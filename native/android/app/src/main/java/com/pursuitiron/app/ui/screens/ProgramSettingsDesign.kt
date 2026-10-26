@@ -203,7 +203,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
                     else -> {
                         lines.take(6).forEach { (a, t) ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(a, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = cs.primary, modifier = Modifier.widthIn(min = 44.dp, max = 96.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(a, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = cs.primary, modifier = Modifier.widthIn(min = 44.dp, max = 120.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Text(t, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), modifier = Modifier.weight(1f))
                             }
                         }
@@ -324,8 +324,11 @@ private fun reviewLines(rv: JSONObject?): List<Pair<String, String>> {
     rv ?: return emptyList()
     val out = mutableListOf<Pair<String, String>>()
     rv.list("config").forEach { c -> out += c.s("label") to "${c.s("before")} → ${c.s("after")}" }
-    rv.list("days").forEach { d ->
-        val day = d.s("label").substringBefore(" —").substringBefore(" ·").take(14)
+    val days = rv.list("days")
+    val short = days.map { it.s("label").substringBefore(" —").substringBefore(" ·").take(14) }
+    days.forEachIndexed { k, d ->
+        // Two days that shorten to the same word ("Upper") keep their full names.
+        val day = if (short.count { it == short[k] } > 1) d.s("label") else short[k]
         d.list("rows").forEach { r ->
             out += day to when (r.s("kind")) {
                 "Added" -> "adds ${r.s("name")}"

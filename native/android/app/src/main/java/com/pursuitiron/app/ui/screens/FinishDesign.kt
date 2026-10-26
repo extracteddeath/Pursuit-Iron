@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
@@ -92,8 +93,14 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         // A page, not a dialog: no dimming behind it, so the status bar keeps the page's colour.
+        val lightBars = cs.primaryContainer.luminance() > 0.5f
         (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { w ->
-            LaunchedEffect(w) { w.setDimAmount(0f) }
+            LaunchedEffect(w) {
+                w.setDimAmount(0f)
+                w.statusBarColor = android.graphics.Color.TRANSPARENT; w.navigationBarColor = android.graphics.Color.TRANSPARENT
+                if (android.os.Build.VERSION.SDK_INT >= 29) { w.isStatusBarContrastEnforced = false; w.isNavigationBarContrastEnforced = false }
+                androidx.core.view.WindowCompat.getInsetsController(w, w.decorView).isAppearanceLightStatusBars = lightBars
+            }
         }
         Box(Modifier.fillMaxSize().background(cs.primaryContainer)) {
             val x = p

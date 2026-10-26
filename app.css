@@ -87,7 +87,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb button[data-pi-control]:active:not(:disabled){transform:none!important}
 #root[data-pi-motion="expressive"] .wpb .wpb-effort-scale{width:min(220px,100%);max-width:100%;flex-wrap:nowrap!important}
 #root[data-pi-motion="expressive"] .wpb .wpb-effort-scale>button{flex:var(--pi-choice-grow,1) 1 0;min-width:0!important;width:0!important;padding-inline:0!important}
-#root[data-pi-motion="expressive"] .wpb .wpb-tab svg{scale:var(--pi-nav-scale,1)}
 #root[data-pi-motion="expressive"] .wpb .wpb-toggle>[data-pi-thumb]{transform:translateX(var(--pi-switch-x,0px))!important;transition:box-shadow 140ms var(--pi-ease)!important}
 #root[data-pi-motion="expressive"] .wpb .wpb-tab{position:relative;isolation:isolate}
 #root[data-pi-motion="expressive"] .wpb .wpb-tab::before{content:"";position:absolute;z-index:-1;top:4px;width:46px;height:28px;border-radius:16px;background:color-mix(in srgb,currentColor 10%,transparent);opacity:0;transition:opacity 140ms var(--pi-ease)}
@@ -1058,8 +1057,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   content:none!important;
   opacity:0!important;
 }
-/* Cohesive but compact surface entrances. Content remains immediately
-   interactive; only the first five important cards participate, never sets. */
+/* Root navigation animates at most one lead card; the selected indicator
+   supplies the main continuity cue. No workout controls enter this system. */
 #root[data-pi-motion="expressive"] .wpb [data-pi-reveal="1"]{
   animation:piContentCascade 260ms cubic-bezier(.2,.85,.2,1)
     var(--pi-reveal-delay,0ms) both;

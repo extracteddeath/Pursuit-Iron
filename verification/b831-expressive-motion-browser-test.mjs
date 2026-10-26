@@ -531,6 +531,18 @@ try {
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
             await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
+            // M377: ordinary root navigation must not set five cards moving.
+            // Preserve the measured indicator and real route while only one
+            // meaningful card can arrive. The chosen nav icon does not bounce.
+            const rootMotion=await page.$eval(`[data-view-frame="${tab}"]`,el=>({
+                entering:el.querySelectorAll('[data-pi-reveal="1"]').length,
+                quick:el.dataset.piNavQuick==='1'
+            }));
+            assert.ok(rootMotion.entering<=1 && (!rootMotion.quick || rootMotion.entering===0),
+                'M377 root navigation has at most one entrance: '+JSON.stringify(rootMotion));
+            const bouncingIcons=await page.$eval('.wpb-tabbar button[data-tab] svg',icons=>
+                icons.filter(el=>el.style.getPropertyValue('--pi-nav-scale')).length);
+            assert.equal(bouncingIcons,0,'M377 tab icons do not bounce in addition to the indicator');
 
             if (tab === 'settings') {
                 const r52=await page.evaluate(()=>{

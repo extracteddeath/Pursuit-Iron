@@ -317,8 +317,8 @@ export function installAppMotion(root) {
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
     const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-tabbar';
-// Delayed visual entrances are bounded to five high-level cards per new page.
-// No workout logger controls, engine values or React-owned children participate.
+// One lead-card entrance carries navigation context without moving a row of cards.
+// Workout logger controls, engine values and React-owned children never participate.
 const entranceKeys = new WeakMap();
 const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card, .wpb-plan-view .wpb-plan-glance-tile, .wpb-plan-view .wpb-plan-up-next';
 // Record the real source geometry before React navigates. The next mounted
@@ -378,7 +378,7 @@ function stagePage(el, initial = false) {
     if (rapid) delete el.dataset.piCascade;
     else el.dataset.piCascade = '1';
     const cards = [...el.querySelectorAll(entranceSelector)].filter(item =>
-        !item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')).slice(0, 5);
+        !item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')).slice(0, 1);
     const source = connectedSource;
     const linked = !rapid && source && performance.now() - source.at < 1100 &&
         source.from !== key && (!source.target || source.target === key);
@@ -397,14 +397,12 @@ function stagePage(el, initial = false) {
     // Each fresh quick-switch owns its navigation; a stale tab-origin cannot
     // carry a second, unrelated connected-card movement into the next screen.
     if (rapid) connectedSource = null;
-    cards.forEach((item, index) => {
+    cards.forEach(item => {
+        // A primary route is a change of context, not a five-card procession.
+        // The indicator already shows selection; at most one lead card arrives.
         delete item.dataset.piReveal;
-        if (rapid) {
-            item.style.removeProperty('--pi-reveal-delay');
-            return;
-        }
-        item.style.setProperty('--pi-reveal-delay', `${index * 26}ms`);
-        item.dataset.piReveal = '1';
+        item.style.removeProperty('--pi-reveal-delay');
+        if (!rapid) item.dataset.piReveal = '1';
     });
 }
 const navSurface = button => {
@@ -763,11 +761,6 @@ function disclosure(el, initial = false) {
                 } } : {})
             });
             shape(b);
-            if (group.matches('.wpb-tabbar')) {
-                const icon = b.querySelector('svg');
-                if (icon && !initial && previous !== undefined && i === selected)
-                    spring(icon, '--pi-nav-scale', 1, { restart: .88, damping: .8, stiffness: 800, precision: .001 });
-            }
         });
     }
     // R35: resolve 'on' colors from the ACTUAL filled surface, not the

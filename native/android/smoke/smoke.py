@@ -517,7 +517,8 @@ tap(r"^\|Settings$", "program-settings")
 if find(r"TRAINING GOAL", timeout=15):
     # B905: a changed setting is previewed by the engine before anything is saved
     if tap(r"^\|Strength$|^Strength\|", "settings-goal", required=False):
-        if not find(r"^\|Save · \d+ change|don’t change any lifts|isn't possible", timeout=40):
+        time.sleep(6)
+        if not scroll_to(r"^\|Save · \d+ change|don’t change any lifts|isn't possible", tries=6, step=600):
             FAILS.append("program settings did not preview the rebuild")
         shot("settings-preview")
         tap(r"^\|Reset$", required=False)

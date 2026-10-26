@@ -8743,6 +8743,27 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-exercise-options-backdrop,#root .wpb .wpb-exercise-options-sheet{animation:none}}
 @media(forced-colors:active){#root .wpb .wpb-exercise-options-sheet,#root .wpb .wpb-exercise-options-confirm{background:Canvas;color:CanvasText;border-color:ButtonText}#root .wpb .wpb-exercise-options-backdrop button:focus-visible{outline-color:Highlight}}
 
+/* Shared pinned notes: stage the note and setup until one explicit Save. */
+#root .wpb .wpb-setup-fields{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+#root .wpb .wpb-setup-field{display:flex;align-items:center;gap:4px;max-width:100%;min-width:0;flex-wrap:wrap;margin:0}
+#root .wpb .wpb-setup-field-label{font-size:.6875rem;font-weight:600;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-setup-field[data-orphan="true"] .wpb-setup-field-label{color:var(--wpb-theme-faint)}
+#root .wpb .wpb-setup-field-input{box-sizing:border-box;width:2.875rem;max-width:100%;padding:6px 4px;border:1px solid var(--wpb-theme-border);border-radius:8px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);font-size:.8125rem;font-weight:600;text-align:center}
+#root .wpb .wpb-setup-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+#root .wpb .wpb-setup-chip{font-size:.6875rem;font-weight:700;color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);border-radius:8px;padding:3px 8px}
+#root .wpb .wpb-note-editor{min-width:0;margin-bottom:12px;padding:12px;border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text)}
+#root .wpb .wpb-note-editor[data-context="program"]{margin-top:8px;margin-bottom:0;padding:8px}
+#root .wpb .wpb-note-editor-heading{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:.6875rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}
+#root .wpb .wpb-note-editor-heading svg{flex-shrink:0}
+#root .wpb .wpb-note-editor-text{box-sizing:border-box;width:100%;padding:10px 12px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font:inherit;font-size:.8125rem;line-height:1.5;resize:vertical;scroll-margin-block:90px}
+#root .wpb .wpb-note-editor-help{margin:6px 2px 10px;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted);overflow-wrap:anywhere}
+#root .wpb .wpb-note-editor-actions{display:flex;flex-wrap:wrap;gap:8px}
+#root .wpb .wpb-note-editor-actions>button{flex:1 1 5rem;min-width:0;white-space:normal;overflow-wrap:anywhere;font-size:.9375rem}
+#root .wpb .wpb-note-editor-actions .wpb-note-editor-remove{color:var(--wpb-theme-danger)}
+#root .wpb .wpb-note-editor input{min-height:44px;min-width:3.75rem}
+#root .wpb .wpb-note-editor :is(input,textarea,button):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(forced-colors:active){#root .wpb .wpb-note-editor,#root .wpb .wpb-note-editor :is(input,textarea){border:1px solid CanvasText;background:Canvas;color:CanvasText}#root .wpb .wpb-note-editor :is(input,textarea,button):focus-visible{outline-color:Highlight}}
+
 /* B912 — Prototype-informed Profile hierarchy; presentation only.
    Root header ownership moved to UiRootHeader in M271. */
 #root[data-pi-motion="expressive"] .wpb .wpb-profile.wpb-profile .wpb-profile-hero{

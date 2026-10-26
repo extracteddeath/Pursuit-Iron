@@ -1,3 +1,17 @@
+## M385 — staged pinned notes, setup and shared editing (Build 932)
+
+Continue from published Build 931 (PR #359, merge ae50c1c). Its candidate and post-merge gates, 129-file hosted parity and both actual public offline theme replays passed.
+
+The extended existing R54 fixture reproduces a persistence defect on unchanged Build 931: changing J-hooks from 9.5 to 11.5 writes immediately while note text is staged. Cancel leaves the setup change saved. Three duplicated editors also share uncontrolled textarea refs; Program identifies an active editor only by exercise ID, allowing repeated exercises to open multiple editors. Its editor occupies the narrow exercise-name column rather than the card width.
+
+Move the three renderers into one controlled modules/exercise-notes.js owner. Keep note/setup drafts local until Save and invoke the existing normalized App writers together in the same React event. Cancel only closes; Remove clears the original saved setup keys, including orphans. Keep cleared orphan inputs present until Save so Cancel remains meaningful. Consolidate the three identical root callback pairs, without moving persistence or changing its schema. Scope Program's active editor by day, slot and exercise; saved notes remain global to that exercise. Move the editor below the exercise row so it can use the card width. Retain the canonical equipment-field metadata and the shared UiAction controls.
+
+Use one semantic CSS family for the editor and shared setup display. Inputs have associated visible labels, at least 44px edit targets and scalable type; actions wrap and remain reachable by scrolling at enlarged text. Preserve closed Workout/Focus logging geometry. Retire 29 static inline styles, tightening 2482 → 2453. External priorities remain 2303, embedded priorities 1198 and repeated priorities 15. No training engine, progression, saved prescription or history policy changes.
+
+The existing R54 browser owner now exercises Program, Workout and Library in both palettes: typing without writes, Cancel, Save, saved-field removal, orphan retention/explicit clearing, reload, global cue consistency, repeated-exercise editor identity and unchanged saved prescriptions/history/live set values. Cover 320/393/834/1280px with 100/200% text, labelled 44px inputs, hit-tested reachable Save/Remove/Cancel and visible forced-color borders. Keep its sharing/options/tab contracts and B888 workout choices intact. Require exact-head source, lifecycle, independent engine, all seven browser groups and release/offline checks, then merged Pages hash parity and an actual public offline note journey before publication.
+
+Next: continue cohesive Program/Library editing ownership, tab composition and source-level style retirement; prioritize reproduced prescription/persistence defects. Broader cleanup and physical Android/IME/TalkBack/interruption acceptance remain open.
+
 ## M384 — exercise actions, readable controls and working dismissal (Build 931)
 
 Continue Program inspection from published Build 930 (PR #358, merge c413e20). Its full candidate and post-merge gates, 128-file hosted parity and four actual public offline replays passed.

@@ -214,10 +214,13 @@ private fun MiniBar(vm: AppViewModel, modifier: Modifier) {
 
 /** A full-page dialog's own copy of the snackbar and busy scrim: the app's are hidden under the dialog window. */
 @Composable
-fun androidx.compose.foundation.layout.BoxScope.PageOverlays(bottom: androidx.compose.ui.unit.Dp = 24.dp) {
+fun PageOverlays(bottom: androidx.compose.ui.unit.Dp = 24.dp) {
     val vm = LocalAppVm.current ?: return
-    SnackHost(vm, Modifier.align(Alignment.BottomCenter), bottom)
-    vm.busy?.let { BusyScrim(it) }
+    if (vm.snack == null && vm.busy == null) return
+    Box(Modifier.fillMaxSize()) {
+        SnackHost(vm, Modifier.align(Alignment.BottomCenter), bottom)
+        vm.busy?.let { BusyScrim(it) }
+    }
 }
 
 @Composable

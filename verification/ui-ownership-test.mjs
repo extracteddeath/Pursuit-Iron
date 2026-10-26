@@ -97,7 +97,9 @@ assert.ok(!exerciseOptions.includes('style:') && !exerciseOptions.includes('loca
 assert.equal((exerciseOptions.match(/export function ProgramExerciseOptions\(/g)||[]).length,1,'One exercise-options owner');
 assert.ok(app.includes('canLink: !program.config?.noSupersets && slot < day.exercises.length - 1'), 'Options obey the saved superset constraint');
 assert.ok(!exerciseOptions.includes('"data-sheet-drag": true') && exerciseOptions.includes('ref: sheetDragRef'),
-    'The existing sheet gesture ref must attach without a fabricated initialized flag');
+    'The options sheet consumes the existing gesture ref');
+assert.ok(app.includes('const SHEET_DRAG_BOUND = new WeakSet()') && app.includes('SHEET_DRAG_BOUND.has(el)'),
+    'Shared gesture initialization follows node identity, independent of presentation flags');
 assert.ok(!programShare.includes('style:') && !programShare.includes('C.'), 'Program sharing uses the shared CSS owner');
 assert.ok(!app.includes('function ShareProgramSheet(') && !app.includes('function programToText('), 'One selected-week sharing owner');
 assert.ok(programShare.includes('sessionPrescriptionRows(program, day, weekIndex)') && programShare.includes('daysInWeek(program, weekIndex)'), 'Shared text reads canonical selected-week prescriptions');

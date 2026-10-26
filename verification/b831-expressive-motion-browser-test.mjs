@@ -1706,6 +1706,11 @@ try {
         });
         await page.$eval('[data-sheet-drag]', el => {
             el.dispatchEvent(new TouchEvent('touchmove', { touches: [new Touch({ ...window.__b831Touch, clientY: window.__b831Touch.clientY + 30 })], bubbles: true }));
+        });
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const dragged=await page.$eval('[data-sheet-drag]',el=>parseFloat(el.style.getPropertyValue('--pi-surface-y')));
+        assert.ok(dragged>0,'A partial gym-sheet drag actually moves before returning; presentation flags cannot skip initialization');
+        await page.$eval('[data-sheet-drag]',el=>{
             el.dispatchEvent(new TouchEvent('touchend', { touches: [], bubbles: true }));
         });
         await page.waitForFunction(() => document.querySelector('[data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y') === '0px');

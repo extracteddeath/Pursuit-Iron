@@ -1,7 +1,7 @@
 ## Build 931 / M384 — Usable exercise actions and one presentation owner
 
 - Program exercise options scale the title, action labels and complete descriptions with the text-size setting. A persistent heading keeps Close visible while the action list scrolls.
-- Restore the existing sheet drag-to-dismiss handler: the previous markup pre-marked initialization and prevented the gesture ref attaching. Keyboard focus, Escape and actual touch dismissal use the same shared owners.
+- Restore the existing sheet drag-to-dismiss handler across options, gyms, program switching and achievements: presentation flags no longer prevent initialization by node identity. Keyboard focus, Escape and actual touch dismissal use the same shared owners.
 - Keep removal confirmation inside the sheet, reset it on dismissal, and preserve all existing note/info/ban/removal handlers. Do not offer supersets when disabled or on the last exercise; protect the final remaining exercise from removal.
 - Extract the one options renderer from App, retire 17 inline styles and 34 priority overrides, and tighten the measured ownership guards. Engine policy, prescriptions, persistence and Workout/Focus geometry remain unchanged.
 - Extend existing R54 with 320/393/834/1280px and 100/200% text, scroll/Close, focus, forced colors, real browser touch, confirmation Cancel/reset and constrained actions; retain B831 contrast, geometry and motion checks on the semantic structure.

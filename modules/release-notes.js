@@ -3,7 +3,7 @@ import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, C
 
 export const CHANGELOG = [
     { version: "4.0.0", build: "931", items: [
-        "Exercise options follow your text size and keep Close visible while you scroll. Drag down from the heading to dismiss.",
+        "Exercise options follow your text size and keep Close visible while you scroll. Drag-to-dismiss now works in options, gyms, program switching and achievements.",
         "Removal confirmation resets when closed, and superset actions respect your program settings."
     ] },
     { version: "4.0.0", build: "930", items: [

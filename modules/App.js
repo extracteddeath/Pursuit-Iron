@@ -5530,10 +5530,12 @@ function CheckBox({ on }) {
    over a scrollable list belongs to that list. Both are what makes the gesture feel like part of
    the sheet rather than a trap laid over its contents. */
 const SHEET_GRAB_PX = 72; // the band at the top of a sheet where a downward drag means "dismiss"
+const SHEET_DRAG_BOUND = new WeakSet();
 const SHEET_DISMISS_PX = 110; // far enough that a scroll overshoot or a stray thumb cannot fire it
 function sheetDragRef(el) {
-    if (!el || el.dataset.sheetDrag)
+    if (!el || SHEET_DRAG_BOUND.has(el))
         return;
+    SHEET_DRAG_BOUND.add(el);
     el.dataset.sheetDrag = "1";
     // Natural-content sheets stay compact; long sheets use the large detent. The choice is structural,
     // not per-feature styling, so every sheet participates in the same hierarchy automatically.

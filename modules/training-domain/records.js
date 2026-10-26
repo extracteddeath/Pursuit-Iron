@@ -1,3 +1,4 @@
+import { exerciseAt } from '../next-engine/shell-projection.js';
 // Canonical records domain. Maintained production source; independent of React and browser APIs.
 import { programWorkingWeeks } from "../program-duration.js";
 import { getNextShellCell, canonicalShellSetCount } from "../next-engine/app-shell-adapter.js";
@@ -59,13 +60,6 @@ function normalizeCycleLinks(saved, cycles) {
         return rest;
     });
     return touched ? out : saved;
-}
-
-function exerciseAt(program, day, slot, week) {
-    const alt = program.pairs?.[`${day.id}:${slot}`];
-    if (!alt)
-        return day.exercises[slot];
-    return (Math.max(1, week) % 2 === 0) ? alt : day.exercises[slot];
 }
 
 function normalizeHistoryDayIds(history, saved) {

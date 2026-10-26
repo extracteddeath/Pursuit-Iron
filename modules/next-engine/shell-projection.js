@@ -258,6 +258,37 @@ function clearUserPrescriptionOverride(override, field) {
     return next;
 }
 
+function exerciseAt(program, day, slot, week) {
+    const alt = program?.pairs?.[`${day?.id}:${slot}`];
+    if (!alt)
+        return day?.exercises?.[slot];
+    return (Math.max(1, week) % 2 === 0) ? alt : day?.exercises?.[slot];
+}
+
+function styleFor(program, id) {
+    const s = program?.progStyle?.[id];
+    if (!s)
+        return "auto";
+    // Earlier generated programs mirrored week-one methods in this map. A
+    // lifter marker or a different value distinguishes a choice from that mirror.
+    if (program?.engineSource === "pursuit-next" && !program?.progStyleLifter?.[id] && engineWeekOneStyles(program, id).has(s))
+        return "auto";
+    return s;
+}
+
+function engineWeekOneStyles(program, id) {
+    const out = new Set();
+    for (const d of program?.days || [])
+        (d.exercises || []).forEach((x, slot) => {
+            if (x !== id)
+                return;
+            const st = program?.nextWeekPrescriptions?.[`${d.id}:${slot}`]?.[1]?.progressionStyle;
+            if (st && st !== "auto")
+                out.add(st);
+        });
+    return out;
+}
+
 function getNextShellCell(program, day, slotIndex, weekIndex) {
     if (program?.engineSource !== 'pursuit-next')
         return null;
@@ -291,7 +322,12 @@ function getNextShellCell(program, day, slotIndex, weekIndex) {
     const techRaw = ownedValue('tech', cell.tech ?? null);
     const tech = techRaw || null;
     const role = ownedValue('role', cell.role);
-    const explicitStyle = program?.progStyle?.[key];
+    // An explicit exercise-wide choice from Program or Workout overrides this
+    // lift's saved slot/week method. Auto removes that choice and reveals the
+    // existing slot/week schedule; it never deletes or rewrites the schedule.
+    const exerciseStyle = styleFor(program, exerciseAt(program, day, slotIndex, weekIndex));
+    const slotStyle = program?.progStyle?.[key];
+    const explicitStyle = exerciseStyle !== 'auto' ? exerciseStyle : slotStyle;
     if (explicitStyle && explicitStyle !== 'auto') ownership.progressionStyle = 'user';
     const progressionStyle = explicitStyle && explicitStyle !== 'auto'
         ? explicitStyle : ownedValue('progressionStyle', cell.progressionStyle ?? 'auto');
@@ -361,4 +397,4 @@ class NextShellAdapterError extends Error {
     constructor(code, message, recovery) { super(message); this.name = 'NextShellAdapterError'; this.code = code; this.recovery = recovery; }
 }
 
-export { EXPLICIT_EXERCISE_ALIASES, NextShellAdapterError, SHELL_PRESCRIPTION_FIELDS, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, hasOwn, immutableEngineSetCount, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, overrideKeyForField, primaryPart, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, shellRange, snapshotNextShellPrescription, swapNextSlotPrescriptions };
+export { exerciseAt, styleFor, engineWeekOneStyles, EXPLICIT_EXERCISE_ALIASES, NextShellAdapterError, SHELL_PRESCRIPTION_FIELDS, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, hasOwn, immutableEngineSetCount, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, overrideKeyForField, primaryPart, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, shellRange, snapshotNextShellPrescription, swapNextSlotPrescriptions };

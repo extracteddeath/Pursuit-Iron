@@ -1,6 +1,7 @@
 import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { PROG_STYLES } from '../modules/engine-api.js';
 
 const coordinator = productionSource();
 const reference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
@@ -29,7 +30,10 @@ const progressionUi = app.slice(progressionStart, progressionEnd);
 assert.ok(!/selectProgressionStyle|reselectProgressionStyle/.test(app), 'App UI must not duplicate or rerun engine progression policy');
 assert.ok(!/loadability|measurementReliable|noviceLinearEligible/.test(progressionUi), 'progression explanation UI must not expose selector implementation jargon');
 
-for (const label of ['Double progression','Dynamic double progression','Rep ladder','Linear progression','Wave loading','e1RM autoregulation'])
-  assert.ok(progressionUi.includes(label), `progression view should have a plain display label for ${label}`);
+assert.ok(progressionUi.includes('PROG_STYLES[style]'), 'Progression reference must use the same display labels as Workout and the editor');
+for (const method of ['double','dynamic','ladder','linear','wave','e1rm'])
+  assert.ok(typeof PROG_STYLES[method] === 'string' && PROG_STYLES[method].length > 2 && !PROG_STYLES[method].includes('_'), `Shared progression label is readable for ${method}`);
+assert.ok(reference.includes('Current weekly methods appear above; your later choices take precedence.'),
+  'Original generation rationale cannot masquerade as the current edited method');
 
 console.log('PASS M191: creation copy and Plan Info now explain engine-owned per-exercise progression selection without duplicating selector policy or exposing engine jargon.');

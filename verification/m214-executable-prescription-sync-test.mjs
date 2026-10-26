@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { EXERCISES, EX_BY_ID, computeCell, prescribeSets, loggedWorkoutPerformance, propagateCycleEditsPure, normalizeEditedHistoryEntry } from '../modules/engine-api.js';
+import { EXERCISES, EX_BY_ID, computeCell, prescribeSets, sessionSuggestion, loggedWorkoutPerformance, propagateCycleEditsPure, normalizeEditedHistoryEntry, styleFor, programChangeLabels } from '../modules/engine-api.js';
 
 import { generateNextProgramForShell, getNextShellCell, markUserPrescriptionOverride,
     nextExerciseIdForShellExercise, swapNextSlotPrescriptions, snapshotNextShellPrescription } from '../modules/next-engine/app-shell-adapter.js';
@@ -8,6 +8,7 @@ import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell,
     nextWorkoutSuggestionFromPerformedShell } from '../modules/next-engine/workout-history-adapter.js';
 import { captureShellVolumeSnapshot, repairShellVolume } from '../modules/next-engine/volume-repair.js';
 import { convertProgramToNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
+import { withProgressionChoices } from '../modules/session-tools.js';
 
 const fixture = JSON.parse(fs.readFileSync('verification/m205-generation-parity-results.json')).rows[3];
 const original = generateNextProgramForShell({ config: fixture.config, legacyExercises: EXERCISES,
@@ -30,6 +31,63 @@ const log = historyFor(edited, day, id, 10, [
     { w: 100, r: 15, done: false }
 ]);
 const logInput = JSON.stringify(log);
+// Program editor and in-workout choices use the exercise identity. That explicit
+// choice must reach the executable cell, not merely its selected-state label.
+for (const method of ['double', 'dynamic', 'ladder', 'linear', 'wave', 'e1rm']) {
+    const chosen = withProgressionChoices(original, { [id]: method });
+    for (const week of [1, original.config.weeks]) {
+        const cell = getNextShellCell(chosen, day, slot, week);
+        assert.equal(cell.progressionStyle, method, 'An exercise choice must own the generated prescription');
+        assert.equal(cell.ownership.progressionStyle, 'user');
+    }
+    const replay = analyzeShellHistoryForNextEngine(chosen, [log], EXERCISES);
+    assert.equal(replay.workouts[0].session.exercises[slot].progressionStyle, method,
+        'The progression evaluator must execute the method selected in the UI');
+}
+const methodSources = JSON.stringify(original);
+const slotMethod = clone(original);
+slotMethod.progStyle = { [key]: 'double' };
+const exerciseChoice = withProgressionChoices(slotMethod, { [id]: 'dynamic' });
+assert.equal(getNextShellCell(exerciseChoice, day, slot, 1).progressionStyle, 'dynamic',
+    'An exercise-wide choice explicitly overrides its saved slot method');
+assert.equal(getNextShellCell(withProgressionChoices(exerciseChoice, { [id]: 'auto' }), day, slot, 1).progressionStyle, 'double',
+    'Auto reveals the original slot schedule without rewriting it');
+assert.deepEqual(exerciseChoice.nextWeekPrescriptions, original.nextWeekPrescriptions);
+assert.equal(exerciseChoice.overrides, slotMethod.overrides);
+const mirrored = { ...original, progStyle: { [id]: getNextShellCell(original, day, slot, 1).progressionStyle } };
+assert.equal(styleFor(mirrored, id), 'auto', 'Old engine-written style mirrors do not become user choices');
+const locked = { ...mirrored, progStyleLifter: { [id]: true } };
+assert.equal(getNextShellCell(locked, day, slot, original.config.weeks).progressionStyle, locked.progStyle[id]);
+assert.equal(getNextShellCell(locked, day, slot, original.config.weeks).ownership.progressionStyle, 'user');
+// The method changes the actual numbers, not just metadata: DDP can advance the
+// qualifying first set while classic double keeps a shared load until both earn it.
+const choiceHistory = historyFor(edited, day, id, 10);
+choiceHistory.perf[id].sets = [{ w: 100, r: 15, rir: 2, tr: 2 }, { w: 100, r: 10, rir: 2, tr: 2 }];
+const classic = withProgressionChoices(edited, { [id]: 'double' });
+const dynamicChoice = withProgressionChoices(edited, { [id]: 'dynamic' });
+const classicTargets = sessionSuggestion(classic, day, slot, {}, 'lb', 1, [choiceHistory]);
+const dynamicTargets = sessionSuggestion(dynamicChoice, day, slot, {}, 'lb', 1, [choiceHistory]);
+assert.equal(classicTargets.weight, 100);
+assert.ok(dynamicTargets.setTargets[0].weight > 100);
+assert.equal(dynamicTargets.setTargets[1].weight, 100);
+assert.equal(snapshotNextShellPrescription(dynamicChoice, day, slot, EX_BY_ID[id], 1).progressionStyle, 'dynamic');
+const factualHistory = clone(choiceHistory);
+factualHistory.perf[id].prescription = snapshotNextShellPrescription(classic, day, slot, EX_BY_ID[id], 1);
+const historyBeforeChoice = JSON.stringify(factualHistory);
+const factualReplay = analyzeShellHistoryForNextEngine(dynamicChoice, [factualHistory], EXERCISES);
+assert.equal(factualReplay.workouts[0].session.exercises[slot].progressionStyle, 'double',
+    'A later method choice cannot rewrite the method actually logged');
+assert.equal(nextWorkoutSuggestionForShell(dynamicChoice, [factualHistory], EXERCISES, day, slot, 1).action, 'represcribe');
+assert.equal(JSON.stringify(factualHistory), historyBeforeChoice);
+const pairedChoice = clone(original);
+pairedChoice.pairs = { [key]: 'db-bench' };
+const alternatingChoice = withProgressionChoices(pairedChoice, { 'db-bench': 'linear' });
+assert.equal(getNextShellCell(alternatingChoice, day, slot, 1).progressionStyle, getNextShellCell(original, day, slot, 1).progressionStyle);
+assert.equal(getNextShellCell(alternatingChoice, day, slot, 2).progressionStyle, 'linear',
+    'An alternating lift owns its choice only on weeks when it is prescribed');
+assert.equal(JSON.stringify(original), methodSources, 'Choosing and evaluating methods does not rewrite the generated artifact');
+const methodLabels = programChangeLabels(original, withProgressionChoices(original, { [id]: 'dynamic' }));
+assert.deepEqual(methodLabels, ['Progression method'], 'A method-only save must not claim changed sets or reps');
 const analysis = analyzeShellHistoryForNextEngine(edited, [log], EXERCISES);
 const planned = analysis.workouts[0].session.exercises[slot];
 assert.equal(planned.sets, 2);

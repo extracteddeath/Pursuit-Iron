@@ -6,6 +6,9 @@ const next=withProgressionChoices(base,{bench:'dynamic',curl:'ladder'});
 assert.equal(next.progStyle.bench,'dynamic'); assert.equal(base.progStyle.bench,'double');
 assert.equal(next.progStyleLifter.curl,true);
 assert.equal(withProgressionChoices(next,{bench:'auto'}).progStyle.bench,undefined);
+const automatic=withProgressionChoices(next,{bench:'auto',curl:'auto'});
+assert.equal(automatic.progStyle,undefined);assert.equal(automatic.progStyleLifter,undefined,
+    'Auto retires empty choice maps instead of leaving a false program edit');
 assert.deepEqual(repeatedNote('Try straps','once'),{text:'Try straps',repeat:'none'});
 assert.deepEqual(repeatedNote('Try straps','none'),{text:'',repeat:'none'});
 assert.deepEqual(repeatedNote('Cue','always'),{text:'Cue',repeat:'always'});
@@ -118,7 +121,7 @@ assert.throws(()=>withWorkoutProgramReview(original,{...review,progressionOrigin
 assert.equal(withWorkoutProgramReview(reviewed,{...review,progressionOrigins:undefined}).progStyle['db-bench'],'dynamic',
     'old already-applied choices remain safe no-ops');
 const autoReview={...review,progressionChanges:{'db-bench':'auto'}};
-assert.equal(withWorkoutProgramReview(original,autoReview).progStyle['db-bench'],undefined);
+assert.equal(withWorkoutProgramReview(original,autoReview).progStyle?.['db-bench'],undefined);
 assert.throws(()=>withWorkoutProgramReview(original,{...review,progressionChanges:{'db-bench':'unknown'}}),/unavailable/);
 const additions={...original,days:[...original.days,{id:'second',exercises:['db-bench'],primaryIndex:0}]};
 assert.throws(()=>withWorkoutProgramReview(additions,review),/workout slots changed/);

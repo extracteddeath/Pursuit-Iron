@@ -1,6 +1,6 @@
 # Engine upgrade and assurance sequence through M265
 
-The behavior-bearing engine remains M234 / Pursuit Engine 0.65.9 / app 4.0.0 build 905. M235 verifies that behavior line. M236–M264 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing the training model or authored build identity. Offline cache identity also certifies shipped content so same-build repairs reach installed copies. M265 moves interactive generation off the main thread and connects the continuation controls to the canonical engine.
+The training-model checkpoint is M234 / Pursuit Engine 0.65.9 / app 4.0.0 build 905. The current app release is identified by RELEASE_MANIFEST.json; build 905 is the historical behavior checkpoint, not the current webapp build. M235 verifies that behavior line. M236–M264 harden ownership, verification, CI, history provenance, standalone packaging, and internal responsibility boundaries without changing the training model or authored build identity. Offline cache identity also certifies shipped content so same-build repairs reach installed copies. M265 moves interactive generation off the main thread and connects the continuation controls to the canonical engine.
 
 | Milestone | Scope | Acceptance |
 |---|---|---|
@@ -61,3 +61,7 @@ The behavior-bearing engine remains M234 / Pursuit Engine 0.65.9 / app 4.0.0 bui
 Prefer deletion or consolidation only when ownership is provably duplicated or unreachable. Keep small modules when they own a real boundary, migration, state seam, compatibility contract, or independently testable invariant. Do not create a new gate, adapter, exporter, or engine root when an existing canonical owner can carry the responsibility.
 
 The next behavior-changing engine line must add an explicit differential/replay baseline before replacing the verified M234/M235 behavior checkpoint.
+
+## M371 execution-boundary correction
+
+The Build 919 candidate corrects exercise-ID progression choices that were visible in Program/Workout but ignored by generated slot projections. The existing identity/choice readers now live beside getNextShellCell, while existing domain exports keep their identities. Explicit choices reach the evaluator, runtime and logged method snapshot; Auto restores the saved slot/week method. One shared writer serves Program and Workout. Original generated cells and completed-history snapshots remain intact. This fixes selection authority without changing Engine 0.65.9 progression algorithms; M214 now exercises the selection differential and the actual save/log/review journey. The current full launch queue remains NEXT_APP_UPDATE_PLAN.md.

@@ -2599,35 +2599,18 @@ function classifyPlateau(trend, sets, muscleReadiness, ctx) {
 
 let _lmCache = { key: null, val: null };
 
-function lifterModelKey(hs) {
-    let h = 5381;
-    const n = hs.length;
-    for (let i = 0; i < n; i++) {
-        const e = hs[i];
-        if (!e)
-            continue;
-        /* Editing history must invalidate every model that consumes it. Volume/setsDone alone miss
-           RIR-only corrections, set-order corrections and a changed load/reps pair whose tonnage happens
-           to stay equal. Fingerprint the performed-set evidence itself, including target-vs-observed RIR
-           provenance, so the coach/readiness/progression views cannot keep serving the pre-edit model. */
-        let sig = `${e.id}|${e.date}|${e.volume}|${e.setsDone}`;
-        const perf = e.perf || {};
-        for (const exId of Object.keys(perf).sort()) {
-            const p = perf[exId] || {};
-            sig += `|${exId}:${p.weight ?? ""}:${p.reps ?? ""}`;
-            for (const st of (Array.isArray(p.sets) ? p.sets : []))
-                sig += `;${st?.w ?? ""},${st?.r ?? ""},${st?.rir ?? ""},${st?.tr ?? ""},${st?.sub ? 1 : 0}`;
-        }
-        for (let j = 0; j < sig.length; j++)
-            h = ((h * 33) ^ sig.charCodeAt(j)) >>> 0;
-    }
-    return `${n}:${h}`;
+function lifterModelKey(history, perf, program) {
+    // Coaching consumes complete factual provenance and the current program.
+    // Native serialization is both complete and cheaper than a hand-built hash
+    // that omitted unit, observed-effort flags and staged prescription changes.
+    return JSON.stringify([history, perf, program]);
 }
 
 function buildLifterModel(history, perf, program) {
     const hs = canonicalHistoryNewest(history);
-    const key = lifterModelKey(hs) + "|" + (program ? `${program.id}:${program.updatedAt || ""}:${program.weeks || ""}` : "-");
-    if (_lmCache.key === key && _lmCache.val)
+    const key = lifterModelKey(hs, perf, program);
+    const cacheAge = Date.now() - (_lmCache.val?.builtAt ?? 0);
+    if (_lmCache.key === key && _lmCache.val && cacheAge >= 0 && cacheAge < 60000)
         return _lmCache.val;
     const effort = effortCalibration(hs);
     const trends = exerciseTrends(hs);

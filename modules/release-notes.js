@@ -2,6 +2,10 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "923", items: [
+        "Faster startup and workout reopening with a long training history, while keeping the same prescriptions and loading rules.",
+        "Coaching now refreshes after corrections to reported effort or your program, and recovery estimates update as time passes."
+    ] },
     { version: "4.0.0", build: "922", items: [
         "A second app window now waits before opening your training data, protecting workouts from stale saves. Unexpected changes from an older window pause saving and offer a backup before reload.",
         "The privacy policy now opens correctly in the installed app and remains available offline."

@@ -106,8 +106,8 @@ function historicalShellCell(program, day, slot, week, perf, exerciseId) {
             && saved.setTargets.every(t => numberOf(t.reps) > 0 && numberOf(t.weight) >= 0)
             ? saved.setTargets : undefined };
 }
-function plannedSessionForEntry(program, entry, legacyExercises, unit) {
-    const snap = sourceSnapshot(program);
+function plannedSessionForEntry(program, entry, legacyExercises, unit, context) {
+    const snap = context ? context.planSnap : sourceSnapshot(program);
     if (!snap)
         return null;
     const found = resolveDay(program, entry);
@@ -117,7 +117,7 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit) {
     const sourceSession = snap.program.sessions[dayIndex];
     if (!sourceSession)
         return null;
-    const legacyMap = legacyExerciseById(legacyExercises);
+    const legacyMap = context?.legacyMap ?? legacyExerciseById(legacyExercises);
     const exercises = [];
     const legacyIds = [];
     const week = Math.max(1, Math.round(Number(entry.weekIndex) || 1));
@@ -165,10 +165,10 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit) {
         return null;
     return { session: { ...sourceSession, id: String(day.id), name: String(day.label || sourceSession.name), intent: String(day.focus || day.type || sourceSession.intent), exercises }, legacyIds };
 }
-function workoutFromEntry(program, entry, legacyExercises, unit) {
+function workoutFromEntry(program, entry, legacyExercises, unit, context) {
     if (!validHistoryDate(entry)) return null;
     const targetUnit = programUnit(program, unit, entry.unit);
-    const planned = plannedSessionForEntry(program, entry, legacyExercises, targetUnit);
+    const planned = plannedSessionForEntry(program, entry, legacyExercises, targetUnit, context);
     if (!planned)
         return null;
     const found = resolveDay(program, entry);
@@ -199,7 +199,7 @@ function workoutFromEntry(program, entry, legacyExercises, unit) {
     for (const legacyId of Object.keys(entry.perf ?? {}))
         if (!planned.legacyIds.includes(legacyId))
             ignored.push(legacyId);
-    const source = sourceSnapshot(program, targetUnit);
+    const source = context?.snap ?? sourceSnapshot(program, targetUnit);
     const progression = evaluateWorkoutProgression(planned.session, performed, { ...historyExposureContext(entry), percentageLoading: !!program.config?.percentScheme, loadingInventory: source?.request.equipment.loading, equipmentAvailable: source?.request.equipment.available });
     return {
         programId: String(program.id), unit: targetUnit,
@@ -546,7 +546,11 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     if (!snap)
         throw new NextShellAdapterError('NEXT_HISTORY_SNAPSHOT_MISSING', 'This saved program lacks the engine snapshot required for history adaptation. Rebuild it before adapting the next block.');
     const { entries } = normalized;
-    const workouts = entries.map(entry => ({ entry, workout: workoutFromEntry(program, entry, legacyExercises, evaluationUnit) }))
+    // One synchronous analysis owns one current catalog lookup and unit-adjusted
+    // snapshot. Rebuild them on the next call so in-place/custom/history edits
+    // remain fresh; no cross-call cache or second history authority is needed.
+    const context = { snap, planSnap: sourceSnapshot(program), legacyMap: legacyExerciseById(legacyExercises) };
+    const workouts = entries.map(entry => ({ entry, workout: workoutFromEntry(program, entry, legacyExercises, evaluationUnit, context) }))
         .filter(({ entry, workout }) => {
             if (workout && workout.performedSets.length) return true;
             normalized.excluded.push({ id: workout?.historyId ?? entry?.id ?? null,
@@ -591,7 +595,7 @@ export function analyzeShellHistoryForNextEngine(program, history, legacyExercis
     // Response/protection evidence follows the live roster too. A user swap or added movement is
     // absent from the immutable generation snapshot, but its logged exposures must still be diagnosed.
     const sourceExercises = (program.days ?? []).flatMap(day => plannedSessionForEntry(program,
-        { dayId: day.id, weekIndex: 1 }, legacyExercises)?.session.exercises ?? []);
+        { dayId: day.id, weekIndex: 1 }, legacyExercises, evaluationUnit, context)?.session.exercises ?? []);
     const unique = new Map(sourceExercises.map(ex => [ex.exerciseId, ex]));
     const diagnoses = [...unique.values()].map(ex => diagnoseExerciseResponse(ex, exposures.get(ex.exerciseId) ?? [], recovery));
     let positive = 0, negative = 0;

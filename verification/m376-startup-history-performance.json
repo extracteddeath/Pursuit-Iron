@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "milestone": "M376",
+  "build": 923,
+  "baseRevision": "c191a57d28e7d98fe3752a37135744e220bd2002",
+  "runtimeAggregate": "28d2be2d246b011e5ceb8466bbae384fa0d1d29bb47a1037c455115d785524f0",
+  "moduleSha256": {
+    "modules/next-engine/loading.js": "1a142af24c0d8d577c751926102e4c413e11f18162dd1261a31d80901ef7cfc3",
+    "modules/next-engine/workout-history-adapter.js": "e4411d30e25080ac81f5fdbaa206e9069f2af72d75fcb8e7af9a7ae44a14bf6a",
+    "modules/session-tools.js": "6f75f6559033a968f5dbb986c3141adb31aab13e9971ce61719b301c2f88311b",
+    "modules/training-domain/analytics.js": "07a956721139fbcac7382f05550665cc2ff56ab6f5e8cf2381f4d368f8056066"
+  },
+  "method": "One sequential reference/candidate pair; each has one Home startup and five pointer Resume/Back returns per native/4x CPU profile. The HTTP-only reference restores repeated per-workout maps/default clones and duplicate no-choice review suggestions. The coaching correctness fix is retained in both. Assets local; timings environment-relative, not field CWV, physical Android, network latency or TalkBack certification.",
+  "reproduce": {
+    "entry": "verification/m318-throttled-cycle-performance-browser-test.mjs",
+    "referenceArguments": [
+      "--startup-only",
+      "--history-rebuild-reference",
+      "--app-report",
+      "reference.json"
+    ],
+    "candidateArguments": [
+      "--startup-only",
+      "--app-report",
+      "candidate.json"
+    ],
+    "fullRegression": "Run entry with no filter; --logger-report and --app-report can retain reports."
+  },
+  "reference": {
+    "schemaVersion": 1,
+    "build": 923,
+    "runtimeAggregate": "28d2be2d246b011e5ceb8466bbae384fa0d1d29bb47a1037c455115d785524f0",
+    "browser": "HeadlessChrome/153.0.8010.0",
+    "reference": true,
+    "fixture": {
+      "historyWorkouts": 240,
+      "serializedStoreCharacters": 499586,
+      "viewport": "393x852",
+      "reducedMotion": true
+    },
+    "method": "Full local app navigation to two-frame Home readiness; real pointer Resume to two-frame set entry, with exact persisted recovery and unchanged training content. Native/4x CPU emulation. Not field CWV, network timing or physical Android certification.",
+    "records": [
+      {
+        "rate": 1,
+        "homeMs": 1234.9,
+        "longTasks": [
+          {
+            "start": 292.90000000037253,
+            "duration": 924
+          }
+        ],
+        "warmReturnsMs": [
+          551.4,
+          394.2,
+          349.2,
+          326.5,
+          337.6
+        ],
+        "historyWork": {
+          "maps": 26322,
+          "analyses": 107
+        }
+      },
+      {
+        "rate": 4,
+        "homeMs": 4813.7,
+        "longTasks": [
+          {
+            "start": 189.59999999962747,
+            "duration": 51
+          },
+          {
+            "start": 488.7999999988824,
+            "duration": 111
+          },
+          {
+            "start": 604.3999999985099,
+            "duration": 99
+          },
+          {
+            "start": 816.1999999992549,
+            "duration": 3935
+          }
+        ],
+        "warmReturnsMs": [
+          2525,
+          1922.5,
+          1833.8,
+          2177.5,
+          1803.1
+        ],
+        "historyWork": {
+          "maps": 26322,
+          "analyses": 107
+        }
+      }
+    ]
+  },
+  "candidate": {
+    "schemaVersion": 1,
+    "build": 923,
+    "runtimeAggregate": "28d2be2d246b011e5ceb8466bbae384fa0d1d29bb47a1037c455115d785524f0",
+    "browser": "HeadlessChrome/153.0.8010.0",
+    "reference": false,
+    "fixture": {
+      "historyWorkouts": 240,
+      "serializedStoreCharacters": 499586,
+      "viewport": "393x852",
+      "reducedMotion": true
+    },
+    "method": "Full local app navigation to two-frame Home readiness; real pointer Resume to two-frame set entry, with exact persisted recovery and unchanged training content. Native/4x CPU emulation. Not field CWV, network timing or physical Android certification.",
+    "records": [
+      {
+        "rate": 1,
+        "homeMs": 677.4,
+        "longTasks": [
+          {
+            "start": 246.59999999962747,
+            "duration": 414
+          }
+        ],
+        "warmReturnsMs": [
+          351.9,
+          250.6,
+          212.6,
+          239,
+          257.4
+        ],
+        "historyWork": {
+          "maps": 142,
+          "analyses": 71
+        }
+      },
+      {
+        "rate": 4,
+        "homeMs": 3246.3,
+        "longTasks": [
+          {
+            "start": 669.5999999996275,
+            "duration": 105
+          },
+          {
+            "start": 780.4000000003725,
+            "duration": 94
+          },
+          {
+            "start": 973,
+            "duration": 2169
+          }
+        ],
+        "warmReturnsMs": [
+          1619.2,
+          1272.4,
+          1050.5,
+          1132.5,
+          1008.6
+        ],
+        "historyWork": {
+          "maps": 142,
+          "analyses": 71
+        }
+      }
+    ]
+  },
+  "observed": [
+    {
+      "cpuRate": 1,
+      "homeImprovementPercent": 45.1,
+      "referenceWarmMedianMs": 349.2,
+      "candidateWarmMedianMs": 250.6,
+      "mapsBefore": 26322,
+      "mapsAfter": 142,
+      "analysesBefore": 107,
+      "analysesAfter": 71
+    },
+    {
+      "cpuRate": 4,
+      "homeImprovementPercent": 32.6,
+      "referenceWarmMedianMs": 1922.5,
+      "candidateWarmMedianMs": 1132.5,
+      "mapsBefore": 26322,
+      "mapsAfter": 142,
+      "analysesBefore": 107,
+      "analysesAfter": 71
+    }
+  ],
+  "parity": {
+    "fixedClock": 1793016000000,
+    "baseBuild": 922,
+    "status": "pass",
+    "analyses": 36,
+    "suggestions": 216,
+    "models": 36,
+    "reviews": 72,
+    "analysisJsonCharacters": 8646997,
+    "revisionCorrections": "all populated histories",
+    "inventoryIsolation": true,
+    "inputImmutability": true,
+    "coverage": "Six generated configurations; both lb/kg; 0/8/64 completed-workout histories. Complete session reviews, history analyses, selected suggestions and fresh coaching models; in-place history correction and normalized inventory isolation."
+  },
+  "correctnessRegressions": {
+    "existingM225": "Observed-effort provenance correction changes calibration immediately; in-place program-unit changes recalculate e1RM; complete identical inputs reuse within one minute; elapsed time or clock rollback refreshes recovery. Provenance regression failed before the fix with stale -0.68 bias.",
+    "existingM221": "Normalized loading returns independent records/lists in lb/kg/normalized unit tokens.",
+    "existingB904": "Saved session choices, review/Undo and scoped program changes remain intact."
+  },
+  "loggerRegression": {
+    "schemaVersion": 1,
+    "sourceRevision": "c191a57d28e7d98fe3752a37135744e220bd2002",
+    "build": 923,
+    "runtimeAggregate": "28d2be2d246b011e5ceb8466bbae384fa0d1d29bb47a1037c455115d785524f0",
+    "fixture": {
+      "programId": "m318-fixed-2",
+      "historyWorkouts": 240,
+      "rows": 7,
+      "workingSets": 23,
+      "viewport": "393x852",
+      "reducedMotion": true
+    },
+    "browser": "HeadlessChrome/153.0.8010.0",
+    "unit": "ms",
+    "method": "Synthetic input/click to two animation frames; persisted live state checked per action. Local preloaded assets; CPU slowdown emulated. Not physical Android, field INP, cold startup, or TalkBack certification.",
+    "timingPolicy": "Environment-relative diagnostics; correctness and zero duplicate suggestion calls are enforced, not a flaky machine-speed threshold.",
+    "records": [
+      {
+        "rate": 1,
+        "mountedSuggestionCalls": 7,
+        "callsDuringLogging": 0,
+        "historyWork": {
+          "maps": 14,
+          "analyses": 7
+        },
+        "input": {
+          "samples": 40,
+          "p50": 33.3,
+          "p95": 33.6,
+          "p99": 33.8
+        },
+        "complete": {
+          "samples": 10,
+          "p50": 33.3,
+          "p95": 33.7,
+          "p99": 33.7
+        },
+        "undo": {
+          "samples": 10,
+          "p50": 33.2,
+          "p95": 33.5,
+          "p99": 33.5
+        }
+      },
+      {
+        "rate": 4,
+        "mountedSuggestionCalls": 7,
+        "callsDuringLogging": 0,
+        "historyWork": {
+          "maps": 14,
+          "analyses": 7
+        },
+        "input": {
+          "samples": 40,
+          "p50": 33.4,
+          "p95": 35.5,
+          "p99": 49.6
+        },
+        "complete": {
+          "samples": 10,
+          "p50": 54.9,
+          "p95": 67.8,
+          "p99": 67.8
+        },
+        "undo": {
+          "samples": 10,
+          "p50": 50.5,
+          "p95": 86.3,
+          "p99": 86.3
+        }
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createExerciseMap } from '../modules/next-engine/exercise-db.js';
+import { createExerciseMap, EXERCISES } from '../modules/next-engine/exercise-db.js';
 import {
   exerciseKnowledgeNode,
   exerciseRedundancyPenalty,
@@ -25,6 +25,9 @@ const preacher = get('preacher_curl');
 const bench = get('barbell_bench');
 
 const node = exerciseKnowledgeNode(bench);
+assert.equal(exerciseKnowledgeNode(bench), node,
+  'Repeated reads of an immutable built-in definition must reuse its knowledge projection');
+assert.ok(node.secondaryStimulus.every(Object.isFrozen), 'Shared nested contribution records must be immutable');
 assert.equal(node.id, 'barbell_bench');
 assert.deepEqual(node.primaryStimulus, ['chest']);
 assert.ok(node.secondaryStimulus.some(x => x.muscle === 'triceps' && x.credit === .5));
@@ -37,6 +40,30 @@ assert.equal(typeof node.skillDemand, 'number');
 assert.equal(node.strengthSpecificity.bench_press, 1);
 assert.ok(Array.isArray(node.substitutions));
 assert.ok(Array.isArray(node.attachments));
+assert.throws(() => { node.secondaryStimulus[0].credit = 9; }, TypeError,
+  'A consumer cannot corrupt a shared nested contribution');
+for (const def of EXERCISES) {
+  const cached = exerciseKnowledgeNode(def);
+  assert.equal(exerciseKnowledgeNode(def), cached);
+  assert.deepEqual(cached, exerciseKnowledgeNode(structuredClone(def)), 'Reused and fresh catalog projections must match: ' + def.id);
+}
+for (let i = 0; i < EXERCISES.length; i++) for (const stride of [1,17]) {
+  const a = EXERCISES[i], b = EXERCISES[(i + stride) % EXERCISES.length];
+  assert.deepEqual(exerciseSelectionRelationship(a,b), exerciseSelectionRelationship(structuredClone(a),structuredClone(b)),
+    'Reuse must preserve every relationship field: ' + a.id + '/' + b.id);
+}
+const mutable = { ...structuredClone(bench), source: 'custom' };
+const earlier = exerciseKnowledgeNode(mutable);
+mutable.muscles.chest.credit = .25;mutable.flags.unilateral = true;mutable.equipment = ['bands'];
+const current = exerciseKnowledgeNode(mutable);
+assert.notEqual(current, earlier, 'Mutable custom metadata must never reuse an older projection');
+assert.equal(current.stimulus.chest,.25);assert.equal(current.unilateral,true);assert.deepEqual(current.equipment,['bands']);
+assert.equal(node.stimulus.chest,1, 'Same-ID custom/edited copies cannot change canonical facts');
+const snapshot = structuredClone(bench);
+exerciseKnowledgeNode(snapshot);snapshot.fatigue.shoulder = 0;
+assert.equal(exerciseKnowledgeNode(snapshot).jointStress.shoulder,0,
+  'An edited same-ID snapshot must stay fresh without requiring a custom source flag');
+assert.equal(node.jointStress.shoulder,bench.fatigue.shoulder);
 
 const quadPair = exerciseSelectionRelationship(hack, legPress);
 assert.equal(quadPair.nearDuplicate, true, `hack squat + leg press should be recognized as a near-duplicate knee-dominant pair: ${JSON.stringify(quadPair)}`);

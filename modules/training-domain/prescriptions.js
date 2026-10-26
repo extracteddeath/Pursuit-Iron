@@ -1,3 +1,4 @@
+import { styleFor, engineWeekOneStyles } from '../next-engine/shell-projection.js';
 import { sessionPlanChange } from '../session-plan.js';
 import { loadingInventoryInUnit } from '../next-engine/loading.js';
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
@@ -346,33 +347,6 @@ function summarizeSets(sets, ex, unit) {
     const avgW = roundTo(weights.reduce((a, b) => a + b, 0) / weights.length, stepW);
     const reps = Math.round(pool.reduce((a, s) => a + parseInt(s.reps), 0) / pool.length);
     return { weight: avgW, reps };
-}
-
-function styleFor(program, id) {
-    const s = program?.progStyle?.[id];
-    if (!s)
-        return "auto";
-    /* ⚠ ENGINE-WRITTEN IS NOT LIFTER-CHOSEN. Next-engine programs used to have the engine's week-1 style written here, in the
-       same map as a lifter's explicit choice, so resolveStyle treated it as one: the per-week block schedule never reached
-       the workout and v661's adaptive rules never ran. New programs no longer write it (app-shell-adapter). For programs
-       saved before that, an entry the lifter did NOT set (progStyleLifter) that equals the engine's own week-1 style for
-       this exercise is engine-written, so it reads as auto. Anything the lifter set always wins. */
-    if (program?.engineSource === "pursuit-next" && !program?.progStyleLifter?.[id] && engineWeekOneStyles(program, id).has(s))
-        return "auto";
-    return s;
-}
-
-function engineWeekOneStyles(program, id) {
-    const out = new Set();
-    for (const d of program?.days || [])
-        (d.exercises || []).forEach((x, slot) => {
-            if (x !== id)
-                return;
-            const st = program?.nextWeekPrescriptions?.[`${d.id}:${slot}`]?.[1]?.progressionStyle;
-            if (st && st !== "auto")
-                out.add(st);
-        });
-    return out;
 }
 
 function resolveStyle(program, ex, isPrimary, weekIndex, perf, history, dayId) {

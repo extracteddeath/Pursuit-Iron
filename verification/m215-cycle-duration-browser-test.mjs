@@ -10,12 +10,19 @@ const importMap = fs.readFileSync(path.join(root, 'index.html'), 'utf8').match(/
 assert.ok(importMap);
 const template = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';
-import {HomePrograms,CyclesView,CycleDetail,ProgramSettingsSheet,StyleTag} from '/modules/App.js';
+import {HomePrograms,CyclesView,CycleDetail,StyleTag} from '/modules/App.js';
+import {ProgramSettingsSheet} from '/modules/program-settings-sheet.js';
 const params=new URL(location.href).searchParams,screen=params.get('screen')||'cycles';
 const stored=JSON.parse(localStorage.getItem('m215-programs')||'null')||${JSON.stringify(savedPrograms)};
 const cycle=${JSON.stringify(staleCycle)};
 localStorage.setItem('m215-programs',JSON.stringify(stored));
 const noop=()=>{};
+// This isolated cycle-duration probe renders the real feature module. App.js normally supplies
+// labels/input helpers; the probe supplies no training policy or replacement UI primitives.
+const settingsPresentation={
+ GOALS:{strength:{label:'Strength'},both:{label:'Strength & Size'},hypertrophy:{label:'Hypertrophy'}},
+ selectNumericInput:e=>e.currentTarget.select(),sheetDragRef:()=>{}
+};
 function Probe(){
  const n=Number(params.get('index')||0);
  const [programs,setPrograms]=React.useState(stored),[draft,setDraft]=React.useState({...stored[n].config,folder:'',description:''});
@@ -25,7 +32,7 @@ function Probe(){
  const apply=()=>{const p={...program,weeks:cfg.weeks,config:{...program.config,...cfg}};const next=programs.map((v,i)=>i===n?p:v);localStorage.setItem('m215-programs',JSON.stringify(next));setPrograms(next);setDraft({...p.config,folder:'',description:''});};
  const content=screen==='home'?React.createElement(HomePrograms,{...common,activeId:programs[0].id,onOpen:noop,onOpenCycles:noop,onSetActive:noop,onCompare:noop,onOptions:noop})
  :screen==='detail'?React.createElement(CycleDetail,common)
- :screen==='settings'?React.createElement(ProgramSettingsSheet,{program,draft:cfg,setDraft,dirty:cfg.weeks!==program.config.weeks,onApply:apply,onClose:noop})
+ :screen==='settings'?React.createElement(ProgramSettingsSheet,{...settingsPresentation,program,draft:cfg,setDraft,dirty:cfg.weeks!==program.config.weeks,onApply:apply,onClose:noop})
  :React.createElement(CyclesView,common);
  return React.createElement('div',{className:'wpb',style:{height:'100%'}},React.createElement(StyleTag),content);
 }
@@ -66,6 +73,9 @@ try{
  for(const [index,weeks] of [[0,10],[1,5],[2,3]]){
   await open('screen=settings&index='+index);
   await page.waitForSelector('[data-testid="program-settings-sheet"]');
+  const choiceTargets=await page.$$eval('[data-testid="program-settings-sheet"] button[aria-pressed]',nodes=>nodes.map(n=>({label:n.textContent.trim(),height:n.getBoundingClientRect().height})));
+  assert.ok(choiceTargets.length>=10&&choiceTargets.every(n=>n.height>=48),
+   'Every program-setting choice has a 48px target: '+JSON.stringify(choiceTargets));
   if(index>0){
    assert.match(await page.$eval('[data-testid="cycle-phase-duration"]',n=>n.innerText),new RegExp(weeks+' weeks'));
    assert.equal(await page.$('input[aria-label="Block length in weeks"]'),null,'cycle-owned phases display their length without an editable field');
@@ -87,14 +97,18 @@ try{
  await page.focus(field);await page.keyboard.press('ArrowDown');assert.equal(await readWeeks(),'9');
  await page.keyboard.press('ArrowUp');assert.equal(await readWeeks(),'10');
  assert.equal(await page.$eval(save,n=>n.disabled),true,'returning to the saved length leaves no change');
- for(const value of ['', '0', '-1', '3.5', 'abc', '9007199254740992']){
+ for(const value of ['', '0', '-1', '3.5', 'abc', '53', '1000000', '9007199254740992']){
   await replaceWeeks(value);assert.equal(await readWeeks(),value,'invalid or incomplete text stays editable');
   assert.equal(await page.$eval(save,n=>n.disabled),true,'incomplete and invalid lengths cannot be saved');
   assert.equal(await page.$eval(field,n=>n.getAttribute('aria-invalid')),'true');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('m215-programs'))[0].config.weeks),10,'typing never changes the saved program');
  }
- for(const weeks of [1,2,7,9,12,3]){
+ for(const weeks of [52,1,2,7,9,12,3]){
   await replaceWeeks(String(weeks));assert.equal(await readWeeks(),String(weeks));
+  if(weeks===52){
+   assert.equal(await page.$eval('button[aria-label="Increase block length"]',n=>n.disabled),true);
+   await page.focus(field);await page.keyboard.press('ArrowUp');assert.equal(await readWeeks(),'52','keyboard stepping respects the same authoring boundary');
+  }
   if(weeks===1){
    assert.equal(await page.$eval('button[aria-label="Decrease block length"]',n=>n.disabled),true);
    await page.keyboard.press('ArrowDown');assert.equal(await readWeeks(),'1','decrement cannot produce a zero-week program');

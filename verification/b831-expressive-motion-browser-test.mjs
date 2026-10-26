@@ -531,6 +531,19 @@ try {
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
             await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
+            // M377: ordinary root navigation must not set five cards moving.
+            // Preserve the measured indicator and real route while only one
+            // meaningful card can arrive. The chosen nav icon does not bounce.
+            const rootMotion=await page.$eval(`[data-view-frame="${tab}"]`,el=>({
+                entering:el.querySelectorAll('[data-pi-reveal="1"]').length,
+                quick:el.dataset.piNavQuick==='1'
+            }));
+            assert.ok(rootMotion.entering<=1 && (!rootMotion.quick || rootMotion.entering===0),
+                'M377 root navigation has at most one entrance: '+JSON.stringify(rootMotion));
+            const bouncingIcons=await page.$eval('.wpb-tabbar',bar=>
+                [...bar.querySelectorAll('button[data-tab] svg')]
+                    .filter(el=>el.style.getPropertyValue('--pi-nav-scale')).length);
+            assert.equal(bouncingIcons,0,'M377 tab icons do not bounce in addition to the indicator');
 
             if (tab === 'settings') {
                 const r52=await page.evaluate(()=>{
@@ -671,17 +684,19 @@ try {
                 navPill.oldPill==='none' && navPill.oldUnderline==='none',
                 'R38 one opaque tonal indicator replaces translucent hollow pill: '+JSON.stringify(navPill));
             if (tab === 'progress') {
-                // Selected group indicator springs independently from actual
-                // button hit targets, and settles to an unscaled resting pill.
-                await page.waitForFunction(() => {
-                    const bar=document.querySelector('.wpb-tabbar[data-pi-m3-track]');
-                    return bar?.style.getPropertyValue('--pi-m3-track-stretch') === '1';
-                }, { timeout: 5000 });
-                assert.ok(await page.$eval('.wpb-tabbar', bar => {
+                // M378: the indicator itself moves to the selected tab.
+                // No extra stretch/corner spring should compete with it, and
+                // native navigation targets must retain their full hit area.
+                assert.ok(await page.$eval('.wpb-tabbar[data-pi-m3-track]', bar => {
                     const item = bar.querySelector('[aria-current="page"]');
+                    if (!item) return false;
+                    const expected = Math.min(60, item.offsetWidth * .78);
+                    const painted = parseFloat(bar.style.getPropertyValue('--pi-m3-track-width'));
                     return item.getBoundingClientRect().height >= 44 &&
-                        parseFloat(bar.style.getPropertyValue('--pi-m3-track-corner')) >= 17.9;
-                }), 'R9 selection flex retains real navigation tap geometry');
+                        Math.abs(painted - expected) < .8 &&
+                        !bar.style.getPropertyValue('--pi-m3-track-stretch') &&
+                        !bar.style.getPropertyValue('--pi-m3-track-corner');
+                }), 'M378 retains stable navigation hit geometry and one measured indicator');
             }
             if (tab === 'plan') {
                 const tonal = await tonalSurfaceReport({
@@ -1377,7 +1392,7 @@ try {
             return first?.getAttribute('aria-selected')==='true' &&
                 Math.abs(parseFloat(group.style.getPropertyValue('--pi-m3-track-x'))-first.offsetLeft)<.12 &&
                 Math.abs(parseFloat(group.style.getPropertyValue('--pi-m3-track-width'))-first.offsetWidth)<.12 &&
-                parseFloat(first.style.getPropertyValue('--pi-choice-grow'))>1.18;
+                !first.style.getPropertyValue('--pi-choice-grow');
         },{timeout:5000});
         const beforeTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => ({
             x: Number.parseFloat(el.style.getPropertyValue('--pi-m3-track-x')),
@@ -1394,7 +1409,7 @@ try {
             return selected?.textContent?.trim() === 'Lifts' &&
                 Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-x')) - selected.offsetLeft) < .08 &&
                 Math.abs(Number.parseFloat(group.style.getPropertyValue('--pi-m3-track-width')) - selected.offsetWidth) < .08 &&
-                Number.parseFloat(selected.style.getPropertyValue('--pi-choice-grow')) > 1.199;
+                !selected.style.getPropertyValue('--pi-choice-grow');
         }, { timeout: 5000 });
         const afterTrack = await page.$eval('.wpb-progress .wpb-premium-tabs', el => {
             const selected = el.querySelector('[aria-selected="true"]');
@@ -1411,6 +1426,11 @@ try {
             'selected Progress segment retains its readable width while the spring updates');
         assert.equal(afterTrack.childCount, beforeTrack.children,
             'selection motion never adds a DOM element or reduces tap targets');
+        assert.equal(await page.$eval('.wpb-progress .wpb-premium-tabs', g =>
+            g.hasAttribute('data-pi-m3-fluid')), false,
+            'M378 uses one measured indicator rather than a competing fluid-width owner');
+        assert.ok(afterTrack.w>0 && beforeTrack.widths.every(w=>w>=44),
+            'M378 keeps legible tap surfaces while selected indicator travels');
         assert.ok(afterTrack.indicator !== 'none' && afterTrack.activeBackground === 'rgba(0, 0, 0, 0)',
             'moving indicator paints the selection, not the old static button fill');
         if (width === 430)
@@ -1686,6 +1706,11 @@ try {
         });
         await page.$eval('[data-sheet-drag]', el => {
             el.dispatchEvent(new TouchEvent('touchmove', { touches: [new Touch({ ...window.__b831Touch, clientY: window.__b831Touch.clientY + 30 })], bubbles: true }));
+        });
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const dragged=await page.$eval('[data-sheet-drag]',el=>parseFloat(el.style.getPropertyValue('--pi-surface-y')));
+        assert.ok(dragged>0,'A partial gym-sheet drag actually moves before returning; presentation flags cannot skip initialization');
+        await page.$eval('[data-sheet-drag]',el=>{
             el.dispatchEvent(new TouchEvent('touchend', { touches: [], bubbles: true }));
         });
         await page.waitForFunction(() => document.querySelector('[data-sheet-drag]')?.style.getPropertyValue('--pi-surface-y') === '0px');
@@ -1922,16 +1947,16 @@ try {
         await page.click(actionableR22);
         await page.waitForSelector('.wpb-exercise-options-sheet .wpb-sheet-action');
         const optionsContrastR36=await contrastAuditR36([
-            ['sheetAction','.wpb-exercise-options-sheet>.wpb-sheet-action'],
+            ['sheetAction','.wpb-exercise-options-body>.wpb-sheet-action'],
             ['sheetClose','.wpb-exercise-options-sheet .wpb-sheet-close']
         ]);
         console.log('R36 SHEET '+JSON.stringify(optionsContrastR36));
         assert.ok(optionsContrastR36.every(x=>x.absent||x.ratio>=4.5),
             'R36 sheet labels meet AA contrast: '+JSON.stringify(optionsContrastR36));
         const optionsR22=await page.$eval('.wpb-exercise-options-sheet', sheet=>{
-            const title=sheet.querySelector(':scope > div:first-child > div:first-child > div:first-child');
+            const title=sheet.querySelector('.wpb-exercise-options-title');
             const close=sheet.querySelector('.wpb-sheet-close');
-            const actions=[...sheet.querySelectorAll(':scope > .wpb-sheet-action')];
+            const actions=[...sheet.querySelectorAll('.wpb-exercise-options-body > .wpb-sheet-action')];
             const firstDescription=actions[0]?.querySelector(':scope > span:last-child > span:last-child');
             const c=getComputedStyle(sheet);
             const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
@@ -2361,7 +2386,7 @@ try {
             return chosen?.textContent?.includes('Recent') &&
                 Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-x')) - chosen.offsetLeft) < .3 &&
                 Math.abs(parseFloat(el.style.getPropertyValue('--pi-m3-track-width')) - chosen.offsetWidth) < .3 &&
-                parseFloat(chosen.style.getPropertyValue('--pi-choice-grow')) > 1.18;
+                !chosen.style.getPropertyValue('--pi-choice-grow');
         }, { timeout: 5000 });
         await page.$eval('.wpb-library-search input', input => input.focus());
         const libraryFocus = await page.$eval('.wpb-library-search input', el =>
@@ -2669,7 +2694,9 @@ try {
             return input?.value === 'Back Squat' && rows.length > 0
                 && rows.every(row => row.textContent.toLowerCase().includes('back squat'));
         }, { timeout: 15000 });
-        await page.click('.wpb-library-row');
+        // Use the pointer target after its entrance geometry is stable as well
+        // as its text; a raw page click can land between moving filter rows.
+        await page.locator('.wpb-library-row').click();
         await page.waitForSelector('[data-exercisedetail] .wpb-exercise-tabs');
         await page.click('.wpb-exercise-tabs>button:nth-child(2)');
         await page.waitForSelector('[data-exercisecharts]');

@@ -1,8 +1,11 @@
 import { productionSource } from './production-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { PROG_STYLES } from '../modules/engine-api.js';
 
-const app = productionSource();
+const coordinator = productionSource();
+const reference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
+const app = coordinator + '\n' + reference;
 
 assert.ok(!app.includes('Auto applies double-progression / load ramps across the block.'), 'stale one-size-fits-all Auto copy must be removed');
 assert.ok(app.includes('Auto · choose per exercise'), 'program creation should explain that Auto selects per exercise');
@@ -15,19 +18,22 @@ assert.ok(app.includes('Why these methods?'), 'progression view should make the 
 assert.match(app, /data-progression-reason/, 'per-exercise progression explanations should have a stable UI hook');
 assert.ok(app.includes('One unusual workout is not enough to switch it.'), 'adaptive method changes should explain anti-thrashing behavior');
 assert.ok(app.includes('_jsx(ProgressionCard, { program: program, open: showProg'), 'Plan Info should include the progression card');
-assert.ok(app.includes('how progression was chosen'), 'Plan Info description should identify progression as part of the reference');
+assert.ok(reference.includes('how progression was chosen'), 'Plan Info description should identify progression as part of the reference');
 
 // The UI may contain unrelated legacy metadata elsewhere in this very large compiled bundle. The M191
 // contract is stricter and more useful: the new progression explanation surface itself must consume the
 // engine-owned decision record without importing policy functions or leaking their implementation terms.
 const progressionStart = app.indexOf('const selectedProgressions = Array.isArray(program?.nextEngine?.progressionPlan)');
-const progressionEnd = app.indexOf('const rows = useMemo(() => {', progressionStart);
+const progressionEnd = app.indexOf('const rows = useMemo(', progressionStart);
 assert.ok(progressionStart >= 0 && progressionEnd > progressionStart, 'progression explanation section should be present and bounded');
 const progressionUi = app.slice(progressionStart, progressionEnd);
 assert.ok(!/selectProgressionStyle|reselectProgressionStyle/.test(app), 'App UI must not duplicate or rerun engine progression policy');
 assert.ok(!/loadability|measurementReliable|noviceLinearEligible/.test(progressionUi), 'progression explanation UI must not expose selector implementation jargon');
 
-for (const label of ['Double progression','Dynamic double progression','Rep ladder','Linear progression','Wave loading','e1RM autoregulation'])
-  assert.ok(progressionUi.includes(label), `progression view should have a plain display label for ${label}`);
+assert.ok(progressionUi.includes('PROG_STYLES[style]'), 'Progression reference must use the same display labels as Workout and the editor');
+for (const method of ['double','dynamic','ladder','linear','wave','e1rm'])
+  assert.ok(typeof PROG_STYLES[method] === 'string' && PROG_STYLES[method].length > 2 && !PROG_STYLES[method].includes('_'), `Shared progression label is readable for ${method}`);
+assert.ok(reference.includes('Current weekly methods appear above; your later choices take precedence.'),
+  'Original generation rationale cannot masquerade as the current edited method');
 
 console.log('PASS M191: creation copy and Plan Info now explain engine-owned per-exercise progression selection without duplicating selector policy or exposing engine jargon.');

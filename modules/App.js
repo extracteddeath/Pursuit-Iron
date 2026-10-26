@@ -1,3 +1,18 @@
+import { BackupRestorePanel } from './backup-restore-panel.js';
+import { appStorageOwnership } from './app-storage-ownership.js';
+import { InfoCard, MotionReveal } from './ui-disclosure.js';
+import { SetupCard, ProgressionCard, ProgramReferenceSheet, ProgressionChoiceSheet } from './program-reference-surfaces.js';
+import { CHANGELOG } from './release-notes.js';
+import { UiHeader, UiRootHeader, UiAction, UiChoice, UiStatus, UiSection } from './ui-primitives.js';
+import { ProgramSettingsSheet } from './program-settings-sheet.js';
+import { LoadWaveCard } from './program-load-wave.js';
+import { ShareProgramSheet } from './program-share-sheet.js';
+import { ProgramExerciseOptions } from './program-exercise-options.js';
+import { ProgramTrainingMaxes, TrainingMaxSummary } from './program-training-maxes.js';
+import { PinnedNoteEditor, SetupFieldsDisplay } from './exercise-notes.js';
+import { VolumeBars, VolumeRampTable } from './program-volume-surfaces.js';
+import { WeeklyScheduleSheet } from './program-schedule-sheet.js';
+import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { withSessionPlanChoice } from './session-plan.js';
@@ -6,7 +21,7 @@ import {
     applyLiveAutoregulation, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, availableFor,
     backupRecordImpact, BAR_LABEL, barFor, BARS, barWeightFor, baseSetsFor, betterTopSet, birthFromAge,
     blockChangeSummary, blockPlanFor, blockRetro, blockReview, buildLifterModel, buildUserAddedSlotPrescriptions,
-    buildWeekPlan, BW_LOG_CAP, calibratedAnchorPerf, canUndoProgramSave, capHistory, clamp, clearSetup,
+    buildWeekPlan, BW_LOG_CAP, calibratedAnchorPerf, canUndoProgramSave, capHistory, clamp,
     clearUserPrescriptionOverride, cloneNextDayPrescriptions, coachFacts, completionRate, COMPOSITE_HEADS,
     compositeMrv, computeCell, computeLevel, computeMilestones, convertHistoryLoad, coverageGaps, coverageRelief,
     cuesFor, CUSTOM_CYCLE_PHASES, customFutureCycleSpecs, cycleConfigForStandaloneProgram, cycleProgress,
@@ -16,7 +31,7 @@ import {
     engineInfo, ENGINES, EQUIP_CATS, EQUIPMENT, estimateMinutes, EX_BY_ID, EX_FAMILY, EX_METRIC_BY_ID,
     EX_METRICS, EX_WINDOWS, exerciseAt, exerciseProfile, EXERCISES, exerciseSeries, exerciseTrends, exMatches,
     EXP, expandEquipment, explainPrescription, exRecords, feedbackDelta, filterWorkoutHistory, fmtSets,
-    FOCUS_CAVEAT, formatSetup, galleryIssueBody, gallerySubmission, generateNextCycleForShell,
+    FOCUS_CAVEAT, formatSetup, generateNextCycleForShell,
     generateNextProgramForShell, GENERATION_ROUTE, getNextShellCell, goalForDay, groupPctSets,
     groupSessionsByCycle, groupSessionsByMonth, growMyoSets, GYM_LIMIT_KEYS, GYM_PRESETS, gymById,
     historyDayIndex, historyForProgram, homeProgramGroups, INVENTORY_KEYS, isAssistedEx, isBarLike,
@@ -42,7 +57,7 @@ import {
     SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS,
     SESSION_LENGTH_OPTIONS, sessionE1RM, sessionExercisePlan, SESSIONS, sessionSnapshotStatus, sessionSuggestion,
     SET_ROW_BLEED, setAvailPlates, setExLoadInc, setGymBarWeights, setGymLimits, setLoadInc, setRestScaleGlobal,
-    setsOf, setupFieldsFor, setupFieldsWithStored, simulateAndAudit, splitBuildability, splitContractGaps,
+    setsOf, setupFieldsFor, simulateAndAudit, splitBuildability, splitContractGaps,
     SPLITS, splitSupportsTrainingDays, starvedRegions, STD_LEVELS, STORE_VERSION, strengthClubSnapshot,
     strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, styleFor, styleOverride, SUB_LANDMARKS,
     SUBMUSCLE_LABEL, subRegionOf, summarizeSession, summarizeSets, swapNextSlotPrescriptions, swapOverlapNames,
@@ -56,7 +71,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='910';
+const __APP_VERSION__='4.0.0'; const __BUILD__='933';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -81,7 +96,7 @@ import { programWorkingWeeks, cycleBlockMetadata } from "./program-duration.js";
 
 
 import { emptyRetiredTrialData, preserveRetiredTrialData, emptyRetiredRolloutData, preserveRetiredRolloutData } from "./legacy-research-data.js";
-import { ChevronLeft, ChevronRight, ChevronUp, Check, Plus, Minus, Dumbbell, Target, Clock, Zap, Calendar, RefreshCw, X, Repeat, Ban, Save, Flame, Layers, Trophy, Settings2, Trash2, ChevronDown, Pencil, Pin, Folder as FolderIcon, AlertTriangle, Video, ExternalLink, Wand2, Battery, Library, Search, Upload, Minimize2, MoreHorizontal, Copy, BarChart3, PlusCircle, Play, Pause, SkipForward, CheckCircle2, TrendingUp, Timer, TrendingDown, Info, Home as HomeIcon, Palette, Activity, Award, GripVertical, WifiOff, HardDrive, Heart, Sun, Moon, ArrowUpRight, Share2, Anchor, Axe, Bone, Brain, Compass, Crown, Feather, Footprints, Gauge, Gem, Hammer, HandMetal, Hourglass, Medal, Mountain, Orbit, PersonStanding, Rocket, Shield, Skull, Snowflake, Sparkles, Star, Swords, Waves, Wind, Pickaxe, Milestone, Smartphone, Undo2, Accessibility, Maximize2, History, HelpCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronUp, Check, Plus, Minus, Dumbbell, Target, Clock, Zap, Calendar, RefreshCw, X, Repeat, Ban, Save, Flame, Layers, Trophy, Settings2, Trash2, ChevronDown, Pencil, Pin, Folder as FolderIcon, AlertTriangle, Video, ExternalLink, Wand2, Battery, Library, Search, Upload, Minimize2, MoreHorizontal, Copy, BarChart3, PlusCircle, Play, Pause, SkipForward, CheckCircle2, TrendingUp, Timer, TrendingDown, Info, Home as HomeIcon, Activity, Award, GripVertical, WifiOff, HardDrive, Heart, Sun, Moon, ArrowUpRight, Share2, Anchor, Axe, Bone, Brain, Compass, Crown, Feather, Footprints, Gauge, Gem, Hammer, HandMetal, Hourglass, Medal, Mountain, Orbit, PersonStanding, Rocket, Shield, Skull, Snowflake, Sparkles, Star, Swords, Waves, Wind, Pickaxe, Milestone, Smartphone, Undo2, Maximize2, History, HelpCircle } from "lucide-react";
 /* ============================== DESIGN TOKENS ============================== */
 // Full per-theme palettes (ported from the Pursuit running app — tinted, cohesive).
 // Each theme defines its own background/surface/text tints, not just an accent swap.
@@ -1723,9 +1738,9 @@ function StyleTag({ theme } = {}) {
           width:min(680px,calc(100% - 32px))!important;
           margin-left:auto!important;margin-right:auto!important;margin-bottom:16px!important;
           border-radius:var(--r-sheet)!important;
-          max-height:calc(100dvh - 32px)!important;
           border:1px solid var(--hairline)!important;
         }
+        .wpb-backdrop>[data-sheet-drag]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(100dvh - 32px)!important;}
       }
 
       /* Screen-specific de-cardification. These are deliberate exceptions where grouped rows read
@@ -2174,8 +2189,7 @@ function StyleTag({ theme } = {}) {
       .wpb-context-menu-item{min-height:40px!important;border-radius:8px!important;padding:9px 10px!important;font-size:14px!important;font-weight:600!important;}
       .wpb-context-menu-item:hover{background:${C.bg2}!important;}
       .wpb-context-menu-item:focus-visible{outline-offset:-1px!important;}
-      .wpb-sheet-action{margin-bottom:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;border-bottom:1px solid var(--section-rule)!important;background:transparent!important;padding:13px 4px!important;}
-      .wpb-exercise-options-sheet{padding-top:8px!important;}
+      .wpb-sheet-action:not(.wpb-program-exercise-action){margin-bottom:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;border-bottom:1px solid var(--section-rule)!important;background:transparent!important;padding:13px 4px!important;}
 
       .wpb-chart{overflow:hidden;max-width:100%;min-width:0;}
       .wpb-chart line{stroke:color-mix(in srgb,${C.borderSoft} 72%,transparent)!important;}
@@ -2242,12 +2256,12 @@ function StyleTag({ theme } = {}) {
       .wpb [data-sheet-drag]{
         overscroll-behavior:contain;scroll-padding-top:20px;
         scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom));
-        max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;
         border-radius:18px 18px 0 0!important;
         transform:translateZ(0);backface-visibility:hidden;
       }
-      .wpb [data-sheet-drag][data-detent="content"]{max-height:min(68dvh,540px)!important;}
-      .wpb [data-sheet-drag][data-detent="large"]{max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag][data-detent="content"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:min(68dvh,540px)!important;}
+      .wpb [data-sheet-drag][data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
       .wpb [data-sheet-drag][data-dragging="1"]{box-shadow:0 -18px 48px rgba(0,0,0,.22);}
       .wpb [data-sheet-drag] :is(input,textarea,select){scroll-margin-top:68px;scroll-margin-bottom:140px;}
       .wpb [data-sheet-drag]::before{width:36px;height:4px;margin-bottom:10px;opacity:.9;}
@@ -4975,31 +4989,11 @@ function summarizeProgram(p) {
    text can never describe different rules. */
 
 
-/* zone: below MEV (under-stimulating), MEV–MRV (productive), above MRV (more than this app plans for).
-   The third label used to read "junk volume", which claimed more than the evidence does: the current
-   dose-response work finds gains still rising at the top of the studied range, with diminishing
-   returns — not reversing. Above MRV is a flag that a week is planned past what this app budgets for
-   recovery, and worth a look if progress or readiness is sliding; it is not a claim those sets did
-   nothing. The colour and the threshold are unchanged — only the claim attached to them. */
+/* MEV/MAV/MRV are coaching estimates, not claims of muscle loss or failed recovery. */
 function volumeZone(part, sets, program = 0) {
     const { mev, mrv } = landmarkFor(part, program?.config?.experience || "intermediate", program);
     const mav = mavFor(part, program);
-    /* FOUR BANDS, NOT THREE. "Productive" covered everything from MEV to MRV — a range wide enough
-       that 9 sets and 21 sets read identically, when one is the middle of the growth range and the
-       other is at the edge of what the week budgets. Splitting it at MAV is the same information the
-       generator already uses (mavFor is the readiness-trim's own threshold), just shown.
-
-       THE SUBTITLES ARE DELIBERATELY WEAKER THAN THE ONES THIS IDEA CAME WITH. The AI Studio build
-       paired these bands with "Below maintenance threshold" and "Exceeds systemic recovery". Both
-       assert more than the app knows:
-         - MEV is the MINIMUM EFFECTIVE volume, not maintenance. Maintenance volume is a separate and
-           LOWER landmark, so a lifter under MEV is very often still maintaining. "Below maintenance"
-           tells them they are losing muscle, which the number does not say.
-         - "Exceeds systemic recovery" is the same over-claim as the old "junk volume" label removed
-           above, in new words: it states as fact that the lifter cannot recover from these sets.
-           MRV is what THIS APP budgets for, and the dose-response evidence has gains still rising at
-           the top of the studied range.
-       So the bands are adopted and the claims are not. */
+    // Productive and high are both within the planned range; MAV separates them.
     if (sets < mev)
         return { color: C.muted, label: "below MEV", sub: "under the volume that reliably drives growth" };
     if (sets <= mav)
@@ -5010,20 +5004,8 @@ function volumeZone(part, sets, program = 0) {
         return { color: C.accentInk, label: "high", sub: "near the top of the planned range" };
     return { color: C.warn, label: "over MRV", sub: "past what this app budgets to recover from" }; // label text is user-visible — see the note above
 }
-// Parts whose total is really several independently-recoverable sub-heads. The deltoid is the
-// big one: front delts soak up huge indirect volume from all pressing, so the broad "shoulders"
-// total routinely sails past a single 26-set ceiling even when each head (front / side / rear)
-// is individually fine. For these, the meaningful MRV is the SUM of the heads' ceilings, and the
-// "over MRV" warning should only fire when an actual head exceeds its own MRV — not when the
-// lumped total crosses a number that was never meant to cover all three heads at once.
-
-/* ⚠ Takes an optional program so a ceiling is resolved from the landmarks that program was BUILT
-   with — same reason as preferenceFloor. Called with one argument it falls back to the legacy table,
-   which is what history-wide callers want. */
-
-// Zone for a broad part, using per-head data when the part is a composite so a single over-built
-// head (not the harmless lumped sum) is what trips the warning. Falls back to the flat zone when
-// no sub-volume is available.
+// Composite muscles use per-head recovery ceilings; preserve the program's
+// own landmarks when available, and legacy tables for historical views.
 function partZone(part, sets, subVolume, program = null) {
     if (program?.engineSource === "pursuit-next") return volumeZone(part, sets, program);
     const heads = COMPOSITE_HEADS[part];
@@ -5043,9 +5025,7 @@ function partZone(part, sets, subVolume, program = null) {
     });
     if (anyHeadOver)
         return { color: C.warn, label: "a head over MRV", sub: "one deltoid head is past its own ceiling" };
-    /* Composites get the same MAV split as everything else, so a shoulder total near its ceiling no
-       longer reads identically to one in the middle of the range. The over-MRV verdict still belongs
-       to the per-head test above — only the productive band is being subdivided here. */
+    // MAV divides the productive band without altering the per-head MRV guard.
     return sets <= mavFor(part)
         ? { color: C.accentInk, label: "productive", sub: "inside the range this app plans for" }
         : { color: C.accentInk, label: "high", sub: "near the top of the planned range" };
@@ -5482,6 +5462,7 @@ async function loadStore() {
     return MEM.data == null ? null : parseStoredData(JSON.stringify(MEM.data));
 }
 async function writeStoreText(key, text) {
+    if (!appStorageOwnership.writable()) return false;
     try {
         if (typeof localStorage !== "undefined") {
             localStorage.setItem(key, text);
@@ -5551,10 +5532,12 @@ function CheckBox({ on }) {
    over a scrollable list belongs to that list. Both are what makes the gesture feel like part of
    the sheet rather than a trap laid over its contents. */
 const SHEET_GRAB_PX = 72; // the band at the top of a sheet where a downward drag means "dismiss"
+const SHEET_DRAG_BOUND = new WeakSet();
 const SHEET_DISMISS_PX = 110; // far enough that a scroll overshoot or a stray thumb cannot fire it
 function sheetDragRef(el) {
-    if (!el || el.dataset.sheetDrag)
+    if (!el || SHEET_DRAG_BOUND.has(el))
         return;
+    SHEET_DRAG_BOUND.add(el);
     el.dataset.sheetDrag = "1";
     // Natural-content sheets stay compact; long sheets use the large detent. The choice is structural,
     // not per-feature styling, so every sheet participates in the same hierarchy automatically.
@@ -6493,26 +6476,6 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
     }
     return null;
 }
-// Editable row of small setup fields (Seat, Back pad, J-hooks…) for whichever apply to this
-// exercise's equipment. Renders nothing if the exercise has no rack/machine/cable/bench component.
-function SetupFieldsGrid({ ex, value = {}, onChange }) {
-    // Union, not setupFieldsFor() alone — otherwise a stored value whose key this exercise's equipment
-    // no longer implies becomes uneditable and unremovable (see setupFieldsWithStored).
-    const fields = setupFieldsWithStored(ex, value);
-    if (!fields.length)
-        return null;
-    return (_jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }, children: fields.map(f => (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("span", { title: f.orphan ? "Saved earlier — this exercise's equipment no longer lists this setting. Clear it to remove." : undefined, style: { fontSize: 11, fontWeight: 600, color: f.orphan ? C.faint : C.muted }, children: f.label }), _jsx("input", { value: value[f.key] || "", onChange: e => onChange(f.key, e.target.value), placeholder: "\u2014", inputMode: "text", style: { width: 46, padding: "6px 4px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg2, color: C.text, fontSize: 13, fontWeight: 600, textAlign: "center" } })] }, f.key))) }));
-}
-// Read-only chips for whichever setup fields are actually filled in — sits directly above the
-// free-text note wherever a pinned note displays, so the two read as one integrated block.
-function SetupFieldsDisplay({ ex, value }) {
-    // Union, not setupFieldsFor() alone — a value that is stored must always be able to show itself,
-    // regardless of what the exercise's current equipment implies (see setupFieldsWithStored).
-    const fields = setupFieldsWithStored(ex, value).filter(f => value?.[f.key]);
-    if (!fields.length)
-        return null;
-    return (_jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: value && Object.keys(value).length ? 6 : 0 }, children: fields.map(f => (_jsxs("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, borderRadius: 8, padding: "3px 8px" }, children: [f.label, " ", value[f.key]] }, f.key))) }));
-}
 function Stepper({ value, onMinus, onPlus, plusDisabled, label = "value" }) {
     return (_jsxs("div", { className: "wpb-setup-stepper", "data-has-value": value ? "true" : "false", children: [
         _jsx(UiAction, { variant: "tonal", "data-icon-only": "true", onClick: onMinus, disabled: value === 0,
@@ -6526,57 +6489,6 @@ function Stepper({ value, onMinus, onPlus, plusDisabled, label = "value" }) {
 // Maps each week of a non-percentage block to a phase with a one-line "why".
 
 
-// Render a program as clean, shareable plain text (sets × reps @ effort, with grouping).
-function programToText(program, loadMode = "rir", unit = "kg") {
-    const cfg = program.config || {};
-    const splitName = SPLITS[cfg.split]?.name || cfg.split || "Custom";
-    const goalName = (GOALS[cfg.goal]?.name) || cfg.goal || "";
-    const scheme = cfg.percentScheme;
-    const wk = weeksOf(program);
-    const L = [];
-    L.push(program.name || "My Program");
-    L.push(`${splitName} · ${program.days.length} days/week${goalName ? " · " + goalName : ""} · ${wk}-week block`);
-    if ((program.description || "").trim())
-        L.push(program.description.trim());
-    if (scheme && PCT_SCHEMES[scheme])
-        L.push(`Main lifts use ${PCT_SCHEMES[scheme].name} percentages of ${PCT_SCHEMES[scheme].basis}.`);
-    L.push("");
-    program.days.forEach((day) => {
-        L.push(day.label || "Day");
-        if (day.note)
-            L.push(`  — ${day.note}`);
-        day.exercises.forEach((id, slot) => {
-            const ex = EX_BY_ID[id];
-            if (!ex)
-                return;
-            const grouped = program.ss?.[`${day.id}:${slot}`] || (slot > 0 && program.ss?.[`${day.id}:${slot - 1}`]);
-            const bullet = grouped ? "   ↳" : `  ${slot + 1}.`;
-            // main lift of a percentage program → print the weekly waves
-            if (scheme && PCT_SCHEMES[scheme] && slot === day.primaryIndex) {
-                const S = PCT_SCHEMES[scheme];
-                const tm = program.trainingMax?.[id] || 0;
-                L.push(`${bullet} ${ex.name} — ${S.name} main lift${tm > 0 ? ` · TM ${tm}${unit}` : ""}`);
-                const wkCount = scheme === "531" ? S.weeks.length : Math.min(wk, 4);
-                for (let w = 1; w <= wkCount; w++) {
-                    const wave = scheme === "531" ? S.weeks[w - 1] : S.weeks[0];
-                    const mult = scheme === "madcow" && w > 1 ? 1 + 0.025 * (w - 1) : 1;
-                    const parts = wave.sets.map(([pct, reps]) => tm > 0 ? `${roundTo(tm * pct * mult, loadStep(ex, unit))}×${reps}` : `${Math.round(pct * 100)}%×${reps}`);
-                    const wlabel = scheme === "531" ? `W${w} (${wave.label})` : `Wk ${w}`;
-                    L.push(`       ${wlabel}: ${parts.join(" · ")}`);
-                }
-                if (cfg.assistance === "bbb")
-                    L.push(`       + BBB supplemental: 5 × ${tm > 0 ? `${roundTo(tm * 0.5, loadStep(ex, unit))}×10` : "50%×10"}`);
-                return;
-            }
-            const cell = computeCell(program, day, id, slot, 1);
-            const eff = cell.rir != null ? ` @ ${effortLabel(cell.rir, loadMode)}` : (cell.range ? " to failure" : "");
-            L.push(`${bullet} ${ex.name} — ${cell.sets} × ${cell.range}${eff}`);
-        });
-        L.push("");
-    });
-    L.push("Made with Pursuit Iron — Strength Coach");
-    return L.join("\n");
-}
 // Header metrics for ProgramView, hoisted out of the markup because the scroll-collapse animation
 // below has to do arithmetic with them: the collapsed gap under the title is derived from the top
 // padding so the block stays optically balanced. Editing the padding in the style below alone would
@@ -6704,39 +6616,6 @@ function phaseTone(label, index, accent) {
         return { hue: _rot(base, 150, 0.45), icon: DELOAD_ICON };
     return { hue: _rot(base, PHASE_ROT[k], 1), icon: PHASE_ICONS[k] };
 }
-// R61 foundations pilot. These primitives own presentation and native button semantics only;
-// navigation, saved choices, logging and scroll memory remain with their existing screen owners.
-function UiHeader({ className = "", ...props }) {
-    return _jsx("div", { ...props, className: `wpb-ui-header ${className}` });
-}
-// Root destinations share one app-bar anatomy. Deep screens keep their own Back action.
-function UiRootHeader({ title, titleClassName = "", actions, actionsClassName = "", children, className = "" }) {
-    return _jsxs("header", { className: `wpb-root-header ${className}`, children: [
-        _jsxs("div", { className: "wpb-root-title-row", children: [
-            _jsx("h1", { className: `wpb-screen-title ${titleClassName}`, children: title }),
-            actions && _jsx("div", { className: `wpb-root-actions ${actionsClassName}`, children: actions })
-        ] }), children
-    ] });
-}
-function UiAction({ variant = "secondary", className = "", ...props }) {
-    // Components own static visual properties; only runtime-measured styles are forwarded.
-    return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant });
-}
-function UiChoice({ selected, kind = "chip", className = "", label, caption, children, ...props }) {
-    return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-choice ${className}`, "data-choice-kind": kind, "aria-pressed": !!selected,
-        children: kind === "summary" ? _jsxs(_Fragment, { children: [
-            _jsx("span", { className: "wpb-ui-choice-label", children: label }),
-            caption != null && _jsx("span", { className: "mono wpb-ui-choice-caption", children: caption })
-        ] }) : children });
-}
-function UiStatus({ className = "", children, ...props }) {
-    // Static guidance is not a live announcement. Dynamic save/failure announcements keep their
-    // existing status owner rather than repeating every time a view mounts.
-    return _jsx("div", { ...props, className: `wpb-ui-status ${className}`, children });
-}
-function UiSection({ className = "", ...props }) {
-    return _jsx("section", { ...props, className: `wpb-ui-section ${className}` });
-}
 function PlanView({ program, plan, blockNavigation = null, readOnly = false, navigationMemory, onCurrentWeekAdvance, onOpenDay, onOpenProgram }) {
     /* The first visit opens the current week. Later visits restore the week being browsed rather
        than making Back or a tab switch feel like starting the plan again. */
@@ -6794,8 +6673,8 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
         return () => cancelAnimationFrame(frame);
     }, [openWeek, pane, program?.id]);
     const pickWeek = week => {
-        const next = openWeek === week ? null : week;
-        pickedWeek.current = next;
+        const next = pane === "volume" ? week : openWeek === week ? null : week;
+        pickedWeek.current = pane === "schedule" ? next : null;
         setOpenWeek(next);
     };
     if (!program || !plan)
@@ -6828,8 +6707,8 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
             _jsxs("div", { className: "wpb-plan-context", children: [_jsxs("div", { className: "wpb-plan-context-heading", children: [_jsx("h2", { className: "wpb-plan-title", children: program.name }), _jsxs(UiAction, { onClick: () => onOpenProgram(openWeek || plan.currentWeek), className: "wpb-plan-open-program", "aria-label": readOnly ? "View full block exercises" : "Open full program", children: [readOnly ? "View block exercises" : "Open full program", _jsx(ChevronRight, { size: 16, "aria-hidden": true })] })] }), blockNavigation, readOnly && _jsx("p", { className: "wpb-plan-preview-notice", children: "Viewing a block preview. Your current training block is unchanged." })] }), upNext, _jsx("div", { className: "wpb-plan-panes", children: [["schedule", "Schedule", Calendar], ["volume", "Volume", BarChart3], ["progression", "Progression", TrendingUp], ["blueprint", "Blueprint", Layers]].map(([id, label, Icon]) => {
                     const on = pane === id;
                     return (_jsxs(UiChoice, { selected: on, kind: "tab", onClick: () => setPane(id), "aria-label": label, "data-plan-pane": id, className: "wpb-plan-pane-tab", children: [_jsx(Icon, { size: 15 }), _jsx("span", { className: "wpb-plan-pane-label", children: label })] }, id));
-                }) }), pane === "schedule" && plan.totalWeeks > 1 && (_jsx("div", { className: "wpb-hscroll wpb-choice-rail wpb-plan-week-picker", "data-plan-week-picker": true, children: plan.weeks.map(w => {
-                    const on = openWeek === w.week;
+                }) }), (pane === "schedule" || pane === "volume") && plan.totalWeeks > 1 && (_jsx("div", { className: "wpb-hscroll wpb-choice-rail wpb-plan-week-picker", "data-plan-week-picker": true, children: plan.weeks.map(w => {
+                    const on = pane === "volume" ? featuredWeek?.week === w.week : openWeek === w.week;
                     return (_jsx(UiChoice, { selected: on, kind: "summary", onClick: () => pickWeek(w.week), className: "wpb-plan-week-chip", "aria-label": `Week ${w.week}`,
                         label: `Week ${w.week}`, caption: `${w.sets} sets · ${fmtMin(w.minutes)}` }, w.week));
                 }) })), pane === "schedule" && (() => {
@@ -6838,7 +6717,7 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
                     return null;
                 const tone = wi.deload ? (C.warn || C.accent) : C.accent;
                 return (_jsxs(UiStatus, { "data-week-intent": wi.label, style: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 12, padding: "4px 0 10px", background: "none", border: "none", borderBottom: `1px solid ${C.borderSoft}`, borderRadius: 0 }, children: [_jsx(Activity, { size: 14, color: tone, style: { flexShrink: 0, marginTop: 1 } }), _jsxs("div", { style: { fontSize: 13, color: C.text, lineHeight: 1.5 }, children: [_jsx("span", { style: { fontWeight: 700 }, children: wi.label }), _jsxs("span", { style: { color: C.muted }, children: [" \u00B7 ", wi.detail] })] })] }));
-            })(), pane === "schedule" && featuredWeek && _jsx("section", { className: "wpb-plan-selected-week", "aria-label": "Selected week sessions", children: renderWeekCard(featuredWeek) }), pane === "volume" && (_jsx(VolumeCard, { program: program, week: plan.currentWeek, volume: weeklyVolume(program, plan.currentWeek), subVolume: weeklySubVolume(program, plan.currentWeek), title: `Week ${plan.currentWeek} volume`, open: volOpen, onToggle: () => setVolOpen(v => !v) })), pane === "progression" && _jsx(ProgressionCard, { program: program, open: progOpen, onToggle: () => setProgOpen(v => !v) }), pane === "blueprint" && (_jsxs(_Fragment, { children: [_jsx(LoadWaveCard, { program: program, open: waveOpen, onToggle: () => setWaveOpen(v => !v) }), (() => {
+            })(), pane === "schedule" && featuredWeek && _jsx("section", { className: "wpb-plan-selected-week", "aria-label": "Selected week sessions", children: renderWeekCard(featuredWeek) }), pane === "volume" && featuredWeek && (_jsx(VolumeCard, { program: program, week: featuredWeek.week, volume: weeklyVolume(program, featuredWeek.week), subVolume: weeklySubVolume(program, featuredWeek.week), title: `Week ${featuredWeek.week} volume`, open: volOpen, onToggle: () => setVolOpen(v => !v) })), pane === "progression" && _jsx(ProgressionCard, { program: program, open: progOpen, onToggle: () => setProgOpen(v => !v) }), pane === "blueprint" && (_jsxs(_Fragment, { children: [_jsx(LoadWaveCard, { program: program, open: waveOpen, onToggle: () => setWaveOpen(v => !v) }), (() => {
                         const bp = blockPlanFor(program);
                         if (!bp)
                             return null;
@@ -6913,8 +6792,6 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         return 1;
     } };
     const [weekIndex, setWeekIndex] = useState(initialWeek || currentTrainingWeek());
-    // M46 lab: legacy PI share-code generation is intentionally absent; Next-native sharing will
-    // serialize Engine 0.61 artifacts directly rather than replaying the removed production generator.
     // ProgramView is reused (not remounted) when the user navigates from one saved program back
     // to home and opens a DIFFERENT one — the parent swaps the program prop in place rather than
     // unmounting this component. Without re-syncing here, weekIndex's useState initializer (which
@@ -7073,27 +6950,12 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
     /* Computed ON DEMAND, never on render. explainGeneration RE-RUNS generation, which is far too much
        work to do for a screen nobody has asked to see; gating it on the sheet being open keeps the plan
        tab exactly as fast as it was. */
-    const [noteEdit, setNoteEdit] = useState(null); // exercise id whose pinned note is being edited
+    const [noteEdit, setNoteEdit] = useState(null); // selected day/slot/exercise; saved notes remain exercise-wide
     const [styleEdit, setStyleEdit] = useState(null); // exercise id whose progression style is being edited
     const [techInfo, setTechInfo] = useState(null); // "dayid:slot" whose technique-cue explainer is open
     const [rowMenu, setRowMenu] = useState(null); // "dayid:slot" whose overflow (3-dot) menu is open
-    const [confirmRemove, setConfirmRemove] = useState(null); // "dayid:slot" pending remove confirmation
     const [exInfo, setExInfo] = useState(null); // { dayId, slot, exId } whose exercise-info sheet is open
-    const [oneRmEdit, setOneRmEdit] = useState(null); // { exId, val } — in-app "Use 1RM" input (window.prompt is suppressed in TWA/WebView shells, so it must be a real modal)
-    const setExStyle = (id, style) => setProgram(p => {
-        const ps = { ...(p.progStyle || {}) };
-        const lifter = { ...(p.progStyleLifter || {}) }; /* the lifter chose this — never mistaken for an engine default (styleFor) */
-        if (style === "auto") {
-            delete ps[id];
-            delete lifter[id];
-        }
-        else {
-            ps[id] = style;
-            lifter[id] = true;
-        } // "auto" = default, no need to store
-        return { ...p, progStyle: Object.keys(ps).length ? ps : undefined, progStyleLifter: Object.keys(lifter).length ? lifter : undefined };
-    });
-    const pnRef = useRef(null);
+    const setExStyle = (id, style) => setProgram(p => withProgressionChoices(p, { [id]: style }));
     const [addDay, setAddDay] = useState(null); // dayId for the add-exercise sheet
     const [showVol, setShowVol] = useState(false);
     const [showProg, setShowProg] = useState(false);
@@ -7475,8 +7337,15 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         }
         const c = program.config;
         if (program.custom === true && program.engineSource !== "pursuit-next") {
-            setProgram(p => applyCustomProgramSettings(p, d));
-            setWeekIndex(i => Math.min(i, d.weeks));
+            let next;
+            try { next = applyCustomProgramSettings(program, d); }
+            catch (error) {
+                if (!(error instanceof RangeError)) throw error;
+                setToast(error.message);
+                return;
+            }
+            setProgram(next);
+            setWeekIndex(i => Math.min(i, next.weeks));
             setCfgSheet(false);
             setToast("Program settings saved");
             return;
@@ -8160,7 +8029,8 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                         const doneCount = program.days.filter(d => isDayDone(d.id, activeWeek)).length;
                         const complete = total > 0 && doneCount === total;
                         return (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }, children: [_jsx("div", { style: { flex: 1, height: 6, borderRadius: 999, background: C.bg2, overflow: "hidden" }, children: _jsx("div", { className: "wpb-bar", style: { background: C.accent, transform: `translateX(-${(1 - (total ? doneCount / total : 0)) * 100}%)` } }) }), _jsx("div", { style: { fontSize: 13, fontWeight: 700, color: complete ? C.accentInk : C.muted, whiteSpace: "nowrap" }, children: complete ? `Week ${activeWeek} complete` : `${doneCount}/${total} this week` })] }));
-                    })(), program.config?.percentScheme && (_jsxs("button", { onClick: () => setTmSheet(true), className: "pressable", style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 12, background: tmSet < mainLifts.length ? (C.warn ? `${C.warn}1a` : C.accentDim) : C.card, border: `1px solid ${tmSet < mainLifts.length ? (C.warn || C.accent) + "55" : C.border}`, borderRadius: 16, padding: "13px 14px", marginBottom: 12, cursor: "pointer", color: C.text }, children: [_jsx(Dumbbell, { size: 18, color: tmSet < mainLifts.length ? (C.warn || C.accentInk) : C.accentInk, style: { flexShrink: 0 } }), _jsxs("div", { style: { flex: 1 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 700 }, children: ["Training maxes \u00B7 ", PCT_SCHEMES[program.config.percentScheme]?.name] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: tmSet < mainLifts.length ? `Set your ${PCT_SCHEMES[program.config.percentScheme]?.basis} for each main lift — ${tmSet}/${mainLifts.length} done` : `${tmSet} main lift${tmSet === 1 ? "" : "s"} set · tap to edit` })] }), _jsx(ChevronRight, { size: 17, color: C.faint })] })), (program.description || "").trim() && (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "flex-start", background: C.card, borderRadius: 16, padding: "12px 14px", marginBottom: 12 }, children: [_jsx(Info, { size: 15, color: C.muted, style: { flexShrink: 0, marginTop: 1 } }), _jsx("span", { style: { fontSize: 13, color: C.text, lineHeight: 1.5, whiteSpace: "pre-wrap" }, children: program.description.trim() })] })), (() => {
+                    })(), program.config?.percentScheme && _jsx(TrainingMaxSummary, { scheme: program.config.percentScheme,
+                        count: tmSet, total: mainLifts.length, onOpen: () => setTmSheet(true) }), (program.description || "").trim() && (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "flex-start", background: C.card, borderRadius: 16, padding: "12px 14px", marginBottom: 12 }, children: [_jsx(Info, { size: 15, color: C.muted, style: { flexShrink: 0, marginTop: 1 } }), _jsx("span", { style: { fontSize: 13, color: C.text, lineHeight: 1.5, whiteSpace: "pre-wrap" }, children: program.description.trim() })] })), (() => {
                         const shortDays = program.days.filter(d => d.exercises.length < 3).length;
                         if (!shortDays)
                             return null;
@@ -8294,7 +8164,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                                                             delete nd[id];
                                                                                         else
                                                                                             nd[id] = 0.9; return { ...p, deloadNext: Object.keys(nd).length ? nd : undefined }; }), style: { fontSize: 11, fontWeight: 700, letterSpacing: .5, padding: "2px 6px", borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 2, cursor: "pointer", border: "none", verticalAlign: "1px", color: armed ? C.accentText : (C.warn || C.muted), background: armed ? C.accent : `${C.warn || C.muted}22` }, children: armed ? _jsxs(_Fragment, { children: [_jsx(ChevronDown, { size: 10 }), " DELOAD \u221210%"] }) : _jsxs(_Fragment, { children: [_jsx(AlertTriangle, { size: 10 }), " PLATEAU \u00B7 ", stall.since] }) }));
-                                                                                })()] }), _jsxs("div", { className: "wpb-program-exercise-meta", style: { fontSize: 13, marginTop: 2 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, (() => { const lt = displayedLastSets[ex.id]; return lt ? _jsxs("span", { children: [" \u00B7 last ", _jsxs("span", { className: "mono", style: { color: C.muted }, children: [lt.approximate ? "≈" : "", lt.weight, " ", unit, lt.reps != null ? ` × ${lt.reps}` : ""] })] }) : null; })(), hint && hint.dir === "up" && hint.delta > 0 && !stall?.high && _jsxs("span", { style: { marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 1, color: C.accentInk, fontWeight: 700, verticalAlign: "-1px" }, children: [_jsx(ChevronUp, { size: 12 }), "+", hint.delta, unit] }), hint && hint.dir === "down" && hint.delta < 0 && _jsxs("span", { style: { marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 1, color: C.warn || C.muted, fontWeight: 700, verticalAlign: "-1px" }, children: [_jsx(ChevronDown, { size: 12 }), hint.delta, unit] })] }), noteEdit === ex.id ? (_jsxs("div", { style: { marginTop: 8, padding: 8, borderRadius: 12, background: C.bg2 }, children: [_jsxs("div", { style: { ...eyebrowAccent(), display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }, children: [_jsx(Pin, { size: 11 }), " Pinned note"] }), _jsx(SetupFieldsGrid, { ex: ex, value: exSetup[ex.id], onChange: (key, v) => onSetExSetup?.(ex.id, key, v) }), _jsx("textarea", { ref: pnRef, autoFocus: true, defaultValue: exNotes[ex.id] || "", placeholder: "e.g. pause on chest \u00B7 elbows tucked", rows: 2, className: "wpb-scroll", style: { width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 13, resize: "vertical", fontFamily: "inherit" } }), _jsxs("div", { style: { display: "flex", gap: 6, marginTop: 8 }, children: [_jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(ex.id, pnRef.current?.value || ""); setNoteEdit(null); }, style: { flex: 1, padding: "8px", borderRadius: 8, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, fontSize: 13, cursor: "pointer" }, children: "Save" }), (exNotes[ex.id] || exSetup[ex.id]) && _jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(ex.id, ""); clearSetup(ex.id, exSetup[ex.id], onSetExSetup); setNoteEdit(null); }, style: { padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.danger, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Remove" }), _jsx("button", { className: "pressable", onClick: () => setNoteEdit(null), style: { padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Cancel" })] })] })) : null, _jsxs("div", { className: "wpb-exercise-actions", style: { display: "grid", gridTemplateColumns: !program.config?.percentScheme ? "40px minmax(0,1fr) 40px" : "40px 40px", alignItems: "center", gap: 8, width: !program.config?.percentScheme ? "calc(100% + 66px)" : "auto", maxWidth: !program.config?.percentScheme ? "calc(100% + 66px)" : "100%", margin: !program.config?.percentScheme ? "8px -66px 0 0" : "8px 0 0", padding: 0, overflow: "visible" }, children: [_jsx("button", { className: "pressable hit", "aria-label": `Swap ${ex.name}`, onClick: () => setSwap({ dayId: day.id, slot }), title: "Swap exercise", style: { ...tinyBtn(), width: "100%", minWidth: 0, minHeight: 0, height: 36, flexShrink: 0 }, children: _jsx(Repeat, { size: 14 }) }), !program.config?.percentScheme && (_jsxs("button", { className: "pressable hit", "aria-label": `How ${ex.name} progresses`, onClick: () => setStyleEdit(styleEdit?.key === `${day.id}:${slot}` ? null : { key: `${day.id}:${slot}`, exId: id, dayId: day.id, isP: slot === day.primaryIndex }), title: "How this lift progresses", style: { ...tinyBtn(), width: "100%", minWidth: 0, minHeight: 0, flexShrink: 1, height: 36, padding: "0 8px", gap: 4, fontSize: 12, fontWeight: 650, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: styleFor(program, ex.id) !== "auto" ? C.accentInk : C.muted, borderColor: styleFor(program, ex.id) !== "auto" ? `${C.accent}66` : C.border }, children: [_jsx(TrendingUp, { size: 12, style: { flexShrink: 0 } }), " ", _jsx("span", { style: { whiteSpace: "nowrap" }, children: (() => {
+                                                                                })()] }), _jsxs("div", { className: "wpb-program-exercise-meta", style: { fontSize: 13, marginTop: 2 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, (() => { const lt = displayedLastSets[ex.id]; return lt ? _jsxs("span", { children: [" \u00B7 last ", _jsxs("span", { className: "mono", style: { color: C.muted }, children: [lt.approximate ? "≈" : "", lt.weight, " ", unit, lt.reps != null ? ` × ${lt.reps}` : ""] })] }) : null; })(), hint && hint.dir === "up" && hint.delta > 0 && !stall?.high && _jsxs("span", { style: { marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 1, color: C.accentInk, fontWeight: 700, verticalAlign: "-1px" }, children: [_jsx(ChevronUp, { size: 12 }), "+", hint.delta, unit] }), hint && hint.dir === "down" && hint.delta < 0 && _jsxs("span", { style: { marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 1, color: C.warn || C.muted, fontWeight: 700, verticalAlign: "-1px" }, children: [_jsx(ChevronDown, { size: 12 }), hint.delta, unit] })] }), _jsxs("div", { className: "wpb-exercise-actions", style: { display: "grid", gridTemplateColumns: !program.config?.percentScheme ? "40px minmax(0,1fr) 40px" : "40px 40px", alignItems: "center", gap: 8, width: !program.config?.percentScheme ? "calc(100% + 66px)" : "auto", maxWidth: !program.config?.percentScheme ? "calc(100% + 66px)" : "100%", margin: !program.config?.percentScheme ? "8px -66px 0 0" : "8px 0 0", padding: 0, overflow: "visible" }, children: [_jsx("button", { className: "pressable hit", "aria-label": `Swap ${ex.name}`, onClick: () => setSwap({ dayId: day.id, slot }), title: "Swap exercise", style: { ...tinyBtn(), width: "100%", minWidth: 0, minHeight: 0, height: 36, flexShrink: 0 }, children: _jsx(Repeat, { size: 14 }) }), !program.config?.percentScheme && (_jsxs("button", { className: "pressable hit", "aria-label": `How ${ex.name} progresses`, onClick: () => setStyleEdit(styleEdit?.key === `${day.id}:${slot}` ? null : { key: `${day.id}:${slot}`, exId: id, dayId: day.id, slot, isP: slot === day.primaryIndex }), title: "How this lift progresses", style: { ...tinyBtn(), width: "100%", minWidth: 0, minHeight: 0, flexShrink: 1, height: 36, padding: "0 8px", gap: 4, fontSize: 12, fontWeight: 650, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: styleFor(program, ex.id) !== "auto" ? C.accentInk : C.muted, borderColor: styleFor(program, ex.id) !== "auto" ? `${C.accent}66` : C.border }, children: [_jsx(TrendingUp, { size: 12, style: { flexShrink: 0 } }), " ", _jsx("span", { style: { whiteSpace: "nowrap" }, children: (() => {
                                                                                                 const SHORT = { linear: "Linear", e1rm: "e1RM", wave: "Wave", dynamic: "Dynamic", double: "Double" };
                                                                                                 const s = styleFor(program, ex.id);
                                                                                                 if (s === "auto") {
@@ -8302,7 +8172,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                                                                     return "Auto · " + (SHORT[a] || a || "");
                                                                                                 }
                                                                                                 return SHORT[s] || s;
-                                                                                            })() })] })), _jsx("button", { className: "pressable hit", "aria-label": `More options for ${ex.name}`, onClick: () => { setRowMenu(rowMenu?.key === `${day.id}:${slot}` ? null : { key: `${day.id}:${slot}`, dayId: day.id, slot, exId: id }); setConfirmRemove(null); }, title: "More options", style: { ...tinyBtn(), width: "100%", minWidth: 0, minHeight: 0, height: 36, flexShrink: 0, color: rowMenu?.key === `${day.id}:${slot}` ? C.accent : C.muted, borderColor: rowMenu?.key === `${day.id}:${slot}` ? `${C.accent}66` : C.border }, children: _jsx(MoreHorizontal, { size: 16 }) })] })] }), pctMain ? (() => {
+                                                                                            })() })] })), _jsx("button", { className: "pressable hit", "aria-label": `More options for ${ex.name}`, onClick: () => { setRowMenu(rowMenu?.key === `${day.id}:${slot}` ? null : { key: `${day.id}:${slot}`, dayId: day.id, slot, exId: id }); }, title: "More options", style: { ...tinyBtn(), width: "100%", minWidth: 0, minHeight: 0, height: 36, flexShrink: 0, color: rowMenu?.key === `${day.id}:${slot}` ? C.accent : C.muted, borderColor: rowMenu?.key === `${day.id}:${slot}` ? `${C.accent}66` : C.border }, children: _jsx(MoreHorizontal, { size: 16 }) })] })] }), pctMain ? (() => {
                                                                     const grp = groupPctSets(pctMain.sets);
                                                                     return (_jsxs("div", { style: { textAlign: "right", minWidth: 96, marginTop: 2 }, children: [_jsx("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, color: C.text }, children: grp.map(x => x.weight).join("/") }), _jsx("div", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: pctMain.label.toLowerCase().includes("deload") ? C.warn : C.accentInk, marginTop: 2 }, children: grp.map(x => x.count > 1 ? `${x.count}×${x.reps}` : `${x.reps}`).join("/") }), _jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 1 }, children: [unit, " \u00B7 ", pctMain.label] })] }));
                                                                 })() : manual ? (_jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, marginTop: 2 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("input", { "aria-label": "Sets", type: "number", min: 1, value: (program.overrides[`${day.id}:${slot}`]?.sets) ?? cell.sets, onChange: (e) => editOverride(day.id, slot, "sets", clamp(parseInt(e.target.value || "1"), 1, 20)), className: "mono", style: miniInput(38) }), _jsx("span", { className: "mono", style: { color: C.faint }, children: "\u00D7" }), _jsx("input", { "aria-label": "Reps", value: (program.overrides[`${day.id}:${slot}`]?.reps) ?? cell.reps, onChange: (e) => editOverride(day.id, slot, "reps", e.target.value), className: "mono", style: miniInput(52) })] }), _jsxs("div", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: C.muted }, children: ["~", effortLabel(cell.rir, loadMode)] })] })) : (() => {
@@ -8316,7 +8186,10 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                                     const lastR = lastFailure ? null : Math.round(parseRIRNum(lse.rir));
                                                                     const lastDiffers = !isDeloadWk && cell.sets > 1 && (lastFailure || lastR !== baseR);
                                                                     return (_jsxs("div", { className: "wpb-exercise-prescription", style: { textAlign: "right", width: 58, minWidth: 58, maxWidth: 58, flexShrink: 0, marginTop: 2 }, children: [_jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 650, letterSpacing: "-.25px", color: C.text, whiteSpace: "nowrap" }, children: [cell.sets, _jsx("span", { style: { color: C.faint }, children: "\u00D7" }), cell.reps] }), _jsx("div", { style: { marginTop: 2 }, children: _jsxs("span", { className: "mono", style: { fontSize: 10, fontWeight: 750, letterSpacing: "-.2px", color: cell.note.includes("Deload") ? C.warn : C.accentInk, whiteSpace: "nowrap" }, children: ["@ ", effortLabel(cell.rir, loadMode)] }) }), lastDiffers && (_jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 2, lineHeight: 1.2, whiteSpace: "nowrap" }, children: ["last: ", lastFailure ? "failure" : effortLabel(lastR, loadMode)] }))] }));
-                                                                })()] }), cell.tech && (() => {
+                                                                })()] }), noteEdit?.dayId === day.id && noteEdit?.slot === slot && noteEdit?.exId === ex.id ?
+            _jsx(PinnedNoteEditor, { ex, note: exNotes[ex.id], setup: exSetup[ex.id], context: "program", saveLabel: "Save",
+                onNote: onSetExNote, onSetup: onSetExSetup, onClose: () => setNoteEdit(null)
+            }, `${day.id}:${slot}:${ex.id}`) : null, cell.tech && (() => {
                                                             const key = `${day.id}:${slot}`;
                                                             const open = techInfo === key;
                                                             const cue = String(cell.tech || "");
@@ -8376,33 +8249,12 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                         return { id, name: EX_BY_ID[id]?.name, cur, nw, note, up: nw > cur };
                     });
                     return (_jsx("div", { onClick: () => setCycleSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "86%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: program.engineSource === "pursuit-next" ? "Build next block" : "Start next cycle" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => setCycleSheet(false), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }, children: program.engineSource === "pursuit-next" ? "Complete your current block first. The next block uses its logged workouts and reported effort. Your current plan and history stay saved." : "New training maxes are projected from your last top-set AMRAP on each lift. This creates a fresh block \u2014 your current one is kept." }), rows.map(r => (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "11px 0", borderBottom: `1px solid ${C.borderSoft || C.border}` }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: r.name }), _jsx("div", { style: { fontSize: 11, color: C.muted }, children: r.note })] }), _jsx("div", { className: "mono", style: { fontSize: 15, color: C.muted }, children: r.cur }), _jsx(ChevronRight, { size: 14, color: C.faint }), _jsxs("div", { className: "mono", style: { fontSize: 15, fontWeight: 700, color: r.up ? C.accentInk : C.muted }, children: [r.nw, _jsxs("span", { style: { fontSize: 11, color: C.faint }, children: [" ", unit] })] })] }, r.id))), _jsxs("button", { onClick: () => { setCycleSheet(false); onNextCycle(program); }, className: "pressable", style: { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(RefreshCw, { size: 16 }), " Create next block"] })] }) }));
-                })() }), _jsx(Exit, { when: tmSheet, children: tmSheet && (_jsx("div", { onClick: () => setTmSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "86%", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Training maxes" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => setTmSheet(false), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }, children: [PCT_SCHEMES[program.config.percentScheme]?.name, " loads each main lift from its ", PCT_SCHEMES[program.config.percentScheme]?.basis, ". Enter your training max, or tap \u201CUse 1RM\u201D to set it to 90% of a one-rep max."] }), mainLifts.map(id => {
-                                const ex = EX_BY_ID[id];
-                                if (!ex)
-                                    return null;
-                                const cur = trainingMaxForUnit(program, id, unit) || "";
-                                return (_jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, marginBottom: 6 }, children: ex.name }), _jsxs("div", { style: { display: "flex", gap: 8, alignItems: "center" }, children: [_jsx("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: cur === "" ? "" : String(cur), placeholder: `Training max (${unit})`, onChange: e => { const v = e.target.value.replace(/[^0-9.]/g, ""); setProgram(p => withTrainingMax(p, id, v === "" ? 0 : parseFloat(v), unit)); }, className: "mono", style: { flex: 1, padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600 } }), _jsx("button", { className: "pressable", onClick: () => setOneRmEdit({ exId: id, val: "" }), style: { padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.accentInk, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }, children: "Use 1RM" })] }), cur > 0 && (() => {
-                                            const ownerDay = program.days.find(d => d.exercises.includes(id));
-                                            const wk = ownerDay ? percentagePlanFor(program, ownerDay, ex, ownerDay.exercises.indexOf(id), 1, unit) : null;
-                                            if (!wk)
-                                                return null;
-                                            return _jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 4 }, className: "mono", children: ["Week 1 (", wk.label, "): ", wk.sets.map(s => `${s.weight}×${s.reps}`).join("  ·  ")] });
-                                        })()] }, id));
-                            }), _jsx("button", { onClick: () => setTmSheet(false), className: "pressable", style: { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 6 }, children: "Done" })] }) })) }), _jsx(Exit, { when: oneRmEdit, children: oneRmEdit && (() => {
-                    const ex = EX_BY_ID[oneRmEdit.exId];
-                    const n = parseFloat(oneRmEdit.val);
-                    const tm = n > 0 && ex ? roundTo(n * 0.9, loadStep(ex, unit)) : null;
-                    const commit = () => {
-                        if (!(n > 0) || !ex) {
-                            setOneRmEdit(null);
-                            return;
-                        }
-                        setProgram(p => withTrainingMax(p, oneRmEdit.exId, tm, unit));
-                        setOneRmEdit(null);
-                    };
-                    return (_jsx("div", { onClick: () => setOneRmEdit(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 75, animation: "fadeIn .2s both", padding: 24 }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Dumbbell, { size: 17, color: C.accentInk }), " Set from 1RM"] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: [ex?.name, " \u2014 enter a recent one-rep max; the training max is set to 90% of it."] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsx("input", { "aria-label": "One-rep max", inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: oneRmEdit.val, autoFocus: true, onChange: e => setOneRmEdit(o => ({ ...o, val: e.target.value.replace(/[^0-9.]/g, "") })), onKeyDown: e => { if (e.key === "Enter")
-                                                commit(); }, className: "mono", style: { flex: 1, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 18, fontWeight: 600, textAlign: "center" } }), _jsx("span", { style: { fontSize: 15, color: C.muted, fontWeight: 600 }, children: unit })] }), _jsx("div", { style: { fontSize: 13, color: tm ? C.accentInk : C.faint, fontWeight: 600, marginBottom: 12, minHeight: 16 }, className: "mono", children: tm ? `→ training max ${tm} ${unit}` : " " }), _jsx("button", { onClick: commit, disabled: !(n > 0), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: n > 0 ? C.accent : C.card, color: n > 0 ? C.accentText : C.faint, fontSize: 15, fontWeight: 700, cursor: n > 0 ? "pointer" : "default" }, children: "Set training max" }), _jsx("button", { onClick: () => setOneRmEdit(null), className: "pressable", style: { width: "100%", padding: "11px", marginTop: 8, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) }));
-                })() }), _jsx(Exit, { when: shareSheet, children: shareSheet && (_jsx(ShareProgramSheet, { program: program, shareCode: shareCode, loadMode: loadMode, unit: unit, onClose: () => setShareSheet(false) })) }), _jsx(Exit, { when: iconSheet, children: _jsx(IconPickerSheet, { open: iconSheet, current: program.icon, currentColor: program.iconColor, title: "Program icon", onClose: () => setIconSheet(false), onPick: (key) => setProgram(p => ({ ...p, icon: key })), onPickColor: (key) => setProgram(p => ({ ...p, iconColor: key })) }) }), dayOpts && (() => {
+                })() }), _jsx(Exit, { when: tmSheet, children: tmSheet && _jsx(ProgramTrainingMaxes, { program, mainLifts, unit,
+                    sheetDragRef, selectNumericInput, onClose: () => setTmSheet(false), onApply: changes => {
+                        setProgram(current => Object.entries(changes).reduce((next, [id, value]) => withTrainingMax(next, id, value, unit), current));
+                        setTmSheet(false);
+                    }
+                }) }), _jsx(Exit, { when: shareSheet, children: shareSheet && (_jsx(ShareProgramSheet, { program: program, shareCode: shareCode, weekIndex: activeWeek, history: history, sheetDragRef: sheetDragRef, loadMode: loadMode, unit: unit, onClose: () => setShareSheet(false) })) }), _jsx(Exit, { when: iconSheet, children: _jsx(IconPickerSheet, { open: iconSheet, current: program.icon, currentColor: program.iconColor, title: "Program icon", onClose: () => setIconSheet(false), onPick: (key) => setProgram(p => ({ ...p, icon: key })), onPickColor: (key) => setProgram(p => ({ ...p, iconColor: key })) }) }), dayOpts && (() => {
                 const day = program.days.find(d => d.id === dayOpts.id);
                 if (!day)
                     return null;
@@ -8451,12 +8303,12 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                 ...(program.days.length > 1 ? [{ k: "del", icon: _jsx(Trash2, { size: 16, color: C.danger }), label: "Delete day", danger: true, on: () => setConfirmDeleteDay(day.id) }] : []),
                             ].map(it => (_jsxs("button", { role: "menuitem", onClick: () => { setDayOpts(null); it.on(); }, className: "pressable wpb-context-menu-item", style: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 9px", borderRadius: 12, background: "none", border: "none", cursor: "pointer", textAlign: "left", color: it.danger ? C.danger : C.text, fontSize: 15, fontWeight: 600 }, children: [it.icon, _jsx("span", { children: it.label })] }, it.k))) })] }));
                 return menu;
-            })(), _jsx(Exit, { when: planInfo, children: planInfo && (_jsx("div", { onClick: () => setPlanInfo(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "86vh", overflowY: "auto", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 20px)", animation: "sheetUp .26s cubic-bezier(.2,.8,.3,1) both" }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 4 }, children: "Plan info" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12, lineHeight: 1.5 }, children: "How this program was put together, how progression was chosen, what it trains each week, and the arc it follows." }), _jsxs("details", { className: "wpb-program-edit-scope", children: [_jsx("summary", { children: "Where do my edits apply?" }), _jsxs("p", { children: ["Edits here change this saved plan, not past workout logs.", program.cycleId ? " Exercise changes also carry to linked cycle blocks while retaining each block’s prescriptions." : " Future sessions use the edited plan.", " For a one-workout replacement, use Swap inside your workout and choose Just this workout."] })] }), (program.engineV || 1) < ENGINE_V && (program.engineDeclined || 0) >= ENGINE_V && !program.quick && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, background: C.card, borderRadius: 12, padding: "11px 12px", marginBottom: 12 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: ["Built on ", publicTrainingCopy(engineInfo(program.engineV || 1).label).toLowerCase()] }), _jsx("div", { style: { fontSize: 11, color: C.faint, lineHeight: 1.45, marginTop: 2 }, children: "You chose to keep this program as it is. You can still update it." })] }), _jsx("button", { onClick: () => { setPlanInfo(false); setProgram(p => { const { engineDeclined, ...rest } = p; return rest; }); }, "aria-label": "Show the program update again", className: "pressable", style: { flexShrink: 0, padding: "8px 12px", borderRadius: 12, background: C.bg2, border: `1px solid ${C.border}`, color: C.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Review" })] })), _jsx(SetupCard, { program: program, open: showSetup, onToggle: () => setShowSetup(v => !v) }), _jsx(ProgressionCard, { program: program, open: showProg, onToggle: () => setShowProg(v => !v) }), _jsx(VolumeCard, { history: history, volume: wkVol, subVolume: wkSubVol, program: program, onApplyFix: applyVolumeFix, fixFeedback: volumeFixFeedback, open: showVol, onToggle: () => setShowVol(v => !v), week: activeWeek }), _jsx(ProgramLayoutHistory, { program, onRestore: revision => { setPlanInfo(false); onReviewProgram({ before: program, after: revision.program, title: "Restore earlier layout", label: "Before restoring an earlier layout", message: "Restore these saved exercises, settings and prescriptions. Your workout history stays available." }); } }), (() => {
+            })(), _jsx(Exit, { when: planInfo, children: planInfo && (_jsx(ProgramReferenceSheet, { onClose: () => setPlanInfo(false), sheetDragRef: sheetDragRef, children: [_jsxs("details", { className: "wpb-program-edit-scope", children: [_jsx("summary", { children: "Where do my edits apply?" }), _jsxs("p", { children: ["Edits here change this saved plan, not past workout logs.", program.cycleId ? " Exercise changes also carry to linked cycle blocks while retaining each block’s prescriptions." : " Future sessions use the edited plan.", " For a one-workout replacement, use Swap inside your workout and choose Just this workout."] })] }), (program.engineV || 1) < ENGINE_V && (program.engineDeclined || 0) >= ENGINE_V && !program.quick && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, background: C.card, borderRadius: 12, padding: "11px 12px", marginBottom: 12 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: ["Built on ", publicTrainingCopy(engineInfo(program.engineV || 1).label).toLowerCase()] }), _jsx("div", { style: { fontSize: 11, color: C.faint, lineHeight: 1.45, marginTop: 2 }, children: "You chose to keep this program as it is. You can still update it." })] }), _jsx("button", { onClick: () => { setPlanInfo(false); setProgram(p => { const { engineDeclined, ...rest } = p; return rest; }); }, "aria-label": "Show the program update again", className: "pressable", style: { flexShrink: 0, padding: "8px 12px", borderRadius: 12, background: C.bg2, border: `1px solid ${C.border}`, color: C.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Review" })] })), _jsx(SetupCard, { chips: programSetupChips(program), open: showSetup, onToggle: () => setShowSetup(v => !v) }), _jsx(ProgressionCard, { program: program, open: showProg, onToggle: () => setShowProg(v => !v) }), _jsx(VolumeCard, { history: history, volume: wkVol, subVolume: wkSubVol, program: program, onApplyFix: applyVolumeFix, fixFeedback: volumeFixFeedback, open: showVol, onToggle: () => setShowVol(v => !v), week: activeWeek }), _jsx(ProgramLayoutHistory, { program, onRestore: revision => { setPlanInfo(false); onReviewProgram({ before: program, after: revision.program, title: "Restore earlier layout", label: "Before restoring an earlier layout", message: "Restore these saved exercises, settings and prescriptions. Your workout history stays available." }); } }), (() => {
                                 const plan = blockPlan;
                                 if (!plan)
                                     return null;
                                 return (_jsx(InfoCard, { icon: Layers, title: `Block plan · ${weeksOf(program)} weeks`, subtitle: plan.name, open: showBlock, onToggle: () => setShowBlock(v => !v), children: _jsxs("div", { children: [plan.phases.map((ph, i) => (_jsxs("div", { style: { display: "flex", gap: 12, marginTop: 12 }, children: [_jsx("div", { style: { width: 64, flexShrink: 0 }, children: _jsx("div", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: ph.label === "Deload" ? C.warn : C.accentInk }, children: ph.w }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700, color: ph.label === "Deload" ? C.warn : C.text }, children: ph.label }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5, marginTop: 1 }, children: ph.detail })] })] }, i))), _jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.45, fontStyle: "italic" }, children: plan.src })] }) }));
-                            })()] }) })) }), _jsx(Exit, { when: seedSheet, children: seedSheet && (_jsx("div", { onClick: () => setSeedSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 22px)", borderTop: `1px solid ${C.border}`, animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both" }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 4 }, children: "Shuffle exercises" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12, lineHeight: 1.5 }, children: "Deals a new set of lifts into the same plan \u2014 a different bench variation, a different row. Your split, days, goal and progression stay exactly as they are." }), _jsxs("button", { onClick: () => { setSeedSheet(false); if (hasEdits)
+                            })()] })) }), _jsx(Exit, { when: seedSheet, children: seedSheet && (_jsx("div", { onClick: () => setSeedSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 22px)", borderTop: `1px solid ${C.border}`, animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both" }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 4 }, children: "Shuffle exercises" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12, lineHeight: 1.5 }, children: "Deals a new set of lifts into the same plan \u2014 a different bench variation, a different row. Your split, days, goal and progression stay exactly as they are." }), _jsxs("button", { onClick: () => { setSeedSheet(false); if (hasEdits)
                                     setConfirmRegen(true);
                                 else
                                     onRegenerate(); }, className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: [_jsx(RefreshCw, { size: 16 }), " Shuffle"] }), _jsxs("button", { onClick: () => { setSeedSheet(false); setConfirmReset(true); }, "aria-label": "Start this program again from week 1", className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", marginTop: 8, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontSize: 14, fontWeight: 600, cursor: "pointer" }, children: [_jsx(Repeat, { size: 15 }), " Start again from week 1"] }), (program.rolls || []).length > 0 && (_jsxs("div", { style: { marginTop: 16 }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Earlier seeds" }), (program.rolls || []).map((r, i) => (_jsxs("button", { onClick: () => { setSeedSheet(false); if (hasEdits)
@@ -8530,180 +8382,34 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                     if (!ex)
                         return null;
                     const close = () => setStyleEdit(null);
-                    const autoName = PROG_STYLES[resolveStyle({ ...program, progStyle: undefined }, ex, styleEdit.isP, activeWeek, perf, history, styleEdit.dayId)] || "double progression";
-                    const opts = [
-                        ["auto", "Auto (recommended)", `Picks the best style for this lift — currently ${autoName}.`],
-                        ["dynamic", "Dynamic double", "True per-set DDP — each set advances independently. Top the rep ceiling on set 1 and its weight goes up next session even if set 2 didn't. Fastest per-set progression."],
-                        ["double", "Double progression", "Build reps anywhere in the range, then add load when you top it. Simple and effective for most lifts."],
-                        ["ladder", "Rep ladder", "One shared rep target that climbs each session (e.g. 10 → 12 → 15), then the load jumps and the target resets. A structured double-progression hybrid with a crisp weekly goal."],
-                        ["wave", "Wave loading", "Rotates heavy / medium / light sessions (lo→mid→hi reps) within the range, then the load jumps. Classic strength periodization."],
-                        ["linear", "Linear LP", `Add a fixed ${linearInc(ex, unit)}${unit} every session you hit the bottom of the range. Best for beginners on big compounds.`],
-                        ["e1rm", "e1RM autoregulation", "Sets load each session from your estimated 1RM to land at the target RIR. Smoothest day-to-day adjustment."],
-                    ];
-                    return (_jsx("div", { onClick: close, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "85vh", overflowY: "auto", background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 16px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 30px rgba(0,0,0,.5)", animation: "sheetUp .25s cubic-bezier(.2,.8,.2,1) both" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "0 2px" }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { ...eyebrowAccent(), display: "flex", alignItems: "center", gap: 4 }, children: [_jsx(TrendingUp, { size: 12 }), " Progression style"] }), _jsx("div", { style: { fontSize: 18, fontWeight: 700, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: ex.name })] }), _jsx("button", { className: "pressable hit wpb-sheet-close", onClick: close, "aria-label": "Close", style: { flexShrink: 0, width: 34, height: 34, borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 17 }) })] }), opts.map(([v, label, sub]) => {
-                                    const on = styleFor(program, styleEdit.exId) === v;
-                                    return (_jsxs("button", { onClick: () => { setExStyle(styleEdit.exId, v); close(); }, className: "pressable", style: { width: "100%", display: "flex", alignItems: "flex-start", gap: 12, padding: "14px", borderRadius: 12, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accentDim : C.bg2, color: C.text, cursor: "pointer", textAlign: "left", marginBottom: 8 }, children: [_jsx("div", { style: { width: 19, height: 19, borderRadius: 999, border: `2px solid ${on ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }, children: on && _jsx("div", { style: { width: 9, height: 9, borderRadius: 999, background: C.accent } }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, color: on ? C.accentInk : C.text }, children: label }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5, marginTop: 2 }, children: sub })] })] }, v));
-                                })] }) }));
+                    const day = program.days.find(d => d.id === styleEdit.dayId);
+                    const slot = styleEdit.slot;
+                    if (!day || slot == null) return null;
+                    const automaticProgram = withProgressionChoices(program, { [ex.id]: "auto" });
+                    const automaticStyle = program.engineSource === "pursuit-next"
+                        ? computeCell(automaticProgram, day, ex.id, slot, activeWeek).progressionStyle
+                        : resolveStyle(automaticProgram, ex, styleEdit.isP, activeWeek, perf, history, day.id);
+                    return _jsx(ProgressionChoiceSheet, { exerciseName: ex.name, selected: styleFor(program, ex.id),
+                        automaticLabel: PROG_STYLES[automaticStyle] || "the saved method", linearIncrement: linearInc(ex, unit), unit,
+                        onChoose: style => { setExStyle(ex.id, style); close(); }, onClose: close, sheetDragRef });
                 })() }), _jsx(Exit, { when: rowMenu, children: rowMenu && (() => {
                     const { dayId, slot, exId } = rowMenu;
-                    const day = program.days.find(d => d.id === dayId);
-                    const ex = EX_BY_ID[exId];
-                    if (!day || !ex)
-                        return null;
-                    const isP = slot === day.primaryIndex;
-                    const canRemove = day.exercises.length > 1;
-                    const isLinked = !program.config?.noSupersets && !!program.ss?.[`${dayId}:${slot}`];
-                    const close = () => { setRowMenu(null); setConfirmRemove(null); };
-                    const item = (icon, label, sub, onClick, danger) => (_jsxs("button", { className: "pressable wpb-sheet-action", onClick: onClick, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, color: danger ? C.danger : C.text, cursor: "pointer", textAlign: "left", marginBottom: 8 }, children: [_jsx("span", { style: { flexShrink: 0, width: 22, display: "flex", justifyContent: "center" }, children: icon }), _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsx("span", { style: { display: "block", fontSize: 15, fontWeight: 600 }, children: label }), sub && _jsx("span", { style: { display: "block", fontSize: 13, color: C.muted, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: sub })] })] }));
-                    return (_jsx("div", { onClick: close, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-exercise-options-sheet", style: { width: "100%", maxHeight: "82vh", overflowY: "auto", background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 16px calc(20px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 30px rgba(0,0,0,.5)", animation: "sheetUp .25s cubic-bezier(.2,.8,.2,1) both" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "0 2px" }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: ex.name }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: [PART_LABEL[ex.part], " \u00B7 ", ex.type, isP ? " · key lift" : ""] })] }), _jsx("button", { className: "pressable hit wpb-sheet-close", onClick: close, "aria-label": "Close", style: { flexShrink: 0, width: 34, height: 34, borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 17 }) })] }), item(_jsx(Pin, { size: 18, color: (exNotes[exId] || exSetup[exId]) ? C.accentInk : C.muted }), (exNotes[exId] || exSetup[exId]) ? "Edit pinned note" : "Add pinned note", exSetup[exId] ? [formatSetup(exSetup[exId]), exNotes[exId]].filter(Boolean).join(" — ") : exNotes[exId] ? exNotes[exId] : "A cue you'll see every time — seat height, tempo…", () => { close(); setNoteEdit(exId); }), slot < day.exercises.length - 1 && item(_jsx(Layers, { size: 18, color: isLinked ? C.accentInk : C.muted }), isLinked ? "Unlink superset" : "Superset with next", isLinked ? "Currently paired with the next exercise" : "Pair with the next exercise, alternating sets", () => { close(); toggleSS(dayId, slot); }), item(_jsx(HelpCircle, { size: 18, color: C.muted }), "Why this lift?", "See why the program selected this exercise", () => { close(); setWhyPick({ dayId, slot, exId }); }), item(_jsx(Info, { size: 18, color: C.muted }), "Exercise info", "Muscles worked, equipment, form demo", () => { close(); setExInfo({ dayId, slot, exId }); }), item(_jsx(Ban, { size: 18, color: C.danger }), "Ban exercise", "Never auto-pick this again, swap it out now", () => { close(); banAndReplace(dayId, slot); }, true), canRemove && (confirmRemove === `${dayId}:${slot}`
-                                    ? (_jsxs("div", { style: { padding: "14px", borderRadius: 12, background: `${C.danger}11`, border: `1px solid ${C.danger}44`, marginTop: 4 }, children: [_jsxs("div", { style: { fontSize: 15, color: C.text, marginBottom: 12, fontWeight: 500 }, children: ["Remove ", ex.name, " from this day?"] }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsx("button", { className: "pressable", onClick: () => { removeSlot(dayId, slot); close(); }, style: { flex: 1, padding: "12px", borderRadius: 12, border: "none", background: C.danger, color: C.dangerText, fontWeight: 700, fontSize: 15, cursor: "pointer" }, children: "Remove" }), _jsx("button", { className: "pressable", onClick: () => setConfirmRemove(null), style: { flex: 1, padding: "12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontWeight: 600, fontSize: 15, cursor: "pointer" }, children: "Cancel" })] })] }))
-                                    : item(_jsx(Trash2, { size: 18, color: C.danger }), "Remove from day", "Take this exercise out of the workout", () => setConfirmRemove(`${dayId}:${slot}`), true))] }) }));
-                })() }), _jsx(Exit, { when: schedSheet, children: schedSheet && (_jsx(WeeklyScheduleSheet, { program: program, onCycle: cycleSchedule, onClear: () => setProgram(p => ({ ...p, schedule: {}, scheduleEdited: true })), onClose: () => setSchedSheet(false) })) }), _jsx(Exit, { when: cfgSheet, children: cfgSheet && (_jsx(ProgramSettingsSheet, { program: program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose: () => setCfgSheet(false) })) }), toast && (() => {
+                    const day = program.days.find(d => d.id === dayId), ex = EX_BY_ID[exId];
+                    if (!day || !ex) return null;
+                    return _jsx(ProgramExerciseOptions, { exercise: ex, primary: slot === day.primaryIndex,
+                        canRemove: day.exercises.length > 1,
+                        canLink: !program.config?.noSupersets && slot < day.exercises.length - 1,
+                        linked: !!program.ss?.[`${dayId}:${slot}`], note: exNotes[exId], setup: exSetup[exId],
+                        onClose: () => setRowMenu(null), sheetDragRef,
+                        onNote: () => setNoteEdit({ dayId, slot, exId }), onSuperset: () => toggleSS(dayId, slot),
+                        onWhy: () => setWhyPick({ dayId, slot, exId }), onInfo: () => setExInfo({ dayId, slot, exId }),
+                        onBan: () => banAndReplace(dayId, slot), onRemove: () => removeSlot(dayId, slot)
+                    }, rowMenu.key);
+                })() }), _jsx(Exit, { when: schedSheet, children: schedSheet && (_jsx(WeeklyScheduleSheet, { program: program, onCycle: cycleSchedule, onClear: () => setProgram(p => ({ ...p, schedule: {}, scheduleEdited: true })), onClose: () => setSchedSheet(false), sheetDragRef: sheetDragRef })) }), _jsx(Exit, { when: cfgSheet, children: cfgSheet && (_jsx(ProgramSettingsSheet, { program: program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose: () => setCfgSheet(false), GOALS: GOALS, sheetDragRef: sheetDragRef, selectNumericInput: selectNumericInput })) }), toast && (() => {
                 const tmsg = typeof toast === "string" ? toast : toast.msg;
                 const tundo = typeof toast === "object" ? toast.undo : null;
                 return (_jsx("div", { style: { position: "absolute", left: 0, right: 0, bottom: 22, display: "flex", justifyContent: "center", zIndex: 70, pointerEvents: "none", padding: "0 18px" }, children: _jsxs("div", { style: { background: C.text, color: C.bg, fontSize: 13, fontWeight: 600, padding: "11px 16px", borderRadius: 12, maxWidth: "100%", boxShadow: "0 8px 24px rgba(0,0,0,.35)", animation: "fadeIn .18s both", display: "flex", alignItems: "center", gap: 8, pointerEvents: "auto" }, children: [_jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: tmsg }), tundo && _jsx("button", { onClick: tundo, className: "pressable", style: { background: "none", border: "none", color: C.bg, fontSize: 13, fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer", flexShrink: 0, padding: "0 2px" }, children: "Undo" })] }) }));
             })()] }));
-}
-/* ═══ SHARE PROGRAM SHEET ═════════════════════════════════════════════════════════════════════
- * Extracted from ProgramView at v633. It owns its two transient "Copied ✓" flags — they are pure
- * UI state with no meaning outside this sheet, and leaving them on ProgramView was two of its
- * ~40 useStates existing only to feed a sheet. `shareCode` stays a prop: it is a memo of the
- * PROGRAM, and encodeProgramCode returning null (a program the schema cannot carry) is a fact
- * about the program, not about this sheet. */
-function ShareProgramSheet({ program, shareCode, loadMode, unit, onClose }) {
-    const [shareCopied, setShareCopied] = useState(false);
-    const [codeCopied, setCodeCopied] = useState(false);
-    const text = programToText(program, loadMode, unit);
-    const copy = async () => {
-        try {
-            await navigator.clipboard.writeText(text);
-            setShareCopied(true);
-        }
-        catch {
-            setShareCopied(false);
-        }
-    };
-    return (_jsx("div", { "data-testid": "share-program-sheet", onClick: () => onClose(), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Share program" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => onClose(), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: "Copy this plain-text plan to send to anyone \u2014 sets \u00D7 reps and target effort for each lift." }), (() => {
-                    const code = shareCode;
-                    if (!code)
-                        return (_jsx("div", { style: { fontSize: 13, color: C.faint, marginBottom: 12, lineHeight: 1.5, padding: "10px 12px", borderRadius: 12, background: C.card }, children: "This program uses custom tweaks a short code can't carry \u2014 send the plain-text plan below instead." }));
-                    return (_jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 6 }, children: "Program code" }), _jsxs("button", { "aria-label": "Copy program code", onClick: () => {
-                                    try {
-                                        navigator.clipboard?.writeText(code);
-                                    }
-                                    catch { }
-                                    try {
-                                        const ta = document.createElement("textarea");
-                                        ta.value = code;
-                                        ta.style.position = "fixed";
-                                        ta.style.opacity = "0";
-                                        document.body.appendChild(ta);
-                                        ta.select();
-                                        document.execCommand("copy");
-                                        document.body.removeChild(ta);
-                                    }
-                                    catch { }
-                                    setCodeCopied(true);
-                                    setTimeout(() => setCodeCopied(false), 1600);
-                                }, className: "pressable", style: { display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.text, cursor: "pointer" }, children: [_jsx("div", { className: "mono", style: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, letterSpacing: .5, overflow: "hidden", textOverflow: "ellipsis" }, children: code }), codeCopied ? _jsx(Check, { size: 15, color: C.accentInk }) : _jsx(Copy, { size: 15, color: C.accentInk })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 6, lineHeight: 1.5 }, children: ["Anyone can paste this into ", _jsx("b", { children: "Settings \u2192 Add a shared program" }), " and get this exact program \u2014 their own settings don't matter."] }), _jsxs("button", { onClick: () => {
-                                    const sub = gallerySubmission(program);
-                                    if (!sub.ok)
-                                        return;
-                                    const body = galleryIssueBody(sub);
-                                    let slug = "extracteddeath/pursuit-iron";
-                                    try {
-                                        const host = location.hostname;
-                                        const owner = host.endsWith(".github.io") ? host.split(".")[0] : null;
-                                        const seg = location.pathname.split("/").filter(Boolean)[0] || null;
-                                        if (owner && seg)
-                                            slug = `${owner}/${seg}`;
-                                    }
-                                    catch { }
-                                    const url = `https://github.com/${slug}/issues/new?labels=gallery-submission&title=${encodeURIComponent("Gallery: " + (program.name || "program"))}&body=${encodeURIComponent(body)}`;
-                                    try {
-                                        window.open(url, "_blank", "noopener");
-                                    }
-                                    catch {
-                                        try {
-                                            location.href = url;
-                                        }
-                                        catch { }
-                                    }
-                                }, className: "pressable", style: { width: "100%", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", fontSize: 15, fontWeight: 600 }, children: [_jsx(Layers, { size: 15, color: C.accentInk }), " Submit to the gallery"] }), _jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 6, lineHeight: 1.5 }, children: "Opens a pre-filled submission with the code and a decoded preview of the lifts. A maintainer reviews it before it shows up in Browse." })] }));
-                })(), _jsx("textarea", { readOnly: true, value: text, onFocus: e => e.target.select(), className: "wpb-scroll mono", style: { width: "100%", height: 200, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 13, lineHeight: 1.5, resize: "none", marginBottom: 12 } }), _jsxs("button", { "aria-label": "Copy plain text", onClick: copy, className: "pressable", style: { width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }, children: [_jsx(Copy, { size: 16 }), " ", shareCopied ? "Copied ✓" : "Copy to clipboard"] })] }) }));
-}
-/* ═══ WEEKLY SCHEDULE SHEET ═══════════════════════════════════════════════════════════════════
- * Extracted from ProgramView at v632. The schedule is a real generation input, not decoration:
- * `plannedGapHours` reads it (v587) and rotation follows it (v578), so a mis-assigned weekday
- * shows up later as sets trimmed for "training ahead of plan". Props are the contract; the tap
- * behaviour (rest → day 1 → … → last day → rest) stays with the owner as `onCycle`, because it
- * is a setProgram reducer and this component owns no state. No hooks inside. */
-function WeeklyScheduleSheet({ program, onCycle, onClear, onClose }) {
-    const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const idx2wd = [1, 2, 3, 4, 5, 6, 0]; // map display order to JS weekday (0=Sun)
-    const sched = program.schedule || {};
-    const trainingDays = idx2wd.filter(wd => sched[wd]).length;
-    const todayWd = new Date().getDay();
-    return (_jsx("div", { "data-testid": "weekly-schedule-sheet", onClick: () => onClose(), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 60, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}`, maxHeight: "86%", overflowY: "auto" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Weekly schedule" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => onClose(), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16 }, children: ["Tap a day to assign a workout \u2014 ", trainingDays, " training ", trainingDays === 1 ? "day" : "days", ", ", 7 - trainingDays, " rest. Cycles through your days, then rest."] }), WD.map((label, i) => {
-                    const wd = idx2wd[i];
-                    const dayId = sched[wd];
-                    const day = dayId ? program.days.find(d => d.id === dayId) : null;
-                    const isToday = wd === todayWd;
-                    return (_jsxs("button", { "aria-label": `Schedule ${label}`, onClick: () => onCycle(wd), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", marginBottom: 6, borderRadius: 12, cursor: "pointer", textAlign: "left", background: day ? C.accentDim : C.card, border: `1px solid ${isToday ? C.accent : day ? C.accent + "44" : C.border}` }, children: [_jsxs("div", { style: { width: 42, flexShrink: 0 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 700, color: day ? C.accentInk : C.muted }, children: label }), isToday && _jsx("div", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, textTransform: "uppercase", letterSpacing: .5 }, children: "Today" })] }), _jsx("div", { style: { flex: 1, minWidth: 0 }, children: day ? _jsx("span", { style: { fontSize: 15, fontWeight: 600, color: C.text }, children: day.label })
-                                    : _jsx("span", { style: { fontSize: 15, color: C.faint }, children: "Rest day" }) }), day ? _jsx(Dumbbell, { size: 15, color: C.accentInk, style: { flexShrink: 0 } }) : _jsx("span", { style: { fontSize: 11, color: C.faint, flexShrink: 0 }, children: "tap to set" })] }, wd));
-                }), Object.keys(sched).length > 0 && (_jsx("button", { "aria-label": "Clear schedule", onClick: () => onClear(), className: "pressable", style: { width: "100%", marginTop: 6, padding: "11px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Clear schedule" }))] }) }));
-}
-/* ═══ PROGRAM SETTINGS SHEET ═══════════════════════════════════════════════════════════════════
- * Extracted from ProgramView at v631 (the first cut of the 2,700-line component). Props are the
- * whole contract: the staged draft and its setter, whether the draft differs from the program,
- * and the two exits. No hooks inside — the sheet is a pure function of what it is handed, which is
- * what lets gates/progsettings.mjs drive it through the real DOM. `sheetDragRef` is the shared
- * ref-callback from 09-ui-primitives. */
-function ProgramSaveReview({ program, changes, scope, onScope, conflicts, onConfirm, onClose }) {
-    return _jsx("div", { className: "wpb-backdrop", role: "dialog", "aria-modal": "true", "aria-labelledby": "program-save-title", onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 100, padding: 16, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxWidth: 440, maxHeight: "85dvh", display: "flex", flexDirection: "column", overflow: "hidden", padding: 18, borderRadius: 20, background: C.bg2, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", flexShrink: 0, alignItems: "center", justifyContent: "space-between", gap: 12 }, children: [_jsx("h2", { id: "program-save-title", style: { fontSize: 19, margin: 0 }, children: "Review changes" }), _jsx("button", { "aria-label": "Close change review", onClick: onClose, style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "wpb-scroll", style: { minHeight: 0, overflowY: "auto", overscrollBehavior: "contain" }, children: [_jsx("p", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: "Review the saved programs affected. Completed workout history stays as logged." }), program.cycleId && _jsxs("fieldset", { style: { border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, margin: "12px 0", minWidth: 0 }, children: [_jsx("legend", { style: { fontWeight: 700, fontSize: 13 }, children: "Apply exercise changes to" }), [["program", "This block only"], ["cycle", "Linked cycle blocks"]].map(([value, label]) => _jsxs("label", { style: { display: "flex", alignItems: "center", gap: 10, padding: "9px 0", fontSize: 14, cursor: "pointer" }, children: [_jsx("input", { type: "radio", name: "program-save-scope", value: value, checked: scope === value, onChange: () => onScope(value) }), label] }, value)), _jsx("div", { style: { fontSize: 12, lineHeight: 1.5, color: C.muted }, children: "Linked blocks use the cycle's exercise-sharing rules. Only blocks listed below will change; each keeps its own training targets." })] }), _jsxs("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 8 }, children: [changes.length, " saved ", changes.length === 1 ? "program" : "programs", " will change"] }), changes.map(({ before, after }) => _jsxs("div", { style: { padding: "12px 0", borderTop: `1px solid ${C.border}`, overflowWrap: "anywhere" }, children: [_jsx("strong", { style: { fontSize: 14 }, children: after.name }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 4, lineHeight: 1.5 }, children: programChangeLabels(before, after).join(" · ") })] }, after.id)), !!conflicts.length && _jsxs("div", { role: "alert", style: { padding: 12, margin: "8px 0", borderRadius: 12, background: C.card, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: ["Another affected block has draft changes: ", conflicts.map(x => x.after.name).join(", "), ". Save or discard that draft first, or choose This block only."] }), _jsx("div", { style: { fontSize: 12, color: C.muted, margin: "10px 0 14px", lineHeight: 1.5 }, children: "You can undo this save from the program screen until the next save or app reload. Later edits can prevent undo." })] }), _jsxs("div", { style: { flexShrink: 0, paddingTop: 10, borderTop: `1px solid ${C.border}` }, children: [_jsx("button", { disabled: !changes.length || !!conflicts.length, onClick: onConfirm, className: "pressable", style: { width: "100%", padding: 13, border: "none", borderRadius: 12, background: C.accent, color: C.accentText, fontWeight: 700, opacity: !changes.length || conflicts.length ? .45 : 1, cursor: "pointer" }, children: "Save reviewed changes" }), _jsx("button", { onClick: onClose, className: "pressable", style: { width: "100%", padding: 13, marginTop: 8, border: `1px solid ${C.border}`, borderRadius: 12, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Keep editing" })] })] }) });
-}
-function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose }) {
-    const cycleLengthOwned = program.engineSource === "pursuit-next" && !!program.cycleId;
-    const draftWeeks = cfgDraft?.weeks ?? weeksOf(program);
-    const validWeeks = /^\d+$/.test(String(draftWeeks)) && Number.isSafeInteger(Number(draftWeeks)) && Number(draftWeeks) > 0;
-    const canApply = cfgDirty && (cycleLengthOwned || validWeeks);
-    // Keep incomplete text in the staged draft; typing a replacement must never save a blank as zero.
-    const editWeeks = value => {
-        const n = Number(value);
-        const weeks = /^\d+$/.test(value) && Number.isSafeInteger(n) && n > 0 ? n : value;
-        setCfgDraft(d => ({ ...d, weeks }));
-    };
-    const stepWeeks = delta => {
-        if (validWeeks)
-            setCfgDraft(d => ({ ...d, weeks: Math.max(1, Number(d?.weeks ?? weeksOf(program)) + delta) }));
-    };
-    const durationControl = cycleLengthOwned
-        ? _jsxs("div", { "data-testid": "cycle-phase-duration", style: { marginBottom: 16, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card }, children: [_jsxs("div", { style: { fontSize: 18, fontWeight: 700, color: C.text }, children: [weeksOf(program), " weeks"] }), _jsx("div", { style: { fontSize: 12, color: C.muted, marginTop: 4 }, children: "Set by this phase of the training cycle." })] })
-        : _jsxs("div", { style: { marginBottom: 16 }, children: [_jsxs("div", { "data-testid": "program-duration-control", style: { display: "flex", alignItems: "center", gap: 8, width: 244, maxWidth: "100%", boxSizing: "border-box", padding: 4, borderRadius: 14, border: `1px solid ${validWeeks ? C.border : C.warn}`, background: C.card }, children: [_jsx("button", { type: "button", "aria-label": "Decrease block length", disabled: !validWeeks || Number(draftWeeks) <= 1, onClick: () => stepWeeks(-1), className: "pressable", style: { width: 44, height: 44, flexShrink: 0, borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg2, color: C.text, fontSize: 22, cursor: "pointer", opacity: !validWeeks || Number(draftWeeks) <= 1 ? .4 : 1 }, children: "\u2212" }), _jsxs("label", { style: { display: "flex", alignItems: "center", justifyContent: "center", flex: 1, minWidth: 0, gap: 4, color: C.muted, fontSize: 13 }, children: [_jsx("input", { type: "text", inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, enterKeyHint: "done", "aria-label": "Block length in weeks", "aria-invalid": !validWeeks, "aria-describedby": !validWeeks ? "program-weeks-error" : undefined, value: draftWeeks, onChange: e => editWeeks(e.target.value), onKeyDown: e => { if (validWeeks && (e.key === "ArrowUp" || e.key === "ArrowDown")) { e.preventDefault(); stepWeeks(e.key === "ArrowUp" ? 1 : -1); } if (e.key === "Enter") e.currentTarget.blur(); }, className: "mono wpb-num-input", style: { width: 64, minWidth: 0, height: 44, padding: 0, border: "none", borderRadius: 8, background: C.card, color: C.accentInk, fontSize: 20, fontWeight: 700, textAlign: "center" } }), "weeks"] }), _jsx("button", { type: "button", "aria-label": "Increase block length", disabled: !validWeeks || Number(draftWeeks) >= Number.MAX_SAFE_INTEGER, onClick: () => stepWeeks(1), className: "pressable", style: { width: 44, height: 44, flexShrink: 0, borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg2, color: C.text, fontSize: 22, cursor: "pointer", opacity: !validWeeks ? .4 : 1 }, children: "+" })] }), !validWeeks && _jsx("div", { id: "program-weeks-error", role: "alert", style: { fontSize: 12, color: C.warn, marginTop: 6 }, children: "Enter a whole number of weeks, at least 1." })] });
-    const setCfgSheet = (v) => { if (!v)
-        onClose(); };
-    return (_jsx("div", { "data-testid": "program-settings-sheet", onClick: () => setCfgSheet(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 60, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px 0", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}`, maxHeight: "88%", overflowY: "auto" }, className: "wpb-scroll", children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: "Program settings" }), _jsx("button", { "aria-label": "Close", className: "pressable hit wpb-sheet-close", onClick: () => setCfgSheet(false), style: iconBtn(), children: _jsx(X, { size: 18 }) })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16 }, children: program.engineSource === "pursuit-next" ? "Adjust your program, then save to rebuild it with the latest program logic. Your current program stays unchanged if the rebuild cannot be completed safely." : "Adjust your program, then save to apply. Changes re-balance your current exercises." }), !program.config?.percentScheme && (_jsxs(_Fragment, { children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Training goal" }), _jsx("div", { style: { display: "flex", gap: 8, marginBottom: 16 }, children: ["strength", "both", "hypertrophy"].map(k => {
-                                const on = cfgDraft?.goal === k;
-                                const lbl = k === "both" ? "Both" : GOALS[k].label;
-                                return _jsx("button", { onClick: () => setCfgDraft(d => ({ ...d, goal: k })), className: "pressable", style: { flex: 1, padding: "12px 4px", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 700, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accent : C.card, color: on ? C.accentText : C.muted, boxShadow: on ? "0 2px 8px rgba(0,0,0,.18)" : "none", transition: "background .12s" }, children: lbl }, k);
-                            }) }), _jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Block length" }), durationControl, _jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Set & rep targets" }), _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }, children: [["auto", "Auto", "Periodized for you — sets & load ramp each week, with a deload"], ["manual", "Manual", "Set your own sets & reps on every exercise"]].map(([v, label, sub]) => {
-                                const on = cfgDraft?.progression === v;
-                                return (_jsxs("button", { onClick: () => setCfgDraft(d => ({ ...d, progression: v })), className: "pressable", style: { display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 12, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.cardHi : C.card, color: C.text, cursor: "pointer", textAlign: "left", boxShadow: on ? `inset 0 0 0 1px ${C.accent}` : "none" }, children: [_jsx("div", { style: { width: 18, height: 18, borderRadius: 999, border: `2px solid ${on ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: on && _jsx("div", { style: { width: 8, height: 8, borderRadius: 999, background: C.accent } }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: label }), _jsx("div", { style: { fontSize: 11, color: C.muted }, children: sub })] })] }, v));
-                            }) }), _jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Training approach" }), _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }, children: [["standard", "Standard volume", "Typically 3–5 sets per exercise at 1–3 reps in reserve (up to 6 on main lifts in peak weeks)"], ["minimalist", "Minimalist · high intensity", "2–3 hard sets near failure. Same exercises, less total volume"]].map(([v, label, sub]) => {
-                                const on = (cfgDraft?.volumeApproach || "standard") === v;
-                                return (_jsxs("button", { onClick: () => setCfgDraft(d => ({ ...d, volumeApproach: v })), className: "pressable", style: { display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 12, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.cardHi : C.card, color: C.text, cursor: "pointer", textAlign: "left", boxShadow: on ? `inset 0 0 0 1px ${C.accent}` : "none" }, children: [_jsx("div", { style: { width: 18, height: 18, borderRadius: 999, border: `2px solid ${on ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: on && _jsx("div", { style: { width: 8, height: 8, borderRadius: 999, background: C.accent } }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: label }), _jsx("div", { style: { fontSize: 11, color: C.muted }, children: sub })] })] }, v));
-                            }) })] })), _jsxs("div", { style: { ...eyebrow(), marginBottom: 8 }, children: ["Folder ", _jsx("span", { style: { fontWeight: 500, textTransform: "none", letterSpacing: 0, color: C.faint }, children: "\u00B7 optional" })] }), _jsx("input", { value: cfgDraft?.folder || "", onChange: e => setCfgDraft(d => ({ ...d, folder: e.target.value })), placeholder: "Group routines, e.g. Bulk 2025", style: { width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, marginBottom: 16, fontFamily: "inherit" } }), _jsxs("div", { style: { ...eyebrow(), marginBottom: 8 }, children: ["Description ", _jsx("span", { style: { fontWeight: 500, textTransform: "none", letterSpacing: 0, color: C.faint }, children: "\u00B7 optional" })] }), _jsx("textarea", { value: cfgDraft?.description || "", onChange: e => setCfgDraft(d => ({ ...d, description: e.target.value })), rows: 3, placeholder: "What this routine is for, how to progress, deload notes\u2026", style: { width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, marginBottom: 16, fontFamily: "inherit", lineHeight: 1.5, resize: "vertical" } }), program.config?.percentScheme && program.engineSource === "pursuit-next" && (_jsxs("div", { style: { marginBottom: 16, padding: "10px 12px", borderRadius: 12, background: C.cardHi, border: `1px solid ${C.border}`, fontSize: 13, color: C.muted, lineHeight: 1.45 }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 5 }, children: "Assistance work" }), "Assistance is managed automatically for this program, so changing an older assistance preset cannot silently replace the plan's structure."] })), program.config?.percentScheme && program.engineSource !== "pursuit-next" && (_jsxs(_Fragment, { children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Assistance work" }), _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }, children: [
-                                ["triumvirate", "Triumvirate", "Main lift + 2 targeted accessories"],
-                                ["bbb", "5×10 Supplemental", "Main lift + 5×10 supplemental @ 50%"],
-                                ["jack_shit", "Jack Shit", "Main lift only — nothing else"],
-                                [null, "Full accessories", "Main lift + a full slate of accessories"],
-                            ].map(([v, label, sub]) => {
-                                const on = (cfgDraft?.assistance ?? null) === v;
-                                return (_jsxs("button", { "aria-label": `Assistance: ${label}`, "aria-pressed": on, onClick: () => setCfgDraft(d => ({ ...d, assistance: v })), className: "pressable", style: { display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 12, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.cardHi : C.card, color: C.text, cursor: "pointer", textAlign: "left", boxShadow: on ? `inset 0 0 0 1px ${C.accent}` : "none" }, children: [_jsx("div", { style: { width: 18, height: 18, borderRadius: 999, border: `2px solid ${on ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: on && _jsx("div", { style: { width: 8, height: 8, borderRadius: 999, background: C.accent } }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: label }), _jsx("div", { style: { fontSize: 11, color: C.muted }, children: sub })] })] }, label));
-                            }) })] })), _jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Barbell movements per session" }), _jsx("div", { style: { display: "flex", gap: 8, marginBottom: 16 }, children: [[null, "No limit"], [1, "1"], [2, "2"], [3, "3"]].map(([v, label]) => {
-                        const on = (cfgDraft?.barbellCap ?? null) === v;
-                        return _jsx("button", { onClick: () => setCfgDraft(d => ({ ...d, barbellCap: v })), className: "pressable", style: { flex: 1, padding: "12px 4px", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 700, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accent : C.card, color: on ? C.accentText : C.muted, boxShadow: on ? "0 2px 8px rgba(0,0,0,.18)" : "none", transition: "background .12s" }, children: label }, label);
-                    }) }), _jsxs("button", { onClick: () => setCfgDraft(d => ({ ...d, noBodyweight: !d.noBodyweight })), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 12, border: `1px solid ${cfgDraft?.noBodyweight ? C.accent : C.border}`, background: cfgDraft?.noBodyweight ? C.cardHi : C.card, color: C.text, cursor: "pointer", textAlign: "left" }, children: [_jsx("div", { style: { width: 22, height: 22, borderRadius: 8, border: `2px solid ${cfgDraft?.noBodyweight ? C.accent : C.border}`, background: cfgDraft?.noBodyweight ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: cfgDraft?.noBodyweight && _jsx(Check, { size: 14, color: C.accentText }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: "Skip bodyweight exercises" }), _jsx("div", { style: { fontSize: 13, color: C.muted }, children: "Replace any bodyweight movements with loaded ones" })] })] }), _jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.5 }, children: "These choices are treated as firm program constraints. If a requested combination cannot be built safely, the rebuild is rejected instead of silently ignoring the setting." }), _jsxs("button", { onClick: () => setCfgDraft(d => ({ ...d, noSupersets: !d.noSupersets })), className: "pressable", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 12, border: `1px solid ${cfgDraft?.noSupersets ? C.accent : C.border}`, background: cfgDraft?.noSupersets ? C.cardHi : C.card, color: C.text, cursor: "pointer", textAlign: "left", marginTop: 8 }, children: [_jsx("div", { style: { width: 22, height: 22, borderRadius: 8, border: `2px solid ${cfgDraft?.noSupersets ? C.accent : C.border}`, background: cfgDraft?.noSupersets ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: cfgDraft?.noSupersets && _jsx(Check, { size: 14, color: C.accentText }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600 }, children: "No supersets" }), _jsx("div", { style: { fontSize: 13, color: C.muted }, children: "Budget the workout as straight sets only" })] })] }), _jsxs("div", { style: { display: "flex", gap: 8, marginTop: 20, position: "sticky", bottom: 0, zIndex: 2, marginLeft: -18, marginRight: -18, padding: "8px 18px calc(env(safe-area-inset-bottom) + 16px)", background: C.bg2, borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("button", { onClick: () => setCfgSheet(false), className: "pressable", style: { flex: 1, padding: "14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Cancel" }), _jsx("button", { "aria-label": "Save program settings", onClick: applyCfgDraft, disabled: !canApply, className: "pressable", style: { flex: 2, padding: "14px", borderRadius: 12, border: "none", background: canApply ? C.accent : C.card, color: canApply ? C.accentText : C.faint, fontSize: 15, fontWeight: 700, cursor: canApply ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: canApply ? 1 : 0.7 }, children: canApply ? _jsxs(_Fragment, { children: [_jsx(Check, { size: 17 }), " Save changes"] }) : "No changes" })] })] }) }));
 }
 // Continuous-mode phase indicator: the finite week-pill strip doesn't fit an endless program, so
 // render the training wave itself — accumulation weeks building up, an automatic deload, then a loop
@@ -8899,252 +8605,24 @@ function SwapSheet({ ex, alts, onPick, onBanCurrent, onClose, trend, program, da
 /* `program` and `week` are optional and only enable the contributing-exercise drill-down: this
    component also renders for LOGGED volume on Home and in history, where there is no program to
    attribute sets to. Without them it behaves exactly as before. */
-function VolumeBars({ volume, subVolume, target, program = null, week = 0 }) {
-    const [openPart, setOpenPart] = useState(null);
-    const weekBreak = useMemo(() => (program ? weekMuscleBreakdown(program, week) : null), [program, week]);
-    const [granular, setGranular] = useState(false);
-    const parts = PART_ORDER.filter(p => (volume[p] || 0) > 0.05 || (target && (target[p] || 0) > 0.05));
-    if (!parts.length)
-        return _jsx("div", { style: { fontSize: 13, color: C.muted, padding: "6px 2px" }, children: "No volume logged yet." });
-    // sub-regions to surface beneath their parent part when granular view is on
-    const subUnder = { shoulders: ["front_delts", "side_delts", "rear_delts"], traps: ["upper_traps"], abs: ["obliques", "serratus"], calves: ["tibialis"] };
-    const subBar = (k) => {
-        const v = (subVolume && subVolume[k]) || 0;
-        const lm = program?.engineSource === "pursuit-next" && k !== "front_delts" ? landmarkFor(k, program.config?.experience, program) : SUB_LANDMARKS[k] || { mev: 4, mrv: 20 };
-        /* SUB-HEADS GET THE SAME BANDS AS EVERYTHING ELSE, FROM ONE DEFINITION.
-           This line used to carry its own copy of the three-band rule — so when the bands changed the
-           broad parts above gained a MAV split and these sub-head rows silently kept the old two-band
-           "productive", side by side on the same screen. Sub-heads have their own landmarks (front
-           delts run mev 0), so the thresholds come from SUB_LANDMARKS while the band NAMES and the
-           claims attached to them come from the shared table. */
-        const subMav = lm.mav != null ? lm.mav : (lm.mev + lm.mrv) / 2;
-        const zone = v < lm.mev ? { color: C.muted, label: "below MEV", sub: "under the volume that reliably drives growth" }
-            : v <= subMav ? { color: C.accentInk, label: "productive", sub: "inside the range this app plans for" }
-                : v <= lm.mrv ? { color: C.accentInk, label: "high", sub: "near the top of the planned range" }
-                    : { color: C.warn, label: "over MRV", sub: "past what this app budgets to recover from" };
-        const scale = Math.max(lm.mrv * 1.1, v, 1);
-        return (_jsxs("div", { style: { marginTop: 6, paddingLeft: 12, borderLeft: `2px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13, marginBottom: 2 }, children: [_jsx("span", { style: { color: C.muted, fontWeight: 500 }, children: SUBMUSCLE_LABEL[k] }), _jsxs("span", { children: [_jsx("span", { className: "mono", style: { color: catInk(zone.color), fontWeight: 600 }, children: fmtSets(v) }), " ", _jsx("span", { style: { fontSize: 11, color: C.faint }, children: zone.label })] })] }), _jsxs("div", { style: { position: "relative", height: 6, borderRadius: 999, background: C.bg2, overflow: "hidden" }, children: [_jsx("div", { style: { position: "absolute", left: `${(lm.mev / scale) * 100}%`, width: `${((lm.mrv - lm.mev) / scale) * 100}%`, top: 0, bottom: 0, background: C.accent, opacity: 0.13 } }), _jsx("div", { className: "wpb-bar", style: { background: zone.color, transform: `translateX(-${100 - Math.min(100, (v / scale) * 100)}%)` } })] })] }, k));
-    };
-    return (_jsxs(_Fragment, { children: [subVolume && (_jsxs("button", { onClick: () => setGranular(g => !g), className: "pressable", style: { display: "flex", alignItems: "center", gap: 6, marginTop: 8, padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: granular ? C.accentDim : C.card, color: granular ? C.accentInk : C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: [_jsx(Layers, { size: 13 }), " ", granular ? "Hide" : "Show", " delt heads & detail"] })), parts.map(p => {
-                const v = volume[p] || 0;
-                const tgt = target ? (target[p] || 0) : 0;
-                const { mev } = landmarkFor(p, program?.config?.experience, program);
-                const mrv = compositeMrv(p, program); // composite parts (shoulders) scale to the sum of their heads
-                const zone = partZone(p, v, subVolume, program);
-                const scale = Math.max(mrv * 1.1, v, tgt); // bar axis tops out past MRV, the bar, and the target
-                return (_jsxs("div", { style: { marginTop: 12 }, children: [_jsxs("div", { "data-vol-part": p, onClick: () => program && setOpenPart(o => o === p ? null : p), style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13, marginBottom: 4, cursor: program ? "pointer" : "default" }, children: [_jsxs("span", { style: { color: C.text, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }, children: [PART_LABEL[p], program && _jsx(ChevronDown, { size: 11, color: C.faint, style: { transform: openPart === p ? "rotate(180deg)" : "none", transition: "transform .15s" } })] }), _jsxs("span", { children: [_jsx("span", { className: "mono", style: { color: catInk(zone.color), fontWeight: 600 }, children: fmtSets(v) }), tgt > 0 && _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint }, children: [" / ", fmtSets(tgt)] }), " ", _jsx("span", { style: { fontSize: 11, color: C.faint }, title: tgt > 0 ? undefined : zone.sub, children: tgt > 0 ? "planned" : zone.label })] })] }), _jsxs("div", { style: { position: "relative", height: 9, borderRadius: 999, background: C.bg2, overflow: "visible" }, children: [_jsxs("div", { style: { position: "absolute", inset: 0, borderRadius: 999, overflow: "hidden" }, children: [_jsx("div", { style: { position: "absolute", left: `${(mev / scale) * 100}%`, width: `${((mrv - mev) / scale) * 100}%`, top: 0, bottom: 0, background: C.accent, opacity: 0.13 } }), _jsx("div", { className: "wpb-bar", style: { background: zone.color, transform: `translateX(-${100 - Math.min(100, (v / scale) * 100)}%)` } })] }), _jsx("div", { style: { position: "absolute", left: `${(mev / scale) * 100}%`, top: -1, bottom: -1, width: 2, background: C.faint, opacity: 0.6 } }), _jsx("div", { style: { position: "absolute", left: `${(mrv / scale) * 100}%`, top: -1, bottom: -1, width: 2, background: C.warn, opacity: 0.7 } }), tgt > 0 && _jsxs(_Fragment, { children: [_jsx("div", { style: { position: "absolute", left: `calc(${(tgt / scale) * 100}% - 3px)`, top: -7, width: 0, height: 0, borderLeft: "3px solid transparent", borderRight: "3px solid transparent", borderTop: `5px solid ${C.text}` } }), _jsx("div", { style: { position: "absolute", left: `${(tgt / scale) * 100}%`, top: -2, bottom: -2, width: 2, background: C.text, opacity: 0.85 } })] })] }), openPart === p && program && (() => {
-                            const entry = (weekBreak || []).find(e => e.part === p);
-                            const from = (entry && entry.from) || [];
-                            if (!from.length)
-                                return _jsx("div", { style: { fontSize: 13, color: C.faint, padding: "8px 0 2px" }, children: "Nothing in this program trains it this week." });
-                            return (_jsxs("div", { style: { marginTop: 8, background: C.bg2, borderRadius: 12, padding: "8px 10px" }, children: [from.slice(0, 8).map((f, i) => (_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, padding: "4px 0", fontSize: 13 }, children: [_jsx("span", { style: { color: C.faint, flexShrink: 0, maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: f.dayLabel }), _jsxs("span", { style: { flex: 1, minWidth: 0, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [f.name, !f.direct && _jsxs("span", { style: { color: C.faint, fontWeight: 400 }, children: [" (", Math.round(f.factor * 100), "% assist)"] })] }), _jsxs("span", { className: "mono", style: { flexShrink: 0, color: f.direct ? C.accentInk : C.muted, fontWeight: 600 }, children: ["+", fmtSets(f.contrib)] })] }, i))), from.length > 8 && _jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 4 }, children: ["+", from.length - 8, " more"] })] }));
-                        })(), granular && subVolume && subUnder[p] && subUnder[p].filter(k => (subVolume[k] || 0) > 0.05 || SUB_LANDMARKS[k]?.mev > 0).map(subBar)] }, p));
-            }), _jsxs("div", { style: { fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.5 }, children: ["Bars include fractional sets from compounds. The shaded band runs from ", _jsx("span", { style: { color: C.muted }, children: "MEV" }), " (minimum effective) to ", _jsx("span", { style: { color: C.warn }, children: "MRV" }), " (max recoverable) \u2014 staying inside it is the productive zone.", target ? " The light marker is your active program's planned volume for this week — the gap is what's left to hit." : "", subVolume ? " Expand a region for delt heads, obliques, and other detail — front delts read high because pressing feeds them, so side/rear usually need the direct work." : "", " Landmarks are population estimates and vary by individual."] })] }));
-}
-function VolumeRampTable({ program }) {
-    const weeks = weeksOf(program);
-    const cols = [];
-    for (let w = 1; w <= weeks; w++)
-        cols.push({ w, label: `W${w}` });
-    if (program.config.deload)
-        cols.push({ w: weeks + 1, label: "DL" });
-    const vols = cols.map(c => weeklyVolume(program, c.w));
-    const parts = PART_ORDER.filter(p => vols.some(v => (v[p] || 0) > 0.05));
-    const CW = 30;
-    if (!parts.length)
-        return null;
-    return (_jsxs("div", { style: { marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 2 }, children: "Volume across the block" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 8 }, children: "Sets per muscle each week \u2014 color shows the MEV \u2192 MRV zone" }), _jsx("div", { className: "wpb-hscroll", style: { overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y" }, children: _jsxs("div", { style: { display: "inline-block", minWidth: "100%" }, children: [_jsxs("div", { style: { display: "flex", marginBottom: 6 }, children: [_jsx("div", { style: { width: 72, flexShrink: 0 } }), cols.map(c => (_jsx("div", { style: { width: CW, textAlign: "center", fontSize: 11, fontWeight: 700, color: c.label === "DL" ? C.muted : C.faint }, children: c.label }, c.w)))] }), parts.map(p => (_jsxs("div", { style: { display: "flex", alignItems: "center", marginBottom: 4 }, children: [_jsx("div", { style: { width: 72, flexShrink: 0, fontSize: 13, fontWeight: 500, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 4 }, children: PART_LABEL[p] }), cols.map((c, ci) => {
-                                    const s = vols[ci][p] || 0;
-                                    const z = volumeZone(p, s, program);
-                                    return (_jsx("div", { style: { width: CW, display: "flex", justifyContent: "center" }, children: _jsx("div", { className: "mono", title: `${PART_LABEL[p]} · ${z.label}`, style: { width: 25, height: 22, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, background: `${z.color}22`, color: catInk(z.color) }, children: fmtSets(s) }) }, c.w));
-                                })] }, p)))] }) }), _jsx("div", { style: { display: "flex", gap: 12, marginTop: 8, fontSize: 11, color: C.muted }, children: [["below MEV", C.muted], ["productive", C.accent], ["over MRV", C.warn]].map(([l, col]) => (_jsxs("span", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("span", { style: { width: 9, height: 9, borderRadius: 8, background: `${col}33`, border: `1px solid ${col}` } }), l] }, l))) })] }));
-}
-/* THE Plan-info card. Three cards live in that sheet — "How this was built", "Weekly volume" and
-   "Block plan" — and each had been given its own shell by hand. They had drifted into three different
-   cards: two radii (18 and 14), two backgrounds (card and bg2), two header paddings, an icon in a
-   34px tile on two of them and a bare 16px icon on the third, three title sizes (15.5/15.5/13.5),
-   two subtitle colours, two chevron sizes, and the expand animation on one of the three. Sitting in
-   one sheet, one under the other, that reads as three unrelated things rather than three sections of
-   the same reference. The shell now exists ONCE and every card in the sheet takes it, so the next
-   card added is consistent by construction rather than by care. data-infocard is the structural hook
-   the gate counts: jsdom has no layout, so "they look the same" has to be asserted as "they are the
-   same element". */
-function MotionReveal({ open, children }) {
-    const [alive, setAlive] = useState(!!open);
-    const holder = useRef(null), content = useRef(null), last = useRef(children);
-    if (open) last.current = children;
-    useLayoutEffect(() => {
-        if (open && !alive) { setAlive(true); return; }
-        const el = holder.current, inner = content.current;
-        if (!el || !inner) return;
-        el.inert = !open;
-        let target = -1;
-        const resize = () => {
-            const next = open ? inner.getBoundingClientRect().height : 0;
-            if (Math.abs(next - target) < .5) return;
-            target = next;
-            spring(el, 'reveal-height', next, { from: el.getBoundingClientRect().height, damping: 1,
-                write: v => { el.style.height = Math.max(0, v) + 'px'; },
-                complete: () => { if (open) el.style.height = 'auto'; else setAlive(false); } });
-        };
-        resize();
-        const observer = new ResizeObserver(resize); if (open) observer.observe(inner);
-        return () => { observer.disconnect(); stopMotion(el, 'reveal-height'); };
-    }, [open, alive]);
-    if (!open && !alive) return null;
-    return _jsx('div', { ref: holder, 'data-pi-reveal': true, 'aria-hidden': open ? undefined : true,
-        style: { height: 0, overflow: 'hidden' }, children: _jsx('div', { ref: content, children: open ? children : last.current }) });
-}
-function InfoCard({ icon: Icon, title, subtitle, open, onToggle, children, collapsible = true }) {
-    const isOpen = collapsible ? !!open : true;
-    const header = (_jsxs(_Fragment, { children: [_jsx("div", { style: { width: 34, height: 34, borderRadius: 12, background: C.bg2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: 17, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: title }), subtitle ? _jsx("div", { style: { fontSize: 13, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: subtitle }) : null] }), collapsible && _jsx(ChevronDown, { size: 20, color: C.muted, className: "wpb-chev", style: { flexShrink: 0, transform: isOpen ? "rotate(180deg)" : "none" } })] }));
-    return (_jsxs("div", { "data-infocard": true, "data-collapsible": collapsible ? "1" : "0", style: { marginBottom: 12, background: C.card, borderRadius: 16, overflow: "hidden" }, children: [collapsible ? (_jsx("button", { className: "pressable", onClick: onToggle, "aria-expanded": isOpen, style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "none", border: "none", color: C.text, cursor: "pointer", textAlign: "left" }, children: header })) : (_jsx("div", { className: "wpb-infocard-static-head", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", color: C.text, textAlign: "left" }, children: header })), _jsx(MotionReveal, { open: isOpen, children: _jsx("div", { style: { padding: "0 16px 14px" }, children: children }) })] }));
-}
-/* Renders programSetupChips on the program screen. Collapsible and CLOSED by default — this is
-   reference, not something read every session. But the two chips most likely to be forgotten, and
-   the ones a lifter actually opens this screen to confirm, are shown in the collapsed header. */
-function SetupCard({ program, open, onToggle }) {
-    const chips = programSetupChips(program);
-    if (!chips.length)
-        return null;
-    const headline = chips.filter(c => c.key === "focus" || c.key === "reduce");
-    return (_jsx(InfoCard, { icon: Settings2, title: "How this was built", open: open, onToggle: onToggle, subtitle: headline.length ? headline.map(c => `${c.label}: ${c.value}`).join(" · ") : `${chips.length} settings`, children: _jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: chips.map(c => (_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 6, padding: "7px 11px", borderRadius: 12,
-                    background: c.tone === "accent" ? C.accentDim : C.bg2
-                }, children: [_jsx("span", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .4, textTransform: "uppercase", color: c.tone === "accent" ? C.accentInk : C.faint }, children: c.label }), _jsx("span", { style: { fontSize: 13, fontWeight: 600, color: C.text }, children: c.value })] }, c.key))) }) }));
-}
-/* ── THE PROGRESSION MATRIX ──────────────────────────────────────────────────────────────────
-   Every prescription this program will ever give you, for every lift, laid out week by week.
-   The program screen shows ONE week at a time, so the shape of the block — where sets step up,
-   where the effort target tightens, what the deload actually removes — could only be reconstructed
-   by paging through weeks and holding the numbers in your head.
-
-   It computes NOTHING. Every cell is computeCell(), the same call the session screen makes when it
-   prescribes the set and the same one the home hero's preview reads, so this table cannot show a
-   number the workout then contradicts. That is the whole reason it is safe to add: it is a view. */
-function ProgressionCard({ program, open, onToggle }) {
-    const [q, setQ] = useState("");
-    const [filter, setFilter] = useState("all");
-    const weeks = weeksOf(program);
-    // M191 is a VIEW of the engine-owned M190 selection record. Do not re-run or approximate
-    // progression policy in the UI: the program snapshot already says what was selected and why.
-    const selectedProgressions = Array.isArray(program?.nextEngine?.progressionPlan) ? program.nextEngine.progressionPlan : [];
-    const progressionLabel = (style) => ({
-        double: "Double progression", dynamic: "Dynamic double progression", ladder: "Rep ladder",
-        linear: "Linear progression", wave: "Wave loading", e1rm: "e1RM autoregulation", auto: "Auto"
-    })[style] || String(style || "Auto").replace(/_/g, " ");
-    const progressionGroups = [];
-    const progressionGroupMap = new Map();
-    for (const item of selectedProgressions) {
-        const key = item?.style || "auto";
-        let group = progressionGroupMap.get(key);
-        if (!group) {
-            group = { key, label: progressionLabel(key), items: [] };
-            progressionGroupMap.set(key, group);
-            progressionGroups.push(group);
-        }
-        group.items.push(item);
-    }
-    const adaptiveSelections = selectedProgressions.filter(item => item?.source === "adaptive" || item?.source === "adaptive_hold").length;
-    const changedSelections = selectedProgressions.filter(item => item?.changed === true).length;
-    const manualSelections = selectedProgressions.filter(item => item?.source === "manual").length;
-    const progressionOverview = selectedProgressions.length ? (_jsxs("div", { "data-progression-selection": true, style: { background: C.bg2, borderRadius: 14, padding: "12px 13px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }, children: [_jsx(Wand2, { size: 14, color: C.accentInk }), _jsx("span", { style: { fontSize: 13, fontWeight: 750, color: C.text }, children: manualSelections === selectedProgressions.length ? "Your progression choices" : adaptiveSelections ? "Progression re-checked from your training" : "Auto progression for this block" }), _jsx("span", { style: { marginLeft: "auto", fontSize: 11, color: C.faint }, children: adaptiveSelections ? changedSelections + " changed · " + Math.max(0, adaptiveSelections - changedSelections) + " kept" : progressionGroups.length + " method" + (progressionGroups.length === 1 ? "" : "s") })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: manualSelections === selectedProgressions.length ? "These methods are locked by your choices. Auto will not replace them at block review." : adaptiveSelections ? "Auto used comparable workout history before keeping or changing each method. One unusual workout is not enough to switch it." : "Pursuit chose per exercise from the lift, rep target, loading setup, your experience, phase, and block length. It can re-check the method between blocks once enough comparable training exists." }), _jsx("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 9 }, children: progressionGroups.map(group => (_jsxs("span", { style: { display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 10, background: C.card, color: C.text, fontSize: 12, fontWeight: 650 }, children: [_jsx("span", { children: group.label }), _jsx("span", { className: "mono", style: { color: C.accentInk, fontWeight: 750 }, children: group.items.length })] }, group.key))) }), _jsxs("details", { open: true, style: { marginTop: 10 }, children: [_jsx("summary", { style: { cursor: "pointer", color: C.accentInk, fontSize: 12, fontWeight: 700, listStylePosition: "inside" }, children: "Why these methods?" }), _jsx("div", { style: { marginTop: 7 }, children: selectedProgressions.map((item, index) => (_jsxs("div", { "data-progression-reason": true, style: { padding: "8px 0", borderTop: "1px solid " + C.borderSoft }, children: [_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8 }, children: [_jsx("span", { style: { flex: 1, minWidth: 0, color: C.text, fontSize: 13, fontWeight: 650, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: item.exerciseName || "Exercise" }), _jsx("span", { style: { flexShrink: 0, color: C.accentInk, fontSize: 11, fontWeight: 700 }, children: progressionLabel(item.style) })] }), item.previousStyle ? _jsx("div", { "data-progression-delta": item.changed ? "changed" : "kept", style: { marginTop: 3, color: item.changed ? C.accentInk : C.faint, fontSize: 11, fontWeight: 700 }, children: item.changed ? "Changed: " + progressionLabel(item.previousStyle) + " → " + progressionLabel(item.style) : "Kept: " + progressionLabel(item.style) }) : null, _jsx("div", { style: { marginTop: 2, color: C.muted, fontSize: 12, lineHeight: 1.45 }, children: item.reason || "Auto selected the progression that best fits this exercise and block." })] }, String(item.exerciseId || item.exerciseName || "exercise") + ":" + index))) })] })] })) : null;
-    const rows = useMemo(() => {
-        const out = [];
-        (program.days || []).forEach(d => (d.exercises || []).forEach((exId, si) => {
-            const ex = EX_BY_ID[exId];
-            if (!ex)
-                return;
-            out.push({ exId, ex, day: d, slot: si, primary: si === d.primaryIndex });
-        }));
-        return out;
-    }, [program]);
-    const UPPER = new Set(["chest", "lats", "upper_back", "shoulders", "biceps", "triceps", "forearms", "traps", "neck"]);
-    const shown = rows.filter(r => {
-        if (q && !r.ex.name.toLowerCase().includes(q.toLowerCase()))
-            return false;
-        if (filter === "primary")
-            return r.primary;
-        if (filter === "upper")
-            return UPPER.has(r.ex.part);
-        if (filter === "lower")
-            return !UPPER.has(r.ex.part);
-        return true;
-    });
-    /* Two week columns at a time. A phone cannot show twelve, and a horizontally scrolling table of
-       numbers is worse than a pager: you lose the exercise name the moment you scroll. */
-    const [from, setFrom] = useState(0);
-    const cols = [from, from + 1].filter(w => w < weeks);
-    const chip = (id, label) => (_jsx("button", { onClick: () => setFilter(id), className: "pressable", style: { padding: "6px 11px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer",
-            border: `1px solid ${filter === id ? C.accent : C.border}`,
-            background: filter === id ? C.accent : "none", color: filter === id ? C.accentText : C.muted }, children: label }, id));
-    return (_jsx(InfoCard, { icon: TrendingUp, title: "Lift progression", open: open, onToggle: onToggle, subtitle: `${rows.length} lifts · ${weeks} week${weeks === 1 ? "" : "s"} of sets, reps and effort`, children: _jsxs("div", { style: { paddingTop: 4 }, children: [progressionOverview, _jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "Search a lift\u2026", "aria-label": "Search a lift", style: { width: "100%", padding: "9px 11px", borderRadius: 12, background: C.bg2, border: `1px solid ${C.border}`, color: C.text, fontSize: 13, marginBottom: 8 } }), _jsxs("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }, children: [chip("all", "All lifts"), chip("primary", "Primary only"), chip("upper", "Upper"), chip("lower", "Lower")] }), weeks > 2 && (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsx("button", { onClick: () => setFrom(w => Math.max(0, w - 1)), disabled: from === 0, "aria-label": "Earlier weeks", className: "pressable hit", style: { ...iconBtn(), width: 30, height: 30, opacity: from === 0 ? .4 : 1 }, children: _jsx(ChevronLeft, { size: 15 }) }), _jsxs("div", { style: { flex: 1, textAlign: "center", fontSize: 13, color: C.muted, fontWeight: 600 }, children: ["Weeks ", from + 1, "\u2013", Math.min(weeks, from + 2), " of ", weeks] }), _jsx("button", { onClick: () => setFrom(w => Math.min(weeks - 2, w + 1)), disabled: from >= weeks - 2, "aria-label": "Later weeks", className: "pressable hit", style: { ...iconBtn(), width: 30, height: 30, opacity: from >= weeks - 2 ? .4 : 1 }, children: _jsx(ChevronRight, { size: 15 }) })] })), _jsxs("div", { style: { display: "flex", ...eyebrow(), padding: "0 0 6px" }, children: [_jsx("span", { style: { flex: 1 }, children: "Exercise" }), cols.map(w => _jsxs("span", { style: { width: 74, textAlign: "center", color: w === 0 ? C.accentInk : C.faint }, children: ["Wk ", w + 1] }, w))] }), shown.length === 0 && _jsx("div", { style: { fontSize: 13, color: C.muted, padding: "10px 0" }, children: "No lift matches that." }), shown.map((r, i) => (_jsxs("div", { style: { display: "flex", alignItems: "center", borderTop: `1px solid ${C.border}`, padding: "9px 0" }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0, paddingRight: 8 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: r.ex.name }), r.primary && _jsx(Star, { size: 10, color: C.accentText, fill: C.accentText, style: { flexShrink: 0 } })] }), _jsx("div", { style: { fontSize: 11, color: C.faint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: r.day.label })] }), cols.map(w => {
-                            const c = computeCell(program, r.day, r.exId, r.slot, w);
-                            const rir = c.rir != null ? c.rir : (c.targetRIR != null ? c.targetRIR : null);
-                            return (_jsxs("div", { style: { width: 74, textAlign: "center" }, children: [_jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 700, color: w === 0 ? C.accentInk : C.text }, children: [c.sets, "\u00D7", c.range] }), rir != null && _jsxs("div", { style: { fontSize: 11, color: C.faint }, children: ["RIR ", rir] })] }, w));
-                        })] }, i)))] }) }));
-}
-/* ── THE VOLUME LOAD WAVE ────────────────────────────────────────────────────────────────────
-   The block plan lists its phases in words. This is the same block as a shape: total planned sets
-   per week, so an accumulation ramp, a step, or a deload trough is visible at a glance rather than
-   inferred from three paragraphs. Sets come from weeklyVolume, the same function the volume card
-   totals — no second definition of "how much work is this week". */
-function LoadWaveCard({ program, open, onToggle }) {
-    const weeks = weeksOf(program);
-    /* plannedWeek, not the weeklyVolume sum: this chart is labelled "planned sets", and the volume
-       sum includes fractional secondary credit, which is a different quantity from the sets you will
-       actually perform. Showing that one under this label was the exact confusion criticised in the
-       build these views came from. */
-    /* ⚠ TWO DEFECTS ON ONE LINE, AND THE SECOND WAS HIDING BEHIND THE FIRST.
-       (1) OFF BY ONE. This sampled plannedWeek(0 … weeks-1) and labelled them W1 … Wn, while every
-       other caller of plannedWeek — the week chips, the header strip — samples 1 … weeks and calls the
-       deload weeks+1. computeCell clamps week 0 to week 1, so the first bar looked right and nothing
-       threw; the wave was simply one week behind from W3 onward. Measured on a 6-week block: the wave
-       showed 85/85/85/89/96/100 where the chips show 85/85/89/96/100/100. The comment above promises
-       "one definition, read by the week chips, the header strip and the load wave, so those three can
-       never disagree about the size of a week" — they were sharing the function and disagreeing about
-       the ARGUMENT, which is the same divergence wearing a disguise.
-       (2) THE DELOAD WAS NEVER IN THE CHART AT ALL, so a card whose whole purpose is to make "an
-       accumulation ramp, a step, or a deload trough visible at a glance" could not show the trough.
-       The old highlight test — lowest quartile AND `w === weeks - 1` — was looking for the deload in
-       the last HARD week, which carries the most volume, so it could never fire on any program ever
-       generated. A deload is not inferred from the shape of a bar; the program says whether it has
-       one, so ask it. */
-    const deloadWeek = program.config?.deload ? weeks + 1 : null;
-    const data = useMemo(() => {
-        const out = Array.from({ length: weeks }, (_, i) => ({ w: i + 1, ...plannedWeek(program, i + 1) }));
-        if (deloadWeek)
-            out.push({ w: deloadWeek, deload: true, ...plannedWeek(program, deloadWeek) });
-        return out;
-    }, [program, weeks, deloadWeek]);
-    const peak = Math.max(1, ...data.map(d => d.sets));
-    const low = Math.min(...data.map(d => d.sets));
-    return (_jsx(InfoCard, { icon: BarChart3, title: "Volume load wave", open: open, onToggle: onToggle, subtitle: `${low}–${peak} planned sets a week across ${weeks} week${weeks === 1 ? "" : "s"}${deloadWeek ? " plus a deload" : ""}`, children: _jsx("div", { "data-load-wave": true, style: { display: "flex", alignItems: "flex-end", gap: 6, paddingTop: 8 }, children: data.map(d => {
-                /* Bars are scaled from the LOW week, not from zero: every week of a block is a large
-                   number, so a zero-based axis renders twelve near-identical bars and shows nothing. The
-                   floor is stated in the subtitle so the exaggeration cannot be read as the whole story. */
-                const h = 18 + ((d.sets - low) / Math.max(1, peak - low)) * 78;
-                const dl = !!d.deload; // the program's own fact, not a guess from the bar's height
-                const first = d.w === 1;
-                return (_jsxs("div", { "data-wave-week": d.w, "data-wave-sets": d.sets, "data-wave-deload": dl ? "1" : "0", style: { flex: 1, minWidth: 0, textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: dl ? C.warn : first ? C.accentInk : C.faint, marginBottom: 2 }, children: d.sets }), _jsx("div", { style: { height: h, borderRadius: 8, background: dl ? C.warn : first ? C.accent : C.accentDim } }), _jsx("div", { className: "mono", style: { fontSize: 11, color: dl ? C.warn : first ? C.accentInk : C.faint, marginTop: 4 }, children: dl ? "DL" : `W${d.w}` })] }, d.w));
-            }) }) }));
-}
 function VolumeCard({ volume, subVolume, program, onApplyFix, fixFeedback = null, open, onToggle, title = "Weekly volume", emptyLabel, target, history = null, week = 0, collapsible = true }) {
     const parts = PART_ORDER.filter(p => (volume[p] || 0) > 0.05);
     const verdicts = volumeVerdicts(history, volume, parts);
     const verb = program ? "is planned at" : "logged";
-    const total = parts.reduce((s, p) => s + volume[p], 0);
+    const credits = parts.reduce((s, p) => s + volume[p], 0);
+    const workingSets = useMemo(() => program ? plannedWeek(program, week > 0 ? week : 1).sets : null, [program, week]);
     const audit = program ? volumeAudit(program) : { issues: [], volBias: {} };
     // Summarize using the SAME (peak-week) view the Volume check uses, so the header can't say
     // "all in range" while the panel flags a muscle as over MRV. Falls back to the displayed week's
     // zone count when there's no program (e.g. history view).
     // "outside MEV-MRV" must not count the `high` band, which is inside it — see volumeZone.
-    const flags = program ? audit.issues.length : parts.filter(p => !["productive", "high"].includes(partZone(p, volume[p], subVolume).label)).length;
+    const flags = program ? new Set(audit.issues.map(issue => issue.region || issue.part || issue.label)).size : parts.filter(p => !["productive", "high"].includes(partZone(p, volume[p], subVolume).label)).length;
     const isEmpty = parts.length === 0;
-    return (_jsx(InfoCard, { icon: BarChart3, title: title, open: open, onToggle: onToggle, collapsible: collapsible, subtitle: isEmpty ? "No sets logged yet" : `${fmtSets(total)} sets · ${parts.length} muscles${flags ? ` · ${flags} outside MEV–MRV` : " · all in range"}`, children: isEmpty ? (_jsx("div", { style: { padding: "6px 2px 8px", fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: emptyLabel || "Log a workout to see your set volume per muscle against your MEV–MRV landmarks." })) : (_jsxs(_Fragment, { children: [audit.issues.length > 0 && (_jsxs("div", { style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: "12px 13px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(AlertTriangle, { size: 14, color: C.warn }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "Volume check" }), _jsx("span", { style: { fontSize: 11, color: C.faint, marginLeft: "auto" }, children: program?.engineSource === "pursuit-next" ? "all training weeks" : "peak week vs MEV\u2013MRV" })] }), audit.issues.map(iss => (_jsxs("div", { style: { display: "flex", gap: 8, padding: "7px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("span", { style: { flexShrink: 0, marginTop: 1, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: iss.status === "under" ? C.muted : C.warn, width: 46 }, children: iss.status === "under" ? "Low" : "High" }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600, color: C.text }, children: [iss.label, " ", _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint, fontWeight: 500 }, children: ["\u00B7 ", fmtSets(iss.v), " sets (", iss.status === "under" ? `MEV ${iss.mev}` : `MRV ${iss.mrv}`, ")"] })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }, children: iss.fix })] })] }, iss.part))), Object.keys(audit.volBias).length > 0 && onApplyFix && (_jsxs("button", { onClick: () => onApplyFix(audit.volBias), "data-volume-auto-fix": true, className: "pressable", style: { width: "100%", marginTop: 12, background: C.accent, border: "none", borderRadius: 12, color: C.accentText, cursor: "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px" }, children: [_jsx(Wand2, { size: 14 }), " Preview weekly volume fix"] })), Object.keys(audit.volBias).length === 0 && (_jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }, children: "These need an exercise added or a longer session \u2014 auto-fix can't resolve them without changing your day structure." }))] })), verdicts.length > 0 && (_jsxs("div", { style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: "12px 13px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Brain, { size: 14, color: C.accentInk }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "From your training" }), _jsx("span", { style: { fontSize: 11, color: C.faint, marginLeft: "auto" }, children: "your response, not averages" })] }), verdicts.map(v => (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "baseline", padding: "7px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("span", { style: { flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: v.status === "in" ? C.accentInk : C.warn, minWidth: 44 }, children: v.status === "in" ? "on it" : v.status === "over" ? "above" : "below" }), _jsxs("div", { style: { flex: 1, minWidth: 0, fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: [_jsx("b", { style: { color: C.text }, children: PART_LABEL[v.part] || v.part }), " ", v.status === "in"
+    return (_jsx(InfoCard, { icon: BarChart3, title: title, open: open, onToggle: onToggle, collapsible: collapsible, subtitle: isEmpty ? (program ? "No working sets planned" : "No sets logged yet") : `${workingSets != null ? `${fmtSets(workingSets)} working sets` : `${fmtSets(credits)} muscle set credits`} · ${parts.length} muscles${flags ? ` · ${flags} regions to review` : ""}`, children: isEmpty ? (_jsx("div", { style: { padding: "6px 2px 8px", fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: emptyLabel || (program ? "No working sets are planned for this week. Check the selected week and saved exercise targets." : "Log a workout to see your set volume per muscle against your MEV–MRV landmarks.") })) : (_jsxs(_Fragment, { children: [audit.issues.length > 0 && (_jsxs("div", { style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: "12px 13px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(AlertTriangle, { size: 14, color: C.warn }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "Volume check" }), _jsx("span", { style: { fontSize: 11, color: C.faint, marginLeft: "auto" }, children: program?.engineSource === "pursuit-next" ? "all training weeks" : "peak week vs MEV\u2013MRV" })] }), audit.issues.map(iss => (_jsxs("div", { style: { display: "flex", gap: 8, padding: "7px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("span", { style: { flexShrink: 0, marginTop: 1, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: iss.status === "under" ? C.muted : C.warn, width: 46 }, children: iss.status === "under" ? "Low" : "High" }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600, color: C.text }, children: [iss.label, " ", _jsxs("span", { className: "mono", style: { fontSize: 11, color: C.faint, fontWeight: 500 }, children: ["\u00B7 ", fmtSets(iss.v), " sets (", iss.status === "under" ? `MEV ${iss.mev}` : `MRV ${iss.mrv}`, ")"] })] }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }, children: iss.fix })] })] }, iss.part))), Object.keys(audit.volBias).length > 0 && onApplyFix && (_jsxs("button", { onClick: () => onApplyFix(audit.volBias), "data-volume-auto-fix": true, className: "pressable", style: { width: "100%", marginTop: 12, background: C.accent, border: "none", borderRadius: 12, color: C.accentText, cursor: "pointer", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px" }, children: [_jsx(Wand2, { size: 14 }), " Preview weekly volume fix"] })), Object.keys(audit.volBias).length === 0 && (_jsx("div", { style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }, children: "These need an exercise added or a longer session \u2014 auto-fix can't resolve them without changing your day structure." }))] })), verdicts.length > 0 && (_jsxs("div", { style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: "12px 13px" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Brain, { size: 14, color: C.accentInk }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.text }, children: "From your training" }), _jsx("span", { style: { fontSize: 11, color: C.faint, marginLeft: "auto" }, children: "your response, not averages" })] }), verdicts.map(v => (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "baseline", padding: "7px 0", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("span", { style: { flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .3, color: v.status === "in" ? C.accentInk : C.warn, minWidth: 44 }, children: v.status === "in" ? "on it" : v.status === "over" ? "above" : "below" }), _jsxs("div", { style: { flex: 1, minWidth: 0, fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: [_jsx("b", { style: { color: C.text }, children: PART_LABEL[v.part] || v.part }), " ", v.status === "in"
                                             ? `${verb} ${fmtSets(v.planned)} sets — inside the ${v.lo}–${v.hi} range that has driven your fastest gains.`
                                             : v.status === "over"
                                                 ? `${verb} ${fmtSets(v.planned)} sets, above the ${v.lo}–${v.hi} that has driven your fastest gains. More sets haven't bought you more progress.`
-                                                : `${verb} ${fmtSets(v.planned)} sets, below the ${v.lo}–${v.hi} that has driven your fastest gains.`, _jsxs("span", { style: { color: C.faint }, children: [" (", v.weeks, " weeks compared)"] })] })] }, v.part)))] })), _jsx(VolumeBars, { volume: volume, subVolume: subVolume, target: target, program: program, week: week }), program && _jsx(VolumeRampTable, { program: program }), fixFeedback && _jsx("div", { role: "status", "data-volume-repair-status": fixFeedback.status, style: { marginTop: 10, padding: "10px 12px", borderRadius: 12, background: C.bg2, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: fixFeedback.message })] })) }));
+                                                : `${verb} ${fmtSets(v.planned)} sets, below the ${v.lo}–${v.hi} that has driven your fastest gains.`, _jsxs("span", { style: { color: C.faint }, children: [" (", v.weeks, " weeks compared)"] })] })] }, v.part)))] })), _jsx("p", { className: "wpb-volume-credit-help", children: "Muscle bars include partial credit when a lift also trains another muscle. Working sets count each performed set once." }), _jsx(VolumeBars, { volume: volume, subVolume: subVolume, target: target, program: program, week: week, palette: C, partZone, catInk }), program && _jsx(VolumeRampTable, { program: program, volumeZone, catInk }), fixFeedback && _jsx("div", { role: "status", "data-volume-repair-status": fixFeedback.status, style: { marginTop: 10, padding: "10px 12px", borderRadius: 12, background: C.bg2, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: fixFeedback.message })] })) }));
 }
 function AddSheet({ parts, usedIds = [], onPick, onAddById, onCreate, onClose }) {
     const [mode, setMode] = useState("pick"); // pick | create
@@ -11363,40 +10841,6 @@ function SetAwareDockPrototype({ data, exIdx, lastPerf, program, day, weekIndex,
       ] });
 }
 
-function ProgramRevisionReview({ review, onApply, onClose }) {
-    const changes = useMemo(() => reviewProgramChanges(review.before, review.after), [review.before, review.after]);
-    return _jsx(SessionChoiceDialog, { title: review.title, onClose, className: "wpb-program-revision", footer:
-        _jsxs("div", { className: "wpb-program-revision-footer", children: [
-            _jsx("button", { type: "button", onClick: onClose, className: "wpb-session-choice pressable", children: "Keep current plan" }),
-            _jsx("button", { type: "button", onClick: onApply, "data-apply-program-review": true, className: "wpb-session-choice pressable", children: "Apply changes" })] }),
-        children: _jsxs("div", { "data-program-review": true, children: [
-            _jsx("p", { children: review.message }),
-            _jsx("p", { className: "wpb-program-review-status", children: "Preview · your current plan is unchanged until you apply." }),
-            review.audit && _jsxs("section", { className: "wpb-program-review-audit", children: [
-                _jsx("h3", { children: "Volume check" }),
-                _jsx("p", { children: `${review.audit.before.length} findings before · ${review.audit.after.length} remaining after` }),
-                review.audit.after.map((issue, index) => _jsx("p", { children: `${issue.label}: ${fmtSets(issue.v)} sets · ${issue.fix || (issue.status === 'under' ? 'still below the planned minimum' : 'still above the planned maximum')}` }, `${issue.region}:${index}`))] }),
-            changes.config.map((change, index) => _jsxs("div", { className: "wpb-program-review-setting", children: [
-                _jsx("strong", { children: change.label }), _jsx("span", { children: `${change.before} → ${change.after}` })] }, index)),
-            changes.days.map(day => _jsxs("section", { className: "wpb-program-review-day", children: [
-                _jsx("h3", { children: day.label }),
-                _jsx("p", { children: `Week 1 estimate: ${day.beforeMinutes} → ${day.afterMinutes} min` }),
-                day.rows.map((row, index) => _jsxs("article", { className: "wpb-program-review-row", children: [
-                    _jsx("strong", { children: row.name }), _jsx("small", { children: row.kind }),
-                    _jsx("div", { className: "wpb-program-review-columns", children: [['Before', row.before], ['After', row.after]].map(([label, lines]) =>
-                        _jsxs("div", { children: [_jsx("h4", { children: label }), ...lines.map((line, i) => _jsx("p", { children: line }, i))] }, label)) })] }, `${row.id}:${index}`))] }, day.id)),
-            !changes.count && _jsx("p", { children: "The exercise list, weekly targets and displayed settings match. Applying keeps the rebuilt program details." })] }) });
-}
-function ProgramLayoutHistory({ program, onRestore }) {
-    if (!program.layoutHistory?.length) return null;
-    return _jsxs("section", { className: "wpb-program-layout-history", "aria-label": "Earlier layouts", children: [
-        _jsx("h3", { children: "Earlier layouts" }),
-        _jsx("p", { children: "Saved exercises, settings and targets. Review before restoring." }),
-        program.layoutHistory.map((revision, index) => _jsxs("button", { type: "button", className: "wpb-session-choice pressable",
-            "data-restore-program-layout": index, onClick: () => onRestore(revision), children: [
-                _jsx("strong", { children: revision.label }),
-                _jsx("span", { children: new Date(revision.at).toLocaleString() }), _jsx("span", { children: "Review restore" })] }, `${revision.at}:${index}`))] });
-}
 function WorkingSetCountControl({ value, onChange, label, minimum = 1, disabled = false }) {
     const count = Number(value);
     return _jsxs("div", { className: "wpb-working-set-control", children: [
@@ -11751,7 +11195,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     const [swap, setSwap] = useState(false);
     const [supersetPick, setSupersetPick] = useState(false); // suggested partner picker for the live workout
     const [pinEdit, setPinEdit] = useState(false); // editing the current exercise's pinned note
-    const pinRef = useRef(null);
     const finishingRef = useRef(false); // re-entry guard for finish() — see its definition
     const [finishSaving, setFinishSaving] = useState(false);
     const [addEx, setAddEx] = useState(false);
@@ -11875,6 +11318,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         if (finishingRef.current)
             return false;
         try {
+            if (!appStorageOwnership.writable()) throw new Error('Another window owns device storage.');
             localStorage.setItem(LIVE_KEY, JSON.stringify({ schemaVersion: 2, programId: program.id, dayId: day.id, weekIndex, dayExSig, startedAt: startRef.current, elapsedMs: runElapsedMs(), savedAt: Date.now(), data, readiness, injuryReports, sessionProgressions, sessionProgressionOrigins, sessionLengthPlan: day.sessionLengthPlan, sessionNote, sessionNoteRepeat, exIdx, focusPin, fbPump, fbSore, runPaused, restEndMs: restEndRef.current, restMax, restPaused: paused, restRemain: paused ? rest : 0, sessionId: sessionIdRef.current }));
             setSaveError(false);
             return true;
@@ -13129,7 +12573,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                 { k: "progression", hidden: !focus && !program.config?.percentScheme, label: "Progression", icon: TrendingUp, on: () => setProgressionEdit(true) },
                                 ...(exNotes[e.id] || exSetup[e.id] ? [] : [{ k: "pin", label: "Pin a note", icon: Pin, on: () => setPinEdit(true) }]),
                                 ...(barFor(ex) ? [{ k: "plates", label: "Plates", icon: Dumbbell, on: () => setCalc({ bar: barFor(ex), weight: plateSet?.weight || "" }) }] : []),
-                            ].filter(c => !c.hidden).map(c => (_jsxs("button", { onClick: c.on, className: "pressable wpb-workout-tool", style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "8px 13px", borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", fontSize: 12.5, fontWeight: 600 }, children: [_jsx(c.icon, { size: 13, color: C.accentInk }), " ", c.label] }, c.k))) }), pinEdit ? (_jsxs("div", { style: { marginBottom: 12, padding: 12, borderRadius: 12, background: C.bg2 }, children: [_jsxs("div", { style: { ...eyebrowAccent(), display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Pin, { size: 12 }), " Pinned note \u00B7 ", ex.name] }), _jsx(SetupFieldsGrid, { ex: ex, value: exSetup[e.id], onChange: (key, v) => onSetExSetup?.(e.id, key, v) }), _jsx("textarea", { ref: pinRef, autoFocus: true, defaultValue: exNotes[e.id] || "", placeholder: "e.g. pause on chest \u00B7 pinky on ring", rows: 3, className: "wpb-scroll", style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 13, resize: "vertical", fontFamily: "inherit" } }), _jsx("div", { style: { fontSize: 11, color: C.faint, margin: "6px 2px 10px" }, children: "Saved to this exercise and shown every time it comes up \u2014 in any workout or program." }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(e.id, pinRef.current?.value || ""); setPinEdit(false); }, style: { flex: 1, padding: "10px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, fontSize: 15, cursor: "pointer" }, children: "Save note" }), (exNotes[e.id] || exSetup[e.id]) && _jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(e.id, ""); clearSetup(e.id, exSetup[e.id], onSetExSetup); setPinEdit(false); }, style: { padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.danger, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Remove" }), _jsx("button", { className: "pressable", onClick: () => setPinEdit(false), style: { padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Cancel" })] })] })) : (exNotes[e.id] || exSetup[e.id]) ? (_jsxs("button", { className: "pressable", onClick: () => setPinEdit(true), "aria-label": `Edit pinned note for ${ex.name}`, style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 7, marginBottom: 9, padding: "8px 10px", borderRadius: 11, background: C.accentDim, border: `1px solid ${C.accent}38`, color: C.text, cursor: "pointer" }, children: [_jsx(Pin, { size: 12, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx(SetupFieldsDisplay, { ex: ex, value: exSetup[e.id] }), exNotes[e.id] && _jsx("div", { style: { fontSize: 12, lineHeight: 1.3, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", whiteSpace: "pre-wrap" }, children: exNotes[e.id] })] }), _jsx(Pencil, { size: 11, color: C.faint, style: { flexShrink: 0 } })] })) : null, !focus && (() => {
+                            ].filter(c => !c.hidden).map(c => (_jsxs("button", { onClick: c.on, className: "pressable wpb-workout-tool", style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "8px 13px", borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: "pointer", fontSize: 12.5, fontWeight: 600 }, children: [_jsx(c.icon, { size: 13, color: C.accentInk }), " ", c.label] }, c.k))) }), pinEdit ? _jsx(PinnedNoteEditor, { ex, note: exNotes[e.id], setup: exSetup[e.id], onNote: onSetExNote,
+                                onSetup: onSetExSetup, onClose: () => setPinEdit(false) }, e.id) : (exNotes[e.id] || exSetup[e.id]) ? (_jsxs("button", { className: "pressable", onClick: () => setPinEdit(true), "aria-label": `Edit pinned note for ${ex.name}`, style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 7, marginBottom: 9, padding: "8px 10px", borderRadius: 11, background: C.accentDim, border: `1px solid ${C.accent}38`, color: C.text, cursor: "pointer" }, children: [_jsx(Pin, { size: 12, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx(SetupFieldsDisplay, { ex: ex, value: exSetup[e.id] }), exNotes[e.id] && _jsx("div", { style: { fontSize: 12, lineHeight: 1.3, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", whiteSpace: "pre-wrap" }, children: exNotes[e.id] })] }), _jsx(Pencil, { size: 11, color: C.faint, style: { flexShrink: 0 } })] })) : null, !focus && (() => {
                             // Per-set DDP: when each set has its own weight, the session-level banner would be
                             // misleading (it shows only the first set's weight). Show a different banner instead.
                             // The displayed advice is the same evaluated decision used to fill the rows.
@@ -16331,7 +15776,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
                                         const over = trained.filter(p => partZone(p, weekVol[p], weekSubVol).label === "a head over MRV");
                                         const targets = (over.length ? over : trained.slice().sort((a, b) => weekVol[b] - weekVol[a]).slice(0, 2)).map(p => PART_LABEL[p]);
                                         return (_jsxs("div", { className: "wpb-progress-volume-warning", children: [_jsx(Battery, { size: 14, color: C.warn, className: "wpb-progress-warning-icon" }), _jsxs("div", { className: "wpb-progress-warning-copy", children: ["Your reps-in-reserve is trending down. ", over.length ? "You're over MRV on" : "Fatigue tends to pool in your highest-volume work —", " ", _jsx("span", { className: "wpb-progress-strong", children: targets.join(" & ") }), "; pulling a set or two there (or taking a deload) will likely restore your reserve."] })] }));
-                                    })(), _jsx(VolumeBars, { volume: weekVol })] })), liftPane === "load" && advice.length > 0 && (_jsxs("div", { className: "wpb-progress-card", children: [_jsxs("div", { className: "wpb-progress-card-head", children: [_jsx(Wand2, { size: 15, color: C.accentInk }), _jsx("div", { className: "wpb-progress-card-title", children: "Next block volume" })] }), _jsx("div", { className: "wpb-progress-card-copy-compact", children: "Auto-regulated from last week's logged volume & progress" }), advice.map(a => {
+                                    })(), _jsx(VolumeBars, { volume: weekVol, palette: C, partZone, catInk })] })), liftPane === "load" && advice.length > 0 && (_jsxs("div", { className: "wpb-progress-card", children: [_jsxs("div", { className: "wpb-progress-card-head", children: [_jsx(Wand2, { size: 15, color: C.accentInk }), _jsx("div", { className: "wpb-progress-card-title", children: "Next block volume" })] }), _jsx("div", { className: "wpb-progress-card-copy-compact", children: "Auto-regulated from last week's logged volume & progress" }), advice.map(a => {
                                         const up = a.delta > 0, flat = a.delta === 0;
                                         return (_jsxs("div", { className: "wpb-progress-volume-change-row", children: [_jsx("div", { className: "wpb-progress-volume-change-muscle", children: PART_LABEL[a.part] }), _jsx("div", { "data-direction": up ? "up" : flat ? "flat" : "down", className: "mono wpb-progress-volume-change-value", children: up ? `+${a.delta}` : flat ? "hold" : a.delta }), _jsx("div", { className: "wpb-progress-volume-change-reason", children: a.reason })] }, a.part));
                                     })] })), liftPane === "exercises" && trends.length > 0 && _jsx(ChartFavoritesManager, { trends, favorites: chartFavorites, onToggle: toggleChartFavorite, onMove: moveChartFavorite }), liftPane === "exercises" && trends.length > 0 && (_jsxs("div", { className: "wpb-progress-lift-search", children: [_jsx(Search, { size: 15, color: C.faint, className: "wpb-progress-fixed-icon" }), _jsx("input", { value: liftQ, onChange: e => setLiftQ(e.target.value), "aria-label": "Search your lifts", placeholder: `Search ${trends.length} lift${trends.length === 1 ? "" : "s"}\u2026`, className: "wpb-progress-lift-search-input" }), liftQ && (_jsx("button", { onClick: () => setLiftQ(""), "aria-label": "Clear lift search", className: "pressable hit wpb-progress-lift-search-clear",  children: _jsx(X, { size: 15 }) }))] })), liftPane === "exercises" && (() => {
@@ -16506,909 +15951,12 @@ function StrengthSnapshotCard({ history, bodyweight, sex, age, unit, bwLog = [],
  * new, and keep a record of what shipped when. They want opposite shapes.
  *
  * So: the card shows the newest WHATS_NEW_MAX entries and nothing else; the full history lives
- * behind "Full changelog", grouped by version, and is generated into CHANGELOG.md at build time
- * from this same array so the shipped file cannot drift from what the app shows.
+ * behind "Full changelog", grouped by version. The catalog lives in release-notes.js;
+ * CHANGELOG.md records detailed engineering and verification evidence separately.
  *
  * Newest release first, newest entry first within a release. */
 const WHATS_NEW_MAX = 10;
-const CHANGELOG = [
-    { version: "4.0.0", build: "905", items: ["Review generated rebuilds and weekly volume repairs before applying them, with changed exercises and week-by-week set, rep, effort and rest targets.", "Restore exact earlier layouts from Plan info, including settings and manual edits. Keep up to three recent copies within a storage budget.", "Portrait tablets now show the session lineup beside the workout. Focus and phone logging keep their existing controls.", "Plateau options let you keep the plan, choose double progression, review a variation, or use lighter automatic targets today. Completed work and manual entries stay protected."] },
-    { version: "4.0.0", build: "882", items: ["Switching from Strong or Hevy? Export your workouts as CSV there, then choose the file in Settings → Backup & restore. You review what will be added before anything changes, and Undo is one tap.", "Each lift says the one method that actually sets today's load, and Why beside the target opens the full explanation. Coach no longer says a load was reduced when it wasn't.", "New Keep screen on switch under Settings → During a workout. A Privacy policy link is now under About."] },
-    { version: '4.0.0', build: '830', items: ['Completed sets show logged effort directly under reps. Tap the RIR value to edit.', 'Removed the separate add-effort row and extra completed target effort line for a tighter workout list.', 'Muted logged values, Undo, rest navigation and numeric entry remain available.'] },
-    { version: '4.0.0', build: '829', items: ['Restored full set rows instead of collapsing completed sets into summaries.', 'Finished sets now fade to muted controls with read-only weight and reps, while the current set stands out.', 'Reps-left editing, Undo, rest navigation, numeric entry and logged progression evidence remain available.'] },
-    { version: "4.0.0", build: "828", items: ["Completed sets once again show their set number, logged weight and reps in a quiet compact row.", "Reps-left entry expands beneath the row, with Undo and prior-set details preserved."] },
-    { version: "4.0.0", build: "827", items: ["Smaller set-complete buttons and narrower weight fields give the steppers more room.", "Completed sets collapse into quiet reps-left bars, keeping the highlight on your current set.", "Change effort or undo completion from the bar; numeric tap-to-select and rest navigation remain available."] },
-    { version: "4.0.0", build: "826", items: ["Restored the workout layout from build 824, removing the extra reserved space between sets.", "Tap a weight or reps field to select its value and quickly type a replacement.", "Next exercise and Finish workout stay available while the rest timer is running.", "The recent history alignment and weight-suggestion fixes remain in place."] },
-    { version: "4.0.0", build: "824", items: ["The Last column, Last time shortcut and Focus view now show the same most recent workout and matching set.", "A new set no longer repeats the final set from your previous workout. Planned effort is kept separate from reported effort.", "Clear rep misses can lower an excessive load even when fewer sets were completed. New targets start at the bottom of your rep range.", "Generated and custom programs share this correction. Resuming refreshes untouched suggestions while preserving completed sets and manual entries."] },
-    { version: "4.0.0", build: "816", items: ["Progression history is now owned by the exact program and workout day, preventing repeated lifts on another day from advancing the wrong prescription.", "Adaptive stall and fatigue decisions no longer borrow evidence from another program.", "Percentage training-max updates now use the active program’s AMRAP evidence and parse imported numeric values safely.", "Malformed imported engine settings, phases and tiered-progression state now fail safely instead of producing plausible but incorrect prescriptions.", "A new permanent boundary-integrity regression suite protects these cases across custom, percentage and tiered programs."] },
-    { version: "4.0.0", build: "815", items: ["Custom workouts save their original targets, so later program edits cannot award an unearned weight increase.", "Percentage workouts now match the preview, including training-max units, rep-out sets and deloads.", "Recovery, interruption and exercise-edit flags remain attached to saved performance and protect future suggestions.", "Duplicate, empty or malformed workout records no longer advance a training block or hide valid history.", "Mixed-unit strength records and trends compare the same physical loads. Session estimates respect the accepted weekly set budget."] },
-    {"version": "4.0.0", "build": "812", "items": ["Custom programs now use the same progression evaluator as generated plans and honor your selected method.", "Rep targets follow each set\u2019s previous performance. Reduced weights rebuild from the bottom of your range.", "Resumed workouts refresh untouched suggestions while protecting completed sets and manual entries.", "Custom settings save the no-superset option and preserve your exercise list and last-set techniques."]},
-    {"version": "4.0.0", "build": "811", "items": ["Load suggestions handle incomplete or malformed equipment lists without crashing or inventing unavailable weights.", "Large imported plate inventories no longer require enumerating the entire stock before selecting a load.", "Invalid strength-history values cannot spoil valid strength estimates.", "Blank or incomplete rep targets use safe defaults instead of producing zero-rep working sets.", "Your themes, programs, completed sets and manual workout entries remain intact."]},
-    {"version": "4.0.0", "build": "810", "items": ["Repeated exercises in custom programs now progress from the last session of the same training day.", "The suggestion and Last column use the same session, so a newer Legs workout cannot replace Lower's working load.", "A shorter workout on another day cannot qualify a longer day's load increase. Each day builds toward its own full set target.", "Resuming refreshes untouched automatic custom-plan loads while preserving completed sets and manually entered values.", "The reviewed theme contrast, phone layout, Plan estimates, reduced-motion sheets and workout audio improvements remain available."]},
-    {"version":"4.0.0","build":"809","items":["Highlighted labels and training details are clearer across light and dark themes, with larger tap areas for common controls.","Finished sets and phase labels stay readable. Plan keeps its week navigation, and session estimates update when rest length or custom exercises change.","Sheets close smoothly and respect reduced-motion settings. Buttons release without an abrupt snap.","Workout chimes reuse one audio context while training and release it when you leave the workout.","The recent release-note repair, compact theme picker, manual entries and scheduled final-set techniques remain available."]},
-    { version: "4.0.0", build: "808", items: ["Workout controls are quieter and prescribed rep ranges stay together. Small steppers, manual entries, and final-set techniques remain available.", "Plan puts Up Next near the top and shows one completion summary. Phase names, icons, week lengths, and all four plan views remain available.", "Choosing a later week brings its days into view beneath the week picker. The picker stays reachable as you scroll.", "Settings shows your saved theme in one row. Expand it to choose from every light and dark theme.", "What's new loads correctly on Home and from Settings. Dismissed notes stay dismissed, and the full changelog remains available."] },
-    { version: "4.0.0", build: "807", items: ["Workouts now stay open if the device cannot save. Completed history is saved before the recovery copy is removed, with Retry save available when needed.", "Android Back and Minimize save your progress before leaving the workout. Update restarts also save the current app data first.", "An interruption during completion cleanup cannot create a second log of the same workout.", "Screen awake follows the workout and releases when you leave. Installed apps also support landscape and split-screen layouts.", "Block length uses a compact week field with minus/plus controls. Saved phase lengths remain consistent across cycle views.", "Custom routines keep their scheduled final-set techniques in later weeks."] },
-    { version: "3.215.0", build: "771", items: ["Fixed generated-plan set counts at the shared engine-to-shell boundary: persisted array-shaped counts now resolve to one scalar, and ambiguous corrupt values recover from the immutable engine prescription instead of repeating/multiplying across Home, Program, Plan, Preview, or Workout.", "Cleaned up the workout SET / TARGET-LAST row: the phone columns have more breathing room and LAST shows load × reps only, without repeating RIR that is already shown in the suggestion/effort surfaces.", "Fixed cycle next-block dose previews reading nonexistent week 0; opening-set summaries now use the engine's 1-based week 1 prescription. Pursuit Engine 0.62.5 programming math is unchanged."] },
-    { version: "3.214.0", build: "770", items: ["Workout History is now editable: correct date/time, duration, per-set load, reps and RIR, add/remove sets, or remove a lift; program/day/week ownership stays locked and derived progression/readiness data refreshes from the correction.", "Fixed custom-program double progression when a 10-15 rep range was stored as an array: 10 reps is the baseline, not the load-increase trigger; every prescribed set must reach 15 at the planned effort before weight goes up.", "Re-audited the live authority path: generated programs are created and audited by Pursuit Engine 0.62.5, workout set counts come from its week cells, and completed history is evaluated by its progression engine; legacy generated-plan progression remains bypassed."] },
-    { version: "3.213.0", build: "769", items: ["Program and workout effort ranges now normalize engine array values such as [2,2] to a single clean 2 RIR label instead of showing 2,2.", "Finite-program week progress now advances from distinct completed days when modern history has explicit week/day data, so a repeated or duplicated workout cannot silently jump the plan into a later lower-volume week.", "The M162 double-progression rep-floor safety fix is retained unchanged; this update does not regenerate or reduce saved program volume."] },
-    { version: "3.212.0", build: "768", items: ["Double progression now lowers an off-target load when completed reps fall below the bottom of the prescribed range, instead of carrying the heaviest logged set forward.", "A hard or unknown-effort rep-floor miss is recalibrated from the logged performance and snapped down to a load your equipment can actually make; intentionally easy short sets stay at the same load.", "Missing effort values now stay missing instead of being read as 0 RIR, so load calibration no longer treats unreported effort as failure."] },
-    { version: "3.211.1", build: "767", items: ["All Programs search now uses one clean field, without a second background, border or focus ring around its text input."] },
-    { version: "3.211.0", build: "766", items: [
-        "All Programs now separates the plan you are training from saved programs, with compact cycle cards and consistent spacing.",
-        "Distinct icons identify Hypertrophy, Strength, Peak, Strength & Size, and Recovery. Every cycle shows its phases in order; expand it for block details.",
-        "Search by program, phase or folder, filter cycles and standalone plans, and show more programs when you need them. Each cycle counts as one plan."
-    ] },
-    { version: "3.210.0", build: "765", items: ["Turn a program into a training cycle: it becomes Block 1 (history and edits kept) and the later blocks are planned for you.", "Saved plans from earlier versions can be restored to your library or removed from the list, without touching workout history.", "Programs list: a cycle shows its split, days and focus once, and each block says where it stands (Training now, Up next, Later).", "Cycles you aren't training fold away; every block of a cycle has the cycle's icon.", "The program switch button now says \"Switch\", and upcoming cycle blocks no longer show a button that couldn't work."] },
-    { version: "3.208.0", build: "763", items: ["Programs you wrote yourself (Build your own) now come across when you import a backup or update, keep your own sets and reps, and can be trained — they were being discarded.", "Fixed a crash when opening a workout: Quick workouts, programs with a typed single rep target like \"8\", and custom programs.", "Weight suggestions now match this week's reps — heavier as the reps drop — and always land on weights your equipment can make.", "New \"No squat rack\" option: a home barbell without a rack skips squats, bench and presses taken from a rack.", "Self-test runs in seconds; the full engine check is still in Settings.", "No sideways scrolling on Home or in the program builder, and backups download as pursuit-iron-backup-<date>.json.", "Runs on React, the same as the original app."] },
-    { version: "3.207.0", build: "762", items: [
-            "Every curated setup family now has explicit presentation metadata, so no variant silently falls back to a generic or misleading picture.",
-            "Lateral raises now clearly distinguish dumbbell, standard cable, lean-away cable, cross-body single-arm cable, and machine setups in their artwork and labels.",
-            "Pushdowns, overhead extensions, triceps kickbacks, rear-delt flyes, chest flyes, and glute kickbacks received the same full variation-coverage audit across Library, Program info, and Swap."
-        ] },
-    { version: "3.206.0", build: "761", items: [
-            "Overhead cable extensions now explicitly identify the rope attachment everywhere setup details are shown.",
-            "Attachment visuals now depict the actual implement — rope, dumbbell, EZ-bar, resistance band, V-bar, straight bar, or single handle — with larger, clearer artwork.",
-            "Exercise Detail, Program info and Swap now use the same attachment-aware labels and compact full-width variant rows."
-        ] },
-    { version: "3.205.0", build: "760", items: [
-            "Exercise setup alternatives now use compact full-width rows instead of oversized horizontal cards, so every option is readable without sideways scrolling.",
-            "Overhead-extension variants now have distinct dumbbell, EZ-bar, band and cable visuals instead of sharing the same generic glyph."
-        ] },
-    { version: "3.204.0", build: "759", items: [
-            "Training experience no longer squeezes its label in Settings; the choices get their own responsive row.",
-            "Ocean and Citrus add two new light appearance themes with readable accent contrast.",
-            "Block review waits for a completed block, uses only that program’s own workouts, and cannot carry a previous plan’s review into a newly started program."
-        ] },
-    { version: "3.189.0", build: "744", items: [[Sparkles, "Review plan updates", "Preview an updated version of an older plan before saving. Your original plan and workout history are retained."], [Check, "Clearer builder choices", "See equipment and session-length availability before building, with progress feedback while checks run."], [Check, "Merged reliability fixes", "Older-plan preservation, equipment matching and progression improvements now work alongside recent workout, restore and history fixes."]] },
-    { version: "3.188.0", build: "743", items: ["Search workout history by exercise, workout or note; filter by program and date.", "Clearer starting targets and expandable prescription evidence.", "Correct mixed-unit group volume totals and retain names for earlier programs."] },
-    { version: "3.187.0", build: "742", items: [
-            "Review changed programs before saving. Choose this block or linked cycle blocks, with undo available after saving.",
-            "Backup previews show actual additions, updates and removals. Draft conflicts are protected, and restore undo restores your prior settings too."
-        ] },
-    { version: "3.186.0", build: "741", items: [
-            "Workout controls reserve their own space, with keyboard-aware height and clearer exercise navigation.",
-            "Active cycles lead directly to the next workout preview; future blocks explain when they become available.",
-            "Block completion lives under Block actions, including a clear final-block completion action.",
-            "Short final cycle blocks can finish after their planned workouts; minimum-workout and recovery checks still apply."
-        ] },
-    { version: "3.185.0", build: "740", items: [
-            "Fixed the cycle creation crash in both direct and guided setup.",
-            "Cycle setup now uses the selected cycle goal for recommendations and shows its total length and exercise adaptation choice.",
-            "Rejected builds keep a visible explanation and your answers for retry; invalid cycle templates stop before generation."
-        ] },
-    { version: "3.184.0", build: "739", items: [
-            [Dumbbell, "Typing survives timer updates", "Fixed the portable runtime’s text-input event handling. Typed Weight/Reps values now update state immediately; no manual-value lock cache is used."],
-            [Save, "Workout drafts recover before the first set", "Resume preserves entered values, selected exercise, paused timer and feedback. Storage failures show a retry warning."],
-            [Settings2, "Review restores and exercise swaps", "Backup files preview counts before confirmation. Exercise alternatives warn about overlapping work, and cycle details compare the next planned block."],
-            [Dumbbell, "Equipment increments stay consistent", "Engine 0.62.1 respects custom loading increments in both directions and keeps kilogram inventories labeled correctly."],
-        ] },
-    { version: "3.183.0", build: "738", items: [
-            [Dumbbell, "Workout inputs restored to v661 state flow", "Removed the later manual-lock/precedence wrapper entirely. Weight and Reps again use v661’s direct set-state path, while compact hold-repeat steppers stay visually isolated from global button sizing."],
-        ] },
-    { version: "3.182.0", build: "737", items: [
-            [Dumbbell, "Workout inputs use the latest manual value", "Typing and steppers now share one external input lock, so a newer keyboard value cannot snap back to an older stepped value. Compact hold-repeat steppers remain unchanged."],
-        ] },
-    { version: "3.181.0", build: "736", items: [
-            [Dumbbell, "v661 workout input behavior restored", "Weight and Reps use the proven v661 direct-edit path again, with small hold-repeat steppers and no intermediate draft layer."],
-        ] },
-    { version: "3.179.0", build: "734", items: [
-            [Settings2, "Workout inputs now keep manual Weight/Reps…", "Workout inputs now keep manual Weight/Reps edits authoritative while you type, including blank reps during editing."],
-            [Dumbbell, "Set steppers are truly compact again…", "Set steppers are truly compact again, with a full invisible touch target and restored press-and-hold acceleration for large load changes."],
-        ] },
-    { version: "3.178.0", build: "733", items: [
-            [Settings2, "Workout set controls are predictable again", "The compact set-row steppers are back, each tap changes exactly one increment, and manual load/reps edits stay user-owned instead of being eligible for later automatic rewrites."],
-        ] },
-    { version: "3.177.0", build: "732", items: [
-            [Maximize2, "Workout layout repaired again", "Normal set rows now protect full load/reps values on phone widths without creating a second empty line, and Focus Mode is intentionally compact instead of stretching two giant value cards to fill the screen."],
-        ] },
-    { version: "3.176.0", build: "731", items: [
-            [Sparkles, "Phone details are cleaner", "Profile stat units no longer run into their values, the closest achievement has a clear drill-in affordance, Home utility actions read as one tool group, and Settings helper copy takes less vertical space."],
-        ] },
-    { version: "3.175.0", build: "730", items: [
-            [Settings2, "Settings switches are properly shaped", "Toggle tracks now stay compact pills while retaining a full 44px invisible touch target, so the thumb remains centered instead of stretching the control into a circle."],
-        ] },
-    { version: "3.174.0", build: "729", items: [
-            [Sparkles, "Home, Profile, and Settings are calmer", "Settings uses one compact section jump control, Profile keeps the full achievement board collapsed until you ask for it, and Home removes duplicate quick actions while making backup a quieter utility row."],
-        ] },
-    { version: "3.173.0", build: "728", items: [
-            [Shield, "Creation errors no longer escape into the app", "Single-program and cycle generation now fail closed without rethrowing a handled build error, so a rejected request stays in setup instead of becoming a startup-style crash."],
-            [Repeat, "Cycle transitions are transactional too", "Advancing or looping a cycle now validates its cycle id, block index, ownership, active block, and next-program linkage before any saved state is replaced."],
-        ] },
-    { version: "3.172.0", build: "727", items: [
-            [Layers, "Superset choice is always available", "Single-program and cycle creation now have a dedicated Workout constraints step, so straight sets remain selectable even when your active gym lets the wizard skip Equipment."],
-            [Shield, "Cycle creation fails safely", "Training-cycle builds now validate every block before anything is saved. An incomplete result returns to setup instead of crashing the app."],
-        ] },
-    { version: "3.171.0", build: "726", items: [
-            [RefreshCw, "Startup recovery has a real safe mode", "If saved state causes a crash after it loads, Safe start can open the app without reading or overwriting that data. Release checks now include deterministic startup and storage-recovery checks, with real-device launch kept as the final certification step."],
-        ] },
-    { version: "3.170.0", build: "725", items: [
-            [RefreshCw, "Startup recovery is safer", "Installed-app updates no longer take over during first render. M101 can rescue the broken M100 cache, then future updates wait until you choose Restart."],
-        ] },
-    { version: "3.169.0", build: "724", items: [
-            [Sparkles, "Final fit and finish across the app", "Long program and cycle names wrap cleanly on narrow phones, recovery messages use plain product language, and stale implementation labels have been removed from everyday screens."],
-            [Maximize2, "Narrow screens keep the important words", "Primary cycle titles can use two lines before truncating, while status and action controls keep their own space instead of squeezing the name into an unreadable fragment."],
-        ] },
-    { version: "3.168.0", build: "723", items: [
-            [Wand2, "Faster program and cycle setup", "Creation skips equipment when your active gym is already configured, keeps a compact setup summary visible before generation, and uses shorter plain-language choices throughout optional customization."],
-            [Save, "Backup settings are easier to scan", "Backup and restore actions use clearer labels and shorter explanations while preserving the same safe merge behavior."],
-        ] },
-    { version: "3.167.0", build: "722", items: [
-            [RefreshCw, "Clearer progress when the app is working", "Program generation and shared-program loading now show purposeful progress states instead of internal engine jargon or a blank wait. Errors have an obvious retry path, and restore messaging now matches the app’s safe merge behavior."],
-        ] },
-    { version: "3.166.0", build: "721", items: [
-            [Sparkles, "Navigation now behaves like one coherent app", "Primary tabs reset stale drill-down history, detail screens return to the screen that opened them, and repeated taps on the active tab no longer replay page transitions."],
-            [Check, "Clearer feedback after actions", "Save, undo, offline, and update messages now expose proper live status semantics so confirmations are announced consistently without adding more visual chrome."],
-        ] },
-    { version: "3.165.0", build: "720", items: [
-            [Sparkles, "Clearer hierarchy on the screens you use between sets", "Home, Program, Progress, and Profile now give primary actions and training information more visual weight while flattening secondary metrics and metadata."],
-        ] },
-    { version: "3.164.0", build: "719", items: [
-            [Settings2, "Controls feel more consistent", "Settings selectors, toggles, fields, dialogs, and destructive actions now share one compact interaction system across the app."],
-        ] },
-    { version: "3.163.0", build: "718", items: [
-            [Sparkles, "Cleaner screens outside workouts", "Home, Program, Progress, Profile, Settings, Library, Cycles, empty states and dialogs now use shorter copy, tighter spacing and quieter surfaces."],
-        ] },
-    { version: "3.162.0", build: "717", items: [
-            [Palette, "A calmer app outside the workout", "Home, Program, Progress, Profile, Settings, Library, Cycles, navigation, and empty states now share tighter spacing, quieter surfaces, and more consistent hierarchy. Workout logging remains on the restored M92 layout."],
-            [Layers, "Less card and pill overload", "Secondary metrics, filters, day metadata, quick actions, and navigation use flatter structure and smaller radii so important training actions stand out instead of every element competing for attention."],
-            [Maximize2, "Better use of phone and tablet width", "Primary non-workout pages now share a centered content width, compact mobile spacing, and cleaner headers while preserving full-width behavior on narrow phones."],
-        ] },
-    { version: "3.157.0", build: "712", items: [
-            [Dumbbell, "Cleaner workout controls", "The workout keeps timer, set logging, and exercise navigation in the primary path. Reset timer and Add exercise moved into Workout Options so they no longer compete for phone-screen space."],
-            [Maximize2, "Focused mode simplified", "Focused mode keeps one primary action with only previous and next exercise controls around it, reducing accidental taps while preserving every workout action through the options menu."],
-        ] },
-    { version: "3.156.0", build: "711", items: [
-            [Timer, "Workout screen restored on compact phones", "The elapsed timer now keeps its full readout, focused-mode load and rep fields retain their large readable type, and the workout scrollbar is reduced to a thin track so it no longer steals usable width."],
-            [Dumbbell, "Workout controls use space more deliberately", "On narrow phones the redundant header plate shortcut is removed because Plates remains available in the exercise action row. That reclaimed width protects the timer and Finish action without removing the calculator."],
-            [Shield, "Program pages stay focused on training", "Program and Settings now stay focused on training choices instead of implementation details."],
-            [Layers, "Cleaner product language", "Program Settings and What’s New now describe user-visible behavior in plain training language."],
-        ] },
-    { version: "3.154.0", build: "709", items: [
-            [Layers, "One visual system across the whole app", "Home, program setup, workout logging, Settings, and sheets now share the same spacing, control heights, surface geometry, and visual hierarchy instead of feeling like screens built at different times."],
-            [Dumbbell, "Workout logging puts the set first", "Set-entry fields, exercise navigation, coach cards, warm-up guidance, and focused logging now use clearer states and larger consistent inputs without changing prescriptions or workout behavior."],
-            [Settings2, "Settings is faster to scan", "Section navigation, headings, rows, and segmented controls are denser and more consistent, making common settings faster to scan."],
-        ] },
-    { version: "3.153.0", build: "708", items: [
-            [Layers, "Cleaner Program hierarchy on phones", "Program actions, day cards and collapsed exercise previews now use a tighter responsive hierarchy. Save/Update remains the obvious primary action while schedule, settings, day navigation and plan reference controls stay compact and predictable."],
-            [Dumbbell, "Program pages are denser without feeling cramped", "Day cards, metadata, exercise previews and the Program action bar now use a tighter mobile hierarchy. Primary Save/Update remains visually dominant while reference and utility actions stop competing with the program name."],
-            [Shield, "Touch targets and button states are more consistent", "Interactive controls now share clearer focus, pressed and disabled behavior, with safer minimum touch targets and responsive Program actions on narrow phones."],
-        ] },
-    { version: "3.152.0", build: "707", items: [
-            [Layers, "Less gym hopping without compromising exercise order", "Compatible cable, dumbbell, barbell, Smith and machine work now clusters inside safe sequencing bands. Strength anchors and productive compound work still take precedence; setup convenience remains only a tie-break after training constraints are satisfied."],
-            [Shield, "Priority work and supersets stay protected", "Specialization and high-priority accessories remain ahead of ordinary cleanup work, and existing superset pairs stay contiguous. Setup optimization cannot split a pair, move strength work behind accessories, or turn a no-superset program into a superset program."],
-            [Clock, "Ordering is now prescription-neutral", "Setup-aware sequencing runs only after all volume, recovery, functional-coverage and arm-coverage repairs are finished. That prevents a harmless order change from feeding backward into exercise selection, set counts, pairing, or modeled session duration."],
-        ] },
-    { version: "3.151.0", build: "706", items: [
-            [Layers, "Whole-body exercise economy", "The M81 quad fix now applies across chest, back, shoulders, arms, posterior chain, calves, forearms and core. Near-equivalent movements consolidate, while different anatomical jobs such as rows vs pulldowns, hinges vs curls, overhead vs non-overhead triceps, and straight- vs bent-knee calves stay distinct."],
-            [Target, "Late repairs cannot sneak duplicates back in", "Exercise distribution, spillover, minimum-volume repair and final reconciliation now share the same semantic economy rule. The final coach audit checks the same invariant, so a future repair pass cannot quietly recreate an avoidable same-slot pairing."],
-            [Dumbbell, "High-priority and constrained programs keep useful variety", "Strength-specific anchors, high-priority specialization, and genuinely different bodyweight mechanics remain legal when they serve different jobs or are needed under limited equipment. Economy no longer means blindly deleting useful coverage."],
-        ] },
-    { version: "3.150.0", build: "705", items: [
-            [Layers, "Less redundant lower-body programming", "The engine now recognizes Hack Squat and Leg Press as the same bilateral knee-dominant compound slot when they are being used for the same hypertrophy job. It keeps true strength-anchor combinations legal, but replaces avoidable duplication with complementary work."],
-            [Clock, "Program screens focus on training, not engine internals", "Internal engine labels no longer crowd the Program title. The weekly strip keeps the focus on training and marks today clearly."],
-            [Shield, "Source-package self-test is runnable again", "The built-in quality checks are more reliable and can validate program generation without interrupting normal app use."],
-        ] },
-    { version: "3.149.0", build: "704", items: [
-            [Shield, "Alternative plans have a stronger quality floor", "Program adjustments must preserve coach-quality warnings, functional coverage, and weekly recovery before they can be accepted."],
-            [Repeat, "Specialization frequency moves are cleaner", "Specialization frequency changes now move only suitable hypertrophy work and avoid duplicating supersets or advanced-technique instructions onto tiny exposures."],
-            [Target, "Strength-phase specificity follows your actual lift priorities", "Strength, intensification and peak scoring now values specificity to the lifts you actually prioritized rather than rewarding an exercise simply because it happens to be specific to any supported powerlift."],
-        ] },
-    { version: "3.148.0", build: "703", items: [
-            [Palette, "A real visual-system reset", "Cards, navigation, headers, inputs and primary actions now use one restrained surface and radius system instead of a mix of large pills, decorative gradients and mismatched shadows. Accent color is reserved for active state and primary action so screens scan more like one product."],
-            [CheckCircle2, "Button colors are theme-safe everywhere", "Buttons now inherit the active theme instead of falling back to the browser's default text color, primary actions always use the correct on-accent text token, disabled primary actions go neutral, and selected tinted controls use the contrast-safe accent ink token."],
-            [Layers, "Program days keep their name space", "Strength and Hypertrophy no longer sit as large badges beside a day name. Phase moved into the quiet metadata row, while Next, Done and fit state use compact status labels so long day names stay on one line whenever the screen has room."],
-            [Sparkles, "Less decoration, more hierarchy", "Decorative card gradients were removed from the main training surfaces. Phase, profile, support and movement-preview cards now use solid surfaces, subtle borders and small accent cues so the app feels calmer and more deliberate."],
-        ] },
-    { version: "3.147.0", build: "702", items: [
-            [Dumbbell, "Workout logging is faster under your thumb", "Weight and rep fields now select cleanly when you tap them, rest has a clearer paused/ready state and real timer progress semantics, and the same set console works in focused and full workout modes. Prescriptions and progression logic are unchanged."],
-            [Repeat, "Exercise swaps now explain why a replacement fits", "Replacement choices distinguish same-pattern swaps, weekly coverage fixes, and useful variations instead of putting one vague “similar” badge on different reasons. Search and ranking are easier to scan without changing the generator’s exercise rules."],
-            [Layers, "Cycles finally read like a timeline", "Cycle list and detail views now show a segmented block timeline sized by block length, with completed, current, and upcoming phases visible at a glance alongside the existing week and session detail."],
-            [TrendingUp, "Progress opens with the answer before the charts", "A compact at-a-glance strip now shows your last-7-day sessions, weekly set volume, and recent PR count. Long history, cycle, and replacement lists also use browser rendering hints so large logs stay smoother without changing stored data."],
-        ] },
-    { version: "3.146.0", build: "701", items: [
-            [Palette, "A calmer, more consistent Pursuit Iron", "Home, programs, workouts, progress, cycles, the exercise library and Settings now share one spacing, surface and action hierarchy. The training engine is unchanged; this release is about making the same information easier to scan and the important action easier to find."],
-            [Smartphone, "Workout and navigation controls are easier to use one-handed", "The bottom navigation has a clearer active state and larger visual target, workout progress is announced as a real progress control, and exercise navigation behaves more consistently on compact screens."],
-            [Settings2, "Research tools no longer crowd normal Settings", "Settings now prioritizes everyday training, appearance, workout, profile, and backup controls instead of internal implementation details."],
-            [Accessibility, "Better hierarchy for assistive technology", "Progress tabs now expose tab semantics and selected state, workout completion exposes progress-bar semantics, navigation identifies itself as primary navigation, and higher-contrast preferences strengthen important surface boundaries."],
-        ] },
-    { version: "3.112.0", build: "663", items: [
-            [Activity, "Training cycles now stay connected from block to block", "Cycle Wizard can build one connected phase plan instead of three unrelated programs. Hypertrophy, Strength and Peak remain linked by one contract, future blocks stay locked previews, and each transition is rebuilt from the completed block's real workout history."],
-            [Shield, "Recovery can be inserted without losing the planned phase", "If completed-workout evidence shows real fatigue, the Next cycle can insert a one-week Recovery block and leave the planned Strength or Peak preview waiting behind it. Early advances, edited future previews and other unsafe transitions fail closed instead of creating a mixed-engine cycle."],
-            [Layers, "Cycle-owned blocks stay cycle-owned", "Reroll, reset, Program Settings, manual future-block activation and individual block deletion no longer bypass the cycle contract. Duplicating a block deliberately detaches a standalone copy; normal progression stays on Complete Block so history adaptation and rollback remain coherent."],
-        ] },
-    { version: "3.110.0", build: "661", items: [
-            [Activity, "Named programs prescribe their own reps", "Main-Lift Waves, Texas Method and Ramping 5×5 now show the reps the programme actually calls for rather than a generic range — 5's PRO means five reps on every main set. Accessory lifts in those programs were showing one rep range while prescribing another; both now agree. Found by the built-in self-test."],
-        ] },
-    { version: "3.110.0", build: "661", items: [
-            [AlertTriangle, "Fixed: named programs showed the wrong reps on their main lifts", "Programs built on a set percentage plan — Main-Lift Waves, GZCLP, Texas Method and the rest — were showing a general rep range on their main lifts instead of the reps the plan actually calls for. Main-Lift Waves runs five reps a set across its waves, for example, and the app was asking for three to six. The plan's own prescription is now what you see."],
-            [AlertTriangle, "Fixed: a cable fly could be treated as a main lift", "On one Main-Lift Waves day the second main lift had been swapped out, but the program still treated whatever took its place — a rear delt fly — as a heavy main lift. It is now treated as the accessory it is."],
-        ] },
-    { version: "3.109.0", build: "660", items: [
-            [Timer, "More work in the same hour", "Sixty-minute sessions now pair exercises that use opposing muscles — a push with a pull, say — so you rest less between them. A session fits about fifteen percent more work and still finishes a little sooner, and far fewer muscles end up with no work at all. If your gym is too busy to hold two stations, or you would rather not superset, you can turn it off when you make a program."],
-        ] },
-    { version: "3.108.0", build: "659", items: [
-            [Dumbbell, "Your gym and your experience are remembered", "Equipment you switch on or off while making a program now stays that way for the next one — it belongs to your gym, so it only changes when you change gym. And training experience is asked once instead of every time; you can change it in Settings."],
-            [Layers, "Your barbell limit is respected everywhere", "If you cap how many barbell movements a session can have, that limit now holds all the way through. It used to be applied when the session was first laid out and then ignored by later adjustments, so you could still end up with two barbell lifts — a squat and a row, say — on the same day."],
-        ] },
-    { version: "3.108.0", build: "657", items: [] },
-    { version: "3.108.0", build: "656", items: [
-            [Layers, "Torso / Limbs trains your delts", "On the Torso/Limbs split, side and rear delt work now lands on the limbs day beside your arms — which is the reason that split exists. It was moving your arms there and leaving the delts behind on an already-full torso day, so rear delts finished a week well under what they need. They now clear it."],
-        ] },
-    { version: "3.107.0", build: "655", items: [
-            [Layers, "Upper work lands on upper days first", "Shoulder or arm work is no longer put on a leg day just because that day had spare time — it goes to an upper day when one has room, and still lands on a leg day when nothing else can take it. Programs that deliberately mix, like full body, are unaffected."],
-        ] },
-    { version: "3.106.0", build: "654", items: [
-            [Layers, "A three-day upper/lower that actually balances", "Upper and lower now alternate without resetting each week \u2014 sessions run upper, lower, upper, then lower, upper, lower. Over a fortnight each gets three sessions instead of an uneven two and one, which is how this split is meant to run and why three days never fit it before."],
-        ] },
-    { version: "3.105.0", build: "653", items: [
-            [Layers, "Every training day matches its own name", "A day called \u201cUpper \u00b7 Horizontal\u201d now opens on a flat press rather than an incline, a hinge day gets a hinge, a pull day gets its pull. Each day states the movement it is built around and the builder honours it \u2014 before this, only four of seventy-two days said what they wanted and the rest were left to whichever variation happened to score best."],
-            [PlusCircle, "Exercises you add now survive a shuffle", "An exercise you added yourself used to disappear the next time you shuffled the program, updated the engine or reset it. It is now carried across, kept on the same kind of day, and the time it adds is shown separately so your plan is never marked over target for work you chose to add."],
-            [Activity, "Less filler, same training", "Roughly nine thousand sets of low-value volume removed across the program library, with fewer sessions running past their stated length."],
-        ] },
-    { version: "3.103.0", build: "651", items: [
-            [Zap, "Updating or dismissing the engine notice now sticks", "Choosing to update a program, or dismissing the offer, was only being remembered until you navigated away \u2014 and the update button was also warning you that manual changes would be replaced on programs you had never edited, because the weekly schedule every program is born with was being counted as an edit. Both are fixed, and dismissing now stays dismissed until a genuinely newer engine has something new to say."],
-            [Repeat, "Start a program again from week 1", "Two ways, both in the shuffle sheet: keep the exercises you have now, or go back to the ones it was first built with. Either way it starts again at week 1 and every workout you have logged stays exactly where it is."],
-            [Award, "Volume targets now match your training age", "Minimum and maximum useful volumes are no longer the same for a first-year lifter and a ten-year lifter. Beginners grow on less, advanced lifters need more, and the app now scales both ends accordingly."],
-            [Layers, "Focusing forearms or traps gives them real work", "Choosing either as a focus now sets an actual volume floor for it instead of leaving it to whatever your other lifts happen to provide."],
-        ] },
-    { version: "3.102.0", build: "650", items: [
-            [Layers, "Reducing a muscle now actually reduces it", "Setting a muscle to reduce had no effect on how many exercises it got \u2014 across eight test programs the count was identical every time, and the volume sometimes went up. A reduced muscle no longer competes for its own exercises; it keeps what it earns from your compound lifts, plus a maintenance slot if it would otherwise drop too low. The freed slots go to the muscles you focused."],
-        ] },
-    { version: "3.101.0", build: "649", items: [
-            [Layers, "Deleting a training cycle no longer leaves its blocks orphaned", "Removing a cycle while keeping its blocks left every block still pointing at the cycle that was gone. The library then drew them as a nameless \u201cTraining cycle\u201d card, tapping it dropped you on the all-cycles list, and the second block was hidden inside the group entirely. Blocks you keep are now kept as ordinary programs, and any library already in this state repairs itself the next time the app opens."],
-        ] },
-    { version: "3.100.0", build: "648", items: [
-            [Award, "Your Strength Score and the level beside it agree", "The level printed next to the score is now the level of that score, and the trend line ends on the same number shown above it. Both count the same lifts, including the ones scored against a barbell equivalent."],
-            [Sparkles, "What's new is a headline again", "Home shows the full description for the release you just installed and a one-line title for each older change. Nothing is dropped and the full log is still one tap away."],
-        ] },
-    { version: "3.99.0", build: "647", items: [
-            [Layers, "Better full-body pattern rotation", "Rotation compares a broader layout while protecting muscle coverage, focus points, reduced muscles and session limits."],
-            [Timer, "Stronger program checks", "Program and cycle selection check session ceilings across every training week. Invalid candidates cannot receive a clean score."],
-        ] },
-    { version: "3.98.0", build: "646", items: [
-            [HardDrive, "Safer startup and saving", "Slow or unreadable storage no longer starts an empty account over your data. Retry or restore a backup from a dedicated recovery screen. Pending saves keep their order."],
-            [Wand2, "Clearer program and cycle setup", "Generation shows a working state, prevents duplicate submissions, and keeps your answers if it fails. Focus limits and selected options are clearer."],
-            [Layers, "Sheets behave consistently", "Keyboard focus stays inside the open sheet and returns to the right control when nested pickers close."],
-        ] },
-    { version: "3.97.0", build: "645", items: [
-            [Target, "Focus and reduced muscles guide generation", "Focus inputs are consistent across program and cycle generation. Candidate selection respects your priorities and maintenance targets."],
-            [Layers, "Cycles compare complete layouts", "New cycles compare several coherent candidates across all blocks before choosing a layout."],
-            [Minus, "Reduced muscles keep less work", "A final volume pass trims eligible work while protecting other muscles and fixed prescriptions."],
-        ] },
-    { version: "3.96.0", build: "644", items: [
-            [Activity, "Movement previews rebuilt", "Clearer figures and equipment, corrected pull-ups and core movements, machine-specific loading, and supported bench positions. Pause, slow down, or drag through any movement."],
-            [Layers, "More resilient progression", "Cycle templates now keep their own progression when created from a percentage-based split. Malformed imported phase windows no longer produce invalid progression values."],
-        ] },
-    { version: "3.95.0", build: "643", items: [
-            [Layers, "New cycles start in their intended phase", "Starting a cycle from a peak block no longer carries that peak into a fresh hypertrophy wave. Each block uses its template's own progression window."],
-            [TrendingUp, "Next-cycle loads and explanations agree", "Training-max changes use this program's AMRAP results. The preview now explains the same AMRAP set used to calculate the new load, including when summary reps differ."],
-            [Activity, "Exercise motion follows your preferences", "Figures react immediately when reduced motion changes, stop while the app is hidden, and restart cleanly when you return or choose another exercise."],
-        ] },
-    { version: "3.94.0", build: "642", items: [
-            [Target, "Focusing a small muscle now changes your program", "The focus picker promises that each level adds an exercise for that muscle, and for the smaller ones it usually could not keep that promise \u2014 measured, focusing forearms twice left them with no work at all in 58% of programs, because adding an exercise would break the session's stated exercise count and there was no existing movement to add a set to. A focus point that cannot be filled any other way now trades: either a lift is exchanged for a version of the same movement that also works the muscle you asked for, or a slot comes from a muscle that has sets to spare. Your session keeps its length and its number of exercises, and the program is built both ways and compared, so a trade is only kept when nothing else came off worse. Neck is the exception \u2014 nothing else in the exercise library trains it, so the picker now says so instead of implying otherwise."],
-        ] },
-    { version: "3.93.0", build: "641", items: [
-            [Layers, "A cycle's blocks show what makes them different", "Every block of a training cycle listed the same split, the same day count and the same emphasis \u2014 three identical pairs of lines for a three-block cycle, which is what they have in common by design, since a cycle is one program periodised. Those details now sit once on the cycle's own header and each block shows its name, so the list is about half the height and the block you're actually on is the one that stands out. A block you've edited to differ from its siblings still shows its own details."],
-            [Plus, "The Create and Quick buttons sit at the bottom again", "On phones with a home indicator, the bar reserved space for it and so did the tab bar underneath \u2014 the same gap counted twice, which pushed the buttons up the screen and left a dead strip below them covering whatever card was behind. The space is now reserved once, by whichever is actually last on screen."],
-        ] },
-    { version: "3.92.0", build: "640", items: [
-            [RefreshCw, "Minimizing a workout no longer restarts it", "If you swapped an exercise and chose \u201cUpdate my program\u201d, the workout you were in the middle of could come back empty \u2014 most visibly after closing the app and reopening it. Two things were wrong. The session was still describing the day the way it looked before the swap, so when you came back the app compared the two, decided the saved workout belonged to a different day, and threw it away; and it was making that check on every single redraw, so the workout was often already gone before you tapped resume. Both are fixed, and a changed exercise no longer costs you the session: the day is rebuilt from your program and every set you logged against a lift that did not change comes back with it. The lift you swapped out starts fresh, as it does when you swap mid-workout."],
-            [HomeIcon, "Home shows you what changed, not everything it knows", "The strength score, muscle recovery and the weekly recap used to sit on Home every single day once you had trained even once \u2014 so the program you opened the app to start was below all three, and most days none of them had anything new to tell you. They now appear when they have something to say: recovery when rest is actually advised, the strength score when you set a PR, the recap when you have trained that week, and at most two at a time. Nothing is gone \u2014 all of it is still on Progress whenever you want it, and warnings you should act on, like a deload being due, are never rationed."],
-        ] },
-    { version: "3.91.0", build: "639", items: [
-            [Activity, "Your second curl of the week trains the brachialis", "Every program picked the same incline curl for every biceps slot \u2014 one exercise took 53 of 53 biceps slots across the whole config space, because selection ranks by a single priority number and never looks at what the first pick already trained. When a week holds two or more biceps slots, the second now goes to a neutral-grip movement, which loads the brachialis and the forearm rather than repeating the same supinated curl. Programs with more than one curl went from none to all 21 carrying a neutral grip, and every program keeps its best supinated curl as the first pick."],
-            [AlertTriangle, "The volume check stopped advising work you never asked for", "Forearms, traps and neck are accessory work the app does not program for you, so it has never offered to add sets to them. That silence turned out to rest on those muscles sitting at exactly zero: the neutral-grip curl above puts a fraction of a set into your forearms, and the volume check immediately started telling 126 programs to add forearm work. It now decides by whether the muscle is one the app programs, or one you have put a movement in yourself \u2014 not by whether the number happens to be zero. If you do train a muscle and are missing a direction of it, you still get told which movement closes the gap, which is the advice this rule was always meant to protect."],
-        ] },
-    { version: "3.90.0", build: "638", items: [
-            [Activity, "Deadlifts now progress at the right rate on 5/3/1 and GZCLP", "The deadlift was being treated as an upper-body lift, so it went up in the small jump \u2014 5 lb a cycle instead of 10, half what those programs prescribe. Squats got the full jump, deadlifts did not, on every named program that uses both. It was invisible because the deadlift is filed under lower back rather than legs. Deadlifts now advance like squats, in pounds and kilos. Nothing else about your loads changes."],
-        ] },
-    { version: "3.89.0", build: "637", items: [
-            [Activity, "Long sessions fill up to the length you asked for", "A two-hour session used to stop early \u2014 days came in around 80 minutes, because a day was capped at nine exercises no matter how much time was left. Long sessions can now hold eleven, and a day short of its target is filled with the muscles furthest behind rather than more work for the one that already has the most. Days finishing under their target dropped by 41%, and weekly minimums missed dropped too. Nothing is added past a muscle\u2019s ceiling, past the length you chose, or past what a named program prescribes; shorter session lengths are unchanged."],
-        ] },
-    { version: "3.88.0", build: "636", items: [
-            [Activity, "Heavy days are no longer scheduled back to back", "A deadlift day followed by a squat day was only ever judged on which muscles the two shared \u2014 and a squat and a deadlift do not share many, so the app saw nothing wrong with putting them on consecutive mornings. Loading your spine hard twice in a row is a cost the muscle comparison could not see. It now counts, including between the last training day of your week and the first day of the next, which has no rest between it either. Across every program the app can build, back-to-back heavy days fell by about half. The cost is a small rise in how often two days share some muscle work, which is the lesser of the two problems."],
-            [Activity, "The suggested week and your actual week are the same week", "The suggested-schedule calendar could show a completely different arrangement from the one your program was built with \u2014 same program, two different weeks, depending on which screen you looked at. They now come from one place."],
-        ] },
-    { version: "3.87.0", build: "635", items: [
-            [Activity, "Side and rear delts stop being blocked by your pressing", "Every press gives your front delts work, and that counted toward \u201cshoulders\u201d as a whole. When the total crossed a limit, the app refused to add any more shoulder work \u2014 including the side and rear delt work you were actually short of, which pressing does nothing for. Two parts of the app were using different shoulder limits; they now use the same one. Rear delt shortfalls fell across the board, and no existing program changes."],
-        ] },
-    { version: "3.86.0", build: "634", items: [
-            [Activity, "The app no longer asks you to train muscles it never planned for", "Your program is built to cover thirteen muscle groups. Six others \u2014 traps, lower back, adductors, abductors, forearms, neck \u2014 have always been accessory work you add if you want it, and the builder has never targeted them. The volume check did not know that, so it would tell you to \u201cadd three sets to your traps\u201d in a plan that was never going to include direct trap work, and the one-click fix would then pad some other exercise to satisfy it. Across a sweep of generated programs, roughly one in five suggestions was of that kind. Those are gone. Warnings that you are doing too MUCH of something are unchanged and still apply to every muscle, and anything you add yourself still shows up in your volume charts."],
-        ] },
-    { version: "3.85.5", build: "633", items: [
-            [Activity, "The share code is checked by using it", "Sharing a program hands over a short code that rebuilds the plan on someone else\u2019s phone. There is now a check that opens the share sheet, takes the code it shows, decodes it and rebuilds the program \u2014 then compares it lift by lift against the original. It also confirms that a program the code format genuinely cannot carry says so instead of handing out a code that would rebuild the wrong plan."],
-        ] },
-    { version: "3.85.4", build: "632", items: [
-            [Activity, "Your weekly schedule is checked end to end", "Which weekday each session lands on is not decoration \u2014 the app uses it to work out how much rest a muscle got, and three separate bugs in the past came from a screen and the engine disagreeing about it. The schedule sheet is now its own component with a check that taps through it the way you would, saves, and then confirms the engine reads back exactly the week the sheet wrote. Nothing changed on screen."],
-        ] },
-    { version: "3.85.3", build: "631", items: [
-            [Activity, "Program settings, tested the way you use them", "The program settings sheet is now its own component with a check that drives it exactly as a thumb would: open the program, open settings, pick an assistance style, save, commit \u2014 then read back what was stored and confirm it is the program the builder makes for that choice. Nothing changed on screen. This is the first slice out of the app\u2019s largest screen; the rest follow the same way, one piece and one check at a time."],
-        ] },
-    { version: "3.85.2", build: "630", items: [
-            [Activity, "One type scale", "Text across the app was set at fourteen different sizes between 8\u00bd and 18 points, in half-point steps \u2014 the fingerprint of hundreds of small decisions made one screen at a time. It is now eight sizes on one scale, and a check refuses a new one. Half-point sizes rounded up, never down, so nothing got smaller; the change is subtle on any one screen and visible as consistency across all of them."],
-        ] },
-    { version: "3.85.1", build: "629", items: [
-            [Activity, "Section labels look the same everywhere", "The small uppercase label above a section \u2014 \u201cAssistance work\u201d, \u201cThis day hit\u201d, \u201cAdd a gym\u201d \u2014 was drawn 113 slightly different ways across the app: seven font sizes, five letter-spacings. It is now one definition, used in 79 places, and a check refuses a hand-drawn one. Nothing else moved; this is the first of the visual clean-ups."],
-        ] },
-    { version: "3.85.0", build: "628", items: [
-            [Activity, "A 40-minute plan is now a 40-minute plan", "The program builder priced a session by its sets, warm-ups and rests, and the plan screen priced it the same way plus the minutes every session actually has between exercises \u2014 walking to the next station, loading the bar. So the builder would declare a day fitted at 40 minutes and the plan would show you 47. Across every program the app can build, the builder believed 96 of 2,880 days ran over their limit; the number on screen ran over on 858 of them. From engine 15 there is one price for a day, and it is the one the builder holds the session to. The cost is stated plainly: with the minutes between exercises counted, fewer lifts fit, and about 4% fewer sets are programmed at a given session length \u2014 the sets you were never going to have time for. If you want them back, pick the next session length up; that is what the setting is for. Existing programs are unchanged."],
-            [Activity, "What a 20-minute strength session actually costs", "Two heavy compounds with proper rest take about 30 minutes, not 20 \u2014 and the honest pricing now says so on the plan instead of hiding it. That is the one place the app still cannot fit what was asked, and it now shows it rather than pretending."],
-        ] },
-    { version: "3.84.0", build: "627", items: [
-            [Activity, "Jack Shit, Triumvirate and 5\u00d710 Supplemental now build the program they name", "Those three assistance styles were saved with your program, printed on screen and carried in every share code \u2014 and the program builder never read them. The gallery's \u201cMain-Lift Waves \u00b7 5\u00d710\u201d preset came out with a full slate of accessories, and \u201cJack Shit \u2014 main lift only, nothing else\u201d produced seven lifts a day; only re-picking the style in settings changed anything, and that path rebuilt each day with an old version of the selector and skipped every repair step. From engine 14 the style shapes the program at creation: Jack Shit is the four main lifts and nothing else, Triumvirate and 5\u00d710 are the main lift plus two accessories, and switching styles in settings now rebuilds the whole program the same way. Programs you already have are unchanged unless you switch."],
-            [Activity, "Triumvirate and Jack Shit programs can be shared by code", "A share code could carry the 5\u00d710 style but not the other two, so those programs silently fell back to the long text share. All three now travel in the code, and a shared Jack Shit arrives as Jack Shit."],
-        ] },
-    { version: "3.83.3", build: "626", items: [
-            [Activity, "Every engine rule now has a name", "A program keeps replaying under the engine version that built it \u2014 that is what makes a seed, a share code and a reroll reproduce the layout you saw. The cost was that every rule an engine added lived in the code as a bare version number, thirty-nine of them, and the only way to learn what engine 10 changed was to search for the number. Every one of those rules is now listed once, by name, next to what it does and where it is applied \u2014 and a check refuses any future rule written the old way. Programs are unchanged to the byte."],
-            [Activity, "Exercise selection takes its settings by name", "The routine that picks a day's exercises took eighteen unnamed arguments in a fixed order. One of the two places that called it passed only nine and silently accepted defaults for the rest \u2014 including which engine version to use. Both now pass every setting by name, so an omission is visible where it happens. Nothing changed in what gets picked; the omission itself is now recorded as a decision rather than an accident."],
-        ] },
-    { version: "3.83.2", build: "625", items: [
-            [Activity, "The volume repair engine is now eight named steps", "After the app picks your exercises, a second engine repairs the week: it fills each session toward the length you asked for, holds every muscle at its minimum, guarantees no movement pattern is left out, trims what is over its ceiling, and last of all trims high-frequency work the plan cannot recover from. That engine was one function of sixteen hundred lines. It is now eight named steps in a declared order, sharing one set of helpers, with the engine-version rules visible in the list rather than buried between passes. Every program the app can build was generated on both versions and is identical to the byte; the sweep that guards every generation change moved by zero. Reordering two steps changed 1,019 of them, which is how you know the order is the engine."],
-        ] },
-    { version: "3.83.1", build: "624", items: [
-            [Activity, "Nothing in your programs changed \u2014 the builder underneath them did", "The program builder used to be a long hand-written sequence of steps with the rules for older program versions threaded between them. It is now one readable list of named stages, each with the condition it runs under. Every program the app can build was generated on both versions \u2014 12,420 of them, across every engine version the app has ever shipped \u2014 and they are identical to the byte. The point is what comes next: the engine can now be improved one stage at a time with the whole sequence in view, rather than by adding one more patch to a function nobody could read end to end."],
-            [Activity, "Every build of the app is now reproducible", "The app is assembled from a handful of libraries, and one of them was allowed to drift between versions. A fresh build of the same source came out twelve bytes different from what you were running \u2014 harmless here, but a build that cannot be reproduced cannot be trusted to prove a fix. Every library is now pinned to the exact version that shipped, and a clean install rebuilds the current app byte for byte."],
-        ] },
-    { version: "3.83.0", build: "623", items: [
-            [Activity, "Programs named after a published routine now run that routine", "If you picked 5/3/1, the deadlift day did not contain a deadlift \u2014 it contained a Romanian deadlift 35 times out of 40, because the app chose the lift by which muscles the day was meant to work rather than by name. GZCLP's deadlift day had the same problem. The mechanism to pin a program's main lifts had been in the app all along, but it only ran if you arrived through the gallery; picking the same program from the wizard skipped it, and you got something wearing the name. The main lifts are now fixed whichever way you reach them, and the percentage scheme the program is named for comes with them."],
-            [Activity, "The Texas Method's light day is light again", "Texas prescribes 5\u00d75 squats on the volume day, a deliberately easy 2\u00d75 on the recovery day, and one heavy set on the intensity day. The app was prescribing four working sets on all three, including the one designed for recovery \u2014 so you squatted double what the program asked on the day meant to let you recover, and the app then noticed the fatigue and suggested you cut sets. The program's own set counts now win for the lifts it prescribes. Accessory work is still ours to program."],
-            [Activity, "A program is only offered at session lengths it can be run in", "A 5/3/1 main lift is three work sets plus warm-ups \u2014 twenty to twenty-five minutes before any assistance. The app was offering 5/3/1 at \u201cup to 20 minutes\u201d and GZCLP too, where the two main lifts filled every slot in the week and left no room for a row, a curl or anything else: some weeks trained no back at all. These programs now appear only in the brackets they actually fit, the same way a four-day program is only offered at four days. The same applies at the top end \u2014 two hours of a beginner template is not that template either."],
-            [Activity, "GZCL programs are built from their own tiers", "A GZCLP day is a heavy main lift, a moderate second lift, and one or two high-rep accessories \u2014 and the accessories are where the program deliberately puts your back work, because the four barbell lifts contain no pulling at all. The app was sizing these days from your session length instead and filling the spare slots with whatever coverage wanted, which is how a GZCLP week ended up with curls and calf raises and no rows. The tiers now decide how many movements a day has and what the accessories are for; your equipment and your actual weak points still decide which movements."],
-            [Activity, "You are never told to cut a muscle already at its minimum", "If a muscle was trained just enough and you were recovering poorly, the advice was to cut a set \u2014 which takes it below the point where training earns anything at all. Below the minimum, fatigue is a spacing problem, not a volume one, and the advice now says so instead."],
-        ] },
-    { version: "3.82.0", build: "622", items: [
-            [Activity, "A new program no longer opens with days already ticked off", "If you built a new program on a split you had trained before, some of its days showed up already completed before you had done anything. The app names a program's days after the split \u2014 an upper/lower program always calls them Upper A, Lower A and so on \u2014 which is deliberate, because it is what lets a program keep your history when you regenerate it. But the completed markers were matching those names against your whole training history rather than against this program's, so last month's sessions were ticking off this morning's plan. Completion is now scoped to the program that earned it. Regenerating a program still keeps its ticks, and older sessions logged before the app tracked this are still counted rather than thrown away."],
-        ] },
-    { version: "3.81.0", build: "621", items: [
-            [Activity, "Your training days are arranged so back-to-back sessions clash less", "The app decides which day of the week each session lands on, and it was solving the wrong problem \u2014 spreading overlap evenly around a ring of days as though every session sat the same distance from the next. Your week has rest days in it. On a five-day plan only three of the five pairs are genuinely back-to-back, and which two sessions landed side by side was left to chance. It now minimises the worst clash specifically: the one morning you would train a muscle that is still sore. Across every program the app can build, the volume shared by consecutive days fell by nearly half at the median, and the worst case on a split routine went from 28 shared sets to 15. No exercise selection changed and no muscle gets more or less work \u2014 only the order of your week. Programs you have already saved keep the schedule they were built with."],
-        ] },
-    { version: "3.80.0", build: "620", items: [
-            [Activity, "Every week now tells you what it is for", "The week chips in your plan told you what a week costs \u2014 sets and minutes \u2014 and nothing about what it is doing. Now each one comes with a line: what it is (introduction, accumulation, intensification, peak, deload), the effort you should be leaving in the tank, the rep bracket on your main lift, how many sets have been added since week 1, and when the last-set techniques start appearing. Every word is read from the same prescription the session screen renders, so it cannot drift into describing a plan you are not actually running."],
-        ] },
-    { version: "3.79.0", build: "619", items: [
-            [Activity, "Your shoulders finally get trained", "About one program in ten trained your side delts not at all \u2014 and nothing in the app could see it, because side delts are part of the shoulder rather than a muscle of their own. That is now about one in a thousand. The cause was that the app decided whether an exercise fitted your session using a cost that left out setup, walking to the machine and loading the bar, while the time it SHOWED you included all three. It packed sessions against a budget it was not really keeping, and the first thing squeezed out was the small isolation work at the end."],
-            [Activity, "Three engine improvements, switched on together", "The rule that settles competing needs, the fix for de-emphasising a muscle, and honest session pricing have all been written and measured over the last several releases. They are now live. Across every program the app can build, muscles trained not at all dropped by 7,630 muscle-weeks and no session got longer. Some of those muscles now sit below the ideal amount rather than at zero \u2014 that is the trade, and a little of something beats none of it."],
-            [Activity, "No program trains zero back", "A handful of short two-day plans came out with no pulling work at all \u2014 no rows, no pulldowns, nothing for your back or biceps in the entire week. The step that guarantees every movement pattern is covered was refusing to act, because the only slot it could trade was a lateral raise and a separate rule protected shoulder work above all else. A week that trains no back is a bigger problem than a week light on side delts, so the pattern check now wins that tie \u2014 but only as a last resort, after every trade that costs nothing has been tried. Across every program the app can build this moved 497 muscle-weeks off zero."],
-            [Activity, "Where a 20-minute plan still cannot cover everything", "In a handful of two-day, 20-minute plans there are four exercise slots for the entire week, and no arrangement of four slots trains everything. The app no longer squeezes in a fifth by pretending the session is shorter than it is; instead it tells you plainly that moving to a 20\u201340 minute session closes most of the gaps, and how many."],
-        ] },
-    { version: "3.78.0", build: "618", items: [
-            [Activity, "Focusing a muscle was making that muscle worse", "Picking a muscle to focus on could take it from 28 sets a week down to 18, and clicking it a second time was more likely to hurt than to help. The cause: focus made a muscle win more of the contests for a slot, and the slots it won were isolation work \u2014 so your overhead presses got traded for lateral raises and you ended up with less shoulder work than if you had never focused at all. Focus now asks for what it actually means: one more slot for that muscle, added on top, which can never cost it volume at the point it is granted. It still loses to any muscle that is not yet trained enough, because a preference should not buy away adequate training. Written and measured, switched on in a later release."],
-        ] },
-    { version: "3.77.0", build: "617", items: [
-            [Activity, "The app and its own planner now agree on what \u201ctoo much\u201d means", "The program builder deliberately stops trimming once a muscle is within half a set of its recovery ceiling \u2014 sets come one at a time, so cutting a whole set to shave four tenths off lands further from the mark than leaving it. But the screens that judge your week had no such tolerance, so they called the builder\u2019s own output over the limit. That is what was driving the set-cutting. Both now read one number. Measured across 756 programs: the largest overshoot anywhere is four tenths of a set, and none of them is reported as over the limit any more."],
-            [Activity, "The volume wave shows your deload, and shows the right weeks", "The chart in your plan\u2019s Blueprint was drawn one week behind the week chips beside it \u2014 same numbers, shifted along \u2014 and it left the deload out entirely, so the one card meant to show you the shape of your block could not show the trough at the end of it. The deload is now a bar of its own, marked, and every column matches the week it is labelled with."],
-        ] },
-    { version: "3.76.0", build: "616", items: [
-            [Activity, "Your program is no longer trimmed for following it", "If you did exactly what your program prescribed, the app will not turn around and cut sets from it. The volume advice reads what you logged, and it had no way to tell \u201cyou trained more than we asked\u201d from \u201cyou did precisely what we asked.\u201d So a week that came out four tenths of a set above a recovery ceiling \u2014 a ceiling the app\u2019s own plan had set \u2014 was answered by removing two sets, every session, forever. Now the plan wins for its own volume, and when a plan really is above its ceiling the app says so and points at the program instead of quietly shaving it. Train MORE than the plan asked and the adjustment still applies, exactly as before \u2014 that is real extra load and the app should react to it."],
-        ] },
-    { version: "3.75.0", build: "615", items: [
-            [Activity, "The rule that settles competing needs is written", "When two parts of your program both need work and there is only room for one, the app now has a single rule for who wins: a muscle getting no work at all beats a muscle that is merely under-trained, then the bigger shortfall, then the cheaper option. It is written and measured but not yet switched on, so your programs are unchanged in this release. Measured on all 24,840 configurations, it takes programs that train your side delts not at all down by 14%."],
-            [Activity, "A muscle trained not at all was invisible to our own testing", "The measurement that guards every program change counted muscles that were under-trained, but not muscles that got no work whatsoever \\u2014 for every muscle except the side delts. So the worst thing the program builder can do was the one thing nothing watched, and a fix that took a muscle from nothing to something registered as making things worse. It is now counted, and the number is large: roughly half of all inadequately-trained muscle-weeks are muscles trained not at all. Nothing about your programs changes here \\u2014 this is the instrument, and several improvements already written have been waiting on it."],
-        ] },
-    { version: "3.74.0", build: "614", items: [
-            [Activity, "The program allocator is now a single queue", "The second and last of the two gap-filling steps has been converted. The step that guarantees your side and rear shoulder work no longer decides and acts on its own \u2014 it states what it needs alongside every other request, and one decision point grants them. Programs are identical to before, verified across all 24,840 configurations the app can generate. Now that both steps share one queue, the next release can change how competing needs are settled by changing a single rule, so a muscle left at zero stops losing to a top-up that merely ran earlier."],
-        ] },
-    { version: "3.73.0", build: "613", items: [
-            [Activity, "First half of the new program allocator", "The step that fills gaps in your program used to decide and act in one motion, which is why fixing one thing kept breaking another. It now states what it needs and a single decision point grants it. This is the first of two such steps to be converted, and it produces byte-for-byte the same programs as before \u2014 verified across every configuration the app can generate. The change is the groundwork that lets the next release resolve conflicts between competing needs properly."],
-        ] },
-    { version: "3.72.0", build: "612", items: [
-            [Share2, "Share codes are ready for the new program engine", "A program share code carries the engine version that built it, so whoever opens it rebuilds exactly the program you saw. That field was one bit too small for the engine versions now in development \u2014 a code made by a newer engine would have quietly rebuilt as something else on your friend\u2019s phone, with no error. The field is now wider, every code already in circulation still opens exactly as before, and the check that was supposed to catch this has been fixed too: it only verified that a version was present, not that it was the right one."],
-        ] },
-    { version: "3.71.0", build: "611", items: [
-            [Activity, "Groundwork, and a dead end worth recording", "Work continues on rebuilding how the app decides what goes into your program. This release adds no changes to the programs themselves. A promising fix for the muscle-reduce problem was built and measured, produced the best result so far on that specific issue, and made two other measures noticeably worse \u2014 so it was held rather than shipped. That is now the fifth such attempt, and together they confirm the larger rebuild is necessary rather than optional."],
-        ] },
-    { version: "3.70.0", build: "610", items: [
-            [Check, "The muscle focus and reduce options are now fully measured", "Two of the program creation questions \u2014 which muscles to focus on and which to reduce \u2014 were never covered by the app\u2019s internal quality measurements, so problems with them could not be detected. They are now part of every measurement run, which tripled its size. That immediately confirmed a real issue being worked on: reducing a muscle can currently remove it from your program entirely instead of just training it less. A corrected version is built and held back until it can ship without side effects."],
-        ] },
-    { version: "3.69.0", build: "609", items: [
-            [Activity, "Every build step now reports what it wanted", "The last of the program-building steps was connected to the new request tracking, completing the groundwork. Programs are unchanged. The full picture shows where the app is genuinely short of room: forty-minute sessions run completely full and still fall short of the number of exercises they promise, while two-hour sessions use only about three quarters of the time you set aside. Both are now measured rather than guessed at."],
-        ] },
-    { version: "3.68.0", build: "608", items: [
-            [Activity, "Measuring what your program wanted but could not fit", "Building a program involves several steps that each try to add work, and most of what they ask for does not fit in the time available \u2014 it was simply dropped, unrecorded. The app now tracks every request and whether it was granted. Programs are unchanged. The first measurements were surprising: forty-minute sessions are the most contested of any length, granting only one request in five, and one step is turned down 86% of the time yet still occasionally outbids more important work purely because it runs earlier."],
-        ] },
-    { version: "3.67.0", build: "607", items: [
-            [Activity, "Groundwork for a smarter program builder", "The part of the app that fills gaps in your program is being rebuilt so that every step states what it needs and one place decides what actually fits, instead of several steps each changing the program in turn and undoing one another. This release lays the first piece of that groundwork and changes nothing about the programs it produces \u2014 verified against every measurement the app has. It already revealed something useful: the step that tops up under-trained muscles asks for roughly fourteen times more than it ever gets, and nothing was recording those refusals."],
-        ] },
-    { version: "3.66.0", build: "606", items: [
-            [Activity, "Naming the build steps correctly", "The build trace added last release grouped several steps under the wrong name, which made one of them look responsible for far more of your program than it actually is. The steps are now labelled accurately. Nothing about how programs are built has changed \u2014 but what the trace reports about it is now true, which matters for everything built on top of it."],
-        ] },
-    { version: "3.65.0", build: "605", items: [
-            [Activity, "The build trace now goes one level deeper", "Filling out your program is not one step but several \u2014 topping up neglected muscles, covering missing movements, capping anything excessive \u2014 and the trace added last release could only see the group as a whole. It now shows each step separately. That immediately explained a problem that had resisted three earlier attempts: on very short sessions, one step tops up shoulder work using the last available slot, and a smaller muscle ends the week with none."],
-        ] },
-    { version: "3.64.0", build: "604", items: [
-            [Activity, "Seeing exactly how a program gets built", "Your program is assembled by a chain of steps \u2014 pick the exercises, fill gaps in muscle coverage, merge duplicates, cap anything excessive, trim to fit your session length. Until now there was no way to see what each step did, only the finished result, which made some problems very hard to track down. There is now a full trace of every step: what it added, removed or swapped, how it changed each day\u2019s length, and which muscles gained or lost volume. It found a real issue on its first use."],
-        ] },
-    { version: "3.63.0", build: "603", items: [
-            [Check, "Checking the checks", "Under the hood, this app is held together by a large set of automated checks that run on every build. This release adds one that audits the others \u2014 because a check that has quietly stopped measuring anything does not go quiet, it goes green. It immediately found that programs for the \u201cbrand new to lifting\u201d experience level had never been measured by any of them, so that entire group of programs was going unverified. It is now covered."],
-        ] },
-    { version: "3.62.0", build: "602", items: [
-            [Clock, "A twenty-minute session is now twenty minutes", "It never was. Every short session the app built ran about ten minutes long \u2014 a 20-minute plan that actually took thirty \u2014 and the app had no way of noticing, because the checks that watch session length skipped short sessions entirely. Two exercises at three hard sets simply does not fit twenty minutes, so short sessions now prescribe two working sets instead of three. Fewer sets, but the session is the length you asked for, and the time saved often makes room for a third movement. Every session length in the app now finishes inside the band you picked."],
-            [Check, "The exercise count shown when you pick a session length is now true", "Picking a session length showed you roughly how many exercises to expect, and for the shortest option that number was wrong \u2014 it advertised about five, more than it promised for a forty-minute session, and delivered two. The programs were always right; only the label was wrong. It now shows what you will actually get."],
-        ] },
-    { version: "3.61.0", build: "601", items: [
-            [Activity, "Every week now trains your back", "About one program in ten contained no pulling work at all \u2014 no rows, no pulldowns, nothing for your back \u2014 for the whole week. Measured across 6,300 generated programs, 599 of them had it, and it was always the same pattern missing. It happened even with a full gym available: the app allocated slots muscle by muscle, and because back work is split across three muscles that each rank below chest or quads on their own, a short session could fill up before any of them earned a place. Two things now prevent it. When a movement pattern is missing and there is room, the app adds one. When there is no room, trimming a session to fit the clock is no longer allowed to take the last of it \u2014 the same protection your side and rear delts already had. Your main lift is never affected. Six configurations remain where four total exercises genuinely cannot cover everything; for those the app tells you what would fix it, as it already did."],
-            [Shield, "Short sessions no longer lose a whole shoulder head", "Fitting a session to the clock had one last resort that ignored every protection above it, so it could drop the only side- or rear-delt movement in a program. Across the full configuration sweep this affected 370 programs; it now affects 243, and none of the remainder are caused by trimming."],
-        ] },
-    { version: "3.60.0", build: "600", items: [
-            [Sparkles, "New programs are the best of six, not the first one rolled", "Building a program has always involved an element of chance \u2014 the app rolls a number and that decides which lifts land in which slots. It was handing over whatever came out of the first roll without ever looking at it, and the roll matters more than it sounds: measured across 126 setups, changing nothing but that number moved weekly volume by about two sets a muscle, and left a muscle with no work at all in roughly one program in six that a different roll would have covered. The app now builds six versions of your program, checks each one against your session length, your muscle coverage and its own volume targets, and gives you the best of them. Nothing else changes \u2014 your program still has a shareable code, still rerolls, still rebuilds exactly as before. It is simply no longer the first thing the dice produced."],
-        ] },
-    { version: "3.59.0", build: "599", items: [
-            [TrendingUp, "An easy week no longer costs you weight permanently", "The first week of a block is meant to be a little easier \u2014 more reps left in reserve, not a lighter bar. But the load was being sized against that eased target, so a new block started lighter than the last one finished, and the following weeks held that weight and built reps instead of climbing back. The reduction stuck, and the next block started lower again. Measured over six blocks, a lifter following the program exactly went 95 to 85 to 80 and never recovered \u2014 one notch down per block, indefinitely. Easy weeks now keep your working weight and simply ask less effort of it. A genuine drop in strength still lowers the load, from your actual performance rather than the calendar."],
-        ] },
-    { version: "3.58.0", build: "598", items: [
-            [Brain, "Recovery is judged against your program\u2019s own spacing", "If you train a muscle every day or two \u2014 a five-day full body rotation, say \u2014 you were being eased back constantly. The check that protects a day you trained exactly as scheduled required a recovery reading of 70, which quietly assumed every program leaves a muscle about two days. On a schedule built around 24-hour gaps the reading after a hard session is around 66, so chest, back and legs were all judged under-recovered every single day and trimmed, no matter how closely you followed the plan. Recovery is now measured against what your schedule\u2019s own spacing can realistically deliver, so training on plan counts as on plan. A genuinely bad reading still eases the day back."],
-            [Activity, "Effort notes stay inside a range you\u2019d actually train in", "The \u201c\u2248 RIR\u201d note beside a set could print figures like 7.5, or even a negative number when a weight was heavier than the reps asked for. Those were arithmetically true and useless as targets. The note now stays quiet outside a sensible range and shows your program\u2019s number instead."],
-        ] },
-    { version: "3.57.0", build: "597", items: [
-            [AlertTriangle, "Deload weeks no longer cost you your working weight", "A deload is prescribed at a lighter load on purpose \u2014 but once you logged it, it became the weight the app progressed you from. Train a block at 95, deload at 55 as instructed, log it, and the next block started you at 55. Every deload quietly reset you to about 60% and you climbed back from there, so following the deload as told meant never really moving up across blocks. It showed up as \u201cthe app never progresses me\u201d rather than anything obviously broken. The next load is now worked out from your last real training week, skipping the deload \u2014 while the deload week itself still lightens as it should."],
-        ] },
-    { version: "3.56.0", build: "596", items: [
-            [Clock, "The app notices when your sessions don\u2019t fit your day", "Every workout you finish has always recorded how many of the prescribed sets you actually did, and nothing ever looked at it. That mattered more than it sounds: everything else in the app reads what you LOGGED, so leaving the last two exercises undone each session looked like you were simply training less \u2014 and the response was to prescribe more, to a session that was already too long. If you consistently finish well under your prescribed sets across at least six real sessions, the up-next card now says so and suggests a shorter session. One abandoned workout won\u2019t trigger it, and finishing your work never will."],
-        ] },
-    { version: "3.55.0", build: "595", items: [
-            [TrendingUp, "Stalled lifts get the reason that actually fits", "When a lift stopped setting PRs the app could tell fatigue from ordinary noise, but everything else came back as \u201cyou\u2019ve hit a ceiling \u2014 deload and rebuild\u201d. Two common causes were being missed. If the muscle is getting less weekly work than it needs, that\u2019s under-training, not a ceiling, and deloading is the opposite of the fix \u2014 you\u2019ll now be told how many sets it\u2019s getting against how many it wants. And if a lift has flattened while your other work for the same muscle keeps climbing, the muscle is fine and the movement has gone stale, so you\u2019ll be told to swap the exercise rather than change the program. Falling reps with rising effort is still read as fatigue first, whatever the volume numbers say."],
-        ] },
-    { version: "3.54.0", build: "594", items: [
-            [Activity, "One place to ask how much work a muscle is getting", "Internal groundwork, no change to your programs. Two separate lookups answered that question \u2014 one for muscles, one for the individual heads of a muscle like the side and rear delt \u2014 and asking the wrong one returned nothing, which looked exactly like a muscle getting no work at all. That misread caused a real misdiagnosis while building the last release. There\u2019s now a single lookup covering every muscle and every head, where an untrained muscle reads as zero and only a name that isn\u2019t a muscle reads as nothing, so the two can never be confused again."],
-        ] },
-    { version: "3.53.0", build: "593", items: [
-            [Info, "When a muscle is short, we tell you what would actually fix it", "If your days, session length and equipment don\u2019t leave room for a muscle, the app used to say a longer session would cover it \u2014 without checking. Sometimes that\u2019s wrong: at two days a week no session length rescues a muscle that has no day to train on, and booking ninety minutes on that advice wastes your time. The app now rebuilds your program under each single change you could make \u2014 a longer session, another training day \u2014 and tells you which one actually closes the gap and how much of it. When nothing single-handedly helps, it says so plainly instead of inventing a fix, because your constraints being the limit is a real answer."],
-        ] },
-    { version: "3.52.0", build: "592", items: [
-            [Activity, "Adding a training day now actually adds training", "Going from four days a week to five used to buy you almost nothing \u2014 on a full-body plan the whole week went from 106 sets to 107, and eighteen individual muscles came out with LESS work than they had on fewer days. The targets the generator filled to were fixed numbers for four muscles that happened to sit at the bare minimum, so once they were met it stopped, no matter how much room your week had. Targets are now drawn from each muscle\u2019s own range and scale with how often you train it, and they cover every major muscle rather than four."],
-            [Layers, "Side and rear delts are trained on purpose", "The generator treated shoulders as one muscle, so it could answer a rear-delt shortfall by adding a press. Each head is now accounted for separately, and 177 fewer generated programs contain no side-delt work at all."],
-            [Zap, "Muscles are filled in order of need, not order of code", "Targets were satisfied one at a time down a fixed list, so whatever sat at the end of that list got whatever was left \u2014 abs came out at zero sets on some plans, and calves were short on others. Each pass now serves whichever muscle is furthest below its target, so position in a list can\u2019t starve anything."],
-            [Clock, "Sessions keep the exercise count they promise", "The wizard tells you roughly how many exercises to expect. The generator only ever checked the time, so it could build 8 or 9 movements into a session advertised as 7 while still landing inside the minutes."],
-            [AlertTriangle, "A set trimmed for one muscle no longer lands on another", "When a session was shortened to fit your time, the per-exercise adjustments didn\u2019t move with the exercises. An adjustment meant for one lift could end up applied to a different one \u2014 in one case removing a calf set that a decision about back work had asked for. Custom set counts, superset links and round counts were all affected the same way."],
-            [HelpCircle, "The coverage notice tells you what\u2019s actually short", "It only spoke when a muscle had literally zero sets. Now that shortfalls get spread rather than concentrated, that meant a short session could leave six muscles under their minimum and say nothing at all. It now names anything meaningfully short, and still stays quiet on long programs where everything is covered."],
-        ] },
-    { version: "3.51.0", build: "591", items: [
-            [TrendingUp, "Easing back after a missed set no longer overshoots", "If you came up short of the bottom of a rep range, the app eased the weight back \u2014 but it sized the new weight for the TOP of the range while still asking you for the bottom. On a wide range like 10\u201320 reps that meant a weight picked for 20 reps and a set of 10, which is barely any effort at all. It also made the effort note beside the set report things like \u201c\u22487.5 RIR\u201d, which was accurate about the weight and useless as a target. The eased weight is now sized for the reps you\u2019re actually asked to do, so a small miss gets a small cut."],
-        ] },
-    { version: "3.50.0", build: "590", items: [
-            [Layers, "The split we suggest is now the one that measures best", "The suggested split came from a short hand-written rule \u2014 three days meant full body, four meant upper/lower, five or six meant push/pull/legs. Nothing ever checked whether those were actually the best fit. Scoring every split that supports your day count against how well its week lands each muscle in its productive range, the old suggestion never ranked better than third for any combination of days, goal and experience. Push/pull/legs at five days was a clear example: it only has room for one leg day, so legs came out at the same volume as a three-day program while chest and back climbed past their useful ceiling. Suggestions now come from that scoring. Five days for muscle growth suggests full body; six still suggests push/pull/legs, which genuinely wins there; three days for strength suggests one of the dedicated strength templates that were in the app and never recommended. Beginners are kept away from six-day body-part splits regardless of score. Every split is still yours to choose \u2014 this only changes what we suggest first."],
-        ] },
-    { version: "3.49.0", build: "589", items: [
-            [BarChart3, "The volume load wave shows every week again", "On longer blocks the last weeks of the chart looked missing. The row the bars sit in had a fixed height that was about 22px shorter than a full-height column needs once its set-count and week labels are counted, and because the bars hang from the bottom, anything that didn\u2019t fit was cut off the top. Bar height rises with planned sets and a block ramps up, so the tallest columns are the last ones \u2014 which is why the early weeks looked fine and the end of the block appeared to be cut off. The chart was drawing all of it; you just couldn\u2019t see the top. The row now sizes itself to whatever it\u2019s drawing, so it can\u2019t clip at any block length."],
-        ] },
-    { version: "3.48.0", build: "588", items: [
-            [Save, "Starting a workout no longer looks like editing your program", "Leaving the plan screen after a session would ask whether to keep changes you never made. Right before a workout the app tunes that session\u2019s set volume to how you\u2019ve been recovering, and writes the result onto the copy of the program you have open. The check for unsaved changes compared everything, so it saw those two app-written values and concluded you\u2019d edited your program. They\u2019re rebuilt from scratch before every session and never carried forward, so there was never anything there to save. The check now ignores them, and a real edit \u2014 a swapped exercise, a rename, a changed setting \u2014 is still caught exactly as before."],
-        ] },
-    { version: "3.47.0", build: "587", items: [
-            [Calendar, "Following your plan no longer costs you sets", "If a muscle looked under-recovered, the app could cut a set from that day \u2014 unless you were training on the schedule your program set out, in which case the plan was supposed to win. That exemption was measuring against the wrong week. It assumed your training days were spread evenly across seven, so on a five-day week it expected about 34 hours between sessions; your actual schedule puts two of them back to back, 24 hours apart. Turning up on Tuesday exactly as written looked like turning up early, the exemption was refused, and the set was cut. It now measures against the real weekday spacing your program schedules. A genuinely bad recovery reading can still ease a day back \u2014 that part is unchanged."],
-        ] },
-    { version: "3.46.0", build: "586", items: [
-            [Ban, "You can unban an exercise again", "Banning was one tap and permanent \u2014 the only way back was Settings, which unbans everything at once. Open any exercise in the library and the ban button is now a toggle: tap it once to ban, tap it again to unban. The two places that ban an exercise and immediately swap in a replacement are unchanged, so a second tap there still means what it always did."],
-            [Activity, "The one-click volume fix understands the forearm properly", "When a muscle came up short, the fix was always \u201cadd a set\u201d. For forearms that was wrong: carries, hangs and pinches are isometric holds that never take the wrist through a range, so if your program only had grip work, adding sets to it couldn\u2019t fix anything. The app now checks whether wrist flexion and extension are actually trained, and when one is missing it names the movement that closes the gap instead of quietly adding a set that does nothing. Same for side and rear delts, which get nothing from pressing."],
-            [HelpCircle, "The effort shown beside a weight is one that weight can deliver", "On the styles that hold the load and build reps, the weight came from your progression and the target RIR came from the block plan \u2014 and the two were never checked against each other. If you did 150\u00d79 with one rep left, the app could still print \u201c3 RIR\u201d next to the same 150, which is not a set you can do. Sets now show the reserve the weight actually leaves, marked with \u2248 so you can tell it apart from the plan\u2019s number. The weights themselves are unchanged."],
-            [Activity, "The after-workout feedback tells you what will actually happen", "The \u201c+ set\u201d and \u201c\u2212 set\u201d badges printed your rating back at you rather than what the app was going to do. Sometimes there was no room \u2014 the muscle was already at the top of what you can recover from, or every exercise for it was at its set ceiling \u2014 and nothing changed. And your rating was never the only input: your logged volume adjusts sets on its own, which is why sets were being trimmed on weeks you had marked as feeling fine. The badge now shows the real change, says \u201cno room\u201d when there isn\u2019t any, and tells you when the change came from your logged volume rather than from your rating."],
-            [HelpCircle, "\u201cWhy this?\u201d no longer shows undefined for past sets", "The effort breakdown from your last session was reading the wrong field for weight and reps, so every row printed \u201cundefined \u00d7 undefined\u201d beside an otherwise correct RIR."],
-        ] },
-    { version: "3.45.0", build: "585", items: [
-            [Activity, "The self-test now checks whether the week itself makes sense", "Checking each set individually can't see a week that trains no back at all. A second layer now looks at the whole week: whether any major movement pattern has been left out entirely, whether a muscle you asked the app to emphasise actually gets enough work, and whether anything exceeds the volume ceiling the generator enforces. It found a real problem \u2014 some short-session and low-day-count programs contain no pulling work whatsoever, which is now recorded and tracked so it can't spread while it's being fixed. Findings are split into problems and advisories, because a set that asks for an impossible weight is a bug, while a week sitting slightly under a volume guideline is a judgement call \u2014 those guidelines are population averages, not facts about you."],
-        ] },
-    { version: "3.44.0", build: "584", items: [
-            [Activity, "Older workouts are properly attached to your program again", "Workouts logged before day markers became stable were reconnected in some places but not others. The parts that decide whether a lift has stalled or plateaued were among the ones still looking at the old markers, so for anyone with older history they saw nothing at all \u2014 a lift stuck at the same weight for four sessions looked brand new, and the app never stepped in to adjust it. Reconnection now happens once, when your data loads, so every part of the app sees the same thing. Nothing is rewritten on your device; if a workout can't be matched with certainty it's left exactly as it is rather than guessed at."],
-        ] },
-    { version: "3.43.0", build: "583", items: [
-            [Activity, "The self-test now actually checks your sets", "It was only ever checking the shape of a program \u2014 that days had exercises and exercises had a number of sets \u2014 with a fully-stocked gym and no training history at all. That meant it never looked at a single prescribed weight, and none of the progression machinery ever ran, which is why it kept saying \u201call clear\u201d while real problems went unnoticed. It now simulates a lifter training week after week across four different gym setups \u2014 hitting targets, missing them, and stalling \u2014 and checks over a hundred thousand individual prescribed sets against rules about whether a set makes sense to a human: a weight you can actually load on that machine, a warm-up that climbs and stays lighter than your work set, a rep target inside the range shown next to it, a drop set no heavier than the set it came from. It then runs the same checks over your own programs and your real logged history."],
-        ] },
-    { version: "3.42.0", build: "582", items: [
-            [Trash2, "You can delete a logged workout \u2014 and redo that day", "Every workout in your history now has a delete button beside Repeat. It takes two taps to confirm, and you get an Undo afterwards if you change your mind. Deleting properly undoes everything that session caused: your rotation goes back so the app asks for that day again, the muscles it trained stop counting as fatigued, and the loads it suggests roll back to the session before it. If a lift has no earlier session to fall back on, the app forgets it rather than quietly keeping numbers from a workout you deleted."],
-        ] },
-    { version: "3.41.0", build: "581", items: [
-            [Repeat, "Swap alternatives now come from the gym you're actually in", "If you added a machine to your gym after building a program, that program never offered it \u2014 the swap list was still reading the equipment you had when the program was created. It now uses your active gym. Two related fixes came with it: equipment that implies other equipment (an incline bench implies a bench) was being dropped entirely, hiding every alternative behind it, and the same problem existed in three separate places \u2014 the plan tab, the swap list during a workout, and the \u201cban this exercise\u201d replacement, which picks a substitute for you rather than showing a list. Your program still generates against the equipment it was built for, so opening a plan somewhere else won't rewrite your training."],
-        ] },
-    { version: "3.40.0", build: "580", items: [
-            [HelpCircle, "Why this lift now explains the choice in training language", "Tap the question mark on any exercise in your plan to see the role it plays in that day: whether it anchors the session or adds targeted accessory work, what else it trains, and how it fits the current goal. Internal selection scores and build diagnostics stay out of the training UI."],
-        ] },
-    { version: "3.39.0", build: "579", items: [
-            [HelpCircle, "Every exercise can now tell you why it asked for that", "New \u201cWhy this?\u201d button on any exercise in a workout. It lays out the whole decision: the weight and the reason behind it, the rep range, sets and target RIR, which progression style is running and what made the app pick it, any plateau or fatigue override and what will clear it, and everything it read about you \u2014 last session, estimated 1RM, stalled sessions, recovery. It also shows, set by set, whether the effort it used was one you rated yourself, the one the plan asked for that day, or an assumption because neither was recorded. The panel reads the same engine that built your sets rather than working anything out on its own, so it cannot drift away from what you are actually being told to lift."],
-        ] },
-    { version: "3.38.0", build: "578", items: [
-            [Calendar, "Your logged workouts stay attached to the day you did them", "Every workout you log records which day of your program it was. Those day markers were being generated randomly, so any time a program was rebuilt \u2014 shuffled, updated, moved to a newer engine, or changed to a different number of days \u2014 all of them stopped matching and your history came unstuck from the program in one go. That is why the app served up a day you had just trained, and why finished workouts stopped showing as finished on the plan tab. Day markers are now derived from what the day actually is, so they survive a rebuild, a reshuffle and even reordering your days by hand. Workouts you logged before this update are reattached automatically by their day name \u2014 nothing to restore, and no need to log them again."],
-            [Repeat, "Swap suggestions were missing equipment you have", "When a program's kit listed something that implies another piece \u2014 an incline bench implies a bench \u2014 the swap list ignored the implied one, hiding every alternative that needed it. On a dumbbell-and-incline-bench setup that was four missing chest options alone."],
-        ] },
-    { version: "3.37.1", build: "577", items: [
-            [Dumbbell, "Two forearm slots go to the front and back of the wrist, not the side", "Radial and ulnar deviation is a small assistance role through a short range, so when a week only has room for two wrist movements they should be the palm-side and back-of-hand ones. That is what happened already, but only by accident of where the new movements sat in the exercise list \u2014 nothing was actually enforcing it, and reordering the library would have quietly changed it. The side is now explicitly the third slot's direction: it is picked once flexion and extension are both covered, and not before."],
-        ] },
-    { version: "3.37.0", build: "576", items: [
-            [Dumbbell, "Side-of-wrist work exists now \u2014 and programs actually use it", "The last release could spread forearm work between the front and back of the wrist but not the side, because the library had no radial or ulnar deviation movement in it at all. Four are added: hammer radial and ulnar deviation, which need nothing but a hammer, plus cable and band versions. Adding them was not enough on its own \u2014 measured across 42 forearm-focused programs, the new movements were picked zero times, losing every slot to the older staples and to carries. A program that buys a third forearm slot now trains all three directions, and grip work keeps its place."],
-            [Dumbbell, "Wrist spread was being applied for the wrong reason", "The rule that spreads forearm work recorded which wrist direction it had trained in only one of the two places it picks exercises \u2014 so for almost every program it recorded nothing, and grip holds were being pushed out of every slot unconditionally rather than making way for whatever was actually missing. The spread you saw was right; the reason behind it was not. It now tracks what the week has covered, which is what lets the third direction be found at all."],
-        ] },
-    { version: "3.36.1", build: "575", items: [
-            [Flame, "Myo-reps grow past three on every lift, not just loaded ones", "The 3-to-5 rule shipped yesterday only ran once a weight was on the row. On a bodyweight or assisted movement \u2014 and on any lift the first time you do it, before there is a suggestion to fill in \u2014 the row opens blank, so logging the third mini added nothing and the set ended early. A blank load means you haven\u2019t typed a weight yet, not that the extension is over."],
-        ] },
-    { version: "3.36.0", build: "574", items: [
-            [TrendingUp, "Myo-reps and drop sets no longer cost you weight", "An extension of a set is short by design and always comes last, and four separate places read \u201cthe last set\u201d straight off the list \u2014 so a mini counted as the set that decides next session\u2019s load. Taking a 50 lb lateral raise to 20/20/20 and then adding three 4-rep minis had earned an increase to 60; the app prescribed 45 and told you to ease back. Using the technique the block asked for was costing you load every session, and the harder you extended the set the more it took away. Extensions are now invisible to progression \u2014 the same session with and without them gives the same answer."],
-            [TrendingUp, "Working up in weight is no longer read as a missed set", "180\u00d76 and then 210\u00d74 came back as \u201cease back to 180\u201d \u2014 a weight you had already beaten for more reps that day. At a fixed load the last set is the right thing to judge; when the load itself moves, the last set is the TOP set, and being at the bottom of the rep range is what a top set is for. A session with varying loads is now judged on what it averaged, which is the same basis the \u201cLast\u201d reference already used. Straight sets are unchanged."],
-            [Flame, "Myo-reps run 3 to 5 mini-sets, and stop when you do", "It always asked for exactly three. Three are still laid out up front, and a fourth and a fifth are added only when you actually hit the mini rep range \u2014 come in under it and the extension is over. Whichever comes first, which is how the technique is meant to run."],
-            [Dumbbell, "Wrist work now covers both directions, not just one", "Every forearm movement \u2014 wrist curls, reverse wrist curls, carries, hangs, pinches, a gripper \u2014 read as the same movement internally, so the app could not tell a palm-side curl from a back-of-hand one, or wrist work from a static grip hold. Measured across 252 forearm-focused programs: 325 grip slots against 48 wrist, and not one program trained both wrist directions. A program with more than one forearm slot now trains flexion and extension, and grip work keeps its place once both are covered. Side-of-wrist work (radial and ulnar deviation) still has no movement in the library, so that direction is not yet coverable."],
-        ] },
-    { version: "3.35.0", build: "573", items: [
-            [Library, "Five splits finally have a ready-made program", "Full Body \u00b7 Pattern Rotation, Torso / Limbs, Push / Pull / Legs / Arms, Upper / Lower / Arms and Powerlifting \u00b7 SBD Wave were all in the app, and none of them appeared anywhere in Templates \u2014 the only way to reach one was to build a custom split, which is the route you take when you already know what you want. There are now nine templates covering them, so the browse list runs to 74. Nothing that already existed has changed: no template\u2019s configuration was touched, and a release check now fails the build if a split is ever left with no way in again."],
-        ] },
-    { version: "3.34.1", build: "572", items: [
-            [Layers, "Fixed: the hamstring template was the same program as the plain PPL", "\u201cPPL \u2014 hamstring emphasis\u201d in the shared programs list promised swaps for more direct hamstring work, and was in fact an identical copy of the standard six-day Push / Pull / Legs \u2014 same exercises, same volume, different name. It is now a real hamstring build: leg curls and Nordic curls in place of hip thrusts and walking lunges, with about a quarter more hamstring volume a week. Every shared program is now checked before release, so a template cannot claim something it does not do."],
-        ] },
-    { version: "3.34.0", build: "571", items: [
-            [Palette, "Four new themes", "Emerald and Gold join the dark themes, Sage and Ochre the light ones. They fill gaps rather than repeat what was there \u2014 a true green, a warm gold, a muted sage and a deep ochre \u2014 so every theme still gives you a different app to look at. All eighteen are now checked for readable text on buttons before they ship."],
-        ] },
-    { version: "3.33.1", build: "570", items: [
-            [Award, "Your Profile score now says what it rests on, and what is next", "The Strength Score on your Profile is the one people screenshot, and it was the only place still presenting the number flat. If your score comes entirely from dumbbell or bodyweight lifts it is now marked as an estimate here too, exactly as it is on your home screen. Both cards also name the next target on your weakest pattern \u2014 in the weight you actually load, so a dumbbell target reads per hand."],
-        ] },
-    { version: "3.33.0", build: "569", items: [
-            [BarChart3, "The Lifts tab is split into four views", "It had grown into one long scroll of ten sections, and several of them were not about individual lifts at all \u2014 volume against targets, next block\u2019s volume, fatigue and recovery had all collected there. It now works like the Plan tab: Exercises for your per-lift charts and search, which is where it opens; Records for personal bests, strength standards and goals; Load for intensity and volume; Recovery for fatigue. Nothing was removed, and tapping the Strength Score card on your home screen still takes you straight to the standards."],
-        ] },
-    { version: "3.32.1", build: "568", items: [
-            [Calendar, "Fixed: \u201c+3 more exercises\u201d on Up Next now shows them", "The Up Next card lists the first five exercises of the session and counted the rest underneath. That count looked like something you could tap, and was not. Tap it now and the rest of the session opens in place, with the sets and reps for each; tap again to fold it back to a summary."],
-        ] },
-    { version: "3.32.0", build: "567", items: [
-            [Search, "Search your lifts on the Progress screen", "The Lifts tab keeps one chart for every exercise you have ever logged, so the longer you train the further you scroll to reach any one of them. There is now a search box above the list. It matches muscles and shorthand as well as names \u2014 typing \u201cchest\u201d finds your presses, \u201crdl\u201d finds Romanian deadlifts \u2014 using the same matching as the exercise picker, so the same words find the same lifts wherever you search from."],
-        ] },
-    { version: "3.31.1", build: "566", items: [
-            [GripVertical, "Drag to reorder today's exercises", "The day list now has a handle on each row \u2014 press and drag to move a lift up or down the session, past as many positions as you like in one go. The arrows are still there for a quick single step, and remain the way to do it with a keyboard or screen reader. Undo covers the whole drag rather than each step of it."],
-            [AlertTriangle, "Fixed: rearranging a later exercise moved you onto it", "Moving a lift from the day list jumped the workout to that lift, so reorganising what was still to come lost your place. You now stay on the exercise you were actually doing."],
-        ] },
-    { version: "3.31.0", build: "565", items: [
-            [Layers, "See the whole day, and rearrange it, from one list", "Tap the exercise counter at the top of a workout to pull up everything you are doing today. Each lift shows how many sets you have left, the one you are on is marked, and tapping any of them jumps straight there. You can move lifts up and down to change the order \u2014 useful when a rack or machine is taken \u2014 skip one for today, or add another, all without leaving the list. Reordering, skipping and adding were already possible, but only from the card of the lift you happened to be standing on, so changing the order meant walking to each one in turn."],
-        ] },
-    { version: "3.30.0", build: "564", items: [
-            [Layers, "Supersets show the whole group, with everyone's progress", "A linked pair or trio only ever named the exercise either side of the one you were on \u2014 so standing on the middle movement of three, you were told about two neighbours without being told they were one round, and nothing said how many sets each still had left. Now every movement in the group sits in a row: its position (A1, A2, A3), its name, how far through it is, and which one you are on. Tap any of them to go straight there instead of swiping back and forth between machines. It shows in focused mode too, which is exactly when you are moving between stations."],
-        ] },
-    { version: "3.29.1", build: "563", items: [
-            [Maximize2, "Focused mode stops hiding things you need", "The row of actions under a lift \u2014 Info, Warm-up, Superset, History, Swap, Pin a note, Plates \u2014 was hidden in focused mode, so using it meant dropping out of the mode and back again. The warm-up button was the one that hurt: a ramp is only built when the app already knows your working weight, so the first session of a brand-new program has none, and that button is the only way to add them. In focused mode there was no way to reach it. The last-set technique \u2014 partials, myo-reps, a loaded stretch \u2014 now also shows on the set it actually applies to, which matters more here than anywhere, because focused mode shows you one set at a time."],
-        ] },
-    { version: "3.29.0", build: "562", items: [
-            [Award, "Dumbbells and bodyweight lifts now count toward your Strength Score", "Every strength standard in the app was a barbell one, so anyone training with dumbbells got a permanently empty panel telling them to log a squat, bench, deadlift or press \u2014 lifts their own program never prescribed and their gym might not contain. Four of the twelve programs the app itself offers could never produce a score. Dumbbell presses, rows and RDLs, and weighted pull-ups, chin-ups and dips, are now measured against their closest barbell equivalent and marked \u201cEst.\u201d so it is clear which numbers came off a bar. Push-ups, goblet squats and split squats are deliberately left out: a rep count is not a load, and a made-up level is worse than none. If you already train with a barbell, your score has not moved by a single point."],
-            [Award, "Your score now says why it moved, and what to lift next", "Strength standards are relative to bodyweight, so gaining weight lowers the score even when every lift holds \u2014 correct arithmetic, and baffling to read. The card now separates the two: how much came from your training and how much from the scale. It also names the next target on your weakest pattern, taken from the same table that set your level, so the goal can never disagree with the rank beside it."],
-            [AlertTriangle, "Fixed: one unknown exercise could stop the app from opening", "A saved program can name an exercise a given version does not have \u2014 after restoring a backup from a newer build, or on an older install. That single unknown movement stopped the whole app from starting, and because the program is stored on the device, reloading hit the same wall every time. The exercise now shows as unavailable in that one slot and everything else carries on. Your program is left untouched, so the lift returns intact once the app knows it again."],
-            [Shield, "Fixed: the backup reminder could go quiet without a backup existing", "Opening the backup screen was enough to mark you as backed up, so tapping the reminder, glancing at it and going back silenced it for another two weeks with nothing saved anywhere. Only actually sharing, downloading or copying the file counts now. The error screen can also save a backup before you do anything else, since reloading cannot help when the problem is the stored data itself."],
-            [AlertTriangle, "Fixed: personal records could show the wrong unit", "A workout entry that arrived without a unit recorded on it \u2014 from an imported backup, or a much older version \u2014 was labelled in kilograms no matter which unit you train in. It now follows your setting, while entries that do carry their own unit keep it, because a record of what you lifted should not change because a preference did."],
-            [Maximize2, "Fixed: panels showed two grab handles", "The bar you pull to close a panel was drawn twice on most of them, leaving a doubled line across the top. Toasts and the resume banner were also being treated as draggable panels, which put a stray handle on them and pushed their text sideways."],
-        ] },
-    { version: "3.28.1", build: "561", items: [
-            [AlertTriangle, "Fixed: pulling a sheet down did nothing", "Dragging a panel down by its top was released last version and did not actually work on a device. Panels open with a slide-up animation, and a browser gives an animation priority over the position the drag was setting \u2014 so the sheet was being told to move and the animation kept overruling it. The drag now takes that animation off before it starts moving anything."],
-        ] },
-    { version: "3.28.0", build: "560", items: [
-            [Maximize2, "Pull a sheet down to close it", "Every panel that slides up from the bottom \u2014 exercise pickers, plan info, settings, the lot \u2014 can now be dragged down by its top to dismiss, with a grab bar showing where. Closing one previously meant reaching for a small X or tapping the strip above it, which on a large phone is exactly where a thumb does not reach. A short pull springs back, so a scroll that overshoots will not throw the panel away."],
-        ] },
-    { version: "3.27.3", build: "559", items: [
-            [Settings2, "Internal: every program the app can build is now measured", "The release sweep that checks generated programs against volume landmarks was walking a hand-written list of splits, session lengths and training days \u2014 and that list had fallen behind. Ten of the twenty-three splits, both two-hour session lengths, and every two-day program were never checked. The sweep now covers all of them, and a new check fails the build if anything the app offers is ever left out again."],
-        ] },
-    { version: "3.27.2", build: "558", items: [
-            [Settings2, "Internal: the set shortcuts are now tested by using them", "The buttons that restore a suggested load or fill in last time\u2019s numbers were checked only by inspecting the code that draws them. A release check now builds a training history, walks into a real session and taps them, confirming each fills the row with exactly the numbers it names \u2014 and that it withdraws once taken."],
-        ] },
-    { version: "3.27.1", build: "557", items: [
-            [Maximize2, "The two shortcuts under a set are readable now", "Restoring the suggested load, or filling in what you lifted last time, were the smallest text in the app \u2014 a pair of nine-pixel numbers squeezed under the target, distinguishable only by a tiny arrow, with nothing on screen saying what tapping one would do. They are now proper buttons under the row, each labelled: \u201CSuggested 185\u00D78\u201D and \u201CLast time 180\u00D77\u201D."],
-        ] },
-    { version: "3.27.0", build: "556", items: [
-            [Info, "Programs now say what they cannot fit", "At 20 to 40 minutes a session holds three or four exercises, so a week is about a dozen movements for the whole body \u2014 and something has to give, usually side and rear delts. That prioritising is right, but it was happening silently: you could train a program for months without knowing it contained no lateral raise. A short program now states which muscles get no direct work, so you can lengthen the session, add the movement yourself, or accept it knowingly. It only appears when a muscle gets nothing at all, and never on programs of 90 minutes or more."],
-        ] },
-    { version: "3.26.1", build: "555", items: [
-            [AlertTriangle, "Fixed: two bench options that read as the same thing", "Your gym\u2019s equipment list offered \u201CAdjustable Bench\u201D and \u201CAdjustable / Incline Bench\u201D side by side, so it was natural to tick one and move on \u2014 and whichever you skipped quietly removed a whole class of pressing from your programs. Ticking only the incline one is what made an incline day open on a flat barbell bench, because no incline press was available to choose. The first is now labelled \u201CFlat Bench\u201D, and selecting an adjustable or decline bench now implies you can also bench flat, since those benches do. Worth re-checking your gym: if you only ticked one, you should now see both flat and incline work appear."],
-        ] },
-    { version: "3.26.0", build: "554", items: [
-            [Clock, "Session times now include the gym, not just the lifting", "The estimate counted your sets, your rest and your warm-up ramp \u2014 and nothing for walking to the next station, waiting for it, or loading the first working weight. It read about a quarter short of a real session. Changing exercise is now costed, more for a barbell than a cable and almost nothing for a superset, so the time on the card is the time on the clock. Your programs are unchanged: this corrects what is shown, not how sessions are built."],
-        ] },
-    { version: "3.25.1", build: "553", items: [
-            [AlertTriangle, "Fixed: exercises that did not match the day they were on", "In Full Body \u00B7 Pattern Rotation the squat day could open on a leg press and the unilateral day on a bilateral squat \u2014 the pattern was in the day\u2019s name and nowhere in how exercises were chosen. Each day now states the movement it wants, so the squat day opens on a squat, the hinge day on a hinge, the unilateral day on a lunge or split squat, and the deadlift day on a deadlift. Later exercises in the day are still free to vary. A floor press could also open an incline day, because the app did not recognize it as a flat press and so never scored it against the day\u2019s angle."],
-        ] },
-    { version: "3.25.0", build: "552", items: [
-            [AlertTriangle, "Fixed: Full Body \u00B7 Pattern Rotation never programmed a deadlift, and pressed with dumbbells", "Every day in that split was led by a leg movement, and only a day\u2019s main lift draws the heavy barbell variant \u2014 so pressing stayed an accessory even in strength and peak blocks, and picked a dumbbell version. No day asked for lower back work either, so a conventional deadlift could never be chosen. The rotation now leads with squat, hinge, incline press, deadlift, then the pump day, so each of the big lifts anchors a session and waves down into low reps like the original Full Body does. Existing programs are unchanged."],
-            [Clock, "Session times now learn how long you actually take", "The estimate priced your sets and rest but not the gym around them \u2014 walking to the next rack, waiting for one, loading plates. It now compares what past sessions were estimated at against the clock they actually took and adjusts what it shows you. It needs four completed sessions before it changes anything, ignores one left running by accident, and does not alter how programs are built."],
-        ] },
-    { version: "3.24.0", build: "551", items: [
-            [Clock, "The session length picker tells the truth now", "It said \u201C~6 exercises\u201D next to \u201C90 to 120 minutes\u201D \u2014 six exercises is about an hour. The count shown is now measured from what the app actually builds, and it accounts for your goal, because rest length decides how much fits: the same time holds more hypertrophy work than strength work. An automated check regenerates programs before each release and fails if any of these numbers drifts from reality."],
-            [AlertTriangle, "Known: long sessions still come up short", "Choosing 90-120 minutes or longer currently produces days of around 80 minutes. The picker no longer overstates what you will get, but the underlying shortfall is not fixed yet \u2014 it is now measured on every release rather than going unnoticed."],
-        ] },
-    { version: "3.23.2", build: "550", items: [
-            [Settings2, "Internal: two blind spots closed in the program checks", "The measurement sweep only ever built 40, 60 and 90 minute sessions, so the two longest lengths the app offers \u2014 where it struggles most to fill a day \u2014 were never checked. It now covers every length. The check harness that deliberately breaks the app to prove the tests still work also no longer writes to the source it is testing."],
-        ] },
-    { version: "3.23.1", build: "549", items: [
-            [Settings2, "Internal: the release checks now prove they can fail", "A suite of automated checks is only evidence if it is capable of going red. Eight known past defects are now deliberately reintroduced before each release and every one must be caught, with a harmless control change that must NOT be flagged \u2014 so a check that has quietly stopped testing anything is detected rather than trusted. The program measurement sweep also refuses to compare a run that generated nothing, and now reads volume at the first week of a block as well as the peak."],
-        ] },
-    { version: "3.23.0", build: "548", items: [
-            [Calendar, "The Plan tab now has four views", "Schedule, Volume, Progression and Blueprint. Schedule is what it always was, with a week strip across the top carrying each week\u2019s sets and running time. Volume shows the week against the landmarks, and tapping a muscle lists the lifts that fed it \u2014 including compounds feeding it indirectly, and at what rate. Progression is every lift week by week with its sets, rep target and effort, searchable and filterable. Blueprint charts the block\u2019s planned sets per week alongside its phases. The header also states the week, your session frequency, the sets that week prescribes and the phase it belongs to, over a bar of workouts completed."],
-            [Zap, "Home is more compact", "Browse templates, build your own and training cycles were three full-width buttons stacked down the page. They are now one block of four tiles alongside a quick unguided session, each showing its own count. A new program can also be started straight from the header of your program list."],
-        ] },
-    { version: "3.22.0", build: "547", items: [
-            [Layers, "See the session before you start it", "The card on Home now lists the first lifts in today's workout with their sets and reps, and says how many more are in the session \u2014 so you can tell what you are walking into without starting it first."],
-            [TrendingUp, "New: lift progression", "A table in Plan info showing every lift week by week \u2014 sets, rep target and effort \u2014 so you can see where the block steps up and what the deload actually removes, instead of paging through one week at a time. Searchable, and filterable to primary lifts, upper or lower."],
-            [BarChart3, "New: volume load wave", "The block\u2019s planned sets per week as a chart, so an accumulation ramp or a deload trough is visible at a glance."],
-            [BarChart3, "Weekly volume now shows what fed each muscle", "Tap a muscle to see which lifts contributed to its weekly total, including compounds that feed it indirectly and at what rate \u2014 the reason a total can read higher than the direct work you remember doing."],
-            [AlertTriangle, "Fixed: muscles at the top of their healthy range read as out of range", "Splitting the volume bands last release left three places still treating only the lower half of the MEV\u2013MRV range as productive, so a well-trained muscle could be counted as outside its range on the progress and volume screens."],
-        ] },
-    { version: "3.21.0", build: "546", items: [
-            [Layers, "Four more splits", "Torso / Limbs (4-5 days) alternates chest-back-shoulder days with leg-and-arm days, so arms are trained in a session where they are not already spent. Push / Pull / Legs / Arms adds a dedicated shoulders-and-arms day to PPL. Upper / Lower / Arms does the same for a 5-day upper-lower. Powerlifting \u00B7 SBD Wave builds the week around squat, bench and deadlift with hypertrophy accessories behind them. All four are additions \u2014 no existing program changes."],
-            [TrendingUp, "Weekly volume now reads in four bands, not three", "A muscle between its minimum and its ceiling used to read simply as \u201Cproductive\u201D, whether it sat in the middle of the range or right at the top. The band now splits at the point the app itself uses when deciding whether to trim a session, so \u201Chigh\u201D is distinguishable from \u201Cproductive\u201D, and each band explains what it means."],
-        ] },
-    { version: "3.20.0", build: "545", items: [
-            [Layers, "New split: Full Body \u00B7 Pattern Rotation", "A second way to run full body, alongside the existing one \u2014 each day pairs a leg pattern with an upper push or pull rather than hanging everything off one anchor lift: squat with horizontal push/pull, hinge with vertical, then unilateral, posterior chain, and a pump day. Spreading the pressing across the week means the front delt takes much less of it. In exchange, side and rear delts get slightly less coverage than the original full body, so it suits you better if you already do your own lateral and rear work. The original Full Body is unchanged and still the default."],
-        ] },
-    { version: "3.19.0", build: "544", items: [
-            /* ONE ENTRY FOR FOCUSED MODE, NOT NINE. Builds 536-543 were the feature being BUILT — crash
-               fixed, arrows added, tiles split, digits un-clipped, warm-ups skipped, the bar rearranged.
-               None of it shipped to anyone. A reader opening What's New does not want the construction
-               diary of something they have never seen; they want to know the feature exists and what it
-               does. The intermediate releases are gone with their entries, since a version nobody ran is
-               not a release. Haiden: "we don't need a bunch of change logs for a feature I never published
-               yet." Real fixes from those builds that were NOT about focused mode keep their own entries. */
-            [Maximize2, "New: focused mode for the workout screen", "A button in the workout header strips the screen back to one large card for the set you are on \u2014 load and reps as big numbers in their own labelled tiles, each with full-size hold-to-repeat steppers, the target and what you lifted at that set position last time on one quiet line above, and a row of pips showing every set in the exercise. Everything you set up before a lift steps out of the way: the exercise strip, coach note, pinned cues, the suggestion banner, warm-up and superset controls, notes. It starts at your first working set rather than walking you through the warm-up ramp, the arrows move between sets so you can go back and correct one, and the rest clock is much larger. Logging is the one wide button in the bar at the bottom, with the effort question offered beside it rather than demanded. Your choice is remembered if you reload mid-workout."],
-            [Palette, "Fixed: unreadable text on light themes", "A few buttons and labels referred to a color that does not exist, so they fell back to the page text color and became near-invisible on Mint, Clay, Stone, Slate, Lilac and Rosewater. All of them now use the correct color."],
-            [Maximize2, "Tighter set list", "The effort tag under each logged set was taking a full line of padding, which made a finished exercise read as loose."],
-        ] },
-    { version: "3.18.1", build: "536", items: [
-            [AlertTriangle, "Fixed: the rest timer never started on myo-reps in the last exercise", "Once the final working set of a session was logged, the app treated the workout as over and stopped starting rest timers — so any myo-rep or drop set still waiting got no timer at all. Because it triggered on the last working set rather than a position in the list, it hit whichever exercise you happened to finish last. Rest now runs whenever anything is still unlogged."],
-        ] },
-    { version: "3.18.0", build: "535", items: [
-            [TrendingUp, "Rope exercises now show you holding the ends, not the middle", "Every rope movement drew the rope splitting at your hands, so it looked like you were pinching the middle of it. A rope hangs from a carabiner and each hand takes an end, and the strands pull in a straight line toward the machine — face pulls, rope pushdowns, rope hammer curls and rope rows all show that now."],
-        ] },
-    { version: "3.17.9", build: "534", items: [
-            [TrendingUp, "Front raises and face pulls now show the right movement", "Both were drawn as a lateral raise — arms sweeping out to the sides. A front raise is the arm travelling forward to shoulder height, and a face pull is a high pull toward the head with the elbows above the wrists, so both now animate the movement you are actually doing. Every other shoulder raise is unchanged."],
-        ] },
-    { version: "3.17.8", build: "533", items: [
-            [AlertTriangle, "Fixed: dynamic double progression could prescribe less than you just lifted", "A lift on Dynamic double could open with weights BELOW the ones in its own Last Time column, and announce a set advancing when nothing in that column had topped the rep range. The app was progressing it from a different workout than the one you were looking at: it normally anchors on your best of the last three sessions of that day, so one off day can't drag your loads down, and it ranks those sessions by the single best set in each. On per-set progression that's the wrong question — an older session can win on set 1 alone while every other set in it was lighter, and then sets 2, 3 and 4 get prescribed from those lighter numbers. Dynamic double now advances each set from your most recent session, so every set progresses from what you actually did last time and the Last Time column is what the prescription is built on. Every other progression style keeps the best-of-three anchor and its protection against a single bad day."],
-        ] },
-    { version: "3.17.7", build: "532", items: [
-            [Medal, "Saved program cards are readable by screen readers", "The card that opens a program had no label of its own, so a screen reader read out everything printed on it run together — the name, the Active badge, the split, the day count — as one long string. It now announces itself as \"Open <program name>\"."],
-        ] },
-    { version: "3.17.6", build: "531", items: [
-            [AlertTriangle, "Fixed: correcting an old workout didn't update your training insights", "If you went back and fixed a weight or rep count in a session from a while ago, the app kept using its previous read of your training — plateau detection, effort calibration, recovery and every coach note carried on from the numbers you'd just corrected. It only noticed changes to how MANY workouts you had and which was newest, so an edit in the middle was invisible to it. It now notices any change to what's actually in them."],
-        ] },
-    { version: "3.17.5", build: "530", items: [
-            [AlertTriangle, "Fixed: a lift stuck at the same numbers wasn't reported as stalled", "Plateau detection could only see a lift that was getting WEAKER. If your estimated max simply stopped moving — which is what a plateau nearly always looks like — every session tied for \"best\" and the newest one was read as a fresh record, so the count reset to zero every time. The result was the app switching a stuck lift to recalibrated loading and telling you why in the session, while the coach card said nothing at all. Both now measure it the same way, and adding reps or sets at the same weight still correctly counts as progress rather than a stall."],
-        ] },
-    { version: "3.17.4", build: "529", items: [
-            [AlertTriangle, "Fixed: the 1RM calculator's percentage table could ask for more than your max", "Training percentages were rounded to the nearest plate increment, which rounds up as often as down — so an estimated max of 263 lb printed \"100% = 265\", four pounds heavier than the number directly above it. Every row leaned the same way. They now round down, so no percentage ever asks for more load than the estimate it came from, and 100% stops contradicting the max it's derived from."],
-        ] },
-    { version: "3.17.3", build: "528", items: [
-            [AlertTriangle, "Fixed: a workout with a missing date could poison a lift's stats", "A backup restored from another device can contain a workout entry with no date on it — the app never drops those, because losing a logged session is worse than carrying an odd one. But the training model measured \"days since you last trained this\" straight off that date and produced a nonsense value for the whole lift. Nothing displayed it yet, so nobody saw it; it would have surfaced the first time something did."],
-        ] },
-    { version: "3.17.2", build: "527", items: [
-            [Medal, "The bottom navigation is now readable by screen readers", "The five tabs along the bottom were unlabelled buttons — a screen reader announced them without saying which was which, and nothing marked the one you were on beyond its color. Each tab now carries its name and reports itself as the current page."],
-        ] },
-    { version: "3.17.1", build: "526", items: [
-            [Zap, "What's new on the home screen is a summary again", "Each entry was printing its full write-up — some of them over a hundred words — three deep on the screen you open to start training. They're now trimmed to a line or two each, and the complete text is still there under Full changelog."],
-        ] },
-    { version: "3.17.0", build: "525", items: [
-            [Layers, "Program cards: one button to switch, everything else in a menu", "A saved program carried four icon buttons in a row — switch, next block, duplicate and delete — all the same size and shape, sitting side by side on a screen you scroll past. Delete looked exactly like the one next to it. Switching is the only one you reach for on purpose, so it keeps its tick; the rest moved behind a three-dot menu that names each action in words. The program name gets the space back, and the row stops growing every time a new action is added."],
-        ] },
-    { version: "3.16.2", build: "524", items: [
-            [AlertTriangle, "Fixed: unsaved program edits could disappear when opened from the Plan tab", "Editing a saved program holds your changes until you hit Save, so a half-finished edit survives leaving the screen. Opening that program from the Plan tab's \"Open full program\" loaded the last SAVED version instead of your pending edit — and because the app then saw nothing pending, it discarded the edit entirely. No prompt, no undo. That route now resumes your in-progress changes like every other way into a program."],
-        ] },
-    { version: "3.16.1", build: "523", items: [
-            [AlertTriangle, "Fixed: updating a cycle block's engine could scramble other blocks in the cycle", "The block you updated always updated correctly — the damage landed on the OTHER phases of the same cycle. Saving any change to a cycle block was treated as \"carry this block's exercises to every phase,\" with no check for whether anything had actually changed. An engine update regenerates a block from its own settings and usually doesn't touch which exercises it uses at all — but every other phase in the cycle got overwritten with that block's list anyway. The same flaw meant swapping a single exercise on one day could silently overwrite unrelated days on other phases too. Only what actually changed is carried across the cycle now; everything else — including a lift you're mid-block on — is left exactly as it was."],
-        ] },
-    { version: "3.16.0", build: "522", items: [
-            [Layers, "Your plan stops losing a set to autoregulation every session", "If you train a muscle again before it's had time to recover — a five- or six-day full body, most often — the app was trimming an accessory set at the start of most sessions. It was only ever removing volume it already considered spare, but it made that decision fresh every workout, so the volume your program said it would train was never the volume you actually trained. That decision now happens once, when the program is built. You get a plan that's honest about what it's asking for, and autoregulation goes back to responding to a bad day rather than to your schedule."],
-            [Target, "What it will and won't take", "It only removes volume above the point where extra sets stop paying for themselves, never below what a muscle needs to grow, never from your main lift, and never from a muscle you asked for more of. A muscle whose schedule already leaves it time to recover is left completely alone — measured across 864 program configurations, four- and two-day-a-week splits come out identical."],
-            [TrendingUp, "Existing programs are offered the update, not given it", "Programs keep running the engine they were built on, so nothing changes mid-block. The Plan screen offers the update and says what it changes; you can take it or keep the program as it is."],
-        ] },
-    { version: "3.15.1", build: "521", items: [
-            [AlertTriangle, "Fixed: an effort reading of \"0.050000000000000044 RIR\"", "The app measures how far your own effort ratings sit from what your performance implies, and quietly corrects for it — so a logged 1 RIR might be read as 0.05. That correction is right and worth keeping, but the number was being printed exactly as computed, floating-point noise and all. Effort now displays to the nearest half rep everywhere it appears. The correction itself keeps its full precision where the load maths uses it."],
-            [AlertTriangle, "Fixed: un-ticking a set left its numbers behind", "Completing a set retunes the next one from what you just lifted. Un-ticking it put the tick back but left the retune in place — so weights and reps written by a set you had un-logged stayed on screen with nothing to explain them, and a few mis-taps while setting up filled an exercise with numbers you never asked for. Un-ticking now puts the affected set back exactly as the program wrote it. Anything you typed yourself is left alone."],
-            [Dumbbell, "The plate breakdown follows the set you're about to do", "The loading strip under an exercise was pinned to the first working set and stayed there. On a ramp it told you to load the bar for set 1 while you were standing at it for set 3. It now reads the next set you haven't logged."],
-        ] },
-    { version: "3.15.0", build: "520", items: [
-            [AlertTriangle, "Fixed: doing exactly what the app asked could take weight off the bar", "Every set is prefilled at the bottom of its rep range — that is what the range means: start there and build up. But after you logged one, the app predicted you would get one or two fewer reps on the next set from fatigue, treated that prediction as a failed set, and stripped an increment. Log the 40x10 it asked for and the next set became 35; log 95x10 and the next became 90. The weight now only changes when a set you actually PERFORMED lands outside the range — too many reps and it goes up, a real miss and it comes down. Reps drifting down across your sets is normal and no longer costs you load."],
-            [AlertTriangle, "Fixed: tightening your RIR did nothing at all", "A block that moves from 2 reps-in-reserve to 1 is asking for more effort at the same reps, so the load should step up. It never did. Unless you had rated every set by hand, the strength estimate quietly used THIS week's target as the effort for LAST week's sets, which cancels out exactly — so 2 RIR, 1 RIR and 0 RIR produced identical suggestions forever. Your logged sets already record the RIR they were prescribed at, and that is what gets read now."],
-            [AlertTriangle, "Fixed: one lift, three different answers about how it progresses", "The style badge, the advice line under it and the set weights themselves each worked out the progression style separately, and could each get a different answer, because one of them was not told which day it was looking at. That is how a lift could be labelled \"e1RM autoregulation\" while the advice underneath said \"same load, build toward 15 reps\" and the sets below were laid out with per-set weights. They all ask one function now."],
-            [TrendingUp, "e1RM autoregulation is temporary, and says so", "When a lift stalls, the app switches it to e1RM autoregulation to recalibrate the load. It had no way back: it checked whether you were still stalled by looking at your recent sessions, but autoregulation holds you steady on purpose, so the check could only ever see more flat sessions. The switch is now time-boxed — it hands the lift back to your program's own progression on a new best or after a few sessions either way — and the badge says why it engaged and what ends it."],
-            [Zap, "Myo-reps rest for 15 seconds, not two minutes", "The short pause is the whole technique, and the first one never happened: the set that takes you to failure is an ordinary working set, so finishing it started the full working rest. The timer now looks at the set you are about to do rather than the one you just finished, so the pause before the first mini-set is short — and the first drop of a drop set is immediate."],
-            [Zap, "Myo-reps and drop sets follow your actual working weight", "The mini-sets copied the weight once, when the exercise was first laid out, and then ignored it. Change the working weight afterwards — by hand, with the steppers, or because the app retuned it mid-exercise — and the extensions were left showing the old number. They are worked out from the set they extend now, every time, so a myo-rep always matches the set it came from and a drop set stays the right fraction of it."],
-            [Zap, "No delete button on a myo-rep the program asked for", "Skipping a prescribed mini-set costs you nothing, so a delete control sitting at the end of the row was all risk and no benefit. Extensions you added yourself keep theirs, and the Myo button still removes a prescribed set deliberately."],
-            [AlertTriangle, "Fixed: the target column could disagree with the weight box", "When the app retuned a set from the one you just logged, it changed the weight but left the target beside it reading the old prescription — so the row showed a target of 40 and a weight of 35 with nothing explaining the difference. The target follows the retune now."],
-            [Target, "The suggestion names the set it came from", "The line above your sets showed your BEST set from last time while the advice beside it was worked out from your LAST one. If your reps fell across the exercise you would read \"last 40x15 — build toward 15 reps\", which looks like the app failing to notice a set it had just shown you. It now shows the set the suggestion was actually built from."],
-        ] },
-    { version: "3.14.9", build: "519", items: [
-            [Layers, "Program cards are roomier again", "The Switch button added last build was a word taking up card width, which squeezed program names down to a few letters — worst inside training cycles, where the cards are already narrow. It is back to a compact tick; hold it for a moment and it tells you what it does. Long names now wrap onto a second line instead of being cut off, and cycle blocks got a little of their width back."],
-            [Layers, "Pick a program from a list instead of hunting for its card", "There is a Switch program button on your Up Next card now. It opens a list of everything you have saved, showing how long each program is, how many days a week it runs, how much of it you have finished and which block of a cycle it belongs to — the things you would actually compare. Your current program is marked and the switch still announces itself with an Undo."],
-            [Layers, "Switching programs now tells you it happened", "Changing your active program used to do it silently — the card jumped to the top of the list and nothing else. It now says which program you have switched to and offers Undo, which also puts a training cycle back to the block it was on. The control is a labelled Switch button rather than a tick sitting next to Delete."],
-            [AlertTriangle, "Fixed: six side-scrolling rows could block the page from scrolling", "Rows that scroll sideways — the gym chips on Home, the equipment lists in Gyms, the chart ranges in an exercise, the gallery filters — could swallow an up-and-down swipe that started on them, so the page underneath stayed put. Same fault as the Plan tab last build, in six other places."],
-            [Palette, "Plan phase colors now come from your theme", "The phase colors added in the last build were fixed values that fought most of the themes. Each phase now takes its color from your accent, shifted just enough to tell them apart, so the Plan belongs to whichever theme you are using. Deloads still sit apart on purpose."],
-            [Layers, "Plan header rows line up", "The phase strip used fixed-width chips while the stat boxes above divided the width evenly, so the two rows did not share a grid. They now line up edge to edge."],
-            [AlertTriangle, "Fixed: tapping a day in the Plan sent you to Home", "Opening the Plan tab straight after launching the app and tapping any day bounced you back to the Home tab instead of showing the workout. The Plan works out its own program, but the preview screen was still checking for one you had explicitly opened."],
-            [Layers, "Training phases now look like what they ask of you", "Each phase carries its own color and icon — building volume, raising intensity, sharpening, and a cooler quieter one for deloads — in the strip at the top and again on the block it heads, so a phase is one recognisable thing wherever it appears rather than four identical chips."],
-            [Calendar, "Plan days now say what the session actually is", "Each day in the Plan listed only its name, set count and length. It now also shows the lift it is built around, how many exercises it holds and the muscles it works, so you can tell two days apart without opening either. The phase box no longer cuts long names off half way through."],
-            [Calendar, "The Plan opens on what's next, and days preview before they start", "The plan now leads with the next workout you owe, and the week you are in is already open when you arrive. Days you have logged are ticked off and the next one is marked. Tapping a day opens a preview of it — the lifts, sets and target loads — with Start as a separate step, instead of dropping you straight into a session."],
-            [AlertTriangle, "Fixed the phase weeks shown for a cycle", "When a program was one block of a training cycle, the phase strip worked out the later blocks' week ranges from the current block's length, showing impossible spans like \"W6-6\" and \"W10-6\". Each block's weeks now add up across the cycle."],
-            [Calendar, "The Plan tab is now a scrollable week list", "The first version laid the weeks out as a wide grid that had to scroll sideways, which on a phone stopped the page underneath from scrolling at all. It is a straight list now: one row per week showing what it holds and how many of its sessions you have done, grouped under the phase it belongs to, and each week opens to its training days. The nav bar also no longer disappears when you open the tab."],
-            [Calendar, "New Plan tab — your whole program at a glance", "Until now you could only see one week at a time. The Plan tab lays the entire block out: which phase you are in, a grid of every week against every training day with the sets and time each holds, and an expandable table showing how each lift builds week by week. The deload is marked everywhere it appears. Tap any cell to jump straight into that day at that week."],
-            [Layers, "The history grouping switch now always appears", "The By cycle / By month switch added in the last build only showed up if you had built a training cycle, so most people never saw it. It is now always above the session list, and it reads By program when you have not run a cycle, since that is what it groups by."],
-            [Layers, "History can group by training cycle", "Your workout list can now be grouped by the cycle and block you were running instead of by calendar month, so a block that ran across the end of a month reads as one block rather than two. Switch between By cycle and By month above the list. Sessions from standalone programs keep their own group."],
-            [Trophy, "Switch the Strength Club between what you lifted and your estimated max", "The club total is now yours to define. Tap Lifted for the heaviest weight you have actually put on the bar across squat, bench and deadlift — the way the 1000 lb club is traditionally counted — or Est. 1RM for what your best sets project to. The card says which one it is showing, and all three lifts always use the same measure."],
-            [AlertTriangle, "History no longer blanks out on an incomplete entry", "A workout entry missing its volume figure — which can happen with imported backups or sessions saved by much older versions — took the entire History tab down instead of just showing zero for that one line."],
-            [Award, "Strength score over time now tracks strength, not bookkeeping", "The score-over-time chart could show a long decline while every one of your lifts was getting stronger. Lifts you train less often were counted less at first and more later, so the line drifted downward as the weighting caught up, and the card would report something like a 16-point drop and a lower level. Every point on the chart is now weighted the same way, so the line moves when your lifts move and stays put when they don't."],
-            [AlertTriangle, "Strength standards no longer crashes the Progress tab", "Tapping the edit button on the Strength standards card took the whole Progress tab down with a blank error. The card was doing a piece of its calculation in a place that only ran some of the time, which is something React refuses to allow. It runs every time now. The earlier attempt at this fix in build 501 changed the wrong thing and the crash survived it."],
-            [Calendar, "Up Next shows the workout, not the gym notes", "The Up Next screen was listing your pinned notes and machine setup under every lift. That is information you need standing at the machine, not deciding whether to train, and it pushed the actual prescription down the screen. Notes and setup still appear in the session itself, where you use them."],
-            [Layers, "Myo-reps show correctly in history", "When you view a past session, myo-reps and drop sets are now labeled as M/D instead of numbered like working sets, so you can tell at a glance which sets were extensions. Records (PRs, best e1RM, top volume) now exclude extensions correctly."],
-            [AlertTriangle, "Strength standards edit fixed", "Clicking the edit button to update your profile on the Strength standards card now works correctly."],
-            [Search, "Search for exercises when swapping", "When replacing an exercise in a workout or program, tap the exercise list to filter it by name instead of scrolling through all available options."],
-            [Zap, "Unweighted exercises count in recovery trends", "Pull-ups and dips logged without weight now include set count in exerciseTrends and underRecoveredWeekly, giving an honest recovery cost to bodyweight work."],
-            [Layers, "\"Sets you've actually logged\" means working sets", "Myo mini-sets and drop sets are extensions of the set above, and every other screen already treats them that way — but the weekly logged-volume counter added them in as full sets. Three minis on an overhead press showed as six sets of shoulders instead of three, and then got compared against volume landmarks that are defined in working sets. There were also two copies of that counter, and the weekly volume advice used one of each."],
-            [Repeat, "Editing one block of a cycle keeps the others intact", "Saving an edited block carries the change to its sibling blocks. The rule that does the carrying existed twice — once for real, once in a simplified copy that the tests were checking — and the copy could not remap a day's main lift or its supersets. Reordering a day in one block could quietly point another block's primary at the wrong exercise."],
-        ] },
-    { version: "3.12.0", build: "498", items: [
-            [Activity, "Tap a muscle to see what trains it", "\"This day hits\" showed numbers like Glutes 7.7 with no way to ask where 7.7 came from — and on a day with no glute exercise on it, that reads like a bug rather than three lifts each paying a share. Tap any muscle now and it opens the exercises behind it, with the arithmetic shown: direct work counts its full sets, secondary work shows the sets and the share it contributes."],
-            [Layers, "The breakdown is the number", "It is built from the same pass that produces the chip rather than a second walk over the day, so what you open always adds up to what you tapped."],
-        ] },
-    { version: "3.11.2", build: "497", items: [
-            [Target, "One strength curve, not eight", "The formula behind every estimated max in the app was written out by hand in eight different places, in four slightly different variants. That is why the same lift could read 291 in one screen and 300 in another: a fix applied to one copy never reached the rest. There is one now, and everything else asks it."],
-            [Award, "The rep-target table agreed with nothing", "Its one-rep row divided your 1RM by an extra factor, so a 300 lb max was listed as a 291 lb single — while the strength charts, correctly, said 300. Same cause: a second copy of the maths. Fixed, and the whole table now matches the charts."],
-            [Layers, "Warm-ups and drop sets counted consistently", "The rule for what counts as a working set was re-typed dozens of times and some copies had drifted, so a few older screens still counted a drop set or a myo mini as a full set. They all ask the same question now."],
-        ] },
-    { version: "3.11.1", build: "496", items: [
-            [Award, "\"Last 225×5\" when you did 225×6", "Two screens were printing the wrong number for the same reason. The weight and reps stored against a lift are deliberately the fewest reps you held at the top weight — the cautious figure the app uses to pick your next load. Printed as \"last 225×5\" on the program view, it reported a set you had already beaten. Personal records had a second version of the same problem: among sets at the same weight it kept whichever it saw first, so the first time you ever touched 225 owned the record no matter what you did on it later. Both now read your best actual set."],
-            [Target, "Drop sets stay drop sets in your history", "Myo mini-sets and drop sets are marked as extensions while you train, but that mark was thrown away when the session was saved — so anything reading your history later counted them as full working sets again, including the new volume-per-set chart. The mark is saved with them now."],
-        ] },
-    { version: "3.11.0", build: "495", items: [
-            [Layers, "The cycles tab tells you where you are", "It listed the plan and nothing else — no progress, no dates, no sense of what you had actually done. Every cycle now carries a progress bar, the week you are on out of the total, how many weeks are left, how many sessions you have logged against it, and the calendar window it runs in. All of that already existed one screen deeper; the list just could not reach it."],
-            [Milestone, "Finished blocks can be reviewed", "A completed block used to be a checkmark. Tap Review and you get what actually happened in it: which lifts moved and by how much, each muscle's weekly volume set against whether it progressed, and a concrete change to carry into the next block. It is offered when you complete a block too — the moment it is most worth reading."],
-            [Calendar, "One note at a time, not four", "Every block printed its full intent, so a four-block cycle was four paragraphs you read once months ago. Only the block you are in shows its note now. Finished blocks show what you logged, upcoming ones show which weeks they land in, and the detail page still has every word."],
-        ] },
-    { version: "3.10.0", build: "494", items: [
-            [BarChart3, "Six ways to read a lift, over any range", "The exercise library charted one thing — estimated 1RM, every session you have ever logged. It now charts estimated 1-RM, 3-RM and 10-RM, your heaviest actual weight, total volume, and volume per set, across 1W, 1M, 3M, 6M, 1Y or all time. The rep maxes come from inverting the same formula the rest of the app uses, so the 1-RM you see here is the same number your records tab calls your best."],
-            [Maximize2, "The exercise page is a full screen now", "It was a sheet sliding up over the list, capped at most of the screen height, with the library still showing behind it. What is in there — the demo, every session you have logged, the charts, your PRs and rep maxes — is a destination, not an aside. It gets the whole screen and its own back button."],
-            [Calendar, "The charts are spaced by date, not by session", "The old chart put every session an equal step apart, so a fortnight off looked identical to training twice in a week. Points now sit where they actually happened, which is what makes the range buttons mean anything."],
-        ] },
-    { version: "3.9.3", build: "493", items: [
-            [Layers, "Myo-rep minis stopped counting as full sets", "When the app adds myo-reps to a lift, the three short mini-sets were being treated as three more working sets — so a five-set exercise showed eight numbered sets, the session's set total was inflated, and each mini claimed a last-session set that never existed. They're extensions of the set above and now read that way: indented, marked M, and out of the count."],
-            [Target, "A 4-rep myo mini no longer rewrote your set of twelve", "The same problem reached your logs. The summary each lift is remembered by takes the lowest reps you held at the top weight — and it was counting the mini-sets, so twelve reps of lateral raises were recorded as four, and the next session's target was cut to match. Drop sets did the same through their stripped load. Extensions are now excluded from that summary, which is also what your next opening weight is built from."],
-            [Activity, "A carried-over weight says it's carried over", "When a lift only has one recorded weight rather than a set-by-set record, that figure stands in for every set — but it looked exactly like a real per-set record, so set five appeared to report a set you may never have done. It's now tagged LIFT."],
-        ] },
-    { version: "3.9.2", build: "492", items: [
-            [Target, "The set you just finished waits for you", "Ticking a set sent the workout straight on to the next one — and asked how hard the last one was inside the row it had just dimmed and moved past. The set you've finished now stays lit until you've said what it felt like, and says plainly that it's optional. The next set goes live at the same moment, so ignoring the question costs you nothing but reaching for the steppers."],
-            [Activity, "The effort a set was asked for stays on the set", "The target — 2 RIR, 85%, to failure — vanished the instant you logged the set, which is the exact moment you're asked what it actually felt like. It stays put now, so the number you're comparing against is still on screen. Logged efforts on earlier sets collapse to a tag you can tap to change."],
-        ] },
-    { version: "3.9.1", build: "491", items: [
-            [Brain, "One coach on the workout screen, not two", "The session had two coach panels stacked at the top saying different things in the same voice — a strip explaining what the block is asking of you this week, and a card explaining what the app changed about today's numbers for you specifically. They're one card now. The block's note is still there, at the end of the coach note, and it's the first thing you read when there's nothing personal to say yet."],
-            [Info, "Plan info reads as one screen", "\"How this was built\", \"Weekly volume\" and \"Block plan\" had each been built with their own card style — different corners, different backgrounds, different heading sizes — which made three sections of the same reference look like three unrelated things. They share one card now."],
-        ] },
-    { version: "3.9.0", build: "490", items: [
-            [Plus, "Hold the + or − to run the weight up", "Getting from an empty bar to a working weight was around eighteen taps. Press and hold either stepper — weight or reps — and it repeats, starting slow enough to stop on the number you want and speeding up the longer you hold. A single tap still moves exactly one increment."],
-        ] },
-    { version: "3.8.1", build: "489", items: [
-            [Trophy, "Your record is your best set, not your worst", "Bench 225×6 and then 225×5, and the record read 225×5. The app keeps a cautious summary of each lift — the reps you held across every set — because that's the right number for deciding your next load. It was also being used as the set you're remembered by, where it reports a set you already beat. Records and PR estimates now both come from your best logged set."],
-        ] },
-    { version: "3.8.0", build: "488", items: [
-            [Save, "Editing a program waits for you to save it", "Swapping an exercise used to commit straight to your saved program — no button press, no warning on the way out. Changes are now held as a draft: the Save button tells you when something's pending, going back asks whether to keep or discard, and the version in your library doesn't change until you say so. The draft is written to your device as you edit, so it survives closing the app or a crash mid-edit — reopen and it's still there, still asking."],
-        ] },
-    { version: "3.7.0", build: "487", items: [
-            [Layers, "The set you're on reads the way it used to", "The target, the effort it's asked at and the set you're beating are stacked in one column again, and the plate breakdown is back under the weight it describes. Both still appear only on the set you're working. The highlight now runs the full width of the screen instead of floating as an inset card, and the set number has room to breathe."],
-            [Target, "A lift with one recorded weight uses it for every set", "If the app only had a summary of a lift — one weight and rep count, which is what older saves and carried-over lifts store — only your first set showed it. Set two onward read \"new\", as if the same lift in the same session had no history. That summary now stands as the reference for every working set."],
-        ] },
-    { version: "3.6.3", build: "486", items: [
-            [Settings2, "Day menu fix, without the extra dependency", "The previous fix worked but pulled in a library the single-file build can't load. Same result, no new dependency: the menu is now rendered above the day list instead of inside a day card."],
-        ] },
-    { version: "3.6.2", build: "485", items: [
-            [Layers, "The set you're on reads as one line again", "The last update put the effort target, technique cue, where the weight came from and last session's set on separate lines — but only on the set you're working, which made that row the tallest on screen and shifted every row below it each time you logged a set. Same information, now a single strip under the row. The plate breakdown moved into it too, so it's back and it's with the rest of what that set needs."],
-        ] },
-    { version: "3.6.1", build: "484", items: [
-            [Settings2, "The day menu opens where you tapped", "The last fix wasn't enough: the menu could still vanish on a collapsed day, or open far down the screen on an open one. A performance optimisation on the day card was quietly redefining what \"anchored to the screen\" meant, so the menu was being placed relative to the card instead of the window. It now renders outside the card entirely."],
-        ] },
-    { version: "3.6.0", build: "483", items: [
-            [Play, "Tapping your next workout shows just that workout", "It used to open your whole program — every day of the split, every week — and leave you to find the session you were already being pointed at. Now it opens the day itself: what's in it, what each lift asks for, your pinned notes, and Start. The full program is one tap away under \"View full program\", and Back brings you straight back here."],
-        ] },
-    { version: "3.5.1", build: "482", items: [
-            [Settings2, "The day menu no longer gets cut off", "On a collapsed day, the 3-dot menu was clipped by the day's own card. It now opens against the screen, and flips above the button when it would run off the bottom."],
-            [Zap, "You can decline an engine update", "The offer to rebuild a program on a newer engine had no \"no\". It does now — \"Keep it as it is\" dismisses it for good on that program. A future engine will ask again, since a new correction is a new question, and Plan info keeps a way to change your mind."],
-        ] },
-    { version: "3.5.0", build: "481", items: [
-            [Layers, "The workout screen shows the set you're on", "Every set row looked the same, so finding your place mid-workout meant reading the table. The set you're on now keeps full contrast and an accent rule; the rest dim. The plate breakdown, the effort target, the technique cue and last session's set follow that row instead of appearing under all six at once — same information, arriving as you reach it."],
-            [Flame, "Warm-ups get out of the way once they're done", "A ramp set carried the same full-size row as a top set, four of them above the work. Once they're all logged they collapse to one line. Tap it to bring them back — a mis-logged ramp is still fixable."],
-            [Brain, "The coach note shrinks once you start lifting", "It's the card you want before the first set and a banner you're reading past by the third. After your first logged set it becomes a one-line pill, still a tap from the full note."],
-            [Info, "Plan info moved off the top of your program", "\"How this was built\", \"Weekly volume\" and \"Block plan\" now live behind a Plan button next to the day selector. All three are unchanged — they're reference you consult, not something you read on the way to training."],
-            [Settings2, "A saved program stops looking like a construction site", "While you're building, the day controls stay out as buttons. Once saved, rename and duplicate collapse into a 3-dot menu — which also gives Delete a home it never had here. The exercise rows lost their up/down arrows (the drag handle already did that job), the RIR tooltip, and the pinned-note readout; notes still show during the session, where you act on them."],
-            [Save, "Leaving an unsaved program asks first", "Back used to discard a freshly built program silently. It now offers to save it."],
-        ] },
-    { version: "3.4.0", build: "480", items: [
-            [Zap, "Update an older program", "Programs stay stable once built so prescriptions do not change mid-block. When a saved plan is using older program logic, you can now rebuild it with the latest quality fixes while keeping the same setup and seed. Logged workouts stay untouched, and the previous version remains available under Earlier shuffles."],
-            [Activity, "What the volume ceiling actually means", "Weekly sets above the ceiling were labelled junk volume. The best current evidence — a 2026 analysis of 67 studies — finds size and strength still improving as weekly sets rise, with diminishing returns rather than a point where more starts to hurt. The ceiling is a recovery budget worth watching when progress or readiness slides, not a line past which your sets stopped counting, and it now says so. Same numbers, same colors, honest claim. The same analysis confirmed that counting an indirect set as half a set predicts growth best, which is what this app already does."],
-        ] },
-    { version: "3.3.4", build: "479", items: [
-            [Trophy, "Strength and peak blocks lift the barbell", "A strength or peak block was given its heavy sets and reps on whichever lift suited muscle growth best — so a full-gym strength program could be built on a dumbbell bench and a hack squat, with no barbell bench, squat or deadlift anywhere in it. The main lift of a strength-focused day is now the barbell you can add weight to and test. Hypertrophy blocks are unchanged, and every block in a cycle shares the same main lift so your logged weights still carry forward."],
-            [Ban, "Ban an exercise from a saved program", "Banning a lift from the exercise menu was only offered while a program was still unsaved — which meant it never appeared for a training cycle at all, since a cycle saves its blocks the moment it's created. It's now available wherever the menu is."],
-            [Activity, "The clock stops cutting your side delts", "When a session ran long, the exercise it dropped to fit the time was chosen by looking at the whole shoulder total — a number your pressing already fills out. So the last lateral raise in the day looked free to cut, and side or rear delt work could disappear from a program entirely even though it had just been added on purpose. Trimming for time now knows the difference between the three heads. Across a 1,458-program sweep, programs training no side delts at all fell from 33 to 18, and side and rear delt work below the minimum effective dose fell by about a fifth."],
-        ] },
-    { version: "3.3.3", build: "478", items: [
-            [Activity, "Bench angles match the day", "A day called \"Push · Chest\" could be built around an incline press while the flat bench landed on the delt day, and \"Incline + Pull\" could get a flat bench. Days that name an angle now anchor on the right variant."],
-            [Repeat, "Myo-reps you can actually log", "When a block prescribes myo-reps, the mini-sets now appear in your set list instead of only being mentioned in a note — so those reps count toward your volume and estimates."],
-            [AlertTriangle, "Report a bug", "Settings has a Report a bug section that emails pursuitiron@gmail.com with your version and build already filled in."],
-        ] },
-    { version: "3.3.2", build: "477", items: [
-            [AlertTriangle, "No more empty training days", "With a very limited equipment list and bodyweight excluded, a program could generate a day with no exercises in it at all. The fallback that fills a day only ever considered the first muscle it wanted; it now tries everything the day was meant to cover."],
-        ] },
-    { version: "3.3.1", build: "476", items: [
-            [Activity, "\"Train this less\" no longer means \"barely at all\"", "De-emphasising a muscle was cutting it by around 90% — chest went from about 11 sets a week to 1, which is below the level needed to hold what you've built. It now keeps a maintenance dose and gives the rest of the room to what you actually asked for."],
-        ] },
-    { version: "3.3.0", build: "475", items: [
-            [Timer, "Session estimates count your warm-ups", "Longer warm-ups for heavy lifts weren't being counted in the session time estimate, so a session budgeted at 90 minutes could really take 100 or more — and because the app fills sessions up to that estimate, it was overfilling them. Warm-up time is now costed from the actual ramp."],
-        ] },
-    { version: "3.2.9", build: "474", items: [
-            [Activity, "Two muscles were being counted twice", "Reverse Curl and Curtsy Lunge each credited their own main muscle a second time as a supporting one, inflating that muscle's weekly volume by half. That made a muscle look like it had met its target when it hadn't, or trip a ceiling it shouldn't have."],
-        ] },
-    { version: "3.2.8", build: "473", items: [
-            [Layers, "Full Body described accurately", "The Full Body split said it trains everything each session. It doesn't — it rotates, covering several movement patterns a day so every muscle gets trained two or more times a week. That's the better design, and now it's what the description says."],
-        ] },
-    { version: "3.2.7", build: "472", items: [
-            [Layers, "Template labels match what they build", "Two templates were labelled as pure strength programs while being configured for strength and size. Every template's day count, goal and structure is now checked against what it actually generates."],
-        ] },
-    { version: "3.2.6", build: "470", items: [
-            [Flame, "Warm-ups that match the weight", "How many warm-up sets a lift got depended on where it sat in the session, not on how heavy it was — so a 495 lb squat in the second slot ramped straight from 345 to 495 in one jump, and the same lift at 135 got the identical ramp. Warm-ups now scale with the actual load, so heavy work is approached properly and light work isn't padded."],
-            [Shield, "Bad data can't become a prescription", "A damaged or hand-edited backup could put an impossible weight into your history — negative, or absurdly large — and the app would hand it straight back as the weight to load next session. Those rows are now ignored the same way a missing one is."],
-        ] },
-    { version: "3.2.5", build: "469", items: [
-            [Activity, "Delt coverage across every split", "The side and rear delt work added recently was only ever verified on a few splits. Checking all eighteen found programs that trained neither head at all — mostly on shorter sessions, where there's no room to add anything. Those now convert one front-delt press, which the rest of your pressing already covers, into the work that's actually missing."],
-        ] },
-    { version: "3.2.4", build: "468", items: [
-            [Activity, "Side and rear delts now hit their target", "Lateral and rear-delt work is spread across two days instead of stacked onto one. Stacking meant a later step that merges duplicate isolations quietly folded them back together and lost sets — so side delts fell short in nearly every program even though the app thought it had fixed them. They now clear their target, and splitting the work across days suits delts better anyway."],
-        ] },
-    { version: "3.2.3", build: "467", items: [
-            [Activity, "Side and rear delts survive a strength block", "The check that guarantees side and rear delt work only ran on hypertrophy goals — and on a strength goal every shoulder slot fills with presses, so a powerbuilding peak block could end up with three pressing movements and no lateral or rear work at all. It now runs whatever your goal is."],
-            [Timer, "Sessions closer to the length you picked", "Choosing \"90 to 120 minutes\" was producing 65-minute sessions, because session length set an exercise count that was never checked against the actual duration. Days now fill toward the bottom of the range you chose, spending the extra time on whichever muscle is furthest below its target."],
-            [Repeat, "Swaps offer what your program is missing", "Swapping an exercise now floats options that fill a gap in your current program to the top — so replacing an overhead press suggests a lateral raise when your side delts are short, instead of listing every other press first."],
-            [Settings2, "Barbell limit label fixed", "The program summary said \"Barbell cap 1 lb\". It's a limit on barbell movements per session, not a weight, and now says so."],
-        ] },
-    { version: "3.2.2", build: "466", items: [
-            [Settings2, "See how a program was built", "The choices you made when you created a program — what to emphasise, what to cut back, session length, block length, deload — are now shown on the program screen under \"How this was built\", and the emphasis and reduction choices appear on each card in your library. Those two in particular change your set counts without changing the exercise list, so there was previously no way to confirm they'd been applied."],
-            [AlertTriangle, "Strength standards render fix", "The strength standards section could fail to load for some histories. Fixed, and when a section does fail it now names which part of the app it happened in."],
-        ] },
-    { version: "3.2.1", build: "465", items: [
-            [Activity, "Side and rear delts stop getting skipped", "Shoulder volume was being judged as one number, and that number looked healthy while the three heads underneath it were badly out of balance — front delts well past their useful ceiling from all the pressing, side and rear delts below the minimum to grow in almost every program. Each head is now checked against its own targets, so the ones that only grow from deliberate work actually get it."],
-        ] },
-    { version: "3.2.0", build: "464", items: [
-            [Activity, "Volume that stays inside the lines", "High-frequency plans were pushing delts and triceps past the point where extra sets cost recovery without buying growth — worst case a third over the ceiling, and it got worse the more days you trained. Every press was quietly adding shoulder volume the plan wasn't counting. Programs now check both ends: enough work to grow, not so much that you're training your own fatigue."],
-        ] },
-    { version: "3.1.10", build: "464", items: [
-            [BarChart3, "Every muscle gets enough work", "Generated programs now guarantee each muscle clears its minimum effective volume for the week. Calves were the worst offender — they came in under the minimum in about four of every five programs, at any training frequency. The fix respects your time limit and any muscle you've asked for less of, and it won't push another muscle past its recoverable ceiling to get there."],
-        ] },
-    { version: "3.1.9", build: "462", items: [
-            [Layers, "The plan's volume is the volume you train", "Recovery used to compare your session against the AVERAGE gap between times a muscle is trained — a spacing your split may never actually schedule. On any uneven rotation that made the plan's own session look early, and a set got trimmed from a day the program deliberately chose. It now uses the tightest gap the rotation really produces, so following the plan means training the volume it designed. Train sooner than that and it still adjusts."],
-        ] },
-    { version: "3.1.8", build: "461", items: [
-            [Activity, "It knows its own programming", "A block that programs near-failure work no longer reports it as you overreaching. It still trims an accessory set when you train hard on one day's rest — that's the point of autoregulation — but it names the block instead of telling you that you pushed too hard, because on an intensification week you did exactly what was asked."],
-        ] },
-    { version: "3.1.7", build: "459", items: [
-            [Calendar, "History grouped by month", "Your session list now breaks into months with a sticky heading that carries that month's session count and total volume — so scrolling back through a year tells you something instead of just going on forever."],
-            [AlertTriangle, "Fixes", "Programs failed to open once you had a few sessions logged — that's fixed. The unit you pick in Settings is no longer asked for again when you build a program, gym equipment is sorted alphabetically so the two hip machines sit together, and the Back and Done buttons no longer collide with the text beside them."],
-        ] },
-    { version: "3.1.6", build: "454", items: [
-            [Settings2, "Find things in Settings", "Settings jumps straight to a section now instead of making you scroll past everything — Training, Appearance, Workout, Profile, Data, Backup, About. And an empty Progress tab offers your next workout by name rather than just telling you it's empty."],
-        ] },
-    { version: "3.1.5", build: "453", items: [
-            [Wand2, "Program setup you can cut short", "The builder now shows which question you're on out of how many, and once you've set your equipment you can generate straight away — the remaining questions all have sensible defaults and are there to refine, not to finish."],
-        ] },
-    { version: "3.1.4", build: "452", items: [
-            [Flame, "The warm-up card remembers you", "If you have your own warm-up, tap Hide once and the checklist stays gone — it used to come back at the top of every single session. Settings can bring it back. Browsing templates also puts the recommended ones first now."],
-        ] },
-    { version: "3.1.3", build: "450", items: [
-            [TrendingUp, "Plateaus counted per day", "If a lift appears on two days of your program — heavy on one, higher reps on the other — the lighter day's sets were being counted as sessions without a PR, so the app called a plateau on a lift that was progressing fine. Stalls are now tracked per training day."],
-            [Share2, "Better share cards", "Your top set now breaks ties on reps, so logging 195×4 and then 195×6 shares the 195×6. Shared images also carry the Pursuit Iron name."],
-        ] },
-    { version: "3.1.2", build: "449", items: [
-            [Settings2, "Machine settings are back", "Pin the seat, back pad, thigh pad, ankle pad and start position for a machine and the app remembers them for next time. This had quietly stopped working on most machines — leg curls, leg extensions, pec decks, chest presses and more offered no settings at all. All 116 machine exercises have them again, and only the ones each machine actually has."],
-        ] },
-    { version: "3.1.1", build: "448", items: [
-            [Undo2, "Back always gets you out", "Opening a cycle block, jumping to its cycle, then opening a block from there could trap the back button bouncing between the two screens with no way home. Navigation now remembers the whole path you took instead of just the last step."],
-        ] },
-    { version: "3.1.0", build: "447", items: [
-            [HomeIcon, "A home screen that answers the question", "Today's workout now sits at the top, above the streak and totals — the thing you opened the app for is the first thing you see. The template carousel retires itself once you're a few sessions into a program, so your own library isn't buried under suggestions you've already passed on."],
-            [Accessibility, "Easier to hit, easier to see", "Small controls — the +/− steppers, reorder arrows, sheet close buttons — now have a full-size touch area even though they still look the same, so you miss them less with a thumb mid-set. Sheets close with Escape, announce themselves properly, and there's a visible focus outline if you're using a keyboard."],
-            [Layers, "Templates named for what they do", "Program templates now carry descriptive names — Main-Lift Waves, Tiered Linear Progression, Ramping 5×5, Straight 5×5 — instead of borrowing coaches' and brands' names. The programming is unchanged: same percentages, same progression, same saved programs and share codes. Only the labels moved."],
-            [Palette, "Text you can actually read", "Every color the app uses as text was measured against the surface behind it, and the ones that fell short were corrected — in all fourteen themes. Secondary labels, the amber warnings and the accent links are all legible now, including on the light themes where they were faintest. The themes still look like themselves."],
-            [Calendar, "Your birthday, not your age", "Strength standards scale by age, and a typed-in age quietly went stale — a lifter who entered 39 kept being scored against 39-year-olds for years. Enter a birthday once and it stays right. If you'd set an age before, it's been carried over as an estimate; set the real date and it'll sharpen."],
-            [TrendingUp, "Bodyweight tracking that keeps up", "Weigh-ins now hold about five and a half years instead of six months, and each one remembers the unit it was taken in — so switching between lb and kg, or merging two devices, no longer shows a phantom gain or loss. Body measurements convert properly between inches and centimeters too."],
-        ] },
-    { version: "3.0", build: "441", items: [
-            [Smartphone, "Fits smaller screens properly", "The workout screen now rearranges itself on compact and folded phones — the weight and rep steppers drop to their own line instead of getting squeezed, the elapsed timer keeps its full readout, and Finish shrinks to a check so nothing runs off the edge. Every bottom button clears the gesture bar too."],
-            [HomeIcon, "Set up each gym you train in", "Your commercial gym, your garage, the hotel rack — each one keeps its own equipment list, and switching gyms rebuilds what you're offered. Programs are built for the place you're actually standing in."],
-            [Dumbbell, "Tell it the weights you own", "Enter your real dumbbell rack — 5, 10, 15 or up to 100 — and it stops asking for loads that don't exist. At the heaviest bell it holds the weight and builds reps instead of inventing a 62.5."],
-            [Activity, "Plateau warnings that mean it", "A stall is now judged per training day, so the same lift on push day and leg day is never mixed into one misleading line. And working through a rep range set by set counts as progress, because it is."],
-            [Share2, "Share a session", "Any workout in Progress becomes a clean card — your lifts, top sets, volume and time."],
-            [BarChart3, "History where you need it", "Open any exercise in a program to see every session you've logged for it on that day, with your best marked."],
-        ] },
-];
+
 /* ⚠ ONE READER FOR A CHANGELOG ITEM. Items are `[Icon, title, description]` tuples, and both renderers
    destructured them as such. Thirteen items added from build 734 were written as OBJECTS
    (`{ icon, title, text }`, one with no title at all), and destructuring an object as an array throws
@@ -17425,7 +15973,7 @@ function changelogEntry(item) {
     }
     return { Icon: Sparkles, title: publicTrainingCopy(item ?? ""), sub: "" };
 }
-const CHANGELOG_ITEMS = CHANGELOG.flatMap(r => r.items).map(changelogEntry);
+const CHANGELOG_ITEM_COUNT = CHANGELOG.reduce((count, release) => count + release.items.length, 0);
 /* HOME'S CARD IS A HEADLINE, NOT THE RECORD.
  *
  * Changelog bodies are written for the FULL log, where the space is free and the detail is the point:
@@ -17452,7 +16000,7 @@ function capWords(text, n = WHATS_NEW_WORDS) {
 /* The archive view. Grouped by release rather than one long list, because the question it answers is
    "when did X change / what was in that update" — which a flat run of entries cannot answer at all. */
 function ChangelogSheet({ onClose }) {
-    return (_jsx("div", { className: "wpb-backdrop", onClick: onClose, style: { position: "fixed", inset: 0, background: "#00000088", zIndex: 90, display: "flex", alignItems: "flex-end" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "88vh", display: "flex", flexDirection: "column", background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "14px 18px calc(env(safe-area-inset-bottom) + 18px)" }, children: [_jsx("div", { style: { width: 40, height: 4, background: C.border, borderRadius: 999, margin: "0 auto 14px" } }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 800, letterSpacing: -0.3 }, children: "Changelog" }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: [CHANGELOG_ITEMS.length, " changes across ", CHANGELOG.length, " releases"] })] }), _jsx("button", { onClick: onClose, "aria-label": "Close", className: "pressable hit", style: { flexShrink: 0, border: "none", background: C.card, color: C.text, fontSize: 15, fontWeight: 700, padding: "9px 16px", borderRadius: 12, cursor: "pointer", whiteSpace: "nowrap" }, children: "Done" })] }), _jsx("div", { className: "wpb-scroll", style: { flex: 1, overflowY: "auto", paddingBottom: 8 }, children: CHANGELOG.map(rel => (_jsxs("div", { style: { marginBottom: 16 }, children: [_jsxs("div", { style: { position: "sticky", top: 0, zIndex: 2, background: C.bg, padding: "8px 0 8px", display: "flex", alignItems: "baseline", gap: 8 }, children: [_jsxs("span", { className: "mono", style: { fontSize: 13, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "3px 8px", borderRadius: 8 }, children: ["v", rel.version] }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: C.faint }, children: ["build ", rel.build] }), _jsxs("span", { className: "mono", style: { marginLeft: "auto", fontSize: 11, fontWeight: 600, color: C.faint }, children: [rel.items.length, " ", rel.items.length === 1 ? "change" : "changes"] })] }), rel.items.map(changelogEntry).map(({ Icon, title, sub }, i) => (_jsxs("div", { style: { display: "flex", gap: 12, marginBottom: 12 }, children: [_jsx("div", { style: { width: 30, height: 30, borderRadius: 8, background: C.cardHi, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: 15, color: C.muted }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700 }, children: title }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 1 }, children: sub })] })] }, i)))] }, rel.version))) })] }) }));
+    return (_jsx("div", { className: "wpb-backdrop", onClick: onClose, style: { position: "fixed", inset: 0, background: "#00000088", zIndex: 90, display: "flex", alignItems: "flex-end" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), style: { width: "100%", maxHeight: "88vh", display: "flex", flexDirection: "column", background: C.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "14px 18px calc(env(safe-area-inset-bottom) + 18px)" }, children: [_jsx("div", { style: { width: 40, height: 4, background: C.border, borderRadius: 999, margin: "0 auto 14px" } }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 800, letterSpacing: -0.3 }, children: "Changelog" }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: [CHANGELOG_ITEM_COUNT, " changes across ", CHANGELOG.length, " releases"] })] }), _jsx("button", { onClick: onClose, "aria-label": "Close", className: "pressable hit", style: { flexShrink: 0, border: "none", background: C.card, color: C.text, fontSize: 15, fontWeight: 700, padding: "9px 16px", borderRadius: 12, cursor: "pointer", whiteSpace: "nowrap" }, children: "Done" })] }), _jsx("div", { className: "wpb-scroll", style: { flex: 1, overflowY: "auto", paddingBottom: 8 }, children: CHANGELOG.map(rel => (_jsxs("div", { style: { marginBottom: 16 }, children: [_jsxs("div", { style: { position: "sticky", top: 0, zIndex: 2, background: C.bg, padding: "8px 0 8px", display: "flex", alignItems: "baseline", gap: 8 }, children: [_jsxs("span", { className: "mono", style: { fontSize: 13, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "3px 8px", borderRadius: 8 }, children: ["v", rel.version] }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 600, color: C.faint }, children: ["build ", rel.build] }), _jsxs("span", { className: "mono", style: { marginLeft: "auto", fontSize: 11, fontWeight: 600, color: C.faint }, children: [rel.items.length, " ", rel.items.length === 1 ? "change" : "changes"] })] }), rel.items.map(changelogEntry).map(({ Icon, title, sub }, i) => (_jsxs("div", { style: { display: "flex", gap: 12, marginBottom: 12 }, children: [_jsx("div", { style: { width: 30, height: 30, borderRadius: 8, background: C.cardHi, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: 15, color: C.muted }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700 }, children: title }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 1 }, children: sub })] })] }, i)))] }, rel.version))) })] }) }));
 }
 /* Home shows only this release. Normalize its mixed string/tuple/object entries before
    rendering, as the full archive does; every displayed note needs a valid icon and title. */
@@ -17460,7 +16008,7 @@ function WhatsNewCard({ onDismiss, onFullLog }) {
     const items = (CHANGELOG[0]?.items || []).map(changelogEntry).slice(0, WHATS_NEW_MAX);
     // How many of those belong to the release this build IS — the ones the user has not seen before.
     const latest = Math.min(items.length, (CHANGELOG[0] && CHANGELOG[0].items.length) || items.length);
-    return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "16px 16px 14px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }, children: [_jsx(Zap, { size: 16, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "What's new" }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "2px 7px", borderRadius: 8 }, children: ["v", APP_VERSION] }), _jsx("button", { onClick: onDismiss, "aria-label": "Dismiss", className: "pressable hit", style: { marginLeft: "auto", width: 28, height: 28, borderRadius: 8, border: "none", background: C.bg2, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 15 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ["The ", items.length, " most recent changes", CHANGELOG_ITEMS.length > items.length ? ` · ${CHANGELOG_ITEMS.length - items.length} more in the full log` : ""] }), items.map(({ Icon, title, sub }, i) => (_jsxs("div", { "data-wn-item": i < latest ? "full" : "brief", style: { display: "flex", gap: 12, alignItems: i < latest ? "flex-start" : "center", marginBottom: i < items.length - 1 ? (i < latest ? 13 : 9) : 14 }, children: [_jsx("div", { style: { width: i < latest ? 34 : 26, height: i < latest ? 34 : 26, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: i < latest ? 16 : 13, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: i < latest ? 15 : 13, fontWeight: 700 }, children: title }), i < latest && _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 1 }, children: capWords(sub) })] })] }, i))), CHANGELOG_ITEMS.length > items.length && (_jsx("button", { onClick: onFullLog, className: "pressable", style: { width: "100%", padding: "9px", marginBottom: 8, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.accentInk, fontSize: 13, fontWeight: 700, cursor: "pointer" }, children: "Full changelog" })), _jsx("button", { onClick: onDismiss, className: "pressable", style: { width: "100%", padding: "11px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Got it" })] }));
+    return (_jsxs("div", { style: { background: C.card, borderRadius: 16, padding: "16px 16px 14px", marginBottom: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }, children: [_jsx(Zap, { size: 16, color: C.accentInk }), _jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: "What's new" }), _jsxs("span", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "2px 7px", borderRadius: 8 }, children: ["v", APP_VERSION] }), _jsx("button", { onClick: onDismiss, "aria-label": "Dismiss", className: "pressable hit", style: { marginLeft: "auto", width: 28, height: 28, borderRadius: 8, border: "none", background: C.bg2, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx(X, { size: 15 }) })] }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginBottom: 12 }, children: ["The ", items.length, " most recent changes", CHANGELOG_ITEM_COUNT > items.length ? ` · ${CHANGELOG_ITEM_COUNT - items.length} more in the full log` : ""] }), items.map(({ Icon, title, sub }, i) => (_jsxs("div", { "data-wn-item": i < latest ? "full" : "brief", style: { display: "flex", gap: 12, alignItems: i < latest ? "flex-start" : "center", marginBottom: i < items.length - 1 ? (i < latest ? 13 : 9) : 14 }, children: [_jsx("div", { style: { width: i < latest ? 34 : 26, height: i < latest ? 34 : 26, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Icon, { size: i < latest ? 16 : 13, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: i < latest ? 15 : 13, fontWeight: 700 }, children: title }), i < latest && _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.45, marginTop: 1 }, children: capWords(sub) })] })] }, i))), CHANGELOG_ITEM_COUNT > items.length && (_jsx("button", { onClick: onFullLog, className: "pressable", style: { width: "100%", padding: "9px", marginBottom: 8, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.accentInk, fontSize: 13, fontWeight: 700, cursor: "pointer" }, children: "Full changelog" })), _jsx("button", { onClick: onDismiss, className: "pressable", style: { width: "100%", padding: "11px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: "pointer" }, children: "Got it" })] }));
 }
 // Install prompt: two variants depending on what the platform actually supports.
 // - Chromium (Android/desktop): a real captured beforeinstallprompt event -> the button triggers the
@@ -17787,9 +16335,8 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
             head.style.height = clippedHeight;
             return natural;
         };
-        let full = measureFull(), raf = 0;
+        let full = measureFull();
         const apply = () => {
-            raf = 0;
             const progress = Math.min(1, Math.max(0, sc.scrollTop / full));
             const remaining = Math.max(0, full - Math.max(0, sc.scrollTop));
             head.style.height = `${remaining}px`;
@@ -17800,21 +16347,26 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
         };
         head.style.height = `${full}px`;
         apply(); // layout effect avoids a one-frame full header on restored scroll
-        const onScroll = () => { if (!raf) raf = requestAnimationFrame(apply); };
+        // Scroll events already run before paint. Deferring these geometry writes to another
+        // frame moved program buttons after the pointer had selected its click coordinates.
+        // Apply the same bounded collapse now; no extra animation or state owner is needed.
+        const onScroll = apply;
         const onResize = () => {
-            if (raf) cancelAnimationFrame(raf);
-            raf = 0;
-            // scrollHeight includes clipped descendants, so measurement never
-            // temporarily expands the already-collapsed header on orientation change.
-            full = Math.max(1, head.scrollHeight);
+            // Recompute the natural size in both directions. A prior enlarged
+            // explicit height must not become the new smaller-font baseline.
+            full = measureFull();
             apply();
         };
+        // Text-only enlargement and font changes need not resize the window.
+        // Observe natural children, not the height this scroll owner clips.
+        const contentResize = typeof ResizeObserver !== "undefined" ? new ResizeObserver(onResize) : null;
+        for (const child of head.children) contentResize?.observe(child);
         sc.addEventListener("scroll", onScroll, { passive: true });
         window.addEventListener("resize", onResize);
         return () => {
             sc.removeEventListener("scroll", onScroll);
             window.removeEventListener("resize", onResize);
-            if (raf) cancelAnimationFrame(raf);
+            contentResize?.disconnect();
         };
     }, [upNext]);
     /* "Settled in" = they have a program running and have actually used it. The threshold is
@@ -19413,194 +17965,6 @@ function ThemePicker({ theme, onChange }) {
     ] });
 }
 
-/* What a Strong/Hevy import will bring in, shown inside the normal restore preview. Every number is from
-   the converter's own summary; the unit question appears only when the file does not state its unit,
-   because guessing kg vs lb silently would corrupt every load the engine later builds on. */
-function CsvImportSummary({ summary, unit, csvUnit, onUnit }) {
-    const fmtDate = ms => { try {
-        return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-    }
-    catch {
-        return "";
-    } };
-    const chosen = csvUnit || summary.weightUnit || unit;
-    const list = names => names.slice(0, 6).join(", ") + (names.length > 6 ? ` and ${names.length - 6} more` : "");
-    return (_jsxs("div", { "data-csv-import-summary": summary.source, style: { margin: "8px 0 4px", display: "grid", gap: 6, color: C.text }, children: [_jsxs("div", { children: [_jsx("span", { className: "mono", style: { fontWeight: 750 }, children: summary.workouts }), ` workout${summary.workouts === 1 ? "" : "s"} · `, _jsx("span", { className: "mono", style: { fontWeight: 750 }, children: summary.sets }), ` working set${summary.sets === 1 ? "" : "s"}`, summary.first ? ` · ${fmtDate(summary.first)} – ${fmtDate(summary.last)}` : ""] }), summary.unitAssumed && (_jsxs("div", { role: "group", "aria-label": "Weight unit used in this file", style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 10px", borderRadius: 10, background: C.warnDim }, children: [_jsx("span", { style: { fontSize: 12.5, lineHeight: 1.35 }, children: "This file doesn't say whether weights are kg or lb." }), _jsx("div", { className: "wpb-segmented", style: { display: "flex", background: C.bg2, borderRadius: 10, padding: 2, flexShrink: 0 }, children: ["kg", "lb"].map(u => (_jsx("button", { type: "button", "data-csv-unit": u, onClick: () => onUnit(u), "aria-pressed": chosen === u, className: "pressable hit", style: { minWidth: 44, minHeight: 36, padding: "4px 10px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: chosen === u ? C.accent : "transparent", color: chosen === u ? C.accentText : C.muted }, children: u }, u))) })] })), !!summary.customCreated.length && (_jsxs("div", { style: { fontSize: 12.5, color: C.muted, lineHeight: 1.45 }, children: [summary.customCreated.length, " lift", summary.customCreated.length === 1 ? " isn't" : "s aren't", " in the library and will be added as custom exercises: ", list(summary.customCreated), "."] })), !!summary.unmatched.length && (_jsxs("div", { "data-csv-unmatched": true, style: { fontSize: 12.5, color: C.muted, lineHeight: 1.45 }, children: ["Skipped, because the muscle they train is unclear: ", list(summary.unmatched.map(u => `${u.name} (${u.sets} set${u.sets === 1 ? "" : "s"})`)), "."] })), !!(summary.warmupsSkipped || summary.cardioSkipped) && (_jsx("div", { style: { fontSize: 12.5, color: C.faint, lineHeight: 1.45 }, children: [summary.warmupsSkipped ? `${summary.warmupsSkipped} warm-up set${summary.warmupsSkipped === 1 ? "" : "s"} left out, as in workouts logged here` : "", summary.warmupsSkipped && summary.cardioSkipped ? "; " : "", summary.cardioSkipped ? `${summary.cardioSkipped} cardio entr${summary.cardioSkipped === 1 ? "y" : "ies"} skipped` : "", "."].join("") }))] }));
-}
-// One stable owner for backup previews, transfers and restore Undo. Settings keeps navigation
-// and preferences; transfer completion never modifies workout or engine state.
-function BackupRestorePanel({ unit, initialFocus, onFocusHandled, onExport, onBackupSaved, onExportCSV, onExportBodyCSV, onImport, onPreviewImport }) {
-    const [transfer, setTransfer] = useState(null);
-    const [transferBusy, setTransferBusy] = useState(false);
-    const transferBusyRef = useRef(false);
-    const fileReadRef = useRef(0);
-    const [readingFile, setReadingFile] = useState(false);
-    useEffect(() => () => { fileReadRef.current += 1; }, []);
-    const clearFileRead = () => { fileReadRef.current += 1; setReadingFile(false); };
-    const closePanel = () => {
-        clearFileRead(); setBackup(null); setImportMsg(null); setImportText("");
-        setUndoSnap(null); setCsvUnit(null); setTransfer(null);
-    };
-    const [backup, setBackup] = useState(null); // "export" | "import" | null
-    const [exportText, setExportText] = useState("");
-    const [importText, setImportText] = useState("");
-    const [importMsg, setImportMsg] = useState(null);
-    const [csvUnit, setCsvUnit] = useState(null); // weight unit for a Strong export that does not state one
-    const importPreview = useMemo(() => {
-        if (!importText.trim())
-            return null;
-        try {
-            if (importText.length > 20 * 1024 * 1024)
-                throw new Error("Backup exceeds the 20 MB restore limit.");
-            return onPreviewImport ? onPreviewImport(importText, { csvWeightUnit: csvUnit }) : { ok: false, msg: "Restore preview is unavailable. Reopen Settings and try again." };
-        }
-        catch (e) {
-            return { ok: false, msg: e.message || "Backup is unreadable." };
-        }
-    }, [importText, onPreviewImport, csvUnit]);
-    // The snapshot of the store as it was immediately before the last import, handed back by importData.
-    // A merge can update records, apply synced deletions and hit storage limits. Undo needs the
-    // complete pre-import snapshot; merging again cannot restore the previous state.
-    const [undoSnap, setUndoSnap] = useState(null);
-    const undoImport = () => {
-        if (!undoSnap)
-            return;
-        const result = onImport(undoSnap, { replace: true });
-        if (!result?.ok) {
-            setImportMsg(result || { ok: false, msg: "Undo could not be completed." });
-            return;
-        }
-        setUndoSnap(null);
-        setImportMsg({ ok: true, msg: "Reverted to how things were before that restore." });
-    };
-    // Opening a preview or copying a partial CSV does not create a restorable backup.
-    const openExport = () => { setExportText(onExport()); setBackup("export"); setTransfer(null); };
-    // Deep link from Home's backup nudge: land with the export sheet already open and scrolled into
-    // view, so "Back up" is one tap instead of navigate-then-hunt. Cleared after handling so the
-    // sheet doesn't re-open every time Settings is revisited.
-    const backupRef = useRef(null);
-    useEffect(() => {
-        if (initialFocus !== "export")
-            return;
-        openExport();
-        const t = setTimeout(() => { try {
-            backupRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        catch { } onFocusHandled?.(); }, 80);
-        return () => clearTimeout(t);
-    }, [initialFocus]);
-    // A ref closes the same-tick double-tap window before React disables the buttons.
-    const transferOnce = async (operation) => {
-        if (transferBusyRef.current) return;
-        transferBusyRef.current = true; setTransferBusy(true); setTransfer(null);
-        try { await operation(); }
-        finally { transferBusyRef.current = false; setTransferBusy(false); }
-    };
-    const copyExport = () => transferOnce(async () => {
-        try {
-            await navigator.clipboard.writeText(exportText);
-            if (backup === "export") onBackupSaved?.();
-            setTransfer({ ok: true, msg: backup === "csv" ? "CSV copied. Save it in your spreadsheet. Use Save backup for a full restore copy." : "Backup copied. Paste it into a file or another safe place." });
-        } catch {
-            setTransfer({ ok: false, msg: "Couldn't copy this text. Select and copy it manually, or download the backup file." });
-        }
-    });
-    const fileInputRef = useRef(null);
-    // Whether this device/browser can share a FILE (not just text) — gates showing the "Share to
-    // cloud" button. Probed with the SAME mime type we actually share (text/plain — see shareBackupFile
-    // for why), since canShare() answering "yes" for one mime doesn't mean it'll accept another.
-    const [canShareFiles, setCanShareFiles] = useState(false);
-    useEffect(() => {
-        try {
-            if (navigator.canShare && typeof File !== "undefined") {
-                const probe = new File(["backup"], "probe.txt", { type: "text/plain" });
-                setCanShareFiles(navigator.canShare({ files: [probe] }));
-            }
-        }
-        catch { }
-    }, []);
-    // The backup is real JSON, but it's shared with a .txt name / text/plain mime rather than
-    // application/json: several mobile OS share sheets (notably a number of Android Chrome / share
-    // -target combinations) report canShare({files})=true for JSON and then have the actual share()
-    // call silently reject or hand back zero compatible targets, which our catch below was previously
-    // swallowing as "just download it" — invisible and confusing. text/plain is far more consistently
-    // accepted by cloud-storage share targets, and it's byte-for-byte the same JSON content, so Restore
-    // reads it back fine regardless of the .txt name. Plain "Download" still saves the conventional .json.
-    const backupFileName = (forShare) => `pursuit-iron-backup-${new Date().toISOString().slice(0, 10)}.${forShare ? "txt" : "json"}`;
-    // A download request is not proof that Android saved a file; tell the user to check Files.
-    const downloadFile = (fallback = false) => {
-        let url, anchor;
-        try {
-            url = URL.createObjectURL(new Blob([exportText], { type: "application/json" }));
-            anchor = document.createElement("a");
-            anchor.href = url; anchor.download = backupFileName(false);
-            document.body.appendChild(anchor); anchor.click();
-            onBackupSaved?.();
-            setTransfer({ ok: true, msg: (fallback ? "Sharing unavailable. Download requested instead. " : "Download requested. ") + "Check Files or Downloads before leaving." });
-        } catch {
-            setTransfer({ ok: false, msg: "Couldn't download the backup. Try Copy text, or share the file if available." });
-        } finally {
-            anchor?.remove();
-            if (url) setTimeout(() => URL.revokeObjectURL(url), 1500);
-        }
-    };
-    const downloadBackupFile = () => transferOnce(() => downloadFile());
-    const shareBackupFile = () => transferOnce(async () => {
-        try {
-            const file = new File([exportText], backupFileName(true), { type: "text/plain" });
-            if (navigator.canShare?.({ files: [file] })) {
-                await navigator.share({ files: [file], title: "Pursuit Iron backup" });
-                onBackupSaved?.();
-                setTransfer({ ok: true, msg: "Backup handed to your chosen app. Check that it saved the file." });
-                return;
-            }
-        } catch (e) {
-            if (e?.name === "AbortError") {
-                setTransfer({ ok: true, msg: "Sharing cancelled. Your backup is ready to try again." });
-                return;
-            }
-        }
-        downloadFile(true);
-    });
-    const onPickFile = async (e) => {
-        const file = e.target.files?.[0];
-        e.target.value = "";
-        if (!file) return;
-        const requestId = ++fileReadRef.current;
-        setImportText(""); setCsvUnit(null); setImportMsg(null); setReadingFile(false);
-        if (file.size > 20 * 1024 * 1024) {
-            setImportMsg({ ok: false, msg: "Backup exceeds the 20 MB restore limit." });
-            return;
-        }
-        setReadingFile(true);
-        try {
-            const text = await file.text();
-            if (requestId === fileReadRef.current) setImportText(text);
-        } catch {
-            if (requestId === fileReadRef.current) setImportMsg({ ok: false, msg: "Couldn't read that file. Choose it again or paste the backup text." });
-        } finally {
-            if (requestId === fileReadRef.current) setReadingFile(false);
-        }
-    };
-    const doImport = () => {
-        if (readingFile || !importPreview?.ok || importPreview.draftConflicts?.length)
-            return;
-        try {
-            const r = onImport(importText, { csvWeightUnit: csvUnit });
-            setImportMsg(r);
-            if (r.ok) {
-                setImportText("");
-                setUndoSnap(r.undo || null);
-            }
-        }
-        catch (e) {
-            setImportMsg({ ok: false, msg: "Restore failed: " + (e.message || "unreadable backup") });
-        }
-    };
-    const Title = SettingsTitle;
-    return _jsxs("section", { className: "wpb-backup", "aria-busy": transferBusy || readingFile, "aria-label": "Backup and restore", children: [_jsx("div", { ref: backupRef, "data-settings-anchor": "backup", style: { scrollMarginTop: 12 }, children: _jsx(Title, { children: "Backup & restore" }) }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5, padding: "0 4px 10px" }, children: "Your training data stays on this device. Save a backup periodically so you can recover it or move it to another device." }), backup === null && (_jsx("div", { style: { padding: "0 4px 12px" }, children: _jsxs("div", { style: { background: C.accentDim, borderRadius: 12, padding: "10px 12px" }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Smartphone, { size: 13, color: C.accentInk }), " Using two devices?"] }), _jsx("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }, children: "Restores merge safely instead of replacing your log. Move the backup between devices whenever you want them to share the same history." })] }) })), backup === null && (_jsxs("div", { className: "wpb-backup-actions", children: [_jsxs(UiAction, { onClick: openExport, variant: "tonal", children: [_jsx(Save, { size: 15 }), " Save backup"] }), _jsxs(UiAction, { onClick: () => { setBackup("import"); setImportMsg(null); setTransfer(null); }, variant: "tonal", children: [_jsx(RefreshCw, { size: 15 }), " Restore backup"] })] })), backup === null && onExportCSV && (_jsxs(UiAction, { onClick: () => { setExportText(onExportCSV()); setBackup("csv"); setTransfer(null); }, variant: "tonal", style: { width: "100%", marginTop: 8 }, children: [_jsx(BarChart3, { size: 15 }), " Export workout log (CSV)"] })), backup === null && onExportBodyCSV && (_jsxs(UiAction, { onClick: () => { setExportText(onExportBodyCSV()); setBackup("csv"); setTransfer(null); }, variant: "tonal", style: { width: "100%", marginTop: 8 }, children: [_jsx(Activity, { size: 15 }), " Export body metrics (CSV)"] })), (backup === "export" || backup === "csv") && (_jsxs("div", { children: [_jsx("div", { style: { fontSize: 13, color: C.muted, marginBottom: 8 }, children: backup === "csv" ? "Copy this CSV into a spreadsheet (Excel, Google Sheets, Numbers)." : canShareFiles ? "Send this file to your other device — Drive, Dropbox, email, anything. Review additions, updates and removals before restoring it there." : "Copy this backup somewhere safe — or send it to your other device. Review additions, updates and removals before confirming a restore." }), transfer && _jsx("div", { role: "status", className: "wpb-backup-status", "data-ok": transfer.ok, children: transfer.msg }), _jsx("textarea", { "aria-label": "Backup or CSV text to copy", readOnly: true, value: exportText, onFocus: e => e.target.select(), className: "wpb-scroll mono wpb-backup-text" }), backup === "export" && canShareFiles && (_jsxs(UiAction, { onClick: shareBackupFile, disabled: transferBusy, variant: "primary", style: { width: "100%", marginTop: 8 }, children: [_jsx(Share2, { size: 16 }), " Share backup"] })), _jsxs("div", { className: "wpb-backup-actions", style: { marginTop: 8 }, children: [backup === "export" && _jsx(UiAction, { onClick: downloadBackupFile, disabled: transferBusy, variant: canShareFiles ? "tonal" : "primary", children: canShareFiles ? "Download file" : "Download backup file" }), _jsx(UiAction, { onClick: copyExport, disabled: transferBusy, variant: backup === "csv" ? "primary" : "tonal", children: "Copy text" }), _jsx(UiAction, { onClick: closePanel, disabled: transferBusy, variant: "tonal", children: "Done" })] }), _jsx("div", { style: { fontSize: 13, color: C.faint, marginTop: 8, padding: "0 2px" }, children: backup === "csv" ? "Tip: paste this into a spreadsheet." : "Includes saved programs, cycles, completed workout history, body log, settings, custom exercises, gyms and notes. Unfinished workouts and unsaved program drafts remain on this device; finish or save those before moving to another device." })] })), backup === "import" && (_jsxs("div", { children: [_jsxs(UiAction, { onClick: () => fileInputRef.current?.click(), variant: "tonal", style: { width: "100%", marginBottom: 8 }, children: [_jsx(Upload, { size: 16 }), " Choose backup or Strong/Hevy CSV\u2026"] }), _jsx("input", { "aria-label": "Choose a backup file or a Strong or Hevy CSV export", ref: fileInputRef, type: "file", accept: "application/json,.json,.txt,.csv,text/csv,text/comma-separated-values", style: { display: "none" }, onChange: onPickFile }), _jsx("div", { "data-import-switch-hint": true, style: { fontSize: 12.5, color: C.muted, marginBottom: 8, lineHeight: 1.45, textAlign: "center" }, children: "Switching from Strong or Hevy? Export your workouts as CSV in that app and choose the file here. Review how it merges with your existing history before confirming." }), _jsx("div", { style: { fontSize: 13, color: C.faint, marginBottom: 8, textAlign: "center" }, children: "\u2014 or paste the backup text \u2014" }), _jsx("textarea", { "aria-label": "Backup text to restore", value: importText, onChange: e => { clearFileRead(); setImportMsg(null); setImportText(e.target.value); }, placeholder: "Paste backup text from your other device\u2026", className: "wpb-scroll mono wpb-backup-text" }), readingFile && _jsx("div", { role: "status", className: "wpb-backup-status", children: "Reading file…" }), importPreview && _jsx("div", { role: "status", style: { fontSize: 13, padding: "12px", marginTop: 8, borderRadius: 12, background: C.card, color: importPreview.ok ? C.text : C.danger, lineHeight: 1.6 }, children: importPreview.ok ? _jsxs(_Fragment, { children: [_jsx("strong", { children: importPreview.csv ? `Review your ${importPreview.csv.label} history` : "Review before restoring" }), importPreview.csv && _jsx(CsvImportSummary, { summary: importPreview.csv, unit: unit, csvUnit: csvUnit, onUnit: setCsvUnit }), _jsx("div", { style: { margin: "6px 0 10px", color: C.muted }, children: importPreview.csv ? "Changes to this device after merging the imported workouts:" : "Changes to this device after merging and checking the backup:" }), _jsxs("table", { "aria-label": "Backup merge impact", style: { width: "100%", borderCollapse: "collapse", fontSize: 12, textAlign: "right" }, children: [_jsx("thead", { children: _jsxs("tr", { children: [_jsx("th", { scope: "col", style: { textAlign: "left" }, children: "Records" }), ["Add", "Update", "Remove"].map(label => _jsx("th", { scope: "col", style: { padding: "6px 2px" }, children: label }, label))] }) }), _jsx("tbody", { children: (importPreview.csv ? importPreview.impact.filter(row => row.key === "history" || row.key === "custom") : importPreview.impact).map(row => _jsxs("tr", { "data-backup-row": row.key, style: { borderTop: `1px solid ${C.border}` }, children: [_jsx("th", { scope: "row", style: { textAlign: "left", padding: "7px 0", fontWeight: 600 }, children: row.label }), _jsx("td", { children: row.added }), _jsx("td", { children: row.updated }), _jsx("td", { style: { color: row.removed ? C.danger : C.text }, children: row.removed })] }, row.key)) })] }), _jsxs("div", { style: { marginTop: 10 }, children: [importPreview.incomingPreferences ? "This backup is newer: matching preferences may change." : "This device is newer: current preferences take priority.", " Matching records use the newest edit."] }), !!importPreview.historyDropped && _jsxs("div", { role: "alert", style: { marginTop: 8, color: C.danger }, children: [importPreview.historyDropped, " oldest workouts exceed the storage limit and will not be kept."] }), !!(importPreview.dropped || importPreview.skippedPrograms) && _jsxs("div", { style: { marginTop: 8 }, children: [importPreview.dropped, " unknown exercise slots and ", importPreview.skippedPrograms, " unsupported or empty programs will be skipped."] }), !!importPreview.draftConflicts?.length && _jsxs("div", { role: "alert", style: { marginTop: 8, color: C.danger }, children: ["Save or discard these drafts before restoring: ", importPreview.draftConflicts.join(", "), ". Your drafts have not changed."] }), _jsx("div", { style: { marginTop: 8, color: C.muted }, children: "Removals can come from synced deletions or compatibility checks. Undo restores the state before this import and is available here until you close this panel or leave Settings." })] }) : importPreview.msg }), importMsg && _jsx("div", { role: "status", style: { fontSize: 13, fontWeight: 600, color: importMsg.ok ? C.accentInk : C.danger, marginTop: 8, padding: "0 2px", lineHeight: 1.5 }, children: importMsg.msg }), undoSnap && (_jsx(UiAction, { onClick: undoImport, variant: "tonal", style: { width: "100%", marginTop: 8 }, children: "Undo this restore" })), _jsxs("div", { className: "wpb-backup-actions", style: { marginTop: 8 }, children: [_jsx(UiAction, { onClick: doImport, disabled: readingFile || !importPreview?.ok || !!importPreview.draftConflicts?.length, variant: "primary", children: importPreview?.csv ? "Import workouts" : "Confirm restore" }), _jsx(UiAction, { onClick: closePanel, disabled: transferBusy, variant: "tonal", children: "Cancel" })] }), _jsx("div", { style: { fontSize: 13, color: C.faint, marginTop: 8, padding: "0 2px" }, children: "Check additions, updates and removals before confirming." })] }))] });
-}
-
 // Share one accessible Settings switch without changing any owner's state or callbacks.
 function SettingsSwitch({ className = "", ...props }) {
     return _jsx("button", { type: "button", role: "switch", ...props, className: "pressable hit wpb-settings-switch" + (className ? " " + className : ""),
@@ -20040,7 +18404,6 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
     const [goalVal, setGoalVal] = useState("");
     const [editingGoal, setEditingGoal] = useState(false);
     const [pinEdit, setPinEdit] = useState(false); // editing the pinned note/setup for the open detail sheet
-    const pinRef = useRef(null);
     // Competitive tracker pattern: recently trained movements should be one tap away rather than
     // requiring a search through hundreds of exercises. Keep this as a filter (not a hidden rerank)
     // so the canonical anatomical ordering remains predictable when "All" is selected.
@@ -20092,7 +18455,8 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                         const goal = goals[e.id];
                         const best = bestFor(e.id);
                         return (_jsxs("button", { onClick: () => { setDetailId(e.id); setEditingGoal(false); setDetailTab("history"); setPinEdit(false); }, className: "pressable wpb-library-row", "aria-current": detailId === e.id ? "true" : undefined, "data-banned": isBanned ? "1" : "0", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", marginBottom: 6, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", textAlign: "left", opacity: isBanned ? 0.56 : 1 }, children: [_jsx("div", { className: "wpb-library-row-icon", style: { width: 36, height: 36, borderRadius: 8, background: C.bg2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, textTransform: "uppercase" }, children: PART_LABEL[e.part].slice(0, 3) }) }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [e.name, e.custom && _jsx("span", { style: { color: C.accentInk, fontSize: 11 }, children: " \u00B7 custom" })] }), _jsxs("div", { style: { fontSize: 13, color: C.faint }, children: [PART_LABEL[e.part], " \u00B7 ", e.type, " \u00B7 ", e.equip.length ? e.equip.length + " equip" : "bodyweight"] })] }), best > 0 && _jsxs("span", { className: "mono", style: { fontSize: 13, fontWeight: 600, color: C.muted, flexShrink: 0 }, children: [Math.round(best), unit] }), goal > 0 && _jsx(Target, { size: 13, color: best >= goal ? C.accentInk : C.faint, style: { flexShrink: 0 } }), isBanned && _jsx(Ban, { size: 13, color: C.danger, style: { flexShrink: 0 } }), _jsx(ChevronRight, { size: 16, color: C.faint, style: { flexShrink: 0 } })] }, e.id));
-                    }), onCreateCustom && (_jsxs("button", { className: "pressable", onClick: onCreateCustom, style: { width: "100%", marginTop: 6, padding: "12px", borderRadius: 12, border: `1px dashed ${C.border}`, background: "none", color: C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(PlusCircle, { size: 15 }), " Create a custom exercise"] }))] }), _jsx(Exit, { when: detail, children: detail && (_jsxs("div", { className: "wpb-backdrop wpb-exercise-detail", style: { position: "fixed", inset: 0, background: C.bg, zIndex: 80, display: "flex", flexDirection: "column", overflow: "hidden", animation: "fadeIn .16s both" }, children: [_jsxs("div", { className: "wpb-exercise-detail-header", style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 8, padding: "calc(env(safe-area-inset-top) + 10px) 14px 10px", borderBottom: `1px solid ${C.borderSoft}`, background: C.bg }, children: [_jsx("button", { "data-wpb-system-back": true, className: "pressable hit", onClick: () => setDetailId(null), "aria-label": "Back to library", style: { ...iconBtn(), width: 38, height: 38 }, children: _jsx(ChevronLeft, { size: 20 }) }), _jsx("div", { style: { flex: 1, minWidth: 0, fontSize: 18, fontWeight: 700, letterSpacing: -0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: detail.name })] }), _jsxs("div", { "data-exercisedetail": true, className: "wpb-scroll wpb-exercise-detail-body", style: { flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", padding: "12px 18px calc(env(safe-area-inset-bottom) + 26px)", maxWidth: 560, width: "100%", margin: "0 auto" }, children: [_jsxs("div", { className: "wpb-exercise-figure-wrap", style: { position: "relative", marginBottom: 12 }, children: [_jsx(ExerciseFigure, { ex: detail, height: 186 }), _jsxs("a", { href: `https://www.youtube.com/results?search_query=${encodeURIComponent("how to " + detail.name + " proper form")}`, target: "_blank", rel: "noopener noreferrer", className: "pressable", style: { position: "absolute", right: 10, top: 10, display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", padding: "7px 11px", borderRadius: 12, background: "rgba(0,0,0,.5)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 13, fontWeight: 700, border: `1px solid rgba(255,255,255,.16)` }, children: [_jsx(Video, { size: 13, color: C.danger }), " Demo"] })] }), _jsxs("div", { className: "wpb-exercise-meta", style: { fontSize: 13, color: C.muted, marginTop: 8, marginBottom: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }, children: [_jsxs("span", { children: [PART_LABEL[detail.part], " \u00B7 ", detail.type, " \u00B7 ", detail.rep[0], "\u2013", detail.rep[1], " reps"] }), detailTrend && _jsxs("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "2px 8px", borderRadius: 8 }, children: [detailTrend.sessionsCount, " logged"] }), isStretchFocus(detail.id, 3) && _jsx("span", { style: { fontSize: 11, fontWeight: 700, color: C.text, background: C.bg2, padding: "2px 8px", borderRadius: 8 }, children: "Stretch focus" })] }), pinEdit ? (_jsxs("div", { style: { marginBottom: 12, padding: 12, borderRadius: 12, background: C.bg2 }, children: [_jsxs("div", { style: { ...eyebrowAccent(), display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }, children: [_jsx(Pin, { size: 12 }), " Pinned note"] }), _jsx(SetupFieldsGrid, { ex: detail, value: exSetup[detail.id], onChange: (key, v) => onSetExSetup?.(detail.id, key, v) }), _jsx("textarea", { ref: pinRef, autoFocus: true, defaultValue: exNotes[detail.id] || "", placeholder: "e.g. pause on chest \u00B7 pinky on ring", rows: 3, className: "wpb-scroll", style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 13, resize: "vertical", fontFamily: "inherit" } }), _jsx("div", { style: { fontSize: 11, color: C.faint, margin: "6px 2px 10px" }, children: "Saved to this exercise and shown every time it comes up \u2014 in any workout or program." }), _jsxs("div", { style: { display: "flex", gap: 8 }, children: [_jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(detail.id, pinRef.current?.value || ""); setPinEdit(false); }, style: { flex: 1, padding: "10px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, fontSize: 15, cursor: "pointer" }, children: "Save note" }), (exNotes[detail.id] || exSetup[detail.id]) && _jsx("button", { className: "pressable", onClick: () => { onSetExNote?.(detail.id, ""); clearSetup(detail.id, exSetup[detail.id], onSetExSetup); setPinEdit(false); }, style: { padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.danger, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Remove" }), _jsx("button", { className: "pressable", onClick: () => setPinEdit(false), style: { padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer" }, children: "Cancel" })] })] })) : (exNotes[detail.id] || exSetup[detail.id]) ? (_jsxs("button", { className: "pressable", onClick: () => setPinEdit(true), style: { width: "100%", textAlign: "left", display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 12, padding: "10px 12px", borderRadius: 12, background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.text, cursor: "pointer" }, children: [_jsx(Pin, { size: 13, color: C.accentInk, style: { flexShrink: 0, marginTop: 1 } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx(SetupFieldsDisplay, { ex: detail, value: exSetup[detail.id] }), exNotes[detail.id] && _jsx("span", { style: { fontSize: 13, lineHeight: 1.4, whiteSpace: "pre-wrap" }, children: exNotes[detail.id] })] }), _jsx(Pencil, { size: 12, color: C.faint, style: { flexShrink: 0, marginTop: 1 } })] })) : (_jsxs("button", { className: "pressable", onClick: () => setPinEdit(true), style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, marginBottom: 12, padding: "9px 12px", borderRadius: 12, background: C.card, border: `1px dashed ${C.border}`, color: C.muted, cursor: "pointer" }, children: [_jsx(Pin, { size: 13, color: C.muted, style: { flexShrink: 0 } }), _jsxs("span", { style: { fontSize: 13 }, children: ["Pin a note", setupFieldsFor(detail).length ? " or setup" : "", "\u2026"] })] })), _jsx("div", { className: "wpb-premium-tabs wpb-exercise-tabs", role: "tablist", "aria-label": "Exercise detail sections", style: { display: "flex", gap: 4, background: C.card, borderRadius: 12, padding: 4, marginBottom: 16 }, children: [["history", "History"], ["charts", "Charts"], ["records", "Records"], ["about", "About"]].map(([k, label]) => (_jsx("button", { role: "tab", "aria-selected": detailTab === k, onClick: () => setDetailTab(k), className: "pressable", style: { flex: 1, padding: "8px 4px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: detailTab === k ? C.accent : "none", color: detailTab === k ? C.accentText : C.muted }, children: label }, k))) }), detailTab === "history" && (detailTrend ? (_jsx("div", { style: { marginBottom: 4 }, children: [...detailTrend.sessions].reverse().map((s, i) => {
+                    }), onCreateCustom && (_jsxs("button", { className: "pressable", onClick: onCreateCustom, style: { width: "100%", marginTop: 6, padding: "12px", borderRadius: 12, border: `1px dashed ${C.border}`, background: "none", color: C.muted, cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(PlusCircle, { size: 15 }), " Create a custom exercise"] }))] }), _jsx(Exit, { when: detail, children: detail && (_jsxs("div", { className: "wpb-backdrop wpb-exercise-detail", style: { position: "fixed", inset: 0, background: C.bg, zIndex: 80, display: "flex", flexDirection: "column", overflow: "hidden", animation: "fadeIn .16s both" }, children: [_jsxs("div", { className: "wpb-exercise-detail-header", style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 8, padding: "calc(env(safe-area-inset-top) + 10px) 14px 10px", borderBottom: `1px solid ${C.borderSoft}`, background: C.bg }, children: [_jsx("button", { "data-wpb-system-back": true, className: "pressable hit", onClick: () => setDetailId(null), "aria-label": "Back to library", style: { ...iconBtn(), width: 38, height: 38 }, children: _jsx(ChevronLeft, { size: 20 }) }), _jsx("div", { style: { flex: 1, minWidth: 0, fontSize: 18, fontWeight: 700, letterSpacing: -0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: detail.name })] }), _jsxs("div", { "data-exercisedetail": true, className: "wpb-scroll wpb-exercise-detail-body", style: { flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", padding: "12px 18px calc(env(safe-area-inset-bottom) + 26px)", maxWidth: 560, width: "100%", margin: "0 auto" }, children: [_jsxs("div", { className: "wpb-exercise-figure-wrap", style: { position: "relative", marginBottom: 12 }, children: [_jsx(ExerciseFigure, { ex: detail, height: 186 }), _jsxs("a", { href: `https://www.youtube.com/results?search_query=${encodeURIComponent("how to " + detail.name + " proper form")}`, target: "_blank", rel: "noopener noreferrer", className: "pressable", style: { position: "absolute", right: 10, top: 10, display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", padding: "7px 11px", borderRadius: 12, background: "rgba(0,0,0,.5)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 13, fontWeight: 700, border: `1px solid rgba(255,255,255,.16)` }, children: [_jsx(Video, { size: 13, color: C.danger }), " Demo"] })] }), _jsxs("div", { className: "wpb-exercise-meta", style: { fontSize: 13, color: C.muted, marginTop: 8, marginBottom: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }, children: [_jsxs("span", { children: [PART_LABEL[detail.part], " \u00B7 ", detail.type, " \u00B7 ", detail.rep[0], "\u2013", detail.rep[1], " reps"] }), detailTrend && _jsxs("span", { style: { fontSize: 11, fontWeight: 700, color: C.accentInk, background: C.accentDim, padding: "2px 8px", borderRadius: 8 }, children: [detailTrend.sessionsCount, " logged"] }), isStretchFocus(detail.id, 3) && _jsx("span", { style: { fontSize: 11, fontWeight: 700, color: C.text, background: C.bg2, padding: "2px 8px", borderRadius: 8 }, children: "Stretch focus" })] }), pinEdit ? _jsx(PinnedNoteEditor, { ex: detail, note: exNotes[detail.id], setup: exSetup[detail.id],
+                onNote: onSetExNote, onSetup: onSetExSetup, onClose: () => setPinEdit(false) }, detail.id) : (exNotes[detail.id] || exSetup[detail.id]) ? (_jsxs("button", { className: "pressable", onClick: () => setPinEdit(true), "aria-label": `Edit pinned note for ${detail.name}`, style: { width: "100%", textAlign: "left", display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 12, padding: "10px 12px", borderRadius: 12, background: C.accentDim, border: `1px solid ${C.accent}44`, color: C.text, cursor: "pointer" }, children: [_jsx(Pin, { size: 13, color: C.accentInk, style: { flexShrink: 0, marginTop: 1 } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx(SetupFieldsDisplay, { ex: detail, value: exSetup[detail.id] }), exNotes[detail.id] && _jsx("span", { style: { fontSize: 13, lineHeight: 1.4, whiteSpace: "pre-wrap" }, children: exNotes[detail.id] })] }), _jsx(Pencil, { size: 12, color: C.faint, style: { flexShrink: 0, marginTop: 1 } })] })) : (_jsxs("button", { className: "pressable", onClick: () => setPinEdit(true), style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, marginBottom: 12, padding: "9px 12px", borderRadius: 12, background: C.card, border: `1px dashed ${C.border}`, color: C.muted, cursor: "pointer" }, children: [_jsx(Pin, { size: 13, color: C.muted, style: { flexShrink: 0 } }), _jsxs("span", { style: { fontSize: 13 }, children: ["Pin a note", setupFieldsFor(detail).length ? " or setup" : "", "\u2026"] })] })), _jsx("div", { className: "wpb-premium-tabs wpb-exercise-tabs", role: "tablist", "aria-label": "Exercise detail sections", style: { display: "flex", gap: 4, background: C.card, borderRadius: 12, padding: 4, marginBottom: 16 }, children: [["history", "History"], ["charts", "Charts"], ["records", "Records"], ["about", "About"]].map(([k, label]) => (_jsx("button", { role: "tab", "aria-selected": detailTab === k, onClick: () => setDetailTab(k), className: "pressable", style: { flex: 1, padding: "8px 4px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: detailTab === k ? C.accent : "none", color: detailTab === k ? C.accentText : C.muted }, children: label }, k))) }), detailTab === "history" && (detailTrend ? (_jsx("div", { style: { marginBottom: 4 }, children: [...detailTrend.sessions].reverse().map((s, i) => {
                                         const top = s.sets.reduce((m, x) => (x.e1rm > m.e1rm ? x : m), s.sets[0]);
                                         return (_jsxs("div", { className: "wpb-exercise-history-session", style: { background: C.card, borderRadius: 16, padding: "13px 14px", marginBottom: 8 }, children: [_jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }, children: [_jsx("span", { style: { fontSize: 15, fontWeight: 700 }, children: new Date(s.date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }) }), _jsxs("span", { className: "mono", style: { fontSize: 13, color: C.faint }, children: ["~", Math.round(top.e1rm), " ", s.unit, " e1RM"] })] }), s.sets.map((set, si) => {
                                                     const isTop = set === top && s.sets.length > 1;
@@ -20130,7 +18494,7 @@ function LibraryView({ onBack, banned = [], onBan, onSetBan, goals = {}, onSetGo
                                         setDetailId(null); }, className: "pressable", "aria-label": "Ban from all programs", "aria-pressed": banned.includes(detail.id), style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${banned.includes(detail.id) ? C.border : C.dangerDim}`, background: "none", color: banned.includes(detail.id) ? C.muted : C.danger, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }, children: [_jsx(Ban, { size: 15 }), " ", banned.includes(detail.id) ? "Banned \u2014 tap to unban" : "Ban from all programs"] })] })] })) })] }));
 }
 const INTRO_VERSION = 5; // bump when onboarding content changes → returning users see it once more
-const WHATS_NEW_VERSION = 228; // bump when there's an update worth showing existing users on Home
+const WHATS_NEW_VERSION = 232; // bump when there's an update worth showing existing users on Home
 /* How much training history to keep.
 
    Measured, not guessed: a typical logged session (7 exercises, 3–5 sets each) serialises to ~1,095
@@ -20166,6 +18530,25 @@ function StorageRecovery({ state, onRetry, onRestore }) {
     const raw = state.error?.raw;
     const hasRaw = typeof raw === "string";
     const slow = state.status === "slow";
+    const ownershipError = state.error?.code?.startsWith('APP_STORAGE_');
+    if (ownershipError) return _jsxs('section', { className: 'wpb-storage-gate', 'data-storage-busy': state.error.code === 'APP_STORAGE_BUSY', 'data-storage-changed': state.error.code === 'APP_STORAGE_CHANGED', 'aria-labelledby': 'storage-gate-title', children: [
+        _jsx(HardDrive, { size: 30, 'aria-hidden': true }),
+        _jsx('h1', { id: 'storage-gate-title', children: state.error.code === 'APP_STORAGE_BUSY' ? 'Already open elsewhere' : state.error.code === 'APP_STORAGE_CHANGED' ? 'Training changed elsewhere' : 'Storage protection unavailable' }),
+        _jsx('p', { role: 'status', children: state.error.message }),
+        _jsx('p', { children: state.error.code === 'APP_STORAGE_CHANGED' ? 'Saving in this window is paused. Keep its backup before reloading if you need to recover changes made here.' : 'This window has not changed your saved training or unfinished workout.' }),
+        hasRaw && _jsx(UiAction, { variant: 'tonal', onClick: () => {
+            try {
+                const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
+                const a = document.createElement('a'); a.href = url; a.download = 'pursuit-iron-window-backup.json';
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1500);
+                setMessage('Download requested. Check Files or Downloads before reloading.');
+            } catch { setMessage('Could not download this backup. Keep this window open and try again.'); }
+        }, children: 'Download this window’s backup' }),
+        _jsx(UiAction, { variant: 'primary', onClick: state.error.code === 'APP_STORAGE_CHANGED' ? () => location.reload() : onRetry,
+            children: state.error.code === 'APP_STORAGE_CHANGED' ? 'Reload' : 'Try again' }),
+        message && _jsx('p', { role: 'status', children: message })
+    ] });
     const actionStyle = { width: "100%", minHeight: 48, padding: "12px 16px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, fontWeight: 600, cursor: "pointer" };
     const pickFile = e => {
         const file = e.target.files?.[0];
@@ -20411,6 +18794,7 @@ function GenerationProgress({ label, onCancel }) {
 }
 
 function App() {
+    appStorageOwnership.require();
     const [view, setView] = useState("home");
     const scrollMemory = useRef({}); // per-screen scroll restoration; views return exactly where the user left them
     const planNavigationMemory = useRef(Object.create(null));
@@ -20551,6 +18935,23 @@ function App() {
     const planChoiceLock = useRef(false);
     const [exNotes, setExNotes] = useState({}); // pinned per-exercise notes (id → text), persist across all sessions
     const [exSetup, setExSetup] = useState({}); // pinned per-exercise physical setup (id → {seat, back, hooks, ...}), shown integrated with the note
+    const updateExerciseSetup = (id, key, value) => setExSetup(previous => {
+        const fields = { ...(previous[id] || {}) };
+        const text = (value || "").trim();
+        if (text) fields[key] = text;
+        else delete fields[key];
+        const next = { ...previous };
+        if (Object.keys(fields).length) next[id] = fields;
+        else delete next[id];
+        return next;
+    });
+    const updatePinnedNote = (id, text) => setExNotes(previous => {
+        const next = { ...previous };
+        const value = (text || "").trim();
+        if (value) next[id] = value;
+        else delete next[id];
+        return next;
+    });
     const [perf, setPerf] = useState({});
     const [history, setHistoryRaw] = useState([]);
     const [custom, setCustomRaw] = useState([]);
@@ -21082,7 +19483,7 @@ function App() {
         setLoadState({ status: "loading" });
         const slow = setTimeout(() => { if (alive)
             setLoadState({ status: "slow" }); }, 5000);
-        (safeStart ? Promise.resolve(null) : (recoveryStore ? Promise.resolve(recoveryStore) : loadStore())).then(d => {
+        appStorageOwnership.acquire().then(() => safeStart ? null : (recoveryStore || loadStore())).then(d => {
             if (!alive)
                 return;
             clearTimeout(slow);
@@ -21199,20 +19600,12 @@ function App() {
     }, [loadAttempt, recoveryStore, safeStart]);
     // persist on change (after initial load)
     const storageWarned = useRef(false);
-    const crossTabWarned = useRef(false);
-    // The native `storage` event fires in every OTHER tab/window when one of them writes to this
-    // origin's storage — never in the tab that made the write. That's exactly the signal needed here:
-    // if this key changed while THIS tab is open, another tab of the app is also open, and whichever
-    // one saves last will silently overwrite the other's data (a finished workout only saved in the
-    // other tab would be lost with no error). We don't attempt to merge or auto-reload — either could
-    // discard whatever this tab hasn't saved yet — just surface it once so the user can act (finish up
-    // in one tab, then reload the other before using it).
+    const externalStorageChange = useRef(() => {});
+    // Current app windows share the exclusive lease. An older build or external writer may not.
+    // Suspend that stale window and retain its own backup instead of autosaving over the new facts.
     useEffect(() => {
         const onStorage = (e) => {
-            if (e.key !== KEY || crossTabWarned.current)
-                return;
-            crossTabWarned.current = true;
-            setAppToast({ msg: "Pursuit Iron is open in another tab or window — use just one at a time, or a save could be lost. Reload the other one when you're done here." });
+            if (e.key === KEY && appStorageOwnership.writable()) externalStorageChange.current();
         };
         window.addEventListener("storage", onStorage);
         return () => window.removeEventListener("storage", onStorage);
@@ -21445,6 +19838,13 @@ function App() {
         setView("home");
     };
     const exportData = () => JSON.stringify({ v: STORE_VERSION, savedAt: Date.now(), exportedAt: Date.now(), tombs, saved: withLegacy(saved, "saved"), cycles: withLegacy(cycles, "cycles"), banned, equipDefault, gyms, activeGymId, unit, unitChosen, experience, loadMode, perf, history, custom, theme, bodyweight, sex, birth, birthEst, age, bwLog, measurements, reminders, restAutoStart, warmupCard, restScale, haptics, minInc, plates, goals, exNotes, exSetup, injuryLog, seenIntroV, seenWhatsNew, lastBackup, installDismissedAt, pinnedId, canaryResearch, selectivePromotionRuntime }, null, 2);
+    externalStorageChange.current = () => {
+        if (!loaded || !appStorageOwnership.writable()) return;
+        const raw = exportData();
+        appStorageOwnership.release();
+        setLoaded(false);
+        setLoadState({ status: 'error', error: Object.assign(new Error('Another window changed the training data. Close other app windows before reloading this one.'), { code: 'APP_STORAGE_CHANGED', raw }) });
+    };
     // Local calendar date for exports — slicing toISOString() takes the UTC date, which puts an
     // evening session in any UTC-negative timezone on the *next* day in the CSV.
     const isoLocal = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -22819,7 +21219,7 @@ function App() {
     // finishing/discarding.
     const completedLiveSession = snapshot => !!(snapshot?.sessionId && history.some(entry => entry.id === snapshot.sessionId));
     useEffect(() => {
-        if (!loaded || view === "session") {
+        if (!loaded || safeStart || view === "session") {
             setLiveSession(null);
             return;
         }
@@ -22835,7 +21235,7 @@ function App() {
         catch {
             setLiveSession(null);
         }
-    }, [view, saved, history, loaded]);
+    }, [view, saved, history, loaded, safeStart]);
     const resumeLive = () => {
         setDiscardArmed(false);
         try {
@@ -22876,6 +21276,10 @@ function App() {
         setDiscardArmed(false);
     };
     const startSession = (day, wk, ownerProgram) => {
+        if (safeStart || !appStorageOwnership.writable()) {
+            setAppToast({ msg: 'Exit recovery mode and reopen your saved training before starting a workout.' });
+            return;
+        }
         // React state updates are asynchronous: the selected owner must travel with
         // its day instead of borrowing the previously open program for guards/saves.
         if (!ownerProgram?.days?.some(row => row.id === day?.id)) {
@@ -23368,16 +21772,7 @@ function App() {
                                         setBirthEst(false);
                                     } }, bwLog: bwLog, onLogBodyweight: logBodyweight, goals: goals, onRepeat: repeatWorkout, measurements: measurements, onLogMeasurement: logMeasurement, cycles: cycles, saved: saved })) : view === "profile" ? (_jsx(ProfileView, { history: history, bodyweight: bodyweight, sex: sex, age: age, unit: unit, onStrength: () => { setProgressFocus("strength"); navToTab("progress"); }, onSettings: () => { setSettingsFocus("profile"); navToTab("settings"); } })) : view === "settings" ? (_jsx(SettingsView, { experience: experience, setExperience: setExperience, selfTestData: { saved, history, perf }, gymName: activeGym ? activeGym.name : "All equipment", gymCount: gyms.length, onGyms: () => setGymsOpen(true), initialFocus: settingsFocus, onFocusHandled: () => setSettingsFocus(null), theme: theme, setTheme: chooseTheme, unit: unit, setUnit: switchUnit, loadMode: loadMode, setLoadMode: setLoadMode, restAutoStart: restAutoStart, setRestAutoStart: setRestAutoStart, warmupCard: warmupCard, setWarmupCard: setWarmupCard, haptics: haptics, setHaptics: setHaptics, restScale: restScale, setRestScale: setRestScale, reminders: reminders, setReminders: setReminders, minInc: minInc, setMinInc: setMinInc, plates: plates, setPlates: setPlates, bodyweight: bodyweight, setBodyweight: setBodyweight, sex: sex, setSex: setSex, age: age, birth: birth, setBirth: (b) => { setBirth(b); setBirthEst(false); }, birthEst: birthEst, bannedCount: banned.length, customCount: custom.length, historyCount: history.length, onClearBanned: () => { const prev = banned; setBanned([]); if (prev.length)
                                         setAppToast({ msg: `Cleared ${prev.length} banned exercise${prev.length === 1 ? "" : "s"}`, undo: () => { setBanned(prev); setAppToast(null); } }); }, onClearHistory: () => { const prev = history; setHistory([]); if (prev.length)
-                                        setAppToast({ msg: `Cleared ${prev.length} logged workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, onResetAll: resetAll, onExport: () => exportData(), onBackupSaved: () => setLastBackup(Date.now()), onExportCSV: exportCSV, onExportBodyCSV: exportBodyCSV, onImport: importData, onPreviewImport: (text, options) => importData(text, { ...(options || {}), preview: true }), onLibrary: () => pushView("library", "settings"), onImportProgram: importProgramText, onGallery: () => pushView("gallery", "settings"), onShowIntro: () => { setSeenIntroV(0); rootView("home"); }, onShowWhatsNew: () => setWhatsNewModal(true) })) : view === "library" ? (_jsx(LibraryView, { onBack: goBack, navigationMemory: screenNavigationMemory.current.library, banned: banned, onBan: addBan, onSetBan: setBanFor, goals: goals, onSetGoal: setGoalWeight, unit: unit, history: history, onCreateCustom: () => pushView("wizard", "library"), onCompare: () => { setCompareMode("exercises"); pushView("compare", "library"); }, exNotes: exNotes, onSetExNote: (id, text) => setExNotes(prev => { const n = { ...prev }; const t = (text || "").trim(); if (t)
-                                        n[id] = t;
-                                    else
-                                        delete n[id]; return n; }), exSetup: exSetup, onSetExSetup: (id, key, value) => setExSetup(prev => { const cur = { ...(prev[id] || {}) }; const v = (value || "").trim(); if (v)
-                                        cur[key] = v;
-                                    else
-                                        delete cur[key]; const n = { ...prev }; if (Object.keys(cur).length)
-                                        n[id] = cur;
-                                    else
-                                        delete n[id]; return n; }) })) : view === "compare" ? (_jsx(CompareView, { saved: saved, initialMode: compareMode, onBack: goBack })) : view === "gallery" ? (_jsx(GalleryView, { onBack: goBack, onImport: importProgramText })) : view === "cycles" ? (_jsx(CyclesView, { onBack: () => { setFocusCycle(null); goBack(); }, focusId: focusCycle, cycles: cycles, saved: saved, history: history, cycleInfo: liveCycleInfo, onNew: () => pushView("cycleWizard", "cycles"), onOpenBlock: (c, i) => openCycleBlock(c, i, "cycles"), onCompleteBlock: completeCycleBlock, onDelete: deleteCycle, onOpenCycle: (c) => openCycleDetail(c.id, "cycles"), onReview: (c, i) => { setReviewOf({ cycleId: c.id, blockIdx: i }); pushView("blockReview", "cycles"); } })) : view === "cycleDetail" ? ((() => {
+                                        setAppToast({ msg: `Cleared ${prev.length} logged workout${prev.length === 1 ? "" : "s"}`, undo: () => { setHistory(prev); setAppToast(null); } }); }, onResetAll: resetAll, onExport: () => exportData(), onBackupSaved: () => setLastBackup(Date.now()), onExportCSV: exportCSV, onExportBodyCSV: exportBodyCSV, onImport: importData, onPreviewImport: (text, options) => importData(text, { ...(options || {}), preview: true }), onLibrary: () => pushView("library", "settings"), onImportProgram: importProgramText, onGallery: () => pushView("gallery", "settings"), onShowIntro: () => { setSeenIntroV(0); rootView("home"); }, onShowWhatsNew: () => setWhatsNewModal(true) })) : view === "library" ? (_jsx(LibraryView, { onBack: goBack, navigationMemory: screenNavigationMemory.current.library, banned: banned, onBan: addBan, onSetBan: setBanFor, goals: goals, onSetGoal: setGoalWeight, unit: unit, history: history, onCreateCustom: () => pushView("wizard", "library"), onCompare: () => { setCompareMode("exercises"); pushView("compare", "library"); }, exNotes: exNotes, onSetExNote: updatePinnedNote, exSetup: exSetup, onSetExSetup: updateExerciseSetup })) : view === "compare" ? (_jsx(CompareView, { saved: saved, initialMode: compareMode, onBack: goBack })) : view === "gallery" ? (_jsx(GalleryView, { onBack: goBack, onImport: importProgramText })) : view === "cycles" ? (_jsx(CyclesView, { onBack: () => { setFocusCycle(null); goBack(); }, focusId: focusCycle, cycles: cycles, saved: saved, history: history, cycleInfo: liveCycleInfo, onNew: () => pushView("cycleWizard", "cycles"), onOpenBlock: (c, i) => openCycleBlock(c, i, "cycles"), onCompleteBlock: completeCycleBlock, onDelete: deleteCycle, onOpenCycle: (c) => openCycleDetail(c.id, "cycles"), onReview: (c, i) => { setReviewOf({ cycleId: c.id, blockIdx: i }); pushView("blockReview", "cycles"); } })) : view === "cycleDetail" ? ((() => {
                                     const dc = cycles.find(c => c.id === detailCycleId);
                                     if (!dc)
                                         return _jsx(CyclesView, { onBack: goBack, cycles: cycles, saved: saved, onNew: () => pushView("cycleWizard", "cycles"), onOpenBlock: (c, i) => openCycleBlock(c, i, "cycles"), onCompleteBlock: completeCycleBlock, onDelete: deleteCycle, onOpenCycle: (c) => openCycleDetail(c.id, "cycles") });
@@ -23465,16 +21860,7 @@ function App() {
                                                Resolving by id at render makes the signature incapable of drifting: there is one
                                                day, the program's. `sessionDay` stays the pointer (it carries quick/freestyle days
                                                that are not in `saved` yet, hence the fallback). */
-                                            program: program, injuryLog, day: liveDay, weekIndex: sessionWeek, unit: unit, perf: perf, onExit: leaveSession, onFinish: finishSession, onSaveRoutine: saveRoutine, restAutoStart: restAutoStart, warmupCard: warmupCard, onSetWarmupCard: setWarmupCard, restScale: restScale, onBan: addBan, banned: banned, history: history, loadMode: loadMode, onEditHistory: editHistoryEntry, goals: goals, onSetGoal: setGoalWeight, onUpdateProgramExercise: updateProgramExercise, onSetRest: setProgramRest, exNotes: exNotes, onSetExNote: (id, text) => setExNotes(prev => { const n = { ...prev }; const t = (text || "").trim(); if (t)
-                                                n[id] = t;
-                                            else
-                                                delete n[id]; return n; }), exSetup: exSetup, onSetExSetup: (id, key, value) => setExSetup(prev => { const cur = { ...(prev[id] || {}) }; const v = (value || "").trim(); if (v)
-                                                cur[key] = v;
-                                            else
-                                                delete cur[key]; const n = { ...prev }; if (Object.keys(cur).length)
-                                                n[id] = cur;
-                                            else
-                                                delete n[id]; return n; }), onSetExLoadInc: setProgramExLoadInc })) : program ? (_jsx(ProgramView
+                                            program: program, injuryLog, day: liveDay, weekIndex: sessionWeek, unit: unit, perf: perf, onExit: leaveSession, onFinish: finishSession, onSaveRoutine: saveRoutine, restAutoStart: restAutoStart, warmupCard: warmupCard, onSetWarmupCard: setWarmupCard, restScale: restScale, onBan: addBan, banned: banned, history: history, loadMode: loadMode, onEditHistory: editHistoryEntry, goals: goals, onSetGoal: setGoalWeight, onUpdateProgramExercise: updateProgramExercise, onSetRest: setProgramRest, exNotes: exNotes, onSetExNote: updatePinnedNote, exSetup: exSetup, onSetExSetup: updateExerciseSetup, onSetExLoadInc: setProgramExLoadInc })) : program ? (_jsx(ProgramView
                                         /* ⚠ setProgram STAYS THE DRAFT-LOCAL SETTER. Routing every edit through `commitProgram`
                                            wrote each change straight to `saved` and broke the draft model outright —
                                            gates/draftlifecycle failed 12 checks, starting with "the SAVED copy is untouched by
@@ -23514,16 +21900,7 @@ function App() {
                                                 const idx = c.blockIds.indexOf(program.id);
                                                 return { name: c.name, blockNum: idx + 1, blockCount: c.blockIds.length, label: c.blockMeta?.[idx]?.label || null, open: () => openCycleDetail(c.id, "program") };
                                             })(), onWeekChange: (w) => { if (program)
-                                                setProgWeek(m => ({ ...m, [program.id]: w })); }, exNotes: exNotes, onSetExNote: (id, text) => setExNotes(prev => { const n = { ...prev }; const t = (text || "").trim(); if (t)
-                                                n[id] = t;
-                                            else
-                                                delete n[id]; return n; }), exSetup: exSetup, onSetExSetup: (id, key, value) => setExSetup(prev => { const cur = { ...(prev[id] || {}) }; const v = (value || "").trim(); if (v)
-                                                cur[key] = v;
-                                            else
-                                                delete cur[key]; const n = { ...prev }; if (Object.keys(cur).length)
-                                                n[id] = cur;
-                                            else
-                                                delete n[id]; return n; }), onSetExLoadInc: setProgramExLoadInc, perf: perf })) : (_jsx(Splash, {})) }, view)] }), liveDockVisible && (() => {
+                                                setProgWeek(m => ({ ...m, [program.id]: w })); }, exNotes: exNotes, onSetExNote: updatePinnedNote, exSetup: exSetup, onSetExSetup: updateExerciseSetup, onSetExLoadInc: setProgramExLoadInc, perf: perf })) : (_jsx(Splash, {})) }, view)] }), liveDockVisible && (() => {
                         const prog = saved.find(p => p.id === liveSession.programId);
                         const day = prog?.days.find(d => d.id === liveSession.dayId);
                         const doneSets = Array.isArray(liveSession.data) ? liveSession.data.reduce((n, e) => n + (Array.isArray(e?.sets) ? e.sets.filter(s => s?.done && !s.warm).length : 0), 0) : 0;
@@ -23594,7 +21971,7 @@ function App() {
 export default function RootApp() {
     return _jsx(ErrorBoundary, { full: true, children: _jsx(App, {}) });
 }
-export { programSetupChips, volumeZone, partZone, CHANGELOG, CHANGELOG_ITEMS, WHATS_NEW_MAX, phaseTone, navPush, navPop, shareSession, shareStrengthScore, templateFacets, templateEmphasis, ExerciseFigure, figurePose, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, previewVolumeNudge, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, recordReleaseDiag, readReleaseDiagnostics };
+export { programSetupChips, volumeZone, partZone, phaseTone, navPush, navPop, shareSession, shareStrengthScore, templateFacets, templateEmphasis, ExerciseFigure, figurePose, assertFigureCoverage, FIGURE_GENERIC_OK, Exit, previewVolumeNudge, capWords, WHATS_NEW_WORDS, homeCardPlan, HOME_INSIGHT_BUDGET, WhatsNewCard, recordReleaseDiag, readReleaseDiagnostics };
 export { GOALS, THEMES, TEMPLATE_FILTER_GROUPS, fitChip, fitText, fitFont, wrapList, drawRecapCard, volumeAdvice, ICON_CHOICES, ICON_GROUPS, ICON_COLORS, iconForProgram, iconForCycle, iconColorOf, runSelfTest };
 // UI verification seams; computation is imported directly from engine-api.js.
 export { loadStore, saveStore, Wizard, ConvertProgramToCycleSheet };

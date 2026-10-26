@@ -20,7 +20,8 @@ export function withProgressionChoices(program, choices = {}) {
         if (style === 'auto') { delete progStyle[id]; delete progStyleLifter[id]; }
         else { progStyle[id] = style; progStyleLifter[id] = true; }
     }
-    return { ...program, progStyle, progStyleLifter };
+    return { ...program, progStyle: Object.keys(progStyle).length ? progStyle : undefined,
+        progStyleLifter: Object.keys(progStyleLifter).length ? progStyleLifter : undefined };
 }
 // Retain the source of a session choice; timestamps and unrelated edits do not
 // establish a conflict. Progression is exercise-wide, including paired slots.
@@ -177,10 +178,13 @@ export function withWorkoutProgramChanges(program, dayId, changes = [], reviewWe
 // Home, Preview and the change review are projections of the actual Workout prescription.
 export function buildSessionReview(program, day, weekIndex, unit, history = [], perf = {}) {
     const records = normalizeHistoryRevisions(history).entries;
+    const hasChoices = Object.keys(program.sessionPlanChoices || {}).length > 0;
     const exercises = sessionPrescriptionRows(program, day, weekIndex).flatMap(({ id, ex, slot, cell }) => {
         const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
         const proposedSuggestion = sessionSuggestion(program, day, slot, perf, unit, weekIndex, history, false);
-        const suggestion = sessionSuggestion(program, day, slot, perf, unit, weekIndex, history);
+        // Without a saved choice, the effective result is exactly the proposal.
+        // Replaying all history twice would add no information to this review.
+        const suggestion = hasChoices ? sessionSuggestion(program, day, slot, perf, unit, weekIndex, history) : proposedSuggestion;
         const proposed = prescribeSets(program, day, ex, slot, weekIndex, unit, proposedSuggestion, perf, perf, history, false).filter(set => !set.warm && !set.sub);
         const effective = prescribeSets(program, day, ex, slot, weekIndex, unit, suggestion, perf, perf, history, false).filter(set => !set.warm && !set.sub);
         const change = sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cell, range,

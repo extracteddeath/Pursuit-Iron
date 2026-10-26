@@ -126,8 +126,9 @@ console.log('PASS 6 merge: nothing lost, settings untouched, idempotent re-impor
 
 // 7. The app routes CSV through the existing restore path, with the unit question and Undo.
 const app = fs.readFileSync(new URL('../modules/App.js', import.meta.url), 'utf8');
+const backup = fs.readFileSync(new URL('../modules/backup-restore-panel.js', import.meta.url), 'utf8');
 assert.match(app, /const csvSource = !replace && detectWorkoutCsv\(json\);/, 'importData detects CSV before backup parsing');
 assert.match(app, /workoutCsvToStore\(json, \{ catalog, unit, weightUnit: csvWeightUnit \}\)/);
-assert.ok(app.includes('accept: "application/json,.json,.txt,.csv,text/csv,text/comma-separated-values"'), 'the restore picker accepts CSV');
-assert.ok(app.includes('onPreviewImport(importText, { csvWeightUnit: csvUnit })') && app.includes('onImport(importText, { csvWeightUnit: csvUnit })'), 'preview and import use the same unit choice');
+assert.ok(backup.includes("accept: 'application/json,.json,.txt,.csv,text/csv,text/comma-separated-values'"), 'the restore picker accepts CSV');
+assert.ok(backup.includes('onPreviewImport(importText, { csvWeightUnit: csvUnit })') && backup.includes('onImport(importText, { csvWeightUnit: csvUnit })'), 'preview and import use the same unit choice');
 console.log('PASS 7 the restore panel previews, imports and undoes CSV history through one path.');

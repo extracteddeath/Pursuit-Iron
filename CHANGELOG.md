@@ -1,3 +1,161 @@
+## Build 933 / M386 — Safe decimal training-max editing and truthful review
+
+- Preserve decimal points and intermediate text while entering a training max. Typing 212.5 previously produced 2125, which could multiply percentage-based workout loads.
+- Stage all maxes until Apply; Cancel, Close and dismissal discard the staged edits. Apply updates the existing program draft, which still requires reviewed Save. Reject invalid or nonfinite input rather than silently stripping characters.
+- Keep the existing 90% one-rep-max conversion and canonical loading-step rounding in one inline conversion panel. Back/Escape closes conversion first and restores focus to its lift.
+- Show canonical staged percentage previews and exact training-max before/after values with units in save/restore review. Preserve stored-unit conversion and untouched maxes, prescriptions, logged history and entered live sets.
+- Extract the editor and entry card into one feature owner, with labelled scalable fields and a persistent Close/Apply/Cancel frame. Retire 27 inline styles, tighten the combined budget to 2,426 and add no priority overrides.
+- Extend existing M225 browser and B905 review contracts; retain percentage workout, lb/kg, deload, protected resume and actual finish coverage. Physical Android/IME/TalkBack acceptance remains separate.
+
+## Build 932 / M385 — Consistent pinned-note and setup editing
+
+- Stage physical setup and note text together in Program, Workout and Library. Save applies both; Cancel discards both. Remove clears the saved note and every saved setup field, including older equipment settings.
+- Use one controlled editor and one pair of App persistence callbacks. Keep saved cues exercise-wide while scoping the active Program editor to its selected day and slot, including repeated exercises.
+- Place the Program editor across the exercise card, with labelled setup inputs, 44px edit targets, scalable text, wrapping actions and visible focus/forced-color borders. Preserve the closed Workout/Focus logging layout.
+- Retire 29 static inline styles into one shared CSS family and tighten the presentation budget from 2,482 to 2,453 without adding priority overrides. Engine policy and storage schema stay unchanged.
+- Extend the existing R54 journey with both themes, narrow/enlarged-text reflow, reachable actions, Save/Cancel/Remove, old setup-field retention and explicit clearing, reload, cross-screen persistence and unchanged saved prescriptions, history and live set values.
+
+## Build 931 / M384 — Usable exercise actions and one presentation owner
+
+- Program exercise options scale the title, action labels and complete descriptions with the text-size setting. A persistent heading keeps Close visible while the action list scrolls.
+- Restore the existing sheet drag-to-dismiss handler across options, gyms, program switching and achievements: presentation flags no longer prevent initialization by node identity. Keyboard focus, Escape and actual touch dismissal use the same shared owners.
+- Keep removal confirmation inside the sheet, reset it on dismissal, and preserve all existing note/info/ban/removal handlers. Do not offer supersets when disabled or on the last exercise; protect the final remaining exercise from removal.
+- Extract the one options renderer from App, retire 17 inline styles and 34 priority overrides, and tighten the measured ownership guards. Engine policy, prescriptions, persistence and Workout/Focus geometry remain unchanged.
+- Extend existing R54 with 320/393/834/1280px and 100/200% text, scroll/Close, focus, forced colors, real browser touch, confirmation Cancel/reset and constrained actions; retain B831 contrast, geometry and motion checks on the semantic structure.
+
+## Build 930 / M383 — Accurate selected-week sharing and readable plan inspection
+
+- Share as text now reads the selected executable week, including alternating exercises, rotating days, deloads and authored targets. Percentage loads come from the same canonical reader as Workout, preserving units and rep-out sets instead of reimplementing scheme formulas.
+- Share program has a named, height-bounded dialog, labelled selectable text, visible Close/Copy controls, contained keyboard focus, and explicit clipboard success/failure feedback. It follows enlarged text, reduced motion and forced colors.
+- Load-wave values and week labels follow text size, retain full accessible names, and scroll within the chart at narrow widths. Keep the existing planned-set and relative bar-height computations.
+- Move sharing into one feature owner and retire 19 static inline style objects across sharing and the chart. The counted combined presentation budget tightens from 2,518 to 2,499, without new CSS priorities or engine/persistence changes.
+- Extend existing R54 selected/deload-week and responsive sharing coverage, R53 canonical chart/keyboard coverage, and M225 percentage export parity. Physical Android keyboard, TalkBack and interruption acceptance remain separate.
+
+## Build 929 / M382 — Readable, accessible volume inspection
+
+- Expandable muscle headings and granular details have 44px targets and follow the shared text-size tokens. Contributor rows place long session labels above exercise names on compact layouts.
+- Block volume labels stay visible while scrolling later weeks; the table supports keyboard scrolling and enlarged text. Chevron motion respects reduced motion and focus stays visible in forced colors.
+- Retire 38 static inline style objects into the existing themed stylesheet, and include both extracted volume owners in the existing style-debt budget. Engine policy, volume calculations and saved training keep their current owners.
+- Extend the existing R53 browser journey with twelve canonical contributions, long labels, 100/200% text at 320/393/900/1280px, native keyboard controls, granular details, block/deload parity and immutable saved prescriptions.
+
+## Build 928 / M381 — Complete, readable muscle-volume contributors
+
+- Expanded muscle drilldowns show every contributor instead of stopping after eight; session and exercise labels wrap rather than being visually truncated.
+- Canonical MEV/MAV/MRV landmarks, fractional muscle credits, program generation, active prescriptions, workout logging, and history remain unchanged.
+- Extend the existing R53 browser contract to verify full contributor readability. Retain Material 3 Expressive motion and spacing owners, publish only after all release and browser checks, and keep physical Android/TalkBack as a separate acceptance gate.
+
+## Build 927 / M380 — One owner for volume presentation and accessible drilldowns
+
+- Extract shared muscle-volume bars and block-volume ramp into `modules/program-volume-surfaces.js`. Plan, Program and Progress use exactly one renderer and the unchanged canonical engine callbacks for zone thresholds, working sets and fractional muscle credits.
+- Replace pointer-only volume-contributor headings with native keyboard-operable controls, accessible labels, `aria-expanded`, and focus-visible styling. Logged-history rows remain ordinary non-interactive labels.
+- Retire obsolete historical volume-zone design commentary but preserve the MEV/MAV/MRV boundaries and composite-head MRV guard.
+- Extend existing R53 Plan browser contract with Enter and Space toggling and no saved-data mutation. All existing engine, lifecycle, program/workout, accessibility, responsive, offline and hosted integrity gates remain required; real Android/TalkBack acceptance is separate.
+
+## Build 926 / M379 — Single-owner Plan load-wave presentation
+
+- Extract the Plan Blueprint **Volume load wave** from the oversized App owner into `modules/program-load-wave.js` without duplicating prescriptions, week counts, or training state. Pass only the existing palette from App; get planned sets from the unchanged canonical engine.
+- Keep one-based weeks and the configured optional final deload; do not confuse planned working sets with fractional weekly muscle-volume credit. Reduce combined production UI source size and remove retrospective inline comments instead of adding a compatibility adapter or CSS overrides.
+- Extend the existing R53 real-browser Plan contract to assert ordered week numbers, nonnegative planned sets and no misplaced deload; require exact-head lifecycle, engine, browser and release integrity, then hosted Pages byte checks. Android IME/TalkBack remains a separate physical-device gate.
+
+## Build 925 / M378 — Stable selection geometry with one motion owner
+
+- Plan, Progress and Library segment changes keep adjacent choices and touch targets stationary while their measured selected indicator moves. Remove redundant indicator stretch/corner springs; keep the quiet root-navigation budget from Build 924.
+- The workout effort-scale spring remains, as do keyboard selection, theme-aware indicator color, reduced motion, accessibility and all canonical engine 0.65.9, persisted data, logging, and backup boundaries.
+- Update the existing B831 browser contract to require stable selected geometry; full lifecycle, engine parity, browser, offline and hosted integrity gates are mandatory before launch publication. Real Android IME/TalkBack acceptance remains separate.
+
+## Build 924 / M377 — Calmer root navigation without competing animation
+
+- Ordinary Home/Plan/Progress/Profile/Settings navigation now animates at most the lead content card, rather than staggering up to five cards and bouncing the newly selected tab icon on top of the indicator. Preserve the one measured navigation indicator, spatial direction, and actual tapped-source relationship when appropriate.
+- Keep native tab routing, 48px+ controls, actual selected states, all five tabs, keyboard navigation, fast switching, reduced motion, exercise detail transitions, sheets, and protected Workout/Focus behavior unchanged. No training, engine, storage or saved-history changes.
+- Extend the existing B831 full-browser motion owner with a one-card entrance budget and no nav-icon bounce. Required before publication: source and lifecycle checks, seven browser groups, release/offline integrity, exact merged-hosted bytes and live online/offline navigation. Device/IME/TalkBack acceptance remains separate.
+
+## Build 923 / M376 — Faster history replay and fresh coaching
+
+- Build one current catalog lookup and source snapshot per historical analysis instead of rebuilding them for every workout. Read loading defaults without cloning them before normalization; returned inventories remain independent and editable.
+- Reuse the session review's proposal when no saved review choice changes it, preserving separate set records, saved choices and Undo while avoiding a second identical history replay.
+- Fix stale coaching after corrections to observed-effort provenance or the current program, and refresh time-dependent recovery without requiring a new workout. Preserve the existing calculation formulas and factual history.
+- Extend the existing browser performance owner with full-app/240-workout startup, repeated real-pointer recovery, exact state preservation and a bound on redundant historical work. Retain the keystroke/completion/Undo suggestion-reuse guard and matched reference measurements.
+- Keep the Home greeting and Settings gym name/count complete at enlarged text. Remeasure the Home context when its content size changes, and limit the stacked-row flex rule to its intended form rows; preserve smooth scrolling and existing controls.
+
+## Build 922 / M375 — Protect training across app windows and offline navigation
+
+- Prevent a stale second app window from autosaving over a workout completed elsewhere. One window owns device training/recovery storage; a second waits before opening it and can retry after the owner closes.
+- Pause saving if an older app version or external writer changes training storage. Keep the current window's backup available before reloading current saved data.
+- Serve the actual privacy policy from an installed app, including offline. Certify and precache the policy instead of substituting Home for every document navigation.
+- Verify concurrent windows, live-state preservation, completion, ownership release, external-write recovery/export, cached navigation, offline policy content and the existing crash/update lifecycle. Refresh outdated public README claims.
+
+## Build 921 / M374 — Readable restore review and backup ownership
+
+- Make backup/restore guidance, merge impact, CSV summaries and unit choices respond to enlarged text. Keep each record with labeled Add/Update/Remove counts on narrow screens, with table/header semantics preserved for assistive technology.
+- Move the existing backup UI and transfer handlers out of App.js into one feature owner. Retain the App's storage, merge, compatibility, unit conversion and Undo transactions; no engine or history policy changes.
+- Retire 43 inline style objects and tighten the combined presentation budget to 2558. Use the existing shared controls and theme tokens without new CSS priority declarations.
+- Extend the existing browser fixture with enlarged JSON/CSV previews, exact count mappings, accessible headers, full-file restore/Undo and actual CSV unit-selection/import/Undo, alongside transfer failure/cancellation and stale-file protection.
+
+## Build 920 / M373 — Faster cycle creation through canonical exercise reuse
+
+- Reuse the existing immutable knowledge projection for each exact built-in catalog definition. Custom definitions and edited/snapshot copies are read afresh, including same-ID copies; keep one canonical catalog and projection formula.
+- Freeze nested secondary-contribution records so consumers cannot corrupt shared facts. Reuse is lazy and bounded to the built-in catalog.
+- Verify all 376 catalog projections and 752 relationship comparisons against fresh copies, mutable-custom isolation and complete generated/upgraded/advanced cycle byte parity at fixed IDs/clock.
+- Extend the existing performance harness with an uncached reference control. The final local control/candidate pair reduces complete cycle creation from about 3.3s to 1.0s native, and 14.7s to 4.4s with simulated 4× CPU; timing is environment-specific and is not physical Android certification. Retain the runtime-bound measurement and exact-parity evidence.
+- Preserve Engine 0.65.9 training algorithms, accepted plans, constraints, manual targets, historical facts and the protected Workout/Focus layout. Retain the logging regression that prevents repeated suggestions during input/completion/Undo.
+
+## Build 919 / M371 — Executable progression choices and exact save review
+
+- Fix exercise-wide progression choices that changed the editor/session selection but left generated engine cells on their original method. The canonical projection now honors the selected method, including alternating exercise identity; Auto reveals the saved slot/week schedule without rewriting it.
+- Share one progression-choice writer between Program and Workout. Preserve original generated prescriptions, manual set entries, completed facts and historical method snapshots; remove empty choice maps when returning to Auto.
+- Replace the clipped progression-method sheet with a named dialog, persistent Close action, explicit program scope, shared selected controls and wrapping explanations. Remove 13 static inline style objects and add no CSS priorities.
+- Show the current method in each weekly progression cell and identify the original generation rationale as historical. Read method names from the existing shared catalog.
+- Program save review now identifies method-only edits accurately and offers exact before/after settings and weekly prescriptions. Reuse the existing revision comparison renderer; scale review typography with text size, retain keyboard containment and keep actions visible.
+- Extend existing lifecycle/browser contracts across all six methods, numeric classic-double vs DDP behavior, Auto restoration, old engine mirrors, alternating identities and immutable history. Exercise the real editor save → Preview → Workout → method change → reload/resume → completed log → reviewed program update. Engine 0.65.9 progression algorithms remain unchanged.
+
+## Build 918 / M370 — Executable plan details and authored settings validation
+
+- Correct the progression table's week-zero offset. Use canonical session projections for each visible week, include the final week and deload, and show the actual alternating exercise and effort target.
+- Keep Plan Schedule and Volume on the same browsed week; retain the week controls in Volume and restore the selected week after tab navigation. Count actual working sets separately from fractional per-muscle set credits.
+- Refuse newly requested custom-program bodyweight and barbell constraints when existing exercises conflict. Explain the affected day and exercise before Save; retain authored choices and saved training.
+- Validate newly entered block lengths from 1–52 weeks without silently rounding or truncating them. Preserve existing longer durations during metadata edits and keep cycle-owned lengths unchanged.
+- Give Plan Info a persistent Close action, wrapping labels, accessible shared disclosures and responsive progression cards. Consolidate the reference/disclosure presentation in two feature modules and remove 56 inline style objects with no added CSS priorities.
+- Extend existing browser and domain gates for canonical prescription parity, alternating lifts, selected deload volume, settings refusal/save/reload and 320–900px layouts at 200% text. Engine 0.65.9 progression policy, manual prescriptions and historical training remain unchanged.
+
+## Build 917 / M369 — Release-content ownership and current in-app notes
+
+- Move 201,450 characters of release history out of App.js into one dedicated catalog. Preserve all 248 historical releases, 516 entries, mixed formats and icon references exactly.
+- Retire unused App icon imports and release-data exports; browser verification imports the canonical catalog directly. Count archived entries without eagerly projecting all of their metadata at startup.
+- Show current launch improvements in What's New and its Settings replay; preserve dismissal, the full archive, existing notes and saved training.
+- Include the new module in release/offline hashing and source ownership checks. No engine, storage or Workout/Focus geometry changes.
+
+## Build 916 / M368 — Shared settings controls and reliable Home actions
+
+- Fix a delayed Home-header collapse that moved program buttons by 60px after scrolling and could make Open/Switch clicks miss. Apply the existing collapse in the scroll event and remove the deferred callback.
+- Program Settings now uses the same shared choice controls as the rest of the app, with 48px minimum targets, scalable labels and explicit form groups.
+- Separate form scrolling keeps Save, Cancel and the dialog heading visible. Choices wrap at narrow widths and enlarged text; selection remains legible in forced colors and reduced motion.
+- Move six stateless UI primitives into one reusable module; remove all 46 remaining Settings inline style objects and obsolete presentation props. No added CSS priorities.
+- Preserve the existing program transaction, constraints, duration validation, cycle ownership, saved history and Engine 0.65.9. Browser checks exercise staged changes/cancellation, focus restoration, 200% text and creation → Preview → Start → resume.
+
+## Build 915 / M367 — Program Settings dialog semantics and CSS ownership
+
+- Treat the Program Settings sheet as one named modal dialog, with explicit Folder and Description labels and selected-state announcements for existing option and constraint controls.
+- Move 12 static inline style objects from the sheet frame, header, form and save bar to semantic theme CSS; retain valid/invalid duration controls, staged drafts and Save/Cancel behavior.
+- Tighten the complete cross-module inline-style ceiling to 2,716. Keep training engine 0.65.9, existing programs and workout history unchanged.
+
+## Build 914 / M366 — Program Settings ownership and block duration styling
+
+- Extract the Program Settings dialog into a feature-owned renderer; keep draft transactions and save/cancel control in ProgramView.
+- Replace 10 static block-duration styles with theme CSS, including valid/invalid numeric state, disabled increment controls and keyboard focus treatment.
+- Keep cycle-owned duration, saved program state, existing workout history and Engine 0.65.9 unchanged. Add extracted module to style regression accounting and reduce the debt ceiling.
+
+## Build 913 / M365 — Program schedule presentation ownership
+
+- Move the weekly schedule sheet out of App.js into one Program feature module, preserving the existing schedule reducer and swipe-to-dismiss behavior.
+- Remove 15 inline JSX style objects in favor of themed CSS roles, with responsive focus, reduced-motion and forced-colors coverage.
+- Include extracted source in the UI debt guard. Keep workout, cycle, saved-program and history data unchanged; Engine 0.65.9 retains the same identity.
+
+## Build 912 / M364 — Keyboard-contained Program save review
+
+- Give the save-review dialog a clear initial focus, Escape dismissal and Tab/Shift+Tab containment. Return keyboard focus to the invoking control when the review closes.
+- Preserve conflict-disabled saves, linked cycle scope, saved program transactions and completed workout history. No engine or storage schema change.
+- Add a regression guard for keyboard and focus behavior; keep the canonical Engine 0.65.9 unchanged.
+
 ## Build 909 / M362 — Prelaunch computation-boundary cleanup
 
 - Retire 256 duplicate engine exports from App.js and migrate 49 verification consumers to the canonical engine API. Pure computation tests and standalone parity no longer need the UI module.

@@ -55,11 +55,26 @@ try{
   assert.ok(end.scroll>=top.full-2,'collapse uses the full expanded greeting distance');
   assert.ok(Math.abs(mid.header.h-near.header.h)<top.full*.08+3,`no threshold snap at 95%: ${mid.header.h} → ${near.header.h}`);
   assert.ok(Math.abs(restored.header.h-top.header.h)<=2,'scrolling to top restores full header height');
+  const scrollHandoff=await page.evaluate(async full=>{
+   const home=document.querySelector('.wpb-home'),sc=home.querySelector('.wpb-page-scroll');
+   const greeting=home.querySelector('.wpb-home-header').lastElementChild;
+   sc.scrollTop=full*2;
+   await new Promise(r=>requestAnimationFrame(r));
+   const first=greeting.getBoundingClientRect().height;
+   await new Promise(r=>requestAnimationFrame(r));
+   return {first,following:greeting.getBoundingClientRect().height};
+  },top.full);
+  assert.ok(scrollHandoff.first<=1&&scrollHandoff.following<=1,
+    'Header geometry is ready when next-frame pointer positioning begins: '+JSON.stringify(scrollHandoff));
+  await get(0,top.full);
   assert.deepEqual(errors,[],'no runtime error');
-  if(width===393&&theme==='rose'){
-    await page.locator('.hp-open').click({timeout:12000});
-    await page.waitForSelector('.wpb-program',{timeout:12000});
-  }
+  // A real pointer action scrolls the saved program into view. Deferred header
+  // collapse used to move it between the pointer's geometry read and click,
+  // so the same action landed on the card footer instead of opening the program.
+  await page.click('.hp-open');
+  await page.waitForSelector('.wpb-program',{timeout:12000});
+  assert.equal(await page.$eval('.wpb-program-name-text',n=>n.textContent),program.name,
+    'A pointer opens the intended program immediately after Home scrolls');
   await page.close();
  }
  console.log('PASS B887 Home masthead: scroll-linked smooth height, stable Pursuit Iron brand and 48px tools at 320/393/900 in both themes');

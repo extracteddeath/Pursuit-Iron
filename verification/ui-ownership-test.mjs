@@ -5,10 +5,33 @@ import fs from 'node:fs';
 // Decrease alongside a verified cleanup; never raise to permit a cosmetic override.
 const css = fs.readFileSync('app.css', 'utf8');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
-const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
+const programReview = fs.readFileSync('modules/program-review-surfaces.js', 'utf8');
+const programSchedule = fs.readFileSync('modules/program-schedule-sheet.js', 'utf8');
+const programSettings = fs.readFileSync('modules/program-settings-sheet.js', 'utf8');
+const backupPanel = fs.readFileSync('modules/backup-restore-panel.js', 'utf8');
+const primitives = fs.readFileSync('modules/ui-primitives.js', 'utf8');
+const releaseNotes = fs.readFileSync('modules/release-notes.js', 'utf8');
+const disclosures = fs.readFileSync('modules/ui-disclosure.js', 'utf8');
+const programReference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
+const programVolume = fs.readFileSync('modules/program-volume-surfaces.js', 'utf8');
+const loadWave = fs.readFileSync('modules/program-load-wave.js', 'utf8');
+const programShare = fs.readFileSync('modules/program-share-sheet.js', 'utf8');
+const exerciseOptions = fs.readFileSync('modules/program-exercise-options.js', 'utf8');
+const exerciseNotes = fs.readFileSync('modules/exercise-notes.js', 'utf8');
+const trainingMaxes = fs.readFileSync('modules/program-training-maxes.js', 'utf8');
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes;
+const MAX_IMPORTANT = 2303; // M384: retire 33 exercise-options priority overrides.
+const MAX_APP_IMPORTANT = 1198; // M384: retire the private options padding override.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2772; // M362: measured baseline after retiring the unused cycle renderer
+const MAX_INLINE_STYLE_OBJECTS = 2426; // M386: one training-max editor and entry card; retire 27 static styles.
+
+// M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
+for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
+  assert.ok(css.includes('.wpb-program-settings-'+role+'{'), 'Settings view lost semantic CSS owner '+role);
+for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "program-settings-title"','htmlFor: "program-settings-folder"','htmlFor: "program-settings-description"','selected: !!cfgDraft?.noSupersets','selected: !!cfgDraft?.noBodyweight','disabled: !canApply'])
+  assert.ok(programSettings.includes(token), 'Settings dialog accessibility/transaction contract lost: '+token);
+assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.includes('"wpb-backdrop", style:'), 'Static Settings shell styles must remain in CSS');
+
 const allowedDebtKeys = new Set([
   "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
   "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
@@ -69,25 +92,134 @@ function guard(cssText, appText) {
         'New competing selector/property owner. Edit existing shared rule instead.');
     return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
-const report = guard(css, app);
+const report = guard(css, presentationSource);
+
+assert.ok(!trainingMaxes.includes('style:') && !trainingMaxes.includes('localStorage'), 'Training-max presentation has no private styles or persistence');
+assert.ok(!app.includes('oneRmEdit') && !app.includes('setOneRmEdit'), 'One-rep conversion has one transient owner');
+assert.ok(trainingMaxes.includes('onApply(changes)') && app.includes('withTrainingMax(next, id, value, unit)'), 'Training maxes apply through the canonical program-draft boundary');
+
+assert.ok(!exerciseNotes.includes('style:') && !exerciseNotes.includes('localStorage'), 'Pinned notes use semantic CSS and the App persistence boundary');
+assert.ok(!app.includes('function SetupFieldsGrid(') && !app.includes('function SetupFieldsDisplay(') && !app.includes('pinRef') && !app.includes('pnRef'), 'Pinned notes have no shadow grid or shared textarea ref');
+assert.equal((exerciseNotes.match(/export function PinnedNoteEditor\(/g)||[]).length,1,'One controlled pinned-note editor');
+assert.equal((app.match(/onSetExNote: updatePinnedNote/g)||[]).length,3,'All routes consume one pinned-note writer');
+assert.equal((app.match(/onSetExSetup: updateExerciseSetup/g)||[]).length,3,'All routes consume one setup writer');
+assert.ok(app.includes('noteEdit?.dayId === day.id && noteEdit?.slot === slot && noteEdit?.exId === ex.id'), 'Program notes belong to the selected row while saved notes remain per exercise');
+assert.ok(!exerciseOptions.includes('style:') && !exerciseOptions.includes('localStorage') && !exerciseOptions.includes('setProgram'),
+    'Exercise options own only presentation and transient confirmation');
+assert.equal((exerciseOptions.match(/export function ProgramExerciseOptions\(/g)||[]).length,1,'One exercise-options owner');
+assert.ok(app.includes('canLink: !program.config?.noSupersets && slot < day.exercises.length - 1'), 'Options obey the saved superset constraint');
+assert.ok(!exerciseOptions.includes('"data-sheet-drag": true') && exerciseOptions.includes('ref: sheetDragRef'),
+    'The options sheet consumes the existing gesture ref');
+assert.ok(app.includes('const SHEET_DRAG_BOUND = new WeakSet()') && app.includes('SHEET_DRAG_BOUND.has(el)'),
+    'Shared gesture initialization follows node identity, independent of presentation flags');
+assert.ok(!programShare.includes('style:') && !programShare.includes('C.'), 'Program sharing uses the shared CSS owner');
+assert.ok(!app.includes('function ShareProgramSheet(') && !app.includes('function programToText('), 'One selected-week sharing owner');
+assert.ok(programShare.includes('sessionPrescriptionRows(program, day, weekIndex)') && programShare.includes('daysInWeek(program, weekIndex)'), 'Shared text reads canonical selected-week prescriptions');
+
+for (const name of ['InfoCard','MotionReveal']) {
+    assert.equal((app.match(new RegExp('function '+name+'\\(', 'g')) || []).length, 0, 'No duplicate disclosure owner in App');
+    assert.equal((disclosures.match(new RegExp('export function '+name+'\\(', 'g')) || []).length, 1, 'One shared disclosure owner');
+}
+for (const name of ['SetupCard','ProgressionCard','ProgramReferenceSheet','ProgressionChoiceSheet']) {
+    assert.equal((app.match(new RegExp('function '+name+'\\(', 'g')) || []).length, 0, 'Reference view is not duplicated in the coordinator');
+    assert.equal((programReference.match(new RegExp('export function '+name+'\\(', 'g')) || []).length, 1, 'One reference presentation owner');
+}
+assert.ok(!disclosures.includes('style:') && !programReference.includes('style:') && !programReference.includes('C.'),
+    'Shared disclosure/reference presentation must stay in its CSS owner');
+assert.ok(app.includes('setProgram(p => withProgressionChoices(p, { [id]: style }))'),
+    'Program and Workout must share the progression-choice writer');
+assert.ok(programReference.includes("'aria-label': 'Close progression methods'") && programReference.includes("'aria-describedby': 'program-progression-scope'"),
+    'Method choice keeps a named dialog, explicit scope and persistent Close action');
+assert.ok(disclosures.includes("'aria-controls': contentId") && disclosures.includes('const contentId = useId()'),
+    'Every disclosure connects its own accessible control and content');
+assert.ok(programReference.includes('sessionPrescriptionRows(program, day, week)') && programReference.includes('start + 1, start + 2'),
+    'Progression reads canonical one-based executable week/slot projections');
+assert.ok(programReference.includes("'aria-label': 'Close program details'") && programReference.includes('role: \'dialog\''),
+    'Program reference has a named dialog and an explicit close action');
+
+assert.ok(app.includes("from './program-settings-sheet.js'") && !app.includes('function ProgramSettingsSheet('),
+  'Program Settings has a single extracted presentation owner');
+assert.equal((programSettings.match(/function ProgramSettingsSheet\(/g) || []).length, 1, 'Single settings view');
+assert.ok(programSettings.includes("data-testid\": \"program-settings-sheet") &&
+    programSettings.includes('onApply: applyCfgDraft') &&
+    programSettings.includes('onClick: applyCfgDraft'),
+    'Settings retains staged changes and Save/Cancel actions');
+assert.ok(programSettings.includes('GOALS, sheetDragRef, selectNumericInput') &&
+  app.includes('GOALS: GOALS, sheetDragRef:'),
+  'Settings does not capture removed App module presentation globals');
+for(const label of ['Decrease block length','Increase block length','Block length in weeks','program-weeks-error'])
+  assert.ok(programSettings.includes(label), 'Settings duration control lost contract: '+label);
+for(const role of ['cycle-length','cycle-length-value','cycle-length-help','length','length-control','length-step','length-label','length-input','length-error'])
+  assert.ok(css.includes('.wpb-program-settings-'+role+'{'), 'Missing settings CSS role '+role);
+
+assert.ok(app.includes("from './program-schedule-sheet.js'"), 'Program owns only schedule state');
+assert.ok(!app.includes('function WeeklyScheduleSheet('), 'No duplicate schedule renderer in App');
+assert.equal((programSchedule.match(/function WeeklyScheduleSheet\(/g) || []).length, 1, 'Schedule has a single view owner');
+assert.ok(!programSchedule.includes('style: {') && !programSchedule.includes('C.') && !programSchedule.includes('iconBtn('), 'Schedule uses themed CSS');
+for(const token of ['onCycle(weekday)', 'onClear', 'sheetDragRef', "'data-assigned'", "'data-today'", "'aria-modal': true"])
+    assert.ok(programSchedule.includes(token), 'Schedule lost behavior/semantics: '+token);
+for(const role of ['backdrop','sheet','heading','row','weekday','today','assignment','hint','clear'])
+    assert.ok(css.includes('.wpb-program-schedule-' + role + '{'), 'Missing schedule CSS role: '+role);
+for (const name of ['ProgramRevisionReview', 'ProgramLayoutHistory', 'ProgramSaveReview']) {
+    assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 0, name + ' must not remain in App');
+    assert.equal((programReview.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1, name + ' has one feature owner');
+}
+assert.ok(app.includes("from './program-review-surfaces.js'"), 'App composes the feature-owned Program review');
+assert.ok(!programReview.includes('style: {') && !programReview.includes('style: iconBtn()'), 'No static inline review styles');
+assert.ok(programReview.includes("event.key === 'Escape'") &&
+  programReview.includes("event.key !== 'Tab'") &&
+  programReview.includes('handleProgramSaveReviewKeys(event, onClose)') &&
+  programReview.includes('autoFocus: true') &&
+  programReview.includes('returnFocus.current?.isConnected'),
+  'Save review must support keyboard dismissal, contained tab navigation and return focus');
+
+assert.ok(programReview.includes('disabled: !changes.length || !!conflicts.length') &&
+    programReview.includes('checked: scope === value') && programReview.includes('onChange: () => onScope(value)'),
+    'Save scope and conflict guards remain owned by the existing plan transaction');
+for(const role of ['backdrop','panel','heading','title','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','confirm','cancel'])
+    assert.ok(css.includes('.wpb-save-review-' + role + '{'), 'Missing Program review CSS owner: ' + role);
 // Exercise the actual ceilings, even as successful cleanup creates headroom below them.
 const cssOverflow = '.bad-extra{color:red!important;}\n'.repeat(MAX_IMPORTANT - report.important + 1);
 const appOverflow = '.bad-embedded{color:red!important;}\n'.repeat(MAX_APP_IMPORTANT - report.appImportant + 1);
-assert.throws(() => guard(css + '\n' + cssOverflow, app), /CSS priority overrides increased/);
-assert.throws(() => guard(css, app + '\n' + appOverflow), /Embedded stylesheet priority overrides increased/);
+assert.throws(() => guard(css + '\n' + cssOverflow, presentationSource), /CSS priority overrides increased/);
+assert.throws(() => guard(css, presentationSource + '\n' + appOverflow), /Embedded stylesheet priority overrides increased/);
 assert.ok(repeatedImportantDeclarations('.duplicate{color:red!important;} .duplicate{color:blue!important;}')
     .includes('\t.duplicate\tcolor'), 'Guard must detect duplicate priority declarations.');
 assert.deepEqual(repeatedImportantDeclarations('.scoped{color:red!important;} /* reflow */ @media(max-width:420px){.scoped{color:blue!important;}}'), [],
     'Comments before at-rules cannot erase media scope or invent duplicate owners.');
 assert.deepEqual(repeatedImportantDeclarations('/* narrow */ @media(max-width:420px){.scoped{color:red!important;}} /* same scope */ @media(max-width:420px){.scoped{color:blue!important;}}'),
     ['@media(max-width:420px)\t.scoped\tcolor'], 'Commented copies in the same media scope still count as competing owners.');
-for (const name of ['UiRootHeader','UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])
-    assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1,
+for (const name of ['UiHeader','UiRootHeader','UiAction','UiChoice','UiStatus','UiSection','SettingsSwitch'])
+    assert.equal((presentationSource.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 1,
         'Only one shared ' + name + ' component may exist.');
+assert.ok(app.includes("from './ui-primitives.js'") && programSettings.includes("from './ui-primitives.js'"),
+    'Screens and Settings consume the same shared UI owner');
+for (const name of ['UiHeader','UiRootHeader','UiAction','UiChoice','UiStatus','UiSection']) {
+    assert.equal((app.match(new RegExp('function ' + name + '\\(', 'g')) || []).length, 0, 'No shadow UI primitive in App: '+name);
+    assert.equal((primitives.match(new RegExp('export function ' + name + '\\(', 'g')) || []).length, 1, 'One exported UI primitive: '+name);
+}
+assert.ok(app.includes("from './release-notes.js'") && !app.includes('const CHANGELOG = ['),
+    'Release content has one feature owner, outside the application coordinator');
+assert.equal((releaseNotes.match(/export const CHANGELOG = \[/g) || []).length, 1, 'One release catalog');
+assert.ok(!releaseNotes.includes('engine-api') && !releaseNotes.includes('App.js') && !releaseNotes.includes('style:'),
+    'Release content cannot import the coordinator, training logic or presentation overrides');
+assert.ok(!app.includes('CHANGELOG_ITEMS =') && app.includes('CHANGELOG_ITEM_COUNT = CHANGELOG.reduce('),
+    'Archive count does not eagerly project every historical note at startup');
+assert.ok(!primitives.includes('engine-api') && !primitives.includes('useState') && !primitives.includes('localStorage'),
+    'Shared presentation must not own training, state or persistence');
+assert.ok(!programSettings.includes('style:') && !programSettings.includes('C.') && !programSettings.includes('eyebrow'),
+    'Settings presentation is fully CSS-owned, including conditional choices');
 for (const token of ['--pi-color-card','--pi-color-control','--pi-color-feature','--pi-color-divider',
     '--pi-shape-card','--pi-shape-action','--pi-shape-feature'])
     assert.ok(css.includes(token), 'Missing semantic theme role: ' + token);
-assert.ok(app.includes('function BackupRestorePanel('), 'Transfers need one canonical panel.');
+assert.ok(app.includes("from './backup-restore-panel.js'") && !app.includes('function BackupRestorePanel('),
+    'Backup transfers and staged review have one feature owner');
+assert.equal((backupPanel.match(/export function BackupRestorePanel\(/g) || []).length, 1, 'Single backup panel');
+assert.ok(!backupPanel.includes('style:') && !backupPanel.includes('C.') && !backupPanel.includes('localStorage'),
+    'Backup presentation uses shared CSS and retains the App persistence boundary');
+for (const token of ['transferBusyRef.current', 'requestId === fileReadRef.current', 'onPreviewImport(importText',
+    'onImport(undoSnap, { replace: true })', 'draftConflicts?.length', '20 * 1024 * 1024'])
+    assert.ok(backupPanel.includes(token), 'Backup transfer/restore safeguard lost: ' + token);
 // Canonical role vocabulary and primitive owners must survive future polish passes.
 for(const token of [
   '--pi-color-active','--pi-color-on-active','--pi-ui-primary-fill','--pi-ui-primary-ink',
@@ -101,7 +233,7 @@ for(const primitive of [
 ]) assert.ok(css.includes(primitive), 'Missing shared primitive: '+primitive);
 for(const selector of ['input:not([type="range"]):not(.wpb-ui-control)', 'select:not(.wpb-ui-control)', 'textarea:not(.wpb-ui-control)'])
   assert.ok(app.includes(selector),'Legacy form layer must leave shared controls to their canonical owner: '+selector);
-const action=app.slice(app.indexOf('function UiAction('),app.indexOf('function UiChoice('));
+const action=primitives.slice(primitives.indexOf('function UiAction('),primitives.indexOf('function UiChoice('));
 assert.ok(!action.includes('style: {') && !action.includes('C.accent'),
   'Shared UiAction may not inject presentation overrides at render time');
 for(const str of ['wpb-ui-card wpb-profile-share-card','wpb-ui-card wpb-custom-cycle',
@@ -143,7 +275,7 @@ assert.ok(css.includes('.wpb .wpb-wizard-name-input[data-has-value="true"]'),
   'Controlled name input has its own selected border');
 // The complete creation presentation now has no static JSX styles.
 const wizardShell=app.slice(app.indexOf('function Wizard({'),app.indexOf('function Heading('));
-const wizardBody=app.slice(app.indexOf('function StepBody('),app.indexOf('// Editable row'));
+const wizardBody=app.slice(app.indexOf('function StepBody('),app.indexOf('function Stepper('));
 const setupStepper=app.slice(app.indexOf('function Stepper('),app.indexOf('// Training-phase narrative'));
 assert.equal((wizardShell.match(/style: \{/g)||[]).length,1,'Only computed progress transform remains inline in Wizard');
 assert.ok(wizardShell.includes('style: { transform: `translateX('),'Wizard retains calculated progress transform');
@@ -158,7 +290,7 @@ assert.ok(setupStepper.includes('disabled: value === 0')&&setupStepper.includes(
   'Shared stepper retains native limit semantics');
 const plan=app.slice(app.indexOf('function PlanView('),app.indexOf('function NextWorkoutView('));
 assert.ok(plan.includes('_jsx(UiRootHeader, { title: "Plan" })')&&!plan.includes('aria-label": "Back"'),'Plan root uses shared app bar without a Back action');
-const rootHeader=app.slice(app.indexOf('function UiRootHeader('),app.indexOf('function UiAction('));
+const rootHeader=primitives.slice(primitives.indexOf('function UiRootHeader('),primitives.indexOf('function UiAction('));
 assert.ok(!rootHeader.includes('style:'),'Root app bar presentation is class-owned');
 assert.ok(!plan.includes('style: { fontSize: 26, fontWeight: 740, color: C.text'),
   'Plan title static typography must not return to inline styles');
@@ -302,7 +434,8 @@ assert.ok(css.includes('outline:2px solid Highlight!important;') &&
 const settingsContainer=css.slice(css.indexOf('/* Container em follows text-only enlargement'),css.indexOf('/* Preserve the R41 primary/secondary hierarchy'));
 assert.ok(settingsContainer.includes('@container pi-settings-body (max-width:16em){') &&
   settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row{\n    flex-direction:column;') &&
-  settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-copy{\n    flex:none;') &&
+  settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row>.wpb-settings-row-copy{\n    flex:none;') &&
+  !settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-copy{\n    flex:none;') &&
   settingsContainer.includes('.wpb .wpb-settings .wpb-settings-row-control{\n    align-self:flex-start;'),
   'Enlarged Settings row text has full card width and owns its control below');
 

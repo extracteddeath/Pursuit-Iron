@@ -50,6 +50,26 @@ try{
      history:populated?[recentSession]:[]});
   await page.goto('http://127.0.0.1:'+server.address().port+'/',{waitUntil:'networkidle0'});
   await page.waitForSelector('.wpb-home .wpb-action-tile');
+  // Text-only enlargement does not dispatch window.resize. The collapsible
+  // greeting must remeasure its natural content instead of clipping the title.
+  for(const enlarged of [true,false]){
+   await page.evaluate(large=>{
+    document.querySelector('.wpb-home .wpb-page-scroll').scrollTop=0;
+    document.documentElement.style.fontSize=large?'200%':'';
+   },enlarged);
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   const greeting=await page.$eval('.wpb-home-context',node=>{
+    const box=node.getBoundingClientRect(),walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT),rects=[];
+    while(walker.nextNode()){
+     if(!walker.currentNode.textContent.trim())continue;
+     const range=document.createRange();range.selectNodeContents(walker.currentNode);rects.push(...range.getClientRects());
+    }
+    return {height:box.height,contentHeight:node.scrollHeight,complete:rects.length>0&&rects.every(r=>
+     r.left>=box.left-1&&r.right<=box.right+1&&r.top>=box.top-1&&r.bottom<=box.bottom+1)};
+   });
+   assert.ok(greeting.complete&&Math.abs(greeting.height-greeting.contentHeight)<=1,
+    'Home greeting remains complete when text grows and returns: '+JSON.stringify({width,theme,populated,enlarged,greeting}));
+  }
   if(!populated){
    const observed=await page.evaluate(()=>{
     const home=document.querySelector('.wpb-home');

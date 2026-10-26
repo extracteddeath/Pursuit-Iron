@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from '../modules/mobile-lifecycle.js';
+import { createAppStorageOwnership } from '../modules/app-storage-ownership.js';
 
 const pausedClock = restoreWorkoutClock({ elapsedMs: 120000, runPaused: true }, 1000000);
 assert.deepEqual(pausedClock, { startedAt: 880000, pausedAt: 1000000 });
@@ -20,6 +21,37 @@ assert.deepEqual(restoreWorkoutClock(null, 1700), { startedAt: 1700, pausedAt: 0
 
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve, reject; const promise = new Promise((ok, no) => { resolve = ok; reject = no; }); return { promise, resolve, reject }; };
+{
+    let held = false, requests = 0;
+    const locks = { request: async (name, options, callback) => {
+        assert.equal(name, 'pursuit-iron:wpb-storage');
+        assert.deepEqual(options, { mode: 'exclusive', ifAvailable: true });
+        requests++;
+        if (held) return callback(null);
+        held = true;
+        try { return await callback({ name }); } finally { held = false; }
+    } };
+    const first = createAppStorageOwnership(locks), second = createAppStorageOwnership(locks);
+    first.require(); second.require();
+    assert.equal(first.writable(), false);
+    const initial = first.acquire();
+    assert.equal(first.acquire(), initial, 'StrictMode shares a pending ownership request');
+    await initial; await first.acquire();
+    assert.equal(requests, 1, 'The current document reuses its own ownership');
+    assert.equal(first.writable(), true);
+    await assert.rejects(second.acquire(), error => error.code === 'APP_STORAGE_BUSY');
+    assert.equal(second.writable(), false, 'A competing document cannot write');
+    first.release(); await flush();
+    assert.equal(first.writable(), false);
+    await second.acquire(); assert.equal(second.writable(), true);
+    second.release(); await flush();
+    for (const manager of [null, { request: () => { throw Error('unavailable'); } }, { request: () => Promise.reject(Error('denied')) }]) {
+        const unavailable = createAppStorageOwnership(manager);
+        await assert.rejects(unavailable.acquire(), error => error.code === 'APP_STORAGE_UNAVAILABLE');
+        assert.equal(unavailable.writable(), false, 'Unsupported or denied ownership must never permit a partial save');
+    }
+    console.log('PASS M375 storage ownership: one pending request, exclusive holder, retry after release and unavailable/denied APIs fail before writes.');
+}
 const sentinel = () => {
     const value = new EventTarget();
     value.released = false;

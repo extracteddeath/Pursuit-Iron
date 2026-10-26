@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { plannedWeek } from '../modules/engine-api.js';
 
 // R53: two real saved-palette contexts, same program, same phone geometry.
 // Both layouts must resolve the same semantic surface roles. Screenshot
@@ -290,6 +291,70 @@ async function verifyTaskHierarchy(browser){
       assert.ok(choices.every(b=>b.height>=44)&&choices.filter(b=>b.pressed==='true').length===1,'One active 44px+ pane');
       await page.click('[data-plan-pane="volume"]');
       assert.equal(await page.$eval('[data-plan-pane="volume"]',b=>b.getAttribute('aria-pressed')),'true');
+      // M380: in a planned week the contributors' heading must be a native
+      // keyboard-accessible button, not a pointer-only clickable div.
+      await page.waitForSelector('.wpb-plan button[data-vol-part]');
+      const rowBefore=await page.$eval('.wpb-plan button[data-vol-part]',el=>({
+        part:el.dataset.volPart,expanded:el.getAttribute('aria-expanded'),
+        named:el.getAttribute('aria-label'),style:getComputedStyle(el).fontSize
+      }));
+      assert.equal(rowBefore.expanded,'false');
+      assert.ok(rowBefore.named?.includes('Volume contributors for')&&parseFloat(rowBefore.style)>=12,
+        'M380: muscle-volume header has readable accessible name');
+      await page.focus('.wpb-plan button[data-vol-part]');
+      await page.keyboard.press('Enter');
+      assert.equal(await page.$eval('.wpb-plan button[data-vol-part]',el=>el.getAttribute('aria-expanded')),
+        'true','M380: Enter opens muscle-volume contributors without changing training');
+      const contributors=await page.evaluate(()=>[...document.querySelectorAll('.wpb-plan [data-volume-contributor]')].map(row=>{
+        const name=row.children[1],style=getComputedStyle(name);
+        return {name:name.textContent.trim(),whiteSpace:style.whiteSpace,textOverflow:style.textOverflow,
+          clipped:name.scrollWidth>name.clientWidth+1};
+      }));
+      assert.ok(contributors.length>0&&contributors.every(row=>row.name&&row.whiteSpace==='normal'&&
+        row.textOverflow!=='ellipsis'&&!row.clipped),
+        'M381: expanded muscle credits expose complete wrapping names: '+JSON.stringify(contributors));
+      await page.keyboard.press('Space');
+      assert.equal(await page.$eval('.wpb-plan button[data-vol-part]',el=>el.getAttribute('aria-expanded')),
+        'false','M380: Space closes native volume contributors');
+      // M379: this is the actual Plan blueprint renderer, not a duplicated
+      // graph fixture. Its planned sets use canonical 1-based weeks and the
+      // optional deload is exactly one final additional week.
+      await page.click('[data-plan-pane="blueprint"]');
+      await page.waitForSelector('[data-load-wave] [data-wave-week]');
+      const loadWave = await page.$eval('[data-load-wave]', el =>
+        [...el.querySelectorAll('[data-wave-week]')].map(row=>({
+          week:Number(row.dataset.waveWeek),sets:Number(row.dataset.waveSets),
+          deload:row.dataset.waveDeload==='1'
+        })));
+      assert.ok(loadWave.length>=4 &&
+        loadWave.every((point,i)=>point.week===i+1&&Number.isFinite(point.sets)&&point.sets>=0) &&
+        loadWave.filter(point=>point.deload).length<=1 &&
+        loadWave.slice(0,-1).every(point=>!point.deload),
+        'M379 uses the canonical consecutive planned weeks and one optional final deload: '+JSON.stringify(loadWave));
+      assert.deepEqual(loadWave.map(point=>point.sets),loadWave.map(point=>plannedWeek(seed.saved[0],point.week).sets),
+        'Load-wave values equal canonical saved-week totals');
+      for(const width of [320,393,900,1280])for(const textSize of [16,32]){
+        await resize(width,800);
+        await page.evaluate(size=>document.documentElement.style.fontSize=size+'px',textSize);
+        const wave=await page.$eval('[data-load-wave]',el=>({
+          scrollable:el.scrollWidth>el.clientWidth,overflow:getComputedStyle(el).overflowX,
+          tabIndex:el.tabIndex,named:el.getAttribute('aria-label'),
+          rows:[...el.children].map(row=>({
+            named:row.getAttribute('aria-label'),font:parseFloat(getComputedStyle(row.lastElementChild).fontSize),
+            clipped:[row.firstElementChild,row.lastElementChild].some(n=>n.scrollWidth>n.clientWidth+1)
+          })),pageOverflow:document.documentElement.scrollWidth>innerWidth+1
+        }));
+        assert.ok(!wave.pageOverflow&&wave.named&&wave.tabIndex===0&&wave.rows.every(row=>row.named&&
+          !row.clipped&&row.font>=textSize*.8125-.1),'Wave labels scale and stay readable in their scroll region: '+JSON.stringify({width,textSize,wave}));
+        if(width===320&&textSize===32){
+          assert.ok(wave.scrollable&&wave.overflow==='auto','Long enlarged wave scrolls within the chart');
+          await page.focus('[data-load-wave]');await page.keyboard.press('ArrowRight');
+          await page.waitForFunction(()=>{const el=document.querySelector('[data-load-wave]');return el.scrollLeft>0;});
+          await page.screenshot({path:path.join(root,`verification/r53-wave-${theme}-${textSize}-phone.png`)});
+        }
+      }
+      await page.evaluate(()=>document.documentElement.style.fontSize='16px');
+      await resize(393,800);
       await page.click('[data-plan-pane="schedule"]');
       assert.equal(await page.$eval('[data-plan-pane="schedule"]',b=>b.getAttribute('aria-pressed')),'true');
       assert.ok(planOrder.nextFirst&&planOrder.pickerFirst&&planOrder.sessionsFirst&&
@@ -332,6 +397,98 @@ async function verifyTaskHierarchy(browser){
     }finally{await context.close();}
   }
   console.log('PASS R62: Home/Plan action and reading order; connected full-size rows; window-bounded adaptive tablet/laptop widths; outline/week retention during resize; short window and enlarged text.');
+}
+// Stress the real shared volume display with more than eight contributions,
+// long session names and enlarged text. This deliberately repetitive custom
+// fixture tests presentation; it is not a recommended training program.
+async function verifyVolumeDetails(browser){
+  for(const theme of ['rose','rosewater']){
+    const context=await browser.createBrowserContext(),page=await context.newPage();
+    const seed=initial(theme);
+    seed.saved=[{...program,config:{...program.config,days:3,deload:true},overrides:{},
+      days:Array.from({length:3},(_,i)=>({id:'volume-'+i,
+        label:'Upper body session with a long descriptive name '+(i+1),primaryIndex:i,
+        exercises:['bb-bench','inc-db-press','cable-fly','smith-bench']}))}];
+    const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    try{
+      await page.setViewport({width:320,height:852,deviceScaleFactor:1});
+      await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+      await page.evaluateOnNewDocument(value=>{
+        if(!localStorage.getItem('wpb:v1'))localStorage.setItem('wpb:v1',JSON.stringify(value));
+      },seed);
+      await page.goto('http://127.0.0.1:8795/',{waitUntil:'networkidle0'});
+      await page.waitForSelector('.wpb-tabbar');
+      await page.click('[data-tab="plan"]');
+      await page.click('[data-plan-pane="volume"]');
+      const trigger='.wpb-plan button[data-vol-part="chest"]';
+      await page.waitForSelector(trigger);
+      await page.focus(trigger);await page.keyboard.press('Enter');
+      const expected=await page.evaluate(async()=>{
+        const {weekMuscleBreakdown}=await import('./modules/engine-api.js');
+        return weekMuscleBreakdown(JSON.parse(localStorage.getItem('wpb:v1')).saved[0],1)
+          .find(entry=>entry.part==='chest').from;
+      });
+      assert.ok(expected.length>8,'Fixture must exercise the former eight-row cutoff');
+      for(const width of [320,393,900,1280])for(const text of [16,32]){
+        await page.setViewport({width,height:852,deviceScaleFactor:1});
+        await page.evaluate(size=>document.documentElement.style.fontSize=size+'px',text);
+        const details=await page.evaluate(sel=>{
+          const button=document.querySelector(sel),box=button.getBoundingClientRect();
+          const rows=[...document.querySelectorAll('.wpb-plan [data-volume-contributor]')];
+          return {font:parseFloat(getComputedStyle(button).fontSize),height:box.height,
+            rows:rows.map(row=>({day:row.children[0].textContent,name:row.children[1].textContent,
+              clipped:[row,...row.children].some(el=>el.scrollWidth>el.clientWidth+1)}))};
+        },trigger);
+        assert.ok(details.height>=44&&details.font>=text*.8125-.1,
+          'Volume controls scale with text and retain touch targets: '+JSON.stringify({theme,width,text,details}));
+        assert.equal(details.rows.length,expected.length,'Every canonical contribution remains visible');
+        assert.ok(details.rows.every((row,i)=>!row.clipped&&row.name.includes(expected[i].name)&&
+          row.day===expected[i].dayLabel),'Complete contributor text reflows: '+JSON.stringify({theme,width,text,details}));
+        if(width===320){
+          await page.$eval('.wpb-plan [data-volume-contributor]',el=>el.scrollIntoView({block:'center'}));
+          await page.screenshot({path:path.join(root,`verification/r53-volume-${theme}-${text}-phone.png`)});
+        }
+      }
+      await page.focus(trigger);await page.keyboard.press('Space');
+      assert.equal(await page.$eval(trigger,el=>el.getAttribute('aria-expanded')),'false');
+      const toggle='.wpb-plan .wpb-volume-detail-toggle';
+      await page.focus(toggle);await page.keyboard.press('Enter');
+      assert.ok(await page.$eval(toggle,el=>el.getAttribute('aria-expanded')==='true'&&
+        el.getBoundingClientRect().height>=44),'Granular detail has a full native keyboard/touch control');
+      assert.ok((await page.$$('.wpb-plan .wpb-volume-sub')).length>0,'Granular volume remains visible');
+      await page.keyboard.press('Space');
+      const rampExpected=await page.evaluate(async()=>{
+        const {weeklyVolume,weeksOf,PART_ORDER,PART_LABEL,fmtSets}=await import('./modules/engine-api.js');
+        const p=JSON.parse(localStorage.getItem('wpb:v1')).saved[0];
+        const volumes=Array.from({length:weeksOf(p)+1},(_,i)=>weeklyVolume(p,i+1));
+        return PART_ORDER.filter(part=>volumes.some(v=>(v[part]||0)>.05)).map(part=>({
+          label:PART_LABEL[part],sets:volumes.map(v=>fmtSets(v[part]||0))}));
+      });
+      const rampActual=await page.$$eval('.wpb-plan .wpb-volume-ramp-row',rows=>rows.map(row=>({
+        label:row.firstElementChild.textContent,sets:[...row.querySelectorAll('.wpb-volume-ramp-dose')].map(el=>el.textContent)})));
+      assert.deepEqual(rampActual,rampExpected,'Block table preserves all canonical weeks, muscle credits and final deload');
+      await page.setViewport({width:320,height:852,deviceScaleFactor:1});
+      const scroll='.wpb-plan .wpb-volume-ramp-scroll';
+      await page.focus(scroll);await page.keyboard.press('ArrowRight');
+      await page.waitForFunction(sel=>document.querySelector(sel).scrollLeft>0,{timeout:3000},scroll);
+      assert.ok(await page.$eval(scroll,el=>[...el.querySelectorAll('.wpb-volume-ramp-label')]
+        .every(label=>label.getBoundingClientRect().left>=el.getBoundingClientRect().left-.5)),
+        'Muscle labels stay visible while keyboard-scrolling later weeks');
+      await page.screenshot({path:path.join(root,`verification/r53-volume-ramp-${theme}-phone.png`)});
+      const client=await page.createCDPSession();
+      await client.send('Emulation.setEmulatedMedia',{features:[
+        {name:'forced-colors',value:'active'},{name:'prefers-reduced-motion',value:'reduce'}]});
+      await page.focus(trigger);
+      assert.ok(await page.$eval(trigger,el=>getComputedStyle(el).outlineStyle!=='none'&&
+        getComputedStyle(el.querySelector('svg')).transitionDuration==='0s'),
+        'Forced colors retain focus and reduced motion removes chevron interpolation');
+      await client.detach();
+      assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),seed.saved,
+        'Reading volume details never changes the saved prescriptions');
+      assert.deepEqual(errors,[]);
+    }finally{await context.close();}
+  }
+  console.log('PASS R53 volume details: full canonical contributor counts, long names, native keyboard controls and 320/393/900/1280px at 100/200% text in both themes.');
 }
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const server=http.createServer((req,res)=>{
@@ -668,6 +825,7 @@ try{
   }
   await verifyFoundationStates(browser);
   await verifyTaskHierarchy(browser);
+  await verifyVolumeDetails(browser);
   // Build genuine 1:1 side-by-side PNGs for visual signoff (left dark / right light),
   // not two disjoint galleries where differences are difficult to compare.
   const canvasPage=await browser.newPage();

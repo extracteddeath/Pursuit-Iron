@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "milestone": "M376",
+  "build": 923,
+  "baseRevision": "c191a57d28e7d98fe3752a37135744e220bd2002",
+  "runtimeAggregate": "0ef8e8b123d4c297090b416f2c02a51e829b0b36e3a5b34579f3956cebdd68b1",
+  "moduleSha256": {
+    "modules/next-engine/loading.js": "1a142af24c0d8d577c751926102e4c413e11f18162dd1261a31d80901ef7cfc3",
+    "modules/next-engine/workout-history-adapter.js": "e4411d30e25080ac81f5fdbaa206e9069f2af72d75fcb8e7af9a7ae44a14bf6a",
+    "modules/session-tools.js": "6f75f6559033a968f5dbb986c3141adb31aab13e9971ce61719b301c2f88311b",
+    "modules/training-domain/analytics.js": "07a956721139fbcac7382f05550665cc2ff56ab6f5e8cf2381f4d368f8056066"
+  },
+  "method": "One sequential reference/candidate pair; each has one Home startup and five pointer Resume/Back returns per native/4x CPU profile. The HTTP-only reference restores repeated per-workout maps/default clones and duplicate no-choice review suggestions. The coaching correctness fix is retained in both. Assets local; timings environment-relative, not field CWV, physical Android, network latency or TalkBack certification.",
+  "reproduce": {
+    "entry": "verification/m318-throttled-cycle-performance-browser-test.mjs",
+    "referenceArguments": [
+      "--startup-only",
+      "--history-rebuild-reference",
+      "--app-report",
+      "reference.json"
+    ],
+    "candidateArguments": [
+      "--startup-only",
+      "--app-report",
+      "candidate.json"
+    ],
+    "fullRegression": "Run entry with no filter; --logger-report and --app-report can retain reports."
+  },
+  "reference": {
+    "schemaVersion": 1,
+    "build": 923,
+    "runtimeAggregate": "0ef8e8b123d4c297090b416f2c02a51e829b0b36e3a5b34579f3956cebdd68b1",
+    "browser": "HeadlessChrome/153.0.8010.0",
+    "reference": true,
+    "fixture": {
+      "historyWorkouts": 240,
+      "serializedStoreCharacters": 499586,
+      "viewport": "393x852",
+      "reducedMotion": true
+    },
+    "method": "Full local app navigation to two-frame Home readiness; real pointer Resume to two-frame set entry, with exact persisted recovery and unchanged training content. Native/4x CPU emulation. Not field CWV, network timing or physical Android certification.",
+    "records": [
+      {
+        "rate": 1,
+        "homeMs": 1146.2,
+        "longTasks": [
+          {
+            "start": 274.59999999962747,
+            "duration": 854
+          }
+        ],
+        "warmReturnsMs": [
+          456.3,
+          397.7,
+          352.8,
+          384,
+          385.1
+        ],
+        "historyWork": {
+          "maps": 26322,
+          "analyses": 107
+        }
+      },
+      {
+        "rate": 4,
+        "homeMs": 6091.4,
+        "longTasks": [
+          {
+            "start": 345.80000000074506,
+            "duration": 76
+          },
+          {
+            "start": 905.8000000007451,
+            "duration": 195
+          },
+          {
+            "start": 1109.300000000745,
+            "duration": 124
+          },
+          {
+            "start": 1350.1000000014901,
+            "duration": 4659
+          },
+          {
+            "start": 6034.200000001118,
+            "duration": 56
+          }
+        ],
+        "warmReturnsMs": [
+          2782.4,
+          3040.6,
+          2602.1,
+          2155.3,
+          1985
+        ],
+        "historyWork": {
+          "maps": 26322,
+          "analyses": 107
+        }
+      }
+    ]
+  },
+  "candidate": {
+    "schemaVersion": 1,
+    "build": 923,
+    "runtimeAggregate": "0ef8e8b123d4c297090b416f2c02a51e829b0b36e3a5b34579f3956cebdd68b1",
+    "browser": "HeadlessChrome/153.0.8010.0",
+    "reference": false,
+    "fixture": {
+      "historyWorkouts": 240,
+      "serializedStoreCharacters": 499586,
+      "viewport": "393x852",
+      "reducedMotion": true
+    },
+    "method": "Full local app navigation to two-frame Home readiness; real pointer Resume to two-frame set entry, with exact persisted recovery and unchanged training content. Native/4x CPU emulation. Not field CWV, network timing or physical Android certification.",
+    "records": [
+      {
+        "rate": 1,
+        "homeMs": 744,
+        "longTasks": [
+          {
+            "start": 294.59999999962747,
+            "duration": 433
+          }
+        ],
+        "warmReturnsMs": [
+          365.7,
+          243.8,
+          212.3,
+          263.5,
+          203.5
+        ],
+        "historyWork": {
+          "maps": 142,
+          "analyses": 71
+        }
+      },
+      {
+        "rate": 4,
+        "homeMs": 2638.4,
+        "longTasks": [
+          {
+            "start": 472,
+            "duration": 88
+          },
+          {
+            "start": 568.8000000007451,
+            "duration": 112
+          },
+          {
+            "start": 782.9000000003725,
+            "duration": 1772
+          },
+          {
+            "start": 2584.60000000149,
+            "duration": 52
+          }
+        ],
+        "warmReturnsMs": [
+          1541.1,
+          1252.7,
+          1220.1,
+          1250.8,
+          1089.4
+        ],
+        "historyWork": {
+          "maps": 142,
+          "analyses": 71
+        }
+      }
+    ]
+  },
+  "observed": [
+    {
+      "cpuRate": 1,
+      "homeImprovementPercent": 35.1,
+      "referenceWarmMedianMs": 385.1,
+      "candidateWarmMedianMs": 243.8,
+      "mapsBefore": 26322,
+      "mapsAfter": 142,
+      "analysesBefore": 107,
+      "analysesAfter": 71
+    },
+    {
+      "cpuRate": 4,
+      "homeImprovementPercent": 56.7,
+      "referenceWarmMedianMs": 2602.1,
+      "candidateWarmMedianMs": 1250.8,
+      "mapsBefore": 26322,
+      "mapsAfter": 142,
+      "analysesBefore": 107,
+      "analysesAfter": 71
+    }
+  ],
+  "parity": {
+    "fixedClock": 1793016000000,
+    "baseBuild": 922,
+    "status": "pass",
+    "analyses": 36,
+    "suggestions": 216,
+    "models": 36,
+    "reviews": 72,
+    "analysisJsonCharacters": 8646997,
+    "revisionCorrections": "all populated histories",
+    "inventoryIsolation": true,
+    "inputImmutability": true,
+    "coverage": "Six generated configurations; both lb/kg; 0/8/64 completed-workout histories. Complete session reviews, history analyses, selected suggestions and fresh coaching models; in-place history correction and normalized inventory isolation."
+  },
+  "correctnessRegressions": {
+    "existingM225": "Observed-effort provenance correction changes calibration immediately; in-place program-unit changes recalculate e1RM; complete identical inputs reuse within one minute; elapsed time or clock rollback refreshes recovery. Provenance regression failed before the fix with stale -0.68 bias.",
+    "existingM221": "Normalized loading returns independent records/lists in lb/kg/normalized unit tokens.",
+    "existingB904": "Saved session choices, review/Undo and scoped program changes remain intact.",
+    "existingHomeAndM219": "Home greeting text remains complete during enlargement and reversal; Settings gym name/count/chevron stay inside the actual action at 320/393/834px. Both failed before the correction. Existing masthead/pointer and theme/audio/lifecycle checks remain intact."
+  },
+  "loggerRegression": {
+    "schemaVersion": 1,
+    "sourceRevision": "5d450e9c72604e5b4e20d7ad3be49590f0fc9187",
+    "build": 923,
+    "runtimeAggregate": "0ef8e8b123d4c297090b416f2c02a51e829b0b36e3a5b34579f3956cebdd68b1",
+    "fixture": {
+      "programId": "m318-fixed-2",
+      "historyWorkouts": 240,
+      "rows": 7,
+      "workingSets": 23,
+      "viewport": "393x852",
+      "reducedMotion": true
+    },
+    "browser": "HeadlessChrome/153.0.8010.0",
+    "unit": "ms",
+    "method": "Synthetic input/click to two animation frames; persisted live state checked per action. Local preloaded assets; CPU slowdown emulated. Not physical Android, field INP, cold startup, or TalkBack certification.",
+    "timingPolicy": "Environment-relative diagnostics; correctness and zero duplicate suggestion calls are enforced, not a flaky machine-speed threshold.",
+    "records": [
+      {
+        "rate": 1,
+        "mountedSuggestionCalls": 7,
+        "callsDuringLogging": 0,
+        "historyWork": {
+          "maps": 14,
+          "analyses": 7
+        },
+        "input": {
+          "samples": 40,
+          "p50": 33.3,
+          "p95": 33.6,
+          "p99": 36.9
+        },
+        "complete": {
+          "samples": 10,
+          "p50": 33.3,
+          "p95": 33.4,
+          "p99": 33.4
+        },
+        "undo": {
+          "samples": 10,
+          "p50": 33.4,
+          "p95": 37,
+          "p99": 37
+        }
+      },
+      {
+        "rate": 4,
+        "mountedSuggestionCalls": 7,
+        "callsDuringLogging": 0,
+        "historyWork": {
+          "maps": 14,
+          "analyses": 7
+        },
+        "input": {
+          "samples": 40,
+          "p50": 33.5,
+          "p95": 39.4,
+          "p99": 49.6
+        },
+        "complete": {
+          "samples": 10,
+          "p50": 65.6,
+          "p95": 119.1,
+          "p99": 119.1
+        },
+        "undo": {
+          "samples": 10,
+          "p50": 64,
+          "p95": 84.9,
+          "p99": 84.9
+        }
+      }
+    ]
+  },
+  "uiSha256": {
+    "modules/App.js": "9200beeecfe0074477c3edf1bc895730c79c67405da00aec3645a3c809565fd9",
+    "index.html": "ce62091c0d0f8224783a20d808124c8e76ed3a818e771e19fe5ae10cfe112492",
+    "sw.js": "c8c527c1f66e3b7f95cf5c91c75083bacc4623812e6a21e15d8333505c928efd",
+    "BUILD_PROFILE.json": "06e122b90a99e6657dd96c02827e52a31a7e2327e6a2b11be2936c2dadbf5c9f",
+    "CHANGELOG.md": "131dbba632588f8185ec34d4e6a1e8256b017316338179a2cf0ffe8f80803570",
+    "app.css": "9e1c0ebf7d4f71d5c78111fe96ca8b6a6f454679f4251711166ec7d268b3b17d",
+    "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
+    "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
+  }
+}

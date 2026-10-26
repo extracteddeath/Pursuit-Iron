@@ -1,51 +1,47 @@
-# Pursuit-Iron
-Fitness app
+# Pursuit Iron
 
+[Pursuit Iron](https://extracteddeath.github.io/Pursuit-Iron/) is a web app for planning and logging strength training.
 
-https://extracteddeath.github.io/Pursuit-Iron/
+Build a program for strength, muscle growth, or both, using your schedule, available equipment, experience and session time. Create your own routine or link training blocks into a cycle. Your saved prescription, workout targets and logged history have separate, explicit owners.
 
-Pursuit Iron builds you a complete training program, then keeps adjusting it as you lift.
+The app includes:
 
-Tell it your goal, how many days a week you can train, how long each session can run, and what equipment you actually have. It generates a full week from a library of 365 exercises — or start from a proven template and let it handle the maths.
+- Programs and adaptive cycles with reviewed changes before they replace your saved plan.
+- Exercise-specific progression, equipment loading steps, effort targets and bounded workout adjustments.
+- Fast set logging, rest timers, plate calculations, notes and resume snapshots.
+- Training history, lift trends, strength standards, bodyweight and measurement logs.
+- Multiple gym inventories, themes, enlarged text and phone/tablet layouts.
+- JSON backup/restore with a merge preview and Undo, plus workout and body-metric CSV export and Strong/Hevy workout import.
 
-BUILT AROUND YOUR CONSTRAINTS
-• Full gym, garage rack, or a single pair of dumbbells — programs are built from the kit you own
-• Save multiple gyms and switch between them
-• Sessions fit the time you have, not an idealised hour
-• Splits from 2 to 6 days: full body, upper/lower, push/pull/legs, and hybrids
+Training recommendations and strength scores are estimates based on the information available to the app. Review the proposed program and log what you actually perform.
 
-PROVEN TEMPLATES, DONE PROPERLY
-5/3/1 · nSuns 531 LP · GZCLP · Madcow 5x5 · Texas Method · The Rippler · Jacked & Tan 2.0 · German Volume Training — each with its own percentage scheme and progression rules, not a generic week with a famous name attached.
+## Data and offline use
 
-IT READS WHAT YOU LOG
-• Loads suggested from your own estimated 1RM and the reps-in-reserve you report
-• Weekly volume per muscle tracked against MEV / MAV / MRV landmarks
-• Tells you when a muscle is under-dosed or past what you're recovering from
-• Distinguishes a real strength ceiling from accumulated fatigue — and from ordinary noise
-• Deloads are earned by evidence in your training, not by a date on the calendar
-• Beginners get simple linear progression until they genuinely stall out of it
+Training is stored on your device. No account is required. After the app has loaded and its offline assets have been saved, it can open and log workouts without a connection. You can install it from a supporting browser's app/install menu.
 
-PERIODIZATION THAT MEANS SOMETHING
-Chain blocks into a cycle that moves through accumulation, intensification and a peak. Rep ranges, effort targets and volume shift with the phase.
+Use one active app window at a time. A second window waits before opening the same device data, so stale copies cannot overwrite a completed workout. If an older app version changes storage unexpectedly, the current window pauses saving and offers its own backup before reloading.
 
-FAST TO USE UNDER A BAR
-• Rest timers, plate calculator, warm-up ramps, supersets
-• Notes pinned to a lift resurface every time it comes up — including rack settings like J-hook height, seat and pulley position
-• Estimated-1RM trends, strength standards for your bodyweight, age and sex
-• Body measurements, bodyweight log, achievements, shareable session cards
+Save a separate backup before changing devices or clearing browser data. A full backup contains saved programs, cycles, completed history, body logs and settings. Unfinished workouts and unsaved program drafts stay on the current device. Restore shows additions, updates and removals before you confirm; it does not silently replace your existing log.
 
-YOUR DATA IS YOURS
-No account. No server. No ads. No subscription. Everything stays on your device and works completely offline — a basement gym with no signal changes nothing. Move between your own devices with an export you control, using a merge that preserves existing records and previews changes before you confirm. Keep a separate backup: device loss or cleared browser data can still remove local records.
+Read the [privacy policy](https://extracteddeath.github.io/Pursuit-Iron/privacy.html) for the current data-handling details.
 
-HONEST BY DESIGN
-Volume advice shows the set counts it rests on. The model that estimates your personal productive volume range stays silent unless your history genuinely contains enough variation to identify one — a group average dressed up as a personal finding would be worse than no answer at all. That restraint is why the coaching is worth reading.
+## Development and release verification
 
-Free, forever. Built by a tiny independent team..
+Production uses maintained JavaScript modules, locally hosted React and icons, a static stylesheet and a service worker. No application build step or network-hosted runtime library is required.
 
+For local development, serve this repository on localhost, for example:
 
-Developer map: [ENGINE_ARCHITECTURE.md](ENGINE_ARCHITECTURE.md). Verified engine sequence: [ENGINE_UPGRADE_PLAN.md](ENGINE_UPGRADE_PLAN.md). Engine verification: [M235_ENGINE_VERIFICATION_2_REPORT.md](M235_ENGINE_VERIFICATION_2_REPORT.md). Post-merge assurance: [M236_VERIFICATION_ASSURANCE_REPORT.md](M236_VERIFICATION_ASSURANCE_REPORT.md). CI supply-chain assurance: [M237_CI_SUPPLY_CHAIN_REPORT.md](M237_CI_SUPPLY_CHAIN_REPORT.md).
+```sh
+python3 -m http.server 8000
+```
 
-Repository hygiene: generated screenshots, local ZIP packages and build output are ignored.
-Historical B/M/R milestone audit reports no longer needed by current verification were
-removed from the live tree; they remain recoverable from Git history. Current
-engineering contracts, UI guidance and regression tests remain in this repository.
+Use a current browser with device-storage protection support. The installed PWA requires HTTPS in production; localhost is supported for development.
+
+The current release identity and certified file hashes are in `RELEASE_MANIFEST.json`. Prepare a new shipped build with `node scripts/finalize-release.mjs --next-build`; unchanged finalization does not increment it again. Release validation requires source contracts, the complete engine lifecycle audit, independent engine parity, all browser groups and release/offline integrity. After deployment, verify hosted bytes and replay the installed offline app.
+
+- [Engine architecture](ENGINE_ARCHITECTURE.md)
+- [Current improvement plan and acceptance evidence](NEXT_APP_UPDATE_PLAN.md)
+- [Engine verification](M235_ENGINE_VERIFICATION_2_REPORT.md)
+- [CI and supply-chain verification](M237_CI_SUPPLY_CHAIN_REPORT.md)
+
+Generated screenshots, local archives and build output are ignored. Historical reports remain in Git history; current contracts and engineering guidance stay in the repository. Browser emulation does not certify physical Android interruption, keyboard or TalkBack behavior.

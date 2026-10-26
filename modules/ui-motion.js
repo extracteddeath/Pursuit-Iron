@@ -317,8 +317,8 @@ export function installAppMotion(root) {
     // measured, never guessed, so four-column and two-column selectors share one behavior.
     const selectionTracks = new WeakMap();
     const trackSelector = '.wpb-progress .wpb-premium-tabs, .wpb-settings .wpb-segmented, .wpb-exercise-tabs, .wpb-library-flag-filter, .wpb-progress-grouping, .wpb-plan-panes, .wpb-exercise-window-tabs, .wpb-tabbar';
-// Delayed visual entrances are bounded to five high-level cards per new page.
-// No workout logger controls, engine values or React-owned children participate.
+// One lead-card entrance carries navigation context without moving a row of cards.
+// Workout logger controls, engine values and React-owned children never participate.
 const entranceKeys = new WeakMap();
 const entranceSelector = '.wpb-home-hero, .wpb-home .wpb-action-tile, .wpb-program .wpb-day-card, .wpb-progress .wpb-progress-glance-item, .wpb-profile .wpb-profile-strength-cell, .wpb-settings .wpb-settings-card, .wpb-plan-view .wpb-plan-glance-tile, .wpb-plan-view .wpb-plan-up-next';
 // Record the real source geometry before React navigates. The next mounted
@@ -378,7 +378,7 @@ function stagePage(el, initial = false) {
     if (rapid) delete el.dataset.piCascade;
     else el.dataset.piCascade = '1';
     const cards = [...el.querySelectorAll(entranceSelector)].filter(item =>
-        !item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')).slice(0, 5);
+        !item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')).slice(0, 1);
     const source = connectedSource;
     const linked = !rapid && source && performance.now() - source.at < 1100 &&
         source.from !== key && (!source.target || source.target === key);
@@ -397,14 +397,12 @@ function stagePage(el, initial = false) {
     // Each fresh quick-switch owns its navigation; a stale tab-origin cannot
     // carry a second, unrelated connected-card movement into the next screen.
     if (rapid) connectedSource = null;
-    cards.forEach((item, index) => {
+    cards.forEach(item => {
+        // A primary route is a change of context, not a five-card procession.
+        // The indicator already shows selection; at most one lead card arrives.
         delete item.dataset.piReveal;
-        if (rapid) {
-            item.style.removeProperty('--pi-reveal-delay');
-            return;
-        }
-        item.style.setProperty('--pi-reveal-delay', `${index * 26}ms`);
-        item.dataset.piReveal = '1';
+        item.style.removeProperty('--pi-reveal-delay');
+        if (!rapid) item.dataset.piReveal = '1';
     });
 }
 const navSurface = button => {
@@ -716,58 +714,30 @@ function disclosure(el, initial = false) {
             return;
         }
         positionTrack(group, buttons, selected, initial);
-        // 2026 expressive connected button groups briefly compress their painted
-        // active container while it travels, then spring to the measured size.
-        // This never scales a button's hit target or touches the workout logger.
-        if (!initial && previous !== undefined && selected >= 0 &&
-            group.matches(trackSelector) && !reduced()) {
-            spring(group, '--pi-m3-track-stretch', 1, {
-                restart: .88, stiffness: 690, damping: .76,
-                precision: .001
-            });
-            spring(group, '--pi-m3-track-corner', 18, {
-                restart: 25, write: pixels(group, '--pi-m3-track-corner'),
-                stiffness: 780, damping: .82, precision: .02
-            });
-        }
+        // The measured indicator already supplies selection continuity. Avoid
+        // springing its width/shape separately: this created two competing
+        // movements on every tab or segment change.
         const rir = group.matches('.wpb-effort-scale');
-        // Material's expressive button group: the active option takes more
-        // space, adjacent options yield gently, and the painted selection
-        // follows their measured bounds. The underlying React controls stay
-        // present and in the same order, with identical keyboard semantics.
-        const fluid = group.matches('.wpb-progress .wpb-premium-tabs,.wpb-library .wpb-library-flag-filter,.wpb-plan-panes');
-        if (fluid) group.dataset.piM3Fluid = '1';
-        let trackQueued = false;
-        const followFluid = () => {
-            if (!fluid || trackQueued) return;
-            trackQueued = true;
-            requestAnimationFrame(() => {
-                trackQueued = false;
-                if (root.contains(group) && choiceStates.get(group) === selected)
-                    positionTrack(group, buttons, selected, true);
-            });
-        };
+        // Only the effort scale uses intentional proportional button growth.
+        // Plan, Progress and Library tab widths remain native; shifting
+        // neighboring hit targets during selection breaks spatial continuity.
+        // The existing measured track moves without altering those targets.
+        delete group.dataset.piM3Fluid;
         buttons.forEach((b, i) => {
             if (!rir && !b.hasAttribute('aria-selected') && !b.hasAttribute('aria-pressed') && !b.hasAttribute('aria-current') && !group.matches('.wpb-tabbar')) return;
             control(b); b.dataset.piChoice = i === selected ? 'selected' : 'unselected';
-            const neighbor = selected >= 0 && Math.abs(i - selected) === 1;
-            const grow = rir ? i === selected ? 1.18 : neighbor ? .91 : 1 :
-                fluid ? i === selected ? 1.20 : neighbor ? .95 : 1 : 1;
-            spring(b, '--pi-choice-grow', grow, {
-                from: initial ? grow : 1,
-                damping: fluid ? .83 : .9, stiffness: fluid ? 620 : 850,
-                precision: .001,
-                ...(fluid ? { write: value => {
-                    b.style.setProperty('--pi-choice-grow', String(value));
-                    followFluid();
-                } } : {})
-            });
-            shape(b);
-            if (group.matches('.wpb-tabbar')) {
-                const icon = b.querySelector('svg');
-                if (icon && !initial && previous !== undefined && i === selected)
-                    spring(icon, '--pi-nav-scale', 1, { restart: .88, damping: .8, stiffness: 800, precision: .001 });
+            if (rir) {
+                const neighbor = selected >= 0 && Math.abs(i - selected) === 1;
+                const grow = i === selected ? 1.18 : neighbor ? .91 : 1;
+                spring(b, '--pi-choice-grow', grow, {
+                    from: initial ? grow : 1, damping: .9,
+                    stiffness: 850, precision: .001
+                });
+            } else {
+                stopMotion(b, '--pi-choice-grow');
+                b.style.removeProperty('--pi-choice-grow');
             }
+            shape(b);
         });
     }
     // R35: resolve 'on' colors from the ACTUAL filled surface, not the

@@ -50,12 +50,24 @@ def shot(name):
     print("shot", path, flush=True)
 
 
-def record(name, action, secs=3):
-    """A short screen recording around one interaction, to check motion frame by frame."""
+def record(name, taps, secs=5):
+    """A short screen recording around taps (patterns located before recording, so the tap lands at once)."""
     try:
+        pts = []
+        for pat in taps:
+            if isinstance(pat, (int, float)):
+                pts.append(pat); continue
+            p = find(pat, timeout=6)
+            if not p:
+                print("record: not found", pat, flush=True); return
+            pts.append(p)
         rec = subprocess.Popen(["adb", "shell", "screenrecord", "--time-limit", str(secs), "--size", "540x1200", "/sdcard/rec.mp4"])
-        time.sleep(0.8)
-        action()
+        time.sleep(1.5)
+        for p in pts:
+            if isinstance(p, (int, float)):
+                time.sleep(p)
+            else:
+                adb("shell", "input", "tap", str(p[0]), str(p[1]))
         rec.wait(timeout=secs + 15)
         time.sleep(0.5)
         adb("pull", "/sdcard/rec.mp4", os.path.join(OUT, name + ".mp4"))
@@ -423,9 +435,9 @@ for t in ["Plan", "Progress", "Exercises", "You"]:
 # Motion: the avatar travels from Today's header to the middle of You; tabs fade through
 tap(r"^\|Today$|^Today\|")
 time.sleep(1.5)
-record("motion-avatar", lambda: tap(r"^You(: [^|]*)?\|"))
+record("motion-avatar", [r"^You(: [^|]*)?\|"])
 time.sleep(1)
-record("motion-tabs", lambda: (tap(r"^\|Plan$|^Plan\|"), time.sleep(0.9), tap(r"^\|Progress$|^Progress\|")))
+record("motion-tabs", [r"^\|Plan$|^Plan\|", r"^\|Progress$|^Progress\|"])
 
 # 5a. Exercises: equipment filter and the count
 tap(r"^\|Exercises$|^Exercises\|")
@@ -572,7 +584,7 @@ shot("profile-achievements")
 # The design's badges: tap one for what it takes
 scroll_to(r"Century, (earned|\d+ percent)", tries=4, step=500)
 if tap(r"Century, (earned|\d+ percent)", "badge-open", required=False):
-    if not find(r"Log 100 training sessions", timeout=3):
+    if not find(r"Log 100 training sessions", timeout=4):
         FAILS.append("badge detail missing")
     tap(r"^Close badge")
 else:

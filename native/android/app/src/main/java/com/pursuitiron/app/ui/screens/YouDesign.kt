@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.pursuitiron.app.ui.screens
 
@@ -25,6 +25,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -458,6 +459,9 @@ fun ProfBadges(board: JSONObject) {
     val all = board.list("badges"); if (all.isEmpty()) return
     val cs = MaterialTheme.colorScheme
     var open by remember { mutableStateOf<String?>(null) }
+    // The detail opens under the grid; bring it on screen once it has grown in.
+    val detailView = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    androidx.compose.runtime.LaunchedEffect(open) { if (open != null) { kotlinx.coroutines.delay(250); detailView.bringIntoView() } }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Achievements", style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 6.dp).semantics { heading() })
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -492,7 +496,7 @@ fun ProfBadges(board: JSONObject) {
             val x = m ?: return@AnimatedVisibility
             val done = x.b("done")
             val fg = if (done) cs.onPrimaryContainer else cs.onSurface
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(if (done) cs.primaryContainer else cs.surfaceContainerHigh).padding(16.dp),
+            Row(Modifier.fillMaxWidth().bringIntoViewRequester(detailView).clip(RoundedCornerShape(24.dp)).background(if (done) cs.primaryContainer else cs.surfaceContainerHigh).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 BadgeShape(done, 44.dp, 14.dp, badgeIcon(x.s("id")), 26.dp)
                 Spacer(Modifier.width(6.dp))

@@ -20,7 +20,8 @@ export function withProgressionChoices(program, choices = {}) {
         if (style === 'auto') { delete progStyle[id]; delete progStyleLifter[id]; }
         else { progStyle[id] = style; progStyleLifter[id] = true; }
     }
-    return { ...program, progStyle, progStyleLifter };
+    return { ...program, progStyle: Object.keys(progStyle).length ? progStyle : undefined,
+        progStyleLifter: Object.keys(progStyleLifter).length ? progStyleLifter : undefined };
 }
 // Retain the source of a session choice; timestamps and unrelated edits do not
 // establish a conflict. Progression is exercise-wide, including paired slots.

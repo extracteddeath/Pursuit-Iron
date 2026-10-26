@@ -280,8 +280,10 @@ function programChangeLabels(before, after) {
         labels.push("Program name");
     if (changed("days"))
         labels.push("Training days, exercises or order");
-    if (["overrides", "slotBias", "nextWeekPrescriptions", "progStyle"].some(changed))
-        labels.push("Set, rep or effort targets");
+    if (["overrides", "slotBias", "nextWeekPrescriptions"].some(changed))
+        labels.push("Exercise targets");
+    if (["progStyle", "progStyleLifter"].some(changed))
+        labels.push("Progression method");
     if (changed("ss"))
         labels.push("Supersets");
     if (["schedule", "weekPlan", "scheduleBase"].some(changed))

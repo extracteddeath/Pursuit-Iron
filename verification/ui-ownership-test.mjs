@@ -16,7 +16,7 @@ const presentationSource = disclosures + '\n' + programReference + '\n' + releas
 const MAX_IMPORTANT = 2360; // M291: consolidate the remaining Profile style owners
 const MAX_APP_IMPORTANT = 1229; // M292: retire ten superseded Progress priority declarations.
 const MAX_REPEAT_IMPORTANT = 15; // M288: at-rule comments no longer erase media/container scope.
-const MAX_INLINE_STYLE_OBJECTS = 2614; // M370: disclosure/reference styles have one CSS owner; include every extracted module.
+const MAX_INLINE_STYLE_OBJECTS = 2601; // M371: progression-method sheet retires thirteen static inline styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -91,12 +91,16 @@ for (const name of ['InfoCard','MotionReveal']) {
     assert.equal((app.match(new RegExp('function '+name+'\\(', 'g')) || []).length, 0, 'No duplicate disclosure owner in App');
     assert.equal((disclosures.match(new RegExp('export function '+name+'\\(', 'g')) || []).length, 1, 'One shared disclosure owner');
 }
-for (const name of ['SetupCard','ProgressionCard','ProgramReferenceSheet']) {
+for (const name of ['SetupCard','ProgressionCard','ProgramReferenceSheet','ProgressionChoiceSheet']) {
     assert.equal((app.match(new RegExp('function '+name+'\\(', 'g')) || []).length, 0, 'Reference view is not duplicated in the coordinator');
     assert.equal((programReference.match(new RegExp('export function '+name+'\\(', 'g')) || []).length, 1, 'One reference presentation owner');
 }
 assert.ok(!disclosures.includes('style:') && !programReference.includes('style:') && !programReference.includes('C.'),
     'Shared disclosure/reference presentation must stay in its CSS owner');
+assert.ok(app.includes('setProgram(p => withProgressionChoices(p, { [id]: style }))'),
+    'Program and Workout must share the progression-choice writer');
+assert.ok(programReference.includes("'aria-label': 'Close progression methods'") && programReference.includes("'aria-describedby': 'program-progression-scope'"),
+    'Method choice keeps a named dialog, explicit scope and persistent Close action');
 assert.ok(disclosures.includes("'aria-controls': contentId") && disclosures.includes('const contentId = useId()'),
     'Every disclosure connects its own accessible control and content');
 assert.ok(programReference.includes('sessionPrescriptionRows(program, day, week)') && programReference.includes('start + 1, start + 2'),

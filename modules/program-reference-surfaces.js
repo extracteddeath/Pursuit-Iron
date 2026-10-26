@@ -1,10 +1,49 @@
-// Read-only program reference. Values come from saved engine projections; this view never writes a program.
+// Program reference and progression presentation. App owns changes and persistence.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useState } from 'react';
-import { X, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import { weeksOf, sessionPrescriptionRows, EX_BY_ID, effortLabel, computeCell, exerciseAt } from './engine-api.js';
+import { X, Check, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { weeksOf, sessionPrescriptionRows, EX_BY_ID, PROG_STYLES, effortLabel, computeCell, exerciseAt } from './engine-api.js';
 import { UiChoice } from './ui-primitives.js';
 import { InfoCard } from './ui-disclosure.js';
+
+export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel, linearIncrement, unit, onChoose, onClose, sheetDragRef }) {
+    const options = [
+        ['auto', 'Auto (recommended)', `Use this program’s per-week methods. Currently ${automaticLabel}.`],
+        ['dynamic', 'Dynamic double', 'Each working set builds reps and earns its own load increase.'],
+        ['double', 'Double progression', 'Build reps across the working sets before increasing their shared load.'],
+        ['ladder', 'Rep ladder', 'Raise a shared rep target in steps, then increase the load.'],
+        ['wave', 'Wave loading', 'Vary rep targets within the prescribed range across sessions.'],
+        ['linear', 'Linear progression', `Add ${linearIncrement} ${unit} after successful work at the bottom of the range.`],
+        ['e1rm', 'e1RM autoregulation', 'Use recent strength estimates and the target effort to choose a load.']
+    ];
+    return _jsx('div', { className: 'wpb-backdrop wpb-progression-choice-backdrop', role: 'dialog', 'aria-modal': true,
+        'aria-labelledby': 'program-progression-title', 'aria-describedby': 'program-progression-scope', onClick: onClose,
+        children: _jsxs('section', { className: 'wpb-progression-choice-panel', ref: sheetDragRef,
+            onClick: event => event.stopPropagation(), children: [
+                _jsxs('header', { className: 'wpb-progression-choice-heading', children: [
+                    _jsxs('div', { children: [
+                        _jsx('h2', { id: 'program-progression-title', children: 'Progression method' }),
+                        _jsx('p', { className: 'wpb-progression-choice-exercise', children: exerciseName })
+                    ] }),
+                    _jsx('button', { type: 'button', className: 'pressable hit wpb-sheet-close wpb-progression-choice-close',
+                        'aria-label': 'Close progression methods', onClick: onClose, children: _jsx(X, { size: 18 }) })
+                ] }),
+                _jsxs('div', { className: 'wpb-scroll wpb-progression-choice-body', children: [
+                    _jsx('p', { id: 'program-progression-scope', className: 'wpb-progression-choice-scope',
+                        children: 'Choose how this lift progresses throughout the program. Review and save your program to keep the change.' }),
+                    _jsx('div', { className: 'wpb-progression-choice-options', role: 'group', 'aria-label': 'Progression methods',
+                        children: options.map(([value, label, description]) => _jsxs(UiChoice, {
+                            selected: selected === value, className: 'wpb-progression-choice', 'data-program-progression-choice': value,
+                            onClick: () => onChoose(value), children: [
+                                _jsx('span', { className: 'wpb-progression-choice-check', 'aria-hidden': true,
+                                    children: selected === value && _jsx(Check, { size: 15 }) }),
+                                _jsxs('span', { className: 'wpb-progression-choice-copy', children: [
+                                    _jsx('strong', { children: label }), _jsx('span', { children: description })
+                                ] })
+                            ] }, value)) })
+                ] })
+            ] }) });
+}
 
 export function ProgramReferenceSheet({ onClose, sheetDragRef, children }) {
     return _jsx('div', { className: 'wpb-backdrop wpb-program-reference-backdrop', role: 'dialog', 'aria-modal': true,
@@ -43,10 +82,7 @@ export function ProgressionCard({ program, open, onToggle }) {
     const totalWeeks = weeks + (program.config?.deload ? 1 : 0);
     // Read the saved selection record. The UI never selects a progression method.
     const selectedProgressions = Array.isArray(program?.nextEngine?.progressionPlan) ? program.nextEngine.progressionPlan : [];
-    const progressionLabel = style => ({
-        double: 'Double progression', dynamic: 'Dynamic double progression', ladder: 'Rep ladder',
-        linear: 'Linear progression', wave: 'Wave loading', e1rm: 'e1RM autoregulation', auto: 'Auto'
-    })[style] || String(style || 'Auto').replace(/_/g, ' ');
+    const progressionLabel = style => PROG_STYLES[style] || String(style || 'Auto').replace(/_/g, ' ');
     const progressionGroups = [];
     const progressionGroupMap = new Map();
     for (const item of selectedProgressions) {
@@ -61,6 +97,7 @@ export function ProgressionCard({ program, open, onToggle }) {
     const progressionOverview = selectedProgressions.length ? _jsxs('details', {
         className: 'wpb-progression-explanation', 'data-progression-selection': true, children: [
             _jsx('summary', { children: 'Why these methods?' }),
+            _jsx('p', { className: 'wpb-progression-origin-note', children: 'This records how the block was built. Current weekly methods appear above; your later choices take precedence.' }),
             _jsxs('div', { className: 'wpb-progression-explanation-heading', children: [
                 _jsx('strong', { children: manualSelections === selectedProgressions.length ? 'Your progression choices'
                     : adaptiveSelections ? 'Progression re-checked from your training' : 'Auto progression for this block' }),
@@ -135,6 +172,8 @@ export function ProgressionCard({ program, open, onToggle }) {
                             projected ? [
                                 _jsx('span', { className: 'wpb-progression-prescription mono', children: `${projected.cell.sets}×${projected.cell.reps}` }, 'prescription'),
                                 _jsx('span', { className: 'wpb-progression-effort', children: effortLabel(projected.cell.rir) }, 'effort'),
+                                _jsx('span', { className: 'wpb-progression-method', 'data-progression-method': projected.cell.progressionStyle,
+                                    children: progressionLabel(projected.cell.progressionStyle) }, 'method'),
                                 projected.id !== row.ex?.id && _jsx('span', { className: 'wpb-progression-variant', children: projected.ex.name }, 'variant')
                             ] : _jsx('span', { className: 'wpb-progression-unavailable', children: unavailable?.missing ? (unavailable.note || 'Prescription unavailable') : 'Not scheduled' })
                         ] }, column.week);

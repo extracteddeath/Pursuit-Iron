@@ -1,3 +1,12 @@
+## Build 919 / M371 — Executable progression choices and exact save review
+
+- Fix exercise-wide progression choices that changed the editor/session selection but left generated engine cells on their original method. The canonical projection now honors the selected method, including alternating exercise identity; Auto reveals the saved slot/week schedule without rewriting it.
+- Share one progression-choice writer between Program and Workout. Preserve original generated prescriptions, manual set entries, completed facts and historical method snapshots; remove empty choice maps when returning to Auto.
+- Replace the clipped progression-method sheet with a named dialog, persistent Close action, explicit program scope, shared selected controls and wrapping explanations. Remove 13 static inline style objects and add no CSS priorities.
+- Show the current method in each weekly progression cell and identify the original generation rationale as historical. Read method names from the existing shared catalog.
+- Program save review now identifies method-only edits accurately and offers exact before/after settings and weekly prescriptions. Reuse the existing revision comparison renderer; scale review typography with text size, retain keyboard containment and keep actions visible.
+- Extend existing lifecycle/browser contracts across all six methods, numeric classic-double vs DDP behavior, Auto restoration, old engine mirrors, alternating identities and immutable history. Exercise the real editor save → Preview → Workout → method change → reload/resume → completed log → reviewed program update. Engine 0.65.9 progression algorithms remain unchanged.
+
 ## Build 918 / M370 — Executable plan details and authored settings validation
 
 - Correct the progression table's week-zero offset. Use canonical session projections for each visible week, include the final week and deload, and show the actual alternating exercise and effort target.

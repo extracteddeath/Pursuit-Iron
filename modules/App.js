@@ -5,6 +5,7 @@ import { SetupCard, ProgressionCard, ProgramReferenceSheet, ProgressionChoiceShe
 import { CHANGELOG } from './release-notes.js';
 import { UiHeader, UiRootHeader, UiAction, UiChoice, UiStatus, UiSection } from './ui-primitives.js';
 import { ProgramSettingsSheet } from './program-settings-sheet.js';
+import { LoadWaveCard } from './program-load-wave.js';
 import { WeeklyScheduleSheet } from './program-schedule-sheet.js';
 import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
@@ -65,7 +66,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='925';
+const __APP_VERSION__='4.0.0'; const __BUILD__='926';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -6815,7 +6816,7 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
                     return null;
                 const tone = wi.deload ? (C.warn || C.accent) : C.accent;
                 return (_jsxs(UiStatus, { "data-week-intent": wi.label, style: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 12, padding: "4px 0 10px", background: "none", border: "none", borderBottom: `1px solid ${C.borderSoft}`, borderRadius: 0 }, children: [_jsx(Activity, { size: 14, color: tone, style: { flexShrink: 0, marginTop: 1 } }), _jsxs("div", { style: { fontSize: 13, color: C.text, lineHeight: 1.5 }, children: [_jsx("span", { style: { fontWeight: 700 }, children: wi.label }), _jsxs("span", { style: { color: C.muted }, children: [" \u00B7 ", wi.detail] })] })] }));
-            })(), pane === "schedule" && featuredWeek && _jsx("section", { className: "wpb-plan-selected-week", "aria-label": "Selected week sessions", children: renderWeekCard(featuredWeek) }), pane === "volume" && featuredWeek && (_jsx(VolumeCard, { program: program, week: featuredWeek.week, volume: weeklyVolume(program, featuredWeek.week), subVolume: weeklySubVolume(program, featuredWeek.week), title: `Week ${featuredWeek.week} volume`, open: volOpen, onToggle: () => setVolOpen(v => !v) })), pane === "progression" && _jsx(ProgressionCard, { program: program, open: progOpen, onToggle: () => setProgOpen(v => !v) }), pane === "blueprint" && (_jsxs(_Fragment, { children: [_jsx(LoadWaveCard, { program: program, open: waveOpen, onToggle: () => setWaveOpen(v => !v) }), (() => {
+            })(), pane === "schedule" && featuredWeek && _jsx("section", { className: "wpb-plan-selected-week", "aria-label": "Selected week sessions", children: renderWeekCard(featuredWeek) }), pane === "volume" && featuredWeek && (_jsx(VolumeCard, { program: program, week: featuredWeek.week, volume: weeklyVolume(program, featuredWeek.week), subVolume: weeklySubVolume(program, featuredWeek.week), title: `Week ${featuredWeek.week} volume`, open: volOpen, onToggle: () => setVolOpen(v => !v) })), pane === "progression" && _jsx(ProgressionCard, { program: program, open: progOpen, onToggle: () => setProgOpen(v => !v) }), pane === "blueprint" && (_jsxs(_Fragment, { children: [_jsx(LoadWaveCard, { program: program, palette: C, open: waveOpen, onToggle: () => setWaveOpen(v => !v) }), (() => {
                         const bp = blockPlanFor(program);
                         if (!bp)
                             return null;
@@ -8859,51 +8860,6 @@ function VolumeRampTable({ program }) {
                                     const z = volumeZone(p, s, program);
                                     return (_jsx("div", { style: { width: CW, display: "flex", justifyContent: "center" }, children: _jsx("div", { className: "mono", title: `${PART_LABEL[p]} · ${z.label}`, style: { width: 25, height: 22, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, background: `${z.color}22`, color: catInk(z.color) }, children: fmtSets(s) }) }, c.w));
                                 })] }, p)))] }) }), _jsx("div", { style: { display: "flex", gap: 12, marginTop: 8, fontSize: 11, color: C.muted }, children: [["below MEV", C.muted], ["productive", C.accent], ["over MRV", C.warn]].map(([l, col]) => (_jsxs("span", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("span", { style: { width: 9, height: 9, borderRadius: 8, background: `${col}33`, border: `1px solid ${col}` } }), l] }, l))) })] }));
-}
-/* ── THE VOLUME LOAD WAVE ────────────────────────────────────────────────────────────────────
-   The block plan lists its phases in words. This is the same block as a shape: total planned sets
-   per week, so an accumulation ramp, a step, or a deload trough is visible at a glance rather than
-   inferred from three paragraphs. Sets come from weeklyVolume, the same function the volume card
-   totals — no second definition of "how much work is this week". */
-function LoadWaveCard({ program, open, onToggle }) {
-    const weeks = weeksOf(program);
-    /* plannedWeek, not the weeklyVolume sum: this chart is labelled "planned sets", and the volume
-       sum includes fractional secondary credit, which is a different quantity from the sets you will
-       actually perform. Showing that one under this label was the exact confusion criticised in the
-       build these views came from. */
-    /* ⚠ TWO DEFECTS ON ONE LINE, AND THE SECOND WAS HIDING BEHIND THE FIRST.
-       (1) OFF BY ONE. This sampled plannedWeek(0 … weeks-1) and labelled them W1 … Wn, while every
-       other caller of plannedWeek — the week chips, the header strip — samples 1 … weeks and calls the
-       deload weeks+1. computeCell clamps week 0 to week 1, so the first bar looked right and nothing
-       threw; the wave was simply one week behind from W3 onward. Measured on a 6-week block: the wave
-       showed 85/85/85/89/96/100 where the chips show 85/85/89/96/100/100. The comment above promises
-       "one definition, read by the week chips, the header strip and the load wave, so those three can
-       never disagree about the size of a week" — they were sharing the function and disagreeing about
-       the ARGUMENT, which is the same divergence wearing a disguise.
-       (2) THE DELOAD WAS NEVER IN THE CHART AT ALL, so a card whose whole purpose is to make "an
-       accumulation ramp, a step, or a deload trough visible at a glance" could not show the trough.
-       The old highlight test — lowest quartile AND `w === weeks - 1` — was looking for the deload in
-       the last HARD week, which carries the most volume, so it could never fire on any program ever
-       generated. A deload is not inferred from the shape of a bar; the program says whether it has
-       one, so ask it. */
-    const deloadWeek = program.config?.deload ? weeks + 1 : null;
-    const data = useMemo(() => {
-        const out = Array.from({ length: weeks }, (_, i) => ({ w: i + 1, ...plannedWeek(program, i + 1) }));
-        if (deloadWeek)
-            out.push({ w: deloadWeek, deload: true, ...plannedWeek(program, deloadWeek) });
-        return out;
-    }, [program, weeks, deloadWeek]);
-    const peak = Math.max(1, ...data.map(d => d.sets));
-    const low = Math.min(...data.map(d => d.sets));
-    return (_jsx(InfoCard, { icon: BarChart3, title: "Volume load wave", open: open, onToggle: onToggle, subtitle: `${low}–${peak} planned sets a week across ${weeks} week${weeks === 1 ? "" : "s"}${deloadWeek ? " plus a deload" : ""}`, children: _jsx("div", { "data-load-wave": true, style: { display: "flex", alignItems: "flex-end", gap: 6, paddingTop: 8 }, children: data.map(d => {
-                /* Bars are scaled from the LOW week, not from zero: every week of a block is a large
-                   number, so a zero-based axis renders twelve near-identical bars and shows nothing. The
-                   floor is stated in the subtitle so the exaggeration cannot be read as the whole story. */
-                const h = 18 + ((d.sets - low) / Math.max(1, peak - low)) * 78;
-                const dl = !!d.deload; // the program's own fact, not a guess from the bar's height
-                const first = d.w === 1;
-                return (_jsxs("div", { "data-wave-week": d.w, "data-wave-sets": d.sets, "data-wave-deload": dl ? "1" : "0", style: { flex: 1, minWidth: 0, textAlign: "center" }, children: [_jsx("div", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: dl ? C.warn : first ? C.accentInk : C.faint, marginBottom: 2 }, children: d.sets }), _jsx("div", { style: { height: h, borderRadius: 8, background: dl ? C.warn : first ? C.accent : C.accentDim } }), _jsx("div", { className: "mono", style: { fontSize: 11, color: dl ? C.warn : first ? C.accentInk : C.faint, marginTop: 4 }, children: dl ? "DL" : `W${d.w}` })] }, d.w));
-            }) }) }));
 }
 function VolumeCard({ volume, subVolume, program, onApplyFix, fixFeedback = null, open, onToggle, title = "Weekly volume", emptyLabel, target, history = null, week = 0, collapsible = true }) {
     const parts = PART_ORDER.filter(p => (volume[p] || 0) > 0.05);

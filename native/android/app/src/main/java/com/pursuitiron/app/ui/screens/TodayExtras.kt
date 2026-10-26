@@ -96,7 +96,7 @@ fun IntroScreen(vm: AppViewModel) {
             }
         }
         Column(Modifier.padding(horizontal = 22.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { vm.prefs.markIntro(INTRO_VERSION); vm.prefs.markWhatsNew(WHATS_NEW_VERSION); vm.openSetupMode("program") }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Build my program") }
+            Button(onClick = { vm.prefs.markIntro(INTRO_VERSION); vm.prefs.markWhatsNew(WHATS_NEW_VERSION); vm.openSetupMode("program", full = true) }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Build my program") }
             OutlinedButton(onClick = { vm.prefs.markIntro(INTRO_VERSION); vm.prefs.markWhatsNew(WHATS_NEW_VERSION); vm.openSetupMode("template") }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Browse templates instead") }
             TextButton(onClick = { vm.prefs.markIntro(INTRO_VERSION); vm.prefs.markWhatsNew(WHATS_NEW_VERSION) }, modifier = Modifier.fillMaxWidth()) { Text("I already use the web app") }
         }

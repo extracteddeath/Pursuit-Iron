@@ -222,7 +222,10 @@ fun ProgressScreen(vm: AppViewModel) {
         }
         charts?.let { g -> item(span = full) { VolumeChartCard(g) } }
         // Web VolumeCard: this week's sets per muscle against the landmarks, for the program being trained.
-        vm.home?.o("next")?.let { nx -> item(span = full) { WeekVolumeCard(vm, nx.s("programId"), nx.i("weekIndex")) } }
+        vm.home?.o("next")?.let { nx ->
+            item(span = full) { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> LandmarksCard(d) } }
+            item(span = full) { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> AuditCard(vm, d) } }
+        }
         charts?.let { g ->
             item(span = full) { FeedbackCard(g) }
             item(span = full) { IntensityCard(g) }

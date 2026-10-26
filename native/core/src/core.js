@@ -1680,9 +1680,15 @@ export function weeklyVolumeView({ programId, weekIndex } = {}) {
     const r1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
     let verdicts = []; try { verdicts = E.volumeVerdicts(history(), volume, parts) || []; } catch { verdicts = []; }
     let audit = { issues: [], volBias: {} }; try { audit = E.volumeAudit(p) || audit; } catch { audit = { issues: [], volBias: {} }; }
+    // The design's "solid bar is done so far": working sets logged since Monday, per muscle.
+    const doneThisWeek = {};
+    (() => { const d = new Date(); d.setHours(0, 0, 0, 0); const ws = d.getTime() - ((d.getDay() + 6) % 7) * 86400000;
+        history().filter((h) => Number(h.date) >= ws).forEach((h) => Object.entries(h.perf || {}).forEach(([id, pf]) => {
+            const part = EX_BY_ID[id]?.part; if (!part) return; let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; }
+            const n = rows.filter((x) => !x.warm && !x.sub && Number(x.r) > 0).length; if (n) doneThisWeek[part] = (doneThisWeek[part] || 0) + n; })); })();
     const rows = parts.map((part) => {
         const lm = E.landmarkFor(part, p.config?.experience || 'intermediate', p), z = partZoneOf(part, volume[part], sub, p);
-        return { part, label: E.PART_LABEL?.[part] || part, sets: r1(volume[part]), mev: lm.mev, mav: E.mavFor(part, p), mrv: lm.mrv, zone: z.label, zoneSub: z.sub, tone: z.tone };
+        return { part, label: E.PART_LABEL?.[part] || part, sets: r1(volume[part]), done: r1(doneThisWeek[part] || 0), mev: lm.mev, mav: E.mavFor(part, p), mrv: lm.mrv, zone: z.label, zoneSub: z.sub, tone: z.tone };
     });
     return { programId: p.id, weekIndex: wk, total: r1(parts.reduce((a, x) => a + volume[x], 0)), rows,
         issues: (audit.issues || []).map((i) => ({ part: i.part, label: i.label || E.PART_LABEL?.[i.part] || i.part, status: i.status, sets: r1(i.v), mev: i.mev ?? null, mrv: i.mrv ?? null, fix: i.fix || '' })),
@@ -1765,9 +1771,10 @@ export function setExNote({ id, text }) { S.store.exNotes = { ...(S.store.exNote
 
 /* ------------------------------------------------------------------ program creation */
 export function setupOptions() {
-    return { splits: Object.entries(E.SPLITS || {}).map(([id, s]) => ({ id, name: s.name || id, days: s.days || null })),
+    return { splits: Object.entries(E.SPLITS || {}).map(([id, s]) => ({ id, name: s.name || id, days: s.days || null, blurb: s.blurb || '',
+            minSession: s.minSession || null, maxSession: s.maxSession || null, minBarbells: s.minBarbells || null })),
         sessions: (E.SESSIONS || []).map((s) => (typeof s === 'string' ? { id: s, label: s } : { id: s.id, label: s.label || s.id })),
-        equipment: (E.EQUIPMENT || []).map((e) => ({ id: e.id, label: e.label || e.name || e.id })),
+        equipment: (E.EQUIPMENT || []).map((e) => ({ id: e.id, label: e.label || e.name || e.id, cat: e.cat || 'Other' })),
         goals: ['strength', 'hypertrophy', 'both'], experience: Object.keys(E.EXP || { novice: 1, intermediate: 1, advanced: 1 }),
         injuryAreas: INJURY_AREAS, injuryImpacts: INJURY_IMPACTS,
         parts: (E.PART_ORDER || []).filter((p) => E.PART_LABEL?.[p]).map((p) => ({ id: p, label: E.PART_LABEL[p] })) };

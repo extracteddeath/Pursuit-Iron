@@ -280,11 +280,11 @@ fun CycleTemplatePicker(vm: AppViewModel, template: String, onTemplate: (String)
     val cs = MaterialTheme.colorScheme
     val v = vm.cycles
     val phases = v.list("phases")
-    Kicker("Cycle")
     v.list("templates").forEach { t ->
         val on = template == t.s("id")
-        Surface(onClick = { onTemplate(t.s("id")) }, color = if (on) cs.primary else cs.surfaceContainerHigh, contentColor = if (on) cs.onPrimary else cs.onSurface,
-            shape = RoundedCornerShape(if (on) 18.dp else 22.dp), modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton }) {
+        Surface(onClick = { onTemplate(t.s("id")) }, color = if (on) cs.secondaryContainer else cs.surfaceContainerLow, contentColor = if (on) cs.onSecondaryContainer else cs.onSurface,
+            shape = RoundedCornerShape(if (on) 22.dp else 18.dp), border = androidx.compose.foundation.BorderStroke(if (on) 2.dp else 1.dp, if (on) cs.primary else cs.outlineVariant),
+            modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton }) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row { Text(t.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f)); Text(t.s("tag"), style = MaterialTheme.typography.labelMedium) }
                 Text(t.s("blurb"), style = MaterialTheme.typography.bodySmall)
@@ -293,8 +293,9 @@ fun CycleTemplatePicker(vm: AppViewModel, template: String, onTemplate: (String)
         }
     }
     val onCustom = template == "custom"
-    Surface(onClick = { onTemplate("custom") }, color = if (onCustom) cs.primary else cs.surfaceContainerHigh, contentColor = if (onCustom) cs.onPrimary else cs.onSurface,
-        shape = RoundedCornerShape(if (onCustom) 18.dp else 22.dp), modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton }) {
+    Surface(onClick = { onTemplate("custom") }, color = if (onCustom) cs.secondaryContainer else cs.surfaceContainerLow, contentColor = if (onCustom) cs.onSecondaryContainer else cs.onSurface,
+        shape = RoundedCornerShape(if (onCustom) 22.dp else 18.dp), border = androidx.compose.foundation.BorderStroke(if (onCustom) 2.dp else 1.dp, if (onCustom) cs.primary else cs.outlineVariant),
+        modifier = Modifier.fillMaxWidth().semantics { role = Role.RadioButton }) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text("Custom cycle", style = MaterialTheme.typography.titleSmall)
             Text("Choose every phase and how long it runs.", style = MaterialTheme.typography.bodySmall)

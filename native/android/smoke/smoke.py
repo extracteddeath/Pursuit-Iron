@@ -109,6 +109,34 @@ def seek(pattern, tries=8):
     return scroll_up_to(pattern, tries=tries) or scroll_to(pattern, tries=tries + 4)
 
 
+def wizard(name, cycle=False, shots=False):
+    """The design's Create wizard: pick the format, answer the required name, then Next until it can build."""
+    if cycle:
+        tap(r"^\|Training cycle$|Training cycle\|", "wizard-cycle")
+    tap(r"^\|Continue$", "wizard-mode" if shots else None)
+    for k in range(22):
+        if find(r"Program name|Cycle name", timeout=1):
+            tap(r"Program name|Cycle name")
+            adb("shell", "input", "text", name.replace(" ", "%s"))
+            hide_keyboard()
+            time.sleep(0.6)
+        if shots and k < 4:
+            shot(f"wizard-step-{k}")
+        if find(r"with these settings", timeout=1):
+            tap(r"with these settings", "wizard-early" if shots else None)
+            return True
+        if find(r"^\|(Generate Program|Build Cycle)$", timeout=1):
+            tap(r"^\|(Generate Program|Build Cycle)$")
+            return True
+        if not tap(r"^\|Next$", required=False):
+            FAILS.append("wizard stuck")
+            shot("wizard-stuck")
+            return False
+        time.sleep(0.5)
+    FAILS.append("wizard never finished")
+    return False
+
+
 def row_scroll_to(pattern, anchor, tries=4):
     """A horizontally scrolling row (the Plan action row): swipe it left at the anchor's height until pattern shows."""
     for _ in range(tries):
@@ -254,7 +282,9 @@ adb("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
 launch()
 shot("first-run")
 tap(r"^\|Build my program$", "setup")  # the welcome screen opens the builder
-tap(r"Build my program", "today-with-program", timeout=8)
+wizard("Smoke Program", shots=True)
+time.sleep(4)
+shot("today-with-program")
 time.sleep(3)
 shot("today")
 # The design's Today: week strip, the coach's game plan and this week's days
@@ -611,6 +641,13 @@ else:
 # The design: History is one tap from Progress (Trends · History), with the month calendar filtering the list
 tap(r"^\|Progress$|^Progress\|")
 time.sleep(1.2)
+if not scroll_to(r"Weekly sets vs landmarks", tries=4, step=600):
+    FAILS.append("no weekly landmarks on Progress")
+if scroll_to(r"^\|Weekly audit$", tries=4, step=600):
+    shot("weekly-audit")
+else:
+    FAILS.append("no weekly audit on Progress")
+scroll_up_to(r"^\|History$", tries=8)
 if tap(r"^\|History$", "history-calendar"):
     if tap(r", \d+ workouts?(, today)?\|", "calendar-day", required=False):
         if not find(r"^\|Showing ", timeout=4):
@@ -702,10 +739,8 @@ tap(r"^\|Today$|^Today\|", "today-lb")
 tap(r"^\|Plan$|^Plan\|")
 scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
 row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
-if tap(r"^\|New$") and tap(r"^\|Cycle$", "cycle-setup"):
-    scroll_to(r"Adapt between blocks")
-    shot("cycle-templates")
-    tap(r"^\|Build my cycle$")
+if tap(r"^\|New$", "cycle-setup"):
+    wizard("Smoke Cycle", cycle=True)
     time.sleep(8)
     shot("cycle-built")
     adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
@@ -779,7 +814,7 @@ tap(r"^\|Plan$|^Plan\|")
 scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
 row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 if tap(r"^\|New$"):
-    if tap(r"^\|Template$", "templates"):
+    if tap(r"^\|Start from a template", "templates"):
         tap(r"Search 75 templates|Search \d+ templates")
         adb("shell", "input", "text", "Main-Lift")
         hide_keyboard()

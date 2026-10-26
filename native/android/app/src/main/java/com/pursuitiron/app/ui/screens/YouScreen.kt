@@ -124,7 +124,7 @@ fun YouScreen(vm: AppViewModel) {
                 vm.home?.o("backup")?.takeIf { System.currentTimeMillis() - vm.prefs.backupNudgeHiddenAt > 7 * 86_400_000L }?.let { b -> item(span = full) { BackupBanner(vm, b) } }
                 item { SettingsGroup(vm) { gymsOpen = true } }
                 item { SettingsRows(vm) { k -> when (k) {
-                    "setup" -> vm.openSetupMode("program")
+                    "setup" -> vm.openSetupMode("program", full = true)
                     "injury" -> vm.injuryLogOpen = true
                     else -> settingsSheet = k
                 } } }

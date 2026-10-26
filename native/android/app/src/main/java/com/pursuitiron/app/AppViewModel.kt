@@ -192,8 +192,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun goTab(t: Tab) { tab = t; screen = Screen.Tabs }
     /** Opens program setup; with [cycle], in training-cycle mode. */
     var setupMode by mutableStateOf("program"); private set
-    fun openSetup(cycle: Boolean = false) { setupMode = if (cycle) "cycle" else "program"; screen = Screen.Setup }
-    fun openSetupMode(mode: String) { setupMode = mode; screen = Screen.Setup }
+    /** The guided setup asks everything (units, experience, equipment); New from the Plan uses the active gym. */
+    var setupFull by mutableStateOf(false); private set
+    fun openSetup(cycle: Boolean = false) { setupMode = if (cycle) "cycle" else "program"; setupFull = false; screen = Screen.Setup }
+    fun openSetupMode(mode: String, full: Boolean = false) { setupMode = mode; setupFull = full; screen = Screen.Setup }
     fun closeSetup() { screen = Screen.Tabs }
     fun minimise() { screen = Screen.Tabs; launchCore { home = obj("home") } }
     fun resume() { if (session?.b("active") == true) screen = Screen.Workout }

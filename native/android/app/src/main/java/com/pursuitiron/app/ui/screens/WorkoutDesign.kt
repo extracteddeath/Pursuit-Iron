@@ -533,8 +533,10 @@ fun LiftDemo(name: String, part: String) {
     val (cue, tempo) = DEMO_CUES.getValue(p)
     val dur = when (p) { "push", "curl" -> 2400; "squat" -> 2800; else -> 2600 }
     val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "demo")
-    val t by inf.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(
+    val tLoop by inf.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(
         tween(dur / 2, easing = androidx.compose.animation.core.CubicBezierEasing(0.45f, 0f, 0.3f, 1f)), androidx.compose.animation.core.RepeatMode.Reverse), label = "t")
+    // Reduce motion: the demo holds its mid-rep pose instead of looping.
+    val t = if (com.pursuitiron.app.ui.theme.Motion.reduced) 0.5f else tLoop
     val ink = cs.onSurface; val acc = cs.primary
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surface).padding(start = 6.dp, top = 6.dp, bottom = 6.dp, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         if (savedInstanceState == null) handle(intent)
         setContent {
+            com.pursuitiron.app.ui.theme.Motion.reduced = vm.prefs.reduceMotion
             PiTheme(seed = vm.prefs.seed, dark = vm.prefs.dark ?: isSystemInDarkTheme(), black = vm.prefs.black) {
                 val d = androidx.compose.ui.platform.LocalDensity.current
                 androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, d.fontScale * vm.prefs.zoom)) {

@@ -219,7 +219,7 @@ fun WorkoutScreen(vm: AppViewModel) {
         is WSheet.Note -> NoteSheet(vm, s, sh.ei) { sheet = null }
         is WSheet.Rest -> exs.getOrNull(sh.ei)?.let { RestTimeSheet(vm, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.Progression -> exs.getOrNull(sh.ei)?.let { ProgressionSheet(vm, s, it) { sheet = null } } ?: run { sheet = null }
-        is WSheet.LiftSettings -> exs.getOrNull(sh.ei)?.let { LiftSettingsSheet(vm, s, it) { sheet = null } } ?: run { sheet = null }
+        is WSheet.LiftSettings -> exs.getOrNull(sh.ei)?.let { e -> LiftSettingsSheet(vm, s, e, onPin = { sheet = WSheet.Pin(e.s("id")) }) { sheet = null } } ?: run { sheet = null }
         is WSheet.Pin -> PinNoteSheet(vm, sh.id) { sheet = null }
         is WSheet.AddSet -> exs.getOrNull(sh.ei)?.let { AddSetSheet(vm, it) { sheet = null } } ?: run { sheet = null }
         is WSheet.SetOptions -> SetOptionsSheet(vm, s, sh.ei, sh.si) { sheet = null }
@@ -651,9 +651,8 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                 }
                 MenuRow(PiIcons.Shield, "Something hurt", "Flag it and the plan protects that area", cs.tertiaryContainer, cs.onTertiaryContainer) { onPick(WSheet.Hurt(ei)) }
                 MenuRow(PiIcons.List, "Same weight for all sets", "Set every unlogged set to the average", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("level", "ei" to ei); onPick(null) }
-                MenuRow(PiIcons.Timer, "Rest time", if (ex.i("restCustom") > 0) restLabel(ex.i("restCustom")) else "Default" + (if (ex.i("restDefault") > 0) " · ${restLabel(ex.i("restDefault"))}" else ""), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Rest(ei)) }
                 if (count > 1) MenuRow(PiIcons.Swap, if (ex.b("superset")) "Superset: on" else "Superset", "Alternate sets with another lift", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("select", "ei" to ei); onPick(WSheet.Superset) }
-                MenuRow(PiIcons.Gym, "Goal and weight step", "Settings kept for this lift", cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.LiftSettings(ei)) }
+                MenuRow(PiIcons.Timer, "Rest, goal & setup", listOf(if (ex.i("restCustom") > 0) "Rest ${restLabel(ex.i("restCustom"))}" else "Rest for this lift", if (ex.d("goal") > 0) "goal ${com.pursuitiron.app.ui.common.fmtNum(ex.d("goal"))}" else "a goal weight", "machine step").joinToString(", "), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.LiftSettings(ei)) }
                 val pinned = (ex.list("setup").filter { it.s("value").isNotBlank() }.map { "${it.s("label")} ${it.s("value")}" } + listOf(ex.s("pinNote")).filter { it.isNotBlank() }).joinToString(" — ")
                 MenuRow(PiIcons.Pin, if (pinned.isBlank()) "Pin a note" else "Edit pinned note", pinned.ifBlank { "Setup per machine and a cue you’ll see every time" }, cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Pin(ex.s("id"))) }
                 MenuRow(PiIcons.Close, "Skip exercise", "Drop it from today's workout", cs.tertiaryContainer, cs.onTertiaryContainer) { vm.act("skipExercise", "ei" to ei); vm.toast("Skipped ${ex.s("name")}"); onPick(null) }

@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -39,6 +42,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.unit.dp
 import com.pursuitiron.app.AppViewModel
 import com.pursuitiron.app.BuildConfig
@@ -58,50 +65,109 @@ const val WEB_APP_URL = "https://extracteddeath.github.io/Pursuit-Iron/"
 const val SUPPORT_URL = "https://ko-fi.com/extracteddeath"
 const val BUG_EMAIL = "pursuitiron@gmail.com"
 
-/* App.js Settings → Training preferences: experience and the effort scale. */
+/* App.js Settings → Training preferences, as the design's panel: experience with what each level means, the effort
+   scale with a live example of how a target reads, and the warm-up checklist. */
 @Composable
 fun TrainingPrefsCard(vm: AppViewModel) {
     val st = vm.settings
+    val cs = MaterialTheme.colorScheme
+    val cap = @Composable { t: String -> Text(t, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant) }
     PiCard(radius = 28.dp) {
-        Text("Training preferences", style = MaterialTheme.typography.titleMedium)
-        Kicker("Training experience")
-        Text("Sets your weekly volume range", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Training preferences", style = MaterialTheme.typography.headlineSmall)
+        cap("TRAINING EXPERIENCE")
         val exp = st.s("experience").let { if (it == "novice") "none" else it }
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("none" to "New", "beginner" to "Beginner", "intermediate" to "Intermediate", "advanced" to "Advanced").forEach { (id, l) ->
-                com.pursuitiron.app.ui.common.MorphChip(l, exp == id, { vm.updateSetting("experience", id) }, height = 40.dp)
+        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            listOf(Triple("none", "New to lifting", "Under 6 months. Fewer sets, more technique practice"), Triple("beginner", "Beginner", "6–18 months. Volume ramps gently"),
+                Triple("intermediate", "Intermediate", "1.5–4 years. The full volume range"), Triple("advanced", "Advanced", "4+ years. Higher volume, harder top sets")).forEach { (id, l, sub) ->
+                val on = exp == id
+                Row(Modifier.fillMaxWidth().background(if (on) cs.secondaryContainer else cs.surfaceContainerHigh).clickable { vm.updateSetting("experience", id) }
+                    .semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on }.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    androidx.compose.material3.RadioButton(selected = on, onClick = null)
+                    Column(Modifier.weight(1f)) {
+                        Text(l, style = MaterialTheme.typography.titleSmall, color = if (on) cs.onSecondaryContainer else cs.onSurface)
+                        Text(sub, style = MaterialTheme.typography.bodySmall, color = if (on) cs.onSecondaryContainer else cs.onSurfaceVariant)
+                    }
+                }
             }
         }
-        Kicker("Effort scale")
-        Text("Targets read as reps in reserve, or as RPE", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Segmented(listOf("rir" to "RIR", "rpe" to "RPE"), st.s("loadMode", "rir"), { vm.updateSetting("loadMode", it) })
+        Text("Sets your weekly volume range. It applies from the next program you build; the current one keeps its numbers.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        cap("EFFORT SCALE")
+        val mode = st.s("loadMode", "rir")
+        Segmented(listOf("rir" to "Reps in reserve", "rpe" to "RPE"), mode, { vm.updateSetting("loadMode", it) })
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(if (mode == "rpe") "4 × 6–8 @ RPE 8" else "4 × 6–8 @2 RIR", style = MaterialTheme.typography.titleMedium)
+            Text(if (mode == "rpe") "RPE 8 means a hard set with about 2 good reps left. After a set you tap how hard it actually was."
+                else "@2 means stop with about 2 good reps left. After a set you tap how many you actually had.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        }
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Warm-up checklist", style = MaterialTheme.typography.titleSmall)
+                Text("Show a warm-up and mobility checklist before each session", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+            androidx.compose.material3.Switch(st.b("warmupCard", true), { vm.updateSetting("warmupCard", it) }, modifier = Modifier.semantics { contentDescription = "Warm-up checklist" })
+        }
     }
 }
 
-/* App.js Settings → Data: banned list, history, reset, device storage. */
+/* The design's Data & storage panel (App.js Settings → Data): what's on this phone, spreadsheet export, import from
+   another app, the banned list, and starting over. Backup & restore keeps the full JSON backup. */
 @Composable
 fun ManageDataCard(vm: AppViewModel) {
     val st = vm.settings
     val cs = MaterialTheme.colorScheme
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var bannedOpen by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf<String?>(null) }
     var storage by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(st) { storage = vm.storageStatus() }
-    PiCard(radius = 28.dp) {
-        Text("Manage data", style = MaterialTheme.typography.titleMedium)
-        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            val banned = st.list("banned")
-            DataRow("Banned exercises", "${banned.size} hidden from generation", if (banned.isNotEmpty()) "Review" else null) { bannedOpen = true }
-            DataRow("Workout history", "${st.i("sessions")} sessions logged", if (st.i("sessions") > 0) "Clear" else null, danger = true) { confirm = "history" }
+    var csvKind by remember { mutableStateOf("workouts") }
+    val saveCsv = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null) scope.launch {
+            val text = vm.exportCsv(csvKind) ?: return@launch
+            runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }
+                .onSuccess { vm.toast("CSV saved") }.onFailure { vm.toast("Couldn't save the CSV") }
         }
-        OutlinedButton(onClick = { confirm = "reset" }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Reset everything", color = cs.error) }
-        storage?.let { x ->
-            Kicker("Device storage")
-            val kb = x.i("bytes") / 1024
-            Text("${if (kb >= 1024) String.format(Locale.US, "%.1f MB", kb / 1024.0) else "$kb KB"} in this app's private storage on this phone. " +
-                "Uninstalling the app removes it, so keep a backup file somewhere else.",
+    }
+    val openCsv = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) runCatching { com.pursuitiron.app.data.Transfer.readUri(ctx, uri) }.getOrNull()?.let { vm.offerFile(it) } ?: run { if (uri != null) vm.toast("That file couldn't be read") }
+    }
+    val day = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(java.util.Date())
+    val cap = @Composable { t: String -> Text(t, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant) }
+    PiCard(radius = 28.dp) {
+        Text("Data & storage", style = MaterialTheme.typography.headlineSmall)
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row { cap("ON THIS PHONE"); androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)); cap("PRIVATE") }
+            val bytes = storage?.optLong("bytes") ?: 0L
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(cs.surfaceContainerHighest)) {
+                Box(Modifier.fillMaxWidth((bytes / (5.0 * 1024 * 1024)).toFloat().coerceIn(0.01f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(cs.primary))
+            }
+            val kb = bytes / 1024
+            Text("${if (kb >= 1024) String.format(Locale.US, "%.1f MB", kb / 1024.0) else "$kb KB"} on this phone · ${st.i("sessions")} sessions · ${st.i("programs")} programs · ${vm.customs.size} custom lifts",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         }
+        cap("EXPORT · SPREADSHEET")
+        Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            MenuRow(PiIcons.Download, "Workouts CSV", "One row per set from ${st.i("sessions")} sessions", cs.secondaryContainer, cs.onSecondaryContainer) {
+                csvKind = "workouts"; saveCsv.launch("pursuit-iron-workouts-$day.csv") }
+            MenuRow(PiIcons.Download, "Body CSV", "Bodyweight and measurements", cs.secondaryContainer, cs.onSecondaryContainer) {
+                csvKind = "body"; saveCsv.launch("pursuit-iron-body-$day.csv") }
+        }
+        cap("IMPORT · FROM ANOTHER APP")
+        androidx.compose.material3.FilledTonalButton(onClick = { openCsv.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain", "application/octet-stream")) },
+            modifier = Modifier.fillMaxWidth().height(48.dp)) { Icon(PiIcons.Upload, null, Modifier.size(18.dp)); Text("  Choose a CSV") }
+        Text("Strong or Hevy: export your workouts as CSV there, then pick the file. You review what comes in before anything is added.",
+            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        val banned = st.list("banned")
+        Column(Modifier.clip(RoundedCornerShape(20.dp))) {
+            DataRow("Banned exercises", "${banned.size} hidden from generation", if (banned.isNotEmpty()) "Review" else null) { bannedOpen = true }
+        }
+        cap("START OVER")
+        androidx.compose.material3.FilledTonalButton(onClick = { confirm = "history" }, enabled = st.i("sessions") > 0, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Clear workout history") }
+        OutlinedButton(onClick = { confirm = "reset" }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Erase everything", color = cs.error) }
+        Text("Everything lives in this app's private storage. Uninstalling removes it, so keep a backup file somewhere else.",
+            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
     }
     if (bannedOpen) BannedSheet(vm) { bannedOpen = false }
     when (confirm) {

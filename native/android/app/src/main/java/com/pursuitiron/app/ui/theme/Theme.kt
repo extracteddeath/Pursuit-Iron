@@ -65,18 +65,22 @@ val PiShapes = Shapes(
    settle with a slight overshoot; effect springs change colour and opacity and never overshoot. Entering content
    uses emphasized decelerate, leaving content emphasized accelerate. Every animation in the app picks from these. */
 object Motion {
-    fun <T> spatialFast() = spring<T>(dampingRatio = 0.6f, stiffness = 800f)
-    fun <T> spatial() = spring<T>(dampingRatio = 0.8f, stiffness = 380f)
-    fun <T> spatialSlow() = spring<T>(dampingRatio = 0.8f, stiffness = 200f)
-    fun <T> effectsFast() = spring<T>(dampingRatio = 1f, stiffness = 3800f)
-    fun <T> effects() = spring<T>(dampingRatio = 1f, stiffness = 1600f)
-    fun <T> effectsSlow() = spring<T>(dampingRatio = 1f, stiffness = 800f)
+    /** Comfort → Reduce motion: springs settle at once and timed transitions take no time. Read on every call. */
+    @Volatile var reduced = false
+    private fun <T> sp(d: Float, k: Float) = spring<T>(dampingRatio = if (reduced) 1f else d, stiffness = if (reduced) 100_000f else k)
+    private fun dur(v: Int) = if (reduced) 0 else v
+    fun <T> spatialFast() = sp<T>(0.6f, 800f)
+    fun <T> spatial() = sp<T>(0.8f, 380f)
+    fun <T> spatialSlow() = sp<T>(0.8f, 200f)
+    fun <T> effectsFast() = sp<T>(1f, 3800f)
+    fun <T> effects() = sp<T>(1f, 1600f)
+    fun <T> effectsSlow() = sp<T>(1f, 800f)
     val EmphasizedDecelerate = androidx.compose.animation.core.CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
     val EmphasizedAccelerate = androidx.compose.animation.core.CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
     /** Data (bars, rings, lines) grows in without overshooting the value it shows. */
-    fun <T> data(ms: Int = 500, delay: Int = 0) = androidx.compose.animation.core.tween<T>(ms, delay, EmphasizedDecelerate)
-    fun <T> enter(ms: Int = 400, delay: Int = 0) = androidx.compose.animation.core.tween<T>(ms, delay, EmphasizedDecelerate)
-    fun <T> exit(ms: Int = 200) = androidx.compose.animation.core.tween<T>(ms, 0, EmphasizedAccelerate)
+    fun <T> data(ms: Int = 500, delay: Int = 0) = androidx.compose.animation.core.tween<T>(dur(ms), dur(delay), EmphasizedDecelerate)
+    fun <T> enter(ms: Int = 400, delay: Int = 0) = androidx.compose.animation.core.tween<T>(dur(ms), dur(delay), EmphasizedDecelerate)
+    fun <T> exit(ms: Int = 200) = androidx.compose.animation.core.tween<T>(dur(ms), 0, EmphasizedAccelerate)
     /** Shape morphs (a chip squaring off, a check settling). */
     fun <T> spring() = spatialFast<T>()
 

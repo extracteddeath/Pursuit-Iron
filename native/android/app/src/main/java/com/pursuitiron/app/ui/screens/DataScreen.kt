@@ -43,6 +43,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -91,10 +98,37 @@ fun RemindersCard(vm: AppViewModel) {
             Switch(checked = enabled, onCheckedChange = { if (it) turnOn() else vm.setReminders(enabled = false) }, modifier = Modifier.semantics { contentDescription = "Training reminders" })
         }
         if (enabled) {
-            TextButton(onClick = { picking = true }) { Icon(PiIcons.Timer, null); Text("  At $label") }
+            // The design's reminder panel: the time with 15-minute steps (tap it for any time), the days, and a preview.
+            fun shift(min: Int) { val t = ((hh * 60 + mm + min) % 1440 + 1440) % 1440; vm.setReminders(time = "%02d:%02d".format(t / 60, t % 60)) }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.FilledTonalButton(onClick = { shift(-15) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                    modifier = Modifier.semantics { contentDescription = "15 minutes earlier" }) { Text("−15") }
+                Text(label, style = MaterialTheme.typography.headlineSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { picking = true }.padding(vertical = 6.dp).semantics { contentDescription = "Reminder at $label. Change" })
+                Button(onClick = { shift(15) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                    modifier = Modifier.semantics { contentDescription = "15 minutes later" }) { Text("+15") }
+            }
             val names = DateFormatSymbols.getInstance().shortWeekdays
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                (0..6).forEach { d -> MorphChip(names[d + 1], d in days, { vm.setReminders(days = (if (d in days) days - d else days + d).sorted()) }, height = 36.dp) }
+            // Monday first, as the design draws the week
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                listOf(1, 2, 3, 4, 5, 6, 0).forEach { d -> val on = d in days
+                    Box(Modifier.size(40.dp).clip(if (on) RoundedCornerShape(12.dp) else CircleShape).background(if (on) cs.primary else cs.surfaceContainerHigh)
+                        .clickable { vm.setReminders(days = (if (on) days - d else days + d).sorted()) }
+                        .semantics { contentDescription = names[d + 1] + if (on) ", on" else ", off"; role = Role.Switch; selected = on }, contentAlignment = Alignment.Center) {
+                        Text(names[d + 1].take(1), style = MaterialTheme.typography.labelLarge, color = if (on) cs.onPrimary else cs.onSurfaceVariant)
+                    }
+                }
+            }
+            Text("Pick the days you train.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            Text("PREVIEW", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+            val next = vm.home?.o("next")
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.size(32.dp).clip(CircleShape).background(cs.primary))
+                Column(Modifier.weight(1f)) {
+                    Row { Text("Pursuit Iron", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f)); Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant) }
+                    Text(next?.let { "${it.s("dayLabel")} is up today" } ?: "Time to train", style = MaterialTheme.typography.titleSmall)
+                    next?.let { n -> Text(listOfNotNull("${n.list("exercises").size} exercises", n.i("minutes").takeIf { it > 0 }?.let { "about $it min" }).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
+                }
             }
         }
     }

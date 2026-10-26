@@ -391,13 +391,15 @@ else:
 for _ in range(3):
     adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
 tap(r"Exercise actions")
-if scroll_to(r"^\|Rest time$", tries=3):
-    tap(r"^\|Rest time$", "rest-sheet")
+# The design's "Rest, goal & setup": rest chips, goal stepper, machine step and the pinned note in one sheet
+if scroll_to(r"Rest, goal & setup", tries=3):
+    tap(r"Rest, goal & setup", "lift-settings")
     tap(r"^\|3 min$", "rest-set")
-tap(r"Exercise actions")
-if scroll_to(r"Goal and weight step", tries=3):
-    tap(r"Goal and weight step", "lift-settings")
-    back()
+    if not find(r"GOAL WEIGHT", timeout=4):
+        FAILS.append("lift settings has no goal weight")
+    close_sheet(r"GOAL WEIGHT")
+else:
+    FAILS.append("no Rest, goal & setup in the exercise menu")
 # B932: the pinned note saves the cue and setup together and shows on the lift
 if tap(r"Pin a note for ", "pin-note", required=False):
     if tap(r"^\|Note$|Note\|", required=False):
@@ -760,7 +762,9 @@ if scroll_to(r"^\|Training preferences$", tries=8):
     tap(r"^\|Training preferences$", "settings-training")
     if scroll_to(r"^\|RPE$", tries=4, step=400):
         tap(r"^\|RPE$", "settings-rpe")
-        tap(r"^\|RIR$")
+        if not find(r"RPE 8", timeout=3):
+            FAILS.append("effort preview does not follow the scale")
+        tap(r"^\|Reps in reserve$")
     else:
         FAILS.append("effort scale missing from training preferences")
     back()
@@ -768,6 +772,8 @@ else:
     FAILS.append("no Training preferences row")
 if scroll_to(r"^\|Data & storage$", tries=6):
     tap(r"^\|Data & storage$", "settings-manage-data")
+    if not scroll_to(r"EXPORT · SPREADSHEET", tries=3, step=400):
+        FAILS.append("Data & storage has no spreadsheet export")
     if tap(r"Review Banned exercises", required=False):
         shot("banned-sheet"); back()
     back()

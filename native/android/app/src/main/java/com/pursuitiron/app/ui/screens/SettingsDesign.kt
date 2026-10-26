@@ -317,6 +317,7 @@ fun ComfortSheet(vm: AppViewModel, onClose: () -> Unit) {
                 Text("4 × 6–8 @2 RIR · Last 80×8", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
             }
             Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                ComfortRow("Reduce motion", "Turns off morphs, springs and looping shapes", vm.prefs.reduceMotion) { vm.prefs.changeReduceMotion(it) }
                 ComfortRow("Haptics", "Taps when you log a set, hit a PR or rest ends", st.b("haptics", true)) { vm.updateSetting("haptics", it); if (it) vm.hap(Hap.Log) }
                 ComfortRow("Keep screen on", "Stays awake while a workout is open", vm.prefs.keepAwake) { vm.prefs.changeKeepAwake(it) }
                 ComfortRow("Grip mode", "Bigger set controls and stronger taps for sweaty hands", vm.prefs.grip) { vm.prefs.changeGrip(it) }

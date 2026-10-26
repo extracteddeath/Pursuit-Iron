@@ -61,6 +61,10 @@ class Prefs(context: Context) {
     fun changeCheckIn(v: String) { checkIn = v; sp.edit().putString("checkIn", v).apply() }
     fun changeFocus(v: Boolean) { focus = v; sp.edit().putBoolean("focus", v).apply() }
     fun changeSteppers(v: Boolean) { steppers = v; sp.edit().putBoolean("steppers", v).apply() }
+    /** Comfort → Reduce motion (the design's toggle): drives ui.theme.Motion.reduced. */
+    var reduceMotion by mutableStateOf(sp.getBoolean("reduceMotion", false))
+        private set
+    fun changeReduceMotion(v: Boolean) { reduceMotion = v; sp.edit().putBoolean("reduceMotion", v).apply() }
     /** The design's rest cues: "off", "tones" (3-2-1 then a higher tone) or "voice"; and lowering music instead of pausing it. */
     var cues by mutableStateOf(sp.getString("cues", "tones") ?: "tones")
         private set

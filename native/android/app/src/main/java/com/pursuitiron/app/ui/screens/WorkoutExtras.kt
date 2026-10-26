@@ -41,6 +41,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.draw.alpha
@@ -51,6 +54,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pursuitiron.app.AppViewModel
 import com.pursuitiron.app.ui.common.Badge
 import com.pursuitiron.app.ui.common.Kicker
@@ -292,30 +296,52 @@ fun ProgressionSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onClose: (
 
 /* Goal weight, machine weight step and setup notes: the lift's settings that outlive the workout. */
 @Composable
-fun LiftSettingsSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onClose: () -> Unit) {
+fun LiftSettingsSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onPin: () -> Unit = {}, onClose: () -> Unit) {
+    // The design's "Rest, goal & setup" sheet: rest between sets, a goal weight, the machine step and the pinned note, one place.
     val cs = MaterialTheme.colorScheme
     val u = s.s("unit")
     val id = ex.s("id")
-    var goal by remember { mutableStateOf(if (ex.d("goal") > 0) fmtNum(ex.d("goal")) else "") }
+    val goal = ex.d("goal")
+    val goalStep = if (u == "lb") 5.0 else 2.5
+    val cap = @Composable { t: String -> Text(t, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant) }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Kicker(ex.s("name"))
-            Text("Lift settings", style = MaterialTheme.typography.headlineSmall)
-            Text("Goal weight", style = MaterialTheme.typography.titleSmall)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(goal, { goal = com.pursuitiron.app.ui.common.decimalText(it, 6) }, Modifier.weight(1f), singleLine = true,
-                    label = { Text("Target ($u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                Button(onClick = { vm.setGoal(id, goal.toDoubleOrNull()); vm.toast(if (goal.isBlank()) "Goal cleared" else "Goal set") }, modifier = Modifier.height(56.dp)) { Text("Set") }
+            Text(ex.s("name"), style = MaterialTheme.typography.headlineSmall)
+            cap("REST BETWEEN SETS")
+            val cur = ex.i("restCustom"); val def = ex.i("restDefault")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MorphChip("Auto" + (if (def > 0) " · ${restLabel(def)}" else ""), cur == 0, { vm.act("restFor", "ei" to ex.i("ei"), "sec" to 0) }, height = 44.dp)
+                listOf(60, 90, 120, 180, 240).forEach { sec -> MorphChip(restLabel(sec), cur == sec, { vm.act("restFor", "ei" to ex.i("ei"), "sec" to sec) }, height = 44.dp) }
             }
-            Text("Weight step", style = MaterialTheme.typography.titleSmall)
-            Text("For machines and stacks that jump in bigger steps. Applies to every block of this program.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            Text((if (def > 0) "Auto follows this lift and block: ${restLabel(def)}." else "Auto follows this lift and block.") + if (!(vm.session?.b("quick") ?: false)) " A choice is saved for this lift in the program." else "",
+                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            cap("GOAL WEIGHT")
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                FilledTonalIconButton(onClick = { if (goal > 0) vm.setGoal(id, (goal - goalStep).takeIf { it > 0 }) }, enabled = goal > 0) { Text("−", fontSize = 20.sp) }
+                Text(if (goal > 0) "${fmtNum(goal)} $u" else "No goal", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)
+                    .semantics { contentDescription = if (goal > 0) "Goal ${fmtNum(goal)} $u" else "No goal" })
+                androidx.compose.material3.FilledIconButton(onClick = { vm.setGoal(id, if (goal > 0) goal + goalStep else (ex.list("sets").maxOfOrNull { it.s("weight").toDoubleOrNull() ?: 0.0 }?.takeIf { it > 0 }?.let { it + goalStep } ?: goalStep * 8)) }) { Text("+", fontSize = 20.sp) }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Shows on the lift and in Progress; the finish screen calls it out when you hit it.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
+                if (goal > 0) androidx.compose.material3.TextButton(onClick = { vm.setGoal(id, null) }) { Text("Clear") }
+            }
+            cap("WEIGHT STEP · FOR MACHINES AND STACKS")
             val step = ex.d("step")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 MorphChip("Default", step <= 0, { vm.setExLoadStep(id, null) }, height = 40.dp)
                 val choices = ex.optJSONArray("stepChoices")
                 (0 until (choices?.length() ?: 0)).forEach { k -> val v = choices!!.optDouble(k); MorphChip("${fmtNum(v)} $u", step == v, { vm.setExLoadStep(id, v) }, height = 40.dp) }
             }
-            Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Done") }
+            cap("PINNED NOTE · MACHINE SETUP")
+            val pinned = (ex.list("setup").filter { it.s("value").isNotBlank() }.map { "${it.s("label")} ${it.s("value")}" } + listOf(ex.s("pinNote")).filter { it.isNotBlank() }).joinToString(" — ")
+            Surface(onClick = onPin, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(PiIcons.Pin, null, Modifier.size(18.dp))
+                    Text(pinned.ifBlank { "Pin a note · machine setup" }, style = MaterialTheme.typography.bodyMedium, color = if (pinned.isBlank()) cs.onSurfaceVariant else cs.onSurface, modifier = Modifier.weight(1f))
+                }
+            }
+            Button(onClick = onClose, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Done") }
         }
     }
 }

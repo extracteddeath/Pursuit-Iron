@@ -1003,7 +1003,7 @@ return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workId
         }),
         loadMode: S.store.loadMode === 'rpe' ? 'rpe' : 'rir',
         // App.js warmupRoutine: shown on the first lift until a set is logged.
-        warmup: doneSets === 0 ? (() => { try { const m = E.warmupRoutine(ctx.day); if (!m) return null;
+        warmup: doneSets === 0 && S.store.warmupCard !== false ? (() => { try { const m = E.warmupRoutine(ctx.day); if (!m) return null;
             const parts = [...new Set([ctx.day.exercises[ctx.day.primaryIndex], ...ctx.day.exercises].map((id) => EX_BY_ID[id]?.part).filter(Boolean))].slice(0, 3);
             return { moves: m, parts: parts.map((p) => E.PART_LABEL?.[p] || p) }; } catch { return null; } })() : null,
         timeLimit: l.sessionLengthPlan ? { minutes: l.sessionLengthPlan.minutes, estimatedMinutes: l.sessionLengthPlan.estimatedMinutes, changed: !!l.sessionLengthPlan.changed } : null,

@@ -67,7 +67,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='928';
+const __APP_VERSION__='4.0.0'; const __BUILD__='929';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -8785,7 +8785,7 @@ function VolumeCard({ volume, subVolume, program, onApplyFix, fixFeedback = null
                                             ? `${verb} ${fmtSets(v.planned)} sets — inside the ${v.lo}–${v.hi} range that has driven your fastest gains.`
                                             : v.status === "over"
                                                 ? `${verb} ${fmtSets(v.planned)} sets, above the ${v.lo}–${v.hi} that has driven your fastest gains. More sets haven't bought you more progress.`
-                                                : `${verb} ${fmtSets(v.planned)} sets, below the ${v.lo}–${v.hi} that has driven your fastest gains.`, _jsxs("span", { style: { color: C.faint }, children: [" (", v.weeks, " weeks compared)"] })] })] }, v.part)))] })), _jsx("p", { className: "wpb-volume-credit-help", children: "Muscle bars include partial credit when a lift also trains another muscle. Working sets count each performed set once." }), _jsx(VolumeBars, { volume: volume, subVolume: subVolume, target: target, program: program, week: week, palette: C, partZone, catInk }), program && _jsx(VolumeRampTable, { program: program, palette: C, volumeZone, catInk, eyebrow }), fixFeedback && _jsx("div", { role: "status", "data-volume-repair-status": fixFeedback.status, style: { marginTop: 10, padding: "10px 12px", borderRadius: 12, background: C.bg2, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: fixFeedback.message })] })) }));
+                                                : `${verb} ${fmtSets(v.planned)} sets, below the ${v.lo}–${v.hi} that has driven your fastest gains.`, _jsxs("span", { style: { color: C.faint }, children: [" (", v.weeks, " weeks compared)"] })] })] }, v.part)))] })), _jsx("p", { className: "wpb-volume-credit-help", children: "Muscle bars include partial credit when a lift also trains another muscle. Working sets count each performed set once." }), _jsx(VolumeBars, { volume: volume, subVolume: subVolume, target: target, program: program, week: week, palette: C, partZone, catInk }), program && _jsx(VolumeRampTable, { program: program, volumeZone, catInk }), fixFeedback && _jsx("div", { role: "status", "data-volume-repair-status": fixFeedback.status, style: { marginTop: 10, padding: "10px 12px", borderRadius: 12, background: C.bg2, color: C.text, fontSize: 13, lineHeight: 1.5 }, children: fixFeedback.message })] })) }));
 }
 function AddSheet({ parts, usedIds = [], onPick, onAddById, onCreate, onClose }) {
     const [mode, setMode] = useState("pick"); // pick | create

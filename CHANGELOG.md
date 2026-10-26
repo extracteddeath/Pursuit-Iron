@@ -1,3 +1,10 @@
+## Build 929 / M382 — Readable, accessible volume inspection
+
+- Expandable muscle headings and granular details have 44px targets and follow the shared text-size tokens. Contributor rows place long session labels above exercise names on compact layouts.
+- Block volume labels stay visible while scrolling later weeks; the table supports keyboard scrolling and enlarged text. Chevron motion respects reduced motion and focus stays visible in forced colors.
+- Retire 38 static inline style objects into the existing themed stylesheet, and include both extracted volume owners in the existing style-debt budget. Engine policy, volume calculations and saved training keep their current owners.
+- Extend the existing R53 browser journey with twelve canonical contributions, long labels, 100/200% text at 320/393/900/1280px, native keyboard controls, granular details, block/deload parity and immutable saved prescriptions.
+
 ## Build 928 / M381 — Complete, readable muscle-volume contributors
 
 - Expanded muscle drilldowns show every contributor instead of stopping after eight; session and exercise labels wrap rather than being visually truncated.

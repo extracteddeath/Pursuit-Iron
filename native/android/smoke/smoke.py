@@ -817,6 +817,7 @@ if tap(r"Edit program", "editor"):
     if not find(r"lifts · [\d.]+ sets", timeout=4):
         FAILS.append("editor shows no day summaries")
     tap(r"^Move .+ later\|", "editor-moved")
+    scroll_to(r"^Swap .+\|", tries=4, step=600)
     if tap(r"^Swap .+\|", "editor-swap"):
         if not find(r"No other lift|·", timeout=8):
             FAILS.append("editor swap shows no alternatives")

@@ -275,7 +275,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         session = obj("session")
         // The design: Save session goes straight back to Today with what changed in a toast.
         val earned = r.list("achievements").map { it.s("label") }.filter { it.isNotBlank() }
-        toast((if (quick) "Quick workout saved · your program is unchanged" else if (nudged > 0) "Saved · next session adjusted for $nudged ${if (nudged == 1) "muscle" else "muscles"}" else "Session saved · week updated") +
+        // Kept changes join the saved line rather than replacing it, so the save is never lost from the toast.
+        val k = r.optJSONObject("kept")
+        val keptN = k?.takeIf { it.s("error").isBlank() }?.i("applied") ?: 0
+        toast((if (quick) "Quick workout saved · your program is unchanged" else if (nudged > 0) "Saved · next session adjusted for $nudged ${if (nudged == 1) "muscle" else "muscles"}" else if (keptN > 0) "Session saved · $keptN ${if (keptN == 1) "change" else "changes"} kept in the program" else "Session saved · week updated") +
             (if (earned.isNotEmpty()) " · earned ${earned.joinToString(", ")}" else ""))
         if (routineName != null && routineIds.isNotEmpty()) {
             val sr = obj("saveRoutine", jsonOf("ids" to JSONArray(routineIds), "name" to routineName))
@@ -283,7 +286,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         refreshHomeSide()
         pendingUpdate = obj("pendingProgramUpdate")
-        r.optJSONObject("kept")?.let { k -> if (k.s("error").isNotBlank()) toast(k.s("error")) else if (k.i("applied") > 0) toast("Program updated · ${k.i("applied")} ${if (k.i("applied") == 1) "change" else "changes"} kept") }
+        k?.s("error")?.takeIf { it.isNotBlank() }?.let { toast("Session saved · $it") }
         summary = null; tab = Tab.Today; screen = Screen.Tabs
     }
 

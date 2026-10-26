@@ -214,64 +214,6 @@ fun CycleSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
 }
 
 /* ------------------------------------------------------------------ block review (App.js BlockReviewView) */
-@Composable
-fun BlockReviewSheet(vm: AppViewModel, id: String, index: Int, onClose: () -> Unit) {
-    var r by remember { mutableStateOf<JSONObject?>(null) }
-    LaunchedEffect(id, index) { r = vm.reviewBlock(id, index) }
-    val cs = MaterialTheme.colorScheme
-    val df = DateFormat.getDateInstance(DateFormat.MEDIUM)
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        val x = r
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (x == null) { Text("Loading…"); return@Column }
-            Text("${x.s("label")} review", style = MaterialTheme.typography.headlineSmall)
-            Text(x.s("cycleName") + if (x.b("ok")) " · ${df.format(Date(x.optLong("from")))} to ${df.format(Date(x.optLong("to")))}" else "", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-            if (!x.b("ok")) {
-                Text("Not enough logged to review", style = MaterialTheme.typography.titleMedium)
-                Text(x.s("reason"), color = cs.onSurfaceVariant)
-                return@Column
-            }
-            PiCard(color = cs.surfaceContainer, radius = 22.dp) {
-                Kicker("How it went")
-                Text(x.s("headline"), style = MaterialTheme.typography.titleMedium)
-                if (x.s("note").isNotBlank()) Text("Block intent: ${x.s("note")}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-            }
-            val lifts = x.list("lifts")
-            if (lifts.isNotEmpty()) {
-                Kicker("Lifts")
-                lifts.forEach { l ->
-                    val st = l.s("state"); val pct = l.d("deltaPct")
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(l.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${l.i("sessions")} session${if (l.i("sessions") == 1) "" else "s"}" + if (st == "thin") " · too few to judge" else "", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                        }
-                        Text((if (pct > 0) "+" else "") + com.pursuitiron.app.ui.common.fmtNum(pct) + "%", style = MaterialTheme.typography.titleSmall,
-                            color = when (st) { "progressed" -> cs.primary; "regressed" -> cs.error; else -> cs.onSurfaceVariant })
-                    }
-                }
-            }
-            val muscles = x.list("muscles")
-            if (muscles.isNotEmpty()) {
-                Kicker("Volume vs outcome")
-                muscles.forEach { m ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(m.s("part").replace('_', ' ').replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        Text("${com.pursuitiron.app.ui.common.fmtNum(m.d("avgSets"))} sets/wk · ${m.s("zone")}" + (m.s("drove").takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-                    }
-                }
-            }
-            x.optJSONArray("recs")?.let { a -> if (a.length() > 0) {
-                Kicker("Next time")
-                (0 until a.length()).mapNotNull { a.optJSONObject(it) }.forEach { v ->
-                    Text(v.s("part").replace('_', ' ').replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleSmall)
-                    Text(v.s("rec"), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                }
-            } }
-        }
-    }
-}
-
 /* ------------------------------------------------------------------ cycle setup (App.js Wizard cycle mode + CustomCycleComposer) */
 data class CustomBlock(val phase: String, val weeks: Int)
 

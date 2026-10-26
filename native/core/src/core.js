@@ -1970,9 +1970,25 @@ export function reviewBlock({ id, index }) {
     const prog = programById(id);
     const c = cycles().find((x) => x.id === id) || (prog ? { id, name: prog.name, blockIds: [prog.id], blockMeta: [{ id: prog.id, label: 'Block' }] } : null);
     if (!c) return null;
-    let r = null; try { r = E.blockReview(history(), c, prog ? 0 : index); } catch { r = null; }
+    const bi = prog ? 0 : index;
+    let r = null; try { r = E.blockReview(history(), c, bi); } catch { r = null; }
     if (!r) return null;
-    return { ...r, cycleName: c.name, label: r.block?.label || `Block ${index + 1}`, note: r.block?.note || '' };
+    // The design's review: each lift's e1RM at the start and end of the block, and sessions against the plan.
+    const blockId = c.blockIds[bi], bp = programById(blockId), u = unit();
+    const hs = history().filter((h) => h && h.programId === blockId && h.date).sort((a, b) => Number(a.date) - Number(b.date));
+    const conv = (v, from) => (from && from !== u ? (u === 'lb' ? v * 2.20462 : v / 2.20462) : v);
+    const ends = {};
+    hs.forEach((h) => Object.entries(h.perf || {}).forEach(([id, pf]) => {
+        let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; }
+        const best = rows.filter((x) => !x.warm && Number(x.r) > 0 && Number(x.w) > 0).reduce((m, x) => Math.max(m, E.e1rm(Number(x.w), Number(x.r))), 0);
+        if (best > 0) { const v = conv(best, h.unit); const e = ends[id] || (ends[id] = { start: v, end: v, flatSince: v, flat: 0 }); e.end = v; }
+    }));
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const lifts = (r.lifts || []).map((l) => ({ ...l, start: ends[l.id] ? r1(ends[l.id].start) : null, end: ends[l.id] ? r1(ends[l.id].end) : null }));
+    const planned = bp ? (bp.days || []).length * (E.weeksOf(bp) || 0) : null;
+    return { ...r, lifts, unit: u, cycleName: c.name, label: r.block?.label || `Block ${index + 1}`, note: r.block?.note || '',
+        standalone: !!prog, programId: blockId || null, blockIndex: bi, blocks: c.blockIds.length, planned,
+        stronger: lifts.filter((l) => l.state === 'progressed').length, judged: lifts.filter((l) => l.state !== 'thin').length };
 }
 /* App.js startNextBlock for a standalone program (cycle blocks advance through their cycle). */
 export function nextBlock({ programId }) {

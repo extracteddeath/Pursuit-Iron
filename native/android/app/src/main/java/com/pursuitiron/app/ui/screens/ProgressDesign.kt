@@ -82,7 +82,7 @@ fun LandmarksCard(d: JSONObject) {
                 BoxWithConstraints(Modifier.fillMaxWidth().height(14.dp).clip(CircleShape).background(cs.surfaceContainerHighest)) {
                     val w = maxWidth
                     Box(Modifier.offset(x = w * pos(mev)).width(w * (pos(mrv) - pos(mev))).fillMaxHeight().clip(CircleShape).background(cs.primaryContainer))
-                    Box(Modifier.padding(3.dp).width(maxOf(8.dp, w * pos(planned) - 6.dp)).fillMaxHeight().clip(CircleShape).background(col).alpha(0.28f))
+                    Box(Modifier.padding(3.dp).width(maxOf(8.dp, w * pos(planned) - 6.dp)).fillMaxHeight().clip(CircleShape).background(col.copy(alpha = 0.28f)))
                     Box(Modifier.padding(3.dp).width(maxOf(8.dp, w * fill - 6.dp)).fillMaxHeight().clip(CircleShape).background(col))
                     Box(Modifier.offset(x = w * pos(mev)).width(2.dp).fillMaxHeight().background(cs.onSurface.copy(alpha = 0.5f)))
                     Box(Modifier.offset(x = w * pos(mrv) - 2.dp).width(2.dp).fillMaxHeight().background(cs.onSurface.copy(alpha = 0.5f)))

@@ -503,6 +503,15 @@ else:
     FAILS.append("no Programs sheet with shared programs on Plan")
 # Lift progression lives in Program settings (the Plan action row): the block's methods, each lift's reason
 scroll_up_to(r"^\|Edit program$|Review block", tries=10)
+# The design's Block review page: sessions against the plan (or why it's too early), with Start next block
+if tap(r"Review block", "block-review", required=False):
+    if not find(r"^Block \d+ review$", timeout=10):
+        FAILS.append("block review page did not open")
+    elif not find(r"sessions done|not enough|No sessions were logged", timeout=10):
+        FAILS.append("block review page has no session summary")
+    shot("block-review")
+    close_sheet(r"^Block \d+ review$")
+    scroll_up_to(r"^\|Edit program$|Review block", tries=10)
 row_scroll_to(r"^\|Settings$", r"Review block|^\|Schedule$|^\|Cycle$")
 tap(r"^\|Settings$", "program-settings")
 find(r"Training goal|set by its training cycle", timeout=15)
@@ -578,7 +587,7 @@ tap(r"^\|Progress$|^Progress\|", "progress-after-import")
 if not find(r"vs last week|^\|Volume$", timeout=3):
     FAILS.append("weekly volume chart missing on Progress")
 # Pinned lifts (web chart favourites): Manage opens the panel
-scroll_to(r"Open lift history|^Manage pinned lifts", tries=3, step=500)
+scroll_to(r"Open lift history|^Manage pinned lifts", tries=10, step=600)
 if tap(r"Open lift history", "lift-detail", required=False):
     if not find(r"Pin(ned)? to Progress", timeout=4):
         FAILS.append("lift detail has no pin toggle")

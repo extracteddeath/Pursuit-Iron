@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 925,
+  "build": 926,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "327d5c5096d44adc5686aa3ae4ef3a15a3a83232e44e39f37aaf0ed4c9e3e385",
+  "runtimeAggregate": "c46ee75163ff625fd0cc5a6697b06482d6cbc43304abb0874cca006e0b098581",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -94,12 +94,13 @@
     "modules/plan-session-surfaces.js": "50be1a4d26c40ffb7660086c688098f84a63f947ef8839b1a7062b7242f9cc4a",
     "modules/program-duration.js": "448968dfc14ddec0762ed19dc9873f2762e2b495a97916c2d62e123687fa070e",
     "modules/program-last-performance.js": "61ffec6cde222c2731becdc4b048a7da8b53f044816cf149104b168e3fca7ee3",
+    "modules/program-load-wave.js": "f63a111f0bd62e3282341d002227bb1ecfe136a057098aad5d871a02ccdc128b",
     "modules/program-reference-surfaces.js": "05b03ea575a749935d81c427703690956d927f4f5b8dd7f8e18431750eb1b466",
     "modules/program-review-surfaces.js": "7bb5ed71e79721a4d52f0fca060e8ed800dff95fea0e3e47c313230c74ca6ace",
     "modules/program-review.js": "394e326abe226725d1dd5933420e91cc2e9e79dd5ba9a5a7cb856f4bc8970d51",
     "modules/program-schedule-sheet.js": "3f3db9d93c816ba1c3994c6c2b80013398121156b8345e8cd4bbb991c2e7fefc",
     "modules/program-settings-sheet.js": "c8390305a60df08ad8028a9f93e09e2d478a58d3f8fd95c93f6419e09ea7346c",
-    "modules/release-notes.js": "74527ab35d9bcc29e5c229a80cb891afcadb940c3e9459622199e076874481b8",
+    "modules/release-notes.js": "ccacdfb1664578f207a4adbb7d4632f4025c7d379ab821c090ce195c4349c271",
     "modules/session-choice-dialog.js": "532ddb08086f4bc818eab304df91abe0caf24bf814dcc7fca4cf48f6fda55411",
     "modules/session-plan.js": "29e9b5b201a59de13bd0d21f89ca6358741d4889f52a96cd010c33554902e34c",
     "modules/session-tools.js": "6f75f6559033a968f5dbb986c3141adb31aab13e9971ce61719b301c2f88311b",
@@ -130,11 +131,11 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "ca4a7c07faa1a7c832fcc0e096c8667af6a6feff3fae8ed93dd3442bc6bc68a9",
-    "index.html": "4a612a26db068b4e8c49487c573574a13e2b4452f1b3fd8dd6dfd81bdfb3f140",
-    "sw.js": "39ee2e771e2715268f67d6236ac30c35e7ee7b63c133d10d5e2667da7181b248",
-    "BUILD_PROFILE.json": "6cfa0b0c50d441fe24dc4efc1ff1344fabcb1b39b1b8061ad879eeba56d0502f",
-    "CHANGELOG.md": "542101154d31d003573d80237b88176d32aea923c5606e870b110c6907ac6ec1",
+    "modules/App.js": "50ee4472719b56a9582b8de3401b2809d8ff8b791204c59496b07e5c38ca8dd0",
+    "index.html": "b6ecac1466c8144ffcb3dea1603d7cb448a8dfcd2d807787d461ed9e3bf8bf6a",
+    "sw.js": "239504448d95943e0de42f839d804d8fa88dc61ad8379f3e234d9df74b07a543",
+    "BUILD_PROFILE.json": "a62f96f428dfb63775c4ca9c0587e4d03d8da7b5f008ab00311b333cffc887bd",
+    "CHANGELOG.md": "38afb283065e9bf519145a5798715d224712d49a19b1089e37285c0853080bc5",
     "app.css": "1a3aae45595bfce539adc21b05fd8ef95fa6c2f8933ed240c5a37f1092fad33d",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -142,6 +143,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b925-rc22e99cbeb9b12de",
-  "uiMilestone": "Build 925 · M378 Stable selection motion"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b926-r919f39891f49d179",
+  "uiMilestone": "Build 926 · M379 Single-owner Plan volume wave"
 }

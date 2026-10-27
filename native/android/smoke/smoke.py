@@ -969,6 +969,16 @@ if scroll_to(r"^\|Injury log$", tries=10):
         time.sleep(1.5)
         shot("injury-saved")
     back()
+    # The design's protection card on Today: Feels fine now resolves it
+    tap(r"^\|Today$|^Today\|")
+    if scroll_up_to(r"Knee protection", tries=6):
+        shot("today-protection")
+        tap(r"^\|Feels fine now$")
+        time.sleep(1.5)
+        if find(r"Knee protection", timeout=2):
+            FAILS.append("Feels fine now did not resolve the injury")
+    else:
+        FAILS.append("no protection card on Today for an open injury")
 
 # Template with percentages: build, then set training maxes
 tap(r"^\|Plan$|^Plan\|")

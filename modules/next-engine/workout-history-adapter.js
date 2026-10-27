@@ -363,7 +363,7 @@ function pairOf(v) {
 /* Load for a changed prescription, from the lifter's estimated max. The estimate uses each logged set's reps-in-reserve; where
    none was logged it assumes the LOWER bound of the RIR prescribed for the week that set was trained in — the conservative end
    of what the lifter was told to do. (Assuming failure instead would underestimate the max and cancel out the heavier week.) */
-function represcribeForWeek(exerciseId, cell, lastCell, last, request, fromUnit, toUnit) {
+export function represcribeForWeek(exerciseId, cell, lastCell, last, request, fromUnit, toUnit) {
     const reps = pairOf(cell?.reps ?? cell?.range), rir = pairOf(cell?.rir), lastRir = pairOf(lastCell?.rir);
     if (!reps || !last)
         return null;

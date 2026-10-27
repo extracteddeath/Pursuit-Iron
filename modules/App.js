@@ -10784,7 +10784,7 @@ function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) {
 function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
     const clean = useMemo(() => normalizeInjuryLog(entries), [entries]);
     const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-    const blank = () => ({ region:'', part:'', side:'unspecified', impact:'monitor', level:'twinge', onset:today(), note:'' });
+    const blank = () => ({ region:'', part:'', side:'unspecified', impact:'monitor', level:'', onset:today(), note:'' });
     const [draft, setDraft] = useState(blank);
     const [editingId, setEditingId] = useState(null);
     const [editing, setEditing] = useState(clean.length === 0);
@@ -10863,7 +10863,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
             _jsx('div',{className:'wpb-injury-side',role:'group','aria-label':'Injury side',children:[['unspecified','Not specified'],['left','Left'],['right','Right'],['both','Both']].map(([value,label])=>
                 _jsx('button',{type:'button',className:'pressable','aria-pressed':draft.side===value,onClick:()=>set({side:value}),children:label},value))}),
             _jsxs('label',{children:['Onset date',_jsx('input',{type:'date','aria-label':'Injury onset date',value:draft.onset,max:today(),onChange:ev=>set({onset:ev.target.value})})]}),
-            _jsx('div',{className:'wpb-injury-field-title',children:'How did it feel?'}),
+            _jsx('div',{className:'wpb-injury-field-title',children:'How did it feel? · optional'}),
             _jsx('div',{role:'group','aria-label':'Injury severity',className:'wpb-injury-impact',children:INJURY_LEVELS.map(item=>
                 _jsxs('button',{type:'button',className:'pressable','data-injury-level':item.id,'aria-pressed':draft.level===item.id,onClick:()=>set({level:item.id,impact:item.impact}),
                     children:[_jsx('strong',{children:item.label}),_jsx('span',{children:item.detail})]},item.id))}),
@@ -10876,7 +10876,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
             draft.part && upcoming?.day && _jsxs('div',{className:'wpb-injury-preview',children:[_jsx('strong',{children:'Next workout · '+upcoming.day.label}),
                 _jsx('p',{children:preview.length?preview.length+' related lift'+(preview.length===1?'':'s')+' to review':'No related lifts found in the next workout. This stays in your injury log.'}),
                 preview.length>0 && _jsx('ul',{children:preview.map(ex=>_jsx('li',{children:ex.name},ex.id))}),
-                _jsx('p',{children:injuryPlan(injuryLevel({impact:draft.impact}),preview.map(ex=>ex.name),injuryTitle(draft,PART_LABEL))[0]}),
+                _jsx('p',{children:injuryPlan(draft.impact,preview.map(ex=>ex.name),injuryTitle(draft,PART_LABEL))[0]}),
                 _jsx('p',{children:'You’ll review the exercise list before applying any workout changes.'})]}),
 ]}) :
             _jsxs('div',{children:[_jsxs('div',{className:'wpb-injury-list-heading',children:[_jsx('h3',{children:active.length+' active injur'+(active.length===1?'y':'ies')}),

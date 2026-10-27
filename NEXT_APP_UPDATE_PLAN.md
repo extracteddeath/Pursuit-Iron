@@ -6,7 +6,7 @@ Starting loads are explicitly labelled heuristics, used only when the planned li
 
 Scale the recovery dip by the session's existing effort cost. Six on-plan hard sets keep the full dip; one light exposure produces a smaller dip. Preserve elapsed/measured recovery timing and effort calibration. This is a heuristic model change, not measured physiological recovery.
 
-Retain legacy injury preferences, add descriptive severity and preview the selected preference. Severity can seed a preference, and the user can change it. Saving an injury does not automatically modify the workout; existing exercise review and explicit Apply remain required. Preserve completed sets, source linking, retry idempotence and authored preferences.
+Retain legacy injury preferences, add optional descriptive severity and preview the selected preference. Legacy severity remains unknown: choosing to skip lifts is not a report of sharp pain. Severity can seed a preference, and the user can change it. Saving an injury does not automatically modify the workout; existing exercise review and explicit Apply remain required. Preserve completed sets, source linking, retry idempotence and authored preferences.
 
 Save per-unit plate-pair counts on the gym, preserve them through normalization, and expose staged count editing under the existing gym form. Use a bounded solver for plate math so it cannot invent pairs or miss a reachable combination after a greedy dead end. An explicit empty inventory stays empty. Existing callers without pair counts retain size-only plate behavior.
 

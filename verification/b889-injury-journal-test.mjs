@@ -16,12 +16,15 @@ assert.equal(result[0].lastAdjustment.action,'reduce');assert.equal(result[0].ad
 result=mergeInjuryReports(result,[report],'session-1');assert.equal(result[0].adjustments.length,1,'retry is idempotent');
 assert.equal(mergeInjuryReports([],[{part:'quads',action:'skip',at:3}],'s')[0].impact,'skip');
 assert.equal(original.lastAdjustment,undefined,'original record stays immutable');
-assert.equal(injuryLevel({impact:'skip'}),'sharp','legacy preferences remain readable');
+assert.equal(injuryLevel({impact:'skip'}),'','a legacy skip preference is not a report of sharp pain');
 assert.equal(injuryLevel({level:'sore',impact:'skip'}),'sore','reported severity and authored training preference stay separate');
 assert.equal(injuryAreaForPart('quads'),'knee');
-assert.equal(normalizeInjuryLog([original])[0].level,'sharp');
+assert.equal(normalizeInjuryLog([original])[0].level,null,'legacy severity stays unknown');
+assert.equal(mergeInjuryReports([],[{part:'quads',action:'skip',at:3}],'s')[0].level,null,'a session adjustment does not invent pain severity');
+assert.equal(mergeInjuryReports([],[{part:'quads',action:'skip',level:'sore',at:3}],'s')[0].level,'sore','an explicit severity report is retained independently of the action');
 assert.equal(mergeInjuryReports([],[{part:'quads',action:'monitor',at:3}],'s')[0].impact,'monitor','monitor is not silently changed to reduce');
 assert.match(injuryPlan('sharp',['Squat'],'Knee')[0],/If applied: skip.*Logged sets stay/);
+assert.match(injuryPlan('skip',['Squat'],'Knee')[0],/If applied: skip/);
 assert.match(injuryPlan('sore',['Squat'],'Knee')[0],/half.*rounded up/);
 assert.doesNotMatch(injuryPlan('twinge',['Squat'],'Knee')[0],/Keep going/);
 assert.match(injuryPlan('sharp',[],'Knee')[0],/No related lifts/);

@@ -1,3 +1,4 @@
+import { canonicalRepRange } from './shell-projection.js';
 import { historyNumber as numberOf, convertHistoryLoad as convertLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from './history-contract.js';
 import { advanceCycleState, createInitialCycleState, startPhase } from './cycles.js';
 import { evaluateWorkoutProgression } from './performance.js';
@@ -93,7 +94,7 @@ function historicalShellCell(program, day, slot, week, perf, exerciseId) {
     const current = getNextShellCell(program, day, slot, week);
     const saved = perf?.prescription;
     if (!current || saved?.schemaVersion !== 1 || saved.exerciseId !== exerciseId) return current;
-    const reps = rangeOf(saved.reps, null), rir = rangeOf(saved.rir, null);
+    const reps = canonicalRepRange(saved.reps), rir = rangeOf(saved.rir, null);
     if (!Number.isInteger(saved.sets) || saved.sets < 1 || saved.sets > 20
         || !reps || reps[0] <= 0 || !rir || rir[0] < 0 || rir[1] > 10
         || saved.rest == null || saved.rest === '' || !Number.isFinite(Number(saved.rest)) || Number(saved.rest) < 0)
@@ -134,7 +135,8 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit, context) 
         const fallbackWeek = Math.max(...Object.keys(program?.nextWeekPrescriptions?.[`${day.id}:${slot}`] ?? {}).map(Number).filter(Number.isFinite), 1);
         const cell = historicalShellCell(program, day, slot, week, entry.perf?.[legacyId], nextId)
             ?? historicalShellCell(program, day, slot, fallbackWeek, entry.perf?.[legacyId], nextId);
-        if (!cell)
+        const repBounds = canonicalRepRange(cell?.reps);
+        if (!cell || !repBounds)
             continue;
         const sourceEx = sourceSession.exercises.find(ex => ex.exerciseId === nextId) ?? sourceSession.exercises[slot];
         const legacy = legacyMap.get(legacyId);
@@ -149,7 +151,7 @@ function plannedSessionForEntry(program, entry, legacyExercises, unit, context) 
             role,
             sets: Math.max(1, Math.round(Number(cell.sets) || sourceEx?.sets || 1)),
             prescription: {
-                reps: rangeOf(cell.reps, sourceEx?.prescription.reps ?? [8, 12]),
+                reps: repBounds,
                 rir: rangeOf(cell.rir, sourceEx?.prescription.rir ?? [1, 3]),
                 ...(cell.setTargets ? { setTargets: cell.setTargets.map(t => ({ ...t, weight: convertLoad(t.weight, t.unit || entry.unit, programUnit(program, unit, entry.unit)) })) } : {}),
                 restSeconds: cell.rest != null && cell.rest !== '' && Number.isFinite(Number(cell.rest)) && Number(cell.rest) >= 0
@@ -290,6 +292,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
     if (!nextId)
         return null;
     const cell = getNextShellCell(program, day, slot, weekIndex);
+    if (cell?.prescriptionInvalid) return null;
     const reps = String(cell?.reps ?? cell?.range ?? '');
     const latest = latestShellEntries(history, program, legacyId, day, normalizedHistory);
     const lastEntry = latest.comparable;

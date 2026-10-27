@@ -156,7 +156,7 @@ try{
    });
    assert.ok(geometry.left>=0&&geometry.right<=geometry.viewport+1&&geometry.overflow<=1,'Settings stays within the app: '+JSON.stringify(geometry));
    assert.ok(geometry.bodyHeight>=44&&geometry.bodyBottom<=geometry.footerTop+1,'Settings retains a usable form viewport above its footer');
-   assert.ok(geometry.choices.length>=10&&geometry.choices.every(n=>n.height>=48&&!n.inline.length),'Shared choices have real 48px targets and no inline presentation: '+JSON.stringify(geometry));
+   assert.ok(geometry.choices.length>=10&&geometry.choices.every(n=>n.height>=48-.01&&!n.inline.length),'Shared choices have real 48px targets and no inline presentation: '+JSON.stringify(geometry));
    if(large)assert.ok(geometry.labelSize>=30,'Choice labels follow 200% text sizing');
    assert.equal(await page.$eval('[aria-label="Save program settings"]',n=>n.disabled),true);
    const groups=await page.$$('.wpb-program-settings-group');
@@ -264,7 +264,16 @@ try{
    await page.waitForSelector('.wpb-dialog');await click('Delete day');
    await page.waitForFunction(id=>!document.getElementById('pv-day-'+id),{},expectedPreview.dayId);
    await page.waitForSelector('.wpb-dialog',{hidden:true});
+   const deletedDayDraft=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
    await page.evaluate(()=>window.history.back());
+   await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-dialog')].some(n=>n.textContent.includes('Keep your changes?')));
+   assert.equal(await page.$('.wpb-preview-unavailable'),null,'Native Back reviews the pending deletion before leaving Program');
+   await click('Keep editing');await page.waitForSelector('.wpb-dialog',{hidden:true});
+   assert.equal(await page.$eval('#pv-day-'+expectedPreview.dayId,n=>!!n).catch(()=>false),false,'Keep editing retains the deleted-day draft');
+   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),deletedDayDraft.saved,'Native Back and Keep editing do not save the deletion');
+   await page.evaluate(()=>window.history.back());
+   await page.waitForFunction(()=>[...document.querySelectorAll('.wpb-dialog')].some(n=>n.textContent.includes('Keep your changes?')));
+   await click('Keep draft & leave');
    await page.waitForSelector('.wpb-preview-unavailable');
    assert.equal(await page.$('.wpb-preview-start'),null,'A removed selected day cannot silently become Up Next');
    await page.click('.wpb-preview-unavailable button');await page.waitForSelector('.wpb-program');

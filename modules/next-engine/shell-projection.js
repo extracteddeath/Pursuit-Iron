@@ -159,6 +159,29 @@ function shellRange(value) {
     return nums.every(Number.isFinite) ? range(nums) : String(value[0]);
 }
 
+// Rep targets must be complete positive integer counts/ranges. Dropping a
+// malformed upper bound can turn 10-20oops into 10 and award overload early.
+function canonicalRepRange(value) {
+    const positive = raw => {
+        if (typeof raw !== 'number' && typeof raw !== 'string') return null;
+        const text = String(raw).trim();
+        if (!/^\d+$/.test(text)) return null;
+        const number = Number(text);
+        return Number.isSafeInteger(number) && number > 0 ? number : null;
+    };
+    if (Array.isArray(value)) {
+        if (value.length === 1 && !Array.isArray(value[0])) return canonicalRepRange(value[0]);
+        if (value.length !== 2) return null;
+        const lo = positive(value[0]), hi = positive(value[1]);
+        return lo !== null && hi !== null && hi >= lo ? [lo, hi] : null;
+    }
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    const match = String(value).trim().match(/^(\d+)(?:\s*[-–—]\s*(\d+))?$/);
+    if (!match) return null;
+    const lo = positive(match[1]), hi = positive(match[2] ?? match[1]);
+    return lo !== null && hi !== null && hi >= lo ? [lo, hi] : null;
+}
+
 function canonicalShellSetCount(value, fallback = null) {
     const scalar = (raw) => {
         const n = Number(raw);
@@ -316,7 +339,9 @@ function getNextShellCell(program, day, slotIndex, weekIndex) {
         ? canonicalShellSetCount(rawSets) : null;
     const sets = scalarCount ?? canonicalShellSetCount(rawSets,
         immutableEngineSetCount(program, day, slotIndex, weekIndex) ?? cell.sets);
-    const reps = shellRange(ownedValue('reps', cell.reps));
+    const rawReps = ownedValue('reps', cell.reps);
+    const validReps = canonicalRepRange(rawReps);
+    const reps = validReps ? range(validReps) : '—';
     const rir = shellRange(ownedValue('rir', cell.rir));
     const rest = ownedValue('rest', cell.rest);
     const techRaw = ownedValue('tech', cell.tech ?? null);
@@ -333,7 +358,8 @@ function getNextShellCell(program, day, slotIndex, weekIndex) {
         ? explicitStyle : ownedValue('progressionStyle', cell.progressionStyle ?? 'auto');
     return {
         sets, reps, note: `Pursuit Engine ${program.engineSourceVersion || 'Next'}`,
-        range: reps, rir, rest, tech, role, progressionStyle, ownership, nextEngine: true
+        range: validReps ? reps : null, rir, rest, tech, role, progressionStyle, ownership, nextEngine: true,
+        ...(!validReps ? { missing: true, prescriptionInvalid: true, note: 'Review this exercise’s rep target' } : {})
     };
 }
 
@@ -397,4 +423,4 @@ class NextShellAdapterError extends Error {
     constructor(code, message, recovery) { super(message); this.name = 'NextShellAdapterError'; this.code = code; this.recovery = recovery; }
 }
 
-export { exerciseAt, styleFor, engineWeekOneStyles, EXPLICIT_EXERCISE_ALIASES, NextShellAdapterError, SHELL_PRESCRIPTION_FIELDS, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, hasOwn, immutableEngineSetCount, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, overrideKeyForField, primaryPart, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, shellRange, snapshotNextShellPrescription, swapNextSlotPrescriptions };
+export { exerciseAt, styleFor, engineWeekOneStyles, EXPLICIT_EXERCISE_ALIASES, NextShellAdapterError, SHELL_PRESCRIPTION_FIELDS, canonicalRepRange, canonicalShellSetCount, clearUserPrescriptionOverride, cloneNextDayPrescriptions, getNextShellCell, hasOwn, immutableEngineSetCount, markUserPrescriptionOverride, nextExerciseIdForShellExercise, norm, overrideKeyForField, primaryPart, range, remapNextShellRoster, removeNextSlotPrescription, resolveLegacyExercise, resolveLegacyExerciseByIdentity, resolveNextShellExerciseId, shellPrescriptionFieldOwner, shellPrescriptionOwners, shellRange, snapshotNextShellPrescription, swapNextSlotPrescriptions };

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION, customProgramSettingsIssues, editableProgramWeeks } from '../modules/engine-api.js';
+import { sessionSuggestion, prescribeSets, computeCell, resolveStyle, EX_BY_ID, applyCustomProgramSettings, parseStoredData, STORE_VERSION, customProgramSettingsIssues, editableProgramWeeks, canonicalRepRange, parseManualTargets, withManualProgramTargets, programPrescriptionIssues } from '../modules/engine-api.js';
 
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
@@ -8,7 +8,58 @@ export const program = {id:'m222-custom',custom:true,weeks:10,config:{unit:'lb',
     overrides:{'push:0':{sets:4,reps:'10-20',rir:'2',progressionStyle:'double',techOverride:null}}, ss:{'push:0':true}};
 export const history = [{id:'fly-last',programId:program.id,dayId:'push',date:2000,weekIndex:1,unit:'lb',perf:{'cable-fly':{weight:25,reps:13,sets:[{w:25,r:19,rir:2},{w:25,r:10,rir:2},{w:20,r:11,rir:2},{w:25,r:10,rir:2}]}}}];
 const day=program.days[0],ex=EX_BY_ID['cable-fly'];
+const malformedTargets=structuredClone(program);
+malformedTargets.overrides['push:0'].reps='10-20oops';
+assert.equal(computeCell(malformedTargets,malformedTargets.days[0],ex.id,0,1).missing,true,
+    'An invalid authored range must not become a lower single-rep target that could earn progression');
+assert.deepEqual(prescribeSets(malformedTargets,malformedTargets.days[0],ex,0,1,'lb',null,{}, {},[],false),[],
+    'An invalid authored prescription cannot create guessed working sets');
+// Complete target parsing and immutable per-field ownership. Accepted formats are
+// canonical counts/ranges; malformed suffixes must never lower the overload bar.
+for (const [raw, expected] of [[8,[8,8]], [' 6 – 10 ',[6,10]], ['6—10',[6,10]], [[6,10],[6,10]], [[8],[8,8]], ['08',[8,8]]])
+    assert.deepEqual(canonicalRepRange(raw), expected);
+for (const invalid of ['', '10-20oops', '10-', '-10', '10-6', '0', '6.5', '6,10', '6-10-12', '1e2', Infinity, true, {}, [], [6,10,12], [[6,10]], [0,10]]) {
+    assert.equal(canonicalRepRange(invalid), null, `Reject incomplete rep target ${JSON.stringify(invalid)}`);
+    const bad = structuredClone(program); bad.overrides['push:0'].reps = invalid;
+    assert.equal(computeCell(bad, day, ex.id, 0, 1).prescriptionInvalid, true);
+    assert.equal(prescribeSets(bad, day, ex, 0, 1, 'lb', null, {}, {}, history, false).length, 0);
+    assert.equal(programPrescriptionIssues(bad, day, 1)[0].exerciseId, ex.id);
+    assert.equal(sessionSuggestion(bad, day, 0, null, 'lb', 1, history),null,'Invalid current targets cannot award progression through a neutral fallback');
+}
+const manual = {...structuredClone(program), config:{...program.config, progression:'manual'}};
+manual.overrides['push:0'] = {...manual.overrides['push:0'], sets:[3,4,5,6], reps:[10,20], rest:123,
+    techOverride:'Last set: drop set', prescriptionOwners:{sets:'user',rest:'user',tech:'user'}};
+const manualInput = structuredClone(manual);
+for (const raw of ['', 0, 21, 1.5, '2oops', '1e1', Infinity, true]) {
+    const result = withManualProgramTargets(manual, day.id, 0, 2, {sets:raw,reps:'10-20'});
+    assert.equal(result.program, manual); assert.ok(result.errors.sets);
+}
+assert.equal(parseManualTargets({sets:'20',reps:'6–10'}).valid,true);
+assert.equal(parseManualTargets({sets:'2',reps:'10-20oops'}).valid,false);
+const same = withManualProgramTargets(manual, day.id, 0, 2, {sets:'4',reps:'10–20'});
+assert.equal(same.program, manual, 'Semantic no-op retains weekly arrays and object identity');
+const targets = withManualProgramTargets(manual, day.id, 0, 2, {sets:'4',reps:'8–12'}).program;
+assert.deepEqual(manual,manualInput,'Manual edits cannot mutate their source');
+assert.equal(targets.days,manual.days); assert.equal(targets.overrides['push:0'].sets,manual.overrides['push:0'].sets);
+assert.equal(targets.overrides['push:0'].rest,123); assert.equal(targets.overrides['push:0'].rir,'2');
+assert.equal(targets.overrides['push:0'].techOverride,manual.overrides['push:0'].techOverride);
+assert.deepEqual(targets.overrides['push:0'].prescriptionOwners,{...manual.overrides['push:0'].prescriptionOwners,reps:'user'});
+for(let week=1;week<=4;week++) {
+    const cell=computeCell(targets,day,ex.id,0,week);
+    assert.equal(cell.sets,week+2); assert.equal(cell.reps,'8-12');
+    assert.equal(prescribeSets(targets,day,ex,0,week,'lb',null,{}, {},[],false).filter(s=>!s.sub&&!s.warm).length,week+2);
+}
+const setOnly = withManualProgramTargets(manual,day.id,0,2,{sets:'7',reps:'10-20'}).program;
+assert.equal(setOnly.overrides['push:0'].sets,7);assert.equal(setOnly.overrides['push:0'].reps,manual.overrides['push:0'].reps);
+assert.equal(setOnly.overrides['push:0'].prescriptionOwners.reps,undefined);
+assert.equal(withManualProgramTargets(manual,day.id,0,1,{sets:'3',reps:'8'},'wrong-exercise').program,manual);
+assert.equal(withManualProgramTargets(program,day.id,0,1,{sets:'3',reps:'8'}).program,program,'Auto targets cannot be silently edited through the manual transaction');
+assert.deepEqual(programPrescriptionIssues(program,day,1),[]);
 export function rowsFor(p=program,hs=history){const s=sessionSuggestion(p,p.days[0],0,null,'lb',1,hs);return {suggestion:s,rows:prescribeSets(p,p.days[0],ex,0,1,'lb',s,{}, {},hs,false)};}
+const damagedHistory=structuredClone(history);
+damagedHistory[0].perf[ex.id].prescription={schemaVersion:1,exerciseId:ex.id,sets:4,reps:'10-20oops',rir:[2,2],rest:90};
+assert.deepEqual({...rowsFor(program,damagedHistory).suggestion,last:undefined},{...rowsFor(program,history).suggestion,last:undefined},
+    'A malformed historical target cannot replace the complete current target during progression');
 const fly=rowsFor();assert.deepEqual(fly.rows.map(s=>[s.weight,s.reps]),[['25','20'],['25','11'],['20','12'],['25','11']],
     'Rep-only progression must not raise the lighter working set to the session maximum');
 assert.ok(fly.rows.every(s=>s.target.w===s.weight&&s.target.prefillReps===s.reps));
@@ -102,4 +153,4 @@ const constrained=applyCustomProgramSettings(compatible,{...compatible.config,no
 assert.equal(constrained.days,compatible.days);assert.equal(constrained.overrides,compatible.overrides);
 assert.equal(constrained.config.noSupersets,true);
 
-console.log('PASS M222: Cable Fly row targets; DDP positional loads/reps; reduced-load floor; effort/incomplete/mixed-load gates; per-day custom history ownership; canonical-engine parity; immutable resume repair; authored roster/settings and late-week Myo/Drop techniques.');
+console.log('PASS M222: Cable Fly row targets; DDP positional loads/reps; reduced-load floor; effort/incomplete/mixed-load gates; per-day custom history ownership; canonical-engine parity; immutable resume repair; authored roster/settings and late-week Myo/Drop techniques; strict target parsing and atomic weekly target edits.');

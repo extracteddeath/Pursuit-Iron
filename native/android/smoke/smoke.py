@@ -980,6 +980,13 @@ if tap(r"^\|New$"):
         adb("shell", "input", "text", "Main-Lift")
         hide_keyboard()
         time.sleep(1)
+        if not find(r"Main-Lift Waves", timeout=3):  # the emulator keyboard sometimes adds a stray key: clear and retype
+            tap(r"Search 75 templates|Search \d+ templates")
+            adb("shell", "input", "keyevent", "KEYCODE_MOVE_END")
+            for _ in range(20): adb("shell", "input", "keyevent", "KEYCODE_DEL")
+            adb("shell", "input", "text", "Waves")
+            hide_keyboard()
+            time.sleep(1)
         if tap(r"% of max", "template-picked"):
             time.sleep(6)
             shot("training-max-sheet")

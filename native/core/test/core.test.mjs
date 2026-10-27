@@ -997,6 +997,11 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const before = JSON.parse(C.exportStore()).pinnedId, r = C.importProgramCode({ code });
   ok(r.ok && JSON.parse(C.exportStore()).pinnedId === before && JSON.parse(C.exportStore()).saved.length === 2, 'the code adds a program without switching'); }
 
+// Readiness follows the dose: one easy set no longer reads as a spent muscle
+{ const t = Date.now(), mk = (n) => [{ id: 'r' + n, date: t - 6 * 60000, unit: 'kg', perf: { 'bb-bench': { sets: Array.from({ length: n }, () => ({ w: 60, r: 10, rir: 2, rirReported: true, tr: 2 })) } } }];
+  const at = (n) => E.muscleRecovery(mk(n)).find((x) => x.part === 'chest').readiness;
+  ok(at(1) >= 80 && at(3) < at(1) && at(6) <= 5, 'readiness right after: 1 set ' + at(1) + '%, 3 sets ' + at(3) + '%, 6 sets ' + at(6) + '%'); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 
 // The design's finish page: too easy / about right / too much per muscle, the next day, time and volume

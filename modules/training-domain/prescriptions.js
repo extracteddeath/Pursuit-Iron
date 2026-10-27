@@ -119,6 +119,9 @@ function personalRecoveryHours(history, part, clockHours, options = {}) {
     return out;
 }
 
+const FULL_DOSE_COST = 6 * BASE_SET_COST; // six on-plan hard sets' cost (grinding costs more per set): at or above this, recovery starts from 0%
+const MIN_DOSE_DEPTH = 0.15;
+
 function muscleRecoveryUncached(history) {
     const now = Date.now();
     const canonicalHistory = normalizeHistoryRevisions(history).entries;
@@ -205,7 +208,14 @@ function muscleRecoveryUncached(history) {
            second is evidence worth overruling a plan with. */
         const personal = personalRecoveryHours(canonicalHistory, part, clockHours, { normalizedHistory: canonicalHistory });
         const recoveryHours = personal ?? clockHours; // lifter's measured recovery when history earns it, else the clock model
-        const readiness = Math.round(clamp(hours / recoveryHours, 0, 1) * 100);
+        /* DOSE SETS THE DEPTH, NOT ONLY THE LENGTH. Recovery used to start every trained muscle at 0%,
+           so one easy set read exactly as spent as a full session: 0% straight after, 39% twelve hours
+           on, and "sets will trim" on Today. The dip now scales with the session's set cost for that
+           muscle — a full dose (six on-plan hard sets or more) still starts at 0%, a single set starts
+           near 85% — and the clock (or the lifter's measured recovery) still sets how long the climb back
+           takes. A full session is unchanged; only light exposure stops reading as exhausted. */
+        const depth = clamp(l.sets / FULL_DOSE_COST, MIN_DOSE_DEPTH, 1);
+        const readiness = Math.round((1 - depth * (1 - clamp(hours / recoveryHours, 0, 1))) * 100);
         return { part, readiness, hoursSince: hours, measured: personal != null, overBy: l.overBy || 0, plannedRIR: l.plannedRIR != null ? l.plannedRIR : null, daysSince: Math.floor(hours / 24), status: readiness >= 85 ? "fresh" : readiness >= 55 ? "recovering" : "fatigued", sets: l.sets };
     });
 }

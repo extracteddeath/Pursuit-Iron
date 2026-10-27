@@ -2,6 +2,12 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "941", items: [
+        "New lifts can show a labelled starting estimate from recent related sets or your profile. Logged progression targets and workouts in progress keep their values.",
+        "Light training no longer makes a muscle look as exhausted as a full session. Recovery still reflects effort and time since training.",
+        "Injury entries record how it felt and show the planned effect before you apply workout changes.",
+        "Each gym can save its available plate pairs. Plate calculations respect those counts, including sizes you do not own."
+    ] },
     { version: "4.0.0", build: "940", items: [
         "Manual set and rep edits stay local until Apply, with clear labels, validation and Cancel. Changing reps keeps an untouched weekly set schedule.",
         "Program exercise controls reflow with larger text. Review, workout launch and system Back guide you back to unfinished target edits, and Back preserves saved-draft review.",

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { BARS, normalizeGyms, barWeightFor, setGymBarWeights, platesPerSide, setAvailPlates } from '../modules/training-domain/analytics.js';
+import { BARS, normalizeGyms, barWeightFor, setGymBarWeights, platesPerSide, setAvailPlates, platePairsFor, availPlatesFor } from '../modules/training-domain/analytics.js';
 
 const original = structuredClone(BARS);
 const gym = { id:'home', name:'Home', equipment:['barbell','smith'],
@@ -30,4 +30,23 @@ const invalid=normalizeGyms([{...gym,barWeights:{unit:'lb',smith:-2,barbell:'bad
 assert.equal(barWeightFor('ezbar','lb'),25);
 assert.deepEqual(invalid.barWeights,{unit:'lb'},'invalid backup values rejected');
 assert.deepEqual(BARS,original,'global bar defaults are immutable');
+const finiteGym={...gym,barWeights:{unit:'lb',barbell:45},platePairs:{lb:{25:1,20:3,10:1,5:1,2.5:0},kg:{20:1,10:2}}};
+// Use catalog sizes in a non-greedy case: 35 + 35 fits 70, whereas 45 strands 25.
+finiteGym.platePairs.lb={45:1,35:2};
+const normalized=normalizeGyms([finiteGym],finiteGym.id).gyms[0];
+assert.equal(normalized.platePairs.lb[45],1,'gym normalization retains counts');
+assert.equal(normalized.platePairs.lb[25],0,'unlisted sizes are absent from explicit inventory');
+setGymBarWeights(normalized);setAvailPlates(availPlatesFor(null,normalized));
+assert.deepEqual(platesPerSide(185,'barbell','lb').plates,[35,35],'bounded solver finds the closest achievable combination');
+const limited=platesPerSide(365,'barbell','lb');
+assert.deepEqual(limited.plates,[45,35,35],'never invent more pairs');
+assert.equal(limited.leftover,45);
+assert.deepEqual(availPlatesFor(null,{platePairs:{lb:{}}}).lb,[],'explicit zero inventory does not fall back to standard plates');
+setAvailPlates(availPlatesFor(null,{platePairs:{lb:{}}}));
+assert.equal(platesPerSide(135,'barbell','lb').leftover,45);
+assert.equal(platePairsFor(null,'lb',[])[45],0,'an empty owned-size selection stays empty');
+assert.equal(platePairsFor(null,'lb',[45])[45],4);
+assert.equal(platePairsFor({platePairs:{lb:{45:Infinity,35:-1,25:1.9}}},'lb')[45],0);
+assert.equal(platePairsFor({platePairs:{lb:{25:1.9}}},'lb')[25],1);
+setAvailPlates(null);setGymBarWeights(null);
 console.log('PASS Build 846 separate gym bar masses, zero Smith, per-side math, unit changes, gym switches and backward-compatible defaults');

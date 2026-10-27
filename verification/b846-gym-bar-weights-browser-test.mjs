@@ -37,7 +37,7 @@ try{
     try{
       await page.setViewport({width,height,deviceScaleFactor:1,isMobile:width<500,hasTouch:width<500});
       await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
-      await page.evaluateOnNewDocument(state=>localStorage.setItem('wpb:v1',JSON.stringify(state)),{...store,theme});
+      await page.evaluateOnNewDocument(state=>{if(!sessionStorage.getItem('b846-seeded')){localStorage.setItem('wpb:v1',JSON.stringify(state));sessionStorage.setItem('b846-seeded','1');}},{...store,theme});
       await page.goto('http://127.0.0.1:8799/',{waitUntil:'networkidle0'});
       await page.click('[data-tab="settings"]');
       await page.waitForSelector('.wpb-settings-card');
@@ -117,6 +117,10 @@ try{
       };
       await enlarge();
       const initialGyms=await page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('wpb:v1'));return {gyms:state.gyms,active:state.activeGymId};});
+      await page.$eval('details.wpb-gym-bar-masses',node=>node.open=true);
+      const pairs='input[aria-label="45 lb plate pairs"]';
+      await page.$eval(pairs,input=>{input.focus();input.select();});await page.keyboard.type('0');
+      assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).gyms),initialGyms.gyms,'typing plate counts does not save gym edits');
       await page.$eval('input[aria-label="Filter equipment by name"]',input=>{input.focus();input.select();});
       await page.keyboard.type('dumbbell');
       const equipment='.wpb-gym-equipment-chip';
@@ -158,6 +162,9 @@ try{
       };
       await change(bar,'35');
       await change(smith,'0');
+      await page.$eval('details.wpb-gym-bar-masses',node=>node.open=true);
+      assert.equal(await page.$eval(pairs,input=>input.value),'4','cancel discarded the staged count');
+      await change(pairs,'0');
       assert.equal(await page.$eval(smith,e=>e.value),'0',
         'counterbalanced Smith of zero must remain editable');
       await page.click('.wpb-gym-bar-unit');
@@ -170,6 +177,11 @@ try{
         return gym?.barWeights?.smith===0 && Math.abs(gym.barWeights.barbell-35)<.01;
       });
       const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).gyms);
+      assert.equal(saved.find(g=>g.id==='test_home').platePairs.lb[45],0);
+      const calc=await page.evaluate(async()=>{const domain=await import('/modules/training-domain/analytics.js');return domain.platesPerSide(domain.barWeightFor('barbell','lb')+90,'barbell','lb');});
+      assert.ok(Math.abs(calc.barW-35)<.01);assert.ok(!calc.plates.includes(45)&&calc.leftover===0,'active gym plate math uses the saved pair inventory');
+      await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('#root[data-pi-motion="expressive"]');
+      assert.equal((await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).gyms)).find(g=>g.id==='test_home').platePairs.lb[45],0,'pair counts survive reload');
       assert.equal(saved.find(g=>g.id==='test_elsewhere').barWeights.smith,15,'other gym untouched');
       assert.deepEqual(errors,[]);
       console.log('PASS B846 gym staged edits, cancel, reflow and unit conversion '+JSON.stringify({width,height,theme,enlarged}));

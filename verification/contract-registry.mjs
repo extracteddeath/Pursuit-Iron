@@ -117,6 +117,7 @@ export const contractGroups = Object.freeze({
         'm177-history-merge-integrity-test.mjs',
         'm201-workout-prescription-test.mjs',
         'b936-weekly-load-grid-test.mjs',
+        'm395-starting-load-and-recovery-test.mjs',
         'm204-prescription-ownership-test.mjs',
         'm205-engine-cleanup-test.mjs',
         'm217-android-lifecycle-test.mjs',
@@ -194,6 +195,7 @@ export const browserShards = Object.freeze({
     'integration-data': Object.freeze([
         'r76-cross-screen-form-zoom-browser-test.mjs',
         'b846-gym-bar-weights-browser-test.mjs',
+        'm395-starting-load-browser-test.mjs',
         'm265-worker-generation-browser-test.mjs',
         'm318-throttled-cycle-performance-browser-test.mjs',
         'm219-ui-integration-browser-test.mjs',

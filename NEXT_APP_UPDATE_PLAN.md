@@ -1,3 +1,17 @@
+## Build 941 / M395 — Reviewed web engine patch
+
+Integrate the user-provided web-engine-changes.patch after Build 940 publication. The attachment repeats the recovery diff and assumes a plate-count helper absent from this branch; apply recovery once and adapt the plate helpers to the maintained source.
+
+Starting loads are explicitly labelled heuristics, used only when the planned lift has no positive progression target. Prefer recent completed own/related sets; normalize revisions, use numeric history dates, retain precise lb/kg conversion and accept RIR zero. Use the latest completed exposure within 90 days rather than an all-time maximum. Connect bodyweight, units, experience and sex from the existing App state. Snap estimates through the existing equipment grid and respect gym ceilings. Percentage prescriptions, declined changes, session replacements, entered values and resumed workouts retain their existing authority. The label asks the user to check the first set; it does not promise automatic calibration that has not occurred.
+
+Scale the recovery dip by the session's existing effort cost. Six on-plan hard sets keep the full dip; one light exposure produces a smaller dip. Preserve elapsed/measured recovery timing and effort calibration. This is a heuristic model change, not measured physiological recovery.
+
+Retain legacy injury preferences, add descriptive severity and preview the selected preference. Severity can seed a preference, and the user can change it. Saving an injury does not automatically modify the workout; existing exercise review and explicit Apply remain required. Preserve completed sets, source linking, retry idempotence and authored preferences.
+
+Save per-unit plate-pair counts on the gym, preserve them through normalization, and expose staged count editing under the existing gym form. Use a bounded solver for plate math so it cannot invent pairs or miss a reachable combination after a greedy dead end. An explicit empty inventory stays empty. Existing callers without pair counts retain size-only plate behavior.
+
+Extend B846 and B889 behavioral/browser gates and add M395 evidence/seed/recovery coverage to the owned registry. Require source, lifecycle, independent export, all seven browser groups and release identity gates before merge, then verify hosted hashes and online/offline/resume behavior. Engine generator version remains 0.65.9; this app-domain policy release is Build 941. Physical Android/IME/TalkBack/interruption/foldable acceptance remains open.
+
 ## Build 940 / M394 — Authored targets, Program rows and prescription integrity
 
 Continue from Build 939 / PR #367, merge 645cc96807f3c8bf78e875e2bfa487397803fda4. Keep the user's larger-batch preference: publish related improvements and their verification together.

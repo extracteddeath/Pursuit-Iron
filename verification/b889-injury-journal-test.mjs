@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../modules/injury-tools.js';
+import { injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports, injuryLevel, injuryAreaForPart, injuryPlan } from '../modules/injury-tools.js';
 assert.deepEqual(injuryParts({region:'elbow'}),['biceps','triceps','forearms']);
 assert.equal(injuryTitle({region:'knee',side:'left'}),'Left knee');
 assert.equal(injuryTitle({part:'biceps'},{biceps:'Biceps'}),'Biceps');
@@ -16,4 +16,13 @@ assert.equal(result[0].lastAdjustment.action,'reduce');assert.equal(result[0].ad
 result=mergeInjuryReports(result,[report],'session-1');assert.equal(result[0].adjustments.length,1,'retry is idempotent');
 assert.equal(mergeInjuryReports([],[{part:'quads',action:'skip',at:3}],'s')[0].impact,'skip');
 assert.equal(original.lastAdjustment,undefined,'original record stays immutable');
+assert.equal(injuryLevel({impact:'skip'}),'sharp','legacy preferences remain readable');
+assert.equal(injuryLevel({level:'sore',impact:'skip'}),'sore','reported severity and authored training preference stay separate');
+assert.equal(injuryAreaForPart('quads'),'knee');
+assert.equal(normalizeInjuryLog([original])[0].level,'sharp');
+assert.equal(mergeInjuryReports([],[{part:'quads',action:'monitor',at:3}],'s')[0].impact,'monitor','monitor is not silently changed to reduce');
+assert.match(injuryPlan('sharp',['Squat'],'Knee')[0],/If applied: skip.*Logged sets stay/);
+assert.match(injuryPlan('sore',['Squat'],'Knee')[0],/half.*rounded up/);
+assert.doesNotMatch(injuryPlan('twinge',['Squat'],'Knee')[0],/Keep going/);
+assert.match(injuryPlan('sharp',[],'Knee')[0],/No related lifts/);
 console.log('PASS B889 injury journal: body areas, legacy records, secondary involvement, source linking and retry-safe adjustment history');

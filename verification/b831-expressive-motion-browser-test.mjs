@@ -545,6 +545,25 @@ try {
                     .filter(el=>el.style.getPropertyValue('--pi-nav-scale')).length);
             assert.equal(bouncingIcons,0,'M377 tab icons do not bounce in addition to the indicator');
 
+            if (tab === 'plan' && width <= 360) {
+                const narrowPlan = await page.$eval('.wpb-plan-panes', rail => {
+                    const buttons=[...rail.querySelectorAll('.wpb-plan-pane-tab')];
+                    const rows=[...new Set(buttons.map(b => Math.round(b.getBoundingClientRect().top)))];
+                    const text=buttons.find(b => b.textContent.includes('Progression'))
+                        ?.querySelector('.wpb-plan-pane-label');
+                    const selection=document.createRange();
+                    if(text) selection.selectNodeContents(text);
+                    const lines=text ? [...selection.getClientRects()].filter(r => r.width>0 && r.height>0).length : 0;
+                    return { buttons:buttons.length,rows:rows.length,lines,
+                        minTouch:Math.min(...buttons.map(b => b.getBoundingClientRect().height)),
+                        overflow:rail.scrollWidth>rail.clientWidth+1 };
+                });
+                assert.ok(narrowPlan.buttons===4 && narrowPlan.rows===2 &&
+                    narrowPlan.lines===1 && narrowPlan.minTouch>=48 && !narrowPlan.overflow,
+                    'B937 Plan pane labels stay intact in a reachable 2×2 narrow grid: '+
+                    JSON.stringify(narrowPlan));
+            }
+
             if (tab === 'settings') {
                 const r52=await page.evaluate(()=>{
                     const root=document.querySelector('.wpb-settings');

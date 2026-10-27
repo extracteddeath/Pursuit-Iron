@@ -822,6 +822,34 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Drill-in screens fill the viewport and MUST be fully opaque from first paint.
    The shared scrim fade only belongs to sheets/dialogs. Fading an entire
    navigated detail page exposes the underlying Library text through it. */
+
+/* B937 — one token-owned Library layout/spacing. Keep scrolling, focus,
+   staged filters and detail navigation under their existing behavior owners. */
+.wpb-library{flex:1;min-width:0;overflow-y:auto;padding-bottom:var(--pi-space-6)}
+.wpb-library-header{position:sticky;top:0;z-index:10;padding:var(--pi-space-3) var(--pi-space-4) var(--pi-space-2);border-bottom:1px solid var(--pi-color-divider);background:var(--pi-color-canvas)}
+.wpb-library-headline{display:flex;flex-wrap:wrap;align-items:center;gap:var(--pi-space-2);min-width:0;margin-bottom:var(--pi-space-3)}
+.wpb-library-title{flex:1 1 9em;min-width:0;margin:0;font-size:var(--pi-type-heading);line-height:1.2;letter-spacing:-.025em;overflow-wrap:anywhere;color:var(--pi-color-on-control)}
+.wpb-library-back,.wpb-library-compare{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-width:48px;min-height:48px;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);color:var(--pi-color-on-control)}
+.wpb-library-compare{padding:var(--pi-space-2) var(--pi-space-3);font-size:var(--pi-type-support);font-weight:var(--pi-weight-action)}
+.wpb-library-result-count{margin-inline-start:auto;font-size:var(--pi-type-support);font-weight:650;color:var(--pi-color-on-muted);font-variant-numeric:tabular-nums}
+.wpb-library-search{position:relative;min-width:0;margin-bottom:var(--pi-space-2)}
+.wpb-library-search-icon{position:absolute;left:var(--pi-space-3);top:50%;transform:translateY(-50%);color:var(--pi-color-on-muted);pointer-events:none}
+.wpb-library-search-input{width:100%;min-width:0;min-height:48px;padding:var(--pi-space-3) var(--pi-space-3) var(--pi-space-3) 36px;border-radius:var(--pi-shape-action);border:1px solid var(--pi-color-divider);background:transparent;color:var(--pi-color-on-control);font-size:var(--pi-type-body)}
+.wpb-library-search-input[data-has-query="true"]{padding-inline-end:52px}
+.wpb-library-search-clear{position:absolute;inset-block:0;right:0;display:grid;place-items:center;width:48px;min-height:48px;border:0;border-radius:var(--pi-shape-action);background:transparent;color:var(--pi-color-on-muted);cursor:pointer}
+.wpb-library-filter-strip{display:flex;align-items:center;gap:var(--pi-space-2);min-width:0;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y}
+.wpb-library-filter-strip--muscles{padding-bottom:var(--pi-space-2)}
+.wpb-library-filter-strip--equipment{padding-top:var(--pi-space-1)}
+.wpb-library .wpb-filter-chip{flex-shrink:0;min-height:44px;padding:var(--pi-space-2) var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-card);color:var(--pi-color-on-muted);font-size:var(--pi-type-support);font-weight:650;white-space:nowrap;cursor:pointer}
+.wpb-library .wpb-filter-chip[aria-pressed="true"]{background:var(--pi-color-active);border-color:var(--pi-m3e-primary);color:var(--pi-color-on-active)}
+.wpb-library-flag-filter{display:flex;gap:var(--pi-space-2);padding-top:var(--pi-space-2)}
+.wpb-library-flag{display:flex;flex:1 1 0;align-items:center;justify-content:center;gap:var(--pi-space-1);min-width:0;min-height:44px;padding:var(--pi-space-2);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-card);color:var(--pi-color-on-muted);font-size:var(--pi-type-support);font-weight:650;cursor:pointer}
+.wpb-library-flag[aria-pressed="true"]{background:var(--pi-color-active);border-color:var(--pi-m3e-primary);color:var(--pi-color-on-active)}
+.wpb-library-results{padding:var(--pi-space-2) var(--pi-space-4) var(--pi-space-6)}
+.wpb-library-results>.wpb-library-row{box-sizing:border-box;display:flex;align-items:center;gap:var(--pi-space-3);width:100%;min-width:0;min-height:64px;padding:var(--pi-space-3);margin-bottom:var(--pi-space-2);text-align:left;cursor:pointer;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card);background:var(--pi-color-card)}
+.wpb-library-results>.wpb-library-row[data-banned="1"]{opacity:.56}
+@media (max-width:360px){.wpb-library-header{padding-inline:var(--pi-space-3)}.wpb-library-results{padding-inline:var(--pi-space-3)}}
+@media (forced-colors:active){.wpb-library :is(.wpb-library-back,.wpb-library-compare,.wpb-filter-chip,.wpb-library-flag,.wpb-library-row){border-color:ButtonText;background:ButtonFace;color:ButtonText}.wpb-library :is(.wpb-filter-chip,.wpb-library-flag)[aria-pressed="true"]{background:Highlight;color:HighlightText}}
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
   background-clip:border-box;
 }
@@ -1018,12 +1046,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Root navigation animates at most one lead card; the selected indicator
    supplies the main continuity cue. No workout controls enter this system. */
 #root[data-pi-motion="expressive"] .wpb [data-pi-reveal="1"]{
-  animation:piContentCascade 260ms cubic-bezier(.2,.85,.2,1)
+  animation:piContentCascade 180ms cubic-bezier(.2,.8,.2,1)
     var(--pi-reveal-delay,0ms) both;
 }
 @keyframes piContentCascade{
-  0%{opacity:1;translate:0 6px}
-  72%{opacity:1;translate:0 -1px}
+  0%{opacity:1;translate:0 4px}
   100%{opacity:1;translate:0 0}
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){
@@ -1456,12 +1483,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    actual tab direction; content is never duplicated or asynchronously routed.
    The same page can be swiped back without any additional event handlers. */
 #root[data-pi-motion="expressive"] .wpb [data-view-frame][data-pi-nav-direction] [data-pi-reveal="1"]{
-  animation:piR4ConnectedEntrance 355ms cubic-bezier(.17,.83,.23,1)
+  animation:piR4ConnectedEntrance 200ms cubic-bezier(.2,.8,.2,1)
     var(--pi-reveal-delay,0ms) both!important;
 }
 @keyframes piR4ConnectedEntrance{
-  0%{opacity:1;translate:var(--pi-page-reveal-x,0px) 7px;scale:1}
-  68%{opacity:1;translate:0 -1px;scale:1}
+  0%{opacity:1;translate:var(--pi-page-reveal-x,0px) 0;scale:1}
   100%{opacity:1;translate:0 0;scale:1}
 }
 /* The sheet handle and leading corners carry the spatial cue as the panel
@@ -1952,7 +1978,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    the entire interaction. A short clamped path prevents excessive flying UI. */
 #root[data-pi-motion="expressive"] .wpb [data-view-frame][data-pi-nav-direction]
   [data-pi-reveal="1"][data-pi-connected="source"]{
-  animation:piR9ConnectedArrival 355ms cubic-bezier(.18,.8,.22,1)
+  animation:piR9ConnectedArrival 210ms cubic-bezier(.2,.8,.2,1)
     var(--pi-reveal-delay,0ms) both!important;
 }
 @keyframes piR9ConnectedArrival{
@@ -1961,7 +1987,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     translate:var(--pi-connected-x,0px) var(--pi-connected-y,0px);
     scale:1;
   }
-  70%{opacity:1;translate:0 -1px;scale:1}
   100%{opacity:1;translate:0 0;scale:1}
 }
 @media(prefers-reduced-motion:reduce),(forced-colors:active){

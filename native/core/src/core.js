@@ -52,6 +52,12 @@ function applyGlobals() {
     E.setGymLimits(gym); E.setGymBarWeights(gym);
 }
 
+/* The lifter's bodyweight, sex and experience feed the engine's first-time starting estimates. */
+function prescribeSets(...a) {
+    E.setLifterProfile({ bodyweight: parseFloat(S.store.bodyweight), bwUnit: unit(), sex: S.store.sex || null, experience: S.store.experience || null });
+    return E.prescribeSets(...a);
+}
+
 /* Pairs per plate size for a gym in a unit (the engine's platePairsFor, shared with the web app). */
 function platePairsFor(gym, u) { return E.platePairsFor(gym, u, S.store.plates?.[u]); }
 function activeGym() { const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId); return { list: g.gyms, gym: E.gymById(g.gyms, g.activeGymId) }; }
@@ -745,7 +751,7 @@ function freshData(ctx) {
         if (day.sessionLengthPlan && !(E.computeCell(program, day, id, slot, wk).sets > 0)) return null;
         const last = H.find((h) => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
         const n = repeatedNote(last?.perf?.[id]?.note, last?.perf?.[id]?.noteRepeat);
-        return { id, slot, sets: E.prescribeSets(program, day, EX_BY_ID[id], slot, wk, u, suggestions[slot], dayPerf, P, H, true),
+        return { id, slot, sets: prescribeSets(program, day, EX_BY_ID[id], slot, wk, u, suggestions[slot], dayPerf, P, H, true),
             note: n.text, noteRepeat: n.repeat, superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
             restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 };
     }).filter(Boolean);
@@ -1008,7 +1014,11 @@ return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workId
             const cur = currentSetIndex(e.sets), curSet = cur >= 0 ? e.sets[cur] : null;
             const plateRef = curSet && !curSet.sub ? curSet : e.sets.filter((x) => isWork(x) && !x.skipped).slice(-1)[0];
             let style = null; try { style = E.styleFor(ctx.program, e.id); } catch { style = null; }
-            return { ei, id: e.id, name: ex.name || e.id, short: shortName(ex.name || e.id), line: (() => { try { return liftLine(e, ex); } catch { return ''; } })(), bar, cur, loadTag: loadTag(ex),
+            // First time on this lift: the engine filled a labelled starting estimate (prescribeSets).
+            const estSet = e.sets.find((x) => isWork(x) && x.target?.estimate);
+            const estimate = estSet && !e.sets.some((x) => isWork(x) && x.done) ? { w: estSet.target.w, from: estSet.target.estimate.from,
+                text: E.startingEstimateText(estSet.target.estimate, u) } : null;
+            return { ei, id: e.id, name: ex.name || e.id, short: shortName(ex.name || e.id), line: (() => { try { return liftLine(e, ex); } catch { return ''; } })(), bar, cur, loadTag: loadTag(ex), estimate,
                 plates: (() => { try { return plateRef ? platesFor(parseFloat(plateRef.weight), bar, u) : null; } catch { return null; } })(),
                 platesFor: plateRef ? e.sets.indexOf(plateRef) : -1, addRules: addRules(e, ex, style), part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
                 superset: !!e.superset, supplemental: ctx.program.overrides?.[`${ctx.day.id}:${e.slot}`]?.supplemental ? (SUPP_LABEL[ctx.program.overrides[`${ctx.day.id}:${e.slot}`].supplemental] || 'Supplemental') : null, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', lastNoteDate: ctx.P[e.id]?.note && ctx.P[e.id]?.date ? (typeof ctx.P[e.id].date === 'number' ? ctx.P[e.id].date : Date.parse(ctx.P[e.id].date) || null) : null, pinNote: S.store.exNotes?.[e.id] || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
@@ -1198,7 +1208,7 @@ const ACTIONS = {
     swap({ ei, newId }, ctx, d) {
         if (!EX_BY_ID[newId] || d.some((x, i) => i !== ei && x.id === newId)) return d;
         const slot = d[ei].slot, keepWarm = d[ei].sets.some((s) => s.warm);
-        const sets = E.prescribeSets(ctx.program, ctx.day, EX_BY_ID[newId], slot, ctx.wk, unit(), null, ctx.dayPerf, ctx.P, ctx.H, keepWarm);
+        const sets = prescribeSets(ctx.program, ctx.day, EX_BY_ID[newId], slot, ctx.wk, unit(), null, ctx.dayPerf, ctx.P, ctx.H, keepWarm);
         return d.map((e, i) => (i !== ei ? e : { id: newId, slot, sets, note: '' }));
     },
     note({ ei, text, repeat }, ctx, d) {
@@ -1358,7 +1368,7 @@ const ACTIONS = {
         const nextProgram = withProgressionChoices(source, choices);
         const anchors = E.calibratedAnchorPerf(nextProgram, ctx.day, ctx.P, ctx.H, ctx.wk, ctx.lifterModel.effort);
         const suggestion = E.sessionSuggestion(nextProgram, ctx.day, row.slot, anchors, unit(), ctx.wk, ctx.H);
-        const prescribed = E.prescribeSets(nextProgram, ctx.day, ex, row.slot, ctx.wk, unit(), suggestion, anchors, ctx.P, ctx.H, true);
+        const prescribed = prescribeSets(nextProgram, ctx.day, ex, row.slot, ctx.wk, unit(), suggestion, anchors, ctx.P, ctx.H, true);
         S.live.sessionProgressions = choices;
         return d.map((item) => (item.id !== row.id ? item : { ...item, sets: refreshProgressionSets(item.sets, prescribed, E.userOwnsRuntimeSet) }));
     },

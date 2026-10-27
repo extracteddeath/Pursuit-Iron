@@ -1002,6 +1002,16 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const at = (n) => E.muscleRecovery(mk(n)).find((x) => x.part === 'chest').readiness;
   ok(at(1) >= 80 && at(3) < at(1) && at(6) <= 5, 'readiness right after: 1 set ' + at(1) + '%, 3 sets ' + at(3) + '%, 6 sets ' + at(6) + '%'); }
 
+// First-time lifts start from a labelled estimate: bodyweight × experience, else a related lift's e1RM
+{ C.init({}); C.createProgram({ config: { name: 'S', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  C.logBodyweight({ value: 80 }); const s0 = C.startSession({}), b = s0.exercises.find((e) => e.id === 'bb-bench');
+  ok(b && b.estimate && Number(b.estimate.w) > 40 && Number(b.estimate.w) < 80 && b.estimate.from.kind === 'bodyweight', 'first bench starts from an estimate (' + (b && b.estimate && b.estimate.w) + ' kg)');
+  ok(b.sets.filter((x) => !x.warm).every((x) => x.weight === b.estimate.w), 'the estimate fills the working sets');
+  const H = [{ unit: 'kg', date: '2026-10-01', perf: { 'bb-bench': { sets: [{ w: 100, r: 5 }] } } }];
+  const d = E.startingEstimate('db-bench', { history: H, unit: 'kg' }), w = E.startingWorkLoad(d, 8, 2);
+  ok(d.from.kind === 'related' && d.from.id === 'bb-bench' && w > 28 && w < 38, 'a dumbbell press reads off the barbell bench (' + w.toFixed(1) + ' kg per hand)');
+  ok(E.startingEstimate('bb-bench', { history: H, unit: 'kg' }).from.kind === 'own' && E.startingEstimate('pullup', { history: H, unit: 'kg' }) === null, 'own history wins; bodyweight lifts get no load estimate'); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 
 // The design's finish page: too easy / about right / too much per muscle, the next day, time and volume

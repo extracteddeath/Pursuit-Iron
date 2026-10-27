@@ -353,7 +353,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                 if (ex.b("superset")) Badge("Superset", cs.secondaryContainer, cs.onSecondaryContainer)
                 LastNoteCard(ex, s.s("dayLabel"))
                 s.o("reentry")?.let { r -> ReentryBanner(r) }
-                WhyInline(vm, s, ex) { open(WSheet.History(ex.s("id"))) }
+                ex.o("estimate")?.let { est -> StartingEstimateCard(s, ex, est) } ?: WhyInline(vm, s, ex) { open(WSheet.History(ex.s("id"))) }
                 if (injury != null || ex.has("injuryAdjusted") && !ex.isNull("injuryAdjusted")) {
                     Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(18.dp)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -56,7 +56,7 @@ import {
     SCORE_PATTERN_LABEL, scoreAttribution, scoreLevelIdx, scoreTargetFor, scoreTo100, secondaryOf,
     SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS,
     SESSION_LENGTH_OPTIONS, sessionE1RM, sessionExercisePlan, SESSIONS, sessionSnapshotStatus, sessionSuggestion,
-    SET_ROW_BLEED, setAvailPlates, availPlatesFor, platePairsFor, setExLoadInc, setGymBarWeights, setGymLimits, setLoadInc, setRestScaleGlobal,
+    SET_ROW_BLEED, setLifterProfile, startingEstimateText, setAvailPlates, availPlatesFor, platePairsFor, setExLoadInc, setGymBarWeights, setGymLimits, setLoadInc, setRestScaleGlobal,
     setsOf, setupFieldsFor, simulateAndAudit, splitBuildability, splitContractGaps,
     SPLITS, splitSupportsTrainingDays, starvedRegions, STD_LEVELS, STORE_VERSION, strengthClubSnapshot,
     strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, styleFor, styleOverride, SUB_LANDMARKS,
@@ -12603,7 +12603,14 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                 // A session can have a real previous lift (shown in the Last chips)
                                 // without a compatible progression-owned suggestion. Do not claim
                                 // it is the lifter's first time: that contradicts the actual history.
-                                if (previousWorkoutSet(lastPerf[e.id], 0)) return null;
+                                const est = e.sets.find(x => !x.warm && !x.sub && x.target?.estimate);
+                                if (!est && previousWorkoutSet(lastPerf[e.id], 0)) return null;
+                                if (est && !e.sets.some(x => !x.warm && x.done)) {
+                                    const tRir = est.target.rir ?? "2", low = String(est.target.reps || "").split("-")[0];
+                                    return _jsxs("div", { className: "wpb-starting-estimate", "data-starting-estimate": true, children: [
+                                        _jsx("strong", { children: `Starting estimate \u00b7 ${est.target.w} ${unit}` }),
+                                        _jsx("span", { children: `${est.target.estimate.from?.kind === "own" ? "No suggestion for " + ex.name + " in this program yet." : "First time on " + ex.name + "."} ${startingEstimateText(est.target.estimate, unit)} If ${low || "the"} reps leave more than ${tRir} in the tank, go heavier. Your first set calibrates the rest.` })] });
+                                }
                                 return (_jsxs("div", { className: "wpb-workout-starting-hint", style: { fontSize: 12, color: C.muted, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Info, { size: 13 }), "Choose a starting load. Your completed sets will guide future suggestions."] }));
                             }
                             const col = sug.dir === "up" ? C.accent : sug.dir === "down" ? C.warn : C.muted;
@@ -18023,19 +18030,19 @@ function PlatesAndBars({ unit, gym, plates, onPair, onBar, gymCount }) {
     const max = Math.round((bar + 2 * sizes.reduce((a, p) => a + p * (P[p] || 0), 0)) * 100) / 100;
     const owned = sizes.filter(p => P[p] > 0), jump = owned.length ? Math.min(...owned) * 2 : 0;
     const big = unit === "lb" ? 45 : 25;
-    const stepBtn = (label, onClick, disabled, round) => _jsx("button", { onClick, disabled, "aria-label": label, className: "pressable", style: { width: 40, height: 40, borderRadius: round ? 999 : 12, border: "none", cursor: disabled ? "default" : "pointer", fontSize: 20, fontWeight: 700, background: round ? C.accent : C.bg2, color: round ? C.accentText : C.text, opacity: disabled ? 0.4 : 1 }, children: round ? "+" : "\u2212" });
-    return (_jsxs(_Fragment, { children: [_jsx(SettingsTitle, { children: "Plates & bars" }), _jsxs("div", { className: "wpb-ui-card", style: { background: C.card, borderRadius: 16, padding: "13px 14px", display: "flex", flexDirection: "column", gap: 10 }, children: [
-        _jsx("div", { style: { fontSize: 13, color: C.muted }, children: "The plate calculator only uses what you own, and tells you the closest load you can build." + (gym && gymCount > 1 ? ` For ${gym.name} \u2014 each gym keeps its own bars and plates.` : "") }),
-        _jsxs("div", { style: { fontSize: 12, fontWeight: 800, letterSpacing: 0.4, color: C.muted }, children: ["BAR \u00b7 ", unit.toUpperCase()] }),
-        _jsx("div", { role: "radiogroup", "aria-label": "Bar weight", style: { display: "flex", gap: 8 }, children: BAR_CHOICES[unit].map(b => { const on = Math.abs(bar - b) < 0.01; return _jsx("button", { role: "radio", "aria-checked": on, onClick: () => onBar && onBar(b), className: "pressable", style: { flex: 1, height: 44, borderRadius: on ? 14 : 999, border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, background: on ? C.accent : C.bg2, color: on ? C.accentText : C.text }, children: `${b} ${unit}` }, b); }) }),
-        _jsx("div", { style: { fontSize: 12, fontWeight: 800, letterSpacing: 0.4, color: C.muted }, children: "PLATES \u00b7 PAIRS YOU OWN" }),
-        _jsx("div", { style: { display: "flex", flexDirection: "column", gap: 2, borderRadius: 14, overflow: "hidden" }, children: sizes.map(p => { const n = P[p] || 0; return _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "6px 10px", background: C.bg2 }, children: [
-            _jsx("span", { style: { width: 28, display: "flex", justifyContent: "center" }, children: _jsx("span", { style: { display: "block", width: p >= big * 0.6 ? 12 : 9, height: 12 + Math.round(p / big * 24), borderRadius: 4, background: n ? C.accent : C.border, opacity: n ? 1 : 0.6 } }) }),
-            _jsx("span", { style: { flex: 1, fontSize: 15, fontWeight: 700 }, children: `${p} ${unit}` }),
+    const stepBtn = (label, onClick, disabled, round) => _jsx("button", { onClick, disabled, "aria-label": label, className: "pressable wpb-pb-step", "data-round": round, children: round ? "+" : "\u2212" });
+    return (_jsxs(_Fragment, { children: [_jsx(SettingsTitle, { children: "Plates & bars" }), _jsxs("div", { className: "wpb-ui-card wpb-pb", children: [
+        _jsx("div", { className: "wpb-pb-note", children: "The plate calculator only uses what you own, and tells you the closest load you can build." + (gym && gymCount > 1 ? ` For ${gym.name} \u2014 each gym keeps its own bars and plates.` : "") }),
+        _jsxs("div", { className: "wpb-pb-label", children: ["BAR \u00b7 ", unit.toUpperCase()] }),
+        _jsx("div", { role: "radiogroup", "aria-label": "Bar weight", className: "wpb-pb-bars", children: BAR_CHOICES[unit].map(b => { const on = Math.abs(bar - b) < 0.01; return _jsx("button", { role: "radio", "aria-checked": on, onClick: () => onBar && onBar(b), className: "pressable", children: `${b} ${unit}` }, b); }) }),
+        _jsx("div", { className: "wpb-pb-label", children: "PLATES \u00b7 PAIRS YOU OWN" }),
+        _jsx("div", { className: "wpb-pb-list", children: sizes.map(p => { const n = P[p] || 0; return _jsxs("div", { className: "wpb-pb-row", "data-owned": n > 0, children: [
+            _jsx("span", { className: "wpb-pb-plate", children: _jsx("i", { style: { width: p >= big * 0.6 ? 12 : 9, height: 12 + Math.round(p / big * 24) } }) }),
+            _jsx("span", { className: "wpb-pb-size", children: `${p} ${unit}` }),
             stepBtn(`One fewer pair of ${p} ${unit}`, () => onPair(p, n - 1), n <= 0, false),
-            _jsx("span", { style: { width: 26, textAlign: "center", fontSize: 16, fontWeight: 800 }, children: n }),
+            _jsx("span", { className: "wpb-pb-count", children: n }),
             stepBtn(`One more pair of ${p} ${unit}`, () => onPair(p, n + 1), n >= 10, true)] }, p); }) }),
-        _jsxs("div", { style: { padding: "12px 14px", borderRadius: 14, background: C.accentDim, color: C.accentInk, fontSize: 14 }, children: [_jsx("b", { children: `${max} ${unit}` }), " is the heaviest you can load \u00b7 smallest jump ", _jsx("b", { children: `${jump} ${unit}` })] })] })] }));
+        _jsxs("div", { className: "wpb-pb-max", children: [_jsx("b", { children: `${max} ${unit}` }), " is the heaviest you can load \u00b7 smallest jump ", _jsx("b", { children: `${jump} ${unit}` })] })] })] }));
 }
 
 function SettingsView({ selfTestData = null, initialFocus = null, onFocusHandled, warmupCard, setWarmupCard, experience, setExperience, gymName, gymCount, onGyms, theme, setTheme, unit, setUnit, loadMode, setLoadMode, restAutoStart, setRestAutoStart, restScale, setRestScale, haptics, setHaptics, reminders, setReminders, minInc, setMinInc, plates, setPlates, activeGym = null, onPlatePair = null, onBarbell = null, bodyweight, setBodyweight, sex, setSex, age, birth, setBirth, birthEst, bannedCount, customCount, historyCount, onClearBanned, onClearHistory, onResetAll, onExport, onBackupSaved, onExportCSV, onExportBodyCSV, onImport, onPreviewImport, onLibrary, onImportProgram, onGallery, onShowIntro, onShowWhatsNew }) {
@@ -19081,6 +19088,7 @@ function App() {
     setExLoadInc(program?.exLoadInc || {}); // per-exercise (machine) increments, synced from the program
     setAvailPlates(availPlatesFor(plates, activeGym)); // the active gym's plate pairs: plate math loads within what it owns
     const [sex, setSex] = useState("male");
+    setLifterProfile({ bodyweight: parseFloat(bodyweight), bwUnit: unit, sex, experience }); // first-time lifts start from a labelled estimate
     // Birthdate is the stored fact; age is derived from it on every load so it can never go stale.
     // birthEst marks an age-to-date estimate carried over by migration 10, so the UI can ask for the real date.
     const [birth, setBirth] = useState("");

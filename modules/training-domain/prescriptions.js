@@ -12,6 +12,7 @@ import { evaluateWorkoutProgression } from "../next-engine/performance.js";
 import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds, isBarLike, isMachineLike, loadStep, roundTo, secondaryOf, weeksOf } from './records.js';
 import { EXERCISES, EX_BY_ID } from './catalog.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
+import { startingEstimate, startingWorkLoad } from './starting-load.js';
 
 const PART_LABEL = {
     chest: "Chest", lats: "Lats", upper_back: "Upper Back", shoulders: "Shoulders", biceps: "Biceps",
@@ -1047,10 +1048,19 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         return [];
     const request = program?.nextEngine?.request || program?.nextEngine?.baseRequest;
     const percentage = percentagePlanFor(program, day, ex, slot, weekIndex, unit, history);
+    // First time on this lift: a labelled starting estimate instead of a blank row.
+    const range0 = cellRepRange(cell, program, ex, slot === day.primaryIndex);
+    let estimate = null, estimateLoad = null;
+    if (!percentage && !(Number(sug?.weight) > 0) && !(sug?.setTargets || []).some(t => Number(t?.weight) > 0)) {
+        estimate = startingEstimate(ex.id, { history, unit, experience: program?.config?.experience });
+        const raw = startingWorkLoad(estimate, range0[0], parseRIRNum(cell.rir) ?? 2);
+        estimateLoad = raw > 0 ? loadableAtOrBelow(ex, raw, unit) : null;
+        if (!(estimateLoad > 0)) estimate = estimateLoad = null;
+    }
     const targets = buildRuntimeSetTargets({
         exerciseId: resolveNextShellExerciseId(program, day, slot, ex) || ex.id,
         cell,
-        workingLoad: percentage?.sets[0]?.weight ?? sug?.weight ?? null,
+        workingLoad: percentage?.sets[0]?.weight ?? (estimateLoad || sug?.weight) ?? null,
         suggestedReps: sug?.target ?? null,
         setTargets: sug?.setTargets,
         includeWarmups: !!withWarm,
@@ -1071,7 +1081,8 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         ...(sug?.action === "user_hold" && t.kind !== "warmup" ? { planReviewHeld: true } : {}),
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
-            : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps) }
+            : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: estimate ? "estimate" : sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps),
+                ...(estimate ? { estimate: { from: estimate.from, e1rm: Math.round(estimate.e1rm * 10) / 10 } } : {}) }
     }));
     if (percentage) {
         rows = [...rows.filter(r => r.warm), ...percentage.sets.map(t => ({

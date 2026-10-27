@@ -305,6 +305,22 @@ fun LastNoteCard(ex: JSONObject, dayLabel: String) {
     }
 }
 
+/** The design's first-time card: the engine's labelled starting estimate, in place of "Why?". */
+@Composable
+fun StartingEstimateCard(s: JSONObject, ex: JSONObject, est: JSONObject) {
+    val cs = MaterialTheme.colorScheme
+    val work = ex.list("sets").firstOrNull { !it.b("warm") && !it.b("sub") }
+    val low = work?.o("target")?.s("reps")?.substringBefore('-')?.takeIf { it.isNotBlank() } ?: work?.s("reps").orEmpty()
+    val rir = work?.o("target")?.s("rir")?.takeIf { it.isNotBlank() && it != "null" } ?: "2"
+    val lead = if (est.o("from")?.s("kind") == "own") "No suggestion for ${ex.s("name")} in this program yet." else "First time on ${ex.s("name")}."
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp)
+        .semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Starting estimate · ${est.s("w")} ${s.s("unit")}", style = MaterialTheme.typography.titleSmall)
+        Text("$lead ${est.s("text")} If $low reps leave more than $rir in the tank, go heavier. The engine calibrates from your first set.",
+            style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+    }
+}
+
 /** The design's "Why 82.5 kg?": a chip that opens in place, with the engine's reason, its read and the lift's recent e1RM. */
 @Composable
 fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, onHistory: () -> Unit) {

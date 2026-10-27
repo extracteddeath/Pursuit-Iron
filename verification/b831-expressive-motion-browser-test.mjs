@@ -1317,8 +1317,8 @@ try {
             rapidNavR32.progress.connected===0 && rapidNavR32.home.connected===0 &&
             !rapidNavR32.progress.cascade && !rapidNavR32.home.cascade &&
             rapidNavR32.progress.reveal===0 && rapidNavR32.home.reveal===0 &&
-            rapidNavR32.progress.travel==='6px' &&
-            rapidNavR32.home.travel==='-6px' &&
+            rapidNavR32.progress.travel==='3px' &&
+            rapidNavR32.home.travel==='-3px' &&
             rapidNavR32.home.active==='page' && rapidNavR32.visibleViews===1,
             'R32 rapid tabs preserve direction and suppress repeated entrance cascades: '+
                 JSON.stringify(rapidNavR32));

@@ -4101,9 +4101,13 @@ function strengthScore(history, bw, bwUnit, sex, age) {
                terms sitting next to a per-hand best, which is not a harder goal but a different unit, and
                would send someone after more than double the weight they need. */
             const target = Math.ceil(scoreEquivalentInverse(l.id, l.lvl.thresh[idx], l.unit, bw, bwUnit));
+            /* Shown in the unit the app is in (the bodyweight unit callers pass), not the unit the lift
+               happened to be logged in: a lifter who switched to lb was told "57 kg reaches Beginner". */
+            const shownUnit = bwUnit === "lb" || bwUnit === "kg" ? bwUnit : l.unit;
+            const inShown = (v) => convertHistoryLoad(v, l.unit, shownUnit);
             if (target > l.prBest)
                 nextMilestone = { id: l.id, name: l.name, pattern: weakest.label,
-                    current: Math.round(l.prBest), target, unit: l.unit, est: !!l.est,
+                    current: Math.round(inShown(l.prBest)), target: Math.ceil(inShown(target)), unit: shownUnit, est: !!l.est,
                     level: STD_LEVELS[idx + 1] || STD_LEVELS[STD_LEVELS.length - 1] };
         }
     }

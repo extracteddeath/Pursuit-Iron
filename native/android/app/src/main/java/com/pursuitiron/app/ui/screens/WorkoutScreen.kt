@@ -846,8 +846,9 @@ internal fun HurtSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
     LaunchedEffect(area) { preview = area?.let { vm.injuryPreview(it) } }
     val cs = MaterialTheme.colorScheme
     val ready = when (step) { 0 -> area != null; 1 -> impact != null; else -> true }
-    ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.padding(horizontal = 18.dp).padding(bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    // Opens fully so Next is always on screen; the steps scroll if the text is large.
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 18.dp).padding(bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column {
                 Text("STEP ${step + 1} OF 3", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
                 Text(when (step) { 0 -> "Where does it hurt?"; 1 -> "How bad is it?"; else -> "Here's the plan" }, style = MaterialTheme.typography.headlineSmall)
@@ -857,7 +858,7 @@ internal fun HurtSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
                     0 -> Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics { contentDescription = "Where" }) {
                         areas.chunked(2).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                row.forEach { a -> HurtChoice(a.s("label"), null, area == a.s("id"), 52.dp, Modifier.weight(1f)) { area = a.s("id") } }
+                                row.forEach { a -> HurtChoice(a.s("label"), null, area == a.s("id"), 48.dp, Modifier.weight(1f)) { area = a.s("id") } }
                                 if (row.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }

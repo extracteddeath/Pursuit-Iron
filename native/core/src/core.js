@@ -464,7 +464,8 @@ function todayDesign(nx, H, weekStart) {
         days = p.days.map((d) => {
             let sets = 0; try { sets = dayPreview(p, d, nx.weekIndex).reduce((a, e) => a + (Number(e.sets) || 0), 0); } catch { sets = 0; }
             const wd = wdOf(d.id);
-            return { id: d.id, label: d.label, exercises: d.exercises.length, sets, weekday: wd == null ? null : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][wd],
+            let minutes = null; try { minutes = Math.round(E.estimateMinutes(p, d, nx.weekIndex)) || null; } catch { minutes = null; }
+            return { id: d.id, label: d.label, exercises: d.exercises.length, sets, minutes, weekday: wd == null ? null : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][wd],
                 status: doneIds.has(d.id) ? 'done' : d.id === nx.day.id ? 'today' : 'planned' };
         });
         try {

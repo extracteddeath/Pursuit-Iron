@@ -441,7 +441,7 @@ fun ThisWeekList(vm: AppViewModel, h: JSONObject) {
                     }
                     Column(Modifier.weight(1f)) {
                         Text(d.s("label"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${d.i("exercises")} exercises · ${d.i("sets")} sets", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        Text("${d.i("exercises")} exercises · ${d.i("sets")} sets" + (if (d.i("minutes") > 0) " · ~${d.i("minutes")} min" else ""), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                     Text(when (st) { "done" -> "Done"; "today" -> "Up next"; else -> "Planned" }, style = MaterialTheme.typography.labelMedium, color = if (today) cs.onPrimaryContainer else cs.onSurfaceVariant)
                 }

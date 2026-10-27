@@ -177,9 +177,15 @@ fun WorkoutScreen(vm: AppViewModel) {
             ProgressBar(if (total > 0) done.toFloat() / total else 0f, Modifier.padding(horizontal = 16.dp))
             if (wide) {
                 Row(Modifier.fillMaxSize()) {
-                    LazyColumn(Modifier.width(300.dp).fillMaxHeight(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        itemsIndexed(exs) { k, e ->
-                            MorphChip(e.s("name"), k == ei, { vm.act("select", "ei" to k) }, Modifier.fillMaxWidth(), trailing = workCount(e), done = e.b("done"), height = 56.dp, strong = true)
+                    // The design's tablet rail: each lift with its count on the right, Reorder exercises at the foot.
+                    Column(Modifier.width(300.dp).fillMaxHeight().padding(16.dp)) {
+                        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            itemsIndexed(exs) { k, e -> RailItem(e.s("name"), workCount(e), k == ei, e.b("done")) { vm.act("select", "ei" to k) } }
+                        }
+                        Surface(onClick = { sheet = WSheet.Exercises }, color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(PiIcons.List, null, Modifier.size(18.dp)); Text("  Reorder exercises", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                            }
                         }
                     }
                     ExercisePane(vm, s, ex, wide, Modifier.weight(1f)) { sheet = it }
@@ -275,6 +281,18 @@ private fun workCount(e: JSONObject): String {
     return "${work.count { it.b("done") }}/${work.size}"
 }
 private fun shortName(n: String): String = n.split(' ').filter { it.isNotBlank() }.let { w -> if (n.length <= 14) n else w.takeLast(2).joinToString(" ") }
+
+@Composable
+private fun RailItem(name: String, count: String?, on: Boolean, done: Boolean, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val bg by animateColorAsState(if (on) cs.primary else if (done) cs.primaryContainer else cs.secondaryContainer, Motion.effects(), label = "rail")
+    val fg = if (on) cs.onPrimary else if (done) cs.onPrimaryContainer else cs.onSecondaryContainer
+    Row(Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp)).background(bg).clickable(onClick = onClick)
+        .semantics(mergeDescendants = true) { role = Role.Tab; selected = on }.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold), color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        count?.let { Text(it, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = fg.copy(alpha = 0.85f)) }
+    }
+}
 
 @Composable
 private fun Header(vm: AppViewModel, s: JSONObject, wide: Boolean, onDiscard: () -> Unit, onFinish: () -> Unit, onMenu: () -> Unit) {

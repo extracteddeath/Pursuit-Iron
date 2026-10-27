@@ -580,23 +580,24 @@ try {
                     'R52 Intermediate label fits as one word at regular width: '+JSON.stringify(r52));
                 if(width===430)await page.screenshot({path:path.join(root,'verification/r52-settings-phone.png')});
             }
-            // The mounted destination receives a linked entrance sourced from
-            // the actual tapped navigation control. No duplicate views, no
-            // animation on workout rows, and no change to navigation state.
+            // B937: A bottom-tab change already has a moving selected indicator.
+            // Do not add a second, diagonally source-linked card animation. The
+            // one lead card keeps the short horizontal route cue and the
+            // same React-mounted page. Library detail retains its own link.
             if (tab === 'plan' || tab === 'progress') {
-                const linked = await page.$eval(`[data-view-frame="${tab}"]`, el => {
-                    const lead = el.querySelector('[data-pi-connected="source"]');
+                const motion = await page.$eval(`[data-view-frame="${tab}"]`, el => {
+                    const cards=[...el.querySelectorAll('[data-pi-reveal="1"]')];
                     return { count:el.querySelectorAll('[data-pi-connected="source"]').length,
                         quick:el.dataset.piNavQuick==='1',
-                        x:lead?.style.getPropertyValue('--pi-connected-x'),
-                        y:lead?.style.getPropertyValue('--pi-connected-y') };
+                        reveals:cards.length,
+                        duration:cards[0] ? getComputedStyle(cards[0]).animationDuration : null,
+                        axis:el.style.getPropertyValue('--pi-page-reveal-x') };
                 });
-                assert.ok(linked.quick ? linked.count===0 :
-                    linked.count===1 && Number.isFinite(parseFloat(linked.x)) &&
-                    Number.isFinite(parseFloat(linked.y)) &&
-                    Math.abs(parseFloat(linked.x)) <= 24.01 &&
-                    Math.abs(parseFloat(linked.y)) <= 18.01,
-                    'R9/R33 deliberate transitions connect once; quick ones omit card jumps: '+JSON.stringify(linked));
+                assert.ok(motion.count===0 && motion.reveals<=1 &&
+                    (motion.quick || motion.reveals===1 && motion.duration==='0.2s' &&
+                    Math.abs(parseFloat(motion.axis))<=8.01),
+                    'B937 tab indicator owns navigation; one short horizontal lead, no diagonal duplicate: '+
+                    JSON.stringify(motion));
             }
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');

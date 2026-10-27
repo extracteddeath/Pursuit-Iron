@@ -2,6 +2,10 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "936", items: [
+        "A new training week no longer drops 50 lb to 49.5 lb merely because an estimated load landed one tiny step below completed straight sets.",
+        "Real load corrections, missed targets, mixed-load sessions and available equipment increments still control progression."
+    ] },
     { version: "4.0.0", build: "935", items: [
         "History corrections keep incomplete numbers in the editor instead of silently dropping logged sets. Fix the value or remove the set deliberately before saving.",
         "The history editor now keeps its heading and actions reachable, with larger text, keyboard clearance, and consistent shared controls. Cancel and Back discard staged edits.",

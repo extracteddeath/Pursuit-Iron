@@ -116,6 +116,7 @@ export const contractGroups = Object.freeze({
         'm176-workout-restore-hardening-test.mjs',
         'm177-history-merge-integrity-test.mjs',
         'm201-workout-prescription-test.mjs',
+        'b936-weekly-load-grid-test.mjs',
         'm204-prescription-ownership-test.mjs',
         'm205-engine-cleanup-test.mjs',
         'm217-android-lifecycle-test.mjs',

@@ -48,22 +48,12 @@ function applyGlobals() {
     const g = E.normalizeGyms(st.gyms, st.activeGymId);
     const gym = E.gymById(g.gyms, g.activeGymId);
     // The design's Plates & bars: each gym counts the pairs it owns; plate math loads within those counts.
-    const base = st.plates || { kg: [...E.PLATES.kg], lb: [...E.PLATES.lb] };
-    const pairs = { kg: platePairsFor(gym, 'kg'), lb: platePairsFor(gym, 'lb') };
-    const owned = (u) => E.ALL_PLATES[u].filter((p) => (pairs[u][p] || 0) > 0).sort((a, b) => b - a);
-    E.setAvailPlates({ ...base, kg: owned('kg'), lb: owned('lb'), pairs });
+    E.setAvailPlates(E.availPlatesFor(st.plates, gym));
     E.setGymLimits(gym); E.setGymBarWeights(gym);
 }
 
-/* Pairs per plate size for a gym in a unit: its own counts once set, otherwise the owned-plate set at
-   a commercial-gym depth (4 pairs of the biggest, 2 of the rest). */
-const DEFAULT_PAIRS_TOP = { kg: 25, lb: 45 };
-function platePairsFor(gym, u) {
-    const own = gym?.platePairs?.[u];
-    if (own && typeof own === 'object') return Object.fromEntries(E.ALL_PLATES[u].map((p) => [p, Math.max(0, Math.floor(Number(own[p]) || 0))]));
-    const set = (S.store.plates?.[u]?.length ? S.store.plates[u] : E.PLATES[u]).map(Number);
-    return Object.fromEntries(E.ALL_PLATES[u].map((p) => [p, set.includes(p) ? (p === DEFAULT_PAIRS_TOP[u] ? 4 : 2) : 0]));
-}
+/* Pairs per plate size for a gym in a unit (the engine's platePairsFor, shared with the web app). */
+function platePairsFor(gym, u) { return E.platePairsFor(gym, u, S.store.plates?.[u]); }
 function activeGym() { const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId); return { list: g.gyms, gym: E.gymById(g.gyms, g.activeGymId) }; }
 
 function unit() { return S.store.unit || 'kg'; }

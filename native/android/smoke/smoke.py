@@ -834,7 +834,7 @@ if scroll_to(r"^\|Data & storage$", tries=6):
 else:
     FAILS.append("no Data & storage row")
 # The design's Plates & bars: pairs you own per size; the heaviest load follows the counts
-if scroll_to(r"^\|Plates & bars$", tries=6):
+if seek(r"^\|Plates & bars$"):
     tap(r"^\|Plates & bars$", "settings-plates")
     def heaviest():
         for n in nodes():
@@ -860,7 +860,7 @@ if scroll_to(r"^\|Plates & bars$", tries=6):
     back()
 else:
     FAILS.append("no Plates & bars row")
-if scroll_to(r"^\|Rest timer & cues$", tries=6):
+if seek(r"^\|Rest timer & cues$"):
     tap(r"^\|Rest timer & cues$", "settings-cues")
     if not find(r"^\|Play the cue$", timeout=4) or not find(r"^\|Preview lock screen$", timeout=2):
         FAILS.append("Rest timer & cues lacks Play the cue / Preview lock screen")

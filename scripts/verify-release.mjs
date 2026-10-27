@@ -9,14 +9,6 @@ const root = process.cwd();
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 const bytes = p => fs.readFileSync(path.join(root, p));
 const sha = b => crypto.createHash('sha256').update(b).digest('hex');
-/* Candidate-only forensic output: offline icon digests needed by the exact release finalizer.
-   Removed before final certification. */
-console.log('B937_TEMP_STATIC_DIGESTS ' + JSON.stringify(Object.fromEntries(
-  ['favicon.ico','gallery.json','icons/icon-192-aa9e4b77f520.png',
-   'icons/icon-512-5bdeae240e55.png','icons/icon-maskable-512-1d7393c9a2de.png']
-   .map(p => [p, sha(bytes(p))])
-)));
-
 const fail = msg => { console.error(`RELEASE VERIFY FAILED: ${msg}`); process.exit(1); };
 
 const registry = verifyContractRegistry(root);

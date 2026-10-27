@@ -14,11 +14,12 @@ export function sessionTargetsText(sets, unit) {
 }
 export function PlanChangeBanner({ review, onClick }) {
     if (!review?.changes.length) return null;
-    const undone = review.changes.filter(row => row.change.undone).length;
+    const held = review.changes.filter(row => row.change.undone).length;
+    const count = review.changes.length;
     return _jsxs("button", { type: "button", className: "wpb-plan-change-banner pressable", onClick, "aria-label": "Review plan changes", children: [
         _jsx("span", { className: "wpb-session-plan-icon", children: _jsx(History, { size: 19 }) }),
-        _jsxs("span", { children: [_jsx("strong", { children: `${review.changes.length} plan change${review.changes.length === 1 ? '' : 's'}` }),
-            _jsx("span", { children: undone ? `${undone} undone · review choices` : "See why · Undo if needed" })] }),
+        _jsxs("span", { children: [_jsx("strong", { children: `${count} upcoming adjustment${count === 1 ? '' : 's'}` }),
+            _jsx("span", { children: held ? `${held} prior load${held === 1 ? '' : 's'} kept · See details` : "Review load and planned sets" })] }),
         _jsx(ChevronRight, { size: 18 })] });
 }
 // The Home hero is a workout preview, not a second coaching feed.
@@ -43,7 +44,7 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
     if (!review?.exercises.length) return null;
     const ranked = [...review.exercises].sort((a, b) => {
         const score = row => (row.opportunity ? 8 : 0) + (row.change.undone ? 4 : 0)
-            + (row.protocol.type !== 'straight' ? 2 : 0) + (row.change ? 1 : 0);
+            + (row.protocol.type !== 'straight' ? 2 : 0) + (row.change.changed ? 1 : 0);
         return score(b) - score(a);
     }).slice(0, 3);
     return _jsxs("section", { className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""),
@@ -73,36 +74,44 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
     ] });
 }
 export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose }) {
-    return _jsx(SessionChoiceDialog, { title: "Plan changes", onClose, className: "wpb-plan-changes-dialog", children: _jsxs("div", { children: [
-        _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex}. Choices apply to this workout’s load and reps. Sets, target effort and technique follow the plan.` }),
-        !review.changes.length && _jsx("p", { children: "No changes from your last comparable workout." }),
-        review.changes.map(row => {
-            const uniform = row.proposed.length === row.change.previous.length && row.proposed.every(set => set.weight === row.proposed[0]?.weight && set.reps === row.proposed[0]?.reps)
-                && row.change.previous.every(set => set.weight === row.change.previous[0]?.weight && set.reps === row.change.previous[0]?.reps);
-            const targets = (uniform ? row.proposed.slice(0, 1) : row.proposed);
-            const diff = (set, i) => _jsxs("li", { children: [
-                !uniform && _jsx("span", { className: "wpb-change-set-name", children: `Set ${i + 1}` }),
-                _jsx("span", { className: "wpb-plan-before", children: row.change.undone ? sessionLoadText(set, review.unit) : row.change.previous[i] ? sessionLoadText(row.change.previous[i], review.unit) : 'New set' }),
-                _jsx(ChevronRight, { size: 15, "aria-label": "to" }),
-                _jsx("strong", { children: sessionLoadText(row.change.undone ? row.change.undoTargets[i] : set, review.unit) })] }, i);
-            return _jsxs("section", { className: "wpb-plan-change-card", "data-plan-change": row.id,
-                "data-undone": row.change.undone, children: [
-                _jsxs("div", { className: "wpb-plan-change-title", children: [
-                    _jsx("h3", { children: row.name }),
-                    _jsx("span", { children: row.change.undone ? 'Undone' : row.category })] }),
-                _jsx("ol", { className: "wpb-plan-target-diff", children: targets.slice(0, 1).map(diff) }),
-                !uniform && targets.length > 1 && _jsxs("details", { className: "wpb-plan-change-more", children: [
-                    _jsx("summary", { children: `See all ${targets.length} sets` }),
-                    _jsx("ol", { className: "wpb-plan-target-diff", children: targets.slice(1).map((set, i) => diff(set, i + 1)) })] }),
-                _jsx("p", { className: "wpb-plan-review-basis", children: row.change.source
-                    ? `Compared with this exercise on ${new Date(row.change.source.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} for the same program day.`
-                    : "No comparable completed workout yet." }),
-                _jsx("p", { className: "wpb-plan-change-reason", children: row.change.undone ? `Original recommendation: ${row.proposedReason}` : row.proposedReason }),
-                row.change.canUndo ? _jsx("button", { type: "button", className: "wpb-plan-undo pressable", disabled: busy,
-                    "aria-label": `${row.change.undone ? 'Restore recommendation for' : 'Undo change for'} ${row.name}`,
-                    onClick: () => onChoice(review.programId, review.dayId, review.weekIndex, row.id, !row.change.undone, review.sessionLengthPlan, row.slot),
-                    children: row.change.undone ? 'Use recommendation' : 'Undo change' })
-                    : _jsx("p", { className: "wpb-plan-review-basis", children: "Edit this exercise in your program to change its targets." })
-            ] }, row.id + ':' + row.slot);
-        })] }) });
+    return _jsx(SessionChoiceDialog, { title: "Plan changes", onClose, className: "wpb-plan-changes-dialog",
+        children: _jsxs("div", { className: "wpb-plan-changes-body", children: [
+            _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex}. Routine rep progress is not listed. Load holds affect this upcoming workout, not logged history.` }),
+            !review.changes.length && _jsx("p", { children: "No meaningful changes to review." }),
+            ...review.changes.map(row => {
+                const change = row.change;
+                const why = change.undone ? `Original recommendation: ${row.proposedReason}` : row.proposedReason;
+                const showTargets = change.loadChanged;
+                return _jsxs("section", { className: "wpb-plan-change-card", "data-plan-change": row.id,
+                    "data-kind": change.kind, "data-undone": change.undone, children: [
+                    _jsxs("div", { className: "wpb-plan-change-title", children: [
+                        _jsx("h3", { children: row.name }),
+                        _jsx("span", { children: change.undone ? 'Prior load kept' : change.category })] }),
+                    _jsx("p", { className: "wpb-plan-change-summary", children: change.summary }),
+                    _jsxs("details", { className: "wpb-plan-change-more", children: [
+                        _jsx("summary", { children: "Why and target details" }),
+                        _jsx("p", { className: "wpb-plan-change-reason", children: why }),
+                        change.source && _jsx("p", { className: "wpb-plan-review-basis", children:
+                            `Compared with ${new Date(change.source.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · same workout day.` }),
+                        change.setDelta && _jsx("p", { className: "wpb-plan-review-basis", children:
+                            "Planned sets are compared with the most recent saved program revision, not completed sets." }),
+                        showTargets && _jsx("ol", { className: "wpb-plan-target-diff", children:
+                            row.proposed.map((set, i) => _jsxs("li", { children: [
+                                _jsx("span", { className: "wpb-change-set-name", children: `Set ${i + 1}` }),
+                                _jsx("span", { className: "wpb-plan-before", children: change.previous[i]
+                                    ? sessionLoadText(change.previous[i], review.unit) : 'New set' }),
+                                _jsx(ChevronRight, { size: 15, "aria-label": "to" }),
+                                _jsx("strong", { children: sessionLoadText(change.undone ? change.undoTargets[i] : set, review.unit) })
+                            ] }, i)) })] }),
+                    change.canUndo ? _jsx("button", { type: "button", className: "wpb-plan-undo pressable", disabled: busy,
+                        "aria-label": `${change.undone ? 'Use recommended load for' : 'Keep previous load for'} ${row.name}`,
+                        onClick: () => onChoice(review.programId, review.dayId, review.weekIndex, row.id,
+                            !change.undone, review.sessionLengthPlan, row.slot),
+                        children: change.undone ? "Use recommended load" : "Keep previous load" })
+                        : _jsx("p", { className: "wpb-plan-review-basis", children: change.kind === 'sets'
+                            ? "To revise planned sets, edit your saved program."
+                            : "The previous load cannot be restored exactly with this equipment." })
+                ] }, row.id + ':' + row.slot);
+            })
+        ] }) });
 }

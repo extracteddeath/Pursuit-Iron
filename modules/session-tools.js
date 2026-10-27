@@ -217,9 +217,7 @@ export function buildSessionReview(program, day, weekIndex, unit, history = [], 
                 ? `Starting estimate ${estimatedTarget.w} ${unit}. ${startingEstimateText(estimatedTarget.estimate, unit)} Check the load on your first set.`
             : proposedSuggestion?.reason || `Choose a starting load for ${range[0]}–${range[1]} reps at the planned effort. This exposure will establish a reference for future progression.`;
         const reason = change.undone ? suggestion.reason : proposedReason;
-        const action = proposedSuggestion?.action;
-        const category = action === 'increase_load' || action === 'add_reps' ? 'Progression'
-            : action === 'decrease_load' ? 'Load adjustment' : program.config?.percentScheme ? 'Programmed targets' : 'Rep target';
+        const category = change.category;
         return [{ id, name: ex.name, slot, cell, range, suggestion, proposed, effective, reason, proposedReason,
             style: resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, perf, history, day.id),
             protocol: techniqueProtocolFromCell(cell), change, category, opportunity }];

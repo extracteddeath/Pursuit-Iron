@@ -1,4 +1,4 @@
-import { styleFor, engineWeekOneStyles } from '../next-engine/shell-projection.js';
+import { canonicalRepRange, styleFor, engineWeekOneStyles } from '../next-engine/shell-projection.js';
 import { sessionPlanChange } from '../session-plan.js';
 import { loadingInventoryInUnit } from '../next-engine/loading.js';
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
@@ -837,6 +837,8 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const ex = EX_BY_ID[exerciseAt(program, day, slot, weekIndex)];
     if (!ex)
         return null;
+    const currentCell = computeCell(program, day, ex.id, slot, weekIndex);
+    if (currentCell.prescriptionInvalid) return null;
     const historyRefs = customExerciseHistoryRefs(program, day, ex.id, history);
     const last = historyRefs.comparable;
     if (!last) {
@@ -844,7 +846,6 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
         const rawLoad = representativeCustomLoad(reference?.perf?.[ex.id]);
         if (!reference || rawLoad === null)
             return null;
-        const currentCell = computeCell(program, day, ex.id, slot, weekIndex);
         const [lo] = cellRepRange(currentCell, program, ex, slot === day?.primaryIndex);
         const weight = convertHistoryLoad(rawLoad, reference.unit, unit);
         return { unit, lastUnit: reference.unit ?? unit, weight, dir: 'hold', action: 'initial', reps: currentCell?.range ?? currentCell?.reps,
@@ -852,11 +853,10 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
             reason: 'Use the last known load only as a starting reference. This program day has no comparable completed history yet, so reps/load are not progressed from another day or program.' };
     }
     const conv = w => convertHistoryLoad(w, last.unit, unit);
-    const currentCell = computeCell(program, day, ex.id, slot, weekIndex);
     const saved = last.perf[ex.id].prescription;
     const validSaved = saved?.schemaVersion === 1 && saved.exerciseId === ex.id
         && Number.isInteger(saved.sets) && saved.sets > 0 && saved.sets <= 20
-        && effortBounds(saved.reps)?.[0] > 0 && effortBounds(saved.rir)?.[0] >= 0;
+        && canonicalRepRange(saved.reps)?.[0] > 0 && effortBounds(saved.rir)?.[0] >= 0;
     const cell = validSaved ? { ...currentCell, ...saved, range: Array.isArray(saved.reps) ? saved.reps.join('-') : saved.reps,
         reps: Array.isArray(saved.reps) ? saved.reps.join('-') : saved.reps,
         rir: Array.isArray(saved.rir) ? saved.rir.join('-') : saved.rir } : currentCell;

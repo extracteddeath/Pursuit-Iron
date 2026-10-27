@@ -1,7 +1,7 @@
 import { exerciseAt } from '../next-engine/shell-projection.js';
 // Canonical records domain. Maintained production source; independent of React and browser APIs.
 import { programWorkingWeeks } from "../program-duration.js";
-import { getNextShellCell, canonicalShellSetCount } from "../next-engine/app-shell-adapter.js";
+import { getNextShellCell, canonicalRepRange, canonicalShellSetCount } from "../next-engine/app-shell-adapter.js";
 import { effortForSimulationWeek } from "../next-engine/simulation.js";
 import { rirForPhase } from "../next-engine/realizer-prescriptions.js";
 import { phasePolicyFor, initialPhaseForGoal, SUPPORTED_PHASES } from "../next-engine/phase-policy.js";
@@ -153,26 +153,10 @@ function cellRepRange(cell, program, ex, isPrimary) {
     void program;
     void ex;
     void isPrimary;
-    const parse = (value) => {
-        if (Array.isArray(value) && value.length >= 2) {
-            const a = Number(value[0]), b = Number(value[1]);
-            if (a > 0 && b >= a)
-                return [a, b];
-        }
-        const raw = String(value ?? "").trim();
-        if (!raw)
-            return null;
-        const nums = raw.split(/[-–]/).map(Number).filter(Number.isFinite);
-        if (nums.length >= 2 && nums[0] > 0 && nums[1] >= nums[0])
-            return [nums[0], nums[1]];
-        if (nums.length === 1 && nums[0] > 0)
-            return [nums[0], nums[0]];
-        return null;
-    };
     /* M46: the engine-owned cell is the only source of planned rep targets. A missing range does not
        fall back to the removed v661 rep-range policy. The neutral 8–12 default is used only for
        freestyle/unplanned logging surfaces that have no engine prescription. */
-    return parse(cell?.range) || parse(cell?.reps) || [8, 12];
+    return canonicalRepRange(cell?.range) || canonicalRepRange(cell?.reps) || [8, 12];
 }
 
 function baseSetsFor(config, ex, isPrimary) {
@@ -302,12 +286,12 @@ function baseComputeCell(program, day, id, slotIndex, weekIndex) {
            Keep the shell shape canonical just like Pursuit Next cells do. Otherwise String([10,15])
            becomes "10,15"; the old progression parser then saw only the first number and treated
            the *bottom* of a 10-15 range as the top, which could award a load increase at 10 reps. */
-        const repPair = cellRepRange({ range: o.reps ?? base.reps }, program, ex, slotIndex === day?.primaryIndex);
-        const reps = repPair[0] === repPair[1] ? String(repPair[0]) : `${repPair[0]}-${repPair[1]}`;
+        const repPair = canonicalRepRange(o.reps ?? base.reps);
+        const reps = !repPair ? "—" : repPair[0] === repPair[1] ? String(repPair[0]) : `${repPair[0]}-${repPair[1]}`;
         const effort = effortBounds(o.rir ?? customCycleEffort(program, day, ex, slotIndex, weekIndex) ?? base.rir);
         const rir = effort ? (effort[0] === effort[1] ? String(effort[0]) : `${effort[0]}-${effort[1]}`) : (o.rir ?? base.rir);
-        return { sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets), reps, range: reps, rir, rest: o.rest ?? base.rest, tech: customLastSetTechnique(program, day, ex, slotIndex, weekIndex),
-            role: base.role, progressionStyle: program.progStyle?.[id] ?? o.progressionStyle ?? "auto", note: "Your program", custom: true };
+        return { sets: legacyCustomSetCount(program, day, ex, slotIndex, weekIndex, o.sets, base.sets), reps, range: repPair ? reps : null, rir, rest: o.rest ?? base.rest, tech: customLastSetTechnique(program, day, ex, slotIndex, weekIndex),
+            role: base.role, progressionStyle: program.progStyle?.[id] ?? o.progressionStyle ?? "auto", note: "Your program", custom: true, ...(!repPair ? { missing: true, prescriptionInvalid: true, note: "Review this exercise’s rep target" } : {}) };
     }
     const nextCell = getNextShellCell(program, day, slotIndex, weekIndex);
     if (nextCell)

@@ -8,6 +8,7 @@ const app = fs.readFileSync('modules/App.js', 'utf8');
 const programReview = fs.readFileSync('modules/program-review-surfaces.js', 'utf8');
 const programSchedule = fs.readFileSync('modules/program-schedule-sheet.js', 'utf8');
 const programSettings = fs.readFileSync('modules/program-settings-sheet.js', 'utf8');
+const manualTargets = fs.readFileSync('modules/program-manual-targets.js', 'utf8');
 const backupPanel = fs.readFileSync('modules/backup-restore-panel.js', 'utf8');
 const primitives = fs.readFileSync('modules/ui-primitives.js', 'utf8');
 const releaseNotes = fs.readFileSync('modules/release-notes.js', 'utf8');
@@ -21,11 +22,11 @@ const exerciseNotes = fs.readFileSync('modules/exercise-notes.js', 'utf8');
 const trainingMaxes = fs.readFileSync('modules/program-training-maxes.js', 'utf8');
 const contextMenus = fs.readFileSync('modules/ui-menu.js', 'utf8');
 const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor;
-const MAX_IMPORTANT = 2106; // M393: retire 67 shadowed Library presentation priorities.
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
+const MAX_IMPORTANT = 2073; // M394: retire 33 exercise-row priority overrides.
 const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
 const MAX_REPEAT_IMPORTANT = 14; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 2141; // M393: retire 115 static Library/detail styles.
+const MAX_INLINE_STYLE_OBJECTS = 2123; // M394: retire 18 static exercise-row/manual-input styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -94,6 +95,9 @@ function guard(cssText, appText) {
     return { important, appImportant, inline, duplicates: duplicates.length, legacyOwners: new Set(duplicates).size };
 }
 const report = guard(css, presentationSource);
+assert.ok(!manualTargets.includes('style:') && !manualTargets.includes('localStorage'), 'Manual target text is local and its view is class-owned');
+assert.ok(manualTargets.includes('parseManualTargets(draft)') && app.includes('withManualProgramTargets(p,'), 'Manual targets use the canonical validator and atomic writer');
+assert.ok(app.includes('programPrescriptionIssues(ownerProgram, day, wk || 1)'), 'All workout launches must reject an invalid authored target');
 
 assert.ok(!historyEditor.includes('style:') && !historyEditor.includes('localStorage'), 'History correction has one class-owned view and no private persistence');
 assert.ok(!app.includes('function HistoryEditSheet('), 'History correction must not retain an inline shadow renderer');

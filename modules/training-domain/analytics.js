@@ -1,6 +1,6 @@
 // Canonical analytics domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
-import { generateNextProgramForShell, getNextShellCell, nextExerciseIdForShellExercise } from "../next-engine/app-shell-adapter.js";
+import { canonicalRepRange, generateNextProgramForShell, getNextShellCell, markUserPrescriptionOverride, nextExerciseIdForShellExercise } from "../next-engine/app-shell-adapter.js";
 import { avoidableExerciseOverlap } from "../next-engine/exercise-economy.js";
 import { captureShellVolumeSnapshot, auditShellVolume, shellDayMuscleBreakdown } from "../next-engine/volume-repair.js";
 import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex } from '../next-engine/history-contract.js';
@@ -665,6 +665,52 @@ function applyCustomProgramSettings(program, draft = {}) {
 }
 
 export { customProgramSettingsIssues };
+
+// Manual target edits are one transaction. Raw typing never becomes an executable
+// prescription, and changing reps must not flatten an untouched weekly set schedule.
+function parseManualTargets(raw = {}) {
+    raw = raw && typeof raw === 'object' ? raw : {};
+    const errors = {};
+    const setText = typeof raw.sets === 'number' || typeof raw.sets === 'string' ? String(raw.sets).trim() : '';
+    const sets = /^\d+$/.test(setText) ? Number(setText) : NaN;
+    if (!Number.isSafeInteger(sets) || sets < 1 || sets > 20) errors.sets = 'Enter 1–20 whole sets.';
+    const pair = canonicalRepRange(raw.reps);
+    if (!pair) errors.reps = 'Enter whole reps, such as 8 or 6–10. Put the lower number first.';
+    return { valid: !Object.keys(errors).length, errors, values: {
+        sets, reps: pair ? (pair[0] === pair[1] ? String(pair[0]) : `${pair[0]}-${pair[1]}`) : null
+    } };
+}
+
+function withManualProgramTargets(program, dayId, slot, weekIndex, raw, expectedExerciseId = null) {
+    const parsed = parseManualTargets(raw);
+    if (!parsed.valid) return { program, errors: parsed.errors };
+    const day = program?.days?.find(row => row.id === dayId);
+    const id = day && exerciseAt(program, day, slot, weekIndex);
+    if (program?.config?.progression !== 'manual' || !EX_BY_ID[id] || (expectedExerciseId && id !== expectedExerciseId))
+        return { program, errors: { form: 'This exercise has changed. Reopen its targets before applying.' } };
+    const current = computeCell(program, day, id, slot, weekIndex);
+    const key = `${dayId}:${slot}`, original = program.overrides?.[key] || {};
+    let override = original;
+    if (parsed.values.sets !== current.sets) override = markUserPrescriptionOverride(override, 'sets', parsed.values.sets);
+    const oldReps = canonicalRepRange(current.range) || canonicalRepRange(current.reps);
+    const newReps = canonicalRepRange(parsed.values.reps);
+    if (!oldReps || oldReps[0] !== newReps[0] || oldReps[1] !== newReps[1])
+        override = markUserPrescriptionOverride(override, 'reps', parsed.values.reps);
+    return { program: override === original ? program : { ...program, overrides: { ...program.overrides, [key]: override } }, errors: {} };
+}
+
+function programPrescriptionIssues(program, day, weekIndex = 1) {
+    const currentDay = program?.days?.find(row => row.id === day?.id);
+    if (!currentDay) return [];
+    return (currentDay.exercises || []).flatMap((_, slot) => {
+        const id = exerciseAt(program, currentDay, slot, weekIndex);
+        if (!computeCell(program, currentDay, id, slot, weekIndex).prescriptionInvalid) return [];
+        return [{ code: 'invalid_reps', dayId: currentDay.id, slot, exerciseId: id,
+            message: `Review the rep target for ${EX_BY_ID[id]?.name || 'this exercise'} in Program before starting.` }];
+    });
+}
+
+export { parseManualTargets, withManualProgramTargets, programPrescriptionIssues };
 
 function lastSetEffort(cell, ex, isPrimary, weekIndex, weeks) {
     void ex;

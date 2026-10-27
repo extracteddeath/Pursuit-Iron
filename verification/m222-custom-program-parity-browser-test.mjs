@@ -5,6 +5,107 @@ import http from 'node:http';
 import puppeteer from 'puppeteer-core';
 import { program, history, constraints } from './m222-custom-program-parity-test.mjs';
 const root = path.resolve(new URL('../', import.meta.url).pathname);
+async function verifyManualTargets(browser){
+    const base={id:'m394-manual',name:'Authored target editing',custom:true,weeks:4,
+        config:{unit:'lb',weeks:4,goal:'both',experience:'intermediate',progression:'manual',split:'custom',session:'s60',days:1,deload:false,equipment:['barbell','bench','dumbbell']},
+        days:[{id:'upper',label:'Upper',primaryIndex:0,exercises:['bb-bench','inc-curl']}],
+        overrides:{'upper:0':{sets:[3,4,5,6],reps:[6,8],rir:'2',rest:120},'upper:1':{sets:2,reps:'10-15',rir:'2',rest:90}}};
+    for(const theme of ['rose','rosewater']){
+        const p=structuredClone(base),context=await browser.createBrowserContext(),page=await context.newPage(),errors=[];
+        page.on('pageerror',error=>errors.push(error.message));
+        try{
+            await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+            await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+            await page.evaluateOnNewDocument(({p,theme})=>{if(localStorage.getItem('m394-seeded'))return;
+                localStorage.setItem('m394-seeded','1');localStorage.setItem('wpb:v1',JSON.stringify({v:13,savedAt:1,saved:[p],pinnedId:p.id,
+                    cycles:[],history:[],perf:{},drafts:{[p.id]:{...p,description:'Earlier pending edit'}},tombs:{},unit:'lb',unitChosen:true,theme,seenIntro:999,seenWhatsNew:999,
+                    installDismissedAt:Date.now(),lastBackup:Date.now()}));},{p,theme});
+            await page.goto('http://127.0.0.1:8776/index.html',{waitUntil:'networkidle0'});
+            await page.click('.hp-open');await page.waitForSelector('.wpb-program');
+            const setField='.wpb-program input[aria-label^="Sets"]',repField='.wpb-program input[aria-label^="Reps"]';
+            const form='.wpb-manual-targets',apply=form+' [aria-label^="Apply targets"]',cancel=form+' [aria-label^="Cancel targets"]';
+            const snapshot=()=>page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return {saved:s.saved,drafts:s.drafts,history:s.history,cycles:s.cycles};});
+            const type=async(selector,value)=>{await page.focus(selector);await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');await page.keyboard.press('Backspace');if(value)await page.keyboard.type(value);};
+            const before=await snapshot();
+            assert.equal(await page.$eval(setField,n=>n.value),'3','Display the selected week rather than a serialized set schedule');
+            assert.equal(await page.$eval(repField,n=>n.value),'6-8','Stored rep pairs display as an editable canonical range');
+            await type(setField,'');
+            assert.equal(await page.$eval(setField,el=>el.value),'','Clearing a manual set count preserves raw typing');
+            assert.equal(await page.$eval(apply,n=>n.disabled),true);
+            await type(repField,'10-20oops');assert.equal(await page.$eval(repField,n=>n.value),'10-20oops');
+            assert.deepEqual(await snapshot(),before,'Invalid text cannot write a program or draft');
+            await page.locator('.wpb-program-save').click();assert.equal(await page.$('.wpb-save-review-confirm'),null);
+            await page.locator('.wpb-day-start').click();assert.equal(await page.$('.wpb-workout'),null);
+            assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null);
+            assert.match(await page.$eval('.wpb-program',n=>n.innerText),/Apply or cancel/);
+            assert.equal(await page.$eval(setField,n=>n===document.activeElement),true,'Blocked commit returns focus to the first invalid target');
+            await page.locator(cancel).click();assert.deepEqual(await snapshot(),before);
+            assert.equal(await page.$eval(setField,n=>n.value),'3');assert.equal(await page.$eval(repField,n=>n.value),'6-8');
+            await type(repField,'8–12');
+            assert.equal(await page.$eval(apply,n=>n.disabled),false);
+            assert.deepEqual(await snapshot(),before,'Valid raw text is still local until Apply');
+            for(const [width,height,scale] of [[320,720,1],[393,540,2],[834,900,1],[1280,900,1]]){
+                await page.setViewport({width,height,isMobile:true,hasTouch:true});
+                await page.evaluate(scale=>document.documentElement.style.fontSize=scale===2?'32px':'16px',scale);
+                const layout=await page.$eval(form,n=>({width:n.clientWidth,scroll:n.scrollWidth,fields:[...n.querySelectorAll('input,button')].map(el=>{
+                    const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {left:r.left,right:r.right,width:r.width,height:r.height,font:parseFloat(s.fontSize)};
+                })}));
+                assert.ok(layout.scroll<=layout.width+1,`Target editor reflows at ${width}/${scale}`);
+                assert.ok(layout.fields.every(r=>r.left>=-1&&r.right<=width+1&&r.height>=40),`All fields/actions fit and remain touchable at ${width}/${scale}`);
+                assert.ok(layout.fields.slice(0,2).every(r=>r.font>=16*scale),`Actual text scales in target fields at ${width}/${scale}`);
+                await page.$eval(apply,n=>n.scrollIntoView({block:'center',behavior:'instant'}));
+                assert.equal(await page.$eval(apply,n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),true,'Apply remains reachable in the short viewport');
+                await page.screenshot({path:path.join(root,`verification/m394-manual-${theme}-${width}-${scale}.png`)});
+            }
+            await page.evaluate(()=>document.documentElement.style.fontSize='16px');
+            await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+            await page.locator(apply).click();
+            await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).drafts['m394-manual']?.overrides?.['upper:0']?.reps==='8-12');
+            const applied=await snapshot();assert.deepEqual(applied.saved,before.saved);
+            assert.deepEqual(applied.drafts[p.id].overrides['upper:0'].sets,[3,4,5,6]);
+            assert.equal(applied.drafts[p.id].overrides['upper:0'].rir,'2');assert.equal(applied.drafts[p.id].overrides['upper:0'].rest,120);
+            await page.locator('.wpb-program-save').click();await page.waitForSelector('.wpb-save-review-confirm');
+            await page.locator('.wpb-save-review-details summary').click();
+            assert.match(await page.$eval('.wpb-program-change-details',n=>n.innerText),/8-12/);
+            await page.locator('.wpb-save-review-confirm').click();
+            await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved[0].overrides['upper:0'].reps==='8-12');
+            const committed=await snapshot();assert.deepEqual(committed.saved[0].overrides['upper:0'].sets,[3,4,5,6]);
+            assert.deepEqual(committed.saved[0].overrides['upper:1'],before.saved[0].overrides['upper:1']);
+            assert.deepEqual(committed.history,before.history);assert.deepEqual(committed.cycles,before.cycles);
+            await page.reload({waitUntil:'networkidle0'});await page.locator('.hp-open').click();
+            await page.locator('.wpb-program-week-chip:nth-child(3)').click();
+            await page.waitForFunction(selector=>document.querySelector(selector)?.value==='5',{},setField);
+            assert.equal(await page.$eval(repField,n=>n.value),'8-12');
+            await page.locator('.wpb-day-start').click();await page.waitForSelector('.wpb-next-workout-view');
+            assert.match(await page.$eval('[data-nextex] .wpb-preview-prescription',n=>n.innerText),/5×8-12/);
+            await page.locator('.wpb-preview-start').click();await page.waitForSelector('.wpb-workout');
+            await page.waitForFunction(()=>!!JSON.parse(localStorage.getItem('wpb:live')||'null')?.data?.[0]?.sets?.length);
+            const live=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+            assert.equal(live.weekIndex,3);assert.equal(live.data[0].sets.filter(s=>!s.sub&&!s.warm).length,5);
+            assert.ok(live.data[0].sets.every(s=>s.target.reps==='8-12'));
+            assert.deepEqual(errors,[]);
+        }finally{await context.close();}
+    }
+    // Persisted malformed input is repairable and cannot silently omit a lift at launch.
+    const context=await browser.createBrowserContext(),page=await context.newPage();
+    try{
+        const bad=structuredClone(base);bad.overrides['upper:0'].reps='10-20oops';
+        await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
+        await page.evaluateOnNewDocument(p=>{localStorage.setItem('wpb:v1',JSON.stringify({v:13,saved:[p],pinnedId:p.id,history:[],cycles:[],perf:{},drafts:{},unit:'lb',unitChosen:true,theme:'rose',seenIntro:999,seenWhatsNew:999}));},bad);
+        await page.goto('http://127.0.0.1:8776/index.html',{waitUntil:'networkidle0'});
+        await page.locator('.wpb-home-hero .wpb-primary-action').click();
+        assert.equal(await page.$('.wpb-workout'),null);assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null);
+        assert.match(await page.$eval('.wpb',n=>n.innerText),/Review the rep target/);
+        await page.locator('.hp-open').click();
+        assert.equal(await page.$eval('.wpb-program input[aria-label^="Reps"]',n=>n.value),'10-20oops');
+        await page.locator('.wpb-day-start').click();
+        assert.equal(await page.$('.wpb-workout'),null);assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null);
+        await page.waitForSelector('.wpb-next-workout-view');
+        assert.match(await page.$eval('.wpb-preview-start',n=>n.textContent),/Review targets/);
+        await page.locator('.wpb-preview-start').click();await page.waitForSelector('.wpb-program');
+        assert.match(await page.$eval('.wpb-program input[aria-label^="Reps"]',n=>n.value),/10-20oops/);
+    }finally{await context.close();}
+}
 const importMap = fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const snapshot = {schemaVersion:2,programId:program.id,dayId:'push',weekIndex:1,dayExSig:'cable-fly',exIdx:0,elapsedMs:3800000,data:[{id:'cable-fly',slot:0,superset:true,sets:Array.from({length:4},(_,i)=>({weight:i===2?'17.5':'20',reps:'20',done:i===0,auto:i!==1,valueOwner:i===1?'user':'prescription',target:{w:i===2?'25':'20',reps:'10-20',rir:'2',prefillReps:'20'}}))}]};
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
@@ -18,6 +119,8 @@ const server=http.createServer((req,res)=>{const pathname=new URL(req.url,'http:
 await new Promise(resolve=>server.listen(8776,'127.0.0.1',resolve));let browser;
 try {
     browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+    await verifyManualTargets(browser);
+    console.log('PASS M394 browser: staged/invalid targets, pending-commit guards, dark/light 320–1280px and actual 200% text, weekly arrays, review/save/reload, Preview/live parity and malformed-target repair/refusal.');
     // Exercise the authored settings transaction through the actual router and review/save owner.
     const settingsContext=await browser.createBrowserContext(),settingsPage=await settingsContext.newPage(),settingsErrors=[];
     settingsPage.on('pageerror',e=>settingsErrors.push(e.message));

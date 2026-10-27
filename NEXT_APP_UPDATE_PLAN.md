@@ -1,3 +1,15 @@
+## Build 940 / M394 — Authored targets, Program rows and prescription integrity
+
+Continue from Build 939 / PR #367, merge 645cc96807f3c8bf78e875e2bfa487397803fda4. Keep the user's larger-batch preference: publish related improvements and their verification together.
+
+Reproduce two defects before fixing them: clearing Sets inserts 1, and the rep target 10-20oops becomes 10. A follow-up replay also finds invalid cells being interpreted as a neutral 8–12 range by the progression reader. Keep raw target typing in one local presentation component until Apply. Validate complete whole-number sets (1–20) and positive whole rep counts/ranges in the canonical domain. The atomic manual-target writer marks only semantically changed fields as user-owned, preserves untouched weekly set arrays, and retains rest, RIR, techniques, rosters and history. Display the selected week's scalar set count and a canonical rep range instead of serializing stored arrays into inputs. Cancel writes nothing. Pending target editors block Review, Start, Back, week/day changes and Settings until Apply or Cancel.
+
+Reject malformed authored/engine-owned rep ranges at canonical cell projection; they cannot produce working sets or progression decisions. Historical rep snapshots use the same complete parser. The shared App launch owner refuses invalid targets without saving or starting a partial workout. Preview uses its existing primary action to return directly to Program for repair. Preserve valid numeric programming, loading, progression thresholds, recorded workout facts and resume ownership.
+
+Move the exercise-row shell, grip, heading, metadata, badges and actions to shared CSS. Manual targets use labelled, touchable fields beneath the exercise, native form submission, inline errors and shared actions. The existing M222 browser gate covers dark/light, 320/393/834/1280px, actual 200% text in a short viewport, pending-input guards, exact review/save/reload, untouched 3/4/5/6 weekly sets, matching Program/Preview/live week-three targets, persisted-invalid repair and Home launch refusal. Retain the existing settings, Cable Fly DP/DDP and protected-resume cases. Lower external priorities 2,106 → 2,073 and combined inline objects 2,141 → 2,123; embedded 1,053 and repeated priorities 14 stay unchanged. Include the new view module in the debt scanner.
+
+Require final source, lifecycle, independent-engine, seven browser groups and release checks; publish one Build 940, then verify exact hosted bytes and online/offline/resume journeys. Physical Android/IME/TalkBack/interruption/foldable acceptance remains open. Continue the broader UI/UX and engine audit in cohesive passes.
+
 ## Build 939 / M393 — Library discovery and detail batch
 
 **Release preference:** The user requested larger coherent batches on October 27. Finish related improvements and verification together; do not create a new build for each small change.

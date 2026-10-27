@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { represcribeForWeek } from '../modules/next-engine/workout-history-adapter.js';
 
 // Regression: Hack Squat previously logged as 50 lb for all working sets must
@@ -38,3 +40,8 @@ const coarse = suggest(last, nextWeek, { equipment: { available: ['machine'], lo
 assert.equal(coarse.weight, 45, 'a meaningful whole-notch reduction is not converted into a hold');
 
 console.log('PASS B936: prevent near-grid phantom reductions while preserving larger, unproven and coarse-inventory changes.');
+
+const assets = ['favicon.ico', 'gallery.json', 'icons/icon-192-aa9e4b77f520.png',
+    'icons/icon-512-5bdeae240e55.png', 'icons/icon-maskable-512-1d7393c9a2de.png'];
+console.log('B936_ASSET_DIGESTS ' + JSON.stringify(Object.fromEntries(assets.map(file =>
+    [file, crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')]))));

@@ -22,10 +22,10 @@ const trainingMaxes = fs.readFileSync('modules/program-training-maxes.js', 'utf8
 const contextMenus = fs.readFileSync('modules/ui-menu.js', 'utf8');
 const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
 const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor;
-const MAX_IMPORTANT = 2188; // M388: retire 70 switcher/gym priorities, including a shadowed width.
-const MAX_APP_IMPORTANT = 1143; // M388: retire 40 embedded configuration-sheet priorities.
+const MAX_IMPORTANT = 2173; // M392: retire 15 Settings theme/choice priorities.
+const MAX_APP_IMPORTANT = 1134; // M392: retire 9 obsolete preference typography/layout priorities.
 const MAX_REPEAT_IMPORTANT = 14; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 2284; // M391: Library presentation; retire 19 static styles.
+const MAX_INLINE_STYLE_OBJECTS = 2256; // M392: retire 28 Settings theme/choice/scroll styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])

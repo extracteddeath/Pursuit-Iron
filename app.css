@@ -3660,19 +3660,33 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){.wpb .wpb-settings-card>:is(button,.wpb-settings-row){transition:none;}}
 @media(forced-colors:active){.wpb .wpb-settings-card{border-color:CanvasText;}.wpb .wpb-settings-card>:is(button,.wpb-settings-row){border-color:CanvasText;}}
 
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented{
-  box-sizing:border-box;
-  min-height:48px!important;
-  padding:3px!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  border-radius:15px!important;
-  background-color:var(--pi-r11-raised)!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented>button{
-  border-radius:11px!important;
-}
+.wpb .wpb-settings>.wpb-page-scroll{flex:1;overflow-y:auto;padding:var(--pi-space-2) var(--pi-page-inset) var(--pi-space-8)}
+.wpb .wpb-settings [data-settings-anchor]{scroll-margin-top:var(--pi-space-2)}
+/* Settings choices keep the existing measured selection track and callbacks. */
+.wpb .wpb-settings .wpb-segmented{box-sizing:border-box;display:flex;max-width:100%;padding:3px;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);box-shadow:none}
+.wpb .wpb-settings .wpb-segmented>button{display:flex;align-items:center;justify-content:center;min-width:48px;min-height:48px;padding:var(--pi-space-2) var(--pi-space-1);border:0;border-radius:calc(var(--pi-shape-action) - var(--pi-space-1));background:transparent;color:var(--pi-color-on-control);font-size:var(--pi-type-support);font-weight:650;cursor:pointer}
+.wpb .wpb-settings .wpb-experience-segmented{width:100%}
+.wpb .wpb-theme-picker{background:var(--pi-color-card);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card);overflow:hidden}
+.wpb .wpb-theme-picker>summary{display:flex;align-items:center;gap:var(--pi-space-3);min-height:68px;padding:var(--pi-space-3);list-style:none;cursor:pointer;touch-action:manipulation}
+.wpb .wpb-theme-picker>summary::-webkit-details-marker{display:none}
+.wpb .wpb-theme-picker>summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:-3px;border-radius:var(--pi-shape-card)}
+.wpb-theme-swatch,.wpb-theme-option-swatch{display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:var(--pi-space-2)}
+.wpb-theme-swatch{width:var(--pi-space-8);height:var(--pi-space-8)}
+.wpb-theme-summary-copy{flex:1;min-width:0;overflow-wrap:anywhere}
+.wpb-theme-summary-label{display:block;font-size:var(--pi-type-body);font-weight:650;line-height:1.3}
+.wpb-theme-summary-value{display:block;margin-top:var(--pi-space-1);font-size:var(--pi-type-support);line-height:1.4;color:var(--pi-color-on-muted)}
+.wpb-theme-chevron{flex-shrink:0;color:var(--pi-color-on-muted);transition:transform var(--pi-motion-paint,160ms) var(--pi-ease)}
+.wpb-theme-picker[open] .wpb-theme-chevron{transform:rotate(180deg)}
+.wpb-theme-options-body{padding:var(--pi-space-3);border-top:1px solid var(--pi-color-divider)}
+.wpb-theme-group+.wpb-theme-group{margin-top:var(--pi-space-4)}
+.wpb-theme-group-label{margin-bottom:var(--pi-space-2);font-size:var(--pi-type-support);font-weight:650;color:var(--pi-color-on-muted)}
+.wpb-theme-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,5.25rem),1fr));gap:var(--pi-space-2)}
+.wpb .wpb-theme-option{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--pi-space-2);min-width:0;min-height:66px;padding:var(--pi-space-2) var(--pi-space-1);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);color:var(--pi-color-on-control);font-size:var(--pi-type-support);font-weight:650;line-height:1.3;cursor:pointer}
+.wpb .wpb-theme-option[aria-pressed="true"]{border-color:var(--wpb-theme-accent-ink);background:var(--pi-color-active);color:var(--pi-color-on-active)}
+.wpb-theme-option-swatch{width:var(--pi-space-6);height:var(--pi-space-6);border-radius:50%}
+.wpb-theme-option-label{max-width:100%;overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){.wpb-theme-chevron{transition:none}}
+@media(forced-colors:active){.wpb .wpb-theme-picker,.wpb .wpb-theme-options-body,.wpb .wpb-theme-option{background:Canvas;color:CanvasText;border-color:CanvasText}.wpb .wpb-theme-option[aria-pressed="true"]{background:Highlight;color:HighlightText;border-color:Highlight}}
 @media(forced-colors:active){
   #root[data-pi-motion="expressive"] .wpb-settings :is(.wpb-settings-card,.wpb-settings-jump-control,.wpb-segmented){
     background-color:Canvas!important;
@@ -4303,18 +4317,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--pi-color-card)!important;
   border-color:var(--pi-color-divider)!important;
   box-shadow:none!important;
-}
-/* Theme disclosure retains its own card composition. Settings rows now use explicit shared cards. */
-#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-page-scroll > .wpb-theme-picker{
-  background:var(--pi-color-card)!important;
-  background-image:none!important;
-  border:1px solid var(--pi-color-divider)!important;
-  box-shadow:none!important;
-  border-radius:20px!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-theme-picker > summary{
-  background:transparent!important;
-  background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump{
   background:var(--pi-color-canvas)!important;

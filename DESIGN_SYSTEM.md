@@ -218,3 +218,10 @@ HistoryEditSheet lives in `modules/history-editor.js`. HistoryView uses the exis
 Keep raw numeric typing until Save. The existing canonical normalizer produces the candidate; the view must refuse a candidate that drops staged sets or changes staged numeric values through rounding/clamping. Do not duplicate engine dosage/loading policy, mutate original logs or add a private persistence owner. Intentional set/lift removals remain available, while removing every lift keeps Save disabled. App's stamped setter owns revisions and Undo; the existing correction transaction owns mirror refresh.
 
 The existing B881 browser gate covers actual correction, cancellation, Undo, reload, focus, Back, keyboard bounds and stored-unit/protocol ownership. UI ownership now includes the extracted module and caps combined inline objects at 2,303; external/embedded/repeated priority budgets remain 2,188/1,143/14.
+
+
+### M392 — Settings preferences and scalable theme choices
+
+The six Settings preference groups have one shared CSS presentation and explicit accessible group names. The existing callbacks and measured selection track remain authoritative. ThemePicker uses UiChoice, a native disclosure, semantic palette roles, relative type and a text-relative grid. Only actual swatch colors remain data-driven inline. The Settings scroll pane owns its inset and anchor spacing. Retire superseded embedded theme styles and preference typography/layout overrides instead of adding priority layers.
+
+R76 must enlarge the actual document text in the expanded chooser, since forcing each element's font size in a test masks fixed CSS type. Check complete labels/targets, keyboard selection, exact saved values and reversal. Restoring experience may advance the existing program timestamp; authored content and logged history must match. Current ceilings: 2,256 inline objects, 2,173 external priorities, 1,134 embedded priorities and 14 repeated priorities.

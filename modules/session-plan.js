@@ -55,7 +55,7 @@ export function sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cel
     // Extra planned sets remain prescribed, and equipment inventory remains authoritative.
     const undoTargets = targets.map((target, i) => {
         const prior = previous[i];
-        if (!(prior?.weight > 0)) return target;
+        if (!(prior?.weight > 0) || !(prior.reps >= range[0] && prior.reps <= range[1])) return target;
         const weight = snapLoad(prior.weight);
         return Number.isFinite(weight) && Math.abs(weight - prior.weight) < .001
             ? { ...target, weight: prior.weight } : target;

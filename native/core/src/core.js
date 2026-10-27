@@ -2383,7 +2383,9 @@ export function profile() {
         summary: { workouts: val('first'), bestStreak: val('streak3'), volume: Math.round(val('vol1')) },
         score: score ? { overall: Math.round(score.overall), level: score.level, levelIdx: score.levelIdx, estimated: !!score.estimated, liftCount: score.liftCount,
             subs: (score.subs || []).map((x) => ({ label: x.label, score: Math.round(x.score), lift: x.lift ? { name: x.lift.name, level: x.lift.lvl?.level || null, est: !!x.lift.est } : null })),
-            next: score.nextMilestone ? { name: score.nextMilestone.name, pattern: score.nextMilestone.pattern, current: score.nextMilestone.current, target: score.nextMilestone.target, unit: score.nextMilestone.unit, level: score.nextMilestone.level } : null,
+            next: score.nextMilestone ? (() => { const m = score.nextMilestone, cv = (v) => (m.unit && m.unit !== u ? E.convertHistoryLoad(v, m.unit, u) : v);
+                // The lift's record can be in the unit it was logged in; show the milestone in the unit you lift in.
+                return { name: m.name, pattern: m.pattern, current: Math.round(cv(m.current)), target: Math.ceil(cv(m.target)), unit: u, level: m.level }; })() : null,
             trend: tPoints,
             delta8w: (() => { const pts = (trend?.overall || []).filter((x) => x && typeof x === 'object' && Number.isFinite(Number(x.v)));
                 if (pts.length < 2) return null; const cut = Date.now() - 56 * 86400000;

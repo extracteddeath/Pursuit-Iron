@@ -7880,7 +7880,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
         return () => { window.removeEventListener("resize", size); if (ro)
             ro.disconnect(); };
     }, [program, openDay, activeWeek]);
-    return (_jsxs("div", { className: "wpb-page-shell wpb-program", children: [_jsx("div", { className: "wpb-page-header wpb-program-header", style: { padding: `${PV_PAD_TOP}px 18px 8px`, borderBottom: `1px solid ${C.borderSoft}` }, children: _jsxs("div", { ref: pvTitle, className: "wpb-program-title-row", children: [_jsx("button", { onClick: () => { if (!ensureTargetsApplied()) return; if (!isSaved || hasDraft)
+    return (_jsxs("div", { className: "wpb-page-shell wpb-program", children: [_jsx("div", { className: "wpb-page-header wpb-program-header", style: { padding: `${PV_PAD_TOP}px 18px 8px`, borderBottom: `1px solid ${C.borderSoft}` }, children: _jsxs("div", { ref: pvTitle, className: "wpb-program-title-row", children: [_jsx("button", { "data-wpb-system-back": true, onClick: () => { if (!ensureTargetsApplied()) return; if (!isSaved || hasDraft)
                                 setConfirmLeave(true);
                             else
                                 onBack(); }, "aria-label": "Back", className: "pressable hit", style: { background: "none", border: "none", color: C.text, cursor: "pointer", padding: 4 }, children: _jsx(ChevronLeft, { size: 26 }) }), (() => {
@@ -21498,6 +21498,16 @@ function App() {
                 window.dispatchEvent(new CustomEvent("wpb:wizard-back"));
                 rearm();
                 return;
+            }
+            // Program's Back action owns pending target edits and draft review.
+            // Native Back must enter that same action before changing the stack.
+            if (nav.view === "program") {
+                const back = document.querySelector('.wpb-program-header [data-wpb-system-back]');
+                if (back) {
+                    back.click();
+                    rearm();
+                    return;
+                }
             }
             const roots = ["home", "plan", "progress", "profile", "settings"];
             if ((nav.backStack || []).length || !roots.includes(nav.view)) {

@@ -1,3 +1,10 @@
+## Build 940 / M394 — Safer Program edits and prescription integrity
+
+- Set and rep fields retain raw typing until Apply, with inline errors and Cancel. Complete target validation prevents malformed text from becoming a different rep target or a guessed progression range. Reps-only changes preserve untouched weekly set schedules.
+- Program exercise rows share styles and scalable labelled controls. Review, Start and context changes return focus to unfinished edits; system Back uses the same guarded Back action and saved-draft review.
+- Malformed saved targets lead from Preview to Program for repair and cannot start a partial new workout. Existing workouts keep their persisted set values and remain resumable while the current program needs repair.
+- Retire 18 static inline style objects and 33 external priority overrides; tighten the existing budgets. Training formulas, logged history and protected Workout/Focus geometry retain their existing owners.
+
 ## Build 939 / M393 — Room to browse and cohesive Library details
 
 - Keep only a compact Library toolbar pinned. Search, muscle/equipment filters and All/Recent/Goals/Banned choices scroll with the exercises. Find brings the real search field back without clearing selections; Compare remains available in the toolbar.

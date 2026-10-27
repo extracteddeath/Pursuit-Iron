@@ -10,6 +10,8 @@ Move the exercise-row shell, grip, heading, metadata, badges and actions to shar
 
 Require final source, lifecycle, independent-engine, seven browser groups and release checks; publish one Build 940, then verify exact hosted bytes and online/offline/resume journeys. Physical Android/IME/TalkBack/interruption/foldable acceptance remains open. Continue the broader UI/UX and engine audit in cohesive passes.
 
+October 27 release follow-through reproduces a further data-entry defect: native Back bypasses Program's on-screen Back action and discards pending raw targets. Nominate the existing Program Back action in the native navigation bridge so it retains the same target guard and saved-draft review. Extend M222 with the failing native-Back case, exact raw-text/focus/data preservation and Keep editing. No second navigation, persistence or prescription owner. Keep these changes in Build 940; align the release milestone and changelog before final certification.
+
 ## Build 939 / M393 — Library discovery and detail batch
 
 **Release preference:** The user requested larger coherent batches on October 27. Finish related improvements and verification together; do not create a new build for each small change.

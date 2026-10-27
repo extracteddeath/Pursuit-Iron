@@ -4,7 +4,7 @@ import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, C
 export const CHANGELOG = [
     { version: "4.0.0", build: "940", items: [
         "Manual set and rep edits stay local until Apply, with clear labels, validation and Cancel. Changing reps keeps an untouched weekly set schedule.",
-        "Program exercise controls reflow with larger text. Review and workout launch guide you back to unfinished target edits.",
+        "Program exercise controls reflow with larger text. Review, workout launch and system Back guide you back to unfinished target edits, and Back preserves saved-draft review.",
         "Malformed rep ranges no longer become guessed progression targets. Preview leads back to Program to fix them before starting. Existing workouts remain resumable with their recorded values."
     ] },
     { version: "4.0.0", build: "939", items: [

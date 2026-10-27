@@ -39,8 +39,22 @@ async function verifyManualTargets(browser){
             assert.equal(await page.evaluate(()=>localStorage.getItem('wpb:live')),null);
             assert.match(await page.$eval('.wpb-program',n=>n.innerText),/Apply or cancel/);
             assert.equal(await page.$eval(setField,n=>n===document.activeElement),true,'Blocked commit returns focus to the first invalid target');
+            await page.evaluate(()=>new Promise(resolve=>{
+                window.addEventListener('popstate',()=>requestAnimationFrame(()=>requestAnimationFrame(resolve)),{once:true});
+                window.history.back();
+            }));
+            assert.ok(await page.$('.wpb-program'),'Native Back cannot discard unfinished target text');
+            assert.equal(await page.$eval(repField,n=>n.value),'10-20oops','Native Back retains exact invalid typing');
+            assert.equal(await page.$eval(setField,n=>n===document.activeElement),true,'Native Back focuses the unfinished editor');
+            assert.deepEqual(await snapshot(),before,'Blocked native navigation cannot write targets');
             await page.locator(cancel).click();assert.deepEqual(await snapshot(),before);
             assert.equal(await page.$eval(setField,n=>n.value),'3');assert.equal(await page.$eval(repField,n=>n.value),'6-8');
+            await page.evaluate(()=>window.history.back());
+            await page.waitForSelector('.wpb-dialog');
+            assert.match(await page.$eval('.wpb-dialog',n=>n.innerText),/Keep your changes\?/,'Native Back uses the existing saved-draft review');
+            await page.locator('.wpb-dialog button:last-child').click();
+            await page.waitForSelector('.wpb-dialog',{hidden:true});
+            assert.deepEqual(await snapshot(),before,'Keep editing retains the earlier saved draft');
             await type(repField,'8–12');
             assert.equal(await page.$eval(apply,n=>n.disabled),false);
             assert.deepEqual(await snapshot(),before,'Valid raw text is still local until Apply');
@@ -132,7 +146,7 @@ await new Promise(resolve=>server.listen(8776,'127.0.0.1',resolve));let browser;
 try {
     browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
     await verifyManualTargets(browser);
-    console.log('PASS M394 browser: staged/invalid targets, pending-commit guards, dark/light 320–1280px and actual 200% text, weekly arrays, review/save/reload, Preview/live parity and malformed-target repair/refusal and protected recovery from an invalid current plan.');
+    console.log('PASS M394 browser: staged/invalid targets, pending-commit/native-Back guards and saved-draft review, dark/light 320–1280px and actual 200% text, weekly arrays, review/save/reload, Preview/live parity and malformed-target repair/refusal and protected recovery from an invalid current plan.');
     // Exercise the authored settings transaction through the actual router and review/save owner.
     const settingsContext=await browser.createBrowserContext(),settingsPage=await settingsContext.newPage(),settingsErrors=[];
     settingsPage.on('pageerror',e=>settingsErrors.push(e.message));

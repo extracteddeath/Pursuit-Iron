@@ -2,6 +2,16 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "935", items: [
+        "History corrections keep incomplete numbers in the editor instead of silently dropping logged sets. Fix the value or remove the set deliberately before saving.",
+        "The history editor now keeps its heading and actions reachable, with larger text, keyboard clearance, and consistent shared controls. Cancel and Back discard staged edits.",
+        "Completed-day marks and missing-training-max warnings use the correct theme colors."
+    ] },
+    { version: "4.0.0", build: "934", items: [
+        "Home’s greeting scrolls with the content while the title and tools stay steady. Program controls are ready to tap without an extra layout jump.",
+        "Program and day menus follow your text size, show full names, stay clear of the workout dock, and keep keyboard focus visible when scrolling.",
+        "Program switching and gym setup share consistent sheet styles. Add gym choices follow larger text, and equipment edits still apply only when you choose Done."
+    ] },
     { version: "4.0.0", build: "933", items: [
         "Training-max fields keep decimal points while you type. Apply stages your changes for the program’s save review; Cancel discards them.",
         "Save review now shows each changed lift’s training max before and after, with units. Larger text and one-rep-max conversion are easier to use."

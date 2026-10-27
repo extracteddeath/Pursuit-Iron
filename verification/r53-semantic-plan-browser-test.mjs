@@ -686,7 +686,7 @@ try{
           const sc=home.querySelector('.wpb-page-scroll');
           const rect=x=>{const r=x.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right};};
           const buttons=[...tools.querySelectorAll('button')];
-          return {compact:home.dataset.homeCompact,
+          return {compact:home.querySelector('.wpb-home-context').getBoundingClientRect().bottom<=sc.getBoundingClientRect().top+1?'1':'0',
             header:rect(head),brand:rect(brand),tools:rect(tools),
             buttons:buttons.map(b=>({label:b.getAttribute('aria-label'),...rect(b)})),
             long:getComputedStyle(home.querySelector('.wpb-home-brand-long')).display,
@@ -699,10 +699,10 @@ try{
         assert.ok(expanded.maxScroll>180,'Seeded Home can actually scroll: '+JSON.stringify(expanded));
         assert.notEqual(expanded.long,'none','Full brand shown before scrolling');
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
-        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
+        await page.waitForFunction(()=>(()=>{const home=document.querySelector('.wpb-home');return home&&home.querySelector('.wpb-home-context').getBoundingClientRect().bottom<=home.querySelector('.wpb-page-scroll').getBoundingClientRect().top+1;})());
         const compact=await measure();
-        assert.ok(compact.header.h<=70&&expanded.header.h-compact.header.h>=24,
-          'Scrolled Home returns real vertical space, not only hidden text: '+JSON.stringify({expanded,compact}));
+        assert.ok(compact.header.h<=70&&Math.abs(expanded.header.h-compact.header.h)<=1,
+          'Scrolled context leaves a stable compact app bar without reserved blank space: '+JSON.stringify({expanded,compact}));
         assert.notEqual(compact.long,'none','Full Pursuit Iron identity remains in DOM while its context collapses');
         assert.equal(compact.short,null,'Home no longer substitutes the incorrect Iron-only label');
         assert.ok(compact.buttons.length===3&&compact.buttons.every(b=>b.w>=48&&b.h>=48),
@@ -712,7 +712,7 @@ try{
         captures[theme].homeCompact=Buffer.from(await page.screenshot({type:'png'}));
         await page.setViewport({width:320,height:700,deviceScaleFactor:1,isMobile:true,hasTouch:true});
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=sc.scrollHeight;});
-        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='1');
+        await page.waitForFunction(()=>(()=>{const home=document.querySelector('.wpb-home');return home&&home.querySelector('.wpb-home-context').getBoundingClientRect().bottom<=home.querySelector('.wpb-page-scroll').getBoundingClientRect().top+1;})());
         const small=await measure();
         assert.ok(small.header.h<=70&&small.brand.right+4<=small.tools.x&&!small.overflow,
           '320dp Home compact header has no collision or overflow: '+JSON.stringify(small));
@@ -720,7 +720,7 @@ try{
           'Small-screen actions retain 48px targets: '+JSON.stringify(small));
         await page.setViewport({width:393,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
         await page.$eval('.wpb-home .wpb-page-scroll',sc=>{sc.scrollTop=0;});
-        await page.waitForFunction(()=>document.querySelector('.wpb-home')?.dataset.homeCompact==='0');
+        await page.waitForFunction(()=>(()=>{const home=document.querySelector('.wpb-home');return home&&home.querySelector('.wpb-home-context').getBoundingClientRect().bottom>home.querySelector('.wpb-page-scroll').getBoundingClientRect().top+1;})());
         const restored=await measure();
         assert.notEqual(restored.long,'none','Full masthead returns on scroll-to-top');
         await page.click('.wpb-home-tools button[aria-label="Exercise library"]');

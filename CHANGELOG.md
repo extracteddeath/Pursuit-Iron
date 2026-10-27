@@ -1,3 +1,23 @@
+## Build 935 / M389 — Safe history correction and shared editor styles
+
+- Reproduce and prevent a logged-set loss: typing `92..5` and saving previously filtered a real set out of the completed workout. Retain raw typing; compare staged sets and values with canonical normalization before saving. Incomplete/malformed loads, numeric overflow, fractional or blank reps, invalid/clamped RIR and fractional minutes keep the editor open without touching saved history.
+- Move the correction form through the existing Exit portal outside virtualized/contained history rows. Its named dialog, independently scrolling body and persistent Close/Cancel/Save controls fit the visual viewport and clear an overlaid keyboard.
+- Extract the correction view into one feature module using shared actions, live theme roles and class-owned fields. Retire 31 inline style objects; tighten the combined budget to 2,303. Add no priority overrides or storage/engine schema.
+- Preserve original program/day/week/unit ownership, sub-sets and target metadata. Keep all numerical decisions with normalizeEditedHistoryEntry, all persistence/revision stamps with the existing App owners, and existing performance-mirror/Undo behavior.
+- Give each editor opening a new draft identity so reopening during the shared closing animation cannot revive canceled edits. Extend the existing history import/browser gate with four phone/tablet/short-window and normal/200% text correction journeys, actual Save/Cancel/Undo/reload, interrupted closing, explicit set/lift removal, numeric refusal, keyboard clearance, focus and real browser Back. Keep the 173-gate registry unchanged.
+- Fix unresolved shared palette roles for completed-day markers and incomplete training maxes, using the existing on-accent and warning roles.
+
+## Build 934 / M387–M388 — Shared menus, configuration styles and stable navigation
+
+- Fix two reproducible scroll/interaction races: Home's saved-program target moved 60px after automatic scrolling, and Program's metadata remained 17px tall for an extra frame. Home context now scrolls naturally below a fixed app bar; Program applies its existing header geometry before next-frame pointer positioning.
+- Consolidate Home program actions, Program day actions and the day picker into one menu renderer. Retain all original actions, selected/done/next-day facts, program transactions and Undo behavior.
+- Measure real menu rows and current anchors instead of guessed heights or stale click rectangles. Reflow after text/viewport changes, clear the live-workout dock and navigation, and keep long labels complete.
+- Focus the first action on open; preserve arrows/Home/End, reveal offscreen focused rows inside short menus, and return focus on dismissal. Tab closes the menu. Keep the existing keyboard, Back and motion owners.
+- Consolidate the program switcher and gym editor into one configuration-sheet anatomy. Static presentation uses shared classes and theme roles; existing owners retain program selection, disabled future blocks, equipment, rack limits, bar weights, staged edits and cancellation.
+- Retire 170 CSS priority overrides and 92 inline styles across the menu/navigation and configuration passes. Remove superseded screen-specific layers and a shadowed achievement width. Tighten external/embedded/inline budgets to 2,188/1,143/2,334; add no priority declarations.
+- Compare populated sheets in both themes at four widths and normal/200% text. At narrow enlarged text, place guidance below title/Done and keep program names on a full row. Preserve normal-size geometry; allow gym choices and Done to follow enlarged text rather than fixed priority fonts. Extend existing switcher search/empty-state and gym keyboard/cancel/short-window/unit-conversion journeys.
+- Keep configuration sheets above an overlaid phone keyboard through the shared backdrop visual-viewport ceiling. Extend existing navigation, menu, contrast, resize and stress journeys. Training-engine policy, saved prescriptions, history and live set ownership stay with their current owners. Physical Android/IME/TalkBack certification remains open.
+
 ## Build 933 / M386 — Safe decimal training-max editing and truthful review
 
 - Preserve decimal points and intermediate text while entering a training max. Typing 212.5 previously produced 2125, which could multiply percentage-based workout loads.

@@ -1722,6 +1722,7 @@ try {
         // instead of navigating or calling the destructive Delete item.
         await page.click('button[aria-haspopup="menu"]');
         await page.waitForSelector('.wpb-context-menu[role="menu"]');
+        assert.ok(await page.$eval('.wpb-context-menu',el=>document.activeElement===el.querySelector('[role="menuitem"]')),'Opening a context menu focuses its first action');
         const menuR36=await contrastAuditR36([['menuAction','.wpb-context-menu [role="menuitem"]']]);
         console.log('R36 MENU '+JSON.stringify(menuR36));
         assert.ok(menuR36.every(x=>x.absent||x.ratio>=4.5),'R36 contextual actions remain readable: '+JSON.stringify(menuR36));
@@ -1759,13 +1760,13 @@ try {
         // remeasurement of the open anchored menu; the menu still clears dock.
         const resizeR28=await page.evaluate(async()=>{
             const menu=document.querySelector('.wpb-context-menu');
-            const original=menu.getBoundingClientRect, dock=document.querySelector('.wpb-live-dock');
+            const original=Object.getOwnPropertyDescriptor(HTMLElement.prototype,'offsetHeight'),dock=document.querySelector('.wpb-live-dock');
             let reads=0;
-            menu.getBoundingClientRect=function(...args){reads++;return original.apply(this,args);};
+            Object.defineProperty(menu,'offsetHeight',{configurable:true,get(){reads++;return original.get.call(this);}});
             try{
                 for(let i=0;i<6;i++) window.dispatchEvent(new Event('resize'));
                 await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            }finally{menu.getBoundingClientRect=original;}
+            }finally{delete menu.offsetHeight;}
             const box=menu.getBoundingClientRect(),dockBox=dock.getBoundingClientRect();
             return {reads,clearsDock:box.bottom<=dockBox.top-3,overflow:box.right>innerWidth+1};
         });
@@ -1775,6 +1776,8 @@ try {
 
         // 2026 expressive menu group: rounded outside corners without a
         // wider popup, extra item height, lost keyboard order or new React state.
+        await page.focus('.wpb-context-menu');
+        await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.wpb-context-menu-item')).borderTopLeftRadius)>=20);
         const menuGroupShape = await page.$eval('.wpb-context-menu', menu => {
             const items = [...menu.querySelectorAll(':scope > .wpb-context-menu-item')];
             return { count: items.length,
@@ -2766,7 +2769,7 @@ try {
         await page.waitForSelector('[data-exercisedetail]',{hidden:true});
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved),initial.saved,
             'exercise detail view and charts do not change saved training programs');
-        // R21: temporarily introduce a second *valid* program to exercise
+        // R21/M388: introduce valid programs to exercise the searchable
         // the real Home switcher. Never tap Switch; check selection/disabled
         // semantics, close without altering ownership, then restore the
         // fixture before closing the browser context.
@@ -2774,7 +2777,7 @@ try {
             const copy={...seed.saved[0],id:'r21-secondary',name:
                 'Secondary customized strength and hypertrophy development program'};
             localStorage.setItem('wpb:v1',JSON.stringify({
-                ...seed,saved:[seed.saved[0],copy]
+                ...seed,saved:[seed.saved[0],copy,...Array.from({length:5},(_,i)=>({...copy,id:'m388-search-'+i,name:'Searchable program '+i}))]
             }));
             localStorage.removeItem('wpb:live');
         },initial);
@@ -2782,6 +2785,10 @@ try {
         await page.waitForSelector('button[aria-label="Switch program"]');
         await page.click('button[aria-label="Switch program"]');
         await page.waitForSelector('.wpb-switcher-sheet .wpb-switcher-row');
+        // The shared spring briefly scales rows below their resting size.
+        // Retain the 70px requirement, but measure it after entrance settles.
+        await page.waitForFunction(() => [...document.querySelectorAll('.wpb-switcher-row')]
+            .every(row => row.offsetHeight >= 70 && row.getBoundingClientRect().height >= 70), { timeout: 5000 });
         console.log('R36 DISABLED '+JSON.stringify(await contrastAuditR36([
             ['disabledProgram','.wpb-switcher-row[data-state="active"]'],
             ['enabledProgram','.wpb-switcher-row[data-state="available"]']
@@ -2806,15 +2813,43 @@ try {
                 clipped:sheet.scrollWidth>sheet.clientWidth+1};
         });
         assert.ok(switcherR21.alpha===255 && switcherR21.image==='none' &&
-            switcherR21.doneHeight>=44 && switcherR21.rows===2 &&
+            switcherR21.doneHeight>=44 && switcherR21.rows===7 &&
             switcherR21.activeDisabled===true && switcherR21.availableDisabled===false &&
             switcherR21.minRowHeight>=70 && switcherR21.titleWhiteSpace==='normal' &&
             switcherR21.titleTextOverflow!=='ellipsis' && !switcherR21.clipped,
             'R21 switcher retains working program-state semantics with readable names: '+JSON.stringify(switcherR21));
         if (width===430) await page.screenshot({path:path.join(root,'verification/b831-m3-program-switcher-phone.png')});
+        await page.$eval('.wpb-switcher-sheet',sheet=>{
+            const sizes=[sheet,...sheet.querySelectorAll('*')].filter(el=>el instanceof HTMLElement)
+                .map(el=>[el,parseFloat(getComputedStyle(el).fontSize)]);
+            sizes.forEach(([el,size])=>el.style.setProperty('font-size',size*2+'px','important'));
+        });
+        const switcherHeading=await page.$eval('.wpb-switcher-sheet',sheet=>{
+            const heading=sheet.querySelector('.wpb-selection-heading'),title=sheet.querySelector('.wpb-selection-title');
+            const done=sheet.querySelector('.wpb-switcher-done').getBoundingClientRect();
+            const description=sheet.querySelector('.wpb-selection-intro').getBoundingClientRect();
+            const range=document.createRange();range.selectNodeContents(title);
+            return {fits:[...range.getClientRects()].every(r=>r.right<=done.left-2),
+                fullRow:description.width>=heading.getBoundingClientRect().width-1,
+                overflow:sheet.scrollWidth>sheet.clientWidth+1};
+        });
+        assert.ok(switcherHeading.fits&&switcherHeading.fullRow&&!switcherHeading.overflow,
+            'M388 enlarged title and Done stay separate; guidance uses the full row: '+JSON.stringify(switcherHeading));
+        await page.focus('.wpb-switcher-search');
+        await page.keyboard.type('Secondary customized');
+        await page.waitForFunction(()=>document.querySelectorAll('.wpb-switcher-row').length===1);
+        assert.match(await page.$eval('.wpb-switcher-row',row=>row.getAttribute('aria-label')),/Switch to Secondary/);
+        await page.keyboard.down('Control');await page.keyboard.press('a');await page.keyboard.up('Control');
+        await page.keyboard.type('no program with this name');
+        await page.waitForFunction(()=>!document.querySelector('.wpb-switcher-row'));
+        assert.match(await page.$eval('.wpb-switcher-sheet',sheet=>sheet.textContent),/No programs match/);
+        await page.keyboard.down('Control');await page.keyboard.press('a');await page.keyboard.up('Control');
+        await page.keyboard.press('Backspace');
+        await page.waitForFunction(()=>document.querySelectorAll('.wpb-switcher-row').length===7);
+
         await page.click('.wpb-switcher-sheet>div:first-child>button');
         await page.waitForSelector('.wpb-switcher-sheet',{hidden:true});
-        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved.length),2,
+        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved.length),7,
             'closing the switcher must not change saved programs');
         await page.evaluate(seed => {
             localStorage.setItem('wpb:v1',JSON.stringify(seed));

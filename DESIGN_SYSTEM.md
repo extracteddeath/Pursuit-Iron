@@ -198,3 +198,23 @@ Plan's existing context heading uses intrinsic title sizing rather than a fixed 
 The running-tab review also reproduced two summary disagreements. Live Plan Up Next now reads the canonical nextSessionCursor used by Home; explicit browsed-week previews and completed-block history keep their existing scope. Progress Sessions reads the existing weeklyRecap count/set totals used on Home, instead of summing fractional muscle credits into a workout-set count. Muscle-volume charts retain their existing contribution ledger. Neither change generates prescriptions or modifies training history.
 
 Current rendered baselines covered all five roots at 393px dark, 320px light and 900px light, plus training-empty phone states. M324 source/browser coverage now includes reordered/repeated/scheduled logs, Home/Plan/Preview parity, shared Home/Progress weekly totals, and long-name reflow at 393px, 320px with doubled text, and 900px. R53 accepts a fully contained side-by-side action or an action below a full-width title; B907 retains Profile actions, section/card customization and data preservation. Continue the ordered composition review; this slice does not certify every supporting flow or physical Android behavior.
+
+
+### M388 — shared program-switching and gym configuration styles
+
+ProgramSwitcherSheet and GymsSheet share `.wpb-selection-backdrop`, `.wpb-selection-sheet`, heading, copy and introduction roles. Each feature retains its state and transactions. Native callbacks, the shared drag/motion owner, focus/Back handling, selected/locked program policy, inventory conversion and gym normalization remain authoritative. Static styles are class owned; selection and expanded state use attributes.
+
+Keep phone bottom attachment, safe-area padding, short-window/visual-viewport ceilings and centered expanded sheets in this owner. Legacy generic sheet geometry, dialog skins, primary-action corner rules and filter-chip geometry exclude these migrated roles at zero added specificity. Shared motion and applicable native-control feedback remain in the shared owners. Do not restore the retired switcher/gym priority layers or inline styles.
+
+Normal-size rendered geometry matches the baseline across 320/393/900/1280px in rose/rosewater. Newly class-owned gym choice chips and Done can follow 200% text instead of retaining old priority font sizes. The shared backdrop is bounded by the visual viewport so the editor remains above an overlaid phone keyboard. A sheet container query moves guidance below title/Done and gives program names their own full row at narrow enlarged text sizes. Existing B831 checks search/empty states and program ownership; B846 covers staged equipment edits, cancellation, bar conversion, enlarged text and short landscape. These are browser fixtures, not physical Android certification.
+
+Budgets: 2,188 external priorities, 1,143 embedded priorities, 2,334 combined inline objects, 14 repeated priorities. This slice removes 110 priorities and 76 inline objects from M387; the complete Build 934 candidate removes 170 priorities and 92 inline objects from Build 933.
+
+
+### M389 — one history-correction sheet and exact staged evidence
+
+HistoryEditSheet lives in `modules/history-editor.js`. HistoryView uses the existing Exit portal target at its containing `.wpb`; no modal may be rendered inside a `.wpb-render-auto` history card where content visibility/containment can clip its fixed children. Shared drag, Back, focus and exit motion remain authoritative. Each opening gets a fresh React key: Exit may retain a closing child for animation, but it must never revive a canceled draft on rapid reopening. The named sheet owns one header, scroll body and persistent action footer bounded by the visual viewport; normal and enlarged text use the same token-based fields and a container-query reflow.
+
+Keep raw numeric typing until Save. The existing canonical normalizer produces the candidate; the view must refuse a candidate that drops staged sets or changes staged numeric values through rounding/clamping. Do not duplicate engine dosage/loading policy, mutate original logs or add a private persistence owner. Intentional set/lift removals remain available, while removing every lift keeps Save disabled. App's stamped setter owns revisions and Undo; the existing correction transaction owns mirror refresh.
+
+The existing B881 browser gate covers actual correction, cancellation, Undo, reload, focus, Back, keyboard bounds and stored-unit/protocol ownership. UI ownership now includes the extracted module and caps combined inline objects at 2,303; external/embedded/repeated priority budgets remain 2,188/1,143/14.

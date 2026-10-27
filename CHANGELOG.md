@@ -1,3 +1,11 @@
+## Build 942 — Reliable calculators and gym loading settings
+
+- Share calculator presentation, accessible controls and modal behavior, with a fixed heading and a scrolling body.
+- Keep malformed weights/reps editable, show actual plate outcomes for empty inventories and below-bar targets, and open plate loading from a percentage in one action.
+- Convert gym racks and load ceilings together when switching units, retain bar-mass precision and the gym edit clock, and reject incomplete raw fields before saving.
+- Preserve workout values, program/history ownership and existing generation/progression policies.
+- Retire 39 net inline presentation objects; add end-to-end numeric, unit, inventory, accessibility and dismissal regressions.
+
 ## Build 941 — Starting estimates, recovery dose, injury detail and gym plates
 
 - Integrate the reviewed web engine patch, removing its duplicate recovery hunk.

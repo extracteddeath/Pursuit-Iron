@@ -1,5 +1,9 @@
 # Pursuit Iron design-system contract
 
+### M396 — loading-tool form and calculator ownership
+
+Calculators uses the shared session dialog and existing panel gesture ref, with persistent title/Close and one native scrolling body. Shared choices/actions, semantic theme roles, relative type and adaptable grids replace its static inline geometry and paint. Only the calculated plate height remains inline. Gym loading fields share the existing gym CSS family, connected labels, raw input validation, readable units and 48px controls. Numeric preparation and unit conversion live behind engine-api; the views do not recreate training or plate calculations. The presentation guard includes both extracted views and tightens the inline budget from 2,123 to 2,084 without adding priorities.
+
 Owner: `app.css` provides semantic theme roles and shared component styles. `modules/App.js` owns data, behavior, state and composition. The theme must stay user-selected and preserve tinted dark surfaces.
 
 ## Canonical tokens

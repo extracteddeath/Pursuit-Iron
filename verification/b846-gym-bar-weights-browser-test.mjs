@@ -160,10 +160,20 @@ try{
         await page.$eval(selector, input => { input.focus(); input.select(); });
         await page.keyboard.type(value);
       };
+      const beforeInvalid=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).gyms);
+      await change(bar,'35..5');
+      await page.$$eval('.wpb-gym-done',buttons=>buttons[0].click());
+      assert.equal(await page.$eval(bar,node=>node.value),'35..5','a malformed bar mass stays raw for correction');
+      assert.equal(await page.$eval(bar,node=>node.getAttribute('aria-invalid')),'true');
+      assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).gyms),beforeInvalid,'invalid bar mass cannot silently reset the saved bar');
       await change(bar,'35');
       await change(smith,'0');
       await page.$eval('details.wpb-gym-bar-masses',node=>node.open=true);
       assert.equal(await page.$eval(pairs,input=>input.value),'4','cancel discarded the staged count');
+      await change(pairs,'51');
+      await page.$$eval('.wpb-gym-done',buttons=>buttons[0].click());
+      assert.equal(await page.$eval(pairs,node=>node.value),'51','out-of-range counts are not silently clamped');
+      assert.equal(await page.$eval(pairs,node=>node.getAttribute('aria-invalid')),'true');
       await change(pairs,'0');
       assert.equal(await page.$eval(smith,e=>e.value),'0',
         'counterbalanced Smith of zero must remain editable');
@@ -171,12 +181,32 @@ try{
       assert.ok(Math.abs(Number(await page.$eval(bar,e=>e.value))-15.876)<.001,
         'unit change converts entered bar mass, not just label');
       await page.click('.wpb-gym-bar-unit');
+      assert.equal(Number(await page.$eval(bar,node=>node.value)),35,'bar unit roundtrip retains 35 exactly');
+      const cap='input[aria-label="Dumbbells maximum load"]';
+      await change(cap,'50');
+      await page.$$eval('[aria-label="Change gym load units"]',buttons=>buttons[0].click());
+      assert.ok(Math.abs(Number(await page.$eval(cap,node=>node.value))-110.231)<.001,'gym ceiling converts instead of being relabelled');
+      await page.$$eval('[aria-label="Change gym load units"]',buttons=>buttons[0].click());
+      assert.equal(Number(await page.$eval(cap,node=>node.value)),50);
+      const rack='input[aria-label="Dumbbells available loads"]';
+      await change(rack,'5, nope, 25');
+      await page.$$eval('.wpb-gym-done',buttons=>buttons[0].click());
+      assert.equal(await page.$eval(rack,node=>node.value),'5, nope, 25','rack input does not discard malformed entries on blur');
+      await change(rack,'5, 12.5, 25');
+      assert.equal(await page.$eval(rack,node=>node.value),'5, 12.5, 25','typing does not remount the rack field');
+      await page.$$eval('[aria-label="Change gym load units"]',buttons=>buttons[0].click());
+      assert.ok(Math.abs(Number((await page.$eval(rack,node=>node.value)).split(',').at(-1))-55.116)<.001,'unit change converts every staged rack value');
+      await page.$$eval('[aria-label="Change gym load units"]',buttons=>buttons[0].click());
+      assert.equal(await page.$eval(rack,node=>node.value),'5, 12.5, 25');
       await page.click('.wpb-gym-done');
       await page.waitForFunction(()=>{
         const gym=JSON.parse(localStorage.getItem('wpb:v1')).gyms?.find(g=>g.id==='test_home');
         return gym?.barWeights?.smith===0 && Math.abs(gym.barWeights.barbell-35)<.01;
       });
       const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).gyms);
+      assert.deepEqual(saved.find(g=>g.id==='test_home').inventory.dumbbell,[5,12.5,25],'converted raw rack text cannot overwrite physical values');
+      assert.ok(saved.find(g=>g.id==='test_home').updatedAt>0,'Done retains the gym revision clock');
+      assert.equal(saved.find(g=>g.id==='test_home').inventoryText,undefined,'raw inputs do not become stored gym data');
       assert.equal(saved.find(g=>g.id==='test_home').platePairs.lb[45],0);
       const calc=await page.evaluate(async()=>{const domain=await import('/modules/training-domain/analytics.js');return domain.platesPerSide(domain.barWeightFor('barbell','lb')+90,'barbell','lb');});
       assert.ok(Math.abs(calc.barW-35)<.01);assert.ok(!calc.plates.includes(45)&&calc.leftover===0,'active gym plate math uses the saved pair inventory');

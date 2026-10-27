@@ -74,6 +74,7 @@ function normalizeGyms(list, activeId) {
     const arr = (Array.isArray(list) ? list : []).filter(g => g && typeof g === "object").map((g, i) => ({
         id: typeof g.id === "string" && g.id ? g.id : `gym_${i}`,
         name: String(g.name || `Gym ${i + 1}`).slice(0, 40),
+        ...(Number.isFinite(g.updatedAt) && g.updatedAt >= 0 ? { updatedAt: g.updatedAt } : {}),
         equipment: (Array.isArray(g.equipment) ? g.equipment : []).filter(e => ALL_EQUIP_IDS.includes(e)),
         // Heaviest implement available AT THIS GYM. null = no ceiling. Stored with the unit they were
         // typed in, so switching the app between kg and lb can't silently reinterpret "75" as 75 kg.

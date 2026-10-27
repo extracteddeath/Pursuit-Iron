@@ -2162,7 +2162,7 @@ try {
         assert.equal(barDiagram.side,'one');
         assert.deepEqual(barDiagram.plates,barDiagram.expected,'one sleeve shows each per-side denomination once, inner to outer');
         assert.ok(barDiagram.label?.includes('One side of the barbell'),JSON.stringify(barDiagram));
-        await page.click('.wpb-backdrop button[aria-label="Close"]');
+        await page.click('.wpb-loading-calculator button[aria-label="Close Calculators"]');
         await page.waitForFunction(()=>!document.querySelector('.wpb-visual-plate-bar'));
         // B877 keeps the dock optional on phones and default on expanded screens.
         // Exercise the real toggle in either state without hiding the tested dock.

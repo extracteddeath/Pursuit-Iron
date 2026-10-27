@@ -13940,8 +13940,13 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
    actually logged — the lifts, top sets and totals — rather than a generic badge, because the point
    is showing the work, not the app. */
 function shareSession(entry, theme, history = []) {
+    const card = sessionShareCard(entry, theme, history);
+    if (card) deliverShareCanvas(card.canvas, card.title, "pursuit-iron-workout.png");
+}
+/* The session card itself (canvas + a plain-text version), for the share preview and for sharing. */
+function sessionShareCard(entry, theme, history = []) {
     if (!entry || typeof document === "undefined")
-        return;
+        return null;
     const C = theme || {};
     const unit = entry.unit || "kg";
     /* The estimated-1RM line and the PR list are the two things that make this card worth posting, and
@@ -13981,7 +13986,7 @@ function shareSession(entry, theme, history = []) {
     cnv.height = H;
     const ctx = cnv.getContext("2d");
     if (!ctx)
-        return;
+        return null;
     /* Renders through drawRecapCard — the same card the end-of-session screen produces. This used to
        be a second, separately-maintained layout (its own "PURSUIT IRON" eyebrow, a bare stats row
        instead of tiles, "6 × 225lb · 5" lift lines) which drifted from the recap card it sits beside,
@@ -14002,11 +14007,20 @@ function shareSession(entry, theme, history = []) {
         prs,
         tops: lifts.map(l => ({ name: l.name, set: `${l.top.w}${unit}×${l.top.r}` }))
     }, W, H);
+    const vol = Number(entry.volume || 0);
+    const text = [`${entry.dayLabel || "Workout"} \u2014 ${new Date(entry.date).toDateString()}`,
+        [`${entry.setsDone ?? 0} sets`, vol ? `${Math.round(vol / 100) / 10}k ${unit}` : null, entry.durationMin ? `${entry.durationMin} min` : null].filter(Boolean).join(" \u00b7 "),
+        ...lifts.slice(0, 4).map(l => `${l.name}: ${l.top.w} ${unit} \u00d7 ${l.top.r}`),
+        ...(prs.length ? [`New PRs: ${prs.map(p => p.name).join(", ")}`] : [])].join("\n");
+    return { canvas: cnv, text, title: entry.dayLabel || "My workout" };
+}
+/* Web Share with a PNG where files are supported, a download everywhere else. */
+function deliverShareCanvas(cnv, title, filename) {
     const done = (blob) => {
-        const file = typeof File !== "undefined" ? new File([blob], "pursuit-iron-workout.png", { type: "image/png" }) : null;
+        const file = typeof File !== "undefined" ? new File([blob], filename, { type: "image/png" }) : null;
         try {
             if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-                navigator.share({ files: [file], title: entry.dayLabel || "My workout" }).catch(() => { });
+                navigator.share({ files: [file], title }).catch(() => { });
                 return;
             }
         }
@@ -14015,7 +14029,7 @@ function shareSession(entry, theme, history = []) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "pursuit-iron-workout.png";
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -14028,9 +14042,21 @@ function shareSession(entry, theme, history = []) {
     else {
         const a = document.createElement("a");
         a.href = cnv.toDataURL("image/png");
-        a.download = "pursuit-iron-workout.png";
+        a.download = filename;
         a.click();
     }
+}
+/* A finished session's card: see it before it goes anywhere, copy it as text, or share the image. */
+function SessionShareSheet({ entry, theme, history, onClose }) {
+    const card = useMemo(() => { try { return sessionShareCard(entry, theme, history); } catch { return null; } }, [entry, theme, history]);
+    const src = useMemo(() => { try { return card?.canvas.toDataURL("image/png") || ""; } catch { return ""; } }, [card]);
+    const [copied, setCopied] = useState(false);
+    const copy = async () => { try { await navigator.clipboard.writeText(card.text); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); } };
+    return _jsx(SessionChoiceDialog, { title: "Share workout", onClose, className: "wpb-share-sheet", children: _jsxs("div", { className: "wpb-share-body", children: [
+        src ? _jsx("img", { src, alt: `${entry.dayLabel || "Workout"} share card`, className: "wpb-share-preview" }) : _jsx("p", { children: "This workout can't be drawn on this device." }),
+        _jsxs("div", { className: "wpb-share-actions", children: [
+            _jsx("button", { type: "button", className: "pressable", disabled: !card, onClick: copy, children: copied ? "Copied" : "Copy text" }),
+            _jsx("button", { type: "button", className: "pressable wpb-share-primary", disabled: !card, onClick: () => { deliverShareCanvas(card.canvas, card.title, "pursuit-iron-workout.png"); }, children: "Share\u2026" })] })] }) });
 }
 function shareStrengthScore(sscore, theme) {
     if (!sscore || typeof document === "undefined")
@@ -15471,6 +15497,7 @@ function ChartFavoritesManager({ trends, favorites, onToggle, onMove }) {
 }
 
 function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, embedded, navigationMemory, focusSection, onFocusHandled, onGoTrain, nextLabel = null, bodyweight, sex, age, birth, unit, bwLog, onLogBodyweight, onSetProfile, goals = {}, onRepeat, measurements = {}, onLogMeasurement, activeProgram = null, activeWeek = 1, cycles = [], saved = [] }) {
+    const [shareEntry, setShareEntry] = useState(null);
     const [tab, setTab] = useState(() => navigationMemory?.tab || "sessions");
     // Home and Profile enter the first-class Strength section through the same route.
     const strengthRef = useRef(null);
@@ -15622,7 +15649,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
             sections: [{ key: g.key + ":all", label: null, count: g.count, items: g.items }]
         }));
     }, [groupBy, cycleGroups, visibleHistory, unit]);
-    return (_jsxs("div", { className: "wpb-page-shell wpb-progress", children: [
+    return (_jsxs("div", { className: "wpb-page-shell wpb-progress", children: [shareEntry && createPortal(_jsx(SessionShareSheet, { entry: shareEntry, theme: C, history, onClose: () => setShareEntry(null) }), document.body), 
         _jsxs("div", { className: "wpb-progress-chrome", children: [
             embedded ? _jsx(UiRootHeader, { title: "Progress", titleClassName: "wpb-progress-title" }) :
                 _jsxs(UiHeader, { className: "wpb-page-header wpb-history-header", children: [
@@ -15657,7 +15684,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
                                                 // The logged lifts for this session, in the order they were performed.
                                                 const loggedExercises = Object.entries(h.perf || {})
                                                     .map(([id, p]) => ({ id, ex: EX_BY_ID[id] || { name: p?.name || id, part: null }, p: p || {} }));
-                                                return (_jsxs("div", { "data-history-id": h.id, "data-open": isOpen ? "1" : "0", className: "wpb-render-auto wpb-history-session",  children: [_jsx("div", { className: "wpb-history-session-head", children: _jsxs("button", { "aria-expanded": isOpen, "aria-label": `${h.dayLabel || "Workout"} · ${new Date(h.date).toLocaleDateString()} · ${h.setsDone || 0} completed sets`, onClick: () => setOpenSession(isOpen ? null : h.id), className: "pressable wpb-history-session-toggle",  children: [_jsxs("div", { className: "wpb-history-date",  children: [_jsx("span", { className: "mono wpb-history-date-day",  children: new Date(h.date).getDate() }), _jsx("span", { className: "wpb-history-date-month", children: new Date(h.date).toLocaleDateString(undefined, { month: "short" }) })] }), _jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-progress-item-title", children: h.dayLabel || "Workout" }), _jsxs("div", { className: "mono wpb-history-session-total", children: [h.setsDone || 0, " sets", Number(h.durationMin) > 0 ? ` · ${Math.round(Number(h.durationMin))} min` : "", Number(h.volume) > 0 ? ` · ${Number(h.volume).toLocaleString()} ${hUnit}` : ""] }), _jsx("div", { className: "wpb-progress-item-subtitle", children: h.programName || "Saved workout" })] }), _jsx(ChevronDown, { size: 18, color: C.muted, className: "wpb-history-session-chevron" })] }) }), isOpen && (_jsxs("div", { className: "wpb-history-session-detail",  children: [h.sessionNote && _jsxs("div", { className: "wpb-history-session-note", children: [_jsx("strong", { children: "Session note" }), _jsx("div", { children: h.sessionNote })] }),_jsxs("div", { className: "wpb-history-detail-head",  children: [_jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-history-detail-title", children: h.dayLabel || "Workout" }), _jsx("div", { className: "wpb-history-detail-date", children: new Date(h.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) })] }), _jsxs("div", { role: "group", "aria-label": "Workout actions", className: "wpb-history-actions",  children: [_jsx("button", { onClick: () => shareSession(h, C, history), title: "Share this workout", "aria-label": `Share ${h.dayLabel}`, className: "pressable hit wpb-history-share",  children: _jsx(Share2, { size: 17 }) }), onRepeat && (_jsx("button", { "aria-label": "Repeat this workout", onClick: () => onRepeat(h), title: "Repeat this workout", className: "pressable hit wpb-history-repeat",  children: _jsx(RefreshCw, { size: 17 }) })), onEditEntry && (_jsx("button", { type: "button", "aria-label": `Edit ${h.dayLabel || "workout"}`, title: "Correct workout log", onClick: () => setEditSession(h.id), className: "pressable hit wpb-history-edit",  children: _jsx(Pencil, { size: 17 }) })), onDeleteEntry && (_jsx("button", { type: "button", "aria-label": `Delete ${h.dayLabel || "workout"}`, title: "Delete workout", "data-haptic": "medium", onClick: () => onDeleteEntry(h.id), className: "pressable hit wpb-danger-icon wpb-history-delete",  children: _jsx(Trash2, { size: 17 }) }))] })] }), editSession === h.id && onEditEntry ? _jsx(HistoryEditSheet, { entry: h, unit: h.unit || unit, onClose: () => setEditSession(null), onSave: corrected => { onEditEntry(h.id, corrected); setEditSession(null); } }) : null, loggedExercises.length === 0 ? (_jsx("div", { className: "wpb-history-no-detail", children: "No per-set detail was saved for this session." })) : loggedExercises.map(({ id, ex, p }) => {
+                                                return (_jsxs("div", { "data-history-id": h.id, "data-open": isOpen ? "1" : "0", className: "wpb-render-auto wpb-history-session",  children: [_jsx("div", { className: "wpb-history-session-head", children: _jsxs("button", { "aria-expanded": isOpen, "aria-label": `${h.dayLabel || "Workout"} · ${new Date(h.date).toLocaleDateString()} · ${h.setsDone || 0} completed sets`, onClick: () => setOpenSession(isOpen ? null : h.id), className: "pressable wpb-history-session-toggle",  children: [_jsxs("div", { className: "wpb-history-date",  children: [_jsx("span", { className: "mono wpb-history-date-day",  children: new Date(h.date).getDate() }), _jsx("span", { className: "wpb-history-date-month", children: new Date(h.date).toLocaleDateString(undefined, { month: "short" }) })] }), _jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-progress-item-title", children: h.dayLabel || "Workout" }), _jsxs("div", { className: "mono wpb-history-session-total", children: [h.setsDone || 0, " sets", Number(h.durationMin) > 0 ? ` · ${Math.round(Number(h.durationMin))} min` : "", Number(h.volume) > 0 ? ` · ${Number(h.volume).toLocaleString()} ${hUnit}` : ""] }), _jsx("div", { className: "wpb-progress-item-subtitle", children: h.programName || "Saved workout" })] }), _jsx(ChevronDown, { size: 18, color: C.muted, className: "wpb-history-session-chevron" })] }) }), isOpen && (_jsxs("div", { className: "wpb-history-session-detail",  children: [h.sessionNote && _jsxs("div", { className: "wpb-history-session-note", children: [_jsx("strong", { children: "Session note" }), _jsx("div", { children: h.sessionNote })] }),_jsxs("div", { className: "wpb-history-detail-head",  children: [_jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-history-detail-title", children: h.dayLabel || "Workout" }), _jsx("div", { className: "wpb-history-detail-date", children: new Date(h.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) })] }), _jsxs("div", { role: "group", "aria-label": "Workout actions", className: "wpb-history-actions",  children: [_jsx("button", { onClick: () => setShareEntry(h), title: "Share this workout", "aria-label": `Share ${h.dayLabel}`, className: "pressable hit wpb-history-share",  children: _jsx(Share2, { size: 17 }) }), onRepeat && (_jsx("button", { "aria-label": "Repeat this workout", onClick: () => onRepeat(h), title: "Repeat this workout", className: "pressable hit wpb-history-repeat",  children: _jsx(RefreshCw, { size: 17 }) })), onEditEntry && (_jsx("button", { type: "button", "aria-label": `Edit ${h.dayLabel || "workout"}`, title: "Correct workout log", onClick: () => setEditSession(h.id), className: "pressable hit wpb-history-edit",  children: _jsx(Pencil, { size: 17 }) })), onDeleteEntry && (_jsx("button", { type: "button", "aria-label": `Delete ${h.dayLabel || "workout"}`, title: "Delete workout", "data-haptic": "medium", onClick: () => onDeleteEntry(h.id), className: "pressable hit wpb-danger-icon wpb-history-delete",  children: _jsx(Trash2, { size: 17 }) }))] })] }), editSession === h.id && onEditEntry ? _jsx(HistoryEditSheet, { entry: h, unit: h.unit || unit, onClose: () => setEditSession(null), onSave: corrected => { onEditEntry(h.id, corrected); setEditSession(null); } }) : null, loggedExercises.length === 0 ? (_jsx("div", { className: "wpb-history-no-detail", children: "No per-set detail was saved for this session." })) : loggedExercises.map(({ id, ex, p }) => {
                                                                     // Prefer the full per-set array; fall back to the summary weight×reps for
                                                                     // older logs that predate per-set storage.
                                                                     const sets = (p.sets && p.sets.length) ? p.sets : (p.weight != null ? [{ w: p.weight, r: p.reps }] : []);

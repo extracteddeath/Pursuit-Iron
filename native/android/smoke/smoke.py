@@ -634,7 +634,8 @@ time.sleep(1.5)
 if scroll_to(r"Fresher today|A deload looks due|Muscle recovery|This week|Strength score", tries=4):
     shot("today-insights")
 # The design's weekly recap: the last seven days, four figures and Share recap
-if scroll_to(r"^\|LAST 7 DAYS · ", tries=6, step=500):
+# The insights scroll above can stop below the recap (it sits above This week), so look both ways.
+if scroll_to(r"^\|LAST 7 DAYS · ", tries=6, step=500) or scroll_up_to(r"^\|LAST 7 DAYS · "):
     if not find(r"^\|Share recap$", timeout=2) and not scroll_to(r"^\|Share recap$", tries=2, step=300):
         FAILS.append("weekly recap has no Share recap")
     shot("today-recap")

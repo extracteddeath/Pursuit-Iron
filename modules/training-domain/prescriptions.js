@@ -1048,13 +1048,15 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         return [];
     const request = program?.nextEngine?.request || program?.nextEngine?.baseRequest;
     const percentage = percentagePlanFor(program, day, ex, slot, weekIndex, unit, history);
+    const percentageOwned = !!program.config?.percentScheme && !!tierOf(day, slot)
+        && cell.ownership?.reps !== 'user' && cell.ownership?.rir !== 'user';
     // First time on this lift: a labelled starting estimate instead of a blank row.
     const range0 = cellRepRange(cell, program, ex, slot === day.primaryIndex);
     let estimate = null, estimateLoad = null;
     // A session swap is not the program's lift for this slot: by contract it is never seeded from another
     // lift's history, so the estimate applies only to the planned exercise.
     const plannedHere = (() => { try { return exerciseAt(program, day, slot, weekIndex) === ex.id; } catch { return false; } })();
-    if (plannedHere && !percentage && sug?.action !== 'user_hold' && !sug?.referenceOnly
+    if (plannedHere && !percentageOwned && !percentage && sug?.action !== 'user_hold' && !sug?.referenceOnly
         && !(Number(sug?.weight) > 0) && !(sug?.setTargets || []).some(t => Number(t?.weight) > 0)) {
         estimate = startingEstimate(ex.id, { history, unit, experience: program?.config?.experience });
         const raw = startingWorkLoad(estimate, range0[0], parseRIRNum(cell.rir) ?? 2);

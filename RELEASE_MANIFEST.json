@@ -5,7 +5,7 @@
   "build": 941,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "2f57b7d26223d0d2551ff27393a8ccc2d7536323157755699de596c90df6e821",
+  "runtimeAggregate": "704504332a42d9fdc3117d72ffd65cc1aae3b79524f6e9b04920bcba0319e173",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -115,7 +115,7 @@
     "modules/training-domain/analytics.js": "51871b839c5bbcc0ff017d8c38c767a688c6ccd17ef3f26933a5bb8e3dafc541",
     "modules/training-domain/catalog.js": "d4ddf437e28b301362bca51ccd4400d052b86c36d4807516ece9945d61f5afc0",
     "modules/training-domain/history-import.js": "13a1128e16c886e280feedd45beb7e340cd9a5fac8752741632fe4b08dbc9462",
-    "modules/training-domain/prescriptions.js": "3b2ac734098c60046ffcc7556ea88f439216edd5302dd45d78e1349a31548ed5",
+    "modules/training-domain/prescriptions.js": "8ed3f28c2cb04f6feb3f69bf7e04ebda9bfa1963fba60c713b7f5a15e4adb5c4",
     "modules/training-domain/programs.js": "b08bcac89543531b76c5984b1b5d58e7ab7d294378335d4549c2bf6c232c3423",
     "modules/training-domain/records.js": "4efc9fe5acca5422450d3ecc892c07bab2dcbf3d4ef57c522588044854c6a5bf",
     "modules/training-domain/starting-load.js": "ccc48203a52f19cf9e38740087f4c3d5bae7c462104e46313024a9ee2ad56aa5",
@@ -142,8 +142,8 @@
   "uiFiles": {
     "modules/App.js": "223c8a7be11a0aa658ac30aca4ea0ea6f3dca26ac5e2b6eee5117ed154a5bab5",
     "index.html": "5e128965519c0f5aec7e99b9a63cf067bcfcbd29b696c586efd0e82fd1665f40",
-    "sw.js": "d4f3a59e2a22a3e6fb96eb4dd3f3d46e7a9242e660413a4c125c3d0843853845",
-    "BUILD_PROFILE.json": "4b95305544535c86c66c0bc1135ff19026ed922e0edf6657893ac364eda32420",
+    "sw.js": "10d5d43f2e73e3690dbb0bf01247ea59d08b226e439e317c9f6363dc62b9474f",
+    "BUILD_PROFILE.json": "80515cde6436edacc5247995f9fc3e701e6bef847d4c30dc8518703f11a578ab",
     "CHANGELOG.md": "7c794e7b7cb2146b4833845c8b4af77b10e1e57e2f90fef82d6ea2541b40a61a",
     "app.css": "8fb5c8754a5ab4375b00b61ad5a6eca2f477ce47bc474a3c69f436c3103b2368",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -152,6 +152,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b941-r869d316454d19ee6",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b941-r064f415f982d1026",
   "uiMilestone": "Build 941 · M395 Starting estimates, recovery and gym plates"
 }

@@ -39,6 +39,9 @@ assert.equal(prescribed[0].weight,'45');assert.equal(prescribed[0].target.estima
 assert.ok(make(null,EX_BY_ID['inc-curl']).every(row=>row.weight===''),'a session replacement cannot borrow a planned-slot estimate');
 const held=make({weight:null,action:'user_hold'});
 assert.ok(held.every(row=>row.target.estimate===undefined),'a declined target is not filled with a new estimate');
+const percentageProgram={...program,config:{...program.config,percentScheme:'531'}};
+const missingMax=prescribeSets(percentageProgram,day,EX_BY_ID['db-bench'],0,1,'lb',null,{}, {},prior,false);
+assert.ok(missingMax.every(row=>row.weight===''&&row.target.estimate===undefined),'a missing percentage training max cannot be replaced with an estimate');
 setGymLimits({limitUnit:'lb',limits:{dumbbell:20}});
 assert.ok(make().every(row=>Number(row.weight)<=20),'starting estimates respect the selected gym ceiling');
 setGymLimits(null);setLifterProfile({bodyweight:Infinity});

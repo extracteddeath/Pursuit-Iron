@@ -32,7 +32,6 @@ try{
         const target=snapshot.data[0].sets[0].target;
         assert.ok(Number(target.w)>0);assert.equal(target.nextAction,'estimate');
         assert.match(await page.$eval('.wpb-workout-starting-hint',node=>node.textContent),/Starting estimate/,'Workout also labels the heuristic');
-        assert.match(await page.$eval('[data-testid="set-0-0"]',node=>node.textContent),/estimate/);
         await page.screenshot({path:`verification/m395-estimate-${width}-phone.png`});
         const input='[data-testid="set-0-0"] input[aria-label="weight"]';
         await page.$eval(input,node=>{node.focus();node.select();});await page.keyboard.type('25');

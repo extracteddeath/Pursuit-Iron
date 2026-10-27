@@ -12820,8 +12820,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                                         ? { label: "warm-up", color: C.faint }
                                                         : s.sub
                                                             ? { label: s.kind === "drop" ? "drop" : "myo", color: C.faint }
-                                                            : s.target?.estimate
-                                                                ? { label: "estimate", color: C.muted }
                                                             : s.target?.failure
                                                                 ? { label: "to failure", color: C.warn }
                                                         : s.target?.pct != null

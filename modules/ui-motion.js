@@ -180,7 +180,7 @@ function enterSurface(el, initial = false) {
         el.dataset.piNavDirection = navTravel < 0 ? 'back' : navTravel > 0 ? 'forward' : 'stationary';
         if (rapid) el.dataset.piNavQuick = '1';
         else delete el.dataset.piNavQuick;
-        const reveal = rapid ? 6 : 13;
+        const reveal = rapid ? 3 : 8;
         el.style.setProperty('--pi-page-reveal-x', navTravel > 0 ? reveal + 'px' : navTravel < 0 ? -reveal + 'px' : '0px');
     }
     // The page is the opaque canvas and containing block for fixed controls.
@@ -398,16 +398,16 @@ function stagePage(el, initial = false) {
     const cards = [...el.querySelectorAll(entranceSelector)].filter(item =>
         !item.closest('.wpb-workout,[data-pi-workout-page],[data-sheet-drag]')).slice(0, 1);
     const source = connectedSource;
-    const linked = !rapid && source && performance.now() - source.at < 1100 &&
-        source.from !== key && (!source.target || source.target === key);
+    const linked = !rapid && source && !source.target && performance.now() - source.at < 1100 &&
+        source.from !== key;
     if (linked && cards.length) {
         const lead = cards[0], rect = lead.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
             // Use the true origin direction, but never fly UI from the bottom bar
             // through the workout or across the screen. No element is cloned.
             const clamp = (value, distance) => Math.max(-distance, Math.min(distance, value));
-            lead.style.setProperty('--pi-connected-x', `${clamp((source.x - (rect.left + rect.width / 2)) * .16, 24)}px`);
-            lead.style.setProperty('--pi-connected-y', `${clamp((source.y - (rect.top + rect.height / 2)) * .12, 18)}px`);
+            lead.style.setProperty('--pi-connected-x', `${clamp((source.x - (rect.left + rect.width / 2)) * .10, 12)}px`);
+            lead.style.setProperty('--pi-connected-y', '0px');
             lead.dataset.piConnected = 'source';
         }
         connectedSource = null;

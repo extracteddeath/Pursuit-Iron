@@ -20,11 +20,12 @@ const exerciseOptions = fs.readFileSync('modules/program-exercise-options.js', '
 const exerciseNotes = fs.readFileSync('modules/exercise-notes.js', 'utf8');
 const trainingMaxes = fs.readFileSync('modules/program-training-maxes.js', 'utf8');
 const contextMenus = fs.readFileSync('modules/ui-menu.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus;
-const MAX_IMPORTANT = 2258; // M387: retire 45 competing context-menu priorities.
-const MAX_APP_IMPORTANT = 1183; // M387: retire 15 embedded menu priorities.
+const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
+const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor;
+const MAX_IMPORTANT = 2188; // M388: retire 70 switcher/gym priorities, including a shadowed width.
+const MAX_APP_IMPORTANT = 1143; // M388: retire 40 embedded configuration-sheet priorities.
 const MAX_REPEAT_IMPORTANT = 14; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 2410; // M387: shared menus and natural Home flow; retire 16 static styles.
+const MAX_INLINE_STYLE_OBJECTS = 2303; // M389: history correction sheet; retire 31 static styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -94,6 +95,10 @@ function guard(cssText, appText) {
 }
 const report = guard(css, presentationSource);
 
+assert.ok(!historyEditor.includes('style:') && !historyEditor.includes('localStorage'), 'History correction has one class-owned view and no private persistence');
+assert.ok(!app.includes('function HistoryEditSheet('), 'History correction must not retain an inline shadow renderer');
+assert.ok(historyEditor.includes('normalizeEditedHistoryEntry(entry, draft)') && historyEditor.includes('onSave(corrected)'), 'Corrections are reviewed and saved through the canonical normalizer');
+assert.ok(app.includes('portalTarget: historyRoot.current?.closest(".wpb")'), 'The shared Exit portal owns history-modal placement outside contained rows');
 assert.ok(!contextMenus.includes('style:') && !contextMenus.includes('localStorage'), 'Context menus own presentation without private positioning or persistence');
 assert.equal((app.match(/_jsx\(ContextMenu,/g)||[]).length,3,'Home actions, Program actions and the day picker share one menu renderer');
 assert.ok(!app.includes('MENU_H') && !app.includes('dayOpts.top') && !app.includes('progOpts.top'),'Menu placement measures actual rows and anchors instead of guessed heights');

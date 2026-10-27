@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 934,
+  "build": 935,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "3075e4a85cf16d04cbfc7a2dc59bff6589fead4def0eba99ab85aa2797711192",
+  "runtimeAggregate": "7f7e186f5d4dd1dddfd77410fcbbf4124051c4c48a3b249fb2e08afc5691102f",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -15,6 +15,7 @@
     "modules/exercise-notes.js": "0decb389616ffdee43f5969a411597c8feef75358b9bab2ddecf353f00d8cace",
     "modules/generation-runtime.js": "a8375d92b33d226ef25fce6a2efddb3b84cfbb93e7327a92a4d749ca3071fb76",
     "modules/generation-worker.js": "098d2de152993933990ea44ff0faf6b828b9c579aff53ecbffddb716599899b6",
+    "modules/history-editor.js": "5e6844cfd4f30d06e1b446db7612367913a7ff284a5578b5175f001f6e97b7a7",
     "modules/injury-tools.js": "6003238cf90a17de11ad47fdabe76db73b6438f866656ced83b6e3b7e0e17475",
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/main.js": "0547cb25708ed6a5a4b62a80d306986e694b35789854114f515707845c1ce5fb",
@@ -105,7 +106,7 @@
     "modules/program-share-sheet.js": "0b050ae7e60c759053487700cbacfa24f06f2f7b39a01e67d9757647bf5eb01b",
     "modules/program-training-maxes.js": "8a671cf75d76d792d5d0410a820fe5ba8c7b6aece4e8d79f5ed590db48d5132c",
     "modules/program-volume-surfaces.js": "9ecba74bbf31518995e2d601e0ec29ac115821d11ab02bdf1377a605d4085145",
-    "modules/release-notes.js": "2514ef56f8ea5c588069c82407d68b135f952f0bb1510e609b5afe9493e76ab3",
+    "modules/release-notes.js": "6b0a0869a96c2a558c914a92ea521b53c5e67a06c3d7852b911e44ca13f04c2b",
     "modules/session-choice-dialog.js": "532ddb08086f4bc818eab304df91abe0caf24bf814dcc7fca4cf48f6fda55411",
     "modules/session-plan.js": "29e9b5b201a59de13bd0d21f89ca6358741d4889f52a96cd010c33554902e34c",
     "modules/session-tools.js": "6f75f6559033a968f5dbb986c3141adb31aab13e9971ce61719b301c2f88311b",
@@ -137,18 +138,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "35fec7e911fbd0a79013e53e1e3da08978af424aee93ac8240a3c985d485218f",
-    "index.html": "b98f4ef5998d0eb02a3b550449f5b8724b7ab421576f91256ca35435a5ffb823",
-    "sw.js": "f2869f8586ac4b3528d53acc6e8152c1543a345fadcdc65b8de79d9451e21561",
-    "BUILD_PROFILE.json": "cce59c8ed13d8d28f3e911cfd60ee4c33375f34d12c7a40a02d1e3677a6a257e",
-    "CHANGELOG.md": "7d53da2280a92636a2e02391893d521d507b7167415db222449e3083afabd11b",
-    "app.css": "7cac88eb6ed0275bad5311a5e7029b42a5c44261705c4fd98132bd64e5f78de9",
+    "modules/App.js": "c9f58137f265499979c838969ebc32e47e630c7e246560fbfa4089645e39f38a",
+    "index.html": "bf6f7f9a3006d21abab4da08f193365957efd0939f78501ddca765636a226075",
+    "sw.js": "36d68939a95e4677d4ce8fc630deaeab1a17841ae3b7a9f28487505c335e2869",
+    "BUILD_PROFILE.json": "057f9320ed4304e612dceca7da3d659083b865af70748424da68c10a5d78bd50",
+    "CHANGELOG.md": "d7f86c9cebb4be4bf95e05a54231119846eca0031e46cb5d1d1f3f5ff45e52c6",
+    "app.css": "62d125040fd6a33387535dd172e4c83912a4f1bf75bc1ae3af4f637f0e1d0b52",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b934-rf9ffce41f4e9f6f8",
-  "uiMilestone": "Build 934 · M387 Stable navigation targets and shared menus"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b935-rc194f5bd39007a52",
+  "uiMilestone": "Build 935 · M389 Safe, accessible history correction"
 }

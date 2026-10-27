@@ -1,3 +1,4 @@
+import { HistoryEditSheet } from './history-editor.js';
 import { BackupRestorePanel } from './backup-restore-panel.js';
 import { appStorageOwnership } from './app-storage-ownership.js';
 import { InfoCard, MotionReveal } from './ui-disclosure.js';
@@ -72,7 +73,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='934';
+const __APP_VERSION__='4.0.0'; const __BUILD__='935';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -742,7 +743,7 @@ function StyleTag({ theme } = {}) {
         transform:scale(.985);transition-duration:var(--m-press),var(--m-fast),var(--m-fast),var(--m-fast);}
       /* A disabled control must not pretend to respond — feedback on a dead button is a lie the
          finger notices immediately, and neither existing class guards against it. */
-      .wpb button:disabled,.wpb button[aria-disabled="true"]{transform:none;}
+      .wpb button:disabled:not(:where(.wpb-switcher-row)),.wpb button[aria-disabled="true"]{transform:none;}
       .wpb input,.wpb select,.wpb textarea{
         transition:border-color var(--m-fast) var(--e-out),background var(--m-fast) var(--e-out);}
       /* prefers-reduced-motion is handled globally in app.css, which collapses every transition to
@@ -930,7 +931,9 @@ function StyleTag({ theme } = {}) {
       .wpb-page-scroll{width:100%;max-width:var(--content-max);margin:0 auto;box-sizing:border-box;}
       .wpb-surface{background:${C.card};border:1px solid ${C.borderSoft};border-radius:var(--r-lg);box-shadow:var(--shadow-1);}
       .wpb-hero{background:${C.card};border:1px solid color-mix(in srgb,${C.accent} 24%,${C.borderSoft});border-radius:var(--r-xl)!important;box-shadow:var(--shadow-2);}
-      .wpb-primary-action{min-height:50px!important;border-radius:var(--r-md)!important;font-size:16px!important;font-weight:800!important;letter-spacing:-.1px;box-shadow:0 8px 22px color-mix(in srgb,${C.accent} 16%,transparent);}
+      .wpb-primary-action{min-height:50px!important;letter-spacing:-.1px;box-shadow:0 8px 22px color-mix(in srgb,${C.accent} 16%,transparent);}
+      .wpb-primary-action:not(:where(.wpb-gym-done)){font-size:16px!important;font-weight:800!important;}
+      .wpb-primary-action:not(:where(.wpb-gym-done)){border-radius:var(--r-md)!important;}
       .wpb-action-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}
       .wpb-action-tile{min-height:68px;border-radius:var(--r-lg)!important;box-shadow:0 1px 0 rgba(255,255,255,.025);}
       .wpb-metric-strip{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px!important;}
@@ -990,10 +993,11 @@ function StyleTag({ theme } = {}) {
 .wpb-carousel-card{box-shadow:none!important;border-color:${C.borderSoft}!important;}
       .wpb-hero{background:${C.card}!important;border:1px solid ${C.border}!important;box-shadow:none!important;border-radius:var(--r-xl)!important;}
       .wpb-primary-action{
-        min-height:48px!important;border-radius:var(--r-md)!important;background:${C.accent}!important;
+        min-height:48px!important;background:${C.accent}!important;
         color:${C.accentText}!important;border:1px solid color-mix(in srgb,${C.accent} 82%,${C.border})!important;
-        box-shadow:none!important;font-size:15px!important;font-weight:700!important;letter-spacing:0!important;
-      }
+        box-shadow:none!important;letter-spacing:0!important;}
+      .wpb-primary-action:not(:where(.wpb-gym-done)){font-size:15px!important;font-weight:700!important;}
+      .wpb-primary-action:not(:where(.wpb-gym-done)){border-radius:var(--r-md)!important;}
       .wpb-primary-action:disabled{background:${C.cardHi}!important;color:${C.faint}!important;border-color:${C.borderSoft}!important;box-shadow:none!important;}
       .wpb-secondary-action{min-height:44px;border-radius:var(--r-md)!important;background:${C.cardHi}!important;color:${C.text}!important;border:1px solid ${C.border}!important;box-shadow:none!important;font-weight:650!important;}
       .wpb-ghost-action{min-height:40px;border-radius:var(--r-md)!important;background:transparent!important;color:${C.accentInk}!important;border:1px solid transparent!important;font-weight:650!important;}
@@ -1027,7 +1031,7 @@ function StyleTag({ theme } = {}) {
       .wpb-tabbar .wpb-tab[aria-current="page"]::before{top:1px;width:20px;height:2px;}
       .wpb-premium-tabs{background:${C.bg2};border:1px solid ${C.borderSoft};border-radius:12px;padding:3px;}
       .wpb-premium-tabs>button[aria-selected="true"]{background:${C.cardHi}!important;box-shadow:none!important;color:${C.text}!important;}
-      .wpb input,.wpb select,.wpb textarea{border-radius:10px!important;}
+      .wpb input:not(:where(.wpb-switcher-search,.wpb-history-editor-input)),.wpb select,.wpb textarea{border-radius:10px!important;}
       .wpb input:focus,.wpb select:focus,.wpb textarea:focus{border-color:${C.accent}!important;box-shadow:0 0 0 3px ${C.accentDim};}
 
       /* M84 UI/UX PASS — clearer hierarchy, safer touch targets, and tighter Program density. */
@@ -1160,7 +1164,7 @@ function StyleTag({ theme } = {}) {
       /* One overlay language. Inline backgrounds remain the source of theme colour; this standardizes
          geometry, depth, and safe-area behavior without rewriting each sheet component. */
       .wpb [data-wpb-dialog]{padding-left:12px!important;padding-right:12px!important;}
-      .wpb [data-wpb-dialog]>div:first-child{box-shadow:0 18px 60px rgba(0,0,0,.28);}
+      .wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){box-shadow:0 18px 60px rgba(0,0,0,.28);}
       .wpb-backdrop{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
       /* M95 CONTROL CONSISTENCY — non-workout controls share one interaction language. */
       .wpb-page-shell:not(.wpb-workout) input:not([type="range"]):not(.wpb-ui-control),
@@ -1180,13 +1184,14 @@ function StyleTag({ theme } = {}) {
       .wpb-settings .wpb-experience-segmented>button{min-width:0!important;width:100%!important;white-space:nowrap!important;}
       .wpb-settings .wpb-toggle{width:44px!important;height:26px!important;min-width:44px!important;min-height:26px!important;border:1px solid ${C.borderSoft}!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);overflow:visible!important;}
       .wpb-settings .wpb-toggle>span{width:20px!important;height:20px!important;top:2px!important;left:2px!important;}
-      .wpb-page-shell:not(.wpb-workout) .wpb-primary-action{min-height:46px!important;border-radius:10px!important;}
+      .wpb-page-shell:not(.wpb-workout) .wpb-primary-action{min-height:46px!important;}
+      .wpb-page-shell:not(.wpb-workout) .wpb-primary-action:not(:where(.wpb-gym-done)){border-radius:10px!important;}
       .wpb-page-shell:not(.wpb-workout) .wpb-secondary-action,
       .wpb-page-shell:not(.wpb-workout) .wpb-ghost-action{min-height:42px!important;border-radius:10px!important;}
       .wpb-page-shell:not(.wpb-workout) .wpb-danger-action,
       .wpb .wpb-confirm-danger{min-height:46px!important;border-radius:10px!important;}
       .wpb [data-wpb-dialog] button{min-height:42px;}
-      .wpb [data-wpb-dialog] input,.wpb [data-wpb-dialog] select,.wpb [data-wpb-dialog] textarea{border-radius:10px!important;}
+      .wpb [data-wpb-dialog] input:not(:where(.wpb-selection-sheet input,.wpb-history-editor-input)),.wpb [data-wpb-dialog] select:not(:where(.wpb-selection-sheet select)),.wpb [data-wpb-dialog] textarea:not(:where(.wpb-selection-sheet textarea)){border-radius:10px!important;}
       @media(max-width:420px){
         .wpb-settings .wpb-segmented{max-width:100%;overflow-x:auto;scrollbar-width:none;}
         .wpb-settings .wpb-segmented::-webkit-scrollbar{display:none;}
@@ -1283,10 +1288,11 @@ function StyleTag({ theme } = {}) {
         padding:15px!important;
       }
       .wpb-home .wpb-home-hero .wpb-primary-action{
-        min-height:50px!important;
-        font-size:15px!important;
-        border-radius:11px!important;
-      }
+        min-height:50px!important;}
+      .wpb-home .wpb-home-hero .wpb-primary-action:not(:where(.wpb-gym-done)){
+        font-size:15px!important;}
+      .wpb-home .wpb-home-hero .wpb-primary-action:not(:where(.wpb-gym-done)){
+        border-radius:11px!important;}
       .wpb-home .wpb-action-grid{gap:7px!important;}
       .wpb-home .wpb-action-tile{
         min-height:56px!important;
@@ -1626,15 +1632,19 @@ function StyleTag({ theme } = {}) {
       /* Primary/secondary actions now share exactly one control geometry. The accent is reserved for
          the action that moves the flow forward; secondary actions use contrast rather than another
          bright treatment. */
-      .wpb-primary-action,.wpb-secondary-action,.wpb-ghost-action,.wpb-danger-action{
-        border-radius:var(--r-control)!important;
-        font-weight:650!important;
-      }
+      .wpb-primary-action:not(:where(.wpb-gym-done)),.wpb-secondary-action,.wpb-ghost-action,.wpb-danger-action{
+        font-weight:650!important;}
+
+      /* Primary/secondary actions now share exactly one control geometry. The accent is reserved for
+         the action that moves the flow forward; secondary actions use contrast rather than another
+         bright treatment. */
+      .wpb-primary-action:not(:where(.wpb-gym-done)),.wpb-secondary-action,.wpb-ghost-action,.wpb-danger-action{
+        border-radius:var(--r-control)!important;}
       .wpb-primary-action{box-shadow:none!important;}
       .wpb-secondary-action{background:${C.bg2}!important;border-color:${C.borderSoft}!important;}
       .wpb-ghost-action{color:${C.muted}!important;}
       .wpb-icon-control{border-radius:var(--r-control)!important;}
-      .wpb button:disabled,.wpb [aria-disabled="true"]{opacity:.42!important;filter:none!important;}
+      .wpb button:disabled:not(:where(.wpb-switcher-row)),.wpb [aria-disabled="true"]{opacity:.42!important;filter:none!important;}
 
       /* Form controls need to look like one family on every screen. Native font inheritance avoids
          the classic PWA tell where select/input text is subtly different from the surrounding UI. */
@@ -1723,25 +1733,24 @@ function StyleTag({ theme } = {}) {
          screens become a contained surface instead of a huge stretched mobile drawer. */
       .wpb-backdrop{background:rgba(0,0,0,.54)!important;}
       .wpb-backdrop>[data-sheet-drag]{
+        overflow:hidden;}
+      .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
         border-top-left-radius:var(--r-sheet)!important;
         border-top-right-radius:var(--r-sheet)!important;
         border-top:1px solid var(--hairline)!important;
-        box-shadow:var(--overlay-shadow)!important;
-        overflow:hidden;
-      }
+        box-shadow:var(--overlay-shadow)!important;}
       [data-sheet-drag]::before{width:34px!important;height:4px!important;margin-bottom:9px!important;background:${C.border}!important;}
-      .wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child{
+      .wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
         border-radius:16px!important;
         box-shadow:var(--overlay-shadow)!important;
       }
       @media(min-width:720px){
-        .wpb-backdrop>[data-sheet-drag]{
+        .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
           width:min(680px,calc(100% - 32px))!important;
           margin-left:auto!important;margin-right:auto!important;margin-bottom:16px!important;
           border-radius:var(--r-sheet)!important;
-          border:1px solid var(--hairline)!important;
-        }
-        .wpb-backdrop>[data-sheet-drag]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(100dvh - 32px)!important;}
+          border:1px solid var(--hairline)!important;}
+        .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(100dvh - 32px)!important;}
       }
 
       /* Screen-specific de-cardification. These are deliberate exceptions where grouped rows read
@@ -1903,17 +1912,19 @@ function StyleTag({ theme } = {}) {
       .wpb-library-header{padding-left:16px!important;padding-right:16px!important;background:${C.bg}!important;}
       .wpb-library-search input{min-height:42px!important;background:${C.bg2}!important;border-color:var(--hairline)!important;}
       .wpb-library .wpb-hscroll{gap:5px!important;}
-      .wpb-filter-chip{
-        min-height:34px!important;padding:6px 10px!important;border-radius:9px!important;
-        border-color:transparent!important;background:transparent!important;color:${C.muted}!important;
-        font-size:12.5px!important;font-weight:650!important;
-      }
-      .wpb-filter-chip[aria-pressed="true"],.wpb-filter-chip--primary[aria-pressed="true"]{
-        background:${C.cardHi}!important;color:${C.text}!important;border-color:var(--hairline)!important;
-        box-shadow:inset 0 0 0 1px color-mix(in srgb,${C.accent} 10%,transparent)!important;
-      }
+      .wpb-filter-chip{padding:6px 10px!important;color:${C.muted}!important;}
+      .wpb-filter-chip:not(:where(.wpb-selection-sheet .wpb-filter-chip)){
+        font-size:12.5px!important;font-weight:650!important;}
+      .wpb-filter-chip:not(:where(.wpb-gym-preset,.wpb-gym-rack-preset)){
+        min-height:34px!important;border-radius:9px!important;
+        border-color:transparent!important;background:transparent!important;}
+      .wpb-filter-chip[aria-pressed="true"],.wpb-filter-chip--primary[aria-pressed="true"]{color:${C.text}!important;
+        box-shadow:inset 0 0 0 1px color-mix(in srgb,${C.accent} 10%,transparent)!important;}
+      .wpb-filter-chip:not(:where(.wpb-gym-preset,.wpb-gym-rack-preset))[aria-pressed="true"],.wpb-filter-chip--primary:not(:where(.wpb-gym-preset,.wpb-gym-rack-preset))[aria-pressed="true"]{
+        background:${C.cardHi}!important;border-color:var(--hairline)!important;}
       .wpb-filter-chip--secondary{color:${C.faint}!important;}
-      .wpb-filter-chip--secondary[aria-pressed="true"]{background:${C.accentDim}!important;color:${C.accentInk}!important;}
+      .wpb-filter-chip--secondary[aria-pressed="true"]{color:${C.accentInk}!important;}
+      .wpb-filter-chip--secondary:not(:where(.wpb-gym-preset,.wpb-gym-rack-preset))[aria-pressed="true"]{background:${C.accentDim}!important;}
       .wpb-library-flag-filter{
         gap:2px!important;padding:3px!important;margin-top:4px;border:1px solid var(--hairline);
         border-radius:10px;background:${C.bg2};
@@ -1985,18 +1996,6 @@ function StyleTag({ theme } = {}) {
         background:${C.card}!important;color:${C.muted}!important;display:flex!important;
         align-items:center!important;justify-content:center!important;flex-shrink:0!important;
       }
-      .wpb-gym-equipment-chip{min-height:34px!important;border-radius:9px!important;}
-      .wpb-gym-rack-preset{min-height:34px!important;border-radius:9px!important;}
-      .wpb-gym-clear-action,.wpb-gym-add-action{
-        min-height:34px!important;padding:6px 10px!important;border-radius:9px!important;
-        border:1px solid var(--hairline)!important;background:transparent!important;
-        color:${C.muted}!important;font-size:12.5px!important;font-weight:650!important;
-      }
-      .wpb-gym-clear-action{color:${C.faint}!important;}
-      .wpb-gym-add-action{background:${C.bg2}!important;}
-      @media(max-width:360px){
-        .wpb-gym-add-action{flex:1 1 calc(50% - 4px);justify-content:center;text-align:center;}
-      }
 
       /* Settings: the jump affordance should read like a utility field, not a featured card. Grouped
          rows keep their existing semantics while section rhythm is tightened so the page scans like
@@ -2006,15 +2005,6 @@ function StyleTag({ theme } = {}) {
         min-height:40px!important;border-radius:10px!important;background:${C.bg2}!important;border-color:var(--hairline)!important;
       }
       .wpb-settings-jump-control select{min-height:32px!important;box-shadow:none!important;}
-
-      /* Configuration sheets share the same surface grammar as the rest of the app. Gyms was one of
-         the last large sheets still using oversized 16px cards and full pill clouds. */
-      .wpb-gym-sheet{padding-left:16px!important;padding-right:16px!important;}
-      .wpb-gym-card{
-        border:1px solid var(--section-rule)!important;border-radius:12px!important;background:${C.card}!important;
-      }
-      .wpb-gym-done{min-height:40px!important;border-radius:10px!important;padding-left:14px!important;padding-right:14px!important;}
-      .wpb-gym-sheet .wpb-hscroll .wpb-filter-chip{background:${C.bg2}!important;border-color:var(--hairline)!important;}
 
       /* Dense phones: preserve line length and hierarchy; don't solve crowding by shrinking text. */
       @media(max-width:420px){
@@ -2112,17 +2102,9 @@ function StyleTag({ theme } = {}) {
       /* Achievement and program switcher sheets now participate in the same sheet system instead of
          being bespoke drawers. On wide screens they become contained surfaces rather than full-width
          phone sheets stretched across the viewport. */
-      .wpb-achievement-sheet,.wpb-switcher-sheet{border-top:1px solid var(--section-rule)!important;box-shadow:0 -18px 48px rgba(0,0,0,.28);}
+      .wpb-achievement-sheet{border-top:1px solid var(--section-rule)!important;box-shadow:0 -18px 48px rgba(0,0,0,.28);}
       .wpb-achievement-icon{width:50px!important;height:50px!important;border-radius:13px!important;font-size:25px!important;}
       .wpb-achievement-earned{padding-top:10px;border-top:1px solid var(--section-rule);}
-      .wpb-switcher-search{min-height:42px!important;border-radius:10px!important;background:${C.bg2}!important;border-color:var(--hairline)!important;}
-      .wpb-switcher-row{
-        margin-bottom:0!important;padding:12px 2px!important;border-radius:0!important;border-left:0!important;border-right:0!important;
-        border-top:0!important;border-bottom:1px solid var(--section-rule)!important;background:transparent!important;
-      }
-      .wpb-switcher-row:first-child{border-top:1px solid var(--section-rule)!important;}
-      .wpb-switcher-row[data-state="active"]{background:color-mix(in srgb,${C.accent} 6%,transparent)!important;}
-      .wpb-switcher-row[data-state="locked"]{opacity:.72!important;}
 
       /* Workout history is a ledger, not a card carousel. Month/cycle headers stay sticky, but each
          session is now a ruled row. Open detail gains a quiet inset so expansion is obvious without
@@ -2140,7 +2122,7 @@ function StyleTag({ theme } = {}) {
       .wpb-history-set{border-radius:7px!important;background:${C.bg2}!important;padding:3px 7px!important;}
 
       @media(min-width:700px){
-        .wpb-achievement-sheet,.wpb-switcher-sheet{max-width:560px;margin:0 auto;border-radius:18px 18px 0 0!important;}
+        .wpb-achievement-sheet{max-width:560px;margin:0 auto;border-radius:18px 18px 0 0!important;}
       }
       /* M127 PRODUCTION-FINISH PASS — the final polish layer is about states, accessibility, and
          restraint. It makes onboarding, recovery, charts, menus, empty/error feedback and focus
@@ -2249,16 +2231,19 @@ function StyleTag({ theme } = {}) {
       .wpb [data-sheet-drag]{
         overscroll-behavior:contain;scroll-padding-top:20px;
         scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom));
-        border-radius:18px 18px 0 0!important;
-        transform:translateZ(0);backface-visibility:hidden;
-      }
-      .wpb [data-sheet-drag]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
-      .wpb [data-sheet-drag][data-detent="content"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:min(68dvh,540px)!important;}
-      .wpb [data-sheet-drag][data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+        transform:translateZ(0);backface-visibility:hidden;}
+
+      /* Bottom sheets: one physical model. The visual viewport drives --app-h while the keyboard is
+         open, so this ceiling automatically prevents a sheet from disappearing behind the IME. */
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
+        border-radius:18px 18px 0 0!important;}
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="content"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:min(68dvh,540px)!important;}
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
       .wpb [data-sheet-drag][data-dragging="1"]{box-shadow:0 -18px 48px rgba(0,0,0,.22);}
       .wpb [data-sheet-drag] :is(input,textarea,select){scroll-margin-top:68px;scroll-margin-bottom:140px;}
       .wpb [data-sheet-drag]::before{width:36px;height:4px;margin-bottom:10px;opacity:.9;}
-      @media(min-width:700px){.wpb [data-sheet-drag]{max-width:560px!important;margin-inline:auto!important;}}
+      @media(min-width:700px){.wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){max-width:560px!important;margin-inline:auto!important;}}
 
       /* Type should survive real user data. Headlines may wrap naturally, identifiers may break only
          when they must, while data remains tabular and stable. */
@@ -2316,8 +2301,12 @@ function StyleTag({ theme } = {}) {
          accessibility zoom. Keep the existing visual language, but make vertical chrome yield before
          content and guarantee that modal actions remain reachable inside the visible viewport. */
       .wpb :is(.wpb-primary-action,.wpb-secondary-action,.wpb-danger-action,.wpb-onboarding-primary,.wpb-onboarding-secondary){
-        height:auto!important;max-width:100%;min-width:0;white-space:normal!important;line-height:1.2!important;text-wrap:pretty;
-      }
+        height:auto!important;max-width:100%;min-width:0;white-space:normal!important;text-wrap:pretty;}
+
+      /* M149 REAL-DEVICE RESILIENCE — width-only breakpoints miss phone landscape, split screen and
+         accessibility zoom. Keep the existing visual language, but make vertical chrome yield before
+         content and guarantee that modal actions remain reachable inside the visible viewport. */
+      .wpb :is(.wpb-primary-action:not(:where(.wpb-gym-done)),.wpb-secondary-action,.wpb-danger-action,.wpb-onboarding-primary,.wpb-onboarding-secondary){line-height:1.2!important;}
       .wpb :is(.wpb-premium-tabs,.wpb-settings .wpb-segmented)>button{
         min-width:0!important;white-space:normal!important;overflow-wrap:anywhere;line-height:1.15!important;
       }
@@ -2327,7 +2316,7 @@ function StyleTag({ theme } = {}) {
       /* Centred dialogs previously relied on their content staying shorter than the screen. At 200%
          text, landscape, or a split-screen window that assumption fails and the bottom action can
          become unreachable. Cap to the *visual* viewport and let the dialog itself scroll. */
-      .wpb :is(.wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child){
+      .wpb :is(.wpb-pop,.wpb-dialog,.wpb [data-wpb-dialog]>div:first-child:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))){
         max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px)!important;
         overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:12px;
       }
@@ -2366,7 +2355,7 @@ function StyleTag({ theme } = {}) {
         .wpb-onboarding-footer{padding-top:7px!important;padding-bottom:calc(env(safe-area-inset-bottom) + 8px)!important;}
         .wpb-wizard-heading{margin-bottom:10px!important;}
 
-        .wpb [data-sheet-drag]{max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 4px)!important;}
+        .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 4px)!important;}
       }
 
       @media(max-height:420px) and (orientation:landscape){
@@ -15264,84 +15253,6 @@ function MeasurementDetail({ label, log, unit }) {
                                 } } }, `hit-${e.date}-${i}`))] }), activePoint != null && log[activePoint] && _jsxs("div", { className: "wpb-chart-popover", role: "status", children: [fmtShort(log[activePoint].date), " \u00B7 ", _jsxs("b", { children: [log[activePoint].v, " ", unit] })] }), _jsxs("div", { className: "wpb-chart-axis", "aria-hidden": "true", children: [_jsx("span", { children: fmtShort(log[0].date) }), log.length > 1 && _jsx("span", { children: fmtShort(latest.date) })] }), log.length === 1 && _jsx("div", { style: { padding: "2px 12px 10px", textAlign: "center", fontSize: 12, color: C.muted }, children: "Add another measurement to see a trend." })] }), _jsx("div", { style: { marginTop: 12, fontSize: 11, fontWeight: 800, letterSpacing: .65, textTransform: "uppercase", color: C.faint }, children: "Logging history" }), _jsx("div", { style: { marginTop: 5, borderTop: `1px solid ${C.borderSoft}` }, children: [...log].reverse().map((e, i) => (_jsxs("div", { style: { minHeight: 40, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderBottom: `1px solid ${C.borderSoft}`, fontSize: 13 }, children: [_jsx("span", { style: { color: C.muted }, children: fmtDate(e.date) }), _jsxs("span", { className: "mono", style: { color: C.text, fontWeight: 700 }, children: [e.v, " ", unit] })] }, `${e.date}-${i}`))) })] }));
 }
 
-/* HISTORY CORRECTION IS A FIRST-CLASS DATA OPERATION, NOT A DISPLAY-ONLY PATCH.
- * A bad log can affect load progression, readiness, PRs, weekly volume and the finite-program cursor.
- * Keep structural provenance (program/day/week) locked while allowing the performed evidence itself
- * to be corrected. Every save rebuilds the summary mirror from the edited raw sets. */
-
-
-function localHistoryDateValue(ms) {
-    const d = new Date(Number(ms) || Date.now());
-    const shifted = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-    return shifted.toISOString().slice(0, 16);
-}
-function HistoryEditSheet({ entry, unit, onClose, onSave }) {
-    const makeDraft = (src) => ({ ...src, perf: Object.fromEntries(Object.entries(src?.perf || {}).map(([id, p]) => [id, {
-        ...p,
-        sets: (Array.isArray(p?.sets) && p.sets.length ? p.sets : (p?.reps != null ? [{ w: p.weight ?? 0, r: p.reps }] : [])).map(st => ({ ...st }))
-    }])) });
-    const [draft, setDraft] = useState(() => makeDraft(entry));
-    useEffect(() => setDraft(makeDraft(entry)), [entry?.id]);
-    const setSet = (exId, index, key, value) => setDraft(prev => {
-        const perf = { ...(prev.perf || {}) }, p = { ...(perf[exId] || {}) };
-        const sets = (p.sets || []).map((st, i) => i === index ? { ...st, [key]: value } : st);
-        perf[exId] = { ...p, sets };
-        return { ...prev, perf };
-    });
-    const removeSet = (exId, index) => setDraft(prev => {
-        const perf = { ...(prev.perf || {}) }, p = { ...(perf[exId] || {}) };
-        const sets = (p.sets || []).filter((_, i) => i !== index);
-        if (sets.length)
-            perf[exId] = { ...p, sets };
-        else
-            delete perf[exId];
-        return { ...prev, perf };
-    });
-    const addSet = (exId) => setDraft(prev => {
-        const perf = { ...(prev.perf || {}) }, p = { ...(perf[exId] || {}) }, sets = [...(p.sets || [])];
-        const last = sets[sets.length - 1];
-        sets.push({ w: last?.w ?? 0, r: last?.r ?? "", rir: "" });
-        perf[exId] = { ...p, sets };
-        return { ...prev, perf };
-    });
-    const removeExercise = (exId) => setDraft(prev => { const perf = { ...(prev.perf || {}) }; delete perf[exId]; return { ...prev, perf }; });
-    const exEntries = Object.entries(draft.perf || {});
-    const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px 8px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 14, fontWeight: 650, textAlign: "center" };
-    return createElement("div", { className: "wpb-backdrop", onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,.68)", display: "flex", alignItems: "flex-end" } },
-        createElement("div", { onClick: e => e.stopPropagation(), className: "wpb-scroll", style: { width: "100%", maxHeight: "90%", overflowY: "auto", background: C.bg2, borderRadius: "20px 20px 0 0", border: `1px solid ${C.border}`, padding: "18px 16px calc(env(safe-area-inset-bottom) + 18px)" } },
-            createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 } },
-                createElement(Pencil, { size: 18, color: C.accentInk }),
-                createElement("div", { style: { flex: 1, minWidth: 0 } },
-                    createElement("div", { style: { fontSize: 17, fontWeight: 800 } }, "Correct workout log"),
-                    createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 2 } }, entry.dayLabel || "Workout")),
-                createElement("button", { "aria-label": "Close history editor", onClick: onClose, className: "pressable hit", style: { ...iconBtn(), width: 40, height: 40 } }, createElement(X, { size: 18 }))),
-            createElement("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.45, margin: "8px 0 14px" } }, "Fix what you actually performed. Program, day and week ownership stay locked so correcting a number cannot move the workout to a different place in the plan."),
-            createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 92px", gap: 8, marginBottom: 14 } },
-                createElement("label", { style: { fontSize: 11, color: C.muted, fontWeight: 700 } }, "DATE / TIME",
-                    createElement("input", { type: "datetime-local", value: localHistoryDateValue(draft.date), onChange: e => { const t = new Date(e.target.value).getTime(); if (Number.isFinite(t)) setDraft(d => ({ ...d, date: t })); }, style: { ...inputStyle, textAlign: "left", marginTop: 5 } })),
-                createElement("label", { style: { fontSize: 11, color: C.muted, fontWeight: 700 } }, "MINUTES",
-                    createElement("input", { inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, value: draft.durationMin ?? "", onChange: e => setDraft(d => ({ ...d, durationMin: e.target.value.replace(/[^0-9]/g, "") })), style: { ...inputStyle, marginTop: 5 } }))),
-            ...exEntries.map(([exId, p]) => createElement("section", { key: exId, style: { borderTop: `1px solid ${C.borderSoft}`, padding: "12px 0 4px" } },
-                createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 } },
-                    createElement("div", { style: { flex: 1, fontSize: 15, fontWeight: 750 } }, EX_BY_ID[exId]?.name || exId),
-                    createElement("button", { type: "button", onClick: () => removeExercise(exId), className: "pressable", style: { border: 0, background: "none", color: C.danger, fontSize: 12, fontWeight: 700, padding: 6, cursor: "pointer" } }, "Remove lift")),
-                ...(p.sets || []).map((st, i) => createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "28px minmax(0,1fr) minmax(0,.8fr) minmax(0,.75fr) 34px", gap: 6, alignItems: "end", marginBottom: 7 } },
-                    createElement("div", { className: "mono", style: { fontSize: 12, color: st.sub ? C.faint : C.muted, textAlign: "center", paddingBottom: 11 } }, st.sub ? "↳" : String(i + 1)),
-                    createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, `LOAD ${unit || entry.unit || ""}`,
-                        createElement("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: st.w ?? "", onChange: e => setSet(exId, i, "w", e.target.value.replace(/[^0-9.-]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
-                    createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, "REPS",
-                        createElement("input", { inputMode: "numeric", onFocus: selectNumericInput, onClick: selectNumericInput, value: st.r ?? "", onChange: e => setSet(exId, i, "r", e.target.value.replace(/[^0-9]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
-                    createElement("label", { style: { fontSize: 10, color: C.faint, fontWeight: 700 } }, "RIR",
-                        createElement("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, placeholder: "—", value: st.rir ?? "", onChange: e => setSet(exId, i, "rir", e.target.value.replace(/[^0-9.]/g, "")), style: { ...inputStyle, marginTop: 3 } })),
-                    createElement("button", { type: "button", "aria-label": `Remove set ${i + 1}`, onClick: () => removeSet(exId, i), className: "pressable", style: { ...tinyBtn(), color: C.danger, marginBottom: 1 } }, createElement(X, { size: 14 })))),
-                createElement("button", { type: "button", onClick: () => addSet(exId), className: "pressable", style: { width: "100%", padding: "9px", borderRadius: 10, border: `1px dashed ${C.border}`, background: "none", color: C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" } }, "+ Add set"))),
-            exEntries.length === 0 ? createElement("div", { style: { padding: "18px 4px", color: C.muted, fontSize: 13, textAlign: "center" } }, "No sets remain. Delete the whole workout instead if this session should not exist.") : null,
-            createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 8, marginTop: 14 } },
-                createElement("button", { type: "button", onClick: onClose, className: "pressable", style: { padding: 13, borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.muted, fontSize: 14, fontWeight: 700, cursor: "pointer" } }, "Cancel"),
-                createElement("button", { type: "button", disabled: exEntries.length === 0, onClick: () => exEntries.length && onSave(normalizeEditedHistoryEntry(entry, draft)), className: "pressable", style: { padding: 13, borderRadius: 12, border: 0, background: exEntries.length ? C.accent : C.card, color: exEntries.length ? C.accentText : C.faint, fontSize: 14, fontWeight: 800, cursor: exEntries.length ? "pointer" : "default" } }, "Save correction"))));
-}
-
-
 /* B891 — chart order is a display preference, not a prescription or performance edit.
    Pinned exercise IDs retain their order across history refreshes and app restarts. */
 function ChartFavoritesManager({ trends, favorites, onToggle, onMove }) {
@@ -15404,6 +15315,8 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
     const [detail, setDetail] = useState(null);
     const [openSession, setOpenSession] = useState(() => navigationMemory?.openSession && history.some(h => h.id === navigationMemory.openSession) ? navigationMemory.openSession : null);
     const [editSession, setEditSession] = useState(null); // session being corrected in the full history editor
+    const historyRoot = useRef(null);
+    const editSessionKey = useRef(0); // each opening owns a fresh draft, including interrupted exit motion
     const [groupBy, setGroupBy] = useState(() => navigationMemory?.groupBy || "cycle"); // "cycle" | "month" — see the section list below
     const [sessionQuery, setSessionQuery] = useState(() => navigationMemory?.sessionQuery || "");
     const [sessionProgram, setSessionProgram] = useState(() => history.some(h => String(h.programId || "none") === navigationMemory?.sessionProgram) ? navigationMemory.sessionProgram : "all");
@@ -15531,7 +15444,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
             sections: [{ key: g.key + ":all", label: null, count: g.count, items: g.items }]
         }));
     }, [groupBy, cycleGroups, visibleHistory, unit]);
-    return (_jsxs("div", { className: "wpb-page-shell wpb-progress", children: [
+    return (_jsxs("div", { ref: historyRoot, className: "wpb-page-shell wpb-progress", children: [
         _jsxs("div", { className: "wpb-progress-chrome", children: [
             embedded ? _jsx(UiRootHeader, { title: "Progress", titleClassName: "wpb-progress-title" }) :
                 _jsxs(UiHeader, { className: "wpb-page-header wpb-history-header", children: [
@@ -15566,7 +15479,7 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
                                                 // The logged lifts for this session, in the order they were performed.
                                                 const loggedExercises = Object.entries(h.perf || {})
                                                     .map(([id, p]) => ({ id, ex: EX_BY_ID[id] || { name: p?.name || id, part: null }, p: p || {} }));
-                                                return (_jsxs("div", { "data-history-id": h.id, "data-open": isOpen ? "1" : "0", className: "wpb-render-auto wpb-history-session",  children: [_jsx("div", { className: "wpb-history-session-head", children: _jsxs("button", { "aria-expanded": isOpen, "aria-label": `${h.dayLabel || "Workout"} · ${new Date(h.date).toLocaleDateString()} · ${h.setsDone || 0} completed sets`, onClick: () => setOpenSession(isOpen ? null : h.id), className: "pressable wpb-history-session-toggle",  children: [_jsxs("div", { className: "wpb-history-date",  children: [_jsx("span", { className: "mono wpb-history-date-day",  children: new Date(h.date).getDate() }), _jsx("span", { className: "wpb-history-date-month", children: new Date(h.date).toLocaleDateString(undefined, { month: "short" }) })] }), _jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-progress-item-title", children: h.dayLabel || "Workout" }), _jsxs("div", { className: "mono wpb-history-session-total", children: [h.setsDone || 0, " sets", Number(h.durationMin) > 0 ? ` · ${Math.round(Number(h.durationMin))} min` : "", Number(h.volume) > 0 ? ` · ${Number(h.volume).toLocaleString()} ${hUnit}` : ""] }), _jsx("div", { className: "wpb-progress-item-subtitle", children: h.programName || "Saved workout" })] }), _jsx(ChevronDown, { size: 18, color: C.muted, className: "wpb-history-session-chevron" })] }) }), isOpen && (_jsxs("div", { className: "wpb-history-session-detail",  children: [h.sessionNote && _jsxs("div", { className: "wpb-history-session-note", children: [_jsx("strong", { children: "Session note" }), _jsx("div", { children: h.sessionNote })] }),_jsxs("div", { className: "wpb-history-detail-head",  children: [_jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-history-detail-title", children: h.dayLabel || "Workout" }), _jsx("div", { className: "wpb-history-detail-date", children: new Date(h.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) })] }), _jsxs("div", { role: "group", "aria-label": "Workout actions", className: "wpb-history-actions",  children: [_jsx("button", { onClick: () => shareSession(h, C, history), title: "Share this workout", "aria-label": `Share ${h.dayLabel}`, className: "pressable hit wpb-history-share",  children: _jsx(Share2, { size: 17 }) }), onRepeat && (_jsx("button", { "aria-label": "Repeat this workout", onClick: () => onRepeat(h), title: "Repeat this workout", className: "pressable hit wpb-history-repeat",  children: _jsx(RefreshCw, { size: 17 }) })), onEditEntry && (_jsx("button", { type: "button", "aria-label": `Edit ${h.dayLabel || "workout"}`, title: "Correct workout log", onClick: () => setEditSession(h.id), className: "pressable hit wpb-history-edit",  children: _jsx(Pencil, { size: 17 }) })), onDeleteEntry && (_jsx("button", { type: "button", "aria-label": `Delete ${h.dayLabel || "workout"}`, title: "Delete workout", "data-haptic": "medium", onClick: () => onDeleteEntry(h.id), className: "pressable hit wpb-danger-icon wpb-history-delete",  children: _jsx(Trash2, { size: 17 }) }))] })] }), editSession === h.id && onEditEntry ? _jsx(HistoryEditSheet, { entry: h, unit: h.unit || unit, onClose: () => setEditSession(null), onSave: corrected => { onEditEntry(h.id, corrected); setEditSession(null); } }) : null, loggedExercises.length === 0 ? (_jsx("div", { className: "wpb-history-no-detail", children: "No per-set detail was saved for this session." })) : loggedExercises.map(({ id, ex, p }) => {
+                                                return (_jsxs("div", { "data-history-id": h.id, "data-open": isOpen ? "1" : "0", className: "wpb-render-auto wpb-history-session",  children: [_jsx("div", { className: "wpb-history-session-head", children: _jsxs("button", { "aria-expanded": isOpen, "aria-label": `${h.dayLabel || "Workout"} · ${new Date(h.date).toLocaleDateString()} · ${h.setsDone || 0} completed sets`, onClick: () => setOpenSession(isOpen ? null : h.id), className: "pressable wpb-history-session-toggle",  children: [_jsxs("div", { className: "wpb-history-date",  children: [_jsx("span", { className: "mono wpb-history-date-day",  children: new Date(h.date).getDate() }), _jsx("span", { className: "wpb-history-date-month", children: new Date(h.date).toLocaleDateString(undefined, { month: "short" }) })] }), _jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-progress-item-title", children: h.dayLabel || "Workout" }), _jsxs("div", { className: "mono wpb-history-session-total", children: [h.setsDone || 0, " sets", Number(h.durationMin) > 0 ? ` · ${Math.round(Number(h.durationMin))} min` : "", Number(h.volume) > 0 ? ` · ${Number(h.volume).toLocaleString()} ${hUnit}` : ""] }), _jsx("div", { className: "wpb-progress-item-subtitle", children: h.programName || "Saved workout" })] }), _jsx(ChevronDown, { size: 18, color: C.muted, className: "wpb-history-session-chevron" })] }) }), isOpen && (_jsxs("div", { className: "wpb-history-session-detail",  children: [h.sessionNote && _jsxs("div", { className: "wpb-history-session-note", children: [_jsx("strong", { children: "Session note" }), _jsx("div", { children: h.sessionNote })] }),_jsxs("div", { className: "wpb-history-detail-head",  children: [_jsxs("div", { className: "wpb-progress-grow", children: [_jsx("div", { className: "wpb-history-detail-title", children: h.dayLabel || "Workout" }), _jsx("div", { className: "wpb-history-detail-date", children: new Date(h.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) })] }), _jsxs("div", { role: "group", "aria-label": "Workout actions", className: "wpb-history-actions",  children: [_jsx("button", { onClick: () => shareSession(h, C, history), title: "Share this workout", "aria-label": `Share ${h.dayLabel}`, className: "pressable hit wpb-history-share",  children: _jsx(Share2, { size: 17 }) }), onRepeat && (_jsx("button", { "aria-label": "Repeat this workout", onClick: () => onRepeat(h), title: "Repeat this workout", className: "pressable hit wpb-history-repeat",  children: _jsx(RefreshCw, { size: 17 }) })), onEditEntry && (_jsx("button", { type: "button", "aria-label": `Edit ${h.dayLabel || "workout"}`, title: "Correct workout log", onClick: () => { editSessionKey.current++; setEditSession(h.id); }, className: "pressable hit wpb-history-edit",  children: _jsx(Pencil, { size: 17 }) })), onDeleteEntry && (_jsx("button", { type: "button", "aria-label": `Delete ${h.dayLabel || "workout"}`, title: "Delete workout", "data-haptic": "medium", onClick: () => onDeleteEntry(h.id), className: "pressable hit wpb-danger-icon wpb-history-delete",  children: _jsx(Trash2, { size: 17 }) }))] })] }), _jsx(Exit, { when: editSession === h.id && !!onEditEntry, portalTarget: historyRoot.current?.closest(".wpb"), children: editSession === h.id && onEditEntry ? _jsx(HistoryEditSheet, { entry: h, unit: h.unit || unit, sheetDragRef, selectNumericInput, onClose: () => setEditSession(null), onSave: corrected => { onEditEntry(h.id, corrected); setEditSession(null); } }, editSessionKey.current) : null }), loggedExercises.length === 0 ? (_jsx("div", { className: "wpb-history-no-detail", children: "No per-set detail was saved for this session." })) : loggedExercises.map(({ id, ex, p }) => {
                                                                     // Prefer the full per-set array; fall back to the summary weight×reps for
                                                                     // older logs that predate per-set storage.
                                                                     const sets = (p.sets && p.sets.length) ? p.sets : (p.weight != null ? [{ w: p.weight, r: p.reps }] : []);
@@ -17703,9 +17616,8 @@ function ProgramSwitcherSheet({ saved, cycles, history, activeId, onPick, onClos
     }, [saved, cycles, history, activeId]);
     const needle = q.trim().toLowerCase();
     const shown = needle ? rows.filter(r => r.name.toLowerCase().includes(needle) || (r.cycleName || "").toLowerCase().includes(needle)) : rows;
-    return (_jsx("div", { onClick: onClose, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-switcher-sheet", style: { width: "100%", maxHeight: "90%", overflowY: "auto", background: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "12px 16px calc(env(safe-area-inset-bottom) + 20px)" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, color: C.text }, children: "Switch program" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: "Your next workout comes from whichever is active." })] }), _jsx("button", { onClick: onClose, className: "pressable", style: { flexShrink: 0, border: `1px solid ${C.border}`, background: "none", color: C.text, borderRadius: 12, padding: "7px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Done" })] }), rows.length > 6 && (_jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "Search programs\u2026", "aria-label": "Search programs", className: "wpb-switcher-search", style: { width: "100%", boxSizing: "border-box", margin: "10px 0 4px", padding: "10px 12px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15 } })), _jsxs("div", { style: { marginTop: 8 }, children: [shown.map(r => (_jsxs("button", { onClick: () => { if (r.active || r.lockedPreview)
-                                return; onClose(); onPick(r.id); }, "aria-label": r.active ? `${r.name}, currently active` : r.lockedPreview ? `${r.name}, locked cycle phase` : `Switch to ${r.name}`, "data-state": r.active ? "active" : r.lockedPreview ? "locked" : "available", disabled: r.active || r.lockedPreview, className: `wpb-switcher-row ${r.active || r.lockedPreview ? "" : "pressable"}`, style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 12, marginBottom: 8, padding: "13px 14px", borderRadius: 16,
-                                background: r.active ? C.accentDim : C.card, border: `1px solid ${r.active ? C.accent + "66" : C.border}`, color: C.text, cursor: r.active || r.lockedPreview ? "default" : "pointer", opacity: r.lockedPreview ? .68 : 1 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6 }, children: [_jsx("span", { style: { fontSize: 15, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: r.name }), r.active && _jsx("span", { className: "mono", style: { fontSize: 11, fontWeight: 700, letterSpacing: .5, color: C.accentInk, border: `1px solid ${C.accent}66`, borderRadius: 8, padding: "1px 5px", flexShrink: 0 }, children: "Active" }), r.lockedPreview && _jsx("span", { className: "mono", style: { fontSize: 10, fontWeight: 700, letterSpacing: .4, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 8, padding: "1px 5px", flexShrink: 0 }, children: "Adapts later" })] }), r.cycleName && (_jsxs("div", { className: "mono", style: { fontSize: 11, color: C.accentInk, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [r.cycleName, r.blockLabel ? ` · ${r.blockLabel}` : ""] })), _jsxs("div", { className: "mono", style: { fontSize: 11, color: C.faint, marginTop: 2 }, children: [r.days, "\u00D7/wk \u00B7 ", r.weeks, " wk", r.total ? ` · ${r.done}/${r.total} done` : ""] })] }), r.total > 0 && (_jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 700, color: r.pct > 0 ? C.accentInk : C.faint, flexShrink: 0 }, children: [r.pct, "%"] })), !r.active && _jsx(ChevronRight, { size: 16, color: C.muted, style: { flexShrink: 0 } })] }, r.id))), !shown.length && _jsxs("div", { style: { padding: "22px 4px", textAlign: "center", color: C.faint, fontSize: 15 }, children: ["No programs match \u201C", q, "\u201D."] })] })] }) }));
+    return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-selection-backdrop", children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-switcher-sheet wpb-selection-sheet", children: [_jsxs("div", { className: "wpb-selection-heading", children: [_jsxs("div", { className: "wpb-selection-copy", children: [_jsx("div", { className: "wpb-selection-title", children: "Switch program" }), _jsx("div", { className: "wpb-selection-intro", children: "Your next workout comes from whichever is active." })] }), _jsx("button", { onClick: onClose, className: "pressable wpb-switcher-done", children: "Done" })] }), rows.length > 6 && (_jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "Search programs\u2026", "aria-label": "Search programs", className: "wpb-switcher-search" })), _jsxs("div", { className: "wpb-switcher-list", children: [shown.map(r => (_jsxs("button", { onClick: () => { if (r.active || r.lockedPreview)
+                                return; onClose(); onPick(r.id); }, "aria-label": r.active ? `${r.name}, currently active` : r.lockedPreview ? `${r.name}, locked cycle phase` : `Switch to ${r.name}`, "data-state": r.active ? "active" : r.lockedPreview ? "locked" : "available", disabled: r.active || r.lockedPreview, className: `wpb-switcher-row ${r.active || r.lockedPreview ? "" : "pressable"}`, children: [_jsxs("div", { className: "wpb-selection-copy", children: [_jsxs("div", { className: "wpb-switcher-name-row", children: [_jsx("span", { className: "wpb-switcher-name", children: r.name }), r.active && _jsx("span", { className: "mono wpb-switcher-active", children: "Active" }), r.lockedPreview && _jsx("span", { className: "mono wpb-switcher-locked", children: "Adapts later" })] }), r.cycleName && (_jsxs("div", { className: "mono wpb-switcher-cycle", children: [r.cycleName, r.blockLabel ? ` · ${r.blockLabel}` : ""] })), _jsxs("div", { className: "mono wpb-switcher-dose", children: [r.days, "\u00D7/wk \u00B7 ", r.weeks, " wk", r.total ? ` · ${r.done}/${r.total} done` : ""] })] }), r.total > 0 && (_jsxs("div", { className: "mono wpb-switcher-progress", "data-has-progress": r.pct > 0, children: [r.pct, "%"] })), !r.active && _jsx(ChevronRight, { size: 16, color: C.muted, className: "wpb-selection-chevron" })] }, r.id))), !shown.length && _jsxs("div", { className: "wpb-switcher-empty", children: ["No programs match \u201C", q, "\u201D."] })] })] }) }));
 }
 function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
     const [list, setList] = useState(() => gyms.map(g => ({ ...g, equipment: [...g.equipment] })));
@@ -17740,9 +17652,9 @@ function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
             setOpenId(null);
     };
     const commit = () => { const n = normalizeGyms(list, active); onSave(n.gyms, n.activeGymId, tombed); onClose(); };
-    return (_jsx("div", { onClick: onClose, className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-gym-sheet", style: { width: "100%", maxHeight: "90%", overflowY: "auto", background: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 24px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { "data-dialog-title": true, style: { fontSize: 18, fontWeight: 800, letterSpacing: -0.3 }, children: "Your gyms" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2 }, children: "Programs are built from the equipment of whichever gym is selected." })] }), _jsx("button", { onClick: commit, className: "pressable wpb-primary-action wpb-gym-done", style: { border: "none", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, padding: "9px 16px", borderRadius: 12, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }, children: "Done" })] }), list.map(g => {
+    return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-selection-backdrop", children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-gym-sheet wpb-selection-sheet", children: [_jsxs("div", { className: "wpb-selection-heading", children: [_jsxs("div", { className: "wpb-selection-copy", children: [_jsx("div", { "data-dialog-title": true, className: "wpb-gym-title", children: "Your gyms" }), _jsx("div", { className: "wpb-selection-intro", children: "Programs are built from the equipment of whichever gym is selected." })] }), _jsx("button", { onClick: commit, className: "pressable wpb-primary-action wpb-gym-done", children: "Done" })] }), list.map(g => {
                     const on = g.id === active, open = g.id === openId;
-                    return (_jsxs("div", { className: "wpb-gym-card", style: { marginTop: 12, borderRadius: 16, background: C.card, overflow: "hidden" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "13px 14px" }, children: [_jsx("button", { onClick: () => setActive(g.id), "aria-label": `Use ${g.name}`, className: "pressable hit", style: { flexShrink: 0, width: 20, height: 20, borderRadius: 999, cursor: "pointer", border: `2px solid ${on ? C.accent : C.border}`, background: on ? C.accent : "none", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }, children: on && _jsx(Check, { size: 12, color: C.accentText, strokeWidth: 3.5 }) }), _jsxs("button", { onClick: () => setOpenId(open ? null : g.id), className: "pressable", style: { flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", color: C.text, cursor: "pointer", padding: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: g.name }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 1 }, children: g.equipment.length ? `${g.equipment.length} item${g.equipment.length === 1 ? "" : "s"}` : "Bodyweight only" })] }), _jsx(ChevronRight, { size: 16, color: C.faint, style: { transform: open ? "rotate(90deg)" : "none", transition: "transform .18s" } })] }), open && (_jsxs("div", { style: { padding: "0 14px 14px", borderTop: `1px solid ${C.borderSoft}` }, children: [_jsx("input", { "aria-label": "Gym name", value: g.name, onChange: e => patch(g.id, { name: e.target.value.slice(0, 40) }), placeholder: "Gym name", style: { width: "100%", marginTop: 12, background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 12px", color: C.text, fontSize: 15, fontFamily: "inherit", outline: "none" } }), _jsx("div", { className: "wpb-hscroll", style: { display: "flex", gap: 6, overflowX: "auto", marginTop: 8, paddingBottom: 2 }, children: GYM_PRESETS.map(pr => (_jsx("button", { onClick: () => patch(g.id, { equipment: [...pr.equipment] }), className: "pressable wpb-filter-chip", style: { flexShrink: 0, padding: "7px 12px", borderRadius: 999, border: `1px solid ${C.border}`, background: C.bg2, color: C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }, children: pr.name }, pr.key))) }), _jsx("input", { "aria-label": "Filter equipment by name", value: eqQuery, onChange: e => setEqQuery(e.target.value), placeholder: "Filter equipment by name", style: { width: "100%", marginTop: 8, background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "9px 12px", color: C.text, fontSize: 15, fontFamily: "inherit", outline: "none" } }), EQUIP_CATS.map(cat => {
+                    return (_jsxs("div", { className: "wpb-gym-card", children: [_jsxs("div", { className: "wpb-gym-card-heading", children: [_jsx("button", { onClick: () => setActive(g.id), "aria-label": `Use ${g.name}`, className: "pressable hit wpb-gym-select", "aria-pressed": on, children: on && _jsx(Check, { size: 12, color: C.accentText, strokeWidth: 3.5 }) }), _jsxs("button", { onClick: () => setOpenId(open ? null : g.id), className: "pressable wpb-gym-expand", "aria-expanded": open, children: [_jsx("div", { className: "wpb-gym-name", children: g.name }), _jsx("div", { className: "wpb-gym-summary", children: g.equipment.length ? `${g.equipment.length} item${g.equipment.length === 1 ? "" : "s"}` : "Bodyweight only" })] }), _jsx(ChevronRight, { size: 16, color: C.faint, className: "wpb-gym-chevron", "data-expanded": open })] }), open && (_jsxs("div", { className: "wpb-gym-body", children: [_jsx("input", { "aria-label": "Gym name", value: g.name, onChange: e => patch(g.id, { name: e.target.value.slice(0, 40) }), placeholder: "Gym name", className: "wpb-gym-name-field" }), _jsx("div", { className: "wpb-hscroll wpb-gym-presets", children: GYM_PRESETS.map(pr => (_jsx("button", { onClick: () => patch(g.id, { equipment: [...pr.equipment] }), className: "pressable wpb-filter-chip wpb-gym-preset", children: pr.name }, pr.key))) }), _jsx("input", { "aria-label": "Filter equipment by name", value: eqQuery, onChange: e => setEqQuery(e.target.value), placeholder: "Filter equipment by name", className: "wpb-gym-filter" }), EQUIP_CATS.map(cat => {
                                         /* Sorted by name within the category. Machines is 24 entries in insertion order,
                                            which put "Hip Abduction" twelfth and "Hip Adduction" dead last — twelve rows
                                            apart, with near-identical labels. Scanning for one of them you find the other
@@ -17754,29 +17666,28 @@ function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
                                         if (!items.length)
                                             return null;
                                         const allOn = items.every(e => g.equipment.includes(e.id));
-                                        return (_jsxs("div", { style: { marginTop: 12 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }, children: [_jsx("div", { style: { ...eyebrow(), flex: 1.5 }, children: cat }), _jsx("button", { onClick: () => patch(g.id, { equipment: allOn
+                                        return (_jsxs("div", { className: "wpb-gym-section", children: [_jsxs("div", { className: "wpb-gym-section-heading", children: [_jsx("div", { className: "wpb-gym-section-label", children: cat }), _jsx("button", { onClick: () => patch(g.id, { equipment: allOn
                                                                     ? g.equipment.filter(x => !items.some(e => e.id === x))
-                                                                    : [...new Set([...g.equipment, ...items.map(e => e.id)])] }), className: "pressable", style: { background: "none", border: "none", color: C.accentInk, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0 }, children: allOn ? "Clear all" : "Select all" })] }), _jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: items.map(e => {
+                                                                    : [...new Set([...g.equipment, ...items.map(e => e.id)])] }), className: "pressable wpb-gym-select-all", children: allOn ? "Clear all" : "Select all" })] }), _jsx("div", { className: "wpb-gym-choices", children: items.map(e => {
                                                         const has = g.equipment.includes(e.id);
-                                                        return (_jsx("button", { onClick: () => toggleEq(g, e.id), "aria-pressed": has, className: "pressable wpb-filter-chip wpb-gym-equipment-chip", style: { padding: "7px 12px", borderRadius: 999, cursor: "pointer", fontSize: 13, fontWeight: 600,
-                                                                border: `1px solid ${has ? C.accent : C.border}`, background: has ? C.accentDim : "none", color: has ? C.accentInk : C.muted }, children: e.label }, e.id));
+                                                        return (_jsx("button", { onClick: () => toggleEq(g, e.id), "aria-pressed": has, className: "pressable wpb-filter-chip wpb-gym-equipment-chip", children: e.label }, e.id));
                                                     }) })] }, cat));
                                     }), _jsx(NoRackToggle, { equipment: g.equipment, onChange: (equipment) => patch(g.id, { equipment }) }),
-                                    (g.equipment.includes("barbell") || g.equipment.includes("smith")) && (_jsxs("div", { className: "wpb-gym-bar-masses", style: { marginTop: 14, padding: "12px 12px 10px", borderRadius: 12, background: C.bg2 }, children: [
-                                        _jsx("div", { style: { ...eyebrow(), marginBottom: 3 }, children: "Empty bar weight" }),
-                                        _jsx("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.45, marginBottom: 9 }, children: "Used for plates per side. Log the total weight including the bar. Smith bars can be counterbalanced." }),
+                                    (g.equipment.includes("barbell") || g.equipment.includes("smith")) && (_jsxs("div", { className: "wpb-gym-bar-masses", children: [
+                                        _jsx("div", { className: "wpb-gym-bar-label", children: "Empty bar weight" }),
+                                        _jsx("div", { className: "wpb-gym-bar-description", children: "Used for plates per side. Log the total weight including the bar. Smith bars can be counterbalanced." }),
                                         ["barbell", "smith"].filter(kind => g.equipment.includes(kind)).map(kind => {
                                             const saved = g.barWeights || {};
                                             const measure = saved.unit === "kg" ? "kg" : "lb";
                                             const defaultMass = BARS[kind][measure];
-                                            return _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [
-                                                _jsx("label", { htmlFor: `gym-${g.id}-${kind}-bar-weight`, style: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600 }, children: kind === "smith" ? "Smith bar" : "Barbell" }),
+                                            return _jsxs("div", { className: "wpb-gym-inline", children: [
+                                                _jsx("label", { htmlFor: `gym-${g.id}-${kind}-bar-weight`, className: "wpb-gym-bar-name", children: kind === "smith" ? "Smith bar" : "Barbell" }),
                                                 _jsx("input", { id: `gym-${g.id}-${kind}-bar-weight`, "aria-label": `${kind === "smith" ? "Smith" : "Barbell"} empty bar weight`, inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput,
                                                     value: saved[kind] ?? "", placeholder: String(defaultMass),
                                                     onChange: ev => { const raw = ev.target.value.replace(/[^0-9.]/g, "").slice(0, 8);
                                                         patch(g.id, { barWeights: { ...saved, unit: measure, [kind]: raw } }); },
-                                                    style: { width: 88, textAlign: "right", background: C.card, border: `1px solid ${C.border}`, borderRadius: 9, padding: "9px 10px", color: C.text, fontSize: 15, fontFamily: "inherit" } }),
-                                                _jsx("span", { style: { color: C.muted, fontSize: 13, width: 21 }, children: measure })
+                                                    className: "wpb-gym-bar-field" }),
+                                                _jsx("span", { className: "wpb-gym-bar-measure", children: measure })
                                             ] }, kind);
                                         }),
                                         _jsx("button", { className: "pressable wpb-gym-bar-unit", "aria-label": "Change bar weight units", onClick: () => {
@@ -17788,11 +17699,11 @@ function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
                                                     converted[kind] = String(Math.round(Number(previous[kind]) * factor * 1000) / 1000);
                                             }
                                             patch(g.id, { barWeights: converted });
-                                        }, style: { border: "none", padding: "4px 0", background: "transparent", color: C.accentInk, fontSize: 12, fontWeight: 650 }, children: `Use ${(g.barWeights?.unit === "kg" ? "lb" : "kg")} instead` })
+                                        }, children: `Use ${(g.barWeights?.unit === "kg" ? "lb" : "kg")} instead` })
                                     ] })),
-                                    !!g.equipment.length && (_jsxs("div", { style: { marginTop: 12 }, children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Heaviest available" }), INVENTORY_KEYS.filter(k => k.match(g.equipment)).map(k => {
+                                    !!g.equipment.length && (_jsxs("div", { className: "wpb-gym-section", children: [_jsx("div", { className: "wpb-gym-limit-label", children: "Heaviest available" }), INVENTORY_KEYS.filter(k => k.match(g.equipment)).map(k => {
                                                 const inv = (g.inventory || {})[k.key] || [];
-                                                return (_jsxs("div", { style: { marginBottom: 12, padding: "10px 12px", borderRadius: 12, background: C.bg2 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 600, flex: 1 }, children: k.label }), _jsx("div", { style: { fontSize: 11, color: C.faint }, children: k.sub })] }), _jsx("div", { style: { fontSize: 13, color: inv.length ? C.muted : C.faint, margin: "4px 0 8px", lineHeight: 1.45 }, children: inv.length ? `${inv.join(", ")} ${g.limitUnit || "kg"}` : "No list set — the app assumes its usual increment." }), _jsxs("div", { className: "wpb-hscroll", style: { display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }, children: [(RACK_PRESETS[k.key] || []).filter(pr => pr.unit === (g.limitUnit || "kg")).map(pr => (_jsx("button", { onClick: () => patch(g.id, { inventory: { ...(g.inventory || {}), [k.key]: [...pr.v] } }), className: "pressable wpb-filter-chip wpb-gym-rack-preset", style: { flexShrink: 0, padding: "6px 11px", borderRadius: 999, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }, children: pr.name }, pr.name))), !!inv.length && (_jsx("button", { onClick: () => { const n = { ...(g.inventory || {}) }; delete n[k.key]; patch(g.id, { inventory: n }); }, className: "pressable wpb-gym-clear-action", style: { flexShrink: 0, padding: "6px 11px", borderRadius: 999, border: `1px dashed ${C.border}`, background: "none", color: C.faint, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: "Clear" }))] }), _jsx("input", { defaultValue: inv.join(", "), placeholder: "e.g. 5, 10, 15, 20, 22.5", onBlur: e => {
+                                                return (_jsxs("div", { className: "wpb-gym-inventory", children: [_jsxs("div", { className: "wpb-gym-inventory-heading", children: [_jsx("div", { className: "wpb-gym-inventory-name", children: k.label }), _jsx("div", { className: "wpb-gym-inventory-hint", children: k.sub })] }), _jsx("div", { className: "wpb-gym-inventory-summary", "data-has-inventory": !!inv.length, children: inv.length ? `${inv.join(", ")} ${g.limitUnit || "kg"}` : "No list set — the app assumes its usual increment." }), _jsxs("div", { className: "wpb-hscroll wpb-gym-racks", children: [(RACK_PRESETS[k.key] || []).filter(pr => pr.unit === (g.limitUnit || "kg")).map(pr => (_jsx("button", { onClick: () => patch(g.id, { inventory: { ...(g.inventory || {}), [k.key]: [...pr.v] } }), className: "pressable wpb-filter-chip wpb-gym-rack-preset", children: pr.name }, pr.name))), !!inv.length && (_jsx("button", { onClick: () => { const n = { ...(g.inventory || {}) }; delete n[k.key]; patch(g.id, { inventory: n }); }, className: "pressable wpb-gym-clear-action", children: "Clear" }))] }), _jsx("input", { defaultValue: inv.join(", "), placeholder: "e.g. 5, 10, 15, 20, 22.5", onBlur: e => {
                                                                 const list = e.target.value.split(/[,\s]+/).map(Number).filter(v => Number.isFinite(v) && v > 0);
                                                                 const n = { ...(g.inventory || {}) };
                                                                 if (list.length)
@@ -17800,8 +17711,8 @@ function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
                                                                 else
                                                                     delete n[k.key];
                                                                 patch(g.id, { inventory: n });
-                                                            }, style: { width: "100%", marginTop: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 10px", color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" } }, inv.join(","))] }, k.key));
-                                            }), GYM_LIMIT_KEYS.filter(k => k.match(g.equipment) && !((g.inventory || {})[k.key] || []).length).map(k => (_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 500 }, children: k.label }), _jsx("div", { style: { fontSize: 13, color: C.faint }, children: k.sub })] }), _jsx("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: g.limits && g.limits[k.key] != null ? g.limits[k.key] : "", onChange: e => {
+                                                            }, className: "wpb-gym-inventory-field" }, inv.join(","))] }, k.key));
+                                            }), GYM_LIMIT_KEYS.filter(k => k.match(g.equipment) && !((g.inventory || {})[k.key] || []).length).map(k => (_jsxs("div", { className: "wpb-gym-inline", children: [_jsxs("div", { className: "wpb-selection-copy", children: [_jsx("div", { className: "wpb-gym-limit-name", children: k.label }), _jsx("div", { className: "wpb-gym-limit-hint", children: k.sub })] }), _jsx("input", { inputMode: "decimal", onFocus: selectNumericInput, onClick: selectNumericInput, value: g.limits && g.limits[k.key] != null ? g.limits[k.key] : "", onChange: e => {
                                                             const raw = e.target.value.replace(/[^0-9.]/g, "");
                                                             const next = { ...(g.limits || {}) };
                                                             if (raw === "")
@@ -17809,8 +17720,8 @@ function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
                                                             else
                                                                 next[k.key] = Number(raw);
                                                             patch(g.id, { limits: next, limitUnit: g.limitUnit || "kg" });
-                                                        }, placeholder: "\u2014", style: { width: 74, textAlign: "right", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 10px", color: C.text, fontSize: 15, fontFamily: "inherit", outline: "none" } }), _jsx("button", { onClick: () => patch(g.id, { limitUnit: (g.limitUnit || "kg") === "kg" ? "lb" : "kg" }), className: "pressable hit", style: { flexShrink: 0, width: 40, padding: "8px 0", borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg2, color: C.muted, fontSize: 13, fontWeight: 700, cursor: "pointer" }, children: g.limitUnit || "kg" })] }, k.key))), _jsx("div", { style: { fontSize: 13, color: C.faint, lineHeight: 1.5 }, children: "Leave blank for no limit. At the ceiling the app stops asking for more weight and progresses reps instead." })] })), !g.equipment.length && (_jsx("div", { style: { fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.5 }, children: "Nothing selected \u2014 programs here use bodyweight only. That builds real muscle when sets are taken close to failure, but direct arm, rear-delt and calf work stays limited, and the lower body is the hardest thing to keep overloading. A band or a bar closes most of that gap." })), list.length > 1 && (_jsx("button", { onClick: () => removeGym(g.id), className: "pressable", style: { marginTop: 12, background: "none", border: "none", color: C.warn, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 2 }, children: "Delete this gym" }))] }))] }, g.id));
-                }), _jsx("div", { style: { ...eyebrow(), margin: "20px 0 8px" }, children: "Add a gym" }), _jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: GYM_PRESETS.map(pr => (_jsxs("button", { onClick: () => addGym(pr), className: "pressable wpb-gym-add-action", style: { padding: "9px 13px", borderRadius: 999, border: `1px dashed ${C.border}`, background: "none", color: C.muted, fontSize: 13, fontWeight: 600, cursor: "pointer" }, children: ["+ ", pr.name] }, pr.key))) })] }) }));
+                                                        }, placeholder: "\u2014", className: "wpb-gym-limit-field" }), _jsx("button", { onClick: () => patch(g.id, { limitUnit: (g.limitUnit || "kg") === "kg" ? "lb" : "kg" }), className: "pressable hit wpb-gym-limit-unit", children: g.limitUnit || "kg" })] }, k.key))), _jsx("div", { className: "wpb-gym-guidance", children: "Leave blank for no limit. At the ceiling the app stops asking for more weight and progresses reps instead." })] })), !g.equipment.length && (_jsx("div", { className: "wpb-gym-bodyweight-guidance", children: "Nothing selected \u2014 programs here use bodyweight only. That builds real muscle when sets are taken close to failure, but direct arm, rear-delt and calf work stays limited, and the lower body is the hardest thing to keep overloading. A band or a bar closes most of that gap." })), list.length > 1 && (_jsx("button", { onClick: () => removeGym(g.id), className: "pressable wpb-gym-delete", children: "Delete this gym" }))] }))] }, g.id));
+                }), _jsx("div", { className: "wpb-gym-add-label", children: "Add a gym" }), _jsx("div", { className: "wpb-gym-choices", children: GYM_PRESETS.map(pr => (_jsxs("button", { onClick: () => addGym(pr), className: "pressable wpb-gym-add-action", children: ["+ ", pr.name] }, pr.key))) })] }) }));
 }
 /* saved/history/perf are threaded in for the self-test: it now audits the LIFTER'S OWN programs
    against their real logged history, not only a synthetic sweep. */

@@ -21043,7 +21043,7 @@ function App() {
                 setLiveSession(null);
                 return;
             }
-            startSession(lv.sessionLengthPlan ? { ...day, sessionLengthPlan: lv.sessionLengthPlan } : day, lv.weekIndex || 1, prog);
+            startSession(lv.sessionLengthPlan ? { ...day, sessionLengthPlan: lv.sessionLengthPlan } : day, lv.weekIndex || 1, prog, true);
         }
         catch { }
     };
@@ -21064,7 +21064,7 @@ function App() {
         setLiveSession(null);
         setDiscardArmed(false);
     };
-    const startSession = (day, wk, ownerProgram) => {
+    const startSession = (day, wk, ownerProgram, resumeExisting = false) => {
         if (safeStart || !appStorageOwnership.writable()) {
             setAppToast({ msg: 'Exit recovery mode and reopen your saved training before starting a workout.' });
             return;
@@ -21080,7 +21080,9 @@ function App() {
             setAppToast({ msg: "That Pursuit Next block is a future/completed cycle phase. Train the active block; the next phase unlocks after history-aware advancement." });
             return;
         }
-        const targetIssues = programPrescriptionIssues(ownerProgram, day, wk || 1);
+        // An existing workout restores its persisted rows and user-owned values. A
+        // malformed saved plan must prevent new prescriptions, not strand that log.
+        const targetIssues = resumeExisting ? [] : programPrescriptionIssues(ownerProgram, day, wk || 1);
         if (targetIssues.length) {
             setAppToast({ msg: targetIssues[0].message });
             return;

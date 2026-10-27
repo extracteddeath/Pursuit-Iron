@@ -104,6 +104,18 @@ async function verifyManualTargets(browser){
         assert.match(await page.$eval('.wpb-preview-start',n=>n.textContent),/Review targets/);
         await page.locator('.wpb-preview-start').click();await page.waitForSelector('.wpb-program');
         assert.match(await page.$eval('.wpb-program input[aria-label^="Reps"]',n=>n.value),/10-20oops/);
+        const recovery={schemaVersion:2,programId:bad.id,dayId:'upper',weekIndex:1,dayExSig:'bb-bench|inc-curl',exIdx:0,elapsedMs:120000,runPaused:true,
+            data:bad.days[0].exercises.map((id,slot)=>({id,slot,sets:Array.from({length:slot?2:3},()=>({weight:slot?'30':'190',reps:slot?'10':'5',done:false,auto:false,valueOwner:'user',target:{w:slot?'30':'190',reps:slot?'10-15':'6-8',rir:'2'}}))}))};
+        await page.evaluate(live=>localStorage.setItem('wpb:live',JSON.stringify(live)),recovery);
+        await page.reload({waitUntil:'networkidle0'});
+        await page.locator('.wpb-live-dock button[aria-label="Resume workout"]').click();
+        await page.waitForSelector('.wpb-workout',{timeout:10000});
+        assert.equal(await page.$eval('[data-testid="set-0-0"] input[aria-label="weight"]',n=>n.value),'190');
+        assert.equal(await page.$eval('[data-testid="set-0-0"] input[aria-label="reps"]',n=>n.value),'5');
+        const afterRecovery=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data);
+        assert.deepEqual(afterRecovery.map(ex=>ex.sets.map(set=>[set.weight,set.reps,set.done])),recovery.data.map(ex=>ex.sets.map(set=>[set.weight,set.reps,set.done])),
+            'A malformed current plan cannot block or rewrite an existing workout');
+
     }finally{await context.close();}
 }
 const importMap = fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
@@ -120,7 +132,7 @@ await new Promise(resolve=>server.listen(8776,'127.0.0.1',resolve));let browser;
 try {
     browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
     await verifyManualTargets(browser);
-    console.log('PASS M394 browser: staged/invalid targets, pending-commit guards, dark/light 320–1280px and actual 200% text, weekly arrays, review/save/reload, Preview/live parity and malformed-target repair/refusal.');
+    console.log('PASS M394 browser: staged/invalid targets, pending-commit guards, dark/light 320–1280px and actual 200% text, weekly arrays, review/save/reload, Preview/live parity and malformed-target repair/refusal and protected recovery from an invalid current plan.');
     // Exercise the authored settings transaction through the actual router and review/save owner.
     const settingsContext=await browser.createBrowserContext(),settingsPage=await settingsContext.newPage(),settingsErrors=[];
     settingsPage.on('pageerror',e=>settingsErrors.push(e.message));

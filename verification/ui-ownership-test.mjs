@@ -97,7 +97,7 @@ function guard(cssText, appText) {
 const report = guard(css, presentationSource);
 assert.ok(!manualTargets.includes('style:') && !manualTargets.includes('localStorage'), 'Manual target text is local and its view is class-owned');
 assert.ok(manualTargets.includes('parseManualTargets(draft)') && app.includes('withManualProgramTargets(p,'), 'Manual targets use the canonical validator and atomic writer');
-assert.ok(app.includes('programPrescriptionIssues(ownerProgram, day, wk || 1)'), 'All workout launches must reject an invalid authored target');
+assert.ok(app.includes('resumeExisting ? [] : programPrescriptionIssues(ownerProgram, day, wk || 1)'), 'New workouts reject invalid targets while existing logs remain resumable');
 
 assert.ok(!historyEditor.includes('style:') && !historyEditor.includes('localStorage'), 'History correction has one class-owned view and no private persistence');
 assert.ok(!app.includes('function HistoryEditSheet('), 'History correction must not retain an inline shadow renderer');

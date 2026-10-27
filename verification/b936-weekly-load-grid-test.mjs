@@ -37,4 +37,24 @@ const coarse = suggest(last, nextWeek, { equipment: { available: ['machine'], lo
 } } });
 assert.equal(coarse.weight, 45, 'a meaningful whole-notch reduction is not converted into a hold');
 
-console.log('PASS B936: prevent near-grid phantom reductions while preserving larger, unproven and coarse-inventory changes.');
+// The hold is expressed in the prescription's display unit: real 0.25 kg
+// microloading is valid, but the absolute 0.5 lb bound must not bypass the
+// stricter two-percent cap for lighter exercises.
+const kgLog = { equipment: { available: ['machine'], loading: {
+    unit: 'kg', exerciseOverrides: { [exerciseId]: { minimum: 0, increment: 0.25 } }
+} } };
+const kgSets = { ...last, weight: 25, sets: last.sets.map(set => ({ ...set, w: 25 })) };
+const kgHold = represcribeForWeek(exerciseId, nextWeek, previousWeek, kgSets, kgLog, 'kg', 'kg');
+assert.equal(kgHold.weight, 25, 'a supported 0.25 kg weekly-grid artifact retains completed 25 kg work');
+assert.match(kgHold.reason, /keep the last successfully completed load/);
+
+const lightSets = { ...last, weight: 10, sets: last.sets.map(set => ({ ...set, w: 10 })) };
+const lightRecalibration = suggest(lightSets);
+assert.equal(lightRecalibration.weight, 9.5, 'a 0.5 lb decline is meaningful at a 10 lb working weight');
+assert.doesNotMatch(lightRecalibration.reason, /keep the last successfully completed load/);
+
+const unfinished = suggest({ ...last, sets: last.sets.map(set => ({ ...set, done: false })) });
+assert.doesNotMatch(unfinished.reason, /keep the last successfully completed load/,
+    'a fallback summary without completed set evidence does not earn a hold');
+
+console.log('PASS B936: prevent near-grid phantom reductions while preserving unit boundaries, incomplete evidence and meaningful decreases.');

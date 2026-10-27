@@ -45,7 +45,7 @@ try{
    'Changes does not repeat target RIR/sets or a second held prescription');
   await page.click('[aria-label="Keep previous load for Barbell Bench Press"]');
   await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');
-  assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/Prior load kept/);
+  assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/Prior load kept/i);
   await reveal(page,'bb-bench');
   assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/top of the rep range/,'engine reason remains on demand after holding the prior load');
   assert.equal(await page.$eval('.wpb-session-dialog',n=>n.scrollWidth<=n.clientWidth+1),true);

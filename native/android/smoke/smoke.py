@@ -758,6 +758,23 @@ if tap(r"^\|History$", "history-calendar"):
     if tap(r", \d+ workouts?(, today)?\|", "calendar-day", required=False):
         if not find(r"^\|Showing ", timeout=4):
             FAILS.append("calendar day did not filter the history")
+    # The design's session sheet from the history list: sets by muscle, then Share this session as a card
+    if scroll_to(r"^\|[A-Z][a-z]{2} \d+ · \d+ sets", tries=6, step=600) and tap(r"^\|[A-Z][a-z]{2} \d+ · \d+ sets", "history-sheet"):
+        time.sleep(1.5)
+        if not scroll_to(r"^\|WORKING SETS BY MUSCLE$", tries=4, step=500):
+            FAILS.append("session sheet has no working sets by muscle")
+        if scroll_to(r"Share this session", tries=4, step=500):
+            tap(r"Share this session")
+            if not scroll_to(r"^\|Copy text$", tries=3, step=400):
+                FAILS.append("Share this session shows no card with Copy text")
+            shot("history-share")
+        else:
+            FAILS.append("session sheet has no Share this session")
+        back()
+        time.sleep(1)
+    else:
+        FAILS.append("no session row in the history list")
+    scroll_up_to(r"^\|Trends$", tries=10)
     tap(r"^\|Trends$")
 else:
     FAILS.append("no History tab on Progress")

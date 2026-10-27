@@ -2,6 +2,9 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.i
+import com.pursuitiron.app.ui.common.o
+import com.pursuitiron.app.ui.common.has
 import androidx.compose.foundation.background
 import com.pursuitiron.app.ui.common.fmtNum
 import androidx.compose.foundation.verticalScroll

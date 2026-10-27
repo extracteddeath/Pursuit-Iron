@@ -1,5 +1,6 @@
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.has
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

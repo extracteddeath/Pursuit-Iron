@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.strings
+import com.pursuitiron.app.ui.common.has
 import com.pursuitiron.app.ui.common.sharedElement
 import com.pursuitiron.app.ui.theme.Motion
 

@@ -628,8 +628,16 @@ if scroll_to(r"^\|Recent$", tries=6):
     adb("shell", "input", "swipe", "540", "1500", "540", "1000", "300")
     time.sleep(0.8)
     if tap(r"^\|[A-Z][a-z]{2} \d+ · ", "history-sheet", required=False):
-        scroll_to(r"^\|Correct log$", tries=3)
-        if tap(r"^\|Correct log$", "history-correct"):
+        # The design's session sheet: stats, sets by lift, working sets by muscle, then share as a card
+        if not find(r"^\|WORKING SETS BY MUSCLE$", timeout=3) and not scroll_to(r"^\|WORKING SETS BY MUSCLE$", tries=4, step=500):
+            FAILS.append("session sheet has no working sets by muscle")
+        if scroll_to(r"Share this session", tries=4, step=500):
+            tap(r"Share this session")
+            if not scroll_to(r"^\|Copy text$", tries=3, step=400):
+                FAILS.append("Share this session shows no card with Copy text")
+            shot("history-share")
+        scroll_up_to(r"Correct this log", tries=3)
+        if tap(r"Correct this log", "history-correct"):
             back()
         else:
             back()

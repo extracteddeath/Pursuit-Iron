@@ -26,6 +26,9 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -298,33 +301,112 @@ private fun ReadinessSheet(h: JSONObject) {
 fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     var detail by remember(id) { mutableStateOf<JSONObject?>(null) }
     var editing by remember(id) { mutableStateOf(false) }
+    var sharing by remember(id) { mutableStateOf(false) }
     if (editing) { HistoryEditSheet(vm, id) { editing = false; onClose() }; return }
     androidx.compose.runtime.LaunchedEffect(id) { detail = vm.historyDetail(id) }
     val cs = MaterialTheme.colorScheme
-    ModalBottomSheet(onDismissRequest = onClose) {
+    val shareCtx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // The design's session sheet: date, name, time/sets/volume, PRs, each lift's sets with the top set marked,
+    // working sets by muscle, then Correct this log and Share this session (a card, Copy text or Share…).
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         val d = detail
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (d == null) { Text("Loading…"); return@Column }
-            Kicker(d.s("programName"))
-            Text(d.s("dayLabel"), style = MaterialTheme.typography.headlineSmall)
-            Text(listOfNotNull(d.i("setsDone").takeIf { it > 0 }?.let { "$it sets" }, d.i("durationMin").takeIf { it > 0 }?.let { "$it min" },
-                d.i("volume").takeIf { it > 0 }?.let { "${com.pursuitiron.app.ui.common.fmt1(it / 1000.0)} ${com.pursuitiron.app.ui.common.volUnit(d.s("unit", "kg"))}" }).joinToString(" · "), color = cs.onSurfaceVariant)
-            if (d.s("note").isNotBlank()) PiCard(color = cs.surfaceContainerHigh, radius = 18.dp, padding = 12.dp) { Text(d.s("note")) }
-            d.list("lifts").forEach { l ->
-                PiCard(color = cs.surfaceContainerHigh, radius = 18.dp, padding = 12.dp) {
-                    Text(l.s("name"), style = MaterialTheme.typography.titleSmall)
-                    Text(l.list("sets").filter { !it.b("warm") }.joinToString("   ") { s -> "${s.s("w")}×${s.s("r")}" + if (s.b("sub")) "*" else "" },
-                        style = MaterialTheme.typography.bodyMedium)
+            val u = d.s("unit", "kg")
+            val date = java.util.Date(d.optLong("date"))
+            val isToday = android.text.format.DateUtils.isToday(d.optLong("date"))
+            val kicker = (if (isToday) "TODAY" else java.text.SimpleDateFormat("EEE, MMM d", java.util.Locale.getDefault()).format(date).uppercase()) + (d.s("programName").takeIf { it.isNotBlank() }?.let { " · ${it.uppercase()}" } ?: "")
+            Column(Modifier.padding(horizontal = 4.dp)) {
+                Text(kicker, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(d.s("dayLabel"), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp, lineHeight = 32.sp))
+            }
+            val vol = d.d("volume")
+            val stats = listOf("Time" to (d.i("durationMin").takeIf { it > 0 }?.let { "${it / 60}:${(it % 60).toString().padStart(2, '0')}" } ?: "—"),
+                "Sets" to "${d.i("setsDone")}", "Volume" to (if (vol > 0) "${com.pursuitiron.app.ui.common.fmt1(vol / 1000.0)} ${com.pursuitiron.app.ui.common.volUnit(u)}" else "—"))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                stats.forEach { (k, v) ->
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 12.dp)) {
+                        Text(k, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
+                        Text(v, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.ExtraBold))
+                    }
                 }
             }
-            if (vm.session?.b("active") != true) Button(onClick = { onClose(); vm.repeatWorkout(id) }, modifier = Modifier.fillMaxWidth()) { Text("Repeat this workout") }
-            val shareCtx = LocalContext.current
-            val scope = androidx.compose.runtime.rememberCoroutineScope()
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { editing = true }, modifier = Modifier.weight(1f)) { Text("Correct log") }
-                OutlinedButton(onClick = { scope.launch { vm.shareCard(id)?.let { c -> runCatching { shareWorkoutImage(shareCtx, c, cs) }.onFailure { vm.toast("Couldn't share the image") } } } }, modifier = Modifier.weight(1f)) { Text("Share image") }
+            val prs = d.strings("prs")
+            if (prs.isNotEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.primary).padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(PiIcons.Trophy, null, tint = cs.onPrimary)
+                Column {
+                    Text("${prs.size} new e1RM ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary)
+                    Text(prs.joinToString(" · "), style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onPrimary.copy(alpha = 0.9f))
+                }
             }
-            TextButton(onClick = { vm.deleteHistory(id); onClose() }) {
+            if (d.s("note").isNotBlank()) Text("“${d.s("note")}”", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+            d.list("lifts").forEach { l ->
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(l.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (l.b("pr")) Text("PR", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(cs.primary).padding(horizontal = 8.dp, vertical = 2.dp))
+                        Text(if (l.isNull("e1rm")) "Bodyweight" else "e1RM ${com.pursuitiron.app.ui.common.fmtNum(l.d("e1rm"))} $u", style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
+                    }
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        l.list("sets").forEachIndexed { i, x ->
+                            if (x.b("warm")) return@forEachIndexed
+                            val top = i == l.i("top", -1)
+                            val w = x.d("w"); val lab = (if (x.b("sub")) (if (x.s("kind") == "myo") "M " else "D ") else "") + (if (w > 0) com.pursuitiron.app.ui.common.fmtNum(w) else "BW") + "×" + x.s("r") +
+                                (if (!x.b("sub") && !x.isNull("rir")) " @" + com.pursuitiron.app.ui.common.fmtNum(x.d("rir")) else "")
+                            Text(lab, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = if (top) cs.onPrimaryContainer else cs.onSurface,
+                                modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(if (top) cs.primaryContainer else cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 6.dp))
+                        }
+                    }
+                }
+            }
+            val mus = d.list("muscles")
+            if (mus.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("WORKING SETS BY MUSCLE", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
+                val mx = mus.maxOf { it.i("sets") }.coerceAtLeast(1)
+                mus.forEach { m ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(m.s("label"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.width(84.dp), maxLines = 1)
+                        com.pursuitiron.app.ui.common.ProgressBar(m.i("sets") / mx.toFloat(), Modifier.weight(1f), height = 10.dp)
+                        Text("${m.i("sets")}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), modifier = Modifier.width(24.dp))
+                    }
+                }
+            }
+            if (vm.session?.b("active") != true) FilledTonalButton(onClick = { onClose(); vm.repeatWorkout(id) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Repeat this workout") }
+            OutlinedButton(onClick = { editing = true }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Icon(PiIcons.Pencil, null, Modifier.size(18.dp)); Text("  Correct this log") }
+            androidx.compose.animation.AnimatedContent(sharing, label = "share") { open ->
+                if (!open) Button(onClick = { sharing = true }, modifier = Modifier.fillMaxWidth().height(54.dp)) { Icon(PiIcons.Share, null, Modifier.size(18.dp)); Text("  Share this session", style = MaterialTheme.typography.titleMedium) }
+                else Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(kicker.substringBefore(" · "), style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp), color = cs.onPrimaryContainer.copy(alpha = 0.8f))
+                        Text(d.s("dayLabel"), style = MaterialTheme.typography.headlineMedium.copy(fontSize = 34.sp, lineHeight = 36.sp), color = cs.onPrimaryContainer)
+                        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                            stats.forEach { (k, v) -> Column { Text(v, style = MaterialTheme.typography.titleLarge.copy(fontSize = 26.sp), color = cs.onPrimaryContainer); Text(k, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer.copy(alpha = 0.8f)) } }
+                        }
+                        d.list("lifts").filter { it.i("top", -1) >= 0 }.take(4).forEach { l -> val t = l.list("sets")[l.i("top")]
+                            Row { Text(l.s("name"), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = cs.onPrimaryContainer, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("${com.pursuitiron.app.ui.common.fmtNum(t.d("w"))} × ${t.s("r")}", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold), color = cs.onPrimaryContainer) }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (prs.isNotEmpty()) Text("${prs.size} new e1RM ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary,
+                                modifier = Modifier.clip(CircleShape).background(cs.primary).padding(horizontal = 12.dp, vertical = 6.dp))
+                            Spacer(Modifier.weight(1f))
+                            Text("Logged with Pursuit Iron", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer.copy(alpha = 0.7f))
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilledTonalButton(onClick = {
+                            (shareCtx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager)?.setPrimaryClip(android.content.ClipData.newPlainText("Session", d.s("shareText")))
+                            vm.toast("Session summary copied")
+                        }, modifier = Modifier.weight(1f).height(50.dp)) { Text("Copy text") }
+                        Button(onClick = { scope.launch { vm.shareCard(id)?.let { c -> runCatching { shareWorkoutImage(shareCtx, c, cs) }.onFailure { vm.toast("Couldn't share the image") } } } },
+                            modifier = Modifier.weight(1.3f).height(50.dp)) { Text("Share…") }
+                    }
+                }
+            }
+            TextButton(onClick = { vm.deleteHistory(id); onClose() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Icon(PiIcons.Trash, null, modifier = Modifier.size(18.dp)); Text("  Delete this workout")
             }
         }

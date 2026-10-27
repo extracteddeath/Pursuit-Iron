@@ -1547,10 +1547,27 @@ export function historyGroups({ q = '', days = 'all', programId = 'all', by = 'c
         programs: [...seen.entries()].map(([id, name]) => ({ id, name })),
         groups: groups.map((g) => ({ key: g.key, label: g.label, count: g.count, volume: Math.round(g.volume || 0), items: g.items.map(historyRow) })) };
 }
+/* The design's session sheet: time / sets / volume, the session's e1RM PRs, each lift with its sets (the
+   top set marked) and its e1RM, working sets by muscle, and the share text. */
 export function historyDetail({ id }) {
-    const h = history().find((x) => x.id === id); if (!h) return null;
-    return { ...historyRow(h), note: h.sessionNote || '', lifts: Object.entries(h.perf || {}).map(([eid, p]) => ({ id: eid, name: exName(eid),
-        sets: (p.sets || []).map((s) => ({ w: s.w ?? s.weight ?? null, r: s.r ?? s.reps ?? null, rir: s.rir ?? null, sub: !!s.sub, warm: !!s.warm })) })) };
+    const H = history(), h = H.find((x) => x.id === id); if (!h) return null;
+    const u = h.unit || unit();
+    let prs = []; try { prs = shareCard({ id })?.prs || []; } catch { prs = []; }
+    const muscles = {};
+    const lifts = Object.entries(h.perf || {}).map(([eid, p]) => {
+        const sets = (p.sets || []).map((s) => ({ w: s.w ?? s.weight ?? null, r: s.r ?? s.reps ?? null, rir: s.rirReported === false ? null : (s.rir ?? null), sub: !!s.sub, warm: !!s.warm, kind: s.kind || null }));
+        let top = -1, best = 0;
+        sets.forEach((x, i) => { const w = parseFloat(x.w), r = parseInt(x.r); if (x.warm || !(w > 0 && r > 0)) return; const e = E.e1rm(w, r); if (e > best) { best = e; top = i; } });
+        const part = EX_BY_ID[eid]?.part; if (part) muscles[part] = (muscles[part] || 0) + sets.filter((x) => !x.warm && !x.sub).length;
+        return { id: eid, name: exName(eid), sets, top, e1rm: best > 0 ? Math.round(best * 2) / 2 : null, pr: prs.includes(exName(eid)) };
+    });
+    const muscleRows = Object.entries(muscles).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([part, n]) => ({ part, label: E.PART_LABEL?.[part] || part, sets: n }));
+    const vol = Number(h.volume) || 0;
+    const shareText = [`${h.dayLabel || 'Workout'} — ${new Date(h.date).toDateString()}`,
+        [`${h.setsDone ?? 0} sets`, vol ? `${Math.round(vol / 100) / 10}k ${u}` : null, h.durationMin ? `${h.durationMin} min` : null].filter(Boolean).join(' · '),
+        ...lifts.filter((l) => l.top >= 0).slice(0, 4).map((l) => `${l.name}: ${l.sets[l.top].w} ${u} × ${l.sets[l.top].r}`),
+        ...(prs.length ? [`New PRs: ${prs.join(', ')}`] : [])].join('\n');
+    return { ...historyRow(h), note: h.sessionNote || '', prs, lifts, muscles: muscleRows, shareText };
 }
 /* App.js deleteHistoryEntry: the perf mirror is recomputed, not left pointing at the deleted session. */
 export function deleteHistory({ id }) {

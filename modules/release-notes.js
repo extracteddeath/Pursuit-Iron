@@ -2,6 +2,12 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "942", items: [
+        "Calculators keep their heading and Close action reachable, follow larger text, and use the same controls as the rest of the app.",
+        "Malformed weights and fractional reps stay editable instead of becoming different numbers. Plate results explain empty inventories and targets below the bar.",
+        "Tap a training percentage to see how to load it with your gym’s plates.",
+        "Gym unit changes convert available loads and limits together. Bar weights, rack lists and plate counts are checked before Done, with Cancel preserving saved settings."
+    ] },
     { version: "4.0.0", build: "941", items: [
         "New lifts can show a labelled starting estimate from recent related sets or your profile. Logged progression targets and workouts in progress keep their values.",
         "Light training no longer makes a muscle look as exhausted as a full session. Recovery still reflects effort and time since training.",

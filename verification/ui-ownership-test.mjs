@@ -22,11 +22,13 @@ const exerciseNotes = fs.readFileSync('modules/exercise-notes.js', 'utf8');
 const trainingMaxes = fs.readFileSync('modules/program-training-maxes.js', 'utf8');
 const contextMenus = fs.readFileSync('modules/ui-menu.js', 'utf8');
 const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
-const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
+const loadingCalculator = fs.readFileSync('modules/loading-calculator.js','utf8');
+const gymLoadFields = fs.readFileSync('modules/gym-load-fields.js','utf8');
+const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
 const MAX_IMPORTANT = 2073; // M394: retire 33 exercise-row priority overrides.
 const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
 const MAX_REPEAT_IMPORTANT = 14; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 2123; // M394: retire 18 static exercise-row/manual-input styles.
+const MAX_INLINE_STYLE_OBJECTS = 2084; // M396: retire 40 calculator styles; retain one calculated plate height.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])

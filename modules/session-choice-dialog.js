@@ -1,14 +1,15 @@
 // Shared accessible session dialog: focus restoration and keyboard containment belong in one place.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 
-export function SessionChoiceDialog({ title, onClose, children, dismissible = true, className = "", footer = null }) {
+export function SessionChoiceDialog({ title, onClose, children, dismissible = true, className = "", footer = null, panelRef }) {
     const dialogRef = useRef(null);
+    const attachPanel = useCallback(node => { dialogRef.current = node; panelRef?.(node); }, [panelRef]);
     useEffect(() => { const previous = document.activeElement; dialogRef.current?.focus();
         return () => previous?.isConnected && previous.focus?.(); }, []);
     return _jsx("div", { className: "wpb-backdrop wpb-session-dialog-backdrop", onClick: onClose,
-        children: _jsxs("section", { ref: dialogRef, tabIndex: -1, role: "dialog", "aria-modal": "true", "aria-label": title,
+        children: _jsxs("section", { ref: attachPanel, tabIndex: -1, role: "dialog", "aria-modal": "true", "aria-label": title,
             className: "wpb-session-dialog wpb-scroll " + className, onClick: ev => ev.stopPropagation(),
             onKeyDown: ev => { if (ev.key === 'Escape' && dismissible) onClose();
                 if (ev.key === 'Tab') { const items = [...dialogRef.current.querySelectorAll('button:not(:disabled),select,textarea,input,summary,a[href]')].filter(el => el.getClientRects().length && (el.tagName === 'SUMMARY' || !el.closest('details:not([open])')));

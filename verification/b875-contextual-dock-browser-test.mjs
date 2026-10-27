@@ -182,7 +182,7 @@ try {
         await clickStable(`${dock} .wpb-set-dock-plates`);
         await page.waitForSelector('.wpb-backdrop input[placeholder="Target weight (lb)"]');
         assert.equal(await page.$eval('.wpb-backdrop input[placeholder="Target weight (lb)"]', el=>el.value), '190', 'plate action uses actual typed set, not suggested load');
-        await page.click('.wpb-backdrop button[aria-label="Close"]');
+        await page.click('.wpb-loading-calculator button[aria-label="Close Calculators"]');
         await clickStable(`${dock} button[aria-label="Log dock set"]`);
         await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].done===true);
         await page.waitForFunction(()=>document.querySelector('[data-set-dock-preview]')?.textContent.includes('This set'));

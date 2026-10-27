@@ -1,3 +1,21 @@
+## Build 942 / M396 — Loading tools, complete input and gym unit integrity
+
+Continue from published Build 941 / PR #369, merge cdab546087e79cceefba6f4bc4c2584616319790. All post-merge workflows and the actual public online/offline/manual-target/resume and estimate journeys passed. Keep the user's substantial-batch preference.
+
+Reproduce on Build 941: calculator target 92..5 renders plates for 92; fractional 1RM reps are stripped into another integer; zero available pairs produce an unexplained dash. The gym load-unit action changes the unit token without converting limits or racks. normalizeGyms also discards updatedAt, removing the clock needed to identify newer gym edits. Preserve these failing cases before changing the owners.
+
+Move the calculator to modules/loading-calculator.js and the gym numeric fields to modules/gym-load-fields.js. Use the shared SessionChoiceDialog, UiChoice and UiAction, retaining the original sheet gesture through an optional panel ref. One scrolling body keeps the calculator title/Close reachable. Relative type, adaptable choices, complete labels and themed status/results work at 320/393/834/1280px and actual 200% text. The narrow enlarged-text replay catches and repairs heading/selector clipping. Real touch dismissal and return focus retain the existing motion/focus owners; Workout/Focus ledger geometry stays protected.
+
+modules/training-domain/loading-tools.js owns complete numeric parsing and read-only calculator projections, reusing production platesPerSide and e1rm. Invalid raw typing cannot turn into a lower weight, integer or partial rack. 1RM entry uses the existing model's 1–12 rep range instead of silently capping a larger entry. Percentage loads retain the original downward 5 lb/2.5 kg rounding and can open the plate view in one action. The plate view always states the actual achievable load, including empty inventories and below-bar targets.
+
+The existing gym list remains the draft and its existing Done callback remains the writer. Raw rack/bar/limit/count fields survive edits until validation; invalid Done focuses the affected field and opens its disclosure. Convert all racks and limits together with exact history-unit conversion; bar masses keep their separate unit context. Retain zero Smith bars, unedited precision, inactive-gym values and explicit plate inventories. The transient inventoryText property never becomes saved gym data. Preserve the source gym's updatedAt through normalization. No generation, progression, set-entry, history or recovery policy is replaced.
+
+Retire forty calculator inline objects and retain one computed plate height: combined enforced presentation budget 2,123 → 2,084. External/embedded/repeated priority ceilings stay 2,073/1,053/14. Include both new view modules in the scanner. App.js shrinks by about 14.4 kB at the implementation snapshot; this is source ownership cleanup, not a measured download or startup claim.
+
+Extend B846/B831/B875 and add M396 domain/browser gates to the existing registry. Require all source groups, full 13-stage lifecycle audit, independent engine export/parity, all seven browser groups and release/offline identity checks on the final candidate. Publish one Build 942, then require exact hosted-file parity plus actual public online/offline/calculator/gym/typed-workout-resume replays. Physical Android/IME/TalkBack/interruption/foldable acceptance remains open.
+
+Next: continue cohesive Program editing and inspection families and remaining shared forms; prioritize reproduced prescription, persistence and interaction defects. The broader source refactor and launch/device acceptance remain in progress.
+
 ## Build 941 / M395 — Reviewed web engine patch
 
 Integrate the user-provided web-engine-changes.patch after Build 940 publication. The attachment repeats the recovery diff and assumes a plate-count helper absent from this branch; apply recovery once and adapt the plate helpers to the maintained source.

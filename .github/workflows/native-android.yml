@@ -108,7 +108,7 @@ jobs:
   smoke:
     needs: android
     runs-on: ubuntu-24.04
-    timeout-minutes: 55
+    timeout-minutes: 70
     permissions:
       contents: write   # only to force-push screenshots to the scratch branch native-smoke
     steps:

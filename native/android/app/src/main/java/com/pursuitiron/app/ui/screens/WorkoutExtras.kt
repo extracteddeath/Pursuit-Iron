@@ -4,6 +4,7 @@ package com.pursuitiron.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
@@ -384,8 +385,8 @@ fun SessionNoteSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
     var repeat by remember { mutableStateOf(s.s("sessionNoteRepeat", "once").let { if (it == "none" && s.s("sessionNote").isNotBlank()) "none" else if (it == "none") "once" else it }) }
     val cs = MaterialTheme.colorScheme
     val save = { vm.act("sessionNote", "text" to text.trim(), "repeat" to repeat); onClose() }
-    ModalBottomSheet(onDismissRequest = save) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    ModalBottomSheet(onDismissRequest = save, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Workout note", style = MaterialTheme.typography.headlineSmall)
             // The design's note: a filled field, then quick tags that add or remove themselves joined by " · ".
             androidx.compose.material3.TextField(text, { text = it.take(300) }, Modifier.fillMaxWidth(), minLines = 4,

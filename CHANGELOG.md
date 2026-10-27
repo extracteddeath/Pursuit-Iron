@@ -1,5 +1,7 @@
 ## Build 937 / M391 — Even Library spacing and calmer motion
 
+- Browser screenshot review: keep the Library result count in the header row on regular widths, avoid duplicate counts on narrow phones, and let the Plan's Progression tab take a two-column layout rather than splitting its name.
+
 - Library header, search, filter strips and rows share spacing, typography, accessible target sizes and theme paint instead of 19 inline style objects. Search, selection, exercise detail and saved training retain their behavior.
 - Primary navigation uses shorter one-axis lead-card motion, avoiding diagonal source-linked overshoot. Reduced-motion and system Back handling remain unchanged.
 - Engine 0.65.9 and storage schema are unchanged; physical Android acceptance remains open.

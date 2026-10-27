@@ -828,10 +828,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-library{flex:1;min-width:0;overflow-y:auto;padding-bottom:var(--pi-space-6)}
 .wpb-library-header{position:sticky;top:0;z-index:10;padding:var(--pi-space-3) var(--pi-space-4) var(--pi-space-2);border-bottom:1px solid var(--pi-color-divider);background:var(--pi-color-canvas)}
 .wpb-library-headline{display:flex;flex-wrap:wrap;align-items:center;gap:var(--pi-space-2);min-width:0;margin-bottom:var(--pi-space-3)}
-.wpb-library-title{flex:1 1 9em;min-width:0;margin:0;font-size:var(--pi-type-heading);line-height:1.2;letter-spacing:-.025em;overflow-wrap:anywhere;color:var(--pi-color-on-control)}
+.wpb-library-title{flex:1 1 5em;min-width:0;margin:0;font-size:var(--pi-type-heading);line-height:1.2;letter-spacing:-.025em;overflow-wrap:anywhere;color:var(--pi-color-on-control)}
 .wpb-library-back,.wpb-library-compare{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-width:48px;min-height:48px;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);color:var(--pi-color-on-control)}
 .wpb-library-compare{padding:var(--pi-space-2) var(--pi-space-3);font-size:var(--pi-type-support);font-weight:var(--pi-weight-action)}
-.wpb-library-result-count{margin-inline-start:auto;font-size:var(--pi-type-support);font-weight:650;color:var(--pi-color-on-muted);font-variant-numeric:tabular-nums}
+.wpb-library-result-count{margin-inline-start:0;font-size:var(--pi-type-support);font-weight:650;color:var(--pi-color-on-muted);font-variant-numeric:tabular-nums}
 .wpb-library-search{position:relative;min-width:0;margin-bottom:var(--pi-space-2)}
 .wpb-library-search-icon{position:absolute;left:var(--pi-space-3);top:50%;transform:translateY(-50%);color:var(--pi-color-on-muted);pointer-events:none}
 .wpb-library-search-input{width:100%;min-width:0;min-height:48px;padding:var(--pi-space-3) var(--pi-space-3) var(--pi-space-3) 36px;border-radius:var(--pi-shape-action);border:1px solid var(--pi-color-divider);background:transparent;color:var(--pi-color-on-control);font-size:var(--pi-type-body)}
@@ -848,7 +848,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-library-results{padding:var(--pi-space-2) var(--pi-space-4) var(--pi-space-6)}
 .wpb-library-results>.wpb-library-row{box-sizing:border-box;display:flex;align-items:center;gap:var(--pi-space-3);width:100%;min-width:0;min-height:64px;padding:var(--pi-space-3);margin-bottom:var(--pi-space-2);text-align:left;cursor:pointer;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card);background:var(--pi-color-card)}
 .wpb-library-results>.wpb-library-row[data-banned="1"]{opacity:.56}
-@media (max-width:360px){.wpb-library-header{padding-inline:var(--pi-space-3)}.wpb-library-results{padding-inline:var(--pi-space-3)}}
+@media (max-width:360px){.wpb-library-header{padding-inline:var(--pi-space-3)}.wpb-library-results{padding-inline:var(--pi-space-3)}.wpb-library-result-count{display:none}}
 @media (forced-colors:active){.wpb-library :is(.wpb-library-back,.wpb-library-compare,.wpb-filter-chip,.wpb-library-flag,.wpb-library-row){border-color:ButtonText;background:ButtonFace;color:ButtonText}.wpb-library :is(.wpb-filter-chip,.wpb-library-flag)[aria-pressed="true"]{background:Highlight;color:HighlightText}}
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-detail.wpb-backdrop{
   background-clip:border-box;
@@ -8967,8 +8967,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{box-sizing:border-box;display:flex;flex:1 1 0;min-width:0;min-height:44px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border:0;border-radius:8px;background:transparent;color:var(--pi-color-on-control,inherit);font-size:11px;font-weight:700;cursor:pointer;}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab[aria-pressed="true"]{background:var(--pi-color-card,transparent);color:var(--pi-m3e-primary,var(--wpb-theme-accent,currentColor));font-weight:800;}
 .wpb-plan-pane-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-/* Cohesion 23: complete Plan labels on narrow rails and enlarged text. */
-@container (max-width:18em){
+/* B937: keep complete Plan labels before words wrap mid-syllable on 320px phones. */
+@container (max-width:20em){
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{flex:1 1 calc(50% - 4px);min-height:48px;}
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-pane-label{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;text-align:center;}
 }

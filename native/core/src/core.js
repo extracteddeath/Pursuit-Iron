@@ -2020,15 +2020,37 @@ export function importGallery({ code }) {
     const e = (E.decodeGallery(GALLERY) || []).find((x) => x.code === code);
     const d = E.decodeProgramCode(code);
     if (!e || !d?.ok) return { ok: false, error: d?.reason || 'That program code could not be read.' };
+    return importDecoded(d, e.title, code);
+}
+/* The design's Add a shared program: any program code someone shared (the web's decodeProgramCode),
+   previewed from what the code carries, then built for your gym like a gallery import. */
+function codeTitle(c) { const sp = (E.SPLITS || {})[c.split]; return `${sp?.name || 'Program'} · ${c.days} days`; }
+export function previewProgramCode({ code }) {
+    const c0 = String(code || '').trim().toUpperCase();
+    let d = null; try { d = c0 ? E.decodeProgramCode(c0) : null; } catch { d = null; }
+    if (!d?.ok) return { ok: false, error: c0 ? (d?.reason || 'That doesn’t look like a program code.') : '' };
+    const c = d.config, eqLabel = Object.fromEntries((E.EQUIPMENT || []).map((x) => [x.id, x.label || x.id]));
+    const all = !c.equipment || (E.ALL_EQUIP_IDS || []).every((q) => c.equipment.includes(q));
+    return { ok: true, code: c0, name: codeTitle(c),
+        meta: [GOAL_LABEL[c.goal] || c.goal, c.experience, c.weeks ? `${c.weeks} weeks` : null, c.session ? String(c.session).replace(/^s/, '') + ' min' : null, c.percentScheme ? '% of training max' : null].filter(Boolean).join(' · '),
+        equipment: all ? 'Any gym — built for the one you’re in' : (c.equipment || []).map((q) => eqLabel[q] || q).join(', ') };
+}
+export function importProgramCode({ code }) {
+    const c0 = String(code || '').trim().toUpperCase();
+    let d = null; try { d = E.decodeProgramCode(c0); } catch { d = null; }
+    if (!d?.ok) return { ok: false, error: d?.reason || 'That doesn’t look like a program code.' };
+    return importDecoded(d, codeTitle(d.config), c0);
+}
+function importDecoded(d, title, code) {
     const all = !d.config.equipment || (E.ALL_EQUIP_IDS || []).every((q) => d.config.equipment.includes(q));
-    const config = { ...d.config, name: e.title, equipment: all ? (activeKit() || d.config.equipment) : d.config.equipment };
+    const config = { ...d.config, name: title, equipment: all ? (activeKit() || d.config.equipment) : d.config.equipment };
     const keep = { pinnedId: S.store.pinnedId, equipDefault: S.store.equipDefault, experience: S.store.experience, unit: S.store.unit };
     const r = createProgram({ config: { ...config, unit: unit() }, seed: d.seed });
     // An import sits in your programs; the one you train stays the one you train.
     Object.entries(keep).forEach(([k, v]) => { if (v === undefined) delete S.store[k]; else S.store[k] = v; });
     if (!r.ok) return { ok: false, error: 'This program couldn’t be built for your gym. Nothing was added.' };
     S.store.galleryAdded = { ...(S.store.galleryAdded || {}), [code]: r.programId }; markStore();
-    return { ...r, title: e.title };
+    return { ...r, title };
 }
 export function createProgram({ config, seed }) {
     const cfg = programConfig(config);

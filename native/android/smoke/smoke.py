@@ -531,7 +531,19 @@ else:
     FAILS.append("no week-by-week entry on Plan")
 # The design's Programs (the program pill under Plan): every program, then shared programs (added without switching)
 scroll_up_to(r"^Program: ", tries=10)
-if tap(r"^Program: ", "programs-sheet") and scroll_to(r"Browse shared programs", tries=4, step=500):
+prog_open = tap(r"^Program: ", "programs-sheet")
+# The design's Add a shared program: paste a code, see what it is
+if prog_open and scroll_to(r"Add a shared program", tries=4, step=500):
+    tap(r"Add a shared program")
+    tap(r"^\|Paste a sample code$", "add-shared")
+    if not find(r"^\|Add to my programs$", timeout=6):
+        FAILS.append("a pasted program code shows no preview")
+    shot("add-shared-preview")
+    back()
+    time.sleep(1)
+else:
+    FAILS.append("no Add a shared program in Programs")
+if prog_open and scroll_to(r"Browse shared programs", tries=4, step=500):
     tap(r"Browse shared programs", "gallery")
     if tap(r"^Import ", "gallery-import", required=False):
         if not find(r"is in your programs|Added to your programs", timeout=20):

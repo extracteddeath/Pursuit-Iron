@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import androidx.compose.foundation.layout.imePadding
+import androidx.lifecycle.viewModelScope
 import androidx.compose.foundation.background
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.border
@@ -111,6 +113,8 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
     var d by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(vm.plan) { d = vm.programsList() }
     var sel by remember { mutableStateOf<String?>(null) }
+    var addShared by remember { mutableStateOf(false) }
+    if (addShared) { AddSharedProgramSheet(vm) { addShared = false; vm.viewModelScope.launch { d = vm.programsList() } }; return }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -156,6 +160,44 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
                     }
                     Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
                 }
+            }
+            Surface(onClick = { addShared = true }, color = androidx.compose.ui.graphics.Color.Transparent, contentColor = cs.primary, shape = RoundedCornerShape(24.dp),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, cs.outlineVariant), modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(PiIcons.Download, null, Modifier.size(18.dp)); Text("  Add a shared program", style = MaterialTheme.typography.titleSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+                }
+            }
+        }
+    }
+}
+
+/** The design's Add a shared program: paste a program code, see what it is, add it (the program you train stays). */
+@Composable
+fun AddSharedProgramSheet(vm: AppViewModel, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    var code by remember { mutableStateOf("") }
+    var pv by remember { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(code) { pv = vm.previewProgramCode(code) }
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 16.dp).padding(bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Add a shared program", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
+            Kicker("Program code")
+            androidx.compose.material3.TextField(code, { code = it.uppercase().take(48) }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("PI-XXXX-XXXX-XXXX") },
+                shape = RoundedCornerShape(18.dp), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters),
+                colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh,
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
+            val p = pv
+            if (code.isBlank()) TextButton(onClick = { vm.viewModelScope.launch { vm.galleryCodes().firstOrNull()?.let { code = it } } }) { Text("Paste a sample code") }
+            else if (p != null && !p.b("ok") && p.s("error").isNotBlank()) Text("That doesn’t look like a program code. Codes look like PI-ABCD-1234-WXYZ.", style = MaterialTheme.typography.bodySmall,
+                color = cs.onTertiaryContainer, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.tertiaryContainer).padding(horizontal = 12.dp, vertical = 10.dp))
+            if (p != null && p.b("ok")) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(p.s("name"), style = MaterialTheme.typography.titleMedium)
+                    Text(p.s("meta"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    Text(p.s("equipment"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+                Text("It joins your programs. The one you train now stays until you switch.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                Button(onClick = { vm.importProgramCode(p.s("code")) { onClose() } }, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text("Add to my programs", style = MaterialTheme.typography.titleMedium) }
             }
         }
     }

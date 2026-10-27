@@ -989,6 +989,14 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const row = C.progressCharts().feedback.find((r) => r.part === part);
   ok(row && row.answers[row.answers.length - 1] === 'Too much' && /fewer|hold/.test(row.note), 'a finish-page answer shows in Recovery & feedback (' + (row && row.note) + ')'); }
 
+// The design's Add a shared program: a pasted code previews, then builds into your programs (the active one stays)
+{ C.init({}); C.createProgram({ config: { name: 'Mine', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  const code = C.galleryList()[0].code, pv = C.previewProgramCode({ code: code.toLowerCase() + ' ' });
+  ok(pv.ok && /days$/.test(pv.name) && pv.meta.length > 0, 'a program code previews (' + pv.name + ')');
+  ok(!C.previewProgramCode({ code: 'PI-NOPE' }).ok, 'a bad code is refused');
+  const before = JSON.parse(C.exportStore()).pinnedId, r = C.importProgramCode({ code });
+  ok(r.ok && JSON.parse(C.exportStore()).pinnedId === before && JSON.parse(C.exportStore()).saved.length === 2, 'the code adds a program without switching'); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 
 // The design's finish page: too easy / about right / too much per muscle, the next day, time and volume

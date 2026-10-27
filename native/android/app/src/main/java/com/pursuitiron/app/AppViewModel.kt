@@ -377,6 +377,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
     /** The design's shared programs (web gallery.json). */
     suspend fun galleryList(): List<JSONObject> = arr(call("galleryList"))
+    suspend fun previewProgramCode(code: String): JSONObject? = obj("previewProgramCode", jsonOf("code" to code))
+    suspend fun galleryCodes(): List<String> = arr(call("galleryList")).map { it.s("code") }.filter { it.isNotBlank() }
+    fun importProgramCode(code: String, done: () -> Unit) = launchCore {
+        val r = obj("importProgramCode", jsonOf("code" to code))
+        if (r?.b("ok") == true) { hap(Hap.Log); refreshHomeSide(); toast("Added to your programs · nothing changes until you switch"); done() } else toast(r?.s("error") ?: "Nothing was added")
+    }
     fun importGallery(code: String, done: () -> Unit) = launchCore {
         val r = obj("importGallery", jsonOf("code" to code))
         if (r?.b("ok") == true) { hap(Hap.Log); refreshHomeSide(); toast("Added to your programs · nothing changes until you switch") } else toast(r?.s("error") ?: "Nothing was added")

@@ -380,11 +380,29 @@ function represcribeForWeek(exerciseId, cell, lastCell, last, request, fromUnit,
     if (e1 === null)
         return null;
     const repsMid = Math.round((reps[0] + reps[1]) / 2), rirMid = rir ? (rir[0] + rir[1]) / 2 : 2;
-    const weight = availableLoadAtOrBelow(exerciseId, e1 / (1 + (repsMid + rirMid) / 30), request?.equipment?.loading, request?.equipment?.available);
-    if (weight === null)
+    const inventory = request?.equipment?.loading, available = request?.equipment?.available;
+    const recommended = availableLoadAtOrBelow(exerciseId, e1 / (1 + (repsMid + rirMid) / 30), inventory, available);
+    if (recommended === null)
         return null;
+    // A week-to-week rep/RIR change is not evidence of failure. Avoid a phantom
+    // 50 -> 49.5 lb "deload" when a fractional inventory step puts the estimate
+    // just below the same load every completed set already used successfully.
+    // This guard is ONLY for re-prescription: failed-set corrections, explicit
+    // deloads and earned microplate increases remain owned by progression.
+    const observed = completedHistorySets(last).map(set => ({
+        weight: convertLoad(set?.w, fromUnit, toUnit), reps: numberOf(set?.r)
+    }));
+    const sameLoad = observed.length > 0 && observed.every(set =>
+        Number.isFinite(set.weight) && set.weight > 0 && set.reps >= reps[0]
+        && Math.abs(set.weight - observed[0].weight) < 1e-6);
+    const lastLoad = sameLoad ? observed[0].weight : null;
+    const selectableLast = lastLoad === null ? null : availableLoadAtOrBelow(exerciseId, lastLoad, inventory, available);
+    const tinyDifference = lastLoad === null ? false : lastLoad > recommended
+        && lastLoad - recommended <= Math.min(toUnit === 'kg' ? 0.25 : 0.5, lastLoad * 0.02) + 1e-6;
+    const retainLast = tinyDifference && selectableLast !== null && Math.abs(selectableLast - lastLoad) < 1e-6;
+    const weight = retainLast ? lastLoad : recommended;
     const range = reps[0] === reps[1] ? String(reps[0]) : `${reps[0]}–${reps[1]}`, reserve = rir ? (rir[0] === rir[1] ? String(rir[0]) : `${rir[0]}–${rir[1]}`) : null;
-    return { weight, target: repsMid, reason: `This week's prescription changes to ${range} reps${reserve ? ` with ${reserve} in reserve` : ''}, so the load is re-set from your estimated max (about ${Math.round(e1)} ${toUnit || request?.equipment?.loading?.unit || 'lb'}) to land mid-range.` };
+    return { weight, target: repsMid, reason: `This week's prescription changes to ${range} reps${reserve ? ` with ${reserve} in reserve` : ''}, so the load is re-set from your estimated max (about ${Math.round(e1)} ${toUnit || request?.equipment?.loading?.unit || 'lb'}) to land mid-range.${retainLast ? ' The tiny estimated decrease is below a meaningful change, so keep the last successfully completed load.' : ''}` };
 }
 export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises, day, slot, weekIndex, perf, unit) {
     if (program?.engineSource !== 'pursuit-next')

@@ -386,7 +386,10 @@ export function home() {
         } : null,
         week: { sessions: thisWeek.length, planned: nx ? nx.program.days.length : 0, volume: Math.round(thisWeek.reduce((s, h) => s + (Number(h.volume) || 0), 0)) },
         readiness: { today: todayReady, parts: rd },
-        injuries: injuries().filter((i) => !i.resolvedAt).map((i) => ({ id: i.id, title: injuryTitle(i, E.PART_LABEL), impact: i.impact })),
+        // The design's protection card: what the next session's lifts do about each open injury.
+        injuries: injuries().filter((i) => !i.resolvedAt).map((i) => ({ id: i.id, title: injuryTitle(i, E.PART_LABEL), impact: i.impact,
+            area: INJURY_AREAS.find((a) => a.id === i.region)?.label || injuryTitle(i, E.PART_LABEL),
+            lifts: nx ? nx.day.exercises.filter((id) => EX_BY_ID[id] && injuryMatchesExercise(i, EX_BY_ID[id], E.secondaryOf(EX_BY_ID[id]))).map(exName) : [] })),
         live: S.live ? liveSummary() : null,
         needsTrainingMax: nx && nx.program.config?.percentScheme ? mainLifts(nx.program).filter((id) => !(E.trainingMaxForUnit(nx.program, id, unit()) > 0)).length : 0,
         cycle: (() => { const ci = liveCycleInfo(); return ci ? { id: ci.cycle.id, name: ci.cycle.name || 'Training cycle', blockIdx: ci.blockIdx, blocks: (ci.cycle.blockMeta || []).map((b) => b.label || 'Block'),

@@ -911,7 +911,7 @@ private fun hurtPlan(p: JSONObject?, impact: String?): List<String> {
         "reduce" -> out += "Today: $names keep half of ${if (lifts.size == 1) "its" else "their"} remaining sets. Logged sets stay."
         else -> out += "Today: stop $names. Logged sets stay; the rest are dropped."
     }
-    out += "Mark it resolved in the injury log when it feels fine, and the normal plan comes back."
+    out += "Tap \"Feels fine now\" on Today when it does, and the normal plan comes back."
     return out
 }
 

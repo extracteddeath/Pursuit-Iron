@@ -7,6 +7,8 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -116,15 +118,29 @@ fun TodayScreen(vm: AppViewModel) {
             }
         }
 
+        // The design's protection card: the area, what the next session does about it, Feels fine now / Change.
         h.list("injuries").forEach { inj ->
             item {
-                PiCard(color = cs.tertiaryContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.injuryLogOpen = true }) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(PiIcons.Shield, null, tint = cs.onTertiaryContainer)
+                val lifts = inj.strings("lifts")
+                PiCard(color = cs.tertiaryContainer, radius = 24.dp, padding = 16.dp) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(PiIcons.Shield, null, tint = cs.onTertiaryContainer, modifier = Modifier.padding(top = 2.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Protecting: ${inj.s("title")}", style = MaterialTheme.typography.titleSmall, color = cs.onTertiaryContainer)
-                            Text(when (inj.s("impact")) { "skip" -> "Related lifts are skipped"; "reduce" -> "Related work is reduced"; else -> "Related lifts are flagged for review" },
-                                style = MaterialTheme.typography.bodySmall, color = cs.onTertiaryContainer)
+                            Text("${inj.s("area", inj.s("title"))} protection", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), color = cs.onTertiaryContainer)
+                            Text(if (lifts.isEmpty()) "Nothing in your next session loads it." else lifts.joinToString(", ") + when (inj.s("impact")) {
+                                "skip" -> if (lifts.size == 1) " is skipped." else " are skipped."
+                                "reduce" -> " get fewer sets."
+                                else -> if (lifts.size == 1) " is flagged for review." else " are flagged for review."
+                            }, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer)
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.Surface(onClick = { vm.feelsFine(inj.s("id")) }, color = cs.onTertiaryContainer, contentColor = cs.tertiaryContainer,
+                            shape = androidx.compose.foundation.shape.CircleShape, modifier = Modifier.height(40.dp)) {
+                            Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Feels fine now", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold)) }
+                        }
+                        androidx.compose.material3.TextButton(onClick = { vm.injuryLogOpen = true }, modifier = Modifier.height(40.dp)) {
+                            Text("Change", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onTertiaryContainer)
                         }
                     }
                 }

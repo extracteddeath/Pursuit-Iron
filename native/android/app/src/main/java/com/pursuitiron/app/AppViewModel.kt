@@ -403,6 +403,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (r?.b("ok") == true) { hap(Hap.Log); home = obj("home"); toast(if (r.b("updated")) "Injury updated" else "Injury logged. The plan protects that area.") }
         return r
     }
+    /** The design's "Feels fine now": resolve the injury and go back to the normal plan. */
+    fun feelsFine(id: String) = launchCore {
+        val r = obj("toggleInjuryResolved", jsonOf("id" to id)) ?: return@launchCore
+        if (r.b("resolved")) { hap(Hap.Done); home = obj("home"); toast("Back to your normal plan") }
+    }
     suspend fun toggleInjury(id: String) {
         val r = obj("toggleInjuryResolved", jsonOf("id" to id)) ?: return
         home = obj("home"); toast(if (r.b("resolved")) "Marked resolved" else "Marked active")

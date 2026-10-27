@@ -422,7 +422,7 @@ if find(r"STEP 1 OF 3", timeout=4):
     tap(r"^\|Next$")
     tap(r"^\|Sore$|Sore\|", "hurt-level")
     tap(r"^\|Next$")
-    if not find(r"Here's the plan", timeout=4) or not find(r"Mark it resolved", timeout=2):
+    if not find(r"Here's the plan", timeout=4) or not find(r"Feels fine now", timeout=2):
         FAILS.append("Something hurt does not reach its plan step")
     shot("hurt-plan")
 else:

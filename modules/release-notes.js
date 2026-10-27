@@ -2,6 +2,11 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "939", items: [
+        "Library search and filters scroll away to leave more room for exercises. Use Find in the compact toolbar to return to search.",
+        "Library lists and exercise details share consistent styles, larger text and clearer controls.",
+        "Goal editing keeps invalid numbers unsaved, with Cancel and an explicit Remove goal action."
+    ] },
     { version: "4.0.0", build: "938", items: [
         "Theme names now follow larger text settings and reflow into readable choices.",
         "Training preferences share consistent controls, spacing and named keyboard groups."

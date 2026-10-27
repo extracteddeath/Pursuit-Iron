@@ -225,3 +225,12 @@ The existing B881 browser gate covers actual correction, cancellation, Undo, rel
 The six Settings preference groups have one shared CSS presentation and explicit accessible group names. The existing callbacks and measured selection track remain authoritative. ThemePicker uses UiChoice, a native disclosure, semantic palette roles, relative type and a text-relative grid. Only actual swatch colors remain data-driven inline. The Settings scroll pane owns its inset and anchor spacing. Retire superseded embedded theme styles and preference typography/layout overrides instead of adding priority layers.
 
 R76 must enlarge the actual document text in the expanded chooser, since forcing each element's font size in a test masks fixed CSS type. Check complete labels/targets, keyboard selection, exact saved values and reversal. Restoring experience may advance the existing program timestamp; authored content and logged history must match. Current ceilings: 2,256 inline objects, 2,173 external priorities, 1,134 embedded priorities and 14 repeated priorities.
+
+
+### M393 — Library browsing, complete details and batched delivery
+
+Only the compact Library toolbar is sticky. Search and filters scroll within the existing results owner so the same composition works in the wide list/detail pane. Find reveals/focuses search without clearing selections. Keep Compare named and discoverable, restore scroll/filter context, and never animate toolbar height in response to scrolling.
+
+LibraryView has one computed inline goal width and no static inline presentation. Use the semantic Library/detail CSS family for all list, note, history, record, variant, technique and goal surfaces. Preserve the existing shared motion, focus, palette, selected-state and adaptive-pane owners. Retire superseded component rules during migration. Current ceilings: 2,141 inline objects, 2,106 external priorities, 1,053 embedded priorities, 14 repeated priorities.
+
+Goal fields keep raw typing and accept only complete finite positive values; Save cannot infer a replacement for invalid text. Shared actions expose Cancel and explicit removal, with a visible unit label and independent exercise drafts. R54/R74/R65 cover scrolling room, actual larger text, reachable short-window actions, state/data preservation and adaptive panes. Ship related improvements as one meaningful verified batch, following the user's October 27 preference.

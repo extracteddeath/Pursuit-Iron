@@ -421,6 +421,16 @@ try{
             'Rendered enlarged Library labels fit after scrolling: '+JSON.stringify({theme,width,
               failures:rendered.controls.filter(c=>c.inViewport&&!c.textFits)}));
         }
+        const readingSpace=await page.$eval('.wpb-library',shell=>{
+          const viewport=shell.getBoundingClientRect(),header=shell.querySelector('.wpb-library-header').getBoundingClientRect();
+          return {scroll:shell.scrollTop,header:header.height,
+            fraction:(viewport.bottom-header.bottom)/viewport.height,
+            filtersGone:shell.querySelector('.wpb-library-flag-filter').getBoundingClientRect().bottom<=viewport.top+1};
+        });
+        assert.ok(readingSpace.scroll>0&&readingSpace.filtersGone&&readingSpace.fraction>=.65,
+          'Enlarged Library browsing reserves the viewport for exercises instead of pinned filter rows: '+JSON.stringify({theme,width,readingSpace}));
+        if(width===320||width===393)
+          await page.screenshot({path:path.join(root,'verification/b939-library-browsing-'+theme+'-'+width+'-phone.png')});
         await page.$eval('.wpb-library',el=>el.scrollTop=0);
         await settle();
         if(width===320||width===1280)

@@ -607,8 +607,26 @@ async function verifyBrowseMemory(browser,theme,width){
       assert.ok(Math.abs(actual-expected)<=2,label+' '+JSON.stringify({theme,width,expected,actual}));};
 
     await page.click('button[aria-label="Exercise library"]');await page.waitForSelector('.wpb-library');
+    await setScroll(620);
+    const browsingSpace=await page.$eval('.wpb-library',shell=>{
+      const viewport=shell.getBoundingClientRect(),header=shell.querySelector('.wpb-library-header').getBoundingClientRect();
+      const search=shell.querySelector('.wpb-library-search').getBoundingClientRect();
+      const flags=shell.querySelector('.wpb-library-flag-filter').getBoundingClientRect();
+      return {scroll:shell.scrollTop,headerHeight:header.height,
+        headerPinned:Math.abs(header.top-viewport.top)<1,
+        searchGone:search.bottom<=viewport.top+1,filtersGone:flags.bottom<=viewport.top+1,
+        readingFraction:(viewport.bottom-header.bottom)/viewport.height};
+    });
+    assert.ok(browsingSpace.scroll>300&&browsingSpace.headerPinned&&browsingSpace.searchGone&&
+      browsingSpace.filtersGone&&browsingSpace.headerHeight<=80&&browsingSpace.readingFraction>=.75,
+      'Library leaves the exercise list readable: only a compact toolbar stays pinned while search and filters scroll away: '+JSON.stringify({theme,width,browsingSpace}));
+    await page.click('button[aria-label="Find exercises"]');
+    await settle();
+    assert.equal(await scroll(),0,'The compact toolbar brings search back without clearing filters');
+    assert.equal(await page.$eval('.wpb-library-search input',el=>el===document.activeElement),true,
+      'Find exercises focuses the real search input');
     const libraryScroll=await setScroll(180);assert.ok(libraryScroll>50,'Library has a real browsing position');
-    await clickText('Compare','.wpb-library-header button');await page.waitForSelector('[data-view-frame="compare"]');
+    await page.click('button[aria-label="Compare exercises"]');await page.waitForSelector('[data-view-frame="compare"]');
     await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-library');
     await assertScroll(libraryScroll,'Compare Back restores the Library position');
     await page.type('input[aria-label="Search exercises"]','press');
@@ -622,10 +640,10 @@ async function verifyBrowseMemory(browser,theme,width){
       results:document.querySelectorAll('.wpb-library-row').length
     }));
     const filtered=await libraryState();assert.ok(filtered.results>0,'The combined filters have real results');
-    await clickText('Compare','.wpb-library-header button');await page.waitForSelector('[data-view-frame="compare"]');
+    await page.click('button[aria-label="Compare exercises"]');await page.waitForSelector('[data-view-frame="compare"]');
     await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-library');
     assert.deepEqual(await libraryState(),filtered,'Compare Back retains query, muscle, equipment, Recent and matching results');
-    assert.equal(await page.$$eval('.wpb-library-header>.wpb-hscroll',groups=>groups.every(group=>{
+    assert.equal(await page.$$eval('.wpb-library-controls>.wpb-hscroll',groups=>groups.every(group=>{
       const box=group.querySelector('[aria-pressed="true"]').getBoundingClientRect(),bounds=group.getBoundingClientRect();
       return box.left>=bounds.left-1&&box.right<=bounds.right+1;
     })),true,'Restored selected muscle and equipment chips are fully visible');
@@ -643,6 +661,70 @@ async function verifyBrowseMemory(browser,theme,width){
     await page.type('.wpb-library-search input','no matching exercise');await clickText('Clear filters');
     const reset=await libraryState();assert.equal(reset.query,'');assert.equal(reset.muscle,'All muscles');
     assert.equal(reset.equipment,'Any equipment');assert.equal(reset.flag,'All');
+    // Library detail is the same task as discovery: inspect factual records,
+    // stage a goal, correct mistakes and return without touching the plan.
+    await page.type('.wpb-library-search input',EXERCISES.find(ex=>ex.id==='bb-bench').name);
+    await page.click('.wpb-library-row');await page.waitForSelector('.wpb-exercise-detail');
+    await clickText('Records','.wpb-exercise-tabs button');
+    assert.ok(await page.$('.wpb-exercise-records'),'Logged records remain available');
+    await clickText('About','.wpb-exercise-tabs button');
+    const readGoals=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).goals||{});
+    const goalsBefore=await readGoals();
+    const typeGoal=async text=>{
+      await page.focus('.wpb-exercise-goal-input');await page.keyboard.down('Control');
+      await page.keyboard.press('KeyA');await page.keyboard.up('Control');
+      await page.keyboard.press('Backspace');if(text)await page.keyboard.type(text);
+    };
+    for(const text of ['92..5','125oops','-5','0','Infinity','']){
+      await typeGoal(text);await page.click('.wpb-exercise-goal-save');
+      assert.deepEqual(await readGoals(),goalsBefore,'Malformed or empty goal never saves a partial number or inferred replacement: '+text);
+      assert.equal(await page.$eval('.wpb-exercise-goal-input',el=>el.value),text,'Invalid goal typing stays available to correct');
+    }
+    await typeGoal('212.5');await page.click('.wpb-exercise-goal-save');
+    await page.waitForSelector('.wpb-exercise-goal');
+    assert.equal((await readGoals())['bb-bench'],212.5,'A decimal goal retains its exact entered value');
+    await page.focus('.wpb-exercise-goal');await page.keyboard.press('Enter');
+    await typeGoal('225.5');await clickText('Cancel','.wpb-exercise-goal-editor button');
+    assert.equal((await readGoals())['bb-bench'],212.5,'Cancel discards a staged goal change');
+    await page.focus('.wpb-exercise-goal');await page.keyboard.press('Enter');
+    const ordinary=await page.$eval('.wpb-exercise-goal-input',el=>parseFloat(getComputedStyle(el).fontSize));
+    await page.evaluate(()=>document.documentElement.style.fontSize='200%');
+    await page.setViewport({width,height:520,deviceScaleFactor:1,isMobile:true,hasTouch:true});await settle();
+    const enlarged=await page.$eval('.wpb-exercise-goal-input',el=>({size:parseFloat(getComputedStyle(el).fontSize),
+      label:el.labels?.[0]?.textContent,overflow:document.documentElement.scrollWidth>innerWidth+1}));
+    assert.ok(enlarged.size>=ordinary*1.95&&enlarged.label?.includes('lb')&&!enlarged.overflow,
+      'Goal label, unit and field follow larger text in a short phone window: '+JSON.stringify(enlarged));
+    for(const selector of ['.wpb-exercise-goal-save','.wpb-exercise-goal-cancel','.wpb-exercise-goal-remove']){
+      const button=await page.$(selector);await button.focus();await settle();
+      const target=await button.evaluate(el=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+        return {width:r.width,height:r.height,hit:el===hit||el.contains(hit)};});
+      assert.ok(target.width>=44&&target.height>=44&&target.hit,'Goal actions remain reachable above navigation: '+JSON.stringify({selector,target}));
+      await button.dispose();
+    }
+    await page.screenshot({path:path.join(root,`verification/b939-goal-${theme}-${width}-phone.png`)});
+    await page.evaluate(()=>document.documentElement.style.fontSize='');
+    await page.setViewport({width,height:852,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    await clickText('Remove goal','.wpb-exercise-goal-editor button');
+    assert.deepEqual(await readGoals(),goalsBefore,'Removing a goal is explicit and restores the empty goal state');
+    await typeGoal('777');
+    await page.click('.wpb-exercise-detail-header button[aria-label="Back to library"]');
+    await page.waitForSelector('.wpb-exercise-detail',{hidden:true});
+    await page.click('button[aria-label="Find exercises"]');
+    await page.click('button[aria-label="Clear exercise search"]');
+    await page.type('.wpb-library-search input',EXERCISES.find(ex=>ex.id==='inc-curl').name);
+    await page.click('.wpb-library-row');await page.waitForSelector('.wpb-exercise-detail');
+    await clickText('About','.wpb-exercise-tabs button');
+    assert.notEqual(await page.$eval('.wpb-exercise-goal-input',el=>el.value),'777','A different exercise cannot inherit the previous goal draft');
+    await page.click('button[aria-label="Ban from all programs"]');
+    await page.waitForSelector('.wpb-exercise-detail',{hidden:true});
+    assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).banned.includes('inc-curl')),
+      'Ban remains an intentional preference transaction');
+    await page.click('.wpb-library-row');await page.waitForSelector('.wpb-exercise-detail');
+    await clickText('About','.wpb-exercise-tabs button');
+    await page.click('button[aria-label="Ban from all programs"]');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).banned.includes('inc-curl')),false,'Unban reverses the same preference');
+    await page.click('.wpb-exercise-detail-header button[aria-label="Back to library"]');
+    await page.waitForSelector('.wpb-exercise-detail',{hidden:true});
     await page.evaluate(()=>history.back());await page.waitForSelector('[data-view-frame="home"]');
 
     await page.click('[data-tab="progress"]');await page.waitForSelector('#history-search');
@@ -697,7 +779,7 @@ async function verifyBrowseMemory(browser,theme,width){
     const withoutLoadStamp=s=>({...s,history:s.history.map(({updatedAt,...record})=>record)});
     assert.deepEqual(withoutLoadStamp(await training()),withoutLoadStamp(before),'Reload retains every training record');
     assert.deepEqual(errors,[],'No browsing or reload errors');
-    return {theme,width,libraryScroll,sessionsScroll,recordsScroll,clear};
+    return {theme,width,libraryScroll,sessionsScroll,recordsScroll,clear,browsingSpace};
   }finally{await context.close();}
 }
 // Cohesion 13: real manual-program choices retain selection and deload semantics

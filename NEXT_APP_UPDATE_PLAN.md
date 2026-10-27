@@ -1,3 +1,17 @@
+## Build 939 / M393 — Library discovery and detail batch
+
+**Release preference:** The user requested larger coherent batches on October 27. Finish related improvements and verification together; do not create a new build for each small change.
+
+Continue from published Build 938 / PR #366, merge 4af05ccf8392773ea8afa4865f6993752a9e6a5c. All candidate/post-merge workflows and public dark/light online/offline/resume journeys passed, with 133/133 hosted hashes matching.
+
+R54 reproduces the reported Library browsing defect on unchanged Build 938: its five-row pinned header is 290px tall at 393px, leaving 65.96% of the Library viewport for results. Move search and the three filter rows into the existing results scroll owner. Keep a compact toolbar with Back, Library, Find and Compare. The final 320/393px dark/light fixtures measure a 65px toolbar and 92.37% reading space after scrolling. Find returns the actual scrolling owner(s) to search and focuses the existing input without resetting filters. Preserve filter restoration, Compare/Back scroll memory, selected-chip visibility and the wide list/detail pane.
+
+Consolidate the complete LibraryView presentation into one semantic CSS family: catalog, empty states, detail chrome, notes, history, records, metadata, movement variants, technique/demo and goal controls. Retire 115 static inline objects and superseded external/embedded Library layers. The only remaining Library inline object is the calculated goal progress width. Tighten combined inline 2,256 → 2,141; external priorities 2,173 → 2,106; embedded 1,134 → 1,053; repeated priorities remain 14. Preserve shared motion, palette, focus, selected-state, content-visibility and adaptive-pane owners. No new runtime module or parallel data/engine owner.
+
+The same task replay reproduces a goal defect: entering 92..5 stores 92. Validate a complete finite positive decimal before Save, retain invalid raw typing, and keep updates with the existing onSetGoal writer. Give the form a visible unit label, shared actions, Cancel and explicit Remove goal. Clear staged goal text when selecting another exercise. R54 checks invalid/empty input, exact 212.5 lb save, Cancel, Remove, exercise isolation, Ban/Unban, larger text and reachable actions in a short phone window; authored training and logged facts remain unchanged. R74 protects reading space at enlarged text, and R65 selects the actual second exercise independently of the added controls node.
+
+Require final-head source/lifecycle/independent/seven-browser/release gates, then hosted-byte parity and public online/offline/resume checks. Physical Android/IME/TalkBack/interruption/foldable acceptance stays open. The broader refactor continues with Program and other cohesive surfaces; this batch does not claim full launch acceptance.
+
 ## Build 938 / M392 — Settings choice and theme ownership
 
 Continue after Build 937 / PR #365 merged as 7c8664eb0f659ad928177b0c7433349c0d839872. All five candidate workflows passed, including the seven browser groups. Deployed verification is recorded separately.

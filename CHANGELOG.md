@@ -1,3 +1,10 @@
+## Build 939 / M393 — Room to browse and cohesive Library details
+
+- Keep only a compact Library toolbar pinned. Search, muscle/equipment filters and All/Recent/Goals/Banned choices scroll with the exercises. Find brings the real search field back without clearing selections; Compare remains available in the toolbar.
+- Move list, empty-state, detail, notes, history, records, attachment, technique and goal presentation into semantic CSS. Retire 115 inline style objects and 148 priority overrides, including the old rules that flattened rows and squeezed muscle badges. Keep text scaling, rounded rows, keyboard focus and the existing adaptive list/detail pane.
+- Goal editing accepts a complete, finite positive weight. Malformed input no longer silently saves a numeric prefix or a guessed replacement. Add Cancel and explicit Remove goal, visible units, scalable controls and independent drafts per exercise.
+- Preserve all original catalog/record projections, pinned notes, bans, training prescriptions and workout recovery. Engine 0.65.9 remains unchanged.
+
 ## Build 938 / M392 — Readable Settings choices and shared styling
 
 - Fix theme names remaining at 11.5px when actual root text doubles. Theme labels and group captions now scale; the grid adapts to the text size and available width.

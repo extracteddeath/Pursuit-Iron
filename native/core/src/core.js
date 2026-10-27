@@ -15,7 +15,7 @@ import { withProgressionChoices, repeatedNote, refreshProgressionSets, buildSess
 import { withSessionPlanChoice } from '../../../modules/session-plan.js';
 import { reviewProgramChanges, withProgramRevision } from '../../../modules/program-review.js';
 import { INJURY_AREAS, INJURY_IMPACTS, injuryParts, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from '../../../modules/injury-tools.js';
-import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout, resizeWorkingSets } from '../../../modules/workout-context.js';
+import { adjustInjuredExercises, workoutPlateau, lighterPendingWorkout, resizeWorkingSets, carryLoggedLoad, uncarryLoggedLoad } from '../../../modules/workout-context.js';
 
 const { EX_BY_ID, EXERCISES } = E;
 const now = () => Date.now();
@@ -1058,8 +1058,9 @@ const ACTIONS = {
     toggle({ ei, si }, ctx, d) {
         const e = d[ei], set = e?.sets[si]; if (!set) return d;
         const wasDone = !!set.done, ex = EX_BY_ID[e.id];
-        let sets = e.sets.map((s, j) => (j === si ? { ...s, done: !wasDone, skipped: false, hint: undefined, ...(wasDone ? { actualRIR: null } : {}) } : s));
+        let sets = e.sets.map((s, j) => (j === si ? { ...s, done: !wasDone, skipped: false, hint: undefined, carriedFrom: undefined, ...(wasDone ? { actualRIR: null } : {}) } : s));
         if (wasDone) {
+            sets = uncarryLoggedLoad(sets, si);
             sets = E.rollbackLiveAutoregulation(sets, si);
             sets = sets.map((s) => {
                 if (!s || s.retuneSrc !== si || s.done || E.userOwnsRuntimeSet(s) || !s.retuneFrom) return s;
@@ -1068,7 +1069,7 @@ const ACTIONS = {
             });
         } else if (isWork(set)) {
             const W = parseFloat(set.weight), R = parseInt(set.reps);
-            if (W > 0 && R > 0) sets = nextPrefill(ctx, sets, si, ex, e.slot);
+            if (W > 0 && R > 0) sets = carryLoggedLoad(nextPrefill(ctx, sets, si, ex, e.slot), si);
         }
         const out = d.map((x, i) => (i === ei ? { ...x, sets } : x));
         // App.js toggleDone superset round: a working set inside a superset moves on to the partner

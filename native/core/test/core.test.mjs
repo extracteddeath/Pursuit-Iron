@@ -129,6 +129,21 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const orm = C.oneRm({ weight: 100, reps: 5 });
   ok(orm.e1rm > 100 && orm.percents[0].load <= orm.e1rm && orm.reps[0].load <= orm.e1rm, '1RM estimate floors every load at or below the estimate (' + orm.e1rm + ')'); }
 
+// The design's carried load: a logged set's load fills the later empty working sets; unlogging takes it back
+{ C.init({}); C.createProgram({ config: { name: 'Carry', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  C.startSession({}); let cs = C.session();
+  const ei = cs.exercises.findIndex((e) => e.sets.filter((x) => !x.warm).every((x) => !(parseFloat(x.weight) > 0)));
+  if (ei >= 0) {
+    const si = cs.exercises[ei].sets.findIndex((x) => !x.warm && !x.sub);
+    C.act({ type: 'edit', ei, si, field: 'weight', value: '60' }); cs = C.act({ type: 'toggle', ei, si });
+    const later = cs.exercises[ei].sets.filter((x, j) => j > si && !x.warm && !x.sub);
+    ok(later.length > 0 && later.every((x) => x.weight === '60'), 'a logged load fills the later empty working sets');
+    C.act({ type: 'edit', ei, si: si + 1, field: 'weight', value: '62.5' });
+    cs = C.act({ type: 'toggle', ei, si });
+    const after = cs.exercises[ei].sets.filter((x, j) => j > si && !x.warm && !x.sub);
+    ok(after[0].weight === '62.5' && after.slice(1).every((x) => x.weight === ''), 'unlogging takes the carried load back, keeping a load you changed');
+  } else ok(false, 'no first-time lift to test the carried load'); }
+
 // 12. Gyms and plates
 { const g = C.gyms();
   ok(g.gyms.length >= 1 && g.equipment.length > 1 && g.presets.length >= 3, 'gyms view lists gyms, equipment by category and presets');

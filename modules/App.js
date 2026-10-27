@@ -76,7 +76,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
 import { holdWorkoutScreenAwake, restoreWorkoutClock, workoutElapsedMs } from "./mobile-lifecycle.js";
-import { activeSetContext, adjustInjuredExercises, dockRepSuggestion, removePendingWorkingSet, resizeWorkingSets, workoutTechniqueRest, workoutPlateau, lighterPendingWorkout } from "./workout-context.js";
+import { activeSetContext, adjustInjuredExercises, carryLoggedLoad, uncarryLoggedLoad, dockRepSuggestion, removePendingWorkingSet, resizeWorkingSets, workoutTechniqueRest, workoutPlateau, lighterPendingWorkout } from "./workout-context.js";
 import { programLastPerformances } from "./program-last-performance.js";
 import { exitMotion, moveSheet, motionValue, resumeMotion, settleSheet, spring, stopMotion } from "./ui-motion.js";
 
@@ -11859,7 +11859,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         setData(d => d.map((e, i) => {
             if (i !== ei)
                 return e;
-            let sets = e.sets.map((s, j) => j === si ? { ...s, done: !wasDone, hint: undefined, ...(wasDone ? { actualRIR: null } : {}) } : s);
+            let sets = e.sets.map((s, j) => j === si ? { ...s, done: !wasDone, hint: undefined, carriedFrom: undefined, ...(wasDone ? { actualRIR: null } : {}) } : s);
             /* UN-TICKING A SET UNDOES THE RETUNE THAT TICKING IT CAUSED.
                Completing a working set rewrites the NEXT one from what you just lifted. Un-ticking used to
                clear only `done` and `actualRIR` — the rewrite it had triggered stayed behind, with nothing
@@ -11872,6 +11872,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                An input the lifter has TYPED (auto === false) is theirs and is never rolled back — the
                rollback only reclaims rows the app itself wrote and now has no reason to stand behind. */
             if (wasDone) {
+                sets = uncarryLoggedLoad(sets, si);
                 sets = rollbackLiveAutoregulation(sets, si);
                 sets = sets.map(s => {
                     if (!s || s.liveAdjustment || s.retuneSrc !== si || s.done || userOwnsRuntimeSet(s) || !s.retuneFrom)
@@ -11898,7 +11899,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             clearTimeout(prFlashTimer.current);
                         prFlashTimer.current = setTimeout(() => setPrFlash(null), 2400);
                     }
-                    sets = computeNextPrefill(sets, si, ex, e.slot);
+                    sets = carryLoggedLoad(computeNextPrefill(sets, si, ex, e.slot), si);
                 }
             }
             return { ...e, sets };

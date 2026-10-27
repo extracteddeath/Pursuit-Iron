@@ -1,3 +1,4 @@
+import { startingEstimateText } from './training-domain/starting-load.js';
 import { sessionPlanChange } from './session-plan.js';
 import { completedHistorySets, convertHistoryLoad, normalizeHistoryRevisions } from './next-engine/history-contract.js';
 import { sessionSuggestion, prescribeSets, loadableAtOrBelow, resolveStyle } from './training-domain/prescriptions.js';
@@ -209,8 +210,11 @@ export function buildSessionReview(program, day, weekIndex, unit, history = [], 
                     opportunity = { type: 'reps', weight, reps, bestReps };
             }
         }
+        const estimatedTarget = proposed.find(set => set.target?.estimate)?.target;
         const proposedReason = proposed.some(set => set.target?.nextAction === 'percentage')
             ? 'This lift follows the saved percentage program and training max for this week. Its programmed weights and reps stay together.'
+            : estimatedTarget
+                ? `Starting estimate ${estimatedTarget.w} ${unit}. ${startingEstimateText(estimatedTarget.estimate, unit)} Check the load on your first set.`
             : proposedSuggestion?.reason || `Choose a starting load for ${range[0]}–${range[1]} reps at the planned effort. This exposure will establish a reference for future progression.`;
         const reason = change.undone ? suggestion.reason : proposedReason;
         const action = proposedSuggestion?.action;

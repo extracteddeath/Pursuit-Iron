@@ -1,3 +1,12 @@
+## Build 941 — Starting estimates, recovery dose, injury detail and gym plates
+
+- Integrate the reviewed web engine patch, removing its duplicate recovery hunk.
+- Seed otherwise blank planned lifts with labelled, equipment-rounded estimates; use corrected recent history and the current profile without replacing progression or saved live work.
+- Scale recovery depth with the recorded session dose while retaining effort and elapsed/measured recovery.
+- Record injury severity and show preference effects before explicit workout adjustments.
+- Persist per-gym plate pairs and solve only combinations the gym owns, including empty inventories.
+- Add behavioral coverage for revisions, units, zero RIR, gym limits, protected swaps/holds, recovery dose and finite plate combinations.
+
 ## Build 940 / M394 — Safer Program edits and prescription integrity
 
 - Set and rep fields retain raw typing until Apply, with inline errors and Cancel. Complete target validation prevents malformed text from becoming a different rep target or a guessed progression range. Reps-only changes preserve untouched weekly set schedules.

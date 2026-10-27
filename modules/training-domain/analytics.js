@@ -39,6 +39,37 @@ function sanitizeGymBarWeights(input) {
     return out;
 }
 
+function sanitizePlatePairs(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+    const out = {};
+    for (const unit of ['kg', 'lb']) {
+        const counts = input[unit];
+        if (!counts || typeof counts !== 'object' || Array.isArray(counts)) continue;
+        out[unit] = Object.fromEntries(ALL_PLATES[unit].map(plate => {
+            const count = Number(counts[plate]);
+            return [plate, Number.isFinite(count) ? clamp(Math.floor(count), 0, 50) : 0];
+        }));
+    }
+    return Object.keys(out).length ? out : null;
+}
+
+// Counts are pairs: one plate on each side of the bar. An explicit empty set stays empty.
+function platePairsFor(gym, unit, ownedSet) {
+    if (!ALL_PLATES[unit]) return {};
+    const own = sanitizePlatePairs(gym?.platePairs)?.[unit];
+    if (own) return own;
+    const set = Array.isArray(ownedSet) ? ownedSet.map(Number) : PLATES[unit];
+    return Object.fromEntries(ALL_PLATES[unit].map(plate =>
+        [plate, set.includes(plate) ? (plate === (unit === 'kg' ? 25 : 45) ? 4 : 2) : 0]));
+}
+
+function availPlatesFor(plates, gym) {
+    const base = plates || PLATES;
+    const pairs = Object.fromEntries(['kg', 'lb'].map(unit => [unit, platePairsFor(gym, unit, base[unit])]));
+    return { ...base, ...Object.fromEntries(['kg', 'lb'].map(unit =>
+        [unit, ALL_PLATES[unit].filter(plate => pairs[unit][plate] > 0)])), pairs };
+}
+
 function normalizeGyms(list, activeId) {
     const arr = (Array.isArray(list) ? list : []).filter(g => g && typeof g === "object").map((g, i) => ({
         id: typeof g.id === "string" && g.id ? g.id : `gym_${i}`,
@@ -49,6 +80,7 @@ function normalizeGyms(list, activeId) {
         limits: sanitizeLimits(g.limits),
         inventory: sanitizeInventory(g.inventory),
         barWeights: sanitizeGymBarWeights(g.barWeights),
+        ...(sanitizePlatePairs(g.platePairs) ? { platePairs: sanitizePlatePairs(g.platePairs) } : {}),
         limitUnit: g.limitUnit === "kg" || g.limitUnit === "lb" ? g.limitUnit : "kg"
     }));
     const gyms = arr.length ? arr : [
@@ -2155,6 +2187,28 @@ function platesPerSide(total, bar, unit) {
         return { barW, plates: [], leftover: 0 }; // NaN/Infinity/absurd input (corrupt log, cleared field) must not reach the greedy loop
     if (!(perSide > 0))
         return { barW, plates: [], leftover: 0 };
+    const counts = AVAIL_PLATES.pairs?.[unit];
+    if (counts) {
+        // Bounded change-making: an early greedy choice can strand a reachable total.
+        // Store each reachable amount once, using the fewest available plates per side.
+        const grid = .25, target = Math.floor(perSide / grid + 1e-9);
+        const paths = new Map([[0, []]]);
+        for (const plate of ALL_PLATES[unit] || []) {
+            const raw = Number(counts[plate]);
+            const count = Number.isFinite(raw) ? clamp(Math.floor(raw), 0, 50) : 0;
+            const units = Math.round(plate / grid);
+            const before = [...paths];
+            for (const [amount, loaded] of before) {
+                for (let n = 1; n <= count && amount + n * units <= target; n++) {
+                    const next = amount + n * units, size = loaded.length + n;
+                    if (!paths.has(next) || paths.get(next).length > size)
+                        paths.set(next, [...loaded, ...Array(n).fill(plate)]);
+                }
+            }
+        }
+        const best = Math.max(...paths.keys());
+        return { barW, plates: paths.get(best), leftover: Math.round((perSide - best * grid) * 1000) / 1000 };
+    }
     const list = (((AVAIL_PLATES[unit] && AVAIL_PLATES[unit].length) ? [...AVAIL_PLATES[unit]].sort((a, b) => b - a) : PLATES[unit]) || []).filter(p => Number.isFinite(p) && p > 0); // a 0/negative/NaN plate (possible via a corrupt import) would spin the greedy loop forever; unknown unit → empty list, not a throw
     // Greedy largest-first — the conventional loading order lifters expect, and provably exact for the
     // canonical default sets (every denomination is a multiple of the smallest).
@@ -5314,7 +5368,7 @@ const RELEASE_DIAG_FIELDS = new Set(["code", "source", "action", "phase", "engin
 function isRuntimeProgram(p) {
     return !!p && (p.engineSource === "pursuit-next" || p.artifactType === "freestyle" || p.custom === true);
 }
-export { ALL_PLATES, ASSIST_IDS, AVAIL_PLATES, BARS, BAR_LABEL, BIG_THREE, BIRTH_RE, COVERED_MUSCLES, DELT_HEAD, EQUIP_CATS, EX_ABBREV, EX_FAMILY, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMIT_KEYS, INTENT_FROM_CAT, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PATTERNS, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, STANDARDS, STD_LEVELS, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, SUBMUSCLE_LABEL, TECHNICAL_LIFTS, TEMPLATE_CATS, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, ageFactor, ageFrom, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, availableFor, backupRecordImpact, barFor, barWeightFor, betterTopSet, birthParts, blockChangeSummary, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, classifyPlateau, clearSetup, coachFacts, completionRate, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, cycleProgress, dayMuscleBreakdown, dayMuscleVolume, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, deloadAdvice, distributeVolBias, effectiveRest, effortLabel, effortValueLabel, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkOf, lastSetEffort, lastTopSet, lengthUnitFor, lifterModelKey, linearInc, liveCoachForContext, logWindow, loggedSubVolume, loggedVolume, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergedSetCount, newGymId, nextTMEvidence, normalizeBwLog, normalizeGyms, normalizeMeasureLog, overreachSignal, paceFactor, patternCues, patternTrainable, perWeekOf, perfAfterDelete, personalMav, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribedRIRofAny, programChangeLabels, projectNextTM, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, repsLow, restSec, rirTrend, rmAt, rotationOf, sanitizeInventory, sanitizeLimits, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, setAvailPlates, setGymBarWeights, setRestScaleGlobal, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, subRegionOf, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, toLength, todayISO, uid, underRecoveredWeekly, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, workoutPlanCoachFact };
+export { ALL_PLATES, ASSIST_IDS, AVAIL_PLATES, BARS, BAR_LABEL, BIG_THREE, BIRTH_RE, COVERED_MUSCLES, DELT_HEAD, EQUIP_CATS, EX_ABBREV, EX_FAMILY, EX_METRICS, EX_METRIC_BY_ID, EX_SPECIFIC, EX_WINDOWS, FOCUS_CAVEAT, GAP_FRACTION, GENERATION_ROUTE, GYM_LIMIT_KEYS, INTENT_FROM_CAT, LEGACY_EX_TYPICAL_KEYS, LEVEL_TITLES, MACHINE_SETUP, MILESTONE_XP, MIN_DAY_SESSIONS, MOBILITY, MUSCLE_SYNONYM, MYO_MAX_SETS, MYO_MINI_REPS, MYO_MINI_SETS, MYO_MIN_REPS, MYO_TARGET_REPS, NOVICE_INELIGIBLE_SPLITS, PATTERNS, PATTERN_GROUPS, PATTERN_MIN_SETS, PHASES, PHASE_ROT, PLANNED_ROOM_RIR, PLATES, PROG_POLICIES, PROG_STYLES, PV_PAD_TOP, PV_ROW_GAP, RACK_PRESETS, REDUCE_FRACTION, REFERENCES, REGION_MOVEMENT, REGION_REQUIRED, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY, REST_SCALE, SCORE_BANDS, SCORE_EQUIV, SCORE_PATTERN, SCORE_PATTERN_LABEL, SELF_TEST_FRAME_BUDGET_MS, SELF_TEST_HISTORY_LIMIT, SELF_TEST_SUPPORTED_ENGINES, SESSION_BOUNDS, SESSION_EX_TYPICAL, SETUP_FIELD_ORDER, SETUP_LABELS, SET_ROW_BLEED, SEX_FACTOR, STANDARDS, STD_LEVELS, STRENGTH_CLUB_LIFTS, STRENGTH_CLUB_TIERS_LB, STRETCH_FOCUS_E2, STRETCH_FOCUS_E3, SUBMUSCLE_LABEL, TECHNICAL_LIFTS, TEMPLATE_CATS, VIEW_DEPTH, WARMUP_PYRAMIDS, WARMUP_SET_SEC, WEIGHTED_SWAP, __doseMemo, __slopeMemo, __volKey, __weeklyVolMemo, _dstCache, _lmCache, _planOverviewMemo, addedMinutes, addedSeconds, ageFactor, ageFrom, applyCustomProgramSettings, asLengthUnit, assertExerciseData, auditProgramWeek, auditSets, availableFor, backupRecordImpact, barFor, barWeightFor, betterTopSet, birthParts, blockChangeSummary, blockPlanFor, blockRetro, blockReview, budgetIncludesTransitions, buildLifterModel, calibrateDayPerf, calibratedAnchorPerf, canUndoProgramSave, classifyPlateau, clearSetup, coachFacts, completionRate, computeLevel, computeMilestones, constantLoadDecay, coverageGaps, coverageRelief, cuesFor, cycleProgress, dayMuscleBreakdown, dayMuscleVolume, dayScopedTrends, daySeconds, daysInWeek, decodeGallery, deloadAdvice, distributeVolBias, effectiveRest, effortLabel, effortValueLabel, estimateMinutes, estimateMinutesFor, exMatches, exRecords, exWindow, exerciseAt, exerciseProfile, exerciseSeries, exerciseSlotSec, exerciseTrends, explainPrescription, feedbackDelta, filterWorkoutHistory, fmtSets, formatSetup, groupPctSets, groupSessionsByCycle, groupSessionsByMonth, growMyoSets, gymById, gymCapFor, historyForProgram, historyVolumeIn, homeProgramGroups, isAssistedEx, isRuntimeProgram, isStretchFocus, isWorkSet, landmarkOf, lastSetEffort, lastTopSet, lengthUnitFor, lifterModelKey, linearInc, liveCoachForContext, logWindow, loggedSubVolume, loggedVolume, lowerBodyLift, makeMyoMini, mavFor, mergeSessionData, mergedSetCount, newGymId, nextTMEvidence, normalizeBwLog, normalizeGyms, normalizeMeasureLog, overreachSignal, paceFactor, patternCues, patternTrainable, perWeekOf, perfAfterDelete, personalMav, personalRepSlope, phaseFor, phaseKind, pickActiveProgram, pickTopSet, planOverview, planOverviewMemo, plannedWeek, plateauOf, plateauOfLift, plateauSplitByDay, platesPerSide, poolOf, preferenceFloor, prescribedRIRofAny, programChangeLabels, projectNextTM, rankSwapAlts, readinessBand, recommendedSplit, regionGapFix, regionGapsFor, repRange, repsLow, restSec, rirTrend, rmAt, rotationOf, sanitizeInventory, sanitizeLimits, sanitizePlatePairs, platePairsFor, availPlatesFor, sanitizeRepsInput, sanitizeWeightInput, scoreAttribution, scoreCompose, scoreContin, scoreEquivalent, scoreEquivalentInverse, scoreLevelIdx, scoreLevelLabel, scoreMatur, scorePatternFor, scoreTargetFor, scoreTo100, sessionE1RM, sessionExercisePlan, sessionSnapshotStatus, setAvailPlates, setGymBarWeights, setRestScaleGlobal, setupFieldsFor, setupFieldsWithStored, setupLabel, simulateAndAudit, starvedRegions, strengthClubSnapshot, strengthLevel, strengthScore, strengthScoreHistory, strengthSnapshot, stretchTable, subRegionOf, swapOverlapNames, syncSubSets, techExplain, techSetTag, templateConfig, templateIntent, tempoFor, toLength, todayISO, uid, underRecoveredWeekly, userOwnsRuntimeSet, volumeAudit, volumeLedger, volumeResponse, volumeVerdicts, warmupCount, warmupPlan, warmupRoutine, warmupSets, weekIntent, weekKeyOf, weekMuscleBreakdown, weeklyBodyweightTrend, weeklyRecap, weeklySubVolume, weeklyVolume, workoutPlanCoachFact };
 
 export { liftBests };
 

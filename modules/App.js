@@ -21,7 +21,7 @@ import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { withSessionPlanChoice } from './session-plan.js';
 import {
     addedMinutes, advanceLegacyFirstCycleBlock, ageFrom, ALL_EQUIP_IDS, ALL_PLATES, applyCustomProgramSettings,
-    applyLiveAutoregulation, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, availableFor,
+    applyLiveAutoregulation, assertExerciseData, auditProgramWeek, auditSets, autoStyleDetail, availableFor, availPlatesFor, platePairsFor,
     backupRecordImpact, BAR_LABEL, barFor, BARS, barWeightFor, baseSetsFor, betterTopSet, birthFromAge,
     blockChangeSummary, blockPlanFor, blockRetro, blockReview, buildLifterModel, buildUserAddedSlotPrescriptions,
     buildWeekPlan, BW_LOG_CAP, calibratedAnchorPerf, canUndoProgramSave, capHistory, clamp,
@@ -68,13 +68,13 @@ import {
     todayISO, TOTAL_WEEKS, toUnit, trainingMaxForUnit, uid, underRecoveredWeekly, userOwnsRuntimeSet, VIEW_DEPTH,
     volumeAudit, volumeVerdicts, warmupRoutine, warmupSets, weekIntent, weeklyBodyweightTrend, weeklyRecap,
     weeklySubVolume, weeklyVolume, weekMuscleBreakdown, weeksOf, withManualProgramTargets, withTrainingMax, workoutCsvToStore,
-    workoutPlanCoachFact,
+    workoutPlanCoachFact, setLifterProfile, startingEstimateText,
 } from './engine-api.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
-import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
+import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='940';
+const __APP_VERSION__='4.0.0'; const __BUILD__='941';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -10784,7 +10784,7 @@ function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) {
 function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
     const clean = useMemo(() => normalizeInjuryLog(entries), [entries]);
     const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-    const blank = () => ({ region:'', part:'', side:'unspecified', impact:'monitor', onset:today(), note:'' });
+    const blank = () => ({ region:'', part:'', side:'unspecified', impact:'monitor', level:'', onset:today(), note:'' });
     const [draft, setDraft] = useState(blank);
     const [editingId, setEditingId] = useState(null);
     const [editing, setEditing] = useState(clean.length === 0);
@@ -10808,7 +10808,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
         finally {savingRef.current=false;setSaving(false);}
     };
     const begin = entry => {
-        const next=entry?{region:entry.region || '',part:entry.part,side:entry.side,impact:entry.impact,
+        const next=entry?{region:entry.region || '',part:entry.part,side:entry.side,impact:entry.impact,level:injuryLevel(entry),
             onset:entry.onset || today(),note:entry.note}:blank();
         originalRef.current=JSON.stringify(next);setDraft(next);setEditingId(entry?.id || null);setEditing(true);setError('');setStatus('');setDiscard(false);
         setGroup(INJURY_AREAS.find(area=>area.id===next.region)?.group || 'Upper body');
@@ -10863,6 +10863,10 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
             _jsx('div',{className:'wpb-injury-side',role:'group','aria-label':'Injury side',children:[['unspecified','Not specified'],['left','Left'],['right','Right'],['both','Both']].map(([value,label])=>
                 _jsx('button',{type:'button',className:'pressable','aria-pressed':draft.side===value,onClick:()=>set({side:value}),children:label},value))}),
             _jsxs('label',{children:['Onset date',_jsx('input',{type:'date','aria-label':'Injury onset date',value:draft.onset,max:today(),onChange:ev=>set({onset:ev.target.value})})]}),
+            _jsx('div',{className:'wpb-injury-field-title',children:'How did it feel? · optional'}),
+            _jsx('div',{role:'group','aria-label':'Injury severity',className:'wpb-injury-impact',children:INJURY_LEVELS.map(item=>
+                _jsxs('button',{type:'button',className:'pressable','data-injury-level':item.id,'aria-pressed':draft.level===item.id,onClick:()=>set({level:item.id,impact:item.impact}),
+                    children:[_jsx('strong',{children:item.label}),_jsx('span',{children:item.detail})]},item.id))}),
             _jsx('div',{className:'wpb-injury-field-title',children:'Your training preference'}),
             _jsx('div',{role:'group','aria-label':'Injury training preference',className:'wpb-injury-impact',children:INJURY_IMPACTS.map(item=>
                 _jsxs('button',{type:'button',className:'pressable','data-injury-impact':item.id,'aria-pressed':draft.impact===item.id,onClick:()=>set({impact:item.id}),
@@ -10872,6 +10876,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
             draft.part && upcoming?.day && _jsxs('div',{className:'wpb-injury-preview',children:[_jsx('strong',{children:'Next workout · '+upcoming.day.label}),
                 _jsx('p',{children:preview.length?preview.length+' related lift'+(preview.length===1?'':'s')+' to review':'No related lifts found in the next workout. This stays in your injury log.'}),
                 preview.length>0 && _jsx('ul',{children:preview.map(ex=>_jsx('li',{children:ex.name},ex.id))}),
+                _jsx('p',{children:injuryPlan(draft.impact,preview.map(ex=>ex.name),injuryTitle(draft,PART_LABEL))[0]}),
                 _jsx('p',{children:'You’ll review the exercise list before applying any workout changes.'})]}),
 ]}) :
             _jsxs('div',{children:[_jsxs('div',{className:'wpb-injury-list-heading',children:[_jsx('h3',{children:active.length+' active injur'+(active.length===1?'y':'ies')}),
@@ -12502,12 +12507,15 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                             // Per-set DDP: when each set has its own weight, the session-level banner would be
                             // misleading (it shows only the first set's weight). Show a different banner instead.
                             // The displayed advice is the same evaluated decision used to fill the rows.
-                            if (!sug) {
+                            const estimatedTarget = e.sets.find(set => !set.warm && set.target?.estimate)?.target;
+                            if (!sug || estimatedTarget) {
                                 // A session can have a real previous lift (shown in the Last chips)
                                 // without a compatible progression-owned suggestion. Do not claim
                                 // it is the lifter's first time: that contradicts the actual history.
-                                if (previousWorkoutSet(lastPerf[e.id], 0)) return null;
-                                return (_jsxs("div", { className: "wpb-workout-starting-hint", style: { fontSize: 12, color: C.muted, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Info, { size: 13 }), "Choose a starting load. Your completed sets will guide future suggestions."] }));
+                                if (!estimatedTarget && previousWorkoutSet(lastPerf[e.id], 0)) return null;
+                                return (_jsxs("div", { className: "wpb-workout-starting-hint", style: { fontSize: 12, color: C.muted, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(Info, { size: 13 }), estimatedTarget
+                                    ? `Starting estimate ${estimatedTarget.w} ${unit}. ${startingEstimateText(estimatedTarget.estimate,unit)} Check the load on your first set.`
+                                    : "Choose a starting load. Your completed sets will guide future suggestions."] }));
                             }
                             const col = sug.dir === "up" ? C.accent : sug.dir === "down" ? C.warn : C.muted;
                             const Arrow = sug.dir === "up" ? TrendingUp : sug.dir === "down" ? TrendingDown : Minus;
@@ -16107,7 +16115,7 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
     const [bkHide, setBkHide] = useState(false);
     const [upNextAll, setUpNextAll] = useState(true);
     const [planChangesOpen, setPlanChangesOpen] = useState(false);
-    const sessionReview = useMemo(() => upNext ? buildSessionReview(upNext.program, upNext.day, upNext.weekIndex, unit, history, perf) : null, [upNext, unit, history, perf]); // Show the actual session before starting.
+    const sessionReview = useMemo(() => upNext ? buildSessionReview(upNext.program, upNext.day, upNext.weekIndex, unit, history, perf) : null, [upNext, unit, history, perf, bodyweight, sex]); // Show the actual session before starting.
     useEffect(() => { setUpNextAll(true); }, [upNext?.program?.id, upNext?.day?.id, upNext?.weekIndex]);
     /* Program-card overflow menu. Held at Home's TOP LEVEL, not inside the card, and carrying the
        button's viewport rect — the same shape ProgramView's day menu uses, and for the same reason it
@@ -17609,7 +17617,7 @@ function ProgramSwitcherSheet({ saved, cycles, history, activeId, onPick, onClos
     return (_jsx("div", { onClick: onClose, className: "wpb-backdrop wpb-selection-backdrop", children: _jsxs("div", { ref: sheetDragRef, "data-sheet-drag": true, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-switcher-sheet wpb-selection-sheet", children: [_jsxs("div", { className: "wpb-selection-heading", children: [_jsxs("div", { className: "wpb-selection-copy", children: [_jsx("div", { className: "wpb-selection-title", children: "Switch program" }), _jsx("div", { className: "wpb-selection-intro", children: "Your next workout comes from whichever is active." })] }), _jsx("button", { onClick: onClose, className: "pressable wpb-switcher-done", children: "Done" })] }), rows.length > 6 && (_jsx("input", { value: q, onChange: e => setQ(e.target.value), placeholder: "Search programs\u2026", "aria-label": "Search programs", className: "wpb-switcher-search" })), _jsxs("div", { className: "wpb-switcher-list", children: [shown.map(r => (_jsxs("button", { onClick: () => { if (r.active || r.lockedPreview)
                                 return; onClose(); onPick(r.id); }, "aria-label": r.active ? `${r.name}, currently active` : r.lockedPreview ? `${r.name}, locked cycle phase` : `Switch to ${r.name}`, "data-state": r.active ? "active" : r.lockedPreview ? "locked" : "available", disabled: r.active || r.lockedPreview, className: `wpb-switcher-row ${r.active || r.lockedPreview ? "" : "pressable"}`, children: [_jsxs("div", { className: "wpb-selection-copy", children: [_jsxs("div", { className: "wpb-switcher-name-row", children: [_jsx("span", { className: "wpb-switcher-name", children: r.name }), r.active && _jsx("span", { className: "mono wpb-switcher-active", children: "Active" }), r.lockedPreview && _jsx("span", { className: "mono wpb-switcher-locked", children: "Adapts later" })] }), r.cycleName && (_jsxs("div", { className: "mono wpb-switcher-cycle", children: [r.cycleName, r.blockLabel ? ` · ${r.blockLabel}` : ""] })), _jsxs("div", { className: "mono wpb-switcher-dose", children: [r.days, "\u00D7/wk \u00B7 ", r.weeks, " wk", r.total ? ` · ${r.done}/${r.total} done` : ""] })] }), r.total > 0 && (_jsxs("div", { className: "mono wpb-switcher-progress", "data-has-progress": r.pct > 0, children: [r.pct, "%"] })), !r.active && _jsx(ChevronRight, { size: 16, color: C.muted, className: "wpb-selection-chevron" })] }, r.id))), !shown.length && _jsxs("div", { className: "wpb-switcher-empty", children: ["No programs match \u201C", q, "\u201D."] })] })] }) }));
 }
-function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
+function GymsSheet({ gyms, activeGymId, plates = PLATES, onSave, onClose }) {
     const [list, setList] = useState(() => gyms.map(g => ({ ...g, equipment: [...g.equipment] })));
     const [active, setActive] = useState(activeGymId);
     const [openId, setOpenId] = useState(null);
@@ -17691,6 +17699,24 @@ function GymsSheet({ gyms, activeGymId, onSave, onClose }) {
                                             patch(g.id, { barWeights: converted });
                                         }, children: `Use ${(g.barWeights?.unit === "kg" ? "lb" : "kg")} instead` })
                                     ] })),
+                                    (g.equipment.includes('barbell') || g.equipment.includes('smith')) && _jsxs('details', { className:'wpb-gym-bar-masses', children:[
+                                        _jsx('summary', {children:'Available plate pairs'}),
+                                        _jsx('p', {className:'wpb-gym-bar-description',children:'One pair is one plate on each side. Set missing sizes to 0. Counts are saved for this gym.'}),
+                                        ...['lb','kg'].map(measure => _jsxs('fieldset', {children:[
+                                            _jsx('legend',{children:measure}),
+                                            ...ALL_PLATES[measure].map(plate => {
+                                                const counts=platePairsFor(g,measure,plates[measure]);
+                                                const value=g.platePairs?.[measure]?.[plate] ?? counts[plate];
+                                                const id=`gym-${g.id}-plates-${measure}-${plate}`;
+                                                return _jsxs('div',{className:'wpb-gym-inline',children:[
+                                                    _jsx('label',{htmlFor:id,className:'wpb-gym-bar-name',children:`${plate} ${measure}`}),
+                                                    _jsx('input',{id,'aria-label':`${plate} ${measure} plate pairs`,inputMode:'numeric',pattern:'[0-9]*',value,
+                                                        onFocus:selectNumericInput,onClick:selectNumericInput,className:'wpb-gym-bar-field',
+                                                        onChange:ev=>{if(/^\d{0,2}$/.test(ev.target.value))patch(g.id,{platePairs:{...g.platePairs,[measure]:{...counts,[plate]:ev.target.value}}});}})
+                                                ]},plate);
+                                            })
+                                        ]},measure))
+                                    ]}),
                                     !!g.equipment.length && (_jsxs("div", { className: "wpb-gym-section", children: [_jsx("div", { className: "wpb-gym-limit-label", children: "Heaviest available" }), INVENTORY_KEYS.filter(k => k.match(g.equipment)).map(k => {
                                                 const inv = (g.inventory || {})[k.key] || [];
                                                 return (_jsxs("div", { className: "wpb-gym-inventory", children: [_jsxs("div", { className: "wpb-gym-inventory-heading", children: [_jsx("div", { className: "wpb-gym-inventory-name", children: k.label }), _jsx("div", { className: "wpb-gym-inventory-hint", children: k.sub })] }), _jsx("div", { className: "wpb-gym-inventory-summary", "data-has-inventory": !!inv.length, children: inv.length ? `${inv.join(", ")} ${g.limitUnit || "kg"}` : "No list set — the app assumes its usual increment." }), _jsxs("div", { className: "wpb-hscroll wpb-gym-racks", children: [(RACK_PRESETS[k.key] || []).filter(pr => pr.unit === (g.limitUnit || "kg")).map(pr => (_jsx("button", { onClick: () => patch(g.id, { inventory: { ...(g.inventory || {}), [k.key]: [...pr.v] } }), className: "pressable wpb-filter-chip wpb-gym-rack-preset", children: pr.name }, pr.name))), !!inv.length && (_jsx("button", { onClick: () => { const n = { ...(g.inventory || {}) }; delete n[k.key]; patch(g.id, { inventory: n }); }, className: "pressable wpb-gym-clear-action", children: "Clear" }))] }), _jsx("input", { defaultValue: inv.join(", "), placeholder: "e.g. 5, 10, 15, 20, 22.5", onBlur: e => {
@@ -18801,8 +18827,9 @@ function App() {
     setLoadInc(minInc.v, minInc.unit); // keep the module-level load increment in sync each render
     setRestScaleGlobal(restScale); // so estimateMinutes (and thus engine-2's hard session-time fit) reflects the lifter's ACTUAL rest length
     setExLoadInc(program?.exLoadInc || {}); // per-exercise (machine) increments, synced from the program
-    setAvailPlates(plates); // keep available-plate set in sync each render
+    setAvailPlates(availPlatesFor(plates, activeGym));
     const [sex, setSex] = useState("male");
+    setLifterProfile({bodyweight,bwUnit:unit,sex,experience});
     // Birthdate is the stored fact; age is derived from it on every load so it can never go stale.
     // birthEst marks an age-to-date estimate carried over by migration 10, so the UI can ask for the real date.
     const [birth, setBirth] = useState("");
@@ -21721,7 +21748,7 @@ function App() {
                         if (!showUpdate && !offline)
                             return null;
                         return (_jsx("div", { style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 8px)", left: 0, right: 0, zIndex: 30, display: "flex", justifyContent: "center", pointerEvents: "none" }, children: showUpdate ? (_jsxs("button", { onClick: applyUpdate, disabled: updateRestarting, "aria-busy": updateRestarting, className: "pressable wpb-notice-in", style: { pointerEvents: "auto", display: "flex", alignItems: "center", gap: 8, background: C.accent, color: C.accentText, border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 22px rgba(0,0,0,.4)" }, children: [_jsx(RefreshCw, { size: 14 }), updateRestarting ? " Restarting\u2026" : " Update ready \u2014 Restart"] })) : (_jsxs("div", { role: "status", "aria-live": "polite", style: { display: "flex", alignItems: "center", gap: 6, background: C.bg2, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 999, padding: "6px 12px", fontSize: 13, fontWeight: 600, animation: "fadeIn .3s both" }, children: [_jsx(WifiOff, { size: 12 }), " Offline \u00B7 saved locally"] })) }));
-                    })(), saveReview && program?.id === saveReview.id && _jsx(ProgramSaveReview, { program: program, changes: reviewedChanges, scope: saveReview.scope, onScope: scope => setSaveReview({ ...saveReview, scope }), conflicts: reviewConflicts, onConfirm: confirmProgramSave, onClose: () => setSaveReview(null) }), appToast && _jsx(UiNotice, { message: appToast.msg, onUndo: appToast.undo, action: appToast.action, actionLabel: appToast.actionLabel, onDismiss: () => setAppToast(null) }), _jsx(Exit, { when: !!calcOpen, children: calcOpen && _jsx(PlateCalcSheet, { unit: unit, onClose: () => setCalcOpen(false) }) }), _jsx(Exit, { when: switchOpen, children: switchOpen && (_jsx(ProgramSwitcherSheet, { saved: saved, cycles: cycles, history: history, activeId: upNext?.program?.id || null, onPick: setActiveProgram, onClose: () => setSwitchOpen(false) })) }), _jsx(Exit, { when: gymsOpen, children: gymsOpen && (_jsx(GymsSheet, { gyms: gyms, activeGymId: activeGymId, onSave: (g, id, tombed) => {
+                    })(), saveReview && program?.id === saveReview.id && _jsx(ProgramSaveReview, { program: program, changes: reviewedChanges, scope: saveReview.scope, onScope: scope => setSaveReview({ ...saveReview, scope }), conflicts: reviewConflicts, onConfirm: confirmProgramSave, onClose: () => setSaveReview(null) }), appToast && _jsx(UiNotice, { message: appToast.msg, onUndo: appToast.undo, action: appToast.action, actionLabel: appToast.actionLabel, onDismiss: () => setAppToast(null) }), _jsx(Exit, { when: !!calcOpen, children: calcOpen && _jsx(PlateCalcSheet, { unit: unit, onClose: () => setCalcOpen(false) }) }), _jsx(Exit, { when: switchOpen, children: switchOpen && (_jsx(ProgramSwitcherSheet, { saved: saved, cycles: cycles, history: history, activeId: upNext?.program?.id || null, onPick: setActiveProgram, onClose: () => setSwitchOpen(false) })) }), _jsx(Exit, { when: gymsOpen, children: gymsOpen && (_jsx(GymsSheet, { gyms: gyms, activeGymId: activeGymId, plates: plates, onSave: (g, id, tombed) => {
                                 setGyms(g);
                                 setActiveGymId(id);
                                 const a = gymById(g, id);

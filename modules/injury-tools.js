@@ -17,6 +17,27 @@ export const INJURY_IMPACTS = [
     { id:'reduce', label:'Reduce affected work', detail:'Prefer fewer remaining sets when I review the workout.' },
     { id:'skip', label:'Skip affected lifts', detail:'Prefer skipping related movements for the session.' }
 ];
+// How bad it felt decides what happens to the affected lifts (the prototype's pain flow).
+export const INJURY_LEVELS = [
+    { id:'twinge', label:'Twinge', detail:'Noticed it, could keep going', impact:'monitor' },
+    { id:'sore', label:'Sore', detail:'Hurt during the lift', impact:'reduce' },
+    { id:'sharp', label:'Sharp', detail:'Sudden or stabbing, had to stop', impact:'skip' }
+];
+export function injuryLevel(entry) {
+    return INJURY_LEVELS.find(level=>level.id===entry?.level)?.id || '';
+}
+export function injuryAreaForPart(part) {
+    return INJURY_AREAS.find(area=>area.parts[0]===part)?.id || INJURY_AREAS.find(area=>area.parts.includes(part))?.id || '';
+}
+// Plain-language plan: what happens today to the named lifts at this severity.
+export function injuryPlan(level, names, areaLabel) {
+    names=Array.isArray(names)?names:[];
+    const area=String(areaLabel || 'that area').toLowerCase(), list=names.join(', '), one=names.length===1;
+    if(!names.length) return ['No related lifts found for your '+area+' in this session. Related lifts stay flagged in later sessions.'];
+    if(level==='sharp' || level==='skip') return ['If applied: skip remaining sets for '+list+'. Logged sets stay.'];
+    if(level==='sore' || level==='reduce') return ['If applied: '+list+' keep'+(one?'s':'')+' half of '+(one?'its':'their')+' remaining sets, rounded up. Logged sets stay.'];
+    return [list+(one?' is':' are')+' flagged for review before training.'];
+}
 export function injuryParts(entry) {
     return INJURY_AREAS.find(area=>area.id===entry?.region)?.parts || (entry?.part ? [entry.part] : []);
 }
@@ -33,7 +54,8 @@ export function normalizeInjuryLog(rows) {
     return (Array.isArray(rows)?rows:[]).filter(row=>row && typeof row==='object' && typeof row.id==='string' && typeof row.part==='string')
         .map(row=>({...row, note:typeof row.note==='string'?row.note:'',
             side:['left','right','both'].includes(row.side)?row.side:'unspecified',
-            impact:['monitor','reduce','skip'].includes(row.impact)?row.impact:'monitor' }));
+            impact:['monitor','reduce','skip'].includes(row.impact)?row.impact:'monitor' }))
+        .map(row=>({...row, level:injuryLevel(row) || null}));
 }
 export function mergeInjuryReports(entries, reports, sessionId) {
     let next=normalizeInjuryLog(entries);
@@ -43,7 +65,8 @@ export function mergeInjuryReports(entries, reports, sessionId) {
         if(existing) next=next.map(entry=>entry.id!==existing.id?entry:{...entry,
             updatedAt:Math.max(Number(entry.updatedAt)||0,Number(report.at)||0),lastAdjustment:adjustment,
             adjustments:[...(entry.adjustments || []).filter(item=>item.id!==adjustment.id),adjustment]});
-        else next=[{...adjustment,impact:report.action==='skip'?'skip':'reduce'},...next.filter(entry=>entry.id!==adjustment.id)];
+        else next=[{...adjustment,impact:['monitor','reduce','skip'].includes(report.action)?report.action:'reduce',
+            level:injuryLevel(report) || null},...next.filter(entry=>entry.id!==adjustment.id)];
     }
     return next;
 }

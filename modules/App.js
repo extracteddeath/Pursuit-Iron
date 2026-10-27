@@ -68,7 +68,7 @@ import {
     workoutPlanCoachFact,
 } from './engine-api.js';
 import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_SETUP_DRAFT_KEY } from './cycle-setup-drafts.js';
-import { INJURY_AREAS, INJURY_IMPACTS, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
+import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryAreaForPart, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
 const __APP_VERSION__='4.0.0'; const __BUILD__='933';
@@ -10860,10 +10860,13 @@ function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) {
         _jsxs("label", { children: ["Show this note", _jsx("select", { value: repeat, "aria-label": label + " note repetition", onChange: ev => onRepeat(ev.target.value),
             children: [['none','This session only'],['once','Repeat once'],['always','Keep repeating']].map(([value, text]) => _jsx("option", { value, children: text }, value)) })] })] });
 }
-function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
+function InjuryLevelPips({ n }) {
+    return _jsx("span", { className: "wpb-injury-pips", "aria-hidden": true, children: [1, 2, 3].map(i => _jsx("i", { "data-on": i <= n }, i)) });
+}
+function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null, editId = null }) {
     const clean = useMemo(() => normalizeInjuryLog(entries), [entries]);
     const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-    const blank = () => ({ region:'', part:'', side:'unspecified', impact:'monitor', onset:today(), note:'' });
+    const blank = () => ({ region:'', part:'', side:'unspecified', impact:'monitor', level:'twinge', onset:today(), note:'' });
     const [draft, setDraft] = useState(blank);
     const [editingId, setEditingId] = useState(null);
     const [editing, setEditing] = useState(clean.length === 0);
@@ -10887,7 +10890,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
         finally {savingRef.current=false;setSaving(false);}
     };
     const begin = entry => {
-        const next=entry?{region:entry.region || '',part:entry.part,side:entry.side,impact:entry.impact,
+        const next=entry?{region:entry.region || '',part:entry.part,side:entry.side,impact:entry.impact,level:injuryLevel(entry),
             onset:entry.onset || today(),note:entry.note}:blank();
         originalRef.current=JSON.stringify(next);setDraft(next);setEditingId(entry?.id || null);setEditing(true);setError('');setStatus('');setDiscard(false);
         setGroup(INJURY_AREAS.find(area=>area.id===next.region)?.group || 'Upper body');
@@ -10901,6 +10904,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
         const next=previous?clean.map(item=>item.id===entry.id?entry:item):[entry,...clean];
         if(await save(next)) {setEditing(false);setStatus(previous?'Injury updated':'Injury logged');originalRef.current=JSON.stringify(draft);}
     };
+    useLayoutEffect(() => { const entry=editId && clean.find(item=>item.id===editId); if(entry) begin(entry); }, []);
     const active=clean.filter(entry=>!entry.resolvedAt), resolved=clean.filter(entry=>entry.resolvedAt);
     const preview = upcoming?.day ? upcoming.day.exercises.map((id,slot) => EX_BY_ID[exerciseAt(upcoming.program,upcoming.day,slot,upcoming.weekIndex)])
         .filter(ex=>injuryMatchesExercise(draft,ex,ex?secondaryOf(ex):[])) : [];
@@ -10908,9 +10912,9 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
         _jsxs('div',{className:'wpb-injury-record-title',children:[_jsx('strong',{children:injuryTitle(entry,PART_LABEL)}),
             _jsx('span',{className:'wpb-injury-status',children:entry.resolvedAt?'Resolved':'Active'})]}),
         _jsx('div',{className:'wpb-injury-record-meta',children:[entry.onset?'Since '+new Date(entry.onset+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Logged '+new Date(entry.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}),
-            INJURY_IMPACTS.find(item=>item.id===entry.impact)?.label].filter(Boolean).join(' · ')}),
+            INJURY_LEVELS.find(item=>item.id===injuryLevel(entry))?.label,INJURY_IMPACTS.find(item=>item.id===entry.impact)?.label].filter(Boolean).join(' · ')}),
         entry.note && _jsx('p',{className:'wpb-injury-record-note',children:entry.note}),
-        entry.lastAdjustment && _jsx('div',{className:'wpb-injury-record-meta',children:'Last workout: '+(entry.lastAdjustment.action==='skip'?'affected lifts skipped':'affected work reduced')}),
+        entry.lastAdjustment && _jsx('div',{className:'wpb-injury-record-meta',children:'Last workout: '+(entry.lastAdjustment.action==='skip'?'affected lifts skipped':entry.lastAdjustment.action==='monitor'?'flagged, kept going':'affected work reduced')}),
         _jsxs('div',{className:'wpb-injury-record-actions',children:[
             _jsx('button',{type:'button',className:'pressable',disabled:saving,onClick:()=>begin(entry),'aria-label':'Edit '+injuryTitle(entry,PART_LABEL),children:'Edit'}),
             _jsx('button',{type:'button',className:'pressable',disabled:saving,onClick:async()=>{
@@ -10928,7 +10932,7 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
                 _jsx('button',{type:'button',className:'pressable',onClick:onClose,children:'Discard changes'})]})]}),
         editing ? _jsxs('form',{id:'wpb-injury-entry-form',onSubmit:submit,'data-injury-editor':true,children:[
             _jsx('div',{className:'wpb-injury-intro',children:[_jsx('h3',{children:editingId?'Edit injury':'Log an injury'}),
-                _jsx('p',{children:'Choose the area, then tell Pursuit how you want to handle related lifts.'})]}),
+                _jsx('p',{children:'Where does it hurt, and how bad is it? The plan protects that area until it feels fine.'})]}),
             _jsx('div',{className:'wpb-injury-field-title',children:'Affected area'}),
             _jsx('div',{className:'wpb-injury-tabs',role:'group','aria-label':'Body area group',children:['Upper body','Lower body','Torso'].map(value=>
                 _jsx('button',{type:'button',className:'pressable','aria-pressed':group===value,onClick:()=>setGroup(value),children:value},value))}),
@@ -10942,16 +10946,17 @@ function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
             _jsx('div',{className:'wpb-injury-side',role:'group','aria-label':'Injury side',children:[['unspecified','Not specified'],['left','Left'],['right','Right'],['both','Both']].map(([value,label])=>
                 _jsx('button',{type:'button',className:'pressable','aria-pressed':draft.side===value,onClick:()=>set({side:value}),children:label},value))}),
             _jsxs('label',{children:['Onset date',_jsx('input',{type:'date','aria-label':'Injury onset date',value:draft.onset,max:today(),onChange:ev=>set({onset:ev.target.value})})]}),
-            _jsx('div',{className:'wpb-injury-field-title',children:'Your training preference'}),
-            _jsx('div',{role:'group','aria-label':'Injury training preference',className:'wpb-injury-impact',children:INJURY_IMPACTS.map(item=>
-                _jsxs('button',{type:'button',className:'pressable','data-injury-impact':item.id,'aria-pressed':draft.impact===item.id,onClick:()=>set({impact:item.id}),
-                    children:[_jsx('strong',{children:item.label}),_jsx('span',{children:item.detail})]},item.id))}),
+            _jsx('div',{className:'wpb-injury-field-title',children:'How bad is it?'}),
+            _jsx('div',{role:'group','aria-label':'How bad is it',className:'wpb-injury-impact wpb-injury-levels',children:INJURY_LEVELS.map((item,i)=>
+                _jsxs('button',{type:'button',className:'pressable','data-injury-level':item.id,'data-injury-impact':item.impact,'aria-pressed':injuryLevel(draft)===item.id,onClick:()=>set({level:item.id,impact:item.impact}),
+                    children:[_jsx(InjuryLevelPips,{n:i+1}),_jsxs('span',{className:'wpb-injury-level-copy',children:[_jsx('strong',{children:item.label}),_jsx('span',{children:item.detail})]})]},item.id))}),
             _jsxs('label',{children:['Details · optional',_jsx('textarea',{'aria-label':'Injury details',rows:3,maxLength:2000,value:draft.note,
                 placeholder:'What happened? Which movements or positions are affected?',onChange:ev=>set({note:ev.target.value})})]}),
-            draft.part && upcoming?.day && _jsxs('div',{className:'wpb-injury-preview',children:[_jsx('strong',{children:'Next workout · '+upcoming.day.label}),
-                _jsx('p',{children:preview.length?preview.length+' related lift'+(preview.length===1?'':'s')+' to review':'No related lifts found in the next workout. This stays in your injury log.'}),
+            draft.part && upcoming?.day && _jsxs('div',{className:'wpb-injury-preview',children:[_jsx('strong',{children:'Your plan · '+upcoming.day.label}),
+                _jsx('p',{children:preview.length?preview.length+' related lift'+(preview.length===1?'':'s')+' next workout':'No related lifts found in the next workout. This stays in your injury log.'}),
                 preview.length>0 && _jsx('ul',{children:preview.map(ex=>_jsx('li',{children:ex.name},ex.id))}),
-                _jsx('p',{children:'You’ll review the exercise list before applying any workout changes.'})]}),
+                preview.length>0 && _jsx('p',{children:injuryLevel(draft)==='sharp'?'Skip these until it feels fine. Logged sets always stay.':injuryLevel(draft)==='sore'?'Go lighter: half the remaining sets on these lifts.':'Keep going. These are flagged so you can decide before each session.'}),
+                _jsx('p',{children:'Tap \u201cFeels fine now\u201d on Home when it does, and the normal plan comes back.'})]}),
 ]}) :
             _jsxs('div',{children:[_jsxs('div',{className:'wpb-injury-list-heading',children:[_jsx('h3',{children:active.length+' active injur'+(active.length===1?'y':'ies')}),
                 _jsx('button',{type:'button',className:'pressable',onClick:()=>begin(),children:'Log injury'})]}),
@@ -11284,6 +11289,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     const [sessionNoteRepeat, setSessionNoteRepeat] = useState(() => liveMatch?.sessionNoteRepeat ?? previousSessionNote.repeat);
     const [injuryOpen, setInjuryOpen] = useState(false);
     const [injuryPart, setInjuryPart] = useState("");
+    const [injuryRegion, setInjuryRegion] = useState("");
+    const [injuryStep, setInjuryStep] = useState(0);
+    const [injuryLevelPick, setInjuryLevelPick] = useState(null);
     const [injurySourceId, setInjurySourceId] = useState("");
     const [injuryReports, setInjuryReports] = useState(() => liveMatch?.injuryReports || []);
     const [injurySelected, setInjurySelected] = useState([]);
@@ -11681,45 +11689,54 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         ex: EX_BY_ID[row.id] })).filter(({ ex }) => ex &&
             (ex.part === part || secondaryOf(ex).some(([p]) => p === part)));
     const injurySource = injuryLog.find(item => item.id === injurySourceId) || null;
-    const injuryCandidates = () => injurySource ? data.map((row,index) => ({row,index,ex:EX_BY_ID[row.id]}))
-        .filter(({ex}) => injuryMatchesExercise(injurySource,ex,ex?secondaryOf(ex):[])) : affectedByPart(injuryPart);
+    // Pain flow: where → how bad → plan. A logged injury skips straight to its plan.
+    const injuryTarget = injurySource || (injuryRegion ? { region: injuryRegion } : { part: injuryPart });
+    const matchingRows = target => data.filter(row => { const ex = EX_BY_ID[row.id]; return injuryMatchesExercise(target, ex, ex ? secondaryOf(ex) : []); });
+    const injuryCandidates = () => data.map((row,index) => ({row,index,ex:EX_BY_ID[row.id]}))
+        .filter(({ex}) => injuryMatchesExercise(injuryTarget,ex,ex?secondaryOf(ex):[]));
+    const injuryAreaLabel = injurySource ? injuryTitle(injurySource, PART_LABEL)
+        : INJURY_AREAS.find(area => area.id === injuryRegion)?.label || PART_LABEL[injuryPart] || "That area";
     const chooseLoggedInjury = id => {
         const entry = injuryLog.find(item => item.id === id && !item.resolvedAt);
         setInjurySourceId(entry?.id || "");
-        if(entry) {setInjuryPart(entry.part);setInjurySelected(data.filter(row => {
-            const ex=EX_BY_ID[row.id];return injuryMatchesExercise(entry,ex,ex?secondaryOf(ex):[]);
-        }).map(row=>row.id));}
-        else setInjurySelected(affectedByPart(injuryPart).map(item=>item.row.id));
+        if(entry) {setInjuryPart(entry.part);setInjuryRegion(entry.region || "");setInjuryLevelPick(injuryLevel(entry));
+            setInjurySelected(matchingRows(entry).map(row=>row.id));setInjuryStep(2);}
     };
     const openInjury = () => {
         const active = data[exIdx] && EX_BY_ID[data[exIdx].id];
         const logged = injuryLog.find(item => !item.resolvedAt);
         setInjurySourceId(logged?.id || "");
         const part = logged?.part || active?.part || PART_ORDER[0];
+        const region = logged ? logged.region || "" : injuryAreaForPart(part);
         setInjuryPart(part);
-        setInjurySelected(logged ? data.filter(row => {const ex=EX_BY_ID[row.id];return injuryMatchesExercise(logged,ex,ex?secondaryOf(ex):[]);}).map(row=>row.id)
-            : affectedByPart(part).map(item => item.row.id));
+        setInjuryRegion(region);
+        setInjuryLevelPick(logged ? injuryLevel(logged) : null);
+        setInjurySelected(matchingRows(logged || (region ? { region } : { part })).map(row => row.id));
+        setInjuryStep(logged ? 2 : 0);
         setInjuryOpen(true);
         setSessionMenu(false);
     };
-    const changeInjuryPart = part => {
+    const changeInjuryRegion = region => {
+        const area = INJURY_AREAS.find(item => item.id === region);
         setInjurySourceId("");
-        setInjuryPart(part);
-        setInjurySelected(affectedByPart(part).map(item => item.row.id));
+        setInjuryRegion(region);
+        setInjuryPart(area?.parts[0] || injuryPart);
+        setInjurySelected(matchingRows({ region }).map(row => row.id));
     };
     const applyInjury = action => {
         const affected = data.filter(row => injurySelected.includes(row.id));
-        if (!affected.length) return;
+        if (!affected.length && action !== "monitor") return;
         const originals = data, previousIndex = exIdx, previousReports = injuryReports;
         const selected = new Set(affected.map(row => row.id));
-        const next = adjustInjuredExercises(data, [...selected], injuryPart, action);
-        const report = { part: injuryPart, action, exercises: [...selected], at: Date.now(),
+        const next = action === "monitor" ? data : adjustInjuredExercises(data, [...selected], injuryPart, action);
+        const report = { part: injuryPart, action, level: injuryLevelPick || undefined, exercises: [...selected], at: Date.now(),
+            ...(injuryRegion && !injurySource ? { region: injuryRegion } : {}),
             ...(injurySource ? { injuryId:injurySource.id,region:injurySource.region,side:injurySource.side,note:injurySource.note } : {}) };
         setData(next);
         setExIdx(Math.max(0, Math.min(previousIndex, next.length - 1)));
         setInjuryReports(prev => [...prev, report]);
         setInjuryOpen(false);
-        setSnack({ msg: action === "skip" ? "Affected exercises skipped for today" : "Remaining affected sets reduced for today",
+        setSnack({ msg: action === "skip" ? "Affected exercises skipped for today" : action === "monitor" ? "Noted \u00b7 watching your " + injuryAreaLabel.toLowerCase() : "Remaining affected sets reduced for today",
             undo: () => { setData(originals); setExIdx(previousIndex);
                 setInjuryReports(previousReports); setSnack(null); } });
     };
@@ -13288,63 +13305,70 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                   style: { width: "100%", maxHeight: "88dvh", overflowY: "auto",
                     background: C.bg, borderRadius: "26px 26px 0 0", padding: "18px 16px calc(24px + env(safe-area-inset-bottom))",
                     boxSizing: "border-box", border: `1px solid ${C.border}` },
-                  children: [
-                    _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 },
-                      children: [_jsx(AlertTriangle, { size: 20, color: C.warn }),
-                        _jsx("h2", { style: { margin: 0, fontSize: 20, flex: 1 }, children: injurySource ? injuryTitle(injurySource,PART_LABEL) : "Injury during workout" }),
+                  children: (() => {
+                      const level = injuryLevelPick || "twinge", impact = INJURY_LEVELS.find(item => item.id === level)?.impact || "monitor";
+                      const names = injuryCandidates().filter(({ row }) => injurySelected.includes(row.id)).map(({ ex }) => ex.name);
+                      const btn = (action, label, cls) => _jsx("button", { type: "button", onClick: () => applyInjury(action),
+                        disabled: action !== "monitor" && !injurySelected.length, className: "pressable " + cls,
+                        style: { minHeight: 50, borderRadius: 14, border: `1px solid ${C.border}`, background: impact === action ? C.accent : C.card,
+                          color: impact === action ? C.accentText : C.text, fontSize: 14, fontWeight: impact === action ? 750 : 650,
+                          opacity: action === "monitor" || injurySelected.length ? 1 : .45, order: impact === action ? 0 : 1 }, children: label });
+                      const titles = ["Where does it hurt?", "How bad is it?", injuryAreaLabel + " \u00b7 " + (INJURY_LEVELS.find(item => item.id === level)?.label || "")];
+                      return [
+                    _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 },
+                      children: [injuryStep > 0 ? _jsx("button", { type: "button", onClick: () => setInjuryStep(injurySource && injuryStep === 2 ? 1 : injuryStep - 1),
+                          "aria-label": "Back", className: "pressable hit", style: { ...iconBtn(), border: "none", background: C.card }, children: _jsx(ChevronLeft, { size: 19 }) })
+                          : _jsx(AlertTriangle, { size: 20, color: C.warn }),
+                        _jsx("h2", { style: { margin: 0, fontSize: 20, flex: 1 }, children: titles[injuryStep] }),
                         _jsx("button", { type: "button", onClick: () => setInjuryOpen(false),
                           "aria-label": "Close injury adjustments", className: "pressable hit",
                           style: { ...iconBtn(), border: "none", background: C.card }, children: _jsx(X, { size: 19 }) })
-                      ] }),
-                    _jsx("p", { style: { fontSize: 13, lineHeight: 1.5, color: C.muted, margin: "0 0 12px" },
-                      children: "Stop movements that provoke pain. Select the affected muscle and review exercises before changing today's workout. This doesn't edit your future plan." }),
-                    injuryLog.some(item => !item.resolvedAt) && _jsxs("label", { style: { display:"grid",gap:6,marginBottom:12,fontSize:13,fontWeight:650 },children:["Logged injury",
+                      ] }, "head"),
+                    _jsx("div", { className: "wpb-injury-steps", "aria-label": `Step ${injuryStep + 1} of 3`, children: [0, 1, 2].map(i => _jsx("i", { "data-on": i <= injuryStep }, i)) }, "steps"),
+                    injuryStep === 0 && _jsxs("div", { "data-injury-step": "where", children: [
+                      injuryLog.some(item => !item.resolvedAt) && _jsxs("label", { style: { display:"grid",gap:6,marginBottom:12,fontSize:13,fontWeight:650 },children:["Logged injury",
                         _jsx("select", { "aria-label":"Choose logged injury",value:injurySourceId,onChange:ev=>chooseLoggedInjury(ev.target.value),
                             style:{minHeight:48,padding:10,borderRadius:12,background:C.card,color:C.text,border:`1px solid ${C.border}`},children:[
                                 _jsx("option",{value:"",children:"New issue during this session"}),
                                 ...injuryLog.filter(item=>!item.resolvedAt).map(item=>_jsx("option",{value:item.id,children:injuryTitle(item,PART_LABEL)},item.id))] })] }),
-                    injurySource && _jsxs("div",{className:"wpb-injury-preview",children:[
-                        _jsx("strong",{children:INJURY_IMPACTS.find(item=>item.id===injurySource.impact)?.label || "Review before training"}),
-                        injurySource.note && _jsx("p",{children:injurySource.note}),
-                        _jsx("p",{children:"Review the matched exercises below. Your preference does not apply changes automatically."})]}),
-                    !injurySource && _jsx("label", { htmlFor: "wpb-injury-muscle", style: { fontSize: 12, fontWeight: 700, color: C.muted }, children: "Affected muscle" }),
-                    !injurySource && _jsx("select", { id: "wpb-injury-muscle", value: injuryPart, onChange: ev => changeInjuryPart(ev.target.value),
-                      style: { width: "100%", minHeight: 48, padding: "10px", borderRadius: 12,
-                        border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 15, margin: "6px 0 12px" },
-                      children: PART_ORDER.map(part => _jsx("option", { value: part, children: PART_LABEL[part] || part }, part)) }),
-                    _jsx("p", { style: { fontSize: 12, color: C.muted, margin: "0 0 8px" },
-                      children: "Primary and supporting muscle involvement are included. Uncheck any exercise you know is unaffected." }),
-                    injuryCandidates().length ? _jsx("div", {
-                      style: { display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 },
-                      children: injuryCandidates().map(({ row, ex }) =>
-                        _jsxs("label", { style: { display: "flex", alignItems: "center", gap: 10,
-                          minHeight: 48, background: C.card, borderRadius: 12, padding: "8px 12px",
-                          fontSize: 14, fontWeight: 600 },
-                          children: [
-                            _jsx("input", { type: "checkbox", checked: injurySelected.includes(row.id),
-                              onChange: ev => setInjurySelected(prev => ev.target.checked
-                                ? [...prev, row.id] : prev.filter(id => id !== row.id)),
-                              style: { width: 19, height: 19, accentColor: C.accent } }),
-                            _jsx("span", { style: { flex: 1 }, children: ex.name }),
-                            _jsx("span", { style: { fontSize: 11, color: C.muted },
-                              children: `${row.sets.filter(set => set.done).length} logged` })
-                          ] }, row.id))
-                    }) : _jsx("p", { style: { color: C.muted, fontSize: 13 }, children: "No exercises match this muscle in the current session." }),
-                    _jsxs("div", { style: { display: "grid", gap: 8 }, children: [
-                      _jsx("button", { type: "button", onClick: () => applyInjury("skip"),
-                        disabled: !injurySelected.length, className: "pressable wpb-injury-skip",
-                        style: { minHeight: 50, borderRadius: 14, border: `1px solid ${C.border}`, background: injurySource?.impact === "reduce" ? C.card : C.accent,
-                          color: injurySource?.impact === "reduce" ? C.text : C.accentText, fontSize: 14, fontWeight: 700, opacity: injurySelected.length ? 1 : .45 },
-                        children: "Skip selected remaining exercises" }),
-                      _jsx("button", { type: "button", onClick: () => applyInjury("reduce"),
-                        disabled: !injurySelected.length, className: "pressable wpb-injury-reduce",
-                        style: { minHeight: 48, borderRadius: 14, border: `1px solid ${C.border}`,
-                          background: injurySource?.impact === "reduce" ? C.accent : C.card, color: injurySource?.impact === "reduce" ? C.accentText : C.text, fontSize: 14, fontWeight: 650 },
-                        children: "Reduce remaining sets by about half" })
-                    ] }),
-                    _jsx("p", { style: { margin: "12px 2px 0", fontSize: 12, color: C.muted, lineHeight: 1.4 },
-                      children: "Completed sets are retained. You can undo this adjustment. If there is acute pain, inability to bear weight, or worsening symptoms, stop the workout and seek medical care." })
-                  ] })
+                      _jsx("div", { className: "wpb-injury-area-grid wpb-injury-area-all", role: "group", "aria-label": "Where does it hurt", children: INJURY_AREAS.map(area =>
+                        _jsx("button", { type: "button", className: "pressable", "data-injury-area": area.id, "aria-pressed": !injurySource && injuryRegion === area.id,
+                          onClick: () => changeInjuryRegion(area.id), children: area.label }, area.id)) }),
+                      _jsx("button", { type: "button", className: "pressable wpb-injury-next", disabled: !injuryRegion && !injurySource,
+                        onClick: () => setInjuryStep(injurySource ? 2 : 1), style: { width: "100%", minHeight: 50, marginTop: 14, borderRadius: 999, border: "none",
+                          background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 750, opacity: injuryRegion || injurySource ? 1 : .45 }, children: "Next" })] }, "where"),
+                    injuryStep === 1 && _jsx("div", { "data-injury-step": "level", role: "group", "aria-label": "How bad is it", className: "wpb-injury-impact wpb-injury-levels", children: INJURY_LEVELS.map((item, i) =>
+                        _jsxs("button", { type: "button", className: "pressable", "data-injury-level": item.id, "aria-pressed": injuryLevelPick === item.id,
+                          onClick: () => { setInjuryLevelPick(item.id); setInjuryStep(2); },
+                          children: [_jsx(InjuryLevelPips, { n: i + 1 }), _jsxs("span", { className: "wpb-injury-level-copy", children: [_jsx("strong", { children: item.label }), _jsx("span", { children: item.detail })] })] }, item.id)) }, "level"),
+                    injuryStep === 2 && _jsxs("div", { "data-injury-step": "plan", children: [
+                      _jsxs("div", { className: "wpb-injury-preview", style: { marginTop: 4 }, children: [
+                        injuryPlan(level, names, injuryAreaLabel).map((line, i) => _jsx("p", { children: line }, i)),
+                        _jsx("p", { children: "Tap \u201cFeels fine now\u201d on Home when it does, and the normal plan comes back." }),
+                        _jsx("button", { type: "button", className: "pressable wpb-injury-change", onClick: () => setInjuryStep(1), children: "Change how bad" })] }),
+                      injuryCandidates().length ? _jsx("div", {
+                        style: { display: "flex", flexDirection: "column", gap: 5, margin: "4px 0 12px" },
+                        children: injuryCandidates().map(({ row, ex }) =>
+                          _jsxs("label", { style: { display: "flex", alignItems: "center", gap: 10,
+                            minHeight: 48, background: C.card, borderRadius: 12, padding: "8px 12px",
+                            fontSize: 14, fontWeight: 600 },
+                            children: [
+                              _jsx("input", { type: "checkbox", checked: injurySelected.includes(row.id),
+                                onChange: ev => setInjurySelected(prev => ev.target.checked
+                                  ? [...prev, row.id] : prev.filter(id => id !== row.id)),
+                                style: { width: 19, height: 19, accentColor: C.accent } }),
+                              _jsx("span", { style: { flex: 1 }, children: ex.name }),
+                              _jsx("span", { style: { fontSize: 11, color: C.muted },
+                                children: `${row.sets.filter(set => set.done).length} logged` })
+                            ] }, row.id))
+                      }) : null,
+                      _jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: [
+                        level === "twinge" && btn("monitor", "Keep going", "wpb-injury-monitor"),
+                        btn("reduce", impact === "reduce" ? "Reduce remaining sets by half" : "Reduce instead", "wpb-injury-reduce"),
+                        btn("skip", impact === "skip" ? "Skip the rest of these lifts" : "Skip instead", "wpb-injury-skip")] }),
+                      _jsx("p", { style: { margin: "12px 2px 0", fontSize: 12, color: C.muted, lineHeight: 1.4 },
+                        children: "Logged sets stay. You can undo this. If there is acute pain, inability to bear weight, or worsening symptoms, stop the workout and seek medical care." })] }, "plan")
+                      ].filter(Boolean); })() })
               }) }), _jsx(Exit, { when: exList, children: exList && _jsx(SessionExerciseListSheet, { data: data, exIdx: exIdx, onJump: goEx, onMove: moveExerciseInSession, onSkip: removeExerciseFromSession, onReorderStart: beginReorder, onReorderEnd: endReorder, onAdd: () => { setExList(false); setAddEx(true); }, onClose: () => setExList(false) }) }), _jsx(Exit, { when: !!addEx, children: addEx && _jsx(ExercisePickerSheet, { onPick: addExerciseToSession, onClose: () => setAddEx(false), banned: banned, title: "Add exercise" }) }), prFlash && (_jsx("div", { onClick: () => setPrFlash(null), style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 14px)", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 50, pointerEvents: "auto", padding: "0 16px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, maxWidth: 360, padding: "12px 16px", borderRadius: 16, background: C.warn, color: C.warnText, boxShadow: "0 12px 30px rgba(0,0,0,.4)", animation: "fadeUp .35s cubic-bezier(.2,.8,.3,1) backwards" }, children: [_jsx(Trophy, { size: 22, color: C.warnText, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 800, letterSpacing: .2 }, children: ["New PR \u2014 ", prFlash.name] }), _jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, opacity: .85, marginTop: 1 }, children: ["est ", prFlash.est, " ", unit, " \u00B7 ", prFlash.w, unit, "\u00D7", prFlash.r] })] })] }) })), snack && _jsx(UiNotice, { message: snack.msg, onUndo: snack.undo }), _jsx(Exit, { when: !readiness, children: !readiness && (_jsx("div", { className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.66)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 22, fontWeight: 700 }, children: "How are you feeling?" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: "Today's loads will be adjusted to match your readiness." }), [
                                 { label: "Feeling strong", sub: "Hit the prescribed loads", factor: 1, icon: Flame },
                                 { label: "A little off", sub: "Trim loads ~5%", factor: 0.95, icon: Battery },
@@ -16260,7 +16284,7 @@ function HomePrograms({ saved, cycles, activeId, onOpen, onOpenCycles, onSetActi
         limit > 4 && rest.length > 4 && h('button', { type: 'button', className: 'pressable hp-action hp-more', onClick: ev => { setLimit(4); ev.currentTarget.closest('section').scrollIntoView({ block: 'start' }); } }, 'Show fewer programs'));
 }
 
-function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planChoiceBusy = false, injuryLog = [], onLogInjury, legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], activeGymId = null, onSetGym, saved, history = [], bwLog = [], onCreate, onBuildOwn, onCycles, cycleCount = 0, cycleInfo = null, onOpenCycles, onQuick, onOpen, onDelete, onDuplicate, onConvertCycle, activeId = null, onSwitchProgram, onSetActive, cycles = [], onHistory, onStrength, historyCount, upNext, onStartNext, onStartAlt, onOpenActive, onTemplate, onDeload, canDeload, onLight, canLight, onLibrary, onCalc, onCompare, bodyweight, sex, age, unit, needsBackup, onBackup, whatsNew, onDismissWhatsNew, onOpenChangelog, sessionActive = false, hasTabBar = false, showInstall = false, installEvent = null, isIosSafari = false, onDismissInstall, browseRequested = false, onBrowseHandled }) {
+function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planChoiceBusy = false, injuryLog = [], onLogInjury, onEditInjury = null, onResolveInjury = null, legacySaved = [], onRebuildLegacy, onRemoveLegacy, gyms = [], activeGymId = null, onSetGym, saved, history = [], bwLog = [], onCreate, onBuildOwn, onCycles, cycleCount = 0, cycleInfo = null, onOpenCycles, onQuick, onOpen, onDelete, onDuplicate, onConvertCycle, activeId = null, onSwitchProgram, onSetActive, cycles = [], onHistory, onStrength, historyCount, upNext, onStartNext, onStartAlt, onOpenActive, onTemplate, onDeload, canDeload, onLight, canLight, onLibrary, onCalc, onCompare, bodyweight, sex, age, unit, needsBackup, onBackup, whatsNew, onDismissWhatsNew, onOpenChangelog, sessionActive = false, hasTabBar = false, showInstall = false, installEvent = null, isIosSafari = false, onDismissInstall, browseRequested = false, onBrowseHandled }) {
     const [bkHide, setBkHide] = useState(false);
     const [upNextAll, setUpNextAll] = useState(true);
     const [planChangesOpen, setPlanChangesOpen] = useState(false);
@@ -16410,7 +16434,20 @@ function Home({ restScale = 1, loadMode = "rir", perf = {}, onPlanChoice, planCh
     planChangesOpen && sessionReview && _jsx(PlanChangesDialog, { review: sessionReview, dayLabel: upNext.day.label, busy: planChoiceBusy, onChoice: onPlanChoice, onClose: () => setPlanChangesOpen(false) }),
     // Weekly progress is visible immediately after the session card, before optional coaching.
     history.length > 0 && _jsx(WeeklyRecapCard, { history, unit }),
-    !sessionActive && upNext && _jsx(SessionGamePlan, { review: sessionReview, restScale, home: true }), _jsxs("section", { className: "wpb-home-health", "aria-label":"Injury and recovery",children:[
+    !sessionActive && upNext && _jsx(SessionGamePlan, { review: sessionReview, restScale, home: true }), onResolveInjury && injuryLog.filter(item => !item.resolvedAt).slice(0, 2).map(item => {
+        const level = injuryLevel(item), area = (INJURY_AREAS.find(a => a.id === item.region)?.label || PART_LABEL[item.part] || "that area").toLowerCase();
+        const lifts = upNext?.day ? upNext.day.exercises.map((id, slot) => EX_BY_ID[exerciseAt(upNext.program, upNext.day, slot, upNext.weekIndex)])
+            .filter(ex => injuryMatchesExercise(item, ex, ex ? secondaryOf(ex) : [])) : [];
+        const body = lifts.length ? (level === "sharp" ? "Skip " : level === "sore" ? "Go lighter on " : "Watch ") + lifts.map(ex => ex.name).join(", ") + " next workout."
+            : "No lifts in your next workout load your " + area + ".";
+        return _jsxs("section", { className: "wpb-home-protect", "data-injury-protect": item.id, "aria-label": "Protecting your " + area, children: [
+            _jsxs("div", { className: "wpb-home-protect-head", children: [_jsx(Shield, { size: 20 }), _jsxs("span", { children: [
+                _jsx("strong", { children: "Protecting your " + area + " · " + (INJURY_LEVELS.find(l => l.id === level)?.label || "") }),
+                _jsx("span", { children: body })] })] }),
+            _jsxs("div", { className: "wpb-home-protect-actions", children: [
+                _jsx("button", { type: "button", className: "pressable", onClick: () => onResolveInjury(item.id), children: "Feels fine now" }),
+                _jsx("button", { type: "button", className: "pressable", onClick: () => onEditInjury?.(item.id), children: "Change" })] })] }, item.id);
+    }), _jsxs("section", { className: "wpb-home-health", "aria-label":"Injury and recovery",children:[
         _jsx("div",{className:"wpb-home-health-icon",children:_jsx(Activity,{size:19})}),
         _jsxs("div",{className:"wpb-home-health-copy",children:[_jsx("strong",{children:"Injury & recovery"}),
             _jsx("span",{children:injuryLog.some(item=>!item.resolvedAt)?injuryLog.filter(item=>!item.resolvedAt).map(item=>injuryTitle(item,PART_LABEL)).join(" · "):"Flag an area before your next workout"})]}),
@@ -21788,7 +21825,15 @@ function App() {
     return (_jsxs("div", { className: "wpb", style: { background: C.bg, color: C.text, height: "var(--app-h, 100dvh)", display: "flex", justifyContent: "center" }, children: [_jsx(StyleTag, { theme: theme }), _jsxs("div", { style: { width: "100%", maxWidth: 460, height: "var(--app-h, 100dvh)", position: "relative", background: C.bg, display: "flex", flexDirection: "column", overflow: "hidden", borderLeft: `1px solid ${C.borderSoft}`, borderRight: `1px solid ${C.borderSoft}`, paddingTop: "env(safe-area-inset-top)", paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }, children: [_jsxs("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column", position: "relative", paddingBottom: liveDockVisible ? (tabView ? 64 : 78) : 0 }, children: [loaded && safeStart && _jsxs("div", { role: "status", style: { flexShrink: 0, display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: C.warnDim || C.card, borderBottom: `1px solid ${C.borderSoft}`, color: C.text, fontSize: 12, lineHeight: 1.35 }, children: [_jsx(AlertTriangle, { size: 15, color: C.warn, style: { flexShrink: 0 } }), _jsxs("span", { style: { flex: 1 }, children: [_jsx("b", { children: "Recovery mode." }), " Saved training data is untouched and autosave is paused."] }), _jsx("button", { className: "pressable", onClick: () => { try {
                                             sessionStorage.removeItem("wpb:safe-start");
                                         }
-                                        catch { } location.reload(); }, style: { border: 0, background: "transparent", color: C.accentInk, fontWeight: 800, fontSize: 12, cursor: "pointer", padding: "6px 4px" }, children: "Exit" })] }), _jsx("div", { "data-view-frame": view, className: `wpb-view-frame ${viewAnimClass}`, style: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }, children: !loaded ? (loadState.status === "loading" ? _jsx(Splash, {}) : _jsx(StorageRecovery, { state: loadState, onRetry: () => setLoadAttempt(n => n + 1), onRestore: setRecoveryStore }, loadAttempt)) : view === "home" ? (_jsx(Home, { restScale, loadMode, perf, onPlanChoice: changeSessionPlan, planChoiceBusy, injuryLog, onLogInjury: () => setHomeInjuryOpen(true), legacySaved: legacyStore.saved, onRebuildLegacy: rebuildLegacyProgram, onRemoveLegacy: removeLegacyProgram, browseRequested: homeBrowse, onBrowseHandled: () => setHomeBrowse(false), saved: saved, history: history, bwLog: bwLog, onCreate: () => pushView("wizard", "home"), onBuildOwn: buildOwnRoutine, onCycles: () => { setFocusCycle(null); pushView(cycles.length ? "cycles" : "cycleWizard", "home"); }, cycleCount: cycles.length, cycleInfo: liveCycleInfo, gyms: gyms, activeGymId: activeGymId, onSetGym: (id) => { setActiveGymId(id); const a = gymById(gyms, id); if (a)
+                                        catch { } location.reload(); }, style: { border: 0, background: "transparent", color: C.accentInk, fontWeight: 800, fontSize: 12, cursor: "pointer", padding: "6px 4px" }, children: "Exit" })] }), _jsx("div", { "data-view-frame": view, className: `wpb-view-frame ${viewAnimClass}`, style: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }, children: !loaded ? (loadState.status === "loading" ? _jsx(Splash, {}) : _jsx(StorageRecovery, { state: loadState, onRetry: () => setLoadAttempt(n => n + 1), onRestore: setRecoveryStore }, loadAttempt)) : view === "home" ? (_jsx(Home, { restScale, loadMode, perf, onPlanChoice: changeSessionPlan, planChoiceBusy, injuryLog, onLogInjury: () => setHomeInjuryOpen(true), onEditInjury: id => setHomeInjuryOpen({ editId: id }), onResolveInjury: async id => {
+        const before = injuryLog, entry = before.find(item => item.id === id); if (!entry) return;
+        const next = before.map(item => item.id === id ? { ...item, resolvedAt: Date.now(), updatedAt: Date.now() } : item);
+        if (!(await persistAppStore({ injuryLog: next }))) { setAppToast({ msg: 'Could not save injury log. Try again.' }); return; }
+        setInjuryLog(next);
+        setAppToast({ msg: injuryTitle(entry, PART_LABEL) + " marked fine \u00b7 normal plan is back", undo: async () => {
+            const restored = next.map(item => item.id === id ? { ...item, resolvedAt: undefined, updatedAt: Date.now() } : item);
+            if (await persistAppStore({ injuryLog: restored })) setInjuryLog(restored); setAppToast(null); } });
+    }, legacySaved: legacyStore.saved, onRebuildLegacy: rebuildLegacyProgram, onRemoveLegacy: removeLegacyProgram, browseRequested: homeBrowse, onBrowseHandled: () => setHomeBrowse(false), saved: saved, history: history, bwLog: bwLog, onCreate: () => pushView("wizard", "home"), onBuildOwn: buildOwnRoutine, onCycles: () => { setFocusCycle(null); pushView(cycles.length ? "cycles" : "cycleWizard", "home"); }, cycleCount: cycles.length, cycleInfo: liveCycleInfo, gyms: gyms, activeGymId: activeGymId, onSetGym: (id) => { setActiveGymId(id); const a = gymById(gyms, id); if (a)
                                         setEquipDefault(a.equipment); }, onOpenCycles: (cid) => { if (typeof cid === "string")
                                         openCycleDetail(cid, "home");
                                     else {
@@ -21959,7 +22004,7 @@ function App() {
                                 // gym cannot resurrect it. Same mechanism programs and history already use.
                                 if (tombed && Object.keys(tombed).length)
                                     setTombs(t => ({ ...t, ...tombed }));
-                            }, onClose: () => setGymsOpen(false) })) }), homeInjuryOpen && _jsx(HomeInjuryJournal, { entries: injuryLog, upcoming: upNext, onClose: () => setHomeInjuryOpen(false), onSave: async next => {
+                            }, onClose: () => setGymsOpen(false) })) }), homeInjuryOpen && _jsx(HomeInjuryJournal, { entries: injuryLog, upcoming: upNext, editId: homeInjuryOpen?.editId || null, onClose: () => setHomeInjuryOpen(false), onSave: async next => {
         if (!(await persistAppStore({ injuryLog: next }))) { setAppToast({ msg: 'Could not save injury log. Try again.' }); return false; }
         setInjuryLog(next); return true;
     } }), cycleBlockPreview && (() => { const p = saved.find(p => p.id === cycleBlockPreview.programId); const owner = cycles.find(c => c.blockIds?.includes(p?.id)); const idx = owner?.blockIds.indexOf(p?.id) ?? -1; const previousProgram = idx > 0 ? saved.find(s => s.id === owner.blockIds[idx - 1]) : null; return p ? _jsx(CycleBlockPreview, { key: p.id, program: p, previousProgram, initialWeek: cycleBlockPreview.initialWeek, initialDayId: cycleBlockPreview.initialDayId, onClose: () => setCycleBlockPreview(null), onViewPlan: () => { setPlanBlockId(p.id); setCycleBlockPreview(null); navToTab("plan"); } }) : null; })(), pendingProgramUpdate && _jsx(SessionChoiceDialog, { title: pendingProgramUpdate.programExerciseChanges?.length ? "Update program?" : "Update program progression?", dismissible: false, onClose: () => {}, children: _jsxs("div", { children: [

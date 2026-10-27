@@ -2182,7 +2182,9 @@ try {
           const option=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Report an injury'));
           if(!option)throw new Error('Missing injury entry');option.click();
         });
-        await page.waitForSelector('[data-injury-sheet] #wpb-injury-muscle');
+        await page.waitForSelector('[data-injury-sheet] [data-injury-step="where"] [aria-pressed="true"]');
+        await page.click('.wpb-injury-next');await page.waitForSelector('[data-injury-level="sore"]');
+        await page.click('[data-injury-level="sore"]');await page.waitForSelector('[data-injury-step="plan"]');
         const injuryReview=await page.$eval('[data-injury-sheet]',el=>({
           labels:[...el.querySelectorAll('input[type="checkbox"]')].map(n=>n.closest('label')?.textContent),
           defaultSelected:[...el.querySelectorAll('input[type="checkbox"]')].filter(n=>n.checked).length

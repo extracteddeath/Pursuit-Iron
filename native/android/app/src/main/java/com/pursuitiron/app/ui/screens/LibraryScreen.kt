@@ -3,6 +3,11 @@
 package com.pursuitiron.app.ui.screens
 
 import androidx.compose.foundation.background
+import com.pursuitiron.app.ui.common.fmtNum
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -159,56 +164,98 @@ fun LibraryScreen(vm: AppViewModel) {
     open?.let { id -> ExerciseSheet(vm, id) { open = null } }
 }
 
+/* The design's exercise sheet: the lift with its group tile, where it sits in your plan, best e1RM and
+   whether your gym has it, muscles, heaviest set, the pinned note, History & records / Form video, tempo,
+   technique cues, today's status and Ban. Numbers come from history and the engine. */
 @Composable
 fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     var x by remember(id) { mutableStateOf<JSONObject?>(null) }
     var pin by remember(id) { mutableStateOf<JSONObject?>(null) }
     var pinOpen by remember(id) { mutableStateOf(false) }
+    var liftOpen by remember(id) { mutableStateOf(false) }
     LaunchedEffect(id, pinOpen) { x = vm.exercise(id); if (!pinOpen) pin = vm.pinnedNote(id) }
     val cs = MaterialTheme.colorScheme
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     if (pinOpen) PinNoteSheet(vm, id) { pinOpen = false }
-    ModalBottomSheet(onDismissRequest = onClose) {
+    if (liftOpen) { LiftDetailSheet(vm, id) { liftOpen = false }; return }
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         val e = x
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (e == null) { Text("Loading…"); return@Column }
-            Kicker(e.s("partLabel"))
-            Text(e.s("name"), style = MaterialTheme.typography.headlineMedium)
-            Text(e.strings("equip").joinToString(", ").replaceFirstChar { it.uppercase() }, color = cs.onSurfaceVariant)
+            val u = e.s("unit", "kg")
+            val g = (listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core").indexOf(e.s("group")).coerceAtLeast(0)) % 3
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(Modifier.size(56.dp).clip(listOf(CircleShape, RoundedCornerShape(16.dp), RoundedCornerShape(16.dp, 16.dp, 16.dp, 5.dp))[g])
+                    .background(listOf(cs.tertiaryContainer, cs.primaryContainer, cs.secondaryContainer)[g]), contentAlignment = Alignment.Center) {
+                    Text(e.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        color = listOf(cs.onTertiaryContainer, cs.onPrimaryContainer, cs.onSecondaryContainer)[g])
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(e.s("name"), style = MaterialTheme.typography.headlineSmall)
+                    Text("${e.s("group")} · ${e.s("equipLabel")}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+            }
+            val plan = e.o("plan")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    (if (plan != null) "Plan · ${plan.s("day")}" else "Plan") to (plan?.let { p -> if (p.isNull("sets")) "—" else "${p.i("sets")} × ${p.s("reps").replace("-", "–")}" } ?: "Not in it"),
+                    "Best e1RM" to (if (e.isNull("bestE1rm")) "—" else "${fmtNum(e.d("bestE1rm"))} $u"),
+                    "At your gym" to (if (e.b("atGym", true)) "Yes" else "No"),
+                ).forEach { (k, v) ->
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 10.dp)) {
+                        Text(k, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant, maxLines = 1)
+                        Text(v, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
             val sec = e.list("secondary")
             if (e.b("stretchFocus")) StretchFocusNote()
             com.pursuitiron.app.ui.common.MuscleChips(e.s("partLabel").replaceFirstChar { it.uppercase() }, sec.sortedByDescending { it.d("share") }.map { it.s("label").replaceFirstChar { c -> c.uppercase() } }, max = 6)
-            val cues = e.strings("cues")
-            if (cues.isNotEmpty()) PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {
-                Text("Form cues", style = MaterialTheme.typography.titleSmall)
-                cues.forEach { c -> Row { Text("•  "); Text(c, style = MaterialTheme.typography.bodyMedium) } }
-            }
-            val hist = e.list("history")
-            if (hist.isNotEmpty()) PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {
-                Text("Your history", style = MaterialTheme.typography.titleSmall)
-                hist.take(6).forEach { h ->
-                    Row {
-                        Text(SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(h.optLong("date"))), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 12.dp))
-                        Text(h.list("sets").joinToString("  ") { "${it.s("w")}×${it.s("r")}" }, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+            e.o("heaviest")?.let { h ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(PiIcons.Trophy, null, Modifier.size(18.dp))
+                    Text("Heaviest set", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    Text("${fmtNum(h.d("w"))} $u × ${h.i("r")} · ${SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(h.optLong("date")))}", style = MaterialTheme.typography.bodyMedium)
                 }
             }
             // B932: the same pinned-note editor as the workout; setup and cue are saved or removed together
-            val pinned = pin?.let { p -> (p.list("fields").filter { it.s("value").isNotBlank() }.map { "${it.s("label")} ${it.s("value")}" } + listOf(p.s("note")).filter { it.isNotBlank() }).joinToString(" — ") }.orEmpty()
-            Surface(onClick = { pinOpen = true }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(PiIcons.Pin, null, Modifier.size(20.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(if (pinned.isBlank()) "Pin a note" else "Pinned note", style = MaterialTheme.typography.titleSmall)
-                        Text(pinned.ifBlank { "Setup per machine and a cue you’ll see every time" }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                    }
-                    Icon(PiIcons.ChevronRight, null, Modifier.size(18.dp), tint = cs.onSurfaceVariant)
+            Text("PINNED NOTE · MACHINE SETUP", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
+            val pinned = pin?.let { p -> (p.list("fields").filter { it.s("value").isNotBlank() }.map { "${it.s("label")} ${it.s("value")}" } + listOf(p.s("note")).filter { it.isNotBlank() }).joinToString(" · ") }.orEmpty()
+            Surface(onClick = { pinOpen = true }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(PiIcons.Pin, null, Modifier.size(18.dp))
+                    Text(pinned.ifBlank { "Pin a note · machine setup" }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (e.b("banned")) FilledTonalButton(onClick = { vm.setBan(id, false); x = JSONObject(e.toString()).put("banned", false) }) { Text("Unban") }
-                else OutlinedButton(onClick = { vm.setBan(id, true); x = JSONObject(e.toString()).put("banned", true) }) {
-                    Icon(PiIcons.Close, null, modifier = Modifier.size(16.dp)); Text("  Never pick this")
+                Surface(onClick = { liftOpen = true }, color = cs.primaryContainer, contentColor = cs.onPrimaryContainer, shape = CircleShape, modifier = Modifier.weight(1f).height(48.dp)) {
+                    Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) { Icon(PiIcons.Trend, null, Modifier.size(18.dp)); Text("  History & records", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)) }
                 }
+                Surface(onClick = { runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(e.s("video")))) }.onFailure { vm.toast("No app can open that link") } },
+                    color = cs.surfaceContainerHigh, contentColor = cs.onSurface, shape = CircleShape, modifier = Modifier.weight(1f).height(48.dp)) {
+                    Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) { Icon(PiIcons.Play, null, Modifier.size(16.dp)); Text("  Form video", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)) }
+                }
+            }
+            if (e.s("tempo").isNotBlank()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Icon(PiIcons.Timer, null, Modifier.size(22.dp), tint = cs.primary)
+                Column {
+                    Text("Tempo", style = MaterialTheme.typography.bodyMedium)
+                    Text(e.s("tempo"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+            }
+            val cues = e.strings("cues")
+            if (cues.isNotEmpty()) {
+                Text("TECHNIQUE CUES", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
+                cues.forEach { c -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(Modifier.padding(top = 7.dp).size(6.dp).clip(CircleShape).background(cs.primary)); Text(c, style = MaterialTheme.typography.bodyMedium) } }
+            }
+            if (e.b("today")) Row(Modifier.fillMaxWidth().height(56.dp).clip(CircleShape).background(cs.primaryContainer), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Icon(PiIcons.Check, null, Modifier.size(18.dp), tint = cs.onPrimaryContainer); Text("  In today's workout", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold), color = cs.onPrimaryContainer)
+            }
+            if (e.b("banned")) FilledTonalButton(onClick = { vm.setBan(id, false); x = JSONObject(e.toString()).put("banned", false) }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Unban — the generator can pick it again") }
+            else OutlinedButton(onClick = { vm.setBan(id, true); x = JSONObject(e.toString()).put("banned", true) }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Icon(PiIcons.Ban, null, modifier = Modifier.size(18.dp)); Text("  Ban exercise")
             }
         }
     }

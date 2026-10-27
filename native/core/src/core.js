@@ -1932,7 +1932,37 @@ export function exercise({ id }) {
         note: S.store.exNotes?.[id] || '', banned: (S.store.banned || []).includes(id),
         // App.js exercise info sheet: isStretchFocus(ex.id, 3) shows the StretchFocusNote.
         stretchFocus: (() => { try { return !!E.isStretchFocus(id, 3); } catch { return false; } })(),
-        history: H.map((h) => ({ date: h.date, sets: (h.perf[id].sets || []).filter((s) => !s.warm).map((s) => ({ w: s.w ?? null, r: s.r ?? null })) })) };
+        history: H.map((h) => ({ date: h.date, sets: (h.perf[id].sets || []).filter((s) => !s.warm).map((s) => ({ w: s.w ?? null, r: s.r ?? null })) })),
+        ...exerciseFacts(x) };
+}
+/* The design's exercise sheet: group and equipment, where it sits in the plan, the best e1RM and heaviest set
+   (in the unit you lift in), whether the gym you're in has the kit, its tempo and a form video search. */
+function exerciseFacts(x) {
+    const id = x.id, u = unit();
+    const eqLabel = { barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Bands', bodyweight: 'Bodyweight' }[libEquipOf(x)] || EQUIP_LABEL[(x.equip || [])[0]] || 'Other';
+    let plan = null;
+    const nx = upNext();
+    if (nx) {
+        const p = nx.program;
+        for (const d of p.days) {
+            const slot = d.exercises.findIndex((_e, k) => E.exerciseAt(p, d, k, nx.weekIndex) === id);
+            if (slot < 0) continue;
+            let cell = null; try { cell = E.computeCell(p, d, id, slot, nx.weekIndex); } catch { cell = null; }
+            const wd = Object.keys(p.schedule || {}).find((k) => p.schedule[k] === d.id);
+            plan = { day: wd != null ? ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][Number(wd)] : d.label, sets: cell?.sets ?? null, reps: cell?.reps ?? null };
+            break;
+        }
+    }
+    let best = 0, heavy = null;
+    history().forEach((h) => { const p = h.perf?.[id]; if (!p) return;
+        (p.sets || []).forEach((st) => { const w0 = parseFloat(st.w ?? st.weight), r = parseInt(st.r ?? st.reps); if (st.warm || !(w0 > 0 && r > 0)) return;
+            const w = Math.round(E.convertHistoryLoad(w0, h.unit || u, u) * 10) / 10, e = E.e1rm(w, r);
+            if (e > best) best = e; if (!heavy || w > heavy.w || (w === heavy.w && r > heavy.r)) heavy = { w, r, date: h.date }; }); });
+    let atGym = true; try { const kit = activeKit(); atGym = !kit || !!E.availableFor(x.part, E.expandEquipment(new Set(kit))).some((e) => e.id === id); } catch { atGym = true; }
+    let tempo = ''; try { tempo = E.tempoFor(x) || ''; } catch { tempo = ''; }
+    const today = !!nx && nx.day.exercises.some((_e, k) => E.exerciseAt(nx.program, nx.day, k, nx.weekIndex) === id);
+    return { group: groupOf(x), equipLabel: eqLabel, plan, bestE1rm: best > 0 ? Math.round(best * 2) / 2 : null, heaviest: heavy, unit: u, atGym, tempo, today,
+        video: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${x.name} proper form`) };
 }
 export function setBan({ id, banned }) {
     const cur = new Set(S.store.banned || []); banned ? cur.add(id) : cur.delete(id);

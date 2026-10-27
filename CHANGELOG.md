@@ -1,3 +1,9 @@
+## Build 936 / M390 — Stable weekly loads and load-grid regression
+
+- Preserve the prior load across a week-to-week rep/RIR change when each completed straight set used it, met the new rep floor and the estimated decrease is at most 0.5 lb / 0.25 kg and 2%. The held load must remain selectable in the actual equipment inventory.
+- Preserve meaningful weight reductions, misses, mixed loads and discrete machine notches. Earned progression and logged workout evidence are unchanged.
+- Add the reported 50 lb -> 49.5 lb regression to mandatory integration contracts. Engine 0.65.9 remains in place.
+
 ## Build 935 / M389 — Safe history correction and shared editor styles
 
 - Reproduce and prevent a logged-set loss: typing `92..5` and saving previously filtered a real set out of the completed workout. Retain raw typing; compare staged sets and values with canonical normalization before saving. Incomplete/malformed loads, numeric overflow, fractional or blank reps, invalid/clamped RIR and fractional minutes keep the editor open without touching saved history.

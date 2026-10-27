@@ -296,7 +296,8 @@ fun LastNoteCard(ex: JSONObject, dayLabel: String) {
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PiIcons.Note, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(18.dp))
             Column(Modifier.weight(1f)) {
-                Text(if (ex.s("note").isNotBlank()) "Your note" else "From your last $dayLabel", style = MaterialTheme.typography.labelLarge, color = cs.onSecondaryContainer)
+                val on = ex.optLong("lastNoteDate", 0L).takeIf { it > 0 }?.let { " · " + java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()).format(java.util.Date(it)) } ?: ""
+                Text(if (ex.s("note").isNotBlank()) "Your note" else "From your last $dayLabel$on", style = MaterialTheme.typography.labelLarge, color = cs.onSecondaryContainer)
                 Text("“$note”", style = MaterialTheme.typography.bodyMedium, color = cs.onSecondaryContainer)
             }
             androidx.compose.material3.IconButton(onClick = { shown = false }, modifier = Modifier.size(36.dp)) { Icon(PiIcons.Close, "Dismiss last time's note", tint = cs.onSecondaryContainer, modifier = Modifier.size(18.dp)) }

@@ -2,6 +2,8 @@
 
 package com.pursuitiron.app.ui.screens
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -154,12 +156,16 @@ fun FeedbackCard(g: JSONObject) {
                             Text("$r%", style = MaterialTheme.typography.labelLarge)
                         } else Box(Modifier.weight(1f))
                     }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // The design's three answer tiles, oldest first, equal width.
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         m.strings("answers").forEach { a ->
                             val (bg, fg) = when (a) { "About right" -> cs.primary to cs.onPrimary; "Too much" -> cs.tertiaryContainer to cs.onTertiaryContainer; else -> cs.secondaryContainer to cs.onSecondaryContainer }
-                            Surface(color = bg, contentColor = fg, shape = RoundedCornerShape(10.dp)) { Text(a, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)) }
+                            Box(Modifier.weight(1f).height(26.dp).clip(RoundedCornerShape(8.dp)).background(bg), contentAlignment = Alignment.Center) {
+                                Text(a, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold), color = fg, maxLines = 1)
+                            }
                         }
                     }
+                    if (m.s("note").isNotBlank()) Text(m.s("note"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
                 }
             }
         }

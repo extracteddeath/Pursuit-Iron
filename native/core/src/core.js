@@ -1643,8 +1643,18 @@ export function progressCharts() {
         });
     }));
     const rd = readiness(), fb = {};
-    H.forEach((h) => Object.entries(h.feedbackRaw || {}).forEach(([part, v]) => { if (v?.sore && SORE_LABEL[v.sore]) (fb[part] = fb[part] || []).length < 3 && fb[part].push(SORE_LABEL[v.sore]); }));
-    const feedback = Object.entries(fb).map(([part, answers]) => ({ part, label: E.PART_LABEL?.[part] || part, readiness: rd.find((r) => r.part === part)?.readiness ?? null, answers }))
+    // The finish page's "How did each muscle feel?" answer (diff) leads; the older soreness answer fills in.
+    // `next` is what the newest answer did to that muscle's sets (the stored delta, after the MRV check).
+    const DIFF_LABEL = { 1: 'Too easy', 0: 'About right', '-1': 'Too much' }, nextOf = {};
+    H.forEach((h) => Object.entries(h.feedbackRaw || {}).forEach(([part, v]) => {
+        const a = v?.diff != null && DIFF_LABEL[v.diff] ? DIFF_LABEL[v.diff] : v?.sore && SORE_LABEL[v.sore] ? SORE_LABEL[v.sore] : null;
+        if (!a) return;
+        if (!(part in nextOf)) nextOf[part] = Number(h.feedback?.[part] ?? 0);
+        (fb[part] = fb[part] || []).length < 3 && fb[part].push(a);
+    }));
+    const NEXT = { 1: 'One more set next time.', 0: 'Sets hold.', '-1': 'One set fewer next time.' };
+    const feedback = Object.entries(fb).map(([part, answers]) => ({ part, label: E.PART_LABEL?.[part] || part, readiness: rd.find((r) => r.part === part)?.readiness ?? null, answers: answers.slice().reverse(),
+        note: (answers[0] === 'About right' ? 'On target. ' : answers[0] === 'Too much' ? 'Too much last time. ' : 'Felt easy last time. ') + (NEXT[Math.sign(nextOf[part] || 0)] || 'Sets hold.') }))
         .sort((a, b) => (a.readiness ?? 100) - (b.readiness ?? 100));
     return { unit: u, weeks, intensity: { reps: [{ label: 'Strength', sub: '1–5 reps', sets: reps[0] }, { label: 'Hypertrophy', sub: '6–12 reps', sets: reps[1] }, { label: 'Endurance', sub: '13+ reps', sets: reps[2] }],
         effort: [{ label: 'To failure', sub: '0 RIR', sets: eff[0] }, { label: 'Hard', sub: '1 RIR', sets: eff[1] }, { label: 'Productive', sub: '2 RIR', sets: eff[2] }, { label: 'Easy', sub: '3+ RIR', sets: eff[3] }], unrated },

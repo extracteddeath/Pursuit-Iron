@@ -980,6 +980,15 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
     ok(after[0].weight === '62.5' && after.slice(1).every((x) => x.weight === ''), 'unlogging takes the carried load back, keeping a load you changed');
   } else ok(false, 'no first-time lift to test the carried load'); }
 
+// The design's Recovery & feedback: the finish page's muscle answers show with what they did next time
+{ C.init({}); C.createProgram({ config: { name: 'FB', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  const s0 = C.startSession({}); const si = s0.exercises[0].sets.findIndex((x) => !x.warm && !x.sub);
+  C.act({ type: 'edit', ei: 0, si, field: 'weight', value: '60' }); C.act({ type: 'edit', ei: 0, si, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei: 0, si });
+  const part = C.finishPreview().parts[0].part;
+  C.act({ type: 'feedback', part, diff: -1 }); C.finishSession();
+  const row = C.progressCharts().feedback.find((r) => r.part === part);
+  ok(row && row.answers[row.answers.length - 1] === 'Too much' && /fewer|hold/.test(row.note), 'a finish-page answer shows in Recovery & feedback (' + (row && row.note) + ')'); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 
 // The design's finish page: too easy / about right / too much per muscle, the next day, time and volume

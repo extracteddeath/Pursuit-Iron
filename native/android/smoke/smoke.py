@@ -638,6 +638,14 @@ if scroll_to(r"^\|Recent$", tries=6):
 tap(r"^\|Progress$|^Progress\|", "progress-after-import")
 if not find(r"vs last week|^\|Volume$", timeout=3):
     FAILS.append("weekly volume chart missing on Progress")
+# The finish page's muscle answers feed Recovery & feedback
+if scroll_to(r"^\|Recovery & feedback$", tries=8, step=600):
+    if not find(r"next time\.|Sets hold\.", timeout=2) and not scroll_to(r"next time\.|Sets hold\.", tries=2, step=300):
+        FAILS.append("Recovery & feedback rows have no next-time note")
+    shot("progress-feedback")
+else:
+    FAILS.append("no Recovery & feedback on Progress after answering how a muscle felt")
+scroll_up_to(r"vs last week|^\|Volume$", tries=12)
 # Pinned lifts (web chart favourites): Manage opens the panel
 scroll_to(r"Open lift history|^Manage pinned lifts", tries=10, step=600)
 if tap(r"Open lift history", "lift-detail", required=False):

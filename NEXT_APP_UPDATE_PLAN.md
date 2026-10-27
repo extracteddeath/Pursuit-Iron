@@ -729,4 +729,5 @@ Final local evidence: all 127 source contracts passed (20 generation, 32 adaptat
 - Replace 19 static Library presentation objects with theme-backed spacing owners for the header, search and clear action, two scrollable filter rows, four status choices and result rows. All data, keyboard focus, catalog behavior and training history remain owned by App.
 - Use shared 4/8px spacing, 48px header/search actions and at least 44px filter targets across phone and enlarged-text layouts.
 - Shorten root navigation's single lead-card entrance, prevent simultaneous diagonal tab-linked travel, and preserve separate exercise-detail motion, Workout/Focus geometry and reduced-motion semantics.
+- Keep complete Plan labels in a 2-by-2 grid at 320px. Tighten the combined inline-style ceiling from 2,303 to 2,284; external/embedded/repeated priority counts stay at 2,188/1,143/14. The switcher browser check retains its 70px layout requirement and accepts only a 0.001px DOMRect floating-point tolerance after entrance settles.
 - Release requires certified cache and all exact-head CI/browser groups, public offline byte verification, and physical Android acceptance separately.

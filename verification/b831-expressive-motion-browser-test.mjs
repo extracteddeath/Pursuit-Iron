@@ -2806,9 +2806,11 @@ try {
         await page.click('button[aria-label="Switch program"]');
         await page.waitForSelector('.wpb-switcher-sheet .wpb-switcher-row');
         // The shared spring briefly scales rows below their resting size.
-        // Retain the 70px requirement, but measure it after entrance settles.
+        // Retain the 70px layout requirement and wait for entrance to settle.
+        // Translated DOMRects can differ by a floating-point fraction of a
+        // pixel; offsetHeight still enforces the full, untransformed target.
         await page.waitForFunction(() => [...document.querySelectorAll('.wpb-switcher-row')]
-            .every(row => row.offsetHeight >= 70 && row.getBoundingClientRect().height >= 70), { timeout: 5000 });
+            .every(row => row.offsetHeight >= 70 && row.getBoundingClientRect().height >= 70 - .001), { timeout: 5000 });
         console.log('R36 DISABLED '+JSON.stringify(await contrastAuditR36([
             ['disabledProgram','.wpb-switcher-row[data-state="active"]'],
             ['enabledProgram','.wpb-switcher-row[data-state="available"]']
@@ -2835,7 +2837,7 @@ try {
         assert.ok(switcherR21.alpha===255 && switcherR21.image==='none' &&
             switcherR21.doneHeight>=44 && switcherR21.rows===7 &&
             switcherR21.activeDisabled===true && switcherR21.availableDisabled===false &&
-            switcherR21.minRowHeight>=70 && switcherR21.titleWhiteSpace==='normal' &&
+            switcherR21.minRowHeight>=70-.001 && switcherR21.titleWhiteSpace==='normal' &&
             switcherR21.titleTextOverflow!=='ellipsis' && !switcherR21.clipped,
             'R21 switcher retains working program-state semantics with readable names: '+JSON.stringify(switcherR21));
         if (width===430) await page.screenshot({path:path.join(root,'verification/b831-m3-program-switcher-phone.png')});

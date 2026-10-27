@@ -173,11 +173,14 @@ fun PlanScreen(vm: AppViewModel) {
         item(span = full) {
             // The design's week chips: W1 … with DONE / NOW, and the deload week as its own chip.
             val cur = p.i("current"); val list = (1..weeks).toList() + if (p.b("deload")) listOf(weeks + 1) else emptyList()
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // On a tablet the chips share the row, as in the design; on a phone they scroll.
+            if (wide) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                list.forEach { n -> PlanWeekChip(n, n > weeks, n == wk, cur, { vm.loadPlan(p.s("programId"), n) }, Modifier.weight(1f)) }
+            } else LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(list) { n -> PlanWeekChip(n, n > weeks, n == wk, cur, { vm.loadPlan(p.s("programId"), n) }) }
             }
         }
-        item(span = full) { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }
+        item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }
         p.list("days").forEach { d ->
             item { PlanDayCard(vm, p, d, wk) { k -> whyFor = Triple(p.s("programId"), d.s("id"), k) } }
         }
@@ -220,15 +223,20 @@ fun ProgressScreen(vm: AppViewModel) {
             item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { HistoryList(vm, day) { historyId = it } }
             return@LazyVerticalStaggeredGrid
         }
-        charts?.let { g -> item(span = full) { VolumeChartCard(g) } }
+        // On a tablet the cards sit in two columns, as in the design: volume, landmarks and audit on the left,
+        // recovery & feedback and intensity on the right.
+        val lane = if (wide) StaggeredGridItemSpan.SingleLane else full
+        charts?.let { g -> item(span = lane) { VolumeChartCard(g) } }
+        if (wide) charts?.let { g -> item(span = lane) { FeedbackCard(g) } }
         // Web VolumeCard: this week's sets per muscle against the landmarks, for the program being trained.
         vm.home?.o("next")?.let { nx ->
-            item(span = full) { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> LandmarksCard(d) } }
-            item(span = full) { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> AuditCard(vm, d) } }
+            item(span = lane) { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> LandmarksCard(d) } }
+            if (wide) charts?.let { g -> item(span = lane) { IntensityCard(g) } }
+            item(span = lane) { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> AuditCard(vm, d) } }
         }
         charts?.let { g ->
-            item(span = full) { FeedbackCard(g) }
-            item(span = full) { IntensityCard(g) }
+            if (!wide) item(span = full) { FeedbackCard(g) }
+            if (!wide || vm.home?.o("next") == null) item(span = lane) { IntensityCard(g) }
         }
         item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
     }
@@ -266,16 +274,16 @@ fun ProgramMenuButton(vm: AppViewModel, id: String, name: String) {
 
 /* The design's week chip: a 52dp pill, W1 with DONE / NOW / DELOAD underneath; the chosen week morphs to a rounded square. */
 @Composable
-private fun PlanWeekChip(n: Int, deload: Boolean, selected: Boolean, current: Int, onClick: () -> Unit) {
+private fun PlanWeekChip(n: Int, deload: Boolean, selected: Boolean, current: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
     val r by androidx.compose.animation.core.animateDpAsState(if (selected) 16.dp else 26.dp, com.pursuitiron.app.ui.theme.Motion.spring(), label = "weekChip")
     val tag = when { deload -> "DELOAD"; current > 0 && n < current -> "DONE"; n == current -> "NOW"; else -> "" }
     val bg = when { selected -> cs.primary; deload -> cs.tertiaryContainer; else -> cs.surfaceContainerHigh }
     val fg = when { selected -> cs.onPrimary; deload -> cs.onTertiaryContainer; else -> cs.onSurface }
     androidx.compose.material3.Surface(onClick = onClick, shape = RoundedCornerShape(r), color = bg, contentColor = fg,
-        modifier = Modifier.height(52.dp).widthIn(min = 56.dp).semantics { contentDescription = (if (deload) "Deload week" else "Week $n") + (if (tag == "NOW") ", current" else if (tag == "DONE") ", done" else ""); this.selected = selected }) {
+        modifier = modifier.height(52.dp).widthIn(min = 56.dp).semantics { contentDescription = (if (deload) "Deload week" else "Week $n") + (if (tag == "NOW") ", current" else if (tag == "DONE") ", done" else ""); this.selected = selected }) {
         Column(Modifier.padding(horizontal = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(if (deload) "DL" else "W$n", style = MaterialTheme.typography.titleSmall)
+            Text("W$n", style = MaterialTheme.typography.titleSmall)
             if (tag.isNotEmpty()) Text(tag, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, letterSpacing = 0.4.sp))
         }
     }

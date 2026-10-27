@@ -513,6 +513,11 @@ if tap(r"^\|Barbell$", "library-barbell"):
     tap(r"^\|Any equipment$")
 else:
     FAILS.append("no equipment filter on Exercises")
+# An exercise's own sheet (the design's exercise detail)
+if tap(r"^\|Barbell Bench Press$", "exercise-detail", required=False):
+    time.sleep(1.5)
+    shot("exercise-detail-k")
+    back()
 
 # 5b. Plan: volume wave and the week-by-week lift table
 tap(r"^\|Plan$|^Plan\|")

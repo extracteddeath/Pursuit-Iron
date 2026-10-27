@@ -1,6 +1,6 @@
 ## Build 937 / M391 — Even Library spacing and calmer motion
 
-- Browser screenshot review: preserve a one-line Library title with the dynamic result count accessible to assistive technology; make Plan's Progression tab reflow into a two-column layout instead of breaking its name.
+- Browser screenshot review: preserve a one-line Library title with a screen-reader-accessible result count; at narrow widths, correct the existing priority flex owner so Plan's Progression label uses two rows rather than breaking mid-word.
 
 - Library header, search, filter strips and rows share spacing, typography, accessible target sizes and theme paint instead of 19 inline style objects. Search, selection, exercise detail and saved training retain their behavior.
 - Primary navigation uses shorter one-axis lead-card motion, avoiding diagonal source-linked overshoot. Reduced-motion and system Back handling remain unchanged.

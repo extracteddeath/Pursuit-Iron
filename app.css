@@ -1741,7 +1741,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   position:relative;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>button{
-  flex:var(--pi-choice-grow,1) 1 0%!important;
+  flex:var(--pi-choice-grow,1) 1 var(--pi-plan-tab-basis,0%)!important;
   min-width:0!important;
   position:relative;z-index:1;
   gap:2px!important;
@@ -3719,7 +3719,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   box-shadow:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>button{
-  min-height:44px!important;
+  min-height:var(--pi-plan-tab-min-height,44px)!important;
   min-width:0;
   border-radius:13px!important;
 }
@@ -8968,8 +8968,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab[aria-pressed="true"]{background:var(--pi-color-card,transparent);color:var(--pi-m3e-primary,var(--wpb-theme-accent,currentColor));font-weight:800;}
 .wpb-plan-pane-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* B937: keep complete Plan labels before words wrap mid-syllable on 320px phones. */
-@container (max-width:340px){
-  #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{flex:1 1 calc(50% - 4px);min-height:48px;}
+@media (max-width:360px){
+  #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes>.wpb-plan-pane-tab{--pi-plan-tab-basis:calc(50% - 4px);--pi-plan-tab-min-height:48px;}
   #root[data-pi-motion="expressive"] .wpb .wpb-plan-pane-label{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;text-align:center;}
 }
 .wpb-plan-week-picker{

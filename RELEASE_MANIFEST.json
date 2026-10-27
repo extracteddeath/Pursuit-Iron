@@ -140,16 +140,16 @@
   "uiFiles": {
     "modules/App.js": "964ae90100a8665a704daeef850dfdc1856918a18921ae5d1c1889b51ef5aaec",
     "index.html": "fd6909c5c618f88d10b37d75df74d005447f9f2e66c9bd0da4587a3468794700",
-    "sw.js": "5b65b015994735396d938410515c1263e90dadc3edc91e447d63f79e521a362b",
-    "BUILD_PROFILE.json": "474f85981f7b763fa64f79337fc993a59a0aef771fabea3151a22709e8db6681",
-    "CHANGELOG.md": "aefff918ce1ac92294beadf91d08d351a82e84aa168487968085f34c68417c4a",
-    "app.css": "e6f0f1fdb834a916bdecbbe524a1c634271dd952834fc394c4b0f7cd9e8c43b6",
+    "sw.js": "9024b8098aaabf4b00582b15250f6c7af1e1cb105a0477e681d061fbbdd9aeac",
+    "BUILD_PROFILE.json": "b30a877e8c45aa6c1508eff8198a6c9b12d736f2af8cc3a972aa123d78aa3082",
+    "CHANGELOG.md": "e0fa670e9b9667561bc4710bb4435698c04277329d3d100072028b436edc7ccc",
+    "app.css": "dd86b38b48071243d2ee65711701125e32e4ff97fb7dfc4ef2055b64972f00d6",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b937-r39ae7171e536498b",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b937-r427a6ce067c794db",
   "uiMilestone": "Build 937 · M391 Even Library rhythm and calmer route motion"
 }

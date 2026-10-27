@@ -1958,7 +1958,7 @@ function exerciseFacts(x) {
         (p.sets || []).forEach((st) => { const w0 = parseFloat(st.w ?? st.weight), r = parseInt(st.r ?? st.reps); if (st.warm || !(w0 > 0 && r > 0)) return;
             const w = Math.round(E.convertHistoryLoad(w0, h.unit || u, u) * 10) / 10, e = E.e1rm(w, r);
             if (e > best) best = e; if (!heavy || w > heavy.w || (w === heavy.w && r > heavy.r)) heavy = { w, r, date: h.date }; }); });
-    let atGym = true; try { const kit = activeKit(); atGym = !kit || !!E.availableFor(x.part, E.expandEquipment(new Set(kit))).some((e) => e.id === id); } catch { atGym = true; }
+    let atGym = true; try { const kit = activeKit(); atGym = !kit || !!E.availableFor(x.part, E.expandEquipment(new Set(kit)), []).some((e) => e.id === id); } catch { atGym = true; }
     let tempo = ''; try { tempo = E.tempoFor(x) || ''; } catch { tempo = ''; }
     const today = !!nx && nx.day.exercises.some((_e, k) => E.exerciseAt(nx.program, nx.day, k, nx.weekIndex) === id);
     return { group: groupOf(x), equipLabel: eqLabel, plan, bestE1rm: best > 0 ? Math.round(best * 2) / 2 : null, heaviest: heavy, unit: u, atGym, tempo, today,

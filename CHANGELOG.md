@@ -1,3 +1,11 @@
+## Build 938 / M392 — Readable Settings choices and shared styling
+
+- Fix theme names remaining at 11.5px when actual root text doubles. Theme labels and group captions now scale; the grid adapts to the text size and available width.
+- Theme selection reuses UiChoice and native disclosure/keyboard behavior. Only real palette swatches retain data-driven inline paint.
+- Consolidate six preference groups, theme presentation and Settings scroll/anchor spacing into semantic CSS. Retire 28 inline style objects, 15 external priorities and nine embedded priorities; lower the existing ceilings to 2,256 / 2,173 / 1,134 respectively. Repeated priorities stay at 14.
+- Keep all original preference callbacks, training algorithms and persistence owners. Existing R76 now checks actual text scaling, theme/preference keyboard selection, persisted values, reversal and authored-content/history preservation.
+- Engine 0.65.9 is unchanged. Physical Android/IME/TalkBack acceptance remains open.
+
 ## Build 937 / M391 — Even Library spacing and calmer motion
 
 - Browser screenshot review: preserve a one-line Library title with a screen-reader-accessible result count; at narrow widths, correct the existing priority flex owner so Plan's Progression label uses two rows rather than breaking mid-word.

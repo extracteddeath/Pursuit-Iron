@@ -1,3 +1,15 @@
+## Build 938 / M392 — Settings choice and theme ownership
+
+Continue after Build 937 / PR #365 merged as 7c8664eb0f659ad928177b0c7433349c0d839872. All five candidate workflows passed, including the seven browser groups. Deployed verification is recorded separately.
+
+The extended existing R76 fixture fails on unchanged Build 937: every theme label stays 11.5px when actual document text doubles. The earlier per-element enlargement fixture could not detect that fixed-size defect. Move theme presentation from the embedded stylesheet/inline objects into the Settings CSS family, use relative type and a text-relative grid, and reuse UiChoice. Preserve the native disclosure, all palette values and existing theme callback; only the two real swatch colors remain inline.
+
+Six preference groups retain their exact callbacks and measured moving indicator, with explicit accessible group names and shared class-owned presentation. Remove superseded theme rules, obsolete preference font/layout overrides, and inline scroll/anchor spacing. Measured combined inline objects 2,284 → 2,256; external priorities 2,188 → 2,173; embedded priorities 1,143 → 1,134; repeated priorities remain 14. No new module, storage schema, engine formula, history writer or gesture owner.
+
+R76 covers both palettes at 320/393/900/1280px, actual 200% root text in the expanded theme chooser, complete labels and usable targets, keyboard theme selection and exact persisted preference values, reversal, and authored content/logged facts. Changing then restoring experience legitimately advances the existing program modification timestamp; the training-content comparison explicitly excludes only that timestamp. Preserve all existing Profile/Progress/Settings enlargement coverage, and run source/lifecycle/independent/seven-browser/release gates on the final candidate before merge. Require hosted hash parity and a real offline browser journey afterward.
+
+Next: remaining Program/Library detail/editor families and source retirement, then measured device acceptance. Physical Android/IME/TalkBack/interruption/foldable checks remain open. Do not call the entire refactor or launch acceptance complete from browser passes.
+
 ## Build 935 — publication resumption and remaining refactor
 
 The user explicitly authorized publication to the existing Pursuit Iron destination on October 26, followed by a review of the remaining refactor. This resolves the publication-scope blocker recorded historically under M388/M389 below. Resume existing PR #362, preserving its M387 work and adding the complete M388/M389 candidate. The release remains Build 935 / Engine 0.65.9. Require exact-head source, lifecycle, independent-engine, seven-browser and release checks before merge; verify the deployed files and public offline execution afterward.

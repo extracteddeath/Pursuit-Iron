@@ -153,6 +153,82 @@ try{
           }
           assert.equal(await page.$eval('.wpb-settings-jump-control select',el=>el.value),'',
             'Settings jump resets for the next deliberate navigation');
+          if(width===320){
+            await page.focus('.wpb-theme-picker>summary');
+            await page.keyboard.press('Enter');
+            await page.waitForSelector('.wpb-theme-picker[open]');
+            const ordinary=await page.$$eval('.wpb-theme-option',options=>
+              options.map(el=>parseFloat(getComputedStyle(el).fontSize)));
+            const rootText=await page.evaluate(()=>{
+              const root=document.documentElement;
+              const old=root.style.fontSize;
+              root.style.fontSize=parseFloat(getComputedStyle(root).fontSize)*2+'px';
+              return old;
+            });
+            await settle(page);
+            const choices=await page.$$eval('.wpb-theme-option',options=>options.map(el=>{
+              const box=el.getBoundingClientRect(),label=el.lastElementChild;
+              const range=document.createRange();range.selectNodeContents(label);
+              return {name:label.textContent,size:parseFloat(getComputedStyle(el).fontSize),
+                width:box.width,height:box.height,
+                fits:[...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1)};
+            }));
+            assert.ok(choices.length===ordinary.length&&choices.every((c,i)=>
+              c.size>=ordinary[i]*1.95&&c.width>=44&&c.height>=44&&c.fits),
+              'Theme names scale with actual 200% root text and retain usable targets: '+JSON.stringify({ordinary,choices}));
+            await page.screenshot({path:path.join(root,'verification/b938-themes-'+theme+'-enlarged-phone.png')});
+            await page.evaluate(old=>document.documentElement.style.fontSize=old,rootText);
+            // Use the native keyboard action, verify persisted theme selection,
+            // and return to the fixture's palette before the geometry matrix.
+            const alternate=theme==='rose'?'amethyst':'sage';
+            await page.focus('[data-theme-option="'+alternate+'"]');
+            await page.keyboard.press('Space');
+            await page.waitForFunction(id=>JSON.parse(localStorage.getItem('wpb:v1')).theme===id,{},alternate);
+            assert.equal(await page.$eval('[data-theme-option="'+alternate+'"]',el=>el.getAttribute('aria-pressed')),'true');
+            await page.focus('[data-theme-option="'+theme+'"]');
+            await page.keyboard.press('Space');
+            await page.waitForFunction(id=>JSON.parse(localStorage.getItem('wpb:v1')).theme===id,{},theme);
+            await page.focus('.wpb-theme-picker>summary');
+            await page.keyboard.press('Enter');
+            await settle(page);
+            const training=await page.evaluate(()=>{
+              const data=JSON.parse(localStorage.getItem('wpb:v1'));
+              return {saved:data.saved.map(({updatedAt,...program})=>program),history:data.history,cycles:data.cycles,perf:data.perf};
+            });
+            for(const name of ['Weight unit','Training experience','Effort scale','Smallest jump','Rest length','Sex']){
+              const selector='[role="group"][aria-label="'+name+'"]';
+              const old=await page.$eval(selector,group=>group.querySelector('[aria-pressed="true"]').textContent);
+              const option=await page.$eval(selector,group=>group.querySelector('[aria-pressed="false"]').textContent);
+              await page.focus(selector+'>button[aria-pressed="false"]');
+              await page.keyboard.press('Space');
+              await page.waitForFunction(({selector,text})=>
+                document.querySelector(selector)?.querySelector('[aria-pressed="true"]')?.textContent===text,{},
+                {selector,text:option});
+              const field={'Weight unit':'unit','Training experience':'experience','Effort scale':'loadMode',
+                'Smallest jump':'minInc','Rest length':'restScale','Sex':'sex'}[name];
+              const expected=name==='Weight unit'?option:
+                name==='Training experience'?({'New':'novice','Beginner':'beginner','Intermediate':'intermediate','Advanced':'advanced'}[option]):
+                name==='Effort scale'?option.toLowerCase():
+                name==='Smallest jump'?{v:option==='Std'?0:Number(option),unit:option==='Std'?null:'lb'}:
+                name==='Rest length'?({'Short':.7,'Standard':1,'Long':1.3}[option]):option.toLowerCase();
+              await page.waitForFunction(({field,expected})=>
+                JSON.stringify(JSON.parse(localStorage.getItem('wpb:v1'))[field])===JSON.stringify(expected),{},
+                {field,expected});
+              const handle=await page.$(selector);
+              const buttons=await handle.$$('button');
+              for(const button of buttons)if(await button.evaluate((el,text)=>el.textContent===text,old)){
+                await button.focus();await page.keyboard.press('Space');break;
+              }
+              await handle.dispose();
+              await page.waitForFunction(({selector,text})=>
+                document.querySelector(selector)?.querySelector('[aria-pressed="true"]')?.textContent===text,{},
+                {selector,text:old});
+            }
+            assert.deepEqual(await page.evaluate(()=>{
+              const data=JSON.parse(localStorage.getItem('wpb:v1'));
+              return {saved:data.saved.map(({updatedAt,...program})=>program),history:data.history,cycles:data.cycles,perf:data.perf};
+            }),training,'Reverting preferences restores authored content and logged facts; edit timestamps may advance');
+          }
         }
         const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).saved);
         // Use the computed initial text size, then modify ONLY typography.

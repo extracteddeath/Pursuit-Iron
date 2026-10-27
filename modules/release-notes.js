@@ -2,6 +2,10 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "938", items: [
+        "Theme names now follow larger text settings and reflow into readable choices.",
+        "Training preferences share consistent controls, spacing and named keyboard groups."
+    ] },
     { version: "4.0.0", build: "937", items: [
         "Exercise Library search, filter rails and lists now use a consistent shared spacing and theme system.",
         "Tab navigation moves one lead card on a shorter, predictable horizontal axis."

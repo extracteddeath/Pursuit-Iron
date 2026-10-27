@@ -1051,7 +1051,10 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
     // First time on this lift: a labelled starting estimate instead of a blank row.
     const range0 = cellRepRange(cell, program, ex, slot === day.primaryIndex);
     let estimate = null, estimateLoad = null;
-    if (!percentage && !(Number(sug?.weight) > 0) && !(sug?.setTargets || []).some(t => Number(t?.weight) > 0)) {
+    // A session swap is not the program's lift for this slot: by contract it is never seeded from another
+    // lift's history, so the estimate applies only to the planned exercise.
+    const plannedHere = (() => { try { return exerciseAt(program, day, slot, weekIndex) === ex.id; } catch { return false; } })();
+    if (plannedHere && !percentage && !(Number(sug?.weight) > 0) && !(sug?.setTargets || []).some(t => Number(t?.weight) > 0)) {
         estimate = startingEstimate(ex.id, { history, unit, experience: program?.config?.experience });
         const raw = startingWorkLoad(estimate, range0[0], parseRIRNum(cell.rir) ?? 2);
         estimateLoad = raw > 0 ? loadableAtOrBelow(ex, raw, unit) : null;

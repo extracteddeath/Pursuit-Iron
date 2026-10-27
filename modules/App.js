@@ -21420,6 +21420,9 @@ function App() {
             setAppToast({ msg: "That Pursuit Next block is a future/completed cycle phase. Train the active block; the next phase unlocks after history-aware advancement." });
             return;
         }
+        // A workout takes the screen: an earlier action's Undo notice (a program switch, say) must not
+        // sit over the set rows, where a tap meant for a set would undo that action instead.
+        setAppToast(t => t?.undo ? null : t);
         // Ensure a planned program is in the library before logging against it, so the
         // session feeds Up-next and progress tracking. (Quick/freestyle workouts skip this.)
         if (ownerProgram && !ownerProgram.quick && !saved.some(p => p.id === ownerProgram.id)) {

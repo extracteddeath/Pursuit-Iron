@@ -216,6 +216,23 @@ function upNext() {
     return { program: active, day: active.days[c.dayIndex], dayIndex: c.dayIndex, weekIndex: c.weekIndex || 1, scheduled: c.scheduled };
 }
 
+/* The design's weekly recap: the same 7-day window as E.weeklyRecap, plus the time trained, the dates it
+   covers and the week's best set (highest e1RM), in the unit shown. */
+function recapExtras(H, u) {
+    const t = Date.now(), wk = 7 * 86400000, inW = H.filter((h) => h.date > t - wk);
+    const minutes = inW.reduce((m, h) => m + (Number(h.durationMin) || 0), 0);
+    let best = null;
+    inW.forEach((h) => Object.entries(h.perf || {}).forEach(([id, p]) => {
+        (p?.sets || []).forEach((x) => {
+            const w0 = parseFloat(x.w ?? x.weight), r = parseInt(x.r ?? x.reps);
+            if (!(w0 > 0 && r > 0) || x.warm || x.sub) return;
+            const w = Math.round(E.convertHistoryLoad ? E.convertHistoryLoad(w0, h.unit || u, u) * 10 : w0 * 10) / 10;
+            const e = E.e1rm(w, r);
+            if (!best || e > best.e1rm) best = { name: exName(id), w, r, rir: x.rirReported ? x.rir : null, e1rm: Math.round(e * 10) / 10 };
+        });
+    }));
+    return { minutes, from: t - wk, to: t, best };
+}
 function readiness() {
     let rows = [];
     try { rows = E.muscleRecovery(history()) || []; } catch { rows = []; }
@@ -547,7 +564,8 @@ function todayInsights(nx, H) {
         recovery: { restAdvised, ready, parts: fr.rec.filter((r) => r.daysSince != null).sort((a, b) => a.readiness - b.readiness).slice(0, 8)
             .map((r) => ({ part: r.part, label: E.PART_LABEL[r.part] || r.part, readiness: Math.round(r.readiness), status: r.status || null, daysSince: r.daysSince })) },
         recap: recap && recap.count ? { count: recap.count, sets: recap.sets, vol: recap.vol, prevCount: recap.prevCount, prevSets: recap.prevSets, prevVol: recap.prevVol, prs: recap.prs,
-            topMuscle: recap.topMuscle ? { part: recap.topMuscle[0], label: E.PART_LABEL[recap.topMuscle[0]] || recap.topMuscle[0], sets: recap.topMuscle[1] } : null } : null,
+            topMuscle: recap.topMuscle ? { part: recap.topMuscle[0], label: E.PART_LABEL[recap.topMuscle[0]] || recap.topMuscle[0], sets: recap.topMuscle[1] } : null,
+            planned: nx ? nx.program.days.length : 0, ...recapExtras(H, u) } : null,
         insights, needsBodyweight: needsBw
     };
 }

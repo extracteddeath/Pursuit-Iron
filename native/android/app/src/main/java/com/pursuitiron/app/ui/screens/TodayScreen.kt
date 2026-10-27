@@ -182,7 +182,7 @@ fun TodayScreen(vm: AppViewModel) {
             }
         }
 
-        if ("recap" in h.strings("insights")) item(span = full) { RecapCard(h) }
+        if (h.o("recap") != null && vm.prefs.recapHiddenUntil < System.currentTimeMillis()) item(span = full) { RecapCard(vm, h) }
         review?.takeIf { next != null && h.o("restDay") == null }?.let { r -> item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { GamePlanCard(r, r.list("changes").size) } }
         if (next != null) item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -168,7 +168,7 @@ private fun CardChip(label: String, on: Boolean, onClick: () -> Unit) {
 }
 
 /** App.js shareCustomProfileCard: the card's rows drawn 1080 wide, shared through the system sheet. */
-fun shareProfileCardImage(context: Context, title: String, card: JSONObject, cs: ColorScheme) {
+fun shareProfileCardImage(context: Context, title: String, card: JSONObject, cs: ColorScheme, tagline: String = "Built through every workout.", file: String = "pursuit-iron-profile.png", chooser: String = "Share profile") {
     val rows = card.list("rows")
     val W = 1080; val pad = 104f; val inner = W - pad * 2
     val heights = rows.map { 142f + (it.strings("lines").size.coerceAtLeast(1) - 1) * 42f }
@@ -187,7 +187,7 @@ fun shareProfileCardImage(context: Context, title: String, card: JSONObject, cs:
     }
     text("PURSUIT IRON", pad, 128f, 31f, cs.primary.toArgb(), true)
     text(title, pad, 191f, 66f, cs.onSurface.toArgb(), true)
-    text("Built through every workout.", pad, 281f, 23f, cs.onSurfaceVariant.toArgb(), false)
+    text(tagline, pad, 281f, 23f, cs.onSurfaceVariant.toArgb(), false)
     var y = 360f
     rows.forEachIndexed { i, r ->
         val h = heights[i]
@@ -198,11 +198,11 @@ fun shareProfileCardImage(context: Context, title: String, card: JSONObject, cs:
         y += h + 16
     }
     val dir = File(context.cacheDir, "exports").apply { mkdirs() }
-    val f = File(dir, "pursuit-iron-profile.png")
+    val f = File(dir, file)
     f.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     val uri = FileProvider.getUriForFile(context, context.packageName + ".files", f)
     val send = Intent(Intent.ACTION_SEND).setType("image/png").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    context.startActivity(Intent.createChooser(send, "Share profile").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    context.startActivity(Intent.createChooser(send, chooser).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
 @Composable

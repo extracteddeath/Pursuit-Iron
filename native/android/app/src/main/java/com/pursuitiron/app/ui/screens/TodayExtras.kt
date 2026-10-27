@@ -53,6 +53,10 @@ import com.pursuitiron.app.ui.common.ProgressBar
 import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.d
 import com.pursuitiron.app.ui.common.fmt1
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import com.pursuitiron.app.ui.common.plural
+import com.pursuitiron.app.ui.common.fmtNum
 import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.list
 import com.pursuitiron.app.ui.common.o
@@ -177,30 +181,59 @@ fun RecoveryCard(vm: AppViewModel, h: JSONObject) {
 }
 
 /* App.js WeeklyRecapCard. */
+/* The design's weekly recap: the last seven days against the plan, four figures, the best set and how
+   the volume moved, then Share recap (an image) or close it for a week. Figures from E.weeklyRecap. */
 @Composable
-fun RecapCard(h: JSONObject) {
+fun RecapCard(vm: AppViewModel, h: JSONObject) {
     val r = h.o("recap") ?: return
     val cs = MaterialTheme.colorScheme
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val u = h.s("unit", "kg")
-    fun delta(cur: Double, prev: Double): String? = if (prev <= 0) null else ((cur - prev) / prev * 100).toInt().let { if (it > 0) "▲$it%" else if (it < 0) "▼${-it}%" else "—" }
+    val fmt = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())
+    val from = java.util.Date(r.optLong("from")); val to = java.util.Date(r.optLong("to"))
+    val sameMonth = java.text.SimpleDateFormat("M", java.util.Locale.US).let { it.format(from) == it.format(to) }
+    val range = fmt.format(from).uppercase() + "–" + (if (sameMonth) java.text.SimpleDateFormat("d", java.util.Locale.getDefault()).format(to) else fmt.format(to).uppercase())
+    val count = r.i("count"); val planned = r.i("planned")
+    val title = if (planned > 0) "$count of $planned sessions" + (if (count >= planned) " — a full week" else "") else plural(count, "session")
+    val mins = r.i("minutes")
+    val stats = listOf("${r.i("sets")}" to "sets", "${fmt1(r.d("vol") / 1000.0)} ${volUnit(u)}" to "volume", "${r.i("prs")}" to if (r.i("prs") == 1) "PR" else "PRs", "${mins / 60}:${(mins % 60).toString().padStart(2, '0')}" to "hours")
+    val line = buildString {
+        r.o("best")?.let { b -> append("Best: ${b.s("name")} ${fmtNum(b.d("w"))} $u × ${b.i("r")}" + (if (!b.isNull("rir")) " @${fmtNum(b.d("rir"))}" else "") + ", e1RM ${fmtNum(b.d("e1rm"))} $u.") }
+        if (r.d("prevVol") > 0) { val pct = Math.round((r.d("vol") / r.d("prevVol") - 1) * 100); append((if (isNotEmpty()) " " else "") + "Volume ${if (pct >= 0) "+" else "−"}${kotlin.math.abs(pct)}% on the week before.") }
+        r.o("topMuscle")?.let { t -> append((if (isNotEmpty()) " " else "") + "Most trained: ${t.s("label")}, ${t.i("sets")} sets.") }
+    }
     PiCard(radius = 28.dp, padding = 18.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("This week", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            if (r.i("prs") > 0) Text("${r.i("prs")} PR${if (r.i("prs") == 1) "" else "s"}", style = MaterialTheme.typography.labelLarge, color = cs.primary)
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("LAST 7 DAYS · $range", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
+                Text(title, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 24.sp))
+            }
+            androidx.compose.material3.IconButton(onClick = {
+                vm.prefs.hideRecap(System.currentTimeMillis() + 7 * 86_400_000L)
+                vm.toast("Recap hidden until next week") { vm.prefs.hideRecap(0L) }
+            }, modifier = Modifier.size(40.dp)) { Icon(PiIcons.Close, "Hide the weekly recap", tint = cs.onSurfaceVariant) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(
-                Triple("Workouts", "${r.i("count")}", null),
-                Triple("Sets", "${r.i("sets")}", delta(r.d("sets"), r.d("prevSets"))),
-                Triple("Volume", "${fmt1(r.d("vol") / 1000.0)} ${volUnit(u)}", delta(r.d("vol"), r.d("prevVol"))),
-            ).forEach { (k, v, dl) ->
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(10.dp)) {
-                    Text(v, style = MaterialTheme.typography.titleMedium)
-                    Text(k + (dl?.let { "  $it" } ?: ""), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            stats.forEach { (v, k) ->
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surface).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(v, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), maxLines = 1)
+                    Text(k, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = cs.onSurfaceVariant)
                 }
             }
         }
-        r.o("topMuscle")?.let { t -> Text("Most trained: ${t.s("label")} · ${t.i("sets")} sets", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
+        if (line.isNotEmpty()) Text(line, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant)
+        androidx.compose.material3.Surface(onClick = {
+            val card = org.json.JSONObject().put("rows", org.json.JSONArray().apply {
+                put(org.json.JSONObject().put("label", "Last 7 days · $range").put("lines", org.json.JSONArray().put(title)).put("detail", ""))
+                put(org.json.JSONObject().put("label", "The week").put("lines", org.json.JSONArray().put(stats.joinToString(" · ") { "${it.first} ${it.second}" })).put("detail", ""))
+                if (line.isNotEmpty()) put(org.json.JSONObject().put("label", "Highlights").put("lines", org.json.JSONArray().put(r.o("best")?.let { b -> "${b.s("name")} ${fmtNum(b.d("w"))} $u × ${b.i("r")}" } ?: title)).put("detail", line))
+            })
+            shareProfileCardImage(ctx, "Weekly recap", card, cs, tagline = "Seven days of training, logged.", file = "pursuit-iron-recap.png", chooser = "Share recap")
+        }, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = androidx.compose.foundation.shape.CircleShape, modifier = Modifier.height(40.dp)) {
+            Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(PiIcons.Share, null, Modifier.size(16.dp)); Text("Share recap", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
+            }
+        }
     }
 }
 

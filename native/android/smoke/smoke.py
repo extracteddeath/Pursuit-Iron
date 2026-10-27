@@ -616,6 +616,14 @@ tap(r"^\|Today$|^Today\|")
 time.sleep(1.5)
 if scroll_to(r"Fresher today|A deload looks due|Muscle recovery|This week|Strength score", tries=4):
     shot("today-insights")
+# The design's weekly recap: the last seven days, four figures and Share recap
+if scroll_to(r"^\|LAST 7 DAYS · ", tries=6, step=500):
+    if not find(r"^\|Share recap$", timeout=2) and not scroll_to(r"^\|Share recap$", tries=2, step=300):
+        FAILS.append("weekly recap has no Share recap")
+    shot("today-recap")
+else:
+    FAILS.append("no weekly recap on Today after a logged week")
+scroll_up_to(r"^\|Today$", tries=10)
 if scroll_to(r"^\|Recent$", tries=6):
     adb("shell", "input", "swipe", "540", "1500", "540", "1000", "300")
     time.sleep(0.8)

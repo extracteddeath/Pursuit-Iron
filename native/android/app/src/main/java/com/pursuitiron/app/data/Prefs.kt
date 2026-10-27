@@ -84,6 +84,9 @@ class Prefs(context: Context) {
     var reentrySkippedFor by mutableStateOf(sp.getLong("reentrySkippedFor", 0L))
         private set
     fun skipReentry(lastDate: Long) { reentrySkippedFor = lastDate; sp.edit().putLong("reentrySkippedFor", lastDate).apply() }
+    /** The design's weekly recap: hidden until a week from when you closed it. */
+    var recapHiddenUntil by mutableStateOf(sp.getLong("recapHiddenUntil", 0L))
+    fun hideRecap(until: Long) { recapHiddenUntil = until; sp.edit().putLong("recapHiddenUntil", until).apply() }
     /** App.js ProfileCustomization ("wpb:profile-layout-v1"): profile section order and the ones hidden. */
     var profileLayout by mutableStateOf(ProfileLayout.parse(sp.getString("profileLayout", null)))
         private set

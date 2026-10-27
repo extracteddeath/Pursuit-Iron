@@ -679,14 +679,14 @@ private fun Stepper(tag: String, label: String, value: String, kb: KeyboardType,
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(tag, style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold), color = cs.onSurfaceVariant, modifier = Modifier.width(48.dp))
-        HoldStep(PiIcons.Minus, minusLabel, 56.dp, false, onMinus, shape = RoundedCornerShape(18.dp), bg = cs.secondaryContainer, fg = cs.onSecondaryContainer)
+        HoldStep(PiIcons.Minus, minusLabel, 56.dp, false, shape = RoundedCornerShape(18.dp), bg = cs.secondaryContainer, fg = cs.onSecondaryContainer, onStep = onMinus)
         androidx.compose.foundation.text.BasicTextField(value, onText, singleLine = true,
             textStyle = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp, textAlign = TextAlign.Center, color = cs.onSurface),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
             keyboardOptions = KeyboardOptions(keyboardType = kb, imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { onCommit(); focus.clearFocus() }),
             modifier = Modifier.weight(1f).semantics { contentDescription = "$label, tap to type" },
             decorationBox = { inner -> Box(contentAlignment = Alignment.Center) { if (value.isEmpty()) Text("—", style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp), color = cs.outline); inner() } })
-        HoldStep(PiIcons.Plus, plusLabel, 56.dp, true, onPlus, shape = CircleShape)
+        HoldStep(PiIcons.Plus, plusLabel, 56.dp, true, shape = CircleShape, onStep = onPlus)
     }
 }
 

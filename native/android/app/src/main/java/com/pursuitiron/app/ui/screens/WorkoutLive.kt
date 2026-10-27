@@ -140,8 +140,9 @@ fun AddRow(vm: AppViewModel, ex: JSONObject, modifier: Modifier = Modifier, onMo
 
 /** A −/+ button that runs on while held (the design's hold-to-repeat). */
 @Composable
-fun HoldStep(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, size: Dp, filled: Boolean, onStep: () -> Unit,
-             shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(12.dp), bg: androidx.compose.ui.graphics.Color? = null, fg: androidx.compose.ui.graphics.Color? = null) {
+fun HoldStep(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, size: Dp, filled: Boolean,
+             shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(12.dp), bg: androidx.compose.ui.graphics.Color? = null, fg: androidx.compose.ui.graphics.Color? = null,
+             onStep: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val step by rememberUpdatedState(onStep)
     val scope = rememberCoroutineScope()

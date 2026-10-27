@@ -140,11 +140,12 @@ fun AddRow(vm: AppViewModel, ex: JSONObject, modifier: Modifier = Modifier, onMo
 
 /** A −/+ button that runs on while held (the design's hold-to-repeat). */
 @Composable
-fun HoldStep(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, size: Dp, filled: Boolean, onStep: () -> Unit) {
+fun HoldStep(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, size: Dp, filled: Boolean, onStep: () -> Unit,
+             shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(12.dp), bg: androidx.compose.ui.graphics.Color? = null, fg: androidx.compose.ui.graphics.Color? = null) {
     val cs = MaterialTheme.colorScheme
     val step by rememberUpdatedState(onStep)
     val scope = rememberCoroutineScope()
-    Box(Modifier.size(size).clip(RoundedCornerShape(12.dp)).background(if (filled) cs.primary else cs.surfaceContainerHighest)
+    Box(Modifier.size(size).clip(shape).background(bg ?: if (filled) cs.primary else cs.surfaceContainerHighest)
         .semantics { contentDescription = label; role = Role.Button }
         .pointerInput(Unit) {
             detectTapGestures(onPress = {
@@ -153,7 +154,7 @@ fun HoldStep(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Strin
                 tryAwaitRelease(); job.cancel()
             })
         }, contentAlignment = Alignment.Center) {
-        Icon(icon, null, tint = if (filled) cs.onPrimary else cs.onSurface, modifier = Modifier.size(18.dp))
+        Icon(icon, null, tint = fg ?: if (filled) cs.onPrimary else cs.onSurface, modifier = Modifier.size(if (size >= 52.dp) 22.dp else 18.dp))
     }
 }
 

@@ -16,6 +16,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.selected
@@ -102,6 +104,7 @@ import com.pursuitiron.app.ui.common.PiIcons
 import com.pursuitiron.app.ui.common.ProgressBar
 import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.d
+import com.pursuitiron.app.ui.common.fmtNum
 import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.list
 import com.pursuitiron.app.ui.common.mmss
@@ -572,51 +575,118 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
     var plates by remember { mutableStateOf(false) }
     val bar = barFor(ex.strings("equip"))
     if (plates) { ToolsSheet(vm, "plates", w, ex.s("bar").ifBlank { bar ?: "barbell" }, onUse = { v -> w = v; vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to v) }) { plates = false }; return }
-    ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Kicker(ex.s("name"))
-            Text(when { set.b("done") -> "Edit logged set"; set.b("warm") -> "Warm-up"; else -> "Set ${si + 1}" }, style = MaterialTheme.typography.headlineSmall)
-            if (!set.b("done") && !set.b("sub")) com.pursuitiron.app.ui.common.Segmented(
-                listOf("standard" to "Standard", "warmup" to "Warm-up", "failure" to "To failure"),
-                if (set.b("warm")) "warmup" else set.s("type", "standard"), { k -> vm.act("setType", "ei" to ei, "si" to si, "kind" to k) }, height = 40.dp)
-            set.o("target")?.let { t -> Text("Target: ${t.s("reps")} reps" + (if (!t.isNull("rir")) " at ${t.s("effort").ifBlank { t.s("rir") + " RIR" }}" else ""), color = cs.onSurfaceVariant) }
+    val unitU = s.s("unit").uppercase()
+    val sets = ex.list("sets")
+    val title = when {
+        set.b("warm") -> "Warm-up"
+        set.b("sub") -> if (set.s("kind") == "myo") "Myo mini" else "Drop set"
+        else -> "Set ${sets.take(si + 1).count { !it.b("warm") && !it.b("sub") }}"
+    }
+    val commit = {
+        if (w != shownW(set.s("weight"))) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to if (assisted) assistStored(w) else w)
+        if (r != set.s("reps")) vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r)
+    }
+    // The design's set editor: the lift and set, the set type with what it counts for, big − value + rows,
+    // the plates per side, then Save or Save & log.
+    ModalBottomSheet(onDismissRequest = { commit(); onClose() }) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column {
+                Text(ex.s("name"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
+                Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp))
+            }
+            if (!set.b("done") && !set.b("sub")) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                val kind = if (set.b("warm")) "warmup" else set.s("type", "standard")
+                com.pursuitiron.app.ui.common.Segmented(listOf("standard" to "Standard", "warmup" to "Warm-up", "failure" to "To failure"),
+                    kind, { k -> vm.act("setType", "ei" to ei, "si" to si, "kind" to k) }, height = 40.dp)
+                Text(when (kind) {
+                    "warmup" -> "Warm-ups don’t count toward volume, records or the next load."
+                    "failure" -> "Logged as 0 RIR. Counts toward volume and records, but the next load isn’t based on it."
+                    else -> "Counts toward volume and records, and sets the next load."
+                }, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 6.dp))
+            }
+            set.o("target")?.let { t -> if (!set.b("warm")) Text("Target: ${t.s("reps")} reps" + (if (!t.isNull("rir")) " at ${t.s("effort").ifBlank { t.s("rir") + " RIR" }}" else ""),
+                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
             if (assisted) {
                 // App.js: help is a negative load. Typed and shown as the amount of help; minus adds help, plus takes it off.
                 Text("Assisted: less help is progress. The help comes off once every set tops the range.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                Stepper("Assistance (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it) },
+                Stepper("Help", "Assistance (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it) },
                     onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to assistStored(w)) },
                     onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) },
                     minusLabel = "More assistance", plusLabel = "Less assistance")
-            } else Stepper("Weight (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = it }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w) },
-                onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) })
-            Stepper("Reps", r, KeyboardType.Number, onText = { r = it }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r) },
-                onMinus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to -1) }, onPlus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to 1) })
+            } else Stepper(unitU, "Weight (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it) },
+                onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w) },
+                onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) },
+                minusLabel = "Less weight", plusLabel = "More weight")
+            Stepper("Reps", "Reps", r, KeyboardType.Number, onText = { r = it.filter { c -> c.isDigit() }.take(3) }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r) },
+                onMinus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to -1) }, onPlus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to 1) },
+                minusLabel = "Fewer reps", plusLabel = "More reps")
+            if (bar != null && !assisted) EditorPlates(vm, w, ex.s("bar").ifBlank { bar }, s.s("unit")) { commit(); plates = true }
+            if (set.b("added")) TextButton(onClick = { vm.act("removeSet", "ei" to ei, "si" to si); onClose() }) { Text("Remove this set") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (set.b("added")) TextButton(onClick = { vm.act("removeSet", "ei" to ei, "si" to si); onClose() }) { Text("Remove set") }
-                if (bar != null && !assisted) TextButton(onClick = { plates = true }) { Icon(PiIcons.Plates, null, modifier = Modifier.size(18.dp)); Text("  Plates") }
-                Spacer(Modifier.weight(1f))
-                Button(onClick = {
-                    if (w != shownW(set.s("weight"))) vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to if (assisted) assistStored(w) else w)
-                    if (r != set.s("reps")) vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r)
-                    onClose()
-                }) { Text("Done") }
+                if (set.b("done")) {
+                    Button(onClick = { commit(); vm.toast("Updated"); onClose() }, modifier = Modifier.weight(1f).height(56.dp)) { Text("Save", style = MaterialTheme.typography.titleMedium) }
+                } else {
+                    Surface(onClick = { commit(); onClose() }, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = CircleShape, modifier = Modifier.weight(1f).height(56.dp)) {
+                        Box(contentAlignment = Alignment.Center) { Text("Save", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) }
+                    }
+                    Button(onClick = { commit(); vm.act("toggle", "ei" to ei, "si" to si); onClose() }, modifier = Modifier.weight(1.3f).height(56.dp)) {
+                        Text("Save & log", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold))
+                    }
+                }
             }
         }
     }
 }
 
+/** The design's PLATES PER SIDE strip in the set editor: the bar stub, each plate sized to its weight, the sleeve. Tap for the calculator. */
 @Composable
-private fun Stepper(label: String, value: String, kb: KeyboardType, onText: (String) -> Unit, onCommit: () -> Unit, onMinus: () -> Unit, onPlus: () -> Unit,
+private fun EditorPlates(vm: AppViewModel, w: String, bar: String, unit: String, onOpen: () -> Unit) {
+    val total = w.replace(',', '.').toDoubleOrNull() ?: return
+    var pc by remember { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(total, bar) { pc = vm.plateCalc(total, bar) }
+    val res = pc?.o("result") ?: return
+    val list = res.optJSONArray("plates")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
+    if (list.isEmpty()) return
+    val cs = MaterialTheme.colorScheme
+    val maxP = if (unit == "lb") 45.0 else 25.0; val bigAt = if (unit == "lb") 25.0 else 15.0
+    val note = when { res.b("under") -> " · lighter than the bar"; !res.b("exact") -> " · closest you can load: ${fmtNum(res.d("achievable"))} $unit"; else -> "" }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).clickable(onClick = onOpen)
+        .semantics(mergeDescendants = true) { contentDescription = "Per side: ${list.joinToString(", ") { fmtNum(it) }} $unit. Open the plate calculator"; role = Role.Button }
+        .padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row {
+            Text("PLATES PER SIDE", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Text("${fmtNum(res.d("barWeight"))} $unit bar$note", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
+        }
+        Row(Modifier.height(64.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Box(Modifier.width(26.dp).height(10.dp).clip(RoundedCornerShape(3.dp)).background(cs.outlineVariant))
+            list.forEach { p ->
+                val big = p >= bigAt
+                Box(Modifier.width(if (big) 18.dp else 14.dp).height((22 + Math.round(p / maxP * 42).toInt()).dp).clip(RoundedCornerShape(5.dp))
+                    .background(if (big) cs.primary else cs.tertiaryContainer), contentAlignment = Alignment.Center) {
+                    Text(fmtNum(p), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.ExtraBold), color = if (big) cs.onPrimary else cs.onTertiaryContainer,
+                        maxLines = 1, softWrap = false, modifier = Modifier.graphicsLayer { rotationZ = -90f }.wrapContentSize(unbounded = true))
+                }
+            }
+            Box(Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(3.dp)).background(cs.outlineVariant))
+        }
+    }
+}
+
+@Composable
+private fun Stepper(tag: String, label: String, value: String, kb: KeyboardType, onText: (String) -> Unit, onCommit: () -> Unit, onMinus: () -> Unit, onPlus: () -> Unit,
                     minusLabel: String = "Less $label", plusLabel: String = "More $label") {
     val cs = MaterialTheme.colorScheme
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).clickable { onMinus() }
-            .semantics { contentDescription = minusLabel; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Minus, null) }
-        OutlinedTextField(value = value, onValueChange = onText, label = { Text(label) }, singleLine = true, modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = kb, imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { onCommit() }),
-            textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = TextAlign.Center))
-        Box(Modifier.size(52.dp).clip(CircleShape).background(cs.primary).clickable { onPlus() }
-            .semantics { contentDescription = plusLabel; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.Plus, null, tint = cs.onPrimary) }
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(tag, style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold), color = cs.onSurfaceVariant, modifier = Modifier.width(48.dp))
+        HoldStep(PiIcons.Minus, minusLabel, 56.dp, false, onMinus, shape = RoundedCornerShape(18.dp), bg = cs.secondaryContainer, fg = cs.onSecondaryContainer)
+        androidx.compose.foundation.text.BasicTextField(value, onText, singleLine = true,
+            textStyle = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp, textAlign = TextAlign.Center, color = cs.onSurface),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
+            keyboardOptions = KeyboardOptions(keyboardType = kb, imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { onCommit(); focus.clearFocus() }),
+            modifier = Modifier.weight(1f).semantics { contentDescription = "$label, tap to type" },
+            decorationBox = { inner -> Box(contentAlignment = Alignment.Center) { if (value.isEmpty()) Text("—", style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp), color = cs.outline); inner() } })
+        HoldStep(PiIcons.Plus, plusLabel, 56.dp, true, onPlus, shape = CircleShape)
     }
 }
 

@@ -325,15 +325,15 @@ if find(r"Warm-up & mobility", timeout=3):
 else:
     FAILS.append("no warm-up card on the first lift")
 if tap(r"Weight not set, edit", "set-editor"):
-    tap(r"^\|Weight \(")  # the field's label, not the "Less Weight (kg)" button
+    tap(r"^Weight \((kg|lb)\), tap to type")  # the design's big value, typed in place
     adb("shell", "input", "text", "60")
     time.sleep(0.6)
     shot("set-editor-typed")
     hide_keyboard()
     time.sleep(0.6)
-    if tap(r"Plates$", "set-plates", required=False):  # only barbell lifts load plates
+    if tap(r"Open the plate calculator$", "set-plates", required=False):  # only barbell lifts load plates
         back()
-    tap(r"^\|Done$|Done$")
+    tap(r"^\|Save$", "set-editor-save")
 tap(r"^Set 1:", "set-logged")
 tap(r"^2 reps left", "set-rated")
 # The design's Why opens in place on the card
@@ -355,6 +355,8 @@ if tap(r"Short on time\?", "time-sheet"):
 else:
     FAILS.append("the workout clock does not open Short on time")
 if tap(r"Weight 60(\.0)?, edit", "edit-logged-set"):
+    if not find(r"^\|Set 1$", timeout=3) or find(r"^\|Save & log$", timeout=1):
+        FAILS.append("a logged set's editor is not titled Set 1 with Save only")
     back()
 tap(r"Exercise actions", "exercise-menu")
 # B903: change today's working-set count; the finish page asks whether the program keeps it
@@ -474,11 +476,11 @@ if scroll_to(r"Quick workout", tries=3):
     time.sleep(1.5)
     tap(r"^\|[A-Za-z -]*Curl[A-Za-z -]*$", "quick-added")
     if tap(r"Weight not set, edit"):
-        tap(r"^\|Weight \(")
+        tap(r"^Weight \((kg|lb)\), tap to type")
         adb("shell", "input", "text", "12")
         hide_keyboard()
         time.sleep(0.6)
-        tap(r"^\|Done$|Done$")
+        tap(r"^\|Save$")
     tap(r"^Set 1:", "quick-logged")
     tap(r"^\|Finish$|^Finish$")
     tap(r"^\|Finish$|^Finish$", timeout=5, required=False)

@@ -22,10 +22,10 @@ const trainingMaxes = fs.readFileSync('modules/program-training-maxes.js', 'utf8
 const contextMenus = fs.readFileSync('modules/ui-menu.js', 'utf8');
 const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
 const presentationSource = disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor;
-const MAX_IMPORTANT = 2173; // M392: retire 15 Settings theme/choice priorities.
-const MAX_APP_IMPORTANT = 1134; // M392: retire 9 obsolete preference typography/layout priorities.
+const MAX_IMPORTANT = 2106; // M393: retire 67 shadowed Library presentation priorities.
+const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
 const MAX_REPEAT_IMPORTANT = 14; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 2256; // M392: retire 28 Settings theme/choice/scroll styles.
+const MAX_INLINE_STYLE_OBJECTS = 2141; // M393: retire 115 static Library/detail styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -565,3 +565,9 @@ for(const role of ['"warning-dim": C.warnDim','"warning-note": (C.warn || "#e0a3
 assert.ok(!css.includes('font-size:max(11px,.72rem);'),'The masked history group-count font rule may not return');
 assert.match(css,/\.wpb-progress-range-chart\{[^}]*min-height:46px;[^}]*\}/,'Range-chart height fits its labels and data-derived bars');
 assert.ok(!/\.wpb-progress-range-chart\{[^}]*[;{]height:46px;/.test(css),'Range-chart labels cannot be squeezed into a fixed bar-height container');
+
+// Library discovery and detail presentation retain only measured goal progress inline.
+const libraryView=app.slice(app.indexOf('function LibraryView('),app.indexOf('const INTRO_VERSION'));
+assert.equal((libraryView.match(/style: \{/g)||[]).length,1,'Library retains only its calculated goal progress width');
+assert.ok(libraryView.includes('style: { width: `${pct}%` }'),'Goal width stays derived from the saved goal and factual best');
+assert.ok(!libraryView.includes('parseFloat(goalVal)'),'Goal saving cannot accept a partial numeric prefix');

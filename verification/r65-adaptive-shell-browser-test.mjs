@@ -473,7 +473,8 @@ try{
           assert.ok(libraryLayout.detail.x>=libraryLayout.results.right-2,
             'Detail pane sits beside the usable filtered Library results: '+JSON.stringify(libraryLayout));
           const title=libraryLayout.title;
-          await page.click('.wpb-library-results > .wpb-library-row:nth-child(2)');
+          const exerciseRows=await page.$$('.wpb-library-results > .wpb-library-row');
+          await exerciseRows[1].click();
           libraryLayout=await libraryGeometry();
           assert.notEqual(libraryLayout.title,title,
             'Switching selected Library exercise updates the existing detail pane');

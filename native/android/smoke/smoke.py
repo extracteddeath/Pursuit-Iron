@@ -1138,6 +1138,13 @@ tap(r"^\|Skip$", required=False)  # readiness check
 shot("tablet-workout")
 if find(r"Minimise workout", timeout=4) is None:
     FAILS.append("tablet did not show the workout")
+# The tablet tabs beside the design's: minimise the workout, then each tab on the rail
+tap(r"Minimise workout", required=False)
+time.sleep(1.5)
+for pat, nm in [(r"^\|Plan$|^Plan\|", "tablet-plan"), (r"^\|Progress$|^Progress\|", "tablet-progress"), (r"^\|Exercises$|^Exercises\|", "tablet-exercises"), (r"^\|You$|^You\|", "tablet-you")]:
+    if tap(pat, required=False):
+        time.sleep(2)
+        shot(nm)
 adb("shell", "wm", "size", "reset")
 adb("shell", "wm", "density", "reset")
 

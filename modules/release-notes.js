@@ -2,6 +2,11 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "943", items: [
+        "Home and Preview only flag meaningful upcoming adjustments: load changes, plateau responses, and recent changes to planned set counts. Earning an extra rep is ordinary progression, not an undoable plan edit.",
+        "Keep the previous load without giving up earned rep targets. Your logged sets, planned effort, and training program remain intact.",
+        "Adjustment cards are shorter. Open Why and target details for the full rationale and per-set comparison; the review sheet keeps Close visible."
+    ] },
     { version: "4.0.0", build: "942", items: [
         "Calculators keep their heading and Close action reachable, follow larger text, and use the same controls as the rest of the app.",
         "Malformed weights and fractional reps stay editable instead of becoming different numbers. Plate results explain empty inventories and targets below the bar.",

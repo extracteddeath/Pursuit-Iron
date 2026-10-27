@@ -1,3 +1,11 @@
+## Build 943 — Meaningful adjustments and compact reviews
+
+- Remove routine rep-only progression from Home and Preview change history. Do not offer Undo for a normal rep increase.
+- Highlight earned load changes and actual plateau-related load responses; distinguish planned set-count edits only when evidenced by a recent saved program revision (never by missed sets).
+- Keep current rep targets and planned dose when declining an upcoming load adjustment, and retain exact equipment/load guards.
+- Compact review cards, move full reasoning and per-set comparisons behind disclosure, and keep Close visible above the scrolling review body.
+- Expand regression coverage for ordinary reps, load increases, plateau responses and saved set-count changes.
+
 ## Build 942 — Reliable calculators and gym loading settings
 
 - Share calculator presentation, accessible controls and modal behavior, with a fixed heading and a scrolling body.

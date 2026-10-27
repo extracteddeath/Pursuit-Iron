@@ -156,5 +156,5 @@
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
   "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b942-r64a178f208e5686d",
-  "uiMilestone": "Build 942 · M396 Loading tools and gym unit integrity"
+  "uiMilestone": "Build 942 · Meaningful plan adjustments and review"
 }

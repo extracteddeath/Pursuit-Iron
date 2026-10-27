@@ -545,6 +545,25 @@ try {
                     .filter(el=>el.style.getPropertyValue('--pi-nav-scale')).length);
             assert.equal(bouncingIcons,0,'M377 tab icons do not bounce in addition to the indicator');
 
+            if (tab === 'plan' && width <= 360) {
+                const narrowPlan = await page.$eval('.wpb-plan-panes', rail => {
+                    const buttons=[...rail.querySelectorAll('.wpb-plan-pane-tab')];
+                    const rows=[...new Set(buttons.map(b => Math.round(b.getBoundingClientRect().top)))];
+                    const text=buttons.find(b => b.textContent.includes('Progression'))
+                        ?.querySelector('.wpb-plan-pane-label');
+                    const selection=document.createRange();
+                    if(text) selection.selectNodeContents(text);
+                    const lines=text ? [...selection.getClientRects()].filter(r => r.width>0 && r.height>0).length : 0;
+                    return { buttons:buttons.length,rows:rows.length,lines,
+                        minTouch:Math.min(...buttons.map(b => b.getBoundingClientRect().height)),
+                        overflow:rail.scrollWidth>rail.clientWidth+1 };
+                });
+                assert.ok(narrowPlan.buttons===4 && narrowPlan.rows===2 &&
+                    narrowPlan.lines===1 && narrowPlan.minTouch>=48 && !narrowPlan.overflow,
+                    'B937 Plan pane labels stay intact in a reachable 2×2 narrow grid: '+
+                    JSON.stringify(narrowPlan));
+            }
+
             if (tab === 'settings') {
                 const r52=await page.evaluate(()=>{
                     const root=document.querySelector('.wpb-settings');
@@ -580,23 +599,24 @@ try {
                     'R52 Intermediate label fits as one word at regular width: '+JSON.stringify(r52));
                 if(width===430)await page.screenshot({path:path.join(root,'verification/r52-settings-phone.png')});
             }
-            // The mounted destination receives a linked entrance sourced from
-            // the actual tapped navigation control. No duplicate views, no
-            // animation on workout rows, and no change to navigation state.
+            // B937: A bottom-tab change already has a moving selected indicator.
+            // Do not add a second, diagonally source-linked card animation. The
+            // one lead card keeps the short horizontal route cue and the
+            // same React-mounted page. Library detail retains its own link.
             if (tab === 'plan' || tab === 'progress') {
-                const linked = await page.$eval(`[data-view-frame="${tab}"]`, el => {
-                    const lead = el.querySelector('[data-pi-connected="source"]');
+                const motion = await page.$eval(`[data-view-frame="${tab}"]`, el => {
+                    const cards=[...el.querySelectorAll('[data-pi-reveal="1"]')];
                     return { count:el.querySelectorAll('[data-pi-connected="source"]').length,
                         quick:el.dataset.piNavQuick==='1',
-                        x:lead?.style.getPropertyValue('--pi-connected-x'),
-                        y:lead?.style.getPropertyValue('--pi-connected-y') };
+                        reveals:cards.length,
+                        duration:cards[0] ? getComputedStyle(cards[0]).animationDuration : null,
+                        axis:el.style.getPropertyValue('--pi-page-reveal-x') };
                 });
-                assert.ok(linked.quick ? linked.count===0 :
-                    linked.count===1 && Number.isFinite(parseFloat(linked.x)) &&
-                    Number.isFinite(parseFloat(linked.y)) &&
-                    Math.abs(parseFloat(linked.x)) <= 24.01 &&
-                    Math.abs(parseFloat(linked.y)) <= 18.01,
-                    'R9/R33 deliberate transitions connect once; quick ones omit card jumps: '+JSON.stringify(linked));
+                assert.ok(motion.count===0 && motion.reveals<=1 &&
+                    (motion.quick || motion.reveals===1 && motion.duration==='0.2s' &&
+                    Math.abs(parseFloat(motion.axis))<=8.01),
+                    'B937 tab indicator owns navigation; one short horizontal lead, no diagonal duplicate: '+
+                    JSON.stringify(motion));
             }
             await page.waitForFunction(tab => document.querySelector(`[data-view-frame="${tab}"]`)?.style.getPropertyValue('--pi-surface-opacity') === '1', {}, tab);
             assert.equal(await page.$eval(`[data-tab="${tab}"]`, b => b.getAttribute('aria-current')), 'page');
@@ -1316,8 +1336,8 @@ try {
             rapidNavR32.progress.connected===0 && rapidNavR32.home.connected===0 &&
             !rapidNavR32.progress.cascade && !rapidNavR32.home.cascade &&
             rapidNavR32.progress.reveal===0 && rapidNavR32.home.reveal===0 &&
-            rapidNavR32.progress.travel==='6px' &&
-            rapidNavR32.home.travel==='-6px' &&
+            rapidNavR32.progress.travel==='3px' &&
+            rapidNavR32.home.travel==='-3px' &&
             rapidNavR32.home.active==='page' && rapidNavR32.visibleViews===1,
             'R32 rapid tabs preserve direction and suppress repeated entrance cascades: '+
                 JSON.stringify(rapidNavR32));
@@ -2786,9 +2806,11 @@ try {
         await page.click('button[aria-label="Switch program"]');
         await page.waitForSelector('.wpb-switcher-sheet .wpb-switcher-row');
         // The shared spring briefly scales rows below their resting size.
-        // Retain the 70px requirement, but measure it after entrance settles.
+        // Retain the 70px layout requirement and wait for entrance to settle.
+        // Translated DOMRects can differ by a floating-point fraction of a
+        // pixel; offsetHeight still enforces the full, untransformed target.
         await page.waitForFunction(() => [...document.querySelectorAll('.wpb-switcher-row')]
-            .every(row => row.offsetHeight >= 70 && row.getBoundingClientRect().height >= 70), { timeout: 5000 });
+            .every(row => row.offsetHeight >= 70 && row.getBoundingClientRect().height >= 70 - .001), { timeout: 5000 });
         console.log('R36 DISABLED '+JSON.stringify(await contrastAuditR36([
             ['disabledProgram','.wpb-switcher-row[data-state="active"]'],
             ['enabledProgram','.wpb-switcher-row[data-state="available"]']
@@ -2815,7 +2837,7 @@ try {
         assert.ok(switcherR21.alpha===255 && switcherR21.image==='none' &&
             switcherR21.doneHeight>=44 && switcherR21.rows===7 &&
             switcherR21.activeDisabled===true && switcherR21.availableDisabled===false &&
-            switcherR21.minRowHeight>=70 && switcherR21.titleWhiteSpace==='normal' &&
+            switcherR21.minRowHeight>=70-.001 && switcherR21.titleWhiteSpace==='normal' &&
             switcherR21.titleTextOverflow!=='ellipsis' && !switcherR21.clipped,
             'R21 switcher retains working program-state semantics with readable names: '+JSON.stringify(switcherR21));
         if (width===430) await page.screenshot({path:path.join(root,'verification/b831-m3-program-switcher-phone.png')});

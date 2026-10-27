@@ -1,3 +1,11 @@
+## Build 937 / M391 — Even Library spacing and calmer motion
+
+- Browser screenshot review: preserve a one-line Library title with a screen-reader-accessible result count; at narrow widths, correct the existing priority flex owner so Plan's Progression label uses two rows rather than breaking mid-word.
+
+- Library header, search, filter strips and rows share spacing, typography, accessible target sizes and theme paint instead of 19 inline style objects. Search, selection, exercise detail and saved training retain their behavior.
+- Primary navigation uses shorter one-axis lead-card motion, avoiding diagonal source-linked overshoot. Reduced-motion and system Back handling remain unchanged.
+- Engine 0.65.9 and storage schema are unchanged; physical Android acceptance remains open.
+
 ## Build 936 / M390 — Stable weekly loads and load-grid regression
 
 - Preserve the prior load across a week-to-week rep/RIR change when each completed straight set used it, met the new rep floor and the estimated decrease is at most 0.5 lb / 0.25 kg and 2%. The held load must remain selectable in the actual equipment inventory.

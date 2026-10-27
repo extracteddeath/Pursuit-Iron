@@ -25,7 +25,7 @@ const presentationSource = disclosures + '\n' + programReference + '\n' + releas
 const MAX_IMPORTANT = 2188; // M388: retire 70 switcher/gym priorities, including a shadowed width.
 const MAX_APP_IMPORTANT = 1143; // M388: retire 40 embedded configuration-sheet priorities.
 const MAX_REPEAT_IMPORTANT = 14; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 2303; // M389: history correction sheet; retire 31 static styles.
+const MAX_INLINE_STYLE_OBJECTS = 2284; // M391: Library presentation; retire 19 static styles.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])

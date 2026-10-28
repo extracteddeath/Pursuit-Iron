@@ -139,7 +139,7 @@ for (const candidate of [squatProgram, {...squatProgram,engineSource:undefined,c
     const sets = prescribeSets(candidate,squatDay,EX_BY_ID['back-squat'],0,1,'lb',advice,{}, {},squatHistory,false);
     assert.deepEqual(sets.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['215','5']));
 }
-console.log('PASS M220 squat regression: latest evidence remains raw; generated/custom incomplete rep misses lower all four targets to 190 x 5.');
+console.log('PASS M220 squat regression: explicit double keeps its prior weight; fatigue reduction remains available for acceptance.');
 
 // M338 / 148338.png: a mild final-set miss must not turn a held ramp into four top sets.
 export const inclineProgram={id:'m338-incline',custom:true,engineV:4,weeks:6,
@@ -150,11 +150,13 @@ export const inclineHistory=[{id:'m338-last',programId:inclineProgram.id,dayId:'
     perf:{'low-inc-bb-bench':{weight:210,reps:5,sets:[195,200,205,210].map((w,i)=>({w,r:[10,8,6,5][i],done:true,rir:null}))}}}];
 const inclineBefore=structuredClone(inclineHistory);
 const inclineAdvice=sessionSuggestion(inclineProgram,inclineProgram.days[0],0,null,'lb',1,inclineHistory);
-assert.equal(inclineAdvice.action,'decrease_load');
-assert.deepEqual(inclineAdvice.setTargets.map(s=>s.weight),[190,190,190,190]);
-assert.match(inclineAdvice.reason,/later sets under fatigue/);
+assert.equal(inclineAdvice.action,'hold_load');
+assert.equal(inclineAdvice.optionalLowerLoad,190);
+assert.deepEqual(inclineAdvice.setTargets.map(s=>s.weight),[210,210,210,210]);
+assert.match(inclineAdvice.reason,/build reps/);
 const inclineRows=prescribeSets(inclineProgram,inclineProgram.days[0],EX_BY_ID['low-inc-bb-bench'],0,1,'lb',inclineAdvice,{}, {},inclineHistory,false);
-assert.deepEqual(inclineRows.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['190','6']));
+assert.deepEqual(inclineRows.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['210','6']));
+assert.equal(inclineRows[0].loadAdvice.toLoad,190,'Recovery drop is an opt-in recommendation');
 assert.deepEqual(inclineHistory,inclineBefore);
 const generatedRamp=structuredClone(squatProgram);
 generatedRamp.overrides[`${squatDay.id}:0`]=markUserPrescriptionOverride(generatedRamp.overrides[`${squatDay.id}:0`], 'reps', '6-8');

@@ -1,0 +1,130 @@
+# One-shot B956 source migration. Deletes itself after verified commit.
+name: Finalize B956 shared Program/Workout styles
+on:
+  push:
+    branches: [refactor/b956-program-workout-utility-consolidation]
+    paths: ['.github/workflows/finalize-b956-static-styles.yml']
+permissions:
+  contents: write
+jobs:
+  consolidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Consolidate audited static presentation
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const read=p=>fs.readFileSync(p,'utf8'),write=(p,t)=>fs.writeFileSync(p,t);
+          let app=read('modules/App.js'),css=read('app.css');
+          const baselineInline=(app.match(/style:\s*\{/g)||[]).length;
+          const beforeImportant=(css.match(/!important/g)||[]).length;
+          const begins=['function ProgramView(','function WorkoutSession('],expectedCounts=[37,51];
+          const findSpan=(s,n)=>{const a=s.indexOf(n),b=s.indexOf('\nfunction ',a+1);assert.ok(a>0&&b>a,'Cannot isolate '+n);return {a,b,content:s.slice(a,b)};};
+          const parseStyle=v=>v.split(/,\s*(?=[A-Za-z]\w*:)/).map(p=>{const m=p.trim().match(/^([A-Za-z]\w*):\s*(.*?)\s*$/);assert.ok(m,'Unexpected style '+p);return {prop:m[1],value:m[2],key:m[1]+': '+m[2]};});
+          const staticStyle=v=>!(/[($?]|\bC\.|\b\w+\.\w+/.test(v)||v.includes(String.fromCharCode(96)));
+          const srcRx=/_(jsx|jsxs)\("([a-z]+)", \{ style: \{ ([^{}]*) \}/g;
+          const spans=begins.map(n=>findSpan(app,n)),frequency=new Map();
+          for(const span of spans)for(const m of span.content.matchAll(srcRx)){
+            if(!staticStyle(m[3]))continue;
+            for(const p of parseStyle(m[3]))frequency.set(p.key,(frequency.get(p.key)||0)+1);
+          }
+          const selected=[...frequency].filter(([key,n])=>n>=2);
+          assert.equal(selected.length,46,'Audited property-value list changed');
+          const alias=v=>v.replaceAll('"','').replaceAll("'","").replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+          const kebab=p=>p.replace(/[A-Z]/g,x=>'-'+x.toLowerCase());
+          const dimensional=new Set(['gap','rowGap','columnGap','fontSize','width','minWidth','maxWidth','height','marginTop','marginBottom','paddingTop','paddingBottom','paddingLeft','paddingRight','letterSpacing']);
+          function cssValue({prop,value}){
+            const m=value.match(/^["'](.*)["']$/),v=m?m[1]:value;
+            if(/^-?\d+(\.\d+)?$/.test(v)&&Number(v)!==0&&dimensional.has(prop)){
+              const scales={4:1,8:2,12:3,16:4,20:5,24:6,32:8,40:10};
+              if((prop==='gap'||prop.startsWith('margin')||prop.startsWith('padding'))&&scales[Number(v)])return 'var(--pi-space-'+scales[Number(v)]+','+v+'px)';
+              return v+'px';
+            }
+            return v;
+          }
+          const classes=new Map(),used=new Set();
+          for(const [key] of selected){
+            const item=parseStyle(key)[0],cls='wpb-s956-'+alias(item.prop)+'-'+alias(item.value);
+            assert.ok(!used.has(cls),'CSS utility collision '+cls);
+            used.add(cls);classes.set(key,{cls,decl:kebab(item.prop)+':'+cssValue(item)});
+          }
+          let total=0;
+          for(let i=spans.length-1;i>=0;i--){
+            const span=findSpan(app,begins[i]);let count=0;
+            const transformed=span.content.replace(srcRx,(whole,kind,tag,body)=>{
+              if(!staticStyle(body))return whole;
+              const parts=parseStyle(body);
+              if(!parts.every(p=>frequency.get(p.key)>=2))return whole;
+              const list=parts.map(p=>{assert.ok(classes.has(p.key),'Missing shared property '+p.key);return classes.get(p.key).cls;});
+              assert.equal(new Set(list).size,list.length,'Duplicate property in JSX style');
+              count++;return '_'+kind+'("'+tag+'", { className: "'+list.join(' ')+'"';
+            });
+            assert.equal(count,expectedCounts[i],begins[i]+' migration count changed');
+            total+=count;app=app.slice(0,span.a)+transformed+app.slice(span.b);
+          }
+          assert.equal(total,88);
+          assert.equal(baselineInline-(app.match(/style:\s*\{/g)||[]).length,88);
+          const anchor='/* M187 premium interaction contract.';
+          assert.equal(css.split(anchor).length-1,1,'CSS ownership anchor changed');
+          const shared=[
+            '/* B956: reusable static Program/Workout layout and type declarations.',
+            '   Dynamic set geometry, motion, palette state and logged values stay inline. */',
+            ...[...classes.values()].map(({cls,decl})=>'#root .wpb .'+cls+',#root .'+cls+'{'+decl+'}'),
+            ''
+          ].join('\n');
+          css=css.replace(anchor,shared+anchor);
+          assert.equal((css.match(/!important/g)||[]).length,beforeImportant);
+          write('modules/App.js',app);write('app.css',css);
+          let audit=read('verification/ui-ownership-test.mjs');
+          assert.ok(audit.includes('const MAX_INLINE_STYLE_OBJECTS = 1958;'),'B955 inline budget changed');
+          audit=audit.replace('const MAX_INLINE_STYLE_OBJECTS = 1958;','const MAX_INLINE_STYLE_OBJECTS = 1870; // B956: 88 shared CSS presentation objects retired.');
+          const guard=[
+            '// B956: 46 reusable static CSS owners with scoped Program/Workout call-site contracts.',
+            'const b956Classes=[ '+[...classes.values()].map(x=>JSON.stringify(x.cls)).join(', ')+' ];',
+            'assert.equal(b956Classes.length,46,"Shared CSS owner count regressed");',
+            'for(const cls of b956Classes)assert.ok(css.includes("."+cls+","),"Missing B956 CSS owner "+cls);',
+            'const b956Program=app.split("function ProgramView(")[1].split(String.fromCharCode(10)+"function ")[0];',
+            'const b956Workout=app.split("function WorkoutSession(")[1].split(String.fromCharCode(10)+"function ")[0];',
+            'assert.equal((b956Program.match(/className: "wpb-s956-/g)||[]).length,37,"Program CSS ownership regression");',
+            'assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,51,"Workout CSS ownership regression");',
+            ''
+          ].join('\n');
+          const marker="console.log('PASS UI ownership:";
+          assert.equal(audit.split(marker).length-1,1);
+          audit=audit.replace(marker,guard+marker);
+          write('verification/ui-ownership-test.mjs',audit);
+          write('NEXT_APP_UPDATE_PLAN.md',read('NEXT_APP_UPDATE_PLAN.md')
+            +'\n\n## Build 956 — Shared static Program/Workout declarations\n\n'
+            +'Migrate 88 further first-property static JSX presentation objects in Program (37) and Workout (51) '
+            +'into 46 reusable class-owned CSS property/value rules. Share spacing tokens for 4/8/12/16px values. '
+            +'Do not alter the engine, history, storage, dynamic state/geometry, timers, Focus or working set controls. '
+            +'No new important declarations. Lower inline style budget 1,958 to 1,870 and enforce call-site guards. '
+            +'This is a scoped cleanup, not a claim that all remaining inline styles are safe to remove. '
+            +'Require candidate/main browser, engine, offline, release and hosted byte checks; physical Android remains separately gated.\n');
+          console.log('B956_SOURCE_DELTA '+JSON.stringify({program:37,workout:51,retired:total,sharedCSSOwners:classes.size,inlineBefore:baselineInline,inlineAfter:(app.match(/style:\s*\{/g)||[]).length,cssPriorityDelta:0}));
+          NODE
+      - name: Finalize Build 956 and run source/ownership/release gates
+        run: |
+          node scripts/finalize-release.mjs --next-build
+          node --check modules/App.js
+          node --check verification/ui-ownership-test.mjs
+          node verification/ui-ownership-test.mjs
+          node verification/b884-workout-hierarchy-test.mjs
+          node scripts/verify-release.mjs
+      - name: Commit verified B956 and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/finalize-b956-static-styles.yml
+          git add -A
+          git commit -m "B956: consolidate 88 reusable static Program and Workout styles"
+          git push origin HEAD:refactor/b956-program-workout-utility-consolidation

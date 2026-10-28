@@ -78,6 +78,33 @@ export function loadingInventoryInUnit(input, unit, { nativeDefaults = false } =
     converted.exerciseOverrides = Object.fromEntries(Object.entries(inventory.exerciseOverrides).map(([id, p]) => [id, profile(p)]));
     return converted;
 }
+/**
+ * Resolve a workout's load inventory in the displayed unit and honor the user's
+ * per-exercise increment before any dynamic or double-progression decisions.
+ * A separately configured list of actual available loads remains authoritative.
+ * Legacy unit-converted factory increments are first repaired by the canonical
+ * unit conversion, rather than silently driving 5.5/5.51 lb machine steps.
+ */
+export function loadingInventoryWithExerciseSteps(input, unit, steps = {}, options = {}) {
+    const inventory = loadingInventoryInUnit(input, unit, options);
+    if (!steps || typeof steps !== 'object') return inventory;
+    const overrides = { ...inventory.exerciseOverrides };
+    let changed = false;
+    for (const [id, setting] of Object.entries(steps)) {
+        const raw = Number(setting?.v), from = setting?.unit;
+        if (!id || !(raw > 0) || !Number.isFinite(raw) || !['lb', 'kg'].includes(from)) continue;
+        const increment = from === unit ? raw : round(raw * (unit === 'lb' ? 2.2046226218 : 1 / 2.2046226218));
+        if (!(increment > 0)) continue;
+        const old = overrides[id] ?? {};
+        // A known rack is a finite list of real physical settings, not a grid
+        // that can be replaced by a per-exercise increment.
+        if (Array.isArray(old.availableLoads)) continue;
+        if (old.increment === increment && old.minimum === 0) continue;
+        overrides[id] = { ...old, increment, minimum: 0 };
+        changed = true;
+    }
+    return changed ? { ...inventory, exerciseOverrides: overrides } : inventory;
+}
 export function normalizeLoadingInventory(input) {
     if (!input)
         return defaultLoadingInventoryFor('lb');

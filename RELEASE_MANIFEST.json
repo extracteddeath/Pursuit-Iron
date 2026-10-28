@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 947,
+  "build": 948,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "894bd23c7c4140529e7de0fad56fcecd0765653a550ae229ce0df19951fb6fdb",
@@ -145,10 +145,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "a6c3cb8664402c60af04f7b8ea36da614d6d0c753812c488876977f406f176c4",
-    "index.html": "4eda9dada08f5e2944cb09b11cbc4e027d2cad8475bfbaef7d3792078f803a04",
-    "sw.js": "ddc4a73807a9eb30b45370f9442ae1819e6139bc5571787a6bfd28611cc87c60",
-    "BUILD_PROFILE.json": "9e0d5bc098790d3ec998cf747743bf5d700aef76064003bdd5976f696ad48b12",
+    "modules/App.js": "afad6a135f7b48bb1314ad0af114679647526c900ee13a7e8035369e1e6a6f7f",
+    "index.html": "44874a68774094a6a6d7b0cde27e8e39ec5daa85f7baa06c5f883f31037955e0",
+    "sw.js": "caba3efd324ca667f0974d40881e3dc5a96b298e31892b115d63823402966d10",
+    "BUILD_PROFILE.json": "b34d2603b6e2a505d7045a05d47422edeec2a05d45a637f1f3449a0914f1a8a8",
     "CHANGELOG.md": "a6db39f8419545eabfe5d3fb78fb1df8a4f220c05fe56e950a0c3bb30fcdc2ca",
     "app.css": "5c76e2938099d6aac22744daa4e19cb4b656a1eb7a2dccf79dc2facd4f484d63",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -157,6 +157,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b947-rb665140a90e9cab4",
-  "uiMilestone": "Build 947 · Compact workout exercise navigation"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b948-rcc91fe9ad3864da9",
+  "uiMilestone": "Build 948 · Persistent safe workout update"
 }

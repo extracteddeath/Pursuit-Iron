@@ -1,6 +1,6 @@
 import { canonicalRepRange, styleFor, engineWeekOneStyles } from '../next-engine/shell-projection.js';
 import { sessionPlanChange } from '../session-plan.js';
-import { loadingInventoryInUnit } from '../next-engine/loading.js';
+import { loadingInventoryWithExerciseSteps } from '../next-engine/loading.js';
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { nextExerciseIdForShellExercise, resolveNextShellExerciseId, snapshotNextShellPrescription } from "../next-engine/app-shell-adapter.js";
@@ -1076,7 +1076,8 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         suggestedReps: sug?.target ?? null,
         setTargets: sug?.setTargets,
         includeWarmups: !!withWarm,
-        loadingInventory: loadingInventoryInUnit(request?.equipment?.loading, unit, { nativeDefaults: !program.config?.loadingInventory }),
+        loadingInventory: loadingInventoryWithExerciseSteps(request?.equipment?.loading, unit, program?.exLoadInc,
+            { nativeDefaults: !program.config?.loadingInventory }),
         equipmentAvailable: request?.equipment?.available,
         snapLoad: value => loadableAtOrBelow(ex, value, unit)
     });
@@ -1137,9 +1138,9 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
             const base = Number(rows[lastWork].weight) || 0;
             for (const drop of protocol.drops || [])
                 rows.push({
-                    weight: base > 0 ? String(Math.round(base * drop.fraction * 100) / 100) : '', reps: '', warm: false,
+                    weight: base > 0 ? String(loadableAtOrBelow(ex, base * drop.fraction, unit)) : '', reps: '', warm: false,
                     sub: true, kind: 'drop', dropF: drop.fraction, prescribed: true, done: false, auto: true, valueOwner: "prescription",
-                    target: { w: base > 0 ? String(Math.round(base * drop.fraction * 100) / 100) : '—', reps: 'to failure', rir: null, rest: drop.restSeconds }
+                    target: { w: base > 0 ? String(loadableAtOrBelow(ex, base * drop.fraction, unit)) : '—', reps: 'to failure', rir: null, rest: drop.restSeconds }
                 });
         }
     }

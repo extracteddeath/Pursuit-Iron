@@ -138,7 +138,20 @@ export async function verifyWizardSteps(page, { width, height, theme, root, url 
         'constraints','focus','reduce','progression','length','deload'];
     const visited=[];
     for(const key of expected){
-      await page.waitForFunction(key=>document.querySelector('.wpb-wizard-step')?.dataset.stepKey===key,{},key);
+      const currentKey=await page.evaluate(()=>document.querySelector('.wpb-wizard-step')?.dataset.stepKey||'(missing)');
+      console.log('R74_WIZARD_STEP_ENTER '+JSON.stringify({theme,width,height,cycle,expected:key,current:currentKey}));
+      try {
+        await page.waitForFunction(key=>document.querySelector('.wpb-wizard-step')?.dataset.stepKey===key,
+          {timeout:7000},key);
+      } catch(error){
+        const detail=await page.evaluate(()=>({step:document.querySelector('.wpb-wizard-step')?.dataset.stepKey||null,
+          wizardCount:document.querySelectorAll('.wpb-wizard').length,
+          visibleTitle:document.querySelector('.wpb-wizard-step')?.textContent.slice(0,300)||'',
+          nextDisabled:document.querySelector('.wpb-wizard-next-action')?.disabled,
+          wizardResult:!!window.wizardResult}));
+        throw new Error('R74_WIZARD_STEP_MISMATCH '+JSON.stringify({theme,width,height,cycle,expected:key,detail}),
+          {cause:error});
+      }
       if(key==='name')await page.type('.wpb-wizard-step input','R74 '+(cycle?'cycle':'program')+' draft '+theme);
       if(key==='split'||key==='session')await page.waitForFunction(()=>
         !document.querySelector('.wpb-wizard-next-action').disabled&&

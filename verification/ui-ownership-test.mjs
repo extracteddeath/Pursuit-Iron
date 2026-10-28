@@ -28,7 +28,7 @@ const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + dis
 const MAX_IMPORTANT = 2061; // M394: retire 33 exercise-row priority overrides.
 const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 1870; // B956: 88 shared CSS presentation objects retired. // B955: 74 Program/Workout inline presentations have shared CSS owners. // M396: retire 40 calculator styles; retain one calculated plate height.
+const MAX_INLINE_STYLE_OBJECTS = 1757; // B957: 113 more static screen styles retired. // B956: 88 shared CSS presentation objects retired. // B955: 74 Program/Workout inline presentations have shared CSS owners. // M396: retire 40 calculator styles; retain one calculated plate height.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -339,6 +339,23 @@ const b956Program=app.split("function ProgramView(")[1].split(String.fromCharCod
 const b956Workout=app.split("function WorkoutSession(")[1].split(String.fromCharCode(10)+"function ")[0];
 assert.equal((b956Program.match(/className: "wpb-s956-/g)||[]).length,37,"Program CSS ownership regression");
 assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,51,"Workout CSS ownership regression");
+// B957 static style owners: keep these shared classes and each migrated destination.
+const b957NewOwners=["wpb-s957-letterspacing-0-3","wpb-s957-padding-0-2px","wpb-s957-gap-2","wpb-s957-gap-16","wpb-s957-padding-3-5px-0","wpb-s957-height-100","wpb-s957-padding-14px-16px-6px","wpb-s957-margintop-4","wpb-s957-lineheight-1-5","wpb-s957-texttransform-capitalize"];
+assert.equal(b957NewOwners.length,10);
+for(const cls of b957NewOwners)assert.ok(css.includes("."+cls+","),"Missing B957 CSS owner "+cls);
+assert.equal((app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,10,"Home shared owner regression");
+assert.equal((app.split("function SettingsView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,18,"SettingsView shared owner regression");
+assert.equal((app.split("function ProgressDetail(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"ProgressDetail shared owner regression");
+assert.equal((app.split("function StrengthSnapshotCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"StrengthSnapshotCard shared owner regression");
+assert.equal((app.split("function OneRepMaxCalc(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"OneRepMaxCalc shared owner regression");
+assert.equal((app.split("function CompareView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,21,"CompareView shared owner regression");
+assert.equal((app.split("function ExerciseCharts(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,1,"ExerciseCharts shared owner regression");
+assert.equal((app.split("function ThousandClubCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,5,"ThousandClubCard shared owner regression");
+assert.equal((app.split("function TrainingHeatmap(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,7,"TrainingHeatmap shared owner regression");
+assert.equal((app.split("function GalleryView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,5,"GalleryView shared owner regression");
+assert.equal((app.split("function BlockReviewView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,12,"BlockReviewView shared owner regression");
+assert.equal((app.split("function LegacyProgramsCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,1,"LegacyProgramsCard shared owner regression");
+assert.equal((app.split("function ChangelogSheet(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,6,"ChangelogSheet shared owner regression");
 console.log('PASS UI ownership: important ' + report.important + '/' + MAX_IMPORTANT +
     ', embedded ' + report.appImportant + '/' + MAX_APP_IMPORTANT + ', repeated ' + report.duplicates + '/' + MAX_REPEAT_IMPORTANT + ' (' + report.legacyOwners +
     ' historical owner collisions), inline styles ' + report.inline + '/' + MAX_INLINE_STYLE_OBJECTS);

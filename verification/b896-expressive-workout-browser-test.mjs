@@ -97,6 +97,18 @@ try {
   assert.ok(heading.meta.left<heading.tags.left,'Working-set context remains under the lift name');
   assert.ok(heading.set.top>=heading.name.bottom-2,'Set count follows the lift name');
   assert.ok(heading.progression.top>=heading.set.bottom-2,'Progression action follows working-set count');
+  assert.equal(heading.meta.display,'contents','Meta must not stretch the tags row');
+  assert.ok(Math.abs(heading.tags.top-heading.set.top)<=10,
+    'Tags and set context share a row: '+JSON.stringify(heading));
+  assert.ok(heading.progression.top-heading.set.bottom<=9,
+    'Progression immediately follows set context: '+JSON.stringify(heading));
+  const stripGap=await page.evaluate(()=>{
+    const progression=document.querySelector('.wpb-progression-label')?.getBoundingClientRect();
+    const tools=document.querySelector('.wpb-workout-tools')?.getBoundingClientRect();
+    return progression&&tools?tools.top-progression.bottom:null;
+  });
+  assert.ok(stripGap!==null&&stripGap>=-2&&stripGap<=18,
+    'No empty gap between progression and action strip: '+stripGap);
   const loadRepHeaders=await page.evaluate(()=>{
     const heading=document.querySelector('.wpb-set-head');
     const first=document.querySelector('.wpb-set-controls');

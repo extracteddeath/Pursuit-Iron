@@ -7929,10 +7929,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   opacity:1;
 }
 
-/* B900 — Compact exercise header and swipeable single-line workout actions.
-   Focus retains its independent layout. The normal logger has a name/set/
-   progression stack on the left and tags/actions on the right, with no
-   exercise-detail margins or wrapping toolbar stealing vertical space. */
+/* B949 — Workout header: align title/actions, set/tags and progression as
+   independent rows. The old meta stack stretched the tag row and left a gap. */
 #root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row{
   display:flex;align-items:flex-start;gap:8px;min-width:0;
 }
@@ -7940,11 +7938,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   flex:1;min-width:0;align-self:center;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;
-  grid-template-rows:auto auto auto;column-gap:8px;row-gap:0;
-  align-items:start;min-width:0;
+  display:grid;grid-template-columns:minmax(0,1fr) max-content;
+  grid-template-rows:auto auto auto;column-gap:8px;row-gap:2px;
+  align-items:center;min-width:0;
 }
-#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row{display:contents;}
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row,
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta{
+  display:contents;
+}
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row .wpb-exercise-name{
   grid-column:1;grid-row:1;min-width:0;align-self:start;
 }
@@ -7952,37 +7953,41 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   grid-column:2;grid-row:1;justify-self:end;align-self:start;min-width:0;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags{
-  grid-column:2;grid-row:2;justify-self:end;justify-content:flex-start;
-  align-self:start;min-width:0;max-width:160px;margin:2px 0 0;
-  flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;overflow-y:hidden;
-  touch-action:pan-x;scrollbar-width:none;
+  grid-column:2;grid-row:2;justify-self:end;align-self:center;
+  min-width:0;max-width:min(48vw,190px);margin:0;
+  justify-content:flex-start;flex-wrap:nowrap;white-space:nowrap;
+  overflow-x:auto;overflow-y:hidden;touch-action:pan-x;scrollbar-width:none;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags::-webkit-scrollbar{display:none;}
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags>span{
   flex:0 0 auto;white-space:nowrap;
 }
-#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta{
-  grid-column:1;grid-row:2;display:flex;flex-direction:column;
-  align-items:flex-start;flex-wrap:nowrap;row-gap:0;margin:0;min-width:0;
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-exercise-set-context{
+  grid-column:1;grid-row:2;min-width:0;align-self:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child>.wpb-session-choice{
-  grid-column:1/-1;grid-row:3;justify-self:start;
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-progression-label{
+  grid-column:1/-1;grid-row:3;justify-self:start;align-self:center;
+  box-sizing:border-box;max-width:100%;min-height:36px!important;
+  margin:0!important;padding:3px 4px!important;line-height:1.3;text-align:left;
 }
-#root .wpb-workout[data-focus-mode="true"] .wpb-exercise-meta{
-  display:flex;align-items:center;flex-wrap:wrap;column-gap:12px;row-gap:0;
-  /* Preserve Focus spacing independently of exercise-detail presentation. */
-  margin:6px 0 14px;min-width:0;
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-progression-explanation,
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-adjust-sets,
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child>.wpb-session-choice,
+#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child>div:not(.wpb-exercise-title-row):not(.wpb-exercise-tags):not(.wpb-exercise-meta){
+  grid-column:1/-1;min-width:0;justify-self:start;
 }
-#root .wpb-workout .wpb-progression-explanation{flex-basis:100%;}
 #root .wpb-workout .wpb-workout-tools{
   display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
   touch-action:pan-x pan-y;overscroll-behavior-x:contain;
   -webkit-overflow-scrolling:touch;scrollbar-width:none;
 }
+#root .wpb-workout[data-focus-mode="false"] .wpb-workout-tools{
+  margin-top:4px!important;
+}
 #root .wpb-workout .wpb-workout-tools::-webkit-scrollbar{display:none;}
 #root .wpb-workout .wpb-workout-tools .wpb-workout-tool{
-  flex:0 0 auto;white-space:nowrap;
-  line-height:1.35;text-align:left;
+  flex:0 0 auto;white-space:nowrap;line-height:1.35;text-align:left;
 }
 #root .wpb-workout .wpb-progression-label:focus-visible{
   outline:2px solid var(--wpb-theme-accent-ink);outline-offset:1px;

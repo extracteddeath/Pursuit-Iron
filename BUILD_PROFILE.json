@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b965-r43f3910776da08e7",
-  "uiMilestone": "Build 965 · Workout and app-shell static layout consolidation"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b966-r846b34dff9398dd4",
+  "uiMilestone": "Build 966 · Stable contextual menu focus and keyboard dismissal"
 }

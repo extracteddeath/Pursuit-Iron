@@ -2202,7 +2202,21 @@ function platesPerSide(total, bar, unit) {
             for (const [amount, loaded] of before) {
                 for (let n = 1; n <= count && amount + n * units <= target; n++) {
                     const next = amount + n * units, size = loaded.length + n;
-                    if (!paths.has(next) || paths.get(next).length > size)
+                    const incumbent = paths.get(next);
+                    // Fewest plates wins. On an equal-count tie, prefer a heavier first
+                    // plate (45 + 45 + 10 + 5 + 2.5 instead of 45 + 25 + 25 + 10 + 2.5).
+                    // Both are valid totals, but the former is the conventional load.
+                    let betterTie = false;
+                    if (incumbent && incumbent.length === size) {
+                        for (let i = 0; i < size; i++) {
+                            const candidatePlate = i < loaded.length ? loaded[i] : plate;
+                            if (candidatePlate !== incumbent[i]) {
+                                betterTie = candidatePlate > incumbent[i];
+                                break;
+                            }
+                        }
+                    }
+                    if (!incumbent || size < incumbent.length || betterTie)
                         paths.set(next, [...loaded, ...Array(n).fill(plate)]);
                 }
             }

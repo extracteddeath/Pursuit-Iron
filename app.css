@@ -119,6 +119,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-s957-margintop-4,#root .wpb-s957-margintop-4{margin-top:var(--pi-space-1,4px)}
 #root .wpb .wpb-s957-lineheight-1-5,#root .wpb-s957-lineheight-1-5{line-height:1.5}
 #root .wpb .wpb-s957-texttransform-capitalize,#root .wpb-s957-texttransform-capitalize{text-transform:capitalize}
+/* B958: three missing shared utilities; other call sites reuse existing B956/B957 declarations. */
+#root .wpb .wpb-s958-marginbottom-10,#root .wpb-s958-marginbottom-10{margin-bottom:10px}
+#root .wpb .wpb-s958-position-relative,#root .wpb-s958-position-relative{position:relative}
+#root .wpb .wpb-s958-fontweight-750,#root .wpb-s958-fontweight-750{font-weight:750}
 /* M187 premium interaction contract.
    This is intentionally semantic instead of screen-specific: Home, Program, Workout, Progress,
    Settings and Onboarding inherit the same typography, control feedback, sheets, scrolling and

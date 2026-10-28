@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 957,
+  "build": 958,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "60b90ba9662026da984e6a2c3b36a1c41129350e926a3202946ecddd65aba974",
@@ -146,18 +146,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "c44eb3c6e19eccbc15b996d95d5a4b19eb35b6b6a9494c3d95262caee0b4c094",
-    "index.html": "b437f531fe49d3f5a5ff8c42a285befd09684fc838e0a704acac15a7ab533d4e",
-    "sw.js": "1fbb7a009f6f66bb23b48fcbba192be7aad955d3a586367e29b814db2eef3309",
-    "BUILD_PROFILE.json": "fe5e4dd07180c45564d18c7fd6fb94932e36a15da11bcf4eaca879b1355ce12d",
+    "modules/App.js": "66f0c179582278e914355a60bc9449da63f6f8e796982427ee10dfb4cbf53a77",
+    "index.html": "8a8483c7cf1ca83f4095def7243fab8adc02c4ee328f034e710905ce0b68523c",
+    "sw.js": "0318e35ad243026689aa6f4617aae4cc3ebf21ba05639bfe8ee07b5cf69ea10a",
+    "BUILD_PROFILE.json": "0c85c53ba7b09ff453b5fdff98142e2a36f61061cd206f836d610f053d4cdbf9",
     "CHANGELOG.md": "004e81d258626db5b0e2ab6fcfae18a209ddca3b681bafe9441513bc3a0c9bd6",
-    "app.css": "b685d9985e2a78ca865a5eb45c8dd15d5d9d2a8196132545e365028136af68f4",
+    "app.css": "acbc49f22485eaa8bc42955c7af36030988e5c078ccbd648eec15a1297fcee21",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b957-race18fad9d15fdda",
-  "uiMilestone": "Build 957 · Consolidated shared icon/modal styles and retired CSS conflicts"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b958-ra4d8a4dca87c0d46",
+  "uiMilestone": "Build 958 · Consolidated shared icon/modal styles and retired CSS conflicts"
 }

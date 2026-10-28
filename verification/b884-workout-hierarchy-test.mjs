@@ -7,7 +7,7 @@ const app = fs.readFileSync('modules/App.js','utf8');
 const css = fs.readFileSync('app.css','utf8');
 const workout = app.slice(app.indexOf('function WorkoutSession('), app.indexOf('function WorkoutSession(')+275000);
 assert.ok(workout.startsWith('function WorkoutSession('), 'WorkoutSession source must exist');
-const exercise = workout.indexOf('className: "wpb-exercise-heading"');
+const exercise = workout.indexOf('className: "wpb-exercise-heading ');
 const toolbar = workout.indexOf('className: "wpb-hscroll wpb-workout-tools"');
 const list = workout.indexOf('data-testid": `set-${ei}-${si}`');
 const add = workout.indexOf('className: "pressable wpb-add-set"');
@@ -54,7 +54,7 @@ assert.ok(css.includes('.wpb-exercise-meta>.wpb-exercise-set-context{') && css.i
   'Set context must share row 2 with tags');
 assert.ok(css.includes('.wpb-exercise-meta>.wpb-progression-label{') && css.includes('grid-column:1/-1;grid-row:3;'),
   'Progression sits on the third row');
-assert.ok(workout.includes('className: "wpb-exercise-head-actions"') && workout.includes('className: "wpb-exercise-set-context"'),
+assert.ok(workout.includes('className: "wpb-exercise-head-actions ') && workout.includes('className: "wpb-exercise-set-context"'),
   'Skip/history/info and current working-set context retain their actions');
 
 assert.ok(css.includes('data-focus-mode="false"][data-set-dock-visible="true"]') && css.includes('padding-bottom:calc(16px + var(--pi-set-dock-height,0px))!important;'), 'Dock scroll reserve must survive the B884 normal-mode padding shorthand');

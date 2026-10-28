@@ -74,6 +74,7 @@ export const contractGroups = Object.freeze({
         'home-entry-hierarchy-test.mjs',
         'plan-choice-ownership-test.mjs',
         'ui-ownership-test.mjs',
+        'b960-static-presentation-test.mjs',
         'b910-settings-wizard-polish-test.mjs',
         'b909-coach-simplification-test.mjs',
         'b906-dialog-motion-polish-test.mjs',

@@ -844,3 +844,8 @@ Migrate 80 strictly literal first-prop JSX style objects across Plan, Next, Home
 Fix shared session dialogs so a nondismissible review cannot close from the scrim or Escape; keep Tab inside all sheets, including read-only ones, and restore focus to the original trigger on closing. Close buttons use consistent 48px targets and readable long-title wrapping on phone/tablet. Add source and real-browser regression coverage without engine, set-logging, history, storage, or dynamic animation changes. Publish after complete release, engine, UI, browser and offline integrity; Android hardware certification remains separate.
 
 Build 959 certification note: automated source, release and browser checks must pass on the final candidate commit before merging; Android hardware testing and hosted deployment remain independent sign-offs.
+
+ 
+## Build 960 — Shared CSS reuse across remaining static JSX
+
+Retire 133 additional strictly static JSX presentation objects from App across Plan, Workout, Next, Progress, Profile and onboarding, reusing the B955–B958 property owners wherever values match and adding only required missing utilities. Each migrated value is layout or typography; retain all state-driven colors, values, calculations, transitions, inline animation and interaction ownership. Tighten verified presentation debt ceiling 1,677 → 1,544; add a permanent exact-debt/utility-ownership contract and retain the zero-duplicate-priority and 2,061-CSS-priority ceilings. This migration is paint/layout parity work, not an engine change. Complete full engine, browser, offline, version and hosted-byte verification before sign-off; physical Android review separately required.

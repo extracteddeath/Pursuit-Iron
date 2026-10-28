@@ -28,7 +28,7 @@ const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + dis
 const MAX_IMPORTANT = 2061; // M394: retire 33 exercise-row priority overrides.
 const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 1677; // B958: 80 more static screen styles migrated via existing utility owners. // B957: 113 more static screen styles retired. // B956: 88 shared CSS presentation objects retired. // B955: 74 Program/Workout inline presentations have shared CSS owners. // M396: retire 40 calculator styles; retain one calculated plate height.
+const MAX_INLINE_STYLE_OBJECTS = 1544; // B958: 80 more static screen styles migrated via existing utility owners. // B957: 113 more static screen styles retired. // B956: 88 shared CSS presentation objects retired. // B955: 74 Program/Workout inline presentations have shared CSS owners. // M396: retire 40 calculator styles; retain one calculated plate height.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -323,39 +323,39 @@ for(const className of ['wpb-program-cycle-collapse','wpb-program-cycle-inset','
     'Program contextual cycle route/reference help must keep their single CSS owners: '+className);
 assert.ok(!programOwner.includes('ref: pvTitle, style:') && !programOwner.includes('ref: pvNameCol, style:'),
   'Program metadata and title must not return to inline layout');
-// B955: exact Program/Workout layout ownership. Dynamic style is never migrated here.
+// B955/B960: exact Program/Workout layout ownership; B960 reuses earlier CSS utilities. Dynamic style remains inline.
 for (const cls of ["wpb-layout-grow-min","wpb-layout-heading-18-gap6","wpb-layout-flex-one","wpb-layout-truncate","wpb-layout-strong-15","wpb-layout-row-tight-bottom8","wpb-layout-bottom12","wpb-layout-row-gap8","wpb-layout-row-tight","wpb-layout-strong-18","wpb-layout-row-start-bottom8","wpb-layout-support-600","wpb-layout-bottom16","wpb-layout-row-gap8-top8"]) {
   assert.ok(css.includes("."+cls+","), "Missing shared presentation owner "+cls);
 }
 const b955Program=app.slice(app.indexOf("function ProgramView("),app.indexOf("\nfunction ",app.indexOf("function ProgramView(")+1));
 const b955Workout=app.slice(app.indexOf("function WorkoutSession("),app.indexOf("\nfunction ",app.indexOf("function WorkoutSession(")+1));
-assert.equal((b955Program.match(/className: "wpb-layout-/g)||[]).length,23,"Program static styles must be shared");
-assert.equal((b955Workout.match(/className: "wpb-layout-/g)||[]).length,51,"Workout static styles must be shared");
-// B956: 46 reusable static CSS owners with scoped Program/Workout call-site contracts.
+assert.equal((b955Program.match(/className: "wpb-layout-/g)||[]).length,24,"Program static styles must be shared");
+assert.equal((b955Workout.match(/className: "wpb-layout-/g)||[]).length,52,"Workout static styles must be shared");
+// B956/B960: 46 reusable static CSS owners with scoped Program/Workout call-site contracts; B960 only increases use.
 const b956Classes=[ "wpb-s956-display-flex", "wpb-s956-flexdirection-column", "wpb-s956-gap-6", "wpb-s956-alignitems-flex-start", "wpb-s956-fontweight-600", "wpb-s956-fontsize-14", "wpb-s956-justifycontent-space-between", "wpb-s956-gap-12", "wpb-s956-fontweight-700", "wpb-s956-alignitems-center", "wpb-s956-marginbottom-6", "wpb-s956-gap-8", "wpb-s956-flexwrap-wrap", "wpb-s956-overflow-hidden", "wpb-s956-flex-1", "wpb-s956-minwidth-0", "wpb-s956-fontsize-13", "wpb-s956-textoverflow-ellipsis", "wpb-s956-whitespace-nowrap", "wpb-s956-marginbottom-12", "wpb-s956-gap-4", "wpb-s956-margintop-8", "wpb-s956-flexshrink-0", "wpb-s956-textalign-right", "wpb-s956-margintop-2", "wpb-s956-margintop-6", "wpb-s956-display-grid", "wpb-s956-marginbottom-4", "wpb-s956-fontsize-15", "wpb-s956-margintop-12", "wpb-s956-fontsize-18", "wpb-s956-marginbottom-2", "wpb-s956-marginbottom-8", "wpb-s956-marginbottom-14", "wpb-s956-gap-7", "wpb-s956-alignitems-baseline", "wpb-s956-justifycontent-center", "wpb-s956-textalign-center", "wpb-s956-alignitems-flex-end", "wpb-s956-width-30", "wpb-s956-flex-0-0-30px", "wpb-s956-display-block", "wpb-s956-gap-5", "wpb-s956-gap-10", "wpb-s956-padding-3px-0", "wpb-s956-marginbottom-16" ];
 assert.equal(b956Classes.length,46,"Shared CSS owner count regressed");
 for(const cls of b956Classes)assert.ok(css.includes("."+cls+","),"Missing B956 CSS owner "+cls);
 const b956Program=app.split("function ProgramView(")[1].split(String.fromCharCode(10)+"function ")[0];
 const b956Workout=app.split("function WorkoutSession(")[1].split(String.fromCharCode(10)+"function ")[0];
-assert.equal((b956Program.match(/className: "wpb-s956-/g)||[]).length,37,"Program CSS ownership regression");
-assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,51,"Workout CSS ownership regression");
-// B957 static style owners: keep these shared classes and each migrated destination.
+assert.equal((b956Program.match(/className: "wpb-s956-/g)||[]).length,41,"Program CSS ownership regression");
+assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,57,"Workout CSS ownership regression");
+// B957/B960: keep these shared classes and all migrated destinations; B960 adds reuse without removing B957 ownership.
 const b957NewOwners=["wpb-s957-letterspacing-0-3","wpb-s957-padding-0-2px","wpb-s957-gap-2","wpb-s957-gap-16","wpb-s957-padding-3-5px-0","wpb-s957-height-100","wpb-s957-padding-14px-16px-6px","wpb-s957-margintop-4","wpb-s957-lineheight-1-5","wpb-s957-texttransform-capitalize"];
 assert.equal(b957NewOwners.length,10);
 for(const cls of b957NewOwners)assert.ok(css.includes("."+cls+","),"Missing B957 CSS owner "+cls);
-assert.equal((app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,12,"Home shared owner regression");
+assert.equal((app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,15,"Home shared owner regression");
 assert.equal((app.split("function SettingsView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,20,"SettingsView shared owner regression");
 assert.equal((app.split("function ProgressDetail(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,10,"ProgressDetail shared owner regression");
 assert.equal((app.split("function StrengthSnapshotCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"StrengthSnapshotCard shared owner regression");
 assert.equal((app.split("function OneRepMaxCalc(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"OneRepMaxCalc shared owner regression");
-assert.equal((app.split("function CompareView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,22,"CompareView shared owner regression");
-assert.equal((app.split("function ExerciseCharts(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,1,"ExerciseCharts shared owner regression");
+assert.equal((app.split("function CompareView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,24,"CompareView shared owner regression");
+assert.equal((app.split("function ExerciseCharts(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,5,"ExerciseCharts shared owner regression");
 assert.equal((app.split("function ThousandClubCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,5,"ThousandClubCard shared owner regression");
-assert.equal((app.split("function TrainingHeatmap(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,7,"TrainingHeatmap shared owner regression");
-assert.equal((app.split("function GalleryView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,5,"GalleryView shared owner regression");
+assert.equal((app.split("function TrainingHeatmap(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,8,"TrainingHeatmap shared owner regression");
+assert.equal((app.split("function GalleryView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,6,"GalleryView shared owner regression");
 assert.equal((app.split("function BlockReviewView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,12,"BlockReviewView shared owner regression");
 assert.equal((app.split("function LegacyProgramsCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,1,"LegacyProgramsCard shared owner regression");
-assert.equal((app.split("function ChangelogSheet(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,6,"ChangelogSheet shared owner regression");
+assert.equal((app.split("function ChangelogSheet(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,7,"ChangelogSheet shared owner regression");
 // B958 cross-screen shared presentation ownership: 80 literal JSX objects retired.
 const b958Names=["PlanView","NextWorkoutView","Home","SettingsView","ProgressDetail","CompareView","MilestonesCard","StrengthComparisonCard","RecoveryTrendCard","MuscleRecoveryCard","ProfileMiniForm","ConvertProgramToCycleSheet","VolumeCard","AddSheet","SwapSheet"];
 const b958Counts=[11,6,2,2,1,1,4,8,7,3,4,5,3,10,13];

@@ -832,3 +832,8 @@ Migrate 88 further first-property static JSX presentation objects in Program (37
 ## Build 957 — Cross-screen shared style ownership
 
 Retire 113 more literal first-property JSX inline style objects across 13 screen and card owners: Home 10, Settings 18, Progress detail 9, Strength snapshot 9, one-rep-max tool 9, comparison 21, exercise charts 1, Thousand Club 5, heatmap 7, Gallery 5, block review 12, legacy cards 1, changelog 6. Reuse 28 B956 CSS declaration owners and add only ten new CSS rules for the remaining shared values. Preserve actual computed sizes/spacing, data-driven styles, training engine, set logger, and motion. No new important rules. Ownership debt ceiling tightens 1,870 to 1,757. Full candidate and deployed browser/core/engine integrity remain compulsory; physical Android testing separate.
+
+
+## Build 958 — Cross-screen shared CSS reuse
+
+Migrate 80 strictly literal first-prop JSX style objects across Plan, Next, Home, Settings, Progress, comparison, recovery, profile form, conversion, volume and exercise sheets. Reuse 27 existing B956/B957 property owners and add just three missing declarations. No new priority overrides; preserve all dynamic training values, colors, measured geometry, accessibility callbacks, history, and animation. Tighten verified inline-style ceiling from 1,757 to 1,677. Maintain end-to-end core/engine/browser/offline gates and deployed byte verification; physical Android certification remains separate.

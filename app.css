@@ -123,6 +123,80 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-s958-marginbottom-10,#root .wpb-s958-marginbottom-10{margin-bottom:10px}
 #root .wpb .wpb-s958-position-relative,#root .wpb-s958-position-relative{position:relative}
 #root .wpb .wpb-s958-fontweight-750,#root .wpb-s958-fontweight-750{font-weight:750}
+/* B960 — 133 static layout/typography objects moved out of JSX.
+   Reuse B955–B958 utilities when equal. Runtime color, geometry, animation and record state stay inline.
+   These selectors are presentation-only; no priority declarations are added. */
+#root .wpb .wpb-s960-alignitems-stretch,#root .wpb-s960-alignitems-stretch{align-items:stretch}
+#root .wpb .wpb-s960-display-inline-flex,#root .wpb-s960-display-inline-flex{display:inline-flex}
+#root .wpb .wpb-s960-flex-0-0-120px,#root .wpb-s960-flex-0-0-120px{flex:0 0 120px}
+#root .wpb .wpb-s960-flexwrap-nowrap,#root .wpb-s960-flexwrap-nowrap{flex-wrap:nowrap}
+#root .wpb .wpb-s960-fontsize-11px,#root .wpb-s960-fontsize-11px{font-size:11px}
+#root .wpb .wpb-s960-fontsize-12-5px,#root .wpb-s960-fontsize-12-5px{font-size:12.5px}
+#root .wpb .wpb-s960-fontsize-12px,#root .wpb-s960-fontsize-12px{font-size:12px}
+#root .wpb .wpb-s960-fontsize-14-5px,#root .wpb-s960-fontsize-14-5px{font-size:14.5px}
+#root .wpb .wpb-s960-fontsize-17px,#root .wpb-s960-fontsize-17px{font-size:17px}
+#root .wpb .wpb-s960-fontsize-19px,#root .wpb-s960-fontsize-19px{font-size:19px}
+#root .wpb .wpb-s960-fontsize-20px,#root .wpb-s960-fontsize-20px{font-size:20px}
+#root .wpb .wpb-s960-fontsize-22px,#root .wpb-s960-fontsize-22px{font-size:22px}
+#root .wpb .wpb-s960-fontsize-28px,#root .wpb-s960-fontsize-28px{font-size:28px}
+#root .wpb .wpb-s960-fontweight-500,#root .wpb-s960-fontweight-500{font-weight:500}
+#root .wpb .wpb-s960-fontweight-720,#root .wpb-s960-fontweight-720{font-weight:720}
+#root .wpb .wpb-s960-fontweight-780,#root .wpb-s960-fontweight-780{font-weight:780}
+#root .wpb .wpb-s960-fontweight-800,#root .wpb-s960-fontweight-800{font-weight:800}
+#root .wpb .wpb-s960-letterspacing-neg-0-55px,#root .wpb-s960-letterspacing-neg-0-55px{letter-spacing:-0.55px}
+#root .wpb .wpb-s960-letterspacing-neg-0-5px,#root .wpb-s960-letterspacing-neg-0-5px{letter-spacing:-0.5px}
+#root .wpb .wpb-s960-letterspacing-neg-0-6px,#root .wpb-s960-letterspacing-neg-0-6px{letter-spacing:-0.6px}
+#root .wpb .wpb-s960-lineheight-1-15,#root .wpb-s960-lineheight-1-15{line-height:1.15}
+#root .wpb .wpb-s960-lineheight-1-16,#root .wpb-s960-lineheight-1-16{line-height:1.16}
+#root .wpb .wpb-s960-lineheight-1-2,#root .wpb-s960-lineheight-1-2{line-height:1.2}
+#root .wpb .wpb-s960-lineheight-1-25,#root .wpb-s960-lineheight-1-25{line-height:1.25}
+#root .wpb .wpb-s960-lineheight-1-3,#root .wpb-s960-lineheight-1-3{line-height:1.3}
+#root .wpb .wpb-s960-lineheight-1-4,#root .wpb-s960-lineheight-1-4{line-height:1.4}
+#root .wpb .wpb-s960-lineheight-18px,#root .wpb-s960-lineheight-18px{line-height:18px}
+#root .wpb .wpb-s960-margin-0,#root .wpb-s960-margin-0{margin:0}
+#root .wpb .wpb-s960-margin-0-2px-12px,#root .wpb-s960-margin-0-2px-12px{margin:0 2px 12px}
+#root .wpb .wpb-s960-margin-10px-2px-0,#root .wpb-s960-margin-10px-2px-0{margin:10px 2px 0}
+#root .wpb .wpb-s960-margin-10px-2px-4px,#root .wpb-s960-margin-10px-2px-4px{margin:10px 2px 4px}
+#root .wpb .wpb-s960-margin-12px-0-14px,#root .wpb-s960-margin-12px-0-14px{margin:12px 0 14px}
+#root .wpb .wpb-s960-margin-4px-0-10px,#root .wpb-s960-margin-4px-0-10px{margin:4px 0 10px}
+#root .wpb .wpb-s960-margin-6px-0-12px,#root .wpb-s960-margin-6px-0-12px{margin:6px 0 12px}
+#root .wpb .wpb-s960-margin-8px-0-0,#root .wpb-s960-margin-8px-0-0{margin:8px 0 0}
+#root .wpb .wpb-s960-marginbottom-20px,#root .wpb-s960-marginbottom-20px{margin-bottom:20px}
+#root .wpb .wpb-s960-marginleft-4px,#root .wpb-s960-marginleft-4px{margin-left:4px}
+#root .wpb .wpb-s960-marginleft-auto,#root .wpb-s960-marginleft-auto{margin-left:auto}
+#root .wpb .wpb-s960-marginright-4px,#root .wpb-s960-marginright-4px{margin-right:4px}
+#root .wpb .wpb-s960-margintop-10px,#root .wpb-s960-margintop-10px{margin-top:10px}
+#root .wpb .wpb-s960-margintop-14px,#root .wpb-s960-margintop-14px{margin-top:14px}
+#root .wpb .wpb-s960-margintop-16px,#root .wpb-s960-margintop-16px{margin-top:16px}
+#root .wpb .wpb-s960-margintop-18px,#root .wpb-s960-margintop-18px{margin-top:18px}
+#root .wpb .wpb-s960-margintop-1px,#root .wpb-s960-margintop-1px{margin-top:1px}
+#root .wpb .wpb-s960-margintop-22px,#root .wpb-s960-margintop-22px{margin-top:22px}
+#root .wpb .wpb-s960-margintop-24px,#root .wpb-s960-margintop-24px{margin-top:24px}
+#root .wpb .wpb-s960-margintop-5px,#root .wpb-s960-margintop-5px{margin-top:5px}
+#root .wpb .wpb-s960-margintop-7px,#root .wpb-s960-margintop-7px{margin-top:7px}
+#root .wpb .wpb-s960-margintop-9px,#root .wpb-s960-margintop-9px{margin-top:9px}
+#root .wpb .wpb-s960-maxwidth-180px,#root .wpb-s960-maxwidth-180px{max-width:180px}
+#root .wpb .wpb-s960-maxwidth-40,#root .wpb-s960-maxwidth-40{max-width:40%}
+#root .wpb .wpb-s960-minwidth-74px,#root .wpb-s960-minwidth-74px{min-width:74px}
+#root .wpb .wpb-s960-minwidth-96px,#root .wpb-s960-minwidth-96px{min-width:96px}
+#root .wpb .wpb-s960-overflowwrap-anywhere,#root .wpb-s960-overflowwrap-anywhere{overflow-wrap:anywhere}
+#root .wpb .wpb-s960-padding-0-11px-10px-32px,#root .wpb-s960-padding-0-11px-10px-32px{padding:0 11px 10px 32px}
+#root .wpb .wpb-s960-padding-0-12px-11px-29px,#root .wpb-s960-padding-0-12px-11px-29px{padding:0 12px 11px 29px}
+#root .wpb .wpb-s960-padding-0-12px-12px,#root .wpb-s960-padding-0-12px-12px{padding:0 12px 12px}
+#root .wpb .wpb-s960-padding-0-18px,#root .wpb-s960-padding-0-18px{padding:0 18px}
+#root .wpb .wpb-s960-padding-0-32px,#root .wpb-s960-padding-0-32px{padding:0 32px}
+#root .wpb .wpb-s960-padding-10px-0-2px,#root .wpb-s960-padding-10px-0-2px{padding:10px 0 2px}
+#root .wpb .wpb-s960-padding-10px-0-6px,#root .wpb-s960-padding-10px-0-6px{padding:10px 0 6px}
+#root .wpb .wpb-s960-padding-10px-18px-0,#root .wpb-s960-padding-10px-18px-0{padding:10px 18px 0}
+#root .wpb .wpb-s960-padding-12px-12px-12px-16px,#root .wpb-s960-padding-12px-12px-12px-16px{padding:12px 12px 12px 16px}
+#root .wpb .wpb-s960-padding-12px-18px-10px,#root .wpb-s960-padding-12px-18px-10px{padding:12px 18px 10px}
+#root .wpb .wpb-s960-padding-14px,#root .wpb-s960-padding-14px{padding:14px}
+#root .wpb .wpb-s960-padding-2px-0-10px,#root .wpb-s960-padding-2px-0-10px{padding:2px 0 10px}
+#root .wpb .wpb-s960-padding-4px-16px-8px,#root .wpb-s960-padding-4px-16px-8px{padding:4px 16px 8px}
+#root .wpb .wpb-s960-padding-7px-0,#root .wpb-s960-padding-7px-0{padding:7px 0}
+#root .wpb .wpb-s960-paddingleft-18px,#root .wpb-s960-paddingleft-18px{padding-left:18px}
+#root .wpb .wpb-s960-paddingtop-12px,#root .wpb-s960-paddingtop-12px{padding-top:12px}
+#root .wpb .wpb-s960-whitespace-normal,#root .wpb-s960-whitespace-normal{white-space:normal}
 /* M187 premium interaction contract.
    This is intentionally semantic instead of screen-specific: Home, Program, Workout, Progress,
    Settings and Onboarding inherit the same typography, control feedback, sheets, scrolling and

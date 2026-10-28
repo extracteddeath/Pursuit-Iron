@@ -827,3 +827,8 @@ Scoped refactor of 74 exact first-prop static JSX style objects in the Program (
 ## Build 956 — Shared static Program/Workout declarations
 
 Migrate 88 further first-property static JSX presentation objects in Program (37) and Workout (51) into 46 reusable class-owned CSS property/value rules. Share spacing tokens for 4/8/12/16px values. Do not alter the engine, history, storage, dynamic state/geometry, timers, Focus or working set controls. No new important declarations. Lower inline style budget 1,958 to 1,870 and enforce call-site guards. This is a scoped cleanup, not a claim that all remaining inline styles are safe to remove. Require candidate/main browser, engine, offline, release and hosted byte checks; physical Android remains separately gated.
+
+
+## Build 957 — Cross-screen shared style ownership
+
+Retire 113 more literal first-property JSX inline style objects across 13 screen and card owners: Home 10, Settings 18, Progress detail 9, Strength snapshot 9, one-rep-max tool 9, comparison 21, exercise charts 1, Thousand Club 5, heatmap 7, Gallery 5, block review 12, legacy cards 1, changelog 6. Reuse 28 B956 CSS declaration owners and add only ten new CSS rules for the remaining shared values. Preserve actual computed sizes/spacing, data-driven styles, training engine, set logger, and motion. No new important rules. Ownership debt ceiling tightens 1,870 to 1,757. Full candidate and deployed browser/core/engine integrity remain compulsory; physical Android testing separate.

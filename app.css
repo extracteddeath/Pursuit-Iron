@@ -107,6 +107,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-s956-gap-10,#root .wpb-s956-gap-10{gap:10px}
 #root .wpb .wpb-s956-padding-3px-0,#root .wpb-s956-padding-3px-0{padding:3px 0}
 #root .wpb .wpb-s956-marginbottom-16,#root .wpb-s956-marginbottom-16{margin-bottom:var(--pi-space-4,16px)}
+/* B957: ten new shared static presentation tokens reused by Home, Progress, Profile and Settings.
+   Other migrated styles reuse B956 owners; dynamic and measured styles remain inline. */
+#root .wpb .wpb-s957-letterspacing-0-3,#root .wpb-s957-letterspacing-0-3{letter-spacing:-0.3px}
+#root .wpb .wpb-s957-padding-0-2px,#root .wpb-s957-padding-0-2px{padding:0 2px}
+#root .wpb .wpb-s957-gap-2,#root .wpb-s957-gap-2{gap:2px}
+#root .wpb .wpb-s957-gap-16,#root .wpb-s957-gap-16{gap:var(--pi-space-4,16px)}
+#root .wpb .wpb-s957-padding-3-5px-0,#root .wpb-s957-padding-3-5px-0{padding:3.5px 0}
+#root .wpb .wpb-s957-height-100,#root .wpb-s957-height-100{height:100%}
+#root .wpb .wpb-s957-padding-14px-16px-6px,#root .wpb-s957-padding-14px-16px-6px{padding:14px 16px 6px}
+#root .wpb .wpb-s957-margintop-4,#root .wpb-s957-margintop-4{margin-top:var(--pi-space-1,4px)}
+#root .wpb .wpb-s957-lineheight-1-5,#root .wpb-s957-lineheight-1-5{line-height:1.5}
+#root .wpb .wpb-s957-texttransform-capitalize,#root .wpb-s957-texttransform-capitalize{text-transform:capitalize}
 /* M187 premium interaction contract.
    This is intentionally semantic instead of screen-specific: Home, Program, Workout, Progress,
    Settings and Onboarding inherit the same typography, control feedback, sheets, scrolling and

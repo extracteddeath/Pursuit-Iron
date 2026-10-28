@@ -214,7 +214,7 @@ try {
   if(width>=600) await page.click('[aria-label="Exit focused mode"]');
   // Real hit boxes, not invisible pseudo-elements: all exercise actions remain
   // reachable on the smallest phone and the destructive second tap cannot clip.
-  const actionBoxes=await page.$eval('.wpb-exercise-head-actions>button',buttons=>buttons.map(button=>{
+  const actionBoxes=await page.$$eval('.wpb-exercise-head-actions>button',buttons=>buttons.map(button=>{
     const r=button.getBoundingClientRect();return {width:r.width,height:r.height,
       left:r.left,right:r.right,aria:button.getAttribute('aria-label')};
   }));

@@ -849,3 +849,8 @@ Build 959 certification note: automated source, release and browser checks must 
 ## Build 960 — Shared CSS reuse across remaining static JSX
 
 Retire 133 additional strictly static JSX presentation objects from App across Plan, Workout, Next, Progress, Profile and onboarding, reusing the B955–B958 property owners wherever values match and adding only required missing utilities. Each migrated value is layout or typography; retain all state-driven colors, values, calculations, transitions, inline animation and interaction ownership. Tighten verified presentation debt ceiling 1,677 → 1,544; add a permanent exact-debt/utility-ownership contract and retain the zero-duplicate-priority and 2,061-CSS-priority ceilings. This migration is paint/layout parity work, not an engine change. Complete full engine, browser, offline, version and hosted-byte verification before sign-off; physical Android review separately required.
+
+
+## Build 961 — Dialog overlay and information-icon CSS ownership
+
+Consolidate 25 repeated fixed modal backdrop style objects into a deduplicated set of static CSS variants, keeping each original overlay's backdrop opacity, z-index, alignment, padding, animation and independent dismiss callback. Move 11 repeated informational Lucide icon offsets to one shared rule. Preserve all dynamic colors, workout logging, focus ownership, program logic, movement timing and history. Reduce static inline-presentation debt ceiling 1,544 → 1,508 and add a permanent explicit owner/geometry guard. Require all candidate browser, lifecycle, release, offline and production-byte checks; physical Android remains a distinct release sign-off.

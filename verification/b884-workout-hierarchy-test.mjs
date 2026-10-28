@@ -80,3 +80,13 @@ assert.ok(!workout.includes('padding: "8px 13px", borderRadius: 999, border: '),
 assert.ok(css.includes('/* B969: compact workout action rail.') &&
   css.includes('.wpb-workout-tools .wpb-workout-tool[data-selected="true"]'),
   'One CSS owner paints the compact icon rail and selected state');
+
+/* B970: keep notes discoverable in one toolbar action and CSS-owned hint surfaces. */
+assert.ok(!workout.includes('children: "Session note · " + e.note'),
+  'Exercise header must not duplicate the session note toolbar action');
+assert.ok(workout.includes('{ k: "session-note", hasNote: !!e.note') &&
+  workout.includes('"data-has-note": c.hasNote ? "true" : undefined'),
+  'Workout note action retains its accessible label and displays saved-note presence');
+for(const cls of ['wpb-workout-pinned-note','wpb-workout-pinned-note-text','wpb-workout-starting-hint']){
+ assert.ok(css.includes('#root .wpb-workout .'+cls+'{'),'CSS owns workout note/hint presentation: '+cls);
+}

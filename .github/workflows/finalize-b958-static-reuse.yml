@@ -117,6 +117,16 @@ jobs:
           assert.ok(audit.includes('const MAX_INLINE_STYLE_OBJECTS = 1757;'),'Expected B957 inline budget unchanged');
           audit=audit.replace('const MAX_INLINE_STYLE_OBJECTS = 1757;',
             'const MAX_INLINE_STYLE_OBJECTS = 1677; // B958: 80 more static screen styles migrated via existing utility owners.');
+          // The B957 baseline asserted exact class-owned surface counts; B958 adds
+          // class-owned nodes on four of those same surfaces, so advance the
+          // expected counts while preserving the exact B957 assertions.
+          for(const [name,oldCount,newCount] of [
+            ['Home',10,12],['SettingsView',18,20],['ProgressDetail',9,10],['CompareView',21,22]
+          ]){
+            const line=audit.split('\\n').find(x=>x.includes('"'+name+' shared owner regression"'));
+            assert.ok(line&&line.includes('.length,'+oldCount+','),'B957 historical contract changed '+name);
+            audit=audit.replace(line,line.replace('.length,'+oldCount+',','.length,'+newCount+','));
+          }
           const guard=[
             '// B958 cross-screen shared presentation ownership: 80 literal JSX objects retired.',
             'const b958Names='+JSON.stringify(names)+';',

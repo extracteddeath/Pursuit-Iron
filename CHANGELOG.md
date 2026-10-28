@@ -1,3 +1,11 @@
+## Build 969 — Workout action rail: accessible compact icons
+
+- Replace the scrolling text-chip action strip with 48px icon controls; provide per-action accessible names and browser tooltips.
+- Expose genuine pressed states for Warm-up and Superset, without changing their feature callbacks.
+- Remove the toolbar's repeated inline presentation rules and keep theme/geometry in shared CSS.
+- Retain horizontal scrolling only when available actions exceed the viewport; preserve normal/Focus workout, set inputs, rest and pinned note actions.
+- Extend phone/tablet browser verification for labels, real hit boxes, pressed state and adaptive overflow; engine 0.65.9 and training data are unchanged.
+
 ## Build 968 — Accessible workout exercise header actions
 
 - Give the Info, History and Skip actions real 48px hit targets, preserving the compact normal and Focus workout layouts.

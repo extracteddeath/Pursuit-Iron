@@ -134,10 +134,10 @@ assert.equal(previousWorkoutSet({weight:200,reps:5,sets:[null]},0),null,'malform
 assert.deepEqual(rawSquat,originalSquat,'display references do not calibrate or mutate history');
 for (const candidate of [squatProgram, {...squatProgram,engineSource:undefined,custom:true}]) {
     const advice = sessionSuggestion(candidate,squatDay,0,null,'lb',1,squatHistory);
-    assert.equal(advice.action,'decrease_load','generated and custom owners both lower the incomplete heavy ramp');
-    assert.equal(advice.weight,190);
+    assert.equal(advice.action,'hold_load','Double progression holds last weight until the lifter chooses otherwise');
+    assert.equal(advice.weight,215); assert.equal(advice.optionalLowerLoad,190);
     const sets = prescribeSets(candidate,squatDay,EX_BY_ID['back-squat'],0,1,'lb',advice,{}, {},squatHistory,false);
-    assert.deepEqual(sets.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['190','5']));
+    assert.deepEqual(sets.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['215','5']));
 }
 console.log('PASS M220 squat regression: latest evidence remains raw; generated/custom incomplete rep misses lower all four targets to 190 x 5.');
 
@@ -161,8 +161,8 @@ generatedRamp.overrides[`${squatDay.id}:0`]=markUserPrescriptionOverride(generat
 const generatedRampHistory=[{...inclineHistory[0],programId:generatedRamp.id,dayId:squatDay.id,
     perf:{'back-squat':inclineHistory[0].perf['low-inc-bb-bench']}}];
 const generatedAdvice=sessionSuggestion(generatedRamp,generatedRamp.days.find(d=>d.id===squatDay.id),0,null,'lb',1,generatedRampHistory);
-assert.equal(generatedAdvice.action,'decrease_load');
-assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[190,190,190,190],
+assert.equal(generatedAdvice.action,'hold_load'); assert.equal(generatedAdvice.optionalLowerLoad,190);
+assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[210,210,210,210],
     'Generated and authored programs share the same fatigue-aware straight-set calibration');
 
 

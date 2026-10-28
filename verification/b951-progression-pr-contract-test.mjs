@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { completedSetPR } from '../modules/workout-pr.js';
+import { applyLiveAutoregulation, rollbackLiveAutoregulation } from '../modules/next-engine/live-autoregulation.js';
+const e1rm=(w,r)=>w*(1+Math.min(r,12)/30), row={weight:'120',reps:'10',done:false};
+assert.deepEqual(completedSetPR(row,149,e1rm),{w:120,r:10,est:160});
+for(const invalid of [{...row,done:true},{...row,warm:true},{...row,sub:true},{...row,weight:'0'},{...row,reps:''},{...row,reps:'3.5'},{...row,reps:'bad'},{...row,typeOverride:'warmup'}])
+  assert.equal(completedSetPR(invalid,149,e1rm),null,'Only completed, valid working sets can beat history');
+assert.equal(completedSetPR(row,160,e1rm),null,'A tie is not a personal record');
+assert.equal(completedSetPR(row,0,e1rm),null,'A first exposure is not a personal record');
+const pending=()=>({weight:'100',reps:'8',done:false,auto:true,valueOwner:'prescription',target:{w:100,reps:[8,12],rir:1,prefillReps:'8'}});
+const sets=[{...pending(),reps:'6',done:true,actualRIR:0},{...pending(),reps:'7',done:true,actualRIR:0},pending()];
+const out=applyLiveAutoregulation({sets,sourceIndex:1,cell:{sets:3,reps:[8,12],rir:[1,2],role:'hypertrophy_isolation',progressionStyle:'double'},snapLoad:w=>Math.floor(w/5)*5});
+assert.equal(out.decision.action,'suggest_pending_load_reduction');
+assert.equal(out.sets[2].weight,'100','Recommending a reduction must not rewrite the actual weight');
+assert.equal(out.sets[2].target.w,100);
+assert.equal(out.sets[2].loadAdvice.toLoad,95);
+assert.equal(out.sets[2].recoveryLimited,undefined,'An unaccepted recommendation is not a reduced set');
+assert.deepEqual(rollbackLiveAutoregulation(out.sets,0),sets,'Undoing evidence removes the advice');
+const app=fs.readFileSync('modules/App.js','utf8');
+const gesture=app.slice(app.indexOf('const toggleDone ='),app.indexOf('const computeNextPrefill ='));
+assert.ok(gesture.includes('completedSetPR(set, prBaseline[data[ei].id], e1rm)'));
+assert.ok(gesture.indexOf('setPrFlash(')<gesture.indexOf('setData(d =>'), 'Celebration is an event, not a state updater');
+assert.ok(!gesture.slice(gesture.indexOf('setData(d =>')).includes('setPrFlash('));
+assert.ok(gesture.includes('const acceptLowerLoad ='),'The user must accept a lighter load');
+assert.ok(app.includes('data-load-advice'));
+console.log('PASS B951 PR and double progression: no false records and no automatic load reductions.');

@@ -764,7 +764,22 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
 // Review and Workout consume this same boundary. A user can decline one upcoming
 // load/rep recommendation without changing the progression method or stored history.
 function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
-    const suggestion = engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history);
+    let suggestion = engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history);
+    // Double progression is rep-first. When historical fatigue suggests a
+    // lower weight, show it as advice instead of silently changing the load.
+    if (suggestion?.action === 'decrease_load' && !program.config?.percentScheme) {
+        const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+        const style = ex && resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, dayPerf, history, day.id);
+        const prior = convertHistoryLoad(suggestion.last?.weight, suggestion.lastUnit || unit, unit);
+        const keep = ex && Number(prior) > 0 ? loadableAtOrBelow(ex, Number(prior), unit) : 0;
+        if (style === 'double' && keep > Number(suggestion.weight)) {
+            const lower = suggestion.weight;
+            suggestion = { ...suggestion, weight: keep, dir: 'hold', action: 'hold_load',
+                optionalLowerLoad: lower,
+                setTargets: suggestion.setTargets?.map(t => ({ ...t, weight: keep, earnedLoadIncrease: false })),
+                reason: `Hold ${keep} ${unit} and build reps; ${lower} ${unit} is available if today's performance calls for a reduction.` };
+        }
+    }
     if (!suggestion || !applyReviewChoice || !program.sessionPlanChoices || !Object.keys(program.sessionPlanChoices).length) return suggestion;
     const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
     if (!ex) return suggestion;
@@ -1092,6 +1107,9 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         auto: true,
         valueOwner: sug?.action === "user_hold" && t.kind !== "warmup" ? "user" : "prescription",
         ...(sug?.action === "user_hold" && t.kind !== "warmup" ? { planReviewHeld: true } : {}),
+        ...(t.kind !== 'warmup' && Number(sug?.optionalLowerLoad) > 0 && Number(sug.optionalLowerLoad) < Number(t.weight)
+            ? { loadAdvice: { fromLoad: Number(t.weight), toLoad: sug.optionalLowerLoad,
+                sourceIndices: [], reasonCode: 'prior_session_fatigue' } } : {}),
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
             : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: estimate ? "estimate" : sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps),

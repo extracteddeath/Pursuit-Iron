@@ -9155,3 +9155,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-readiness-option>svg{flex-shrink:0;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-readiness-skip{width:100%;min-height:48px;border:0;background:transparent;color:var(--wpb-theme-muted);font:inherit;font-weight:650}
 #root .wpb .wpb-readiness-option:focus-visible,#root .wpb .wpb-readiness-skip:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+
+/* B951 — Load reductions are explicit recommendations, not automatic edits. */
+#root .wpb-workout .wpb-load-advice{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:6px 8px;margin:2px 0 5px;border:1px solid var(--wpb-theme-border);border-radius:10px;color:var(--wpb-theme-muted);background:var(--wpb-theme-card);font-size:12px;line-height:1.35}
+#root .wpb-workout .wpb-load-advice>span{min-width:0;flex:1}
+#root .wpb-workout .wpb-load-advice>button{flex-shrink:0;min-height:38px;padding:6px 10px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);border:1px solid var(--wpb-theme-border);border-radius:9px;font:inherit;font-weight:700;cursor:pointer}
+#root .wpb-workout .wpb-load-advice>button:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(max-width:360px){#root .wpb-workout .wpb-load-advice{align-items:flex-start;flex-direction:column}}

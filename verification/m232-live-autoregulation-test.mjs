@@ -9,12 +9,12 @@ const sets = [{ ...pending(), reps: '6', actualRIR: 0, done: true }, { ...pendin
 const snapLoad = x => Math.floor(x / 5) * 5, input = { sets, sourceIndex: 1, cell, snapLoad };
 const before = structuredClone(sets), adjusted = applyLiveAutoregulation(input);
 assert.deepEqual(sets, before);
-assert.equal(adjusted.decision.action, 'reduce_pending_load');
+assert.equal(adjusted.decision.action, 'suggest_pending_load_reduction');
 assert.equal(adjusted.decision.earnedProgression, false);
 assert.equal(adjusted.sets[0], sets[0]); assert.equal(adjusted.sets[1], sets[1]);
-assert.equal(adjusted.sets[2].weight, '95'); assert.equal(adjusted.sets[2].reps, sets[2].reps);
+assert.equal(adjusted.sets[2].weight, '100'); assert.equal(adjusted.sets[2].loadAdvice.toLoad,95); assert.equal(adjusted.sets[2].reps, sets[2].reps);
 assert.deepEqual(adjusted.sets[2].target.reps, sets[2].target.reps);
-assert.equal(adjusted.sets[2].recoveryLimited, true);
+assert.equal(adjusted.sets[2].recoveryLimited, undefined);
 assert.equal(applyLiveAutoregulation({ ...input, sets: adjusted.sets }).sets, adjusted.sets, 'same event never compounds');
 for (const source of [0, 1]) assert.deepEqual(rollbackLiveAutoregulation(adjusted.sets, source), sets);
 const restored = JSON.parse(JSON.stringify(adjusted.sets));
@@ -41,8 +41,8 @@ const ex = EX_BY_ID['bb-bench'], program = { id: 'live-232', custom: true, weeks
     days: [{ id: 'd', label: 'Accessory', primaryIndex: -1, exercises: [ex.id] }], overrides: { 'd:0': { sets: 3, reps: '8-12', rir: '1-2', progressionStyle: 'double' } } };
 const finished = adjusted.sets.map(s => ({ ...s, done: true, reps: '12', actualRIR: 2 }));
 const perf = loggedWorkoutPerformance(program, program.days[0], [{ id: ex.id, slot: 0, note: '', sets: finished }], 1, 'lb', {}, []);
-assert.equal(perf[ex.id].sets[2].recoveryLimited, true, 'live limitation survives actual production serialization');
-assert.equal(progressionExposureContext(perf[ex.id].sets).badDay, true);
+assert.equal(perf[ex.id].sets[2].recoveryLimited, undefined, 'Unaccepted advice must not count as lowered work');
+assert.equal(progressionExposureContext(perf[ex.id].sets).badDay, false);
 const history = [{ id: 'completed', programId: program.id, dayId: 'd', date: 1, unit: 'lb', perf }];
 assert.notEqual(sessionSuggestion(program, program.days[0], 0, null, 'lb', 1, history).action, 'increase_load', 'eased work cannot earn future progression');
 console.log('PASS M232: two observed misses, one bounded loadable pending reduction, completed/manual/protocol protection, idempotent resume/undo and no earned progression from eased work.');
@@ -88,7 +88,7 @@ assert.equal(applyLiveAutoregulation({...repInput,sets:lowerLoad}).sets,lowerLoa
 const unknown=repRows().map((s,i)=>i===0?{...s,actualRIR:null}:s);
 assert.equal(applyLiveAutoregulation({...repInput,sets:unknown}).sets,unknown,'missing effort is never assumed to be failure or spare reps');
 const chain=capped.sets.map((s,i)=>i===1?{...s,done:true,reps:'6',actualRIR:0}:i===0?{...s,reps:'6',actualRIR:0}:s);
-assert.equal(applyLiveAutoregulation({...repInput,sets:chain,sourceIndex:1}).sets[2].weight,'95','a previous rep cap cannot block the two-miss load safeguard');
+assert.equal(applyLiveAutoregulation({...repInput,sets:chain,sourceIndex:1}).sets[2].loadAdvice?.toLoad,95,'a previous rep cap cannot block the two-miss load safeguard');
 assert.equal(liveEffortFeedback(unknown,0),'Optional · guides suggestions');
 assert.equal(liveEffortFeedback(capped.sets,0),'Next set reps adjusted');
 assert.equal(liveEffortFeedback(repRows(),0),'Saved · next target unchanged');
@@ -128,7 +128,7 @@ console.log('PASS M359: deliberate failure/AMRAP/percentage sets neither authori
 // M296: an opening snapshot cannot retain a live reduction without its logged sources.
 {
 const adjusted = applyLiveAutoregulation(input).sets;
-assert.equal(adjusted[2].weight, '95');
+assert.equal(adjusted[2].weight, '100'); assert.equal(adjusted[2].loadAdvice.toLoad,95);
 assert.equal(reconcileRestoredLiveAdjustments(adjusted), adjusted, 'Real two-miss observations survive a genuine resume');
 for (const change of ['unlogged', 'missing_rir', 'self_source', 'missing_source']) {
     const saved = structuredClone(adjusted);
@@ -138,7 +138,7 @@ for (const change of ['unlogged', 'missing_rir', 'self_source', 'missing_source'
     if (change === 'missing_source') saved[2].liveAdjustment.sourceIndices = [0, 99];
     const before = structuredClone(saved), fixed = reconcileRestoredLiveAdjustments(saved);
     assert.equal(fixed[2].weight, '100', change + ': remove orphaned reduction');
-    assert.equal(fixed[2].liveAdjustment, undefined);
+    assert.equal(fixed[2].liveAdjustment, undefined); assert.equal(fixed[2].loadAdvice,undefined);
     assert.deepEqual(saved, before);
     assert.equal(reconcileRestoredLiveAdjustments(fixed), fixed, 'Restore repair is idempotent');
     for (const protectedRow of [{ done: true }, { auto: false }, { valueOwner: 'user' }, { weight: '92.5' }]) {

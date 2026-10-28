@@ -10,7 +10,7 @@ const authoredIntent = row => row?.typeOverride || row?.target?.failure || row?.
 const hold = (sets, reasonCode) => ({ sets, decision: { schemaVersion: 1, action: 'hold', reasonCode, earnedProgression: false } });
 
 const restorePendingAdjustment = row => {
-    const { liveAdjustment, retuneFrom, retuneSrc, autoTuned, hint, recoveryLimited, suggested, ...rest } = row;
+    const { liveAdjustment, retuneFrom, retuneSrc, autoTuned, hint, recoveryLimited, suggested, loadAdvice, ...rest } = row;
     return { ...rest, weight: retuneFrom.weight, reps: retuneFrom.reps, target: retuneFrom.target,
         ...(retuneFrom.recoveryLimited !== undefined ? { recoveryLimited: retuneFrom.recoveryLimited } : {}) };
 };
@@ -23,7 +23,7 @@ export function reconcileRestoredLiveAdjustments(sets) {
     const out = sets.map((row, index) => {
         if (!untouched(row) || authoredIntent(row) || !row.retuneFrom || !row.liveAdjustment) return row;
         const adjustment = row.liveAdjustment;
-        const count = adjustment.action === 'reduce_pending_load' ? 2
+        const count = ['reduce_pending_load', 'suggest_pending_load_reduction'].includes(adjustment.action) ? 2
             : adjustment.action === 'cap_pending_reps' ? 1 : null;
         if (count === null) return row; // Unknown protocols are not ours to rewrite.
         const sources = adjustment.sourceIndices;
@@ -93,11 +93,13 @@ function applyLiveLoadReduction({ sets, sourceIndex, cell, context = {}, snapLoa
     if (!(load > 0) || typeof snapLoad !== 'function') return hold(sets, 'unknown_loadability');
     const next = snapLoad(load * .95);
     if (!Number.isFinite(next) || next <= 0 || next >= load || next < load * .9) return hold(sets, 'no_small_loadable_reduction');
-    const decision = { schemaVersion: 1, action: 'reduce_pending_load', reasonCode: 'two_observed_accessory_misses', sourceIndices: indices,
+    const decision = { schemaVersion: 1, action: 'suggest_pending_load_reduction', reasonCode: 'two_observed_accessory_misses', sourceIndices: indices,
         pendingIndex, fromLoad: load, toLoad: next, earnedProgression: false, confidence: 'moderate' };
     const result = [...sets];
-    result[pendingIndex] = { ...pending, weight: String(next), target: { ...pending.target, w: next }, autoTuned: true, hint: 'down',
-        recoveryLimited: true, liveAdjustment: decision, retuneSrc: indices.at(-1),
+    // Suggestion is not consent: do not overwrite weight, reps or target.
+    result[pendingIndex] = { ...pending, loadAdvice: { fromLoad: load, toLoad: next,
+            sourceIndices: indices, reasonCode: decision.reasonCode }, liveAdjustment: decision,
+        retuneSrc: indices.at(-1),
         retuneFrom: pending.retuneFrom ?? { weight: pending.weight, reps: pending.reps, target: pending.target, recoveryLimited: pending.recoveryLimited } };
     return { sets: result, decision };
 }
@@ -151,7 +153,7 @@ function capPendingReps({ sets, sourceIndex, cell, context = {} }) {
 
 export function applyLiveAutoregulation(args) {
     const reduced = applyLiveLoadReduction(args);
-    if (reduced.decision.action === 'reduce_pending_load') return reduced;
+    if (reduced.decision.action === 'suggest_pending_load_reduction') return reduced;
     return capPendingReps({ ...args, sets: reduced.sets });
 }
 
@@ -163,6 +165,7 @@ export function liveEffortFeedback(sets, sourceIndex) {
     const adjustment = pending.liveAdjustment;
     if (untouched(pending) && adjustment?.sourceIndices?.includes(sourceIndex)) {
         if (adjustment.action === 'cap_pending_reps') return 'Next set reps adjusted';
+        if (adjustment.action === 'suggest_pending_load_reduction') return 'Lower load suggested · not applied';
         if (adjustment.action === 'reduce_pending_load') return 'Next set load eased';
     }
     return 'Saved · next target unchanged';

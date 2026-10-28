@@ -22,6 +22,7 @@ import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutli
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { workoutNavLabel } from './workout-nav-labels.js';
+import { completedSetPR } from './workout-pr.js';
 import { withSessionPlanChoice } from './session-plan.js';
 import {
     addedMinutes, advanceLegacyFirstCycleBlock, ageFrom, ALL_EQUIP_IDS, ALL_PLATES, applyCustomProgramSettings,
@@ -11426,12 +11427,16 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         setSnack({ msg: "Resumed your in-progress workout" });
     }, []);
     const flashSnack = (msg, snapData, snapIdx) => setSnack({ msg, undo: () => { setData(snapData); setExIdx(snapIdx); setSnack(null); } });
-    const prHitRef = useRef(new Set());
     const prFlashTimer = useRef(null);
-    // all-time best estimated 1RM per exercise BEFORE this session (this session isn't in history yet)
+    // Historical best uses completed sessions converted to the active unit.
     const prBaseline = useMemo(() => Object.fromEntries(Object.entries(
         liftBests(history, unit, h => !sessionIdRef.current || h.id !== sessionIdRef.current))
         .map(([id, best]) => [id, best.e1rm])), [history, unit]);
+    // Never re-celebrate a record already present when the workout resumes.
+    const prHitRef = useRef(null);
+    if (prHitRef.current === null) prHitRef.current = new Set(
+        data.filter(e => e?.sets?.some(s => s.done &&
+            completedSetPR({ ...s, done: false }, prBaseline[e.id], e1rm))).map(e => e.id));
     // Wall-clock rest timer: anchored to an absolute end timestamp instead of tick-decrementing.
     // Browsers throttle background intervals to ≥1/min, so the old `r - 1` countdown silently froze
     // whenever the screen locked or the PWA was backgrounded mid-rest (i.e. every time you put the
@@ -11719,6 +11724,17 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         const ex = EX_BY_ID[data[ei].id];
         const set = data[ei].sets[si];
         const wasDone = set.done;
+        // React may replay state updaters; PR effects belong to one real
+        // not-done → done gesture, with an actual previous record to beat.
+        const record = !wasDone ? completedSetPR(set, prBaseline[data[ei].id], e1rm) : null;
+        if (record && !prHitRef.current.has(data[ei].id)) {
+            prHitRef.current.add(data[ei].id);
+            setPrFlash({ name: ex.name, ...record });
+            try { beep(); } catch {}
+            buzz("success");
+            if (prFlashTimer.current) clearTimeout(prFlashTimer.current);
+            prFlashTimer.current = setTimeout(() => setPrFlash(null), 2400);
+        }
         // Logging is a more meaningful state change than a generic tap. Own the haptic here so the
         // global press listener does not stack a second vibration on the same gesture. Undo stays light.
         buzz(wasDone ? "light" : "medium");
@@ -11838,20 +11854,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             if (!wasDone && !set.warm && !set.sub) {
                 const W = parseFloat(set.weight), R = parseInt(set.reps);
                 if (W > 0 && R > 0) {
-                    // live PR flash: this set's estimated 1RM beats the all-time best for this lift
-                    const est = e1rm(W, R);
-                    if (prBaseline[e.id] > 0 && est > prBaseline[e.id] && !prHitRef.current.has(e.id)) {
-                        prHitRef.current.add(e.id);
-                        setPrFlash({ name: ex.name, est, w: W, r: R });
-                        try {
-                            beep();
-                        }
-                        catch { }
-                        buzz("success");
-                        if (prFlashTimer.current)
-                            clearTimeout(prFlashTimer.current);
-                        prFlashTimer.current = setTimeout(() => setPrFlash(null), 2400);
-                    }
                     sets = computeNextPrefill(sets, si, ex, e.slot);
                 }
             }
@@ -11861,6 +11863,16 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             goEx(advanceTo);
     };
     // Apply the canonical session-only guards to observed reps/RIR; never infer unreported effort.
+    // No automatic weight drop: only tapping the recommendation applies it.
+    const acceptLowerLoad = (ei, si) => setData(rows => rows.map((e, i) => i !== ei ? e : {
+        ...e, sets: e.sets.map((s, j) => {
+            const w = Number(s.loadAdvice?.toLoad);
+            if (j !== si || s.done || !(w > 0 && w < Number(s.weight))) return s;
+            const { loadAdvice, liveAdjustment, retuneFrom, retuneSrc, ...rest } = s;
+            return { ...rest, weight: String(w), auto: false, valueOwner: "user",
+                recoveryLimited: true, autoTuned: false, hint: undefined };
+        })
+    }));
     const computeNextPrefill = (sets, si, ex, slot) => {
         if (program.config?.progression === 'manual' || program.config?.percentScheme || !ex) return sets;
         const cell = computeCell(program, day, ex.id, slot, weekIndex);
@@ -12778,7 +12790,13 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                     borderLeft: `4px solid ${isActive ? C.accent : isEffort ? `${C.accent}55` : "transparent"}`,
                                     background: isActive ? C.accentDim : "transparent",
                                     transition: "opacity .18s, background .18s"
-                                }, children: [_jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 7 : 8, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsxs("button", { type: "button", "data-set-options-trigger": true, "data-noswipe": true,
+                                }, children: [!s.done && s.loadAdvice && Number(s.loadAdvice.toLoad) < Number(s.weight) &&
+                                    _jsxs("div", { className: "wpb-load-advice", "data-load-advice": true, children: [
+                                        _jsx("span", { children: `Keep ${s.weight} ${unit}, or consider ${s.loadAdvice.toLoad} ${unit} if today's performance warrants it.` }),
+                                        _jsx("button", { type: "button", className: "pressable", onClick: () => acceptLowerLoad(ei, si),
+                                            "aria-label": `Use suggested ${s.loadAdvice.toLoad} ${unit} for set ${label}`,
+                                            children: `Use ${s.loadAdvice.toLoad} ${unit}` })
+                                    ] }), _jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 7 : 8, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsxs("button", { type: "button", "data-set-options-trigger": true, "data-noswipe": true,
                                             onClick: () => { setSetOptions({ ei, si }); setSetRemoveConfirm(false); },
                                             "aria-haspopup": "dialog", "aria-expanded": setOptions?.ei === ei && setOptions?.si === si,
                                             "aria-label": `Options for ${s.warm ? "warm-up" : s.sub ? s.kind : "working"} set ${label}`,
@@ -13295,7 +13313,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                     _jsx("p", { style: { margin: "12px 2px 0", fontSize: 12, color: C.muted, lineHeight: 1.4 },
                       children: "Completed sets are retained. You can undo this adjustment. If there is acute pain, inability to bear weight, or worsening symptoms, stop the workout and seek medical care." })
                   ] })
-              }) }), _jsx(Exit, { when: exList, children: exList && _jsx(SessionExerciseListSheet, { data: data, exIdx: exIdx, onJump: goEx, onMove: moveExerciseInSession, onSkip: removeExerciseFromSession, onReorderStart: beginReorder, onReorderEnd: endReorder, onAdd: () => { setExList(false); setAddEx(true); }, onClose: () => setExList(false) }) }), _jsx(Exit, { when: !!addEx, children: addEx && _jsx(ExercisePickerSheet, { onPick: addExerciseToSession, onClose: () => setAddEx(false), banned: banned, title: "Add exercise" }) }), prFlash && (_jsx("div", { onClick: () => setPrFlash(null), style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 14px)", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 50, pointerEvents: "auto", padding: "0 16px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, maxWidth: 360, padding: "12px 16px", borderRadius: 16, background: C.warn, color: C.warnText, boxShadow: "0 12px 30px rgba(0,0,0,.4)", animation: "fadeUp .35s cubic-bezier(.2,.8,.3,1) backwards" }, children: [_jsx(Trophy, { size: 22, color: C.warnText, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 800, letterSpacing: .2 }, children: ["New PR \u2014 ", prFlash.name] }), _jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, opacity: .85, marginTop: 1 }, children: ["est ", prFlash.est, " ", unit, " \u00B7 ", prFlash.w, unit, "\u00D7", prFlash.r] })] })] }) })), snack && _jsx(UiNotice, { message: snack.msg, onUndo: snack.undo }), _jsx(Exit, { when: !readiness || readinessOpen, children: (!readiness || readinessOpen) &&
+              }) }), _jsx(Exit, { when: exList, children: exList && _jsx(SessionExerciseListSheet, { data: data, exIdx: exIdx, onJump: goEx, onMove: moveExerciseInSession, onSkip: removeExerciseFromSession, onReorderStart: beginReorder, onReorderEnd: endReorder, onAdd: () => { setExList(false); setAddEx(true); }, onClose: () => setExList(false) }) }), _jsx(Exit, { when: !!addEx, children: addEx && _jsx(ExercisePickerSheet, { onPick: addExerciseToSession, onClose: () => setAddEx(false), banned: banned, title: "Add exercise" }) }), prFlash && (_jsx("div", { onClick: () => setPrFlash(null), style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 14px)", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 50, pointerEvents: "auto", padding: "0 16px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, maxWidth: 360, padding: "12px 16px", borderRadius: 16, background: C.warn, color: C.warnText, boxShadow: "0 12px 30px rgba(0,0,0,.4)", animation: "fadeUp .35s cubic-bezier(.2,.8,.3,1) backwards" }, children: [_jsx(Trophy, { size: 22, color: C.warnText, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 800, letterSpacing: .2 }, children: ["New estimated 1RM best \u2014 ", prFlash.name] }), _jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, opacity: .85, marginTop: 1 }, children: ["est ", prFlash.est, " ", unit, " \u00B7 ", prFlash.w, unit, "\u00D7", prFlash.r] })] })] }) })), snack && _jsx(UiNotice, { message: snack.msg, onUndo: snack.undo }), _jsx(Exit, { when: !readiness || readinessOpen, children: (!readiness || readinessOpen) &&
     _jsx(SessionChoiceDialog, { title: "How are you feeling?", className: "wpb-readiness-dialog",
         dismissible: !!readiness, onClose: () => setReadinessOpen(false),
         children: _jsxs("div", { className: "wpb-readiness-content", children: [

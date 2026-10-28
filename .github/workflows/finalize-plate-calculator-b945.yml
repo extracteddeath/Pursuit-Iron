@@ -28,7 +28,7 @@ jobs:
             const p="RELEASE_MANIFEST.json",m=JSON.parse(fs.readFileSync(p,"utf8"));
             if (m.build !== 944) throw new Error("Expected build 944 before B945 finalization");
             m.uiMilestone="Build 944 · Conventional plate loading and gym inventory safety";
-            fs.writeFileSync(p,JSON.stringify(m,null,2)+"\\n");
+            fs.writeFileSync(p,JSON.stringify(m,null,2));
           '
       - name: Finalize production manifests, cache revision and build number
         run: node scripts/finalize-release.mjs --next-build

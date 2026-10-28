@@ -47,6 +47,22 @@ try {
  await page.click('[aria-label="Close Session notes"]');
  await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
  await page.waitForSelector('[data-testid="set-0-2"]');snap=await getLive();assert.deepEqual(snap.sessionProgressionOrigins['bb-bench'],firstOrigin);assert.equal(snap.sessionProgressions['bb-bench'],'dynamic');assert.equal(snap.sessionNote,'Try an earlier session');assert.equal(snap.data[0].note,'Pause on chest');
+  // B970: the compact icon is the sole visible per-exercise note action.
+  assert.equal(await page.$$eval('.wpb-exercise-heading .wpb-session-choice',els=>els.length),0,
+    'Exercise heading does not insert an extra note row');
+  const noteAction='[aria-label="Edit session note"][data-has-note="true"]';
+  await page.waitForSelector(noteAction);
+  const noteMarker=await page.$eval(noteAction,el=>({
+    marker:getComputedStyle(el,'::after').content,
+    width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height
+  }));
+  assert.equal(noteMarker.marker,'""','Saved note exposes a visible indicator');
+  assert.ok(noteMarker.width>=48&&noteMarker.height>=48,'Note action retains its 48px hit target');
+  await page.click(noteAction);
+  await page.waitForSelector('[aria-label="Session notes"].wpb-session-dialog');
+  assert.equal(await page.$eval('.wpb-session-note-editor:nth-child(2) textarea',n=>n.value),
+    'Pause on chest','Toolbar opens the persisted exercise note');
+  await page.click('[aria-label="Close Session notes"]');
  await page.click('[aria-label="Finish workout"]');await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='Save & finish'));
  await clickText('Save & finish');
  await page.waitForSelector('[aria-label="Update program progression?"]');

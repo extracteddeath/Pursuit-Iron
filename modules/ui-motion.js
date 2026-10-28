@@ -88,6 +88,20 @@ function tick(now) {
     });
     frame = active.size ? requestAnimationFrame(tick) : 0;
 }
+// Initial focus and later keyboard navigation must choose from the *same*
+// genuinely usable items. :not(:disabled) alone includes aria-disabled,
+// hidden and inert controls (and menus can change while open).
+function availableMenuItems(menu) {
+    return [...menu.querySelectorAll('[role="menuitem"]')].filter(el => {
+        if (el.disabled || el.getAttribute('aria-disabled') === 'true' ||
+            el.getAttribute('tabindex') === '-1' ||
+            el.closest('[inert],[hidden],[aria-hidden="true"],.wpb-closing')) return false;
+        const hiddenDetail = el.closest('details:not([open])');
+        if (hiddenDetail && !el.closest('summary')) return false;
+        const style = getComputedStyle(el);
+        return style.visibility !== 'hidden' && style.display !== 'none' && !!el.getClientRects().length;
+    });
+}
 const contextMenuAnchors = new WeakMap(), menuFrames = new WeakSet();
 export function registerContextMenu(menu, anchor) {
     if (!menu || !anchor) return () => {};
@@ -135,7 +149,7 @@ function positionContextMenu(el, immediate = false) {
         el.dataset.piMenuReady = '1';
         if (record.focus) {
             record.focus = false;
-            (el.querySelector('[role="menuitem"]:not(:disabled)') || el).focus({ preventScroll: true });
+            (availableMenuItems(el)[0] || el).focus({ preventScroll: true });
         }
     };
     if (immediate) { apply(); return; }
@@ -663,13 +677,21 @@ function disclosure(el, initial = false) {
                     return;
                 }
             }
-            if (e.key === 'Tab') { root.querySelector('.wpb-dismiss-layer')?.click(); return; }
+            if (e.key === 'Tab') {
+                // Closing via React restores the anchor. Prevent the browser
+                // from simultaneously moving focus through a disappearing menu.
+                e.preventDefault();
+                root.querySelector('.wpb-dismiss-layer')?.click();
+                return;
+            }
             if (['ArrowDown','ArrowUp','Home','End'].includes(e.key)) {
-                const items = [...menu.querySelectorAll('[role="menuitem"]')]
-                    .filter(el => !disabled(el));
+                const items = availableMenuItems(menu);
                 if (items.length) {
                     const at = items.indexOf(e.target.closest('[role="menuitem"]'));
+                    // Focus can be on the menu container when every action was
+                    // previously disabled. Down starts at first, Up at last.
                     const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 :
+                        at < 0 ? (e.key === 'ArrowDown' ? 0 : items.length - 1) :
                         (at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
                     e.preventDefault(); e.stopPropagation();
                     const chosen = items[next];

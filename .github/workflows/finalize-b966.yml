@@ -1,0 +1,47 @@
+name: Finalize B966 menu interaction repair (one shot)
+on:
+  push:
+    branches: [fix/b966-context-menu-keyboard]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Verify menu keyboard interactions and existing input contracts
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node --check modules/ui-motion.js
+          node --check verification/b966-context-menu-keyboard-browser-test.mjs
+          node verification/b966-context-menu-keyboard-test.mjs
+          node verification/b966-context-menu-keyboard-browser-test.mjs
+          node verification/b959-dialog-owner-test.mjs
+          node verification/b948-persistent-update-workout-test.mjs
+      - name: Remove temporary workflow and certify numbered release
+        run: |
+          rm .github/workflows/finalize-b966.yml
+          node verification/m237-ci-supply-chain-test.mjs
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const p='RELEASE_MANIFEST.json',m=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(m.build!==965) throw new Error('Expected Build 965 baseline');
+          m.uiMilestone='Build 966 · Stable contextual menu focus and keyboard dismissal';
+          fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n');
+          NODE
+          node scripts/finalize-release.mjs --next-build
+          node scripts/verify-release.mjs
+      - name: Commit verified release to PR branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Finalize B966: menu interaction recovery and release hashes"
+          git push origin HEAD:fix/b966-context-menu-keyboard

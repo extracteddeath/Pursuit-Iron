@@ -6970,15 +6970,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-exercise-head-actions>button{
   box-sizing:border-box;
   display:flex;align-items:center;justify-content:center;
-  flex:0 0 48px;
-  width:48px!important;min-width:48px!important;
   height:48px!important;min-height:48px!important;
   padding:0;border:0;border-radius:12px;
   background:transparent;color:var(--wpb-theme-muted);
   cursor:pointer;
 }
+#root .wpb-workout .wpb-exercise-head-actions>button:not(.wpb-confirm-skip){
+  flex:0 0 48px;width:48px!important;min-width:48px!important;
+}
 #root .wpb-workout .wpb-exercise-head-actions>.wpb-confirm-skip{
-  flex:0 0 auto;width:auto!important;min-width:80px!important;
+  flex:0 0 auto;width:auto;min-width:80px;
   padding:0 10px;gap:4px;border:1px solid;
   border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;
 }

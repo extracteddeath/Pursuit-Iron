@@ -30,3 +30,16 @@ Confirm the exercise name and control icons do not collide, the set line and
 tags are aligned, the progression label occupies its own compact row, and
 the toolbar does not have an artificial spacer. Check long names/tags, Focus,
 and the presence or absence of optional session notes and progression reasons.
+
+## B950 style-ownership certification
+
+After the B949 layout repair, the UI ownership gate detected four redundant
+CSS priority declarations. B950 removes those four redundant declarations,
+including two obsolete exercise-navigation width priorities that were already
+overridden by the later unified rail, without changing the normal workout
+grid. The priority count returns to its pre-change ceiling (2073).
+The B950 release workflow explicitly requires both the workout hierarchy
+contract and UI ownership contract before certifying and publishing.
+
+The finalized B950 release updates the app version stamp and service-worker
+cache together, while keeping the workout-set entry behavior unchanged.

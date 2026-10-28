@@ -38,7 +38,7 @@ jobs:
             assert.ok(m,'Style parse drift: '+p);
             return {prop:m[1],value:m[2],key:m[1]+': '+m[2]};
           });
-          const literal=v=>parse(v).every(p=>/^(?:"[^"]*"|'[^']*'|-?\d+(?:\.\d+)?)$/.test(p.value));
+          const literal=v=>v.split(/,\s*(?=[A-Za-z]\w*:)/).every(p=>/^[A-Za-z]\w*:\s*(?:"[^"]*"|'[^']*'|-?\d+(?:\.\d+)?)$/.test(p.trim()));
           const rx=/_(jsx|jsxs)\("([a-z]+)", \{ style: \{ ([^{}]*) \}/g;
           const span=(s,n)=>{
             const a=s.indexOf('function '+n+'('),b=s.indexOf('\nfunction ',a+1);

@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 966,
+  "build": 967,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "0459a964319d42c635bdcba0e1615798c4ed245408bc2309aa88c05b8e53b2db",
+  "runtimeAggregate": "3f8c9116e8e59bad84e3514239ed30f714ce00e8cb58050dc84728828012af94",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -21,7 +21,7 @@
     "modules/legacy-research-data.js": "8b09be67d7c80da7602bb168726d7f7bc3f6ddb9a43b29293acdd18e208ba206",
     "modules/loading-calculator.js": "1525872640be8ac0f540cf9cb58962fed50790ccda13925f446ee34864784e99",
     "modules/main.js": "0547cb25708ed6a5a4b62a80d306986e694b35789854114f515707845c1ce5fb",
-    "modules/mobile-lifecycle.js": "52f6db9f34b21a7fec3fd6b3e70c50a31d4f38864b6754b40477843807155cc7",
+    "modules/mobile-lifecycle.js": "458023a822f15a8f03dba82ab4e7eeb005f965968a3d92bc07568e248a46ff47",
     "modules/next-engine/adaptive-cycle-upgrade.js": "daa089f224f84abc8e3c6d38e8aaba934539cf4e1bb282fad8f7494ec50dd398",
     "modules/next-engine/allocator.js": "2b6e9a494c6297fe1cfb5070518d21934efc9e9ae33ca8fcdc34a73e03263e4b",
     "modules/next-engine/app-shell-adapter.js": "08ce0da9cfb40a5045b8bdfea99828848b316fe4a188f8c9c5affc3bfff5382f",
@@ -110,7 +110,7 @@
     "modules/program-training-maxes.js": "8a671cf75d76d792d5d0410a820fe5ba8c7b6aece4e8d79f5ed590db48d5132c",
     "modules/program-volume-surfaces.js": "9ecba74bbf31518995e2d601e0ec29ac115821d11ab02bdf1377a605d4085145",
     "modules/release-notes.js": "138d46cf4b336306f8fa34202e1637b29f011347198da570c6bb23a2f0c5d558",
-    "modules/session-choice-dialog.js": "f65d8d42e410311113c2ed90d30b5bf23e60a7ca7a99c4ce40f4051b4271653d",
+    "modules/session-choice-dialog.js": "a7183592ff817d7bb1b122dd52d3df79f997366ac0d9acd9ba074c8907f71dee",
     "modules/session-plan.js": "6b4b562f81d4a97b8d73ed892898f94180f617ce77d16c8fd4128a8781c903c8",
     "modules/session-tools.js": "bb47e4bbcef367a3a27b0cbd23393379d63a5c8ea41ba31172f342fa76795776",
     "modules/training-domain.js": "b0ab1dfc9b363f4ee7c467039aacf06a9fd9b635b92c224d4aa151cccc596f47",
@@ -146,10 +146,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "35dd38180cff9cebe6a2945124df5f17b6a196366b25079e9646bbb72d6003c9",
-    "index.html": "b2b89b4b26ad728d1577f96d86d8575ed37642086524f1d77eea990585beae62",
-    "sw.js": "dd5724c3885d11bb7f77c2801356dae68b42eb0f7225fabfbad8013dd0657ecc",
-    "BUILD_PROFILE.json": "c2fefb719a75e02fe0faf51da028aefbcc4f5249e7581f6eed77a2daa9715403",
+    "modules/App.js": "dbdf87a26bb6a42e0d29827c940054fbf7ad34d329bf1df8c130e34be411f807",
+    "index.html": "bd963b019ad91947ece5085dd8fc7badcefea480c5c6715c1c1b5296dff2dbdd",
+    "sw.js": "005a9d3129eb40b202aa23e2866a3f1c701b22712d5f76f7b3d2f24654c4b594",
+    "BUILD_PROFILE.json": "356d48a656806d35573960b52312947f8b4f19519c9f0dd1f7294df74a542c8a",
     "CHANGELOG.md": "004e81d258626db5b0e2ab6fcfae18a209ddca3b681bafe9441513bc3a0c9bd6",
     "app.css": "69d64028907cb5252bb90bee524cbeca356c3f7fcd99d768ea4b9dda68b8b56b",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -158,6 +158,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b966-r846b34dff9398dd4",
-  "uiMilestone": "Build 966 · Stable contextual menu focus and keyboard dismissal"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b967-r9c51dbf57a99e4b4",
+  "uiMilestone": "Build 967 · Safe workout pagehide and dialog focus"
 }

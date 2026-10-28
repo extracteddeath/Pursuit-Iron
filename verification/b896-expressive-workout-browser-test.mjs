@@ -170,11 +170,26 @@ try {
   assert.ok(toolbar.rows.every(y=>Math.abs(y)<=2),'Warm-up/Superset/Swap/Notes/Plates remain in one line: '+JSON.stringify(toolbar));
   assert.equal(toolbar.overflow,'auto','Toolbar must be horizontally scrollable');
   assert.ok(toolbar.top-heading.progression.bottom<=16,'Remove unused space below progression: '+JSON.stringify({heading,toolbar}));
-  if(width<=393){
-   assert.ok(toolbar.scrollWidth>toolbar.clientWidth+8,'Phone action strip should be wider than viewport and swipeable');
+  // Compact icon controls scroll only when needed, without unused horizontal space.
+  if(toolbar.scrollWidth>toolbar.clientWidth+8){
    const scroll=await page.$eval('.wpb-workout-tools',el=>{el.scrollLeft=el.scrollWidth;return el.scrollLeft;});
-   assert.ok(scroll>0,'Swiping across the action strip reveals hidden actions');
+   assert.ok(scroll>0,'Overflowing icon actions remain horizontally reachable');
   }
+  const actionSemantics=await page.$$eval('.wpb-workout-tool',buttons=>buttons.map(button=>{
+   const box=button.getBoundingClientRect();
+   return {name:button.getAttribute('aria-label'),hint:button.title,visibleText:button.textContent.trim(),
+     icons:button.querySelectorAll('svg[aria-hidden="true"]').length,
+     pressed:button.getAttribute('aria-pressed'),height:box.height,width:box.width};
+  }));
+  assert.equal(actionSemantics.length,toolbar.count,'Every available action keeps its accessible name');
+  assert.ok(actionSemantics.every(a=>a.name&&a.hint===a.name&&a.visibleText===''&&a.icons===1),
+    'Icon-only actions retain accessible labels and native browser hints: '+JSON.stringify(actionSemantics));
+  assert.ok(actionSemantics.every(a=>a.width>=48&&a.height>=48),
+    'All icon actions own real 48px hit targets: '+JSON.stringify(actionSemantics));
+  assert.ok(actionSemantics.some(a=>a.name==='Warm-up'&&a.pressed==='false'),
+    'Warm-up control exposes its toggle state');
+  assert.ok(actionSemantics.some(a=>a.name==='Superset'&&a.pressed==='false'),
+    'Superset control exposes its toggle state');
 
   const nav=await page.$$eval('.wpb-ex-nav-step',els=>els.map(el=>({name:el.querySelector('.wpb-ex-nav-name')?.textContent,count:el.querySelector('.wpb-ex-nav-count')?.textContent,label:el.getAttribute('aria-label')})));
   assert.equal(nav[0].count,'1/3');assert.equal(nav[1].count,'0/2');assert.ok(nav.every((x,i)=>x.name&&x.label.startsWith(EX_BY_ID[program.days[0].exercises[i]].name)));

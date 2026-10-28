@@ -210,7 +210,8 @@ export const browserShards = Object.freeze({
 
 export const releaseTests = Object.freeze([
     'm223-icon-update-test.mjs',
-    'b945-plate-calculator-test.mjs'
+    'b945-plate-calculator-test.mjs',
+    'b946-machine-loading-grid-test.mjs'
 ]);
 
 const specialExecutableFiles = new Set([

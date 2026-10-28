@@ -202,7 +202,7 @@ try{
         const plateButton=(await page.$$('.wpb-workout-tool'));
         let platesOpened=false;
         for(const button of plateButton){
-          if(await button.evaluate(el=>el.textContent.trim()==='Plates')){
+          if(await button.evaluate(el=>el.getAttribute('aria-label')==='Plates')){
             await button.click();platesOpened=true;break;
           }
         }

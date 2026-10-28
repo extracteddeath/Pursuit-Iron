@@ -42,6 +42,23 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Replaces static JSX styles, without changing inputs, gestures or saved data. */
 #root .wpb svg.wpb-icon-no-shrink{flex-shrink:0}
 #root .wpb .wpb-backdrop.wpb-shared-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:70;animation:fadeIn .2s both;padding:24px}
+/* B955: shared static presentation for Program and Workout.
+   Keep computed weights, set geometry, timed motion and dynamic color inline.
+   Values intentionally retain original computed pixels for screenshot parity. */
+#root .wpb .wpb-layout-grow-min,#root .wpb-layout-grow-min{flex:1;min-width:0}
+#root .wpb .wpb-layout-heading-18-gap6,#root .wpb-layout-heading-18-gap6{font-size:18px;font-weight:700;margin-bottom:6px}
+#root .wpb .wpb-layout-flex-one,#root .wpb-layout-flex-one{flex:1}
+#root .wpb .wpb-layout-truncate,#root .wpb-layout-truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#root .wpb .wpb-layout-strong-15,#root .wpb-layout-strong-15{font-size:15px;font-weight:700}
+#root .wpb .wpb-layout-row-tight-bottom8,#root .wpb-layout-row-tight-bottom8{display:flex;align-items:center;gap:6px;margin-bottom:var(--pi-space-2,8px)}
+#root .wpb .wpb-layout-bottom12,#root .wpb-layout-bottom12{margin-bottom:var(--pi-space-3,12px)}
+#root .wpb .wpb-layout-row-gap8,#root .wpb-layout-row-gap8{display:flex;gap:var(--pi-space-2,8px)}
+#root .wpb .wpb-layout-row-tight,#root .wpb-layout-row-tight{display:flex;align-items:center;gap:6px}
+#root .wpb .wpb-layout-strong-18,#root .wpb-layout-strong-18{font-size:18px;font-weight:700}
+#root .wpb .wpb-layout-row-start-bottom8,#root .wpb-layout-row-start-bottom8{display:flex;gap:var(--pi-space-2,8px);align-items:flex-start;margin-bottom:var(--pi-space-2,8px)}
+#root .wpb .wpb-layout-support-600,#root .wpb-layout-support-600{font-size:13px;font-weight:600}
+#root .wpb .wpb-layout-bottom16,#root .wpb-layout-bottom16{margin-bottom:var(--pi-space-4,16px)}
+#root .wpb .wpb-layout-row-gap8-top8,#root .wpb-layout-row-gap8-top8{display:flex;gap:var(--pi-space-2,8px);margin-top:var(--pi-space-2,8px)}
 /* M187 premium interaction contract.
    This is intentionally semantic instead of screen-specific: Home, Program, Workout, Progress,
    Settings and Onboarding inherit the same typography, control feedback, sheets, scrolling and

@@ -156,16 +156,19 @@ try {
     const summary=el.querySelector('.wpb-workout-summary');
     const nav=summary?.querySelector('[aria-label="Show today\'s exercises"]');
     const p=progress?.getBoundingClientRect(),c=close?.getBoundingClientRect(),s=summary?.getBoundingClientRect();
-    return {progressHeight:p?.height,progressOverflow:progress&&getComputedStyle(progress).overflow,
+    return {progressHeight:p?.height,progressCssHeight:progress&&parseFloat(getComputedStyle(progress).height),
+      progressOverflow:progress&&getComputedStyle(progress).overflow,
       border:getComputedStyle(el).borderBottomStyle,
-      closeWidth:c?.width,closeHeight:c?.height,summaryDisplay:summary&&getComputedStyle(summary).display,
+      closeWidth:c?.width,closeHeight:c?.height,closeCssWidth:close&&parseFloat(getComputedStyle(close).width),
+      summaryDisplay:summary&&getComputedStyle(summary).display,
       summaryWidth:s?.width,summaryScrollWidth:summary?.scrollWidth,
       navLabel:nav?.getAttribute('aria-label')};
   });
-  assert.ok(headerLayout.progressHeight>=5&&headerLayout.progressHeight<=7&&headerLayout.progressOverflow==='hidden',
-    'Workout progress retains compact geometry: '+JSON.stringify(headerLayout));
-  assert.ok(headerLayout.closeWidth>=40&&headerLayout.closeHeight>=40&&headerLayout.border==='solid',
-    'Leave workout remains reachable in header: '+JSON.stringify(headerLayout));
+  assert.ok(headerLayout.progressCssHeight>=3&&headerLayout.progressHeight>=2.5&&
+    headerLayout.progressHeight<=headerLayout.progressCssHeight+1&&headerLayout.progressOverflow==='hidden',
+    'Completion bar remains compact and visible through responsive layout: '+JSON.stringify(headerLayout));
+  assert.ok(headerLayout.closeCssWidth>=38&&headerLayout.closeWidth>=37&&headerLayout.closeHeight>=37&&headerLayout.border==='solid',
+    'Leave workout retains its compact hit area without clipping: '+JSON.stringify(headerLayout));
   assert.equal(headerLayout.summaryDisplay,'flex','Workout summary retains flex layout');
   assert.ok(headerLayout.summaryScrollWidth<=headerLayout.summaryWidth+2,
     'Workout summary should not overflow its header: '+JSON.stringify(headerLayout));

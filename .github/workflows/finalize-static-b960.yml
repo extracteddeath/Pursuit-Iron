@@ -1,5 +1,6 @@
 # One-use B960 candidate release finalizer; removed in its own release commit.
 name: Finalize static CSS B960
+# Retry with corrected test regex escaping.
 on:
   push:
     branches: [b960-static-style-ownership]

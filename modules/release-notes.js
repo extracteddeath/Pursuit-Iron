@@ -2,6 +2,10 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "953", items: [
+        "Exercise titles, set counts and lift tags sit closer together, with less space above workout actions.",
+        "Warm-up, Superset, Swap and Session note stay on one swipeable row with comfortable tap targets."
+    ] },
     { version: "4.0.0", build: "944", items: [
         "You can adjust workout readiness from Workout options, even after starting; changing the answer never compounds a previous load reduction.",
         "Readiness changes only suggested working weights that are still unlogged. Your manual entries, completed sets, current reps and target effort remain untouched.",

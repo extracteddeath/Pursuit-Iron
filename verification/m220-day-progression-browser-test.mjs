@@ -85,8 +85,8 @@ try {
         const work='[data-testid^="set-0-"][data-warm="0"][data-sub="0"]';
         assert.deepEqual(await page.$$eval(`${work} input[aria-label="weight"]`,ns=>ns.map(n=>n.value)),['195','200','205','210']);
         assert.deepEqual(await page.$$eval(`${work} input[aria-label="reps"]`,ns=>ns.map(n=>n.value)),['6','6','6','6']);
-        assert.match(await page.$eval('.wpb-load-reference summary',n=>n.textContent),/195 lb/,
-            'The target summary describes the held first working load; lower advice is separate');
+        assert.match(await page.$eval('.wpb-load-reference summary',n=>n.textContent),/195–210 lb/,
+            'The target summary describes the full retained per-set load range; lower advice is separate');
         await page.click('button[aria-label="Show previous workout values"]');
         const lastRows=await page.$$eval(work,ns=>ns.map(n=>n.textContent));
         for(const [index,text] of ['195×10','200×8','205×6','210×5'].entries())

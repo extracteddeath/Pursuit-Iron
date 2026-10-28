@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
+import vm from 'node:vm';
 import puppeteer from 'puppeteer-core';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const im=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
@@ -15,7 +16,7 @@ function Demo(){
  ['standard','protected','empty','disabled'].map(id=>React.createElement('button',{id:'open-'+id,key:id,onClick:()=>setMode(id)},'Open '+id)),
  mode && React.createElement(SessionChoiceDialog,{
    title:'An intentionally very long heading for the full session review experience',
-   dismissible:mode==='standard',
+   dismissible:mode==='standard'||mode==='disabled',
    onClose:()=>{window.closeCount=(window.closeCount||0)+1;setMode(null)}
  },mode==='empty'?React.createElement('p',null,'Read only'):
  mode==='disabled' ? [
@@ -26,12 +27,14 @@ function Demo(){
     React.createElement('input',{key:'disabled-input',id:'disabled-field',disabled:true,'aria-label':'Unavailable'}),
     React.createElement('select',{key:'disabled-select',id:'disabled-select',disabled:true},React.createElement('option',null,'Disabled')),
     React.createElement('button',{key:'disabled-button',id:'disabled-action',disabled:true},'Unavailable'),
-    React.createElement('input',{key:'hidden',id:'hidden-field',style:{display:'none'},'aria-label':'Hidden')
+    React.createElement('input',{key:'hidden',id:'hidden-field',style:{display:'none'},'aria-label':'Hidden'})
  ] : [React.createElement('input',{key:'field',id:'field','aria-label':'Details'}),
      React.createElement('button',{key:'save',id:'save'},'Save')])
  );
 }
 createRoot(document.getElementById('root')).render(React.createElement(Demo));`;
+// Check the embedded module itself, not only this wrapper's Node syntax.
+new vm.Script(fixture.replace(/^import .*;\n/gm,''));
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">'+im+'</head><body><div id="root"></div><script type="module">'+fixture+'</script></body></html>';
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json'};
 const server=http.createServer((req,res)=>{

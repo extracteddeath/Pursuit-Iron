@@ -21,6 +21,7 @@ import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from '
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
+import { workoutNavLabel } from './workout-nav-labels.js';
 import { withSessionPlanChoice } from './session-plan.js';
 import {
     addedMinutes, advanceLegacyFirstCycleBlock, ageFrom, ALL_EQUIP_IDS, ALL_PLATES, applyCustomProgramSettings,
@@ -10557,7 +10558,7 @@ function WorkoutExerciseNav({ data, exIdx, onSelect }) {
             "aria-current": active ? "step" : undefined,
             "aria-label": `${name} · exercise ${i + 1} of ${data.length} · ${done} of ${work.length} working sets completed`,
             title: name, children: [complete && _jsx(Check, { size: 14, "aria-hidden": true }),
-                _jsx("span", { className: "wpb-ex-nav-name", children: name }),
+                _jsx("span", { className: "wpb-ex-nav-name", children: workoutNavLabel(name) }),
                 _jsxs("span", { className: "mono wpb-ex-nav-count", children: [done, "/", work.length] })] }, `${row.id}:${i}`);
     }) });
 }

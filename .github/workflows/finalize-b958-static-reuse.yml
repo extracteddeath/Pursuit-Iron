@@ -1,0 +1,162 @@
+# One-time B958 measured static presentation migration. Removes itself after guarded commit.
+name: Finalize B958 shared layout reuse
+on:
+  push:
+    branches: [refactor/b958-shared-ui-style-reuse]
+    paths: ['.github/workflows/finalize-b958-static-reuse.yml']
+permissions:
+  contents: write
+jobs:
+  consolidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Migrate only strictly literal, repeatedly used static presentation
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const read=p=>fs.readFileSync(p,'utf8'),write=(p,v)=>fs.writeFileSync(p,v);
+          let app=read('modules/App.js'),css=read('app.css');
+          const originalInline=(app.match(/style:\s*\{/g)||[]).length;
+          const importantBefore=(css.match(/!important/g)||[]).length;
+          const names=['PlanView','NextWorkoutView','Home','SettingsView','ProgressDetail',
+            'CompareView','MilestonesCard','StrengthComparisonCard','RecoveryTrendCard',
+            'MuscleRecoveryCard','ProfileMiniForm','ConvertProgramToCycleSheet','VolumeCard','AddSheet','SwapSheet'];
+          const expected=[11,6,2,2,1,1,4,8,7,3,4,5,3,10,13];
+          const sourceRx=/_(jsx|jsxs)\("([a-z]+)", \{ style: \{ ([^{}]*) \}/g;
+          const parts=v=>v.split(/,\s*(?=[A-Za-z]\w*:)/).map(s=>s.trim()).filter(Boolean);
+          const literal=v=>parts(v).every(s=>{
+            const m=s.match(/^[A-Za-z]\w*:\s*(.*?)$/);
+            return m&&(/^[-+]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(m[1])||
+              /^"(?:[^"\\]|\\.)*"$/.test(m[1])||/^(?:true|false)$/.test(m[1]));
+          });
+          const span=(s,n)=>{
+            const a=s.indexOf('function '+n+'('),b=s.indexOf('\nfunction ',a+1);
+            assert.ok(a>=0&&b>a,'Missing component boundary '+n);
+            return {a,b,content:s.slice(a,b)};
+          };
+          const frequency=new Map();
+          for(const name of names)for(const match of span(app,name).content.matchAll(sourceRx)){
+            if(!literal(match[3]))continue;
+            for(const atom of parts(match[3]))frequency.set(atom,(frequency.get(atom)||0)+1);
+          }
+          const keys=[...frequency].filter(([atom,n])=>n>=2).map(x=>x[0]);
+          assert.equal(keys.length,33,'Expected 33 repeated property/value pairs in scoped components');
+          const alias=v=>v.replaceAll('"','').replaceAll("'","").replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+          const declared=(cls)=>css.includes('#root .wpb .'+cls+',#root .'+cls+'{');
+          const owner=new Map(),additions=[];
+          for(const atom of keys){
+            const m=atom.match(/^([A-Za-z]\w*):\s*(.*)$/);
+            assert.ok(m,'Malformed atom '+atom);
+            const [prop,v]=[m[1],m[2]];
+            let cls='wpb-s956-'+alias(prop)+'-'+alias(v);
+            if(!declared(cls)){
+              const reused='wpb-s957-'+alias(prop)+'-'+alias(v);
+              if(declared(reused))cls=reused;
+              else {
+                cls='wpb-s958-'+alias(prop)+'-'+alias(v);
+                assert.ok(!declared(cls),'Duplicated new class '+cls);
+                const dash=prop.replace(/[A-Z]/g,c=>'-'+c.toLowerCase());
+                const text=/^"(.*)"$/.test(v)?v.slice(1,-1):v;
+                let value=text;
+                if(/^[-+]?\d+(\.\d+)?$/.test(text)&&Number(text)!==0&&
+                  ['fontSize','gap','marginTop','marginBottom','paddingTop','paddingBottom','width','height','minWidth','maxWidth'].includes(prop))
+                  value=text+'px';
+                additions.push({cls,decl:dash+':'+value});
+              }
+            }
+            owner.set(atom,cls);
+          }
+          assert.equal(additions.length,3,'This release must add only three genuinely missing shared CSS declarations');
+          const counts={};
+          // Edit descending source offsets to preserve all earlier component positions.
+          for(const name of [...names].reverse()){
+            const selected=span(app,name);
+            let count=0;
+            const updated=selected.content.replace(sourceRx,(full,jsx,tag,body,offset,source)=>{
+              if(!literal(body))return full;
+              const atoms=parts(body);
+              if(!atoms.every(x=>(frequency.get(x)||0)>=2))return full;
+              const clses=atoms.map(x=>owner.get(x));
+              assert.ok(clses.every(Boolean),'Missing shared CSS utility');
+              assert.equal(new Set(clses).size,clses.length,'Duplicate utility in one element');
+              // The refactor is intentionally first-prop only; do not overwrite existing class names.
+              const tail=source.slice(offset+full.length,offset+full.length+110);
+              const untilChildren=tail.split('children:')[0].split(' }),')[0];
+              assert.ok(!untilChildren.includes('className:'),'Existing className would be overwritten: '+name);
+              count++;
+              return '_'+jsx+'("'+tag+'", { className: "'+clses.join(' ')+'"';
+            });
+            const wanted=expected[names.indexOf(name)];
+            assert.equal(count,wanted,name+' expected '+wanted+' literal style objects');
+            counts[name]=count;
+            app=app.slice(0,selected.a)+updated+app.slice(selected.b);
+          }
+          const total=Object.values(counts).reduce((a,b)=>a+b,0);
+          assert.equal(total,80);
+          assert.equal(originalInline-(app.match(/style:\s*\{/g)||[]).length,80);
+          const anchor='/* M187 premium interaction contract.';
+          assert.equal(css.split(anchor).length-1,1,'Missing canonical CSS insertion anchor');
+          const shared=[
+            '/* B958: three missing shared utilities; other call sites reuse existing B956/B957 declarations. */',
+            ...additions.map(x=>'#root .wpb .'+x.cls+',#root .'+x.cls+'{'+x.decl+'}'),
+            ''
+          ].join('\n');
+          css=css.replace(anchor,shared+anchor);
+          assert.equal((css.match(/!important/g)||[]).length,importantBefore,'Must not add priority overrides');
+          write('modules/App.js',app);write('app.css',css);
+          let audit=read('verification/ui-ownership-test.mjs');
+          assert.ok(audit.includes('const MAX_INLINE_STYLE_OBJECTS = 1757;'),'Expected B957 inline budget unchanged');
+          audit=audit.replace('const MAX_INLINE_STYLE_OBJECTS = 1757;',
+            'const MAX_INLINE_STYLE_OBJECTS = 1677; // B958: 80 more static screen styles migrated via existing utility owners.');
+          const guard=[
+            '// B958 cross-screen shared presentation ownership: 80 literal JSX objects retired.',
+            'const b958Names='+JSON.stringify(names)+';',
+            'const b958Counts='+JSON.stringify(expected)+';',
+            'for(let i=0;i<b958Names.length;i++){',
+            '  const name=b958Names[i],start=app.indexOf("function "+name+"(");',
+            '  const end=app.indexOf(String.fromCharCode(10)+"function ",start+1);',
+            '  assert.ok(start>=0&&end>start,"B958 component moved "+name);',
+            '  assert.equal((app.slice(start,end).match(/className: "wpb-s95(?:6|7|8)-/g)||[]).length>=b958Counts[i],true,"B958 owner styles lost "+name);',
+            '}',
+            'for(const cls of '+JSON.stringify(additions.map(x=>x.cls))+')assert.ok(css.includes("."+cls+","),"Missing B958 utility "+cls);',
+            ''
+          ].join('\n');
+          const marker="console.log('PASS UI ownership:";
+          assert.equal(audit.split(marker).length-1,1,'No unique ownership test insertion marker');
+          audit=audit.replace(marker,guard+marker);
+          write('verification/ui-ownership-test.mjs',audit);
+          write('NEXT_APP_UPDATE_PLAN.md',read('NEXT_APP_UPDATE_PLAN.md')+
+            '\n\n## Build 958 — Cross-screen shared CSS reuse\n\n'+
+            'Migrate 80 strictly literal first-prop JSX style objects across Plan, Next, Home, Settings, Progress, comparison, recovery, profile form, conversion, volume and exercise sheets. '+
+            'Reuse 27 existing B956/B957 property owners and add just three missing declarations. '+
+            'No new priority overrides; preserve all dynamic training values, colors, measured geometry, accessibility callbacks, history, and animation. '+
+            'Tighten verified inline-style ceiling from 1,757 to 1,677. '+
+            'Maintain end-to-end core/engine/browser/offline gates and deployed byte verification; physical Android certification remains separate.\n');
+          console.log('B958_SOURCE_DELTA '+JSON.stringify({retired:total,owners:counts,reused:keys.length-additions.length,newDeclarations:additions,
+            inlineBefore:originalInline,inlineAfter:(app.match(/style:\s*\{/g)||[]).length,priorityDelta:0}));
+          NODE
+      - name: Finalize release and enforce source, workout and offline integrity
+        run: |
+          node scripts/finalize-release.mjs --next-build
+          node --check modules/App.js
+          node --check verification/ui-ownership-test.mjs
+          node verification/ui-ownership-test.mjs
+          node verification/b884-workout-hierarchy-test.mjs
+          node scripts/verify-release.mjs
+      - name: Commit verified B958 and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/finalize-b958-static-reuse.yml
+          git add -A
+          git commit -m "B958: reuse shared layout ownership on 80 more screen elements"
+          git push origin HEAD:refactor/b958-shared-ui-style-reuse

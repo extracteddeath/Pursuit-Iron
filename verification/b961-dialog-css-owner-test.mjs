@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const app=fs.readFileSync('modules/App.js','utf8'),css=fs.readFileSync('app.css','utf8');
+assert.ok((app.match(/style: \\{/g)||[]).length<=1486,'B961 permanently reduces static JSX style debt');
 const owners=[...app.matchAll(/wpb-b961-overlay-(\d{2})/g)].map(x=>x[1]);
 const styles=[...css.matchAll(/#root \.wpb \.wpb-backdrop\.wpb-b961-overlay-(\d{2})\{([^{}]+)\}/g)];
 assert.equal(owners.length,25,'25 modal call sites are class-owned');

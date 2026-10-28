@@ -28,7 +28,7 @@ jobs:
             const p="RELEASE_MANIFEST.json",m=JSON.parse(fs.readFileSync(p,"utf8"));
             if (m.build !== 948) throw new Error("Expected B948 before B949");
             m.uiMilestone="Build 948 · Aligned workout exercise header";
-            fs.writeFileSync(p,JSON.stringify(m,null,2)+"\\n");
+            fs.writeFileSync(p,JSON.stringify(m,null,2));
           '
       - name: Bump build and refresh offline cache
         run: node scripts/finalize-release.mjs --next-build

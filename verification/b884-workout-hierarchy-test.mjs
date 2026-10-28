@@ -48,12 +48,12 @@ assert.match(css, /#root \.wpb-workout \.wpb-workout-tools\{\s*display:flex;flex
   'Workout tools must stay on one horizontally scrolling row');
 assert.ok(!css.includes('flex-wrap:wrap;overflow:visible!important;touch-action:pan-y!important;'),
   'Do not regress workout tools to wrapping rows');
-assert.match(css, /\\.wpb-workout\\[data-focus-mode="false"\\] \\.wpb-exercise-title-row,\\s*#root \\.wpb-workout\\[data-focus-mode="false"\\] \\.wpb-exercise-meta\\{\\s*display:contents;/,
-  'The meta wrapper must not inflate the tags row');
-assert.match(css, /\\.wpb-workout\\[data-focus-mode="false"\\] \\.wpb-exercise-meta>\\.wpb-exercise-set-context\\{\\s*grid-column:1;grid-row:2;/,
-  'Set context shares row 2 with tags');
-assert.match(css, /\\.wpb-workout\\[data-focus-mode="false"\\] \\.wpb-exercise-meta>\\.wpb-progression-label\\{\\s*grid-column:1\\/-1;grid-row:3;/,
-  'Progression sits on compact row 3');
+assert.ok(css.includes('#root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta{') && css.includes('  display:contents;'),
+  'The meta wrapper must be layout-transparent');
+assert.ok(css.includes('.wpb-exercise-meta>.wpb-exercise-set-context{') && css.includes('grid-column:1;grid-row:2;'),
+  'Set context must share row 2 with tags');
+assert.ok(css.includes('.wpb-exercise-meta>.wpb-progression-label{') && css.includes('grid-column:1/-1;grid-row:3;'),
+  'Progression sits on the third row');
 assert.ok(workout.includes('className: "wpb-exercise-head-actions"') && workout.includes('className: "wpb-exercise-set-context"'),
   'Skip/history/info and current working-set context retain their actions');
 

@@ -16,4 +16,6 @@ assert.ok(owners.every(o=>!o[2].includes('!important')),'static migration adds n
 for(const preserved of ['style: { background: C.', 'style: { color: C.', 'style: { transform:']){
  assert.ok(app.includes(preserved),'dynamic theme/motion must remain owned by JSX: '+preserved);
 }
+const runner=fs.readFileSync('scripts/verify-engine-contracts.mjs','utf8');
+assert.ok(runner.includes('CONTRACT_FAILURE')&&runner.includes('finally {')&&runner.includes('failures.length'),'Contract runner must enumerate failures instead of terminating on the first test');
 console.log('PASS B960: 133 static presentations use 71 CSS owners with runtime styles preserved.');

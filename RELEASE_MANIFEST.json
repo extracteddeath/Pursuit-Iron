@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 948,
+  "build": 949,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "894bd23c7c4140529e7de0fad56fcecd0765653a550ae229ce0df19951fb6fdb",
@@ -145,18 +145,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "afad6a135f7b48bb1314ad0af114679647526c900ee13a7e8035369e1e6a6f7f",
-    "index.html": "44874a68774094a6a6d7b0cde27e8e39ec5daa85f7baa06c5f883f31037955e0",
-    "sw.js": "caba3efd324ca667f0974d40881e3dc5a96b298e31892b115d63823402966d10",
-    "BUILD_PROFILE.json": "b34d2603b6e2a505d7045a05d47422edeec2a05d45a637f1f3449a0914f1a8a8",
+    "modules/App.js": "a7b0e51c26376b784fd7e0c860001c754518589627af009937a866a858e1d674",
+    "index.html": "cf7ec22495926b2fc397a78fdee5160195b838ab6b10ef3d95c8cb2d0096748e",
+    "sw.js": "bcea62158533cd45a96e2952bd19a9b0d805c0a45b14e309de49f96abf8ba5a1",
+    "BUILD_PROFILE.json": "89fdeadb5d3df5522d5464ca971707334027443e0bfc43bfab6f71375d47ef50",
     "CHANGELOG.md": "a6db39f8419545eabfe5d3fb78fb1df8a4f220c05fe56e950a0c3bb30fcdc2ca",
-    "app.css": "5c76e2938099d6aac22744daa4e19cb4b656a1eb7a2dccf79dc2facd4f484d63",
+    "app.css": "f697d8c3ec977215fd335104c6d48e720e5bca3849b60ff2d3e489fe123ca54c",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b948-rcc91fe9ad3864da9",
-  "uiMilestone": "Build 948 · Persistent safe workout update"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b949-rac922714152de676",
+  "uiMilestone": "Build 949 · Aligned workout exercise header"
 }

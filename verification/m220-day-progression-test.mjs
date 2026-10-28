@@ -1,3 +1,4 @@
+import { classifySessionAdjustment } from '../modules/session-plan.js';
 import assert from 'node:assert/strict';
 import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
 
@@ -163,3 +164,22 @@ const generatedAdvice=sessionSuggestion(generatedRamp,generatedRamp.days.find(d=
 assert.equal(generatedAdvice.action,'decrease_load');
 assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[190,190,190,190],
     'Generated and authored programs share the same fatigue-aware straight-set calibration');
+
+
+// B943: rep-only progression is ordinary training, not an undoable plan change.
+const classify = (previous, targets, suggestion = { action: 'add_reps' }, setDelta = null) =>
+    classifySessionAdjustment({ previous, targets, suggestion, setDelta, unit: 'lb' });
+const held = [{ weight: 200, reps: 6 }];
+const extraRep = classify(held, [{ weight: 200, reps: 7 }]);
+assert.equal(extraRep.changed, false, 'one more rep must not create a Home change');
+assert.equal(extraRep.loadChanged, false);
+const heavier = classify(held, [{ weight: 205, reps: 6 }], { action: 'increase_load' });
+assert.equal(heavier.category, 'Load increased');
+assert.equal(heavier.changed, true);
+const plateau = classify(held, [{ weight: 190, reps: 6 }],
+    { action: 'decrease_load', reason: 'Plateau reset after repeated stalls' });
+assert.equal(plateau.category, 'Plateau response');
+const moreSets = classify(held, [{ weight: 200, reps: 7 }], { action: 'add_reps' }, { before: 3, after: 4 });
+assert.equal(moreSets.category, 'Sets updated');
+assert.equal(moreSets.summary, '3 → 4 planned sets');
+console.log('PASS B943: ordinary reps are not changes; material load, plateau and saved planned-set changes are distinguished.');

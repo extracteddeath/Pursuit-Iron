@@ -9127,3 +9127,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   .wpb-volume-contributors,.wpb-volume-ramp-dose{border:1px solid CanvasText}
   .wpb-volume-track{outline:1px solid CanvasText}
 }
+
+/* B943: a persistent close/header and one scroll region for upcoming adjustments. */
+#root .wpb .wpb-session-dialog.wpb-plan-changes-dialog{display:flex;flex-direction:column;overflow:hidden;padding:0;min-height:0;max-height:88dvh}
+#root .wpb .wpb-plan-changes-dialog .wpb-session-dialog-heading{flex:0 0 auto;margin:0;padding:var(--pi-space-3) var(--pi-space-4);border-bottom:1px solid var(--wpb-theme-border);background:var(--wpb-theme-bg)}
+#root .wpb .wpb-plan-changes-dialog .wpb-session-dialog-heading button{min-width:48px;min-height:48px;margin-left:auto;flex-shrink:0}
+#root .wpb .wpb-plan-changes-body{overflow-y:auto;overscroll-behavior:contain;min-height:0;min-width:0;padding:var(--pi-space-3) var(--pi-space-4) calc(var(--pi-space-4) + env(safe-area-inset-bottom))}
+#root .wpb .wpb-plan-change-card .wpb-plan-change-summary{margin:6px 0 4px;color:var(--wpb-theme-text);font-size:.875rem;font-weight:650;line-height:1.4}
+#root .wpb .wpb-plan-change-more>summary{min-height:44px;display:flex;align-items:center}
+#root .wpb .wpb-plan-change-card .wpb-plan-undo{min-height:48px}

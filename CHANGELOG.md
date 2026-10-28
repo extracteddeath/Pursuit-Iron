@@ -1,3 +1,9 @@
+## Build 954 — CSS ownership consolidation
+
+- Replace 45 identical Lucide inline flex styles and seven modal overlay inline objects with shared class-owned styling.
+- Retire 12 overridden important declarations and require zero competing important-property owners.
+- Preserve the normal/Focus logger, saved weights, data models, gestures, spacing and responsive theme behavior.
+
 ## Build 953 — Compact workout spacing and readiness verification
 
 - Center the exercise title beside its controls and bring the set context closer to the name.

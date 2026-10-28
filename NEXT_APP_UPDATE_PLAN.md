@@ -812,3 +812,8 @@ Continue from published B952. The repeated spacing report exposed a verification
 B896 now measures the actual progression/tool text gap (at most 24px), title/context spacing (at most 14px for its short-title fixture), zero-to-4px control separation and 48px tool targets. Its existing phone/tablet, Focus, rest, navigation, per-set ownership and load/reps alignment coverage stays in place. The final visible-label gap is measured against a 26px limit with 48px hit targets.
 
 Readiness continues with all registered source contracts, complete training lifecycle audit, all seven browser groups, independent engine export/parity, release/cache integrity and deployed-byte verification. Record final evidence in the PR. Physical Android keyboard, interruption and TalkBack checks remain the device-only acceptance work in R90; the deliverable remains the web/PWA.
+
+
+## Build 954 — Verified static presentation consolidation
+
+One shared owner replaces 52 duplicated static App JSX style objects (45 icons, seven modal overlays). Remove 12 superseded same-selector/same-at-rule important declarations; preserve CSS fallbacks and all dynamic inline geometry. Tighten the enforced budgets to 2,061 external priorities, zero repeated-important collisions, and 2,032 inline objects. No training engine or storage API changes. Browser regression must cover Workout/Focus, dialogs, responsive themes, layout and accessibility. This is a measured first cleanup batch; remaining legitimate dynamic styles and legacy declarations require separate audits.

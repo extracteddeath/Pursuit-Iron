@@ -25,10 +25,10 @@ const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
 const loadingCalculator = fs.readFileSync('modules/loading-calculator.js','utf8');
 const gymLoadFields = fs.readFileSync('modules/gym-load-fields.js','utf8');
 const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
-const MAX_IMPORTANT = 2073; // M394: retire 33 exercise-row priority overrides.
+const MAX_IMPORTANT = 2061; // M394: retire 33 exercise-row priority overrides.
 const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
-const MAX_REPEAT_IMPORTANT = 14; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 2084; // M396: retire 40 calculator styles; retain one calculated plate height.
+const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
+const MAX_INLINE_STYLE_OBJECTS = 2032; // M396: retire 40 calculator styles; retain one calculated plate height.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -37,21 +37,7 @@ for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "p
   assert.ok(programSettings.includes(token), 'Settings dialog accessibility/transaction contract lost: '+token);
 assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.includes('"wpb-backdrop", style:'), 'Static Settings shell styles must remain in CSS');
 
-const allowedDebtKeys = new Set([
-  "\t#root[data-pi-motion=\"expressive\"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title\tfont-size",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-tabbar\tbackground-color",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next=\"true\"]\tborder-color",
-  "@media(max-width:420px)\t#root .wpb-workout[data-focus-mode=\"false\"] .wpb-set-controls>.wpb-set-index\twidth",
-  "@media(max-width:420px)\t#root .wpb-workout[data-focus-mode=\"false\"] [data-done=\"1\"] .wpb-set-controls>.wpb-set-index\twidth",
-  "@media(max-width:420px)\t#root .wpb-workout[data-focus-mode=\"false\"] [data-done=\"1\"] .wpb-set-controls>.wpb-set-index\tflex",
-  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\twidth",
-  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tmin-width",
-  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\theight",
-  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tmin-height",
-  "\t#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step\tborder-radius",
-  "\t#root .wpb-workout .wpb-exercise-heading .wpb-progression-label\tfont-size",
-  "\t#root[data-pi-motion=\"expressive\"] .wpb .wpb-wizard-step[data-pi-step-enter=\"1\"]\tanimation"
-]);
+const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
 function repeatedImportantDeclarations(source) {
     const frames = [], rules = [];

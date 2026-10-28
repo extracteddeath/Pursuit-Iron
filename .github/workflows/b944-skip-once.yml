@@ -1,0 +1,40 @@
+name: B944 Skip journey certification and one-time rehash
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+permissions:
+  contents: write
+jobs:
+  focused:
+    if: ${{ github.actor == 'extracteddeath' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'improve/b944-readiness-control' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: improve/b944-readiness-control
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked browser harness
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify both previously failing Skip journeys
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/b904-session-review-browser-test.mjs
+          node --no-warnings --experimental-loader ./verification/import-loader.mjs verification/b888-session-choices-browser-test.mjs
+      - name: Recompute release hashes without advancing build
+        run: |
+          test "$(node -p "require('./RELEASE_MANIFEST.json').build")" = "944"
+          node scripts/finalize-release.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add modules/App.js index.html sw.js BUILD_PROFILE.json RELEASE_MANIFEST.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Rehash Build 944 after readiness Skip compatibility repair"
+            git push origin HEAD:improve/b944-readiness-control
+          fi

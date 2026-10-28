@@ -8,7 +8,7 @@ import { deriveAthleteResponse, requestWithAthleteResponse } from './athlete-res
 import { createSemanticExerciseGraph, transferExerciseStartingReference } from './semantic-exercise-graph.js';
 import { EXERCISE_MAP } from './exercise-db.js';
 import { estimate1RM } from './history.js';
-import { availableLoadAtOrBelow, loadingInventoryInUnit } from './loading.js';
+import { availableLoadAtOrBelow, loadingInventoryWithExerciseSteps } from './loading.js';
 import { normalizeRequest } from './prescription.js';
 import { transitionProgramPhase } from './phase-transition.js';
 import { nextProgramToShellProgram, getNextShellCell, resolveNextShellExerciseId, NextShellAdapterError } from './app-shell-adapter.js';
@@ -46,8 +46,9 @@ function programUnit(program, unit, loggedUnit) {
 }
 function sourceSnapshot(program, unit) {
     const stored = program?.nextEngine?.request;
-    const loading = unit ? loadingInventoryInUnit(stored?.equipment?.loading, unit,
-        { nativeDefaults: !program?.config?.loadingInventory }) : stored?.equipment?.loading;
+    const loadingUnit = ['lb', 'kg'].includes(unit) ? unit : program?.config?.unit ?? stored?.equipment?.loading?.unit ?? 'lb';
+    const loading = loadingInventoryWithExerciseSteps(stored?.equipment?.loading, loadingUnit, program?.exLoadInc,
+        { nativeDefaults: !program?.config?.loadingInventory });
     const request = loading === stored?.equipment?.loading ? stored : { ...stored, equipment: { ...stored?.equipment, loading } };
     const next = program?.nextEngine?.program;
     if (!request || !next || !Array.isArray(next.sessions))

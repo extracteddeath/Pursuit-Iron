@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app=fs.readFileSync('modules/App.js','utf8'),css=fs.readFileSync('app.css','utf8');
+const workout=app.slice(app.indexOf('function WorkoutSession('),app.indexOf('function WorkoutSession(')+375000);
+const program=app.slice(app.indexOf('function ProgramView('),app.indexOf('function ProgramView(')+220000);
+assert.ok(workout.includes('className: "wpb-workout-card wpb-warmup-card"') && workout.includes('className: "wpb-warmup-step"'));
+assert.ok(workout.includes('className: "wpb-warmup-finish"') || workout.includes('className: "pressable wpb-warmup-finish"'));
+assert.ok(workout.includes('setShowWarmup(false)') && workout.includes('onSetWarmupCard?.(false)'));
+assert.ok(workout.includes('wpb-confirm-skip') && workout.includes('removeExerciseFromSession(ei)'));
+for(const cls of ['wpb-program-retro','wpb-program-priorities','wpb-program-coverage-warning','wpb-program-continuous-note','wpb-program-upgrade-card','wpb-program-undo-action']) assert.ok(program.includes(cls) && css.includes('.'+cls+'{'),cls+' has single semantic source');
+assert.ok(program.includes('"data-trend": r.trend'), 'Program review trend remains data-driven');
+assert.ok(program.includes('onRegenerate(program.seed, ENGINE_V)') && program.includes('saveUndo.onUndo'), 'Program callbacks unchanged');
+assert.ok((app.match(/style: \{/g)||[]).length<=1340,'B972 removes at least 29 static inline objects');
+assert.equal((css.match(/!important/g)||[]).length,2061,'B972 introduces no override debt');
+console.log('PASS B972: context cards are theme-owned; workout and program callbacks intact.');

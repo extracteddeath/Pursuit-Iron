@@ -1,3 +1,9 @@
+## Build 972 — Workout warm-up and Program context cleanup
+
+- Consolidate 36 inline presentation objects across warm-up, skip confirmation and Program block review, save undo, priorities, coverage, continuous-cycle and upgrade notices.
+- Improve compact responsive reading and action targets while preserving the same exercise/program callbacks, logged sets, progression, PR events and history.
+- Add a regression ownership contract; training engine remains 0.65.9.
+
 ## Build 971 — Workout header CSS ownership and consistent summary layout
 
 - Consolidate seven static presentation objects from the live workout header, Leave action, completion bar, progress summary, exercise-list link and planned day note into shared CSS.

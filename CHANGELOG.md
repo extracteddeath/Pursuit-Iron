@@ -1,3 +1,11 @@
+## Build 971 — Workout header CSS ownership and consistent summary layout
+
+- Consolidate seven static presentation objects from the live workout header, Leave action, completion bar, progress summary, exercise-list link and planned day note into shared CSS.
+- Retain the timer's pause/resume/reset handlers, active Focus/Finish state, session progress arithmetic and button labels.
+- Keep title and summary geometry responsive, preserve the completion bar's compact height, prevent long summary labels from overflowing the header and maintain high-contrast focus indication.
+- Add 320px and wider browser checks for header progress, Leave button, exercise-list navigation, and no horizontal overflow.
+- Training engine 0.65.9, saved workouts, set entry and program cycle remain unchanged.
+
 ## Build 970 — Unclutter workout notes and consolidate static note styling
 
 - Remove the redundant, full-width per-exercise session-note button from the workout header. The compact note action still opens the existing editor and retains its accessible name.

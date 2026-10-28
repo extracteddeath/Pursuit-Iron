@@ -11272,6 +11272,19 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             return false;
         }
     };
+    // A user-approved app update must flush the *current* workout state before
+    // reloading. Relying on the last autosave tick can lose the most recent set.
+    const updateSaveRef = useRef(() => false);
+    updateSaveRef.current = persistLive;
+    useEffect(() => {
+        const onSaveBeforeUpdate = event => {
+            if (!event.detail) return;
+            event.detail.handled = true;
+            event.detail.saved = updateSaveRef.current();
+        };
+        window.addEventListener("wpb:save-workout-before-update", onSaveBeforeUpdate);
+        return () => window.removeEventListener("wpb:save-workout-before-update", onSaveBeforeUpdate);
+    }, []);
     const minimizeWorkout = () => { if (!persistLive()) return; setSessionMenu(false); onExit(); };
     // Android/PWA system Back is owned by the app shell, but ONLY this component can flush the complete
     // in-memory workout snapshot before leaving. The shell emits one semantic event; keeping the real
@@ -18904,7 +18917,8 @@ function App() {
     // the waiting worker to take over (controllerchange in index.html reloads into the new version).
     const [updateReady, setUpdateReady] = useState(null); // the waiting ServiceWorker
     useEffect(() => {
-        const on = (e) => setUpdateReady(e.detail?.waiting || null);
+        // Never clear an announced update due to an unrelated or incomplete event.
+        const on = (e) => { if (e.detail?.waiting) setUpdateReady(e.detail.waiting); };
         window.addEventListener("wpb:update-ready", on);
         // Close a startup race: index.html announces an already-waiting worker inside its `load`
         // handler, which can fire before this listener is attached — leaving a ready update un-prompted
@@ -18922,6 +18936,7 @@ function App() {
         return () => window.removeEventListener("wpb:update-ready", on);
     }, []);
     const [updateRestarting, setUpdateRestarting] = useState(false);
+    const [confirmUpdateRestart, setConfirmUpdateRestart] = useState(false);
     const updateAttempt = useRef({ running: false, timer: null });
     useEffect(() => () => clearTimeout(updateAttempt.current.timer), []);
     const stopUpdateAttempt = (msg) => {
@@ -18937,6 +18952,29 @@ function App() {
         updateAttempt.current.running = true;
         setUpdateRestarting(true);
         try {
+            if (view === "session") {
+                // The session component owns the complete live workout state. Force
+                // a synchronous save before touching the service worker; refuse the
+                // restart if storage is full or the component could not respond.
+                const receipt = { handled: false, saved: false };
+                window.dispatchEvent(new CustomEvent("wpb:save-workout-before-update", { detail: receipt }));
+                if (!receipt.handled || !receipt.saved) {
+                    stopUpdateAttempt("Workout could not be saved. Restart cancelled; your session is still open.");
+                    return;
+                }
+            } else if (liveDockVisible) {
+                // A minimized workout has already been persisted by its owner.
+                // Never reload on a missing/corrupt local snapshot.
+                let intact = false;
+                try {
+                    const snapshot = JSON.parse(localStorage.getItem(LIVE_KEY) || "null");
+                    intact = !!(snapshot?.programId && snapshot?.dayId && Array.isArray(snapshot?.data));
+                } catch { }
+                if (!intact) {
+                    stopUpdateAttempt("Workout recovery snapshot unavailable. Resume your workout before updating.");
+                    return;
+                }
+            }
             if (!safeStart && !(await persistAppStore())) {
                 stopUpdateAttempt("Could not save before restarting. Free some device storage, then try again.");
                 return;
@@ -18963,6 +19001,14 @@ function App() {
         } catch {
             stopUpdateAttempt("The update could not restart. Your current screen is still open.");
         }
+    };
+    const requestUpdate = () => {
+        if (!updateReady || updateRestarting) return;
+        if (view === "session" || liveDockVisible) {
+            setConfirmUpdateRestart(true);
+            return;
+        }
+        applyUpdate();
     };
     // Native-feel: a subtle haptic tick on every tapped control. We fire on pointerup only when the
     // pointer barely moved since pointerdown, so scrolling a list of pressable cards never buzzes — only
@@ -21684,14 +21730,22 @@ function App() {
                             return null;
                         return (_jsx("div", { className: "wpb-float-in wpb-live-dock", style: { position: "absolute", left: 8, right: 8, bottom: `calc(${tabView ? "72px" : "12px"} + env(safe-area-inset-bottom))`, zIndex: 35 }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, background: C.accent, color: C.accentText, borderRadius: 16, padding: "10px 10px 10px 14px", boxShadow: "0 8px 26px rgba(0,0,0,.4)" }, children: [_jsx("span", { style: { display: "flex", width: 9, height: 9, flexShrink: 0 }, children: _jsx("span", { className: "wpb-pulse", style: { width: 9, height: 9, borderRadius: 999, background: C.accentText } }) }), discardArmed ? (_jsxs("div", { role: "status", "aria-live": "polite", style: { flex: 1, minWidth: 0, color: C.accentText, textAlign: "left" }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: "Discard workout?" }), _jsx("div", { style: { fontSize: 11, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: "Tap red Discard again \u00B7 4s" })] })) : (_jsxs("button", { onClick: resumeLive, className: "pressable", style: { flex: 1, minWidth: 0, background: "none", border: "none", color: C.accentText, cursor: "pointer", textAlign: "left", padding: 0 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: "Workout in progress \u00B7 tap to resume" }), _jsxs("div", { style: { fontSize: 11, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: [day.label, " \u00B7 ", doneSets, " set", doneSets === 1 ? "" : "s", " logged"] })] })), _jsx("button", { onClick: resumeLive, className: "pressable hit", "aria-label": "Resume workout", style: { width: 36, height: 36, borderRadius: 12, background: "rgba(0,0,0,.16)", border: "none", color: C.accentText, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }, children: _jsx(Play, { size: 17, fill: C.accentText }) }), _jsx("button", { onClick: dismissLive, className: "pressable hit", "aria-label": discardArmed ? "Confirm discard workout" : "Discard in-progress workout", title: discardArmed ? "Confirm discard" : "Discard", style: { width: discardArmed ? 78 : 30, height: 36, background: discardArmed ? C.danger : "none", border: "none", borderRadius: discardArmed ? 10 : 0, color: discardArmed ? C.dangerText : C.accentText, opacity: discardArmed ? 1 : .7, fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }, children: discardArmed ? _jsx(_Fragment, { children: "Discard" }) : _jsx(X, { size: 17 }) })] }) }));
                     })(), loaded && tabView && _jsx(TabBar, { view: view, onNav: navToTab }), (() => {
-                        // The restart pill reloads the app, so never surface it mid-workout — it would interrupt a
-                        // set. updateReady is sticky state, so hiding it during a session just DEFERS it: the pill
-                        // reappears the instant the workout ends. The offline note is harmless info, so it stays.
-                        const showUpdate = !!updateReady && view !== "session" && !liveDockVisible;
+                        // An installed update is a persistent user choice. Keep the action
+                        // visible across workout navigation and minimized sessions; restarting
+                        // an active workout requires confirmation and a verified fresh save.
+                        const showUpdate = !!updateReady;
                         if (!showUpdate && !offline)
                             return null;
-                        return (_jsx("div", { style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 8px)", left: 0, right: 0, zIndex: 30, display: "flex", justifyContent: "center", pointerEvents: "none" }, children: showUpdate ? (_jsxs("button", { onClick: applyUpdate, disabled: updateRestarting, "aria-busy": updateRestarting, className: "pressable wpb-notice-in", style: { pointerEvents: "auto", display: "flex", alignItems: "center", gap: 8, background: C.accent, color: C.accentText, border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 22px rgba(0,0,0,.4)" }, children: [_jsx(RefreshCw, { size: 14 }), updateRestarting ? " Restarting\u2026" : " Update ready \u2014 Restart"] })) : (_jsxs("div", { role: "status", "aria-live": "polite", style: { display: "flex", alignItems: "center", gap: 6, background: C.bg2, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 999, padding: "6px 12px", fontSize: 13, fontWeight: 600, animation: "fadeIn .3s both" }, children: [_jsx(WifiOff, { size: 12 }), " Offline \u00B7 saved locally"] })) }));
-                    })(), saveReview && program?.id === saveReview.id && _jsx(ProgramSaveReview, { program: program, changes: reviewedChanges, scope: saveReview.scope, onScope: scope => setSaveReview({ ...saveReview, scope }), conflicts: reviewConflicts, onConfirm: confirmProgramSave, onClose: () => setSaveReview(null) }), appToast && _jsx(UiNotice, { message: appToast.msg, onUndo: appToast.undo, action: appToast.action, actionLabel: appToast.actionLabel, onDismiss: () => setAppToast(null) }), _jsx(Exit, { when: !!calcOpen, children: calcOpen && _jsx(PlateCalcSheet, { sheetDragRef, selectNumericInput, unit: unit, onClose: () => setCalcOpen(false) }) }), _jsx(Exit, { when: switchOpen, children: switchOpen && (_jsx(ProgramSwitcherSheet, { saved: saved, cycles: cycles, history: history, activeId: upNext?.program?.id || null, onPick: setActiveProgram, onClose: () => setSwitchOpen(false) })) }), _jsx(Exit, { when: gymsOpen, children: gymsOpen && (_jsx(GymsSheet, { gyms: gyms, activeGymId: activeGymId, plates: plates, onSave: (g, id, tombed) => {
+                        return (_jsx("div", { style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 8px)", left: 0, right: 0, zIndex: 55, display: "flex", justifyContent: "center", pointerEvents: "none" }, children: showUpdate ? (_jsxs("button", { onClick: requestUpdate, disabled: updateRestarting, "aria-busy": updateRestarting, className: "pressable wpb-notice-in", style: { pointerEvents: "auto", display: "flex", alignItems: "center", gap: 8, background: C.accent, color: C.accentText, border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 22px rgba(0,0,0,.4)" }, children: [_jsx(RefreshCw, { size: 14 }), updateRestarting ? " Restarting\u2026" : (view === "session" || liveDockVisible) ? " Update ready \u00b7 Save & restart" : " Update ready \u2014 Restart"] })) : (_jsxs("div", { role: "status", "aria-live": "polite", style: { display: "flex", alignItems: "center", gap: 6, background: C.bg2, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 999, padding: "6px 12px", fontSize: 13, fontWeight: 600, animation: "fadeIn .3s both" }, children: [_jsx(WifiOff, { size: 12 }), " Offline \u00B7 saved locally"] })) }));
+                    })(), confirmUpdateRestart && _jsx(SessionChoiceDialog, { title: "Save workout and update?", onClose: () => setConfirmUpdateRestart(false),
+                        children: _jsxs("div", { children: [
+                            _jsx("p", { children: "Your workout will be saved before restarting. You can resume it after the update." }),
+                            _jsxs("div", { style: { display: "flex", gap: 10, marginTop: 18 }, children: [
+                                _jsx("button", { type: "button", className: "pressable hit", onClick: () => setConfirmUpdateRestart(false), children: "Keep training" }),
+                                _jsx("button", { type: "button", className: "pressable hit", disabled: updateRestarting, onClick: () => { setConfirmUpdateRestart(false); applyUpdate(); }, children: "Save & restart" })
+                            ] })
+                        ] })
+                    }), saveReview && program?.id === saveReview.id && _jsx(ProgramSaveReview, { program: program, changes: reviewedChanges, scope: saveReview.scope, onScope: scope => setSaveReview({ ...saveReview, scope }), conflicts: reviewConflicts, onConfirm: confirmProgramSave, onClose: () => setSaveReview(null) }), appToast && _jsx(UiNotice, { message: appToast.msg, onUndo: appToast.undo, action: appToast.action, actionLabel: appToast.actionLabel, onDismiss: () => setAppToast(null) }), _jsx(Exit, { when: !!calcOpen, children: calcOpen && _jsx(PlateCalcSheet, { sheetDragRef, selectNumericInput, unit: unit, onClose: () => setCalcOpen(false) }) }), _jsx(Exit, { when: switchOpen, children: switchOpen && (_jsx(ProgramSwitcherSheet, { saved: saved, cycles: cycles, history: history, activeId: upNext?.program?.id || null, onPick: setActiveProgram, onClose: () => setSwitchOpen(false) })) }), _jsx(Exit, { when: gymsOpen, children: gymsOpen && (_jsx(GymsSheet, { gyms: gyms, activeGymId: activeGymId, plates: plates, onSave: (g, id, tombed) => {
                                 setGyms(g);
                                 setActiveGymId(id);
                                 const a = gymById(g, id);

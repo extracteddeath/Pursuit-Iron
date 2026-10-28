@@ -24,6 +24,7 @@ function Demo(){
     React.createElement('details',{key:'closed'},React.createElement('summary',null,'Extra'),React.createElement('button',{id:'closed-action'},'Unavailable while closed')),
     React.createElement('div',{key:'inert',inert:true},React.createElement('button',{id:'inert-action'},'Inactive')),
     React.createElement('button',{key:'live',id:'last-live'},'Apply'),
+    React.createElement('button',{key:'aria-disabled',id:'aria-disabled','aria-disabled':'true'},'Unavailable ARIA action'),
     React.createElement('input',{key:'disabled-input',id:'disabled-field',disabled:true,'aria-label':'Unavailable'}),
     React.createElement('select',{key:'disabled-select',id:'disabled-select',disabled:true},React.createElement('option',null,'Disabled')),
     React.createElement('button',{key:'disabled-button',id:'disabled-action',disabled:true},'Unavailable'),
@@ -80,6 +81,11 @@ try {
  assert.equal(await page.$eval('.wpb-session-dialog-heading button',el=>el===document.activeElement),true,'Tab skips disabled, hidden, inert and closed disclosure controls');
  await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');
  assert.equal(await page.$eval('#last-live',el=>el===document.activeElement),true,'Shift+Tab wraps to last enabled visible action');
+ // Recover containment even when an ARIA-disabled action receives focus from script.
+ await page.$eval('#aria-disabled',el=>el.focus({preventScroll:true}));
+ await page.keyboard.press('Tab');
+ assert.equal(await page.$eval('.wpb-session-dialog-heading button',el=>el===document.activeElement),true,
+     'a dynamically unavailable control cannot send focus outside the modal');
  await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
  await page.click('#open-empty');await page.keyboard.press('Tab');
  assert.equal(await page.$eval('.wpb-session-dialog',el=>el===document.activeElement),true,'empty protected sheet retains focus');

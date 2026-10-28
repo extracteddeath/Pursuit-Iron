@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b966-r846b34dff9398dd4",
-  "uiMilestone": "Build 966 · Stable contextual menu focus and keyboard dismissal"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b967-r9c51dbf57a99e4b4",
+  "uiMilestone": "Build 967 · Safe workout pagehide and dialog focus"
 }

@@ -8,7 +8,7 @@ const css = fs.readFileSync('app.css','utf8');
 const workout = app.slice(app.indexOf('function WorkoutSession('), app.indexOf('function WorkoutSession(')+275000);
 assert.ok(workout.startsWith('function WorkoutSession('), 'WorkoutSession source must exist');
 const exercise = workout.indexOf('className: "wpb-exercise-heading ');
-const toolbar = workout.indexOf('className: "wpb-hscroll wpb-workout-tools"');
+const toolbar = workout.indexOf('className: "wpb-hscroll wpb-workout-tools'); // Additional shared CSS owner classes must not hide or reorder the toolbar.
 const list = workout.indexOf('data-testid": `set-${ei}-${si}`');
 const add = workout.indexOf('className: "pressable wpb-add-set"');
 const coaching = workout.indexOf('"aria-label": "Expand Coach guidance"');

@@ -44,7 +44,11 @@ const perf = loggedWorkoutPerformance(program, program.days[0], [{ id: ex.id, sl
 assert.equal(perf[ex.id].sets[2].recoveryLimited, undefined, 'Unaccepted advice must not count as lowered work');
 assert.equal(progressionExposureContext(perf[ex.id].sets).badDay, false);
 const history = [{ id: 'completed', programId: program.id, dayId: 'd', date: 1, unit: 'lb', perf }];
-assert.notEqual(sessionSuggestion(program, program.days[0], 0, null, 'lb', 1, history).action, 'increase_load', 'eased work cannot earn future progression');
+assert.equal(sessionSuggestion(program, program.days[0], 0, null, 'lb', 1, history).action, 'increase_load', 'Unaccepted advice cannot masquerade as completed reduced work');
+const accepted = finished.map((s, i) => i === 2 ? { ...s, weight: '95', recoveryLimited: true, valueOwner: 'user' } : s);
+const acceptedPerf = loggedWorkoutPerformance(program, program.days[0], [{ id: ex.id, slot: 0, note: '', sets: accepted }], 1, 'lb', {}, []);
+assert.equal(progressionExposureContext(acceptedPerf[ex.id].sets).badDay, true, 'An explicitly accepted lower set remains recovery evidence');
+assert.notEqual(sessionSuggestion(program, program.days[0], 0, null, 'lb', 1, [{ ...history[0], perf: acceptedPerf }]).action, 'increase_load', 'Lowered work must not automatically earn a new load');
 console.log('PASS M232: two observed misses, one bounded loadable pending reduction, completed/manual/protocol protection, idempotent resume/undo and no earned progression from eased work.');
 
 // B901: a history-derived 9 / 11 / 9 prefill must yield to today's 8 @ 2 observation.

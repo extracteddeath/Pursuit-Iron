@@ -59,6 +59,54 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-layout-support-600,#root .wpb-layout-support-600{font-size:13px;font-weight:600}
 #root .wpb .wpb-layout-bottom16,#root .wpb-layout-bottom16{margin-bottom:var(--pi-space-4,16px)}
 #root .wpb .wpb-layout-row-gap8-top8,#root .wpb-layout-row-gap8-top8{display:flex;gap:var(--pi-space-2,8px);margin-top:var(--pi-space-2,8px)}
+/* B956: reusable static Program/Workout layout and type declarations.
+   Dynamic set geometry, motion, palette state and logged values stay inline. */
+#root .wpb .wpb-s956-display-flex,#root .wpb-s956-display-flex{display:flex}
+#root .wpb .wpb-s956-flexdirection-column,#root .wpb-s956-flexdirection-column{flex-direction:column}
+#root .wpb .wpb-s956-gap-6,#root .wpb-s956-gap-6{gap:6px}
+#root .wpb .wpb-s956-alignitems-flex-start,#root .wpb-s956-alignitems-flex-start{align-items:flex-start}
+#root .wpb .wpb-s956-fontweight-600,#root .wpb-s956-fontweight-600{font-weight:600}
+#root .wpb .wpb-s956-fontsize-14,#root .wpb-s956-fontsize-14{font-size:14px}
+#root .wpb .wpb-s956-justifycontent-space-between,#root .wpb-s956-justifycontent-space-between{justify-content:space-between}
+#root .wpb .wpb-s956-gap-12,#root .wpb-s956-gap-12{gap:var(--pi-space-3,12px)}
+#root .wpb .wpb-s956-fontweight-700,#root .wpb-s956-fontweight-700{font-weight:700}
+#root .wpb .wpb-s956-alignitems-center,#root .wpb-s956-alignitems-center{align-items:center}
+#root .wpb .wpb-s956-marginbottom-6,#root .wpb-s956-marginbottom-6{margin-bottom:6px}
+#root .wpb .wpb-s956-gap-8,#root .wpb-s956-gap-8{gap:var(--pi-space-2,8px)}
+#root .wpb .wpb-s956-flexwrap-wrap,#root .wpb-s956-flexwrap-wrap{flex-wrap:wrap}
+#root .wpb .wpb-s956-overflow-hidden,#root .wpb-s956-overflow-hidden{overflow:hidden}
+#root .wpb .wpb-s956-flex-1,#root .wpb-s956-flex-1{flex:1}
+#root .wpb .wpb-s956-minwidth-0,#root .wpb-s956-minwidth-0{min-width:0}
+#root .wpb .wpb-s956-fontsize-13,#root .wpb-s956-fontsize-13{font-size:13px}
+#root .wpb .wpb-s956-textoverflow-ellipsis,#root .wpb-s956-textoverflow-ellipsis{text-overflow:ellipsis}
+#root .wpb .wpb-s956-whitespace-nowrap,#root .wpb-s956-whitespace-nowrap{white-space:nowrap}
+#root .wpb .wpb-s956-marginbottom-12,#root .wpb-s956-marginbottom-12{margin-bottom:var(--pi-space-3,12px)}
+#root .wpb .wpb-s956-gap-4,#root .wpb-s956-gap-4{gap:var(--pi-space-1,4px)}
+#root .wpb .wpb-s956-margintop-8,#root .wpb-s956-margintop-8{margin-top:var(--pi-space-2,8px)}
+#root .wpb .wpb-s956-flexshrink-0,#root .wpb-s956-flexshrink-0{flex-shrink:0}
+#root .wpb .wpb-s956-textalign-right,#root .wpb-s956-textalign-right{text-align:right}
+#root .wpb .wpb-s956-margintop-2,#root .wpb-s956-margintop-2{margin-top:2px}
+#root .wpb .wpb-s956-margintop-6,#root .wpb-s956-margintop-6{margin-top:6px}
+#root .wpb .wpb-s956-display-grid,#root .wpb-s956-display-grid{display:grid}
+#root .wpb .wpb-s956-marginbottom-4,#root .wpb-s956-marginbottom-4{margin-bottom:var(--pi-space-1,4px)}
+#root .wpb .wpb-s956-fontsize-15,#root .wpb-s956-fontsize-15{font-size:15px}
+#root .wpb .wpb-s956-margintop-12,#root .wpb-s956-margintop-12{margin-top:var(--pi-space-3,12px)}
+#root .wpb .wpb-s956-fontsize-18,#root .wpb-s956-fontsize-18{font-size:18px}
+#root .wpb .wpb-s956-marginbottom-2,#root .wpb-s956-marginbottom-2{margin-bottom:2px}
+#root .wpb .wpb-s956-marginbottom-8,#root .wpb-s956-marginbottom-8{margin-bottom:var(--pi-space-2,8px)}
+#root .wpb .wpb-s956-marginbottom-14,#root .wpb-s956-marginbottom-14{margin-bottom:14px}
+#root .wpb .wpb-s956-gap-7,#root .wpb-s956-gap-7{gap:7px}
+#root .wpb .wpb-s956-alignitems-baseline,#root .wpb-s956-alignitems-baseline{align-items:baseline}
+#root .wpb .wpb-s956-justifycontent-center,#root .wpb-s956-justifycontent-center{justify-content:center}
+#root .wpb .wpb-s956-textalign-center,#root .wpb-s956-textalign-center{text-align:center}
+#root .wpb .wpb-s956-alignitems-flex-end,#root .wpb-s956-alignitems-flex-end{align-items:flex-end}
+#root .wpb .wpb-s956-width-30,#root .wpb-s956-width-30{width:30px}
+#root .wpb .wpb-s956-flex-0-0-30px,#root .wpb-s956-flex-0-0-30px{flex:0 0 30px}
+#root .wpb .wpb-s956-display-block,#root .wpb-s956-display-block{display:block}
+#root .wpb .wpb-s956-gap-5,#root .wpb-s956-gap-5{gap:5px}
+#root .wpb .wpb-s956-gap-10,#root .wpb-s956-gap-10{gap:10px}
+#root .wpb .wpb-s956-padding-3px-0,#root .wpb-s956-padding-3px-0{padding:3px 0}
+#root .wpb .wpb-s956-marginbottom-16,#root .wpb-s956-marginbottom-16{margin-bottom:var(--pi-space-4,16px)}
 /* M187 premium interaction contract.
    This is intentionally semantic instead of screen-specific: Home, Program, Workout, Progress,
    Settings and Onboarding inherit the same typography, control feedback, sheets, scrolling and

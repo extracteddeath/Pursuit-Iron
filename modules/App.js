@@ -13298,7 +13298,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                     _jsx(ChevronRight, { size: 18 })] }, o.label)),
             !readiness && _jsx("button", { type: "button", "data-wpb-system-back": true,
                 className: "wpb-readiness-skip pressable", onClick: () => applyReadiness("—", 1),
-                children: "Skip for now" })
+                children: "Skip" })
         ] }) }) }), _jsxs("div", { className: "wpb-workout-footer", style: { flexShrink: 0, padding: `${focus ? 0 : 8}px 16px calc(env(safe-area-inset-bottom) + ${keyboardOpen ? 6 : 14}px)`, background: C.bg, borderTop: `1px solid ${C.borderSoft}`, zIndex: 40 }, children: [rest > 0 && (!setDockPreview || keyboardOpen || focus) && (_jsxs("div", { "data-rest-card": true, className: "wpb-rest-card", role: "timer", "aria-live": "off", "aria-label": paused ? `Rest paused at ${fmtTime(rest)}` : `${fmtTime(rest)} rest remaining`, style: { background: C.card, borderRadius: 16, padding: "12px 12px", marginBottom: focus ? 8 : 0, marginTop: focus ? 10 : 0,
                             border: `1px solid ${paused ? C.warn + "55" : rest <= 10 ? C.accent + "66" : C.borderSoft}` }, children: [_jsxs("div", { className: "wpb-rest-top", style: { display: "flex", alignItems: "center", gap: 6 }, children: [_jsxs("span", { className: "wpb-rest-ring", "aria-hidden": true, style: { color: paused ? C.warn : C.accentInk }, children: [
                                 _jsxs("svg", { viewBox: "0 0 36 36", children: [

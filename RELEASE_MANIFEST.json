@@ -5,7 +5,7 @@
   "build": 959,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "4db294134520d47d4d122b66be68c3698a54222241017992309aa3e294ddb97f",
+  "runtimeAggregate": "63de408fe8ae1e03b9a136501ada695006484ab3044756a92ae90587416e8c52",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -110,7 +110,7 @@
     "modules/program-training-maxes.js": "8a671cf75d76d792d5d0410a820fe5ba8c7b6aece4e8d79f5ed590db48d5132c",
     "modules/program-volume-surfaces.js": "9ecba74bbf31518995e2d601e0ec29ac115821d11ab02bdf1377a605d4085145",
     "modules/release-notes.js": "138d46cf4b336306f8fa34202e1637b29f011347198da570c6bb23a2f0c5d558",
-    "modules/session-choice-dialog.js": "5024d948592472eee872fd0408879e1863333eb9509af8b440e154ad2fe6e0c5",
+    "modules/session-choice-dialog.js": "bd6a5e120d54671ae6442d0691b1247c33767af8796fd2963422bdb516322d3b",
     "modules/session-plan.js": "6b4b562f81d4a97b8d73ed892898f94180f617ce77d16c8fd4128a8781c903c8",
     "modules/session-tools.js": "bb47e4bbcef367a3a27b0cbd23393379d63a5c8ea41ba31172f342fa76795776",
     "modules/training-domain.js": "b0ab1dfc9b363f4ee7c467039aacf06a9fd9b635b92c224d4aa151cccc596f47",
@@ -148,8 +148,8 @@
   "uiFiles": {
     "modules/App.js": "df1eac1764eba7f4d08645c2ea170e93534cc8281f2a8031732796d52081ed58",
     "index.html": "969e582960b67f31171fc78a93b248ca2873e0ead5a7ea31d31c6858e0539ee6",
-    "sw.js": "bdbc7bbd362584dd70fe69ab8717f5546f92e8c41c87e94d5ff09df378324fa0",
-    "BUILD_PROFILE.json": "42cbc48ca75e4e6768596df76c4e7ad5e2d49a0a923adefa7224a676fd1e7a05",
+    "sw.js": "cb834291f4adc6b58c86c30af7fe6d7751b480670c889d9a552e60b1b549f73f",
+    "BUILD_PROFILE.json": "8feb94c0088b23bb5475a0ea92e1eeeeb150641d9607fd4ecdeaeaed1d07bcc0",
     "CHANGELOG.md": "004e81d258626db5b0e2ab6fcfae18a209ddca3b681bafe9441513bc3a0c9bd6",
     "app.css": "576f1dcb44129401f5511af188796fa187a9d590470f9f51031564f2f1505bbe",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -158,6 +158,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b959-rbb92f70996fe22f3",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b959-r7fccae400541418e",
   "uiMilestone": "Build 959 · Accessible session dialog containment"
 }

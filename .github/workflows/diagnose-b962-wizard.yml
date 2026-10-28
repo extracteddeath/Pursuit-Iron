@@ -1,4 +1,5 @@
 name: Diagnose B962 wizard at 320
+# Diagnostics revision 2: capture root and page exceptions on missing split step.
 on:
   push:
     branches: [b962-gym-edit-stability]

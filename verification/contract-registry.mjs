@@ -60,6 +60,7 @@ export const contractGroups = Object.freeze({
     ]),
     quality: Object.freeze([
         'b888-session-choices-test.mjs',
+        'b944-readiness-test.mjs',
         'm180-coach-quality-oracle-test.mjs',
         'm180-coach-quality-matrix.mjs',
         'm187-premium-ux-test.mjs',

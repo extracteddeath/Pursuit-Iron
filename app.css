@@ -9136,3 +9136,19 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-plan-change-card .wpb-plan-change-summary{margin:6px 0 4px;color:var(--wpb-theme-text);font-size:.875rem;font-weight:650;line-height:1.4}
 #root .wpb .wpb-plan-change-more>summary{min-height:44px;display:flex;align-items:center}
 #root .wpb .wpb-plan-change-card .wpb-plan-undo{min-height:48px}
+
+/* B944 — workout readiness uses shared, keyboard-accessible dialog choreography. */
+#root .wpb .wpb-readiness-dialog{display:flex;flex-direction:column;overflow:hidden;max-height:88dvh;padding:0}
+#root .wpb .wpb-readiness-dialog .wpb-session-dialog-heading{flex:0 0 auto;margin:0;padding:var(--pi-space-4);border-bottom:1px solid var(--wpb-theme-border)}
+#root .wpb .wpb-readiness-dialog .wpb-session-dialog-heading button{flex-shrink:0;min-height:48px;min-width:48px}
+#root .wpb .wpb-readiness-content{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--pi-space-3) var(--pi-space-4) calc(var(--pi-space-4) + env(safe-area-inset-bottom))}
+#root .wpb .wpb-readiness-content .wpb-readiness-intro{margin:0 0 var(--pi-space-3);font-size:.875rem;line-height:1.5}
+#root .wpb .wpb-readiness-option{display:flex;align-items:center;gap:var(--pi-space-3);width:100%;min-height:64px;margin:0 0 var(--pi-space-2);padding:var(--pi-space-3);text-align:left;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);border-radius:var(--pi-shape-card,16px);font:inherit}
+#root .wpb .wpb-readiness-option[aria-pressed="true"]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim)}
+#root .wpb .wpb-readiness-icon{flex:0 0 36px;display:grid;place-items:center;height:36px;border-radius:12px;background:var(--wpb-theme-bg);color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-readiness-copy{flex:1;min-width:0;display:grid;gap:2px}
+#root .wpb .wpb-readiness-copy strong{font-size:.9375rem;font-weight:700;line-height:1.3}
+#root .wpb .wpb-readiness-copy span{font-size:.8125rem;color:var(--wpb-theme-muted);line-height:1.45}
+#root .wpb .wpb-readiness-option>svg{flex-shrink:0;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-readiness-skip{width:100%;min-height:48px;border:0;background:transparent;color:var(--wpb-theme-muted);font:inherit;font-weight:650}
+#root .wpb .wpb-readiness-option:focus-visible,#root .wpb .wpb-readiness-skip:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}

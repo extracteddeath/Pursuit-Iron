@@ -2,6 +2,11 @@
 import { Accessibility, Activity, AlertTriangle, Award, Ban, BarChart3, Brain, Calendar, Check, CheckCircle2, Clock, Dumbbell, Flame, GripVertical, HardDrive, HelpCircle, Home as HomeIcon, Info, Layers, Library, Maximize2, Medal, Milestone, Minus, Palette, Play, Plus, PlusCircle, RefreshCw, Repeat, Save, Search, Settings2, Share2, Shield, Smartphone, Sparkles, Target, Timer, Trash2, TrendingUp, Trophy, Undo2, Wand2, Zap } from 'lucide-react';
 
 export const CHANGELOG = [
+    { version: "4.0.0", build: "944", items: [
+        "You can adjust workout readiness from Workout options, even after starting; changing the answer never compounds a previous load reduction.",
+        "Readiness changes only suggested working weights that are still unlogged. Your manual entries, completed sets, current reps and target effort remain untouched.",
+        "Loads follow your gym’s usable weight increments. The check-in now uses an accessible, scrollable sheet with a persistent heading."
+    ] },
     { version: "4.0.0", build: "943", items: [
         "Home and Preview only flag meaningful upcoming adjustments: load changes, plateau responses, and recent changes to planned set counts. Earning an extra rep is ordinary progression, not an undoable plan edit.",
         "Keep the previous load without giving up earned rep targets. Your logged sets, planned effort, and training program remain intact.",

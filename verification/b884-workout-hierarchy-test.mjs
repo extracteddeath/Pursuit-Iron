@@ -69,3 +69,14 @@ assert.ok(css.includes('width:48px!important;min-width:48px!important;') &&
 assert.ok(workout.includes('aria-label": "Confirm skip exercise for today"') &&
   css.includes('.wpb-exercise-head-actions>.wpb-confirm-skip{'),
   'Skip confirmation has its own accessible label and intrinsic text width');
+
+/* B969: toolbar buttons are icon-only; feature callbacks remain in WorkoutSession. */
+assert.ok(workout.includes('className: "pressable wpb-workout-tool", "aria-label": c.label') &&
+  workout.includes('"aria-pressed": c.active === undefined ? undefined : !!c.active') &&
+  workout.includes('children: _jsx(c.icon, { size: 19, "aria-hidden": true })'),
+  'Accessible icon actions retain their labels and toggle semantics');
+assert.ok(!workout.includes('padding: "8px 13px", borderRadius: 999, border: '),
+  'Toolbar presentation must no longer be owned by JSX styles');
+assert.ok(css.includes('/* B969: compact workout action rail.') &&
+  css.includes('.wpb-workout-tools .wpb-workout-tool[data-selected="true"]'),
+  'One CSS owner paints the compact icon rail and selected state');

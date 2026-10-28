@@ -91,6 +91,7 @@ export const contractGroups = Object.freeze({
         'b885-stable-workout-rows-test.mjs',
         'b884-workout-hierarchy-test.mjs',
         'b947-workout-nav-abbreviations-test.mjs',
+        'b948-persistent-update-workout-test.mjs',
         'b883-native-loading-step-test.mjs',
         'b881-history-import-test.mjs',
         'b880-play-foundation-test.mjs',

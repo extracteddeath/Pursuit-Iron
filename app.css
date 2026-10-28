@@ -9357,3 +9357,40 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-b962-layout-15,#root .wpb-b962-layout-15{font-size:13px;font-weight:500}
 #root .wpb .wpb-b962-layout-16,#root .wpb-b962-layout-16{padding:16px;margin:12px 0;text-align:center}
 #root .wpb .wpb-b962-layout-17,#root .wpb-b962-layout-17{display:grid;gap:10px;padding-top:6px}
+
+/* B964: static scroll / plan / progress / responsive layout now use one CSS property owner. */
+#root .wpb .wpb-b964-layout-01,#root .wpb-b964-layout-01{margin:0 10px 10px}
+#root .wpb .wpb-b964-layout-02,#root .wpb-b964-layout-02{width:64px;flex-shrink:0}
+#root .wpb .wpb-b964-layout-03,#root .wpb-b964-layout-03{flex:1;min-height:0;overflow-y:auto;padding:8px 14px 90px}
+#root .wpb .wpb-b964-layout-04,#root .wpb-b964-layout-04{cursor:pointer;font-weight:600;font-size:14px}
+#root .wpb .wpb-b964-layout-05,#root .wpb-b964-layout-05{display:inline;vertical-align:-1px}
+#root .wpb .wpb-b964-layout-06,#root .wpb-b964-layout-06{text-align:right;width:58px;min-width:58px;max-width:58px;flex-shrink:0;margin-top:2px}
+#root .wpb .wpb-b964-layout-07,#root .wpb-b964-layout-07{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#root .wpb .wpb-b964-layout-08,#root .wpb-b964-layout-08{display:grid;grid-template-columns:repeat(4, 1fr);gap:8px}
+#root .wpb .wpb-b964-layout-09,#root .wpb-b964-layout-09{flex:1;overflow-y:auto;padding:0 18px}
+#root .wpb .wpb-b964-layout-10,#root .wpb-b964-layout-10{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;padding:0 18px 10px}
+#root .wpb .wpb-b964-layout-11,#root .wpb-b964-layout-11{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:8px}
+#root .wpb .wpb-b964-layout-12,#root .wpb-b964-layout-12{padding:8px 0;font-weight:700;cursor:pointer}
+#root .wpb .wpb-b964-layout-13,#root .wpb-b964-layout-13{cursor:pointer;padding:8px 0;font-weight:700}
+#root .wpb .wpb-b964-layout-14,#root .wpb-b964-layout-14{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;padding-bottom:2px}
+#root .wpb .wpb-b964-layout-15,#root .wpb-b964-layout-15{display:block;max-width:100%}
+#root .wpb .wpb-b964-layout-16,#root .wpb-b964-layout-16{display:grid;gap:6px;margin-bottom:12px;font-size:13px;font-weight:650}
+#root .wpb .wpb-b964-layout-17,#root .wpb-b964-layout-17{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+#root .wpb .wpb-b964-layout-18,#root .wpb-b964-layout-18{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:2px}
+#root .wpb .wpb-b964-layout-19,#root .wpb-b964-layout-19{flex:1;overflow-y:auto;padding:16px 16px 40px}
+#root .wpb .wpb-b964-layout-20,#root .wpb-b964-layout-20{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:6px}
+#root .wpb .wpb-b964-layout-21,#root .wpb-b964-layout-21{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px}
+#root .wpb .wpb-b964-layout-22,#root .wpb-b964-layout-22{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;padding-bottom:2px}
+#root .wpb .wpb-b964-layout-23,#root .wpb-b964-layout-23{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
+#root .wpb .wpb-b964-layout-24,#root .wpb-b964-layout-24{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+#root .wpb .wpb-b964-layout-25,#root .wpb-b964-layout-25{flex:1;overflow-y:auto;padding-bottom:8px}
+#root .wpb .wpb-b964-layout-26,#root .wpb-b964-layout-26{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px;margin-top:10px}
+#root .wpb .wpb-b964-layout-27,#root .wpb-b964-layout-27{flex:1;overflow-y:auto;padding:6px 16px 28px}
+#root .wpb .wpb-b964-layout-28,#root .wpb-b964-layout-28{flex:1;overflow-y:auto;padding:6px 0 28px}
+#root .wpb .wpb-b964-layout-29,#root .wpb-b964-layout-29{flex:1;overflow-y:auto;padding:8px 16px 28px}
+#root .wpb .wpb-b964-layout-30,#root .wpb-b964-layout-30{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;padding-bottom:6px;margin-bottom:20px}
+#root .wpb .wpb-b964-layout-31,#root .wpb-b964-layout-31{display:flex;align-items:center;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px}
+#root .wpb .wpb-b964-layout-32,#root .wpb-b964-layout-32{flex:1;overflow-y:auto;padding:32px 24px;align-items:center;justify-content:center}
+#root .wpb .wpb-b964-layout-33,#root .wpb-b964-layout-33{width:100%;max-width:420px;margin:auto;padding:22px}
+#root .wpb .wpb-b964-layout-34,#root .wpb-b964-layout-34{display:flex;gap:6px;overflow-x:auto;padding:2px 0}
+#root .wpb .wpb-b964-layout-35,#root .wpb-b964-layout-35{flex:1;overflow-y:auto;padding:14px 16px 40px}

@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b970-r960b067e9b7c6dd3",
-  "uiMilestone": "Build 970 · Simplified workout notes and CSS ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b971-r14ced1bc0d5a7fc0",
+  "uiMilestone": "Build 971 · Workout header CSS and summary geometry"
 }

@@ -6771,8 +6771,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   scroll-padding-inline:4px;
 }
 #root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{
-  width:40px!important;
-  min-width:40px!important;
   height:40px!important;
   min-height:40px!important;
   border-radius:13px!important;
@@ -7969,7 +7967,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-progression-label{
   grid-column:1/-1;grid-row:3;justify-self:start;align-self:center;
   box-sizing:border-box;max-width:100%;min-height:36px!important;
-  margin:0!important;padding:3px 4px!important;line-height:1.3;text-align:left;
+  line-height:1.3;text-align:left;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-progression-explanation,
 #root .wpb-workout[data-focus-mode="false"] .wpb-exercise-meta>.wpb-adjust-sets,

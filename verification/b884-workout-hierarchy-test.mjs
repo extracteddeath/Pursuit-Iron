@@ -90,3 +90,18 @@ assert.ok(workout.includes('{ k: "session-note", hasNote: !!e.note') &&
 for(const cls of ['wpb-workout-pinned-note','wpb-workout-pinned-note-text','wpb-workout-starting-hint']){
  assert.ok(css.includes('#root .wpb-workout .'+cls+'{'),'CSS owns workout note/hint presentation: '+cls);
 }
+
+/* B971: UI-only header CSS ownership; timer and progress state remain in React. */
+for(const cls of ['wpb-workout-header','wpb-workout-close','wpb-workout-summary',
+  'wpb-workout-exercise-link','wpb-workout-day-note','wpb-workout-day-note-copy']){
+ assert.ok(css.includes('#root .wpb-workout .'+cls+'{'), 'Missing fixed header CSS owner: '+cls);
+}
+assert.ok(workout.includes('"aria-label": "Workout completion"') &&
+  workout.includes('"aria-valuenow": doneSets') &&
+  workout.includes('"aria-label": "Show today\'s exercises"') &&
+  workout.includes('"aria-label": "Leave workout"'),
+  'Progress, exercise navigation and Leave actions retain their state owners');
+assert.ok(!workout.includes('className: "wpb-workout-header", style: { padding:') &&
+  !workout.includes('className: "wpb-workout-summary", style:') &&
+  !workout.includes('className: "pressable hit wpb-workout-close", style:'),
+  'Static workout header styles must not be duplicated inline');

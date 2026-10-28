@@ -150,6 +150,26 @@ try {
       labelRects:labels.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width})),
       fieldRects:fields.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width,flex:getComputedStyle(x).flex}))};
   });
+  const headerLayout=await page.$eval('.wpb-workout-header',el=>{
+    const progress=el.querySelector('[role="progressbar"]');
+    const close=el.querySelector('[aria-label="Leave workout"]');
+    const summary=el.querySelector('.wpb-workout-summary');
+    const nav=summary?.querySelector('[aria-label="Show today\'s exercises"]');
+    const p=progress?.getBoundingClientRect(),c=close?.getBoundingClientRect(),s=summary?.getBoundingClientRect();
+    return {progressHeight:p?.height,progressOverflow:progress&&getComputedStyle(progress).overflow,
+      border:getComputedStyle(el).borderBottomStyle,
+      closeWidth:c?.width,closeHeight:c?.height,summaryDisplay:summary&&getComputedStyle(summary).display,
+      summaryWidth:s?.width,summaryScrollWidth:summary?.scrollWidth,
+      navLabel:nav?.getAttribute('aria-label')};
+  });
+  assert.ok(headerLayout.progressHeight>=5&&headerLayout.progressHeight<=7&&headerLayout.progressOverflow==='hidden',
+    'Workout progress retains compact geometry: '+JSON.stringify(headerLayout));
+  assert.ok(headerLayout.closeWidth>=40&&headerLayout.closeHeight>=40&&headerLayout.border==='solid',
+    'Leave workout remains reachable in header: '+JSON.stringify(headerLayout));
+  assert.equal(headerLayout.summaryDisplay,'flex','Workout summary retains flex layout');
+  assert.ok(headerLayout.summaryScrollWidth<=headerLayout.summaryWidth+2,
+    'Workout summary should not overflow its header: '+JSON.stringify(headerLayout));
+  assert.equal(headerLayout.navLabel,"Show today's exercises",'Exercise-list action is preserved');
   assert.ok(loadRepHeaders,'Workout set headings and inputs remain mounted');
   if(loadRepHeaders.compact){
     assert.equal(loadRepHeaders.load,'center','Compact LOAD heading centered over load inputs');

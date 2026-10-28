@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b960-r556bc74bf8c8e90d",
-  "uiMilestone": "Build 960 · Shared static presentation CSS ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b961-r2c41daf16c5e6bc6",
+  "uiMilestone": "Build 961 · Shared modal and informational icon CSS ownership"
 }

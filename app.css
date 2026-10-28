@@ -38,6 +38,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @keyframes pursuitBootSlide{0%{transform:translate3d(-165%,0,0)}60%,100%{transform:translate3d(265%,0,0)}}
 @media (prefers-reduced-motion:reduce){.pursuit-boot-progress>span{animation:none;transform:none;width:100%;opacity:.45}}
 
+/* B954: one CSS owner for common icon stability and seven identical modal overlays.
+   Replaces static JSX styles, without changing inputs, gestures or saved data. */
+#root .wpb svg.wpb-icon-no-shrink{flex-shrink:0}
+#root .wpb .wpb-backdrop.wpb-shared-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:70;animation:fadeIn .2s both;padding:24px}
 /* M187 premium interaction contract.
    This is intentionally semantic instead of screen-specific: Home, Program, Workout, Progress,
    Settings and Onboarding inherit the same typography, control feedback, sheets, scrolling and
@@ -1418,7 +1422,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    stays in document flow and remains reachable from its first frame.
    No fixed animation on workout set inputs or persisting lists. */
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-step[data-pi-step-enter="1"]{
-  animation:piExpressiveStepIn 360ms cubic-bezier(.18,.82,.23,1) both!important;
   transform-origin:50% 0;
 }
 @keyframes piExpressiveStepIn{
@@ -1625,7 +1628,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Preserve actual form state, available choices and footer dimensions. */
 
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-heading-title{
-  font-size:clamp(28px,7.2vw,35px)!important;
   font-weight:810!important;
   text-wrap:balance;
 }
@@ -1912,7 +1914,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Navigation is one grounded surface; active destination is indicated by the
    already-measured spring pill, not by a background glow on the entire bar. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  background-color:var(--pi-m3e-surface-container-low)!important;
   border-top:1px solid var(--pi-m3e-outline-variant)!important;
 }
 /* A flat primary container creates an obvious task hierarchy. The action
@@ -3282,7 +3283,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Tab buttons still own all tap/keyboard semantics; the animated track
    remains paint-only, measured by ui-motion.js from these real bounds. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  background-color:var(--pi-r38-nav-surface)!important;
   padding-top:5px!important;
   padding-bottom:calc(5px + env(safe-area-inset-bottom))!important;
 }
@@ -4543,7 +4543,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
   background-image:none!important;
-  border-color:var(--pi-r11-accent-stroke)!important;
 }
 
 /* R54 — shared design roles in the *expanded* full Program. The live workout
@@ -6771,9 +6770,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   scroll-padding-inline:4px;
 }
 #root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{
-  height:40px!important;
-  min-height:40px!important;
-  border-radius:13px!important;
   font-size:13px!important;
   box-shadow:none!important;
 }
@@ -6805,7 +6801,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root .wpb-workout .wpb-exercise-heading .wpb-progression-label{
   margin-top:4px!important;
-  font-size:11px!important;
 }
 #root .wpb-workout .wpb-exercise-head-actions{
   gap:1px!important;
@@ -7068,7 +7063,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     align-items:start!important;padding:5px 2px 7px!important;
   }
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index{
-    grid-column:1;grid-row:1;min-width:0;width:auto!important;padding-top:5px!important;
+    grid-column:1;grid-row:1;min-width:0;padding-top:5px!important;
   }
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>.wpb-set-index::before{content:none!important;}
   #root .wpb-workout[data-focus-mode="false"] .wpb-set-controls>div:nth-child(2){
@@ -7118,8 +7113,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     display:flex!important;align-items:flex-start!important;gap:6px!important;
     padding:2px!important;
   }
-  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>.wpb-set-index{
-    width:24px!important;flex:0 0 24px!important;padding-top:7px!important;
+  #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>.wpb-set-index{padding-top:7px!important;
   }
   #root .wpb-workout[data-focus-mode="false"] [data-done="1"] .wpb-set-controls>div:nth-child(2){
     display:block!important;width:60px!important;flex:0 0 60px!important;

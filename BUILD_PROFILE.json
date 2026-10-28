@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b953-r8145a62bba69b0e5",
-  "uiMilestone": "Build 953 · Compact workout spacing and launch-readiness verification"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b954-r667923c9fda69028",
+  "uiMilestone": "Build 954 · Consolidated shared icon/modal styles and retired CSS conflicts"
 }

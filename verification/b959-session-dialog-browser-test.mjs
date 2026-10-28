@@ -4,7 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import puppeteer from 'puppeteer-core';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
-const im=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\\s\\S]*?<\\/script>/)[0];
+const im=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const fixture=`import React from '/vendor/react.js';
 import {createRoot} from '/vendor/react-dom-client.js';
 import {SessionChoiceDialog} from '/modules/session-choice-dialog.js';

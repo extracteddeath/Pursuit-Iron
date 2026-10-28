@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useRef, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 
-const focusable = 'button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,[tabindex]:not([tabindex="-1"])';
+const focusable = 'button:not(:disabled),select,textarea,input,summary,a[href]';
 
 export function SessionChoiceDialog({ title, onClose, children, dismissible = true, className = "", footer = null, panelRef }) {
     const dialogRef = useRef(null);
@@ -20,10 +20,11 @@ export function SessionChoiceDialog({ title, onClose, children, dismissible = tr
         if (ev.key !== 'Tab') return;
         const panel = dialogRef.current;
         if (!panel) return;
+        // Match the established journal/wizard tab order: generic tabindex elements
+        // are not action controls, and including them after a <summary> lets Tab escape.
         const items = [...panel.querySelectorAll(focusable)].filter(el =>
-            el.getClientRects().length > 0 &&
-            getComputedStyle(el).visibility !== 'hidden' &&
-            !el.closest('[inert],[aria-hidden="true"]'));
+            el.getClientRects().length &&
+            (el.tagName === 'SUMMARY' || !el.closest('details:not([open])')));
         const first = items[0], last = items.at(-1), active = document.activeElement;
         if (!first) { ev.preventDefault(); panel.focus({ preventScroll: true }); }
         else if (ev.shiftKey && (active === first || active === panel || !panel.contains(active))) {

@@ -1,3 +1,11 @@
+## Build 970 — Unclutter workout notes and consolidate static note styling
+
+- Remove the redundant, full-width per-exercise session-note button from the workout header. The compact note action still opens the existing editor and retains its accessible name.
+- Add a subtle filled note indicator to the 48px action icon when an exercise note is saved.
+- Move set-context, starting-hint, pinned-note card, and pinned-note excerpt presentation from JSX into theme-aware CSS while preserving labels and behavior.
+- Extend normal and Focus phone/browser checks for a single note action, visible indicator, safe touch target, saved note text and editor access after reload.
+- Preserve persisted notes, workout progression, set rows, saved training data, and engine 0.65.9.
+
 ## Build 969 — Workout action rail: accessible compact icons
 
 - Replace the scrolling text-chip action strip with 48px icon controls; provide per-action accessible names and browser tooltips.

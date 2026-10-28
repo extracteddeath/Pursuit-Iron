@@ -25,14 +25,16 @@ export function SessionChoiceDialog({ title, onClose, children, dismissible = tr
         const items = [...panel.querySelectorAll(focusable)].filter(el =>
             el.getClientRects().length &&
             el.getAttribute('tabindex') !== '-1' &&
+            el.getAttribute('aria-disabled') !== 'true' &&
             !el.closest('[inert],[aria-hidden="true"]') &&
             getComputedStyle(el).visibility !== 'hidden' &&
             (el.tagName === 'SUMMARY' || !el.closest('details:not([open])')));
         const first = items[0], last = items.at(-1), active = document.activeElement;
+        const activeIsEligible = items.includes(active);
         if (!first) { ev.preventDefault(); panel.focus({ preventScroll: true }); }
-        else if (ev.shiftKey && (active === first || active === panel || !panel.contains(active))) {
+        else if (ev.shiftKey && (active === first || active === panel || !activeIsEligible)) {
             ev.preventDefault(); last.focus({ preventScroll: true });
-        } else if (!ev.shiftKey && (active === last || active === panel || !panel.contains(active))) {
+        } else if (!ev.shiftKey && (active === last || active === panel || !activeIsEligible)) {
             ev.preventDefault(); first.focus({ preventScroll: true });
         }
     };

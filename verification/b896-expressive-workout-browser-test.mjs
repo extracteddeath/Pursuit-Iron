@@ -190,6 +190,10 @@ try {
     'Warm-up control exposes its toggle state');
   assert.ok(actionSemantics.some(a=>a.name==='Superset'&&a.pressed==='false'),
     'Superset control exposes its toggle state');
+  assert.ok(actionSemantics.some(a=>a.name==='Session note'),
+    'Session notes remain reachable from the compact workout toolbar');
+  assert.equal(await page.$$eval('.wpb-exercise-heading .wpb-session-choice',els=>els.length),0,
+    'No extra note row separates the workout name and set context');
 
   const nav=await page.$$eval('.wpb-ex-nav-step',els=>els.map(el=>({name:el.querySelector('.wpb-ex-nav-name')?.textContent,count:el.querySelector('.wpb-ex-nav-count')?.textContent,label:el.getAttribute('aria-label')})));
   assert.equal(nav[0].count,'1/3');assert.equal(nav[1].count,'0/2');assert.ok(nav.every((x,i)=>x.name&&x.label.startsWith(EX_BY_ID[program.days[0].exercises[i]].name)));

@@ -1,0 +1,44 @@
+# Single-use candidate finalizer. Never modifies main directly.
+name: Finalize dialog B959
+on:
+  push:
+    branches: [b959-dialog-containment]
+    paths:
+      - '.github/workflows/finalize-session-dialog-b959.yml'
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Verify dialog source and CSS ownership
+        run: |
+          node verification/b959-dialog-owner-test.mjs
+          node verification/ui-ownership-test.mjs
+      - name: Version candidate and refresh cache
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const file="RELEASE_MANIFEST.json",m=JSON.parse(fs.readFileSync(file,"utf8"));
+            if(m.build!==958)throw new Error("Expected B958");
+            m.uiMilestone="Build 959 · Accessible session dialog containment";
+            fs.writeFileSync(file,JSON.stringify(m,null,2));
+          '
+          node scripts/finalize-release.mjs --next-build
+      - name: Verify release integrity
+        run: node scripts/verify-release.mjs
+      - name: Save certified branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Finalize B959: protected dialogs and stable Close controls"
+          git push origin HEAD:b959-dialog-containment

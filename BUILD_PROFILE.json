@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b964-r20c1bdcb86582b77",
-  "uiMilestone": "Build 964 · Unified scroll, grid and layout CSS ownership"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b965-r43f3910776da08e7",
+  "uiMilestone": "Build 965 · Workout and app-shell static layout consolidation"
 }

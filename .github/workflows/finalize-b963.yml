@@ -1,0 +1,43 @@
+name: Finalize B963 dialog focus and CI hygiene (one shot)
+on:
+  push:
+    branches: [refactor/b963-dialog-focus-hygiene]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Verify focused source contracts
+        run: |
+          node --check modules/session-choice-dialog.js
+          node --check verification/b959-session-dialog-browser-test.mjs
+          node verification/b959-dialog-owner-test.mjs
+          node verification/m237-ci-supply-chain-test.mjs
+      - name: Finalize one Build 963 release
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const file='RELEASE_MANIFEST.json', m=JSON.parse(fs.readFileSync(file,'utf8'));
+          if(m.build!==962) throw new Error('Unexpected release baseline '+m.build);
+          m.uiMilestone='Build 963 · Safer session dialog focus and retired publishing workflows';
+          fs.writeFileSync(file,JSON.stringify(m,null,2)+'\n');
+          NODE
+          node scripts/finalize-release.mjs --next-build
+          node scripts/verify-release.mjs
+      - name: Commit finalized release and retire this workflow
+        run: |
+          rm .github/workflows/finalize-b963.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Finalize Build 963: dialog focus, CI cleanup and offline hashes"
+          git push origin HEAD:refactor/b963-dialog-focus-hygiene

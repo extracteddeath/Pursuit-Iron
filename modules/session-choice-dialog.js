@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useRef, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 
-const focusable = 'button:not(:disabled),select,textarea,input,summary,a[href]';
+const focusable = 'button:not(:disabled),select:not(:disabled),textarea:not(:disabled),input:not(:disabled),summary,a[href]';
 
 export function SessionChoiceDialog({ title, onClose, children, dismissible = true, className = "", footer = null, panelRef }) {
     const dialogRef = useRef(null);
@@ -24,6 +24,9 @@ export function SessionChoiceDialog({ title, onClose, children, dismissible = tr
         // are not action controls, and including them after a <summary> lets Tab escape.
         const items = [...panel.querySelectorAll(focusable)].filter(el =>
             el.getClientRects().length &&
+            el.getAttribute('tabindex') !== '-1' &&
+            !el.closest('[inert],[aria-hidden="true"]') &&
+            getComputedStyle(el).visibility !== 'hidden' &&
             (el.tagName === 'SUMMARY' || !el.closest('details:not([open])')));
         const first = items[0], last = items.at(-1), active = document.activeElement;
         if (!first) { ev.preventDefault(); panel.focus({ preventScroll: true }); }

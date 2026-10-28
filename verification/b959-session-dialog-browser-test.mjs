@@ -12,13 +12,22 @@ function Demo(){
  const [mode,setMode]=React.useState(null);
  window.forceClose=()=>setMode(null);
  return React.createElement('div',{className:'wpb',style:{minHeight:'100dvh'}},
- ['standard','protected','empty'].map(id=>React.createElement('button',{id:'open-'+id,key:id,onClick:()=>setMode(id)},'Open '+id)),
+ ['standard','protected','empty','disabled'].map(id=>React.createElement('button',{id:'open-'+id,key:id,onClick:()=>setMode(id)},'Open '+id)),
  mode && React.createElement(SessionChoiceDialog,{
    title:'An intentionally very long heading for the full session review experience',
    dismissible:mode==='standard',
    onClose:()=>{window.closeCount=(window.closeCount||0)+1;setMode(null)}
  },mode==='empty'?React.createElement('p',null,'Read only'):
-    [React.createElement('input',{key:'field',id:'field','aria-label':'Details'}),
+ mode==='disabled' ? [
+    React.createElement('input',{key:'field',id:'field','aria-label':'Details'}),
+    React.createElement('details',{key:'closed'},React.createElement('summary',null,'Extra'),React.createElement('button',{id:'closed-action'},'Unavailable while closed')),
+    React.createElement('div',{key:'inert',inert:true},React.createElement('button',{id:'inert-action'},'Inactive')),
+    React.createElement('button',{key:'live',id:'last-live'},'Apply'),
+    React.createElement('input',{key:'disabled-input',id:'disabled-field',disabled:true,'aria-label':'Unavailable'}),
+    React.createElement('select',{key:'disabled-select',id:'disabled-select',disabled:true},React.createElement('option',null,'Disabled')),
+    React.createElement('button',{key:'disabled-button',id:'disabled-action',disabled:true},'Unavailable'),
+    React.createElement('input',{key:'hidden',id:'hidden-field',style:{display:'none'},'aria-label':'Hidden')
+ ] : [React.createElement('input',{key:'field',id:'field','aria-label':'Details'}),
      React.createElement('button',{key:'save',id:'save'},'Save')])
  );
 }
@@ -63,6 +72,12 @@ try {
  await page.keyboard.press('Tab');
  assert.equal(await page.$eval('#field',el=>el===document.activeElement),true,'protected Tab enters first field');
  await page.evaluate(()=>window.forceClose());await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
+ await page.click('#open-disabled');await page.waitForSelector('#last-live');
+ await page.$eval('#last-live',el=>el.focus());await page.keyboard.press('Tab');
+ assert.equal(await page.$eval('.wpb-session-dialog-heading button',el=>el===document.activeElement),true,'Tab skips disabled, hidden, inert and closed disclosure controls');
+ await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');
+ assert.equal(await page.$eval('#last-live',el=>el===document.activeElement),true,'Shift+Tab wraps to last enabled visible action');
+ await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
  await page.click('#open-empty');await page.keyboard.press('Tab');
  assert.equal(await page.$eval('.wpb-session-dialog',el=>el===document.activeElement),true,'empty protected sheet retains focus');
  await page.evaluate(()=>window.forceClose());await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
@@ -71,5 +86,5 @@ try {
  const tablet=await page.$eval('.wpb-session-dialog',el=>{const r=el.getBoundingClientRect();return {x:r.x,right:r.right,width:r.width};});
  assert.ok(tablet.width<=620&&tablet.x>=0&&tablet.right<=1000,'tablet bounds contained');
  assert.deepEqual(errors,[],'no browser errors');
- console.log('PASS B959 browser: protected sheet, Tab, Escape, phone and tablet Close geometry');
+ console.log('PASS B963/B959 browser: protected sheet, disabled/hidden/inert Tab trap, Escape, phone and tablet Close geometry');
 } finally { if(browser)await browser.close();await new Promise(done=>server.close(done)); }

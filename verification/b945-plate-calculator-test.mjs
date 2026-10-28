@@ -7,7 +7,8 @@ import { plateLoadPreview } from '../modules/training-domain/loading-tools.js';
 const lb = plates => ({ platePairs: { lb: plates } });
 try {
   setGymBarWeights(null);
-  setAvailPlates(availPlatesFor(null, {}));
+  // Match the screenshot gym: standard 45/25/10/5/2.5 plates, no 35s.
+  setAvailPlates(availPlatesFor(null, lb({ 45: 4, 25: 2, 10: 2, 5: 2, 2.5: 2 })));
 
   // Screenshot regression: both arrangements reach 260 lb, but the heaviest-first
   // arrangement is more conventional for a 45 lb bar and a standard plate rack.
@@ -20,6 +21,7 @@ try {
   assert.deepEqual(preview.plates, result.plates, 'sheet and workout row share one solver');
 
   // Total plate count takes priority over heavier denominations.
+  setAvailPlates(availPlatesFor(null, {}));
   const fewerPlates = platesPerSide(215, 'barbell', 'lb');
   assert.deepEqual(fewerPlates.plates, [45, 35, 5]);
 

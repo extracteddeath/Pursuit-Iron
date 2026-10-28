@@ -9,7 +9,7 @@ A configured 5 lb Machine Shoulder Press showed automatic target rows of 115.5, 
 - Automatically generated drop weights in the legacy prescription adapter also now snap to loadable equipment settings instead of multiplying a load and displaying the raw fractional result.
 
 ## Regression verification
-Release gate: `verification/b946-machine-loading-grid-test.mjs`
+Quality contract: `verification/b946-machine-loading-grid-test.mjs` (registered in the standard engine/UX quality shard)
 - Given automatic raw dynamic targets 115.5 / 110 / 99 lb with a 5 lb machine step, working rows are 115 / 110 / 95 lb; input and target agree.
 - A comparable prior session completing 120 lb across all three sets at >=8 reps and adequate effort retains 120 lb; there is no fabricated load reduction. Real underperformance, explicit readiness, and position-specific fatigue may still result in load adjustments.
 - Engine progression next steps honor the configured 5 lb increment.

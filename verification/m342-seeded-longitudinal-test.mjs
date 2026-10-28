@@ -139,11 +139,13 @@ function doSession(p, day, week, history, event, context) {
             const replayed = reconcileRestoredLiveAdjustments(clone(attempt.sets));
             assert.deepEqual(replayed, clone(attempt.sets),
                 'Evidence-backed adjustment changed merely by resuming');
-            if (attempt.decision.action === 'reduce_pending_load') {
-                const newRow = replayed.find(row => row.liveAdjustment?.action === 'reduce_pending_load');
-                assert.ok(newRow?.recoveryLimited && !newRow.done);
-                assert.ok(Number(newRow.weight) < starting,
-                    'Fatigue adjustment increased a pending load');
+            if (attempt.decision.action === 'suggest_pending_load_reduction') {
+                const newRow = replayed.find(row => row.liveAdjustment?.action === 'suggest_pending_load_reduction');
+                assert.ok(newRow && !newRow.done && newRow.recoveryLimited !== true);
+                assert.equal(Number(newRow.weight),starting,
+                    'Fatigue advice must never change the athlete\'s pending load');
+                assert.ok(Number(newRow.loadAdvice.toLoad) < starting,
+                    'Fatigue advice must name a genuinely lighter available load');
                 metrics.liveAdjustments++;
             }
             updated.splice(0, updated.length, ...replayed.map(row => {

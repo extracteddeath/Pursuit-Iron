@@ -127,14 +127,16 @@ function save(rows, context = {}) {
         'An unearned hold must retain the actual per-set mixed loads');
     check('mixed-load-no-effort', { action: done.advice.action, next: target.map(r => Number(r.weight)) });
 }
-// 5. Two observed failures reduce ONE pending automatic accessory set.
-// Interrupted completion and storage must retain fatigue provenance and bar progression.
+// 5. Two observed misses MAY SUGGEST a lighter pending accessory set.
+// They cannot rewrite the weight or mark an unaccepted reduction as completed work.
 {
     const observed = rowsFrom([6, 7, null, null], [100, 100, 100, 100], [0, 0, null, null]);
     const adjusted = applyLiveAutoregulation({ sets: observed, sourceIndex: 1, cell,
         snapLoad: weight => Math.floor(weight / 5) * 5 });
-    assert.equal(adjusted.decision.action, 'reduce_pending_load');
-    assert.equal(adjusted.sets[2].weight, '95');
+    assert.equal(adjusted.decision.action, 'suggest_pending_load_reduction');
+    assert.equal(adjusted.sets[2].weight, '100');
+    assert.equal(adjusted.sets[2].loadAdvice.toLoad,95);
+    assert.equal(adjusted.sets[2].recoveryLimited,undefined);
     assert.equal(adjusted.sets[3].weight, '100');
     assert.deepEqual(applyLiveAutoregulation({ sets: clone(adjusted.sets), sourceIndex: 1, cell,
         snapLoad: weight => Math.floor(weight / 5) * 5 }).sets, clone(adjusted.sets),
@@ -146,8 +148,8 @@ function save(rows, context = {}) {
         ? { ...row, done: true, reps: '8', actualRIR: 1 } : row);
     const saved = save(completed, { workoutInterrupted: true });
     assert.equal(saved.counted, 3);
-    assert.equal(saved.entry.perf[id].sets[2].w, 95);
-    assert.equal(saved.entry.perf[id].sets[2].recoveryLimited, true);
+    assert.equal(saved.entry.perf[id].sets[2].w, 100,'Unaccepted lower-load advice does not change recorded weight');
+    assert.equal(saved.entry.perf[id].sets[2].recoveryLimited, undefined);
     assert.notEqual(saved.advice.action, 'increase_load');
     check('fatigue-and-interruption', { action: saved.advice.action, loggedSets: saved.counted });
     const orphan = clone(adjusted.sets);
@@ -155,7 +157,9 @@ function save(rows, context = {}) {
     const orphanBefore = clone(orphan);
     const repaired = reconcileRestoredLiveAdjustments(orphan);
     assert.equal(repaired[2].weight, '100',
-        'A saved reduction without its original logged evidence must be removed');
+        'A saved recommendation never changed the actual load');
+    assert.equal(repaired[2].loadAdvice,undefined,
+        'A saved recommendation without its logged evidence must be removed');
     assert.deepEqual(orphan, orphanBefore, 'Repair is read-only');
     check('orphan-adjustment-recovery', { loadRestored: Number(repaired[2].weight) });
 }

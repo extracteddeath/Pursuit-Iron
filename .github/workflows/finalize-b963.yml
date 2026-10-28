@@ -21,6 +21,7 @@ jobs:
           node --check modules/session-choice-dialog.js
           node --check verification/b959-session-dialog-browser-test.mjs
           node verification/b959-dialog-owner-test.mjs
+          rm .github/workflows/finalize-b963.yml
           node verification/m237-ci-supply-chain-test.mjs
       - name: Finalize one Build 963 release
         run: |
@@ -35,7 +36,7 @@ jobs:
           node scripts/verify-release.mjs
       - name: Commit finalized release and retire this workflow
         run: |
-          rm .github/workflows/finalize-b963.yml
+          rm -f .github/workflows/finalize-b963.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A

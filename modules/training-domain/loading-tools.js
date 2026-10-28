@@ -1,7 +1,19 @@
 // Loading tools share the production plate solver, unit conversion and e1RM model.
-import { BARS, platesPerSide, barWeightFor } from './analytics.js';
+import { BARS, platesPerSide, barWeightFor, platePairsFor } from './analytics.js';
 import { e1rm, E1RM_REP_CAP } from './programs.js';
 import { convertHistoryLoad } from '../next-engine/history-contract.js';
+
+/** Resolve each staged edit against the latest gym, not the render that began typing. */
+export const gymBarDraftUpdate = (kind, value) => gym => {
+    const bars = gym.barWeights || {};
+    return { barWeights: { ...bars, unit: bars.unit === 'kg' ? 'kg' : 'lb', [kind]: value } };
+};
+export const gymPlatePairDraftUpdate = (unit, plate, value, plates) => gym => {
+    const counts = platePairsFor(gym, unit, plates?.[unit]);
+    return { platePairs: { ...gym.platePairs, [unit]: {
+        ...counts, ...gym.platePairs?.[unit], [plate]: value
+    } } };
+};
 
 export function readLoadingNumber(input, { min = 0, max = Infinity, integer = false } = {}) {
     const raw = input == null ? '' : String(input).trim();

@@ -1,20 +1,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { UiAction } from './ui-primitives.js';
-import { BARS, ALL_PLATES, INVENTORY_KEYS, GYM_LIMIT_KEYS, RACK_PRESETS, platePairsFor, prepareGymLoadDraft, withGymBarUnit, withGymLoadingUnit } from './engine-api.js';
+import { BARS, ALL_PLATES, INVENTORY_KEYS, GYM_LIMIT_KEYS, RACK_PRESETS, platePairsFor, prepareGymLoadDraft, gymBarDraftUpdate, gymPlatePairDraftUpdate, withGymBarUnit, withGymLoadingUnit } from './engine-api.js';
 
 const display = value => typeof value === 'number' ? String(Math.round(value * 1000) / 1000) : value ?? '';
-
-/** Resolve each staged edit against the latest gym, not the render that began typing. */
-export const gymBarDraftUpdate = (kind, value) => gym => {
-    const bars = gym.barWeights || {};
-    return { barWeights: { ...bars, unit: bars.unit === 'kg' ? 'kg' : 'lb', [kind]: value } };
-};
-export const gymPlatePairDraftUpdate = (unit, plate, value, plates) => gym => {
-    const counts = platePairsFor(gym, unit, plates?.[unit]);
-    return { platePairs: { ...gym.platePairs, [unit]: {
-        ...counts, ...gym.platePairs?.[unit], [plate]: value
-    } } };
-};
 
 export function GymLoadFields({ gym, plates, onChange, onInvalid, selectNumericInput }) {
     const draft = prepareGymLoadDraft(gym), eq = gym.equipment || [], measure = gym.limitUnit || 'kg';

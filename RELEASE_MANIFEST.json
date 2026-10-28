@@ -146,10 +146,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "f1e7d9ef1edfc55763aaa19d5b25f000b266702bf1329535c4d368bd743f7cad",
+    "modules/App.js": "7185ef16d7e211754ac97816a7e0a230d7ab4fb290a2b6b6fc8e15592fc83634",
     "index.html": "0ff0713a5818807a0be4628846e836599d67b382cd9a68d9af16f4a57e8c351b",
-    "sw.js": "f8aff37a6796025bb445094e869c62f52464e1ba32910557ab438c344ef3c1d6",
-    "BUILD_PROFILE.json": "fde3f9dc95b4cbbd3fdd27f8991801862a34d7b63512a6fb0d1364e9c4a4b8c8",
+    "sw.js": "3cefedbb3e2af8c7c5cfb839870741792380d236dba2737604f845d95cd2b223",
+    "BUILD_PROFILE.json": "bd1a097d07b1af3d01e57b7404dd99a5d4717d8c3ec504ba9c07b073eb42544f",
     "CHANGELOG.md": "5311acff782a2a485bed3862c80c01c83a4526fd0fa4fcec195881c88814dd6d",
     "app.css": "85275ee357f3e80deacf17e6397f6e65d8b384c172b91598f4262e0f53fed457",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -158,6 +158,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b972-rf0a5099678c3bfec",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b972-r4d609141cd46d150",
   "uiMilestone": "Build 972 · Workout and Program context cleanup"
 }

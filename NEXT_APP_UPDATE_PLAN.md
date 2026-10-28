@@ -803,3 +803,12 @@ Final local evidence: all 127 source contracts passed (20 generation, 32 adaptat
 - Shorten root navigation's single lead-card entrance, prevent simultaneous diagonal tab-linked travel, and preserve separate exercise-detail motion, Workout/Focus geometry and reduced-motion semantics.
 - Keep complete Plan labels in a 2-by-2 grid at 320px. Tighten the combined inline-style ceiling from 2,303 to 2,284; external/embedded/repeated priority counts stay at 2,188/1,143/14. The switcher browser check retains its 70px layout requirement and accepts only a 0.001px DOMRect floating-point tolerance after entrance settles.
 - Release requires certified cache and all exact-head CI/browser groups, public offline byte verification, and physical Android acceptance separately.
+
+
+## Build 953 — Workout spacing and continued web/PWA readiness
+
+Continue from published B952. The repeated spacing report exposed a verification gap: a small gap between control boxes can still leave excessive space between their centered text. Center the title within the existing name/action row, reduce the normal progression row from 36px to 32px, remove the toolbar's 4px leading margin, and use 44px normal-mode tools. Focus retains its 48px tools through the existing rule's fallback. Edit existing owners; add no priority overrides or inline styles.
+
+B896 now measures the actual progression/tool text gap (at most 24px), title/context spacing (at most 14px for its short-title fixture), zero-to-4px control separation and 44px tool targets. Its existing phone/tablet, Focus, rest, navigation, per-set ownership and load/reps alignment coverage stays in place. Current measured visible label gap is about 22px versus 30px before the fix.
+
+Readiness continues with all registered source contracts, complete training lifecycle audit, all seven browser groups, independent engine export/parity, release/cache integrity and deployed-byte verification. Record final evidence in the PR. Physical Android keyboard, interruption and TalkBack checks remain the device-only acceptance work in R90; the deliverable remains the web/PWA.

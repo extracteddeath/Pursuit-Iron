@@ -204,7 +204,9 @@ try {
     await page.screenshot({path:path.join(root,'verification/m222-progression-phone.png')});
     await open('?dynamic');assert.deepEqual(await values(),['25','25','20','25']);assert.deepEqual(await reps(),['20','11','12','11']);
     assert.match(await page.$eval('.wpb-workout',n=>n.innerText),/20–25 lb/);
-    await open('?down');assert.deepEqual(await values(),['20','20','20','20']);assert.deepEqual(await reps(),['10','10','10','10']);
+    await open('?down');assert.deepEqual(await values(),['25','25','25','25'],'Double progression holds prior working loads until a reduction is chosen');assert.deepEqual(await reps(),['10','10','10','10']);
+    await page.click('.wpb-load-explanation summary');
+    assert.match(await page.$eval('.wpb-load-explanation',n=>n.textContent),/You can choose 20 lb/,'A lower load stays visible as optional advice');
     await open('?resume&nosuperset');assert.deepEqual(await values(),['20','17.5','25']);assert.deepEqual(await reps(),['20','20','11']);
     const resumed=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0].sets);
     assert.deepEqual(resumed.map(s=>s.weight),['20','20','17.5','25']);assert.deepEqual(resumed.map(s=>s.reps),['20','20','20','11']);

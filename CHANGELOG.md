@@ -1,3 +1,10 @@
+## Build 953 — Compact workout spacing and readiness verification
+
+- Center the exercise title beside its controls and bring the set context closer to the name.
+- Remove the extra leading toolbar margin and compact the progression/action rows while preserving 44px tool targets and horizontal access to every action.
+- Preserve Focus sizing, set-column alignment, prescription and saved-workout ownership.
+- Extend the workout browser gate to measure visible text spacing as well as control boxes.
+
 ## Build 944 — Reversible, equipment-aware readiness
 
 - Rework workout check-in as a single immutable-source load adjustment, without compounded 5% or 12% reductions.

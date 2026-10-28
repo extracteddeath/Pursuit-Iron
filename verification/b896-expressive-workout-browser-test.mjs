@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs'; import http from 'node:http'; import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { EX_BY_ID } from '../modules/engine-api.js';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const program={id:'b888',name:'Session choices',custom:true,weeks:4,config:{unit:'lb',goal:'both',experience:'intermediate',progression:'double',deload:false},
  days:[{id:'test',label:'Push',primaryIndex:0,exercises:['bb-bench','inc-curl']}],overrides:{'test:0':{sets:3,reps:'5-8',rir:'2',rest:90},'test:1':{sets:2,reps:'8-12',rir:'2',rest:90}}};
@@ -107,8 +108,31 @@ try {
     const tools=document.querySelector('.wpb-workout-tools')?.getBoundingClientRect();
     return progression&&tools?tools.top-progression.bottom:null;
   });
-  assert.ok(stripGap!==null&&stripGap>=-2&&stripGap<=18,
+  assert.ok(stripGap!==null&&stripGap>=0&&stripGap<=4,
     'No empty gap between progression and action strip: '+stripGap);
+  // Border boxes alone missed the reported empty space: both labels were
+  // centered inside tall controls. Measure the text the lifter actually sees.
+  const visibleSpacing=await page.evaluate(()=>{
+    const textBox=el=>{
+      const text=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());
+      if(!text)return null;
+      const range=document.createRange();range.selectNodeContents(text);
+      return range.getBoundingClientRect();
+    };
+    const progression=textBox(document.querySelector('.wpb-progression-label'));
+    const tools=[...document.querySelectorAll('.wpb-workout-tool')];
+    const first=textBox(tools[0]);
+    const name=document.querySelector('.wpb-exercise-name').getBoundingClientRect();
+    const context=document.querySelector('.wpb-exercise-set-context').getBoundingClientRect();
+    return {glyphGap:first.top-progression.bottom,titleGap:context.top-name.bottom,
+      targets:tools.map(el=>el.getBoundingClientRect().height)};
+  });
+  assert.ok(visibleSpacing.glyphGap>=0&&visibleSpacing.glyphGap<=24,
+    'Progression and tool labels have compact visible spacing: '+JSON.stringify(visibleSpacing));
+  assert.ok(visibleSpacing.titleGap>=0&&visibleSpacing.titleGap<=14,
+    'The set context stays close to the short exercise name: '+JSON.stringify(visibleSpacing));
+  assert.ok(visibleSpacing.targets.every(height=>height>=44),
+    'Compact tool presentation retains 44px targets: '+JSON.stringify(visibleSpacing));
   const loadRepHeaders=await page.evaluate(()=>{
     const heading=document.querySelector('.wpb-set-head');
     const first=document.querySelector('.wpb-set-controls');
@@ -153,7 +177,7 @@ try {
   }
 
   const nav=await page.$$eval('.wpb-ex-nav-step',els=>els.map(el=>({name:el.querySelector('.wpb-ex-nav-name')?.textContent,count:el.querySelector('.wpb-ex-nav-count')?.textContent,label:el.getAttribute('aria-label')})));
-  assert.equal(nav[0].count,'1/3');assert.equal(nav[1].count,'0/2');assert.ok(nav.every(x=>x.name&&x.label.includes(x.name)));
+  assert.equal(nav[0].count,'1/3');assert.equal(nav[1].count,'0/2');assert.ok(nav.every((x,i)=>x.name&&x.label.startsWith(EX_BY_ID[program.days[0].exercises[i]].name)));
   const navigate=async i=>page.evaluate(i=>document.querySelectorAll('.wpb-ex-nav-step')[i].click(),i);
   await navigate(1);await page.waitForSelector('[data-testid="set-1-0"]');
   const visible=await page.$eval('.wpb-ex-nav',rail=>{const r=rail.getBoundingClientRect(),a=rail.querySelector('[aria-current="step"]').getBoundingClientRect();return !r.width||a.left>=r.left-1&&a.right<=r.right+1;});

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 const app=fs.readFileSync('modules/App.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 const total=(app.match(/style: \{/g)||[]).length;
-assert.equal(total,1522,'B960 must retire exactly 133 static JSX style objects from the previous baseline');
+assert.ok(total<=1522,'B960 retained utility owners must not regress to a higher inline-style count; later builds may retire more');
 const owners=[...css.matchAll(/#root \.wpb \.(wpb-s960-[a-z0-9-]+),#root \.\1\{([^}]+)\}/g)];
 assert.equal(owners.length,71,'B960 CSS owners must remain one declaration per exact property/value');
 const names=new Set(owners.map(m=>m[1]));

@@ -62,6 +62,7 @@ export const contractGroups = Object.freeze({
         'b888-session-choices-test.mjs',
         'b944-readiness-test.mjs',
         'b959-dialog-owner-test.mjs',
+        'b961-dialog-css-owner-test.mjs',
         'b945-plate-calculator-test.mjs',
         'b946-machine-loading-grid-test.mjs',
         'm180-coach-quality-oracle-test.mjs',

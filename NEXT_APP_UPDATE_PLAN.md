@@ -837,3 +837,10 @@ Retire 113 more literal first-property JSX inline style objects across 13 screen
 ## Build 958 — Cross-screen shared CSS reuse
 
 Migrate 80 strictly literal first-prop JSX style objects across Plan, Next, Home, Settings, Progress, comparison, recovery, profile form, conversion, volume and exercise sheets. Reuse 27 existing B956/B957 property owners and add just three missing declarations. No new priority overrides; preserve all dynamic training values, colors, measured geometry, accessibility callbacks, history, and animation. Tighten verified inline-style ceiling from 1,757 to 1,677. Maintain end-to-end core/engine/browser/offline gates and deployed byte verification; physical Android certification remains separate.
+
+ 
+## Build 959 — Shared dialog dismissal and keyboard containment
+
+Fix shared session dialogs so a nondismissible review cannot close from the scrim or Escape; keep Tab inside all sheets, including read-only ones, and restore focus to the original trigger on closing. Close buttons use consistent 48px targets and readable long-title wrapping on phone/tablet. Add source and real-browser regression coverage without engine, set-logging, history, storage, or dynamic animation changes. Publish after complete release, engine, UI, browser and offline integrity; Android hardware certification remains separate.
+
+Build 959 certification note: automated source, release and browser checks must pass on the final candidate commit before merging; Android hardware testing and hosted deployment remain independent sign-offs.

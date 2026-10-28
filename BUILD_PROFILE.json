@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b958-ra4d8a4dca87c0d46",
-  "uiMilestone": "Build 958 · Consolidated shared icon/modal styles and retired CSS conflicts"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b959-r7fccae400541418e",
+  "uiMilestone": "Build 959 · Accessible session dialog containment"
 }

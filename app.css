@@ -9238,3 +9238,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-load-advice>button{flex-shrink:0;min-height:38px;padding:6px 10px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);border:1px solid var(--wpb-theme-border);border-radius:9px;font:inherit;font-weight:700;cursor:pointer}
 #root .wpb-workout .wpb-load-advice>button:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(max-width:360px){#root .wpb-workout .wpb-load-advice{align-items:flex-start;flex-direction:column}}
+
+/* B959: shared sheet title/Close geometry on small screens and enlarged fonts. */
+#root .wpb .wpb-session-dialog-heading{min-width:0;gap:var(--pi-space-3,12px)}
+#root .wpb .wpb-session-dialog-heading>h2{min-width:0;overflow-wrap:anywhere}
+#root .wpb .wpb-session-dialog-heading>button{width:48px;height:48px;min-width:48px;min-height:48px;flex:0 0 48px;margin-left:auto}

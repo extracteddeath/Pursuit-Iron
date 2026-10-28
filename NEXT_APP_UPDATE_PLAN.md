@@ -817,3 +817,8 @@ Readiness continues with all registered source contracts, complete training life
 ## Build 954 — Verified static presentation consolidation
 
 One shared owner replaces 52 duplicated static App JSX style objects (45 icons, seven modal overlays). Remove 12 superseded same-selector/same-at-rule important declarations; preserve CSS fallbacks and all dynamic inline geometry. Tighten the enforced budgets to 2,061 external priorities, zero repeated-important collisions, and 2,032 inline objects. No training engine or storage API changes. Browser regression must cover Workout/Focus, dialogs, responsive themes, layout and accessibility. This is a measured first cleanup batch; remaining legitimate dynamic styles and legacy declarations require separate audits.
+
+
+## Build 955 — Program/Workout static layout ownership
+
+Scoped refactor of 74 exact first-prop static JSX style objects in the Program (23) and Workout (51) component owners. Reuse one shared CSS family for grow/min-width, truncation, repeated heading/type and compact layout rows. No new important declarations, no dynamic style migration, no training/recording policy or storage changes. Keep the 48px workout actions and B953 density intact. Tighten the static-inline debt ceiling from 2,032 to 1,958; require all exact-head browser, engine, offline and release checks plus production byte verification. Physical Android remains a separate sign-off.

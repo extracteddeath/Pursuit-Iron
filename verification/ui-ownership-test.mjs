@@ -28,7 +28,7 @@ const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + dis
 const MAX_IMPORTANT = 2061; // M394: retire 33 exercise-row priority overrides.
 const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 2032; // M396: retire 40 calculator styles; retain one calculated plate height.
+const MAX_INLINE_STYLE_OBJECTS = 1958; // B955: 74 Program/Workout inline presentations have shared CSS owners. // M396: retire 40 calculator styles; retain one calculated plate height.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -323,6 +323,14 @@ for(const className of ['wpb-program-cycle-collapse','wpb-program-cycle-inset','
     'Program contextual cycle route/reference help must keep their single CSS owners: '+className);
 assert.ok(!programOwner.includes('ref: pvTitle, style:') && !programOwner.includes('ref: pvNameCol, style:'),
   'Program metadata and title must not return to inline layout');
+// B955: exact Program/Workout layout ownership. Dynamic style is never migrated here.
+for (const cls of ["wpb-layout-grow-min","wpb-layout-heading-18-gap6","wpb-layout-flex-one","wpb-layout-truncate","wpb-layout-strong-15","wpb-layout-row-tight-bottom8","wpb-layout-bottom12","wpb-layout-row-gap8","wpb-layout-row-tight","wpb-layout-strong-18","wpb-layout-row-start-bottom8","wpb-layout-support-600","wpb-layout-bottom16","wpb-layout-row-gap8-top8"]) {
+  assert.ok(css.includes("."+cls+","), "Missing shared presentation owner "+cls);
+}
+const b955Program=app.slice(app.indexOf("function ProgramView("),app.indexOf("\nfunction ",app.indexOf("function ProgramView(")+1));
+const b955Workout=app.slice(app.indexOf("function WorkoutSession("),app.indexOf("\nfunction ",app.indexOf("function WorkoutSession(")+1));
+assert.equal((b955Program.match(/className: "wpb-layout-/g)||[]).length,23,"Program static styles must be shared");
+assert.equal((b955Workout.match(/className: "wpb-layout-/g)||[]).length,51,"Workout static styles must be shared");
 console.log('PASS UI ownership: important ' + report.important + '/' + MAX_IMPORTANT +
     ', embedded ' + report.appImportant + '/' + MAX_APP_IMPORTANT + ', repeated ' + report.duplicates + '/' + MAX_REPEAT_IMPORTANT + ' (' + report.legacyOwners +
     ' historical owner collisions), inline styles ' + report.inline + '/' + MAX_INLINE_STYLE_OBJECTS);

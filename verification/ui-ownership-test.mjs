@@ -28,7 +28,7 @@ const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + dis
 const MAX_IMPORTANT = 2061; // M394: retire 33 exercise-row priority overrides.
 const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 1958; // B955: 74 Program/Workout inline presentations have shared CSS owners. // M396: retire 40 calculator styles; retain one calculated plate height.
+const MAX_INLINE_STYLE_OBJECTS = 1870; // B956: 88 shared CSS presentation objects retired. // B955: 74 Program/Workout inline presentations have shared CSS owners. // M396: retire 40 calculator styles; retain one calculated plate height.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -331,6 +331,14 @@ const b955Program=app.slice(app.indexOf("function ProgramView("),app.indexOf("\n
 const b955Workout=app.slice(app.indexOf("function WorkoutSession("),app.indexOf("\nfunction ",app.indexOf("function WorkoutSession(")+1));
 assert.equal((b955Program.match(/className: "wpb-layout-/g)||[]).length,23,"Program static styles must be shared");
 assert.equal((b955Workout.match(/className: "wpb-layout-/g)||[]).length,51,"Workout static styles must be shared");
+// B956: 46 reusable static CSS owners with scoped Program/Workout call-site contracts.
+const b956Classes=[ "wpb-s956-display-flex", "wpb-s956-flexdirection-column", "wpb-s956-gap-6", "wpb-s956-alignitems-flex-start", "wpb-s956-fontweight-600", "wpb-s956-fontsize-14", "wpb-s956-justifycontent-space-between", "wpb-s956-gap-12", "wpb-s956-fontweight-700", "wpb-s956-alignitems-center", "wpb-s956-marginbottom-6", "wpb-s956-gap-8", "wpb-s956-flexwrap-wrap", "wpb-s956-overflow-hidden", "wpb-s956-flex-1", "wpb-s956-minwidth-0", "wpb-s956-fontsize-13", "wpb-s956-textoverflow-ellipsis", "wpb-s956-whitespace-nowrap", "wpb-s956-marginbottom-12", "wpb-s956-gap-4", "wpb-s956-margintop-8", "wpb-s956-flexshrink-0", "wpb-s956-textalign-right", "wpb-s956-margintop-2", "wpb-s956-margintop-6", "wpb-s956-display-grid", "wpb-s956-marginbottom-4", "wpb-s956-fontsize-15", "wpb-s956-margintop-12", "wpb-s956-fontsize-18", "wpb-s956-marginbottom-2", "wpb-s956-marginbottom-8", "wpb-s956-marginbottom-14", "wpb-s956-gap-7", "wpb-s956-alignitems-baseline", "wpb-s956-justifycontent-center", "wpb-s956-textalign-center", "wpb-s956-alignitems-flex-end", "wpb-s956-width-30", "wpb-s956-flex-0-0-30px", "wpb-s956-display-block", "wpb-s956-gap-5", "wpb-s956-gap-10", "wpb-s956-padding-3px-0", "wpb-s956-marginbottom-16" ];
+assert.equal(b956Classes.length,46,"Shared CSS owner count regressed");
+for(const cls of b956Classes)assert.ok(css.includes("."+cls+","),"Missing B956 CSS owner "+cls);
+const b956Program=app.split("function ProgramView(")[1].split(String.fromCharCode(10)+"function ")[0];
+const b956Workout=app.split("function WorkoutSession(")[1].split(String.fromCharCode(10)+"function ")[0];
+assert.equal((b956Program.match(/className: "wpb-s956-/g)||[]).length,37,"Program CSS ownership regression");
+assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,51,"Workout CSS ownership regression");
 console.log('PASS UI ownership: important ' + report.important + '/' + MAX_IMPORTANT +
     ', embedded ' + report.appImportant + '/' + MAX_APP_IMPORTANT + ', repeated ' + report.duplicates + '/' + MAX_REPEAT_IMPORTANT + ' (' + report.legacyOwners +
     ' historical owner collisions), inline styles ' + report.inline + '/' + MAX_INLINE_STYLE_OBJECTS);

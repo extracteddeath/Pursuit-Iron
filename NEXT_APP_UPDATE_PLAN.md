@@ -822,3 +822,8 @@ One shared owner replaces 52 duplicated static App JSX style objects (45 icons, 
 ## Build 955 — Program/Workout static layout ownership
 
 Scoped refactor of 74 exact first-prop static JSX style objects in the Program (23) and Workout (51) component owners. Reuse one shared CSS family for grow/min-width, truncation, repeated heading/type and compact layout rows. No new important declarations, no dynamic style migration, no training/recording policy or storage changes. Keep the 48px workout actions and B953 density intact. Tighten the static-inline debt ceiling from 2,032 to 1,958; require all exact-head browser, engine, offline and release checks plus production byte verification. Physical Android remains a separate sign-off.
+
+
+## Build 956 — Shared static Program/Workout declarations
+
+Migrate 88 further first-property static JSX presentation objects in Program (37) and Workout (51) into 46 reusable class-owned CSS property/value rules. Share spacing tokens for 4/8/12/16px values. Do not alter the engine, history, storage, dynamic state/geometry, timers, Focus or working set controls. No new important declarations. Lower inline style budget 1,958 to 1,870 and enforce call-site guards. This is a scoped cleanup, not a claim that all remaining inline styles are safe to remove. Require candidate/main browser, engine, offline, release and hosted byte checks; physical Android remains separately gated.

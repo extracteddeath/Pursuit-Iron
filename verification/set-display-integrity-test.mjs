@@ -35,9 +35,14 @@ check('legacy custom programs restore authored schedules and saved dose deltas b
 check('phone set row keeps protected 520px breakpoint',()=>assert.ok(app.includes('const narrowSet = useNarrow(520);')));
 check('SET/LAST header aligns the load and rep tracks to the editable row',()=>{
   assert.ok(app.includes('className: "wpb-set-head"'));
-  assert.ok(app.includes('gap: 8 }, children: [_jsx("span", { style: { width: 30, flex: "0 0 30px" }'));
+  assert.ok(app.includes('gap: 8 }, children: [_jsx("span", { className: "wpb-s956-width-30 wpb-s956-flex-0-0-30px"'));
+  assert.ok(app.includes('_jsx("span", { className: "wpb-s956-flex-1 wpb-s956-textalign-center", children: unit.toUpperCase() })'));
+  assert.ok(app.includes('_jsx("span", { className: "wpb-s956-flex-1 wpb-s956-textalign-center", children: "REPS" })'));
   assert.ok(app.includes('width: narrowSet ? 60 : 80, flex: narrowSet ? "0 0 60px" : "0 0 80px"'));
-  assert.ok(app.includes('style: { width: 30, flex: "0 0 30px" }'));
+  assert.ok(app.includes('_jsx("span", { className: "wpb-s956-width-30 wpb-s956-flex-0-0-30px" })'));
+  const css=fs.readFileSync('app.css','utf8');
+  assert.ok(css.includes('.wpb-s956-width-30{width:30px}') && css.includes('.wpb-s956-flex-0-0-30px{flex:0 0 30px}'));
+  assert.ok(css.includes('.wpb-s956-textalign-center{text-align:center}') && css.includes('.wpb-s956-flex-1{flex:1}'));
 });
 const sharedStart=app.indexOf('// ── Shared TARGET / LAST column');
 const sharedEnd=app.indexOf('// TARGET mode:',sharedStart);

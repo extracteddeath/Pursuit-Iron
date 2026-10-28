@@ -67,7 +67,7 @@ try{
   await page.locator('[aria-label="Resume workout"]').click();await page.waitForSelector('.wpb-workout');
   const snapshot=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data[0]);
   const before=await snapshot();
-  const open=async()=>{await page.$$eval('button',buttons=>buttons.find(b=>b.textContent.trim()==='Plateau options').click());await page.waitForSelector('[aria-label="Plateau options"]');};
+  const open=async()=>{await page.$$eval('button',buttons=>buttons.find(b=>b.getAttribute('aria-label')==='Plateau options').click());await page.waitForSelector('[aria-label="Plateau options"]');};
   await open();await page.screenshot({path:'/tmp/b905-plateau.png'});await page.locator('[data-plateau-lighter]').click();
   await page.waitForFunction(w=>Number(JSON.parse(localStorage.getItem('wpb:live')).data[0].sets[1].weight)<Number(w),{},before.sets[1].weight);
   let after=await snapshot();assert.deepEqual(after.sets[0],before.sets[0]);assert.deepEqual(after.sets[2],before.sets[2]);assert.equal(after.sets[1].valueOwner,'user');

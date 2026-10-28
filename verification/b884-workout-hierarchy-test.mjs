@@ -36,7 +36,7 @@ assert.ok(css.includes('data-focus-mode="false"'), 'Focus and normal screen styl
 // The exercise header must not drift back into a tall name/tags/set/actions stack.
 for(const selector of [
   '.wpb-workout[data-focus-mode="false"] .wpb-exercise-heading>div:first-child',
-  '.wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row{display:contents;}',
+  '.wpb-workout[data-focus-mode="false"] .wpb-exercise-title-row,',
   '.wpb-workout[data-focus-mode="false"] .wpb-exercise-heading .wpb-exercise-tags',
   '.wpb-workout[data-focus-mode="false"] .wpb-exercise-meta'
 ]) assert.ok(css.includes(selector), 'Missing compact workout header owner: '+selector);

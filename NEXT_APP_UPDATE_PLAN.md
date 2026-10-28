@@ -854,3 +854,5 @@ Retire 133 additional strictly static JSX presentation objects from App across P
 ## Build 961 — Dialog overlay and information-icon CSS ownership
 
 Consolidate 25 repeated fixed modal backdrop style objects into a deduplicated set of static CSS variants, keeping each original overlay's backdrop opacity, z-index, alignment, padding, animation and independent dismiss callback. Move 11 repeated informational Lucide icon offsets to one shared rule. Preserve all dynamic colors, workout logging, focus ownership, program logic, movement timing and history. Reduce static inline-presentation debt ceiling 1,544 → 1,508 and add a permanent explicit owner/geometry guard. Require all candidate browser, lifecycle, release, offline and production-byte checks; physical Android remains a distinct release sign-off.
+
+B961 certification gate: verify the finalized release's real browser shards, engine lifecycle, release identity and hosted asset parity before merge. Large static CSS overlay migration has no training state changes; mobile hardware remains separate.

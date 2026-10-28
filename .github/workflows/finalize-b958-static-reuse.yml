@@ -123,7 +123,7 @@ jobs:
           for(const [name,oldCount,newCount] of [
             ['Home',10,12],['SettingsView',18,20],['ProgressDetail',9,10],['CompareView',21,22]
           ]){
-            const line=audit.split('\\n').find(x=>x.includes('"'+name+' shared owner regression"'));
+            const line=audit.split('\n').find(x=>x.includes('"'+name+' shared owner regression"'));
             assert.ok(line&&line.includes('.length,'+oldCount+','),'B957 historical contract changed '+name);
             audit=audit.replace(line,line.replace('.length,'+oldCount+',','.length,'+newCount+','));
           }

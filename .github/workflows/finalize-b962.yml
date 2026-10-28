@@ -1,6 +1,6 @@
 # Single-use Build 962 finalizer, removed before merge. No direct main writes.
 name: Finalize B962 gym edit and style ownership
-# B962 repair: avoid importing browser-only React code in Node source contracts.
+# B962 repair: pure updater verification imports training-domain/loading-tools.js only.
 on:
   push:
     branches: [b962-gym-edit-stability]

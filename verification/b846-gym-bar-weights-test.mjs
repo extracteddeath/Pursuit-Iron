@@ -52,7 +52,7 @@ setAvailPlates(null);setGymBarWeights(null);
 console.log('PASS Build 846 separate gym bar masses, zero Smith, per-side math, unit changes, gym switches and backward-compatible defaults');
 
 const { prepareGymLoadDraft } = await import('../modules/training-domain/loading-tools.js');
-const { gymBarDraftUpdate, gymPlatePairDraftUpdate } = await import('../modules/gym-load-fields.js');
+const { gymBarDraftUpdate, gymPlatePairDraftUpdate } = await import('../modules/training-domain/loading-tools.js');
 // Two inputs edited in one render must not overwrite each other's pending draft.
 // A subsequent plate count cannot resurrect the Smith's old 35 lb default.
 const stagedStart={...gym,barWeights:{unit:'lb',barbell:45,smith:35},platePairs:{lb:{45:4,25:4}}};

@@ -150,6 +150,29 @@ try {
       labelRects:labels.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width})),
       fieldRects:fields.map(x=>({left:x.getBoundingClientRect().left,width:x.getBoundingClientRect().width,flex:getComputedStyle(x).flex}))};
   });
+  const headerLayout=await page.$eval('.wpb-workout-header',el=>{
+    const progress=el.querySelector('[role="progressbar"]');
+    const close=el.querySelector('[aria-label="Leave workout"]');
+    const summary=el.querySelector('.wpb-workout-summary');
+    const nav=summary?.querySelector('[aria-label="Show today\'s exercises"]');
+    const p=progress?.getBoundingClientRect(),c=close?.getBoundingClientRect(),s=summary?.getBoundingClientRect();
+    return {progressHeight:p?.height,progressCssHeight:progress&&parseFloat(getComputedStyle(progress).height),
+      progressOverflow:progress&&getComputedStyle(progress).overflow,
+      border:getComputedStyle(el).borderBottomStyle,
+      closeWidth:c?.width,closeHeight:c?.height,closeCssWidth:close&&parseFloat(getComputedStyle(close).width),
+      summaryDisplay:summary&&getComputedStyle(summary).display,
+      summaryWidth:s?.width,summaryScrollWidth:summary?.scrollWidth,
+      navLabel:nav?.getAttribute('aria-label')};
+  });
+  assert.ok(headerLayout.progressCssHeight>=3&&headerLayout.progressHeight>=2.5&&
+    headerLayout.progressHeight<=headerLayout.progressCssHeight+1&&headerLayout.progressOverflow==='hidden',
+    'Completion bar remains compact and visible through responsive layout: '+JSON.stringify(headerLayout));
+  assert.ok(headerLayout.closeCssWidth>=38&&headerLayout.closeWidth>=37&&headerLayout.closeHeight>=37&&headerLayout.border==='solid',
+    'Leave workout retains its compact hit area without clipping: '+JSON.stringify(headerLayout));
+  assert.equal(headerLayout.summaryDisplay,'flex','Workout summary retains flex layout');
+  assert.ok(headerLayout.summaryScrollWidth<=headerLayout.summaryWidth+2,
+    'Workout summary should not overflow its header: '+JSON.stringify(headerLayout));
+  assert.equal(headerLayout.navLabel,"Show today's exercises",'Exercise-list action is preserved');
   assert.ok(loadRepHeaders,'Workout set headings and inputs remain mounted');
   if(loadRepHeaders.compact){
     assert.equal(loadRepHeaders.load,'center','Compact LOAD heading centered over load inputs');

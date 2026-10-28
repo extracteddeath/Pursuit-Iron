@@ -9558,3 +9558,88 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     border-color:CanvasText;
   }
 }
+ 
+/* B971: fixed workout header geometry belongs to CSS; timer state, progress
+   values and navigation stay with the React logger's existing action owners. */
+#root .wpb-workout .wpb-workout-header{
+  border-bottom:1px solid var(--wpb-theme-border-soft);
+}
+#root .wpb-workout .wpb-workout-close{
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  width:40px;
+  height:40px;
+  padding:0;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:var(--wpb-theme-text);
+  cursor:pointer;
+}
+#root .wpb-workout .wpb-workout-header>[role="progressbar"]{
+  margin-top:8px;
+  height:6px;
+  border-radius:999px;
+  background:var(--wpb-theme-bg-tint);
+  overflow:hidden;
+}
+#root .wpb-workout .wpb-workout-header>[role="progressbar"]>.wpb-bar{
+  background:var(--wpb-theme-accent);
+}
+#root .wpb-workout .wpb-workout-summary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:4px;
+  font-size:11px;
+  color:var(--wpb-theme-muted);
+  min-width:0;
+}
+#root .wpb-workout .wpb-workout-summary>span:first-child{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+#root .wpb-workout .wpb-workout-summary>span:last-child{
+  flex-shrink:0;
+  white-space:nowrap;
+}
+#root .wpb-workout .wpb-workout-exercise-link{
+  border:0;
+  padding:0;
+  background:transparent;
+  color:var(--wpb-theme-accent-ink);
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+#root .wpb-workout .wpb-workout-exercise-link:focus-visible{
+  outline:2px solid var(--wpb-theme-accent-ink);
+  outline-offset:2px;
+}
+#root .wpb-workout .wpb-workout-day-note{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  padding:10px 16px;
+  border-bottom:1px solid color-mix(in srgb,var(--wpb-theme-accent) 13%,transparent);
+  background:var(--wpb-theme-accent-dim);
+}
+#root .wpb-workout .wpb-workout-day-note-copy{
+  min-width:0;
+  font-size:13px;
+  line-height:1.4;
+  color:var(--wpb-theme-text);
+  overflow-wrap:anywhere;
+}
+@media(forced-colors:active){
+  #root .wpb-workout .wpb-workout-close,
+  #root .wpb-workout .wpb-workout-day-note{
+    border-color:CanvasText;
+  }
+}

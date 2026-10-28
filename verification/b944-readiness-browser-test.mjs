@@ -51,7 +51,15 @@ try{
  assert.ok(off.every((n,i)=>n<=baseline[i]),'readiness never increases the working load');
  assert.ok(off.some((n,i)=>n<baseline[i]),'readiness actually reduces load');
  const open=async()=>{await page.click('button[aria-label="Workout options"]');
-     await page.click('button[aria-label="Adjust workout readiness"]');
+     const action='button[aria-label="Adjust workout readiness"]';
+     await page.waitForSelector(action,{visible:true});
+     await page.$eval(action,element=>element.scrollIntoView({block:'center',behavior:'instant'}));
+     // Allow the opening sheet transform to settle before a physical phone tap.
+     await page.waitForFunction(selector=>{
+         const el=document.querySelector(selector),r=el?.getBoundingClientRect();
+         return !!r&&r.width>40&&r.height>=44&&r.top>=0&&r.bottom<=innerHeight;
+     },{},action);
+     await page.click(action);
      await page.waitForSelector('.wpb-readiness-dialog');};
  await open();await page.click('[data-readiness-factor="0.88"]');
  await page.waitForFunction(()=>!document.querySelector('.wpb-readiness-dialog'));

@@ -1,3 +1,11 @@
+## Build 968 — Accessible workout exercise header actions
+
+- Give the Info, History and Skip actions real 48px hit targets, preserving the compact normal and Focus workout layouts.
+- Move three repeated button presentation objects into a single shared CSS owner.
+- Keep the destructive second-tap Skip confirmation legible at its intrinsic text width, with an explicit accessible name.
+- Certify the 320px/393px phone and tablet header geometry, actual hit boxes, accessible confirmation and lack of horizontal overflow.
+- Preserve progression, saved workouts, exercise navigation, set controls and engine version 0.65.9.
+
 ## Build 954 — CSS ownership consolidation
 
 - Replace 45 identical Lucide inline flex styles and seven modal overlay inline objects with shared class-owned styling.

@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b967-r9c51dbf57a99e4b4",
-  "uiMilestone": "Build 967 · Safe workout pagehide and dialog focus"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b968-rb5c76c1bc7198354",
+  "uiMilestone": "Build 968 · Accessible exercise header controls"
 }

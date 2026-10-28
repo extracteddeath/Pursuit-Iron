@@ -61,3 +61,11 @@ assert.ok(css.includes('data-focus-mode="false"][data-set-dock-visible="true"]')
 assert.ok(css.includes('prefers-reduced-motion:reduce') && css.includes('forced-colors:active'),
   'Motion and accessibility overrides remain supported');
 console.log('PASS B884 workout hierarchy: active-set-first layout, preserved input ownership and honest previous-load cues.');
+
+// B968: exercise action hit-target and destructive confirmation layout owner.
+assert.ok(css.includes('width:48px!important;min-width:48px!important;') &&
+  css.includes('height:48px!important;min-height:48px!important;'),
+  'Workout action hit targets are real 48px boxes, independent of icon size');
+assert.ok(workout.includes('aria-label": "Confirm skip exercise for today"') &&
+  css.includes('.wpb-exercise-head-actions>.wpb-confirm-skip{'),
+  'Skip confirmation has its own accessible label and intrinsic text width');

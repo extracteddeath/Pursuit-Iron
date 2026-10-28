@@ -212,6 +212,25 @@ try {
   assert.ok(await page.$('[aria-label="Next exercise"]'),'Next remains available during rest');
   assert.ok(await page.$('[aria-label="Restart rest"]'));assert.ok(await page.$('[aria-label="Skip rest"]'));
   if(width>=600) await page.click('[aria-label="Exit focused mode"]');
+  // Real hit boxes, not invisible pseudo-elements: all exercise actions remain
+  // reachable on the smallest phone and the destructive second tap cannot clip.
+  const actionBoxes=await page.$$eval('.wpb-exercise-head-actions>button',buttons=>buttons.map(button=>{
+    const r=button.getBoundingClientRect();return {width:r.width,height:r.height,
+      left:r.left,right:r.right,aria:button.getAttribute('aria-label')};
+  }));
+  assert.equal(actionBoxes.length,3,'Info, History and Skip remain separate exercise controls');
+  assert.ok(actionBoxes.every(b=>b.width>=48&&b.height>=48),
+    'Exercise header icons must have 48px real hit targets: '+JSON.stringify(actionBoxes));
+  assert.ok(actionBoxes.every(b=>b.left>=-1&&b.right<=width+1),
+    'Exercise header actions stay within the phone viewport: '+JSON.stringify(actionBoxes));
+  await page.click('button[aria-label="Skip this exercise for today"]');
+  const confirmation=await page.$eval('[aria-label="Confirm skip exercise for today"]',button=>{
+    const r=button.getBoundingClientRect();return {width:r.width,height:r.height,
+      scrollWidth:button.scrollWidth,clientWidth:button.clientWidth,
+      label:button.getAttribute('aria-label')};
+  });
+  assert.ok(confirmation.width>=80&&confirmation.height>=48&&confirmation.scrollWidth<=confirmation.clientWidth+1,
+    'Destructive skip confirmation must remain readable and accessible: '+JSON.stringify(confirmation));
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false,'no page overflow '+width);
   if(process.env.B896_SCREENSHOTS) await page.screenshot({path:`${process.env.B896_SCREENSHOTS}/b896-${width}-${theme}.png`});
   assert.deepEqual(errors,[]);console.log(`PASS B896 ${width} ${theme}: named live progress, navigation ownership, preserved controls and shared rest state`);

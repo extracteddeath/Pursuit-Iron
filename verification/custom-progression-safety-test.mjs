@@ -11,7 +11,7 @@ assert.ok(s);
 assert.equal(s.action,'hold_load');
 assert.equal(s.dir,'hold');
 assert.equal(s.weight,200);
-assert.deepEqual(s.setTargets.map(t=>t.weight),[200,205,210,215]);
+assert.deepEqual(s.setTargets.map(t=>t.weight),[200,205,210], 'Three prescribed sets retain the first three prior loads');
 assert.equal(s.optionalLowerLoad,185);
 assert.equal(s.target,5);
 console.log('PASS custom double progression safety: positional load hold; 185 lb optional reduction.');

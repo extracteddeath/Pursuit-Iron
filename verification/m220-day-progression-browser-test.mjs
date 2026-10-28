@@ -46,7 +46,7 @@ try {
         const workRows=await page.$$eval(workSelector,ns=>ns.map(n=>`[data-testid="${n.dataset.testid}"]`));
         const setWeights=await page.$$eval(`${workSelector} input[aria-label="weight"]`,ns=>ns.map(n=>n.value));
         const setReps=await page.$$eval(`${workSelector} input[aria-label="reps"]`,ns=>ns.map(n=>n.value));
-        assert.deepEqual(setWeights,['215','215','215','215']);assert.deepEqual(setReps,['5','5','5','5']);
+        assert.deepEqual(setWeights,['205','210','215','205']);assert.deepEqual(setReps,['5','5','5','5']);
         assert.equal(await page.$eval('[data-load-advice]',el=>el.querySelector('button')?.textContent?.trim()),'Use 190 lb',
             'A lighter squat recommendation must require an explicit Use action');
         for(const warm of await page.$$('[data-testid^="set-0-"][data-warm="1"] button[aria-label="Mark set done"]'))await warm.click();
@@ -71,11 +71,11 @@ try {
     }
     for(const variant of ['?squat&resume','?squat&resume&custom']){
         await open(variant);
-        assert.deepEqual(await page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value)),['215','200','215'],
-            'Double progression keeps 215 targets while completed/manual sets survive');
+        assert.deepEqual(await page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="weight"]',ns=>ns.map(n=>n.value)),['210','200','205'],
+            'Double progression retains each prior set-position load and completed/manual edits');
         assert.deepEqual(await page.$$eval('[data-testid^="set-0-"][data-done="0"] input[aria-label="reps"]',ns=>ns.map(n=>n.value)),['5','6','5']);
         const resumedSquat=await savedWorkSets();
-        assert.deepEqual(resumedSquat.map(s=>s.weight),['215','215','200','215']);
+        assert.deepEqual(resumedSquat.map(s=>s.weight),['215','210','200','205']);
         assert.deepEqual(resumedSquat.map(s=>s.reps),['3','5','6','5']);
         assert.equal(resumedSquat[0].done,true,'completed squat load and reps stay persisted after collapse');
     }
@@ -83,10 +83,10 @@ try {
         await page.setViewport({width,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
         await open('?incline');
         const work='[data-testid^="set-0-"][data-warm="0"][data-sub="0"]';
-        assert.deepEqual(await page.$$eval(`${work} input[aria-label="weight"]`,ns=>ns.map(n=>n.value)),['210','210','210','210']);
+        assert.deepEqual(await page.$$eval(`${work} input[aria-label="weight"]`,ns=>ns.map(n=>n.value)),['195','200','205','210']);
         assert.deepEqual(await page.$$eval(`${work} input[aria-label="reps"]`,ns=>ns.map(n=>n.value)),['6','6','6','6']);
-        assert.match(await page.$eval('.wpb-load-reference summary',n=>n.textContent),/210 lb/,
-            'The target summary describes the held working load; lower advice is separate');
+        assert.match(await page.$eval('.wpb-load-reference summary',n=>n.textContent),/195 lb/,
+            'The target summary describes the held first working load; lower advice is separate');
         await page.click('button[aria-label="Show previous workout values"]');
         const lastRows=await page.$$eval(work,ns=>ns.map(n=>n.textContent));
         for(const [index,text] of ['195×10','200×8','205×6','210×5'].entries())
@@ -94,7 +94,7 @@ try {
         if(width===460)await page.screenshot({path:path.join(root,'verification/m338-incline-phone.png')});
         await open('?incline&resume');
         const restored=await savedWorkSets();
-        assert.deepEqual(restored.map(s=>s.weight),['210','210','197.5','210'],
+        assert.deepEqual(restored.map(s=>s.weight),['210','200','197.5','210'],
             'Resume holds automatic double-progression loads and preserves completed/manual loads');
         assert.equal(restored[0].done,true);
         assert.deepEqual(restored.map(s=>s.reps),['5','6','6','6']);

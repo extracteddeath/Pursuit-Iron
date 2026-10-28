@@ -765,19 +765,31 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
 // load/rep recommendation without changing the progression method or stored history.
 function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
     let suggestion = engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history);
-    // Double progression is rep-first. When historical fatigue suggests a
-    // lower weight, show it as advice instead of silently changing the load.
+    // Double progression advances REPS while load stays at its prior value.
+    // With mixed-load history, preserve each position's actual working load:
+    // copying the last/heaviest set to every row is not a legitimate hold.
+    // Any fatigue reduction stays an opt-in proposal, not a prescribed edit.
     if (suggestion?.action === 'decrease_load' && !program.config?.percentScheme) {
         const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
         const style = ex && resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, dayPerf, history, day.id);
-        const prior = convertHistoryLoad(suggestion.last?.weight, suggestion.lastUnit || unit, unit);
-        const keep = ex && Number(prior) > 0 ? loadableAtOrBelow(ex, Number(prior), unit) : 0;
-        if (style === 'double' && keep > Number(suggestion.weight)) {
+        const historyUnit = suggestion.lastUnit || unit;
+        const loads = ex ? completedHistorySets(suggestion.last)
+            .map(row => convertHistoryLoad(row.w, historyUnit, unit))
+            .filter(w => Number.isFinite(w) && w > 0)
+            .map(w => loadableAtOrBelow(ex, w, unit)) : [];
+        const summary = convertHistoryLoad(suggestion.last?.weight, historyUnit, unit);
+        const fallback = loads.length ? Math.min(...loads)
+            : ex && Number(summary) > 0 ? loadableAtOrBelow(ex, Number(summary), unit) : 0;
+        const heldTargets = suggestion.setTargets?.map((target, index) => ({
+            ...target, weight: loads[index] || fallback, earnedLoadIncrease: false
+        }));
+        const highestHeld = Math.max(fallback, ...(heldTargets || []).map(row => Number(row.weight) || 0));
+        if (style === 'double' && fallback > 0 && highestHeld > Number(suggestion.weight)) {
             const lower = suggestion.weight;
-            suggestion = { ...suggestion, weight: keep, dir: 'hold', action: 'hold_load',
-                optionalLowerLoad: lower,
-                setTargets: suggestion.setTargets?.map(t => ({ ...t, weight: keep, earnedLoadIncrease: false })),
-                reason: `Hold ${keep} ${unit} and build reps; ${lower} ${unit} is available if today's performance calls for a reduction.` };
+            suggestion = { ...suggestion, weight: heldTargets?.[0]?.weight || fallback,
+                dir: 'hold', action: 'hold_load', optionalLowerLoad: lower,
+                setTargets: heldTargets,
+                reason: `Keep your previous working-set loads and build reps. You can choose ${lower} ${unit} if today's performance calls for a reduction.` };
         }
     }
     if (!suggestion || !applyReviewChoice || !program.sessionPlanChoices || !Object.keys(program.sessionPlanChoices).length) return suggestion;

@@ -135,9 +135,9 @@ assert.deepEqual(rawSquat,originalSquat,'display references do not calibrate or 
 for (const candidate of [squatProgram, {...squatProgram,engineSource:undefined,custom:true}]) {
     const advice = sessionSuggestion(candidate,squatDay,0,null,'lb',1,squatHistory);
     assert.equal(advice.action,'hold_load','Double progression holds last weight until the lifter chooses otherwise');
-    assert.equal(advice.weight,215); assert.equal(advice.optionalLowerLoad,190);
+    assert.equal(advice.weight,205); assert.equal(advice.optionalLowerLoad,190);
     const sets = prescribeSets(candidate,squatDay,EX_BY_ID['back-squat'],0,1,'lb',advice,{}, {},squatHistory,false);
-    assert.deepEqual(sets.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['215','5']));
+    assert.deepEqual(sets.map(s=>[s.weight,s.reps]),[['205','5'],['210','5'],['215','5'],['205','5']]);
 }
 console.log('PASS M220 squat regression: explicit double keeps its prior weight; fatigue reduction remains available for acceptance.');
 
@@ -152,10 +152,10 @@ const inclineBefore=structuredClone(inclineHistory);
 const inclineAdvice=sessionSuggestion(inclineProgram,inclineProgram.days[0],0,null,'lb',1,inclineHistory);
 assert.equal(inclineAdvice.action,'hold_load');
 assert.equal(inclineAdvice.optionalLowerLoad,190);
-assert.deepEqual(inclineAdvice.setTargets.map(s=>s.weight),[210,210,210,210]);
+assert.deepEqual(inclineAdvice.setTargets.map(s=>s.weight),[195,200,205,210]);
 assert.match(inclineAdvice.reason,/build reps/);
 const inclineRows=prescribeSets(inclineProgram,inclineProgram.days[0],EX_BY_ID['low-inc-bb-bench'],0,1,'lb',inclineAdvice,{}, {},inclineHistory,false);
-assert.deepEqual(inclineRows.map(s=>[s.weight,s.reps]),Array.from({length:4},()=>['210','6']));
+assert.deepEqual(inclineRows.map(s=>[s.weight,s.reps]),[['195','6'],['200','6'],['205','6'],['210','6']]);
 assert.equal(inclineRows[0].loadAdvice.toLoad,190,'Recovery drop is an opt-in recommendation');
 assert.deepEqual(inclineHistory,inclineBefore);
 const generatedRamp=structuredClone(squatProgram);
@@ -164,7 +164,7 @@ const generatedRampHistory=[{...inclineHistory[0],programId:generatedRamp.id,day
     perf:{'back-squat':inclineHistory[0].perf['low-inc-bb-bench']}}];
 const generatedAdvice=sessionSuggestion(generatedRamp,generatedRamp.days.find(d=>d.id===squatDay.id),0,null,'lb',1,generatedRampHistory);
 assert.equal(generatedAdvice.action,'hold_load'); assert.equal(generatedAdvice.optionalLowerLoad,190);
-assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[210,210,210,210],
+assert.deepEqual(generatedAdvice.setTargets.map(s=>s.weight),[195,200,205,210],
     'Generated and authored programs share the same fatigue-aware straight-set calibration');
 
 

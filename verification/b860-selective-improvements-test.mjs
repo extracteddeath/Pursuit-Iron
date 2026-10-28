@@ -107,7 +107,8 @@ assert.doesNotMatch(app, /title: "Workouts this week"/,
     'R78 removes the unexplained extra calendar column');
 assert.match(themeCss, /\.wpb-program-amplifier>button:focus-visible/,
     'amplifier disclosure keeps a visible focus ring');
-assert.match(app, /prBaseline\[e.id\] > 0 && est > prBaseline\[e.id\]/);
+assert.ok(app.includes('completedSetPR(set, prBaseline[data[ei].id], e1rm)'), 'PR gate belongs to the user completion gesture');
+assert.ok(!app.includes('prBaseline[e.id] > 0 && est > prBaseline[e.id]'), 'Never fire PR from React state updater');
 assert.match(app, /const prior = priorBests\[e.id\]\?\.e1rm \?\? null/);
 assert.match(app, /const nextHistory = history\.map[\s\S]{0,160}\.sort/);
 console.log('PASS Build 860: saved kg template and warm-ups; custom/empty inventory safety; normalized PR revisions/units/working sets; two-family dose conservation; useful day titles and 20-theme feature ink.');

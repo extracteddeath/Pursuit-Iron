@@ -8,11 +8,13 @@ const history=[{programId:'custom1',dayId:'d1',date:Date.now(),unit:'lb',perf:{'
 ]}}}];
 const s=sessionSuggestion(program,program.days[0],0,null,'lb',1,history);
 assert.ok(s);
-assert.equal(s.action,'decrease_load');
-assert.equal(s.dir,'down');
-assert.equal(s.weight,185);
+assert.equal(s.action,'hold_load');
+assert.equal(s.dir,'hold');
+assert.equal(s.weight,200);
+assert.deepEqual(s.setTargets.map(t=>t.weight),[200,205,210,215]);
+assert.equal(s.optionalLowerLoad,185);
 assert.equal(s.target,5);
-console.log('PASS custom double progression safety: rep-floor miss -> 185 lb/down.');
+console.log('PASS custom double progression safety: positional load hold; 185 lb optional reduction.');
 
 // Regression from the screenshot: custom-plan ranges persisted as arrays must not collapse [10,15] to 10.
 // Ten reps across all prescribed sets is the BASELINE of a 10-15 range; load only increases once every

@@ -37,16 +37,17 @@ const suggest = (program, hs, week = 1, unit = 'lb') => sessionSuggestion(progra
     mixed[0].perf[id].weight=115;mixed[0].perf[id].reps=8;
     const before = JSON.stringify({ roundedProgram, mixed });
     try {
-        for (const [unit, step, expected] of [['lb',10,110], ['kg',5,50], ['lb',3,114]]) {
+        for (const [unit, step, expected] of [['lb',10,100], ['kg',5,45], ['lb',3,99]]) {
             setExLoadInc({[id]:{v:step,unit}});
             const advice = suggest(roundedProgram,mixed,1,unit);
             assert.equal(advice.weight,expected);
             assert.equal(advice.action,'hold_load','Double progression retains the last load by default');
-            assert.ok(advice.optionalLowerLoad>0&&advice.optionalLowerLoad<expected,'Fatigue reduction remains optional');
-            assert.match(advice.reason,new RegExp(`^Hold ${expected} ${unit} and build reps`),
-                'The explanation must name the held equipment-loadable weight');
+            assert.ok(advice.optionalLowerLoad>0&&advice.optionalLowerLoad<Math.max(...advice.setTargets.map(t=>t.weight)),'Fatigue advice is optional when a prior heavier set exists');
+            assert.match(advice.reason,/Keep your previous working-set loads and build reps/,
+                'The explanation must distinguish retained positional loads from optional lowering');
             const next = prescribeSets(roundedProgram,day,EX_BY_ID[id],slot,1,unit,advice,{}, {},mixed,false).filter(row=>!row.warm&&!row.sub);
-            assert.deepEqual(next.map(row=>Number(row.weight)),[expected,expected,expected,expected]);
+            assert.equal(Number(next[0].weight),expected);
+            assert.ok(next.every(row=>Number(row.weight)>=expected),'No prior heavier working set is silently lowered');
             const why=explainPrescription({program:roundedProgram,day:{...day},ex:EX_BY_ID[id],slot,weekIndex:1,unit,
                 perf:{[id]:{weight:999,reps:15}},history:mixed});
             assert.equal(why.load.weight,advice.weight,'Why consumes the final equipment-aware suggestion');
@@ -62,7 +63,7 @@ const suggest = (program, hs, week = 1, unit = 'lb') => sessionSuggestion(progra
         const missed=suggest(roundedProgram,history(rows(100,6).map(row=>({...row,rir:0}))));
         assert.equal(missed.action,'hold_load');
         assert.ok(missed.optionalLowerLoad<missed.weight);
-        assert.match(missed.reason,/Hold .* and build reps/);
+        assert.match(missed.reason,/Keep your previous working-set loads and build reps/);
         const evidence=structuredClone(mixed);
         evidence[0].perf[id].sets[0].rirReported=false;evidence[0].perf[id].sets[0].tr=2;
         evidence[0].perf[id].sets.unshift({w:20,r:15,warm:true});

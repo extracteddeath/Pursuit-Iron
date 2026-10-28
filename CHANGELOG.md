@@ -1,3 +1,11 @@
+## Build 944 — Reversible, equipment-aware readiness
+
+- Rework workout check-in as a single immutable-source load adjustment, without compounded 5% or 12% reductions.
+- Preserve completed, manual, warm-up, technique-extension and observed-effort-adjusted sets.
+- Use actual gym inventory for pending working loads; never create zero or unsupported weights.
+- Keep current reps, target RIR and prescribed set counts; update session-only labels and permit readiness changes in Workout options.
+- Share accessible sheet and compact Material-based spacing; add source regression coverage and lifecycle parity.
+
 ## Build 943 — Meaningful adjustments and compact reviews
 
 - Remove routine rep-only progression from Home and Preview change history. Do not offer Undo for a normal rep increase.

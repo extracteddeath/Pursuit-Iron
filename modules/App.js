@@ -20,6 +20,7 @@ import { WeeklyScheduleSheet } from './program-schedule-sheet.js';
 import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from './program-review-surfaces.js';
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
+import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { withSessionPlanChoice } from './session-plan.js';
 import {
     addedMinutes, advanceLegacyFirstCycleBlock, ageFrom, ALL_EQUIP_IDS, ALL_PLATES, applyCustomProgramSettings,
@@ -76,7 +77,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='943';
+const __APP_VERSION__='4.0.0'; const __BUILD__='944';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -11003,11 +11004,21 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             : liveStatus === "partial" ? mergeSessionData(liveMatch.data, fresh) : fresh;
         // A saved automatic prefill can come from an older range/tuner. Reconcile pending targets
         // with the current cell; completed and manually controlled rows remain the lifter's record.
-        return restored.map(e => {
+        const reconciled = restored.map(e => {
             const sets = liveMatch ? refreshPendingSetTargets(e.sets, fresh.find(row => row.id === e.id && row.slot === e.slot)?.sets) : e.sets;
             return { ...e, ...(program.config?.noSupersets ? { superset: false } : {}), sets: syncSubSets(reconcilePendingRepTargets(sets,
                 computeCell(program, day, e.id, e.slot, weekIndex)), EX_BY_ID[e.id], unit) };
         });
+        // Resume reconciliation updates app-owned prefills to the latest prescription.
+        // Reapply the SAVED readiness from the original baseline in the same mount pass;
+        // otherwise a restarted "run down" workout silently jumps back to full loads.
+        const factor = liveMatch?.readiness?.factor;
+        return READINESS_CHOICES.some(choice => choice.factor === factor)
+            ? adjustWorkoutReadiness(reconciled, factor, {
+                exerciseFor: id => EX_BY_ID[id], unit,
+                snapLoad: (ex, weight, currentUnit) => loadableAtOrBelow(ex, weight, currentUnit),
+                ownsSet: userOwnsRuntimeSet
+            }) : reconciled;
     });
     /* EVERY write to `data` goes through here, so that "a myo mini carries its activation set's load"
        is an INVARIANT of the session state rather than a line somebody has to remember inside each of
@@ -11156,7 +11167,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     const [setCountEdit, setSetCountEdit] = useState(null);
     useEffect(() => { setSetOptions(null); setSetRemoveConfirm(false); }, [exIdx]);
     const [copiedRecap, setCopiedRecap] = useState(false);
-    const [readiness, setReadiness] = useState(liveMatch?.readiness ?? null); // {label,factor}; restored on resume so the check-in doesn't re-show
+    const [readiness, setReadiness] = useState(liveMatch?.readiness ?? null); // logged/resumed with the workout, not the saved plan
+    const [readinessOpen, setReadinessOpen] = useState(false); // re-open for an explicit mid-session change
     // Was this session RESUMED from an autosave, or started fresh? Captured once at mount: liveMatch is
     // recomputed every render and turns truthy as soon as this session starts autosaving itself, so it
     // cannot be used later to answer the question it answers here.
@@ -11948,8 +11960,12 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         const suggestion = workoutRowMatchesPrescription(nextProgram, day, row, weekIndex)
             ? sessionSuggestion(nextProgram, day, row.slot, anchors, unit, weekIndex, history) : null;
         const prescribed = prescribeSets(nextProgram, day, ex, row.slot, weekIndex, unit, suggestion, anchors, perf, history, true);
-        setData(rows => rows.map(item => item.id !== row.id ? item : { ...item,
-            sets: refreshProgressionSets(item.sets, prescribed, userOwnsRuntimeSet) }));
+        setData(rows => adjustWorkoutReadiness(rows.map(item => item.id !== row.id ? item : { ...item,
+            sets: refreshProgressionSets(item.sets, prescribed, userOwnsRuntimeSet) }), readiness?.factor ?? 1, {
+            exerciseFor: id => EX_BY_ID[id], unit,
+            snapLoad: (candidate, weight, currentUnit) => loadableAtOrBelow(candidate, weight, currentUnit),
+            ownsSet: userOwnsRuntimeSet
+        }));
         const origins = { ...sessionProgressionOrigins };
         if (choices[row.id]) origins[row.id] ??= workoutProgressionOrigin(sourceProgram, row.id);
         else delete origins[row.id];
@@ -11997,26 +12013,16 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         return { ...e, sets: [...head, ...subs] };
     }));
     const toggleSuperset = (ei) => setData(d => d.map((e, i) => i === ei && ei < d.length - 1 ? { ...e, superset: !e.superset } : e));
-    // readiness check-in: scale the day's suggested loads up/down before training
+    // Readiness can be revised mid-session. One immutable baseline prevents a repeated 5%/12%
+    // choice compounding; completed, manual and already effort-retuned targets stay intact.
     const applyReadiness = (label, factor) => {
+        setData(rows => adjustWorkoutReadiness(rows, factor, {
+            exerciseFor: id => EX_BY_ID[id], unit,
+            snapLoad: (ex, weight, currentUnit) => loadableAtOrBelow(ex, weight, currentUnit),
+            ownsSet: userOwnsRuntimeSet
+        }));
         setReadiness({ label, factor });
-        if (factor !== 1)
-            setData(d => d.map(e => {
-                const step = loadStep(EX_BY_ID[e.id], unit);
-                return { ...e, sets: e.sets.map(s => {
-                        if (s.done || userOwnsRuntimeSet(s) || !(parseFloat(s.weight) > 0))
-                            return s;
-                        const cur = parseFloat(s.weight);
-                        // Down-scaling (feeling weak) floors toward the target so a small adjustment can't round
-                        // back up to the original weight on a coarse-increment machine; up-scaling rounds normally.
-                        let nw = factor < 1 ? Math.floor((cur * factor) / step) * step : roundTo(cur * factor, step);
-                        if (factor < 1 && nw >= cur)
-                            nw = cur - step; // guarantee a real reduction
-                        nw = Math.max(step, nw);
-                        const w = String(nw);
-                        return { ...s, weight: w, target: { ...s.target, w } };
-                    }) };
-            }));
+        setReadinessOpen(false);
     };
     // ----- exercise navigation: pills, swipe, prev/next (with directional slide) -----
     const [slideDir, setSlideDir] = useState("l");
@@ -13275,11 +13281,25 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                     _jsx("p", { style: { margin: "12px 2px 0", fontSize: 12, color: C.muted, lineHeight: 1.4 },
                       children: "Completed sets are retained. You can undo this adjustment. If there is acute pain, inability to bear weight, or worsening symptoms, stop the workout and seek medical care." })
                   ] })
-              }) }), _jsx(Exit, { when: exList, children: exList && _jsx(SessionExerciseListSheet, { data: data, exIdx: exIdx, onJump: goEx, onMove: moveExerciseInSession, onSkip: removeExerciseFromSession, onReorderStart: beginReorder, onReorderEnd: endReorder, onAdd: () => { setExList(false); setAddEx(true); }, onClose: () => setExList(false) }) }), _jsx(Exit, { when: !!addEx, children: addEx && _jsx(ExercisePickerSheet, { onPick: addExerciseToSession, onClose: () => setAddEx(false), banned: banned, title: "Add exercise" }) }), prFlash && (_jsx("div", { onClick: () => setPrFlash(null), style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 14px)", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 50, pointerEvents: "auto", padding: "0 16px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, maxWidth: 360, padding: "12px 16px", borderRadius: 16, background: C.warn, color: C.warnText, boxShadow: "0 12px 30px rgba(0,0,0,.4)", animation: "fadeUp .35s cubic-bezier(.2,.8,.3,1) backwards" }, children: [_jsx(Trophy, { size: 22, color: C.warnText, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 800, letterSpacing: .2 }, children: ["New PR \u2014 ", prFlash.name] }), _jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, opacity: .85, marginTop: 1 }, children: ["est ", prFlash.est, " ", unit, " \u00B7 ", prFlash.w, unit, "\u00D7", prFlash.r] })] })] }) })), snack && _jsx(UiNotice, { message: snack.msg, onUndo: snack.undo }), _jsx(Exit, { when: !readiness, children: !readiness && (_jsx("div", { className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.66)", display: "flex", alignItems: "flex-end", zIndex: 80, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, style: { width: "100%", background: C.bg2, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "10px 18px calc(env(safe-area-inset-bottom) + 26px)", animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both", borderTop: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 22, fontWeight: 700 }, children: "How are you feeling?" }), _jsx("div", { style: { fontSize: 13, color: C.muted, marginTop: 2, marginBottom: 16 }, children: "Today's loads will be adjusted to match your readiness." }), [
-                                { label: "Feeling strong", sub: "Hit the prescribed loads", factor: 1, icon: Flame },
-                                { label: "A little off", sub: "Trim loads ~5%", factor: 0.95, icon: Battery },
-                                { label: "Run down", sub: "Back off ~12%, focus on quality", factor: 0.88, icon: Battery },
-                            ].map(o => (_jsxs("button", { onClick: () => applyReadiness(o.label, o.factor), className: "pressable opt", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px", borderRadius: 16, background: C.card, border: `1px solid ${C.border}`, color: C.text, cursor: "pointer", marginBottom: 8, textAlign: "left" }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: C.bg2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(o.icon, { size: 18, color: C.accentInk }) }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("div", { style: { fontSize: 15, fontWeight: 700 }, children: o.label }), _jsx("div", { style: { fontSize: 13, color: C.muted }, children: o.sub })] }), _jsx(ChevronRight, { size: 18, color: C.muted })] }, o.label))), _jsx("button", { "data-wpb-system-back": true, onClick: () => applyReadiness("—", 1), className: "pressable", style: { width: "100%", padding: "11px", marginTop: 4, borderRadius: 12, border: "none", background: "none", color: C.muted, fontSize: 15, fontWeight: 600, cursor: "pointer" }, children: "Skip" })] }) })) }), _jsxs("div", { className: "wpb-workout-footer", style: { flexShrink: 0, padding: `${focus ? 0 : 8}px 16px calc(env(safe-area-inset-bottom) + ${keyboardOpen ? 6 : 14}px)`, background: C.bg, borderTop: `1px solid ${C.borderSoft}`, zIndex: 40 }, children: [rest > 0 && (!setDockPreview || keyboardOpen || focus) && (_jsxs("div", { "data-rest-card": true, className: "wpb-rest-card", role: "timer", "aria-live": "off", "aria-label": paused ? `Rest paused at ${fmtTime(rest)}` : `${fmtTime(rest)} rest remaining`, style: { background: C.card, borderRadius: 16, padding: "12px 12px", marginBottom: focus ? 8 : 0, marginTop: focus ? 10 : 0,
+              }) }), _jsx(Exit, { when: exList, children: exList && _jsx(SessionExerciseListSheet, { data: data, exIdx: exIdx, onJump: goEx, onMove: moveExerciseInSession, onSkip: removeExerciseFromSession, onReorderStart: beginReorder, onReorderEnd: endReorder, onAdd: () => { setExList(false); setAddEx(true); }, onClose: () => setExList(false) }) }), _jsx(Exit, { when: !!addEx, children: addEx && _jsx(ExercisePickerSheet, { onPick: addExerciseToSession, onClose: () => setAddEx(false), banned: banned, title: "Add exercise" }) }), prFlash && (_jsx("div", { onClick: () => setPrFlash(null), style: { position: "absolute", top: "calc(env(safe-area-inset-top) + 14px)", left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 50, pointerEvents: "auto", padding: "0 16px" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, maxWidth: 360, padding: "12px 16px", borderRadius: 16, background: C.warn, color: C.warnText, boxShadow: "0 12px 30px rgba(0,0,0,.4)", animation: "fadeUp .35s cubic-bezier(.2,.8,.3,1) backwards" }, children: [_jsx(Trophy, { size: 22, color: C.warnText, style: { flexShrink: 0 } }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsxs("div", { style: { fontSize: 15, fontWeight: 800, letterSpacing: .2 }, children: ["New PR \u2014 ", prFlash.name] }), _jsxs("div", { className: "mono", style: { fontSize: 13, fontWeight: 600, opacity: .85, marginTop: 1 }, children: ["est ", prFlash.est, " ", unit, " \u00B7 ", prFlash.w, unit, "\u00D7", prFlash.r] })] })] }) })), snack && _jsx(UiNotice, { message: snack.msg, onUndo: snack.undo }), _jsx(Exit, { when: !readiness || readinessOpen, children: (!readiness || readinessOpen) &&
+    _jsx(SessionChoiceDialog, { title: "How are you feeling?", className: "wpb-readiness-dialog",
+        dismissible: !!readiness, onClose: () => setReadinessOpen(false),
+        children: _jsxs("div", { className: "wpb-readiness-content", children: [
+            _jsx("p", { className: "wpb-readiness-intro", children:
+                "Only unlogged suggested working weights change. Your reps, planned sets, completed work and manual entries stay put." }),
+            READINESS_CHOICES.map(o => _jsxs("button", { type: "button",
+                className: "wpb-readiness-option pressable",
+                "data-readiness-factor": o.factor, "aria-pressed": readiness?.factor === o.factor,
+                onClick: () => applyReadiness(o.label, o.factor), children: [
+                    _jsx("span", { className: "wpb-readiness-icon", children: _jsx(o.factor === 1 ? Flame : Battery, { size: 19 }) }),
+                    _jsxs("span", { className: "wpb-readiness-copy", children: [
+                        _jsx("strong", { children: o.label }),
+                        _jsx("span", { children: o.detail })] }),
+                    _jsx(ChevronRight, { size: 18 })] }, o.label)),
+            !readiness && _jsx("button", { type: "button", "data-wpb-system-back": true,
+                className: "wpb-readiness-skip pressable", onClick: () => applyReadiness("—", 1),
+                children: "Skip" })
+        ] }) }) }), _jsxs("div", { className: "wpb-workout-footer", style: { flexShrink: 0, padding: `${focus ? 0 : 8}px 16px calc(env(safe-area-inset-bottom) + ${keyboardOpen ? 6 : 14}px)`, background: C.bg, borderTop: `1px solid ${C.borderSoft}`, zIndex: 40 }, children: [rest > 0 && (!setDockPreview || keyboardOpen || focus) && (_jsxs("div", { "data-rest-card": true, className: "wpb-rest-card", role: "timer", "aria-live": "off", "aria-label": paused ? `Rest paused at ${fmtTime(rest)}` : `${fmtTime(rest)} rest remaining`, style: { background: C.card, borderRadius: 16, padding: "12px 12px", marginBottom: focus ? 8 : 0, marginTop: focus ? 10 : 0,
                             border: `1px solid ${paused ? C.warn + "55" : rest <= 10 ? C.accent + "66" : C.borderSoft}` }, children: [_jsxs("div", { className: "wpb-rest-top", style: { display: "flex", alignItems: "center", gap: 6 }, children: [_jsxs("span", { className: "wpb-rest-ring", "aria-hidden": true, style: { color: paused ? C.warn : C.accentInk }, children: [
                                 _jsxs("svg", { viewBox: "0 0 36 36", children: [
                                     _jsx("circle", { className: "wpb-rest-ring-track", cx: 18, cy: 18, r: 15, fill: "none", strokeWidth: 3 }),
@@ -13555,6 +13575,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                         })] }))] }) }));
                 })() }), _jsx(Exit, { when: confirmReset, children: confirmReset && (_jsx("div", { onClick: () => setConfirmReset(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 24, animation: "fadeIn .2s both" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop", style: { width: "100%", maxWidth: 320, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, marginBottom: 6 }, children: "Reset workout timer?" }), _jsx("div", { style: { fontSize: 15, color: C.muted, marginBottom: 16 }, children: "The elapsed time will go back to 0:00:00. Your logged sets aren't affected." }), _jsxs("button", { onClick: resetRunTimer, className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: C.accent, color: C.accentText, fontWeight: 700, cursor: "pointer", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }, children: [_jsx(RefreshCw, { size: 16 }), " Reset to zero"] }), _jsx("button", { onClick: () => setConfirmReset(false), className: "pressable", style: { width: "100%", padding: "13px", borderRadius: 12, border: `1px solid ${C.border}`, background: "none", color: C.text, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }) })) }), _jsx(Exit, { when: sessionMenu, children: sessionMenu && (_jsx("div", { onClick: () => setSessionMenu(false), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "flex-end", zIndex: 70, animation: "fadeIn .2s both" }, children: _jsxs("div", { ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-scroll wpb-workout-options-sheet", style: { width: "100%", overflowY: "auto", boxSizing: "border-box", background: C.bg2, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 16px calc(env(safe-area-inset-bottom) + 20px)", borderTop: `1px solid ${C.border}`, animation: "sheetUp .28s cubic-bezier(.2,.7,.3,1) both" }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700, color: C.muted, letterSpacing: .4, textTransform: "uppercase", padding: "0 4px 8px" }, children: "Workout options" }), [
                                 { icon: Minimize2, label: "Minimize workout", sub: "Keep it running and return to your previous screen", on: minimizeWorkout },
+                { icon: Battery, label: "Adjust readiness", ariaLabel: "Adjust workout readiness",
+                  sub: readinessLabel(readiness) + " · Only unlogged suggested working loads change",
+                  on: () => { setSessionMenu(false); setReadinessOpen(true); } },
                                 { icon: RefreshCw, label: "Reset timer", sub: "Set elapsed workout time back to zero", on: () => { setSessionMenu(false); onResetClick(); } },
                                 { icon: Plus, label: "Add exercise", sub: "Add another lift to this workout", on: () => { setSessionMenu(false); setAddEx(true); } },
                                 { icon: Pencil, label: "Session notes", ariaLabel: "Session notes", sub: sessionNote ? "Edit session and exercise notes" : "Add session and exercise notes", on: () => { setSessionMenu(false); setSessionNotesOpen(true); } },

@@ -88,7 +88,10 @@ export function refreshProgressionSets(current, prescribed, owns) {
         if (set.warm || set.sub) return set;
         const fresh = work[workIndex++];
         if (!fresh || set.done || owns(set) || set.added || set.typeOverride) return set;
-        return { ...set, weight: fresh.weight, reps: fresh.reps, target: fresh.target,
+        // A different progression method owns a new baseline. Do not let the old
+        // readiness snapshot re-apply itself to the previous method's weights.
+        const { readinessBaseWeight, readinessFactor, ...unadjusted } = set;
+        return { ...unadjusted, weight: fresh.weight, reps: fresh.reps, target: fresh.target,
             hint: fresh.hint, suggested: fresh.suggested, autoTuned: false };
     });
 }

@@ -60,6 +60,7 @@ export const contractGroups = Object.freeze({
     ]),
     quality: Object.freeze([
         'b888-session-choices-test.mjs',
+        'b944-readiness-test.mjs',
         'm180-coach-quality-oracle-test.mjs',
         'm180-coach-quality-matrix.mjs',
         'm187-premium-ux-test.mjs',
@@ -158,6 +159,7 @@ export const browserShards = Object.freeze({
         'm201-workout-prescription-browser-test.mjs',
         'm214-executable-prescription-sync-browser-test.mjs',
         'm232-live-autoregulation-browser-test.mjs',
+        'b944-readiness-browser-test.mjs',
         'b880-wake-lock-browser-test.mjs',
         'b882-workout-reason-browser-test.mjs'
     ]),

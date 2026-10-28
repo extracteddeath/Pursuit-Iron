@@ -28,7 +28,7 @@ const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + dis
 const MAX_IMPORTANT = 2061; // M394: retire 33 exercise-row priority overrides.
 const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
-const MAX_INLINE_STYLE_OBJECTS = 1508; // B961: 25 static overlays and 11 informational icon offsets moved into CSS. // B958: 80 more static screen styles migrated via existing utility owners. // B957: 113 more static screen styles retired. // B956: 88 shared CSS presentation objects retired. // B955: 74 Program/Workout inline presentations have shared CSS owners. // M396: retire 40 calculator styles; retain one calculated plate height.
+const MAX_INLINE_STYLE_OBJECTS = 1491; // B962: 17 more static JSX styles moved to class ownership; B961: 36 overlays/icons retired; B960: 133 static styles retired.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
 for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
@@ -606,3 +606,9 @@ const libraryView=app.slice(app.indexOf('function LibraryView('),app.indexOf('co
 assert.equal((libraryView.match(/style: \{/g)||[]).length,1,'Library retains only its calculated goal progress width');
 assert.ok(libraryView.includes('style: { width: `${pct}%` }'),'Goal width stays derived from the saved goal and factual best');
 assert.ok(!libraryView.includes('parseFloat(goalVal)'),'Goal saving cannot accept a partial numeric prefix');
+
+const safeSplitBranch=app.slice(app.indexOf('if (stepKey === "split")'),app.indexOf('if (stepKey === "session")'));
+assert.ok(safeSplitBranch.includes('const itemsFor = verdict => Array.isArray(verdict?.items) ? verdict.items : []'),
+  'Split guidance must accept missing explanation items from feasibility verdicts');
+assert.ok(!safeSplitBranch.includes('v.items.length')&&!safeSplitBranch.includes('v.items.join'),
+  'Split guidance must not crash on verdicts with no items array');

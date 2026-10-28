@@ -1,8 +1,9 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { UiAction } from './ui-primitives.js';
-import { BARS, ALL_PLATES, INVENTORY_KEYS, GYM_LIMIT_KEYS, RACK_PRESETS, platePairsFor, prepareGymLoadDraft, withGymBarUnit, withGymLoadingUnit } from './engine-api.js';
+import { BARS, ALL_PLATES, INVENTORY_KEYS, GYM_LIMIT_KEYS, RACK_PRESETS, platePairsFor, prepareGymLoadDraft, gymBarDraftUpdate, gymPlatePairDraftUpdate, withGymBarUnit, withGymLoadingUnit } from './engine-api.js';
 
 const display = value => typeof value === 'number' ? String(Math.round(value * 1000) / 1000) : value ?? '';
+
 export function GymLoadFields({ gym, plates, onChange, onInvalid, selectNumericInput }) {
     const draft = prepareGymLoadDraft(gym), eq = gym.equipment || [], measure = gym.limitUnit || 'kg';
     const id = suffix => `gym-${gym.id}-${suffix}`;
@@ -25,7 +26,7 @@ export function GymLoadFields({ gym, plates, onChange, onInvalid, selectNumericI
                 _jsxs('div',{className:'wpb-gym-inline',children:[
                     _jsx('label',{htmlFor:id(`${kind}-bar-weight`),className:'wpb-gym-bar-name',children:kind==='smith'?'Smith bar':'Barbell'}),
                     _jsx('input',{...fieldProps(`${kind}-bar-weight`),'aria-label':`${kind==='smith'?'Smith':'Barbell'} empty bar weight`,inputMode:'decimal',value:display(bars[kind]),placeholder:String(BARS[kind][barUnit]),
-                        onFocus:selectNumericInput,onClick:selectNumericInput,onChange:event=>onChange({barWeights:{...bars,unit:barUnit,[kind]:event.target.value}}),className:'wpb-gym-bar-field wpb-ui-control'}),
+                        onFocus:selectNumericInput,onClick:selectNumericInput,onChange:event=>onChange(gymBarDraftUpdate(kind,event.target.value)),className:'wpb-gym-bar-field wpb-ui-control'}),
                     _jsx('span',{className:'wpb-gym-bar-measure',children:barUnit})
                 ]}),feedback(`${kind}-bar-weight`)
             ]},kind)),
@@ -38,7 +39,7 @@ export function GymLoadFields({ gym, plates, onChange, onInvalid, selectNumericI
                 return _jsxs('div',{className:'wpb-gym-field-block',children:[_jsxs('div',{className:'wpb-gym-inline',children:[
                     _jsx('label',{htmlFor:id(suffix),className:'wpb-gym-bar-name',children:`${plate} ${unit}`}),
                     _jsx('input',{...fieldProps(suffix),'aria-label':`${plate} ${unit} plate pairs`,inputMode:'numeric',value:gym.platePairs?.[unit]?.[plate]??counts[plate],onFocus:selectNumericInput,onClick:selectNumericInput,
-                        onChange:event=>onChange({platePairs:{...gym.platePairs,[unit]:{...counts,...gym.platePairs?.[unit],[plate]:event.target.value}}}),className:'wpb-gym-bar-field wpb-ui-control'})
+                        onChange:event=>onChange(gymPlatePairDraftUpdate(unit,plate,event.target.value,plates)),className:'wpb-gym-bar-field wpb-ui-control'})
                 ]}),feedback(suffix)]},plate);
             })]},unit))
         ]}),

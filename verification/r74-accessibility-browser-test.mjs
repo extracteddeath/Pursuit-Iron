@@ -559,6 +559,13 @@ try{
         console.log('PASS R74 '+theme+' '+width+'x'+height);
       }catch(error){
         console.error('FAIL R74 '+theme+' '+width+'x'+height);
+        console.error('R74_PAGE_ERRORS '+JSON.stringify(errors));
+        console.error('R74_ROOT_STATE '+JSON.stringify(await page.evaluate(()=>({
+          rootText:document.getElementById('root')?.textContent.slice(0,500),
+          bodyText:document.body.textContent.slice(0,500),
+          rootChildren:document.getElementById('root')?.childElementCount,
+          startupStatus:document.querySelector('#pursuit-startup-status')?.textContent
+        }))));
         await page.screenshot({path:path.join(root,'verification/r74-failure-phone.png')});
         throw error;
       }finally{await context.close();}

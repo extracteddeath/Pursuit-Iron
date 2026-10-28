@@ -1,0 +1,45 @@
+name: Finalize B964 shared layout ownership (one shot)
+on:
+  push:
+    branches: [refactor/b964-scroll-layout-css-ownership]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Verify static UI refactor with existing hierarchy guards
+        run: |
+          node --check modules/App.js
+          node --check verification/b964-scroll-layout-owner-test.mjs
+          node verification/b964-scroll-layout-owner-test.mjs
+          node verification/ui-ownership-test.mjs
+          node verification/b884-workout-hierarchy-test.mjs
+      - name: Build 964 and remove temporary publishing workflow
+        run: |
+          rm .github/workflows/finalize-b964.yml
+          node verification/m237-ci-supply-chain-test.mjs
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const p='RELEASE_MANIFEST.json',m=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(m.build!==963)throw new Error('Expected published Build 963 baseline');
+          m.uiMilestone='Build 964 · Unified scroll, grid and layout CSS ownership';
+          fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n');
+          NODE
+          node scripts/finalize-release.mjs --next-build
+          node scripts/verify-release.mjs
+      - name: Publish certified branch snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Finalize B964: scroll/layout CSS owners, updated release and offline hashes"
+          git push origin HEAD:refactor/b964-scroll-layout-css-ownership

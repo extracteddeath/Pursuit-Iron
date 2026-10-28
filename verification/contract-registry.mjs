@@ -61,6 +61,8 @@ export const contractGroups = Object.freeze({
     quality: Object.freeze([
         'b888-session-choices-test.mjs',
         'b944-readiness-test.mjs',
+        'b945-plate-calculator-test.mjs',
+        'b946-machine-loading-grid-test.mjs',
         'm180-coach-quality-oracle-test.mjs',
         'm180-coach-quality-matrix.mjs',
         'm187-premium-ux-test.mjs',
@@ -209,9 +211,7 @@ export const browserShards = Object.freeze({
 });
 
 export const releaseTests = Object.freeze([
-    'm223-icon-update-test.mjs',
-    'b945-plate-calculator-test.mjs',
-    'b946-machine-loading-grid-test.mjs'
+    'm223-icon-update-test.mjs'
 ]);
 
 const specialExecutableFiles = new Set([

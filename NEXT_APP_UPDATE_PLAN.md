@@ -842,3 +842,5 @@ Migrate 80 strictly literal first-prop JSX style objects across Plan, Next, Home
 ## Build 959 — Shared dialog dismissal and keyboard containment
 
 Fix shared session dialogs so a nondismissible review cannot close from the scrim or Escape; keep Tab inside all sheets, including read-only ones, and restore focus to the original trigger on closing. Close buttons use consistent 48px targets and readable long-title wrapping on phone/tablet. Add source and real-browser regression coverage without engine, set-logging, history, storage, or dynamic animation changes. Publish after complete release, engine, UI, browser and offline integrity; Android hardware certification remains separate.
+
+Build 959 certification note: automated source, release and browser checks must pass on the final candidate commit before merging; Android hardware testing and hosted deployment remain independent sign-offs.

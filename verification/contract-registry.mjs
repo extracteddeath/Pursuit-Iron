@@ -205,7 +205,8 @@ export const browserShards = Object.freeze({
     ]),
     'integration-accessibility': Object.freeze([
         'r74-accessibility-browser-test.mjs',
-        'b959-session-dialog-browser-test.mjs'
+        'b959-session-dialog-browser-test.mjs',
+        'b966-context-menu-keyboard-browser-test.mjs'
     ]),
     'integration-data': Object.freeze([
         'r76-cross-screen-form-zoom-browser-test.mjs',

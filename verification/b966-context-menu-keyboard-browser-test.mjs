@@ -5,7 +5,7 @@ import http from 'node:http';
 import puppeteer from 'puppeteer-core';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
 const im=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
-const fixture = String.raw\`
+const fixture = `
 import React from '/vendor/react.js';
 import {createRoot} from '/vendor/react-dom-client.js';
 import {ContextMenu} from '/modules/ui-menu.js';
@@ -25,7 +25,7 @@ function Demo(){
   );
 }
 createRoot(document.getElementById('root')).render(React.createElement(Demo));
-\`;
+`;
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">'+im+'</head><body><div id="root"></div><script type="module">'+fixture+'</script></body></html>';
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html'};
 const server=http.createServer((req,res)=>{

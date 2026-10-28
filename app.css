@@ -7981,7 +7981,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   -webkit-overflow-scrolling:touch;scrollbar-width:none;
 }
 #root .wpb-workout[data-focus-mode="false"] .wpb-workout-tools{
-  --pi-workout-tool-height:44px;
+  --pi-workout-tool-height:48px;
   margin-top:0!important;
 }
 #root .wpb-workout .wpb-workout-tools::-webkit-scrollbar{display:none;}

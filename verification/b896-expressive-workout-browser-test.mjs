@@ -127,12 +127,12 @@ try {
     return {glyphGap:first.top-progression.bottom,titleGap:context.top-name.bottom,
       targets:tools.map(el=>el.getBoundingClientRect().height)};
   });
-  assert.ok(visibleSpacing.glyphGap>=0&&visibleSpacing.glyphGap<=24,
+  assert.ok(visibleSpacing.glyphGap>=0&&visibleSpacing.glyphGap<=26,
     'Progression and tool labels have compact visible spacing: '+JSON.stringify(visibleSpacing));
   assert.ok(visibleSpacing.titleGap>=0&&visibleSpacing.titleGap<=14,
     'The set context stays close to the short exercise name: '+JSON.stringify(visibleSpacing));
-  assert.ok(visibleSpacing.targets.every(height=>height>=44),
-    'Compact tool presentation retains 44px targets: '+JSON.stringify(visibleSpacing));
+  assert.ok(visibleSpacing.targets.every(height=>height>=48),
+    'Compact tool presentation retains 48px targets: '+JSON.stringify(visibleSpacing));
   const loadRepHeaders=await page.evaluate(()=>{
     const heading=document.querySelector('.wpb-set-head');
     const first=document.querySelector('.wpb-set-controls');

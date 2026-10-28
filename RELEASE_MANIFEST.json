@@ -148,16 +148,16 @@
   "uiFiles": {
     "modules/App.js": "70119a96aa8e05b4e8469faea002c3e02b73f120623f0c91093daa0399fb93a7",
     "index.html": "8c7f6c0470161d0c176817b3207debc570901c9a37ef2f0ebe7ff2ea1a5fe957",
-    "sw.js": "df1ed883780e7d40e3cc507053f2ef7b315254d5cddf3956533aba1f3ab92237",
-    "BUILD_PROFILE.json": "0a66ea2f5fec5c812a303ca5c5e5d50252a4e7ee0cad9aa3083e59bf03789ba4",
+    "sw.js": "431b0bd7af0021d9823f4811ac2e7f91802752267d26dee923789843ce6b7945",
+    "BUILD_PROFILE.json": "7935e8a127ebcaa6cb576c86e03f41a88b740344f0a738bce79b788ee2495d2b",
     "CHANGELOG.md": "91d81dd230fd018978846e570cffed59670848f58ee9ead604b329dd7c719de8",
-    "app.css": "f6bdb7fa674bae991eb5fe50ee7a49b62e8a1a23f0b162e237f4c0396c18fbd1",
+    "app.css": "2ee3c07da2158132c3ab0dcc0f07df387a0257645bfb9ff909e5d3a6960d2308",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b953-r2a54504b4d1f843f",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b953-r8145a62bba69b0e5",
   "uiMilestone": "Build 953 · Compact workout spacing and launch-readiness verification"
 }

@@ -11004,11 +11004,21 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
             : liveStatus === "partial" ? mergeSessionData(liveMatch.data, fresh) : fresh;
         // A saved automatic prefill can come from an older range/tuner. Reconcile pending targets
         // with the current cell; completed and manually controlled rows remain the lifter's record.
-        return restored.map(e => {
+        const reconciled = restored.map(e => {
             const sets = liveMatch ? refreshPendingSetTargets(e.sets, fresh.find(row => row.id === e.id && row.slot === e.slot)?.sets) : e.sets;
             return { ...e, ...(program.config?.noSupersets ? { superset: false } : {}), sets: syncSubSets(reconcilePendingRepTargets(sets,
                 computeCell(program, day, e.id, e.slot, weekIndex)), EX_BY_ID[e.id], unit) };
         });
+        // Resume reconciliation updates app-owned prefills to the latest prescription.
+        // Reapply the SAVED readiness from the original baseline in the same mount pass;
+        // otherwise a restarted "run down" workout silently jumps back to full loads.
+        const factor = liveMatch?.readiness?.factor;
+        return READINESS_CHOICES.some(choice => choice.factor === factor)
+            ? adjustWorkoutReadiness(reconciled, factor, {
+                exerciseFor: id => EX_BY_ID[id], unit,
+                snapLoad: (ex, weight, currentUnit) => loadableAtOrBelow(ex, weight, currentUnit),
+                ownsSet: userOwnsRuntimeSet
+            }) : reconciled;
     });
     /* EVERY write to `data` goes through here, so that "a myo mini carries its activation set's load"
        is an INVARIANT of the session state rather than a line somebody has to remember inside each of

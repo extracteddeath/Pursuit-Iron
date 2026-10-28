@@ -6993,8 +6993,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-bottom:1px solid var(--pi-r11-edge)!important;
 }
 #root .wpb-workout .wpb-workout-tool{
-  min-height:42px!important;
-  padding:7px 10px!important;
+  min-height:48px!important;
+  padding:0!important;
   font-weight:650!important;
   border:1px solid transparent!important;
   border-radius:12px!important;
@@ -9454,3 +9454,36 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-b965-layout-43,#root .wpb-b965-layout-43{display:flex;width:9px;height:9px;flex-shrink:0}
 #root .wpb .wpb-b965-layout-44,#root .wpb-b965-layout-44{position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:0;right:0;z-index:55;display:flex;justify-content:center;pointer-events:none}
 #root .wpb .wpb-b965-layout-45,#root .wpb-b965-layout-45{flex:1;min-height:0;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 34px) 26px 24px}
+
+/* B969: compact workout action rail. All actions remain named for assistive tech;
+   only the icon paints, and the available horizontal width is used for logging. */
+#root .wpb-workout .wpb-workout-tools .wpb-workout-tool{
+  box-sizing:border-box;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 48px;
+  width:48px;
+  min-width:48px;
+  height:48px;
+  min-height:48px;
+  padding:0;
+  line-height:1;
+  border-radius:12px;
+  color:var(--wpb-theme-muted);
+  background:transparent;
+}
+#root .wpb-workout .wpb-workout-tools .wpb-workout-tool>svg{
+  display:block;
+  flex-shrink:0;
+}
+#root .wpb-workout .wpb-workout-tools .wpb-workout-tool[data-selected="true"]{
+  color:var(--wpb-theme-accent-ink);
+  box-shadow:inset 0 0 0 1px var(--wpb-theme-accent);
+}
+@media(forced-colors:active){
+  #root .wpb-workout .wpb-workout-tools .wpb-workout-tool[data-selected="true"]{
+    outline:1px solid Highlight;
+    outline-offset:-2px;
+  }
+}

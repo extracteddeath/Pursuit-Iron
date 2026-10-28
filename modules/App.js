@@ -6278,13 +6278,15 @@ function StepBody({ stepKey, config, set, buildable = {}, autoLength = null, com
         const verdictOf = (k, gaps) => gaps.length ? { ok: false, kind: "lifts", items: gaps.map(liftName) } : (buildable[k] || null);
         /* Only blame the gym when more equipment would actually help: `design` means a FULL gym is refused too. */
         const lengthLabel = (id) => (SESSIONS.find(x => x.id === id)?.label || id).toLowerCase();
+        // Background feasibility verdicts may have no explanatory items array.
+        const itemsFor = verdict => Array.isArray(verdict?.items) ? verdict.items : [];
         const noteOf = (v) => !v ? "Checking this split…"
             : v.ok ? (v.okSessions ? `Works at ${config.days} days with ${v.okSessions.map(lengthLabel).join(" or ")} sessions` : null)
-                : v.kind === "lifts" ? `Needs equipment for: ${v.items.join(", ")}`
+                : v.kind === "lifts" ? `Needs equipment for: ${itemsFor(v).join(", ")}`
                     /* At the split step a design verdict means EVERY allowed session length was tried (see the Wizard), so the
                        engine's top suggestion — usually "increase weekly training capacity" — would be wrong advice here. */
-                    : v.kind === "design" ? `Doesn't come out balanced at ${config.days} days with any session length${v.items.length ? ` (${v.items.join(", ")})` : ""} — try another number of days or goal`
-                        : v.items.length ? `Not enough exercises with your equipment for ${v.items.join(", ")}` : "Not enough exercises with your equipment";
+                    : v.kind === "design" ? `Doesn't come out balanced at ${config.days} days with any session length${itemsFor(v).length ? ` (${itemsFor(v).join(", ")})` : ""} — try another number of days or goal`
+                        : itemsFor(v).length ? `Not enough exercises with your equipment for ${itemsFor(v).join(", ")}` : "Not enough exercises with your equipment";
         const withV = [...compatibleSplits].map(([k, sp]) => { const g = gapsOf(k); return [k, sp, g, verdictOf(k, g)]; });
         const ordered = withV.sort((a, b) => (a[2].length > 0) - (b[2].length > 0) || (a[0] === rec ? -1 : b[0] === rec ? 1 : 0));
         const blockedEq = ordered.filter(x => x[3] && x[3].ok === false && x[3].kind !== "design").length;

@@ -606,3 +606,9 @@ const libraryView=app.slice(app.indexOf('function LibraryView('),app.indexOf('co
 assert.equal((libraryView.match(/style: \{/g)||[]).length,1,'Library retains only its calculated goal progress width');
 assert.ok(libraryView.includes('style: { width: `${pct}%` }'),'Goal width stays derived from the saved goal and factual best');
 assert.ok(!libraryView.includes('parseFloat(goalVal)'),'Goal saving cannot accept a partial numeric prefix');
+
+const safeSplitBranch=app.slice(app.indexOf('if (stepKey === "split")'),app.indexOf('if (stepKey === "session")'));
+assert.ok(safeSplitBranch.includes('const itemsFor = verdict => Array.isArray(verdict?.items) ? verdict.items : []'),
+  'Split guidance must accept missing explanation items from feasibility verdicts');
+assert.ok(!safeSplitBranch.includes('v.items.length')&&!safeSplitBranch.includes('v.items.join'),
+  'Split guidance must not crash on verdicts with no items array');

@@ -221,7 +221,7 @@ try {
   assert.equal(actionBoxes.length,3,'Info, History and Skip remain separate exercise controls');
   assert.ok(actionBoxes.every(b=>b.width>=48&&b.height>=48),
     'Exercise header icons must have 48px real hit targets: '+JSON.stringify(actionBoxes));
-  assert.ok(actionBoxes.every(b=>b.left>=-1&&b.right<=innerWidth+1),
+  assert.ok(actionBoxes.every(b=>b.left>=-1&&b.right<=width+1),
     'Exercise header actions stay within the phone viewport: '+JSON.stringify(actionBoxes));
   await page.click('button[aria-label="Skip this exercise for today"]');
   const confirmation=await page.$eval('[aria-label="Confirm skip exercise for today"]',button=>{

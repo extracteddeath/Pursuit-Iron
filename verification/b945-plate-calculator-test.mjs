@@ -40,7 +40,7 @@ try {
   assert.equal(plateLoadPreview('135', 'barbell', 'lb').status, 'no_plates');
   assert.equal(plateLoadPreview('135', 'barbell', 'lb').achievable, 45);
   setAvailPlates(availPlatesFor(null, {}));
-  setGymBarWeights({ unit: 'lb', barbell: 35 });
+  setGymBarWeights({ barWeights: { unit: 'lb', barbell: 35 } });
   assert.equal(plateLoadPreview('125', 'barbell', 'lb').achievable, 125);
   assert.deepEqual(plateLoadPreview('125', 'barbell', 'lb').plates, [45]);
   setGymBarWeights(null);

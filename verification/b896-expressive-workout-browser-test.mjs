@@ -121,7 +121,7 @@ try {
     };
     const progression=textBox(document.querySelector('.wpb-progression-label'));
     const tools=[...document.querySelectorAll('.wpb-workout-tool')];
-    const first=textBox(tools[0]);
+    const first=tools[0]?.querySelector('svg')?.getBoundingClientRect();
     const name=document.querySelector('.wpb-exercise-name').getBoundingClientRect();
     const context=document.querySelector('.wpb-exercise-set-context').getBoundingClientRect();
     return {glyphGap:first.top-progression.bottom,titleGap:context.top-name.bottom,

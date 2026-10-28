@@ -856,3 +856,8 @@ Retire 133 additional strictly static JSX presentation objects from App across P
 Consolidate 25 repeated fixed modal backdrop style objects into a deduplicated set of static CSS variants, keeping each original overlay's backdrop opacity, z-index, alignment, padding, animation and independent dismiss callback. Move 11 repeated informational Lucide icon offsets to one shared rule. Preserve all dynamic colors, workout logging, focus ownership, program logic, movement timing and history. Reduce static inline-presentation debt ceiling 1,544 → 1,508 and add a permanent explicit owner/geometry guard. Require all candidate browser, lifecycle, release, offline and production-byte checks; physical Android remains a distinct release sign-off.
 
 B961 certification gate: verify the finalized release's real browser shards, engine lifecycle, release identity and hosted asset parity before merge. Large static CSS overlay migration has no training state changes; mobile hardware remains separate.
+
+
+## Build 962 — Atomic gym input edits and continued style consolidation
+
+Repair staged gym bar weight/plate inventory edits by applying each change against the latest gym object, not a captured render's barWeights/platePairs. Preserve zero-weight Smith values across subsequent edits, and assert controlled-input focus/typing in real browser cases at 320/393/900/1024px. Move 17 additional fully static JSX layout objects into 17 CSS owners without changing dynamic training state or introducing priority selectors. Keep engine, workout logging, calendar, persistence and motion semantics intact. A completed, fully green PR/browser release is required before deployment. Physical Android/TalkBack certification remains separate.

@@ -50,3 +50,20 @@ assert.equal(platePairsFor({platePairs:{lb:{45:Infinity,35:-1,25:1.9}}},'lb')[45
 assert.equal(platePairsFor({platePairs:{lb:{25:1.9}}},'lb')[25],1);
 setAvailPlates(null);setGymBarWeights(null);
 console.log('PASS Build 846 separate gym bar masses, zero Smith, per-side math, unit changes, gym switches and backward-compatible defaults');
+
+const { prepareGymLoadDraft } = await import('../modules/training-domain/loading-tools.js');
+const { gymBarDraftUpdate, gymPlatePairDraftUpdate } = await import('../modules/gym-load-fields.js');
+// Two inputs edited in one render must not overwrite each other's pending draft.
+// A subsequent plate count cannot resurrect the Smith's old 35 lb default.
+const stagedStart={...gym,barWeights:{unit:'lb',barbell:45,smith:35},platePairs:{lb:{45:4,25:4}}};
+const apply=(current,edit)=>({...current,...edit(current)});
+const withBar=apply(stagedStart,gymBarDraftUpdate('barbell','35'));
+const withSmith=apply(withBar,gymBarDraftUpdate('smith','0'));
+const withPairs=apply(withSmith,gymPlatePairDraftUpdate('lb',45,'0',{lb:[45,25,10]}));
+assert.deepEqual(withPairs.barWeights,{unit:'lb',barbell:'35',smith:'0'});
+assert.equal(withPairs.platePairs.lb[45],'0');
+assert.equal(prepareGymLoadDraft(withPairs).gym.barWeights.smith,0,'counterbalanced Smith zero survives a later plate change');
+assert.equal(prepareGymLoadDraft(withPairs).gym.barWeights.barbell,35,'barbell does not revert during Smith edit');
+const differentOrder=apply(apply(stagedStart,gymBarDraftUpdate('smith','0')),gymBarDraftUpdate('barbell','35'));
+assert.equal(differentOrder.barWeights.smith,'0','latest-state updater retains sibling field across render timing');
+console.log('PASS B962: cross-field gym edits preserve Smith zero, barbell and plate inventory');

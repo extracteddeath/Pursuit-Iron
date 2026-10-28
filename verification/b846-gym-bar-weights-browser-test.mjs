@@ -157,8 +157,13 @@ try{
       const bar='input[aria-label="Barbell empty bar weight"]';
       const smith='input[aria-label="Smith empty bar weight"]';
       const change=async(selector,value)=>{
-        await page.$eval(selector, input => { input.focus(); input.select(); });
-        await page.keyboard.type(value);
+        await page.$eval(selector, input => { input.scrollIntoView({block:'nearest'}); input.focus(); input.select(); });
+        await page.waitForFunction(selector=>document.activeElement===document.querySelector(selector),
+          {timeout:1500},selector);
+        await page.keyboard.type(value,{delay:8});
+        // Assert React's CONTROLLED field, not a transient DOM keystroke.
+        await page.waitForFunction(({selector,value})=>document.querySelector(selector)?.value===value,
+          {timeout:1800},{selector,value});
       };
       const beforeInvalid=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).gyms);
       await change(bar,'35..5');
@@ -168,6 +173,7 @@ try{
       assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')).gyms),beforeInvalid,'invalid bar mass cannot silently reset the saved bar');
       await change(bar,'35');
       await change(smith,'0');
+      assert.equal(await page.$eval(smith,e=>e.value),'0','Smith zero commits before changing other fields');
       await page.$eval('details.wpb-gym-bar-masses',node=>node.open=true);
       assert.equal(await page.$eval(pairs,input=>input.value),'4','cancel discarded the staged count');
       await change(pairs,'51');

@@ -1,5 +1,5 @@
 /* Pursuit Iron 4.0 — M234 production release. */
-const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b943-r67fc096d49329c8f";
+const CACHE="pursuit-iron-production-v4-0-0-m234-candidate-selection-b944-rbf4dc9905389d81c";
 const PURSUIT_CACHE=/^pursuit-iron-(?:next-(?:beta|only|lab)|production)-/;
 const SHELL=[
   "./app.css",
@@ -133,6 +133,7 @@ const SHELL=[
   "./modules/ui-primitives.js",
   "./modules/wizard-stability.js",
   "./modules/workout-context.js",
+  "./modules/workout-readiness.js",
   "./privacy.html",
   "./vendor/lucide-react.js",
   "./vendor/react-dom-client.js",

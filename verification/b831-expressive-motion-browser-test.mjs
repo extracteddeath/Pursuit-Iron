@@ -2036,6 +2036,14 @@ try {
         assert.ok(liveToolsR23.length>0 && liveToolsR23.every(x=>
             x.w>=48 && x.h>=48 && x.image==='none' && x.touch==='manipulation'),
             'R23/R63 live tools retain stable 48px targets without enlarging their visual controls: '+JSON.stringify(liveToolsR23));
+        // Spec v1: workout session-context choices must remain reachable by
+        // touch without forcing a different prescription or editing typed sets.
+        const liveContextTargets=await page.$$eval('.wpb-workout .wpb-session-context>button',
+            buttons=>buttons.filter(el=>el.getClientRects().length)
+                .map(el=>({label:el.getAttribute('aria-label')||el.textContent.trim(),
+                    w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height})));
+        assert.ok(liveContextTargets.every(x=>x.w>=48&&x.h>=48),
+            'Workout session choices meet 48px tap targets: '+JSON.stringify(liveContextTargets));
         // R49: screenshot-led real workout hierarchy. A skipped exercise
         // remains reachable, but navigation never competes with logging an
         // unfinished set. The training grid and Focus mode are untouched.

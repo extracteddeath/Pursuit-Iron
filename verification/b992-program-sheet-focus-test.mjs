@@ -21,6 +21,7 @@ assert.ok(css.includes(':is(.wpb-program-settings-backdrop,.wpb-program-share-ba
 assert.ok(css.includes(':is(.wpb-program-settings-panel,.wpb-program-share-panel)'), 'Program panel has one shared CSS geometry');
 assert.ok(css.includes('max-height:min(88dvh,calc(var(--visual-h'), 'Settings respects responsive viewport and safe area');
 assert.ok(css.includes('max-height:min(92dvh,calc(var(--visual-h'), 'Share retains separate responsive height');
-assert.ok(css.length<=628855,'CSS debt cannot exceed Build 985 baseline');
+// B993 adds one themed Workout Info owner and permanently retires inline styling.
+assert.ok(css.length<=635281,'CSS presentation budget cannot exceed the verified B993 owner');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No additional priority overrides');
 console.log('PASS B992: Program Settings/Share share accessible keyboard and CSS shell ownership.');

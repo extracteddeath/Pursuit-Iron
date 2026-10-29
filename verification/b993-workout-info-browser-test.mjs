@@ -66,6 +66,14 @@ try{
  for(const [width,height,rootFont] of [[320,650,16],[320,650,32],[393,850,16],[834,900,24]]){
   await page.setViewport({width,height,isMobile:width<600,hasTouch:width<600,deviceScaleFactor:2});
   await page.evaluate(font=>document.documentElement.style.fontSize=font+'px',rootFont);
+  // Responsive App shells may remount their active leaf on the resize boundary.
+  // Reopen the same stored workout without modifying its logged sets, then measure
+  // the actual Info sheet in each target viewport rather than a stale DOM node.
+  if (!(await page.$('.wpb-workout'))) {
+   await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+   await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
+  }
+  if (!(await page.$('.wpb-exinfo-sheet'))) await open();
   const m=await page.$eval('.wpb-exinfo-sheet',panel=>{
    const r=panel.getBoundingClientRect(),close=panel.querySelector('.wpb-exinfo-close').getBoundingClientRect();
    const rest=[...panel.querySelectorAll('.wpb-exinfo-rest-step')].map(b=>b.getBoundingClientRect());
@@ -82,6 +90,11 @@ try{
  }
  await page.setViewport({width:393,height:850,isMobile:true,hasTouch:true,deviceScaleFactor:2});
  await page.evaluate(()=>document.documentElement.style.fontSize='16px');
+ if (!(await page.$('.wpb-workout'))) {
+  await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+  await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
+ }
+ if (!(await page.$('.wpb-exinfo-sheet'))) await open();
  // Real value change must use the Workout state writer, not just change CSS.
  await page.$eval('.wpb-exinfo-rest-step',el=>el.click());
  await page.waitForFunction(()=>document.querySelector('.wpb-exinfo-rest-caption')?.textContent.includes('Custom'));

@@ -2007,7 +2007,7 @@ try {
             JSON.stringify(JSON.parse(localStorage.getItem('wpb:v1')||'{}').saved)),programBeforeOptions,
             'R22 opening and dismissing exercise options preserves the entire program');
         // Spec v1: actual Program header touch targets must fit the phone.
-        const programHeaderTargets=await page.$eval('.wpb-program .wpb-program-header-back,.wpb-program .wpb-program-icon-change',
+        const programHeaderTargets=await page.$$eval('.wpb-program .wpb-program-header-back,.wpb-program .wpb-program-icon-change',
             nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
                 const r=el.getBoundingClientRect();
                 return {name:el.className,w:r.width,h:r.height,left:r.left,right:r.right};
@@ -2037,7 +2037,7 @@ try {
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
         // Spec v1: confirm Workout header sizes and lack of overlap by
         // measuring the real controls, not just static CSS declarations.
-        const workoutHeaderTargets=await page.$eval(
+        const workoutHeaderTargets=await page.$$eval(
             '.wpb-workout-header .wpb-workout-close,.wpb-workout-header .wpb-workout-timer,.wpb-workout-header .wpb-workout-header-action',
             nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
                 const r=el.getBoundingClientRect();

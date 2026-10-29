@@ -110,7 +110,8 @@ assert.ok(!exerciseOptions.includes('style:') && !exerciseOptions.includes('loca
 assert.equal((exerciseOptions.match(/export function ProgramExerciseOptions\(/g)||[]).length,1,'One exercise-options owner');
 assert.ok(app.includes('canLink: !program.config?.noSupersets && slot < day.exercises.length - 1'), 'Options obey the saved superset constraint');
 assert.ok(!exerciseOptions.includes('"data-sheet-drag": true') &&
-    exerciseOptions.includes('useProgramSheetFocus(close, sheetDragRef)') &&
+    exerciseOptions.includes('useProgramSheetFocus(dismiss, sheetDragRef)') &&
+    exerciseOptions.includes('if (confirmRemove) setConfirmRemove(false); else close();') &&
     exerciseOptions.includes('ref: attachPanel') &&
     sheetFocus.includes("if (typeof forwardedRef === 'function') forwardedRef(node)") &&
     sheetFocus.includes('forwardedRef.current = node'),

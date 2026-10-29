@@ -90,6 +90,7 @@ export const contractGroups = Object.freeze({
         'b992-program-sheet-focus-test.mjs',
         'b993-workout-info-presentation-test.mjs',
         'b994-workout-finish-presentation-test.mjs',
+        'b995-program-sheet-state-a11y-test.mjs',
         'b983-cascade-debt-test.mjs',
         'b964-scroll-layout-owner-test.mjs',
         'b965-workout-shell-layout-owner-test.mjs',

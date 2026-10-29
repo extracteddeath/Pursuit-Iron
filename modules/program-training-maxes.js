@@ -29,7 +29,6 @@ export function TrainingMaxSummary({ scheme, count, total, onOpen }) {
 }
 
 export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClose, sheetDragRef, selectNumericInput }) {
-    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const [draft, setDraft] = useState(() => Object.fromEntries(mainLifts.map(id => [id,
         String(trainingMaxForUnit(program, id, unit) || '')])));
     const [conversion, setConversion] = useState(null);
@@ -45,6 +44,7 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
     const canApply = !conversion && valid && Object.keys(changes).length > 0;
     const scheme = PCT_SCHEMES[program.config?.percentScheme];
     const closeConversion = () => { setConversion(null); conversionOpener.current?.focus({ preventScroll: true }); };
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(conversion ? closeConversion : onClose, sheetDragRef);
     const apply = () => { if (canApply) onApply(changes); };
     return _jsx('div', { className: 'wpb-backdrop wpb-training-max-backdrop', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-training-max-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },

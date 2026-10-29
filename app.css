@@ -8568,7 +8568,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* M365: sole CSS owner for the Program weekly schedule. Uses live theme variables. */
 #root .wpb .wpb-program-schedule-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-program-schedule-sheet{box-sizing:border-box;width:100%;max-height:86dvh;overflow-y:auto;overscroll-behavior:contain;padding:10px 18px calc(env(safe-area-inset-bottom) + 26px);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb .wpb-program-schedule-sheet{box-sizing:border-box;width:100%;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow-y:auto;overscroll-behavior:contain;padding:10px 18px calc(env(safe-area-inset-bottom) + 26px);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
 #root .wpb .wpb-program-schedule-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--pi-space-2);margin-bottom:var(--pi-space-1)}
 #root .wpb .wpb-program-schedule-title{margin:0;font-size:1.125rem;font-weight:700;line-height:1.4}
 #root .wpb .wpb-program-schedule-close{display:grid;place-items:center;min-width:44px;min-height:44px;color:var(--wpb-theme-text)}
@@ -8604,7 +8604,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-info-card-content{min-width:0;padding:0 16px 14px}
 #root .wpb .wpb-info-card-toggle:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:-3px}
 #root .wpb .wpb-program-reference-backdrop{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-program-reference-panel{box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:56rem;max-height:86dvh;overflow:hidden;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .26s cubic-bezier(.2,.8,.3,1) both}
+#root .wpb .wpb-program-reference-panel{box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:56rem;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow:hidden;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .26s cubic-bezier(.2,.8,.3,1) both}
 #root .wpb .wpb-program-reference-heading{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px 4px}
 #root .wpb .wpb-program-reference-heading h2{min-width:0;margin:0;font-size:1.125rem;line-height:1.4;overflow-wrap:anywhere}
 #root .wpb .wpb-program-reference-close{display:grid;place-items:center;flex-shrink:0;min-width:48px;min-height:48px;border:0;background:transparent;color:var(--wpb-theme-text)}
@@ -8675,7 +8675,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* M371: progression choices share one staged program writer and one presentation owner. */
 #root .wpb .wpb-progression-choice-backdrop{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-progression-choice-panel{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;width:100%;max-width:44rem;max-height:86dvh;overflow:hidden;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
+#root .wpb .wpb-progression-choice-panel{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;width:100%;max-width:44rem;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow:hidden;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
 #root .wpb .wpb-progression-choice-heading{display:flex;align-items:flex-start;flex-shrink:0;gap:12px;padding:16px 18px 10px;border-bottom:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-progression-choice-heading>div{flex:1;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-choice-heading h2{margin:0;font-size:1rem;font-weight:700;line-height:1.4;color:var(--wpb-theme-muted)}

@@ -63,6 +63,7 @@ try {
   const page=await browser.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.setViewport({width:393,height:740,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
   await page.goto('http://127.0.0.1:'+server.address().port+'/b996.html',{waitUntil:'networkidle0'});
   await page.click('#open-review');
   await page.waitForSelector('.wpb-save-review-panel');

@@ -90,6 +90,12 @@ export const contractGroups = Object.freeze({
         'b992-program-sheet-focus-test.mjs',
         'b993-workout-info-presentation-test.mjs',
         'b994-workout-finish-presentation-test.mjs',
+        'b995-program-sheet-state-a11y-test.mjs',
+        'b996-program-ux-consolidation-test.mjs',
+        'b998-ui-controls-test.mjs',
+        'b999-plan-review-m3-test.mjs',
+        'b1000-workout-controls-test.mjs',
+        'b1001-root-font-owner-test.mjs',
         'b983-cascade-debt-test.mjs',
         'b964-scroll-layout-owner-test.mjs',
         'b965-workout-shell-layout-owner-test.mjs',
@@ -192,6 +198,7 @@ export const browserShards = Object.freeze({
         'b882-workout-reason-browser-test.mjs'
     ]),
     program: Object.freeze([
+        'b995-program-schedule-browser-test.mjs',
         'b894-cycle-conversion-browser-test.mjs',
         'b893-custom-cycle-browser-test.mjs',
         'b890-cycle-browsing-browser-test.mjs',
@@ -224,6 +231,11 @@ export const browserShards = Object.freeze({
         'r74-accessibility-browser-test.mjs',
         'b959-session-dialog-browser-test.mjs',
         'b992-program-sheet-focus-browser-test.mjs',
+        'b996-program-ux-consolidation-browser-test.mjs',
+        'b1000-workout-controls-browser-test.mjs',
+        'b1001-root-font-owner-browser-test.mjs',
+        'b998-ui-controls-browser-test.mjs',
+        'b999-plan-review-m3-browser-test.mjs',
         'b966-context-menu-keyboard-browser-test.mjs'
     ]),
     'integration-data': Object.freeze([

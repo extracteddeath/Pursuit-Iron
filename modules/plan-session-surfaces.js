@@ -1,6 +1,7 @@
 // One presentation owner for Home and Plan session review. No prescription generation or saved state.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { History, ChevronRight, ChevronDown, TrendingUp, Trophy, Zap } from 'lucide-react';
+import { useId } from 'react';
 import { workoutTechniqueRest } from './workout-context.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 
@@ -16,23 +17,25 @@ export function PlanChangeBanner({ review, onClick }) {
     if (!review?.changes.length) return null;
     const held = review.changes.filter(row => row.change.undone).length;
     const count = review.changes.length;
-    return _jsxs("button", { type: "button", className: "wpb-plan-change-banner pressable", onClick, "aria-label": "Review plan changes", children: [
-        _jsx("span", { className: "wpb-session-plan-icon", children: _jsx(History, { size: 19 }) }),
+    return _jsxs("button", { type: "button", className: "wpb-plan-change-banner pressable", onClick, "aria-label": `Review ${count} plan adjustment${count === 1 ? '' : 's'}${held ? `, ${held} prior load${held === 1 ? '' : 's'} kept` : ''}`, children: [
+        _jsx("span", { className: "wpb-session-plan-icon", 'aria-hidden': true, children: _jsx(History, { size: 19 }) }),
         _jsxs("span", { children: [_jsx("strong", { children: `${count} upcoming adjustment${count === 1 ? '' : 's'}` }),
             _jsx("span", { children: held ? `${held} prior load${held === 1 ? '' : 's'} kept · See details` : "Review load and planned sets" })] }),
-        _jsx(ChevronRight, { size: 18 })] });
+        _jsx(ChevronRight, { size: 18, 'aria-hidden': true })] });
 }
 // The Home hero is a workout preview, not a second coaching feed.
 export function HomeSessionOutline({ review, expanded, onToggle }) {
+    // IDs must be unique if Home and Plan surfaces remain mounted during navigation.
+    const listId = useId();
     if (!review?.exercises.length) return null;
     return _jsxs("section", { className: "wpb-home-session-outline", "aria-label": "Session outline", children: [
         _jsxs("button", { type: "button", className: "wpb-home-outline-toggle pressable", onClick: onToggle,
-            "aria-expanded": expanded, "aria-controls": "wpb-home-outline-exercises",
+            "aria-expanded": expanded, "aria-controls": listId,
             "aria-label": `${expanded ? 'Hide' : 'Show'} all ${review.exercises.length} session exercises`, children: [
                 _jsx("strong", { children: "Session outline" }),
                 _jsx("span", { children: `${review.exercises.length} exercises` }),
                 _jsx(ChevronDown, { size: 17 })] }),
-        _jsx("div", { id: "wpb-home-outline-exercises", hidden: !expanded, children: expanded &&
+        _jsx("div", { id: listId, hidden: !expanded, children: expanded &&
             _jsx("ul", { className: "wpb-home-outline-list", children: review.exercises.map(row =>
                 _jsxs("li", { className: "wpb-m3-outline-row", children: [_jsx("span", { children: row.name }),
                     _jsx("strong", { children: `${row.cell.sets}×${row.cell.range || row.cell.reps}` })] }, row.id + ':' + row.slot)) }) })

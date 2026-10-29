@@ -204,7 +204,7 @@ async function verifyTaskHierarchy(browser){
         'R91 workout leads; program creation follows training content in DOM and focus order: '+JSON.stringify(homeOrder));
       const outlineState=()=>page.$eval('.wpb-home-session-preview',panel=>{
         const button=panel.querySelector('button[aria-expanded]');
-        const content=panel.querySelector('#wpb-home-outline-exercises');
+        const content=button?.getAttribute('aria-controls') ? document.getElementById(button.getAttribute('aria-controls')) : null;
         return {button:!!button,label:button?.getAttribute('aria-label'),controls:button?.getAttribute('aria-controls'),
           expanded:button?.getAttribute('aria-expanded'),buttonHeight:button?.getBoundingClientRect().height,
           rows:content?.querySelectorAll('.wpb-m3-outline-row').length||0,hidden:content?.hidden,
@@ -212,7 +212,7 @@ async function verifyTaskHierarchy(browser){
       });
       const outlineOpen=await outlineState();
       assert.ok(outlineOpen.button&&outlineOpen.expanded==='true'&&
-        outlineOpen.controls==='wpb-home-outline-exercises'&&
+        !!outlineOpen.controls&&
         outlineOpen.label?.includes('Hide all 4 session exercises')&&
         outlineOpen.buttonHeight>=44&&!outlineOpen.hidden&&outlineOpen.rows===4&&!outlineOpen.overflow,
         'B876 Home shows every session exercise by default, with accessible optional collapse: '+JSON.stringify(outlineOpen));
@@ -299,7 +299,7 @@ async function verifyTaskHierarchy(browser){
         named:el.getAttribute('aria-label'),style:getComputedStyle(el).fontSize
       }));
       assert.equal(rowBefore.expanded,'false');
-      assert.ok(rowBefore.named?.includes('Volume contributors for')&&parseFloat(rowBefore.style)>=12,
+      assert.ok(rowBefore.named?.includes('weekly sets')&&rowBefore.named?.includes('Show contributors')&&parseFloat(rowBefore.style)>=12,
         'M380: muscle-volume header has readable accessible name');
       await page.focus('.wpb-plan button[data-vol-part]');
       await page.keyboard.press('Enter');

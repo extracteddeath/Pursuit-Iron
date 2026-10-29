@@ -3,6 +3,7 @@ import { createElement as h, useState, useEffect } from 'react';
 import { Pencil, X } from 'lucide-react';
 import { EX_BY_ID, normalizeEditedHistoryEntry } from './engine-api.js';
 import { UiAction } from './ui-primitives.js';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 function localHistoryDateValue(ms) {
     const d = new Date(Number(ms) || Date.now());
@@ -11,6 +12,7 @@ function localHistoryDateValue(ms) {
 }
 
 export function HistoryEditSheet({ entry, unit, onClose, onSave, sheetDragRef, selectNumericInput }) {
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const makeDraft = (src) => ({ ...src, perf: Object.fromEntries(Object.entries(src?.perf || {}).map(([id, p]) => [id, {
         ...p,
         sets: (Array.isArray(p?.sets) && p.sets.length ? p.sets : (p?.reps != null ? [{ w: p.weight ?? 0, r: p.reps }] : [])).map(st => ({ ...st }))
@@ -64,8 +66,10 @@ export function HistoryEditSheet({ entry, unit, onClose, onSave, sheetDragRef, s
     }, label, h('input', { ...props, id, className: 'mono wpb-history-editor-input',
         'aria-describedby': showError && invalid ? 'history-editor-error' : undefined }));
     return h('div', { className: 'wpb-backdrop wpb-history-editor-backdrop', role: 'dialog',
-        'aria-modal': true, 'aria-labelledby': 'history-editor-title', 'aria-describedby': 'history-editor-help', onClick: onClose },
-        h('section', { ref: sheetDragRef, className: 'wpb-history-editor-sheet', onClick: event => event.stopPropagation() },
+        'aria-modal': true, 'aria-labelledby': 'history-editor-title', 'aria-describedby': 'history-editor-help',
+        onClick: event => { if (event.target === event.currentTarget) onClose(); } },
+        h('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
+            className: 'wpb-history-editor-sheet', onClick: event => event.stopPropagation() },
             h('header', { className: 'wpb-history-editor-heading' },
                 h(Pencil, { size: 18, 'aria-hidden': true }),
                 h('div', { className: 'wpb-history-editor-copy' },
@@ -111,5 +115,6 @@ export function HistoryEditSheet({ entry, unit, onClose, onSave, sheetDragRef, s
                     'Review incomplete or invalid values before saving.'),
                 h('div', { className: 'wpb-history-editor-actions' },
                     h(UiAction, { variant: 'tonal', onClick: onClose }, 'Cancel'),
-                    h(UiAction, { variant: 'primary', disabled: !exEntries.length, onClick: save }, 'Save correction')))));
+                    h(UiAction, { variant: 'primary', disabled: !exEntries.length, onClick: save,
+                        'aria-describedby': showError && invalid ? 'history-editor-error' : undefined }, 'Save correction')))));
 }

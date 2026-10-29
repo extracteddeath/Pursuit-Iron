@@ -2,7 +2,7 @@
 // Their owners continue to control open/close, drag gestures, saving and navigation.
 import { useCallback, useEffect, useRef } from 'react';
 const ACTIONS = 'button:not(:disabled),select:not(:disabled),textarea:not(:disabled),input:not(:disabled),summary,a[href]';
-export function useProgramSheetFocus(onClose, forwardedRef) {
+export function useProgramSheetFocus(onClose, forwardedRef, { dismissible = true } = {}) {
     const panelRef = useRef(null);
     const attachPanel = useCallback(node => {
         panelRef.current = node;
@@ -18,7 +18,7 @@ export function useProgramSheetFocus(onClose, forwardedRef) {
         if (event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();
-            onClose();
+            if (dismissible) onClose();
             return;
         }
         if (event.key !== 'Tab') return;
@@ -27,7 +27,7 @@ export function useProgramSheetFocus(onClose, forwardedRef) {
         const eligible = [...panel.querySelectorAll(ACTIONS)].filter(el =>
             el.getClientRects().length && el.getAttribute('tabindex') !== '-1' &&
             el.getAttribute('aria-disabled') !== 'true' &&
-            !el.closest('[inert],[aria-hidden="true"]') &&
+            !el.closest('[inert],[hidden],[aria-hidden="true"]') &&
             getComputedStyle(el).visibility !== 'hidden' &&
             (el.tagName === 'SUMMARY' || !el.closest('details:not([open])')));
         const first = eligible[0], last = eligible.at(-1);
@@ -43,5 +43,5 @@ export function useProgramSheetFocus(onClose, forwardedRef) {
             first.focus({ preventScroll: true });
         }
     };
-    return { attachPanel, onPanelKeyDown };
+    return { attachPanel, onPanelKeyDown, panelRef };
 }

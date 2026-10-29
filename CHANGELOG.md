@@ -1,4 +1,4 @@
-## B994 · Workout completion shell ownership (pending release)
+## Build 988 — Workout completion layout and recovery feedback polish
 
 - Replaced 46 finished-workout inline styles with 40 M3 theme-owned CSS roles for stats, PRs, next-session preview, recovery feedback, and save/share actions.
 - Narrow-width stat cards can wrap numbers; entry names wrap instead of clipping, and feedback controls are 44px+ tap targets.

@@ -36,7 +36,8 @@ assert.ok(css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{')
   'Workout rest actions remain accessible after the cleanup');
 assert.ok((css.match(/!important/g)||[]).length<=2060,
   'CSS priority budget must not grow after retiring dead overrides');
-assert.ok(css.length<=628855,
+// B993 replaces fixed Workout-info JSX with themed CSS; this is the new CSS-only ratchet.
+assert.ok(css.length<=635281,
   'CSS migration budget must not grow after the B987 Strength and 1RM owners');
 assert.ok((app.match(/style: \{/g)||[]).length<=1262,
   'Do not restore inline Workout geometry to replace deleted CSS');

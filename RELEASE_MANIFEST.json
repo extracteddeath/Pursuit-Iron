@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 986,
+  "build": 987,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "07ff24852aafb5382dd3514106b126a8bc7cd1ea6761482f72d0e8c61770a1f2",
@@ -148,18 +148,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "87bf3d5b1732586cbea2ff4f8cf31733ea5e8be8b1e80bfb570916047c4dbd79",
-    "index.html": "ed73c14f835c8d3991e9fb43f74c00714e10840e86a0a6f890aa9f35ae3f6b94",
-    "sw.js": "10666bacae7c704b1f1fa378eb9feb0cef15ccb8038d61ad1c653233920a6723",
-    "BUILD_PROFILE.json": "b12e57fa96db237abbd975ac1d230a589274814597d70b97377d9eb04d785f8b",
-    "CHANGELOG.md": "a3fb94b9096cabb1b6f568e8548516ffd8bcc464aad40389cd585f46f6085b99",
-    "app.css": "a5fca54967dd5f4554770015cbcbc69d460e31808557bc9ba5f3746089d66cee",
+    "modules/App.js": "12056113348096ae1394eb15510ad42090c75e81b04c533d169eded9f2db8f55",
+    "index.html": "0a9fdb8865d3e7f72e18f0f9db4070683c501779c399e82b5a1ebe56968516b2",
+    "sw.js": "9cd30b782190fa1af0627228a2f91f96ae4b401f4c1edb6c811f751e1c43c2d2",
+    "BUILD_PROFILE.json": "0401e7bc0991412a0c6bf65633b977007436a8a64e10d5424694a5d882adb1cc",
+    "CHANGELOG.md": "d5b4e29b014365712b95a273d74204c38bcef4885a6d69a1c89cfb43bbd02832",
+    "app.css": "22a4d9928750412023328a17aae35b900c6e6eeee7224dcf4c3f82cdba2e3315",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b986-re6bad8730228c09a",
-  "uiMilestone": "Build 986 · Consolidated Program sheet accessibility and styling"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b987-r62bac79666a86c38",
+  "uiMilestone": "Build 987 · Workout Info styling and accessible controls"
 }

@@ -21,6 +21,8 @@ assert.ok(css.includes('.wpb-day-hit-chip{\n  min-height:44px;'),
   'Expressive theme must not override the chip target with a smaller minimum');
 assert.ok(scope.includes('max-height:88%')&&scope.includes('overflow-y:auto'),
   'Whats New panel stays scrollable with bounded height');
+assert.ok(scope.includes('pointer-events:none')&&scope.includes('overscroll-behavior:contain'),
+  'Decorative picker search must not swallow input taps and modal scrolling must be contained');
 assert.ok(scope.includes('prefers-reduced-motion:reduce')&&scope.includes('forced-colors:active'),
   'Reduced motion and forced colors supported');
 assert.ok(app.includes('setOpenPart(on ? null : e.part)'),'Muscle coverage controls still expand/collapse');

@@ -34,7 +34,8 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
         ]
     }, id);
     return _jsx('div', { className: 'wpb-backdrop wpb-exercise-options-backdrop', role: 'dialog',
-        'aria-modal': true, 'aria-labelledby': 'program-exercise-options-title', onClick: event => { if (event.target === event.currentTarget) close(); },
+        'aria-modal': true, 'aria-labelledby': 'program-exercise-options-title',
+        onClick: event => { if (event.target === event.currentTarget) dismiss(); },
         children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-exercise-options-sheet',
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('header', { className: 'wpb-exercise-options-heading', children: [

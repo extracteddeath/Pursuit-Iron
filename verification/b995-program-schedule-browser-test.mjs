@@ -62,6 +62,8 @@ try {
     await page.click('[aria-label="Clear all scheduled workouts"]');
     await page.waitForFunction(()=>document.querySelector('.wpb-program-schedule-caption [role="status"]')?.textContent.includes('0 training days'));
     assert.equal(await page.$('[aria-label="Clear all scheduled workouts"]'),null);
+    assert.equal(await page.$eval('.wpb-program-schedule-close', el => el === document.activeElement), true,
+        'clearing focuses a persistent action before removing the Clear button');
     await page.keyboard.press('Escape');
     await page.waitForFunction(()=>!document.querySelector('[data-testid="weekly-schedule-sheet"]'));
     assert.equal(await page.$eval('#open',el=>el===document.activeElement),true,'closing restores launcher focus');

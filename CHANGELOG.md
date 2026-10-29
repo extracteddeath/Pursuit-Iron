@@ -1,4 +1,4 @@
-## Build 987 candidate — Workout exercise-information presentation consolidation
+## Build 987 — Workout exercise-information presentation consolidation
 
 - Removed 45 inline style objects from the Workout Info sheet, giving the exercise detail a single theme-token CSS owner for stats, coaching explanation, records, trends, technique cues and setup guidance.
 - Added native dialog semantics, keyboard Tab containment, Escape dismissal and focus return to the originating Info action.

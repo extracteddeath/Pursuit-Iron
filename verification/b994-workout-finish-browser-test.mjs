@@ -64,7 +64,8 @@ try{
    width:innerWidth,height:innerHeight,clientWidth:panel.clientWidth,scrollWidth:panel.scrollWidth,
    metricBounds:items.map(rect),metricOverflow:items.some(x=>x.scrollWidth>x.clientWidth+3),
    entryWhiteSpace:[...panel.querySelectorAll('.wpb-finish-entry-name')].map(el=>getComputedStyle(el).whiteSpace),
-   actions:[...panel.querySelectorAll('.wpb-finish-save,.wpb-finish-share-action,.wpb-finish-feedback-toggle')].map(rect)};
+   actions:[...panel.querySelectorAll('.wpb-finish-save,.wpb-finish-share-action,.wpb-finish-feedback-toggle')]
+    .map(el=>({name:el.className,...rect(el)}))};
  });
  for(const [width,height,font] of [[320,650,16],[320,650,32],[393,850,16],[834,900,24]]){
   await page.setViewport({width,height,isMobile:width<600,hasTouch:width<600,deviceScaleFactor:2});

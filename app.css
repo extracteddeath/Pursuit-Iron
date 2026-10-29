@@ -3037,8 +3037,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button{
   box-sizing:border-box;
-  min-width:44px!important;
-  min-height:44px!important;
+  min-width:48px!important;
+  min-height:48px!important;
   border:1px solid var(--pi-r11-edge)!important;
   border-radius:14px!important;
   background-color:var(--pi-r11-quiet)!important;
@@ -3127,7 +3127,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-variant-numeric:tabular-nums;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-finish-sheet button{
-  min-height:44px;
+  min-height:48px;
 }
 @media(max-width:350px){
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-actions{
@@ -7281,7 +7281,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* B888: compact session choices and readable note editors share theme surfaces. */
 .wpb-session-context{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;flex-shrink:0}
-.wpb-session-context>button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:40px;padding:8px 12px;border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);text-align:left}
+.wpb-session-context>button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:48px;padding:8px 12px;border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);text-align:left}
 /* B896 — Selected Expressive workout details, using Pursuit's existing palette,
    row geometry, motion settings and session owners. */
 #root .wpb-workout .wpb-ex-nav{
@@ -7346,7 +7346,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-session-dialog{width:100%;max-width:560px;max-height:88dvh;overflow-y:auto;box-sizing:border-box;padding:18px 18px calc(24px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border)}
 .wpb-session-dialog-heading{display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .wpb-session-dialog h2{font-size:21px;letter-spacing:-.3px;flex:1;margin:0}
-.wpb-session-dialog-heading button{width:44px;height:44px;border:0;border-radius:50%;background:var(--wpb-theme-card);color:var(--wpb-theme-text);display:grid;place-items:center}
+.wpb-session-dialog-heading button{width:48px;height:48px;border:0;border-radius:50%;background:var(--wpb-theme-card);color:var(--wpb-theme-text);display:grid;place-items:center}
 .wpb-session-dialog p{font-size:13px;line-height:1.55;color:var(--wpb-theme-muted);overflow-wrap:anywhere}
 .wpb-session-dialog label{display:grid;gap:8px;font-size:13px;font-weight:650;margin:12px 0}
 .wpb-session-dialog textarea,.wpb-session-dialog select{box-sizing:border-box;width:100%;font:inherit;padding:12px;min-height:48px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text)}
@@ -10072,7 +10072,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb :is(.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;flex-shrink:0;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);border-radius:10px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);cursor:pointer}
 #root .wpb .wpb-exinfo-rest-step{font-size:18px;font-weight:700}
 #root .wpb .wpb-exinfo-rest-auto{padding:0 10px;font-size:13px;font-weight:600;color:var(--wpb-theme-muted)}
-#root .wpb .wpb-exinfo-weight-choice{box-sizing:border-box;min-width:48px;min-height:44px;padding:9px 12px;border-radius:9px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:13px;font-weight:600;cursor:pointer}
+#root .wpb .wpb-exinfo-weight-choice{box-sizing:border-box;min-width:48px;min-height:48px;padding:9px 12px;border-radius:9px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:13px;font-weight:600;cursor:pointer}
 #root .wpb .wpb-exinfo-weight-choice[aria-pressed="true"]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-exinfo-sheet :is(button,a,summary,input,textarea):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(max-width:359px){#root .wpb .wpb-exinfo-sheet{padding-inline:12px}#root .wpb .wpb-exinfo-rest-row{gap:6px}}

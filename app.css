@@ -9726,3 +9726,106 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-b973-coach-item-evidence{margin-top:5px;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.35;overflow-wrap:anywhere;}
 @media (forced-colors:active){#root .wpb-workout .wpb-b973-set-type[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-2px;}}
 @media (prefers-reduced-motion:reduce){#root .wpb-workout .wpb-b973-set-sheet{animation:none;}}
+
+/* B975: one theme-owned layout for a minimized workout and the persistent PWA
+   update choice. The dock never obscures the tab rail; status remains legible on
+   320px screens and controls retain physical 44-48px touch targets. */
+#root .wpb-live-dock{
+  position:absolute;left:8px;right:8px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:35;
+}
+#root .wpb-live-dock[data-has-tabs="true"]{bottom:calc(72px + env(safe-area-inset-bottom));}
+#root .wpb-live-dock .wpb-b975-live-surface{
+  display:flex;align-items:center;gap:10px;min-width:0;
+  background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);
+  border-radius:16px;padding:8px 10px 8px 12px;
+  box-shadow:0 8px 26px rgba(0,0,0,.4);
+}
+#root .wpb-live-dock .wpb-b975-live-dot{
+  width:9px;height:9px;border-radius:999px;background:currentColor;
+}
+#root .wpb-live-dock .wpb-b975-live-warning,
+#root .wpb-live-dock .wpb-b975-live-resume-copy{
+  flex:1;min-width:0;color:inherit;text-align:left;
+}
+#root .wpb-live-dock .wpb-b975-live-resume-copy{
+  padding:4px 0;border:0;background:transparent;cursor:pointer;
+}
+#root .wpb-live-dock .wpb-b975-live-resume-action,
+#root .wpb-live-dock .wpb-b975-live-discard{
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;min-width:44px;min-height:44px;border:0;
+  color:inherit;cursor:pointer;
+}
+#root .wpb-live-dock .wpb-b975-live-resume-action{
+  width:44px;height:44px;border-radius:12px;background:rgba(0,0,0,.16);
+}
+#root .wpb-live-dock .wpb-b975-live-discard{
+  width:44px;padding:0 5px;border-radius:10px;
+  background:transparent;opacity:.78;font-size:13px;font-weight:700;gap:4px;
+}
+#root .wpb-live-dock[data-discard-armed="true"] .wpb-b975-live-discard{
+  width:78px;background:var(--wpb-theme-danger);color:var(--pi-discard-on-danger);
+  opacity:1;
+}
+#root .wpb .wpb-b975-update-action{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  gap:8px;max-width:calc(100% - 24px);min-height:48px;
+  padding:10px 16px;border:0;border-radius:999px;
+  background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);
+  text-align:center;white-space:normal;overflow-wrap:anywhere;line-height:1.35;
+  font-size:13px;font-weight:700;cursor:pointer;pointer-events:auto;
+  box-shadow:0 6px 22px rgba(0,0,0,.4);
+}
+#root .wpb .wpb-b975-offline-status{
+  box-sizing:border-box;display:flex;align-items:center;gap:6px;
+  max-width:calc(100% - 24px);min-height:36px;padding:6px 12px;
+  border:1px solid var(--wpb-theme-border);border-radius:999px;
+  color:var(--wpb-theme-muted);background:var(--wpb-theme-bg-tint);
+  font-size:13px;font-weight:600;animation:fadeIn .3s both;
+}
+#root .wpb .wpb-b975-update-dialog-actions{
+  display:flex;align-items:stretch;flex-wrap:wrap;gap:10px;margin-top:18px;
+}
+#root .wpb .wpb-b975-update-keep,
+#root .wpb .wpb-b975-update-restart{
+  flex:1 1 130px;min-height:48px;padding:11px 14px;
+  border-radius:14px;font-size:.875rem;font-weight:700;cursor:pointer;
+}
+#root .wpb .wpb-b975-update-keep{
+  border:1px solid var(--wpb-theme-border);
+  background:var(--wpb-theme-card);color:var(--wpb-theme-text);
+}
+#root .wpb .wpb-b975-update-restart{
+  border:1px solid transparent;background:var(--wpb-theme-accent);
+  color:var(--wpb-theme-accent-text);
+}
+#root .wpb .wpb-b975-update-restart:disabled,
+#root .wpb .wpb-b975-update-action:disabled{opacity:.6;cursor:wait;}
+#root .wpb-live-dock .wpb-b975-live-resume-copy:focus-visible,
+#root .wpb-live-dock .wpb-b975-live-resume-action:focus-visible,
+#root .wpb-live-dock .wpb-b975-live-discard:focus-visible,
+#root .wpb .wpb-b975-update-action:focus-visible,
+#root .wpb .wpb-b975-update-keep:focus-visible,
+#root .wpb .wpb-b975-update-restart:focus-visible{
+  outline:2px solid var(--wpb-theme-text);outline-offset:2px;
+}
+@media(max-width:360px){
+  #root .wpb-live-dock .wpb-b975-live-surface{gap:6px;padding:8px;}
+  #root .wpb .wpb-b975-update-action{max-width:calc(100% - 12px);}
+}
+@media(forced-colors:active){
+  #root .wpb-live-dock .wpb-b975-live-surface,
+  #root .wpb-live-dock .wpb-b975-live-resume-action,
+  #root .wpb-live-dock .wpb-b975-live-discard,
+  #root .wpb .wpb-b975-update-action,
+  #root .wpb .wpb-b975-update-keep,
+  #root .wpb .wpb-b975-update-restart{
+    border:1px solid ButtonText;background:Canvas;color:ButtonText;
+  }
+  #root .wpb-live-dock[data-discard-armed="true"] .wpb-b975-live-discard{
+    outline:2px solid Highlight;outline-offset:-2px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #root .wpb .wpb-b975-offline-status{animation:none;}
+}

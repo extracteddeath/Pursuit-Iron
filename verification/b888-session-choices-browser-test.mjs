@@ -27,6 +27,30 @@ try {
  const getLive=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
  const getStore=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
  await page.goto('http://127.0.0.1:8798/index.html',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
+ // B975: minimized workout remains touch-accessible and never covers the nav rail.
+ for(const width of [320,393]){
+  await page.setViewport({width,height:850,isMobile:true,hasTouch:true});
+  const layout=await page.evaluate(()=>{
+   const dock=document.querySelector('.wpb-live-dock'),resume=dock?.querySelector('[aria-label="Resume workout"]'),
+      discard=dock?.querySelector('[aria-label="Discard in-progress workout"]'),
+      rail=document.querySelector('.wpb-tabbar');
+   if(!dock||!resume||!discard)return null;
+   const rect=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};};
+   return {dock:rect(dock),resume:rect(resume),discard:rect(discard),rail:rail?rect(rail):null,
+     tabs:dock.getAttribute('data-has-tabs'),armed:dock.getAttribute('data-discard-armed'),
+     resumeColor:getComputedStyle(resume).color,surfaceColor:getComputedStyle(dock.firstElementChild).color};
+  });
+  assert.ok(layout,`live dock and both controls must render at ${width}px`);
+  assert.equal(layout.tabs,'true','dock should clear the visible tab rail');
+  assert.equal(layout.armed,'false','discard must not enter confirmation without a user click');
+  assert.ok(layout.dock.left>=0 && layout.dock.right<=width,`dock must fit ${width}px`);
+  assert.ok(layout.resume.height>=44 && layout.resume.width>=44,`Resume needs a usable hit target at ${width}px`);
+  assert.ok(layout.discard.height>=44 && layout.discard.width>=44,`Discard needs a usable hit target at ${width}px`);
+  if(layout.rail)assert.ok(layout.dock.bottom<=layout.rail.top+1,'live dock cannot overlap the tab rail');
+  assert.equal(layout.resumeColor,layout.surfaceColor,'resume glyph must inherit accessible surface contrast');
+ }
+ await page.setViewport({width:393,height:850,isMobile:true,hasTouch:true});
+ console.log('PASS B975: minimized workout dock has aligned 44px actions and clears navigation at 320/393px.');
  await clickText('Log injury');await page.waitForSelector('[aria-label="Injury muscle"]');
  await page.select('[aria-label="Injury muscle"]','biceps'); await page.type('[aria-label="Injury details"]','Elbow discomfort on curls');
  await clickText('Save injury'); await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:v1')).injuryLog?.length===1);

@@ -1,3 +1,10 @@
+## Build 975 — Live workout and persistent update polish
+
+- Move eight minimized-workout, PWA update and offline status inline styles into shared theme CSS; preserve all workout and restart callbacks.
+- Keep phone-width dock above the tab rail with 44px Resume and Discard targets; provide clearer restart confirmation actions and visible focus treatment.
+- Assert 320px and 393px dock, offline update touch areas, layout, contrast and persistence in production Chromium.
+- No engine, progression, storage, workout event or history schema change; Engine 0.65.9.
+
 ## Build 974 — Workout ordering and update-prompt verification
 
 - Newly added working sets now precede pending drop/myo extensions; already logged extensions retain their original order.

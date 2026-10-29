@@ -69,10 +69,12 @@ try {
  assert.equal(await page.$eval('#open-standard',el=>el===document.activeElement),true,'return focus to trigger');
  assert.equal(await page.evaluate(()=>window.closeCount),1,'Escape invokes one close');
  await page.click('#open-protected');
+ await page.evaluate(()=>{window.protectedEscapeBubbles=0;document.addEventListener('keydown',ev=>{if(ev.key==='Escape')window.protectedEscapeBubbles++;});});
  await page.$eval('.wpb-session-dialog-backdrop',el=>el.click());
  await page.keyboard.press('Escape');
  assert.ok(await page.$('.wpb-session-dialog'),'protected sheet stays open after backdrop and Escape');
  assert.equal(await page.evaluate(()=>window.closeCount),1,'no premature protected close');
+ assert.equal(await page.evaluate(()=>window.protectedEscapeBubbles),0,'Protected Escape must not reach background keyboard shortcuts');
  await page.keyboard.press('Tab');
  assert.equal(await page.$eval('#field',el=>el===document.activeElement),true,'protected Tab enters first field');
  await page.evaluate(()=>window.forceClose());await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));

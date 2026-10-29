@@ -14,8 +14,12 @@ export function SessionChoiceDialog({ title, onClose, children, dismissible = tr
         return () => { if (previous?.isConnected) previous.focus?.({ preventScroll: true }); };
     }, []);
     const onKeyDown = ev => {
-        if (ev.key === 'Escape' && dismissible) {
-            ev.preventDefault(); ev.stopPropagation(); onClose(); return;
+        if (ev.key === 'Escape') {
+            // Even protected sheets consume Escape, so a parent workout cannot
+            // interpret it as a shortcut or dismiss an underlying surface.
+            ev.preventDefault(); ev.stopPropagation();
+            if (dismissible) onClose();
+            return;
         }
         if (ev.key !== 'Tab') return;
         const panel = dialogRef.current;

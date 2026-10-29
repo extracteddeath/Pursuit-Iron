@@ -789,6 +789,7 @@ try{
         metaContrast:contrast(css('.wpb-program-exercise-meta').color,getComputedStyle(row).backgroundColor),
         nameWrap:css('.wpb-program-exercise-name').whiteSpace,
         chips:chips.length,
+        chipTargets:chips.map(chip=>({height:chip.getBoundingClientRect().height,width:chip.getBoundingClientRect().width})),
         chipContrast:chips.length?contrast(getComputedStyle(chips[0]).color,getComputedStyle(chips[0]).backgroundColor):0,
         overflow:el('.wpb-program').scrollWidth>el('.wpb-program').clientWidth+1
       };
@@ -797,6 +798,8 @@ try{
       'Program exercise card must use a distinct tonal elevation: '+JSON.stringify(nested));
     assert.ok(nested.chips>0&&nested.nameWrap==='normal',
       'Muscle chips remain visible and exercise names wrap: '+JSON.stringify(nested));
+    assert.ok(nested.chipTargets.every(target=>target.width>=44&&target.height>=44),
+      'B977 muscle chips keep 44px hit areas in both saved themes: '+JSON.stringify(nested));
     assert.ok(nested.nameContrast>=4.5&&nested.metaContrast>=4.5&&nested.chipContrast>=4.5,
       'Program name, metadata and chip labels meet WCAG AA contrast: '+JSON.stringify(nested));
     assert.ok(!nested.overflow,'No horizontal clipping with expanded exercises: '+JSON.stringify(nested));

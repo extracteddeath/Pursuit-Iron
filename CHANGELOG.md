@@ -1,3 +1,10 @@
+## Build 977 — Shared chip and dialog presentation
+
+- Move 11 static inline presentation objects into theme CSS for program muscle-coverage chips, chart empty states, settings and version dialogs, and search icons.
+- Muscle-coverage chips now have at least 44px hit targets, with paired-theme Chromium verification.
+- Keep What's New scrolling bounded, support reduced motion and forced colors, and retain generation cancel/Escape controls.
+- No changes to engine 0.65.9, progression, logging, storage or history.
+
 ## Build 976 — Program and workout geometry consolidation
 
 - Retire 16 static JSX layout objects across program scheduling, exercise-swap search/results, plan restore, workout trace, previous-set controls, coaching, injury and history panels.

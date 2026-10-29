@@ -1,0 +1,53 @@
+name: Draft UI candidate verification
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: draft-ui-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    # Draft UI work needs feedback before rebuilding the PWA release identity.
+    # Official full release/engine gates still run only when marked ready.
+    if: ${{ github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Verify all UI integration source contracts
+        run: node scripts/verify-engine-contracts.mjs integration
+
+  ui-browser:
+    if: ${{ github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [program, integration-accessibility]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked Chromium harness
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify draft UI browser shard
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node scripts/verify-browser-contracts.mjs ${{ matrix.shard }}

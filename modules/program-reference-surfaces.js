@@ -133,9 +133,10 @@ export function ProgressionCard({ program, open, onToggle }) {
     const columns = useMemo(() => cols.map(week => ({ week, rows: new Map((program.days || []).flatMap(day =>
         sessionPrescriptionRows(program, day, week).map(row => [`${day.id}:${row.slot}`, row]))) })), [program, start, totalWeeks]);
     const upper = new Set(['chest', 'lats', 'upper_back', 'shoulders', 'biceps', 'triceps', 'forearms', 'traps', 'neck']);
+    const normalizedQuery = q.trim().toLocaleLowerCase();
     const shown = rows.filter(row => {
         const candidates = [row.ex, row.alternate].filter(Boolean);
-        if (q && !candidates.some(ex => ex.name.toLowerCase().includes(q.toLowerCase()))) return false;
+        if (normalizedQuery && !candidates.some(ex => ex.name.toLocaleLowerCase().includes(normalizedQuery))) return false;
         if (filter === 'primary') return row.primary;
         if (filter === 'upper') return candidates.some(ex => upper.has(ex.part));
         if (filter === 'lower') return candidates.some(ex => !upper.has(ex.part));
@@ -144,11 +145,13 @@ export function ProgressionCard({ program, open, onToggle }) {
     return _jsx(InfoCard, { icon: TrendingUp, title: 'Lift progression', open, onToggle,
         subtitle: `${rows.length} lifts · ${weeks} training week${weeks === 1 ? '' : 's'}${program.config?.deload ? ' + deload' : ''}`,
         children: _jsxs('div', { className: 'wpb-progression', 'data-columns': cols.length, children: [
-            _jsx('input', { value: q, onChange: event => setQ(event.target.value), placeholder: 'Search a lift…',
+            _jsx('input', { type: 'search', autoComplete: 'off', spellCheck: false, value: q, onChange: event => setQ(event.target.value), placeholder: 'Search a lift…',
                 'aria-label': 'Search a lift', className: 'wpb-progression-search' }),
             _jsx('div', { className: 'wpb-progression-filters', role: 'group', 'aria-label': 'Filter lift progression',
                 children: [['all', 'All lifts'], ['primary', 'Primary only'], ['upper', 'Upper'], ['lower', 'Lower']].map(([key, label]) =>
                     _jsx(UiChoice, { selected: filter === key, onClick: () => setFilter(key), className: 'wpb-progression-filter', children: label }, key)) }),
+            _jsx('p', { className: 'wpb-progression-result-count', role: 'status', 'aria-live': 'polite',
+                children: `${shown.length} of ${rows.length} lifts shown` }),
             _jsxs('div', { className: 'wpb-progression-pager', children: [
                 _jsx('button', { type: 'button', className: 'pressable wpb-progression-page', 'aria-label': 'Earlier weeks',
                     disabled: start === 0, onClick: () => setFrom(Math.max(0, start - 1)), children: _jsx(ChevronLeft, { size: 18 }) }),
@@ -158,7 +161,9 @@ export function ProgressionCard({ program, open, onToggle }) {
             ] }),
             _jsxs('div', { className: 'wpb-progression-columns', 'aria-hidden': true, children: [
                 _jsx('span', { children: 'Exercise' }), ...cols.map(week => _jsx('span', { children: week > weeks ? 'Deload' : `Wk ${week}` }, week))] }),
-            !shown.length && _jsx('p', { className: 'wpb-progression-empty', children: 'No lift matches that.' }),
+            !shown.length && _jsx('p', { className: 'wpb-progression-empty',
+                children: normalizedQuery ? 'No lifts match this search and filter. Try another name or All lifts.' :
+                    'No lifts match this filter. Choose All lifts to see the full program.' }),
             ...shown.map(row => _jsxs('div', { className: 'wpb-progression-row', 'data-progression-row': `${row.day.id}:${row.slot}`, children: [
                 _jsxs('div', { className: 'wpb-progression-lift', children: [
                     _jsxs('strong', { children: [row.ex?.name || row.alternate?.name || 'Exercise unavailable',
@@ -170,6 +175,7 @@ export function ProgressionCard({ program, open, onToggle }) {
                     const unavailable = projected ? null : computeCell(program, row.day, exerciseAt(program, row.day, row.slot, column.week), row.slot, column.week);
                     return _jsxs('div', { className: 'wpb-progression-cell', 'data-progression-week': column.week,
                         'data-progression-exercise': projected?.id, 'data-deload': column.week > weeks,
+                        'aria-label': `${row.ex?.name || row.alternate?.name || 'Exercise'}, ${label}`,
                         children: [
                             _jsx('span', { className: 'wpb-progression-cell-week', children: label }),
                             projected ? [

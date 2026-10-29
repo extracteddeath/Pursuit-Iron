@@ -95,11 +95,21 @@ export function resizeWorkingSets(row, requested) {
     }
     const seed = work.at(-1) || {};
     const missing = count - next.sets.filter(set => !set.warm && !set.sub).length;
-    if (missing > 0) next = { ...next, sets: [...next.sets, ...Array.from({ length: missing }, () => ({
-        weight: seed.weight ?? '', reps: seed.reps ?? '', warm: false, done: false,
-        auto: false, valueOwner: 'user', added: true,
-        ...(seed.target ? { target: { ...seed.target } } : {})
-    }))] };
+    if (missing > 0) {
+        const added = Array.from({ length: missing }, () => ({
+            weight: seed.weight ?? '', reps: seed.reps ?? '', warm: false, done: false,
+            auto: false, valueOwner: 'user', added: true,
+            ...(seed.target ? { target: { ...seed.target } } : {})
+        }));
+        // New working sets belong before the pending drop/myo extensions of the
+        // formerly final activation. Never move any already logged evidence.
+        const finalWork = next.sets.findLastIndex(set => !set.warm && !set.sub);
+        const suffix = next.sets.slice(finalWork + 1);
+        const insert = suffix.some(set => set.done) ? next.sets.length : finalWork + 1;
+        next = { ...next, sets: [
+            ...next.sets.slice(0, insert), ...added, ...next.sets.slice(insert)
+        ] };
+    }
     return next;
 }
 

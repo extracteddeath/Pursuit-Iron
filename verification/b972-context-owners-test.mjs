@@ -11,5 +11,5 @@ for(const cls of ['wpb-program-retro','wpb-program-priorities','wpb-program-cove
 assert.ok(program.includes('"data-trend": r.trend'), 'Program review trend remains data-driven');
 assert.ok(program.includes('onRegenerate(program.seed, ENGINE_V)') && program.includes('saveUndo.onUndo'), 'Program callbacks unchanged');
 assert.ok((app.match(/style: \{/g)||[]).length<=1340,'B972 removes at least 29 static inline objects');
-assert.equal((css.match(/!important/g)||[]).length,2061,'B972 introduces no override debt');
+assert.equal((css.match(/!important/g)||[]).length,2060,'B972 introduces no override debt');
 console.log('PASS B972: context cards are theme-owned; workout and program callbacks intact.');

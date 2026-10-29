@@ -1,3 +1,11 @@
+## Build 980 — M3 Expressive cascade cleanup
+
+- Remove 38 superseded CSS declarations and rules, including duplicate tonal-role definitions, dead Plan emphasis, and earlier Home, injury, exercise-tag, workout and review layout values. Preserve the later authoritative rules and current visual hierarchy.
+- Reduce stylesheet source by 3,082 characters (622,588 → 619,506) and priority declarations by one (2,061 → 2,060). No new styling or specificity layer; the existing 1,262 inline style objects are unchanged.
+- Validate 14 representative Home/Plan/Progress/Library/Workout/program/injury presentation surfaces against the previous published stylesheet in 16 Chromium scenes: dark/light, 320–1280 px, and forced-colors enabled/disabled. Layout and role-token properties matched.
+- Add a cascade-debt contract and ratchet the historical CSS priority budgets. No changes to the training engine, saved user data, progression, timer, navigation, runtime dependencies, or program logic.
+- Engine remains 0.65.9. Physical Android IME and TalkBack testing remain separate launch gates.
+
 ## Build 979 — Workout rest and set presentation consolidation
 
 - Retire seven inline-style objects from the real Workout logger: rest buttons, rest card and ring, target/load references, set heading, target reps and technique hint.

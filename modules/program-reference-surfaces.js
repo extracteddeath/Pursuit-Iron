@@ -173,7 +173,7 @@ export function ProgressionCard({ program, open, onToggle }) {
                     const projected = column.rows.get(`${row.day.id}:${row.slot}`);
                     const label = column.week > weeks ? 'Deload' : `Week ${column.week}`;
                     const unavailable = projected ? null : computeCell(program, row.day, exerciseAt(program, row.day, row.slot, column.week), row.slot, column.week);
-                    return _jsxs('div', { className: 'wpb-progression-cell', 'data-progression-week': column.week,
+                    return _jsxs('div', { className: 'wpb-progression-cell', role: 'group', 'data-progression-week': column.week,
                         'data-progression-exercise': projected?.id, 'data-deload': column.week > weeks,
                         'aria-label': `${row.ex?.name || row.alternate?.name || 'Exercise'}, ${label}`,
                         children: [

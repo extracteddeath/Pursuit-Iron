@@ -10013,8 +10013,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-gallery-disclaimer{font-size:11px;color:var(--wpb-theme-faint);line-height:1.55;margin-top:20px;padding:0 2px}
 @media(forced-colors:active){#root .wpb .wpb-gallery-chip--selected{outline:2px solid Highlight;outline-offset:-2px}}
 
-/* B991: Workout and Program header presentation moves to theme CSS.
-   Only state, measurements and dynamic icon colour remain in JSX. */
+/* B991: Workout/Program header CSS ownership; dynamic state stays in React. */
 #root .wpb-workout .wpb-workout-timer{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-width:90px;min-height:48px;overflow:visible;color:var(--wpb-theme-muted);font-size:13px;background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 8px;cursor:pointer;touch-action:manipulation;-webkit-touch-callout:none;user-select:none}
 #root .wpb-workout .wpb-workout-timer[data-paused="true"]{color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);border-color:var(--wpb-theme-accent-dim)}
 #root .wpb-workout .wpb-workout-timer-value{font-weight:600;color:var(--wpb-theme-text);white-space:nowrap}

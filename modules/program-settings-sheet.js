@@ -3,6 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { X, Check } from 'lucide-react';
 import { weeksOf, editableProgramWeeks, MAX_EDITABLE_PROGRAM_WEEKS, customProgramSettingsIssues } from './engine-api.js';
 import { UiChoice } from './ui-primitives.js';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const TARGET_OPTIONS = [
     ['auto', 'Auto', 'Periodized for you — sets & load ramp each week, with a deload'],
@@ -37,6 +38,7 @@ function SettingsChoice({ label, detail, selected, onClick, ariaLabel }) {
 }
 
 export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCfgDraft, dirty: cfgDirty, onApply: applyCfgDraft, onClose, GOALS, sheetDragRef, selectNumericInput }) {
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const cycleLengthOwned = program.engineSource === "pursuit-next" && !!program.cycleId;
     const draftWeeks = cfgDraft?.weeks ?? weeksOf(program);
     const editableWeeks = editableProgramWeeks(draftWeeks);
@@ -83,10 +85,10 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
 
     return _jsx("div", {
         "data-testid": "program-settings-sheet", role: "dialog", "aria-modal": true,
-        "aria-labelledby": "program-settings-title", onClick: onClose,
+        "aria-labelledby": "program-settings-title", onClick: event => { if (event.target === event.currentTarget) onClose(); },
         className: "wpb-backdrop wpb-program-settings-backdrop",
         children: _jsxs("div", {
-            ref: sheetDragRef, onClick: e => e.stopPropagation(), className: "wpb-program-settings-panel",
+            ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: e => e.stopPropagation(), className: "wpb-program-settings-panel",
             children: [
                 _jsxs("div", { className: "wpb-program-settings-heading", children: [
                     _jsx("h2", { id: "program-settings-title", className: "wpb-program-settings-title", children: "Program settings" }),

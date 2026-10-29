@@ -8114,7 +8114,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-working-set-control>span:first-child{flex:1 1 140px;overflow-wrap:anywhere}
 .wpb-working-set-stepper{display:flex;align-items:center;gap:6px;padding:4px;border:1px solid var(--wpb-theme-border);border-radius:15px;background:var(--wpb-theme-card)}
 #root .wpb .wpb-working-set-stepper button,#root .wpb .wpb-working-set-stepper input{width:48px;height:48px;min-width:0;border:0;border-radius:11px;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);font:inherit;text-align:center;font-size:1.25rem;font-weight:700;box-sizing:border-box}
-.wpb-working-set-stepper input{width:clamp(56px,4rem,88px);background:transparent;appearance:textfield;-moz-appearance:textfield}
+#root .wpb .wpb-working-set-stepper input{width:clamp(56px,4rem,88px);background:transparent;appearance:textfield;-moz-appearance:textfield}
 .wpb-working-set-stepper input::-webkit-inner-spin-button{appearance:none}
 .wpb-working-set-stepper button{cursor:pointer}.wpb-working-set-stepper button:disabled{opacity:.4;cursor:default}
 .wpb-working-set-stepper :focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
@@ -8411,7 +8411,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);
 }
 #root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:32px;height:32px;border-radius:var(--pi-shape-action)}
-#root .wpb .wpb-plan-change-banner strong{font-size:14px}
+#root .wpb .wpb-plan-change-banner strong{font-size:.875rem}
 #root .wpb .wpb-plan-change-banner>span:nth-child(2)>span{margin-top:2px;line-height:1.35}
 /* Home outline owns its inset; legacy M3 preview rules no longer stack padding. */
 #root .wpb .wpb-home-session-preview{

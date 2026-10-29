@@ -1,3 +1,9 @@
+## Build 981 — Protected dialog keyboard containment
+
+- Consume Escape inside non-dismissible workout/session dialogs so background workout shortcuts cannot receive the same key event. Dismissible dialogs still close normally and restore trigger focus.
+- Extend the real-browser dialog fixture with a background Escape listener and preserve existing focus trapping, inert/disabled controls, small-screen geometry and reduced-motion coverage.
+- Training engine and saved data unchanged. Engine remains 0.65.9.
+
 ## Build 980 — M3 Expressive cascade cleanup
 
 - Remove 38 superseded CSS declarations and rules, including duplicate tonal-role definitions, dead Plan emphasis, and earlier Home, injury, exercise-tag, workout and review layout values. Preserve the later authoritative rules and current visual hierarchy.

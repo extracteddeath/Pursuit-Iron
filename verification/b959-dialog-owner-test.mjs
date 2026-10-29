@@ -3,7 +3,8 @@ import fs from 'node:fs';
 const src=fs.readFileSync('modules/session-choice-dialog.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 assert.ok(src.includes('dismissible && ev.target === ev.currentTarget'),'backdrop respects protected sheets');
-assert.ok(src.includes("ev.key === 'Escape' && dismissible"),'Escape respects protected sheets');
+assert.ok(src.includes("ev.key === 'Escape'") && src.includes('ev.preventDefault(); ev.stopPropagation();') && src.includes('if (dismissible) onClose();'),
+  'Protected dialogs consume Escape and only dismiss when allowed');
 assert.ok(src.includes("ev.key !== 'Tab'")&&src.includes('last.focus({ preventScroll: true })')&&src.includes('first.focus({ preventScroll: true })'),'Tab stays inside dialog');
 assert.ok(src.includes('if (!first)')&&src.includes('panel.focus({ preventScroll: true })'),'no-action dialog retains focus');
 assert.ok(src.includes('previous?.isConnected'),'safe focus restoration');

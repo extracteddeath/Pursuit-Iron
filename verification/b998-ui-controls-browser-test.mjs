@@ -60,11 +60,14 @@ try{
  await page.click(minus);
  assert.equal(await page.$eval('[aria-label="Working sets"]',el=>el.value),'1');
  await page.evaluate(()=>window.setWorkingSets('200'));
+ await page.waitForFunction(()=>document.querySelector('[aria-label="Working sets"]')?.value==='200'
+    && document.querySelector('[aria-label="Increase Working sets"]')?.disabled===true);
  assert.equal(await page.$eval(add,el=>el.disabled),true,'max is enforced in UI');
  await page.click(minus);
  assert.equal(await page.$eval('[aria-label="Working sets"]',el=>el.value),'19',
    'above-bound text clamps to an actual 1–20 integer before step');
  await page.evaluate(()=>window.setWorkingSets('2.5'));
+ await page.waitForFunction(()=>document.querySelector('[aria-label="Working sets"]')?.value==='2.5');
  await page.click(add);
  assert.equal(await page.$eval('[aria-label="Working sets"]',el=>el.value),'3',
    'fractional typed value never emits a fractional or NaN step');

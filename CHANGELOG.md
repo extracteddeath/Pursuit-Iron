@@ -1,3 +1,11 @@
+## Build 984 — Retire unreachable private CSS while preserving Material 3 roles
+
+- Remove thirteen unreachable CSS rule blocks and two orphaned selector branches, with no owners in the shipped runtime JavaScript or HTML.
+- Remove 33 unused private CSS custom properties; preserve the public solid secondary-container surface, semantic shape tokens, and radius contracts after adversarial browser verification.
+- Net stylesheet reduction of 3,039 characters (627,740 → 624,701). No replacement CSS or new !important overrides; training/UI state and inline style counts remain unchanged.
+- Keep the new B987/B988 Strength and Gallery presentation improvements from Build 983 intact. Add B990 dead-CSS regression budget, with static Chromium layout parity across 16 width/theme/forced-colors scenes.
+- Engine remains 0.65.9. No progression, PWA, storage schema, session logging, or workout navigation changes.
+
 ## Build 983 — Consolidated styling and readiness
 
 - Consolidated 59 fixed inline presentation objects across Strength detail, estimated 1RM and Shared Programs into M3 token-based CSS. No new !important selectors.

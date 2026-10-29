@@ -90,10 +90,47 @@ try {
  await page.click('#open-empty');await page.keyboard.press('Tab');
  assert.equal(await page.$eval('.wpb-session-dialog',el=>el===document.activeElement),true,'empty protected sheet retains focus');
  await page.evaluate(()=>window.forceClose());await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
+ // B978: narrow Android layouts with accessibility text scaling must keep the
+ // full modal inside the viewport, preserve the close hit target and trap focus.
+ // Resize the mounted app so this also tests the real responsive transition.
+ for(const width of [320,393]){
+   await page.setViewport({width,height:650,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+   await page.evaluate(()=>{document.documentElement.style.fontSize='32px';});
+   await page.click('#open-standard');
+   await page.waitForSelector('.wpb-session-dialog');
+   const narrow=await page.$eval('.wpb-session-dialog',panel=>{
+     const bounds=panel.getBoundingClientRect(),heading=panel.querySelector('h2').getBoundingClientRect();
+     const close=panel.querySelector('.wpb-session-dialog-heading button').getBoundingClientRect();
+     const target=document.elementFromPoint(close.left+close.width/2,close.top+close.height/2);
+     return {left:bounds.left,right:bounds.right,top:bounds.top,bottom:bounds.bottom,
+       height:bounds.height,viewportWidth:innerWidth,viewportHeight:innerHeight,
+       closeWidth:close.width,closeHeight:close.height,closeRight:close.right,
+       headingRight:heading.right,closeHit:target===panel.querySelector('.wpb-session-dialog-heading button')||
+         panel.querySelector('.wpb-session-dialog-heading button').contains(target),
+       documentOverflow:document.documentElement.scrollWidth>innerWidth+1};
+   });
+   assert.ok(narrow.left>=-1&&narrow.right<=narrow.viewportWidth+1&&
+     narrow.top>=-1&&narrow.bottom<=narrow.viewportHeight+1&&!narrow.documentOverflow,
+     '200% text and narrow phone contain the actual dialog: '+JSON.stringify({width,narrow}));
+   assert.ok(narrow.closeWidth>=48&&narrow.closeHeight>=48&&narrow.closeHit&&
+     narrow.headingRight<=narrow.closeRight+1,
+     'Long heading cannot hide or cover a 48px Close action: '+JSON.stringify({width,narrow}));
+   await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');
+   assert.equal(await page.$eval('#save',el=>el===document.activeElement),true,
+     '200% text retains last-action keyboard focus at '+width+'px');
+   await page.keyboard.press('Tab');
+   assert.equal(await page.$eval('.wpb-session-dialog-heading button',el=>el===document.activeElement),true,
+     'Focus wraps to visible Close at '+width+'px');
+   await page.keyboard.press('Escape');
+   await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
+   assert.equal(await page.$eval('#open-standard',el=>el===document.activeElement),true,
+     'Dismissal restores source focus at '+width+'px');
+ }
+ await page.evaluate(()=>{document.documentElement.style.fontSize='';});
  await page.setViewport({width:1000,height:800,deviceScaleFactor:1,isMobile:false,hasTouch:false});
  await page.click('#open-standard');
  const tablet=await page.$eval('.wpb-session-dialog',el=>{const r=el.getBoundingClientRect();return {x:r.x,right:r.right,width:r.width};});
  assert.ok(tablet.width<=620&&tablet.x>=0&&tablet.right<=1000,'tablet bounds contained');
  assert.deepEqual(errors,[],'no browser errors');
- console.log('PASS B963/B959 browser: protected sheet, disabled/hidden/inert Tab trap, Escape, phone and tablet Close geometry');
+ console.log('PASS B978/B963/B959 browser: protected sheet, disabled/hidden/inert Tab trap, Escape, 320/393px 200%-text phone and tablet Close geometry');
 } finally { if(browser)await browser.close();await new Promise(done=>server.close(done)); }

@@ -11,8 +11,8 @@ for(const role of ["wpb-finish-sheet","wpb-finish-trophy","wpb-finish-subtitle",
 }
 assert.ok(sheet.includes('"aria-pressed": on'),'Pump/recovery input is accessible');
 assert.ok(sheet.includes('style: { color: col }'),'Next-session status preserves dynamic direction color');
-assert.ok((sheet.match(/style: \\{/g)||[]).length<=2,'Workout completion must not regress to inline styling');
-assert.ok((app.match(/style: \\{/g)||[]).length<=1101,'App inline debt budget');
+assert.ok((sheet.match(/style: \{/g)||[]).length<=2,'Workout completion must not regress to inline styling');
+assert.ok((app.match(/style: \{/g)||[]).length<=1101,'App inline debt budget');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No new important overrides');
 assert.ok(css.length<=643592,'CSS size ceiling tracks the migration');
 for(const token of ['.wpb-finish-rating-choice[aria-pressed="true"]','.wpb-finish-feedback-toggle[aria-expanded="true"]','.wpb-finish-routine-save:disabled','@media(prefers-reduced-motion:reduce)'])

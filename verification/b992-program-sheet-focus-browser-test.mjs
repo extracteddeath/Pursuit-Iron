@@ -5,7 +5,7 @@ import http from 'node:http';
 import puppeteer from 'puppeteer-core';
 
 const root=path.resolve(new URL('../',import.meta.url).pathname);
-const importMap=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\\s\\S]*?<\\/script>/)[0];
+const importMap=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const fixture=[
 "import React from '/vendor/react.js';",
 "import {createRoot} from '/vendor/react-dom-client.js';",

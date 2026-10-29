@@ -9951,3 +9951,55 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   #root .wpb .wpb-b977-day-hit-chip{border-color:ButtonText;}
   #root .wpb .wpb-b977-day-hit-chip:focus-visible{outline:2px solid Highlight;}
 }
+
+/* B982: consolidate the canonical workout rest and set-header surfaces.
+   Timer values, bar progress and action callbacks remain owned by WorkoutSession;
+   declarative state flags paint the theme-aware surfaces without inline overrides.
+   Keep these rules non-important: existing Expressive/forced-colors owners stay authoritative. */
+#root .wpb-workout .wpb-load-reference{
+  display:flex;align-items:center;gap:8px;min-width:0;
+  margin-bottom:8px;padding:9px 11px;border-radius:12px;
+  background:var(--wpb-theme-bg-tint);
+}
+#root .wpb-workout .wpb-set-head{
+  display:flex;align-items:center;gap:8px;min-width:0;
+  padding:2px 2px 6px;font-size:11px;font-weight:700;letter-spacing:.4px;
+  color:var(--wpb-theme-faint,var(--wpb-theme-muted));
+}
+#root .wpb-workout .wpb-target-reps{display:block;white-space:nowrap;color:var(--wpb-theme-muted);}
+#root .wpb-workout .wpb-set-tech-tag{
+  margin-top:1px;font-size:11px;font-weight:700;white-space:nowrap;
+  color:var(--wpb-theme-accent-ink);
+}
+#root .wpb-workout .wpb-rest-card{
+  box-sizing:border-box;min-width:0;padding:12px;border-radius:16px;
+  margin:0;border:1px solid var(--wpb-theme-border-soft);
+  background:var(--wpb-theme-card);
+}
+#root .wpb-workout[data-focus-mode="true"] .wpb-rest-card{margin-top:10px;margin-bottom:8px;}
+#root .wpb-workout .wpb-rest-card[data-paused="true"]{
+  border-color:color-mix(in srgb,var(--wpb-theme-warning) 33%,transparent);
+}
+#root .wpb-workout .wpb-rest-card[data-ending="true"]{
+  border-color:color-mix(in srgb,var(--wpb-theme-accent) 40%,transparent);
+}
+#root .wpb-workout .wpb-rest-ring{color:var(--wpb-theme-accent-ink);}
+#root .wpb-workout .wpb-rest-card[data-paused="true"] .wpb-rest-ring{color:var(--wpb-theme-warning);}
+#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;
+  padding:0;border:1px solid var(--wpb-theme-border);border-radius:12px;
+  background:var(--wpb-theme-card);color:var(--wpb-theme-text);
+  font-size:13px;font-weight:600;cursor:pointer;
+}
+#root .wpb-workout .wpb-rest-actions>.wpb-rest-action:focus-visible{
+  outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;
+}
+@media(forced-colors:active){
+  #root .wpb-workout .wpb-rest-actions>.wpb-rest-action{border-color:ButtonText;color:ButtonText;background:ButtonFace;}
+  #root .wpb-workout .wpb-rest-card[data-paused="true"],
+  #root .wpb-workout .wpb-rest-card[data-ending="true"]{border-color:Highlight;}
+}
+@media(prefers-reduced-motion:reduce){
+  #root .wpb-workout .wpb-rest-actions>.wpb-rest-action{transition:none;}
+}

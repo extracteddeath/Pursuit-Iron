@@ -245,6 +245,16 @@ try {
   const rest=await page.$eval('[data-rest-card]',el=>({label:el.getAttribute('aria-label'),ring:el.querySelector('.wpb-rest-ring circle[pathLength]')?.getAttribute('stroke-dashoffset'),value:el.querySelector('[role="progressbar"]').getAttribute('aria-valuenow')}));
   const fits=await page.$eval('[data-rest-card]',el=>{const time=el.querySelector('.mono'),actions=el.querySelector('.wpb-rest-actions'),t=time.getBoundingClientRect(),a=actions.getBoundingClientRect();return time.scrollWidth<=time.clientWidth+1&&(t.bottom<=a.top+1||t.right<=a.left+1)&&el.scrollHeight<=el.clientHeight+1;});
   assert.ok(fits,'rest countdown and actions fit without overlap or clipping');
+  const restButtons=await page.$$eval('[data-rest-card] .wpb-rest-action',buttons=>buttons.map(button=>{
+    const r=button.getBoundingClientRect();const cs=getComputedStyle(button);
+    return {width:r.width,height:r.height,border:cs.borderStyle,foreground:cs.color};
+  }));
+  assert.equal(restButtons.length,5,'One shared rest control owner for normal and Focus timers');
+  assert.ok(restButtons.every(b=>b.width>=47.5&&b.height>=47.5),
+    'Rest controls retain physical 48px targets: '+JSON.stringify(restButtons));
+  assert.equal(await page.$eval('[data-rest-card]',el=>el.dataset.paused),'true',
+    'Timer pause state should paint via a CSS state flag');
+
   assert.match(rest.label,/paused/);assert.equal(Number(rest.value),60);assert.ok(Math.abs(Number(rest.ring)-100/3)<.1,'ring and progressbar read the same remaining time');
   await page.waitForFunction(()=>{const el=document.querySelector('[data-rest-card] [aria-label="Add 15 seconds to rest"]'),r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return el===hit||el.contains(hit);});
   await page.click('[data-rest-card] [aria-label="Add 15 seconds to rest"]');

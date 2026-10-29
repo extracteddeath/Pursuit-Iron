@@ -1,3 +1,9 @@
+## Build 973 — Program exercise and Workout set-entry panel consolidation
+
+- Retire 29 inline style objects from Program amplifier/day details, workout set options and coach guidance.
+- Theme-owned CSS maintains selected set type, accessible compact controls, long-text wrapping and reduced-motion sheet support.
+- Preserve training recommendations, active set edits, history, progression decisions and undo. Engine 0.65.9 is unchanged.
+
 ## Build 972 — Workout warm-up and Program context cleanup
 
 - Consolidate 36 inline presentation objects across warm-up, skip confirmation and Program block review, save undo, priorities, coverage, continuous-cycle and upgrade notices.

@@ -44,6 +44,7 @@ try {
     const page = await browser.newPage(), errors = [];
     page.on('pageerror',error=>errors.push(error.message));
     await page.setViewport({width:393,height:740,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+    await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
     await page.goto('http://127.0.0.1:'+server.address().port+'/program-schedule-test.html',{waitUntil:'networkidle0'});
     await page.click('#open');
     await page.waitForSelector('[data-testid="weekly-schedule-sheet"]');

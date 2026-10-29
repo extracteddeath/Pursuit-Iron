@@ -8130,12 +8130,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 .wpb-game-plan-exercise p,.wpb-plan-change-card p{font-size:13px;line-height:1.55;color:var(--wpb-theme-muted);margin:7px 0 0;overflow-wrap:anywhere}
 
-.wpb-plan-review-intro{font-size:13px;line-height:1.6;color:var(--wpb-theme-muted)}.wpb-plan-review-basis{font-size:12px!important;color:var(--wpb-theme-muted);line-height:1.5}
+.wpb-plan-review-intro{font-size:13px;line-height:1.6;color:var(--wpb-theme-muted)}#root .wpb .wpb-plan-review-basis{font-size:.75rem;color:var(--wpb-theme-muted);line-height:1.5}
 .wpb-plan-change-card{margin:14px 0;padding:15px;border:1px solid var(--wpb-theme-border);border-radius:20px;background:var(--wpb-theme-card)}.wpb-plan-change-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}.wpb-plan-change-title h3{margin:0;font-size:16px;line-height:1.4;overflow-wrap:anywhere;flex:1 1 140px}.wpb-plan-change-title>span{font-size:10px;letter-spacing:.3px;text-transform:uppercase;color:var(--wpb-theme-accent-ink);font-weight:750;background:var(--wpb-theme-accent-dim);padding:4px 8px;border-radius:7px}
 .wpb-plan-target-diff{list-style:none;padding:0;margin:12px 0}.wpb-plan-target-diff li{display:grid;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--wpb-theme-border);font-size:13px;line-height:1.5}.wpb-plan-target-diff li>span:first-child{grid-column:1 / -1;font-size:11px;color:var(--wpb-theme-muted)}.wpb-plan-target-diff strong{color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}.wpb-plan-before{color:var(--wpb-theme-muted);text-decoration:line-through;overflow-wrap:anywhere}
 .wpb-plan-undo{min-height:48px;margin-top:12px;padding:10px 14px;border:1px solid var(--wpb-theme-border);border-radius:14px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font:inherit;font-size:13px;font-weight:750;cursor:pointer}.wpb-plan-undo:disabled{opacity:.5}
 
-#root .wpb-plan-changes-dialog .wpb-plan-undo{min-height:48px!important;font-size:13px!important;line-height:1.4!important;padding:10px 14px!important;border-radius:14px!important}
+#root .wpb .wpb-plan-changes-dialog .wpb-plan-undo{min-height:48px;font-size:.8125rem;line-height:1.4;padding:10px 14px;border-radius:var(--pi-shape-action)}
 .wpb-plan-change-card[data-undone="true"] .wpb-plan-target-diff strong{color:var(--wpb-theme-muted)}
 
 
@@ -8495,16 +8495,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* The review keeps the prior/suggested values and the why, but no longer repeats
    the logger's set/RIR/technique prescription on every card. */
-#root .wpb .wpb-plan-review-intro{margin:0 0 12px;font-size:12px;line-height:1.5}
+#root .wpb .wpb-plan-review-intro{margin:0 0 12px;font-size:.8125rem;line-height:1.5}
 #root .wpb .wpb-plan-change-card{margin:0 0 10px;padding:14px;border-radius:17px}
-#root .wpb .wpb-plan-change-title h3{font-size:14px}
+#root .wpb .wpb-plan-change-title h3{font-size:.9375rem}
 #root .wpb .wpb-plan-target-diff{margin:9px 0 6px}
-#root .wpb .wpb-plan-target-diff li{padding:3px 0;border:0;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);gap:6px;font-size:12px}
-#root .wpb .wpb-plan-target-diff li>span:first-child:not(.wpb-change-set-name){grid-column:auto;font-size:12px;color:var(--wpb-theme-muted)}
-#root .wpb .wpb-plan-target-diff li>.wpb-change-set-name{grid-column:1/-1;color:var(--wpb-theme-muted);font-size:11px}
-#root .wpb .wpb-plan-change-card .wpb-plan-change-reason{font-size:12px;line-height:1.45;margin:6px 0}
+#root .wpb .wpb-plan-target-diff li{padding:3px 0;border:0;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);gap:6px;font-size:.8125rem}
+#root .wpb .wpb-plan-target-diff li>span:first-child:not(.wpb-change-set-name){grid-column:auto;font-size:.75rem;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-plan-target-diff li>.wpb-change-set-name{grid-column:1/-1;color:var(--wpb-theme-muted);font-size:.6875rem}
+#root .wpb .wpb-plan-change-card .wpb-plan-change-reason{font-size:.75rem;line-height:1.45;margin:6px 0}
 #root .wpb .wpb-plan-undo{min-height:44px;margin-top:10px;padding:8px 14px;border-radius:999px}
-#root .wpb .wpb-plan-change-more>summary{font-size:12px;color:var(--wpb-theme-accent-ink);cursor:pointer;}
+#root .wpb .wpb-plan-change-more>summary{font-size:.8125rem;color:var(--wpb-theme-accent-ink);cursor:pointer;}
 #root .wpb .wpb-plan-change-more .wpb-plan-target-diff{margin:0 0 8px;padding-left:10px}
 #root .wpb .wpb-home-outline-toggle:focus-visible,
 #root .wpb .wpb-plan-change-more>summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;border-radius:8px}
@@ -9253,7 +9253,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-plan-changes-dialog .wpb-session-dialog-heading button{min-width:48px;min-height:48px;margin-left:auto;flex-shrink:0}
 #root .wpb .wpb-plan-changes-body{overflow-y:auto;overscroll-behavior:contain;min-height:0;min-width:0;padding:var(--pi-space-3) var(--pi-space-4) calc(var(--pi-space-4) + env(safe-area-inset-bottom))}
 #root .wpb .wpb-plan-change-card .wpb-plan-change-summary{margin:6px 0 4px;color:var(--wpb-theme-text);font-size:.875rem;font-weight:650;line-height:1.4}
-#root .wpb .wpb-plan-change-more>summary{min-height:44px;display:flex;align-items:center}
+#root .wpb .wpb-plan-change-more>summary{min-height:48px;display:flex;align-items:center}
 #root .wpb .wpb-plan-change-card .wpb-plan-undo{min-height:48px}
 
 /* B944 — workout readiness uses shared, keyboard-accessible dialog choreography. */

@@ -51,13 +51,17 @@ export function WorkoutExerciseNav({ data, exIdx, onSelect }) {
 
 
 export function WorkingSetCountControl({ value, onChange, label, minimum = 1, disabled = false }) {
-    const count = Number(value);
+    // Keep partial input editable, but never let a stepper emit NaN,
+    // fractions, or a value beyond the visible 1–20 set range.
+    const parsed = Number(value);
+    const count = Number.isFinite(parsed) && String(value).trim() !== ''
+        ? Math.min(20, Math.max(minimum, Math.trunc(parsed))) : minimum;
     return _jsxs("div", { className: "wpb-working-set-control", children: [
         _jsx("span", { children: label }),
         _jsxs("span", { className: "wpb-working-set-stepper", children: [
-            _jsx("button", { type: "button", disabled: disabled || count <= minimum, "aria-label": "Decrease " + label, onClick: () => onChange(Math.max(minimum, (count || minimum) - 1)), children: "−" }),
+            _jsx("button", { type: "button", disabled: disabled || count <= minimum, "aria-label": "Decrease " + label, onClick: () => onChange(Math.max(minimum, count - 1)), children: "−" }),
             _jsx("input", { type: "number", inputMode: "numeric", min: minimum, max: 20, step: 1, value, disabled, "aria-label": label, onFocus: selectNumericInput, onChange: ev => onChange(ev.target.value) }),
-            _jsx("button", { type: "button", disabled: disabled || count >= 20, "aria-label": "Increase " + label, onClick: () => onChange(Math.min(20, (count || 0) + 1)), children: "+" })] })] });
+            _jsx("button", { type: "button", disabled: disabled || count >= 20, "aria-label": "Increase " + label, onClick: () => onChange(Math.min(20, count + 1)), children: "+" })] })] });
 }
 export function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) {
     return _jsxs("div", { className: "wpb-session-note-editor", children: [

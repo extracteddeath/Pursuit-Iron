@@ -26,6 +26,8 @@ assert.ok(schedule.includes("'data-assigned': day ? 'true' : 'false'"),
     'selected day appearance is derived from the same valid assignment');
 assert.ok(schedule.includes("Object.keys(schedule).length > 0"),
     'obsolete schedule keys remain clearable');
+assert.ok(schedule.includes("panelRef.current?.querySelector('.wpb-program-schedule-close')?.focus"),
+    'clearing the schedule transfers focus before removing its button');
 assert.ok(maxes.includes("count} of ${total} main lifts set. Edit training maxes"),
     'summary exposes completion status to screen readers');
 assert.ok(maxes.includes("'aria-describedby': `${inputId}-1rm-feedback`") &&

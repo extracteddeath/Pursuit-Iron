@@ -10032,3 +10032,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-gallery-import:disabled{cursor:default;background:var(--wpb-theme-card-high);color:var(--wpb-theme-muted)}
 #root .wpb .wpb-gallery-disclaimer{font-size:11px;color:var(--wpb-theme-faint);line-height:1.55;margin-top:20px;padding:0 2px}
 @media(forced-colors:active){#root .wpb .wpb-gallery-chip--selected{outline:2px solid Highlight;outline-offset:-2px}}
+
+/* B991: Workout and Program header presentation moves to theme CSS.
+   Only state, measurements and dynamic icon colour remain in JSX. */
+#root .wpb-workout .wpb-workout-timer{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-width:90px;min-height:40px;overflow:visible;color:var(--wpb-theme-muted);font-size:13px;background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 8px;cursor:pointer;touch-action:manipulation;-webkit-touch-callout:none;user-select:none}
+#root .wpb-workout .wpb-workout-timer[data-paused="true"]{color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);border-color:var(--wpb-theme-accent-dim)}
+#root .wpb-workout .wpb-workout-timer-value{font-weight:600;color:var(--wpb-theme-text);white-space:nowrap}
+#root .wpb-workout .wpb-workout-timer[data-paused="true"] .wpb-workout-timer-value{color:var(--wpb-theme-accent-ink)}
+#root .wpb-workout .wpb-workout-header-action{box-sizing:border-box;width:40px;height:40px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--wpb-theme-text);cursor:pointer}
+#root .wpb-workout .wpb-workout-header-action[data-focus="1"]{background:var(--wpb-theme-accent);border-color:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text)}
+#root .wpb-workout .wpb-workout-actions>.wpb-workout-finish{width:auto;padding:0 14px;font-weight:700;font-size:15px;background:var(--wpb-theme-accent);border-color:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text)}
+#root .wpb-workout .wpb-workout-actions>.wpb-workout-finish[data-compact="true"]{width:40px;padding:0;gap:0}
+#root .wpb-workout .wpb-workout-save-error{padding:12px 16px;background:color-mix(in srgb,var(--wpb-theme-danger) 14%,transparent);color:var(--wpb-theme-text)}
+#root .wpb-workout .wpb-workout-empty-icon{width:60px;height:60px;border-radius:16px;background:var(--wpb-theme-card);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+#root .wpb-workout .wpb-workout-empty-copy{font-size:13px;color:var(--wpb-theme-muted);margin-top:4px;line-height:1.5}
+#root .wpb-workout .wpb-workout-empty-add{margin-top:16px;padding:13px 22px;min-height:44px;border-radius:12px;border:0;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-weight:700;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+#root .wpb-program>.wpb-program-header{padding:var(--pi-program-header-pad,12px) 18px 8px;border-bottom:1px solid var(--wpb-theme-border-soft)}
+#root .wpb-program .wpb-program-header-back{background:transparent;border:0;color:var(--wpb-theme-text);cursor:pointer;padding:4px;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
+#root .wpb-program .wpb-program-icon-change{width:40px;height:40px;border-radius:11px;background:color-mix(in srgb,var(--pi-program-icon-color) 12%,transparent);border:1px solid color-mix(in srgb,var(--pi-program-icon-color) 34%,transparent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+#root .wpb-program .wpb-program-rename-input{flex:1;min-width:0;font-size:18px;font-weight:700;padding:4px 8px;border-radius:8px;border:1px solid var(--wpb-theme-accent);background:var(--wpb-theme-card-high);color:var(--wpb-theme-text)}
+#root .wpb-program .wpb-program-rename-save{width:40px;height:40px;color:var(--wpb-theme-accent-ink);border:1px solid var(--wpb-theme-accent-dim);background:var(--wpb-theme-card);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:11px}
+#root .wpb-workout :is(.wpb-workout-timer,.wpb-workout-header-action,.wpb-workout-empty-add):focus-visible,#root .wpb-program :is(.wpb-program-header-back,.wpb-program-icon-change,.wpb-program-rename-input,.wpb-program-rename-save):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(forced-colors:active){#root .wpb-workout .wpb-workout-header-action[data-focus="1"]{outline:2px solid Highlight;outline-offset:-2px}}

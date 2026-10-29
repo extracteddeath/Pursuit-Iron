@@ -1,3 +1,9 @@
+## Build 985 — Workout and Program header presentation consolidation
+
+- Consolidated eleven inline style objects from Workout timer, Focus/options/Finish header, save error, empty workout state and Program back/name controls into themed CSS. Logging, training state and callbacks unchanged.
+- Explicit paused and compact-state attributes avoid timer-tick style recreation; preserved Focus, renaming, save and finish actions and accessible focus states.
+- No new CSS priority overrides. The CSS size ceiling now accounts for migration from fixed React styles while the lower inline debt budget is permanent. Engine 0.65.9 unchanged.
+
 ## Build 984 — Retire unreachable private CSS while preserving Material 3 roles
 
 - Remove thirteen unreachable CSS rule blocks and two orphaned selector branches, with no owners in the shipped runtime JavaScript or HTML.

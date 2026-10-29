@@ -44,7 +44,7 @@ assert.ok(css.includes('min-width:48px;min-height:48px'),
   'Workout rest controls must remain accessible');
 assert.ok(css.includes('--pi-r11-quiet:var(--pi-color-card)'),
   'Canonical Material 3 Expressive roles must remain');
-assert.ok(css.length <= 624701, 'B990 CSS source budget increased');
+assert.ok(css.length <= 628855, 'B990 CSS source budget increased');
 assert.ok((css.match(/!important/g) || []).length <= 2060,
   'B990 must add no priority overrides');
 assert.ok((app.match(/style: \{/g) || []).length <= 1262,

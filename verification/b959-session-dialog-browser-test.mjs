@@ -86,6 +86,22 @@ try {
  await page.keyboard.press('Tab');
  assert.equal(await page.$eval('.wpb-session-dialog-heading button',el=>el===document.activeElement),true,
      'a dynamically unavailable control cannot send focus outside the modal');
+ // A closed disclosure must keep descendants out of the tab sequence, but
+ // opening it should immediately make its child action reachable in DOM order.
+ await page.click('details summary');
+ assert.equal(await page.$eval('details',el=>el.open),true,'nested disclosure opens inside dialog');
+ await page.$eval('details summary',el=>el.focus());
+ await page.keyboard.press('Tab');
+ assert.equal(await page.$eval('#closed-action',el=>el===document.activeElement),true,
+     'open nested disclosure participates in the real Tab order');
+ await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');
+ assert.equal(await page.$eval('details summary',el=>el===document.activeElement),true,
+     'Shift+Tab returns to the nested disclosure summary');
+ await page.click('details summary');
+ await page.$eval('details summary',el=>el.focus());
+ await page.keyboard.press('Tab');
+ assert.equal(await page.$eval('#last-live',el=>el===document.activeElement),true,
+     'closing disclosure immediately skips its hidden action');
  await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
  await page.click('#open-empty');await page.keyboard.press('Tab');
  assert.equal(await page.$eval('.wpb-session-dialog',el=>el===document.activeElement),true,'empty protected sheet retains focus');
@@ -126,11 +142,37 @@ try {
    assert.equal(await page.$eval('#open-standard',el=>el===document.activeElement),true,
      'Dismissal restores source focus at '+width+'px');
  }
+ // B979: a keyboard-sized visual area is shorter than the ordinary phone viewport.
+ // This emulates reduced available height, not the Android IME itself. Both the
+ // editable field and save action must remain reachable within the dialog scroller.
+ await page.setViewport({width:320,height:420,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+ await page.evaluate(()=>{document.documentElement.style.fontSize='32px';});
+ await page.click('#open-standard');
+ await page.waitForSelector('.wpb-session-dialog');
+ for(const selector of ['#field','#save']) {
+   await page.$eval(selector,element=>element.scrollIntoView({block:'center',behavior:'instant'}));
+   const reach=await page.$eval(selector,element=>{
+     const field=element.getBoundingClientRect();
+     const panel=document.querySelector('.wpb-session-dialog').getBoundingClientRect();
+     const target=document.elementFromPoint(field.left+field.width/2,field.top+field.height/2);
+     return {panelTop:panel.top,panelBottom:panel.bottom,viewportHeight:innerHeight,
+       top:field.top,bottom:field.bottom,right:panel.right,viewportWidth:innerWidth,
+       hit:target===element||element.contains(target),overflow:document.documentElement.scrollWidth>innerWidth+1};
+   });
+   assert.ok(reach.panelTop>=-1&&reach.panelBottom<=reach.viewportHeight+1&&
+     reach.top>=reach.panelTop-1&&reach.bottom<=reach.panelBottom+1&&
+     reach.right<=reach.viewportWidth+1&&reach.hit&&!reach.overflow,
+     'keyboard-sized 320px viewport keeps '+selector+' usable: '+JSON.stringify(reach));
+ }
+ await page.keyboard.press('Escape');
+ await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
+ assert.equal(await page.$eval('#open-standard',el=>el===document.activeElement),true,
+   'short viewport dismissal restores source focus');
  await page.evaluate(()=>{document.documentElement.style.fontSize='';});
  await page.setViewport({width:1000,height:800,deviceScaleFactor:1,isMobile:false,hasTouch:false});
  await page.click('#open-standard');
  const tablet=await page.$eval('.wpb-session-dialog',el=>{const r=el.getBoundingClientRect();return {x:r.x,right:r.right,width:r.width};});
  assert.ok(tablet.width<=620&&tablet.x>=0&&tablet.right<=1000,'tablet bounds contained');
  assert.deepEqual(errors,[],'no browser errors');
- console.log('PASS B978/B963/B959 browser: protected sheet, disabled/hidden/inert Tab trap, Escape, 320/393px 200%-text phone and tablet Close geometry');
+ console.log('PASS B979/B978/B963/B959 browser: protected sheet, disabled/hidden/inert Tab trap, Escape, 320/393px 200%-text phone and tablet Close geometry');
 } finally { if(browser)await browser.close();await new Promise(done=>server.close(done)); }

@@ -224,6 +224,34 @@ try {
   await navigate(1);await page.waitForSelector('[data-testid="set-1-0"]');
   const visible=await page.$eval('.wpb-ex-nav',rail=>{const r=rail.getBoundingClientRect(),a=rail.querySelector('[aria-current="step"]').getBoundingClientRect();return !r.width||a.left>=r.left-1&&a.right<=r.right+1;});
   assert.ok(visible,'selected chip is revealed without scrolling the workout');
+  // B986: orientation, split-screen and text reflow must keep the selected
+  // exercise visible even when the user has not switched exercises.
+  if(width===393 && theme==='amethyst'){
+    // Enforce actual overflow in the two-exercise fixture, rather than
+    // silently passing when both compact chips fit in the viewport.
+    const clipped=await page.$eval('.wpb-ex-nav',el=>{
+      el.style.width='170px';
+      el.style.maxWidth='170px';
+      el.scrollLeft=0;
+      const outer=el.getBoundingClientRect();
+      const chosen=el.querySelector('[aria-current="step"]').getBoundingClientRect();
+      return {offscreen:chosen.right>outer.right+4,scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
+    });
+    assert.ok(clipped.offscreen&&clipped.scrollWidth>clipped.clientWidth,
+      'resize regression fixture must actually clip the active exercise: '+JSON.stringify(clipped));
+    await page.setViewport({width:320,height:740,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    await page.waitForFunction(()=>{
+      const rail=document.querySelector('.wpb-ex-nav');
+      const current=rail?.querySelector('[aria-current="step"]');
+      if(!rail||!current)return false;
+      const r=rail.getBoundingClientRect(),a=current.getBoundingClientRect();
+      return a.left>=r.left-1&&a.right<=r.right+1;
+    },{timeout:4000});
+    assert.equal(await page.$eval('.wpb-ex-nav [aria-current="step"]',el=>el.getAttribute('aria-label').startsWith('Incline Dumbbell Curl')),true,
+      'reflow keeps the selected original exercise and full accessible name');
+    await page.$eval('.wpb-ex-nav',el=>{el.style.width='';el.style.maxWidth='';});
+    await page.setViewport({width,height,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+  }
   await navigate(0);await page.waitForSelector('[data-testid="set-0-1"]');
   assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="weight"]',el=>el.value),'175','manual load survives navigation');
   assert.equal(await page.$eval('[data-testid="set-0-1"] input[aria-label="reps"]',el=>el.value),'7','manual reps survive navigation');

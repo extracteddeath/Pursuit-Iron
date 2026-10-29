@@ -1,3 +1,10 @@
+## Build 982 — Resize-aware Workout exercise navigation
+
+- Keep the active exercise chip visible through phone rotation, split-screen resizing and exercise-label reflow, not only when navigating to another exercise.
+- Use bounded rail-only scrolling and ResizeObserver with cleanup and a safe window-resize fallback; no whole-page scrollIntoView.
+- Extend the B896 production Chromium workout flow with a 393→320px viewport regression, preserving the selected exercise and screen-reader name. The B947 gate checks ownership and cleanup.
+- No engine, prescription, workout logging or saved-data changes. Engine stays 0.65.9.
+
 ## Build 981 — Protected dialog keyboard containment
 
 - Consume Escape inside non-dismissible workout/session dialogs so background workout shortcuts cannot receive the same key event. Dismissible dialogs still close normally and restore trigger focus.

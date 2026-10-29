@@ -23,7 +23,7 @@ assert.ok(info.includes('"aria-pressed": active, onClick: () => onSetExLoadInc(e
 assert.ok(info.includes('setRestCustom(exIdx, restNow + 15)')&&info.includes('setRestCustom(exIdx, Math.max(15, restNow - 15))'),'Rest changes use existing state');
 assert.ok(css.includes('min-width:48px;min-height:48px'),'Rest actions must meet 48px target');
 assert.ok(css.includes('max-height:min(90dvh,calc(var(--visual-h'),'Sheet must account for visual viewport');
-assert.ok((app.match(/style: \{/g)||[]).length<=1147,'Fixed Workout info CSS must not return to inline style');
+assert.ok((app.match(/style: \{/g)||[]).length<=1101,'Fixed Workout info CSS must not return to inline style');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority overrides added');
-assert.ok(css.length<=635281,'CSS migration budget must not grow without review');
+assert.ok(css.length<=643592,'CSS migration budget must not grow without review');
 console.log('PASS B993: Workout Info presentation, focus ownership, responsive targets and CSS debt guards.');

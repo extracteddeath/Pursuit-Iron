@@ -8120,12 +8120,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-exercise-meta .wpb-adjust-sets{min-height:44px;padding:5px 10px;font-size:12px;width:auto;margin:0;background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border)}
 /* Build 904: one session game plan and reviewable progression decisions. */
 #root .wpb-plan-change-banner{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;margin:12px 0 18px;padding:15px;border:1px solid var(--wpb-theme-border);border-radius:22px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-text);text-align:left;font:inherit;cursor:pointer}
-.wpb-plan-change-banner>span:nth-child(2){flex:1;min-width:0}.wpb-plan-change-banner strong{display:block;font-size:14px;line-height:1.4}.wpb-plan-change-banner>span:nth-child(2)>span{display:block;font-size:12px;line-height:1.5;color:var(--wpb-theme-muted);margin-top:4px}.wpb-plan-change-banner>svg{flex-shrink:0}
+.wpb-plan-change-banner>span:nth-child(2){flex:1;min-width:0}.wpb-plan-change-banner strong{display:block;font-size:.875rem;line-height:1.4}.wpb-plan-change-banner>span:nth-child(2)>span{display:block;font-size:.75rem;line-height:1.5;color:var(--wpb-theme-muted);margin-top:4px}.wpb-plan-change-banner>svg{flex-shrink:0}
 .wpb-session-plan-icon{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:13px;background:var(--wpb-theme-card);color:var(--wpb-theme-accent-ink)}
 #root .wpb-session-game-plan{padding:14px;margin-top:14px;border:1px solid var(--wpb-theme-border);border-radius:21px;background:var(--wpb-theme-card);color:var(--wpb-theme-text)}
 
 
-.wpb-game-plan-heading{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;padding:0;margin:0;border:0;background:transparent;color:var(--wpb-theme-text);text-align:left;font:inherit;font-size:16px;line-height:1.4}.wpb-game-plan-heading>strong{flex:1}.wpb-game-plan-heading>svg{flex-shrink:0;color:var(--wpb-theme-accent-ink)}button.wpb-game-plan-heading{cursor:pointer}
+.wpb-game-plan-heading{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;padding:0;margin:0;border:0;background:transparent;color:var(--wpb-theme-text);text-align:left;font:inherit;font-size:1rem;line-height:1.4}.wpb-game-plan-heading>strong{flex:1}.wpb-game-plan-heading>svg{flex-shrink:0;color:var(--wpb-theme-accent-ink)}button.wpb-game-plan-heading{cursor:pointer}
 #root .wpb-game-plan-exercise{color:var(--pi-color-on-control)}
 
 .wpb-game-plan-exercise p,.wpb-plan-change-card p{font-size:13px;line-height:1.55;color:var(--wpb-theme-muted);margin:7px 0 0;overflow-wrap:anywhere}
@@ -8426,8 +8426,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding:6px 0;border:0;background:transparent;text-align:left;
   color:var(--wpb-theme-text);font:inherit;cursor:pointer;
 }
-.wpb-home-outline-toggle>strong{flex:1;font-size:13px;font-weight:750}
-.wpb-home-outline-toggle>span{font-size:12px;color:var(--wpb-theme-muted)}
+.wpb-home-outline-toggle>strong{flex:1;font-size:.8125rem;font-weight:750}
+.wpb-home-outline-toggle>span{font-size:.75rem;color:var(--wpb-theme-muted)}
 .wpb-home-outline-toggle>svg{color:var(--wpb-theme-muted);flex-shrink:0;transition:transform 180ms ease}
 .wpb-home-outline-toggle[aria-expanded="true"]>svg{transform:rotate(180deg)}
 #root .wpb .wpb-home-outline-list{list-style:none;margin:0;padding:0 0 var(--pi-space-1)}
@@ -8460,7 +8460,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-game-plan-highlight-copy{min-width:0;flex:1}
 .wpb-game-plan-highlight-copy>summary{
   display:grid;grid-template-columns:minmax(0,1fr) 20px;column-gap:var(--pi-space-2);
-  align-content:center;min-height:44px;cursor:pointer;list-style:none;
+  align-content:center;min-height:48px;cursor:pointer;list-style:none;
 }
 .wpb-game-plan-highlight-copy>summary::-webkit-details-marker{display:none}
 .wpb-game-plan-highlight-copy>summary::marker{content:""}

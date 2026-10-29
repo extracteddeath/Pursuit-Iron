@@ -1,3 +1,10 @@
+## Build 974 — Workout ordering and update-prompt verification
+
+- Newly added working sets now precede pending drop/myo extensions; already logged extensions retain their original order.
+- Expanded mobile PWA Restart visibility regression across 320px/393px, foreground checks, and Settings navigation.
+- Protected session-only set resizing, user-owned loads, workout history, and easier-day changes with additional tests.
+- Engine remains 0.65.9. Physical Android IME/TalkBack verification remains separate.
+
 ## Build 973 — Program exercise and Workout set-entry panel consolidation
 
 - Retire 29 inline style objects from Program amplifier/day details, workout set options and coach guidance.

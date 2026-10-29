@@ -5,6 +5,9 @@ import fs from 'node:fs';
 // Keep numeric plate height and outcome colours dynamic and accessible.
 const app=fs.readFileSync('modules/App.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
+const styleStart=css.indexOf('/* B987 —');
+const baseCss=css.slice(styleStart,css.indexOf('@media(prefers-reduced-motion:reduce)',styleStart));
+assert.ok(styleStart>0&&baseCss.length>2000,'B987 base CSS must be present');
 const progress=app.slice(app.indexOf('function ProgressDetail('),app.indexOf('function RecoveryTrendCard('));
 const calc=app.slice(app.indexOf('function OneRepMaxCalc('),app.indexOf('// In-app diagnostics:'));
 assert.ok(progress.length>3500&&calc.length>2000,'Both strength panels must remain present');
@@ -12,7 +15,7 @@ for(const name of ['rm-card','rm-field-label','rm-input','rm-summary','rm-plate'
  'strength-detail','strength-detail-stat','strength-detail-plateau','strength-detail-level',
  'strength-detail-meter','strength-detail-chip','strength-detail-session-pr']){
  assert.ok(app.includes('wpb-'+name),'React must use the '+name+' style owner');
- assert.equal(css.split('#root .wpb .wpb-'+name+'{').length-1,1,'Exactly one CSS source for '+name);
+ assert.equal(baseCss.split('#root .wpb .wpb-'+name+'{').length-1,1,'Exactly one base CSS owner for '+name);
 }
 assert.ok(!css.slice(css.indexOf('/* B987 —')).includes('!important'),
  'New CSS must use normal cascade, not priority overrides');

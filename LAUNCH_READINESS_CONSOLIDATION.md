@@ -1,6 +1,6 @@
 # Pursuit Iron — Consolidated launch-readiness program
 
-Baseline: main 93a6e43d8444 (Build 985; engine 0.65.9). This is a working checklist, not a declaration that the app is launch-ready.
+Verified production baseline at the start of B995: main efd7a581c4b5 (Build 988; engine 0.65.9). This is a working checklist, not a declaration that the app is launch-ready.
 
 ## Delivery policy
 - Batch related source changes on focused branches; avoid bumping the public build for every styling edit.
@@ -27,5 +27,10 @@ Baseline: main 93a6e43d8444 (Build 985; engine 0.65.9). This is a working checkl
 - Physical Android acceptance: rotation, IME, TalkBack, offline/resume, installed PWA upgrade, interruption and back gestures. Record device-tested versus simulated coverage explicitly.
 - Ship only after high-priority regressions are resolved; record any remaining nonblocking issues and a rollback point.
 
-## Status
-- Baseline collected. Implementation and certification are ongoing.
+## Current checkpoint — 2026-10-29
+- **Released main:** Build 988, commit `efd7a581c4b55aeb936b10ff5357b564cc9178ef`, Engine 0.65.9. GitHub Actions release integrity, core contracts, hosted-webapp, offline/phone, independent engine audit and Pages deployment are green on this commit.
+- **CSS debt (B994 published budgets):** app stylesheet 643,592 characters, `!important` occurrences at most 2,060, `modules/App.js` fixed inline `style: {` objects at most 1,101. These are ceilings, **not** claims that presentation debt is finished.
+- **B995 source-only candidate:** PR #414 on a draft branch; resolves stale Program schedule IDs before calculating training/rest counts, corrects spoken schedule action names, and improves accessible settings, 1RM, and clipboard statuses. Adds B995 source contract and real Program schedule Chromium 320px/200% check. No engine/persistence algorithm change. This is **not** an integrated release.
+- **Release next:** add any further compatible Program/Workout cleanup to the draft, then finalize **one** monotonic build through `scripts/finalize-release.mjs --next-build`, run exact-head CI and all seven Chromium shards, merge only once checks pass, and certify hosted SHA/asset/cache identity.
+- **Not yet device-certified:** Android TalkBack, IME and orientation, interruption/offline/PWA upgrade on a physical phone. Main branch protection remains unprotected; treat this as a separate release-governance issue.
+- **No launch-ready claim** while these acceptance gates remain open.

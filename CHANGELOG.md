@@ -1,3 +1,10 @@
+## Build 983 — Consolidated styling and readiness
+
+- Consolidated 59 fixed inline presentation objects across Strength detail, estimated 1RM and Shared Programs into M3 token-based CSS. No new !important selectors.
+- Calculator inputs now use 16px text to prevent mobile focus zoom, while calculated plate height, load math and training state remain dynamic.
+- Gallery filters expose aria-pressed, and filter/retry/import controls preserve accessible 44/48px touch targets, offline retry and duplicate-import handling.
+- Added B987/B988 permanent ownership checks; kept engine version 0.65.9. This is one combined release for multiple styling passes.
+
 ## B988 — Shared-program Gallery presentation consolidation
 
 - Moved 22 gallery inline presentation styles into theme-aware CSS, preserving filtering, retry and import logic.

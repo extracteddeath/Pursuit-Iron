@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b985-r81fac69b0e76eb31",
-  "uiMilestone": "Build 985 · Retire unreachable private CSS while preserving M3 roles"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b986-rfde46ba0e187d681",
+  "uiMilestone": "Build 986 · Consolidated Program sheet accessibility and styling"
 }

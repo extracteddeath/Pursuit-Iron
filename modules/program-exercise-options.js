@@ -1,6 +1,6 @@
 // Exercise inspection and actions. ProgramView remains the only prescription writer.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
 import { UiAction } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
@@ -9,9 +9,18 @@ import { PART_LABEL, formatSetup } from './engine-api.js';
 export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, linked,
     note, setup, onNote, onSuperset, onWhy, onInfo, onBan, onRemove, onClose, sheetDragRef }) {
     const [confirmRemove, setConfirmRemove] = useState(false);
+    const wasConfirming = useRef(false);
+    // A cancelled destructive action returns keyboard focus to its visible trigger.
+    useEffect(() => {
+        if (wasConfirming.current && !confirmRemove)
+            document.querySelector('.wpb-exercise-options-sheet [data-exercise-action="remove"]')
+                ?.focus({ preventScroll: true });
+        wasConfirming.current = confirmRemove;
+    }, [confirmRemove]);
     const hasNote = !!(note || setup);
     const close = () => { setConfirmRemove(false); onClose(); };
-    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(close, sheetDragRef);
+    const dismiss = () => { if (confirmRemove) setConfirmRemove(false); else close(); };
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(dismiss, sheetDragRef);
     const act = handler => () => { close(); handler(); };
     const action = (id, Icon, label, description, onClick, danger = false) => _jsxs(UiAction, {
         variant: 'tonal', className: 'wpb-sheet-action wpb-program-exercise-action',
@@ -49,7 +58,7 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
                             _jsx('p', { id: 'program-exercise-remove-title', children: `Remove ${exercise.name} from this day?` }),
                             _jsxs('div', { className: 'wpb-exercise-options-confirm-actions', children: [
                                 _jsx(UiAction, { variant: 'tonal', className: 'wpb-exercise-options-remove', onClick: act(onRemove), children: 'Remove' }),
-                                _jsx(UiAction, { variant: 'tonal', autoFocus: true, onClick: () => setConfirmRemove(false), children: 'Cancel' })
+                                _jsx(UiAction, { variant: 'tonal', autoFocus: true, onClick: dismiss, children: 'Cancel' })
                             ] })
                         ] }) : action('remove', Trash2, 'Remove from day', 'Take this exercise out of the workout', () => setConfirmRemove(true), true))
                 ] })

@@ -94,7 +94,8 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
                     onFocus: event => event.target.select(), className: 'wpb-scroll mono wpb-program-share-text' })
             ] }),
             _jsxs('footer', { className: 'wpb-program-share-footer', children: [
-                _jsx('p', { role: 'status', className: 'wpb-program-share-status', children: feedback?.state === 'error'
+                _jsx('p', { role: 'status', className: 'wpb-program-share-status', children: feedback?.state === 'pending'
+                    ? 'Copying…' : feedback?.state === 'error'
                     ? 'Could not copy. Select the text above and copy it manually.'
                     : feedback?.state === 'copied' ? (feedback.kind === 'code' ? 'Program code copied.' : 'Plain-text plan copied.') : '' }),
                 _jsxs(UiAction, { variant: 'primary', disabled: pending, 'aria-label': 'Copy plain text', onClick: () => copy(text, 'text'),

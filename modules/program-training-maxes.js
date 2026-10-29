@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Dumbbell, ChevronRight, X } from 'lucide-react';
 import { EX_BY_ID, PCT_SCHEMES, trainingMaxForUnit, withTrainingMax, percentagePlanFor, roundTo, loadStep } from './engine-api.js';
 import { UiAction } from './ui-primitives.js';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const numberValue = text => {
     const value = String(text).trim();
@@ -28,6 +29,7 @@ export function TrainingMaxSummary({ scheme, count, total, onOpen }) {
 }
 
 export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClose, sheetDragRef, selectNumericInput }) {
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const [draft, setDraft] = useState(() => Object.fromEntries(mainLifts.map(id => [id,
         String(trainingMaxForUnit(program, id, unit) || '')])));
     const [conversion, setConversion] = useState(null);
@@ -45,8 +47,8 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
     const closeConversion = () => { setConversion(null); conversionOpener.current?.focus({ preventScroll: true }); };
     const apply = () => { if (canApply) onApply(changes); };
     return _jsx('div', { className: 'wpb-backdrop wpb-training-max-backdrop', role: 'dialog', 'aria-modal': true,
-        'aria-labelledby': 'program-training-max-title', onClick: onClose,
-        children: _jsxs('section', { ref: sheetDragRef, className: 'wpb-training-max-sheet',
+        'aria-labelledby': 'program-training-max-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },
+        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-training-max-sheet',
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('header', { className: 'wpb-training-max-heading', children: [
                     _jsx('h2', { id: 'program-training-max-title', children: 'Training maxes' }),

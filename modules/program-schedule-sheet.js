@@ -1,20 +1,22 @@
 // M365: Program weekly-schedule presentation. The parent is the sole schedule writer.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { X, Dumbbell } from 'lucide-react';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const JS_WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
 
 export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetDragRef }) {
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const schedule = program.schedule || {};
     const trainingDays = JS_WEEKDAYS.filter(weekday => schedule[weekday]).length;
     const todayWd = new Date().getDay();
     return _jsx('div', {
         'data-testid': 'weekly-schedule-sheet', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-weekly-schedule-title',
-        className: 'wpb-backdrop wpb-program-schedule-backdrop', onClick: onClose,
+        className: 'wpb-backdrop wpb-program-schedule-backdrop', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         children: _jsxs('div', {
-            ref: sheetDragRef, onClick: event => event.stopPropagation(),
+            ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: event => event.stopPropagation(),
             className: 'wpb-scroll wpb-program-schedule-sheet',
             children: [
                 _jsxs('div', { className: 'wpb-program-schedule-heading', children: [

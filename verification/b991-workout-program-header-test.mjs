@@ -13,6 +13,20 @@ assert.ok(!workout.includes('wpb-workout-header-action", style: narrowSet'),'Fin
 assert.ok(!program.includes('style: { ...iconBtn(), width: 36, height: 36'),'Program name controls must stay CSS-owned');
 for(const selector of ['.wpb-workout-timer[data-paused="true"]','.wpb-workout-header-action[data-focus="1"]','.wpb-workout-finish[data-compact="true"]','.wpb-program-rename-input','.wpb-program-icon-change'])
   assert.ok(css.includes(selector),'Missing CSS role '+selector);
+// Spec v1: the active header must retain actual 48px touch controls, rather
+// than shrinking its clickable box to the icon's visual geometry.
+for (const [selector,property] of [
+  ['#root .wpb-workout .wpb-workout-timer','min-height:48px'],
+  ['#root .wpb-workout .wpb-workout-header-action','height:48px'],
+  ['#root .wpb-workout .wpb-workout-actions>.wpb-workout-finish[data-compact="true"]','width:48px'],
+  ['#root .wpb-program .wpb-program-header-back','min-height:48px'],
+  ['#root .wpb-program .wpb-program-icon-change','height:48px'],
+  ['#root .wpb-program .wpb-program-rename-save','height:48px']
+]){
+  const start=css.indexOf(selector+'{');
+  assert.ok(start>=0 && css.slice(start,css.indexOf('}',start)).includes(property),
+    'Header hit area must use its existing CSS owner: '+selector);
+}
 assert.ok(!css.slice(css.indexOf('/* B991:')).includes('!important'),'No priority overrides in new CSS');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority-debt increase');
 assert.ok((app.match(/style: \\{/g)||[]).length<=1101,'No new inline presentation');

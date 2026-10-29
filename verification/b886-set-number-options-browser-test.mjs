@@ -34,6 +34,15 @@ try{
  const open=()=>page.click('[data-testid="set-0-0"] [data-set-options-trigger]');
  const choose=type=>page.click(`[data-testid="workout-set-options"] button[data-set-type="${type}"]`);
  await open(); await page.waitForSelector('[data-testid="workout-set-options"]');
+ const sheetGeometry=await page.$eval('[data-testid="workout-set-options"]',modal=>{
+  const close=modal.querySelector('.wpb-b973-set-close');
+  const r=close?.getBoundingClientRect();
+  return {close:r?{w:r.width,h:r.height,l:r.left,right:r.right}:null,
+   panel:modal.getBoundingClientRect().width,overflow:modal.scrollWidth>modal.clientWidth+1};
+ });
+ assert.ok(sheetGeometry.close?.w>=48&&sheetGeometry.close?.h>=48&&
+  sheetGeometry.close.l>=-1&&sheetGeometry.close.right<=innerWidth+1&&!sheetGeometry.overflow,
+  'Workout set options keeps Close touch target reachable on the phone: '+JSON.stringify(sheetGeometry));
  assert.equal(await page.$eval('[data-testid="workout-set-options"]',n=>n.getAttribute('aria-modal')),'true');
  assert.equal(await page.$$eval('[data-testid="workout-set-options"] [data-set-type]',a=>a.length),3);
  await choose('warmup');

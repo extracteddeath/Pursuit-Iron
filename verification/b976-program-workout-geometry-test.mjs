@@ -20,7 +20,7 @@ for(const name of names) {
 }
 assert.ok(app.split('style: {').length-1 <= 1280,
   'B976 must permanently retire 16 static inline declarations');
-assert.equal((css.match(/!important/g)||[]).length,2061,
+assert.equal((css.match(/!important/g)||[]).length,2060,
   'New CSS must not increase global priority override debt');
 assert.ok(!scope.includes('!important'),'B976 must not introduce priority overrides');
 assert.ok(app.includes('setSchedSheet(true)'),'Program schedule still opens its editor');

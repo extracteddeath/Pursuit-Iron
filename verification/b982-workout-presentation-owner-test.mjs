@@ -24,5 +24,5 @@ assert.match(scope,/prefers-reduced-motion|forced-colors:active/,'Honor accessib
 assert.ok(app.includes('onBump: bumpRest')&&app.includes('onPause: togglePause')&&app.includes('onSkip: skipRest'),
   'Logger continues to own one timer and callbacks');
 assert.equal((app.match(/style: \{/g)||[]).length,1262,'Seven static workout inline objects retired');
-assert.equal((css.match(/!important/g)||[]).length,2061,'Existing CSS override debt cannot increase');
+assert.equal((css.match(/!important/g)||[]).length,2060,'Existing CSS override debt cannot increase');
 console.log('PASS B982: workout presentation is CSS-owned without extra inline/priority styles.');

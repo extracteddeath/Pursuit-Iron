@@ -5,7 +5,7 @@
   "build": 986,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "8b0e978fe61bf84c1da28dcf8eceeb73c0974726eb277cd94225181ee7c21f4a",
+  "runtimeAggregate": "07ff24852aafb5382dd3514106b126a8bc7cd1ea6761482f72d0e8c61770a1f2",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -108,7 +108,7 @@
     "modules/program-settings-sheet.js": "141f084b4629563573bae7f5a8b03c180a709650a3a8daf7b6b83627454ebf01",
     "modules/program-share-sheet.js": "e7a4553881459cd2e75d0bfd186b15ce84ba66d471053523823bbc59332a954f",
     "modules/program-sheet-focus.js": "9e513ea22d88b783e074def9dd9698de976e3fcf4d0558eb00d04480194c0fc4",
-    "modules/program-training-maxes.js": "8b925ab5753d386b1d2378b515fc4433f93e6474f739a8e9cf89677cec2d31c8",
+    "modules/program-training-maxes.js": "3ef26c078cdddc327c46e2e53b356f33be53866b987f250a3b1cb78dfae0ba98",
     "modules/program-volume-surfaces.js": "9ecba74bbf31518995e2d601e0ec29ac115821d11ab02bdf1377a605d4085145",
     "modules/release-notes.js": "138d46cf4b336306f8fa34202e1637b29f011347198da570c6bb23a2f0c5d558",
     "modules/session-choice-dialog.js": "f64b725443670d646a6686dd144a1ace44ab2fbf4b6cdeda863458d5dd2e380d",
@@ -150,9 +150,9 @@
   "uiFiles": {
     "modules/App.js": "87bf3d5b1732586cbea2ff4f8cf31733ea5e8be8b1e80bfb570916047c4dbd79",
     "index.html": "ed73c14f835c8d3991e9fb43f74c00714e10840e86a0a6f890aa9f35ae3f6b94",
-    "sw.js": "65cab10b467a6ffb33b3739abc29ed7f0f62b03757fa6093c161384b38d84a51",
-    "BUILD_PROFILE.json": "ead675d9f379ff2aa48e800e6fb0fbae18d40cf590554f5ad3034a9ae1c1889e",
-    "CHANGELOG.md": "1185870b85f9cc7c38d381aa0bb4258a507b210ae7bcf0f23f9db0126c81e4c3",
+    "sw.js": "10666bacae7c704b1f1fa378eb9feb0cef15ccb8038d61ad1c653233920a6723",
+    "BUILD_PROFILE.json": "b12e57fa96db237abbd975ac1d230a589274814597d70b97377d9eb04d785f8b",
+    "CHANGELOG.md": "a3fb94b9096cabb1b6f568e8548516ffd8bcc464aad40389cd585f46f6085b99",
     "app.css": "a5fca54967dd5f4554770015cbcbc69d460e31808557bc9ba5f3746089d66cee",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
@@ -160,6 +160,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b986-rfde46ba0e187d681",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b986-re6bad8730228c09a",
   "uiMilestone": "Build 986 · Consolidated Program sheet accessibility and styling"
 }

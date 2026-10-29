@@ -1,0 +1,29 @@
+name: Finalize B991 Workout and Program styling
+on:
+  push:
+    branches: [launch-readiness/b991-workout-program-header]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: startsWith(github.event.head_commit.message, 'stage B991')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Finalize certified release and push candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/finalize-release.mjs --next-build
+          node scripts/verify-release.mjs
+          rm .github/workflows/b991-finalize.yml
+          git add modules/App.js app.css verification/b983-cascade-debt-test.mjs verification/b990-dead-css-ownership-test.mjs verification/b991-workout-program-header-test.mjs verification/contract-registry.mjs CHANGELOG.md BUILD_PROFILE.json RELEASE_MANIFEST.json index.html sw.js .github/workflows/b991-finalize.yml
+          git -c user.name="Pursuit release automation" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Build 985: consolidate Workout and Program header styling"
+          git push origin HEAD:launch-readiness/b991-workout-program-header

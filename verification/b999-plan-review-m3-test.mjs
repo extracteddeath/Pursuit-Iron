@@ -26,7 +26,7 @@ for(const term of [
     '.wpb-game-plan-heading',
     '.wpb-plan-change-banner strong'
 ]) assert.match(getRule(term),/font-size:(?:\.\d+|1)rem/,term+' scales when Android text size increases');
-assert.ok(getRule('#root .wpb .wpb-plan-change-more>summary').includes('min-height:48px'),
+assert.ok(css.includes('#root .wpb .wpb-plan-change-more>summary{min-height:48px;display:flex;align-items:center}'),
     'Program change disclosure remains an accessible tap target');
 assert.ok(css.includes('align-content:center;min-height:48px;cursor:pointer;list-style:none'),
     'Game Plan disclosure is also a 48px tap target');

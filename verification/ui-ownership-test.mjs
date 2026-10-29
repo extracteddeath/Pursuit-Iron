@@ -172,12 +172,15 @@ for (const name of ['ProgramRevisionReview', 'ProgramLayoutHistory', 'ProgramSav
 }
 assert.ok(app.includes("from './program-review-surfaces.js'"), 'App composes the feature-owned Program review');
 assert.ok(!programReview.includes('style: {') && !programReview.includes('style: iconBtn()'), 'No static inline review styles');
-assert.ok(programReview.includes("event.key === 'Escape'") &&
-  programReview.includes("event.key !== 'Tab'") &&
-  programReview.includes('handleProgramSaveReviewKeys(event, onClose)') &&
-  programReview.includes('autoFocus: true') &&
-  programReview.includes('returnFocus.current?.isConnected'),
-  'Save review must support keyboard dismissal, contained tab navigation and return focus');
+assert.ok(programReview.includes('useProgramSheetFocus(onClose)') &&
+  programReview.includes('ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown') &&
+  programReview.includes('event.target === event.currentTarget') &&
+  !programReview.includes('handleProgramSaveReviewKeys') &&
+  !programReview.includes('autoFocus: true') &&
+  sheetFocus.includes("event.key === 'Escape'") &&
+  sheetFocus.includes("event.key !== 'Tab'") &&
+  sheetFocus.includes('previous?.isConnected'),
+  'Save review delegates keyboard dismissal, contained Tab and focus restoration to the shared owner');
 
 assert.ok(programReview.includes('disabled: !changes.length || !!conflicts.length') &&
     programReview.includes('checked: scope === value') && programReview.includes('onChange: () => onScope(value)'),

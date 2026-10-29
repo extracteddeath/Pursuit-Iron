@@ -38,10 +38,10 @@ try{
   const close=modal.querySelector('.wpb-b973-set-close');
   const r=close?.getBoundingClientRect();
   return {close:r?{w:r.width,h:r.height,l:r.left,right:r.right}:null,
-   panel:modal.getBoundingClientRect().width,overflow:modal.scrollWidth>modal.clientWidth+1};
+   panel:modal.getBoundingClientRect().width,viewport:innerWidth,overflow:modal.scrollWidth>modal.clientWidth+1};
  });
  assert.ok(sheetGeometry.close?.w>=48&&sheetGeometry.close?.h>=48&&
-  sheetGeometry.close.l>=-1&&sheetGeometry.close.right<=innerWidth+1&&!sheetGeometry.overflow,
+  sheetGeometry.close.l>=-1&&sheetGeometry.close.right<=sheetGeometry.viewport+1&&!sheetGeometry.overflow,
   'Workout set options keeps Close touch target reachable on the phone: '+JSON.stringify(sheetGeometry));
  assert.equal(await page.$eval('[data-testid="workout-set-options"]',n=>n.getAttribute('aria-modal')),'true');
  assert.equal(await page.$$eval('[data-testid="workout-set-options"] [data-set-type]',a=>a.length),3);

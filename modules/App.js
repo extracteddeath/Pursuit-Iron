@@ -21,7 +21,7 @@ import { ProgramRevisionReview, ProgramLayoutHistory, ProgramSaveReview } from '
 import { sessionLoadText, sessionTargetsText, PlanChangeBanner, HomeSessionOutline, SessionGamePlan, PlanChangesDialog } from './plan-session-surfaces.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
-import { workoutNavLabel } from './workout-nav-labels.js';
+import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, selectNumericInput } from './workout-session-controls.js';
 import { completedSetPR } from './workout-pr.js';
 import { withSessionPlanChoice } from './session-plan.js';
 import {
@@ -79,7 +79,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='977';
+const __APP_VERSION__='4.0.0'; const __BUILD__='978';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -2500,11 +2500,6 @@ function useHoldRepeat(fn, { first = 420, fast = 70, slow = 170, rampAfter = 6 }
    useHoldRepeat cannot be called at the call site: these buttons render inside sets.map inside
    data.map, so the hook count would vary per render (the v490 finding). Keeping one component and
    passing style overrides is the only safe way to have a bigger stepper that still holds. */
-function selectNumericInput(event) {
-    const input = event.currentTarget;
-    if (!input.readOnly && !input.disabled)
-        input.select();
-}
 // On touch browsers, the native click action may move the caret after onClick.
 // Focus-mode fields should retain select-all once the browser finishes the tap.
 function selectFocusNumericInput(event) {
@@ -10539,30 +10534,6 @@ function suggestionLoadLabel(suggestion) {
 
 
 // Read-only navigation: the session continues to own set values and completion.
-function WorkoutExerciseNav({ data, exIdx, onSelect }) {
-    const rail = useRef(null);
-    useLayoutEffect(() => {
-        const list = rail.current, active = list?.querySelector('[aria-current="step"]');
-        if (!list || !active) return;
-        const a = active.getBoundingClientRect(), r = list.getBoundingClientRect();
-        // Scroll only this rail. scrollIntoView can move the workout or page too.
-        if (a.left < r.left + 4) list.scrollLeft -= r.left + 4 - a.left;
-        else if (a.right > r.right - 4) list.scrollLeft += a.right - r.right + 4;
-    }, [exIdx, data.length]);
-    return _jsx("nav", { ref: rail, className: "wpb-hscroll wpb-ex-nav", "aria-label": "Workout exercises", children: data.map((row, i) => {
-        const work = row.sets.filter(isWorkSet), done = work.filter(s => s.done).length;
-        const complete = work.length > 0 && done === work.length, active = i === exIdx;
-        const name = EX_BY_ID[row.id]?.name || "Exercise";
-        return _jsxs("button", { type: "button", onClick: () => onSelect(i),
-            className: "pressable hit wpb-ex-nav-step", "data-active": active ? "1" : "0", "data-complete": complete ? "1" : "0",
-            "aria-current": active ? "step" : undefined,
-            "aria-label": `${name} · exercise ${i + 1} of ${data.length} · ${done} of ${work.length} working sets completed`,
-            title: name, children: [complete && _jsx(Check, { size: 14, "aria-hidden": true }),
-                _jsx("span", { className: "wpb-ex-nav-name", children: workoutNavLabel(name) }),
-                _jsxs("span", { className: "mono wpb-ex-nav-count", children: [done, "/", work.length] })] }, `${row.id}:${i}`);
-    }) });
-}
-
 // Both timer surfaces dispatch to the same wall-clock rest owner.
 function WorkoutRestActions({ paused, onBump, onReset, onPause, onSkip }) {
     const action = (label, onClick, children) => _jsx("button", { type: "button", onClick,
@@ -10769,22 +10740,6 @@ function SetAwareDockPrototype({ data, exIdx, lastPerf, program, day, weekIndex,
       ] });
 }
 
-function WorkingSetCountControl({ value, onChange, label, minimum = 1, disabled = false }) {
-    const count = Number(value);
-    return _jsxs("div", { className: "wpb-working-set-control", children: [
-        _jsx("span", { children: label }),
-        _jsxs("span", { className: "wpb-working-set-stepper", children: [
-            _jsx("button", { type: "button", disabled: disabled || count <= minimum, "aria-label": "Decrease " + label, onClick: () => onChange(Math.max(minimum, (count || minimum) - 1)), children: "−" }),
-            _jsx("input", { type: "number", inputMode: "numeric", min: minimum, max: 20, step: 1, value, disabled, "aria-label": label, onFocus: selectNumericInput, onChange: ev => onChange(ev.target.value) }),
-            _jsx("button", { type: "button", disabled: disabled || count >= 20, "aria-label": "Increase " + label, onClick: () => onChange(Math.min(20, (count || 0) + 1)), children: "+" })] })] });
-}
-function SessionNoteEditor({ label, value, repeat, onChange, onRepeat }) {
-    return _jsxs("div", { className: "wpb-session-note-editor", children: [
-        _jsxs("label", { children: [_jsx("strong", { children: label }), _jsx("textarea", { value, rows: 3, maxLength: 3000,
-            placeholder: "What should you remember? Setup, how it felt, or what to try next time…", onChange: ev => onChange(ev.target.value) })] }),
-        _jsxs("label", { children: ["Show this note", _jsx("select", { value: repeat, "aria-label": label + " note repetition", onChange: ev => onRepeat(ev.target.value),
-            children: [['none','This session only'],['once','Repeat once'],['always','Keep repeating']].map(([value, text]) => _jsx("option", { value, children: text }, value)) })] })] });
-}
 function HomeInjuryJournal({ entries, onSave, onClose, upcoming = null }) {
     const clean = useMemo(() => normalizeInjuryLog(entries), [entries]);
     const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };

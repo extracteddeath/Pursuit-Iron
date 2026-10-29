@@ -14,12 +14,15 @@ const fixture=[
 "import {ProgramSaveReview} from '/modules/program-review-surfaces.js';",
 "import {ProgramExerciseOptions} from '/modules/program-exercise-options.js';",
 "import {HistoryEditSheet} from '/modules/history-editor.js';",
+"import {ProgramReferenceSheet,ProgressionChoiceSheet} from '/modules/program-reference-surfaces.js';",
 "import {InfoCard} from '/modules/ui-disclosure.js';",
 "function Demo(){const [sheet,setSheet]=React.useState('');const [expanded,setExpanded]=React.useState(false);",
 "return React.createElement('main',{className:'wpb'},",
 "React.createElement('button',{id:'open-review',onClick:()=>setSheet('review')},'Review changes'),",
 "React.createElement('button',{id:'open-exercise',onClick:()=>setSheet('exercise')},'Exercise options'),",
 "React.createElement('button',{id:'open-history',onClick:()=>setSheet('history')},'Edit history'),",
+"React.createElement('button',{id:'open-reference',onClick:()=>setSheet('reference')},'Program reference'),",
+"React.createElement('button',{id:'open-progression',onClick:()=>setSheet('progression')},'Progression method'),",
 "React.createElement(InfoCard,{icon:Info,title:'Details',subtitle:'Show and hide',open:expanded,onToggle:()=>setExpanded(x=>!x)},",
 "React.createElement('button',{id:'inside-reveal'},'Inside')),",
 "sheet==='review'&&React.createElement(ProgramSaveReview,{program:{name:'Test',cycleId:null},changes:[],scope:'program',onScope:()=>{},",
@@ -31,7 +34,12 @@ const fixture=[
 "programId:'p1',dayId:'d1',dayLabel:'Upper',durationMin:45,unit:'lb',",
 "perf:{'back-squat':{weight:200,reps:5,sets:[{w:200,r:5,rir:2}]}},volume:1000,setsDone:1},",
 "unit:'lb',onClose:()=>setSheet(''),onSave:()=>setSheet(''),",
-"selectNumericInput:e=>e.currentTarget.select()}));}",
+"selectNumericInput:e=>e.currentTarget.select()}),",
+"sheet==='reference'&&React.createElement(ProgramReferenceSheet,{onClose:()=>setSheet('')},",
+"React.createElement('p',null,'Reference content')),",
+"sheet==='progression'&&React.createElement(ProgressionChoiceSheet,{exerciseName:'Bench Press',",
+"selected:'double',automaticLabel:'Double progression',linearIncrement:5,unit:'lb',",
+"onChoose:()=>setSheet(''),onClose:()=>setSheet('')}));}",
 "createRoot(document.getElementById('root')).render(React.createElement(Demo));"
 ].join('\n');
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">'
@@ -106,6 +114,24 @@ try {
   });
   assert.ok(bounds.left>=-1&&bounds.right<=321&&bounds.top>=-1&&bounds.bottom<=bounds.height+1,
     '320px/200% save review must fit viewport: '+JSON.stringify(bounds));
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>!document.querySelector('.wpb-save-review-panel'));
+  for(const [trigger,selector] of [['#open-reference','.wpb-program-reference-panel'],
+                                    ['#open-progression','.wpb-progression-choice-panel']]){
+    await page.click(trigger);await page.waitForSelector(selector);
+    const result=await page.$eval(selector,el=>{
+      const r=el.getBoundingClientRect();
+      return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:innerHeight,
+        focus:el===document.activeElement};
+    });
+    assert.ok(result.left>=-1&&result.right<=321&&result.top>=-1&&result.bottom<=result.height+1,
+      selector+' must fit 320px scaled viewport '+JSON.stringify(result));
+    assert.equal(result.focus,true,selector+' shares accessible initial focus');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(selector=>!document.querySelector(selector),{},selector);
+    assert.equal(await page.$eval(trigger,el=>el===document.activeElement),true,
+      selector+' restores its trigger after Escape');
+  }
   assert.deepEqual(errors,[],'no runtime errors from shared Program focus or motion fallback');
   console.log('PASS B996 browser: Program review focus/geometry, destructive Escape, focus restore and resilient disclosure.');
 } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}

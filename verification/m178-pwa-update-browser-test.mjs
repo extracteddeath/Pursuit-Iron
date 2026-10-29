@@ -84,7 +84,9 @@ try {
       const rect = button.getBoundingClientRect(), style = getComputedStyle(button);
       return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
         width: rect.width, height: rect.height, display: style.display,
-        visibility: style.visibility, text: button.textContent || '' };
+        visibility: style.visibility, pointerEvents: style.pointerEvents,
+        visibleAtCenter: button.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)),
+        text: button.textContent || '' };
     });
     assert.ok(prompt && prompt.width > 0 && prompt.height > 0,
       `waiting update action must remain laid out at ${width}px`);
@@ -92,6 +94,9 @@ try {
       `update action must fit within ${width}px viewport: ${JSON.stringify(prompt)}`);
     assert.notEqual(prompt.visibility, 'hidden');
     assert.notEqual(prompt.display, 'none');
+    assert.ok(prompt.height >= 44, `Restart button must remain a real mobile touch target at ${width}px`);
+    assert.equal(prompt.pointerEvents, 'auto', 'Restart must remain clickable above page chrome');
+    assert.equal(prompt.visibleAtCenter, true, 'Another surface cannot cover the update action');
     assert.match(prompt.text, /Update ready.*Restart/i);
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     assert.ok(await page.$('button.wpb-notice-in'),

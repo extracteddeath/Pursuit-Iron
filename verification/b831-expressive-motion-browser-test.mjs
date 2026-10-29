@@ -2006,6 +2006,15 @@ try {
         assert.equal(await page.evaluate(() =>
             JSON.stringify(JSON.parse(localStorage.getItem('wpb:v1')||'{}').saved)),programBeforeOptions,
             'R22 opening and dismissing exercise options preserves the entire program');
+        // Spec v1: actual Program header touch targets must fit the phone.
+        const programHeaderTargets=await page.$eval('.wpb-program .wpb-program-header-back,.wpb-program .wpb-program-icon-change',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {name:el.className,w:r.width,h:r.height,left:r.left,right:r.right};
+            }));
+        assert.ok(programHeaderTargets.length>=1 && programHeaderTargets.every(x=>
+            x.w>=48&&x.h>=48&&x.left>=-1&&x.right<=width+1),
+            'Program header touch targets are unclipped: '+JSON.stringify({width,programHeaderTargets}));
         const disclosureOpen=await page.$eval('.wpb-program .wpb-day-card', el => ({
             touch:el.querySelector('.wpb-day-toggle').getBoundingClientRect().height,
             panel:el.querySelector(':scope > .wpb-expand')?.getBoundingClientRect().height,
@@ -2026,6 +2035,21 @@ try {
             'disclosure motion preserves the complete saved prescription');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]'); await page.waitForSelector('.wpb-workout');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
+        // Spec v1: confirm Workout header sizes and lack of overlap by
+        // measuring the real controls, not just static CSS declarations.
+        const workoutHeaderTargets=await page.$eval(
+            '.wpb-workout-header .wpb-workout-close,.wpb-workout-header .wpb-workout-timer,.wpb-workout-header .wpb-workout-header-action',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {name:el.className,action:el.getAttribute('aria-label'),
+                    w:r.width,h:r.height,l:r.left,r:r.right,t:r.top,b:r.bottom};
+            }));
+        const overlappingHeaders=workoutHeaderTargets.some((a,i)=>workoutHeaderTargets.slice(i+1)
+            .some(b=>Math.min(a.r,b.r)-Math.max(a.l,b.l)>1&&Math.min(a.b,b.b)-Math.max(a.t,b.t)>1));
+        assert.ok(workoutHeaderTargets.length>=3 &&
+            workoutHeaderTargets.every(x=>x.w>=48&&x.h>=48&&x.l>=-1&&x.r<=width+1) &&
+            !overlappingHeaders,
+            'Workout header touch targets are distinct: '+JSON.stringify({width,workoutHeaderTargets}));
         // R23: actual on-screen tool controls stay touch-safe; do not touch
         // the compact weight/reps grid, navigation ownership or log state.
         const liveToolsR23=await page.$$eval('.wpb-workout-tools .wpb-workout-tool', controls =>

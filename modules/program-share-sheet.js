@@ -4,6 +4,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useRef, useState } from 'react';
 import { X, Check, Copy, Layers } from 'lucide-react';
 import { UiAction } from './ui-primitives.js';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { SPLITS, weeksOf, daysInWeek, sessionPrescriptionRows, effortLabel,
     percentagePlanFor, gallerySubmission, galleryIssueBody } from './engine-api.js';
 
@@ -36,6 +37,7 @@ export function programToText(program, loadMode = 'rir', unit = 'kg', weekIndex 
 }
 
 export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode, unit, history = [], onClose, sheetDragRef }) {
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const text = useMemo(() => programToText(program, loadMode, unit, weekIndex, history),
         [program, loadMode, unit, weekIndex, history]);
     const [feedback, setFeedback] = useState(null);
@@ -66,9 +68,9 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
     };
     const pending = feedback?.state === 'pending';
     return _jsx('div', { 'data-testid': 'share-program-sheet', role: 'dialog', 'aria-modal': true,
-        'aria-labelledby': 'program-share-title', 'aria-describedby': 'program-share-scope', onClick: onClose,
+        'aria-labelledby': 'program-share-title', 'aria-describedby': 'program-share-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         className: 'wpb-backdrop wpb-program-share-backdrop', children:
-        _jsxs('section', { ref: sheetDragRef, className: 'wpb-program-share-panel', onClick: event => event.stopPropagation(), children: [
+        _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-program-share-panel', onClick: event => event.stopPropagation(), children: [
             _jsxs('header', { className: 'wpb-program-share-heading', children: [
                 _jsx('h2', { id: 'program-share-title', children: 'Share program' }),
                 _jsx(UiAction, { 'aria-label': 'Close', 'data-icon-only': true,

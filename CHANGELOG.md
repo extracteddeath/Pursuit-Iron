@@ -1,3 +1,11 @@
+## Build 986 — Consolidated Program sheet accessibility and styling
+
+- Migrated seven Program bottom-sheet surfaces (Settings, Share, Weekly Schedule, Exercise Actions, Progression Choice, Reference, Training Maxes) to a reusable keyboard-focus owner; previously several had no containment for Tab/Escape or reliable focus restoration.
+- Kept the Program drag-gesture refs, save/apply callbacks, confirmation handling, dynamic form state and engine prescriptions with their original owners.
+- Consolidated duplicate Program Settings/Share shell and backdrop CSS, reducing stylesheet source by 106 characters with no new !important overrides. Settings height now follows the visual viewport and safe-area inset when the mobile keyboard opens.
+- Added static ownership and Chromium focus, nested disclosure, Escape and narrow-layout regression gates. The Training Maxes editor preserves the nested 1RM conversion-first Escape behavior. Engine 0.65.9 remains unchanged; no training load, workout logging, or saved-data schema changes.
+- Release metadata, service-worker precache and runtime/UI hashes updated together for the combined candidate.
+
 ## Build 985 — Workout and Program header presentation consolidation
 
 - Consolidated eleven inline style objects from Workout timer, Focus/options/Finish header, save error, empty workout state and Program back/name controls into themed CSS. Logging, training state and callbacks unchanged.

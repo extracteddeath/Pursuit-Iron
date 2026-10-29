@@ -8727,8 +8727,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* M368: shared choices, scalable form groups and a separately scrollable body.
    UiChoice owns selected paint/focus; these roles own only the settings anatomy. */
-#root .wpb .wpb-program-settings-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-program-settings-panel{box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:46rem;max-height:88dvh;overflow:hidden;border-top:1px solid var(--wpb-theme-border);border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb :is(.wpb-program-settings-backdrop,.wpb-program-share-backdrop){position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
+#root .wpb .wpb-program-settings-backdrop{z-index:60}
+#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:46rem;overflow:hidden;border-top:1px solid var(--wpb-theme-border);border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb .wpb-program-settings-panel{max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 32px))}
 #root .wpb .wpb-program-settings-heading{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:var(--pi-space-2);padding:10px 18px 4px}
 #root .wpb .wpb-program-settings-title{margin:0;font-size:1.125rem;line-height:1.4;font-weight:700}
 #root .wpb .wpb-program-settings-close{display:grid;place-items:center;min-width:44px;min-height:44px;color:var(--wpb-theme-text)}
@@ -8765,8 +8767,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(forced-colors:active){#root .wpb .wpb-program-settings-panel,#root .wpb .wpb-program-settings-field,#root .wpb .wpb-program-settings-cancel,#root .wpb .wpb-program-settings-save{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-program-settings-save:not(:disabled){background:Highlight;color:HighlightText}#root .wpb .wpb-program-settings-backdrop :is(button,input,textarea):focus-visible{outline-color:Highlight}}
 
 /* Program inspection: one themed owner for selected-week sharing and load-wave labels. */
-#root .wpb .wpb-program-share-backdrop{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-program-share-panel{box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:46rem;max-height:min(92dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 32px));overflow:hidden;border-top:1px solid var(--wpb-theme-border);border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb .wpb-program-share-backdrop{z-index:70}
+#root .wpb .wpb-program-share-panel{max-height:min(92dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 32px))}
+#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel):focus{outline:none}
 #root .wpb .wpb-program-share-panel::before{flex-shrink:0}
 #root .wpb .wpb-program-share-heading{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:var(--pi-space-2);padding:10px 18px 4px}
 #root .wpb .wpb-program-share-heading h2{min-width:0;margin:0;font-size:1.125rem;font-weight:700;line-height:1.3;overflow-wrap:anywhere}

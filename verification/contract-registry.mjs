@@ -87,6 +87,7 @@ export const contractGroups = Object.freeze({
         'b988-gallery-presentation-test.mjs',
         'b990-dead-css-ownership-test.mjs',
         'b991-workout-program-header-test.mjs',
+        'b992-program-sheet-focus-test.mjs',
         'b983-cascade-debt-test.mjs',
         'b964-scroll-layout-owner-test.mjs',
         'b965-workout-shell-layout-owner-test.mjs',
@@ -218,6 +219,7 @@ export const browserShards = Object.freeze({
     'integration-accessibility': Object.freeze([
         'r74-accessibility-browser-test.mjs',
         'b959-session-dialog-browser-test.mjs',
+        'b992-program-sheet-focus-browser-test.mjs',
         'b966-context-menu-keyboard-browser-test.mjs'
     ]),
     'integration-data': Object.freeze([

@@ -3,6 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useState } from 'react';
 import { X, Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
 import { UiAction } from './ui-primitives.js';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { PART_LABEL, formatSetup } from './engine-api.js';
 
 export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, linked,
@@ -10,6 +11,7 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
     const [confirmRemove, setConfirmRemove] = useState(false);
     const hasNote = !!(note || setup);
     const close = () => { setConfirmRemove(false); onClose(); };
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(close, sheetDragRef);
     const act = handler => () => { close(); handler(); };
     const action = (id, Icon, label, description, onClick, danger = false) => _jsxs(UiAction, {
         variant: 'tonal', className: 'wpb-sheet-action wpb-program-exercise-action',
@@ -23,8 +25,8 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
         ]
     }, id);
     return _jsx('div', { className: 'wpb-backdrop wpb-exercise-options-backdrop', role: 'dialog',
-        'aria-modal': true, 'aria-labelledby': 'program-exercise-options-title', onClick: close,
-        children: _jsxs('section', { ref: sheetDragRef, className: 'wpb-exercise-options-sheet',
+        'aria-modal': true, 'aria-labelledby': 'program-exercise-options-title', onClick: event => { if (event.target === event.currentTarget) close(); },
+        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-exercise-options-sheet',
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('header', { className: 'wpb-exercise-options-heading', children: [
                     _jsxs('div', { className: 'wpb-exercise-options-identity', children: [

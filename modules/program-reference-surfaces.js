@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react';
 import { X, Check, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { weeksOf, sessionPrescriptionRows, EX_BY_ID, PROG_STYLES, effortLabel, computeCell, exerciseAt } from './engine-api.js';
 import { UiChoice } from './ui-primitives.js';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { InfoCard } from './ui-disclosure.js';
 
 export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel, linearIncrement, unit, onChoose, onClose, sheetDragRef }) {
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const options = [
         ['auto', 'Auto (recommended)', `Use this program’s per-week methods. Currently ${automaticLabel}.`],
         ['dynamic', 'Dynamic double', 'Each working set builds reps and earns its own load increase.'],
@@ -17,8 +19,8 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
         ['e1rm', 'e1RM autoregulation', 'Use recent strength estimates and the target effort to choose a load.']
     ];
     return _jsx('div', { className: 'wpb-backdrop wpb-progression-choice-backdrop', role: 'dialog', 'aria-modal': true,
-        'aria-labelledby': 'program-progression-title', 'aria-describedby': 'program-progression-scope', onClick: onClose,
-        children: _jsxs('section', { className: 'wpb-progression-choice-panel', ref: sheetDragRef,
+        'aria-labelledby': 'program-progression-title', 'aria-describedby': 'program-progression-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
+        children: _jsxs('section', { className: 'wpb-progression-choice-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('header', { className: 'wpb-progression-choice-heading', children: [
                     _jsxs('div', { children: [
@@ -46,9 +48,10 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
 }
 
 export function ProgramReferenceSheet({ onClose, sheetDragRef, children }) {
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     return _jsx('div', { className: 'wpb-backdrop wpb-program-reference-backdrop', role: 'dialog', 'aria-modal': true,
-        'aria-labelledby': 'program-reference-title', onClick: onClose,
-        children: _jsxs('div', { className: 'wpb-program-reference-panel', ref: sheetDragRef,
+        'aria-labelledby': 'program-reference-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },
+        children: _jsxs('div', { className: 'wpb-program-reference-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('div', { className: 'wpb-program-reference-heading', children: [
                     _jsx('h2', { id: 'program-reference-title', children: 'Plan info' }),

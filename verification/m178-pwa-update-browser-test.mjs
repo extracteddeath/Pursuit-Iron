@@ -74,6 +74,36 @@ try {
   });
 
   await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b => /Update ready.*Restart/i.test(b.textContent || '')), { timeout: 30000 });
+  // A waiting release is a user decision, not a toast. Keep the action visible
+  // across phone viewport changes, foreground checks, and tab navigation.
+  for (const [width, height] of [[320, 680], [393, 852]]) {
+    await page.setViewport({ width, height, deviceScaleFactor: 1 });
+    const prompt = await page.evaluate(() => {
+      const button = document.querySelector('button.wpb-notice-in');
+      if (!button) return null;
+      const rect = button.getBoundingClientRect(), style = getComputedStyle(button);
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+        width: rect.width, height: rect.height, display: style.display,
+        visibility: style.visibility, text: button.textContent || '' };
+    });
+    assert.ok(prompt && prompt.width > 0 && prompt.height > 0,
+      `waiting update action must remain laid out at ${width}px`);
+    assert.ok(prompt.left >= 0 && prompt.right <= width && prompt.top >= 0 && prompt.bottom <= height,
+      `update action must fit within ${width}px viewport: ${JSON.stringify(prompt)}`);
+    assert.notEqual(prompt.visibility, 'hidden');
+    assert.notEqual(prompt.display, 'none');
+    assert.match(prompt.text, /Update ready.*Restart/i);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    assert.ok(await page.$('button.wpb-notice-in'),
+      'foreground update rechecks must not dismiss the pending Restart choice');
+  }
+  await page.click('[data-tab="settings"]');
+  await page.waitForFunction(() => !!document.querySelector('button.wpb-notice-in'));
+  assert.equal(await page.evaluate(() => !!window.__pursuitUpdateRequested), false,
+    'routing and viewport changes must never accept an update implicitly');
+  await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 });
+  console.log('PASS pending update: Restart remains visible and user-gated across narrow phones, foreground checks and Settings navigation.');
+
   const waitingBeforeClick = await page.evaluate(async () => {
     const reg = await navigator.serviceWorker.getRegistration();
     return !!reg?.waiting;

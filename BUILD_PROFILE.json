@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 73,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b973-r991cc8ef82057878",
-  "uiMilestone": "Build 973 · Program and Workout set panel consolidation"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b974-r81c34bff2473efde",
+  "uiMilestone": "Build 974 · Workout set order and update-prompt stability"
 }

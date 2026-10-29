@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { activeSetContext, adjustInjuredExercises, dockRepSuggestion, removePendingWorkingSet } from '../modules/workout-context.js';
+import { activeSetContext, adjustInjuredExercises, dockRepSuggestion, removePendingWorkingSet, resizeWorkingSets, lighterPendingWorkout } from '../modules/workout-context.js';
 
 const row = { id: 'press', sets: [
     { warm: true, done: false, weight: '45' },
@@ -58,3 +58,49 @@ assert.deepEqual(fewer.sets,[countRow.sets[0],countRow.sets[1],countRow.sets[4]]
 assert.equal(removePendingWorkingSet(fewer),fewer,'cannot remove last or logged working set');
 assert.deepEqual(countRow,countBefore,'set-count edit preserves the original row');
 console.log('Dock exact rep suggestions and safe session-only set-count reduction pass.');
+
+// Session-local edits preserve completed sets and user-entered values; adding a set
+// must never turn a logged set into an engine-controlled recommendation.
+const editable = { sets: [
+    { warm: true, done: true, weight: '45' },
+    { done: true, weight: '120', reps: '8', actualRIR: 1 },
+    { done: false, weight: '120', reps: '8', target: { w: '120', reps: [8, 12] } },
+    { sub: true, done: false, kind: 'drop', weight: '90' }
+] };
+const more = resizeWorkingSets(editable, 3);
+assert.equal(more.sets.length, 5, 'session-only expansion adds one working set');
+assert.deepEqual(more.sets.slice(0, 3), editable.sets.slice(0, 3), 'new sets preserve original warmups and logged working evidence');
+assert.equal(more.sets[3].added, true, 'manual work precedes the pending drop extension');
+assert.equal(more.sets[4], editable.sets[3], 'drop extension still follows the final activation set');
+assert.equal(more.sets[3].valueOwner, 'user', 'manually added work is not automatically re-prescribed');
+assert.equal(more.sets[3].auto, false);
+assert.equal(resizeWorkingSets(editable, 0), editable, 'cannot remove all ordinary working sets');
+const onlyLogged = resizeWorkingSets(editable, 1);
+assert.deepEqual(onlyLogged.sets, editable.sets.slice(0, 2),
+    'reducing to logged work removes only pending work and its orphaned drop extension');
+assert.equal(resizeWorkingSets(editable, 21), editable, 'reject unbounded session volume');
+assert.deepEqual(editable.sets[1], { done: true, weight: '120', reps: '8', actualRIR: 1 },
+    'live set-count edits must not mutate logged training evidence');
+
+const lighter = { sets: [
+    { done: true, weight: '120', reps: '8' },
+    { done: false, weight: '120', target: { w: '120' } },
+    { done: false, weight: '115', valueOwner: 'user', target: { w: '115' } },
+    { sub: true, done: false, kind: 'drop', weight: '85' }
+] };
+const beforeLight = structuredClone(lighter);
+const reducedDay = lighterPendingWorkout(lighter, load => Math.floor(load / 5) * 5, set => set.valueOwner === 'user');
+assert.equal(reducedDay.sets[0], lighter.sets[0], 'completed work cannot be quietly reduced');
+assert.equal(reducedDay.sets[1].weight, '105', 'only an explicit easier-day action changes pending prescribed load');
+assert.equal(reducedDay.sets[1].valueOwner, 'user');
+assert.equal(reducedDay.sets[2], lighter.sets[2], 'user-entered load is protected');
+assert.equal(reducedDay.sets.some(set => set.sub && !set.done), false, 'pending failure-technique sets are removed on a lighter day');
+assert.deepEqual(lighter, beforeLight, 'the original snapshot remains valid for Undo');
+const loggedExtension = { sets: [
+    { done: true, weight: '100' }, { sub: true, done: true, kind: 'myo', weight: '80' }
+] };
+const retainedExtension = resizeWorkingSets(loggedExtension, 2);
+assert.deepEqual(retainedExtension.sets.slice(0, 2), loggedExtension.sets,
+    'logged extensions remain in their original order when a new work set is added');
+assert.equal(retainedExtension.sets[2].added, true);
+console.log('PASS session edits: set-count changes and explicit easier-day loads preserve completed and manually owned evidence.');

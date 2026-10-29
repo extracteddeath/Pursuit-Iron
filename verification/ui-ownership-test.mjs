@@ -18,6 +18,7 @@ const programVolume = fs.readFileSync('modules/program-volume-surfaces.js', 'utf
 const loadWave = fs.readFileSync('modules/program-load-wave.js', 'utf8');
 const programShare = fs.readFileSync('modules/program-share-sheet.js', 'utf8');
 const exerciseOptions = fs.readFileSync('modules/program-exercise-options.js', 'utf8');
+const sheetFocus = fs.readFileSync('modules/program-sheet-focus.js', 'utf8');
 const exerciseNotes = fs.readFileSync('modules/exercise-notes.js', 'utf8');
 const trainingMaxes = fs.readFileSync('modules/program-training-maxes.js', 'utf8');
 const contextMenus = fs.readFileSync('modules/ui-menu.js', 'utf8');
@@ -108,8 +109,12 @@ assert.ok(!exerciseOptions.includes('style:') && !exerciseOptions.includes('loca
     'Exercise options own only presentation and transient confirmation');
 assert.equal((exerciseOptions.match(/export function ProgramExerciseOptions\(/g)||[]).length,1,'One exercise-options owner');
 assert.ok(app.includes('canLink: !program.config?.noSupersets && slot < day.exercises.length - 1'), 'Options obey the saved superset constraint');
-assert.ok(!exerciseOptions.includes('"data-sheet-drag": true') && exerciseOptions.includes('ref: sheetDragRef'),
-    'The options sheet consumes the existing gesture ref');
+assert.ok(!exerciseOptions.includes('"data-sheet-drag": true') &&
+    exerciseOptions.includes('useProgramSheetFocus(close, sheetDragRef)') &&
+    exerciseOptions.includes('ref: attachPanel') &&
+    sheetFocus.includes("if (typeof forwardedRef === 'function') forwardedRef(node)") &&
+    sheetFocus.includes('forwardedRef.current = node'),
+    'The options sheet forwards the existing gesture ref through its shared focus owner');
 assert.ok(app.includes('const SHEET_DRAG_BOUND = new WeakSet()') && app.includes('SHEET_DRAG_BOUND.has(el)'),
     'Shared gesture initialization follows node identity, independent of presentation flags');
 assert.ok(!programShare.includes('style:') && !programShare.includes('C.'), 'Program sharing uses the shared CSS owner');

@@ -17,6 +17,8 @@ assert.equal(app.split('style: {').length-1,1269,'B977 must retire 11 inline obj
 assert.equal(css.split('!important').length-1,2061,'No new priority overrides');
 assert.ok(!scope.includes('!important'),'New CSS must not introduce important');
 assert.ok(scope.includes('min-height:44px'),'Muscle coverage chips need accessible targets');
+assert.ok(css.includes('.wpb-day-hit-chip{\n  min-height:44px;'),
+  'Expressive theme must not override the chip target with a smaller minimum');
 assert.ok(scope.includes('max-height:88%')&&scope.includes('overflow-y:auto'),
   'Whats New panel stays scrollable with bounded height');
 assert.ok(scope.includes('prefers-reduced-motion:reduce')&&scope.includes('forced-colors:active'),

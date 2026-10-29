@@ -7303,7 +7303,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{
   display:inline-flex;align-items:center;justify-content:center;gap:7px;
   flex:0 0 auto;width:auto!important;min-width:92px!important;max-width:208px;
-  height:44px!important;min-height:44px!important;padding:0 12px!important;
+  height:48px!important;min-height:48px!important;padding:0 12px!important;
   border:1px solid var(--wpb-theme-border);border-radius:22px!important;
   background:var(--wpb-theme-card);color:var(--wpb-theme-muted);cursor:pointer;
   transition:background-color 160ms var(--e-out),border-radius 180ms var(--e-out);
@@ -7316,7 +7316,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);
 }
 .wpb-ex-nav-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-weight:700}
-.wpb-ex-nav-count{flex-shrink:0;font-size:11px;font-weight:600}
+.wpb-ex-nav-count{flex-shrink:0;font-size:.6875rem;font-weight:600}
 #root .wpb-workout .wpb-exercise-heading .wpb-progression-label{
   background:transparent!important;border-radius:8px;
   padding:0 4px!important;min-height:44px!important;
@@ -8109,8 +8109,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-working-set-control{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:14px 0;font-size:13px;color:var(--wpb-theme-muted)}
 .wpb-working-set-control>span:first-child{flex:1 1 140px;overflow-wrap:anywhere}
 .wpb-working-set-stepper{display:flex;align-items:center;gap:6px;padding:4px;border:1px solid var(--wpb-theme-border);border-radius:15px;background:var(--wpb-theme-card)}
-.wpb-working-set-stepper button,.wpb-working-set-stepper input{width:48px;height:48px;min-width:0;border:0;border-radius:11px;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);font:inherit;text-align:center;font-size:20px;font-weight:700;box-sizing:border-box}
-.wpb-working-set-stepper input{width:56px;background:transparent;appearance:textfield;-moz-appearance:textfield}
+.wpb-working-set-stepper button,.wpb-working-set-stepper input{width:48px;height:48px;min-width:0;border:0;border-radius:11px;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);font:inherit;text-align:center;font-size:1.25rem;font-weight:700;box-sizing:border-box}
+.wpb-working-set-stepper input{width:clamp(56px,4rem,88px);background:transparent;appearance:textfield;-moz-appearance:textfield}
 .wpb-working-set-stepper input::-webkit-inner-spin-button{appearance:none}
 .wpb-working-set-stepper button{cursor:pointer}.wpb-working-set-stepper button:disabled{opacity:.4;cursor:default}
 .wpb-working-set-stepper :focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}

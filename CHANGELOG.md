@@ -1,3 +1,10 @@
+## Styling readiness pass B987 — Strength detail and 1RM presentation
+
+- Consolidated fixed style declarations in estimated 1RM and lift-history strength detail panels into theme-scoped CSS, leaving only calculated and contextual values in React.
+- Increased calculator weight/reps input text to 16px to prevent mobile browser focus zoom. Preserved native numeric input selection and visible focus treatment.
+- Kept dynamic plate height, PR/plateau state, chart data, estimated 1RM formulas, and saved athlete records unchanged. Added a permanent source contract to catch regression.
+- No public deployment until the combined release checks pass.
+
 ## Build 982 — Resize-aware Workout exercise navigation
 
 - Keep the active exercise chip visible through phone rotation, split-screen resizing and exercise-label reflow, not only when navigating to another exercise.

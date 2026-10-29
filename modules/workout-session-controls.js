@@ -17,10 +17,23 @@ export function WorkoutExerciseNav({ data, exIdx, onSelect }) {
     useLayoutEffect(() => {
         const list = rail.current, active = list?.querySelector('[aria-current="step"]');
         if (!list || !active) return;
-        const a = active.getBoundingClientRect(), r = list.getBoundingClientRect();
-        // Scroll only this rail. scrollIntoView can move the workout or page too.
-        if (a.left < r.left + 4) list.scrollLeft -= r.left + 4 - a.left;
-        else if (a.right > r.right - 4) list.scrollLeft += a.right - r.right + 4;
+        // Selection changes and responsive reflow both need to reveal the
+        // current exercise, without scrolling the surrounding workout page.
+        const reveal = () => {
+            if (!list.isConnected || !active.isConnected) return;
+            const a = active.getBoundingClientRect(), r = list.getBoundingClientRect();
+            if (a.left < r.left + 4) list.scrollLeft -= r.left + 4 - a.left;
+            else if (a.right > r.right - 4) list.scrollLeft += a.right - r.right + 4;
+        };
+        reveal();
+        if (typeof ResizeObserver !== 'function') {
+            window.addEventListener('resize', reveal);
+            return () => window.removeEventListener('resize', reveal);
+        }
+        const observer = new ResizeObserver(reveal);
+        observer.observe(list);
+        observer.observe(active);
+        return () => observer.disconnect();
     }, [exIdx, data.length]);
     return _jsx("nav", { ref: rail, className: "wpb-hscroll wpb-ex-nav", "aria-label": "Workout exercises", children: data.map((row, i) => {
         const work = row.sets.filter(isWorkSet), done = work.filter(s => s.done).length;

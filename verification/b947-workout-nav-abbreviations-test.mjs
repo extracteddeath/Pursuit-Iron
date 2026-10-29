@@ -35,6 +35,16 @@ assert.match(nav, /"aria-label": `\$\{name\}/, 'screen readers get the full name
 assert.match(nav, /title: name/, 'full hover label is retained');
 assert.match(nav, /children: \[done, "\/", work.length\]/, 'working set count is preserved');
 assert.ok(!app.includes('function WorkoutExerciseNav('), 'Workout rail must have one owner');
+assert.ok(nav.includes('new ResizeObserver(reveal)') &&
+    nav.includes('observer.observe(list)') && nav.includes('observer.observe(active)') &&
+    nav.includes('observer.disconnect()'),
+    'selected exercise rail observes reflow and cleans up on navigation/unmount');
+assert.ok(nav.includes("window.addEventListener('resize', reveal)") &&
+    nav.includes("window.removeEventListener('resize', reveal)"),
+    'responsive fallback removes listeners on unmount');
+assert.ok(!nav.includes('.scrollIntoView('),
+    'never scroll the workout page while revealing a selected chip');
+
 const workout = app.slice(app.indexOf('function WorkoutSession('));
 assert.ok(workout.includes('ex.name'), 'workout title still displays the original exercise name');
 assert.equal((owner.match(/workoutNavLabel\(name\)/g) || []).length, 1,

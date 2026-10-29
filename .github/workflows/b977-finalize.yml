@@ -1,0 +1,39 @@
+name: B977 temporary release finalizer
+on:
+  push:
+    branches: [refactor/b977-shared-chips-dialogs-metadata]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Finalize B977 and retire temporary workflow
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const file='RELEASE_MANIFEST.json';
+          const manifest=JSON.parse(fs.readFileSync(file,'utf8'));
+          if(manifest.build!==976)throw new Error('Expected certified B976 base');
+          manifest.uiMilestone='Build 976 · Shared chips and dialog presentation';
+          fs.writeFileSync(file,JSON.stringify(manifest,null,2)+'\n');
+          const log='CHANGELOG.md';
+          fs.writeFileSync(log,'## Build 977 — Shared chip and dialog presentation\n\n- Move 11 static inline presentation objects into theme CSS for program muscle-coverage chips, chart empty states, settings and version dialogs, and search icons.\n- Muscle-coverage chips now have at least 44px hit targets, with paired-theme Chromium verification.\n- Keep What\x27s New scrolling bounded, support reduced motion and forced colors, and retain generation cancel/Escape controls.\n- No changes to engine 0.65.9, progression, logging, storage or history.\n\n'+fs.readFileSync(log,'utf8'));
+          NODE
+          node scripts/finalize-release.mjs --next-build
+          node scripts/verify-release.mjs
+          node scripts/verify-engine-contracts.mjs integration
+          rm .github/workflows/b977-finalize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "B977: certify shared chip and dialog presentation"
+          git push origin HEAD:refactor/b977-shared-chips-dialogs-metadata

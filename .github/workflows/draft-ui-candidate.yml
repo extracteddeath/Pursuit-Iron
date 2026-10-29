@@ -53,3 +53,54 @@ jobs:
         env:
           CHROME_BIN: /usr/bin/google-chrome
         run: node scripts/verify-browser-contracts.mjs ${{ matrix.shard }}
+
+  stage-monotonic-build:
+    # A single release identity is generated ONLY after all seven Chromium
+    # shards and the full integration source group pass on the same PR head.
+    needs: [source-contracts, ui-browser]
+    if: ${{ github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Stage one monotonic release only after every UI gate passes
+        shell: bash
+        env:
+          RELEASE_BASE: ${{ github.event.pull_request.base.sha }}
+          TARGET_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          base_build="$(git show "${RELEASE_BASE}:RELEASE_MANIFEST.json" | node -e 'let input="";process.stdin.on("data",c=>input+=c);process.stdin.on("end",()=>console.log(JSON.parse(input).build))')"
+          current_build="$(node -p 'require("./RELEASE_MANIFEST.json").build')"
+          if [[ "${current_build}" == "${base_build}" ]]; then
+            node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const file = 'RELEASE_MANIFEST.json';
+          const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+          manifest.uiMilestone = `Build ${manifest.build} · Program, Home and Workout M3 consolidation`;
+          fs.writeFileSync(file, JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+            node scripts/finalize-release.mjs --next-build
+            PURSUIT_RELEASE_BASE="${RELEASE_BASE}" node scripts/verify-release.mjs
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add RELEASE_MANIFEST.json BUILD_PROFILE.json modules/App.js index.html sw.js
+            git diff --cached --quiet && { echo "Release finalizer did not generate identity changes"; exit 1; }
+            git commit -m "Build $((base_build + 1)): finalize consolidated M3 UI, runtime and offline identity"
+            git push origin "HEAD:refs/heads/${TARGET_BRANCH}"
+          elif [[ "${current_build}" == "$((base_build + 1))" ]]; then
+            PURSUIT_RELEASE_BASE="${RELEASE_BASE}" node scripts/verify-release.mjs
+            echo "Candidate already finalized at build ${current_build}; no additional build increment."
+          else
+            echo "Refusing to finalize: base=${base_build}, candidate=${current_build}" >&2
+            exit 1
+          fi

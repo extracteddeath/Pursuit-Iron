@@ -83,6 +83,12 @@ try {
   await page.click('#open-exercise');await page.waitForSelector('.wpb-exercise-options-sheet');
   await page.click('[data-exercise-action="remove"]');
   await page.waitForSelector('.wpb-exercise-options-confirm');
+  await page.$eval('.wpb-exercise-options-backdrop',el=>el.click());
+  await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-options-confirm'));
+  assert.ok(await page.$('.wpb-exercise-options-sheet'),'backdrop first cancels a destructive confirmation');
+  await page.waitForFunction(()=>document.activeElement?.getAttribute('data-exercise-action')==='remove');
+  await page.click('[data-exercise-action="remove"]');
+  await page.waitForSelector('.wpb-exercise-options-confirm');
   await page.keyboard.press('Escape');
   await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-options-confirm'));
   assert.ok(await page.$('.wpb-exercise-options-sheet'),'first Escape cancels confirmation, not entire sheet');

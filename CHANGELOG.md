@@ -1,3 +1,13 @@
+## Build 989 — Program, Home and Workout Material 3 consolidation (release candidate)
+
+- Consolidated Program Save Review, History correction, training-max, Program Settings and Session dialogs on a shared keyboard/focus owner. Escape, Tab containment, return focus and destructive-confirmation cancellation work consistently across sheets.
+- Fixed a focus-loss bug when clearing the Program schedule, normalized stale day assignments, and made Progression search/results and muscle-volume meters accessible.
+- Improved responsive behavior at 320px with 200% text, modern and older WebView disclosure resizing, Program sheet keyboard viewport sizing, and Home's unique outline disclosure IDs.
+- Protected Workout navigation and set-count controls: 48px exercise rail targets, no page-level horizontal scroll, responsive input sizing, and safe integer stepping without overwriting manually typed values.
+- Corrected root typography specificity so component font scales are not suppressed by the global reset, including Plan review and Home summary labels.
+- Consolidated redundant M3 styling rules without introducing override layers: 9 adjacent duplicate declaration blocks and 3 adjacent forced-colors media blocks merged; 18 fewer `!important` occurrences than Build 988, with a smaller stylesheet.
+- Added source and Chromium regressions for dialog semantics, responsive typography, Program schedule, Plan review, Home disclosures, Workout controls and accessibility. Seven browser shards and engine/release certification remain the shipping gates.
+
 ## Build 988 — Workout completion layout and recovery feedback polish
 
 - Replaced 46 finished-workout inline styles with 40 M3 theme-owned CSS roles for stats, PRs, next-session preview, recovery feedback, and save/share actions.

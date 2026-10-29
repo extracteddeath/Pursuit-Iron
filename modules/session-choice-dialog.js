@@ -1,54 +1,19 @@
 // Shared accessible session dialog. Training state stays in feature owners.
+// Program sheets and session dialogs use a single focus/keyboard behavior owner.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { useRef, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
-
-const focusable = 'button:not(:disabled),select:not(:disabled),textarea:not(:disabled),input:not(:disabled),summary,a[href]';
+import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 export function SessionChoiceDialog({ title, onClose, children, dismissible = true, className = "", footer = null, panelRef }) {
-    const dialogRef = useRef(null);
-    const attachPanel = useCallback(node => { dialogRef.current = node; panelRef?.(node); }, [panelRef]);
-    useEffect(() => {
-        const previous = document.activeElement;
-        dialogRef.current?.focus({ preventScroll: true });
-        return () => { if (previous?.isConnected) previous.focus?.({ preventScroll: true }); };
-    }, []);
-    const onKeyDown = ev => {
-        if (ev.key === 'Escape') {
-            // Even protected sheets consume Escape, so a parent workout cannot
-            // interpret it as a shortcut or dismiss an underlying surface.
-            ev.preventDefault(); ev.stopPropagation();
-            if (dismissible) onClose();
-            return;
-        }
-        if (ev.key !== 'Tab') return;
-        const panel = dialogRef.current;
-        if (!panel) return;
-        // Match the established journal/wizard tab order: generic tabindex elements
-        // are not action controls, and including them after a <summary> lets Tab escape.
-        const items = [...panel.querySelectorAll(focusable)].filter(el =>
-            el.getClientRects().length &&
-            el.getAttribute('tabindex') !== '-1' &&
-            el.getAttribute('aria-disabled') !== 'true' &&
-            !el.closest('[inert],[aria-hidden="true"]') &&
-            getComputedStyle(el).visibility !== 'hidden' &&
-            (el.tagName === 'SUMMARY' || !el.closest('details:not([open])')));
-        const first = items[0], last = items.at(-1), active = document.activeElement;
-        const activeIsEligible = items.includes(active);
-        if (!first) { ev.preventDefault(); panel.focus({ preventScroll: true }); }
-        else if (ev.shiftKey && (active === first || active === panel || !activeIsEligible)) {
-            ev.preventDefault(); last.focus({ preventScroll: true });
-        } else if (!ev.shiftKey && (active === last || active === panel || !activeIsEligible)) {
-            ev.preventDefault(); first.focus({ preventScroll: true });
-        }
-    };
+    // Protected sheets still consume Escape to prevent background workout shortcuts.
+    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, panelRef, { dismissible });
     return _jsx("div", {
         className: "wpb-backdrop wpb-session-dialog-backdrop",
         onClick: ev => { if (dismissible && ev.target === ev.currentTarget) onClose(); },
         children: _jsxs("section", {
             ref: attachPanel, tabIndex: -1, role: "dialog", "aria-modal": "true", "aria-label": title,
             className: "wpb-session-dialog wpb-scroll " + className,
-            onClick: ev => ev.stopPropagation(), onKeyDown,
+            onClick: ev => ev.stopPropagation(), onKeyDown: onPanelKeyDown,
             children: [
                 _jsxs("div", { className: "wpb-session-dialog-heading", children: [
                     _jsx("h2", { children: title }),

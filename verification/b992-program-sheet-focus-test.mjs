@@ -4,10 +4,14 @@ const focus=fs.readFileSync('modules/program-sheet-focus.js','utf8');
 const settings=fs.readFileSync('modules/program-settings-sheet.js','utf8');
 const share=fs.readFileSync('modules/program-share-sheet.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
-for(const [name,source] of [['Settings',settings],['Share',share]]){
+const schedule=fs.readFileSync('modules/program-schedule-sheet.js','utf8');
+const exercise=fs.readFileSync('modules/program-exercise-options.js','utf8');
+const reference=fs.readFileSync('modules/program-reference-surfaces.js','utf8');
+const maxes=fs.readFileSync('modules/program-training-maxes.js','utf8');
+for(const [name,source] of [['Settings',settings],['Share',share],['Schedule',schedule],['Exercise options',exercise],['Training maxes',maxes],['Progression and reference',reference]]){
  assert.ok(source.includes("import { useProgramSheetFocus } from './program-sheet-focus.js';"),name+' uses shared focus hook');
  assert.ok(source.includes('useProgramSheetFocus(onClose, sheetDragRef)'),name+' preserves drag owner');
- assert.ok(source.includes('ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown'),name+' traps keyboard on focusable sheet');
+ assert.ok(source.includes('ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown') || source.includes('tabIndex: -1, ref: attachPanel, onKeyDown: onPanelKeyDown'),name+' traps keyboard on focusable sheet');
  assert.ok(source.includes('event.target === event.currentTarget'),name+' ignores inside clicks on backdrop');
 }
 for(const term of ['useEffect','useCallback','getClientRects','details:not([open])','aria-disabled','previous?.isConnected','event.stopPropagation()', "event.key === 'Escape'"]){

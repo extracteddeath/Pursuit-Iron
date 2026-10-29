@@ -2275,13 +2275,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
-/* MATERIAL 3 EXPRESSIVE R11 — DARK SECONDARY-SCREEN TONAL ROLES
-   The R10 screenshot correction belongs to the entire app, not just Home.
-   Plan/Progress/Profile/Library should carry hierarchy in type, containment,
-   shape and the selected item—not saturated pink coatings across the page.
-   Theme-specific light appearance is intentionally left on the R7/R8/R9
-   baseline. Dark roles are opaque theme-derived neutrals and restrained
-   primary containers; no gradients or hard-coded brand hue. */
+/* R11: secondary screens share M3 tonal hierarchy in dark and light modes. */
 
 /* PLAN. A current week and next session are distinct, but the background
    doesn't shout in pink. The existing 4-way animated view selector and
@@ -4126,13 +4120,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 
-/* MATERIAL 3 EXPRESSIVE R47 — PREMIUM TOUCH TARGET & CONTROL RHYTHM
-   The page-level polish (R41–R46) is complete. Google's Android minimum
-   comfortable target is 48dp. Primary selection instruments must therefore
-   have real 48px button boxes, rather than visually large 52px rails with
-   only 40/44px interactive interiors. Scope to navigation/filters/details
-   and avoid the dense logging grid, rest tools, target/previous and steppers.
-   Use containment and shape to express hierarchy, not extra gradients. */
+/* R47: usable 48px touch controls and consistent expressive control rhythm. */
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-panes,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-grouping,
@@ -8154,11 +8142,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* M363 single-owner Program save-review surface. Fixed presentation uses live theme roles,
    not JSX styles or another priority override layer. Dialog/controls keep original events. */
 #root .wpb .wpb-save-review-backdrop{position:fixed;inset:0;z-index:100;padding:16px;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center}
-#root .wpb .wpb-save-review-panel{width:100%;max-width:440px;max-height:85dvh;display:flex;flex-direction:column;overflow:hidden;padding:18px;border-radius:20px;background:var(--wpb-theme-bg-tint);border:1px solid var(--wpb-theme-border)}
+#root .wpb .wpb-save-review-panel{width:100%;max-width:440px;max-height:min(85dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px));display:flex;flex-direction:column;overflow:hidden;padding:18px;border-radius:20px;background:var(--wpb-theme-bg-tint);border:1px solid var(--wpb-theme-border)}
 #root .wpb .wpb-save-review-heading{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:12px}
 #root .wpb .wpb-save-review-title{font-size:1.1875rem;margin:0}
 #root .wpb .wpb-save-review-close{width:48px;height:48px;min-width:48px;min-height:48px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-#root .wpb .wpb-save-review-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#root .wpb .wpb-save-review-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 #root .wpb .wpb-save-review-intro{font-size:0.8125rem;color:var(--wpb-theme-muted);line-height:1.5}
 #root .wpb .wpb-save-review-scope{border:1px solid var(--wpb-theme-border);border-radius:12px;padding:12px;margin:12px 0;min-width:0}
 #root .wpb .wpb-save-review-legend{font-weight:700;font-size:0.8125rem}
@@ -8633,6 +8621,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-progression-search{box-sizing:border-box;width:100%;min-width:0;min-height:48px;margin-bottom:8px;padding:10px 12px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);font-size:.875rem}
 #root .wpb .wpb-progression-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 #root .wpb .wpb-progression-filter{min-width:0;padding:8px 11px;font-size:.8125rem;white-space:normal;overflow-wrap:anywhere}
+#root .wpb .wpb-progression-result-count{margin:0 0 8px;font-size:.75rem;line-height:1.45;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-progression-pager{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 #root .wpb .wpb-progression-page{display:grid;place-items:center;flex-shrink:0;width:48px;min-height:48px;padding:0;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);cursor:pointer}
 #root .wpb .wpb-progression-page:disabled{opacity:.4;cursor:default}

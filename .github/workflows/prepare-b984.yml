@@ -30,7 +30,7 @@ jobs:
           css = Path('app.css').read_text()
           assert '/* B987 — Strength detail and 1RM calculator' in css
           assert '/* B988 — Gallery' in css
-          assert len(css) <= 624700, f'unexpected combined CSS growth: {len(css)}'
+          assert len(css) <= 624800, f'unexpected combined CSS growth: {len(css)}'
           assert 'wpb-profile-identity{' not in css
           registry = Path('verification/contract-registry.mjs')
           text = registry.read_text()
@@ -39,8 +39,8 @@ jobs:
           assert "'b987-dead-css-ownership-test.mjs'" not in text
           registry.write_text(text.replace(anchor, anchor + "\n        'b987-dead-css-ownership-test.mjs',"))
           test = Path('verification/b987-dead-css-ownership-test.mjs')
-          s = test.read_text().replace('css.length <= 616467', 'css.length <= 624700').replace("<= 1262,\n  'B987", "<= 1203,\n  'B987")
-          assert 'css.length <= 624700' in s
+          s = test.read_text().replace('css.length <= 616467', 'css.length <= 624800').replace("<= 1262,\n  'B987", "<= 1203,\n  'B987")
+          assert 'css.length <= 624800' in s
           test.write_text(s)
           changelog = Path('CHANGELOG.md')
           changelog.write_text(

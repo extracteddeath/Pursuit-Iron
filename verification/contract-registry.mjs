@@ -88,6 +88,7 @@ export const contractGroups = Object.freeze({
         'b990-dead-css-ownership-test.mjs',
         'b991-workout-program-header-test.mjs',
         'b992-program-sheet-focus-test.mjs',
+        'b993-workout-info-presentation-test.mjs',
         'b983-cascade-debt-test.mjs',
         'b964-scroll-layout-owner-test.mjs',
         'b965-workout-shell-layout-owner-test.mjs',
@@ -175,6 +176,7 @@ export const browserShards = Object.freeze({
     workout: Object.freeze([
         'shorter-session-browser-test.mjs',
         'b896-expressive-workout-browser-test.mjs',
+        'b993-workout-info-browser-test.mjs',
         'b889-injury-journal-browser-test.mjs',
         'b886-set-number-options-browser-test.mjs',
         'b825-logging-layout-browser-test.mjs',

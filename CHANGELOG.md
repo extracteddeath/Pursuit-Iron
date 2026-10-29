@@ -1,3 +1,11 @@
+## Build 987 candidate — Workout exercise-information presentation consolidation
+
+- Removed 45 inline style objects from the Workout Info sheet, giving the exercise detail a single theme-token CSS owner for stats, coaching explanation, records, trends, technique cues and setup guidance.
+- Added native dialog semantics, keyboard Tab containment, Escape dismissal and focus return to the originating Info action.
+- Reworked the sheet to fit the visual viewport and safe-area insets; kept scrolling inside it and made rest adjusters 48px targets and machine weight choices at least 44px.
+- Preserved dynamic chart geometry, rep and load calculations, active weight-step choice, notes, PR records, and existing callbacks. No engine or persistence-schema changes.
+- Added static and Chromium ownership/responsiveness verification. Source CSS size budget updated to track intentional CSS migration, with no new !important overrides.
+
 ## Build 986 — Consolidated Program sheet accessibility and styling
 
 - Migrated seven Program bottom-sheet surfaces (Settings, Share, Weekly Schedule, Exercise Actions, Progression Choice, Reference, Training Maxes) to a reusable keyboard-focus owner; previously several had no containment for Tab/Escape or reliable focus restoration.

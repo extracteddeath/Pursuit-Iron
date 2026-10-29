@@ -2772,11 +2772,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   gap:10px!important;
   padding-top:calc(env(safe-area-inset-top) + 9px)!important;
   padding-bottom:10px!important;
-  border-bottom:1px solid var(--pi-r11-edge)!important;
-  border-radius:0 0 21px 21px!important;
+
+
   background-color:var(--wpb-focus-bg,#110c15)!important;
-  background-image:none!important;
-  box-shadow:none!important;
+
+
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-detail-header>div:last-child{
@@ -2797,8 +2797,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-figure-wrap{
   margin-bottom:9px!important;
-  border-radius:23px!important;
-  background-image:none!important;
+
+
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-meta{
@@ -2841,7 +2841,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-chart-surface{
-  max-width:100%!important;
+
   overflow-x:clip;
 }
 /* Shared sheet chrome should look and behave like a tangible surface.

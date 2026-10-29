@@ -17,7 +17,8 @@ const numberValue = text => {
 export function TrainingMaxSummary({ scheme, count, total, onOpen }) {
     const metadata = PCT_SCHEMES[scheme];
     return _jsxs('button', { type: 'button', className: 'pressable wpb-training-max-summary',
-        'data-incomplete': count < total, 'aria-label': 'Edit training maxes', onClick: onOpen, children: [
+        'data-incomplete': count < total,
+        'aria-label': `Training maxes, ${count} of ${total} main lifts set. Edit training maxes`, onClick: onOpen, children: [
             _jsx(Dumbbell, { size: 18, 'aria-hidden': true }),
             _jsxs('span', { className: 'wpb-training-max-summary-copy', children: [
                 _jsxs('span', { className: 'wpb-training-max-summary-title', children: ['Training maxes · ', metadata?.name] }),
@@ -89,10 +90,13 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
                                 _jsx('label', { htmlFor: `${inputId}-1rm`, className: 'wpb-training-max-label', children: `Recent one-rep max (${unit})` }),
                                 _jsx('input', { id: `${inputId}-1rm`, key: id, autoFocus: true, className: 'mono wpb-training-max-input',
                                     inputMode: 'decimal', 'aria-label': `One-rep max for ${ex.name} (${unit})`,
-                                    value: conversion.value, onFocus: selectNumericInput, onClick: selectNumericInput,
+                                    value: conversion.value, 'aria-invalid': source == null || (source > 0 && !canConvert) || undefined,
+                                    'aria-describedby': `${inputId}-1rm-feedback`,
+                                    onFocus: selectNumericInput, onClick: selectNumericInput,
                                     onChange: event => setConversion({ id, value: event.target.value }),
                                     onKeyDown: event => { if (event.key === 'Enter') { event.preventDefault(); useConversion(); } } }),
-                                _jsx('p', { className: 'mono wpb-training-max-preview', children: canConvert
+                                _jsx('p', { id: `${inputId}-1rm-feedback`, role: 'status', 'aria-live': 'polite',
+                                    className: 'mono wpb-training-max-preview', children: canConvert
                                     ? `90% → training max ${calculated} ${unit}` : 'Enter a positive one-rep max that rounds to a positive training max.' }),
                                 _jsxs('div', { className: 'wpb-training-max-conversion-actions', children: [
                                     _jsx(UiAction, { variant: 'tonal', disabled: !canConvert, onClick: useConversion, children: 'Use this max' }),

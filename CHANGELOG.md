@@ -1,3 +1,11 @@
+## Build 979 — Workout rest and set presentation consolidation
+
+- Retire seven inline-style objects from the real Workout logger: rest buttons, rest card and ring, target/load references, set heading, target reps and technique hint.
+- Centralize those theme-aware elements in CSS without additional `!important` declarations; rest status now uses declarative paused/finishing flags rather than a per-tick inline border.
+- Normalize rest-button hit targets to 48 px in focus and standard modes; preserve pause, add/reduce, restart and skip callbacks, progress rings and workout logging.
+- Extend real-browser workout regression checks for rest control geometry and keyboard/contrast ownership, and add a source-level style budget gate.
+- Engine stays 0.65.9. No change to training prescriptions, persisted sessions, PR classification or program data.
+
 ## Build 978 — Workout input and exercise rail ownership
 
 - Extract the workout exercise navigation rail, working-set count editor, session notes editor, and shared numeric-field selection helper from App into one presentation-only module.

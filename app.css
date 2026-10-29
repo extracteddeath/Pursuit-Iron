@@ -2473,8 +2473,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:ButtonText!important;
     border-color:ButtonText!important;
   }
-}
-@media(forced-colors:active){
+
+
   #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile
     :is(.wpb-profile-hero,.wpb-profile-stat,.wpb-profile-strength,.wpb-profile-next-strength){
     background-color:Canvas!important;
@@ -3810,8 +3810,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-theme-option-swatch{width:var(--pi-space-6);height:var(--pi-space-6);border-radius:50%}
 .wpb-theme-option-label{max-width:100%;overflow-wrap:anywhere}
 @media(prefers-reduced-motion:reduce){.wpb-theme-chevron{transition:none}}
-@media(forced-colors:active){.wpb .wpb-theme-picker,.wpb .wpb-theme-options-body,.wpb .wpb-theme-option{background:Canvas;color:CanvasText;border-color:CanvasText}.wpb .wpb-theme-option[aria-pressed="true"]{background:Highlight;color:HighlightText;border-color:Highlight}}
-@media(forced-colors:active){
+@media(forced-colors:active){.wpb .wpb-theme-picker,.wpb .wpb-theme-options-body,.wpb .wpb-theme-option{background:Canvas;color:CanvasText;border-color:CanvasText}.wpb .wpb-theme-option[aria-pressed="true"]{background:Highlight;color:HighlightText;border-color:Highlight}
+
   #root[data-pi-motion="expressive"] .wpb-settings :is(.wpb-settings-card,.wpb-settings-jump-control,.wpb-segmented){
     background-color:Canvas!important;
     color:CanvasText!important;
@@ -9143,9 +9143,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-program-edit-scope{margin-block:var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);padding:0 var(--pi-space-3);color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.5;}
 .wpb-program-edit-scope summary{min-height:48px;display:list-item;align-content:center;cursor:pointer;font-weight:650;color:var(--pi-color-on-control);}
 .wpb-program-edit-scope p{margin:0 0 var(--pi-space-3);overflow-wrap:anywhere;}
-@media(forced-colors:active){.wpb-program-cycle-link,.wpb-program-edit-scope{border-color:CanvasText;background:Canvas;color:CanvasText;}}
-
-@media(forced-colors:active){.wpb-program-name{color:ButtonText}.wpb-program-saved-status{color:CanvasText}}
+@media(forced-colors:active){.wpb-program-cycle-link,.wpb-program-edit-scope{border-color:CanvasText;background:Canvas;color:CanvasText;}
+.wpb-program-name{color:ButtonText}.wpb-program-saved-status{color:CanvasText}}
 
 
 /* M297: primary Progress sections and Profile's integrated identity card. */

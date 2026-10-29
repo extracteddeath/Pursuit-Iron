@@ -8,5 +8,6 @@ for(const cls of ['wpb-b973-set-sheet','wpb-b973-set-type','wpb-b973-set-locked'
 for(const required of ['setTechInfo(open ? null : key)','changeSessionSetType(ei, si, opt.id)','setCoachExpand(true)','setCoachExpand(false)','"aria-pressed": currentType === opt.id'])assert.ok(p.includes(required)||w.includes(required),required);
 assert.ok((app.match(/style: \{/g)||[]).length<=1308);
 assert.equal((css.match(/!important/g)||[]).length,2061);
+assert.ok(w.includes('children: ["Based on ", f.evidence]'),'Coach evidence copy must remain syntactically complete');
 assert.ok(w.includes('className: "pressable wpb-b973-coach-collapsed"')&&w.includes('className: "pressable wpb-b973-coach-toggle"'),'Coach disclosure keeps existing pressable control semantics');
 console.log('PASS B973: Program exercise and workout set-panel ownership');

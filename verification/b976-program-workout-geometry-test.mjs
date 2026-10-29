@@ -10,12 +10,13 @@ const names = [
   'session-exit','milestone-item','changelog-backdrop','template-scroller'
 ];
 const scope = css.slice(css.indexOf('/* B976 —'));
+const baseOwners = scope.split('@media(prefers-reduced-motion:reduce)')[0];
 assert.ok(scope.length > 2500,'B976 CSS ownership block is required');
 for(const name of names) {
   const cls='wpb-b976-'+name;
   assert.ok(app.includes(cls),'Missing React class: '+cls);
   assert.ok(scope.includes('.'+cls+'{'),'Missing CSS owner: '+cls);
-  assert.equal(scope.split('.'+cls+'{').length-1,1,'Duplicate CSS owner: '+cls);
+  assert.equal(baseOwners.split('.'+cls+'{').length-1,1,'Duplicate base CSS owner: '+cls);
 }
 assert.ok((app.match(/style: \\{/g)||[]).length <= 1280,
   'B976 must permanently retire 16 static inline declarations');

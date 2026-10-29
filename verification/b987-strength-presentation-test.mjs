@@ -5,7 +5,7 @@ import fs from 'node:fs';
 // Keep numeric plate height and outcome colours dynamic and accessible.
 const app=fs.readFileSync('modules/App.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
-const progress=app.slice(app.indexOf('function ProgressDetail('),app.indexOf('function OneRepMaxCalc('));
+const progress=app.slice(app.indexOf('function ProgressDetail('),app.indexOf('function RecoveryTrendCard('));
 const calc=app.slice(app.indexOf('function OneRepMaxCalc('),app.indexOf('// In-app diagnostics:'));
 assert.ok(progress.length>3500&&calc.length>2000,'Both strength panels must remain present');
 for(const name of ['rm-card','rm-field-label','rm-input','rm-summary','rm-plate','rm-load','rm-explainer',
@@ -26,6 +26,6 @@ assert.ok(css.includes('.wpb-rm-input{')&&css.includes('font-size:16px'),
 assert.ok(progress.includes('wpb-strength-detail-meter--on')&&
  progress.includes('x.e1rm === s.best ? "mono wpb-strength-detail-chip'),
  'Strength-level and best-set conditional states retain their live semantics');
-assert.ok((app.match(/style: \\{/g)||[]).length<=1224,
+assert.ok((app.match(/style: \\{/g)||[]).length<=1203,
  'Retired static presentation styles cannot return');
 console.log('PASS B987 strength details: '+38+' inline presentation owners migrated, responsive input sizing and dynamic calculations preserved.');

@@ -1,3 +1,10 @@
+## B988 — Shared-program Gallery presentation consolidation
+
+- Moved 22 gallery inline presentation styles into theme-aware CSS, preserving filtering, retry and import logic.
+- Added aria-pressed to filter chips and 44px/48px minimum touch targets to choices and import actions.
+- Gallery now uses explicit selected, error, success and disabled CSS states without inline priority overrides.
+- Bundled with B987 to release in one combined build.
+
 ## Styling readiness pass B987 — Strength detail and 1RM presentation
 
 - Consolidated fixed style declarations in estimated 1RM and lift-history strength detail panels into theme-scoped CSS, leaving only calculated and contextual values in React.

@@ -6,6 +6,6 @@ const w=app.slice(app.indexOf('function WorkoutSession('),app.indexOf('function 
 for(const cls of ['wpb-b973-amp-panel','wpb-b973-amp-toggle','wpb-b973-day-note','wpb-b973-day-preview'])assert.ok(p.includes(cls)&&css.includes('.'+cls+'{'),cls);
 for(const cls of ['wpb-b973-set-sheet','wpb-b973-set-type','wpb-b973-set-locked','wpb-b973-coach-collapsed','wpb-b973-coach-open'])assert.ok(w.includes(cls)&&css.includes('.'+cls+'{'),cls);
 for(const required of ['setTechInfo(open ? null : key)','changeSessionSetType(ei, si, opt.id)','setCoachExpand(true)','setCoachExpand(false)','"aria-pressed": currentType === opt.id'])assert.ok(p.includes(required)||w.includes(required),required);
-assert.ok((app.match(/style: \\{/g)||[]).length<=1308);
+assert.ok((app.match(/style: \{/g)||[]).length<=1308);
 assert.equal((css.match(/!important/g)||[]).length,2061);
 console.log('PASS B973: Program exercise and workout set-panel ownership');

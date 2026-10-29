@@ -4739,7 +4739,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   letter-spacing:.025em!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-hit-chip{
-  min-height:32px;
+  min-height:44px;
   padding:5px 10px!important;
   background:var(--pi-color-control)!important;
   color:var(--pi-color-on-control)!important;

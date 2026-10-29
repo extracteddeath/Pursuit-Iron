@@ -610,7 +610,7 @@ async function verifyBrowseMemory(browser,theme,width){
     // Design spec v1, 6: chips and flag filters are primary repeated touch
     // actions. Measure the rendered targets, including responsive overrides,
     // rather than trusting the lower-specificity base CSS declaration.
-    const libraryTargets=await page.$eval('.wpb-library .wpb-filter-chip, .wpb-library .wpb-library-flag',controls=>
+    const libraryTargets=await page.$$eval('.wpb-library .wpb-filter-chip, .wpb-library .wpb-library-flag',controls=>
       controls.filter(el=>el.getClientRects().length).map(el=>({
         label:el.textContent.trim(),height:el.getBoundingClientRect().height,
         width:el.getBoundingClientRect().width

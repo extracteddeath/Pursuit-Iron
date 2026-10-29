@@ -1,3 +1,10 @@
+## Build 976 — Program and workout geometry consolidation
+
+- Retire 16 static JSX layout objects across program scheduling, exercise-swap search/results, plan restore, workout trace, previous-set controls, coaching, injury and history panels.
+- Use stable single-owner CSS for 44px schedule and workout trace actions, 48px workout exit, safe search scrolling, reduced motion and forced colors.
+- Keep engine 0.65.9, workout logging, progression, history, saved plan data and callback behavior unchanged.
+- Protect this cleanup with registered integration source contract and existing seven real-browser shards.
+
 ## Build 975 — Live workout and persistent update polish
 
 - Move eight minimized-workout, PWA update and offline status inline styles into shared theme CSS; preserve all workout and restart callbacks.

@@ -80,6 +80,7 @@ export const contractGroups = Object.freeze({
         'b972-context-owners-test.mjs',
         'b973-panel-owner-test.mjs',
         'b975-live-notice-owner-test.mjs',
+        'b976-program-workout-geometry-test.mjs',
         'b964-scroll-layout-owner-test.mjs',
         'b965-workout-shell-layout-owner-test.mjs',
         'b910-settings-wizard-polish-test.mjs',

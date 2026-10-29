@@ -9829,3 +9829,82 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){
   #root .wpb .wpb-b975-offline-status{animation:none;}
 }
+
+/* B976 — Program schedule, exercise swap and workout detail controls have
+   explicit CSS owners. Retire static JSX geometry without changing actions,
+   engine data, tab/navigation state or theme-derived dynamic values. */
+#root .wpb-b976-schedule-trigger{
+  display:flex;width:100%;gap:4px;margin-bottom:12px;min-height:44px;
+  padding:0;border:0;background:transparent;cursor:pointer;
+}
+#root .wpb-b976-schedule-day{
+  flex:1;min-width:0;text-align:center;padding:7px 2px 6px;
+  border:1px solid transparent;border-radius:8px;
+}
+#root .wpb-b976-reorder-backdrop{
+  position:fixed;inset:0;z-index:76;display:flex;align-items:flex-end;
+  background:rgba(0,0,0,.6);animation:fadeIn .18s ease both;
+}
+#root .wpb-b976-swap-search-icon{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;
+}
+#root .wpb-b976-swap-results{
+  flex:1;min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;touch-action:pan-y;padding-right:2px;
+}
+#root .wpb-b976-swap-chevron{justify-self:end;}
+#root .wpb-b976-restore-backdrop{
+  position:absolute;inset:0;z-index:120;display:flex;
+  align-items:flex-end;justify-content:center;background:rgba(0,0,0,.68);
+  padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom));
+}
+#root .wpb-b976-trace-trigger{
+  display:flex;align-items:flex-start;gap:8px;width:100%;min-height:44px;
+  padding:9px 11px;border:0;background:transparent;text-align:left;cursor:pointer;
+}
+#root .wpb-b976-previous-set-action{
+  display:block;padding:0;border:0;background:transparent;text-align:left;cursor:pointer;
+}
+#root .wpb-b976-coach-chevron{transform:rotate(180deg);}
+#root .wpb-b976-injury-backdrop{
+  position:fixed;inset:0;z-index:90;display:flex;
+  align-items:flex-end;background:rgba(0,0,0,.65);
+}
+#root .wpb-b976-pr-value{
+  margin-top:1px;font-size:13px;font-weight:600;opacity:.85;
+}
+#root .wpb-b976-session-exit{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:48px;
+  margin-top:2px;padding:13px 8px;border:0;background:transparent;
+  text-align:left;cursor:pointer;
+}
+#root .wpb-b976-milestone-item{
+  flex-shrink:0;width:60px;min-height:60px;padding:0;border:0;
+  background:transparent;text-align:center;cursor:pointer;
+}
+#root .wpb-b976-changelog-backdrop{
+  position:fixed;inset:0;z-index:90;display:flex;
+  align-items:flex-end;background:#00000088;
+}
+#root .wpb-b976-template-scroller{
+  display:flex;flex:1;min-width:0;gap:6px;
+  overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;
+}
+@media(prefers-reduced-motion:reduce){
+  #root .wpb-b976-reorder-backdrop{animation:none;}
+}
+@media(forced-colors:active){
+  #root .wpb-b976-reorder-backdrop,
+  #root .wpb-b976-restore-backdrop,
+  #root .wpb-b976-injury-backdrop,
+  #root .wpb-b976-changelog-backdrop{
+    background:Canvas;color:CanvasText;
+  }
+  #root .wpb-b976-schedule-trigger:focus-visible,
+  #root .wpb-b976-trace-trigger:focus-visible,
+  #root .wpb-b976-previous-set-action:focus-visible,
+  #root .wpb-b976-session-exit:focus-visible,
+  #root .wpb-b976-milestone-item:focus-visible{
+    outline:2px solid Highlight;outline-offset:2px;
+  }
+}

@@ -137,7 +137,10 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
                 ] }),
                 _jsxs("div", { className: "wpb-program-settings-footer", children: [
                     _jsx("button", { type: "button", onClick: onClose, className: "pressable wpb-program-settings-cancel", children: "Cancel" }),
-                    _jsx("button", { type: "button", "aria-label": "Save program settings", onClick: applyCfgDraft, disabled: !canApply, className: "pressable wpb-program-settings-save", children: cfgDirty
+                    _jsx("button", { type: "button", "aria-label": "Save program settings",
+                        "aria-describedby": settingsIssues.length ? "program-settings-issues"
+                            : (!validWeeks && !cycleLengthOwned ? "program-weeks-error" : undefined),
+                        onClick: applyCfgDraft, disabled: !canApply, className: "pressable wpb-program-settings-save", children: cfgDirty
                         ? _jsxs('span', { children: [_jsx(Check, { size: 17, 'aria-hidden': true }), ' Save changes'] })
                         : "No changes" })] })
             ]

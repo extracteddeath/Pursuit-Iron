@@ -227,7 +227,18 @@ try {
   // B986: orientation, split-screen and text reflow must keep the selected
   // exercise visible even when the user has not switched exercises.
   if(width===393 && theme==='amethyst'){
-    await page.$eval('.wpb-ex-nav',el=>{el.scrollLeft=0;});
+    // Enforce actual overflow in the two-exercise fixture, rather than
+    // silently passing when both compact chips fit in the viewport.
+    const clipped=await page.$eval('.wpb-ex-nav',el=>{
+      el.style.width='170px';
+      el.style.maxWidth='170px';
+      el.scrollLeft=0;
+      const outer=el.getBoundingClientRect();
+      const chosen=el.querySelector('[aria-current="step"]').getBoundingClientRect();
+      return {offscreen:chosen.right>outer.right+4,scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
+    });
+    assert.ok(clipped.offscreen&&clipped.scrollWidth>clipped.clientWidth,
+      'resize regression fixture must actually clip the active exercise: '+JSON.stringify(clipped));
     await page.setViewport({width:320,height:740,deviceScaleFactor:1,isMobile:true,hasTouch:true});
     await page.waitForFunction(()=>{
       const rail=document.querySelector('.wpb-ex-nav');
@@ -238,6 +249,7 @@ try {
     },{timeout:4000});
     assert.equal(await page.$eval('.wpb-ex-nav [aria-current="step"]',el=>el.getAttribute('aria-label').startsWith('Incline Dumbbell Curl')),true,
       'reflow keeps the selected original exercise and full accessible name');
+    await page.$eval('.wpb-ex-nav',el=>{el.style.width='';el.style.maxWidth='';});
     await page.setViewport({width,height,deviceScaleFactor:1,isMobile:true,hasTouch:true});
   }
   await navigate(0);await page.waitForSelector('[data-testid="set-0-1"]');

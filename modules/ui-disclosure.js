@@ -23,9 +23,18 @@ export function MotionReveal({ open, children }) {
                 complete: () => { if (open) el.style.height = 'auto'; else setAlive(false); } });
         };
         resize();
-        const observer = new ResizeObserver(resize);
-        if (open) observer.observe(inner);
-        return () => { observer.disconnect(); stopMotion(el, 'reveal-height'); };
+        // ResizeObserver is available on modern Android, but keep disclosure
+        // operable in constrained webviews and older browser shells.
+        const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
+        if (open) {
+            if (observer) observer.observe(inner);
+            else window.addEventListener('resize', resize);
+        }
+        return () => {
+            observer?.disconnect();
+            if (open && !observer) window.removeEventListener('resize', resize);
+            stopMotion(el, 'reveal-height');
+        };
     }, [open, alive]);
     if (!open && !alive) return null;
     return _jsx('div', { ref: holder, className: 'wpb-motion-reveal', 'data-pi-reveal': true,

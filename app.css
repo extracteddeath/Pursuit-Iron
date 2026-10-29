@@ -539,11 +539,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   z-index:1;
   min-width:0;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs[data-pi-m3-track]>button[aria-selected="true"]{
-  background:transparent!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs[data-pi-m3-track]>button[aria-selected="true"],
 #root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented[data-pi-m3-track]>button[aria-pressed="true"]{
   background:transparent!important;
   background-image:none!important;
@@ -757,11 +753,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background-image:none!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag:focus-visible,
-#root[data-pi-motion="expressive"] .wpb-library .wpb-filter-chip:focus-visible{
-  outline:2px solid currentColor!important;
-  outline-offset:-2px!important;
-}
+#root[data-pi-motion="expressive"] .wpb-library .wpb-library-flag:focus-visible, #root[data-pi-motion="expressive"] .wpb-library .wpb-filter-chip:focus-visible,
 #root[data-pi-motion="expressive"] .wpb-library .wpb-library-row:focus-visible{
   outline:2px solid currentColor!important;
   outline-offset:-2px!important;
@@ -958,10 +950,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   overflow-wrap:anywhere;
 }
 @media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb .wpb-chart-axis{font-size:10px!important;}
-  #root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header>div:last-child{
-    font-size:10px!important;
-  }
+#root[data-pi-motion="expressive"] .wpb .wpb-chart-axis,
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-history-group-header>div:last-child{font-size:10px!important;}
 }
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-disclosure>summary::after,
@@ -2528,10 +2518,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   font-weight:790!important;
   letter-spacing:-.035em!important;
 }
-#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label{
-  white-space:normal!important;
-  overflow-wrap:anywhere;
-}
+#root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-label,
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-progress-glance-item>div:last-child{
   white-space:normal!important;
   overflow-wrap:anywhere;
@@ -3793,7 +3780,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(hover:hover) and (pointer:fine){.wpb .wpb-settings-navigation:hover{background:var(--pi-color-control);}}
 @media(prefers-contrast:more){.wpb .wpb-settings-card{border-color:var(--wpb-theme-border);}}
 @media(prefers-reduced-motion:reduce){.wpb .wpb-settings-card>:is(button,.wpb-settings-row){transition:none;}}
-@media(forced-colors:active){.wpb .wpb-settings-card{border-color:CanvasText;}.wpb .wpb-settings-card>:is(button,.wpb-settings-row){border-color:CanvasText;}}
+@media(forced-colors:active){
+.wpb .wpb-settings-card,
+.wpb .wpb-settings-card>:is(button,.wpb-settings-row){border-color:CanvasText;}}
 
 .wpb .wpb-settings>.wpb-page-scroll{flex:1;overflow-y:auto;padding:var(--pi-space-2) var(--pi-page-inset) var(--pi-space-8)}
 .wpb .wpb-settings [data-settings-anchor]{scroll-margin-top:var(--pi-space-2)}
@@ -3989,12 +3978,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:23px!important;
   box-shadow:none!important;
 }
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-tabs{
-  background-color:var(--pi-r11-raised)!important;
-  background-image:none!important;
-  border:1px solid var(--pi-r11-edge)!important;
-  box-shadow:none!important;
-}
+#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-tabs,
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-window-tabs{
   background-color:var(--pi-r11-raised)!important;
   background-image:none!important;
@@ -7291,8 +7275,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline:2px solid var(--pi-m3e-primary)!important;outline-offset:2px!important;
 }
 @media(prefers-reduced-motion:reduce){
-  #root .wpb-set-option-sheet{animation:none!important;}
-  #root .wpb-set-option-backdrop{animation:none!important;}
+#root .wpb-set-option-sheet,
+#root .wpb-set-option-backdrop{animation:none!important;}
 }
 
 /* B888: compact session choices and readable note editors share theme surfaces. */
@@ -7725,7 +7709,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-progress .wpb-progress-record-row+.wpb-progress-record-row{border-top:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-progress .wpb-progress-record-level[data-high="true"]{color:var(--wpb-theme-warning);background:var(--wpb-theme-warning-dim);}
 #root .wpb .wpb-progress .wpb-progress-intensity-row[data-last="false"]{margin-bottom:9px;}
-#root .wpb .wpb-progress .wpb-progress-fatigue-value[data-warning="true"]{color:var(--wpb-theme-warning);}
+#root .wpb .wpb-progress .wpb-progress-fatigue-value[data-warning="true"],
 #root .wpb .wpb-progress .wpb-progress-fatigue-deviation[data-warning="true"]{color:var(--wpb-theme-warning);}
 #root .wpb .wpb-progress .wpb-progress-fatigue-copy[data-warning="true"]{color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-goal-row[data-last="false"]{margin-bottom:var(--pi-space-3);}
@@ -8513,8 +8497,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-home-outline-toggle:focus-visible,
 #root .wpb .wpb-plan-change-more>summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;border-radius:8px}
 @media(prefers-reduced-motion:reduce){.wpb-home-outline-toggle>svg{transition:none!important}}
-@media(forced-colors:active){.wpb-game-plan-highlight-icon{border:1px solid CanvasText}
- #root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
+@media(forced-colors:active){
+.wpb-game-plan-highlight-icon,
+#root .wpb .wpb-home-game-plan{border:1px solid CanvasText}}
 /* B910 / UI polish pass 04 — Settings and creation motion consistency.
    The creation header formerly put a 44px Back target in a 34px-high row.
    Keep header and progress geometry steady across all wizard questions;

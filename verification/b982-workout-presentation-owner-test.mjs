@@ -23,6 +23,6 @@ assert.match(scope,/min-width:48px;min-height:48px/,'Rest buttons must be 48px t
 assert.match(scope,/prefers-reduced-motion|forced-colors:active/,'Honor accessibility contrast and motion');
 assert.ok(app.includes('onBump: bumpRest')&&app.includes('onPause: togglePause')&&app.includes('onSkip: skipRest'),
   'Logger continues to own one timer and callbacks');
-assert.equal((app.match(/style: \{/g)||[]).length,1262,'Seven static workout inline objects retired');
-assert.equal((css.match(/!important/g)||[]).length,2060,'Existing CSS override debt cannot increase');
+assert.ok((app.match(/style: \{/g)||[]).length<=1262,'Seven static workout inline objects retired');
+assert.ok((css.match(/!important/g)||[]).length<=2060,'Existing CSS override debt cannot increase');
 console.log('PASS B982: workout presentation is CSS-owned without extra inline/priority styles.');

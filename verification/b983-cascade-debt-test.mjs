@@ -34,10 +34,10 @@ assert.ok(css.includes('.wpb-exercise-tags{display:flex;gap:5px;flex-wrap:wrap;'
 assert.ok(css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{') &&
   css.includes('min-width:48px;min-height:48px'),
   'Workout rest actions remain accessible after the cleanup');
-assert.equal((css.match(/!important/g)||[]).length,2060,
+assert.ok((css.match(/!important/g)||[]).length<=2060,
   'CSS priority budget must not grow after retiring dead overrides');
 assert.ok(css.length<=619506,
   'Net stylesheet size must not grow beyond the B983 verified baseline');
-assert.equal((app.match(/style: \{/g)||[]).length,1262,
+assert.ok((app.match(/style: \{/g)||[]).length<=1262,
   'Do not restore inline Workout geometry to replace deleted CSS');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

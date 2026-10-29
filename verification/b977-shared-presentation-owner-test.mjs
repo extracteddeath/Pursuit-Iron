@@ -13,8 +13,8 @@ for(const n of names) {
   assert.ok(app.includes(selector.slice(1)),'Missing JSX owner: '+selector);
   assert.ok(scope.includes(selector+'{')||scope.includes(selector+','),'Missing CSS rule: '+selector);
 }
-assert.equal(app.split('style: {').length-1,1262,'B977 must retire 11 inline objects');
-assert.equal(css.split('!important').length-1,2060,'No new priority overrides');
+assert.ok(app.split('style: {').length-1<=1262,'B977 must retire 11 inline objects');
+assert.ok(css.split('!important').length-1<=2060,'No new priority overrides');
 assert.ok(!scope.includes('!important'),'New CSS must not introduce important');
 assert.ok(scope.includes('min-height:44px'),'Muscle coverage chips need accessible targets');
 assert.ok(css.includes('.wpb-day-hit-chip{\n  min-height:44px;'),

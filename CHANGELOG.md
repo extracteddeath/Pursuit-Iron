@@ -1,3 +1,10 @@
+## B994 · Workout completion shell ownership (pending release)
+
+- Replaced 46 finished-workout inline styles with 40 M3 theme-owned CSS roles for stats, PRs, next-session preview, recovery feedback, and save/share actions.
+- Narrow-width stat cards can wrap numbers; entry names wrap instead of clipping, and feedback controls are 44px+ tap targets.
+- Recovery options expose aria-pressed; chevrons use aria-expanded state, routine save uses its disabled state, and dynamic next-session direction stays in the view.
+- No changes to training engine, progression, PR detection, storage format, or workout-completion callbacks.
+
 ## Build 987 — Workout exercise-information presentation consolidation
 
 - Removed 45 inline style objects from the Workout Info sheet, giving the exercise detail a single theme-token CSS owner for stats, coaching explanation, records, trends, technique cues and setup guidance.

@@ -10,7 +10,7 @@ const reference=fs.readFileSync('modules/program-reference-surfaces.js','utf8');
 const maxes=fs.readFileSync('modules/program-training-maxes.js','utf8');
 for(const [name,source] of [['Settings',settings],['Share',share],['Schedule',schedule],['Exercise options',exercise],['Training maxes',maxes],['Progression and reference',reference]]){
  assert.ok(source.includes("import { useProgramSheetFocus } from './program-sheet-focus.js';"),name+' uses shared focus hook');
- assert.ok(source.includes('useProgramSheetFocus(onClose, sheetDragRef)') || source.includes('useProgramSheetFocus(close, sheetDragRef)') || source.includes('useProgramSheetFocus(conversion ? closeConversion : onClose, sheetDragRef)'),name+' preserves drag owner');
+ assert.ok(source.includes('useProgramSheetFocus(onClose, sheetDragRef)') || source.includes('useProgramSheetFocus(close, sheetDragRef)') || source.includes('useProgramSheetFocus(dismiss, sheetDragRef)') || source.includes('useProgramSheetFocus(conversion ? closeConversion : onClose, sheetDragRef)'),name+' preserves drag owner');
  assert.ok(source.includes('ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown') || source.includes('tabIndex: -1, ref: attachPanel, onKeyDown: onPanelKeyDown'),name+' traps keyboard on focusable sheet');
  assert.ok(source.includes('event.target === event.currentTarget'),name+' ignores inside clicks on backdrop');
 }

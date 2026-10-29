@@ -299,7 +299,7 @@ async function verifyTaskHierarchy(browser){
         named:el.getAttribute('aria-label'),style:getComputedStyle(el).fontSize
       }));
       assert.equal(rowBefore.expanded,'false');
-      assert.ok(rowBefore.named?.includes('Volume contributors for')&&parseFloat(rowBefore.style)>=12,
+      assert.ok(rowBefore.named?.includes('weekly sets')&&rowBefore.named?.includes('Show contributors')&&parseFloat(rowBefore.style)>=12,
         'M380: muscle-volume header has readable accessible name');
       await page.focus('.wpb-plan button[data-vol-part]');
       await page.keyboard.press('Enter');

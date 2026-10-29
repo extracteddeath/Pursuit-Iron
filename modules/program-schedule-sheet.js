@@ -6,10 +6,20 @@ import { useProgramSheetFocus } from './program-sheet-focus.js';
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const JS_WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
 
+// Resolve scheduled IDs against the current program before counting training days.
+// Saved schedules may contain obsolete IDs after cycle edits or import; never count
+// an assignment that the sheet can only render as a rest day.
+export function resolvedWeeklySchedule(program) {
+    const dayMap = new Map((program?.days || []).filter(day => day?.id != null).map(day => [String(day.id), day]));
+    const schedule = program?.schedule || {};
+    return JS_WEEKDAYS.map(weekday => ({ weekday, day: dayMap.get(String(schedule[weekday])) || null }));
+}
+
 export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetDragRef }) {
     const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
     const schedule = program.schedule || {};
-    const trainingDays = JS_WEEKDAYS.filter(weekday => schedule[weekday]).length;
+    const rows = resolvedWeeklySchedule(program);
+    const trainingDays = rows.filter(row => row.day).length;
     const todayWd = new Date().getDay();
     return _jsx('div', {
         'data-testid': 'weekly-schedule-sheet', role: 'dialog', 'aria-modal': true,
@@ -27,17 +37,19 @@ export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetD
                         children: _jsx(X, { size: 18 }) })
                 ] }),
                 _jsxs('p', { className: 'wpb-program-schedule-caption', children: [
-                    'Tap a day to assign a workout — ', trainingDays, ' training ',
-                    trainingDays === 1 ? 'day' : 'days', ', ', 7 - trainingDays,
-                    ' rest. Cycles through your days, then rest.'
+                    'Tap a day to assign a workout — ',
+                    _jsxs('span', { role: 'status', 'aria-live': 'polite', 'aria-atomic': true, children: [
+                        trainingDays, ' training ', trainingDays === 1 ? 'day' : 'days',
+                        ', ', 7 - trainingDays, ' rest'
+                    ] }),
+                    '. Cycles through your days, then rest.'
                 ] }),
                 ...DAY_LABELS.map((label, i) => {
-                    const weekday = JS_WEEKDAYS[i];
-                    const id = schedule[weekday];
-                    const day = id ? program.days.find(item => item.id === id) : null;
+                    const { weekday, day } = rows[i];
                     const isToday = weekday === todayWd;
                     return _jsxs('button', {
-                        type: 'button', 'aria-label': 'Schedule ' + label,
+                        type: 'button',
+                        'aria-label': label + (isToday ? ', today' : '') + ': ' + (day?.label || 'Rest day') + '. Change assignment',
                         onClick: () => onCycle(weekday),
                         className: 'pressable wpb-program-schedule-row',
                         'data-assigned': day ? 'true' : 'false',
@@ -57,7 +69,7 @@ export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetD
                     }, weekday);
                 }),
                 Object.keys(schedule).length > 0 && _jsx('button', {
-                    type: 'button', 'aria-label': 'Clear schedule', onClick: onClear,
+                    type: 'button', 'aria-label': 'Clear all scheduled workouts', onClick: onClear,
                     className: 'pressable wpb-program-schedule-clear', children: 'Clear schedule'
                 })
             ]

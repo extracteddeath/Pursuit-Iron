@@ -49,7 +49,9 @@ export function VolumeBars({ volume, subVolume, target, program = null, week = 0
                             const entry = (weekBreak || []).find(e => e.part === p);
                             const from = (entry && entry.from) || [];
                             if (!from.length)
-                                return _jsx("div", { className: "wpb-volume-no-contributors", children: "Nothing in this program trains it this week." });
+                                return _jsx("div", { id: `${volumeDetailsId}-${p}`, role: "region",
+                                    "aria-label": `${PART_LABEL[p]} volume contributors`,
+                                    className: "wpb-volume-no-contributors", children: "Nothing in this program trains it this week." });
                             return (_jsxs("div", { id: `${volumeDetailsId}-${p}`, role: "region",
                                 "aria-label": `${PART_LABEL[p]} volume contributors`,
                                 className: "wpb-volume-contributors", children: [from.map((f, i) => (_jsxs("div", { "data-volume-contributor": true, className: "wpb-volume-contributor", children: [_jsx("span", { className: "wpb-volume-day", children: f.dayLabel }), _jsxs("span", { className: "wpb-volume-exercise", children: [f.name, !f.direct && _jsxs("span", { className: "wpb-volume-assist", children: [" (", Math.round(f.factor * 100), "% assist)"] })] }), _jsxs("span", { className: "mono wpb-volume-credit", "data-direct": !!f.direct, children: ["+", fmtSets(f.contrib)] })] }, i)))] }));

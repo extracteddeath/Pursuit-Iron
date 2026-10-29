@@ -10088,3 +10088,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-exinfo-history-date{font-size:11px;color:var(--wpb-theme-faint);flex-shrink:0;margin-top:1px;width:44px}
 #root .wpb .wpb-exinfo-set-helper{font-size:13px;color:var(--wpb-theme-muted);line-height:1.5}
 @media(forced-colors:active){#root .wpb .wpb-exinfo-why-chip,#root .wpb .wpb-exinfo-pinned{border:1px solid CanvasText}#root .wpb .wpb-exinfo-cue-dot{background:Highlight}}
+
+/* B993: Workout Info bottom sheet has one visual-viewport owner and accessible controls. */
+#root .wpb .wpb-exinfo-sheet{box-sizing:border-box;display:block;width:100%;max-width:46rem;min-width:0;max-height:min(90dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 16px));overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:16px;background:var(--wpb-theme-bg-tint);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;padding:8px 18px calc(env(safe-area-inset-bottom) + 26px);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb .wpb-exinfo-close{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-muted);cursor:pointer}
+#root .wpb :is(.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;flex-shrink:0;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);border-radius:10px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);cursor:pointer}
+#root .wpb .wpb-exinfo-rest-step{font-size:18px;font-weight:700}
+#root .wpb .wpb-exinfo-rest-auto{padding:0 10px;font-size:13px;font-weight:600;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-exinfo-weight-choice{box-sizing:border-box;min-width:48px;min-height:44px;padding:9px 12px;border-radius:9px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:13px;font-weight:600;cursor:pointer}
+#root .wpb .wpb-exinfo-weight-choice[aria-pressed="true"]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-exinfo-sheet :is(button,a,summary,input,textarea):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(max-width:359px){#root .wpb .wpb-exinfo-sheet{padding-inline:12px}#root .wpb .wpb-exinfo-rest-row{gap:6px}}
+@media(prefers-reduced-motion:reduce){#root .wpb .wpb-exinfo-sheet{animation:none}}
+@media(forced-colors:active){#root .wpb .wpb-exinfo-sheet,#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto,.wpb-exinfo-weight-choice){border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-exinfo-weight-choice[aria-pressed="true"]{background:Highlight;color:HighlightText}#root .wpb .wpb-exinfo-sheet :is(button,a,summary,input,textarea):focus-visible{outline-color:Highlight}}

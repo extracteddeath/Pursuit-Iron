@@ -22,7 +22,7 @@ function Demo(){
  mode==='disabled' ? [
     React.createElement('input',{key:'field',id:'field','aria-label':'Details'}),
     React.createElement('details',{key:'closed'},React.createElement('summary',null,'Extra'),React.createElement('button',{id:'closed-action'},'Unavailable while closed')),
-    React.createElement('div',{key:'inert',inert:true},React.createElement('button',{id:'inert-action'},'Inactive')),
+    React.createElement('div',{key:'inert',inert:''},React.createElement('button',{id:'inert-action'},'Inactive')),
     React.createElement('button',{key:'live',id:'last-live'},'Apply'),
     React.createElement('button',{key:'aria-disabled',id:'aria-disabled','aria-disabled':'true'},'Unavailable ARIA action'),
     React.createElement('input',{key:'disabled-input',id:'disabled-field',disabled:true,'aria-label':'Unavailable'}),
@@ -77,6 +77,8 @@ try {
  assert.equal(await page.$eval('#field',el=>el===document.activeElement),true,'protected Tab enters first field');
  await page.evaluate(()=>window.forceClose());await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
  await page.click('#open-disabled');await page.waitForSelector('#last-live');
+ assert.equal(await page.$eval('#inert-action',el=>el.closest('[inert]')?.inert),true,
+     'fixture must actually mount a native inert ancestor in React 18');
  await page.$eval('#last-live',el=>el.focus());await page.keyboard.press('Tab');
  assert.equal(await page.$eval('.wpb-session-dialog-heading button',el=>el===document.activeElement),true,'Tab skips disabled, hidden, inert and closed disclosure controls');
  await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');

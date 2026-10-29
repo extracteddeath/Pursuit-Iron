@@ -1,3 +1,10 @@
+## Build 978 — Workout input and exercise rail ownership
+
+- Extract the workout exercise navigation rail, working-set count editor, session notes editor, and shared numeric-field selection helper from App into one presentation-only module.
+- Preserve the original canonical exercise names for accessibility, workout set callbacks, note persistence and numeric focus behavior.
+- Update the workout rail and set-menu source ownership tests; no progression, rest timer, storage schema or logged history change.
+- Engine remains 0.65.9. Real Android TalkBack and keyboard tests remain a separate launch gate.
+
 ## Build 977 — Shared chip and dialog presentation
 
 - Move 11 static inline presentation objects into theme CSS for program muscle-coverage chips, chart empty states, settings and version dialogs, and search icons.

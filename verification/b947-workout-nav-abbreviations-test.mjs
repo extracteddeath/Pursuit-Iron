@@ -27,15 +27,17 @@ assert.equal(workoutNavLabel(''), 'Exercise');
 assert.equal(workoutNavLabel(null), 'Exercise');
 assert.equal(workoutNavLabel('  Machine   Shoulder Press '), 'Mach. Shoulder Press');
 const app = fs.readFileSync('modules/App.js', 'utf8');
-const nav = app.slice(app.indexOf('function WorkoutExerciseNav('), app.indexOf('function WorkoutRestActions('));
+const owner = fs.readFileSync('modules/workout-session-controls.js', 'utf8');
+const nav = owner.slice(owner.indexOf('function WorkoutExerciseNav('), owner.indexOf('function WorkingSetCountControl('));
 assert.match(nav, /children: workoutNavLabel\(name\)/, 'only the visible pill uses abbreviated labels');
 assert.match(nav, /const name = EX_BY_ID\[row.id\]\?\.name/, 'resolve original canonical exercise title');
 assert.match(nav, /"aria-label": `\$\{name\}/, 'screen readers get the full name and set progress');
 assert.match(nav, /title: name/, 'full hover label is retained');
 assert.match(nav, /children: \[done, "\/", work.length\]/, 'working set count is preserved');
+assert.ok(!app.includes('function WorkoutExerciseNav('), 'Workout rail must have one owner');
 const workout = app.slice(app.indexOf('function WorkoutSession('));
 assert.ok(workout.includes('ex.name'), 'workout title still displays the original exercise name');
-assert.equal((app.match(/workoutNavLabel\(name\)/g) || []).length, 1,
+assert.equal((owner.match(/workoutNavLabel\(name\)/g) || []).length, 1,
     'do not rewrite history, exercise library, notifications or program title names');
 const css = fs.readFileSync('app.css','utf8');
 assert.match(css, /\.wpb-ex-nav-name\{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;/,

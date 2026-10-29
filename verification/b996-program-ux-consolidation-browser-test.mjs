@@ -13,18 +13,25 @@ const fixture=[
 "import {Info} from 'lucide-react';",
 "import {ProgramSaveReview} from '/modules/program-review-surfaces.js';",
 "import {ProgramExerciseOptions} from '/modules/program-exercise-options.js';",
+"import {HistoryEditSheet} from '/modules/history-editor.js';",
 "import {InfoCard} from '/modules/ui-disclosure.js';",
 "function Demo(){const [sheet,setSheet]=React.useState('');const [expanded,setExpanded]=React.useState(false);",
 "return React.createElement('main',{className:'wpb'},",
 "React.createElement('button',{id:'open-review',onClick:()=>setSheet('review')},'Review changes'),",
 "React.createElement('button',{id:'open-exercise',onClick:()=>setSheet('exercise')},'Exercise options'),",
+"React.createElement('button',{id:'open-history',onClick:()=>setSheet('history')},'Edit history'),",
 "React.createElement(InfoCard,{icon:Info,title:'Details',subtitle:'Show and hide',open:expanded,onToggle:()=>setExpanded(x=>!x)},",
 "React.createElement('button',{id:'inside-reveal'},'Inside')),",
 "sheet==='review'&&React.createElement(ProgramSaveReview,{program:{name:'Test',cycleId:null},changes:[],scope:'program',onScope:()=>{},",
 "conflicts:[],onConfirm:()=>{},onClose:()=>setSheet('')}),",
 "sheet==='exercise'&&React.createElement(ProgramExerciseOptions,{exercise:{name:'Bench Press',part:'chest',type:'compound'},primary:true,",
 "canRemove:true,canLink:false,linked:false,note:'',setup:null,onNote:()=>{},onSuperset:()=>{},onWhy:()=>{},onInfo:()=>{},",
-"onBan:()=>{},onRemove:()=>{},onClose:()=>setSheet('')}));}",
+"onBan:()=>{},onRemove:()=>{},onClose:()=>setSheet('')}),",
+"sheet==='history'&&React.createElement(HistoryEditSheet,{entry:{id:'h1',date:Date.now(),",
+"programId:'p1',dayId:'d1',dayLabel:'Upper',durationMin:45,unit:'lb',",
+"perf:{'back-squat':{weight:200,reps:5,sets:[{w:200,r:5,rir:2}]}},volume:1000,setsDone:1},",
+"unit:'lb',onClose:()=>setSheet(''),onSave:()=>setSheet(''),",
+"selectNumericInput:e=>e.currentTarget.select()}));}",
 "createRoot(document.getElementById('root')).render(React.createElement(Demo));"
 ].join('\n');
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">'
@@ -70,12 +77,21 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-options-confirm'));
   assert.ok(await page.$('.wpb-exercise-options-sheet'),'first Escape cancels confirmation, not entire sheet');
+  await page.waitForFunction(()=>document.activeElement?.getAttribute('data-exercise-action')==='remove');
   assert.equal(await page.$eval('[data-exercise-action="remove"]',el=>el===document.activeElement),true,
     'cancelling removal returns focus to its own action');
   await page.keyboard.press('Escape');
   await page.waitForFunction(()=>!document.querySelector('.wpb-exercise-options-sheet'));
   assert.equal(await page.$eval('#open-exercise',el=>el===document.activeElement),true,
     'second Escape closes the sheet and restores trigger focus');
+  await page.click('#open-history');
+  await page.waitForSelector('.wpb-history-editor-sheet');
+  assert.equal(await page.$eval('.wpb-history-editor-sheet',el=>el===document.activeElement),true,
+    'History correction receives consistent initial focus');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>!document.querySelector('.wpb-history-editor-sheet'));
+  assert.equal(await page.$eval('#open-history',el=>el===document.activeElement),true,
+    'history Escape restores the edit launcher without leaving a stale overlay');
   await page.evaluate(()=>{window.ResizeObserver=undefined;});
   await page.click('.wpb-info-card-toggle');
   await page.waitForSelector('#inside-reveal');

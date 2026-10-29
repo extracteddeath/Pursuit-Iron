@@ -36,8 +36,8 @@ assert.ok(css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{')
   'Workout rest actions remain accessible after the cleanup');
 assert.ok((css.match(/!important/g)||[]).length<=2060,
   'CSS priority budget must not grow after retiring dead overrides');
-assert.ok(css.length<=619506,
-  'Net stylesheet size must not grow beyond the B983 verified baseline');
+assert.ok(css.length<=627740,
+  'CSS migration budget must not grow after the B987 Strength and 1RM owners');
 assert.ok((app.match(/style: \{/g)||[]).length<=1262,
   'Do not restore inline Workout geometry to replace deleted CSS');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

@@ -1,3 +1,24 @@
+## Build 983 — Consolidated styling and readiness
+
+- Consolidated 59 fixed inline presentation objects across Strength detail, estimated 1RM and Shared Programs into M3 token-based CSS. No new !important selectors.
+- Calculator inputs now use 16px text to prevent mobile focus zoom, while calculated plate height, load math and training state remain dynamic.
+- Gallery filters expose aria-pressed, and filter/retry/import controls preserve accessible 44/48px touch targets, offline retry and duplicate-import handling.
+- Added B987/B988 permanent ownership checks; kept engine version 0.65.9. This is one combined release for multiple styling passes.
+
+## B988 — Shared-program Gallery presentation consolidation
+
+- Moved 22 gallery inline presentation styles into theme-aware CSS, preserving filtering, retry and import logic.
+- Added aria-pressed to filter chips and 44px/48px minimum touch targets to choices and import actions.
+- Gallery now uses explicit selected, error, success and disabled CSS states without inline priority overrides.
+- Bundled with B987 to release in one combined build.
+
+## Styling readiness pass B987 — Strength detail and 1RM presentation
+
+- Consolidated fixed style declarations in estimated 1RM and lift-history strength detail panels into theme-scoped CSS, leaving only calculated and contextual values in React.
+- Increased calculator weight/reps input text to 16px to prevent mobile browser focus zoom. Preserved native numeric input selection and visible focus treatment.
+- Kept dynamic plate height, PR/plateau state, chart data, estimated 1RM formulas, and saved athlete records unchanged. Added a permanent source contract to catch regression.
+- No public deployment until the combined release checks pass.
+
 ## Build 982 — Resize-aware Workout exercise navigation
 
 - Keep the active exercise chip visible through phone rotation, split-screen resizing and exercise-label reflow, not only when navigating to another exercise.

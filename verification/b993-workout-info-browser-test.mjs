@@ -86,7 +86,8 @@ try{
    'Info fits visible viewport without horizontal clipping: '+JSON.stringify({width,height,rootFont,m}));
   assert.ok(m.close[0]>=48&&m.close[1]>=48&&m.rest.length===2&&m.rest.every(([w,h])=>w>=48&&h>=48),
    'Info close/rest actions meet touch size: '+JSON.stringify(m));
-  assert.ok(m.weight.every(([w,h])=>w>=44&&h>=44),'Load step choices retain touch targets');
+  assert.ok(m.weight.every(([w,h])=>w>=48&&h>=48),
+   'Load step choices meet the 48px design touch contract: '+JSON.stringify({width,height,rootFont,m}));
  }
  await page.setViewport({width:393,height:850,isMobile:true,hasTouch:true,deviceScaleFactor:2});
  await page.evaluate(()=>document.documentElement.style.fontSize='16px');

@@ -23,8 +23,9 @@ assert.ok(history.includes('useProgramSheetFocus(onClose, sheetDragRef)') &&
     'history editor shares keyboard, ref and focus behavior without changing logging');
 assert.ok(history.includes("showError && invalid ? 'history-editor-error'"),
     'history correction save describes the visible error');
-assert.ok(exercise.includes('if (confirmRemove) setConfirmRemove(false); else close();'),
-    'Escape backs out of destructive confirmation before dismissing the sheet');
+assert.ok(exercise.includes('if (confirmRemove) setConfirmRemove(false); else close();') &&
+    exercise.includes('event.target === event.currentTarget) dismiss();'),
+    'Escape and backdrop both back out of a destructive confirmation before dismissing the sheet');
 assert.ok(exercise.includes("panelRef.current?.querySelector('[data-exercise-action=\"remove\"]')") &&
     !exercise.includes("document.querySelector('.wpb-exercise-options-sheet"),
     'cancel returns focus to the correct dialog, not a global selector');

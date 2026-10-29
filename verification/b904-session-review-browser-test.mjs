@@ -16,7 +16,7 @@ try{
   await page.setViewport({width,height:850,isMobile:width<600,hasTouch:width<600});await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
   await page.evaluateOnNewDocument(store=>{if(!sessionStorage.getItem('review-seed')){localStorage.setItem('wpb:v1',JSON.stringify(store));sessionStorage.setItem('review-seed','1');}},{...store,theme:width===900?'rosewater':'amethyst',restScale:width===900?1.5:1,saved:[width===900?{...program,overrides:{...program.overrides,'upper:1':{...program.overrides['upper:1'],techOverride:'Last set: myo-reps'}}}:program]});
   await page.goto('http://127.0.0.1:8804/index.html',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
-  await page.waitForSelector('[aria-label="Review plan changes"]');
+  await page.waitForSelector('.wpb-plan-change-banner[aria-label^="Review "]');
   const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   assert.match(await page.$eval('.wpb-plan-change-banner',n=>n.innerText),/1 upcoming adjustment/);
   const homeCoach=await page.evaluate(()=>{
@@ -36,7 +36,7 @@ try{
   assert.ok(await page.$('[data-pr-exercise="bb-row"]'));assert.equal(await page.$('[data-pr-exercise="bb-bench"]'),null,'no fabricated RIR-adjusted PR');
   assert.equal(await page.$eval('.wpb-home',n=>n.scrollWidth<=n.clientWidth+1),true);
   await page.screenshot({path:`/tmp/b904-home-${width}.png`});
-  await page.click('[aria-label="Review plan changes"]');await page.waitForSelector('[aria-label="Plan changes"]');
+  await page.click('.wpb-plan-change-banner[aria-label^="Review "]');await page.waitForSelector('[aria-label="Plan changes"]');
   assert.equal(await page.$('[data-plan-change="bb-row"]'),null,'ordinary row rep progress has no undo');
   assert.match(await page.$eval('[data-plan-change="bb-bench"]',n=>n.innerText),/80 → 82.5 kg/);
   await reveal(page,'bb-bench');
@@ -61,14 +61,14 @@ try{
   const clickText=async text=>assert.ok(await page.evaluate(text=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);b?.click();return !!b;},text),text);
   await clickText('Preview · Time available');await page.waitForSelector('.wpb-next-workout-view');
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/80 kg × 6/);
-  await page.click('[aria-label="Review plan changes"]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');
+  await page.click('.wpb-plan-change-banner[aria-label^="Review "]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');
   await page.click('[aria-label="Use recommended load for Barbell Bench Press"]');await page.waitForSelector('[aria-label="Keep previous load for Barbell Bench Press"]');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[aria-label="Plan changes"]'));
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/82.5 kg × 6/);
   if(width===393){
-   await page.click('[aria-label="Review plan changes"]');await page.click('[aria-label="Keep previous load for Barbell Bench Press"]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');await page.keyboard.press('Escape');
+   await page.click('.wpb-plan-change-banner[aria-label^="Review "]');await page.click('[aria-label="Keep previous load for Barbell Bench Press"]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');await page.keyboard.press('Escape');
    await clickText('20 min');await page.waitForSelector('[data-testid="session-length-summary"]');
-   await page.click('[aria-label="Review plan changes"]');
+   await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
    assert.equal(await page.$('[data-plan-change="bb-row"]'),null,'rep-only changes cannot be undone even in shortened workouts');
    await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[aria-label="Plan changes"]'));
    assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/,'shortening retains normal row progression');
@@ -99,7 +99,7 @@ try{
   await page.goto('http://127.0.0.1:8804/index.html',{waitUntil:'networkidle0'});
   await page.waitForSelector('[data-game-plan-exercise="db-bench"]');
   const baseline=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
-  await page.click('[aria-label="Review plan changes"]');
+  await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
   await page.waitForSelector('[aria-label="Keep previous load for Dumbbell Bench Press"]');
   assert.match(await page.$eval('.wpb-plan-review-intro',n=>n.innerText),/Week 4.*upcoming workout/);
   assert.match(await page.$eval('[data-plan-change="db-bench"]',n=>n.innerText),/50 → 55 lb/);
@@ -117,12 +117,12 @@ try{
   await page.reload({waitUntil:'networkidle0'});
   await page.waitForSelector('[data-game-plan-exercise="db-bench"]');
   assert.match(await page.$eval('[data-game-plan-exercise="db-bench"]',n=>n.innerText),/50 lb × 6/);
-  await page.click('[aria-label="Review plan changes"]');
+  await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
   await page.click('[aria-label="Use recommended load for Dumbbell Bench Press"]');
   await page.waitForSelector('[aria-label="Keep previous load for Dumbbell Bench Press"]');
   await page.keyboard.press('Escape');
   assert.match(await page.$eval('[data-game-plan-exercise="db-bench"]',n=>n.innerText),/55 lb × 6/);
-  await page.click('[aria-label="Review plan changes"]');
+  await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
   await page.click('[aria-label="Keep previous load for Dumbbell Bench Press"]');
   await page.waitForSelector('[aria-label="Use recommended load for Dumbbell Bench Press"]');
   await page.keyboard.press('Escape');

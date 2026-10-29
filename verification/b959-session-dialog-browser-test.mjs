@@ -98,10 +98,18 @@ try {
  assert.equal(await page.$eval('details summary',el=>el===document.activeElement),true,
      'Shift+Tab returns to the nested disclosure summary');
  await page.click('details summary');
+ assert.equal(await page.$eval('details',el=>el.open),false,'nested disclosure is closed again');
  await page.$eval('details summary',el=>el.focus());
  await page.keyboard.press('Tab');
- assert.equal(await page.$eval('#last-live',el=>el===document.activeElement),true,
-     'closing disclosure immediately skips its hidden action');
+ const closedFocus=await page.evaluate(()=>({active:document.activeElement?.id||document.activeElement?.tagName,
+     open:document.querySelector('details')?.open,
+     activeWithin:!!document.activeElement?.closest('.wpb-session-dialog'),
+     hiddenActionTabIndex:document.querySelector('#closed-action')?.tabIndex,
+     hiddenActionDisplay:getComputedStyle(document.querySelector('#closed-action')).display,
+     summaryFocused:document.activeElement===document.querySelector('details summary')}));
+ console.log('B979_CLOSED_DISCLOSURE_FOCUS '+JSON.stringify(closedFocus));
+ assert.equal(closedFocus.active,'last-live',
+     'closing disclosure must skip nested action: '+JSON.stringify(closedFocus));
  await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.wpb-session-dialog'));
  await page.click('#open-empty');await page.keyboard.press('Tab');
  assert.equal(await page.$eval('.wpb-session-dialog',el=>el===document.activeElement),true,'empty protected sheet retains focus');

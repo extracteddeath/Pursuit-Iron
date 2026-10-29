@@ -13,14 +13,14 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
     // A cancelled destructive action returns keyboard focus to its visible trigger.
     useEffect(() => {
         if (wasConfirming.current && !confirmRemove)
-            document.querySelector('.wpb-exercise-options-sheet [data-exercise-action="remove"]')
+            panelRef.current?.querySelector('[data-exercise-action="remove"]')
                 ?.focus({ preventScroll: true });
         wasConfirming.current = confirmRemove;
     }, [confirmRemove]);
     const hasNote = !!(note || setup);
     const close = () => { setConfirmRemove(false); onClose(); };
     const dismiss = () => { if (confirmRemove) setConfirmRemove(false); else close(); };
-    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(dismiss, sheetDragRef);
+    const { attachPanel, onPanelKeyDown, panelRef } = useProgramSheetFocus(dismiss, sheetDragRef);
     const act = handler => () => { close(); handler(); };
     const action = (id, Icon, label, description, onClick, danger = false) => _jsxs(UiAction, {
         variant: 'tonal', className: 'wpb-sheet-action wpb-program-exercise-action',

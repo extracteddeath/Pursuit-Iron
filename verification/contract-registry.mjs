@@ -193,6 +193,7 @@ export const browserShards = Object.freeze({
         'b882-workout-reason-browser-test.mjs'
     ]),
     program: Object.freeze([
+        'b995-program-schedule-browser-test.mjs',
         'b894-cycle-conversion-browser-test.mjs',
         'b893-custom-cycle-browser-test.mjs',
         'b890-cycle-browsing-browser-test.mjs',

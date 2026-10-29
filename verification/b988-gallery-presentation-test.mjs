@@ -17,5 +17,5 @@ assert.ok(gallery.includes('setRetryKey(k => k + 1)'),'Offline retry stays funct
 const scope=css.slice(css.indexOf('/* B988 — Gallery'));
 assert.ok(!scope.includes('!important'),'No new CSS priority overrides');
 assert.ok(scope.includes('min-height:44px')&&scope.includes('min-height:48px'),'Touch targets remain usable');
-assert.ok((app.match(/style: \\{/g)||[]).length<=1203,'Inline debt budget cannot grow');
+assert.ok((app.match(/style: \{/g)||[]).length<=1203,'Inline debt budget cannot grow');
 console.log('PASS B988: Gallery accessibility, styling ownership, import and offline retry');

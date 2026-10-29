@@ -16,7 +16,7 @@ for(const name of ['rm-card','rm-field-label','rm-input','rm-summary','rm-plate'
 }
 assert.ok(!css.slice(css.indexOf('/* B987 —')).includes('!important'),
  'New CSS must use normal cascade, not priority overrides');
-assert.equal((calc.match(/style: \\{/g)||[]).length,4,
+assert.equal((calc.match(/style: \{/g)||[]).length,4,
  'Only plate height and existing eyebrow options remain calculated or theme-tied');
 assert.ok(calc.includes('style: { height: 22 + (p / maxP) * 32 }'),'Plate height must still scale by plate value');
 assert.ok(calc.includes('font')===true&&calc.includes('round(rmAt(orm, n))'),
@@ -26,6 +26,6 @@ assert.ok(css.includes('.wpb-rm-input{')&&css.includes('font-size:16px'),
 assert.ok(progress.includes('wpb-strength-detail-meter--on')&&
  progress.includes('x.e1rm === s.best ? "mono wpb-strength-detail-chip'),
  'Strength-level and best-set conditional states retain their live semantics');
-assert.ok((app.match(/style: \\{/g)||[]).length<=1203,
+assert.ok((app.match(/style: \{/g)||[]).length<=1203,
  'Retired static presentation styles cannot return');
 console.log('PASS B987 strength details: '+38+' inline presentation owners migrated, responsive input sizing and dynamic calculations preserved.');

@@ -21747,7 +21747,7 @@ function App() {
                     })(), confirmUpdateRestart && _jsx(SessionChoiceDialog, { title: "Save workout and update?", onClose: () => setConfirmUpdateRestart(false),
                         children: _jsxs("div", { children: [
                             _jsx("p", { children: "Your workout will be saved before restarting. You can resume it after the update." }),
-                            _jsxs("div", { className: "wpb-b975-update-dialog-actions", children: [
+                            _jsxs("div", { className: "wpb-b975-update-dialog-actions wpb-s960-margintop-18px", children: [
                                 _jsx("button", { type: "button", className: "pressable hit wpb-b975-update-keep", onClick: () => setConfirmUpdateRestart(false), children: "Keep training" }),
                                 _jsx("button", { type: "button", className: "pressable hit wpb-b975-update-restart", disabled: updateRestarting, onClick: () => { setConfirmUpdateRestart(false); applyUpdate(); }, children: "Save & restart" })
                             ] })

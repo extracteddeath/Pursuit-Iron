@@ -69,11 +69,15 @@ const editable = { sets: [
 ] };
 const more = resizeWorkingSets(editable, 3);
 assert.equal(more.sets.length, 5, 'session-only expansion adds one working set');
-assert.deepEqual(more.sets.slice(0, 4), editable.sets, 'new sets preserve original warmups, logged work and technique attachments');
-assert.equal(more.sets[4].valueOwner, 'user', 'manually added work is not automatically re-prescribed');
-assert.equal(more.sets[4].auto, false);
+assert.deepEqual(more.sets.slice(0, 3), editable.sets.slice(0, 3), 'new sets preserve original warmups and logged working evidence');
+assert.equal(more.sets[3].added, true, 'manual work precedes the pending drop extension');
+assert.equal(more.sets[4], editable.sets[3], 'drop extension still follows the final activation set');
+assert.equal(more.sets[3].valueOwner, 'user', 'manually added work is not automatically re-prescribed');
+assert.equal(more.sets[3].auto, false);
 assert.equal(resizeWorkingSets(editable, 0), editable, 'cannot remove all ordinary working sets');
-assert.equal(resizeWorkingSets(editable, 1), editable, 'cannot erase a completed working set and leave a dangling pending extension');
+const onlyLogged = resizeWorkingSets(editable, 1);
+assert.deepEqual(onlyLogged.sets, editable.sets.slice(0, 2),
+    'reducing to logged work removes only pending work and its orphaned drop extension');
 assert.equal(resizeWorkingSets(editable, 21), editable, 'reject unbounded session volume');
 assert.deepEqual(editable.sets[1], { done: true, weight: '120', reps: '8', actualRIR: 1 },
     'live set-count edits must not mutate logged training evidence');
@@ -92,4 +96,11 @@ assert.equal(reducedDay.sets[1].valueOwner, 'user');
 assert.equal(reducedDay.sets[2], lighter.sets[2], 'user-entered load is protected');
 assert.equal(reducedDay.sets.some(set => set.sub && !set.done), false, 'pending failure-technique sets are removed on a lighter day');
 assert.deepEqual(lighter, beforeLight, 'the original snapshot remains valid for Undo');
+const loggedExtension = { sets: [
+    { done: true, weight: '100' }, { sub: true, done: true, kind: 'myo', weight: '80' }
+] };
+const retainedExtension = resizeWorkingSets(loggedExtension, 2);
+assert.deepEqual(retainedExtension.sets.slice(0, 2), loggedExtension.sets,
+    'logged extensions remain in their original order when a new work set is added');
+assert.equal(retainedExtension.sets[2].added, true);
 console.log('PASS session edits: set-count changes and explicit easier-day loads preserve completed and manually owned evidence.');

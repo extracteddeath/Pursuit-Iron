@@ -48,6 +48,13 @@ assert.ok(css.includes('.wpb-progression-result-count{') &&
     css.includes('max-height:min(85dvh,calc(var(--visual-h,') &&
     css.includes('.wpb-save-review-scroll{flex:1;min-height:0'),
     'responsive CSS belongs to the original components, not new override layers');
+for (const surface of ['wpb-program-schedule-sheet','wpb-program-reference-panel','wpb-progression-choice-panel']) {
+    assert.ok(css.includes(`.${surface}{`) && css.includes(`.${surface}{box-sizing:border-box`),
+        'Program surface retains a component-owned stylesheet rule: '+surface);
+    const start = css.indexOf(`.${surface}{`);
+    assert.ok(css.slice(start, css.indexOf('}', start)).includes('max-height:min(86dvh,calc(var(--visual-h,'),
+        'Program surface respects the visible keyboard viewport: '+surface);
+}
 assert.ok(css.length<=643592,'consolidated CSS does not exceed last published size ceiling');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'no additional priority overrides');
 console.log('PASS B996: shared modal focus, destructive cancellation, resilient disclosure, accessible volume/progression and lower CSS debt.');

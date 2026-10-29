@@ -176,6 +176,7 @@ export const browserShards = Object.freeze({
         'm214-executable-prescription-sync-browser-test.mjs',
         'm232-live-autoregulation-browser-test.mjs',
         'b944-readiness-browser-test.mjs',
+        'b980-pr-notification-browser-test.mjs',
         'b880-wake-lock-browser-test.mjs',
         'b882-workout-reason-browser-test.mjs'
     ]),

@@ -82,7 +82,6 @@ try{
  }
  await page.setViewport({width:393,height:850,isMobile:true,hasTouch:true,deviceScaleFactor:2});
  await page.evaluate(()=>document.documentElement.style.fontSize='16px');
- await page.click('.wpb-exinfo-rest-step:last-of-type').catch(()=>{});
  // Real value change must use the Workout state writer, not just change CSS.
  await page.$eval('.wpb-exinfo-rest-step',el=>el.click());
  await page.waitForFunction(()=>document.querySelector('.wpb-exinfo-rest-caption')?.textContent.includes('Custom'));

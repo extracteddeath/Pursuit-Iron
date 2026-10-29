@@ -15,5 +15,5 @@ for(const selector of ['.wpb-workout-timer[data-paused="true"]','.wpb-workout-he
   assert.ok(css.includes(selector),'Missing CSS role '+selector);
 assert.ok(!css.slice(css.indexOf('/* B991:')).includes('!important'),'No priority overrides in new CSS');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority-debt increase');
-assert.ok((app.match(/style: \\{/g)||[]).length<=1147,'No new inline presentation');
+assert.ok((app.match(/style: \\{/g)||[]).length<=1101,'No new inline presentation');
 console.log('PASS B991: Workout and Program header controls retain callback ownership and CSS styling.');

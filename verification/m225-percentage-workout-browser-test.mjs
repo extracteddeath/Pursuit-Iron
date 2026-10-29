@@ -47,7 +47,7 @@ async function verifyTrainingMaxEditing(browser) {
         const initial=await state();
         const openProgram=async()=>{await page.$eval('[aria-label="Open M225 percentage editor"]',b=>b.click());await page.waitForSelector('.wpb-program');};
         await openProgram();
-        const open=async()=>{await page.$eval('[aria-label="Edit training maxes"]',b=>{b.scrollIntoView({block:'center'});b.focus();b.click();});await page.waitForSelector('.wpb-training-max-sheet',{visible:true});};
+        const open=async()=>{await page.$eval('.wpb-training-max-summary[aria-label*="Edit training maxes"]',b=>{b.scrollIntoView({block:'center'});b.focus();b.click();});await page.waitForSelector('.wpb-training-max-sheet',{visible:true});};
         const input=()=>page.$('.wpb-training-max-controls input');
         const type=async(handle,value)=>{await handle.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');if(value)await page.keyboard.type(value);else await page.keyboard.press('Backspace');};
         const click=label=>page.$$eval('.wpb-training-max-sheet button',(buttons,label)=>buttons.find(b=>b.textContent.trim()===label).click(),label);

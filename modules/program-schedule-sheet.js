@@ -16,7 +16,7 @@ export function resolvedWeeklySchedule(program) {
 }
 
 export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetDragRef }) {
-    const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
+    const { attachPanel, onPanelKeyDown, panelRef } = useProgramSheetFocus(onClose, sheetDragRef);
     const schedule = program.schedule || {};
     const rows = resolvedWeeklySchedule(program);
     const trainingDays = rows.filter(row => row.day).length;
@@ -69,7 +69,14 @@ export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetD
                     }, weekday);
                 }),
                 Object.keys(schedule).length > 0 && _jsx('button', {
-                    type: 'button', 'aria-label': 'Clear all scheduled workouts', onClick: onClear,
+                    type: 'button', 'aria-label': 'Clear all scheduled workouts',
+                    onClick: () => {
+                        // The Clear button unmounts when the schedule becomes empty.
+                        // Move focus to a stable control before changing parent state,
+                        // otherwise Escape would go to the background document.
+                        panelRef.current?.querySelector('.wpb-program-schedule-close')?.focus({ preventScroll: true });
+                        onClear();
+                    },
                     className: 'pressable wpb-program-schedule-clear', children: 'Clear schedule'
                 })
             ]

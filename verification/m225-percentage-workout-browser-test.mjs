@@ -94,7 +94,7 @@ async function verifyTrainingMaxEditing(browser) {
         await cdp.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});await cdp.detach();
         await close();assert.deepEqual(await state(),initial,'Cancel discards the complete max draft');
         await open();await type(await input(),entered);await page.keyboard.press('Escape');await page.waitForSelector('.wpb-training-max-sheet',{hidden:true});
-        await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Edit training maxes');
+        await page.waitForFunction(()=>document.activeElement?.matches('.wpb-training-max-summary[aria-label*="Edit training maxes"]'));
         assert.deepEqual(await state(),initial,'Escape discards changes and restores the entry action');
         await open();await click('Use 1RM');
         await type(await page.$('.wpb-training-max-conversion input'),'12..5');

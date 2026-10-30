@@ -179,6 +179,17 @@ try{
   assert.equal(hierarchy.overflow,false,'compact Profile has no horizontal overflow');
   await page.$eval('.wpb-profile-card-actions button', b=>b.click());
   await page.waitForSelector('.wpb-profile-card-editor');
+  // The read-only metrics explanation is a real disclosure, not a tiny caption.
+  const metricSummary=await page.$eval('.wpb-profile-card-details>summary',el=>{
+    const r=el.getBoundingClientRect();
+    return {w:r.width,h:r.height,l:r.left,right:r.right};
+  });
+  assert.ok(metricSummary.w>=48&&metricSummary.h>=48&&metricSummary.l>=-1&&metricSummary.right<=width+1,
+    'Profile metric explanation has a reachable 48px disclosure: '+JSON.stringify({width,theme,metricSummary}));
+  await page.$eval('.wpb-profile-card-details>summary',el=>el.click());
+  assert.equal(await page.$eval('.wpb-profile-card-details',el=>el.open),true,
+    'Metrics explanation opens without changing card selections');
+  await page.$eval('.wpb-profile-card-details>summary',el=>el.click());
   const rowEdges=await page.$$eval('.wpb-profile-strength-cell',cells=>cells.map(c=>({label:c.querySelector('.wpb-profile-strength-label').getBoundingClientRect().left,value:c.querySelector('.mono').getBoundingClientRect().right})));
   assert.ok(rowEdges.length>=2,'populated fixture shows strength comparisons');
   assert.ok(rowEdges.every(r=>Math.abs(r.label-rowEdges[0].label)<1&&Math.abs(r.value-rowEdges[0].value)<1),'highlighted Push and other scores align');

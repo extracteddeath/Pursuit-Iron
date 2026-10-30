@@ -30,9 +30,10 @@ assert.ok(!css.includes(prefix + '.wpb-history-session-toggle[aria-expanded="tru
 assert.ok(css.includes('#root .wpb .wpb-profile .wpb-profile-achievement-board,#root .wpb .wpb-profile-score-trend{margin-top:12px;padding-top:12px;border-top:1px solid var(--wpb-theme-border-soft)}'));
 assert.ok(css.includes('#root .wpb :is(.wpb-profile-trend-delta,.wpb-profile-pattern-level){font-size:var(--pi-type-caption);font-weight:700;color:var(--pi-profile-trend-ink)}'));
 assert.ok(css.includes('#root .wpb .wpb-profile-pattern-delta{font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-profile-trend-ink)}'));
-assert.ok(!css.includes('#root .wpb .wpb-profile-score-trend{margin-top:12px;') &&
-  !css.includes('#root .wpb .wpb-profile-pattern-level{font-size:11px'),
-  'Profile rhythm and metrics cannot regain duplicate literal owners');
+assert.ok(!css.split('\n').some(line =>
+  line.startsWith('#root .wpb .wpb-profile-score-trend{') ||
+  line.startsWith('#root .wpb .wpb-profile-pattern-level{font-size:11px')),
+  'Profile rhythm and metrics cannot regain duplicate standalone owners');
 assert.equal((css.match(/!important/g) || []).length, 2024, 'No new priority declarations');
 assert.ok(css.length <= 643872, 'Source consolidation must reduce—not expand—CSS debt');
 console.log('PASS design Progress/Profile: shared state, metric and section owners; no priority growth.');

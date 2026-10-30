@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 74,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b995-rdcf82d42ad0107b9",
-  "uiMilestone": "Build 995 · Comparable set counts and verified progression replay"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b996-ra6809f4f69a8a503",
+  "uiMilestone": "Build 996 · Saved-state machine increments and verified progression replay"
 }

@@ -1140,7 +1140,6 @@ function StyleTag({ theme } = {}) {
       .wpb-workout .wpb-workout-scroll{padding-left:14px!important;padding-right:14px!important;}
       .wpb-workout-card,.wpb-coach-card{border:1px solid ${C.borderSoft}!important;border-radius:12px!important;background:${C.card}!important;box-shadow:none!important;}
       .wpb-exercise-heading{padding:2px 2px 0;}
-      .wpb-workout .wpb-ex-nav>button{border-radius:10px!important;min-width:40px!important;height:40px!important;}
       /* M92: pre-redesign set inputs restored; no app-wide workout numeric override. */
       /* M92: focused set inputs use their original inline sizing. */
       /* M92: original set focus treatment restored. */
@@ -1361,10 +1360,6 @@ function StyleTag({ theme } = {}) {
       .wpb-workout-actions{gap:6px!important;}
       .wpb-workout .wpb-ex-nav{
         gap:6px!important;margin-top:8px!important;padding-bottom:0!important;
-      }
-      .wpb-workout .wpb-ex-nav>button{
-        min-width:34px!important;height:34px!important;min-height:34px!important;
-        padding-left:8px!important;padding-right:8px!important;border-radius:9px!important;font-size:12px!important;
       }
       .wpb-workout .wpb-ex-nav>button[aria-current="step"]{
         max-width:min(48vw,180px)!important;
@@ -2172,7 +2167,6 @@ function StyleTag({ theme } = {}) {
       .wpb-ex-nav-name{will-change:max-width,opacity,transform;margin-left;}
       @media(max-width:380px){
         .wpb-workout-actions{gap:4px!important;}
-        .wpb-ex-nav-step{height:38px!important;min-width:38px!important;padding-left:9px!important;padding-right:9px!important;}
         .wpb-history-detail-head{align-items:flex-start!important;gap:8px!important;}
         .wpb-history-actions{gap:5px!important;}
         .wpb-history-actions>button,.wpb-history-actions>span>button{min-width:38px!important;width:38px!important;min-height:38px!important;height:38px!important;}

@@ -199,6 +199,38 @@ assert.ok(programSchedule.includes('wpb-ui-sheet-heading wpb-program-schedule-he
     !css.includes('.wpb-program-schedule-heading{display:flex;'),
     'Weekly Schedule uses the shared header while preserving its compact zero inset');
 
+
+/* Design-spec passes 24–26: existing Program primitives own header,
+   scroll and review-action geometry; features retain only their distinct paint. */
+assert.ok(programReference.includes("wpb-ui-sheet-heading wpb-progression-choice-heading"),
+    'Progression Methods title row reuses the native Program header primitive');
+const progressionHeader=css.split('#root .wpb .wpb-progression-choice-heading{')[1]?.split('}')[0]||'';
+assert.ok(progressionHeader.includes('--pi-ui-sheet-heading-gap:var(--pi-space-3)') &&
+    progressionHeader.includes('--pi-ui-sheet-heading-padding:16px 18px 10px') &&
+    progressionHeader.includes('align-items:flex-start') &&
+    progressionHeader.includes('border-bottom:1px solid var(--wpb-theme-border-soft)'),
+    'Progression Methods keeps its existing eyebrow/exercise anatomy and divider');
+for(const property of ['display:','flex-shrink:','gap:','padding:'])
+    assert.ok(!progressionHeader.includes(property) || progressionHeader.includes('--pi-ui-sheet-heading-'+property.split(':')[0]),
+        'Progression Methods may not re-own shared header layout: '+property);
+assert.ok(programScroll.includes('min-width:0'),
+    'Every Program sheet scroller shares the minimum-width guard');
+for(const cls of ['wpb-program-settings-body','wpb-program-share-body',
+    'wpb-program-reference-body','wpb-progression-choice-body','wpb-exercise-options-body']){
+    const body=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+    assert.ok(body&&!body.includes('min-width:0'),
+        'Sheet body must inherit the common min-width guard: '+cls);
+}
+const saveActionGeometry=css.split('#root .wpb :is(.wpb-save-review-confirm,.wpb-save-review-cancel){')[1]?.split('}')[0]||'';
+for(const prop of ['width:100%','min-height:48px','font-size:.9375rem','line-height:1.4',
+    'padding:13px','border-radius:12px','cursor:pointer'])
+    assert.ok(saveActionGeometry.includes(prop),'Review actions share accessible geometry: '+prop);
+for(const cls of ['wpb-save-review-confirm','wpb-save-review-cancel']){
+    const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+    assert.ok(local&&!['width:','min-height:','font-size:','line-height:','padding:','border-radius:','cursor:'].some(prop=>local.includes(prop)),
+        'Review button-specific styling only owns paint, weight and spacing: '+cls);
+}
+
 // Five Program sheet H2 titles share semantic type and wrapped 200%-text
 // geometry; two compact variants keep their existing 1.3 line-height.
 const commonTitle=css.split('#root .wpb .wpb-ui-sheet-title{')[1]?.split('}')[0]||'';

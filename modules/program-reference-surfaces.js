@@ -22,7 +22,7 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
         'aria-labelledby': 'program-progression-title', 'aria-describedby': 'program-progression-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         children: _jsxs('section', { className: 'wpb-progression-choice-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-progression-choice-heading', children: [
+                _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-progression-choice-heading', children: [
                     _jsxs('div', { children: [
                         _jsx('h2', { id: 'program-progression-title', children: 'Progression method' }),
                         _jsx('p', { className: 'wpb-progression-choice-exercise', children: exerciseName })

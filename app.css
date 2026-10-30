@@ -9931,8 +9931,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Shared-control pilot: Settings navigation and plate choices use the same
    accessible UiAction/UiChoice owners as the rest of the interface. Feature CSS
    owns spacing only; theme paint, selection and focus stay in the primitives. */
-#root .wpb .wpb-settings .wpb-settings-link.wpb-ui-action[data-action="tonal"]{width:100%;min-width:0;gap:var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);margin-bottom:var(--pi-space-2);border-radius:var(--pi-shape-card);justify-content:flex-start;text-align:left}
-#root .wpb .wpb-settings-plates-card{padding:var(--pi-space-3) var(--pi-space-4)}
+#root .wpb .wpb-settings .wpb-settings-link.wpb-ui-action[data-action="tonal"]{width:100%;margin-bottom:var(--pi-space-2);border-radius:var(--pi-shape-card);justify-content:flex-start;text-align:left}
 #root .wpb .wpb-settings-plate-choice{min-width:48px;min-height:48px;padding:8px 13px;font-size:var(--pi-type-support);white-space:normal;overflow-wrap:anywhere}
 
 /* B988 — Gallery: semantic M3 filter states, large touch targets, CSS-owned UI. */
@@ -9944,7 +9943,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-gallery-message{margin-top:20px;border-radius:12px;background:var(--wpb-theme-card);padding:20px 18px;text-align:center}
 #root .wpb .wpb-gallery-message-title{font-size:15px;font-weight:700;color:var(--wpb-theme-text);margin-bottom:4px}
 #root .wpb .wpb-gallery-message-text{font-size:13px;color:var(--wpb-theme-muted);line-height:1.5}
-#root .wpb .wpb-gallery-retry{margin-top:14px;min-height:48px;padding:10px 16px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card-high);color:var(--wpb-theme-text);font-size:14px;font-weight:700;cursor:pointer}
+#root .wpb .wpb-gallery-retry{margin-top:14px;min-height:48px}
 #root .wpb .wpb-gallery-empty-text{font-size:13px;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-gallery-count{font-size:13px;color:var(--wpb-theme-faint);margin-bottom:8px}
 #root .wpb .wpb-gallery-no-match{padding:32px 0;text-align:center;color:var(--wpb-theme-muted);font-size:13px}
@@ -9957,10 +9956,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-gallery-feedback{font-size:13px;font-weight:600;margin-top:12px;line-height:1.45}
 #root .wpb .wpb-gallery-feedback--success{color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-gallery-feedback--error{color:var(--wpb-theme-danger)}
-#root .wpb .wpb-gallery-import{width:100%;min-height:48px;margin-top:12px;padding:11px;border-radius:12px;border:none;cursor:pointer;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px}
+#root .wpb .wpb-gallery-import{width:100%;min-height:var(--pi-primary-min,52px);margin:12px 0 0}
 #root .wpb .wpb-gallery-import:disabled{cursor:default;background:var(--wpb-theme-card-high);color:var(--wpb-theme-muted)}
 #root .wpb .wpb-gallery-disclaimer{font-size:11px;color:var(--wpb-theme-faint);line-height:1.55;margin-top:20px;padding:0 2px}
-@media(forced-colors:active){#root .wpb .wpb-gallery-chip--selected{outline:2px solid Highlight;outline-offset:-2px}}
 
 /* B991: Workout/Program header CSS ownership; dynamic state stays in React. */
 #root .wpb-workout .wpb-workout-timer{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-width:90px;min-height:48px;overflow:visible;color:var(--wpb-theme-muted);font-size:13px;background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 8px;cursor:pointer;touch-action:manipulation;-webkit-touch-callout:none;user-select:none}

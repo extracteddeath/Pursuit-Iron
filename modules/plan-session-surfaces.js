@@ -77,9 +77,12 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
     ] });
 }
 export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose }) {
+    // A planned-set revision is a saved program edit, while load holds are scoped
+    // to this next workout. Do not mislabel both as a one-session change.
+    const hasSavedSetChanges = review.changes.some(row => !!row.change.setDelta);
     return _jsx(SessionChoiceDialog, { title: "Plan changes", onClose, className: "wpb-plan-changes-dialog",
         children: _jsxs("div", { className: "wpb-plan-changes-body", children: [
-            _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex} · Upcoming workout only. Completed history stays intact.` }),
+            _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex}. ${hasSavedSetChanges ? 'Saved program set edits; load holds apply to this workout.' : 'Load choices apply to this workout.'} Completed history stays intact.` }),
             !review.changes.length && _jsx("p", { children: "No meaningful changes to review." }),
             ...review.changes.map(row => {
                 const change = row.change;
@@ -102,7 +105,8 @@ export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose })
                     _jsxs("div", { className: "wpb-plan-change-title", children: [
                         _jsx("h3", { children: row.name }),
                         _jsx("span", { children: change.undone ? 'Prior load kept' : change.category })] }),
-                    _jsx("p", { className: "wpb-plan-change-summary", children: change.summary }),
+                    !singleSet && _jsx("p", { className: "wpb-plan-change-summary", children: change.summary }),
+                    singleSet && _jsx("p", { className: "wpb-plan-review-basis", children: "Last → Upcoming" }),
                     singleSet && targetDetails,
                     _jsxs("details", { className: "wpb-plan-change-more", children: [
                         _jsx("summary", { children: singleSet ? "Why this change?" : "Why and set comparison" }),

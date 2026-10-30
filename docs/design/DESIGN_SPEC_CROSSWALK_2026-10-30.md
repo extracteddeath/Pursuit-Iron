@@ -32,3 +32,6 @@
 
 
 **Passes 74–76 verification upgrade:** B999 browser fixture now mounts the actual `ProgramRevisionReview` with a known goal-setting delta. At 320px and 200% text, it asserts all four impact layers are visibly present and not horizontally clipped, the computed count reflects the diff, focus is correctly trapped, and exactly one Apply callback fires. This tests the §7.9/§10 interaction rather than just naming CSS selectors. Until that exact-head job finishes, evidence remains pending.
+
+
+**Passes 77–79 truthfulness correction (§§7.9,9.2,10):** The canonical `sessionPlanChange` distinguishes `setDelta` (saved program revision provenance) from a reversible next-workout load choice. Plan review now displays the corresponding scope honestly, and a single visible comparison is labeled **Last → Upcoming** without duplicating the same weight summary. B999 source/browser checks enforce this distinction. User data and engine classification remain untouched.

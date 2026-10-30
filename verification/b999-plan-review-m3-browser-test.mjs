@@ -72,7 +72,9 @@ try{
         'Plan actions and disclosure remain >=48px: '+JSON.stringify(sizes));
     assert.ok(sizes.textSize>=24,'200% text scales the review narrative: '+JSON.stringify(sizes));
     assert.equal(sizes.focus,true,'shared modal focus trap receives initial focus');
-    assert.match(await page.$eval('.wpb-plan-review-intro',el=>el.textContent),/Upcoming workout only.*Completed history stays intact/);
+    assert.match(await page.$eval('.wpb-plan-review-intro',el=>el.textContent),/Load choices apply to this workout.*Completed history stays intact/);
+    assert.equal(await page.$('.wpb-plan-change-summary'),null,'Visible single-set diff replaces duplicate load summary');
+    assert.equal(await page.$eval('.wpb-plan-review-basis',el=>el.textContent),'Last → Upcoming');
     const visibleDiff=await page.$eval('.wpb-plan-target-diff',el=>({
         visible:!!el.getClientRects().length,text:el.innerText,labels:el.getAttribute('aria-label')
     }));

@@ -39,7 +39,11 @@ assert.ok((css.match(/!important/g)||[]).length<=2054,'priority declaration coun
 assert.ok(plan.includes('const singleSet = showTargets && row.proposed?.length === 1 && change.previous?.length === 1;') &&
   plan.includes('singleSet && targetDetails') && plan.includes('!singleSet && targetDetails'),
   'Single-set load before/after is immediately visible; multi-set detail stays disclosed once');
-assert.ok(plan.includes('Upcoming workout only. Completed history stays intact.') &&
+assert.ok(plan.includes('review.changes.some(row => !!row.change.setDelta)') &&
+  plan.includes('Saved program set edits; load holds apply to this workout.') &&
+  plan.includes('Load choices apply to this workout.') &&
+  plan.includes('!singleSet && _jsx("p", { className: "wpb-plan-change-summary"') &&
+  plan.includes('children: "Last → Upcoming"') &&
   plan.includes('singleSet ? "Why this change?" : "Why and set comparison"'),
   'Plan changes state scope upfront and keep optional reasoning concise');
 for(const name of ['What changes','Why','When','What stays intact'])

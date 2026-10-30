@@ -222,6 +222,16 @@ export const rearHistory = [{id:'b1002-prior',programId:rearProgram.id,dayId:'up
     assert.deepEqual(rows.map(row => row.target.decisionTrace?.evaluation?.action),['add_reps','add_reps','add_reps']);
     assert.equal(rows[2].target.decisionTrace.source.historyEntryId,prior[0].id,
         'Later-set advice must identify its exact source workout');
+    const crossUnit=prescribeSets(rearProgram,rearProgram.days[0],EX_BY_ID['rear-fly'],
+        0,1,'lb',{weight:55,target:20,action:'hold',lastUnit:'kg',
+            last:{sets:[0,1,2].map(()=>({w:25,r:20,rir:2,rirReported:true}))}},
+        {},{},[],false);
+    assert.deepEqual(crossUnit.map(row=>row.target.decisionTrace.source.load),[55,55,55],
+        'kg history must be converted and snapped before comparing with lb prefills');
+    assert.equal(crossUnit[0].target.decisionTrace.source.originalLoad,25);
+    assert.equal(crossUnit[0].target.decisionTrace.source.originalUnit,'kg');
+    assert.deepEqual(auditSetDecisionTraces(crossUnit),[],
+        'A legitimate kg-to-lb conversion is not an unearned load change');
     assert.deepEqual(rows.map(s=>[s.weight,s.reps]),[['60','21'],['60','21'],['60','21']],
         'Workout row defaults and canonical recommendation must agree');
     const stray = {...advice,setTargets:advice.setTargets.map((t,i)=>i===2?{...t,weight:55}:t)};

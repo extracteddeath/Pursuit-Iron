@@ -1,5 +1,6 @@
 /** Canonical computation API used by the app and standalone consumers. */
 export * from './training-domain.js';
+export { captureWorkoutProgressionReplay, auditWorkoutProgressionReplay } from './next-engine/workout-replay.js';
 export * from './program-duration.js';
 export * as shell from './engine-shell.js';
 export * from './next-engine/config.js';

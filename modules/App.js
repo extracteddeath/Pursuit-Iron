@@ -1965,10 +1965,6 @@ function StyleTag({ theme } = {}) {
          rows keep their existing semantics while section rhythm is tightened so the page scans like
          a native preferences screen. */
       .wpb-settings-jump{padding-top:6px!important;padding-bottom:8px!important;}
-      .wpb-settings-jump-control{
-        min-height:40px!important;border-radius:10px!important;background:${C.bg2}!important;border-color:var(--hairline)!important;
-      }
-      .wpb-settings-jump-control select{min-height:32px!important;box-shadow:none!important;}
 
       /* Dense phones: preserve line length and hierarchy; don't solve crowding by shrinking text. */
       @media(max-width:420px){

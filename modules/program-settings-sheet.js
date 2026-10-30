@@ -91,7 +91,7 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
             ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: e => e.stopPropagation(), className: "wpb-program-settings-panel",
             children: [
                 _jsxs("div", { className: "wpb-ui-sheet-heading wpb-program-settings-heading", children: [
-                    _jsx("h2", { id: "program-settings-title", className: "wpb-program-settings-title", children: "Program settings" }),
+                    _jsx("h2", { id: "program-settings-title", className: "wpb-ui-sheet-title wpb-program-settings-title", children: "Program settings" }),
                     _jsx(UiSheetClose, { className: "wpb-program-settings-close", onClick: onClose })] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-program-settings-body wpb-ui-sheet-scroll', children: [
                     _jsx("p", { className: "wpb-program-settings-intro", children: program.engineSource === "pursuit-next"

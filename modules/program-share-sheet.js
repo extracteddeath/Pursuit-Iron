@@ -72,7 +72,7 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
         className: 'wpb-backdrop wpb-program-share-backdrop', children:
         _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-program-share-panel', onClick: event => event.stopPropagation(), children: [
             _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-program-share-heading', children: [
-                _jsx('h2', { id: 'program-share-title', children: 'Share program' }),
+                _jsx('h2', { id: 'program-share-title', className: 'wpb-ui-sheet-title', children: 'Share program' }),
                 _jsx(UiSheetClose, { className: 'wpb-program-share-close', onClick: onClose })
             ] }),
             _jsxs('div', { className: 'wpb-scroll wpb-program-share-body wpb-ui-sheet-scroll', children: [

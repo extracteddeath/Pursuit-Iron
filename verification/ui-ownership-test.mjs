@@ -195,6 +195,29 @@ assert.ok(programSchedule.includes('wpb-ui-sheet-heading wpb-program-schedule-he
     !css.includes('.wpb-program-schedule-heading{display:flex;'),
     'Weekly Schedule uses the shared header while preserving its compact zero inset');
 
+// Five Program sheet H2 titles share semantic type and wrapped 200%-text
+// geometry; two compact variants keep their existing 1.3 line-height.
+const commonTitle=css.split('#root .wpb .wpb-ui-sheet-title{')[1]?.split('}')[0]||'';
+for(const role of ['min-width:0','margin:0','font-size:1.125rem','font-weight:700',
+    'line-height:var(--pi-ui-sheet-title-leading,1.4)','overflow-wrap:anywhere'])
+    assert.ok(commonTitle.includes(role),'Shared Program sheet title missing '+role);
+for(const [name,source,selector] of [
+  ['Schedule',programSchedule,"wpb-ui-sheet-title wpb-program-schedule-title"],
+  ['Settings',programSettings,"wpb-ui-sheet-title wpb-program-settings-title"],
+  ['Share',programShare,"id: 'program-share-title', className: 'wpb-ui-sheet-title'"],
+  ['Details',programReference,"id: 'program-reference-title', className: 'wpb-ui-sheet-title'"],
+  ['Training Maxes',trainingMaxes,"id: 'program-training-max-title', className: 'wpb-ui-sheet-title'"]
+]) assert.ok(source.includes(selector),name+' must reuse the common sheet title typography');
+for(const [selector,override] of [
+  ['#root .wpb .wpb-program-share-heading h2{','--pi-ui-sheet-title-leading:1.3'],
+  ['#root .wpb .wpb-training-max-heading h2{','--pi-ui-sheet-title-leading:1.3']
+]) assert.ok((css.split(selector)[1]?.split('}')[0]||'').includes(override),
+   'Compact Program sheet title preserves the original line-height: '+selector);
+assert.ok(!css.includes('.wpb-program-settings-title{') &&
+    !css.includes('.wpb-program-schedule-title{') &&
+    !css.includes('.wpb-program-reference-heading h2{'),
+    'Do not re-fork identical Program sheet title typography');
+
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
 function repeatedImportantDeclarations(source) {

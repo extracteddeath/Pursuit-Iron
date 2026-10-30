@@ -54,7 +54,7 @@ export function ProgramReferenceSheet({ onClose, sheetDragRef, children }) {
         children: _jsxs('div', { className: 'wpb-program-reference-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('div', { className: 'wpb-ui-sheet-heading wpb-program-reference-heading', children: [
-                    _jsx('h2', { id: 'program-reference-title', children: 'Plan info' }),
+                    _jsx('h2', { id: 'program-reference-title', className: 'wpb-ui-sheet-title', children: 'Plan info' }),
                     _jsx(UiSheetClose, { className: 'wpb-program-reference-close',
                         'aria-label': 'Close program details', onClick: onClose })
                 ] }),

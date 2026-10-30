@@ -32,7 +32,7 @@ export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetD
             children: [
                 _jsxs('div', { className: 'wpb-ui-sheet-heading wpb-program-schedule-heading', children: [
                     _jsx('h2', { id: 'program-weekly-schedule-title',
-                        className: 'wpb-program-schedule-title', children: 'Weekly schedule' }),
+                        className: 'wpb-ui-sheet-title wpb-program-schedule-title', children: 'Weekly schedule' }),
                     _jsx(UiSheetClose, { onClick: onClose, className: 'wpb-program-schedule-close' })
                 ] }),
                 _jsxs('p', { className: 'wpb-program-schedule-caption', children: [

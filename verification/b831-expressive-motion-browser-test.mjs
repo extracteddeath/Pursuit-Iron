@@ -2050,6 +2050,17 @@ try {
             workoutHeaderTargets.every(x=>x.w>=48&&x.h>=48&&x.l>=-1&&x.r<=width+1) &&
             !overlappingHeaders,
             'Workout header touch targets are distinct: '+JSON.stringify({width,workoutHeaderTargets}));
+        // The exercise rail is independently scrollable. Its buttons still
+        // use complete 48px hit targets, even when some extend offscreen.
+        const exerciseRailTargets=await page.$$eval('.wpb-workout .wpb-ex-nav .wpb-ex-nav-step',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {width:r.width,height:r.height,name:el.getAttribute('aria-label')||el.textContent.trim()};
+            }));
+        assert.ok(exerciseRailTargets.length>=2 &&
+            exerciseRailTargets.every(x=>x.width>=48&&x.height>=48),
+            'Exercise rail uses the shared 48px owner rather than legacy runtime sizing: '+
+            JSON.stringify({width,exerciseRailTargets}));
         // R23: actual on-screen tool controls stay touch-safe; do not touch
         // the compact weight/reps grid, navigation ownership or log state.
         const liveToolsR23=await page.$$eval('.wpb-workout-tools .wpb-workout-tool', controls =>

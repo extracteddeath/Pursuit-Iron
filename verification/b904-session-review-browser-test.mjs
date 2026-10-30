@@ -61,6 +61,17 @@ try{
   const clickText=async text=>assert.ok(await page.evaluate(text=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);b?.click();return !!b;},text),text);
   await clickText('Preview · Time available');await page.waitForSelector('.wpb-next-workout-view');
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/80 kg × 6/);
+  const previewChange=await page.$('.wpb-plan-change-banner[aria-label^="Review "]');
+  if(!previewChange){
+   const evidence=await page.evaluate(()=>{
+      const text=document.querySelector('.wpb-next-workout-view')?.innerText||'';
+      const saved=JSON.parse(localStorage.getItem('wpb:v1')||'null');
+      return {heading:text.slice(0,550),choices:saved?.saved?.[0]?.sessionPlanChoices,
+        hasReview:!!document.querySelector('.wpb-plan-change-banner'),
+        homeGamePlan:document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText};
+   });
+   throw new Error('Preview hid a previously held load adjustment: '+JSON.stringify(evidence));
+  }
   await page.click('.wpb-plan-change-banner[aria-label^="Review "]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');
   await page.click('[aria-label="Use recommended load for Barbell Bench Press"]');await page.waitForSelector('[aria-label="Keep previous load for Barbell Bench Press"]');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[aria-label="Plan changes"]'));

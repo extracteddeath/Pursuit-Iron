@@ -27,7 +27,7 @@ const loadingCalculator = fs.readFileSync('modules/loading-calculator.js','utf8'
 const gymLoadFields = fs.readFileSync('modules/gym-load-fields.js','utf8');
 const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
 const MAX_IMPORTANT = 2060; // M394: retire 33 exercise-row priority overrides.
-const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
+const MAX_APP_IMPORTANT = 1024; // Design audit: remove 25 obsolete Workout header/rail priorities; ratchet measured total.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
 const MAX_INLINE_STYLE_OBJECTS = 1406; // B965: retire 49 additional literal presentation objects; never increase.
 

@@ -4,7 +4,7 @@ import { loadingInventoryWithExerciseSteps } from '../next-engine/loading.js';
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { nextExerciseIdForShellExercise, resolveNextShellExerciseId, snapshotNextShellPrescription } from "../next-engine/app-shell-adapter.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, previousWorkoutSet, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
 import { percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from '../next-engine/percentage-protocols.js';
 import { buildRuntimeSetTargets, customProgramProgressionStyle, techniqueProtocolFromCell } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
@@ -779,7 +779,8 @@ export function retainDoubleProgressionSetLoads(suggestion, previousLoads) {
         Number(suggestion.setTargets[index]?.weight) === target.weight);
     if (sameTargets && Number(suggestion.weight) === previousLoads[0])
         return suggestion;
-    return { ...suggestion, weight: previousLoads[0], dir: 'hold', setTargets: corrected };
+    return { ...suggestion, weight: previousLoads[0], dir: 'hold', setTargets: corrected,
+        traceAdjustments: [...(suggestion.traceAdjustments || []), 'unearned_load_drop_prevented'] };
 }
 
 // Review and Workout consume this same boundary. A user can decline one upcoming
@@ -957,7 +958,7 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     })[0];
     const weight = result.suggestedLoad ?? result.currentLoad;
     return { unit, lastUnit: last.unit ?? unit, weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
-        action: result.action, reps: cell.range, target: result.suggestedReps ?? lo,
+        action: result.action, reasonCode: result.reasonCode, reps: cell.range, target: result.suggestedReps ?? lo,
         setTargets: result.setTargets, last: last.perf[ex.id], confidence: result.confidence, reason: result.reason };
 
 }
@@ -1148,7 +1149,31 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
     const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
     const rangeText = range[0] === range[1] ? String(range[0]) : `${range[0]}-${range[1]}`;
     const rirText = cell.rir ?? null;
-    let rows = targets.map(t => ({
+    // Source -> evaluator decision -> loadable target. Captured after snapping
+    // and before live user edits so the original automatic prefill is auditable.
+    const decisionTraceFor = (index, load, reps, origin = null) => {
+        const previous = previousWorkoutSet(sug?.last, index);
+        const numeric = value => value !== null && value !== undefined && value !== ''
+            && Number.isFinite(Number(value)) ? Number(value) : null;
+        return {
+            schemaVersion: 1, programId: String(program.id), dayId: String(day.id),
+            exerciseId: ex.id, slot, weekIndex, workingSetIndex: index,
+            source: previous ? { load: previous.w, reps: previous.r,
+                ...(previous.rir !== null ? { reportedRir: previous.rir } : {}),
+                ...(previous.summary ? { summaryOnly: true } : {}) } : null,
+            evaluation: { action: origin ?? (estimate ? 'starting_estimate' : sug?.action || 'initial'),
+                reasonCode: percentage ? 'percentage_protocol' : estimate ? 'starting_estimate'
+                    : sug?.reasonCode || 'no_comparable_history',
+                ...(Array.isArray(sug?.traceAdjustments) && sug.traceAdjustments.length
+                    ? { safeguards: [...sug.traceAdjustments] } : {}) },
+            target: { load: numeric(load), reps: numeric(reps), unit },
+            ownership: sug?.action === 'user_hold' ? 'user' : 'prescription'
+        };
+    };
+    let workOrdinal = 0;
+    let rows = targets.map(t => {
+        const workIndex = t.kind === 'work' ? workOrdinal++ : null;
+        return ({
         weight: t.weight == null ? "" : String(t.weight),
         reps: String(t.reps),
         warm: t.kind === "warmup",
@@ -1162,15 +1187,17 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
             : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: estimate ? "estimate" : sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps),
-                ...(estimate ? { estimate: { from: estimate.from, e1rm: Math.round(estimate.e1rm * 10) / 10 } } : {}) }
-    }));
+                ...(estimate ? { estimate: { from: estimate.from, e1rm: Math.round(estimate.e1rm * 10) / 10 } } : {}),
+                decisionTrace: decisionTraceFor(workIndex, t.weight, t.reps) }
+    })});
     if (percentage) {
         rows = [...rows.filter(r => r.warm), ...percentage.sets.map(t => ({
             weight: String(t.weight), reps: String(t.reps).replace('+', ''), warm: false, done: false,
             auto: true, valueOwner: 'prescription',
             target: { w: String(t.weight), reps: String(t.reps).replace('+', ''),
                 rir: t.amrap ? '0' : rirText, amrap: !!t.amrap,
-                nextAction: 'percentage', confidence: null, prefillReps: String(t.reps).replace('+', '') }
+                nextAction: 'percentage', confidence: null, prefillReps: String(t.reps).replace('+', ''),
+                decisionTrace: decisionTraceFor(percentage.sets.indexOf(t), t.weight, String(t.reps).replace('+', ''), 'percentage') }
         }))];
     }
     // Advanced-technique selection is engine-owned; this shell helper only realizes the engine's cue
@@ -1264,7 +1291,13 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             // bug v493 fixed in the live session, surviving in the log.
             return { ...historyExposureContext(x),
                 ...(!x.sub && workPosition.has(x) ? { workingSetIndex: workPosition.get(x) } : {}),
-                w: wv(x), r: parseInt(x.reps), ...(failedRows.includes(x) ? { failedAttempt: true } : {}), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
+                w: wv(x), r: parseInt(x.reps), ...(failedRows.includes(x) ? { failedAttempt: true } : {}), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}),
+                ...(x.target?.decisionTrace?.schemaVersion === 1
+                    ? { decisionTrace: { ...x.target.decisionTrace,
+                        applied: { load: wv(x), reps: parseInt(x.reps),
+                            owner: x.valueOwner || (x.auto ? 'prescription' : 'user'),
+                            ...(x.liveAdjustment?.reasonCode
+                                ? { liveReasonCode: x.liveAdjustment.reasonCode } : {}) } } } : {}) };
         });
         const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex)
             || { schemaVersion: 1, exerciseId: e.id, ...computeCell(program, day, e.id, e.slot, weekIndex) };

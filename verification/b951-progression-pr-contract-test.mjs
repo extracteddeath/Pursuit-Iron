@@ -25,5 +25,5 @@ assert.ok(!gesture.slice(gesture.indexOf('setData(d =>')).includes('setPrFlash('
 assert.ok(!gesture.includes('const acceptLowerLoad ='),'Set-by-set load banners and their unused accept handler stay retired');
 assert.ok(!app.includes('data-load-advice'),'Do not render a coaching banner above every set');
 assert.ok(app.includes('s.loadAdvice') || app.includes('loadAdvice'), 'Live adaptation can still retain advisory data');
-assert.ok(app.includes('data-reference-action') && app.includes('aria-label="weight"'), 'Set targets and manual weight fields remain available');
+assert.ok(app.includes('data-reference-action') && app.includes('"aria-label": "weight"'), 'Set targets and manual weight fields remain available');
 console.log('PASS B951 PR and double progression: no false records and no automatic load reductions.');

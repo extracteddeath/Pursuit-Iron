@@ -102,7 +102,7 @@ for(const selector of ['.wpb-workout-pinned-note:focus-visible{',
 // an always-visible recommendation above every pending set is not a UI action.
 assert.ok(!app.includes('data-load-advice') && !app.includes('const acceptLowerLoad =') &&
     !css.includes('wpb-load-advice'), 'Per-set coaching banner and dead styles must stay retired');
-assert.ok(app.includes('data-set-options-trigger') && app.includes('aria-label="weight"'),
+assert.ok(app.includes('data-set-options-trigger') && app.includes('"aria-label": "weight"'),
     'Weight and set editing remain directly available without a coaching prompt');
 
 // Workout Leave and header actions share one 48px control geometry owner.

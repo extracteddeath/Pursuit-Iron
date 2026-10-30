@@ -2,6 +2,42 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
 import { program, history, alternate, alternateHistory } from './b904-session-review-test.mjs';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
+
+// B994: the standalone diagnostic CLI is part of the full web distribution.
+// Run it here, not in the isolated engine snapshot which intentionally omits scripts/.
+{
+ const {spawnSync}=await import('node:child_process');
+ const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const temp=mkdtempSync(join(tmpdir(),'pursuit-replay-'));
+ const fixture=thirdLoad=>({
+  schemaVersion:1,kind:'pursuit-iron-progression-replay',exerciseId:'rear-fly',
+  slot:0,weekIndex:1,unit:'lb',progressionStyle:'double',
+  suggestion:{action:'add_reps',setTargets:[0,1,2].map(i=>({load:i===2?thirdLoad:60,reps:21}))},
+  history:[{weekIndex:1,unit:'lb',sets:[0,1,2].map(setIndex=>({setIndex,load:60,reps:20,reportedRir:2}))}],
+  rows:[0,1,2].map(i=>({rowIndex:i,workingSetIndex:i,kind:'work',done:false,
+   owner:'prescription',load:i===2?thirdLoad:60,reps:21,
+   target:{load:i===2?thirdLoad:60,reps:21},trace:null,liveAdjustment:null,
+   readinessFactor:null}))
+ });
+ try {
+  const file=join(temp,'diagnostics.json');
+  const run=payload=>{
+   writeFileSync(file,JSON.stringify(payload));
+   return spawnSync(process.execPath,[path.join(root,'scripts/audit-workout-replay.mjs'),file],
+    {cwd:root,encoding:'utf8'});
+  };
+  const valid=run(fixture(60));
+  assert.equal(valid.status,0,'Unchanged three-position double loads pass replay: '+valid.stdout+valid.stderr);
+  const unsafe=run(fixture(55));
+  assert.equal(unsafe.status,1,'An unearned third-set 55 lb load must fail replay');
+  assert.match(unsafe.stdout,/unearned_double_progression_history_load/);
+  assert.match(unsafe.stdout,/unearned_double_progression_suggestion_load/);
+ } finally { rmSync(temp,{recursive:true,force:true}); }
+}
+console.log('PASS B994 independent replay: same-position 60×20 history cannot prescribe 55×21.');
+
 const store={v:13,savedAt:1,saved:[program],cycles:[],history,perf:history[0].perf,drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:program.id,
  theme:'amethyst',unit:'kg',unitChosen:true,restAutoStart:false,warmupCard:false,experience:'intermediate',bodyweight:84,installDismissedAt:Date.now(),lastBackup:Date.now()};
 const mime={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.svg':'image/svg+xml'};

@@ -94,6 +94,17 @@ for(const selector of ['.wpb-workout-pinned-note:focus-visible{',
     assert.ok(!css.includes('#root .wpb-workout '+selector),
         'No standalone Workout focus geometry: '+selector);
 
+// Workout Leave and header actions share one 48px control geometry owner.
+const headerButtonGeometry=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){')[1]?.split('}')[0]||'';
+for(const token of ['box-sizing:border-box','width:48px','height:48px',
+    'background:transparent','color:var(--wpb-theme-text)','cursor:pointer'])
+    assert.ok(headerButtonGeometry.includes(token),'Header shared CSS lost '+token);
+for(const selector of ['.wpb-workout-close{','.wpb-workout-header-action{']){
+    const feature=css.split('#root .wpb-workout '+selector)[1]?.split('}')[0]||'';
+    assert.ok(feature&&!feature.includes('width:48px')&&!feature.includes('height:48px')&&!feature.includes('background:transparent'),
+      'Workout header feature rules must not own shared geometry: '+selector);
+}
+
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
 function repeatedImportantDeclarations(source) {

@@ -17,7 +17,6 @@ for(const selector of ['.wpb-workout-timer[data-paused="true"]','.wpb-workout-he
 // than shrinking its clickable box to the icon's visual geometry.
 for (const [selector,property] of [
   ['#root .wpb-workout .wpb-workout-timer','min-height:48px'],
-  ['#root .wpb-workout .wpb-workout-header-action','height:48px'],
   ['#root .wpb-workout .wpb-workout-actions>.wpb-workout-finish[data-compact="true"]','width:48px'],
   ['#root .wpb-program .wpb-program-header-back','min-height:48px'],
   ['#root .wpb-program .wpb-program-icon-change','height:48px'],
@@ -27,6 +26,15 @@ for (const [selector,property] of [
   assert.ok(start>=0 && css.slice(start,css.indexOf('}',start)).includes(property),
     'Header hit area must use its existing CSS owner: '+selector);
 }
+// Shared Workout button sizing is still measured, with no narrower hit area.
+const headerShared=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){')[1]?.split('}')[0]||'';
+for(const prop of ['width:48px','height:48px','align-items:center','justify-content:center','padding:0'])
+  assert.ok(headerShared.includes(prop),'Workout header shared geometry missing '+prop);
+for(const [selector,paint] of [
+  ['#root .wpb-workout .wpb-workout-close{','display:flex;border:0;border-radius:11px'],
+  ['#root .wpb-workout .wpb-workout-header-action{','display:inline-flex;gap:6px;border:1px solid transparent;border-radius:12px']])
+  assert.ok((css.split(selector)[1]?.split('}')[0]||'').includes(paint),
+    'Workout header retains its feature-specific shape '+selector);
 // Design-spec one-owner rule: the dynamic theme must never shrink the
 // Workout header or exercise navigation underneath the CSS-owned hit area.
 for(const obsolete of [

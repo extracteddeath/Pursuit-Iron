@@ -9486,21 +9486,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-workout-header{
   border-bottom:1px solid var(--wpb-theme-border-soft);
 }
-#root .wpb-workout .wpb-workout-close{
-  box-sizing:border-box;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-shrink:0;
-  width:48px;
-  height:48px;
-  padding:0;
-  border:0;
-  border-radius:11px;
-  background:transparent;
-  color:var(--wpb-theme-text);
-  cursor:pointer;
-}
+#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){box-sizing:border-box;flex-shrink:0;width:48px;height:48px;align-items:center;justify-content:center;padding:0;background:transparent;color:var(--wpb-theme-text);cursor:pointer}
+#root .wpb-workout .wpb-workout-close{display:flex;border:0;border-radius:11px}
 #root .wpb-workout .wpb-workout-header>[role="progressbar"]{
   margin-top:8px;
   height:6px;
@@ -9992,7 +9979,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-workout-timer[data-paused="true"]{color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);border-color:var(--wpb-theme-accent-dim)}
 #root .wpb-workout .wpb-workout-timer-value{font-weight:600;color:var(--wpb-theme-text);white-space:nowrap}
 #root .wpb-workout .wpb-workout-timer[data-paused="true"] .wpb-workout-timer-value{color:var(--wpb-theme-accent-ink)}
-#root .wpb-workout .wpb-workout-header-action{box-sizing:border-box;width:48px;height:48px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--wpb-theme-text);cursor:pointer}
+#root .wpb-workout .wpb-workout-header-action{display:inline-flex;gap:6px;border:1px solid transparent;border-radius:12px}
 #root .wpb-workout .wpb-workout-header-action[data-focus="1"]{background:var(--wpb-theme-accent);border-color:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text)}
 #root .wpb-workout .wpb-workout-actions>.wpb-workout-finish{width:auto;padding:0 14px;font-weight:700;font-size:15px;background:var(--wpb-theme-accent);border-color:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text)}
 #root .wpb-workout .wpb-workout-actions>.wpb-workout-finish[data-compact="true"]{width:48px;padding:0;gap:0}

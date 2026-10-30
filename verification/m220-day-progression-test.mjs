@@ -301,3 +301,24 @@ console.log('PASS B1002: classic double per-set load invariants, 60x20 to 60x21,
         'Three records are not three completed sets when a position is duplicated');
 }
 console.log('PASS B1003 skipped-middle: logger, history, LAST, progression and Workout positions match.');
+
+// B1004 generated sparse exposure: the adapter must not compress missing set #2.
+{
+    const { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } =
+        await import('../modules/next-engine/workout-history-adapter.js');
+    const sparse={id:'b1004-sparse',programId:squatProgram.id,dayId:squatDay.id,
+        date:Date.UTC(2026,9,29),weekIndex:1,unit:'lb',
+        perf:{'back-squat':{weight:205,reps:6,sets:[
+            {w:205,r:5,rir:2,rirReported:true,workingSetIndex:0,done:true},
+            {w:195,r:6,rir:2,rirReported:true,workingSetIndex:2,done:true}
+        ]}}};
+    const analysis=analyzeShellHistoryForNextEngine(squatProgram,[sparse],EXERCISES);
+    assert.deepEqual(analysis.workouts[0].performedSets
+        .filter(set=>set.exerciseId==='back-squat').map(set=>set.setIndex),[0,2],
+        'Generated adapter must preserve original ordinals for sparse working sets');
+    const advice=nextWorkoutSuggestionForShell(squatProgram,[sparse],EXERCISES,squatDay,0,1,'lb');
+    assert.notEqual(advice.action,'increase_load');
+    assert.deepEqual(advice.setTargets.map(row=>row.weight),[205,205,195,205],
+        'Missing set #2 must not consume set #3 history');
+}
+console.log('PASS B1004 generated sparse: skipped working position persists through engine adapter.');

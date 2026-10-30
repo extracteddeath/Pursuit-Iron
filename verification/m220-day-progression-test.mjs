@@ -392,23 +392,54 @@ console.log('PASS B1004 generated sparse: skipped working position persists thro
 console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion.');
 
 
-// B996: saved-state shape, anonymized. 4 x 60 lb at the top of a 12-20
-// rep range cannot earn a load increase against a new 3-set prescription.
-// The actual saved custom program records style "auto", not explicit "double".
+// B997: accurate, anonymized Oct 20 backup shape. The saved historical
+// PRESCRIPTION asked for four sets, but only THREE 60×20 sets were completed.
+// Subsequent week-6 programming asks for three sets. Never infer that the
+// earlier three-of-four workout was completed merely because the new week
+// happens to prescribe three sets. Only one of the three had reported RIR.
 {
     const { evaluateWorkoutProgression } = await import('../modules/next-engine/performance.js');
-    const current = { exercises:[{
-        exerciseId:'rear-fly', name:'Rear Delt Fly', role:'hypertrophy_isolation',
-        sets:3, progressionStyle:'auto', prescription:{reps:[12,20],rir:[0,2]}
-    }]};
-    const prior = [0,1,2,3].map(setIndex=>({
-        exerciseId:'rear-fly',setIndex,load:60,reps:20,rir:1
+    const prior = [0,1,2].map(setIndex=>({
+        exerciseId:'rear-fly',setIndex,load:60,reps:20,rir:setIndex===1?1:null
     }));
-    const decision = evaluateWorkoutProgression(current,prior)[0];
-    assert.equal(decision.reasonCode,'prescription_set_count_changed');
-    assert.equal(decision.action,'hold');
-    assert.equal(decision.suggestedLoad,60);
-    assert.match(decision.reason,/4 working sets/);
-    assert.match(decision.reason,/3/);
+    const historical = { exercises:[{
+        exerciseId:'rear-fly', name:'Rear Delt Fly', role:'accessory',
+        sets:4, progressionStyle:'auto', prescription:{reps:[12,20],rir:[0,2]}
+    }]};
+    const raw = evaluateWorkoutProgression(historical,prior)[0];
+    assert.equal(raw.reasonCode,'incomplete_prescription',
+        'Three historical completed sets do not certify a four-set workout');
+    assert.equal(raw.action,'hold');
+    assert.equal(raw.suggestedLoad,60);
+    assert.deepEqual(raw.setTargets.map(row=>row.weight),[60,60,60,60]);
+    const savedProgram = {id:'b997-sanitized-custom',custom:true,engineV:4,weeks:10,
+        config:{weeks:10,unit:'lb',goal:'both',progression:'auto',experience:'intermediate',deload:true},
+        days:[{id:'pull',label:'Pull',primaryIndex:-1,exercises:['rear-fly']}],
+        overrides:{'pull:0':{sets:3,reps:'12-20',rir:'0-2',progressionStyle:'auto'}},
+        nextWeekPrescriptions:{'pull:0':{'6':{
+            sets:3,reps:[12,20],rir:[0,2],rest:90,role:'accessory',progressionStyle:'auto'
+        }}} };
+    const savedPerf = {weight:60,reps:20,sets:[
+        {w:60,r:20,rir:1,tr:1,rirReported:false},
+        {w:60,r:20,rir:1,tr:1,rirReported:true},
+        {w:60,r:20,rir:1,tr:1,rirReported:false}
+    ],prescription:{schemaVersion:1,exerciseId:'rear-fly',sets:4,
+        reps:'12-20',range:'12-20',rir:'0-2',rest:90,role:'accessory',progressionStyle:'auto'}};
+    const savedHistory=[{id:'b997-week5',programId:savedProgram.id,dayId:'pull',
+        weekIndex:5,date:Date.UTC(2026,9,20),unit:'lb',
+        perf:{'rear-fly':savedPerf}}];
+    const before=structuredClone(savedHistory);
+    const advice=sessionSuggestion(savedProgram,savedProgram.days[0],0,null,'lb',6,savedHistory);
+    assert.equal(advice?.weight,60,
+        'Real program week 6 must not upgrade 3-of-4 previous working sets');
+    assert.notEqual(advice.action,'increase_load');
+    assert.equal(advice.reasonCode,'incomplete_prescription');
+    const next=prescribeSets(savedProgram,savedProgram.days[0],EX_BY_ID['rear-fly'],
+        0,6,'lb',advice,{}, {},savedHistory,false);
+    const working=next.filter(row=>!row.warm&&!row.sub);
+    assert.equal(working.length,3,'Next week still prescribes exactly three working sets');
+    assert.deepEqual(working.map(row=>Number(row.weight)),[60,60,60],
+        'Live workout must preserve 60 lb on every rep-only/held row');
+    assert.deepEqual(savedHistory,before,'Replay must not change saved user history');
 }
-console.log('PASS B996 saved-state auto progression: 4 sets to 3 remains non-comparable.');
+console.log('PASS B997 real backup replay: 3 completed of 4 prescribed cannot promote 60 to 65 after week changes to 3 sets.');

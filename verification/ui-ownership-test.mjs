@@ -160,7 +160,9 @@ for(const [selector,role] of [
   ['#root .wpb .wpb-save-review-close{','Program review'],
   ['#root .wpb-workout .wpb-b973-set-close{','Workout set editor']
 ]) {
-  const paint=css.split(selector)[1]?.split('}')[0]||'';
+  // The Workout class also appears in the earlier shared geometry selector.
+  // Inspect the final feature-specific rule, not that deliberate shared owner.
+  const paint=css.slice(css.lastIndexOf(selector)+selector.length).split('}')[0]||'';
   assert.ok(paint&&!['display:','place-items:','flex:','width:','height:','min-width:','min-height:','color:'].some(prop=>paint.includes(prop)),
     role+' close must not re-own shared icon geometry');
 }

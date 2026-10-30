@@ -44,6 +44,10 @@ assert.ok(plan.includes('Upcoming workout only. Completed history stays intact.'
   'Plan changes state scope upfront and keep optional reasoning concise');
 for(const name of ['What changes','Why','When','What stays intact'])
   assert.ok(revision.includes('children: "'+name+'"'),'Rebuild impact must expose named '+name+' layer');
+assert.ok(revision.includes('className: "wpb-program-review-scope"') &&
+  revision.includes('"aria-label": "Change impact"') &&
+  revision.includes('children: "After you choose Apply changes"'),
+  'Rebuild four-layer impact summary is a visible native section, not hidden instructional text');
 assert.ok(revision.includes('changes.count ?') && revision.includes('Completed workouts; a restorable copy') &&
   css.includes('.wpb-program-review-scope{display:grid;gap:var(--pi-space-2)'),
   'Review shows actual difference count, history preservation and scale-based layout');

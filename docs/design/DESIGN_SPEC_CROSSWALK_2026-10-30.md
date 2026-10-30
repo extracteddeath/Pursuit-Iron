@@ -29,3 +29,6 @@
 | §§6,9.2,14 Purpose/clarity | Rebuild now shows a compact, four-part impact summary, based on the actual `reviewProgramChanges().count`, rather than repeating a generic paragraph. | B999 source guards; existing Program revision browser checks | Await exact-head CI |
 
 **Bounded scope:** Presentation-only. The Plan `onChoice` delegate and Program rebuild `onApply` action, snapshot and failure handling are unchanged. Do not claim a 14/14 score without images/Android testing.
+
+
+**Passes 74–76 verification upgrade:** B999 browser fixture now mounts the actual `ProgramRevisionReview` with a known goal-setting delta. At 320px and 200% text, it asserts all four impact layers are visibly present and not horizontally clipped, the computed count reflects the diff, focus is correctly trapped, and exactly one Apply callback fires. This tests the §7.9/§10 interaction rather than just naming CSS selectors. Until that exact-head job finishes, evidence remains pending.

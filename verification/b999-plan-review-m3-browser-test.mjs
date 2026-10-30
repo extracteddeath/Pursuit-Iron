@@ -10,7 +10,10 @@ const fixture=[
 "import React from '/vendor/react.js';",
 "import {createRoot} from '/vendor/react-dom-client.js';",
 "import {PlanChangesDialog} from '/modules/plan-session-surfaces.js';",
-"function Demo(){const [open,setOpen]=React.useState(false);window.choices=[];",
+"import {ProgramRevisionReview} from '/modules/program-review-surfaces.js';",
+"const originalProgram={id:'demo',weeks:4,config:{goal:'both',session:'s60',weeks:4,unit:'lb'},days:[]};",
+"const rebuiltProgram={...originalProgram,config:{...originalProgram.config,goal:'strength'}};",
+"function Demo(){const [open,setOpen]=React.useState(false);const [revision,setRevision]=React.useState(false);window.choices=[];window.applied=0;",
 "const change={undone:false,category:'Load increase',summary:'Review a higher training load',kind:'load',",
 "previous:[{weight:180,reps:8}],loadChanged:true,canUndo:true,source:{date:Date.now()}};",
 "const review={weekIndex:2,programId:'demo',dayId:'upper',unit:'lb',changes:[{id:'bench',",
@@ -18,8 +21,11 @@ const fixture=[
 "proposedReason:'Built enough reps across sessions to raise the load'}]};",
 "return React.createElement('main',{className:'wpb'},",
 "React.createElement('button',{id:'open-plan',onClick:()=>setOpen(true)},'Review adjustments'),",
+"React.createElement('button',{id:'open-revision',onClick:()=>setRevision(true)},'Review rebuild'),",
 "open&&React.createElement(PlanChangesDialog,{review,dayLabel:'Upper',busy:false,",
-"onChoice:(...args)=>window.choices.push(args),onClose:()=>setOpen(false)}));}",
+"onChoice:(...args)=>window.choices.push(args),onClose:()=>setOpen(false)}),",
+"revision&&React.createElement(ProgramRevisionReview,{review:{title:'Review program rebuild',message:'Shift the goal toward strength',before:originalProgram,after:rebuiltProgram},",
+"onApply:()=>{window.applied++;setRevision(false)},onClose:()=>setRevision(false)}));}",
 "createRoot(document.getElementById('root')).render(React.createElement(Demo));"
 ].join('\n');
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -84,6 +90,27 @@ try{
     await page.waitForFunction(()=>!document.querySelector('.wpb-plan-changes-dialog'));
     assert.equal(await page.$eval('#open-plan',el=>el===document.activeElement),true,
         'Escape restores focus to opener');
+    // A program rebuild is a separate, consequential transaction. Its four
+    // impact layers should be visible without opening a secondary disclosure.
+    await page.click('#open-revision');
+    await page.waitForSelector('.wpb-program-revision');
+    const impact=await page.$eval('.wpb-program-review-scope p',rows=>rows.map(p=>({
+        label:p.querySelector('strong')?.textContent,detail:p.querySelector('span')?.textContent,
+        withinViewport:(()=>{const r=p.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1})()
+    })));
+    assert.deepEqual(impact.map(x=>x.label),['What changes','Why','When','What stays intact'],
+        'Rebuild review exposes the four design-spec impact layers in order');
+    assert.match(impact[0].detail,/1 setting or exercise difference/);
+    assert.match(impact[1].detail,/Shift the goal toward strength/);
+    assert.match(impact[2].detail,/After you choose Apply changes/);
+    assert.match(impact[3].detail,/Completed workouts.*restorable copy/);
+    assert.ok(impact.every(x=>x.withinViewport),'All impact labels wrap within 320px width');
+    assert.equal(await page.$eval('.wpb-program-revision',el=>el===document.activeElement),true,
+        'Rebuild review retains the shared initial focus contract');
+    await page.click('[data-apply-program-review]');
+    assert.equal(await page.evaluate(()=>window.applied),1,
+        'Rebuild Apply still calls the single transaction owner exactly once');
+    await page.waitForFunction(()=>!document.querySelector('.wpb-program-revision'));
     assert.deepEqual(errors,[],'no browser exceptions');
     console.log('PASS B999 browser: Plan review geometry, 200% narrative, 48px actions, callbacks and Escape.');
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}

@@ -33,8 +33,11 @@ const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
 const MAX_INLINE_STYLE_OBJECTS = 1406; // B965: retire 49 additional literal presentation objects; never increase.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
-for(const role of ['backdrop','panel','title','intro','field-label','field','description','footer','cancel','save'])
+for(const role of ['backdrop','panel','intro','field-label','field','description','footer','cancel','save'])
   assert.ok(css.includes('.wpb-program-settings-'+role+'{'), 'Settings view lost semantic CSS owner '+role);
+assert.ok(css.includes('.wpb-ui-sheet-title{') &&
+    programSettings.includes('wpb-ui-sheet-title wpb-program-settings-title'),
+    'Settings title must use the shared sheet typography instead of a forked style owner');
 for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "program-settings-title"','htmlFor: "program-settings-folder"','htmlFor: "program-settings-description"','selected: !!cfgDraft?.noSupersets','selected: !!cfgDraft?.noBodyweight','disabled: !canApply'])
   assert.ok(programSettings.includes(token), 'Settings dialog accessibility/transaction contract lost: '+token);
 assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.includes('"wpb-backdrop", style:'), 'Static Settings shell styles must remain in CSS');

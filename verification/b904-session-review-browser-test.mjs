@@ -79,6 +79,20 @@ try{
   if(width===393){
    await page.click('.wpb-plan-change-banner[aria-label^="Review "]');await page.click('[aria-label="Keep previous load for Barbell Bench Press"]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');await page.keyboard.press('Escape');
    await clickText('20 min');await page.waitForSelector('[data-testid="session-length-summary"]');
+   const shortenedBanner=await page.$('.wpb-plan-change-banner[aria-label^="Review "]');
+   if(!shortenedBanner){
+    const evidence=await page.evaluate(()=>{
+     const store=JSON.parse(localStorage.getItem('wpb:v1')||'null');
+     return {
+      preview:document.querySelector('.wpb-next-workout-view')?.innerText.slice(0,700),
+      savedChoices:store?.saved?.[0]?.sessionPlanChoices,
+      planSummary:document.querySelector('[data-testid="session-length-summary"]')?.innerText,
+      game:document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText,
+      panel:document.querySelector('.wpb-plan-change-banner')?.outerHTML || null
+     };
+    });
+    throw new Error('Shortened workout lost its previously held plan choice: '+JSON.stringify(evidence));
+   }
    await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
    assert.equal(await page.$('[data-plan-change="bb-row"]'),null,'rep-only changes cannot be undone even in shortened workouts');
    await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[aria-label="Plan changes"]'));

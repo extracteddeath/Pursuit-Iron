@@ -26,7 +26,7 @@ const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
 const loadingCalculator = fs.readFileSync('modules/loading-calculator.js','utf8');
 const gymLoadFields = fs.readFileSync('modules/gym-load-fields.js','utf8');
 const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
-const MAX_IMPORTANT = 2031; // Design audit: enforced priority count after Expressive Workout cleanup.
+const MAX_IMPORTANT = 2029; // Design audit: measured CSS priority limit after Workout focus consolidation.
 const MAX_APP_IMPORTANT = 1014; // Design audit: retire duplicate Settings jump geometry/paint; measured runtime ceiling.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
 const MAX_INLINE_STYLE_OBJECTS = 1406; // B965: retire 49 additional literal presentation objects; never increase.
@@ -116,6 +116,22 @@ assert.ok(restPaint.includes('border:1px solid var(--pi-r11-edge)!important;') &
     !restPaint.includes('min-width:48px!important;') &&
     !restPaint.includes('min-height:48px!important;'),
     'Expressive Rest keeps paint but inherits its 48px sizing from the shared owner');
+
+// Workout set entry keeps a shared 2px keyboard focus ring without changing
+// the specificity of the weight field or the set-index button.
+const setEntryFocus=css.split('#root .wpb-workout .wpb-set-controls .wpb-num-input:focus-visible,')[1]?.split('}')[0]||'';
+assert.ok(setEntryFocus.includes('.wpb-set-index:focus-visible{') &&
+    setEntryFocus.includes('outline:2px solid var(--pi-m3e-primary)!important;outline-offset:1px!important;') &&
+    css.split('#root .wpb-workout .wpb-set-index:focus-visible{').length===2,
+    'Workout set focus rings must have one shared rule');
+const coachChrome=css.split('#root .wpb-workout :is(.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle){')[1]?.split('}')[0]||'';
+for(const prop of ['display:flex','align-items:center','width:100%','min-height:48px','text-align:left','cursor:pointer'])
+    assert.ok(coachChrome.includes(prop),'Coach shared control chrome lost '+prop);
+for(const name of ['collapsed','toggle']){
+ const feature=css.split('#root .wpb-workout .wpb-b973-coach-'+name+'{')[1]?.split('}')[0]||'';
+ assert.ok(feature&&!feature.includes('min-height:48px')&&!feature.includes('display:flex'),
+   'Coach feature-specific paint must not duplicate shared control layout: '+name);
+}
 
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 

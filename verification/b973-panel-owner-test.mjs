@@ -10,12 +10,19 @@ assert.ok((app.match(/style: \{/g)||[]).length<=1308);
 assert.ok((css.match(/!important/g)||[]).length<=2060);
 for(const [selector,min] of [
  ['.wpb-b973-set-close','width:48px;height:48px'],
- ['.wpb-b973-coach-collapsed','min-height:48px'],
- ['.wpb-b973-coach-toggle','min-height:48px']
+ [':is(.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle)','min-height:48px']
 ]){
   const start=css.indexOf(selector+'{'),end=css.indexOf('}',start);
   assert.ok(start>=0&&css.slice(start,end).includes(min),
     'Workout set/edit control retains a real 48px CSS owner: '+selector);
+}
+for(const [selector,visual] of [
+ ['.wpb-b973-coach-collapsed','gap:7px'],
+ ['.wpb-b973-coach-toggle','gap:8px']
+]){
+ const start=css.indexOf(selector+'{'),end=css.indexOf('}',start);
+ assert.ok(start>=0&&css.slice(start,end).includes(visual),
+   'Collapsed and open Coach controls retain their distinct geometry: '+selector);
 }
 assert.ok(w.includes('children: ["Based on ", f.evidence]'),'Coach evidence copy must remain syntactically complete');
 assert.ok(w.includes('className: "pressable wpb-b973-coach-collapsed"')&&w.includes('className: "pressable wpb-b973-coach-toggle"'),'Coach disclosure keeps existing pressable control semantics');

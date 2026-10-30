@@ -35,11 +35,11 @@ assert.ok(css.includes('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-t
   css.includes('flex:0 0 48px;width:48px;min-width:48px;height:48px;min-height:48px;padding:0') &&
   css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{'),
   'Workout and Rest share a real 48px icon-action sizing owner');
-assert.ok((css.match(/!important/g)||[]).length<=2031,
-  'Design audit Expressive Workout priority debt is capped at 2031');
+assert.ok((css.match(/!important/g)||[]).length<=2029,
+  'Workout shared focus-ring priority debt capped at 2029');
 // B993 replaces fixed Workout-info JSX with themed CSS; this is the new CSS-only ratchet.
-assert.ok(css.length<=641172,
-  'Expressive Workout shadow cleanup caps CSS at 641172 characters');
+assert.ok(css.length<=641069,
+  'Workout focus and Coach owner consolidation caps CSS at 641069 characters');
 assert.ok((app.match(/style: \{/g)||[]).length<=1262,
   'Do not restore inline Workout geometry to replace deleted CSS');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

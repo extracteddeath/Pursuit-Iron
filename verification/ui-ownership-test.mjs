@@ -167,6 +167,34 @@ for(const [selector,role] of [
     role+' close must not re-own shared icon geometry');
 }
 
+// Program sheet bodies share one scroller; each keeps its distinct inset and
+// optional flex sizing so focus, visual viewport and short-landscape stay safe.
+const programScroll=css.split('#root .wpb .wpb-ui-sheet-scroll{')[1]?.split('}')[0]||'';
+for(const item of ['min-height:0','overflow-y:auto','overscroll-behavior:contain'])
+  assert.ok(programScroll.includes(item),'Shared Program sheet scroll owner missing '+item);
+for(const [name,source,cls] of [
+  ['Save Review',programReview,'wpb-save-review-scroll'],
+  ['Program Settings',programSettings,'wpb-program-settings-body'],
+  ['Share',programShare,'wpb-program-share-body'],
+  ['Training Maxes',trainingMaxes,'wpb-training-max-body'],
+  ['Exercise Options',exerciseOptions,'wpb-exercise-options-body']
+]) assert.ok(source.includes(cls+' wpb-ui-sheet-scroll'),
+   name+' must consume one shared scroll-body owner');
+for(const role of ['wpb-program-reference-body','wpb-progression-choice-body'])
+  assert.ok(programReference.includes(role+' wpb-ui-sheet-scroll'),
+    'Reference and progression bodies share the same scroll owner: '+role);
+for(const cls of ['wpb-save-review-scroll','wpb-program-settings-body',
+    'wpb-program-share-body','wpb-training-max-body','wpb-exercise-options-body',
+    'wpb-program-reference-body','wpb-progression-choice-body']){
+  const feature=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+  assert.ok(feature&&!['overflow-y:','overscroll-behavior:','min-height:'].some(p=>feature.includes(p)),
+    'Program feature body must not fork scroll ownership: '+cls);
+}
+assert.ok(programSchedule.includes('wpb-ui-sheet-heading wpb-program-schedule-heading') &&
+    css.includes('.wpb-program-schedule-heading{--pi-ui-sheet-heading-padding:0;margin-bottom:var(--pi-space-1)}') &&
+    !css.includes('.wpb-program-schedule-heading{display:flex;'),
+    'Weekly Schedule uses the shared header while preserving its compact zero inset');
+
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
 function repeatedImportantDeclarations(source) {

@@ -75,7 +75,7 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
                 _jsx('h2', { id: 'program-share-title', children: 'Share program' }),
                 _jsx(UiSheetClose, { className: 'wpb-program-share-close', onClick: onClose })
             ] }),
-            _jsxs('div', { className: 'wpb-scroll wpb-program-share-body', children: [
+            _jsxs('div', { className: 'wpb-scroll wpb-program-share-body wpb-ui-sheet-scroll', children: [
                 _jsx('p', { id: 'program-share-scope', children: `${weekIndex > weeksOf(program) ? 'Deload' : 'Week ' + weekIndex + ' of ' + weeksOf(program)} · Saved sets, reps and target effort.` }),
                 shareCode && _jsxs('div', { className: 'wpb-program-share-code', children: [
                     _jsx('label', { htmlFor: 'program-share-code', children: 'Program code' }),

@@ -56,7 +56,7 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
                     _jsx(UiSheetClose, { variant: 'tonal', 'data-wpb-system-back': !conversion || undefined,
                         'aria-label': 'Close', onClick: onClose })
                 ] }),
-                _jsxs('div', { className: 'wpb-scroll wpb-training-max-body', children: [
+                _jsxs('div', { className: 'wpb-scroll wpb-training-max-body wpb-ui-sheet-scroll', children: [
                     _jsx('p', { className: 'wpb-training-max-help', children: `${scheme?.name || 'Percentage training'} loads each main lift from its ${scheme?.basis || 'training max'}. Apply your maxes here, then review and save the program to keep the changes.` }),
                     _jsx('p', { className: 'wpb-training-max-help', children: 'Use 1RM calculates 90% of a recent one-rep max, rounded to the lift’s loading step. Leave a max blank to clear it.' }),
                     mainLifts.map(id => {

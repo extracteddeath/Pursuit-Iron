@@ -45,7 +45,7 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
                     ] }),
                     _jsx(UiSheetClose, { variant: 'tonal', 'aria-label': 'Close', onClick: close })
                 ] }),
-                _jsxs('div', { className: 'wpb-scroll wpb-exercise-options-body', children: [
+                _jsxs('div', { className: 'wpb-scroll wpb-exercise-options-body wpb-ui-sheet-scroll', children: [
                     action('note', Pin, hasNote ? 'Edit pinned note' : 'Add pinned note',
                         setup ? [formatSetup(setup), note].filter(Boolean).join(' — ') : note || "A cue you'll see every time — seat height, tempo…", act(onNote)),
                     canLink && action('superset', Layers, linked ? 'Unlink superset' : 'Superset with next',

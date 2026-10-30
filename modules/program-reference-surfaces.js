@@ -31,7 +31,7 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
                         'aria-label': 'Close progression methods', onClick: onClose })
                 ] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-progression-choice-body wpb-ui-sheet-scroll', children: [
-                    _jsx('p', { id: 'program-progression-scope', className: 'wpb-progression-choice-scope',
+                    _jsx('p', { id: 'program-progression-scope', className: 'wpb-ui-sheet-copy wpb-progression-choice-scope',
                         children: 'Choose how this lift progresses throughout the program. Review and save your program to keep the change.' }),
                     _jsx('div', { className: 'wpb-progression-choice-options', role: 'group', 'aria-label': 'Progression methods',
                         children: options.map(([value, label, description]) => _jsxs(UiChoice, {
@@ -59,7 +59,7 @@ export function ProgramReferenceSheet({ onClose, sheetDragRef, children }) {
                         'aria-label': 'Close program details', onClick: onClose })
                 ] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-program-reference-body wpb-ui-sheet-scroll', children: [
-                    _jsx('p', { className: 'wpb-program-reference-intro', children: 'How this program was put together, how progression was chosen, what it trains each week, and the arc it follows.' }),
+                    _jsx('p', { className: 'wpb-ui-sheet-copy wpb-program-reference-intro', children: 'How this program was put together, how progression was chosen, what it trains each week, and the arc it follows.' }),
                     children
                 ] })
             ] }) });

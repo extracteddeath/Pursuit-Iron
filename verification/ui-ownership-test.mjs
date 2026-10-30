@@ -342,6 +342,25 @@ assert.ok(css.includes('#root .wpb :is(.wpb-training-max-sheet,.wpb-exercise-opt
 assert.ok(css.includes('#root .wpb .wpb-training-max-sheet{border-bottom:1px solid var(--wpb-theme-border);border-radius:var(--pi-shape-card)}'),
     'Centered Training Maxes retains complete edge and corner treatment');
 
+
+// Passes 56–59: explanatory sheet text uses one semantic support-copy owner.
+const sheetCopy=css.split('#root .wpb .wpb-ui-sheet-copy{')[1]?.split('}')[0]||'';
+for(const prop of ['font-size:var(--pi-type-support,.8125rem)','line-height:var(--pi-ui-sheet-copy-leading,1.5)','color:var(--wpb-theme-muted)','overflow-wrap:anywhere'])
+    assert.ok(sheetCopy.includes(prop),'Common Program copy lost '+prop);
+for(const [source,name,localProp] of [
+    [programReference,'wpb-program-reference-intro','margin:0 0 12px'],
+    [programReference,'wpb-progression-choice-scope','margin:0 0 12px'],
+    [trainingMaxes,'wpb-training-max-help','margin:0 0 12px'],
+    [programSettings,'wpb-program-settings-intro','--pi-ui-sheet-copy-leading:1.45'],
+    [programSchedule,'wpb-program-schedule-caption','--pi-ui-sheet-copy-leading:1.45']
+]){
+    assert.ok(source.includes('wpb-ui-sheet-copy '+name),'Program copy must use the same class: '+name);
+    const local=css.split('#root .wpb .'+name+'{')[1]?.split('}')[0]||'';
+    assert.ok(local.includes(localProp),'Feature copy spacing/line-height missing: '+name);
+    for(const duplicate of ['font-size:','color:','line-height:'])
+        assert.ok(!local.includes(duplicate),'Feature copy must not duplicate shared type: '+name+' '+duplicate);
+}
+
 /* Design-spec passes 31–33: common viewport and Program action dock ownership. */
 const uiSheetViewport=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
 assert.ok(uiSheetViewport.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'One Program panel viewport formula remains');

@@ -41,13 +41,13 @@ assert.ok((css.match(/!important/g)||[]).length<=2027,
 const viewportFix='bottom:auto;height:min(100dvh,var(--visual-h,var(--app-h,100dvh)));';
 assert.ok(css.includes('.wpb-backdrop.wpb-b961-overlay-09{position:fixed;inset:0;'+viewportFix),
   'Workout Info must stay within the visual viewport');
-assert.ok(css.replace(viewportFix,'').length<=637585,
+assert.ok(css.replace(viewportFix,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
 assert.ok((app.match(/style: \{/g)||[]).length<=1095,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').length<=2668788,
+assert.ok(app.length+css.replace(viewportFix,'').length<=2668657,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

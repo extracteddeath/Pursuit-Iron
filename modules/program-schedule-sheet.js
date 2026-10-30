@@ -35,7 +35,7 @@ export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetD
                         className: 'wpb-ui-sheet-title wpb-program-schedule-title', children: 'Weekly schedule' }),
                     _jsx(UiSheetClose, { onClick: onClose, className: 'wpb-program-schedule-close' })
                 ] }),
-                _jsxs('p', { className: 'wpb-program-schedule-caption', children: [
+                _jsxs('p', { className: 'wpb-ui-sheet-copy wpb-program-schedule-caption', children: [
                     'Tap a day to assign a workout — ',
                     _jsxs('span', { role: 'status', 'aria-live': 'polite', 'aria-atomic': true, children: [
                         trainingDays, ' training ', trainingDays === 1 ? 'day' : 'days',

@@ -98,6 +98,7 @@ const SHELL=[
   "./modules/next-engine/volume-repair.js",
   "./modules/next-engine/weekly-recovery.js",
   "./modules/next-engine/workout-history-adapter.js",
+  "./modules/next-engine/workout-replay.js",
   "./modules/next-engine/workout-runtime.js",
   "./modules/plan-session-surfaces.js",
   "./modules/program-duration.js",

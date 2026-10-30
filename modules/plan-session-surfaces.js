@@ -25,7 +25,7 @@ export function PlanChangeBanner({ review, onClick }) {
     const count = review.changes.length;
     return _jsxs("button", { type: "button", className: "wpb-plan-change-banner pressable", onClick, "aria-label": `Review ${count} plan adjustment${count === 1 ? '' : 's'}${held ? `, ${held} prior load${held === 1 ? '' : 's'} kept` : ''}`, children: [
         _jsx("span", { className: "wpb-session-plan-icon", 'aria-hidden': true, children: _jsx(History, { size: 19 }) }),
-        _jsxs("span", { children: [_jsx("strong", { children: `${count} upcoming adjustment${count === 1 ? '' : 's'}` }),
+        _jsxs("span", { children: [_jsx("strong", { children: `${count} plan adjustment${count === 1 ? '' : 's'}` }),
             _jsx("span", { children: summary })] }),
         _jsx(ChevronRight, { size: 18, 'aria-hidden': true })] });
 }
@@ -68,7 +68,17 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
             const dose = sessionTargetsText(row.effective, review.unit);
             const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${pr.estimated} ${review.unit}.`
                 : `Could beat your ${pr.bestReps}-rep best at this load.`) : row.reason;
-            const guidance = `${dose} · ${technique || why}`;
+            // Scan-first summary; full nonuniform working sets remain in native details.
+            const uniformTargets = row.effective.every(set => set.weight === row.effective[0]?.weight
+                && set.reps === row.effective[0]?.reps);
+            const compactDose = row.effective.length > 1
+                ? `${row.effective.length} sets · ${uniformTargets ? dose : `${sessionLoadText(row.effective[0], review.unit)} first`}`
+                : dose;
+            const preview = technique
+                ? `${compactDose} · ${row.protocol.type === 'myo_reps' ? 'Myo-reps' : 'Drop set'}`
+                : compactDose;
+            const guidance = [!uniformTargets ? `Working sets: ${dose}` : null, technique || why]
+                .filter(Boolean).join(' · ') || dose;
             return _jsxs("div", { className: "wpb-game-plan-exercise", "data-game-plan-exercise": row.id,
                 ...(pr ? { "data-pr-exercise": row.id } : {}), children: [
                 _jsx("span", { className: "wpb-game-plan-highlight-icon", "aria-hidden": true,
@@ -76,7 +86,7 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
                 _jsxs("details", { className: "wpb-game-plan-highlight-copy", children: [
                     _jsxs("summary", { children: [
                         _jsx("strong", { children: pr ? `PR chance · ${row.name}` : row.name }),
-                        _jsx("span", { className: "wpb-game-plan-highlight-preview", children: guidance }),
+                        _jsx("span", { className: "wpb-game-plan-highlight-preview", children: preview }),
                         _jsx(ChevronDown, { size: 16, "aria-hidden": true })] }),
                     _jsx("p", { children: guidance })] })] }, row.id + ':' + row.slot);
         }) })

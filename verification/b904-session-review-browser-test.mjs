@@ -54,7 +54,7 @@ try{
   await page.goto('http://127.0.0.1:8804/index.html',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
   await page.waitForSelector('.wpb-plan-change-banner[aria-label^="Review "]');
   const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
-  assert.match(await page.$eval('.wpb-plan-change-banner',n=>n.innerText),/1 upcoming adjustment/);
+  assert.match(await page.$eval('.wpb-plan-change-banner',n=>n.innerText),/1 plan adjustment/);
   const homeCoach=await page.evaluate(()=>{
    const hero=document.querySelector('.wpb-home-hero'),game=document.querySelector('.wpb-home-game-plan');
    const outline=hero?.querySelector('.wpb-home-session-outline');

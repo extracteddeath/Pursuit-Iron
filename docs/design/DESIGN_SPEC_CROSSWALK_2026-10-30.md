@@ -48,3 +48,17 @@
 | §12 | Repair stale source guard left by the previous wording pass; use source assertions that match the intended new semantics | `verification/b999-plan-review-m3-test.mjs`; monitor source-contract job | CI on exact final head required |
 
 **Source of truth:** `modules/session-plan.js` supplies distinct `setDelta` and `loadChanged` flags. These passes only change text and when existing presentation branches render. Previously logged values, plan choice callbacks and actual program persistence are untouched; no extra CSS or priority declarations.
+
+
+## Passes 90–98 — Home/Game Plan scanability (spec §§6,7.1,7.3,7.9,9.2,10–12)
+
+| Requirement | Implemented improvement | Verification | Status |
+|---|---|---|---|
+| §7.1 concise, optional Game Plan | A collapsed row shows its effective target, with only a brief method label when relevant, rather than a full coaching paragraph | B998 Chromium at 320px/200% text | Exact-head CI required |
+| §§6,9.2 expanded content must add information | Expanding a uniform prescription shows its rationale, not a duplicate of the target already visible | B998 tests 185 lb × 8 in summary and distinct reason in detail | Exact-head CI required |
+| §§7.1,7.3 truthful heterogeneous sets | Compact row says **3 sets · 50 lb × 12 first**; expanding reveals all three actual effective set targets (50/45/40 lb) | B998 validates ordered full targets + source guard | Exact-head CI required |
+| §7.3 special method comprehension | **Myo-reps** / **Drop set** is a short collapsed label; full technique/rest instruction stays available when expanded | B998 checks rest detail and native Enter/close behavior | Exact-head CI required |
+| §§7.9,9.2 consequence scope | A Plan banner uses **plan adjustments**, not a false “upcoming” label for already-saved set edits; its supporting line correctly distinguishes saved sets, load choices, and mixed changes | B998 three banner cases and B904 full-app lifecycle | Exact-head CI required |
+| §§5,10 keyboard and responsive stability | Existing themed summary controls (≥48px) and no horizontal overflow at 320px/200% text; no new action or CSS owner | B998 browser and Home entry hierarchy | Exact-head CI required |
+
+**Source of truth:** Live `review.exercises[].effective`, `protocol.type`, `opportunity` and classified `changes`, never a second prescription model. All changes are within the shared `modules/plan-session-surfaces.js` presentation owner, with **no app CSS, motion, engine, history or persistence changes**. CI and physical-device evidence remain distinct requirements.

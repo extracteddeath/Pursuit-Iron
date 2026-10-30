@@ -34,8 +34,9 @@ assert.ok(!app.includes('function SessionGamePlan('), 'App must not retain the d
 const gamePlan = surfaces.slice(surfaces.indexOf('function SessionGamePlan('), surfaces.indexOf('function PlanChangesDialog('));
 assert.ok(gamePlan.includes('_jsxs("details"') && gamePlan.includes('_jsxs("summary"'),
   'Game Plan must expose complete coaching guidance via native keyboard-operable disclosures');
-assert.ok(gamePlan.includes('children: guidance') && !gamePlan.includes('style: {'),
-  'Game Plan preview and expanded copy share the one computed explanation, without inline presentation');
+assert.ok(gamePlan.includes('children: preview') && gamePlan.includes('children: guidance') &&
+    gamePlan.includes('const uniformTargets =') && !gamePlan.includes('style: {'),
+  'Game Plan shows compact actual targets first, then an independently useful explanation');
 assert.ok(css.includes('#root .wpb .wpb-game-plan-highlight-copy:not([open])>p{display:none}') &&
   css.includes('.wpb-game-plan-highlight-copy>summary:focus-visible'),
   'Game Plan guidance is hidden only while collapsed, with an observable keyboard focus target');

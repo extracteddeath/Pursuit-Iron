@@ -17,6 +17,15 @@ assert.ok(controls.includes('Math.min(20, Math.max(minimum, Math.trunc(parsed)))
     'steppers do not emit NaN or values outside the visible 1–20 interval');
 assert.ok(controls.includes('onChange: ev => onChange(ev.target.value)'),
     'direct typing remains delegated to the owner and is never silently overwritten');
+// Design spec §§7.1,9.2,10: brief, true Home targets and explanatory details on demand.
+assert.ok(home.includes('const compactDose = row.effective.length > 1') &&
+    home.includes('const preview = technique') &&
+    home.includes('const guidance = [!uniformTargets ?') &&
+    home.includes('children: preview') && home.includes('children: guidance') &&
+    home.includes('Review saved program set changes') &&
+    home.includes('Review workout load choices') &&
+    !home.includes('upcoming adjustment'),
+    'Game Plan scans quickly and saved edits cannot be misrepresented as future-only');
 assert.ok(css.includes('.wpb-working-set-stepper') && css.includes('.wpb-home-outline-toggle'),
     'controls retain their established themed CSS owners');
 console.log('PASS B998: unique Home outline controls, meaningful plan banner and bounded set steppers.');

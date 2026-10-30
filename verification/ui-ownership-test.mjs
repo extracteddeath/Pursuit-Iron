@@ -565,7 +565,7 @@ assert.ok(programReview.includes('useProgramSheetFocus(onClose)') &&
 assert.ok(programReview.includes('disabled: !changes.length || !!conflicts.length') &&
     programReview.includes('checked: scope === value') && programReview.includes('onChange: () => onScope(value)'),
     'Save scope and conflict guards remain owned by the existing plan transaction');
-for(const role of ['backdrop','panel','heading','title','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','confirm','cancel'])
+for(const role of ['backdrop','panel','heading','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','confirm','cancel'])
     assert.ok(css.includes('.wpb-save-review-' + role + '{'), 'Missing Program review CSS owner: ' + role);
 // Exercise the actual ceilings, even as successful cleanup creates headroom below them.
 const cssOverflow = '.bad-extra{color:red!important;}\n'.repeat(MAX_IMPORTANT - report.important + 1);

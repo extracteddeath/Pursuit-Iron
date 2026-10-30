@@ -236,7 +236,7 @@ assert.ok(css.includes('.wpb-ui-sheet-close:focus-visible{outline:2px solid var(
 // display:contents layout and all input values are deliberately untouched.
 const workoutFlex=css.split('#root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row,')[1]?.split('}')[0]||'';
 assert.ok(workoutFlex.includes('#root .wpb-workout .wpb-warmup-step{display:flex;align-items:flex-start;gap:8px;min-width:0;') &&
-    (css.match(/#root \\.wpb-workout \\.wpb-warmup-step\\{/g)||[]).length===1,
+    css.split('#root .wpb-workout .wpb-warmup-step{').length===2,
     'Workout Focus title and warmup row must have one shared geometry owner');
 const workoutFocus=css.split('#root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,')[1]?.split('}')[0]||'';
 for(const role of ['.wpb-b973-set-close','.wpb-b973-coach-collapsed','.wpb-b973-coach-toggle','.wpb-load-advice>button'])

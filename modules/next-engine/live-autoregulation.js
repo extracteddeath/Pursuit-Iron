@@ -8,6 +8,20 @@ const untouched = row => automatic(row) && !row.done && String(row.weight) === S
 const authoredIntent = row => row?.typeOverride || row?.target?.failure || row?.target?.amrap
     || row?.target?.nextAction === 'percentage';
 const hold = (sets, reasonCode) => ({ sets, decision: { schemaVersion: 1, action: 'hold', reasonCode, earnedProgression: false } });
+const observedSnapshot = (sets, index) => {
+    const row = sets[index];
+    return { index, load: historyNumber(row?.weight), reps: historyNumber(row?.reps),
+        actualRIR: historyNumber(row?.actualRIR) };
+};
+const matchingSnapshot = (sets, sourceIndices, observations) =>
+    Array.isArray(observations) && observations.length === sourceIndices.length
+    && observations.every((expected, i) => {
+        const now = observedSnapshot(sets, sourceIndices[i]);
+        return expected && expected.index === now.index
+            && expected.load === now.load && expected.reps === now.reps
+            && expected.actualRIR === now.actualRIR;
+    });
+
 
 const restorePendingAdjustment = row => {
     const { liveAdjustment, retuneFrom, retuneSrc, autoTuned, hint, recoveryLimited, suggested, loadAdvice, ...rest } = row;
@@ -27,7 +41,9 @@ export function reconcileRestoredLiveAdjustments(sets) {
             : adjustment.action === 'cap_pending_reps' ? 1 : null;
         if (count === null) return row; // Unknown protocols are not ours to rewrite.
         const sources = adjustment.sourceIndices;
-        const valid = Array.isArray(sources) && sources.length === count && new Set(sources).size === count
+        const valid = adjustment.pendingIndex === index
+            && Array.isArray(sources) && sources.length === count && new Set(sources).size === count
+            && matchingSnapshot(sets, sources, adjustment.sourceObservations)
             && sources.every(sourceIndex => {
                 const source = sets[sourceIndex];
                 const reps = historyNumber(source?.reps), effort = historyNumber(source?.actualRIR);
@@ -94,7 +110,8 @@ function applyLiveLoadReduction({ sets, sourceIndex, cell, context = {}, snapLoa
     const next = snapLoad(load * .95);
     if (!Number.isFinite(next) || next <= 0 || next >= load || next < load * .9) return hold(sets, 'no_small_loadable_reduction');
     const decision = { schemaVersion: 1, action: 'suggest_pending_load_reduction', reasonCode: 'two_observed_accessory_misses', sourceIndices: indices,
-        pendingIndex, fromLoad: load, toLoad: next, earnedProgression: false, confidence: 'moderate' };
+        pendingIndex, fromLoad: load, toLoad: next, sourceObservations: indices.map(index => observedSnapshot(sets, index)),
+        earnedProgression: false, confidence: 'moderate' };
     const result = [...sets];
     // Suggestion is not consent: do not overwrite weight, reps or target.
     result[pendingIndex] = { ...pending, loadAdvice: { fromLoad: load, toLoad: next,
@@ -142,7 +159,8 @@ function capPendingReps({ sets, sourceIndex, cell, context = {} }) {
     const cap = Math.max(Math.ceil(reps[0]), Math.min(Math.floor(reps[1]), Math.floor(r + effort - rir[1])));
     if (planned <= cap) return hold(baseline, 'retain_observed_rep_target');
     const decision = { schemaVersion: 1, action: 'cap_pending_reps', reasonCode: 'observed_effort_rep_cap',
-        sourceIndices: [sourceIndex], pendingIndex, fromReps: planned, toReps: cap,
+        sourceIndices: [sourceIndex], sourceObservations: [observedSnapshot(baseline, sourceIndex)],
+        pendingIndex, fromReps: planned, toReps: cap,
         earnedProgression: false, confidence: 'moderate' };
     const result = [...baseline];
     result[pendingIndex] = { ...pending, reps: String(cap), target: { ...pending.target, prefillReps: String(cap) },

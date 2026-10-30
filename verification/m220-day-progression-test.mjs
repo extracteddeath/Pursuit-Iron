@@ -206,6 +206,15 @@ export const rearHistory = [{id:'b1002-prior',programId:rearProgram.id,dayId:'up
         'equal previous loads progress reps at 60 lb, not an arbitrary 55 lb on set 3');
     const rows = prescribeSets(rearProgram,rearProgram.days[0],EX_BY_ID['rear-fly'],0,1,'lb',
         advice,{}, {},prior,false);
+    const { auditSetDecisionTraces } = await import('../modules/training-domain/prescriptions.js');
+    assert.deepEqual(auditSetDecisionTraces(rows),[],
+        'Real screenshot rows must pass the same per-set provenance audit as full lifecycle');
+    const corrupted = rows.map((row,i) => i===2 ? {...row,target:{...row.target,
+        decisionTrace:{...row.target.decisionTrace,target:{...row.target.decisionTrace.target,load:55}}}} : row);
+    assert.ok(auditSetDecisionTraces(corrupted).some(x=>x.code==='unearned_load_change'),
+        'The release gate must detect an unexpected late-set load drop');
+    assert.ok(auditSetDecisionTraces(corrupted).some(x=>x.code==='display_target_diverges_from_trace'),
+        'The release gate must detect a target whose source and display disagree');
     assert.deepEqual(rows.map(row => row.target.decisionTrace?.source?.load),[60,60,60],
         'Each visible target must identify its own historical load');
     assert.deepEqual(rows.map(row => row.target.decisionTrace?.source?.reps),[20,20,20]);

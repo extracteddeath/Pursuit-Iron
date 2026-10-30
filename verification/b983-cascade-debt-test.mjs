@@ -53,7 +53,11 @@ assert.ok(b1003Start>=0,'B1003 CSS role block is present');
 const b1004Start=css.indexOf('/* B1004 — six confirmation CTAs');
 assert.ok(b1004Start>b1003Start,'B1004 button owner follows fixed type owners');
 const b1003SharedTypeRules=css.slice(b1003Start,b1004Start);
-const b1004SharedButtonRules=css.slice(b1004Start);
+const b1005Start=css.indexOf('/* B1005 — shared section kickers');
+assert.ok(b1005Start>b1004Start,'B1005 shared control owner must follow primary buttons');
+const b1004SharedButtonRules=css.slice(b1004Start,b1005Start);
+const b1005SharedRules=css.slice(b1005Start);
+assert.ok(b1005SharedRules.length<=1288,'B1005 rules must remain compact');
 assert.ok(b1004SharedButtonRules.length<=394,'B1004 shared button must not grow');
 assert.ok(css.includes('#root .wpb .wpb-dialog-primary-action{'),'Primary dialog action owner must exist');
 assert.ok(!app.includes("className: \"pressable\", style: { width: \"100%\", padding: \"13px\", borderRadius: 12, border: \"none\", background: C.accent, color: C.accentText, fontWeight: 700, cursor: \"pointer\", marginBottom: 8, display: \"flex\", alignItems: \"center\", justifyContent: \"center\", gap: 6 }"),'Six old inline primary CTA styles must not return');
@@ -64,14 +68,14 @@ for(const role of b1003RoleNames)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Missing B1003 type owner '+role);
 for(const old of ["style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }","style: { fontSize: 15, fontWeight: 600, color: C.text }","style: { fontSize: 12, color: C.muted, marginTop: 2 }","style: { fontSize: 13, fontWeight: 700, color: C.text }","style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }","style: { fontSize: 13, color: C.text, lineHeight: 1.45 }","style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }"])
   assert.ok(!app.includes(old),'Old inline type object restored: '+old);
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').length<=637454,
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
-assert.ok((app.match(/style: \{/g)||[]).length<=997,
+assert.ok((app.match(/style: \{/g)||[]).length<=955,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').length<=2668250,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').length<=2663750,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.
@@ -89,4 +93,12 @@ for(const literal of replacedStyles)
   assert.ok(!app.includes(literal),'Duplicate inline type style restored: '+literal);
 assert.ok(!css.includes('@media(max-width:350px){\n  #root[data-pi-motion="expressive"] .wpb{\n'),
   'Inert theme selector must stay removed');
+
+/* B1005: fixed-paint roles now use palette-aware shared CSS, not inline objects. */
+const b1005Roles=[["wpb-ey8",12,"style: { ...eyebrow(), marginBottom: 8 }"],["wpb-ey6",5,"style: { ...eyebrow(), marginBottom: 6 }"],["wpb-ey",6,"style: { ...eyebrow() }"],["wpb-eya",3,"style: { ...eyebrowAccent() }"],["wpb-eya8",2,"style: { ...eyebrowAccent(), marginBottom: 8 }"],["wpb-square-accent",4,"style: { width: 34, height: 34, borderRadius: 8, background: C.accentDim, display: \"flex\", alignItems: \"center\", justifyContent: \"center\", flexShrink: 0 }"],["wpb-close-quiet",4,"style: { background: \"none\", border: \"none\", color: C.muted, cursor: \"pointer\", padding: 4 }"],["wpb-save-compact",2,"style: { width: \"100%\", padding: \"13px\", borderRadius: 12, border: \"none\", background: C.accent, color: C.accentText, fontSize: 15, fontWeight: 700, cursor: \"pointer\" }"],["wpb-preview-meta",2,"style: { fontSize: 13, color: C.muted, marginTop: 6, display: \"flex\", alignItems: \"center\", gap: 6, flexWrap: \"wrap\" }"],["wpb-preview-kicker",2,"style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: C.accentInk, textTransform: \"uppercase\" }"]];
+for(const [role,count,old] of b1005Roles){
+  assert.ok(css.includes('.'+role),'B1005 CSS role missing: '+role);
+  assert.equal((app.match(new RegExp('\\b'+role+'\\b','g'))||[]).length,count,'B1005 class use count: '+role);
+  assert.ok(!app.includes(old),'B1005 old inline object restored: '+role);
+}
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

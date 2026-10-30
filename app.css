@@ -10100,3 +10100,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* B1004 — six confirmation CTAs share the existing theme and pressable action. */
 #root .wpb .wpb-dialog-primary-action{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-bottom:8px;padding:13px;border:0;border-radius:12px;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-weight:700;cursor:pointer}
+/* B1005 — shared section kickers, compact actions and card badges. */
+#root .wpb :is(.wpb-ey,.wpb-ey6,.wpb-ey8,.wpb-eya,.wpb-eya8){font-size:var(--pi-type-caption);font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+#root .wpb :is(.wpb-ey,.wpb-ey6,.wpb-ey8){color:var(--wpb-theme-faint)}
+#root .wpb :is(.wpb-eya,.wpb-eya8){color:var(--wpb-theme-accent-ink)}
+#root .wpb :is(.wpb-ey8,.wpb-eya8){margin-bottom:8px}
+#root .wpb .wpb-ey6{margin-bottom:6px}
+#root .wpb .wpb-square-accent{width:34px;height:34px;border-radius:8px;background:var(--wpb-theme-accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#root .wpb .wpb-close-quiet{background:none;border:0;color:var(--wpb-theme-muted);cursor:pointer;padding:4px}
+#root .wpb .wpb-save-compact{width:100%;padding:13px;border-radius:12px;border:0;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-size:var(--pi-type-body);font-weight:700;cursor:pointer}
+#root .wpb .wpb-preview-meta{font-size:var(--pi-type-support);color:var(--wpb-theme-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#root .wpb .wpb-preview-kicker{font-size:var(--pi-type-support);font-weight:700;letter-spacing:1.2px;color:var(--wpb-theme-accent-ink);text-transform:uppercase}

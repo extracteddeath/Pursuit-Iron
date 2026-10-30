@@ -9607,12 +9607,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-b973-set-detail{display:block;margin-top:3px;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.4;overflow-wrap:anywhere;}
 #root .wpb-workout .wpb-b973-set-guidance{padding:8px 4px 0;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.5;}
 #root .wpb-workout :is(.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle){display:flex;align-items:center;width:100%;min-height:48px;text-align:left;cursor:pointer}
-#root .wpb-workout .wpb-b973-coach-collapsed{gap:7px;margin:0 0 9px;padding:7px 10px;border:1px solid var(--wpb-theme-border-soft);border-radius:12px;background:var(--wpb-theme-card)}
+#root .wpb-workout :is(.wpb-b973-coach-collapsed,.wpb-b973-coach-open){border:1px solid var(--wpb-theme-border-soft);background:var(--wpb-theme-card);text-align:left}
+#root .wpb-workout .wpb-b973-coach-collapsed{gap:7px;margin:0 0 9px;padding:7px 10px;border-radius:12px}
 #root .wpb-workout .wpb-b973-coach-toggle{gap:8px;padding:0;border:0;background:transparent;color:inherit}
 #root .wpb-workout .wpb-b973-coach-label{flex-shrink:0;font-size:.6875rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--wpb-theme-accent-ink);}
 #root .wpb-workout .wpb-b973-coach-summary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--wpb-theme-text);font-size:.75rem;font-weight:650;}
 #root .wpb-workout .wpb-b973-coach-context{flex-shrink:0;color:var(--wpb-theme-muted);font-size:.6875rem;}
-#root .wpb-workout .wpb-b973-coach-open{width:100%;margin:0 0 14px;padding:11px 13px;border:1px solid var(--wpb-theme-border-soft);border-radius:16px;text-align:left;background:var(--wpb-theme-card);color:var(--wpb-theme-text);}
+#root .wpb-workout .wpb-b973-coach-open{width:100%;margin:0 0 14px;padding:11px 13px;border-radius:16px;color:var(--wpb-theme-text);}
 
 #root .wpb-workout .wpb-b973-coach-open-context{font-size:.75rem;color:var(--wpb-theme-muted);}
 #root .wpb-workout .wpb-b973-coach-hide{margin-left:auto;font-size:.75rem;color:var(--wpb-theme-muted);}
@@ -9993,32 +9994,36 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B993: CSS-owned Workout exercise information typography and responsive cards. */
 #root .wpb .wpb-exinfo-meta{margin:2px 0 12px;color:var(--wpb-theme-muted);font-size:13px;line-height:1.45}
 #root .wpb .wpb-exinfo-metric{flex:1 1 0;min-width:0;background:var(--wpb-theme-card);border-radius:12px;padding:11px 4px;text-align:center}
-#root .wpb .wpb-exinfo-metric-value{font-size:15px;font-weight:600;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}
-#root .wpb .wpb-exinfo-record-value{font-size:15px;font-weight:700;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}
-#root .wpb .wpb-exinfo-metric-label{font-size:11px;color:var(--wpb-theme-muted);margin-top:2px}
+#root .wpb :is(.wpb-exinfo-metric-value,.wpb-exinfo-record-value){font-size:15px;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}
+#root .wpb .wpb-exinfo-metric-value{font-weight:600}
+#root .wpb .wpb-exinfo-record-value{font-weight:700}
+#root .wpb :is(.wpb-exinfo-metric-label,.wpb-exinfo-rest-caption){font-size:11px;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-exinfo-metric-label{margin-top:2px}
 #root .wpb .wpb-exinfo-why-title{font-size:13px;font-weight:800;color:var(--wpb-theme-text)}
-#root .wpb .wpb-exinfo-why-copy{font-size:13px;color:var(--wpb-theme-text);line-height:1.45;overflow-wrap:anywhere}
+#root .wpb :is(.wpb-exinfo-why-copy,.wpb-exinfo-cue-copy){font-size:13px;color:var(--wpb-theme-text);overflow-wrap:anywhere}
+#root .wpb .wpb-exinfo-why-copy{line-height:1.45}
 #root .wpb .wpb-exinfo-why-chip{font-size:11px;font-weight:700;color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-bg-tint);padding:4px 7px;border-radius:8px}
 #root .wpb .wpb-exinfo-why-disclosure{cursor:pointer;color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:700;padding:8px 0;min-height:44px;display:list-item}
 #root .wpb .wpb-exinfo-muted{color:var(--wpb-theme-muted)}
 #root .wpb .wpb-exinfo-rest-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:var(--wpb-theme-card);border-radius:12px;padding:10px 12px;margin-bottom:12px;min-width:0}
-#root .wpb .wpb-exinfo-rest-caption{font-size:11px;color:var(--wpb-theme-muted)}
-#root .wpb .wpb-exinfo-secondary-copy{font-size:13px;color:var(--wpb-theme-muted);margin-bottom:12px;line-height:1.45}
+
+#root .wpb :is(.wpb-exinfo-secondary-copy,.wpb-exinfo-tempo-copy,.wpb-exinfo-demo-copy,.wpb-exinfo-set-helper){font-size:13px;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-exinfo-secondary-copy{margin-bottom:12px;line-height:1.45}
 #root .wpb .wpb-exinfo-pinned{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;padding:10px 12px;border-radius:12px;background:var(--wpb-theme-accent-dim);min-width:0}
 #root .wpb .wpb-exinfo-pinned-copy{font-size:13px;line-height:1.4;white-space:pre-wrap;color:var(--wpb-theme-text);overflow-wrap:anywhere}
 #root .wpb .wpb-exinfo-trend-value{font-size:18px;font-weight:800;color:var(--wpb-theme-text)}
 #root .wpb .wpb-exinfo-trend-empty{min-height:70px;display:flex;align-items:center;justify-content:center;color:var(--wpb-theme-muted);font-size:12px;text-align:center}
 #root .wpb .wpb-exinfo-trend-dates{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--wpb-theme-muted);margin-top:3px}
 #root .wpb .wpb-exinfo-cue-dot{width:6px;height:6px;border-radius:999px;background:var(--wpb-theme-accent);flex-shrink:0;margin-top:6px}
-#root .wpb .wpb-exinfo-cue-copy{font-size:13px;color:var(--wpb-theme-text);line-height:1.35;overflow-wrap:anywhere}
+#root .wpb .wpb-exinfo-cue-copy{line-height:1.35}
 #root .wpb .wpb-exinfo-tempo{display:flex;align-items:center;gap:8px;margin-top:4px;padding:8px 11px;border-radius:12px;background:var(--wpb-theme-bg-tint);min-width:0;overflow-wrap:anywhere}
-#root .wpb .wpb-exinfo-tempo-copy{font-size:13px;color:var(--wpb-theme-muted);line-height:1.3}
+#root .wpb .wpb-exinfo-tempo-copy{line-height:1.3}
 #root .wpb .wpb-exinfo-demo-icon{width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--wpb-theme-danger) 14%,transparent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-#root .wpb .wpb-exinfo-demo-copy{font-size:13px;color:var(--wpb-theme-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#root .wpb .wpb-exinfo-demo-copy{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #root .wpb .wpb-exinfo-weight-step-card{background:var(--wpb-theme-card);border-radius:16px;padding:12px 14px;margin-bottom:16px}
 #root .wpb .wpb-exinfo-helper{font-size:11px;color:var(--wpb-theme-faint);margin-top:6px;line-height:1.5}
 #root .wpb .wpb-exinfo-history-date{font-size:11px;color:var(--wpb-theme-faint);flex-shrink:0;margin-top:1px;width:44px}
-#root .wpb .wpb-exinfo-set-helper{font-size:13px;color:var(--wpb-theme-muted);line-height:1.5}
+#root .wpb .wpb-exinfo-set-helper{line-height:1.5}
 @media(forced-colors:active){#root .wpb .wpb-exinfo-why-chip,#root .wpb .wpb-exinfo-pinned{border:1px solid CanvasText}#root .wpb .wpb-exinfo-cue-dot{background:Highlight}}
 
 /* B993: Workout Info bottom sheet has one visual-viewport owner and accessible controls. */

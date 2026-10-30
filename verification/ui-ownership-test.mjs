@@ -105,6 +105,17 @@ assert.ok(!app.includes('data-load-advice') && !app.includes('const acceptLowerL
 assert.ok(app.includes('data-set-options-trigger') && app.includes('"aria-label": "weight"'),
     'Weight and set editing remain directly available without a coaching prompt');
 
+// Workout Info text has one scope-owned token for each truly shared role.
+for(const names of [
+  ['metric-value','record-value'],['why-copy','cue-copy'],
+  ['metric-label','rest-caption'],['secondary-copy','tempo-copy','demo-copy','set-helper']
+]) {
+ const rule='#root .wpb :is('+names.map(name=>'.wpb-exinfo-'+name).join(',')+'){';
+ assert.ok(css.includes(rule),'Workout Info typography owner must stay shared: '+names.join(','));
+}
+assert.ok(app.includes('className: "wpb-b973-coach-label", children: "Coach"') &&
+    !app.includes('style: { ...eyebrowAccent() }, children: "Coach"'),
+    'Workout Coach heading cannot regain a duplicate inline style object');
 // Workout Leave and header actions share one 48px control geometry owner.
 const headerButtonGeometry=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){')[1]?.split('}')[0]||'';
 for(const token of ['box-sizing:border-box','width:48px','height:48px',

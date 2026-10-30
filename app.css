@@ -438,13 +438,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* PI TYPOGRAPHY & COMPOSITION — the information architecture pass after the
    Build 831 motion layer. Components keep their existing content and training
    semantics; only page composition, labels, and surface pacing change. */
-#root[data-pi-motion="expressive"] .wpb{
-  
-  
-  
-  
-  
-}
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button>div:first-child{
   font-size:11px!important;
   font-weight:750!important;
@@ -641,10 +634,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump-control:focus-within{
   border-color:var(--pi-m3-overlay-focus)!important;
   box-shadow:0 0 0 2px var(--pi-m3-overlay-tonal-pressed)!important;
-}
-@media(min-width:760px){
-  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
-    border-radius:26px 26px 0 0!important;}
 }
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb .wpb-sheet-close{
@@ -2154,13 +2143,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Recent history has a distinct, quiet item rhythm, without adding padding
    to charts, overriding workouts, or changing displayed training statistics. */
 
-@media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb{
-    
-    
-    
-  }
-}
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-settings-card>.wpb-settings-row,.wpb-settings-card>button,.wpb-history-session){
     transition:none!important;
@@ -7131,8 +7113,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 @media(max-width:420px){
   #root .wpb-workout .wpb-set-controls{column-gap:7px!important;}
-  #root .wpb-workout .wpb-set-controls>div:nth-child(3)>div:first-child,
-  #root .wpb-workout .wpb-set-controls>div:nth-child(4)>div:first-child{gap:5px!important;}
 }
 /* Below 380px, the established two-line adaptation gives each field a
    full-width track. Don't force inline columns and make the inputs microscopic. */
@@ -7320,9 +7300,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-effort-scale>button[aria-pressed="true"]{
   border-radius:10px!important;background:var(--wpb-theme-card)!important;
   color:var(--wpb-theme-text)!important;border-color:var(--wpb-theme-accent-ink)!important;
-}
-@media(prefers-reduced-motion:reduce){
-  #root .wpb-workout .wpb-ex-nav-step{transition:none!important;}
 }
 @media(forced-colors:active){
   #root .wpb-workout .wpb-ex-nav-step[aria-current="step"]{outline:2px solid Highlight;outline-offset:-3px;}
@@ -10103,3 +10080,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-session-notes-previous>strong{color:var(--wpb-theme-text)}
 
 #root .wpb-workout .wpb-workout-average-action{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-top:6px;padding:10px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);font-size:13px;font-weight:600;cursor:pointer}
+
+/* B1001 — shared quiet type roles across Program, Workout and Progress.
+   Theme paint stays with --wpb-theme-*; JSX no longer creates inline paint objects. */
+#root .wpb .wpb-type-faint{color:var(--wpb-theme-faint)}
+#root .wpb .wpb-type-support-muted{font-size:13px;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-type-caption-faint{font-size:11px;color:var(--wpb-theme-faint)}
+#root .wpb .wpb-type-section-intro{font-size:13px;color:var(--wpb-theme-muted);margin-bottom:12px}
+#root .wpb .wpb-type-confirm-copy{font-size:15px;color:var(--wpb-theme-muted);margin-bottom:16px;line-height:1.5}

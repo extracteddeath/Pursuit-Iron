@@ -35,7 +35,7 @@ assert.ok(css.includes('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-t
   css.includes('flex:0 0 48px;width:48px;min-width:48px;height:48px;min-height:48px;padding:0') &&
   css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{'),
   'Workout and Rest share a real 48px icon-action sizing owner');
-assert.ok((css.match(/!important/g)||[]).length<=2027,
+assert.ok((css.match(/!important/g)||[]).length<=2024,
   'Workout Coach and set options shared focus debt capped at 2027');
 // Preserve Build 996's visual-viewport fix without relaxing design CSS debt.
 const viewportFix='bottom:auto;height:min(100dvh,var(--visual-h,var(--app-h,100dvh)));';
@@ -49,11 +49,27 @@ const reviewScopeRule="#root .wpb .wpb-program-review-scope{display:grid;gap:var
 assert.ok(css.includes(reviewScopeRule), 'Compact program-impact grid must use a single named semantic style owner');
 assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
-assert.ok((app.match(/style: \{/g)||[]).length<=1095,
+assert.ok((app.match(/style: \{/g)||[]).length<=1037,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
 assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').length<=2668657,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
+
+// B1001: five shared type roles replace 58 repeated fixed-paint objects.
+const sharedRoles=['faint','support-muted','caption-faint','section-intro','confirm-copy'];
+for(const role of sharedRoles)
+  assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Shared type owner missing: '+role);
+const replacedStyles=[
+ 'style: { color: C.faint }',
+ 'style: { fontSize: 13, color: C.muted }',
+ 'style: { fontSize: 11, color: C.faint }',
+ 'style: { fontSize: 13, color: C.muted, marginBottom: 12 }',
+ 'style: { fontSize: 15, color: C.muted, marginBottom: 16, lineHeight: 1.5 }'
+];
+for(const literal of replacedStyles)
+  assert.ok(!app.includes(literal),'Duplicate inline type style restored: '+literal);
+assert.ok(!css.includes('@media(max-width:350px){\n  #root[data-pi-motion="expressive"] .wpb{\n'),
+  'Inert theme selector must stay removed');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

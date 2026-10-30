@@ -137,3 +137,11 @@
 - **218 (§§11.3,12):** B983 now enforces exact class-use counts, no retired inline objects, <=874 inline style object ceiling, <=2024 stylesheet priority declarations, and a compact 1500-character B1009 owner. The legacy CSS-size ceiling is not relaxed. The combined normalized source budget tightens by 1,002 characters (2,661,215 → 2,660,213).
 - **219 (§§12–14):** Draft source-only milestone pending exact-head integration tests, seven Chromium shards, 320px/200% text/theme/IME and physical Android inspection. Build 999 remains live; no Build 1000 identity or PR merge is authorized by this source change alone.
 - **Measured at authoring:** inline styles **919 → 874**; app.css `!important` **2024 → 2024**; App.js 2,023,868 → 2,022,866 characters, app.css 642,587 → 643,979 characters; combined source change **+380 characters**. Semantic paint is now shared; no training, persistence, PR logic, backup, engine version or deployed release modification.
+
+
+## Design-spec passes 220–230 — genuine round controls and compact layout (draft)
+
+- **220–223 (§§5.2,6,7.3):** Program circuit/superset round +/- actions use actual **48px** button dimensions, replacing the 28px visual box plus overlapping global pseudo hit targets. Their original action callbacks and distinct spoken labels stay unchanged. The reset-to-auto button also receives a 48px physical area.
+- **224–226 (§§5.2,8,11):** A single named round-row layout owner wraps on narrow phones and enlarged text; the number and action labels remain together without introducing duplicate UI or guessed overlap margins.
+- **227–229 (§§10,12):** New B1010 responsive browser gate covers 320/393px at 200% actual font size, physical touch rectangles, nonoverlap, and horizontal page containment. B983 now rejects the old pseudo-hit class, enforces shared class usage and a compact zero-priority B1010 CSS owner; original legacy debt budgets remain in place.
+- **230 (§§12,14):** Source-only candidate; the Program shard, all seven Chromium shards, full engine and device gates still need fresh exact-head evaluation. Build 999 stays live; no engine, persistence, progression or history mutation.

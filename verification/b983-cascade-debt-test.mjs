@@ -68,7 +68,11 @@ const b1007SharedRules=css.slice(b1007Start,b1008Start);
 const b1009Start=css.indexOf('/* B1009 — shared, palette-owned fixed text roles');
 assert.ok(b1009Start>b1008Start,'B1009 shared typography follows B1008 destructive paint');
 const b1008SharedRules=css.slice(b1008Start,b1009Start);
-const b1009SharedRules=css.slice(b1009Start);
+const b1010Start=css.indexOf('/* B1010 — Program round adjusters');
+assert.ok(b1010Start>b1009Start,'B1010 round touch owner follows shared typography');
+const b1009SharedRules=css.slice(b1009Start,b1010Start);
+const b1010SharedRules=css.slice(b1010Start);
+assert.ok(b1010SharedRules.length<=350,'B1010 round hit geometry owner must stay compact');
 assert.ok(b1009SharedRules.length<=1500,'B1009 shared typography must stay compact');
 assert.ok(b1008SharedRules.length<=591,'B1008 danger styles must stay compact');
 assert.ok(b1007SharedRules.length<=690,'B1007 presentation owner must remain compact');
@@ -84,14 +88,14 @@ for(const role of b1003RoleNames)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Missing B1003 type owner '+role);
 for(const old of ["style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }","style: { fontSize: 15, fontWeight: 600, color: C.text }","style: { fontSize: 12, color: C.muted, marginTop: 2 }","style: { fontSize: 13, fontWeight: 700, color: C.text }","style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }","style: { fontSize: 13, color: C.text, lineHeight: 1.45 }","style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }"])
   assert.ok(!app.includes(old),'Old inline type object restored: '+old);
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').length<=637454,
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
 assert.ok((app.match(/style: \{/g)||[]).length<=874,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').length<=2660213,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').length<=2660213,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.
@@ -152,6 +156,21 @@ for(const legacy of ["style: { width: \"100%\", padding: \"13px\", borderRadius:
   assert.ok(!app.includes(legacy),'B1008 retired destructive styling must stay retired');
 assert.ok(css.includes('color:var(--wpb-theme-on-danger)')&&css.includes('background:var(--wpb-theme-danger-dim)'),
   'B1008 uses real dynamic theme text and danger tint rather than a fixed color');
+
+/* B1010: physical 48px controls replace overlapping pseudo-hit surfaces. */
+assert.equal((app.match(/className: "pressable wpb-round-step"/g)||[]).length,2,
+  'Both round adjustment buttons have physical touch targets, not overlapping hit pseudo-elements');
+assert.ok(!app.includes('pressable hit wpb-round-step'),
+  'Round controls cannot reinstate overlapping pseudo-hit areas');
+assert.equal((app.match(/wpb-round-row/g)||[]).length,1,
+  'Only the superset/circuit round row can claim this responsive layout owner');
+assert.ok(css.includes('.wpb-round-step{width:48px;height:48px'),
+  'Round controls must retain real 48px dimensions');
+assert.ok(b1010SharedRules.includes('flex-wrap:wrap')&&
+  b1010SharedRules.includes('min-width:48px;min-height:48px'),
+  'Compact Program row and reset action must remain responsive and physically tappable');
+assert.equal((b1010SharedRules.match(/!important/g)||[]).length,0,
+  'New semantic control geometry must not add priority overrides');
 
 /* B1009: a bounded 45-use static typography migration, not a new styling escape hatch. */
 assert.ok(!/className: "[^"]*pi-t-[^"]+",\s*,/.test(app),'B1009 JSX props must never contain an empty property after a migrated class');

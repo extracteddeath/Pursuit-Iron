@@ -231,6 +231,23 @@ assert.ok(css.includes('.wpb-ui-sheet-close:focus-visible{outline:2px solid var(
     !css.includes('.wpb-program-schedule-close:focus-visible{'),
     'All native sheet/dialog Close controls must share one accessible focus ring');
 
+// Workout Focus title and warmup use one flex owner; the normal title's
+// display:contents layout and all input values are deliberately untouched.
+const workoutFlex=css.split('#root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row,')[1]?.split('}')[0]||'';
+assert.ok(workoutFlex.includes('#root .wpb-workout .wpb-warmup-step{display:flex;align-items:flex-start;gap:8px;min-width:0;') &&
+    !css.includes('#root .wpb-workout .wpb-warmup-step{'),
+    'Workout Focus title and warmup row must have one shared geometry owner');
+const workoutFocus=css.split('#root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,')[1]?.split('}')[0]||'';
+for(const role of ['.wpb-b973-set-close','.wpb-b973-coach-collapsed','.wpb-b973-coach-toggle','.wpb-load-advice>button'])
+  assert.ok(workoutFocus.includes(role),'Workout shared focus ring missing '+role);
+assert.ok(workoutFocus.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;') &&
+    css.includes(':is(.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible{outline-color:Highlight}') &&
+    !css.includes('.wpb-load-advice>button:focus-visible{'),
+    'Workout Coach and set editor require a visible forced-colors focus ring');
+assert.ok(css.includes('.wpb-set-option-row:focus-visible{outline:2px solid var(--pi-m3e-primary)!important;outline-offset:2px!important;') &&
+    css.includes('#root .wpb-workout .wpb-set-controls [data-reference-action]:focus-visible,'),
+    'Set reference and set options share one 2px keyboard focus owner');
+
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
 function repeatedImportantDeclarations(source) {

@@ -6913,9 +6913,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;
 }
 #root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,
-#root .wpb-workout .wpb-workout-pinned-note:focus-visible,
-#root .wpb-workout .wpb-workout-exercise-link:focus-visible,
-#root .wpb-workout .wpb-rest-actions>.wpb-rest-action:focus-visible{
+#root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible,
+#root .wpb-workout .wpb-rest-actions>.wpb-rest-action:focus-visible,
+#root .wpb-workout .wpb-load-advice>button:focus-visible{
   outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;
 }
 #root .wpb-workout .wpb-workout-tools{
@@ -7128,10 +7128,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:6px!important;
   line-height:1.25!important;
 }
-#root .wpb-workout .wpb-set-controls [data-reference-action]:focus-visible{
-  outline:2px solid var(--pi-m3e-primary)!important;
-  outline-offset:2px!important;
-}
+
 @media(max-width:420px){
   #root .wpb-workout .wpb-set-controls{column-gap:7px!important;}
   #root .wpb-workout .wpb-set-controls>div:nth-child(3)>div:first-child,
@@ -7262,9 +7259,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-set-option-sheet .wpb-set-option-row{
   min-height:64px;touch-action:manipulation;
 }
-#root .wpb-set-option-sheet .wpb-set-option-row:focus-visible{
-  outline:2px solid var(--pi-m3e-primary)!important;outline-offset:2px!important;
-}
+#root .wpb-workout .wpb-set-controls [data-reference-action]:focus-visible,
+#root .wpb-set-option-sheet .wpb-set-option-row:focus-visible{outline:2px solid var(--pi-m3e-primary)!important;outline-offset:2px!important;}
 @media(prefers-reduced-motion:reduce){
 #root .wpb-set-option-sheet,
 #root .wpb-set-option-backdrop{animation:none!important;}
@@ -8021,9 +8017,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* B949 — Workout header: align title/actions, set/tags and progression as
    independent rows. The old meta stack stretched the tag row and left a gap. */
-#root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row{
-  display:flex;align-items:flex-start;gap:8px;min-width:0;
-}
+
 #root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row .wpb-exercise-name{
   flex:1;min-width:0;align-self:center;
 }
@@ -9254,7 +9248,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-load-advice{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:6px 8px;margin:2px 0 5px;border:1px solid var(--wpb-theme-border);border-radius:10px;color:var(--wpb-theme-muted);background:var(--wpb-theme-card);font-size:12px;line-height:1.35}
 #root .wpb-workout .wpb-load-advice>span{min-width:0;flex:1}
 #root .wpb-workout .wpb-load-advice>button{flex-shrink:0;min-height:48px;padding:6px 10px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);border:1px solid var(--wpb-theme-border);border-radius:9px;font:inherit;font-weight:700;cursor:pointer}
-#root .wpb-workout .wpb-load-advice>button:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+
 @media(max-width:360px){#root .wpb-workout .wpb-load-advice{align-items:flex-start;flex-direction:column}}
 
 /* B959: shared sheet title/Close geometry on small screens and enlarged fonts. */
@@ -9545,6 +9539,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    No duplicate engine, history, program or animation ownership is introduced. */
 #root .wpb-workout .wpb-warmup-card{margin:0 0 16px;padding:14px 16px;background:var(--wpb-theme-card);border-radius:16px;}
 #root .wpb-workout .wpb-warmup-hide{margin-left:auto;min-width:48px;min-height:48px;padding:5px 8px;background:transparent;border:0;color:var(--wpb-theme-muted);font-size:.8125rem;font-weight:600;cursor:pointer;}
+#root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row,
 #root .wpb-workout .wpb-warmup-step{display:flex;align-items:flex-start;gap:8px;min-width:0;}
 #root .wpb-workout .wpb-warmup-step+.wpb-warmup-step{margin-top:7px;}
 #root .wpb-workout .wpb-warmup-number{box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:0 0 20px;min-width:20px;min-height:20px;margin-top:1px;border-radius:8px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font-size:.75rem;font-weight:700;}
@@ -9623,7 +9618,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-b973-coach-item-title{font-size:.8125rem;font-weight:750;line-height:1.35;color:var(--wpb-theme-text);overflow-wrap:anywhere;}
 #root .wpb-workout .wpb-b973-coach-item-copy{margin-top:3px;color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.45;overflow-wrap:anywhere;}
 #root .wpb-workout .wpb-b973-coach-item-evidence{margin-top:5px;color:var(--wpb-theme-muted);font-size:.75rem;line-height:1.35;overflow-wrap:anywhere;}
-@media (forced-colors:active){#root .wpb-workout .wpb-b973-set-type[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-2px;}}
+@media (forced-colors:active){
+#root .wpb-workout .wpb-b973-set-type[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-2px;}
+#root .wpb-workout :is(.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible{outline-color:Highlight}
+}
 @media (prefers-reduced-motion:reduce){#root .wpb-workout .wpb-b973-set-sheet{animation:none;}}
 
 /* B975: one theme-owned layout for a minimized workout and the persistent PWA

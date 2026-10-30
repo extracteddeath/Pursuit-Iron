@@ -1,6 +1,6 @@
 import { classifySessionAdjustment } from '../modules/session-plan.js';
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
+import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, computeCell, EX_BY_ID } from '../modules/engine-api.js';
 
 import { linearStalled, plateauSessions, styleOverride } from '../modules/training-domain/prescriptions.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
@@ -185,3 +185,267 @@ const moreSets = classify(held, [{ weight: 200, reps: 7 }], { action: 'add_reps'
 assert.equal(moreSets.category, 'Sets updated');
 assert.equal(moreSets.summary, '3 → 4 planned sets');
 console.log('PASS B943: ordinary reps are not changes; material load, plateau and saved planned-set changes are distinguished.');
+
+
+export const rearProgram = { id:'b1002-rear-fly',custom:true,engineV:4,weeks:6,
+        config:{weeks:6,unit:'lb',goal:'both',progression:'double',experience:'intermediate',deload:false},
+        days:[{id:'upper',label:'Upper',primaryIndex:-1,exercises:['rear-fly']}],
+        overrides:{'upper:0':{sets:3,reps:'15-25',rir:'2',progressionStyle:'double'}} };
+export const rearHistory = [{id:'b1002-prior',programId:rearProgram.id,dayId:'upper',date:Date.UTC(2026,9,28),
+        weekIndex:1,unit:'lb',perf:{'rear-fly':{weight:60,reps:20,
+            sets:[0,1,2].map(() => ({w:60,r:20,rir:2,tr:2,done:true}))}}}];
+
+// B1002 / 148555.png: Rear Delt Fly, three prior 60x20 sets. An unexplained
+// third-set 55x21 is neither a rep-first advance nor a user-approved deload.
+{
+    const { retainDoubleProgressionSetLoads } = await import('../modules/training-domain/prescriptions.js');
+    const prior = rearHistory; const before = structuredClone(prior);
+    const advice = sessionSuggestion(rearProgram,rearProgram.days[0],0,null,'lb',1,prior);
+    assert.equal(advice.action,'add_reps');
+    assert.deepEqual(advice.setTargets.map(t=>[t.weight,t.reps]),[[60,21],[60,21],[60,21]],
+        'equal previous loads progress reps at 60 lb, not an arbitrary 55 lb on set 3');
+    const rows = prescribeSets(rearProgram,rearProgram.days[0],EX_BY_ID['rear-fly'],0,1,'lb',
+        advice,{}, {},prior,false);
+    const { auditSetDecisionTraces } = await import('../modules/training-domain/prescriptions.js');
+    assert.deepEqual(auditSetDecisionTraces(rows),[],
+        'Real screenshot rows must pass the same per-set provenance audit as full lifecycle');
+    // The exported replay captures ACTUAL workout rows (not a parallel evaluator fixture)
+    // and intentionally cannot leak notes or profile fields.
+    const { captureWorkoutProgressionReplay, auditWorkoutProgressionReplay } =
+        await import('../modules/next-engine/workout-replay.js');
+    const captured=captureWorkoutProgressionReplay({program:rearProgram,
+        day:rearProgram.days[0],row:{id:'rear-fly',slot:0,note:'DO NOT EXPORT',
+            sets:rows.map(row=>({...row,note:'DO NOT EXPORT'}))},
+        suggestion:advice,cell:computeCell(rearProgram,rearProgram.days[0],'rear-fly',0,1),
+        history:[{...prior[0],note:'DO NOT EXPORT',perf:{'rear-fly':{
+            ...prior[0].perf['rear-fly'],note:'DO NOT EXPORT'}}}],
+        weekIndex:1,unit:'lb',readiness:{factor:1}});
+    assert.equal(captured.kind,'pursuit-iron-progression-replay');
+    assert.equal(captured.rows.length,3);
+    assert.deepEqual(captured.rows.map(row=>row.trace.source.load),[60,60,60]);
+    assert.deepEqual(auditWorkoutProgressionReplay(captured),[],
+        'Valid 60×20 to 60×21 session has no contradictory prescription evidence');
+    assert.ok(!JSON.stringify(captured).includes('DO NOT EXPORT'),
+        'User notes must not leak through the opted-in progression report');
+    const injected=JSON.parse(JSON.stringify(captured));
+    injected.rows[2].load=55;
+    assert.ok(auditWorkoutProgressionReplay(injected)
+        .some(issue=>issue.code==='unexplained_pending_load'&&issue.workingSetIndex===2),
+        'The diagnostic must catch an unexplained automatic 55-lb third set');
+    const manual=JSON.parse(JSON.stringify(injected));
+    manual.rows[2].owner='user';
+    assert.ok(!auditWorkoutProgressionReplay(manual)
+        .some(issue=>issue.code==='unexplained_pending_load'),
+        'User-entered loads are not falsely classified as engine changes');
+    const corrupted = rows.map((row,i) => i===2 ? {...row,target:{...row.target,
+        decisionTrace:{...row.target.decisionTrace,target:{...row.target.decisionTrace.target,load:55}}}} : row);
+    assert.ok(auditSetDecisionTraces(corrupted).some(x=>x.code==='unearned_load_change'),
+        'The release gate must detect an unexpected late-set load drop');
+    assert.ok(auditSetDecisionTraces(corrupted).some(x=>x.code==='display_target_diverges_from_trace'),
+        'The release gate must detect a target whose source and display disagree');
+    assert.deepEqual(rows.map(row => row.target.decisionTrace?.source?.load),[60,60,60],
+        'Each visible target must identify its own historical load');
+    assert.deepEqual(rows.map(row => row.target.decisionTrace?.source?.reps),[20,20,20]);
+    assert.deepEqual(rows.map(row => row.target.decisionTrace?.target?.load),[60,60,60]);
+    assert.deepEqual(rows.map(row => row.target.decisionTrace?.evaluation?.action),['add_reps','add_reps','add_reps']);
+    assert.equal(rows[2].target.decisionTrace.source.historyEntryId,prior[0].id,
+        'Later-set advice must identify its exact source workout');
+    const crossUnit=prescribeSets(rearProgram,rearProgram.days[0],EX_BY_ID['rear-fly'],
+        0,1,'lb',{weight:55,target:20,action:'hold',lastUnit:'kg',
+            last:{sets:[0,1,2].map(()=>({w:25,r:20,rir:2,rirReported:true}))}},
+        {},{},[],false);
+    assert.deepEqual(crossUnit.map(row=>row.target.decisionTrace.source.load),[55,55,55],
+        'kg history must be converted and snapped before comparing with lb prefills');
+    assert.equal(crossUnit[0].target.decisionTrace.source.originalLoad,25);
+    assert.equal(crossUnit[0].target.decisionTrace.source.originalUnit,'kg');
+    assert.deepEqual(auditSetDecisionTraces(crossUnit),[],
+        'A legitimate kg-to-lb conversion is not an unearned load change');
+    assert.deepEqual(rows.map(s=>[s.weight,s.reps]),[['60','21'],['60','21'],['60','21']],
+        'Workout row defaults and canonical recommendation must agree');
+    const stray = {...advice,setTargets:advice.setTargets.map((t,i)=>i===2?{...t,weight:55}:t)};
+    const fixed = retainDoubleProgressionSetLoads(stray,[60,60,60]);
+    assert.deepEqual(fixed.setTargets.map(t=>[t.weight,t.reps]),[[60,21],[60,21],[60,21]],
+        'rep-only progression cannot smuggle a load drop into one set');
+    assert.equal(fixed.weight,60);
+    assert.equal(retainDoubleProgressionSetLoads(fixed,[60,60,60]),fixed,
+        'clean suggestions preserve identity and remain stable through rerenders');
+    const recovered = refreshPendingSetTargets([
+        {auto:true,done:false,valueOwner:'prescription',weight:'55',reps:'21',
+            target:{w:'55',reps:'15-25',prefillReps:'21'}}
+    ],[rows[2]]);
+    assert.equal(recovered[0].weight,'60','untouched pending rows may be repaired on resume');
+    const action = retainDoubleProgressionSetLoads({...stray,action:'decrease_load'},[60,60,60]);
+    assert.equal(action.setTargets[2].weight,55,'an explicit correction remains independently owned');
+    const increased = retainDoubleProgressionSetLoads({...stray,action:'increase_load'},[60,60,60]);
+    assert.equal(increased.setTargets[2].weight,55,'earned load changes must not be blocked');
+    const mixed = retainDoubleProgressionSetLoads(stray,[60,60,55]);
+    assert.deepEqual(mixed.setTargets.map(t=>t.weight),[60,60,55],
+        'genuine prior mixed-load work retains its individual set load');
+    assert.deepEqual(prior,before,'history remains immutable throughout recommendation and render');
+}
+console.log('PASS B1002: classic double per-set load invariants, 60x20 to 60x21, opt-in corrections and resume.');
+
+// B1003 skipped-middle working set: preserving ordinal identity must survive
+// Workout -> logger -> JSON history -> LAST -> both progression evaluators.
+{
+    const { loggedWorkoutPerformance } = await import('../modules/training-domain/prescriptions.js');
+    const { evaluateWorkoutProgression } = await import('../modules/next-engine/performance.js');
+    const base = prescribeSets(rearProgram, rearProgram.days[0], EX_BY_ID['rear-fly'],
+        0, 1, 'lb', { weight: 60, target: 20, action: 'initial' }, {}, {}, [], false);
+    const loggedRows = base.map((row, i) => ({
+        ...row, done: i !== 1, weight: i === 2 ? '55' : '60',
+        reps: i === 2 ? '18' : '20', actualRIR: i === 1 ? null : 2
+    }));
+    const saved = loggedWorkoutPerformance(rearProgram, rearProgram.days[0],
+        [{ id:'rear-fly', slot:0, sets:loggedRows }], 1, 'lb', {}, []);
+    const prior = JSON.parse(JSON.stringify(saved['rear-fly']));
+    assert.deepEqual(prior.sets.map(row => row.decisionTrace?.workingSetIndex),[0,2],
+        'Completed working sets retain the exact original per-position trace');
+    assert.deepEqual(prior.sets.map(row => row.decisionTrace?.applied?.load),[60,55],
+        'History stores the actual applied load in the same record as the original target');
+    assert.deepEqual(prior.sets.map(row => row.workingSetIndex),[0,2],
+        'Logger must not silently compact skipped set #2 into set #1');
+    assert.deepEqual(previousWorkoutSet(prior,0).r,20);
+    assert.equal(previousWorkoutSet(prior,1),null,
+        'LAST cannot show completed set #3 under skipped set #2');
+    assert.equal(previousWorkoutSet(prior,2).w,55);
+    const actual = prior.sets.map(row => ({
+        exerciseId:'rear-fly',setIndex:row.workingSetIndex,load:row.w,
+        reps:row.r,rir:row.rirReported ? row.rir : null
+    }));
+    const session = { exercises:[{ exerciseId:'rear-fly', name:'Rear Delt Fly',
+        role:'hypertrophy_isolation',sets:3,progressionStyle:'double',
+        prescription:{reps:[15,25],rir:[2,2]} }]};
+    const decision = evaluateWorkoutProgression(session,actual)[0];
+    assert.equal(decision.outcome,'incomplete');
+    assert.notEqual(decision.action,'increase_load');
+    assert.deepEqual(decision.setTargets.map(row=>row.weight),[60,60,55],
+        'Progression must retain the actual third-set weight at ordinal 2');
+    const entry={id:'b1003-history',programId:rearProgram.id,
+        dayId:'upper',date:Date.UTC(2026,9,28),weekIndex:1,
+        unit:'lb',perf:saved};
+    const advice=sessionSuggestion(rearProgram,rearProgram.days[0],0,null,'lb',1,[entry]);
+    assert.notEqual(advice.action,'increase_load');
+    const next=prescribeSets(rearProgram,rearProgram.days[0],
+        EX_BY_ID['rear-fly'],0,1,'lb',advice,{}, {},[entry],false);
+    assert.deepEqual(next.map(row=>Number(row.weight)),[60,60,55],
+        'Saved custom history must preserve set ordinal through next actual Workout targets');
+    const manual = loggedWorkoutPerformance(rearProgram,rearProgram.days[0],
+        [{id:'rear-fly',slot:0,sets:base.map((row,i)=>({
+            ...row,done:i===2,weight:i===2?'50':row.weight,
+            reps:i===2?'19':row.reps,valueOwner:i===2?'user':row.valueOwner,
+            auto:i===2?false:row.auto
+        }))}],1,'lb',{},[]);
+    assert.equal(manual['rear-fly'].sets[0].decisionTrace.target.load,60,
+        'User edits must not rewrite what the engine originally prescribed');
+    assert.equal(manual['rear-fly'].sets[0].decisionTrace.applied.load,50);
+    assert.equal(manual['rear-fly'].sets[0].decisionTrace.applied.owner,'user');
+    const duplicates=evaluateWorkoutProgression(session,[
+        {...actual[0],setIndex:0,reps:25},
+        {...actual[0],setIndex:1,reps:25},
+        {...actual[0],setIndex:1,reps:25}])[0];
+    assert.notEqual(duplicates.action,'increase_load',
+        'Three records are not three completed sets when a position is duplicated');
+}
+console.log('PASS B1003 skipped-middle: logger, history, LAST, progression and Workout positions match.');
+
+// B1004 generated sparse exposure: the adapter must not compress missing set #2.
+{
+    const { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } =
+        await import('../modules/next-engine/workout-history-adapter.js');
+    const sparse={id:'b1004-sparse',programId:squatProgram.id,dayId:squatDay.id,
+        date:Date.UTC(2026,9,29),weekIndex:1,unit:'lb',
+        perf:{'back-squat':{weight:205,reps:6,sets:[
+            {w:205,r:5,rir:2,rirReported:true,workingSetIndex:0,done:true},
+            {w:195,r:6,rir:2,rirReported:true,workingSetIndex:2,done:true}
+        ]}}};
+    const analysis=analyzeShellHistoryForNextEngine(squatProgram,[sparse],EXERCISES);
+    const { resolveNextShellExerciseId } = await import('../modules/next-engine/app-shell-adapter.js');
+    const engineId=resolveNextShellExerciseId(squatProgram,squatDay,0,EX_BY_ID['back-squat']);
+    assert.ok(engineId,'Generated movement id must resolve before checking sparse-set replay');
+    assert.deepEqual(analysis.workouts[0].performedSets
+        .filter(set=>set.exerciseId===engineId).map(set=>set.setIndex),[0,2],
+        'Generated adapter must preserve original ordinals for sparse working sets');
+    const advice=nextWorkoutSuggestionForShell(squatProgram,[sparse],EXERCISES,squatDay,0,1,'lb');
+    assert.notEqual(advice.action,'increase_load');
+    assert.deepEqual(advice.setTargets.map(row=>row.weight),[205,205,195,205],
+        'Missing set #2 must not consume set #3 history');
+}
+console.log('PASS B1004 generated sparse: skipped working position persists through engine adapter.');
+
+// B995: a historical full session is non-comparable to a shortened session.
+{
+    const { evaluateWorkoutProgression } = await import('../modules/next-engine/performance.js');
+    const shortened = { exercises:[{
+        exerciseId:'rear-fly', name:'Rear Delt Fly', role:'hypertrophy_isolation',
+        sets:2, progressionStyle:'double', prescription:{reps:[15,25],rir:[2,2]}
+    }]};
+    const actual=[0,1,2].map(setIndex=>({exerciseId:'rear-fly',setIndex,load:60,reps:25,rir:2}));
+    const result=evaluateWorkoutProgression(shortened,actual)[0];
+    assert.equal(result.reasonCode,'prescription_set_count_changed');
+    assert.equal(result.action,'hold');assert.equal(result.suggestedLoad,60);
+    assert.doesNotMatch(result.reason,/only 3 of 2|incomplete/i);
+    assert.match(result.reason,/3 working sets/);
+    assert.match(result.reason,/2/);
+    // Explicit below-floor misses retain their independent failure-correction policy.
+}
+console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion.');
+
+
+// B997: accurate, anonymized Oct 20 backup shape. The saved historical
+// PRESCRIPTION asked for four sets, but only THREE 60×20 sets were completed.
+// Subsequent week-6 programming asks for three sets. Never infer that the
+// earlier three-of-four workout was completed merely because the new week
+// happens to prescribe three sets. Only one of the three had reported RIR.
+{
+    const { evaluateWorkoutProgression } = await import('../modules/next-engine/performance.js');
+    const prior = [0,1,2].map(setIndex=>({
+        exerciseId:'rear-fly',setIndex,load:60,reps:20,rir:setIndex===1?1:null
+    }));
+    const historical = { exercises:[{
+        exerciseId:'rear-fly', name:'Rear Delt Fly', role:'accessory',
+        sets:4, progressionStyle:'auto', prescription:{reps:[12,20],rir:[0,2]}
+    }]};
+    const raw = evaluateWorkoutProgression(historical,prior)[0];
+    assert.equal(raw.reasonCode,'incomplete_prescription',
+        'Three historical completed sets do not certify a four-set workout');
+    assert.equal(raw.action,'hold');
+    assert.equal(raw.suggestedLoad,60);
+    assert.deepEqual(raw.setTargets.map(row=>row.weight),[60,60,60,60]);
+    const savedProgram = {id:'b997-sanitized-custom',custom:true,engineV:4,weeks:10,
+        config:{weeks:10,unit:'lb',goal:'both',progression:'auto',experience:'intermediate',deload:true},
+        days:[{id:'pull',label:'Pull',primaryIndex:-1,exercises:['rear-fly']}],
+        overrides:{'pull:0':{sets:3,reps:'12-20',rir:'0-2',progressionStyle:'auto'}},
+        nextWeekPrescriptions:{'pull:0':{'6':{
+            sets:3,reps:[12,20],rir:[0,2],rest:90,role:'accessory',progressionStyle:'auto'
+        }}} };
+    const savedPerf = {weight:60,reps:20,sets:[
+        {w:60,r:20,rir:1,tr:1,rirReported:false},
+        {w:60,r:20,rir:1,tr:1,rirReported:true},
+        {w:60,r:20,rir:1,tr:1,rirReported:false}
+    ],prescription:{schemaVersion:1,exerciseId:'rear-fly',sets:4,
+        reps:'12-20',range:'12-20',rir:'0-2',rest:90,role:'accessory',progressionStyle:'auto'}};
+    const savedHistory=[{id:'b997-week5',programId:savedProgram.id,dayId:'pull',
+        weekIndex:5,date:Date.UTC(2026,9,20),unit:'lb',
+        perf:{'rear-fly':savedPerf}}];
+    const before=structuredClone(savedHistory);
+    const advice=sessionSuggestion(savedProgram,savedProgram.days[0],0,null,'lb',6,savedHistory);
+    assert.equal(advice?.weight,60,
+        'Real program week 6 must not upgrade 3-of-4 previous working sets');
+    assert.notEqual(advice.action,'increase_load');
+    assert.equal(advice.reasonCode,'incomplete_prescription');
+    const next=prescribeSets(savedProgram,savedProgram.days[0],EX_BY_ID['rear-fly'],
+        0,6,'lb',advice,{}, {},savedHistory,false);
+    const working=next.filter(row=>!row.warm&&!row.sub);
+    assert.equal(working.length,3,'Next week still prescribes exactly three working sets');
+    assert.deepEqual(working.map(row=>Number(row.weight)),[60,60,60],
+        'Live workout must preserve 60 lb on every rep-only/held row');
+    assert.ok(working.every(row=>Number(row.reps)>=12 && Number(row.reps)<=20),
+        'A 12-20 historical rep ceiling cannot become an invented 21-rep prefill');
+    assert.deepEqual(working.map(row=>row.target?.decisionTrace?.source?.load),[60,60,60],
+        'Each workout row must trace to the prior 60-lb working load');
+    assert.deepEqual(working.map(row=>row.target?.decisionTrace?.source?.reportedRir ?? null),[null,1,null],
+        'An unreported planned RIR is not actual effort: only the middle RIR was observed');
+    assert.deepEqual(savedHistory,before,'Replay must not change saved user history');
+}
+console.log('PASS B997 real backup replay: 3 completed of 4 prescribed cannot promote 60 to 65 after week changes to 3 sets.');

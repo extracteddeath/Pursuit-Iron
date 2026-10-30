@@ -157,8 +157,56 @@ console.log('PASS M296 restore: orphan reductions are removed; genuine adjustmen
 }
 
 assert.equal(reconcileRestoredLiveAdjustments(capped.sets), capped.sets, 'Genuine rep caps survive restore');
+for (const kind of ['reps','actualRIR','weight']) {
+    const changed = structuredClone(capped.sets);
+    if (kind === 'reps') changed[0].reps = '9';
+    if (kind === 'actualRIR') changed[0].actualRIR = 4;
+    if (kind === 'weight') changed[0].weight = '95';
+    const recovered = reconcileRestoredLiveAdjustments(changed);
+    assert.equal(recovered[1].reps, '11',
+        'Changed source ' + kind + ' invalidates a previously restored rep cap');
+    assert.equal(recovered[1].liveAdjustment, undefined);
+    assert.equal(recovered[0].done,true,'Never overwrite the lifter\'s completed source set');
+    assert.equal(reconcileRestoredLiveAdjustments(recovered),recovered,
+        'Rep-cap restoration after source edit must be idempotent');
+}
+for (const kind of ['reps','actualRIR','weight']) {
+    const changed = structuredClone(adjusted.sets);
+    if (kind === 'reps') changed[0].reps = '12';
+    if (kind === 'actualRIR') changed[0].actualRIR = 4;
+    if (kind === 'weight') changed[0].weight = '95';
+    const recovered = reconcileRestoredLiveAdjustments(changed);
+    assert.equal(recovered[2].loadAdvice, undefined,
+        'Changing the evidence ' + kind + ' invalidates the stale suggested lower load');
+    assert.equal(recovered[2].liveAdjustment, undefined);
+    assert.equal(recovered[2].weight,'100');
+}
+for (const adjustment of [adjusted.sets, capped.sets]) {
+    const legacy=structuredClone(adjustment);
+    const target=legacy.find(x=>x.liveAdjustment);
+    delete target.liveAdjustment.sourceObservations;
+    const repaired=reconcileRestoredLiveAdjustments(legacy);
+    assert.equal(repaired.find(x=>x.liveAdjustment),undefined,
+        'Old evidence-free automatic suggestions must fail closed during restore');
+    assert.deepEqual(reconcileRestoredLiveAdjustments(repaired),repaired);
+}
+const { captureWorkoutProgressionReplay, auditWorkoutProgressionReplay } =
+    await import('../modules/next-engine/workout-replay.js');
+const replayOf = rows => captureWorkoutProgressionReplay({
+    program, day:program.days[0], row:{id:ex.id,slot:0,sets:rows},
+    suggestion:null,cell,history:[],weekIndex:1,unit:'lb',readiness:{factor:1}
+});
+assert.deepEqual(auditWorkoutProgressionReplay(replayOf(capped.sets)),[],
+    'Real pending rep cap with matching evidence must be explainable in an opt-in export');
+const stale=structuredClone(capped.sets);stale[0].actualRIR=4;
+assert.ok(auditWorkoutProgressionReplay(replayOf(stale))
+    .some(issue=>issue.code==='stale_or_unverifiable_live_adjustment'),
+    'Independent replay audit must detect changed effort evidence');
+console.log('PASS B994 source fingerprint: edited completed work cannot authorize stale live caps or suggested loads after resume.');
 const orphanCap = structuredClone(capped.sets);orphanCap[0].done = false;
 orphanCap[1].suggested = { weight: '95', reps: '8' };
 const repairedCap = reconcileRestoredLiveAdjustments(orphanCap);
 assert.equal(repairedCap[1].weight, '100');assert.equal(repairedCap[1].reps, '11');
 assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a lower target in the UI');
+
+

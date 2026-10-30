@@ -45,8 +45,14 @@ export function sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cel
     const index = program.days.findIndex(row => row.id === day.id);
     const source = normalizeHistoryEntries(history, program.id).entries.slice().reverse().find(entry =>
         index >= 0 && resolveHistoryDayIndex(program.days, entry) === index && completedHistorySets(entry.perf?.[ex.id]).length);
-    const previous = completedHistorySets(source?.perf?.[ex.id]).map(set => ({
-        weight: convertHistoryLoad(set.w, source.unit, unit), reps: Number(set.r) }));
+    // The review comparison is positional, just like LAST and the evaluator.
+    // A skipped middle set must not present set three as the previous set two.
+    const observed = completedHistorySets(source?.perf?.[ex.id]);
+    const hasPositions = observed.some(set => Number.isInteger(set.workingSetIndex) && set.workingSetIndex >= 0);
+    const previous = Array.from({ length: Number(cell.sets) || 0 }, (_, index) => {
+        const set = hasPositions ? observed.find(set => set.workingSetIndex === index) : observed[index];
+        return set ? { weight: convertHistoryLoad(set.w, source.unit, unit), reps: Number(set.r) } : null;
+    });
     const targets = Array.from({ length: Number(cell.sets) || 0 }, (_, i) => ({
         weight: suggestion?.setTargets?.[i]?.weight ?? suggestion?.weight ?? null,
         reps: suggestion?.setTargets?.[i]?.reps ?? suggestion?.target ?? range[0]

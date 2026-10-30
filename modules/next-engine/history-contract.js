@@ -31,7 +31,12 @@ export function completedHistorySets(perf) {
 export function previousWorkoutSet(perf, index) {
     if (!Number.isInteger(index) || index < 0) return null;
     const hasRows = Array.isArray(perf?.sets) && perf.sets.length > 0;
-    const row = hasRows ? completedHistorySets(perf)[index]
+    // Newly logged history records the ORIGINAL working-set position even if
+    // an earlier set was skipped. Never compress set 3 into the display for set 2.
+    const completed = hasRows ? completedHistorySets(perf) : [];
+    const positioned = completed.some(set => Number.isInteger(set.workingSetIndex) && set.workingSetIndex >= 0);
+    const row = hasRows ? positioned
+        ? completed.find(set => set.workingSetIndex === index) : completed[index]
         : perf ? { w: perf.weight, r: perf.reps, summary: true } : null;
     if (!row) return null;
     const w = historyNumber(row.w), r = historyNumber(row.r);

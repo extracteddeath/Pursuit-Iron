@@ -4,7 +4,7 @@ import { loadingInventoryWithExerciseSteps } from '../next-engine/loading.js';
 // Canonical prescriptions domain. Maintained production source; independent of React and browser APIs.
 import { EXERCISE_MAP as NEXT_EXERCISE_MAP } from "../next-engine/exercise-db.js";
 import { nextExerciseIdForShellExercise, resolveNextShellExerciseId, snapshotNextShellPrescription } from "../next-engine/app-shell-adapter.js";
-import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
+import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistorySets, previousWorkoutSet, historyExposureContext, progressionExposureContext, normalizeHistoryEntries, normalizeHistoryRevisions, validHistoryDate, resolveHistoryDayIndex, historyLoadReason } from '../next-engine/history-contract.js';
 import { percentageProtocolFor, adaptPercentageSetBudget, deriveTieredLinearState } from '../next-engine/percentage-protocols.js';
 import { buildRuntimeSetTargets, customProgramProgressionStyle, techniqueProtocolFromCell } from "../next-engine/workout-runtime.js";
 import { nextWorkoutSuggestionForShell } from "../next-engine/workout-history-adapter.js";
@@ -761,6 +761,28 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
 
 }
 
+// A rep-only classic double progression has no authority to rewrite the load of any
+// completed prior working set. Preserve each set position (including genuine mixed-load
+// history) so a stale per-set tuner cannot turn 60x20 into an unsolicited 55x21.
+// Explicitly earned increases, recovery corrections and user-held reviews have
+// separate owners and must not be converted into ordinary holds here.
+export function retainDoubleProgressionSetLoads(suggestion, previousLoads) {
+    if (!suggestion || !['add_reps', 'hold', 'hold_load'].includes(suggestion.action)
+        || !Array.isArray(suggestion.setTargets) || !Array.isArray(previousLoads)
+        || !previousLoads.length || suggestion.setTargets.length !== previousLoads.length
+        || !previousLoads.every(w => Number.isFinite(w) && w > 0))
+        return suggestion;
+    const corrected = suggestion.setTargets.map((target, index) => ({
+        ...target, weight: previousLoads[index]
+    }));
+    const sameTargets = corrected.every((target, index) =>
+        Number(suggestion.setTargets[index]?.weight) === target.weight);
+    if (sameTargets && Number(suggestion.weight) === previousLoads[0])
+        return suggestion;
+    return { ...suggestion, weight: previousLoads[0], dir: 'hold', setTargets: corrected,
+        traceAdjustments: [...(suggestion.traceAdjustments || []), 'unearned_load_drop_prevented'] };
+}
+
 // Review and Workout consume this same boundary. A user can decline one upcoming
 // load/rep recommendation without changing the progression method or stored history.
 function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
@@ -790,6 +812,20 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
                 dir: 'hold', action: 'hold_load', optionalLowerLoad: lower,
                 setTargets: heldTargets,
                 reason: `Keep your previous working-set loads and build reps. You can choose ${lower} ${unit} if today's performance calls for a reduction.` };
+        }
+    }
+    // This is the last shared boundary before both Review and Workout create their rows.
+    // An ordinary rep advance must never lower a later set simply because an
+    // independent tuner supplied a different per-set load.
+    if (suggestion && !program.config?.percentScheme) {
+        const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+        const style = ex && resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, dayPerf, history, day.id);
+        if (style === 'double') {
+            const fromUnit = suggestion.lastUnit || unit;
+            const previousLoads = completedHistorySets(suggestion.last)
+                .map(row => convertHistoryLoad(row.w, fromUnit, unit))
+                .map(w => w > 0 ? loadableAtOrBelow(ex, w, unit) : null);
+            suggestion = retainDoubleProgressionSetLoads(suggestion, previousLoads);
         }
     }
     if (!suggestion || !applyReviewChoice || !program.sessionPlanChoices || !Object.keys(program.sessionPlanChoices).length) return suggestion;
@@ -908,7 +944,9 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const rack = gymRackFor(ex, unit), step = loadStep(ex, unit);
     const loadingInventory = { unit, exerciseOverrides: { [ex.id]: rack?.length
         ? { availableLoads: rack } : { increment: step, minimum: 0 } } };
-    const performed = work.map((x, i) => ({ exerciseId: ex.id, setIndex: i, load: conv(x.w), reps: Number(x.r),
+    const performed = work.map((x, i) => ({ exerciseId: ex.id,
+        setIndex: Number.isInteger(x.workingSetIndex) && x.workingSetIndex >= 0 ? x.workingSetIndex : i,
+        load: conv(x.w), reps: Number(x.r),
         ...historyExposureContext(x), rir: observedHistoryRIR(x) }));
     const exercise = { exerciseId: ex.id, name: ex.name, role: cell.role, sets: Number(cell.sets),
         progressionStyle: style, prescription: { reps: [lo, hi], rir } };
@@ -920,8 +958,9 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     })[0];
     const weight = result.suggestedLoad ?? result.currentLoad;
     return { unit, lastUnit: last.unit ?? unit, weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
-        action: result.action, reps: cell.range, target: result.suggestedReps ?? lo,
-        setTargets: result.setTargets, last: last.perf[ex.id], confidence: result.confidence, reason: result.reason };
+        action: result.action, reasonCode: result.reasonCode, reps: cell.range, target: result.suggestedReps ?? lo,
+        setTargets: result.setTargets, last: last.perf[ex.id], sourceEntryId: last.id ?? null,
+        confidence: result.confidence, reason: result.reason };
 
 }
 
@@ -1111,7 +1150,37 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
     const range = cellRepRange(cell, program, ex, slot === day.primaryIndex);
     const rangeText = range[0] === range[1] ? String(range[0]) : `${range[0]}-${range[1]}`;
     const rirText = cell.rir ?? null;
-    let rows = targets.map(t => ({
+    // Source -> evaluator decision -> loadable target. Captured after snapping
+    // and before live user edits so the original automatic prefill is auditable.
+    const decisionTraceFor = (index, load, reps, origin = null) => {
+        const previous = previousWorkoutSet(sug?.last, index);
+        const priorUnit = sug?.lastUnit || sug?.unit || unit;
+        const comparableLoad = previous?.w > 0
+            ? loadableAtOrBelow(ex, convertHistoryLoad(previous.w, priorUnit, unit), unit)
+            : null;
+        const numeric = value => value !== null && value !== undefined && value !== ''
+            && Number.isFinite(Number(value)) ? Number(value) : null;
+        return {
+            schemaVersion: 1, programId: String(program.id), dayId: String(day.id),
+            exerciseId: ex.id, slot, weekIndex, workingSetIndex: index,
+            source: previous ? { load: comparableLoad, reps: previous.r,
+                originalLoad: previous.w, originalUnit: priorUnit, unit,
+                ...(sug?.sourceEntryId != null ? { historyEntryId: String(sug.sourceEntryId) } : {}),
+                ...(previous.rir !== null ? { reportedRir: previous.rir } : {}),
+                ...(previous.summary ? { summaryOnly: true } : {}) } : null,
+            evaluation: { action: origin ?? (estimate ? 'starting_estimate' : sug?.action || 'initial'),
+                reasonCode: percentage ? 'percentage_protocol' : estimate ? 'starting_estimate'
+                    : sug?.reasonCode || 'no_comparable_history',
+                ...(Array.isArray(sug?.traceAdjustments) && sug.traceAdjustments.length
+                    ? { safeguards: [...sug.traceAdjustments] } : {}) },
+            target: { load: numeric(load), reps: numeric(reps), unit },
+            ownership: sug?.action === 'user_hold' ? 'user' : 'prescription'
+        };
+    };
+    let workOrdinal = 0;
+    let rows = targets.map(t => {
+        const workIndex = t.kind === 'work' ? workOrdinal++ : null;
+        return ({
         weight: t.weight == null ? "" : String(t.weight),
         reps: String(t.reps),
         warm: t.kind === "warmup",
@@ -1125,15 +1194,17 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
         target: t.kind === "warmup"
             ? { w: t.weight == null ? "—" : String(t.weight), reps: String(t.reps), rir: null }
             : { w: t.weight == null ? "—" : String(t.weight), reps: rangeText, rir: rirText, nextAction: estimate ? "estimate" : sug?.action || "initial", confidence: sug?.confidence || null, prefillReps: String(t.reps),
-                ...(estimate ? { estimate: { from: estimate.from, e1rm: Math.round(estimate.e1rm * 10) / 10 } } : {}) }
-    }));
+                ...(estimate ? { estimate: { from: estimate.from, e1rm: Math.round(estimate.e1rm * 10) / 10 } } : {}),
+                decisionTrace: decisionTraceFor(workIndex, t.weight, t.reps) }
+    })});
     if (percentage) {
         rows = [...rows.filter(r => r.warm), ...percentage.sets.map(t => ({
             weight: String(t.weight), reps: String(t.reps).replace('+', ''), warm: false, done: false,
             auto: true, valueOwner: 'prescription',
             target: { w: String(t.weight), reps: String(t.reps).replace('+', ''),
                 rir: t.amrap ? '0' : rirText, amrap: !!t.amrap,
-                nextAction: 'percentage', confidence: null, prefillReps: String(t.reps).replace('+', '') }
+                nextAction: 'percentage', confidence: null, prefillReps: String(t.reps).replace('+', ''),
+                decisionTrace: decisionTraceFor(percentage.sets.indexOf(t), t.weight, String(t.reps).replace('+', ''), 'percentage') }
         }))];
     }
     // Advanced-technique selection is engine-owned; this shell helper only realizes the engine's cue
@@ -1177,6 +1248,38 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
     return rows;
 }
 
+/** Inspect the actual loggable rows, not a separately constructed evaluator fixture.
+ * Release harnesses can require zero violations for every exercised workout slot.
+ * Return diagnostics rather than throwing during a live workout. Legacy saved rows
+ * without this new trace remain compatible and are not invented retroactively. */
+export function auditSetDecisionTraces(rows) {
+    if (!Array.isArray(rows)) return [{ code:'invalid_workout_rows' }];
+    const violations = [];
+    for (const [index, row] of rows.entries()) {
+        if (!row || row.warm || row.sub) continue;
+        const trace = row.target?.decisionTrace;
+        if (!trace) continue; // Legacy saved workouts predate this diagnostic schema.
+        if (trace.schemaVersion !== 1 || trace.workingSetIndex !== rows.slice(0, index)
+            .filter(other => other && !other.warm && !other.sub).length) {
+            violations.push({ index, code:'working_position_mismatch' });
+            continue;
+        }
+        const load = Number(row.target?.w);
+        const reps = Number(row.target?.prefillReps);
+        if (Number.isFinite(load) && trace.target?.load !== load
+            || Number.isFinite(reps) && trace.target?.reps !== reps)
+            violations.push({ index, code:'display_target_diverges_from_trace' });
+        const action = trace.evaluation?.action;
+        const priorLoad = trace.source?.load, nextLoad = trace.target?.load;
+        if (['add_reps','hold','hold_load'].includes(action)
+            && Number.isFinite(priorLoad) && priorLoad > 0
+            && Number.isFinite(nextLoad) && Math.abs(nextLoad - priorLoad) > 1e-6)
+            violations.push({ index, code:'unearned_load_change',
+                priorLoad, nextLoad, action });
+    }
+    return violations;
+}
+
 function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history) {
     // A session-only replacement does not represent a comparable exposure for the
     // programmed slot, but the other lifts in this workout are still comparable.
@@ -1206,6 +1309,11 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             const n = typeof t === "number" ? t : parseRIRNum(t);
             return Number.isFinite(n) ? n : null;
         };
+        // Store the original working-set ordinal, NOT the order in the filtered
+        // completed list. Skipping set 2 then logging set 3 must never turn
+        // set 3 into set 2 in LAST, recovery, or the next prescription.
+        const workPosition = new Map(e.sets.filter(x => x && !x.warm && !x.sub)
+            .map((row, index) => [row, index]));
         const logged = (hasPos ? doneWork.filter(x => parseFloat(x.weight) > 0) : doneWork)
             .map(x => {
             const r = setRIR(x);
@@ -1220,7 +1328,15 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             // (`!s.warm && !s.sub`), but the flag was never PERSISTED, so on replayed history those
             // filters matched nothing and extensions counted as full sets all over again — the exact
             // bug v493 fixed in the live session, surviving in the log.
-            return { ...historyExposureContext(x), w: wv(x), r: parseInt(x.reps), ...(failedRows.includes(x) ? { failedAttempt: true } : {}), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
+            return { ...historyExposureContext(x),
+                ...(!x.sub && workPosition.has(x) ? { workingSetIndex: workPosition.get(x) } : {}),
+                w: wv(x), r: parseInt(x.reps), ...(failedRows.includes(x) ? { failedAttempt: true } : {}), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}),
+                ...(x.target?.decisionTrace?.schemaVersion === 1
+                    ? { decisionTrace: { ...x.target.decisionTrace,
+                        applied: { load: wv(x), reps: parseInt(x.reps),
+                            owner: x.valueOwner || (x.auto ? 'prescription' : 'user'),
+                            ...(x.liveAdjustment?.reasonCode
+                                ? { liveReasonCode: x.liveAdjustment.reasonCode } : {}) } } } : {}) };
         });
         const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex)
             || { schemaVersion: 1, exerciseId: e.id, ...computeCell(program, day, e.id, e.slot, weekIndex) };

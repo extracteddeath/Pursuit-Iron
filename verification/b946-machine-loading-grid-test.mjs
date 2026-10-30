@@ -4,7 +4,7 @@ import { setExLoadInc, setLoadInc } from '../modules/training-domain/records.js'
 import { setGymLimits, loadableAtOrBelow, prescribeSets } from '../modules/training-domain/prescriptions.js';
 import { buildRuntimeSetTargets, refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
 import {
-    defaultLoadingInventoryFor, loadingInventoryWithExerciseSteps, availableLoadAtOrBelow,
+    defaultLoadingInventoryFor, loadingInventoryWithExerciseSteps, canonicalExerciseIncrement, availableLoadAtOrBelow,
     nextAvailableLoad
 } from '../modules/next-engine/loading.js';
 import { evaluateWorkoutProgression } from '../modules/next-engine/performance.js';
@@ -18,6 +18,24 @@ try {
     setGymLimits(null);
     assert.equal(loadableAtOrBelow(ex, 115.5, 'lb'), 115);
     assert.equal(loadableAtOrBelow(ex, 99, 'lb'), 95);
+    // Saved-device fixture: an earlier 2.5-kg menu choice was persisted as
+    // 5.5 lb during a unit switch. This is not a real 5.5-lb machine notch.
+    const migrated = { [id]: { v: 5.5, unit: 'lb' },
+        'hack-squat': { v: 5.5, unit: 'lb' },
+        'machine-hip-thrust': { v: 5.5, unit: 'lb' } };
+    setExLoadInc(migrated);
+    assert.equal(loadableAtOrBelow(ex, 115.5, 'lb'), 115,
+        'Logger must not use a legacy converted 5.5-lb per-exercise increment');
+    const migratedInventory = loadingInventoryWithExerciseSteps(defaultLoadingInventoryFor('lb'),'lb',migrated);
+    for (const migratedId of Object.keys(migrated))
+        assert.equal(migratedInventory.exerciseOverrides[migratedId].increment,5,
+            'Legacy 5.5-lb UI preset must be normalized for every machine');
+    assert.equal(nextAvailableLoad(id,120,migratedInventory,ex.equip),125);
+    assert.equal(availableLoadAtOrBelow(id,115.5,migratedInventory,ex.equip),115);
+    assert.equal(canonicalExerciseIncrement({v:2.5,unit:'kg'},'lb'),5);
+    assert.equal(canonicalExerciseIncrement({v:7.5,unit:'lb'},'lb'),7.5,
+        'An otherwise genuine custom increment remains unaltered');
+    setExLoadInc(increment);
     const inventory = loadingInventoryWithExerciseSteps(defaultLoadingInventoryFor('kg'), 'lb', increment);
     assert.equal(inventory.machine.increment, 5, 'factory unit switching must retain the native 5 lb machine notch');
     assert.equal(inventory.exerciseOverrides[id].increment, 5, 'per-exercise configured increment must reach the evaluator');

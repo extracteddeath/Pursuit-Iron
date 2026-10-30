@@ -85,6 +85,29 @@ export function loadingInventoryInUnit(input, unit, { nativeDefaults = false } =
  * Legacy unit-converted factory increments are first repaired by the canonical
  * unit conversion, rather than silently driving 5.5/5.51 lb machine steps.
  */
+// Normalize only known unit-converted *UI* notch presets. A legacy 2.5 kg
+// selection became 5.5 lb when a program changed units, then both the logger
+// and engine treated that artifact as genuine 5.5 lb hardware. Keep unknown
+// custom steps unchanged; finite inventoried loads still win over this grid.
+const EXERCISE_STEP_CHOICES = {
+    lb: [5, 10, 15, 20, 25, 50],
+    kg: [2.5, 5, 10, 15, 20]
+};
+export function canonicalExerciseIncrement(setting, unit) {
+    const raw = Number(setting?.v), from = setting?.unit;
+    if (!Number.isFinite(raw) || raw <= 0 || !['lb', 'kg'].includes(from)
+        || !['lb', 'kg'].includes(unit)) return null;
+    const ratio = unit === 'lb' ? 2.2046226 : 1 / 2.2046226;
+    const candidate = from === unit ? raw : Math.round(raw * ratio * 2) / 2;
+    if (EXERCISE_STEP_CHOICES[unit].includes(candidate)) return candidate;
+    const opposite = unit === 'lb' ? 'kg' : 'lb';
+    const legacyStep = EXERCISE_STEP_CHOICES[opposite].some(previous =>
+        Math.abs(Math.round(previous * ratio * 2) / 2 - candidate) < 0.001);
+    if (!legacyStep) return candidate;
+    return EXERCISE_STEP_CHOICES[unit].reduce((best, step) =>
+        Math.abs(step - candidate) < Math.abs(best - candidate) ? step : best);
+}
+
 export function loadingInventoryWithExerciseSteps(input, unit, steps = {}, options = {}) {
     const inventory = loadingInventoryInUnit(input, unit, options);
     if (!steps || typeof steps !== 'object') return inventory;
@@ -93,7 +116,7 @@ export function loadingInventoryWithExerciseSteps(input, unit, steps = {}, optio
     for (const [id, setting] of Object.entries(steps)) {
         const raw = Number(setting?.v), from = setting?.unit;
         if (!id || !(raw > 0) || !Number.isFinite(raw) || !['lb', 'kg'].includes(from)) continue;
-        const increment = from === unit ? raw : round(raw * (unit === 'lb' ? 2.2046226218 : 1 / 2.2046226218));
+        const increment = canonicalExerciseIncrement(setting, unit);
         if (!(increment > 0)) continue;
         const old = overrides[id] ?? {};
         // A known rack is a finite list of real physical settings, not a grid

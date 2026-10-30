@@ -2,6 +2,42 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';import http from 'node:http';import path from 'node:path';import puppeteer from 'puppeteer-core';
 import { program, history, alternate, alternateHistory } from './b904-session-review-test.mjs';
 const root=path.resolve(new URL('../',import.meta.url).pathname);
+
+// B994: the standalone diagnostic CLI is part of the full web distribution.
+// Run it here, not in the isolated engine snapshot which intentionally omits scripts/.
+{
+ const {spawnSync}=await import('node:child_process');
+ const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const temp=mkdtempSync(join(tmpdir(),'pursuit-replay-'));
+ const fixture=thirdLoad=>({
+  schemaVersion:1,kind:'pursuit-iron-progression-replay',exerciseId:'rear-fly',
+  slot:0,weekIndex:1,unit:'lb',progressionStyle:'double',
+  suggestion:{action:'add_reps',setTargets:[0,1,2].map(i=>({load:i===2?thirdLoad:60,reps:21}))},
+  history:[{weekIndex:1,unit:'lb',sets:[0,1,2].map(setIndex=>({setIndex,load:60,reps:20,reportedRir:2}))}],
+  rows:[0,1,2].map(i=>({rowIndex:i,workingSetIndex:i,kind:'work',done:false,
+   owner:'prescription',load:i===2?thirdLoad:60,reps:21,
+   target:{load:i===2?thirdLoad:60,reps:21},trace:null,liveAdjustment:null,
+   readinessFactor:null}))
+ });
+ try {
+  const file=join(temp,'diagnostics.json');
+  const run=payload=>{
+   writeFileSync(file,JSON.stringify(payload));
+   return spawnSync(process.execPath,[path.join(root,'scripts/audit-workout-replay.mjs'),file],
+    {cwd:root,encoding:'utf8'});
+  };
+  const valid=run(fixture(60));
+  assert.equal(valid.status,0,'Unchanged three-position double loads pass replay: '+valid.stdout+valid.stderr);
+  const unsafe=run(fixture(55));
+  assert.equal(unsafe.status,1,'An unearned third-set 55 lb load must fail replay');
+  assert.match(unsafe.stdout,/unearned_double_progression_history_load/);
+  assert.match(unsafe.stdout,/unearned_double_progression_suggestion_load/);
+ } finally { rmSync(temp,{recursive:true,force:true}); }
+}
+console.log('PASS B994 independent replay: same-position 60×20 history cannot prescribe 55×21.');
+
 const store={v:13,savedAt:1,saved:[program],cycles:[],history,perf:history[0].perf,drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,pinnedId:program.id,
  theme:'amethyst',unit:'kg',unitChosen:true,restAutoStart:false,warmupCard:false,experience:'intermediate',bodyweight:84,installDismissedAt:Date.now(),lastBackup:Date.now()};
 const mime={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.svg':'image/svg+xml'};
@@ -61,6 +97,17 @@ try{
   const clickText=async text=>assert.ok(await page.evaluate(text=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);b?.click();return !!b;},text),text);
   await clickText('Preview · Time available');await page.waitForSelector('.wpb-next-workout-view');
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/80 kg × 6/);
+  const previewChange=await page.$('.wpb-plan-change-banner[aria-label^="Review "]');
+  if(!previewChange){
+   const evidence=await page.evaluate(()=>{
+      const text=document.querySelector('.wpb-next-workout-view')?.innerText||'';
+      const saved=JSON.parse(localStorage.getItem('wpb:v1')||'null');
+      return {heading:text.slice(0,550),choices:saved?.saved?.[0]?.sessionPlanChoices,
+        hasReview:!!document.querySelector('.wpb-plan-change-banner'),
+        homeGamePlan:document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText};
+   });
+   throw new Error('Preview hid a previously held load adjustment: '+JSON.stringify(evidence));
+  }
   await page.click('.wpb-plan-change-banner[aria-label^="Review "]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');
   await page.click('[aria-label="Use recommended load for Barbell Bench Press"]');await page.waitForSelector('[aria-label="Keep previous load for Barbell Bench Press"]');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[aria-label="Plan changes"]'));
@@ -68,11 +115,31 @@ try{
   if(width===393){
    await page.click('.wpb-plan-change-banner[aria-label^="Review "]');await page.click('[aria-label="Keep previous load for Barbell Bench Press"]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');await page.keyboard.press('Escape');
    await clickText('20 min');await page.waitForSelector('[data-testid="session-length-summary"]');
-   await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
-   assert.equal(await page.$('[data-plan-change="bb-row"]'),null,'rep-only changes cannot be undone even in shortened workouts');
-   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[aria-label="Plan changes"]'));
-   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/,'shortening retains normal row progression');
+   const shortenedBanner=await page.$('.wpb-plan-change-banner[aria-label^="Review "]');
+   const shortState=await page.evaluate(()=>{
+    const saved=JSON.parse(localStorage.getItem('wpb:v1')||'null');
+    return { choice:saved?.saved?.[0]?.sessionPlanChoices?.['upper:0:bb-bench'],
+      bench:document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText,
+      row:document.querySelector('[data-game-plan-exercise="bb-row"]')?.innerText };
+   });
+   assert.ok(shortState.choice?.key,
+    'Shortening must preserve the previously approved load decision in saved program state');
+   assert.equal(shortenedBanner,null,
+    'A 3-set history cannot earn a new 2-set shortened-session load; no pending change means no review');
+   assert.match(shortState.bench,/80 kg × 8/,
+    'The shorter plan holds the previously trained load without inventing a new increase');
+   assert.match(shortState.row,/90 kg × 8/,
+    'The shortened 2-set prescription holds the last comparable 90-kg working load');
+   assert.match(shortState.row,/Different set counts cannot earn an automatic load change/,
+    'Both changed-set-count exercises must explain why progression is paused');
    await clickText('Full');
+   await page.waitForFunction(()=>{
+    const row=document.querySelector('[data-game-plan-exercise="bb-row"]')?.innerText||'';
+    const bench=document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText||'';
+    return row.includes('90 kg × 9') && bench.includes('80 kg × 6');
+   });
+   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/,
+    'Restoring Full re-enables ordinary rep progression without changing logged history');
    await clickText('Start workout');await page.waitForSelector('.wpb-workout');await clickText('Skip');
    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.data?.some(r=>r.id==='bb-bench'));
    let live=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));

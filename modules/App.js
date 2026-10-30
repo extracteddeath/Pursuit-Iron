@@ -23,6 +23,8 @@ import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, selectNumericInput } from './workout-session-controls.js';
 import { completedSetPR } from './workout-pr.js';
+import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
+import { canonicalExerciseIncrement } from './next-engine/loading.js';
 import { withSessionPlanChoice } from './session-plan.js';
 import {
     addedMinutes, advanceLegacyFirstCycleBlock, ageFrom, ALL_EQUIP_IDS, ALL_PLATES, applyCustomProgramSettings,
@@ -79,7 +81,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='989';
+const __APP_VERSION__='4.0.0'; const __BUILD__='996';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -11218,6 +11220,37 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     const sessionIdRef = useRef(null);
     if (sessionIdRef.current == null)
         sessionIdRef.current = liveMatch?.sessionId || uid();
+    // Explicit local diagnostic: no automatic upload. Only current exercise,
+    // numeric history and decision evidence are copied; exclude notes/profile.
+    const copyProgressionDiagnostics = async () => {
+        setSessionMenu(false);
+        try {
+            const row = dataRef.current[exIdx];
+            const record = captureWorkoutProgressionReplay({
+                program, day, row, suggestion: runtimeSuggestions[exIdx],
+                cell: row ? computeCell(program, day, row.id, row.slot, weekIndex) : null,
+                history, weekIndex, unit, readiness
+            });
+            const content = JSON.stringify(record, null, 2);
+            try {
+                if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+                await navigator.clipboard.writeText(content);
+                setSnack({ msg: 'Progression diagnostics copied · contains workout weights and reps' });
+            } catch {
+                // Some Android browser/PWA contexts deny clipboard access. Explicitly
+                // save a file instead of silently dropping the user's evidence.
+                const blob = new Blob([content], { type:'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url; link.download = 'pursuit-progression-diagnostics.json';
+                document.body.appendChild(link); link.click(); link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+                setSnack({ msg: 'Progression diagnostics exported · contains workout weights and reps' });
+            }
+        } catch {
+            setSnack({ msg: 'Could not export progression diagnostics on this device' });
+        }
+    };
     const persistLive = () => {
         if (finishingRef.current)
             return false;
@@ -13129,7 +13162,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                             const fmtDate = d => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
                                             return (_jsxs("section", { "aria-label": `Recent estimated one rep max trend for ${ex.name}`, className: "wpb-b965-layout-21", children: [_jsxs("div", { className: "wpb-s956-display-flex wpb-s956-alignitems-flex-end wpb-s956-justifycontent-space-between wpb-s956-gap-12 wpb-s956-marginbottom-8", children: [_jsxs("div", { children: [_jsxs("div", { style: { ...eyebrow(), display: "flex", alignItems: "center", gap: 6 }, children: [_jsx(TrendingUp, { size: 12, color: C.accentInk }), " Recent strength trend"] }), _jsxs("div", { className: "wpb-exinfo-metric-label", children: [recent.length, " session", recent.length === 1 ? "" : "s", " \u00B7 estimated 1RM"] })] }), _jsxs("div", { className: "wpb-s956-textalign-right", children: [_jsxs("div", { className: "mono wpb-exinfo-trend-value", children: [Math.round(last.e), " ", _jsx("span", { className: "wpb-exinfo-rest-caption", children: unit })] }), recent.length > 1 && _jsxs("div", { className: "mono", style: { fontSize: 11, fontWeight: 700, color: delta > 0 ? C.accentInk : delta < 0 ? C.warn : C.muted }, children: [delta > 0 ? "+" : "", delta, " ", unit] })] })] }), _jsxs("div", { style: { background: C.card, border: `1px solid ${C.borderSoft}`, borderRadius: 14, padding: "9px 10px 8px", overflow: "hidden" }, children: [recent.length > 1 ? (_jsxs("svg", { role: "img", "aria-label": `Estimated one rep max from ${Math.round(first.e)} to ${Math.round(last.e)} ${unit}`, width: "100%", height: "92", viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", className: "wpb-b964-layout-15", children: [[.33, .66].map(fr => _jsx("line", { x1: px, x2: W - px, y1: py + fr * (H - py * 2), y2: py + fr * (H - py * 2), stroke: C.borderSoft, strokeWidth: "1" }, fr)), _jsx("path", { d: line, fill: "none", stroke: C.accent, strokeWidth: "2.4", strokeLinecap: "round", strokeLinejoin: "round", vectorEffect: "non-scaling-stroke" }), recent.map((pt, i) => _jsx("circle", { cx: x(i), cy: y(pt.e), r: i === recent.length - 1 ? 4 : 2.6, fill: i === recent.length - 1 ? C.accent : C.muted, vectorEffect: "non-scaling-stroke" }, pt.date + i))] })) : _jsx("div", { className: "wpb-exinfo-trend-empty", children: "One session logged \u2014 another session will show the trend." }), _jsxs("div", { className: "wpb-exinfo-trend-dates", children: [_jsx("span", { children: fmtDate(first.date) }), _jsx("span", { children: fmtDate(last.date) })] })] })] }));
                                         })(), _jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Technique cues" }), _jsxs("div", { className: "wpb-layout-bottom12", children: [cuesFor(ex).map((c, ci) => (_jsxs("div", { className: "wpb-layout-row-start-bottom8", children: [_jsx("span", { className: "wpb-exinfo-cue-dot" }), _jsx("span", { className: "wpb-exinfo-cue-copy", children: c })] }, ci))), _jsxs("div", { className: "wpb-exinfo-tempo", children: [_jsx("span", { style: { ...eyebrowAccent(), flexShrink: 0 }, children: "Tempo" }), _jsx("span", { className: "wpb-exinfo-tempo-copy", children: tempoFor(ex) })] })] }), _jsxs("a", { href: `https://www.youtube.com/results?search_query=${encodeURIComponent("how to " + ex.name + " proper form technique")}`, target: "_blank", rel: "noopener noreferrer", className: "pressable", style: { display: "flex", alignItems: "center", gap: 12, textDecoration: "none", marginBottom: 16, padding: "11px 13px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.text }, children: [_jsx("div", { className: "wpb-exinfo-demo-icon", children: _jsx(Video, { size: 19, color: C.danger }) }), _jsxs("div", { className: "wpb-layout-grow-min", children: [_jsx("div", { className: "wpb-layout-strong-15", children: "Watch a demo" }), _jsxs("div", { className: "wpb-exinfo-demo-copy", children: ["Form tutorials for ", ex.name] })] }), _jsx(ExternalLink, { size: 15, color: C.faint, className: "wpb-icon-no-shrink" })] }), onSetExLoadInc && (() => {
-                                            const curInc = program.exLoadInc?.[ex.id]?.unit === unit ? program.exLoadInc[ex.id].v : 0;
+                                            const curInc = canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit) || 0;
                                             const defStep = loadStep({ part: ex.part, equip: ex.equip, id: "__generic__" }, unit);
                                             return (_jsxs("div", { className: "wpb-exinfo-weight-step-card", children: [_jsx("div", { style: { ...eyebrow(), marginBottom: 8 }, children: "Weight step on this machine" }), _jsx("div", { className: "wpb-s956-display-flex wpb-s956-flexwrap-wrap wpb-s956-gap-6", children: [0, ...(unit === "lb" ? [5, 10, 15, 20, 25, 50] : [2.5, 5, 10, 15, 20])].map(v => {
                                                             const active = v === curInc;
@@ -13576,6 +13609,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                 { icon: RefreshCw, label: "Reset timer", sub: "Set elapsed workout time back to zero", on: () => { setSessionMenu(false); onResetClick(); } },
                                 { icon: Plus, label: "Add exercise", sub: "Add another lift to this workout", on: () => { setSessionMenu(false); setAddEx(true); } },
                                 { icon: Pencil, label: "Session notes", ariaLabel: "Session notes", sub: sessionNote ? "Edit session and exercise notes" : "Add session and exercise notes", on: () => { setSessionMenu(false); setSessionNotesOpen(true); } },
+                                { icon: Copy, label: "Copy progression diagnostics",
+                                  sub: "Export this exercise’s weights, reps and decision trace · no notes",
+                                  on: copyProgressionDiagnostics },
                                 { icon: AlertTriangle, label: "Report an injury", sub: "Review and skip or reduce affected work for today", on: openInjury },
                                 { icon: Target, label: setDockPreview ? "Hide workout dock" : "Show workout dock",
                                   sub: "A secondary workspace for tablets and unfolded screens", on: () => {
@@ -19554,7 +19590,7 @@ function App() {
                 const e = {};
                 for (const id in np.exLoadInc) {
                     const v = np.exLoadInc[id];
-                    e[id] = (v && v.v != null) ? { ...v, v: conv(v.v), unit: to } : v;
+                    e[id] = (v && v.v != null) ? { ...v, v: canonicalExerciseIncrement(v, to) ?? conv(v.v), unit: to } : v;
                 }
                 np.exLoadInc = e;
             }

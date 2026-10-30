@@ -7,6 +7,7 @@ import {
 import { generateNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
+import { auditSetDecisionTraces } from '../modules/training-domain/prescriptions.js';
 import { config, ids } from './m265-generation-fixture.mjs';
 
 // M340: one continuous, serialized program/cycle -> prescription -> live set ->
@@ -57,12 +58,21 @@ function completeRealWorkout(p, day, week, prior) {
             'Preview and workout disagree about set count: ' + day.id + ':' + slot);
         assert.equal(String(canonical.reps), String(cell.reps),
             'Preview and workout disagree about rep range: ' + day.id + ':' + slot);
-        // Only the leading lift needs a prior-history decision in this bounded run;
-        // all other slots still use the exact production prescription builder.
-        const suggestion = slot === 0
-            ? sessionSuggestion(p, day, slot, null, 'lb', week, prior) : null;
+        // Every slot must traverse the real history-to-next-prescription adapter.
+        // Earlier audits only requested history advice for slot zero, so a broken
+        // rear-delt/late-session target could pass an otherwise green lifecycle audit.
+        const suggestion = sessionSuggestion(p, day, slot, null, 'lb', week, prior);
         const rows = prescribeSets(p, day, ex, slot, week, 'lb', suggestion, null, {}, prior, true);
+        assert.deepEqual(auditSetDecisionTraces(rows),[],
+            'An actual Workout target diverged from recorded engine evidence: ' + day.id + ':' + slot);
         const works = rows.filter(set => !set.warm && !set.sub);
+        if (suggestion?.action === 'add_reps' && cell.progressionStyle === 'double'
+            && Array.isArray(suggestion.setTargets) && suggestion.setTargets.length === works.length) {
+            assert.deepEqual(works.map(set => Number(set.weight)),
+                suggestion.setTargets.map(set => Number(set.weight)),
+                'Late workout slot ignored the history-derived double-progression loads: '
+                    + day.id + ':' + slot);
+        }
         assert.equal(works.length, Number(cell.sets),
             'Wrong loggable working-set count: ' + day.id + ':' + slot);
         assert.ok(works.every(set => set.target?.reps && set.valueOwner),

@@ -135,8 +135,15 @@ function evaluateProgression(session, performedSets, context = {}) {
         }
         const currentLoad = representativeLoad(actual);
         const estimated1RM = bestEstimated1RM(actual);
-        const completion = actual.length / Math.max(1, ex.sets);
-        const completedPrescription = actual.length >= ex.sets;
+        // Completing an edited/extraneous/duplicate row is not the same as
+        // completing every prescribed set position. This also protects plans
+        // after the user skips a middle row but logs a later one.
+        const positions = new Set(actual.map(row => row.setIndex));
+        const completePositions = positions.size === ex.sets && actual.length === ex.sets
+            && Array.from({ length: ex.sets }, (_, i) => i).every(i => positions.has(i));
+        const completion = Array.from({ length: ex.sets }, (_, i) => i)
+            .filter(i => positions.has(i)).length / Math.max(1, ex.sets);
+        const completedPrescription = completePositions;
         const targets = ex.prescription.setTargets;
         const targetFor = s => targets?.[s.setIndex];
         const allAtTop = completedPrescription && actual.every(s => targetFor(s)
@@ -180,6 +187,16 @@ function evaluateProgression(session, performedSets, context = {}) {
                 });
             }
         }
+        // A prior full, in-range exposure cannot certify today's shorter session.
+        // Below-range failure recalibration above has its own separate safety policy.
+        if (actual.length > ex.sets && allAtLeastBottom) {
+            return decision(ex, {
+                outcome: 'non_comparable', reasonCode: 'prescription_set_count_changed',
+                action: 'hold', confidence: 'high',
+                reason: `The prior exposure logged ${actual.length} working sets, while the current prescription calls for ${ex.sets}. Different set counts cannot earn an automatic load change. Keep the prior working load until a comparable session is completed.`,
+                currentLoad, suggestedLoad: currentLoad, estimated1RM
+            });
+        }
         // Missing sets are a hard block on load progression even if every logged set hit the top of the range.
         // Previously 3/4 top-end sets (75% completion) could fall through to the allAtTop branch and advance.
         if (!completedPrescription) {
@@ -201,8 +218,9 @@ function evaluateProgression(session, performedSets, context = {}) {
         if (style === 'dynamic' && !context.percentageLoading && allAtLeastBottom) {
             const [repFloor, repCeiling] = ex.prescription.reps;
             let advanced = 0, blocked = 0;
+            const priorByPosition = new Map(actual.map(set => [set.setIndex, set]));
             const setTargets = Array.from({ length: ex.sets }, (_, index) => {
-                const previous = actual[index];
+                const previous = priorByPosition.get(index);
                 if (!previous) return { weight: currentLoad, reps: repFloor };
                 const plannedRir = targetFor(previous)?.rir ?? targetRirFloor;
                 const effortOkay = previous.rir === null || Number(previous.rir) >= plannedRir;
@@ -304,8 +322,9 @@ export function progressionSetTargets(exercise, actual, result) {
     // Holds and rep-only progression retain each observed set's load for every method.
     // Explicit increases/corrections still own their new load, including dynamic progression.
     const retainingLoads = !increasing && !decreasing && result.suggestedLoad === result.currentLoad;
+    const priorByPosition = new Map(actual.map(set => [set.setIndex, set]));
     return Array.from({ length: Math.max(1, exercise.sets) }, (_, index) => {
-        const previous = actual[index];
+        const previous = priorByPosition.get(index);
         const load = retainingLoads && previous?.load != null
             ? previous.load : result.suggestedLoad ?? result.currentLoad;
         const sameLoad = previous?.load != null && load != null && Math.abs(previous.load - load) < 1e-6;

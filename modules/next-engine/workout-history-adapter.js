@@ -185,13 +185,18 @@ function workoutFromEntry(program, entry, legacyExercises, unit, context) {
         const perf = entry.perf?.[legacyId];
         if (!ex || !perf?.sets?.length)
             return;
-        let setIndex = 0;
+        let legacyIndex = 0;
         for (const raw of completedHistorySets(perf)) {
+            // Historical logs without ordinals remain sequential; current logs
+            // preserve skipped middle sets and must never be compacted here.
+            const index = Number.isInteger(raw.workingSetIndex) && raw.workingSetIndex >= 0
+                ? raw.workingSetIndex : legacyIndex;
+            legacyIndex++;
             const reps = intOf(raw.r), load0 = numberOf(raw.w);
             const observedRir = observedHistoryRIR(raw);
             const exposure = progressionExposureContext([perf, raw]);
             performed.push({
-                ...historyExposureContext(raw), exerciseId: ex.exerciseId, setIndex: setIndex++, load: convertLoad(load0, entry.unit, targetUnit), reps,
+                ...historyExposureContext(raw), exerciseId: ex.exerciseId, setIndex: index, load: convertLoad(load0, entry.unit, targetUnit), reps,
                 badDay: exposure.badDay, interrupted: exposure.interrupted,
                 prescriptionEdited: exposure.nonComparable || repeatedIds.has(legacyId),
                 rir: observedRir, painFlag: raw.painFlag === true, techniqueQuality: raw.techniqueQuality,
@@ -353,7 +358,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         target: decision.suggestedReps,
         setTargets: decision.setTargets,
         last, lastUnit: lastEntry?.unit || evaluationUnit,
-        action: decision.action,
+        sourceEntryId: lastEntry?.id ?? null, action: decision.action, reasonCode: decision.reasonCode,
         confidence: decision.confidence
     };
 }
@@ -444,7 +449,7 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         target: decision.suggestedReps,
         setTargets: decision.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
         last,
-        action: decision.action,
+        action: decision.action, reasonCode: decision.reasonCode,
         confidence: decision.confidence
     };
 }

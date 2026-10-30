@@ -158,6 +158,9 @@ assert.ok(css.includes('color:var(--wpb-theme-on-danger)')&&css.includes('backgr
   'B1008 uses real dynamic theme text and danger tint rather than a fixed color');
 
 /* B1011: semantic font/color paint has one class owner; remaining inline geometry is intentional. */
+// B1009 counts below already represent the FINAL cumulative JSX usage, including
+// later B1011 reuses. Do not add b1011Roles deltas a second time; B1006's
+// earlier wpb-type-micro-faint count is separately adjusted from 5 to 8.
 const b1011Roles=[
   [
     "wpb-type-support-muted",
@@ -236,7 +239,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-strong",
-    12,
+    8,
     "style: { fontSize: 15, fontWeight: 700, color: C.text }"
   ],
   [
@@ -256,22 +259,22 @@ const b1009Contract=[
   ],
   [
     "pi-t-muted-600",
-    11,
+    7,
     "style: { color: C.muted, fontWeight: 600 }"
   ],
   [
     "pi-t-text-600",
-    7,
+    5,
     "style: { color: C.text, fontWeight: 600 }"
   ],
   [
     "pi-t-text-700",
-    9,
+    6,
     "style: { color: C.text, fontWeight: 700 }"
   ],
   [
     "pi-t-caption-muted",
-    17,
+    10,
     "style: { fontSize: 11, color: C.muted }"
   ],
   [

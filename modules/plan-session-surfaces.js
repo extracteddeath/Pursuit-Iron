@@ -82,7 +82,10 @@ export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose })
     const hasSavedSetChanges = review.changes.some(row => !!row.change.setDelta);
     return _jsx(SessionChoiceDialog, { title: "Plan changes", onClose, className: "wpb-plan-changes-dialog",
         children: _jsxs("div", { className: "wpb-plan-changes-body", children: [
-            _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex}. ${hasSavedSetChanges ? 'Saved program set edits; load holds apply to this workout.' : 'Load choices apply to this workout.'} Completed history stays intact.` }),
+            _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex}` }),
+            _jsx("p", { className: "wpb-plan-review-basis", children: hasSavedSetChanges
+                ? "Planned set changes affect your saved program. Load choices affect this workout. Completed history stays intact."
+                : "Load choices affect this workout. Completed history stays intact." }),
             !review.changes.length && _jsx("p", { children: "No meaningful changes to review." }),
             ...review.changes.map(row => {
                 const change = row.change;

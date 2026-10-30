@@ -85,11 +85,12 @@ for (const selector of ['#root .wpb-workout .wpb-workout-tools .wpb-workout-tool
         'Workout/Rest-specific style must not re-own common icon geometry: '+selector);
 }
 
-// Four Workout actions share a theme-aware keyboard ring without selector-specificity inflation.
+// Workout controls share a theme-aware keyboard ring, using :is() only
+// for the single-class targets (which keeps their original specificity).
 const focusGroup = css.split('#root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,')[1]?.split('}')[0] || '';
-for (const selector of ['.wpb-workout-pinned-note:focus-visible,',
-    '.wpb-workout-exercise-link:focus-visible,',
-    '.wpb-rest-actions>.wpb-rest-action:focus-visible{'])
+for (const selector of [':is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible,',
+    '.wpb-rest-actions>.wpb-rest-action:focus-visible,',
+    '.wpb-load-advice>button:focus-visible{'])
     assert.ok(focusGroup.includes(selector), 'Workout focus group missing: '+selector);
 assert.ok(focusGroup.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;'),
     'Shared Workout keyboard ring must remain visible and theme-aware');

@@ -61,9 +61,9 @@ try{
   assert.ok(actions.every(x=>x.height>=48&&x.width>=48&&x.left>=-1&&x.right<=width+1),'Footer actions remain reachable: '+JSON.stringify(actions));
   assert.ok(actions[1].height>=52,'Primary action is at least 52px');
   const weeks='[aria-label="Block length in weeks"]';
-  await page.$eval(weeks,el=>{el.value='';el.dispatchEvent(new Event('input',{bubbles:true}))});
-  // React controlled fields require native typing for draft event handling.
-  await page.click(weeks,{clickCount:3});
+  // Use real keys so React receives the raw invalid draft; never mutate input.value manually.
+  await page.click(weeks);
+  await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.press('Backspace');
   await page.waitForFunction(()=>document.querySelector('[aria-label="Block length in weeks"]')?.getAttribute('aria-invalid')==='true');
   assert.equal(await page.$eval('.wpb-program-settings-save',el=>el.disabled),true,'Invalid raw weeks cannot save');

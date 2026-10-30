@@ -187,18 +187,19 @@ assert.equal(moreSets.summary, '3 → 4 planned sets');
 console.log('PASS B943: ordinary reps are not changes; material load, plateau and saved planned-set changes are distinguished.');
 
 
+export const rearProgram = { id:'b1002-rear-fly',custom:true,engineV:4,weeks:6,
+        config:{weeks:6,unit:'lb',goal:'both',progression:'double',experience:'intermediate',deload:false},
+        days:[{id:'upper',label:'Upper',primaryIndex:-1,exercises:['rear-fly']}],
+        overrides:{'upper:0':{sets:3,reps:'15-25',rir:'2',progressionStyle:'double'}} };
+export const rearHistory = [{id:'b1002-prior',programId:rearProgram.id,dayId:'upper',date:Date.UTC(2026,9,28),
+        weekIndex:1,unit:'lb',perf:{'rear-fly':{weight:60,reps:20,
+            sets:[0,1,2].map(() => ({w:60,r:20,rir:2,tr:2,done:true}))}}}];
+
 // B1002 / 148555.png: Rear Delt Fly, three prior 60x20 sets. An unexplained
 // third-set 55x21 is neither a rep-first advance nor a user-approved deload.
 {
     const { retainDoubleProgressionSetLoads } = await import('../modules/training-domain/prescriptions.js');
-    const rearProgram = { id:'b1002-rear-fly',custom:true,engineV:4,weeks:6,
-        config:{weeks:6,unit:'lb',goal:'both',progression:'double',experience:'intermediate',deload:false},
-        days:[{id:'upper',label:'Upper',primaryIndex:-1,exercises:['rear-fly']}],
-        overrides:{'upper:0':{sets:3,reps:'15-25',rir:'2',progressionStyle:'double'}} };
-    const prior = [{id:'b1002-prior',programId:rearProgram.id,dayId:'upper',date:Date.UTC(2026,9,28),
-        weekIndex:1,unit:'lb',perf:{'rear-fly':{weight:60,reps:20,
-            sets:[0,1,2].map(() => ({w:60,r:20,rir:2,tr:2,done:true}))}}}];
-    const before = structuredClone(prior);
+    const prior = rearHistory; const before = structuredClone(prior);
     const advice = sessionSuggestion(rearProgram,rearProgram.days[0],0,null,'lb',1,prior);
     assert.equal(advice.action,'add_reps');
     assert.deepEqual(advice.setTargets.map(t=>[t.weight,t.reps]),[[60,21],[60,21],[60,21]],

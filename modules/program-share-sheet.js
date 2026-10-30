@@ -69,8 +69,8 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
     const pending = feedback?.state === 'pending';
     return _jsx('div', { 'data-testid': 'share-program-sheet', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-share-title', 'aria-describedby': 'program-share-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
-        className: 'wpb-backdrop wpb-program-share-backdrop', children:
-        _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-program-share-panel', onClick: event => event.stopPropagation(), children: [
+        className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-share-backdrop', children:
+        _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-program-share-panel', onClick: event => event.stopPropagation(), children: [
             _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-program-share-heading', children: [
                 _jsx('h2', { id: 'program-share-title', className: 'wpb-ui-sheet-title', children: 'Share program' }),
                 _jsx(UiSheetClose, { className: 'wpb-program-share-close', onClick: onClose })

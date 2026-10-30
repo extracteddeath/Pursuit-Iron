@@ -47,9 +47,9 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
     const closeConversion = () => { setConversion(null); conversionOpener.current?.focus({ preventScroll: true }); };
     const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(conversion ? closeConversion : onClose, sheetDragRef);
     const apply = () => { if (canApply) onApply(changes); };
-    return _jsx('div', { className: 'wpb-backdrop wpb-training-max-backdrop', role: 'dialog', 'aria-modal': true,
+    return _jsx('div', { className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-training-max-backdrop', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-training-max-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },
-        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-training-max-sheet',
+        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-training-max-sheet',
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-training-max-heading', children: [
                     _jsx('h2', { id: 'program-training-max-title', className: 'wpb-ui-sheet-title', children: 'Training maxes' }),

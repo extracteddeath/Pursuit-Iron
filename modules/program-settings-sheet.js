@@ -86,9 +86,9 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
     return _jsx("div", {
         "data-testid": "program-settings-sheet", role: "dialog", "aria-modal": true,
         "aria-labelledby": "program-settings-title", onClick: event => { if (event.target === event.currentTarget) onClose(); },
-        className: "wpb-backdrop wpb-program-settings-backdrop",
+        className: "wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-settings-backdrop",
         children: _jsxs("div", {
-            ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: e => e.stopPropagation(), className: "wpb-program-settings-panel",
+            ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: e => e.stopPropagation(), className: "wpb-ui-sheet-panel wpb-program-settings-panel",
             children: [
                 _jsxs("div", { className: "wpb-ui-sheet-heading wpb-program-settings-heading", children: [
                     _jsx("h2", { id: "program-settings-title", className: "wpb-ui-sheet-title wpb-program-settings-title", children: "Program settings" }),

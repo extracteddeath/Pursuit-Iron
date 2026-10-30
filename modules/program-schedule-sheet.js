@@ -25,7 +25,7 @@ export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetD
     return _jsx('div', {
         'data-testid': 'weekly-schedule-sheet', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-weekly-schedule-title',
-        className: 'wpb-backdrop wpb-program-schedule-backdrop', onClick: event => { if (event.target === event.currentTarget) onClose(); },
+        className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-program-schedule-backdrop', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         children: _jsxs('div', {
             ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: event => event.stopPropagation(),
             className: 'wpb-scroll wpb-program-schedule-sheet',

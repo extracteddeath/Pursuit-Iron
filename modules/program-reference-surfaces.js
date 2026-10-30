@@ -18,9 +18,9 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
         ['linear', 'Linear progression', `Add ${linearIncrement} ${unit} after successful work at the bottom of the range.`],
         ['e1rm', 'e1RM autoregulation', 'Use recent strength estimates and the target effort to choose a load.']
     ];
-    return _jsx('div', { className: 'wpb-backdrop wpb-progression-choice-backdrop', role: 'dialog', 'aria-modal': true,
+    return _jsx('div', { className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-progression-choice-backdrop', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-progression-title', 'aria-describedby': 'program-progression-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
-        children: _jsxs('section', { className: 'wpb-progression-choice-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
+        children: _jsxs('section', { className: 'wpb-ui-sheet-panel wpb-progression-choice-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-progression-choice-heading', children: [
                     _jsxs('div', { children: [
@@ -49,9 +49,9 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
 
 export function ProgramReferenceSheet({ onClose, sheetDragRef, children }) {
     const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(onClose, sheetDragRef);
-    return _jsx('div', { className: 'wpb-backdrop wpb-program-reference-backdrop', role: 'dialog', 'aria-modal': true,
+    return _jsx('div', { className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-program-reference-backdrop', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-reference-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },
-        children: _jsxs('div', { className: 'wpb-program-reference-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
+        children: _jsxs('div', { className: 'wpb-ui-sheet-panel wpb-program-reference-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('div', { className: 'wpb-ui-sheet-heading wpb-program-reference-heading', children: [
                     _jsx('h2', { id: 'program-reference-title', className: 'wpb-ui-sheet-title', children: 'Plan info' }),

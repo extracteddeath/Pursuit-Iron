@@ -33,10 +33,10 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
             ] })
         ]
     }, id);
-    return _jsx('div', { className: 'wpb-backdrop wpb-exercise-options-backdrop', role: 'dialog',
+    return _jsx('div', { className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-exercise-options-backdrop', role: 'dialog',
         'aria-modal': true, 'aria-labelledby': 'program-exercise-options-title',
         onClick: event => { if (event.target === event.currentTarget) dismiss(); },
-        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-exercise-options-sheet',
+        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-exercise-options-sheet',
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-exercise-options-heading', children: [
                     _jsxs('div', { className: 'wpb-exercise-options-identity', children: [

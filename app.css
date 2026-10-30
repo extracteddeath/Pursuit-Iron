@@ -8542,7 +8542,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   }
 }
 /* M365: sole CSS owner for the Program weekly schedule. Uses live theme variables. */
-#root .wpb .wpb-program-schedule-backdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
+#root .wpb .wpb-program-schedule-backdrop{z-index:60;justify-content:flex-start}
 #root .wpb .wpb-program-schedule-sheet{box-sizing:border-box;width:100%;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow-y:auto;overscroll-behavior:contain;padding:10px 18px calc(env(safe-area-inset-bottom) + 26px);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
 #root .wpb .wpb-program-schedule-heading{--pi-ui-sheet-heading-padding:0;margin-bottom:var(--pi-space-1)}
 #root .wpb .wpb-ui-sheet-title{min-width:0;margin:0;font-size:1.125rem;font-weight:700;line-height:var(--pi-ui-sheet-title-leading,1.4);overflow-wrap:anywhere}
@@ -8580,8 +8580,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-info-card-toggle[aria-expanded="true"] .wpb-info-card-chevron{transform:rotate(180deg)}
 #root .wpb .wpb-info-card-content{min-width:0;padding:0 16px 14px}
 #root .wpb .wpb-info-card-toggle:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:-3px}
-#root .wpb .wpb-program-reference-backdrop{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-program-reference-panel{box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:56rem;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow:hidden;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .26s cubic-bezier(.2,.8,.3,1) both}
+/* Program sheets reuse one overlay, panel and focus geometry owner. */
+#root .wpb .wpb-ui-sheet-backdrop{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
+#root .wpb .wpb-ui-sheet-panel{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;width:100%;overflow:hidden;color:var(--wpb-theme-text)}
+#root .wpb .wpb-ui-sheet-focus :is(button,input,textarea):focus-visible,
+#root .wpb :is(.wpb-load-wave,.wpb-training-max-summary):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+@media(forced-colors:active){#root .wpb .wpb-ui-sheet-focus :is(button,input,textarea):focus-visible{outline-color:Highlight}}
+#root .wpb .wpb-program-reference-backdrop{z-index:70}
+#root .wpb .wpb-program-reference-panel{max-width:56rem;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);animation:sheetUp .26s cubic-bezier(.2,.8,.3,1) both}
 #root .wpb .wpb-program-reference-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3)}
 
 #root .wpb .wpb-program-reference-close{border:0;background:transparent}
@@ -8651,8 +8657,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 /* M371: progression choices share one staged program writer and one presentation owner. */
-#root .wpb .wpb-progression-choice-backdrop{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-progression-choice-panel{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;width:100%;max-width:44rem;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow:hidden;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg);color:var(--wpb-theme-text);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
+#root .wpb .wpb-progression-choice-backdrop{z-index:80}
+#root .wpb .wpb-progression-choice-panel{max-width:44rem;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));border-radius:24px 24px 0 0;background:var(--wpb-theme-bg);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
 #root .wpb .wpb-progression-choice-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:16px 18px 10px;align-items:flex-start;border-bottom:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-progression-choice-heading>div{flex:1;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-choice-heading h2{margin:0;font-size:1rem;font-weight:700;line-height:1.4;color:var(--wpb-theme-muted)}
@@ -8693,9 +8699,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* M368: shared choices, scalable form groups and a separately scrollable body.
    UiChoice owns selected paint/focus; these roles own only the settings anatomy. */
-#root .wpb :is(.wpb-program-settings-backdrop,.wpb-program-share-backdrop){position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
+
 #root .wpb .wpb-program-settings-backdrop{z-index:60}
-#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:46rem;overflow:hidden;border-top:1px solid var(--wpb-theme-border);border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){max-width:46rem;border-top:1px solid var(--wpb-theme-border);border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
 #root .wpb .wpb-program-settings-panel{max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 32px))}
 #root .wpb .wpb-ui-sheet-heading{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:var(--pi-ui-sheet-heading-gap,var(--pi-space-2));padding:var(--pi-ui-sheet-heading-padding,10px 18px 4px)}
 
@@ -8729,9 +8735,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-program-settings-save>span{display:flex;align-items:center;justify-content:center;gap:8px}
 #root .wpb .wpb-program-settings-save svg{flex-shrink:0}
 #root .wpb .wpb-program-settings-save:disabled{background:var(--wpb-theme-card);color:var(--wpb-theme-faint);cursor:default;opacity:.7}
-#root .wpb .wpb-program-settings-backdrop :is(button,input,textarea):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-program-settings-backdrop,#root .wpb .wpb-program-settings-panel{animation:none}#root .wpb .wpb-program-settings-choice{transition:none}}
-@media(forced-colors:active){#root .wpb .wpb-program-settings-panel,#root .wpb .wpb-program-settings-field,#root .wpb .wpb-program-settings-cancel,#root .wpb .wpb-program-settings-save{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-program-settings-save:not(:disabled){background:Highlight;color:HighlightText}#root .wpb .wpb-program-settings-backdrop :is(button,input,textarea):focus-visible{outline-color:Highlight}}
+@media(forced-colors:active){#root .wpb .wpb-program-settings-panel,#root .wpb .wpb-program-settings-field,#root .wpb .wpb-program-settings-cancel,#root .wpb .wpb-program-settings-save{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-program-settings-save:not(:disabled){background:Highlight;color:HighlightText}}
 
 /* Program inspection: one themed owner for selected-week sharing and load-wave labels. */
 #root .wpb .wpb-program-share-backdrop{z-index:70}
@@ -8749,7 +8755,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-program-share-status{margin:0 0 8px;font-size:.8125rem;line-height:1.4;color:var(--wpb-theme-text);overflow-wrap:anywhere}
 #root .wpb .wpb-program-share-status:empty{display:none}
 #root .wpb .wpb-program-share-copy{width:100%}
-#root .wpb .wpb-program-share-backdrop :is(button,textarea):focus-visible,#root .wpb .wpb-load-wave:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+
 #root .wpb .wpb-load-wave{display:flex;align-items:flex-end;gap:6px;min-width:0;margin:0;padding:8px 2px 4px;overflow-x:auto;overscroll-behavior-inline:contain;list-style:none;scroll-padding-inline:2px}
 #root .wpb .wpb-load-wave-week{flex:1 0 2.75rem;min-width:0;text-align:center;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-load-wave-week[data-first="true"]{color:var(--wpb-theme-accent-ink)}
@@ -8761,11 +8767,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-load-wave-week[data-first="true"] .wpb-load-wave-bar{background:var(--wpb-theme-accent)}
 #root .wpb .wpb-load-wave-week[data-wave-deload="1"] .wpb-load-wave-bar{background:var(--wpb-theme-warning)}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-program-share-backdrop,#root .wpb .wpb-program-share-panel{animation:none}}
-@media(forced-colors:active){#root .wpb .wpb-program-share-panel,#root .wpb .wpb-program-share-text{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-program-share-backdrop :is(button,textarea):focus-visible,#root .wpb .wpb-load-wave:focus-visible{outline-color:Highlight}#root .wpb .wpb-load-wave-bar{background:ButtonText}#root .wpb .wpb-load-wave-week[data-first="true"] .wpb-load-wave-bar{background:Highlight}#root .wpb .wpb-load-wave-week[data-wave-deload="1"] .wpb-load-wave-bar{border:1px dashed ButtonText;background:Canvas}}
+@media(forced-colors:active){#root .wpb .wpb-program-share-panel,#root .wpb .wpb-program-share-text{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-load-wave:focus-visible{outline-color:Highlight}#root .wpb .wpb-load-wave-bar{background:ButtonText}#root .wpb .wpb-load-wave-week[data-first="true"] .wpb-load-wave-bar{background:Highlight}#root .wpb .wpb-load-wave-week[data-wave-deload="1"] .wpb-load-wave-bar{border:1px dashed ButtonText;background:Canvas}}
 
 /* Program exercise actions: scalable content beneath a persistent heading. */
-#root .wpb .wpb-exercise-options-backdrop{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-exercise-options-sheet{box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 32px));overflow:hidden;border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
+#root .wpb .wpb-exercise-options-backdrop{z-index:80}
+#root .wpb .wpb-exercise-options-sheet{max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 32px));border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--wpb-theme-bg-tint);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
 #root .wpb .wpb-exercise-options-sheet::before{flex-shrink:0}
 #root .wpb .wpb-exercise-options-heading{--pi-ui-sheet-heading-gap:10px;--pi-ui-sheet-heading-padding:10px max(16px,env(safe-area-inset-left)) 8px}
 #root .wpb .wpb-exercise-options-identity{flex:1;min-width:0}
@@ -8783,9 +8789,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-exercise-options-confirm-actions{display:flex;flex-wrap:wrap;gap:8px}
 #root .wpb .wpb-exercise-options-confirm-actions>button{flex:1 1 7rem;min-width:0;min-height:48px;white-space:normal;overflow-wrap:anywhere}
 #root .wpb .wpb-exercise-options-confirm-actions .wpb-exercise-options-remove{color:var(--wpb-theme-danger)}
-#root .wpb .wpb-exercise-options-backdrop button:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-exercise-options-backdrop,#root .wpb .wpb-exercise-options-sheet{animation:none}}
-@media(forced-colors:active){#root .wpb .wpb-exercise-options-sheet,#root .wpb .wpb-exercise-options-confirm{background:Canvas;color:CanvasText;border-color:ButtonText}#root .wpb .wpb-exercise-options-backdrop button:focus-visible{outline-color:Highlight}}
+@media(forced-colors:active){#root .wpb .wpb-exercise-options-sheet,#root .wpb .wpb-exercise-options-confirm{background:Canvas;color:CanvasText;border-color:ButtonText}}
 
 /* Shared pinned notes: stage the note and setup until one explicit Save. */
 #root .wpb .wpb-setup-fields{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
@@ -8817,8 +8823,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-training-max-summary-copy{flex:1;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-training-max-summary-title{display:block;font-size:.9375rem;font-weight:700;line-height:1.4}
 #root .wpb .wpb-training-max-summary-detail{display:block;margin-top:1px;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted)}
-#root .wpb .wpb-training-max-backdrop{position:fixed;inset:0;z-index:75;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-training-max-sheet{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;width:100%;max-width:44rem;max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow:hidden;border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
+#root .wpb .wpb-training-max-backdrop{z-index:75}
+#root .wpb .wpb-training-max-sheet{max-width:44rem;max-height:min(88dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--wpb-theme-bg-tint);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
 #root .wpb .wpb-training-max-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:12px 18px;border-bottom:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-training-max-heading h2{flex:1;--pi-ui-sheet-title-leading:1.3}
 #root .wpb .wpb-training-max-body{flex:1;padding:14px 18px}
@@ -8837,10 +8843,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-training-max-conversion-actions{margin-top:10px}
 #root .wpb .wpb-training-max-footer{flex-shrink:0;padding:12px 18px calc(env(safe-area-inset-bottom) + 16px);border-top:1px solid var(--wpb-theme-border-soft)}
 #root .wpb :is(.wpb-training-max-conversion-actions,.wpb-training-max-footer)>button{flex:1 1 8rem;min-width:0;font-size:.9375rem;white-space:normal;overflow-wrap:anywhere}
-#root .wpb .wpb-training-max-backdrop :is(button,input):focus-visible,#root .wpb .wpb-training-max-summary:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+
 @media(min-width:840px) and (min-height:600px){#root .wpb .wpb-training-max-backdrop{align-items:center;padding:24px}#root .wpb .wpb-training-max-sheet{border-bottom:1px solid var(--wpb-theme-border);border-radius:var(--pi-shape-card)}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-training-max-backdrop,#root .wpb .wpb-training-max-sheet{animation:none}}
-@media(forced-colors:active){#root .wpb :is(.wpb-training-max-sheet,.wpb-training-max-input,.wpb-training-max-conversion,.wpb-training-max-summary){background:Canvas;color:CanvasText;border-color:CanvasText}#root .wpb .wpb-training-max-backdrop :is(button,input):focus-visible,#root .wpb .wpb-training-max-summary:focus-visible{outline-color:Highlight}}
+@media(forced-colors:active){#root .wpb :is(.wpb-training-max-sheet,.wpb-training-max-input,.wpb-training-max-conversion,.wpb-training-max-summary){background:Canvas;color:CanvasText;border-color:CanvasText}#root .wpb .wpb-training-max-summary:focus-visible{outline-color:Highlight}}
 
 /* Context menus: one renderer, measured anchor owner and themed row family. */
 #root .wpb .wpb-menu-dismiss{position:fixed;inset:0;z-index:40}

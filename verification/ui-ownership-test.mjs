@@ -231,6 +231,53 @@ for(const cls of ['wpb-save-review-confirm','wpb-save-review-cancel']){
         'Review button-specific styling only owns paint, weight and spacing: '+cls);
 }
 
+
+/* Design passes 27–30: Program overlay, panel and focus owners stay shared. */
+for(const [src,name,focus] of [
+  [programReference,'wpb-progression-choice',false],
+  [programReference,'wpb-program-reference',false],
+  [programSettings,'wpb-program-settings',true],
+  [programShare,'wpb-program-share',true],
+  [trainingMaxes,'wpb-training-max',true],
+  [exerciseOptions,'wpb-exercise-options',true],
+  [programSchedule,'wpb-program-schedule',false]
+]){
+  assert.ok(src.includes('wpb-backdrop wpb-ui-sheet-backdrop '+(focus?'wpb-ui-sheet-focus ':'')+name+'-backdrop'),
+    'Shared overlay marker missing: '+name);
+  const local=css.split('#root .wpb .'+name+'-backdrop{')[1]?.split('}')[0]||'';
+  assert.ok(local&&!local.includes('position:fixed')&&!local.includes('animation:fadeIn'),
+    'Feature should only own overlay differences: '+name);
+}
+for(const [src,cls] of [
+  [programReference,'wpb-progression-choice-panel'],
+  [programReference,'wpb-program-reference-panel'],
+  [programSettings,'wpb-program-settings-panel'],
+  [programShare,'wpb-program-share-panel'],
+  [trainingMaxes,'wpb-training-max-sheet'],
+  [exerciseOptions,'wpb-exercise-options-sheet']
+]) assert.ok(src.includes('wpb-ui-sheet-panel '+cls),'Shared panel owner missing: '+cls);
+const sharedBackdrop=css.split('#root .wpb .wpb-ui-sheet-backdrop{')[1]?.split('}')[0]||'';
+for(const p of ['position:fixed','inset:0','display:flex','align-items:flex-end',
+  'justify-content:center','background:rgba(0,0,0,.6)','animation:fadeIn .2s both'])
+  assert.ok(sharedBackdrop.includes(p),'Base overlay lost '+p);
+const sharedPanel=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
+for(const p of ['box-sizing:border-box','display:flex','flex-direction:column',
+    'min-width:0','width:100%','overflow:hidden','color:var(--wpb-theme-text)'])
+    assert.ok(sharedPanel.includes(p),'Base sheet panel lost '+p);
+for(const cls of ['wpb-program-reference-panel','wpb-progression-choice-panel',
+  'wpb-training-max-sheet','wpb-exercise-options-sheet']){
+  const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+  assert.ok(local&&!['box-sizing:','display:flex','flex-direction:','min-width:',
+    'width:100%','overflow:hidden','color:'].some(p=>local.includes(p)),
+    'Feature cannot duplicate shared sheet panel geometry: '+cls);
+}
+assert.ok(css.includes('.wpb-training-max-backdrop{align-items:center;padding:24px}') &&
+  css.includes('.wpb-program-schedule-backdrop{z-index:60;justify-content:flex-start}'),
+  'Centered Training Max and edge-aligned Weekly Schedule retain their variants');
+assert.ok(css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-visible,') &&
+  css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-visible{outline-color:Highlight}'),
+  'Shared keyboard and high contrast focus styles must remain available');
+
 // Five Program sheet H2 titles share semantic type and wrapped 200%-text
 // geometry; two compact variants keep their existing 1.3 line-height.
 const commonTitle=css.split('#root .wpb .wpb-ui-sheet-title{')[1]?.split('}')[0]||'';

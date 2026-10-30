@@ -1138,6 +1138,7 @@ try {
                         radius:parseFloat(cs(cards[0])?.borderTopLeftRadius||0),
                         rowMinimum:rows.length?Math.min(...rows.map(el=>el.getBoundingClientRect().height)):0,
                         segmentHeight:seg?.getBoundingClientRect().height||0,
+                        segmentButtonHeights:[...(seg?.querySelectorAll('button')||[])].map(x=>x.getBoundingClientRect().height),
                         pickerHeight:picker?.getBoundingClientRect().height||0,
                         overflow:root.scrollWidth>root.clientWidth+1,
                         selected:!!seg?.querySelector('[aria-pressed="true"]')};
@@ -1147,6 +1148,7 @@ try {
                     r42.listImage==='none' && r42.railImage==='none' &&
                     r42.radius>=19 && r42.rowMinimum>=48 &&
                     r42.segmentHeight>=48 && r42.pickerHeight>=48 &&
+                    r42.segmentButtonHeights.length>=2 && r42.segmentButtonHeights.every(x=>x>=48) &&
                     r42.selected && !r42.overflow,
                     'R42 Settings grouped surfaces and active choices stay usable at '+width+'px: '+
                     JSON.stringify(r42));

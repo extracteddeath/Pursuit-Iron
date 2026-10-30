@@ -943,7 +943,9 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const rack = gymRackFor(ex, unit), step = loadStep(ex, unit);
     const loadingInventory = { unit, exerciseOverrides: { [ex.id]: rack?.length
         ? { availableLoads: rack } : { increment: step, minimum: 0 } } };
-    const performed = work.map((x, i) => ({ exerciseId: ex.id, setIndex: i, load: conv(x.w), reps: Number(x.r),
+    const performed = work.map((x, i) => ({ exerciseId: ex.id,
+        setIndex: Number.isInteger(x.workingSetIndex) && x.workingSetIndex >= 0 ? x.workingSetIndex : i,
+        load: conv(x.w), reps: Number(x.r),
         ...historyExposureContext(x), rir: observedHistoryRIR(x) }));
     const exercise = { exerciseId: ex.id, name: ex.name, role: cell.role, sets: Number(cell.sets),
         progressionStyle: style, prescription: { reps: [lo, hi], rir } };
@@ -1241,6 +1243,11 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             const n = typeof t === "number" ? t : parseRIRNum(t);
             return Number.isFinite(n) ? n : null;
         };
+        // Store the original working-set ordinal, NOT the order in the filtered
+        // completed list. Skipping set 2 then logging set 3 must never turn
+        // set 3 into set 2 in LAST, recovery, or the next prescription.
+        const workPosition = new Map(e.sets.filter(x => x && !x.warm && !x.sub)
+            .map((row, index) => [row, index]));
         const logged = (hasPos ? doneWork.filter(x => parseFloat(x.weight) > 0) : doneWork)
             .map(x => {
             const r = setRIR(x);
@@ -1255,7 +1262,9 @@ function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, histo
             // (`!s.warm && !s.sub`), but the flag was never PERSISTED, so on replayed history those
             // filters matched nothing and extensions counted as full sets all over again — the exact
             // bug v493 fixed in the live session, surviving in the log.
-            return { ...historyExposureContext(x), w: wv(x), r: parseInt(x.reps), ...(failedRows.includes(x) ? { failedAttempt: true } : {}), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
+            return { ...historyExposureContext(x),
+                ...(!x.sub && workPosition.has(x) ? { workingSetIndex: workPosition.get(x) } : {}),
+                w: wv(x), r: parseInt(x.reps), ...(failedRows.includes(x) ? { failedAttempt: true } : {}), ...(r != null ? { rir: r, rirReported: x.actualRIR != null } : {}), ...(x.sub ? { sub: true, ...(x.kind ? { kind: x.kind } : {}) } : {}), ...(prescribedRIRof(x) != null ? { tr: prescribedRIRof(x) } : {}), ...(x.target?.amrap ? { amrap: true } : {}), ...(x.auto && pw > 0 ? { pw } : {}), ...(!x.target?.freestyle && pt ? { pt } : {}) };
         });
         const prescription = snapshotNextShellPrescription(program, day, e.slot, EX_BY_ID[e.id], weekIndex)
             || { schemaVersion: 1, exerciseId: e.id, ...computeCell(program, day, e.id, e.slot, weekIndex) };

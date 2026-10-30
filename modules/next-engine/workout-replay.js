@@ -37,6 +37,11 @@ const liveDecision = value => value?.schemaVersion === 1 ? {
     reasonCode: String(value.reasonCode || '').slice(0, 80),
     sourceIndices: Array.isArray(value.sourceIndices) ?
         value.sourceIndices.filter(Number.isInteger).slice(0, 10) : [],
+    sourceObservations: Array.isArray(value.sourceObservations)
+        ? value.sourceObservations.slice(0, 10).map(observation => ({
+            index: ordinal(observation.index), load: numeric(observation.load),
+            reps: numeric(observation.reps), actualRIR: numeric(observation.actualRIR)
+        })) : null,
     pendingIndex: ordinal(value.pendingIndex),
     fromLoad: numeric(value.fromLoad), toLoad: numeric(value.toLoad),
     fromReps: numeric(value.fromReps), toReps: numeric(value.toReps)

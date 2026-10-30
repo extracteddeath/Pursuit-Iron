@@ -192,7 +192,7 @@ console.log('PASS B943: ordinary reps are not changes; material load, plateau an
 {
     const { retainDoubleProgressionSetLoads } = await import('../modules/training-domain/prescriptions.js');
     const rearProgram = { id:'b1002-rear-fly',custom:true,engineV:4,weeks:6,
-        config:{weeks:6,unit:'lb',goal:'hypertrophy',progression:'double',experience:'intermediate',deload:false},
+        config:{weeks:6,unit:'lb',goal:'both',progression:'double',experience:'intermediate',deload:false},
         days:[{id:'upper',label:'Upper',primaryIndex:-1,exercises:['rear-fly']}],
         overrides:{'upper:0':{sets:3,reps:'15-25',rir:'2',progressionStyle:'double'}} };
     const prior = [{id:'b1002-prior',programId:rearProgram.id,dayId:'upper',date:Date.UTC(2026,9,28),
@@ -220,7 +220,6 @@ console.log('PASS B943: ordinary reps are not changes; material load, plateau an
     ],[rows[2]]);
     assert.equal(recovered[0].weight,'60','untouched pending rows may be repaired on resume');
     const action = retainDoubleProgressionSetLoads({...stray,action:'decrease_load'},[60,60,60]);
-    assert.equal(action,stray.action === 'decrease_load' ? stray : action);
     assert.equal(action.setTargets[2].weight,55,'an explicit correction remains independently owned');
     const increased = retainDoubleProgressionSetLoads({...stray,action:'increase_load'},[60,60,60]);
     assert.equal(increased.setTargets[2].weight,55,'earned load changes must not be blocked');

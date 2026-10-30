@@ -60,6 +60,15 @@ assert.equal(percentReview.exercises[1].change.canUndo,percentReview.exercises[1
 const deload={...program,weeks:1};assert.ok(buildSessionReview(deload,day,2,'kg',history).exercises.every(row=>!row.change.canUndo));
 const short=planShorterSession(program,day,2,20,{history});const shortDay={...day,sessionLengthPlan:short};
 const shortReview=buildSessionReview(program,shortDay,2,'kg',history);
+const heldShortReview=buildSessionReview(held,shortDay,2,'kg',history);
+console.log('B994_SHORT_REVIEW_DIAG',JSON.stringify({
+ fullChoice:held.sessionPlanChoices, shortPlan:{sets:shortReview.exercises.map(row=>[row.id,row.cell.sets])},
+ bench:heldShortReview.exercises.filter(row=>row.id==='bb-bench').map(row=>({
+  change:row.change.changed,kind:row.change.kind,canUndo:row.change.canUndo,
+  undone:row.change.undone,reason:row.reason,proposed:row.proposed.map(x=>x.weight),
+  effective:row.effective.map(x=>x.weight),previous:row.change.previous
+ }))
+}));
 for(const row of shortReview.exercises)assert.equal(row.effective.length,computeCell(program,shortDay,row.id,row.slot,2).sets);
 const low=structuredClone(history);low[0].perf['bb-bench'].sets=low[0].perf['bb-bench'].sets.map(s=>({...s,r:3}));
 assert.equal(buildSessionReview(program,day,2,'kg',low).exercises[0].change.canUndo,false,'undo cannot reintroduce reps outside the planned range');

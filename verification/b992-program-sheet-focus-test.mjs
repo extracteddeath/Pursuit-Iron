@@ -17,10 +17,18 @@ for(const [name,source] of [['Settings',settings],['Share',share],['Schedule',sc
 for(const term of ['useEffect','useCallback','getClientRects','details:not([open])','aria-disabled','previous?.isConnected','event.stopPropagation()', "event.key === 'Escape'"]){
  assert.ok(focus.includes(term),'Focus behavior missing: '+term);
 }
-assert.ok(css.includes(':is(.wpb-program-settings-backdrop,.wpb-program-share-backdrop)'), 'Program backdrop has one shared CSS geometry');
-assert.ok(css.includes(':is(.wpb-program-settings-panel,.wpb-program-share-panel)'), 'Program panel has one shared CSS geometry');
-assert.ok(css.includes('max-height:min(88dvh,calc(var(--visual-h'), 'Settings respects responsive viewport and safe area');
-assert.ok(css.includes('max-height:min(92dvh,calc(var(--visual-h'), 'Share retains separate responsive height');
+assert.ok(css.includes('.wpb-ui-sheet-backdrop{position:fixed;inset:0;display:flex;') &&
+    settings.includes('wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-settings-backdrop') &&
+    share.includes('wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-share-backdrop'),
+    'Settings and Share reuse one overlay/focus owner');
+assert.ok(css.includes('.wpb-ui-sheet-panel{box-sizing:border-box;display:flex;flex-direction:column;') &&
+    settings.includes('wpb-ui-sheet-panel wpb-program-settings-panel') &&
+    share.includes('wpb-ui-sheet-panel wpb-program-share-panel'),
+    'Settings and Share reuse shared panel sizing');
+assert.ok(css.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))') &&
+    css.includes('.wpb-program-settings-panel{--pi-ui-sheet-max-vh:88dvh;--pi-ui-sheet-top-gap:32px}') &&
+    css.includes('.wpb-program-share-panel{--pi-ui-sheet-max-vh:92dvh;--pi-ui-sheet-top-gap:32px}'),
+    'Settings and Share retain their distinct keyboard-safe height bounds');
 // B993 adds one themed Workout Info owner and permanently retires inline styling.
 assert.ok(css.length<=643592,'CSS presentation budget includes the reviewed B994 finish migration');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No additional priority overrides');

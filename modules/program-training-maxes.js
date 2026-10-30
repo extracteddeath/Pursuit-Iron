@@ -106,7 +106,7 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
                         ] }, id);
                     })
                 ] }),
-                _jsxs('footer', { className: 'wpb-training-max-footer', children: [
+                _jsxs('footer', { className: 'wpb-ui-sheet-footer wpb-training-max-footer', children: [
                     _jsx(UiAction, { variant: 'tonal', onClick: onClose, children: 'Cancel' }),
                     _jsx(UiAction, { variant: 'primary', disabled: !canApply, onClick: apply, children: 'Apply maxes' })
                 ] })

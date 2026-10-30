@@ -92,7 +92,7 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
                 _jsx('textarea', { id: 'program-share-text', readOnly: true, value: text,
                     onFocus: event => event.target.select(), className: 'wpb-scroll mono wpb-program-share-text' })
             ] }),
-            _jsxs('footer', { className: 'wpb-program-share-footer', children: [
+            _jsxs('footer', { className: 'wpb-ui-sheet-footer wpb-ui-sheet-footer-scroll wpb-program-share-footer', children: [
                 _jsx('p', { role: 'status', className: 'wpb-program-share-status', children: feedback?.state === 'pending'
                     ? 'Copying…' : feedback?.state === 'error'
                     ? 'Could not copy. Select the text above and copy it manually.'

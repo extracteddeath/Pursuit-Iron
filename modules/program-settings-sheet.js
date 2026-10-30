@@ -135,7 +135,7 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
                                 selected: !!cfgDraft?.noSupersets, onClick: () => setCfgDraft(d => ({ ...d, noSupersets: !d.noSupersets })) })] }),
                         _jsx('p', { className: 'wpb-program-settings-help', children: 'These choices are treated as firm program constraints. If a requested combination cannot be built safely, the rebuild is rejected instead of silently ignoring the setting.' })] })
                 ] }),
-                _jsxs("div", { className: "wpb-program-settings-footer", children: [
+                _jsxs("div", { className: "wpb-ui-sheet-footer wpb-ui-sheet-footer-scroll wpb-program-settings-footer", children: [
                     _jsx("button", { type: "button", onClick: onClose, className: "pressable wpb-program-settings-cancel", children: "Cancel" }),
                     _jsx("button", { type: "button", "aria-label": "Save program settings",
                         "aria-describedby": settingsIssues.length ? "program-settings-issues"

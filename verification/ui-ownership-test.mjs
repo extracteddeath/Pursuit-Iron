@@ -278,6 +278,36 @@ assert.ok(css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-vis
   css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-visible{outline-color:Highlight}'),
   'Shared keyboard and high contrast focus styles must remain available');
 
+
+/* Design-spec passes 31–33: common viewport and Program action dock ownership. */
+const uiSheetViewport=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
+assert.ok(uiSheetViewport.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'One Program panel viewport formula remains');
+for(const [cls,vh,gap] of [
+    ['wpb-program-settings-panel','88dvh','32px'],
+    ['wpb-program-share-panel','92dvh','32px'],
+    ['wpb-training-max-sheet','88dvh','24px'],
+    ['wpb-exercise-options-sheet','88dvh','32px']
+]){
+    const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+    assert.ok(local&&!local.includes('max-height:min(') &&
+        local.includes('--pi-ui-sheet-max-vh:'+vh),'Height variant remains distinct: '+cls);
+    if(gap!=='24px')assert.ok(local.includes('--pi-ui-sheet-top-gap:'+gap),'Safe-area gap preserved: '+cls);
+}
+const footerBase=css.split('#root .wpb .wpb-ui-sheet-footer{')[1]?.split('}')[0]||'';
+const footerScroll=css.split('#root .wpb .wpb-ui-sheet-footer-scroll{')[1]?.split('}')[0]||'';
+for(const prop of ['flex-shrink:0','border-top:1px solid var(--wpb-theme-border-soft)'])
+    assert.ok(footerBase.includes(prop),'Shared footer divider must retain '+prop);
+for(const prop of ['overflow-y:auto','padding:8px 18px calc(env(safe-area-inset-bottom) + 16px)','background:var(--wpb-theme-bg-tint)'])
+    assert.ok(footerScroll.includes(prop),'Scrollable footer must retain '+prop);
+for(const [src,name,scroll] of [[programSettings,'wpb-program-settings-footer',true],
+    [programShare,'wpb-program-share-footer',true],[trainingMaxes,'wpb-training-max-footer',false]]){
+    assert.ok(src.includes('wpb-ui-sheet-footer '+(scroll?'wpb-ui-sheet-footer-scroll ':'')+name),
+        'Sheet footer must consume shared owner: '+name);
+    const local=css.split('#root .wpb .'+name+'{')[1]?.split('}')[0]||'';
+    assert.ok(local&&!local.includes('flex-shrink:0')&&!local.includes('border-top:'),
+        'Feature footer may not duplicate divider/shrink: '+name);
+}
+
 // Five Program sheet H2 titles share semantic type and wrapped 200%-text
 // geometry; two compact variants keep their existing 1.3 line-height.
 const commonTitle=css.split('#root .wpb .wpb-ui-sheet-title{')[1]?.split('}')[0]||'';

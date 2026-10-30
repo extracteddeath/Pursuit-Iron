@@ -1172,7 +1172,6 @@ function StyleTag({ theme } = {}) {
         border-color:color-mix(in srgb,${C.accent} 58%,${C.border})!important;box-shadow:0 0 0 3px ${C.accentDim}!important;
       }
       .wpb-settings .wpb-segmented{padding:3px!important;gap:2px!important;border:1px solid ${C.borderSoft};border-radius:10px!important;background:${C.bg2}!important;}
-      .wpb-settings .wpb-segmented>button{min-height:36px!important;border-radius:8px!important;padding-top:7px!important;padding-bottom:7px!important;}
       .wpb-settings .wpb-settings-row--stack{align-items:stretch!important;}
       .wpb-settings .wpb-experience-segmented{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;width:100%!important;max-width:none!important;overflow:visible!important;}
       .wpb-settings .wpb-experience-segmented>button{min-width:0!important;width:100%!important;white-space:nowrap!important;}

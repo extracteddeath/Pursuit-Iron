@@ -1,6 +1,6 @@
-# Pursuit Iron — design-spec acceptance crosswalk (passes 50–110)
+# Pursuit Iron — design-spec acceptance crosswalk (passes 50–200)
 
-**Target authority:** Proposed [Design System & UX Specification v1.0.0](https://github.com/extracteddeath/Pursuit-Iron/blob/docs/pursuit-iron-design-spec-v1-20261029/docs/design/PURSUIT_IRON_DESIGN_SPEC_V1.md) (PR #415); existing `DESIGN_SYSTEM.md` and shipped Build 997 remain production owners until the spec itself is approved. **Do not infer certification from this crosswalk.**
+**Target authority:** Proposed [Design System & UX Specification v1.0.0](https://github.com/extracteddeath/Pursuit-Iron/blob/docs/pursuit-iron-design-spec-v1-20261029/docs/design/PURSUIT_IRON_DESIGN_SPEC_V1.md) (PR #415); existing `DESIGN_SYSTEM.md` and shipped Build 998 remain production owners until the proposed specification is approved. **Do not infer certification from this crosswalk.**
 
 | Design-spec requirement | Implemented improvement | Verification / evidence | Acceptance status |
 |---|---|---|---|
@@ -79,3 +79,52 @@
 - **109 (§§5.2,10):** The short-landscape override also exempts Workout Info; the responsive B993 browser test continues asserting real 320px and 200% text containment, modal focus trap, rest controls, Escape and focus restoration, with computed-height diagnostics on failure.
 - **110 (§§11–12):** Added an exact source contract for all five legacy ceiling exclusions, removed a redundant embedded stylesheet comment, and preserved the combined App/CSS debt ceiling. Release staging for PR #420 is explicitly gated on all eight draft UI jobs; never bump the build before that gate.
 - **Release decision:** These passes complete the ~50-pass batch from production Build 997 (design passes 50–110). Stage Build 998 only after exact-head eight-job success, then run full engine, release, offline/host integrity before merging. Physical Android remains a separate acceptance task; no hardware certification claimed.
+
+
+### Passes 111–118 — shared type ownership and safe dead-rule retirement
+- **111 (§§4.1,11.1):** Counted duplicate literal inline text-paint objects in the maintained `modules/App.js`, distinguishing fixed colors/type from genuinely dynamic load or state styling. Previous baseline at pass 110: 1,095 inline `style: {` objects, 2,027 app.css `!important`, 1,014 embedded `!important`.
+- **112 (§§4.1.1,4.1.3):** Replaced 19 identical faint separators and labels with a single reusable `wpb-type-faint` owner, reading the existing semantic palette rather than a hard-coded color.
+- **113 (§§4.1.3,6):** Replaced 13 repeated 13px muted support labels and 11 faint 11px captions with `wpb-type-support-muted` / `wpb-type-caption-faint`, including existing mono and attributed spans without losing their classes.
+- **114–115 (§§7.2,7.7,7.10):** Replaced nine repeated muted 13px section introductions and six 15px confirmation explanations with `wpb-type-section-intro` and `wpb-type-confirm-copy`. Copy, dialogs, actions, callbacks and render conditions are unchanged.
+- **116 (§11.2):** Removed two completely empty legacy expressive theme selectors (including one in the <350px breakpoint), which contributed no declarations.
+- **117 (§§5.2,8.2,11.1):** Removed an expressive tablet border-radius override identical to its unconditional owner, an unnecessary compact set-input gap duplicate, and a reduced-motion exercise-nav transition rule already owned by the earlier shared reduced-motion selector. The effective owner stays in place for each.
+- **118 (§§11.3,12):** Strengthened B983 source gate to protect the five new type roles, prevent reintroduction of the five original repeated inline styles, hold the new 1,037 inline-object ceiling and 2,024 app.css priority ceiling, and forbid the dead tiny-screen selector.
+- **Measured net:** 58 inline style objects removed (1,095→1,037, −5.3%); 3 stylesheet `!important` occurrences removed (2,027→2,024); maintained App.js shrank 524 characters and app.css shrank 33 characters; embedded `!important` unchanged at 1,014. This is a **source-level** design-spec consolidation, not a visual 14/14 acceptance or physical Android certification.
+- **Release boundary:** Changes are on a separate stacked candidate based on pass 110. Do not move these into Build 998's exact-head verification, and do not merge this child ahead of the Build 998 release identity. Rebase/resync after the parent release and run the full UI/engine/release/offline gates before Build 999. No engine, load progression, workout logs, storage or PR detection changes.
+
+
+### Passes 119–125 — fixed type roles selected by net debt reduction
+- **119 (§§4.1,11.2):** Re-audited the surviving repeated inline declarations after pass 118. Rejected low-value migrations where the newly invented selector would cost more code than the repeated inline styles saved; kept genuinely dynamic `eyebrow()` and button/action styling unchanged.
+- **120 (§§4.1.1,7.2):** Converted seven identical muted 13px/1.5-line-height body fragments into one semantic `wpb-type-body-muted` class; conditionals and data remain the same.
+- **121 (§§4.1.3,7.3):** Converted five 15px semibold workout/preview values and five 13px bold labels into existing-theme-ink type owners, preserving their `mono` classes and fixed metric widths.
+- **122 (§§5.2,7.7):** Converted five identical muted 12px secondary lines and five faint 11px/1.4 rhythm footnotes into shared `wpb-type-subline` and `wpb-type-footnote` owners, preserving the 2px/8px offsets.
+- **123 (§§7.2,7.10):** Converted four 13px/1.45 body-copy spans and three muted 13px/1.4 helper lines to `wpb-type-body` and `wpb-type-helper`. No interaction, keyboard, geometry, form, or training state changes.
+- **124 (§11.3):** Ratcheted the B983 `style: {` ceiling from 1,037 to **1,003**, forbade all seven prior repeated literal styles, and required all seven semantic CSS owners. Style migration is bounded by an exact 732-character block rather than permitting unbounded growth elsewhere in app.css.
+- **125 (§§12,13):** Continued the design-spec crosswalk with source metrics and release dependency; **34 further inline style objects retired**, reaching **92 removed since pass 110** (1,095 → 1,003). `app.css` has 2,024 `!important`, embedded App 1,014. B983's normalized legacy stylesheet ceiling of 637,454 characters remains unchanged, while the combined App/CSS legacy-debt ceiling tightens to 2,668,250.
+- **Verification boundary:** Source checks are instrumented; live browser/Android and 14/14 screen rubric remain necessary. Keep this draft batch independent of the generated Build 998 release identity until the parent is fully certified and published. No data, progression, logging, storage, engine or notification changes.
+
+
+### Passes 126–132 — one theme-owned primary confirmation action
+- **126 (§§4,6,11.1):** Reviewed six identical primary-dialog action style objects spanning Program Save, Regenerate, Workout timer reset and exit, and Cycle completion. All six use the same semantic accent foreground/background and identical fixed geometry.
+- **127–129 (§§4.1.4,5.2,6):** Replaced six literal 13px-padding / 12px-radius / accent-fill inline button styles with the shared `wpb-dialog-primary-action` class while retaining each button's existing `pressable` affordance and original `onClick`, icons, messages, conditions and confirmation logic. The shared class now ensures a 48px effective minimum hit height, with no new priority overrides.
+- **130 (§§10,11.1):** Kept fill/ink sourced from existing `--wpb-theme-accent` and `--wpb-theme-accent-text` rather than hardcoding a dark-mode contrast pair; retained inherited keyboard focus behavior.
+- **131–132 (§§11.3,12):** Strengthened B983 to enforce **exactly six** shared action uses, absence of the old 228-character inline action, bounded `B1004` CSS owner, no legacy CSS growth outside named type/button migration blocks, and a tighter **997 inline-object limit**. Cumulative pass-110→132: **98** fewer inline `style: {` objects, from 1,095 to 997; app.css `!important` from 2,027 to 2,024, embedded App priority still 1,014.
+- **Source-size outcome:** Relative to pass 125, `App.js` shrank 1,320 characters, app.css grew 395 for one shared owner: combined shipped sources **925 characters smaller**. Relative to pass 110, combined sources are approximately 1,757 characters smaller. This is source-level verification only: confirm visual/action behavior in Chromium at 320px / enlarged text and physical Android before release.
+- **Release boundary:** Build 998 is published; passes 111–132 remain on draft PR #421 toward the next approximately 50-pass release. No training engine, automatic progression, load fields, logger, history, program persistence or PR detection changes.
+
+
+## Passes 111–200 — shared ownership, correctness and candidate handoff
+
+**Scope:** This milestone records UI source consolidation, not a claim that every requirement of the proposed spec is satisfied. The two specification files are carried into this working branch from [PR #415](https://github.com/extracteddeath/Pursuit-Iron/pull/415) without promoting their *Proposed* status to final Android certification. Production remains Build 998 while a Build 999 candidate is prepared.
+
+| Spec principle | Verified source change | Evidence / release limitation |
+|---|---|---|
+| §§4–6,11: shared semantic styling | Passes 111–157 converted 161 fixed inline objects to shared typography, quiet actions, compare cards and confirmation styles (1,095 → 934). | B983 source budget, themed roles, browser shards on prior exact heads; no claim that all legacy inline geometry is gone |
+| §§6,7.3,8,10: understandable interaction | Passes 158–174 share meter/round controls and footnotes; round +/- controls now carry distinct spoken labels. | B983 guard and draft Chromium candidate; pre-existing 44px expanded hit zones still require physical-device review against proposed 48px preference |
+| §§4.2,5.2,7.3: contrasting user-selected themes | Passes 175–190 expose live danger foreground and dim tokens; destructive actions share them without changing delete callbacks. | CSS inherits computed palette, no new fixed hex; 20 themes, forced colors, large text and physical Android are separate gates |
+| §§7.3,11.2: avoid repetitive set coaching | Passes 191–200 verify per-set load-coaching banners and stale accept handler are absent; no automatic weight change; remove outdated source comment. | B951 progression/PR test verifies manual steppers remain, load advisory data stays separate from display |
+| §§12–14: honest readiness | Build identity/offline hashes must be regenerated and checked after source/browser checks; no public launch or 14/14 claim without actual Android/TalkBack/IME/backup acceptance. | Current changes remain draft until all release gates pass |
+
+**Milestone measured source state (pre-final release work):** 919 React `style: {` instances, 2,024 stylesheet `!important` declarations, both bounded by `verification/b983-cascade-debt-test.mjs`. These are debt ceilings, not endorsed layout outcomes. No training engine, PR math, history, logging persistence or program-dose changes were made during the consolidation.
+
+**Remaining release decisions:** preserve one authoritative design contract; evaluate the new candidate against all seven Chromium shards and independent engine audits; run responsive themes and enlarged text; then regenerate Build 999 source hashes, service worker/cache and manifests. Only ship if the exact candidate passes and there is no false progression/PR/weight increment behavior.

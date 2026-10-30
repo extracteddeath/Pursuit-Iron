@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 // B987: fixed visual geometry belongs to M3 theme-aware CSS, not React.
-// Keep numeric plate height and outcome colours dynamic and accessible.
+// Keep numeric plate height dynamic and calculated outcomes accessible; shared theme kickers are now CSS-owned.
 const app=fs.readFileSync('modules/App.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 const styleStart=css.indexOf('/* B987 —');
@@ -19,8 +19,8 @@ for(const name of ['rm-card','rm-field-label','rm-input','rm-summary','rm-plate'
 }
 assert.ok(!css.slice(css.indexOf('/* B987 —')).includes('!important'),
  'New CSS must use normal cascade, not priority overrides');
-assert.equal((calc.match(/style: \{/g)||[]).length,4,
- 'Only plate height and existing eyebrow options remain calculated or theme-tied');
+assert.equal((calc.match(/style: \{/g)||[]).length,1,
+ 'Only the measured plate-height presentation remains inline; kickers now use shared CSS');
 assert.ok(calc.includes('style: { height: 22 + (p / maxP) * 32 }'),'Plate height must still scale by plate value');
 assert.ok(calc.includes('font')===true&&calc.includes('round(rmAt(orm, n))'),
  'All 1RM and rep target calculations remain owned by the calculator');

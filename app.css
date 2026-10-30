@@ -438,13 +438,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* PI TYPOGRAPHY & COMPOSITION — the information architecture pass after the
    Build 831 motion layer. Components keep their existing content and training
    semantics; only page composition, labels, and surface pacing change. */
-#root[data-pi-motion="expressive"] .wpb{
-  
-  
-  
-  
-  
-}
 #root[data-pi-motion="expressive"] .wpb-home .wpb-home-hero>button>div:first-child{
   font-size:11px!important;
   font-weight:750!important;
@@ -641,10 +634,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb .wpb-settings .wpb-settings-jump-control:focus-within{
   border-color:var(--pi-m3-overlay-focus)!important;
   box-shadow:0 0 0 2px var(--pi-m3-overlay-tonal-pressed)!important;
-}
-@media(min-width:760px){
-  #root[data-pi-motion="expressive"] .wpb .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
-    border-radius:26px 26px 0 0!important;}
 }
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb .wpb-sheet-close{
@@ -2154,13 +2143,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Recent history has a distinct, quiet item rhythm, without adding padding
    to charts, overriding workouts, or changing displayed training statistics. */
 
-@media(max-width:350px){
-  #root[data-pi-motion="expressive"] .wpb{
-    
-    
-    
-  }
-}
 @media(prefers-reduced-motion:reduce){
   #root[data-pi-motion="expressive"] .wpb :is(.wpb-library-row,.wpb-settings-card>.wpb-settings-row,.wpb-settings-card>button,.wpb-history-session){
     transition:none!important;
@@ -7131,8 +7113,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 @media(max-width:420px){
   #root .wpb-workout .wpb-set-controls{column-gap:7px!important;}
-  #root .wpb-workout .wpb-set-controls>div:nth-child(3)>div:first-child,
-  #root .wpb-workout .wpb-set-controls>div:nth-child(4)>div:first-child{gap:5px!important;}
 }
 /* Below 380px, the established two-line adaptation gives each field a
    full-width track. Don't force inline columns and make the inputs microscopic. */
@@ -7320,9 +7300,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-effort-scale>button[aria-pressed="true"]{
   border-radius:10px!important;background:var(--wpb-theme-card)!important;
   color:var(--wpb-theme-text)!important;border-color:var(--wpb-theme-accent-ink)!important;
-}
-@media(prefers-reduced-motion:reduce){
-  #root .wpb-workout .wpb-ex-nav-step{transition:none!important;}
 }
 @media(forced-colors:active){
   #root .wpb-workout .wpb-ex-nav-step[aria-current="step"]{outline:2px solid Highlight;outline-offset:-3px;}
@@ -10103,3 +10080,57 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-session-notes-previous>strong{color:var(--wpb-theme-text)}
 
 #root .wpb-workout .wpb-workout-average-action{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-top:6px;padding:10px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);font-size:13px;font-weight:600;cursor:pointer}
+
+/* B1002 — shared quiet type roles across Program, Workout and Progress.
+   Theme paint stays with --wpb-theme-*; JSX no longer creates inline paint objects. */
+#root .wpb .wpb-type-faint{color:var(--wpb-theme-faint)}
+#root .wpb .wpb-type-support-muted{font-size:13px;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-type-caption-faint{font-size:11px;color:var(--wpb-theme-faint)}
+#root .wpb .wpb-type-section-intro{font-size:13px;color:var(--wpb-theme-muted);margin-bottom:12px}
+#root .wpb .wpb-type-confirm-copy{font-size:15px;color:var(--wpb-theme-muted);margin-bottom:16px;line-height:1.5}
+
+/* B1003 — shared fixed type roles without per-render inline paint. */
+#root .wpb .wpb-type-body-muted{font-size:13px;color:var(--wpb-theme-muted);line-height:1.5}
+#root .wpb .wpb-type-value{font-size:15px;font-weight:600;color:var(--wpb-theme-text)}
+#root .wpb .wpb-type-subline{font-size:12px;color:var(--wpb-theme-muted);margin-top:2px}
+#root .wpb .wpb-type-strong-label{font-size:13px;font-weight:700;color:var(--wpb-theme-text)}
+#root .wpb .wpb-type-footnote{font-size:11px;color:var(--wpb-theme-faint);margin-top:8px;line-height:1.4}
+#root .wpb .wpb-type-body{font-size:13px;color:var(--wpb-theme-text);line-height:1.45}
+#root .wpb .wpb-type-helper{font-size:13px;color:var(--wpb-theme-muted);margin-top:2px;line-height:1.4}
+
+/* B1004 — six confirmation CTAs share the existing theme and pressable action. */
+#root .wpb .wpb-dialog-primary-action{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-bottom:8px;padding:13px;border:0;border-radius:12px;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-weight:700;cursor:pointer}
+/* B1005 — shared section kickers, compact actions and card badges. */
+#root .wpb :is(.wpb-ey,.wpb-ey6,.wpb-ey8,.wpb-eya,.wpb-eya8){font-size:var(--pi-type-caption);font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+#root .wpb :is(.wpb-ey,.wpb-ey6,.wpb-ey8){color:var(--wpb-theme-faint)}
+#root .wpb :is(.wpb-eya,.wpb-eya8){color:var(--wpb-theme-accent-ink)}
+#root .wpb :is(.wpb-ey8,.wpb-eya8){margin-bottom:8px}
+#root .wpb .wpb-ey6{margin-bottom:6px}
+#root .wpb .wpb-square-accent{width:34px;height:34px;border-radius:8px;background:var(--wpb-theme-accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#root .wpb .wpb-close-quiet{background:none;border:0;color:var(--wpb-theme-muted);cursor:pointer;padding:4px}
+#root .wpb .wpb-save-compact{width:100%;padding:13px;border-radius:12px;border:0;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-size:var(--pi-type-body);font-weight:700;cursor:pointer}
+#root .wpb .wpb-preview-meta{font-size:var(--pi-type-support);color:var(--wpb-theme-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#root .wpb .wpb-preview-kicker{font-size:var(--pi-type-support);font-weight:700;letter-spacing:1.2px;color:var(--wpb-theme-accent-ink);text-transform:uppercase}
+/* B1006 — reusable comparison panels and quiet controls. */
+#root .wpb :is(.wpb-quiet-faint,.wpb-quiet-back){background:none;border:0;cursor:pointer}
+#root .wpb .wpb-quiet-faint{color:var(--wpb-theme-faint);padding:2px}
+#root .wpb .wpb-quiet-back{color:var(--wpb-theme-text);padding:4px}
+#root .wpb :is(.wpb-compare-panel,.wpb-compact-card,.wpb-compare-cue,.wpb-split-choices){background:var(--wpb-theme-card)}
+#root .wpb .wpb-compare-panel{border-radius:16px;padding:4px 15px 13px;margin-bottom:16px}
+#root .wpb :is(.wpb-compact-card,.wpb-compare-cue,.wpb-split-choices){border-radius:12px}
+#root .wpb .wpb-compact-card{padding:10px 12px}
+#root .wpb .wpb-compare-cue{padding:11px 13px}
+#root .wpb .wpb-split-choices{display:flex;padding:2px}
+#root .wpb .wpb-review-inset{margin-bottom:12px;background:var(--wpb-theme-bg-tint);border-radius:12px;padding:12px 13px}
+#root .wpb .wpb-type-micro-faint{font-size:var(--pi-type-caption);color:var(--wpb-theme-faint);font-weight:600}
+/* B1007 — round steps, meter tracks and comparison notes. */
+#root .wpb .wpb-round-step{width:28px;height:28px;border-radius:8px;border:0;background:none;color:var(--wpb-theme-muted);cursor:pointer;font-size:var(--pi-type-body);font-weight:700;line-height:1}
+#root .wpb :is(.wpb-meter,.wpb-meter-grow){height:6px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden}
+#root .wpb .wpb-meter-grow{flex:1}
+#root .wpb :is(.wpb-compare-note,.wpb-quiet-note){font-size:var(--pi-type-caption);color:var(--wpb-theme-faint)}
+#root .wpb .wpb-compare-note{margin-top:16px;line-height:1.5;padding:0 2px}
+#root .wpb .wpb-quiet-note{margin-top:12px;line-height:1.45;font-style:italic}
+/* B1008 — unified destructive actions and theme-safe danger emblems. */
+#root .wpb .wpb-dialog-danger{box-sizing:border-box;width:100%;min-height:48px;padding:13px;border-radius:12px;border:0;background:var(--wpb-theme-danger);color:var(--wpb-theme-on-danger);font-weight:700;cursor:pointer;margin-bottom:8px}
+#root .wpb .wpb-dialog-danger-flex{display:flex;align-items:center;justify-content:center;gap:6px}
+#root .wpb .wpb-danger-emblem{width:38px;height:38px;border-radius:12px;background:var(--wpb-theme-danger-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}

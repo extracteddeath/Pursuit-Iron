@@ -322,8 +322,11 @@ console.log('PASS B1003 skipped-middle: logger, history, LAST, progression and W
             {w:195,r:6,rir:2,rirReported:true,workingSetIndex:2,done:true}
         ]}}};
     const analysis=analyzeShellHistoryForNextEngine(squatProgram,[sparse],EXERCISES);
+    const { resolveNextShellExerciseId } = await import('../modules/next-engine/app-shell-adapter.js');
+    const engineId=resolveNextShellExerciseId(squatProgram,squatDay,0,EX_BY_ID['back-squat']);
+    assert.ok(engineId,'Generated movement id must resolve before checking sparse-set replay');
     assert.deepEqual(analysis.workouts[0].performedSets
-        .filter(set=>set.exerciseId==='back-squat').map(set=>set.setIndex),[0,2],
+        .filter(set=>set.exerciseId===engineId).map(set=>set.setIndex),[0,2],
         'Generated adapter must preserve original ordinals for sparse working sets');
     const advice=nextWorkoutSuggestionForShell(squatProgram,[sparse],EXERCISES,squatDay,0,1,'lb');
     assert.notEqual(advice.action,'increase_load');

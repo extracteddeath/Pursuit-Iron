@@ -123,7 +123,7 @@ for(const [role,count,old] of b1005Roles){
 }
 
 /* B1006: style roles must be preserved without restoring fixed inline objects. */
-const b1006Roles=[["wpb-quiet-faint",3,"style: { background: \"none\", border: \"none\", color: C.faint, cursor: \"pointer\", padding: 2 }"],["wpb-quiet-back",2,"style: { background: \"none\", border: \"none\", color: C.text, cursor: \"pointer\", padding: 4 }"],["wpb-compare-panel",2,"style: { background: C.card, borderRadius: 16, padding: \"4px 15px 13px\", marginBottom: 16 }"],["wpb-compact-card",3,"style: { padding: \"10px 12px\", borderRadius: 12, background: C.card }"],["wpb-compare-cue",2,"style: { background: C.card, borderRadius: 12, padding: \"11px 13px\" }"],["wpb-split-choices",2,"style: { display: \"flex\", background: C.card, borderRadius: 12, padding: 2 }"],["wpb-review-inset",2,"style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: \"12px 13px\" }"],["wpb-type-micro-faint",5,"style: { fontSize: 11, color: C.faint, fontWeight: 600 }"]];
+const b1006Roles=[["wpb-quiet-faint",3,"style: { background: \"none\", border: \"none\", color: C.faint, cursor: \"pointer\", padding: 2 }"],["wpb-quiet-back",2,"style: { background: \"none\", border: \"none\", color: C.text, cursor: \"pointer\", padding: 4 }"],["wpb-compare-panel",2,"style: { background: C.card, borderRadius: 16, padding: \"4px 15px 13px\", marginBottom: 16 }"],["wpb-compact-card",3,"style: { padding: \"10px 12px\", borderRadius: 12, background: C.card }"],["wpb-compare-cue",2,"style: { background: C.card, borderRadius: 12, padding: \"11px 13px\" }"],["wpb-split-choices",2,"style: { display: \"flex\", background: C.card, borderRadius: 12, padding: 2 }"],["wpb-review-inset",2,"style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: \"12px 13px\" }"],["wpb-type-micro-faint",8,"style: { fontSize: 11, color: C.faint, fontWeight: 600 }"]];
 for(const [role,count,old] of b1006Roles){
   assert.ok(css.includes('.'+role),'B1006 owner missing: '+role);
   assert.equal((app.match(new RegExp('\\b'+role+'\\b','g'))||[]).length,count,
@@ -236,7 +236,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-strong",
-    8,
+    12,
     "style: { fontSize: 15, fontWeight: 700, color: C.text }"
   ],
   [
@@ -256,22 +256,22 @@ const b1009Contract=[
   ],
   [
     "pi-t-muted-600",
-    7,
+    11,
     "style: { color: C.muted, fontWeight: 600 }"
   ],
   [
     "pi-t-text-600",
-    5,
+    7,
     "style: { color: C.text, fontWeight: 600 }"
   ],
   [
     "pi-t-text-700",
-    6,
+    9,
     "style: { color: C.text, fontWeight: 700 }"
   ],
   [
     "pi-t-caption-muted",
-    10,
+    17,
     "style: { fontSize: 11, color: C.muted }"
   ],
   [

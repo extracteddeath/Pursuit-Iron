@@ -10111,3 +10111,15 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-save-compact{width:100%;padding:13px;border-radius:12px;border:0;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-size:var(--pi-type-body);font-weight:700;cursor:pointer}
 #root .wpb .wpb-preview-meta{font-size:var(--pi-type-support);color:var(--wpb-theme-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 #root .wpb .wpb-preview-kicker{font-size:var(--pi-type-support);font-weight:700;letter-spacing:1.2px;color:var(--wpb-theme-accent-ink);text-transform:uppercase}
+/* B1006 — reusable comparison panels and quiet controls. */
+#root .wpb :is(.wpb-quiet-faint,.wpb-quiet-back){background:none;border:0;cursor:pointer}
+#root .wpb .wpb-quiet-faint{color:var(--wpb-theme-faint);padding:2px}
+#root .wpb .wpb-quiet-back{color:var(--wpb-theme-text);padding:4px}
+#root .wpb :is(.wpb-compare-panel,.wpb-compact-card,.wpb-compare-cue,.wpb-split-choices){background:var(--wpb-theme-card)}
+#root .wpb .wpb-compare-panel{border-radius:16px;padding:4px 15px 13px;margin-bottom:16px}
+#root .wpb :is(.wpb-compact-card,.wpb-compare-cue,.wpb-split-choices){border-radius:12px}
+#root .wpb .wpb-compact-card{padding:10px 12px}
+#root .wpb .wpb-compare-cue{padding:11px 13px}
+#root .wpb .wpb-split-choices{display:flex;padding:2px}
+#root .wpb .wpb-review-inset{margin-bottom:12px;background:var(--wpb-theme-bg-tint);border-radius:12px;padding:12px 13px}
+#root .wpb .wpb-type-micro-faint{font-size:var(--pi-type-caption);color:var(--wpb-theme-faint);font-weight:600}

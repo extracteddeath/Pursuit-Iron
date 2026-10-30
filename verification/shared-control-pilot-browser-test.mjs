@@ -63,7 +63,9 @@ try{
   const weeks='[aria-label="Block length in weeks"]';
   // Use real keys so React receives the raw invalid draft; never mutate input.value manually.
   await page.click(weeks);
-  await page.keyboard.press('Control+A');
+  await page.keyboard.down('Control');
+  await page.keyboard.press('a');
+  await page.keyboard.up('Control');
   await page.keyboard.press('Backspace');
   await page.waitForFunction(()=>document.querySelector('[aria-label="Block length in weeks"]')?.getAttribute('aria-invalid')==='true');
   assert.equal(await page.$eval('.wpb-program-settings-save',el=>el.disabled),true,'Invalid raw weeks cannot save');

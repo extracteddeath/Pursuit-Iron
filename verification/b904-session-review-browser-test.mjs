@@ -80,23 +80,20 @@ try{
    await page.click('.wpb-plan-change-banner[aria-label^="Review "]');await page.click('[aria-label="Keep previous load for Barbell Bench Press"]');await page.waitForSelector('[aria-label="Use recommended load for Barbell Bench Press"]');await page.keyboard.press('Escape');
    await clickText('20 min');await page.waitForSelector('[data-testid="session-length-summary"]');
    const shortenedBanner=await page.$('.wpb-plan-change-banner[aria-label^="Review "]');
-   if(!shortenedBanner){
-    const evidence=await page.evaluate(()=>{
-     const store=JSON.parse(localStorage.getItem('wpb:v1')||'null');
-     return {
-      preview:document.querySelector('.wpb-next-workout-view')?.innerText.slice(0,700),
-      savedChoices:store?.saved?.[0]?.sessionPlanChoices,
-      planSummary:document.querySelector('[data-testid="session-length-summary"]')?.innerText,
-      game:document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText,
-      panel:document.querySelector('.wpb-plan-change-banner')?.outerHTML || null
-     };
-    });
-    throw new Error('Shortened workout lost its previously held plan choice: '+JSON.stringify(evidence));
-   }
-   await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
-   assert.equal(await page.$('[data-plan-change="bb-row"]'),null,'rep-only changes cannot be undone even in shortened workouts');
-   await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[aria-label="Plan changes"]'));
-   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/,'shortening retains normal row progression');
+   const shortState=await page.evaluate(()=>{
+    const saved=JSON.parse(localStorage.getItem('wpb:v1')||'null');
+    return { choice:saved?.saved?.[0]?.sessionPlanChoices?.['upper:0:bb-bench'],
+      bench:document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText,
+      row:document.querySelector('[data-game-plan-exercise="bb-row"]')?.innerText };
+   });
+   assert.ok(shortState.choice?.key,
+    'Shortening must preserve the previously approved load decision in saved program state');
+   assert.equal(shortenedBanner,null,
+    'A 3-set history cannot earn a new 2-set shortened-session load; no pending change means no review');
+   assert.match(shortState.bench,/80 kg × 8/,
+    'The shorter plan holds the previously trained load without inventing a new increase');
+   assert.match(shortState.row,/90 kg × 9/,
+    'Shortening retains ordinary row progression');
    await clickText('Full');
    await clickText('Start workout');await page.waitForSelector('.wpb-workout');await clickText('Skip');
    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.data?.some(r=>r.id==='bb-bench'));

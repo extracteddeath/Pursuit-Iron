@@ -125,7 +125,7 @@ assert.ok(css.includes('.wpb-review-inset{margin-bottom:12px;background:var(--wp
 const b1007Roles=[["wpb-round-step",2,"style: { width: 28, height: 28, borderRadius: 8, border: \"none\", background: \"none\", color: C.muted, cursor: \"pointer\", fontSize: 15, fontWeight: 700, lineHeight: 1 }"],["wpb-meter",2,"style: { height: 6, borderRadius: 999, background: C.bg2, overflow: \"hidden\" }"],["wpb-meter-grow",2,"style: { flex: 1, height: 6, borderRadius: 999, background: C.bg2, overflow: \"hidden\" }"],["wpb-compare-note",2,"style: { fontSize: 11, color: C.faint, marginTop: 16, lineHeight: 1.5, padding: \"0 2px\" }"],["wpb-quiet-note",2,"style: { fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.45, fontStyle: \"italic\" }"]];
 for(const [role,n,old] of b1007Roles){
   assert.ok(css.includes('.'+role),'Missing B1007 palette owner '+role);
-  assert.equal((app.match(new RegExp('\\b'+role+'\\b','g'))||[]).length,n,'B1007 use count '+role);
+  assert.equal((app.match(new RegExp('className: "(?:[^"]* )?'+role+'(?= |")','g'))||[]).length,n,'B1007 complete class use count '+role);
   assert.ok(!app.includes(old),'Retired B1007 fixed presentation must stay retired: '+role);
 }
 for(const label of ['Decrease rounds','Increase rounds'])

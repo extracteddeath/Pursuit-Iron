@@ -6921,7 +6921,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   padding:0 10px;gap:4px;border:1px solid;
   border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;
 }
-#root .wpb-workout .wpb-exercise-head-actions>button:focus-visible{
+#root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,
+#root .wpb-workout .wpb-workout-pinned-note:focus-visible,
+#root .wpb-workout .wpb-workout-exercise-link:focus-visible,
+#root .wpb-workout .wpb-rest-actions>.wpb-rest-action:focus-visible{
   outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;
 }
 #root .wpb-workout .wpb-workout-tools{
@@ -9468,10 +9471,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   -webkit-box-orient:vertical;
   white-space:pre-wrap;
 }
-#root .wpb-workout .wpb-workout-pinned-note:focus-visible{
-  outline:2px solid var(--wpb-theme-accent-ink);
-  outline-offset:2px;
-}
+
 @media(forced-colors:active){
   #root .wpb-workout .wpb-workout-tools .wpb-workout-tool[data-has-note="true"]::after{
     background:Highlight;
@@ -9539,10 +9539,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   text-decoration:underline;
   text-underline-offset:3px;
 }
-#root .wpb-workout .wpb-workout-exercise-link:focus-visible{
-  outline:2px solid var(--wpb-theme-accent-ink);
-  outline-offset:2px;
-}
+
 #root .wpb-workout .wpb-workout-day-note{
   display:flex;
   align-items:flex-start;
@@ -9911,9 +9908,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:var(--wpb-theme-card);color:var(--wpb-theme-text);
   font-size:13px;font-weight:600;cursor:pointer;
 }
-#root .wpb-workout .wpb-rest-actions>.wpb-rest-action:focus-visible{
-  outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;
-}
+
 @media(forced-colors:active){
   #root .wpb-workout .wpb-rest-actions>.wpb-rest-action{border-color:ButtonText;color:ButtonText;background:ButtonFace;}
   #root .wpb-workout .wpb-rest-card[data-paused="true"],

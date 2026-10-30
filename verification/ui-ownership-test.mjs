@@ -81,6 +81,19 @@ for (const selector of ['#root .wpb-workout .wpb-workout-tools .wpb-workout-tool
         'Workout/Rest-specific style must not re-own common icon geometry: '+selector);
 }
 
+// Four Workout actions share a theme-aware keyboard ring without selector-specificity inflation.
+const focusGroup = css.split('#root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,')[1]?.split('}')[0] || '';
+for (const selector of ['.wpb-workout-pinned-note:focus-visible,',
+    '.wpb-workout-exercise-link:focus-visible,',
+    '.wpb-rest-actions>.wpb-rest-action:focus-visible{'])
+    assert.ok(focusGroup.includes(selector), 'Workout focus group missing: '+selector);
+assert.ok(focusGroup.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;'),
+    'Shared Workout keyboard ring must remain visible and theme-aware');
+for(const selector of ['.wpb-workout-pinned-note:focus-visible{',
+    '.wpb-workout-exercise-link:focus-visible{'])
+    assert.ok(!css.includes('#root .wpb-workout '+selector),
+        'No standalone Workout focus geometry: '+selector);
+
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
 function repeatedImportantDeclarations(source) {

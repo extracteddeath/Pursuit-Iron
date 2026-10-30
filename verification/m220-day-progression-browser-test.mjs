@@ -37,17 +37,17 @@ try {
     // working load across all three rows; the UI must show the matching raw LAST.
     await open('?rear');
     const rearWork='[data-testid^="set-0-"][data-warm="0"][data-sub="0"]';
-    const rearWeights=await page.$eval(`${rearWork} input[aria-label="weight"]`, nodes=>nodes.map(node=>node.value));
-    const rearReps=await page.$eval(`${rearWork} input[aria-label="reps"]`, nodes=>nodes.map(node=>node.value));
+    const rearWeights=await page.$$eval(`${rearWork} input[aria-label="weight"]`, nodes=>nodes.map(node=>node.value));
+    const rearReps=await page.$$eval(`${rearWork} input[aria-label="reps"]`, nodes=>nodes.map(node=>node.value));
     assert.deepEqual(rearWeights,['60','60','60'],'B1002: last 60x20 cannot prefill 55x21 on the third set');
     assert.deepEqual(rearReps,['21','21','21'],'B1002: rep-only advance remains inside planned rep range');
     await page.click('button[aria-label="Show previous workout values"]');
-    const rearLast=await page.$eval(rearWork, nodes=>nodes.map(node=>node.textContent));
+    const rearLast=await page.$$eval(rearWork, nodes=>nodes.map(node=>node.textContent));
     assert.equal(rearLast.length,3);
     for(const row of rearLast)assert.match(row,/60×20/,'visible LAST must match the same three history rows');
     await page.screenshot({path:path.join(root,'verification/b1002-rear-fly-phone.png')});
     await open('?rear&resume');
-    assert.deepEqual(await page.$eval(`${rearWork} input[aria-label="weight"]`,nodes=>nodes.map(node=>node.value)),
+    assert.deepEqual(await page.$$eval(`${rearWork} input[aria-label="weight"]`,nodes=>nodes.map(node=>node.value)),
         ['60','60','60'],'B1002: resume repairs a stale automatic third-set 55 lb without touching manual work');
     assert.deepEqual((await savedWorkSets()).map(row=>row.weight),['60','60','60'],
         'Reconciled automatic loads survive persistence and no longer revive the old 55 lb');

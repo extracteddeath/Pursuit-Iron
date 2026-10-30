@@ -136,6 +136,10 @@ try{
    assert.match(await page.$eval('[data-game-plan-exercise="bb-row"] details>p',n=>n.innerText),
     /Different set counts cannot earn an automatic load change/,
     'Full progression safety explanation remains available on demand');
+   // Return the disclosure to its original collapsed state before testing
+   // Full/Short session target previews; open details intentionally hides them.
+   await page.click('[data-game-plan-exercise="bb-row"] summary');
+   assert.equal(await page.$eval('[data-game-plan-exercise="bb-row"] details',n=>n.open),false);
    await clickText('Full');
    await page.waitForFunction(()=>{
     const row=document.querySelector('[data-game-plan-exercise="bb-row"]')?.innerText||'';

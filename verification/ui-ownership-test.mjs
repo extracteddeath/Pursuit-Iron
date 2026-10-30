@@ -395,11 +395,11 @@ assert.ok(workoutFlex.includes('#root .wpb-workout .wpb-warmup-step{display:flex
     css.split('#root .wpb-workout .wpb-warmup-step{').length===2,
     'Workout Focus title and warmup row must have one shared geometry owner');
 const workoutFocus=css.split('#root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,')[1]?.split('}')[0]||'';
-for(const role of ['.wpb-b973-set-close','.wpb-b973-coach-collapsed','.wpb-b973-coach-toggle','.wpb-load-advice>button'])
+for(const role of ['.wpb-b973-set-close','.wpb-b973-coach-collapsed','.wpb-b973-coach-toggle'])
   assert.ok(workoutFocus.includes(role),'Workout shared focus ring missing '+role);
 assert.ok(workoutFocus.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;') &&
     css.includes(':is(.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible{outline-color:Highlight}') &&
-    css.split('#root .wpb-workout .wpb-load-advice>button:focus-visible{').length===2,
+    !css.includes('.wpb-load-advice>button:focus-visible{'),
     'Workout Coach and set editor require a visible forced-colors focus ring');
 assert.ok(css.includes('.wpb-set-option-row:focus-visible{outline:2px solid var(--pi-m3e-primary)!important;outline-offset:2px!important;') &&
     css.includes('#root .wpb-workout .wpb-set-controls [data-reference-action]:focus-visible,'),

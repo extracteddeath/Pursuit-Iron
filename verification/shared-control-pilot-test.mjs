@@ -40,7 +40,7 @@ assert.ok(program.includes("import { UiAction, UiChoice, UiSheetClose }"));
 assert.ok(program.includes('_jsx(UiAction, { variant: "tonal", onClick: onClose, className: "wpb-program-settings-cancel"'));
 assert.ok(program.includes('_jsx(UiAction, { variant: "primary", "aria-label": "Save program settings"'));
 assert.ok(program.includes('onClick: applyCfgDraft, disabled: !canApply'));
-assert.ok(program.includes('if (e.key === "Enter") e.currentTarget.blur()')&&program.includes('role: "alert"'),
+assert.ok(program.includes('if (e.key === "Enter") e.currentTarget.blur()')&&program.includes("role:'alert'"),
   'Numeric draft validation and error announcements must stay intact');
 assert.ok(program.includes('ref: attachPanel')&&program.includes('onKeyDown: onPanelKeyDown'),
   'Shared Program Settings action must not interfere with focus trapping');

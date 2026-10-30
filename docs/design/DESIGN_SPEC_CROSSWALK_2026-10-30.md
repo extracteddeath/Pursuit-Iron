@@ -128,3 +128,12 @@
 **Milestone measured source state (pre-final release work):** 919 React `style: {` instances, 2,024 stylesheet `!important` declarations, both bounded by `verification/b983-cascade-debt-test.mjs`. These are debt ceilings, not endorsed layout outcomes. No training engine, PR math, history, logging persistence or program-dose changes were made during the consolidation.
 
 **Remaining release decisions:** preserve one authoritative design contract; evaluate the new candidate against all seven Chromium shards and independent engine audits; run responsive themes and enlarged text; then regenerate Build 999 source hashes, service worker/cache and manifests. Only ship if the exact candidate passes and there is no false progression/PR/weight increment behavior.
+
+
+## Design-spec passes 201–219 — bounded shared text-paint roles (draft)
+
+- **201–216 (§§4.1.1,4.1.3,11.1):** Converted **45** repeated fixed JSX text-paint objects across Home, Program, Workout, Progress and Settings to **16 shared semantic type roles**. This includes summary labels, compact metadata, captions, comparison emphasis, chart labels and small form labels. Existing label content, class names, callbacks, user entry fields, training state and notification conditions remain untouched. Dynamic data-driven styling remains inline.
+- **217 (§§4.1.1,5.2):** Shared CSS uses the saved-theme `--wpb-theme-*` foreground roles and `--pi-type-*` sizing roles. Common declarations are grouped in one small B1009 owner rather than adding repeated selectors or any `!important`.
+- **218 (§§11.3,12):** B983 now enforces exact class-use counts, no retired inline objects, <=874 inline style object ceiling, <=2024 stylesheet priority declarations, and a compact 1500-character B1009 owner. The legacy CSS-size ceiling is not relaxed. The combined normalized source budget tightens by 1,002 characters (2,661,215 → 2,660,213).
+- **219 (§§12–14):** Draft source-only milestone pending exact-head integration tests, seven Chromium shards, 320px/200% text/theme/IME and physical Android inspection. Build 999 remains live; no Build 1000 identity or PR merge is authorized by this source change alone.
+- **Measured at authoring:** inline styles **919 → 874**; app.css `!important` **2024 → 2024**; App.js 2,023,868 → 2,022,866 characters, app.css 642,587 → 643,980 characters; combined source change **+391 characters**. Semantic paint is now shared; no training, persistence, PR logic, backup, engine version or deployed release modification.

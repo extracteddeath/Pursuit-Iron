@@ -30,6 +30,8 @@ assert.ok(primitives.includes('export function UiSegmented(') &&
  'Shared native button role preserves exclusive aria-pressed and callback');
 assert.ok(css.includes('.wpb .wpb-settings .wpb-segmented>button{display:flex;align-items:center;justify-content:center;min-width:48px;min-height:48px;'),
  'Existing Settings segmented geometry remains unchanged');
+assert.equal((settings.match(/_jsx\("div", \{ className: "wpb-segmented/g)||[]).length,0,
+ 'Settings must not keep six parallel markup/selection implementations');
 assert.equal((css.match(/!important/g)||[]).length,2024,'No CSS priority expansion');
 assert.ok((app.match(/style: \{/g)||[]).length<=869,'No inline style debt expansion');
 console.log('PASS shared Settings segmented controls: six value writers, UI role, 48px hit and no CSS debt growth.');

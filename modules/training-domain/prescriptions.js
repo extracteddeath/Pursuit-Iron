@@ -1243,6 +1243,38 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
     return rows;
 }
 
+/** Inspect the actual loggable rows, not a separately constructed evaluator fixture.
+ * Release harnesses can require zero violations for every exercised workout slot.
+ * Return diagnostics rather than throwing during a live workout. Legacy saved rows
+ * without this new trace remain compatible and are not invented retroactively. */
+export function auditSetDecisionTraces(rows) {
+    if (!Array.isArray(rows)) return [{ code:'invalid_workout_rows' }];
+    const violations = [];
+    for (const [index, row] of rows.entries()) {
+        if (!row || row.warm || row.sub) continue;
+        const trace = row.target?.decisionTrace;
+        if (!trace) continue; // Legacy saved workouts predate this diagnostic schema.
+        if (trace.schemaVersion !== 1 || trace.workingSetIndex !== rows.slice(0, index)
+            .filter(other => other && !other.warm && !other.sub).length) {
+            violations.push({ index, code:'working_position_mismatch' });
+            continue;
+        }
+        const load = Number(row.target?.w);
+        const reps = Number(row.target?.prefillReps);
+        if (Number.isFinite(load) && trace.target?.load !== load
+            || Number.isFinite(reps) && trace.target?.reps !== reps)
+            violations.push({ index, code:'display_target_diverges_from_trace' });
+        const action = trace.evaluation?.action;
+        const priorLoad = trace.source?.load, nextLoad = trace.target?.load;
+        if (['add_reps','hold','hold_load'].includes(action)
+            && Number.isFinite(priorLoad) && priorLoad > 0
+            && Number.isFinite(nextLoad) && Math.abs(nextLoad - priorLoad) > 1e-6)
+            violations.push({ index, code:'unearned_load_change',
+                priorLoad, nextLoad, action });
+    }
+    return violations;
+}
+
 function loggedExercisePerformance(program, day, e, weekIndex, unit, perf, history) {
     // A session-only replacement does not represent a comparable exposure for the
     // programmed slot, but the other lifts in this workout are still comparable.

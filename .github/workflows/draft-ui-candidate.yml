@@ -57,6 +57,14 @@ jobs:
         env:
           CHROME_BIN: /usr/bin/google-chrome
         run: node scripts/verify-browser-contracts.mjs ${{ matrix.shard }}
+      - name: Preserve responsive visual evidence for review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: draft-ui-visual-${{ matrix.shard }}-${{ github.event.pull_request.number }}
+          path: verification/*.png
+          if-no-files-found: ignore
+          retention-days: 7
 
   stage-monotonic-build:
     # A single release identity is generated ONLY after all seven Chromium

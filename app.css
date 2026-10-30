@@ -10123,3 +10123,10 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-split-choices{display:flex;padding:2px}
 #root .wpb .wpb-review-inset{margin-bottom:12px;background:var(--wpb-theme-bg-tint);border-radius:12px;padding:12px 13px}
 #root .wpb .wpb-type-micro-faint{font-size:var(--pi-type-caption);color:var(--wpb-theme-faint);font-weight:600}
+/* B1007 — round steps, meter tracks and comparison notes. */
+#root .wpb .wpb-round-step{width:28px;height:28px;border-radius:8px;border:0;background:none;color:var(--wpb-theme-muted);cursor:pointer;font-size:var(--pi-type-body);font-weight:700;line-height:1}
+#root .wpb :is(.wpb-meter,.wpb-meter-grow){height:6px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden}
+#root .wpb .wpb-meter-grow{flex:1}
+#root .wpb :is(.wpb-compare-note,.wpb-quiet-note){font-size:var(--pi-type-caption);color:var(--wpb-theme-faint)}
+#root .wpb .wpb-compare-note{margin-top:16px;line-height:1.5;padding:0 2px}
+#root .wpb .wpb-quiet-note{margin-top:12px;line-height:1.45;font-style:italic}

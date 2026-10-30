@@ -59,7 +59,11 @@ const b1004SharedButtonRules=css.slice(b1004Start,b1005Start);
 const b1006Start=css.indexOf('/* B1006 — reusable comparison panels');
 assert.ok(b1006Start>b1005Start,'B1006 shared component owner must follow B1005');
 const b1005SharedRules=css.slice(b1005Start,b1006Start);
-const b1006SharedRules=css.slice(b1006Start);
+const b1007Start=css.indexOf('/* B1007 — round steps');
+assert.ok(b1007Start>b1006Start,'B1007 shared owners must follow B1006');
+const b1006SharedRules=css.slice(b1006Start,b1007Start);
+const b1007SharedRules=css.slice(b1007Start);
+assert.ok(b1007SharedRules.length<=690,'B1007 presentation owner must remain compact');
 assert.ok(b1006SharedRules.length<=978,'B1006 CSS must remain compact');
 assert.ok(b1005SharedRules.length<=1288,'B1005 rules must remain compact');
 assert.ok(b1004SharedButtonRules.length<=394,'B1004 shared button must not grow');
@@ -72,14 +76,14 @@ for(const role of b1003RoleNames)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Missing B1003 type owner '+role);
 for(const old of ["style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }","style: { fontSize: 15, fontWeight: 600, color: C.text }","style: { fontSize: 12, color: C.muted, marginTop: 2 }","style: { fontSize: 13, fontWeight: 700, color: C.text }","style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }","style: { fontSize: 13, color: C.text, lineHeight: 1.45 }","style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }"])
   assert.ok(!app.includes(old),'Old inline type object restored: '+old);
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').length<=637454,
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
-assert.ok((app.match(/style: \{/g)||[]).length<=934,
+assert.ok((app.match(/style: \{/g)||[]).length<=924,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').length<=2662700,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').length<=2661926,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.
@@ -116,4 +120,15 @@ for(const [role,count,old] of b1006Roles){
 }
 assert.ok(css.includes('.wpb-review-inset{margin-bottom:12px;background:var(--wpb-theme-bg-tint)'),
   'B1006 inset surface must use the exact mapped theme token');
+
+/* B1007: semantically labelled round adjustment and shared meter/footnote roles. */
+const b1007Roles=[["wpb-round-step",2,"style: { width: 28, height: 28, borderRadius: 8, border: \"none\", background: \"none\", color: C.muted, cursor: \"pointer\", fontSize: 15, fontWeight: 700, lineHeight: 1 }"],["wpb-meter",2,"style: { height: 6, borderRadius: 999, background: C.bg2, overflow: \"hidden\" }"],["wpb-meter-grow",2,"style: { flex: 1, height: 6, borderRadius: 999, background: C.bg2, overflow: \"hidden\" }"],["wpb-compare-note",2,"style: { fontSize: 11, color: C.faint, marginTop: 16, lineHeight: 1.5, padding: \"0 2px\" }"],["wpb-quiet-note",2,"style: { fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.45, fontStyle: \"italic\" }"]];
+for(const [role,n,old] of b1007Roles){
+  assert.ok(css.includes('.'+role),'Missing B1007 palette owner '+role);
+  assert.equal((app.match(new RegExp('\\b'+role+'\\b','g'))||[]).length,n,'B1007 use count '+role);
+  assert.ok(!app.includes(old),'Retired B1007 fixed presentation must stay retired: '+role);
+}
+for(const label of ['Decrease rounds','Increase rounds'])
+  assert.equal((app.match(new RegExp('"aria-label": "'+label+'"','g'))||[]).length,1,
+    'Round adjustment must preserve a spoken action label: '+label);
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

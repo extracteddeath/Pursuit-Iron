@@ -208,3 +208,44 @@ orphanCap[1].suggested = { weight: '95', reps: '8' };
 const repairedCap = reconcileRestoredLiveAdjustments(orphanCap);
 assert.equal(repairedCap[1].weight, '100');assert.equal(repairedCap[1].reps, '11');
 assert.equal(repairedCap[1].suggested, undefined, 'Retired tuning cannot leave a lower target in the UI');
+
+
+// B994 follow-up: the independent, local-only replay must catch a 60 -> 55
+// rep-only load change even when a legacy target lacks a decision trace.
+{
+    const { spawnSync } = await import('node:child_process');
+    const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const scope = mkdtempSync(join(tmpdir(), 'pursuit-replay-'));
+    const prior = { id:'replay-history',programId:program.id,dayId:program.days[0].id,
+        date:1,weekIndex:1,unit:'lb',perf:{[ex.id]:{
+            sets:[0,1,2].map(workingSetIndex=>({
+                w:60,r:20,rir:2,rirReported:true,workingSetIndex,done:true
+            }))
+        }}};
+    const fixture = proposed => captureWorkoutProgressionReplay({
+        program,day:program.days[0],weekIndex:1,unit:'lb',readiness:{factor:1},
+        history:[prior],cell,
+        suggestion:{action:'add_reps',setTargets:[0,1,2].map(i=>({weight:i===2?proposed:60,reps:21}))},
+        row:{id:ex.id,slot:0,sets:[0,1,2].map(i=>({
+            ...pending(),weight:String(i===2?proposed:60),reps:'21',
+            target:{w:i===2?proposed:60,reps:'15-25',prefillReps:'21'}
+        }))}
+    });
+    try {
+        const file=join(scope,'diagnostics.json');
+        const run=payload=>{
+            writeFileSync(file,JSON.stringify(payload));
+            return spawnSync(process.execPath,['scripts/audit-workout-replay.mjs',file],
+                {cwd:process.cwd(),encoding:'utf8'});
+        };
+        const valid=run(fixture(60));
+        assert.equal(valid.status,0,'Unchanged three-position double loads pass independent replay: '+valid.stdout+valid.stderr);
+        const unearned=run(fixture(55));
+        assert.equal(unearned.status,1,'55-lb third-set prescription fails closed');
+        assert.match(unearned.stdout,/unearned_double_progression_history_load/);
+        assert.match(unearned.stdout,/unearned_double_progression_suggestion_load/);
+    } finally { rmSync(scope,{recursive:true,force:true}); }
+}
+console.log('PASS B994 exported replay: rep-only 60x20 history cannot silently prescribe 55x21 on set 3.');

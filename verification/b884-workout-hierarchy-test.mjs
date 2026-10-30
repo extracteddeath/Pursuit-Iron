@@ -31,6 +31,17 @@ for (const stable of ['"aria-label": "weight"','"aria-label": "reps"','"data-hap
   assert.ok(workout.includes(stable), `Set-entry functionality is preserved: ${stable}`);
 }
 assert.ok(!workout.includes('Complete remaining sets'), 'Each set must be completed intentionally; no bulk-complete action');
+// Accessible disclosure/primer controls are not allowed to steal the
+// numeric logger's interaction model or regress to caption-size hit areas.
+for (const [selector,property] of [
+ ['.wpb-load-explanation summary','min-height:48px'],
+ ['#root .wpb-workout .wpb-warmup-hide','min-height:48px'],
+ ['#root .wpb-workout .wpb-warmup-finish','min-height:52px']
+]) {
+ const at=css.indexOf(selector+'{');
+ assert.ok(at>=0&&css.slice(at,css.indexOf('}',at)).includes(property),
+   'Workout supporting action retains its native touch target: '+selector);
+}
 assert.ok(css.includes('R93 / B884 — Workout is a set logger'), 'Style pass is present');
 assert.ok(css.includes('data-focus-mode="false"'), 'Focus and normal screen styling isolated');
 // The exercise header must not drift back into a tall name/tags/set/actions stack.

@@ -20,10 +20,14 @@ assert.ok(gallery.includes('disabled: res && res.ok'),'Imported programs must pr
 assert.ok(gallery.includes('setRetryKey(k => k + 1)'),'Offline retry stays functional');
 const scope=css.slice(css.indexOf('/* B988 — Gallery'),css.indexOf('/* B991: Workout/Program header'));
 assert.ok(!scope.includes('!important'),'No new CSS priority overrides');
-for(const name of ['chip','retry','import']){
+for(const name of ['chip','retry']){
  const rule=css.split('#root .wpb .wpb-gallery-'+name+'{')[1]?.split('}')[0]||'';
  assert.ok(rule.includes('min-height:48px'),'Gallery '+name+' has a 48px effective touch minimum');
 }
+assert.ok(css.includes('#root .wpb .wpb-gallery-import{width:100%;min-height:var(--pi-primary-min,52px)'),
+  'Primary Gallery import is at least 52px and relies on the shared CTA owner');
+assert.ok(gallery.includes('className: "wpb-dialog-primary-action wpb-gallery-import"'),
+  'Gallery import must reuse the existing semantic primary action paint');
 assert.ok(!scope.includes('min-height:44px'),'Gallery must not reintroduce undersized actions');
 assert.ok((app.match(/style: \{/g)||[]).length<=1203,'Inline debt budget cannot grow');
 console.log('PASS B988: Gallery accessibility, styling ownership, import and offline retry');

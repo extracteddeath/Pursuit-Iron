@@ -1,9 +1,9 @@
 // Program reference and progression presentation. App owns changes and persistence.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useState } from 'react';
-import { X, Check, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { weeksOf, sessionPrescriptionRows, EX_BY_ID, PROG_STYLES, effortLabel, computeCell, exerciseAt } from './engine-api.js';
-import { UiChoice } from './ui-primitives.js';
+import { UiChoice, UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { InfoCard } from './ui-disclosure.js';
 
@@ -27,8 +27,8 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
                         _jsx('h2', { id: 'program-progression-title', children: 'Progression method' }),
                         _jsx('p', { className: 'wpb-progression-choice-exercise', children: exerciseName })
                     ] }),
-                    _jsx('button', { type: 'button', className: 'pressable hit wpb-sheet-close wpb-progression-choice-close',
-                        'aria-label': 'Close progression methods', onClick: onClose, children: _jsx(X, { size: 18 }) })
+                    _jsx(UiSheetClose, { className: 'wpb-progression-choice-close',
+                        'aria-label': 'Close progression methods', onClick: onClose })
                 ] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-progression-choice-body', children: [
                     _jsx('p', { id: 'program-progression-scope', className: 'wpb-progression-choice-scope',
@@ -55,8 +55,8 @@ export function ProgramReferenceSheet({ onClose, sheetDragRef, children }) {
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('div', { className: 'wpb-program-reference-heading', children: [
                     _jsx('h2', { id: 'program-reference-title', children: 'Plan info' }),
-                    _jsx('button', { type: 'button', className: 'pressable hit wpb-sheet-close wpb-program-reference-close',
-                        'aria-label': 'Close program details', onClick: onClose, children: _jsx(X, { size: 18 }) })
+                    _jsx(UiSheetClose, { className: 'wpb-program-reference-close',
+                        'aria-label': 'Close program details', onClick: onClose })
                 ] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-program-reference-body', children: [
                     _jsx('p', { className: 'wpb-program-reference-intro', children: 'How this program was put together, how progression was chosen, what it trains each week, and the arc it follows.' }),

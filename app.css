@@ -8596,7 +8596,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-program-reference-panel{box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:56rem;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow:hidden;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .26s cubic-bezier(.2,.8,.3,1) both}
 #root .wpb .wpb-program-reference-heading{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px 4px}
 #root .wpb .wpb-program-reference-heading h2{min-width:0;margin:0;font-size:1.125rem;line-height:1.4;overflow-wrap:anywhere}
-#root .wpb .wpb-program-reference-close{display:grid;place-items:center;flex-shrink:0;min-width:48px;min-height:48px;border:0;background:transparent;color:var(--wpb-theme-text)}
+#root .wpb .wpb-program-reference-close{border:0;background:transparent}
 #root .wpb .wpb-program-reference-body{min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:8px 18px calc(env(safe-area-inset-bottom) + 20px)}
 #root .wpb .wpb-program-reference-intro{margin:0 0 12px;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-program-reference-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
@@ -8669,7 +8669,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-progression-choice-heading>div{flex:1;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-choice-heading h2{margin:0;font-size:1rem;font-weight:700;line-height:1.4;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-progression-choice-exercise{margin:4px 0 0;font-size:1.125rem;font-weight:700;line-height:1.4}
-#root .wpb .wpb-progression-choice-close{display:grid;place-items:center;flex-shrink:0;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-text)}
+#root .wpb .wpb-progression-choice-close{border:1px solid var(--wpb-theme-border);border-radius:14px;background:var(--wpb-theme-card)}
 #root .wpb .wpb-progression-choice-body{min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 16px calc(20px + env(safe-area-inset-bottom))}
 #root .wpb .wpb-progression-choice-scope{margin:0 0 12px;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted);overflow-wrap:anywhere}
 #root .wpb .wpb-progression-choice-options{display:flex;flex-direction:column;gap:8px}

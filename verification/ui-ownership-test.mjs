@@ -145,6 +145,14 @@ for (const name of ['SetupCard','ProgressionCard','ProgramReferenceSheet','Progr
 }
 assert.ok(!disclosures.includes('style:') && !programReference.includes('style:') && !programReference.includes('C.'),
     'Shared disclosure/reference presentation must stay in its CSS owner');
+assert.equal((programReference.match(/_jsx\\(UiSheetClose,/g) || []).length, 2,
+    'Program reference and progression-method sheets share the native close primitive');
+for (const role of ['progression-choice-close','program-reference-close']) {
+    const match = css.match(new RegExp('\\\\.' + role + '\\\\{([^}]*)\\\\}'));
+    assert.ok(match && !/(?:display|place-items|flex-shrink|min-width|min-height|color)\\s*:/.test(match[1]),
+        role + ' may own its distinct paint but must inherit shared button geometry');
+}
+
 assert.ok(app.includes('setProgram(p => withProgressionChoices(p, { [id]: style }))'),
     'Program and Workout must share the progression-choice writer');
 assert.ok(programReference.includes("'aria-label': 'Close progression methods'") && programReference.includes("'aria-describedby': 'program-progression-scope'"),

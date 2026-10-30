@@ -8581,12 +8581,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-info-card-toggle:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:-3px}
 /* Program sheets reuse one overlay, panel and focus geometry owner. */
 #root .wpb .wpb-ui-sheet-backdrop{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6);animation:fadeIn .2s both}
-#root .wpb .wpb-ui-sheet-panel{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;width:100%;overflow:hidden;color:var(--wpb-theme-text);max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))}
+#root .wpb .wpb-ui-sheet-panel{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;width:100%;overflow:hidden;color:var(--wpb-theme-text);max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)));border-radius:var(--pi-ui-sheet-radius,var(--pi-shape-card)) var(--pi-ui-sheet-radius,var(--pi-shape-card)) 0 0;background:var(--pi-ui-sheet-fill,var(--wpb-theme-bg-tint));animation:sheetUp var(--pi-ui-sheet-enter-duration,.25s) var(--pi-ui-sheet-enter-ease,cubic-bezier(.2,.8,.2,1)) both}
 #root .wpb .wpb-ui-sheet-focus :is(button,input,textarea):focus-visible,
 #root .wpb :is(.wpb-load-wave,.wpb-training-max-summary):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(forced-colors:active){#root .wpb .wpb-ui-sheet-focus :is(button,input,textarea):focus-visible{outline-color:Highlight}}
 #root .wpb .wpb-program-reference-backdrop{z-index:70}
-#root .wpb .wpb-program-reference-panel{max-width:56rem;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);animation:sheetUp .26s cubic-bezier(.2,.8,.3,1) both}
+#root .wpb .wpb-program-reference-panel{max-width:56rem;--pi-ui-sheet-radius:24px;--pi-ui-sheet-enter-duration:.26s;--pi-ui-sheet-enter-ease:cubic-bezier(.2,.8,.3,1)}
 #root .wpb .wpb-program-reference-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3)}
 
 #root .wpb .wpb-program-reference-close{border:0;background:transparent}
@@ -8657,7 +8657,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* M371: progression choices share one staged program writer and one presentation owner. */
 #root .wpb .wpb-progression-choice-backdrop{z-index:80}
-#root .wpb .wpb-progression-choice-panel{max-width:44rem;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
+#root .wpb .wpb-progression-choice-panel{max-width:44rem;--pi-ui-sheet-radius:24px;--pi-ui-sheet-fill:var(--wpb-theme-bg)}
 #root .wpb .wpb-progression-choice-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:16px 18px 10px;--pi-ui-sheet-title-size:1rem;align-items:flex-start;border-bottom:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-progression-choice-heading>div{flex:1;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-choice-heading h2{color:var(--wpb-theme-muted)}
@@ -8700,7 +8700,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    UiChoice owns selected paint/focus; these roles own only the settings anatomy. */
 
 #root .wpb .wpb-program-settings-backdrop{z-index:60}
-#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){max-width:46rem;border-top:1px solid var(--wpb-theme-border);border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){max-width:46rem;border-top:1px solid var(--wpb-theme-border);--pi-ui-sheet-radius:24px;--pi-ui-sheet-enter-duration:.28s;--pi-ui-sheet-enter-ease:cubic-bezier(.2,.7,.3,1)}
 #root .wpb .wpb-program-settings-panel{--pi-ui-sheet-max-vh:88dvh;--pi-ui-sheet-top-gap:32px}
 #root .wpb .wpb-ui-sheet-heading{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:var(--pi-ui-sheet-heading-gap,var(--pi-space-2));padding:var(--pi-ui-sheet-heading-padding,10px 18px 4px)}
 
@@ -8772,7 +8772,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* Program exercise actions: scalable content beneath a persistent heading. */
 #root .wpb .wpb-exercise-options-backdrop{z-index:80}
-#root .wpb .wpb-exercise-options-sheet{--pi-ui-sheet-max-vh:88dvh;--pi-ui-sheet-top-gap:32px;border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--wpb-theme-bg-tint);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
+#root .wpb .wpb-exercise-options-sheet{--pi-ui-sheet-max-vh:88dvh;--pi-ui-sheet-top-gap:32px}
+#root .wpb :is(.wpb-training-max-sheet,.wpb-exercise-options-sheet){border:1px solid var(--wpb-theme-border);border-bottom:0}
 #root .wpb .wpb-exercise-options-sheet::before{flex-shrink:0}
 #root .wpb .wpb-exercise-options-heading{--pi-ui-sheet-heading-gap:10px;--pi-ui-sheet-heading-padding:10px max(16px,env(safe-area-inset-left)) 8px}
 #root .wpb .wpb-exercise-options-identity{flex:1;min-width:0}
@@ -8825,7 +8826,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-training-max-summary-title{display:block;font-size:.9375rem;font-weight:700;line-height:1.4}
 #root .wpb .wpb-training-max-summary-detail{display:block;margin-top:1px;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-training-max-backdrop{z-index:75}
-#root .wpb .wpb-training-max-sheet{--pi-ui-sheet-max-vh:88dvh;max-width:44rem;border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--wpb-theme-bg-tint);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
+#root .wpb .wpb-training-max-sheet{--pi-ui-sheet-max-vh:88dvh;max-width:44rem}
 #root .wpb .wpb-training-max-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:12px 18px;border-bottom:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-training-max-heading h2{flex:1;--pi-ui-sheet-title-leading:1.3}
 #root .wpb .wpb-training-max-body{flex:1;padding:14px 18px}

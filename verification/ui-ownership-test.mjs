@@ -310,6 +310,38 @@ assert.ok(css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-vis
   'Shared keyboard and high contrast focus styles must remain available');
 
 
+
+// Design-spec passes 50–55: one shared Program panel owns corners, theme paint,
+// and the entrance. Feature-specific width, inset, tint and timing remain variants.
+const sheetChrome=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
+for(const prop of [
+    'border-radius:var(--pi-ui-sheet-radius,var(--pi-shape-card)) var(--pi-ui-sheet-radius,var(--pi-shape-card)) 0 0',
+    'background:var(--pi-ui-sheet-fill,var(--wpb-theme-bg-tint))',
+    'animation:sheetUp var(--pi-ui-sheet-enter-duration,.25s) var(--pi-ui-sheet-enter-ease,cubic-bezier(.2,.8,.2,1)) both'
+]) assert.ok(sheetChrome.includes(prop), 'Shared Program sheet chrome missing '+prop);
+for(const [owner,properties] of [
+    ['#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){',
+        ['max-width:46rem','--pi-ui-sheet-radius:24px','--pi-ui-sheet-enter-duration:.28s','--pi-ui-sheet-enter-ease:cubic-bezier(.2,.7,.3,1)']],
+    ['#root .wpb .wpb-program-reference-panel{',
+        ['max-width:56rem','--pi-ui-sheet-radius:24px','--pi-ui-sheet-enter-duration:.26s','--pi-ui-sheet-enter-ease:cubic-bezier(.2,.8,.3,1)']],
+    ['#root .wpb .wpb-progression-choice-panel{',
+        ['max-width:44rem','--pi-ui-sheet-radius:24px','--pi-ui-sheet-fill:var(--wpb-theme-bg)']],
+    ['#root .wpb .wpb-training-max-sheet{',
+        ['--pi-ui-sheet-max-vh:88dvh','max-width:44rem']],
+    ['#root .wpb .wpb-exercise-options-sheet{',
+        ['--pi-ui-sheet-max-vh:88dvh','--pi-ui-sheet-top-gap:32px']]
+]){
+    const local=css.split(owner)[1]?.split('}')[0]||'';
+    assert.ok(local,'Sheet variant owner missing '+owner);
+    for(const prop of properties) assert.ok(local.includes(prop), 'Sheet variant lost '+prop+': '+owner);
+    for(const prop of ['border-radius:','background:','animation:'])
+        assert.ok(!local.includes(prop), 'Sheet-specific chrome must not be forked: '+owner+' '+prop);
+}
+assert.ok(css.includes('#root .wpb :is(.wpb-training-max-sheet,.wpb-exercise-options-sheet){border:1px solid var(--wpb-theme-border);border-bottom:0}'),
+    'Exercise Options and Training Maxes share the same single open-bottom border owner');
+assert.ok(css.includes('#root .wpb .wpb-training-max-sheet{border-bottom:1px solid var(--wpb-theme-border);border-radius:var(--pi-shape-card)}'),
+    'Centered Training Maxes retains complete edge and corner treatment');
+
 /* Design-spec passes 31–33: common viewport and Program action dock ownership. */
 const uiSheetViewport=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
 assert.ok(uiSheetViewport.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'One Program panel viewport formula remains');

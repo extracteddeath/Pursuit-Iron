@@ -206,6 +206,13 @@ export const rearHistory = [{id:'b1002-prior',programId:rearProgram.id,dayId:'up
         'equal previous loads progress reps at 60 lb, not an arbitrary 55 lb on set 3');
     const rows = prescribeSets(rearProgram,rearProgram.days[0],EX_BY_ID['rear-fly'],0,1,'lb',
         advice,{}, {},prior,false);
+    assert.deepEqual(rows.map(row => row.target.decisionTrace?.source?.load),[60,60,60],
+        'Each visible target must identify its own historical load');
+    assert.deepEqual(rows.map(row => row.target.decisionTrace?.source?.reps),[20,20,20]);
+    assert.deepEqual(rows.map(row => row.target.decisionTrace?.target?.load),[60,60,60]);
+    assert.deepEqual(rows.map(row => row.target.decisionTrace?.evaluation?.action),['add_reps','add_reps','add_reps']);
+    assert.equal(rows[2].target.decisionTrace.source.historyEntryId,prior[0].id,
+        'Later-set advice must identify its exact source workout');
     assert.deepEqual(rows.map(s=>[s.weight,s.reps]),[['60','21'],['60','21'],['60','21']],
         'Workout row defaults and canonical recommendation must agree');
     const stray = {...advice,setTargets:advice.setTargets.map((t,i)=>i===2?{...t,weight:55}:t)};
@@ -245,6 +252,10 @@ console.log('PASS B1002: classic double per-set load invariants, 60x20 to 60x21,
     const saved = loggedWorkoutPerformance(rearProgram, rearProgram.days[0],
         [{ id:'rear-fly', slot:0, sets:loggedRows }], 1, 'lb', {}, []);
     const prior = JSON.parse(JSON.stringify(saved['rear-fly']));
+    assert.deepEqual(prior.sets.map(row => row.decisionTrace?.workingSetIndex),[0,2],
+        'Completed working sets retain the exact original per-position trace');
+    assert.deepEqual(prior.sets.map(row => row.decisionTrace?.applied?.load),[60,55],
+        'History stores the actual applied load in the same record as the original target');
     assert.deepEqual(prior.sets.map(row => row.workingSetIndex),[0,2],
         'Logger must not silently compact skipped set #2 into set #1');
     assert.deepEqual(previousWorkoutSet(prior,0).r,20);
@@ -272,6 +283,16 @@ console.log('PASS B1002: classic double per-set load invariants, 60x20 to 60x21,
         EX_BY_ID['rear-fly'],0,1,'lb',advice,{}, {},[entry],false);
     assert.deepEqual(next.map(row=>Number(row.weight)),[60,60,55],
         'Saved custom history must preserve set ordinal through next actual Workout targets');
+    const manual = loggedWorkoutPerformance(rearProgram,rearProgram.days[0],
+        [{id:'rear-fly',slot:0,sets:base.map((row,i)=>({
+            ...row,done:i===2,weight:i===2?'50':row.weight,
+            reps:i===2?'19':row.reps,valueOwner:i===2?'user':row.valueOwner,
+            auto:i===2?false:row.auto
+        }))}],1,'lb',{},[]);
+    assert.equal(manual['rear-fly'].sets[0].decisionTrace.target.load,60,
+        'User edits must not rewrite what the engine originally prescribed');
+    assert.equal(manual['rear-fly'].sets[0].decisionTrace.applied.load,50);
+    assert.equal(manual['rear-fly'].sets[0].decisionTrace.applied.owner,'user');
     const duplicates=evaluateWorkoutProgression(session,[
         {...actual[0],setIndex:0,reps:25},
         {...actual[0],setIndex:1,reps:25},

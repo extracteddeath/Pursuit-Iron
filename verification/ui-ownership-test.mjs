@@ -361,6 +361,17 @@ for(const [source,name,localProp] of [
         assert.ok(!local.includes(duplicate),'Feature copy must not duplicate shared type: '+name+' '+duplicate);
 }
 
+
+// Proposed design-spec §§5.2,6,7.2,9.3,10: real recovery from empty Plan results.
+assert.ok(programReference.includes("role: 'search', 'aria-label': 'Find a lift'") &&
+    programReference.includes("'aria-label': 'Clear lift search'") &&
+    programReference.includes("'No lifts are scheduled in this program yet.'") &&
+    programReference.includes("children: 'Show all lifts'"),
+    'Plan lift progression must expose accessible search, no-match recovery and genuine empty state');
+assert.ok(programReference.includes("variant: 'tonal', 'data-icon-only': true, className: 'wpb-progression-page'") &&
+    css.includes('.wpb-progression-filter{min-width:0;min-height:48px'),
+    'Pager and filter controls use shared >=48px targets instead of an alternate skin');
+
 /* Design-spec passes 31–33: common viewport and Program action dock ownership. */
 const uiSheetViewport=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
 assert.ok(uiSheetViewport.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'One Program panel viewport formula remains');

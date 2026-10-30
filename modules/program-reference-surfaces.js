@@ -1,9 +1,9 @@
 // Program reference and progression presentation. App owns changes and persistence.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useState } from 'react';
-import { Check, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { weeksOf, sessionPrescriptionRows, EX_BY_ID, PROG_STYLES, effortLabel, computeCell, exerciseAt } from './engine-api.js';
-import { UiChoice, UiSheetClose } from './ui-primitives.js';
+import { UiAction, UiChoice, UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { InfoCard } from './ui-disclosure.js';
 
@@ -145,25 +145,32 @@ export function ProgressionCard({ program, open, onToggle }) {
     return _jsx(InfoCard, { icon: TrendingUp, title: 'Lift progression', open, onToggle,
         subtitle: `${rows.length} lifts · ${weeks} training week${weeks === 1 ? '' : 's'}${program.config?.deload ? ' + deload' : ''}`,
         children: _jsxs('div', { className: 'wpb-progression', 'data-columns': cols.length, children: [
-            _jsx('input', { type: 'search', autoComplete: 'off', spellCheck: false, value: q, onChange: event => setQ(event.target.value), placeholder: 'Search a lift…',
-                'aria-label': 'Search a lift', className: 'wpb-progression-search' }),
+            _jsxs('div', { className: 'wpb-progression-search-row', role: 'search', 'aria-label': 'Find a lift', children: [
+                _jsx('input', { type: 'search', autoComplete: 'off', spellCheck: false, value: q, onChange: event => setQ(event.target.value), placeholder: 'Search a lift…',
+                    'aria-label': 'Search a lift', className: 'wpb-progression-search' }),
+                _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, className: 'wpb-progression-search-clear',
+                    'aria-label': 'Clear lift search', title: 'Clear lift search', disabled: !q,
+                    onClick: () => setQ(''), children: _jsx(X, { size: 18, 'aria-hidden': true }) })
+            ] }),
             _jsx('div', { className: 'wpb-progression-filters', role: 'group', 'aria-label': 'Filter lift progression',
                 children: [['all', 'All lifts'], ['primary', 'Primary only'], ['upper', 'Upper'], ['lower', 'Lower']].map(([key, label]) =>
                     _jsx(UiChoice, { selected: filter === key, onClick: () => setFilter(key), className: 'wpb-progression-filter', children: label }, key)) }),
             _jsx('p', { className: 'wpb-progression-result-count', role: 'status', 'aria-live': 'polite',
                 children: `${shown.length} of ${rows.length} lifts shown` }),
             _jsxs('div', { className: 'wpb-progression-pager', children: [
-                _jsx('button', { type: 'button', className: 'pressable wpb-progression-page', 'aria-label': 'Earlier weeks',
-                    disabled: start === 0, onClick: () => setFrom(Math.max(0, start - 1)), children: _jsx(ChevronLeft, { size: 18 }) }),
+                _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, className: 'wpb-progression-page', 'aria-label': 'Earlier weeks',
+                    disabled: start === 0, onClick: () => setFrom(Math.max(0, start - 1)), children: _jsx(ChevronLeft, { size: 18, 'aria-hidden': true }) }),
                 _jsx('span', { className: 'wpb-progression-page-label', 'aria-live': 'polite', children: cols.length > 1 ? `Weeks ${cols[0]}–${cols.at(-1)} of ${totalWeeks}` : `Week ${cols[0]} of ${totalWeeks}` }),
-                _jsx('button', { type: 'button', className: 'pressable wpb-progression-page', 'aria-label': 'Later weeks',
-                    disabled: start + cols.length >= totalWeeks, onClick: () => setFrom(Math.min(totalWeeks - 2, start + 1)), children: _jsx(ChevronRight, { size: 18 }) })
+                _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, className: 'wpb-progression-page', 'aria-label': 'Later weeks',
+                    disabled: start + cols.length >= totalWeeks, onClick: () => setFrom(Math.max(0, Math.min(totalWeeks - 2, start + 1))), children: _jsx(ChevronRight, { size: 18, 'aria-hidden': true }) })
             ] }),
             _jsxs('div', { className: 'wpb-progression-columns', 'aria-hidden': true, children: [
                 _jsx('span', { children: 'Exercise' }), ...cols.map(week => _jsx('span', { children: week > weeks ? 'Deload' : `Wk ${week}` }, week))] }),
-            !shown.length && _jsx('p', { className: 'wpb-progression-empty',
-                children: normalizedQuery ? 'No lifts match this search and filter. Try another name or All lifts.' :
-                    'No lifts match this filter. Choose All lifts to see the full program.' }),
+            !shown.length && _jsxs('div', { className: 'wpb-progression-empty', children: [
+                _jsx('p', { children: rows.length ? 'No lifts match the current search or filter.' : 'No lifts are scheduled in this program yet.' }),
+                rows.length > 0 && _jsx(UiAction, { variant: 'tonal', className: 'wpb-progression-reset',
+                    onClick: () => { setQ(''); setFilter('all'); }, children: 'Show all lifts' })
+            ] }),
             ...shown.map(row => _jsxs('div', { className: 'wpb-progression-row', 'data-progression-row': `${row.day.id}:${row.slot}`, children: [
                 _jsxs('div', { className: 'wpb-progression-lift', children: [
                     _jsxs('strong', { children: [row.ex?.name || row.alternate?.name || 'Exercise unavailable',

@@ -58,6 +58,24 @@ for (const surface of ['wpb-program-reference-panel','wpb-progression-choice-pan
     assert.ok(css.includes(`.${surface}{`) && progression.includes('wpb-ui-sheet-panel '+surface),
         'Reference/Progression keep distinct paint and shared responsive geometry: '+surface);
 }
+
+// Design spec §§5.2,6,7.2,9.3,10: search is recoverable and controls remain 48px.
+assert.ok(progression.includes("role: 'search', 'aria-label': 'Find a lift'") &&
+    progression.includes("'aria-label': 'Clear lift search'") &&
+    progression.includes("disabled: !q") && progression.includes("onClick: () => setQ('')"),
+    'Search has a stable clear action with an accessible name');
+assert.ok(progression.includes("children: 'Show all lifts'") &&
+    progression.includes("setQ(''); setFilter('all');") &&
+    progression.includes("'No lifts are scheduled in this program yet.'"),
+    'No-match state offers a UI-only recovery; genuinely empty programs stay distinct');
+assert.ok(progression.includes("variant: 'tonal', 'data-icon-only': true, className: 'wpb-progression-page'") &&
+    !progression.includes("className: 'pressable wpb-progression-page'"),
+    'Week navigation must use common 48px native-action styling');
+assert.ok(css.includes('.wpb-progression-filter{min-width:0;min-height:48px') &&
+    css.includes('.wpb-progression-search-row{display:flex;align-items:center;gap:var(--pi-space-2)') &&
+    !css.includes('.wpb-progression-page{display:grid;place-items:center'),
+    'Filters, search and paging use shared touch-size and spacing ownership');
+
 assert.ok(css.length<=643592,'consolidated CSS does not exceed last published size ceiling');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'no additional priority overrides');
 console.log('PASS B996: shared modal focus, destructive cancellation, resilient disclosure, accessible volume/progression and lower CSS debt.');

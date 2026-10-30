@@ -9,7 +9,7 @@ for(const required of ['setTechInfo(open ? null : key)','changeSessionSetType(ei
 assert.ok((app.match(/style: \{/g)||[]).length<=1308);
 assert.ok((css.match(/!important/g)||[]).length<=2060);
 for(const [selector,min] of [
- ['.wpb-b973-set-close','width:48px;height:48px'],
+ ['.wpb-ui-sheet-close,#root .wpb-workout .wpb-b973-set-close','width:48px;height:48px'],
  [':is(.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle)','min-height:48px']
 ]){
   const start=css.indexOf(selector+'{'),end=css.indexOf('}',start);

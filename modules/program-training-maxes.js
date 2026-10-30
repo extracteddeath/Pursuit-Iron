@@ -51,7 +51,7 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
         'aria-labelledby': 'program-training-max-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-training-max-sheet',
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-training-max-heading', children: [
+                _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-training-max-heading', children: [
                     _jsx('h2', { id: 'program-training-max-title', children: 'Training maxes' }),
                     _jsx(UiSheetClose, { variant: 'tonal', 'data-wpb-system-back': !conversion || undefined,
                         'aria-label': 'Close', onClick: onClose })

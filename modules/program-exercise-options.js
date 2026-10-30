@@ -38,7 +38,7 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
         onClick: event => { if (event.target === event.currentTarget) dismiss(); },
         children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-exercise-options-sheet',
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-exercise-options-heading', children: [
+                _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-exercise-options-heading', children: [
                     _jsxs('div', { className: 'wpb-exercise-options-identity', children: [
                         _jsx('h2', { id: 'program-exercise-options-title', className: 'wpb-exercise-options-title', children: exercise.name }),
                         _jsx('p', { className: 'wpb-exercise-options-meta', children: `${PART_LABEL[exercise.part]} · ${exercise.type}${primary ? ' · key lift' : ''}` })

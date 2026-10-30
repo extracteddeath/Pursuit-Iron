@@ -11,6 +11,7 @@ const programSettings = fs.readFileSync('modules/program-settings-sheet.js', 'ut
 const manualTargets = fs.readFileSync('modules/program-manual-targets.js', 'utf8');
 const backupPanel = fs.readFileSync('modules/backup-restore-panel.js', 'utf8');
 const primitives = fs.readFileSync('modules/ui-primitives.js', 'utf8');
+const sessionChoice = fs.readFileSync('modules/session-choice-dialog.js', 'utf8');
 const releaseNotes = fs.readFileSync('modules/release-notes.js', 'utf8');
 const disclosures = fs.readFileSync('modules/ui-disclosure.js', 'utf8');
 const programReference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
@@ -62,7 +63,7 @@ for (const [name, source] of [['schedule', programSchedule], ['settings', progra
     assert.ok(source.includes('_jsx(UiSheetClose,') && source.includes('wpb-program-' + name + '-close'),
         'Program ' + name + ' must share the native close action and preserve the feature focus locator');
 }
-assert.ok(css.includes('.wpb-ui-sheet-close{display:grid;place-items:center;min-width:48px;min-height:48px;flex-shrink:0;') &&
+assert.ok(css.includes('.wpb-ui-sheet-close,#root .wpb-workout .wpb-b973-set-close{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;') &&
     css.includes('.wpb-ui-sheet-heading{display:flex;flex-shrink:0;') &&
     !['schedule','settings','share'].some(name => css.includes('.wpb-program-' + name + '-close{')) &&
     !css.includes('.wpb-program-settings-heading{') && !css.includes('.wpb-program-share-heading{'),
@@ -131,6 +132,37 @@ for(const name of ['collapsed','toggle']){
  const feature=css.split('#root .wpb-workout .wpb-b973-coach-'+name+'{')[1]?.split('}')[0]||'';
  assert.ok(feature&&!feature.includes('min-height:48px')&&!feature.includes('display:flex'),
    'Coach feature-specific paint must not duplicate shared control layout: '+name);
+}
+
+// Sheet and dialog buttons share semantics but not inappropriate sheet chrome.
+assert.ok(primitives.includes('chrome = "sheet", iconSize = 18') &&
+    primitives.includes('size: iconSize') &&
+    primitives.includes('chrome === "dialog"') &&
+    sessionChoice.includes('_jsx(UiSheetClose, { chrome: "dialog", iconSize: 20') &&
+    sessionChoice.includes('"aria-label": "Close " + title') &&
+    !sessionChoice.includes("import { X }") &&
+    programReview.includes('_jsx(UiSheetClose, { chrome: "dialog"') &&
+    programReview.includes('"aria-label": "Close change review"') &&
+    programReview.includes('className: "wpb-save-review-close"'),
+    'Native dialog controls must share the close component and preserve labels and glyph sizes');
+for(const [name,source,role] of [
+    ['Save Review',programReview,'wpb-save-review-heading'],
+    ['Exercise Options',exerciseOptions,'wpb-exercise-options-heading'],
+    ['Training Maxes',trainingMaxes,'wpb-training-max-heading']
+]) assert.ok(source.includes('wpb-ui-sheet-heading '+role),
+    name+' must reuse the shared sheet header structure');
+assert.ok(css.includes('padding:var(--pi-ui-sheet-heading-padding,10px 18px 4px)') &&
+    css.includes('.wpb-save-review-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:0}') &&
+    css.includes('.wpb-training-max-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:12px 18px;border-bottom:') &&
+    css.includes('.wpb-exercise-options-heading{--pi-ui-sheet-heading-gap:10px;--pi-ui-sheet-heading-padding:10px max(16px,env(safe-area-inset-left)) 8px}'),
+    'Shared header must retain zero review inset, Training Maxes divider and Exercise Options safe-area inset');
+for(const [selector,role] of [
+  ['#root .wpb .wpb-save-review-close{','Program review'],
+  ['#root .wpb-workout .wpb-b973-set-close{','Workout set editor']
+]) {
+  const paint=css.split(selector)[1]?.split('}')[0]||'';
+  assert.ok(paint&&!['display:','place-items:','flex:','width:','height:','min-width:','min-height:','color:'].some(prop=>paint.includes(prop)),
+    role+' close must not re-own shared icon geometry');
 }
 
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners

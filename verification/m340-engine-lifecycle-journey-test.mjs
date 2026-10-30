@@ -7,6 +7,7 @@ import {
 import { generateNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
+import { auditSetDecisionTraces } from '../modules/training-domain/prescriptions.js';
 import { config, ids } from './m265-generation-fixture.mjs';
 
 // M340: one continuous, serialized program/cycle -> prescription -> live set ->
@@ -62,6 +63,8 @@ function completeRealWorkout(p, day, week, prior) {
         // rear-delt/late-session target could pass an otherwise green lifecycle audit.
         const suggestion = sessionSuggestion(p, day, slot, null, 'lb', week, prior);
         const rows = prescribeSets(p, day, ex, slot, week, 'lb', suggestion, null, {}, prior, true);
+        assert.deepEqual(auditSetDecisionTraces(rows),[],
+            'An actual Workout target diverged from recorded engine evidence: ' + day.id + ':' + slot);
         const works = rows.filter(set => !set.warm && !set.sub);
         if (suggestion?.action === 'add_reps' && cell.progressionStyle === 'double'
             && Array.isArray(suggestion.setTargets) && suggestion.setTargets.length === works.length) {

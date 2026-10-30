@@ -1,7 +1,7 @@
 // Shared accessible session dialog. Training state stays in feature owners.
 // Program sheets and session dialogs use a single focus/keyboard behavior owner.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { X } from 'lucide-react';
+import { UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 export function SessionChoiceDialog({ title, onClose, children, dismissible = true, className = "", footer = null, panelRef }) {
@@ -17,8 +17,8 @@ export function SessionChoiceDialog({ title, onClose, children, dismissible = tr
             children: [
                 _jsxs("div", { className: "wpb-session-dialog-heading", children: [
                     _jsx("h2", { children: title }),
-                    dismissible && _jsx("button", { type: "button", className: "pressable hit",
-                        "aria-label": "Close " + title, onClick: onClose, children: _jsx(X, { size: 20 }) })
+                    dismissible && _jsx(UiSheetClose, { chrome: "dialog", iconSize: 20,
+                        "aria-label": "Close " + title, onClick: onClose })
                 ] }),
                 children, footer
             ]

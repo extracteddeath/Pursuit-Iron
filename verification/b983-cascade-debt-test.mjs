@@ -31,18 +31,23 @@ assert.ok(css.includes('.wpb-program-revision-footer{bottom:0;'),
   'Program review footer retains its safe-area geometry');
 assert.ok(css.includes('.wpb-exercise-tags{display:flex;gap:5px;flex-wrap:wrap;'),
   'Actual exercise tags retain current compact geometry');
-assert.ok(css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{') &&
-  css.includes('min-width:48px;min-height:48px'),
-  'Workout rest actions remain accessible after the cleanup');
-assert.ok((css.match(/!important/g)||[]).length<=2035,
-  'B1002 CSS priority budget is ratcheted to 2,035 after deduplicating M3 owners');
-// The exact visual-viewport correction has its own contract. Keep the original
-// stylesheet-size ratchet for every other declaration; this is not a broad +N allowance.
+assert.ok(css.includes('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool,.wpb-rest-actions>.wpb-rest-action){') &&
+  css.includes('flex:0 0 48px;width:48px;min-width:48px;height:48px;min-height:48px;padding:0') &&
+  css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{'),
+  'Workout and Rest share a real 48px icon-action sizing owner');
+assert.ok((css.match(/!important/g)||[]).length<=2027,
+  'Workout Coach and set options shared focus debt capped at 2027');
+// Preserve Build 996's visual-viewport fix without relaxing design CSS debt.
 const viewportFix='bottom:auto;height:min(100dvh,var(--visual-h,var(--app-h,100dvh)));';
 assert.ok(css.includes('.wpb-backdrop.wpb-b961-overlay-09{position:fixed;inset:0;'+viewportFix),
-  'Workout Info must remain constrained to the current visual viewport');
-assert.ok(css.replace(viewportFix,'').length<=642573,
-  'B1002 stylesheet budget remains 642,573 characters excluding the required viewport correction');
-assert.ok((app.match(/style: \{/g)||[]).length<=1262,
+  'Workout Info must stay within the visual viewport');
+assert.ok(css.replace(viewportFix,'').length<=637643,
+  'Program header, sheet scrollers and Save Review action geometry cap CSS at 637668 characters');
+assert.ok((app.match(/style: \{/g)||[]).length<=1095,
   'Do not restore inline Workout geometry to replace deleted CSS');
+assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
+  app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
+  'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
+assert.ok(app.length+css.replace(viewportFix,'').length<=2668846,
+  'Total runtime and stylesheet code must not grow while consolidating note UI');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

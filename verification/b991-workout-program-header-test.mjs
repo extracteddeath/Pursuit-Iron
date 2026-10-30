@@ -13,6 +13,40 @@ assert.ok(!workout.includes('wpb-workout-header-action", style: narrowSet'),'Fin
 assert.ok(!program.includes('style: { ...iconBtn(), width: 36, height: 36'),'Program name controls must stay CSS-owned');
 for(const selector of ['.wpb-workout-timer[data-paused="true"]','.wpb-workout-header-action[data-focus="1"]','.wpb-workout-finish[data-compact="true"]','.wpb-program-rename-input','.wpb-program-icon-change'])
   assert.ok(css.includes(selector),'Missing CSS role '+selector);
+// Spec v1: the active header must retain actual 48px touch controls, rather
+// than shrinking its clickable box to the icon's visual geometry.
+for (const [selector,property] of [
+  ['#root .wpb-workout .wpb-workout-timer','min-height:48px'],
+  ['#root .wpb-workout .wpb-workout-actions>.wpb-workout-finish[data-compact="true"]','width:48px'],
+  ['#root .wpb-program .wpb-program-header-back','min-height:48px'],
+  ['#root .wpb-program .wpb-program-icon-change','height:48px'],
+  ['#root .wpb-program .wpb-program-rename-save','height:48px']
+]){
+  const start=css.indexOf(selector+'{');
+  assert.ok(start>=0 && css.slice(start,css.indexOf('}',start)).includes(property),
+    'Header hit area must use its existing CSS owner: '+selector);
+}
+// Shared Workout button sizing is still measured, with no narrower hit area.
+const headerShared=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){')[1]?.split('}')[0]||'';
+for(const prop of ['width:48px','height:48px','align-items:center','justify-content:center','padding:0'])
+  assert.ok(headerShared.includes(prop),'Workout header shared geometry missing '+prop);
+for(const [selector,paint] of [
+  ['#root .wpb-workout .wpb-workout-close{','display:flex;border:0;border-radius:11px'],
+  ['#root .wpb-workout .wpb-workout-header-action{','display:inline-flex;gap:6px;border:1px solid transparent;border-radius:12px']])
+  assert.ok((css.split(selector)[1]?.split('}')[0]||'').includes(paint),
+    'Workout header retains its feature-specific shape '+selector);
+// Design-spec one-owner rule: the dynamic theme must never shrink the
+// Workout header or exercise navigation underneath the CSS-owned hit area.
+for(const obsolete of [
+ '.wpb-workout-actions>button{',
+ '.wpb-workout-header-action,.wpb-workout-close{min-width:38px!important',
+ '.wpb-workout .wpb-ex-nav>button{border-radius:10px!important;min-width:40px!important',
+ 'min-width:34px!important;height:34px!important;min-height:34px!important;',
+ '.wpb-ex-nav-step{height:38px!important'
+]) assert.ok(!app.includes(obsolete),'Retired runtime sizing must stay retired: '+obsolete);
+assert.ok(css.includes('#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{') &&
+  css.includes('height:48px!important;min-height:48px!important;'),
+  'Exercise navigation uses the single CSS-owned 48px geometry');
 assert.ok(!css.slice(css.indexOf('/* B991:')).includes('!important'),'No priority overrides in new CSS');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority-debt increase');
 assert.ok((app.match(/style: \\{/g)||[]).length<=1101,'No new inline presentation');

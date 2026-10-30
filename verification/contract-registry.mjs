@@ -237,6 +237,7 @@ export const browserShards = Object.freeze({
         'b1000-workout-controls-browser-test.mjs',
         'b1001-root-font-owner-browser-test.mjs',
         'shared-control-pilot-browser-test.mjs',
+        'shared-control-routed-visual-browser-test.mjs',
         'b998-ui-controls-browser-test.mjs',
         'b999-plan-review-m3-browser-test.mjs',
         'b966-context-menu-keyboard-browser-test.mjs'

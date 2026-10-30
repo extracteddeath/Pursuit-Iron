@@ -28,3 +28,12 @@ The source and browser fixtures cannot prove the visual polish of the real user'
 4. Reduce legacy StyleTag and external CSS overlap only after the exact computed theme/color parity is proven. Do not count individual CSS edits as separate design passes.
 
 **Scope:** app and UI semantics only, no changes to engine prescription, logging, history, gym inventory data, offline formats or release manifest.
+
+
+## Release staging and consolidated acceptance — Build 1001
+
+The combined, single-release candidate staged Build **1001** on commit `6918bb0ad8b92383f74fd18ceaae63a0f63f3c4e` after **all eight draft verification jobs passed**: integration source contracts and seven Chromium shards. The release finalizer updated the manifest, app runtime, build profile, HTML and service worker identities in one gated step. Its published milestone text is `Build 1001 · Shared Settings, Gallery and Progress M3 consolidation`; engine version remains `0.65.9`.
+
+This consolidated head also incorporates the verified six-segment Settings shared-choice refactor, Gallery card role adoption, and Progress/Profile shared paint/metric state cleanup from the previous draft branch. The separate component PRs were retained for isolated test review; the combined candidate is the only planned runtime merge.
+
+**Do not confuse staged with deployed.** Non-draft independent engine, release integrity, core, hosted integrity and phone/offline checks must pass on the *post-stage* source. Final hosted Pages parity and Android IME/Back/TalkBack remain separate acceptance requirements. Engine prescription issue #418 is still launch blocking.

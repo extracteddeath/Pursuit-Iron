@@ -148,7 +148,7 @@ assert.ok(!disclosures.includes('style:') && !programReference.includes('style:'
 assert.equal((programReference.match(/_jsx\(UiSheetClose,/g) || []).length, 2,
     'Program reference and progression-method sheets share the native close primitive');
 for (const role of ['progression-choice-close','program-reference-close']) {
-    const match = css.match(new RegExp('\\.' + role + '\\{([^}]*)\\}'));
+    const match = css.match(new RegExp('\\.wpb-' + role + '\\{([^}]*)\\}'));
     assert.ok(match && !/(?:display|place-items|flex-shrink|min-width|min-height|color)\s*:/.test(match[1]),
         role + ' may own its distinct paint but must inherit shared button geometry');
 }

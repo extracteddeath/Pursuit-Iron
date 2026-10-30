@@ -30,10 +30,10 @@ for (const [selector,property] of [
 // Design-spec one-owner rule: the dynamic theme must never shrink the
 // Workout header or exercise navigation underneath the CSS-owned hit area.
 for(const obsolete of [
- '.wpb-workout-actions>button{\\n        width:40px!important',
+ '.wpb-workout-actions>button{',
  '.wpb-workout-header-action,.wpb-workout-close{min-width:38px!important',
  '.wpb-workout .wpb-ex-nav>button{border-radius:10px!important;min-width:40px!important',
- '.wpb-workout .wpb-ex-nav>button{\\n        min-width:34px!important',
+ 'min-width:34px!important;height:34px!important;min-height:34px!important;',
  '.wpb-ex-nav-step{height:38px!important'
 ]) assert.ok(!app.includes(obsolete),'Retired runtime sizing must stay retired: '+obsolete);
 assert.ok(css.includes('#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{') &&

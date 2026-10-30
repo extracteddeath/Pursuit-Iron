@@ -92,6 +92,22 @@ assert.ok(css.includes('/* B969: compact workout action rail.') &&
   css.includes('.wpb-workout-tools .wpb-workout-tool[data-selected="true"]'),
   'One CSS owner paints the compact icon rail and selected state');
 
+/* Design 41–43: One Workout note editor owns exercise notes.
+   Previous-session context moves into it instead of taking logger height. */
+assert.ok(!workout.includes('placeholder: "Add a note\\u2026"') && !workout.includes('children: "Last note:"'),
+  'A duplicate full-width note editor must not return below working sets');
+assert.ok(workout.includes('className: "wpb-session-notes-previous"') &&
+  workout.includes('perf[data[exIdx].id]?.note') &&
+  workout.includes('onChange: text => editNote(exIdx, text)'),
+  'Last exercise note remains readable from the existing session note editor');
+assert.ok(workout.includes('setSessionNotesOpen(true)') &&
+  workout.includes('label: "Whole session"') &&
+  workout.includes('noteRepeat: value'),
+  'Session and exercise note editors and repeat behavior stay available');
+assert.ok(css.includes('.wpb-session-notes-previous{') &&
+  css.includes('.wpb-session-notes-previous>strong{'),
+  'Previous note style is a shared theme-aware CSS role');
+
 /* B970: keep notes discoverable in one toolbar action and CSS-owned hint surfaces. */
 assert.ok(!workout.includes('children: "Session note · " + e.note'),
   'Exercise header must not duplicate the session note toolbar action');

@@ -38,8 +38,10 @@ assert.ok(css.includes('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-t
 assert.ok((css.match(/!important/g)||[]).length<=2027,
   'Workout Coach and set options shared focus debt capped at 2027');
 // B993 replaces fixed Workout-info JSX with themed CSS; this is the new CSS-only ratchet.
-assert.ok(css.length<=637165,
-  'Program header, sheet scrollers and Save Review action geometry cap CSS at 637165 characters');
-assert.ok((app.match(/style: \{/g)||[]).length<=1262,
+assert.ok(css.length<=637379,
+  'Program header, sheet scrollers and Save Review action geometry cap CSS at 637379 characters');
+assert.ok((app.match(/style: \{/g)||[]).length<=1096,
   'Do not restore inline Workout geometry to replace deleted CSS');
+assert.ok(app.length+css.length<=2666684,
+  'Total runtime and stylesheet code must not grow while consolidating note UI');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

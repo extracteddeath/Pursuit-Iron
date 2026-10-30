@@ -10088,3 +10088,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:360px){#root .wpb .wpb-finish-metrics{gap:5px;flex-wrap:nowrap}#root .wpb .wpb-finish-metric{padding:9px 4px}}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-finish-sheet{animation:none}#root .wpb .wpb-finish-feedback-chevron{transition:none}}
 @media(forced-colors:active){#root .wpb .wpb-finish-rating-choice,#root .wpb .wpb-finish-share-action,#root .wpb .wpb-finish-routine-input{border-color:ButtonText;background:Canvas;color:CanvasText}#root .wpb .wpb-finish-rating-choice[aria-pressed="true"]{outline:2px solid Highlight;outline-offset:-2px}}
+
+#root .wpb .wpb-session-notes-previous{margin:12px 0;color:var(--wpb-theme-muted);font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+#root .wpb .wpb-session-notes-previous>strong{color:var(--wpb-theme-text)}

@@ -98,6 +98,13 @@ for(const selector of ['.wpb-workout-pinned-note:focus-visible{',
     assert.ok(!css.includes('#root .wpb-workout '+selector),
         'No standalone Workout focus geometry: '+selector);
 
+// Workout note editor is the one input owner; avoid a second inline logger note.
+assert.ok(!app.includes('placeholder: "Add a note\\u2026"') &&
+  app.includes('className: "wpb-session-notes-previous"') &&
+  app.includes('onChange: text => editNote(exIdx, text)') &&
+  css.includes('.wpb-session-notes-previous{'),
+  'Session note action, repeat option and previous exercise note retain one owner');
+
 // Silent set feedback: live-autoregulation metadata survives in the engine, but
 // an always-visible recommendation above every pending set is not a UI action.
 assert.ok(!app.includes('data-load-advice') && !app.includes('const acceptLowerLoad =') &&

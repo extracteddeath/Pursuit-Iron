@@ -1,4 +1,4 @@
-# Pursuit Iron — design-spec acceptance crosswalk (passes 50–118)
+# Pursuit Iron — design-spec acceptance crosswalk (passes 50–125)
 
 **Target authority:** Proposed [Design System & UX Specification v1.0.0](https://github.com/extracteddeath/Pursuit-Iron/blob/docs/pursuit-iron-design-spec-v1-20261029/docs/design/PURSUIT_IRON_DESIGN_SPEC_V1.md) (PR #415); existing `DESIGN_SYSTEM.md` and shipped Build 997 remain production owners until the spec itself is approved. **Do not infer certification from this crosswalk.**
 
@@ -91,3 +91,14 @@
 - **118 (§§11.3,12):** Strengthened B983 source gate to protect the five new type roles, prevent reintroduction of the five original repeated inline styles, hold the new 1,037 inline-object ceiling and 2,024 app.css priority ceiling, and forbid the dead tiny-screen selector.
 - **Measured net:** 58 inline style objects removed (1,095→1,037, −5.3%); 3 stylesheet `!important` occurrences removed (2,027→2,024); maintained App.js shrank 524 characters and app.css shrank 33 characters; embedded `!important` unchanged at 1,014. This is a **source-level** design-spec consolidation, not a visual 14/14 acceptance or physical Android certification.
 - **Release boundary:** Changes are on a separate stacked candidate based on pass 110. Do not move these into Build 998's exact-head verification, and do not merge this child ahead of the Build 998 release identity. Rebase/resync after the parent release and run the full UI/engine/release/offline gates before Build 999. No engine, load progression, workout logs, storage or PR detection changes.
+
+
+### Passes 119–125 — fixed type roles selected by net debt reduction
+- **119 (§§4.1,11.2):** Re-audited the surviving repeated inline declarations after pass 118. Rejected low-value migrations where the newly invented selector would cost more code than the repeated inline styles saved; kept genuinely dynamic `eyebrow()` and button/action styling unchanged.
+- **120 (§§4.1.1,7.2):** Converted seven identical muted 13px/1.5-line-height body fragments into one semantic `wpb-type-body-muted` class; conditionals and data remain the same.
+- **121 (§§4.1.3,7.3):** Converted five 15px semibold workout/preview values and five 13px bold labels into existing-theme-ink type owners, preserving their `mono` classes and fixed metric widths.
+- **122 (§§5.2,7.7):** Converted five identical muted 12px secondary lines and five faint 11px/1.4 rhythm footnotes into shared `wpb-type-subline` and `wpb-type-footnote` owners, preserving the 2px/8px offsets.
+- **123 (§§7.2,7.10):** Converted four 13px/1.45 body-copy spans and three muted 13px/1.4 helper lines to `wpb-type-body` and `wpb-type-helper`. No interaction, keyboard, geometry, form, or training state changes.
+- **124 (§11.3):** Ratcheted the B983 `style: {` ceiling from 1,037 to **1,003**, forbade all seven prior repeated literal styles, and required all seven semantic CSS owners. Style migration is bounded by an exact 732-character block rather than permitting unbounded growth elsewhere in app.css.
+- **125 (§§12,13):** Continued the design-spec crosswalk with source metrics and release dependency; **34 further inline style objects retired**, reaching **92 removed since pass 110** (1,095 → 1,003). `app.css` has 2,024 `!important`, embedded App 1,014. B983's normalized legacy stylesheet ceiling of 637,454 characters remains unchanged, while the combined App/CSS legacy-debt ceiling tightens to 2,668,250.
+- **Verification boundary:** Source checks are instrumented; live browser/Android and 14/14 screen rubric remain necessary. Keep this draft batch independent of the generated Build 998 release identity until the parent is fully certified and published. No data, progression, logging, storage, engine or notification changes.

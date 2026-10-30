@@ -8,7 +8,7 @@ const program={id:'b886-logger',custom:true,weeks:4,config:{unit:'lb',goal:'hype
 const data=[{id:'bb-bench',slot:0,sets:[1,2,3].map(()=>({weight:'170',reps:'5',done:false,auto:false,valueOwner:'user',target:{w:'170',reps:'5-8',rir:2}}))},
  {id:'inc-curl',slot:1,sets:[1,2].map(()=>({weight:'25',reps:'8',done:false,auto:false,valueOwner:'user',target:{w:'25',reps:'8-12',rir:2}}))}];
 const store={v:13,savedAt:1,saved:[program],cycles:[],history:[],perf:{},drafts:{},tombs:{},seenIntro:999,seenWhatsNew:999,
- pinnedId:program.id,theme:'amethyst',restAutoStart:false,warmupCard:false,unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,
+ pinnedId:program.id,theme:'amethyst',restAutoStart:false,warmupCard:true,unit:'lb',unitChosen:true,experience:'intermediate',bodyweight:185,
  installDismissedAt:Date.now(),lastBackup:Date.now()};
 const live={schemaVersion:2,programId:program.id,dayId:'test',weekIndex:1,dayExSig:'bb-bench|inc-curl',exIdx:0,elapsedMs:20000,
  readiness:{label:'Normal',factor:1},restPaused:false,restRemain:0,restMax:0,runPaused:true,data};
@@ -28,6 +28,26 @@ try{
  await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
  await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
  await page.waitForSelector('[data-testid="set-0-2"]');
+ // First-session warm-up belongs to the same thumb-friendly action system.
+ await page.waitForSelector('.wpb-warmup-card');
+ await page.setViewport({width:320,height:740,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+ await page.evaluate(()=>document.documentElement.style.fontSize='32px');
+ const warmupLayout=await page.$eval('.wpb-warmup-card',card=>{
+  const rect=el=>{const r=el.getBoundingClientRect();return {w:r.width,h:r.height,l:r.left,right:r.right}};
+  return {viewport:innerWidth,card:rect(card),
+    hide:rect(card.querySelector('.wpb-warmup-hide')),
+    proceed:rect(card.querySelector('.wpb-warmup-finish')),
+    horizontalOverflow:card.scrollWidth>card.clientWidth+1};
+ });
+ assert.ok(warmupLayout.hide.w>=48&&warmupLayout.hide.h>=48&&
+  warmupLayout.proceed.h>=52&&warmupLayout.proceed.w>=48&&
+  warmupLayout.card.l>=-1&&warmupLayout.card.right<=warmupLayout.viewport+1&&
+  !warmupLayout.horizontalOverflow,
+  'Warm-up and mobility controls remain usable at 320px/200% text: '+JSON.stringify(warmupLayout));
+ await page.click('.wpb-warmup-finish');
+ await page.waitForFunction(()=>!document.querySelector('.wpb-warmup-card'));
+ await page.evaluate(()=>document.documentElement.style.removeProperty('font-size'));
+ await page.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
  assert.equal(await page.$('.wpb-complete-remaining'),null,'bulk complete action removed');
  const titleSize=await page.$eval('.wpb-exercise-heading .wpb-exercise-name',el=>parseFloat(getComputedStyle(el).fontSize));
  assert.ok(titleSize>=20,`exercise name reads as a headline, ${titleSize}px`);

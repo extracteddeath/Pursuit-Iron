@@ -40,6 +40,24 @@ assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.incl
 
 assert.equal((primitives.match(/export function UiSheetClose\(/g) || []).length, 1,
     'All Program sheets must share one accessible dismiss element');
+assert.ok(primitives.includes('if (variant) return _jsx(UiAction,') &&
+    primitives.includes('"data-icon-only": true') &&
+    primitives.includes('className: `hit wpb-sheet-close') &&
+    primitives.includes('"aria-label": label'),
+    'Tonal close buttons must preserve the existing UiAction semantics and icon-only geometry');
+for(const [name, source, handler] of [
+    ['Exercise options', exerciseOptions, 'onClick: close'],
+    ['Training maxes', trainingMaxes, 'onClick: onClose']
+]) {
+    assert.ok(source.includes('_jsx(UiSheetClose, { variant: \'tonal\'') &&
+        source.includes(handler),
+        name + ' uses the shared tonal sheet close without changing its callback');
+}
+assert.ok(trainingMaxes.includes("'data-wpb-system-back': !conversion || undefined"),
+    'Training-max Back owner still sees its original close action');
+assert.ok(!css.includes('.wpb-exercise-options-heading .wpb-sheet-close{') &&
+    !css.includes('.wpb-training-max-heading .wpb-sheet-close{'),
+    'Tonal sheet close sizing is owned by UiAction, not screen-specific flex overrides');
 for (const [name, source] of [['schedule', programSchedule], ['settings', programSettings], ['share', programShare]]) {
     assert.ok(source.includes('_jsx(UiSheetClose,') && source.includes('wpb-program-' + name + '-close'),
         'Program ' + name + ' must share the native close action and preserve the feature focus locator');

@@ -1,8 +1,8 @@
 // Exercise inspection and actions. ProgramView remains the only prescription writer.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useEffect, useRef, useState } from 'react';
-import { X, Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
-import { UiAction } from './ui-primitives.js';
+import { Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
+import { UiAction, UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { PART_LABEL, formatSetup } from './engine-api.js';
 
@@ -43,8 +43,7 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
                         _jsx('h2', { id: 'program-exercise-options-title', className: 'wpb-exercise-options-title', children: exercise.name }),
                         _jsx('p', { className: 'wpb-exercise-options-meta', children: `${PART_LABEL[exercise.part]} · ${exercise.type}${primary ? ' · key lift' : ''}` })
                     ] }),
-                    _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, 'aria-label': 'Close', onClick: close,
-                        className: 'hit wpb-sheet-close', children: _jsx(X, { size: 18 }) })
+                    _jsx(UiSheetClose, { variant: 'tonal', 'aria-label': 'Close', onClick: close })
                 ] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-exercise-options-body', children: [
                     action('note', Pin, hasNote ? 'Edit pinned note' : 'Add pinned note',

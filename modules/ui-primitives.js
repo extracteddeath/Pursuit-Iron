@@ -37,9 +37,12 @@ export function UiSection({ className = "", ...props }) {
 }
 
 
-// One stateless dismiss control shared by Program sheets; each feature owns dismissal state.
-export function UiSheetClose({ className = "", "aria-label": label = "Close", ...props }) {
+// One stateless dismiss control. Tonal sheets use the existing UiAction owner;
+// plain sheets retain the native 48px geometry owner. Feature owners handle close state.
+export function UiSheetClose({ className = "", "aria-label": label = "Close", variant, ...props }) {
+    const children = _jsx(X, { size: 18, "aria-hidden": true });
+    if (variant) return _jsx(UiAction, { variant, "data-icon-only": true, ...props,
+        "aria-label": label, className: `hit wpb-sheet-close ${className}`, children });
     return _jsx("button", { type: "button", ...props, "aria-label": label,
-        className: `pressable hit wpb-sheet-close wpb-ui-sheet-close ${className}`,
-        children: _jsx(X, { size: 18, "aria-hidden": true }) });
+        className: `pressable hit wpb-sheet-close wpb-ui-sheet-close ${className}`, children });
 }

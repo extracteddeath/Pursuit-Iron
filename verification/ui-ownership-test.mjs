@@ -38,7 +38,7 @@ for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "p
   assert.ok(programSettings.includes(token), 'Settings dialog accessibility/transaction contract lost: '+token);
 assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.includes('"wpb-backdrop", style:'), 'Static Settings shell styles must remain in CSS');
 
-assert.equal((primitives.match(/export function UiSheetClose\\(/g) || []).length, 1,
+assert.equal((primitives.match(/export function UiSheetClose\(/g) || []).length, 1,
     'All Program sheets must share one accessible dismiss element');
 for (const [name, source] of [['schedule', programSchedule], ['settings', programSettings], ['share', programShare]]) {
     assert.ok(source.includes('_jsx(UiSheetClose,') && source.includes('wpb-program-' + name + '-close'),

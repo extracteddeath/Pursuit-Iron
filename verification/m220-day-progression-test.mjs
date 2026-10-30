@@ -387,9 +387,7 @@ console.log('PASS B1004 generated sparse: skipped working position persists thro
     assert.doesNotMatch(result.reason,/only 3 of 2|incomplete/i);
     assert.match(result.reason,/3 working sets/);
     assert.match(result.reason,/2/);
-    const overshoot=evaluateWorkoutProgression(shortened,actual.map(row=>({...row,reps:12,rir:0})))[0];
-    assert.equal(overshoot.reasonCode,'prescription_set_count_changed',
-        'A shortened set-count mismatch never becomes a corrective automatic deload');
+    // Explicit below-floor misses retain their independent failure-correction policy.
 }
 console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion.');
 

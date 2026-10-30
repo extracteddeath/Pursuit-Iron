@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 999,
+  "build": 1000,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "b665cf970998800b9e34eef4c712e15179b258b5b0da662a7c79391885914e91",
@@ -149,18 +149,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "b7a40c6c0f0119ef46d64e3ef61280367db46c1278c83492363b6b979a1547a9",
-    "index.html": "f18cd6377ae231ce41cba0f432e2b5db68daf1b555fbc1e815eac9156b169c36",
-    "sw.js": "042d640b121ab6bb98ddace925a5f94d8346198af965ef5fd54f97da839b2703",
-    "BUILD_PROFILE.json": "f5c318fe30680aba2ad086eb1a1d8c39339d23e5d7f8ed3a6ab4d321a07ad263",
+    "modules/App.js": "94d63dbd7b11dc83c6fc8e00c4e19fb44e93fec6312e9bc1925a80daddfb0938",
+    "index.html": "3fe5f5d6e859d343cd07f7cba977cee348188348051f171b25a61da2328b526d",
+    "sw.js": "2cf222482f191b2731b387726c2b4eb756f87ef733f9d0c18148b459b83a08a2",
+    "BUILD_PROFILE.json": "26f0514e63953a0bbee1dafbdca9dbdac14b0ce51e5ae7f3cebcd48252db5f9a",
     "CHANGELOG.md": "0e3f7d796a743e83f0c9ef4c505d25473ff860d1e5cb8acebe6b3456f71eac19",
-    "app.css": "d2d9c8865de3bff5ac4325b9cce5c641c7f9425305bb5ac85580eb8cc5f5735e",
+    "app.css": "62fb01158a6ba6013a8f321c55a5ffaed9d600e6aa23dfd81c87bb584148204b",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b999-r6a512720ef41a6b3",
-  "uiMilestone": "Build 999 · Program, Home and Workout M3 consolidation"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1000-r2345d7d0912e27cb",
+  "uiMilestone": "Build 1000 · Program, Home and Workout M3 consolidation"
 }

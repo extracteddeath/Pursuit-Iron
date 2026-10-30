@@ -47,8 +47,6 @@ assert.ok(css.includes(searchRecoveryRule)&&css.includes(searchClearRule),
   'New search UI must use only its two named compact presentation owners');
 const reviewScopeRule="#root .wpb .wpb-program-review-scope{display:grid;gap:var(--pi-space-2);margin:var(--pi-space-3) 0}\n#root .wpb .wpb-program-review-scope p{display:grid;gap:2px;margin:0;font-size:var(--pi-type-support);line-height:1.45;overflow-wrap:anywhere}\n#root .wpb .wpb-program-review-scope strong{color:var(--wpb-theme-muted);font-size:var(--pi-type-label)}\n";
 assert.ok(css.includes(reviewScopeRule), 'Compact program-impact grid must use a single named semantic style owner');
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').length<=637454,
-  'Shared Program sheet chrome must not grow stylesheet debt');
 // Explicitly segregate this fixed CSS role migration from legacy stylesheet debt.
 const b1003Start=css.indexOf('/* B1003 — shared fixed type roles');
 assert.ok(b1003Start>=0,'B1003 CSS role block is present');
@@ -59,6 +57,8 @@ for(const role of b1003RoleNames)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Missing B1003 type owner '+role);
 for(const old of ["style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }","style: { fontSize: 15, fontWeight: 600, color: C.text }","style: { fontSize: 12, color: C.muted, marginTop: 2 }","style: { fontSize: 13, fontWeight: 700, color: C.text }","style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }","style: { fontSize: 13, color: C.text, lineHeight: 1.45 }","style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }"])
   assert.ok(!app.includes(old),'Old inline type object restored: '+old);
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').length<=637454,
+  'Shared Program sheet chrome must not grow stylesheet debt');
 assert.ok((app.match(/style: \{/g)||[]).length<=1003,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&

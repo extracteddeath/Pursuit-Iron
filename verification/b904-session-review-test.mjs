@@ -40,6 +40,14 @@ assert.ok(buildSessionReview(program,day,1,'kg',[]).exercises.every(row=>!row.op
 assert.equal(buildSessionReview(program,day,2,'kg',history.map(h=>({...h,programId:'other'}))).changes.length,0,'other programs are not progression evidence');
 assert.equal(buildSessionReview(program,day,2,'kg',history.map(h=>({...h,dayId:'elsewhere',dayLabel:'Other'}))).changes.length,0,'other days are not progression evidence');
 const partial=structuredClone(history);partial[0].perf['bb-row'].sets=[{w:90,r:12,rir:2,rirReported:true},{w:90,r:8,rir:2,rirReported:true},{w:87.5,r:8,rir:2,rirReported:true}];
+const sparseReview=structuredClone(history);
+sparseReview[0].perf['bb-bench'].sets=[
+  {w:80,r:8,rir:2,rirReported:true,tr:2,workingSetIndex:0},
+  {w:77.5,r:7,rir:2,rirReported:true,tr:2,workingSetIndex:2}
+];
+const positional=buildSessionReview(program,day,2,'kg',sparseReview).exercises[0].change.previous;
+assert.deepEqual(positional.map(row=>row?.weight??null),[80,null,77.5],
+  'Plan Review must not move a completed third set into skipped set two');
 const dd=buildSessionReview(program,day,2,'kg',partial).exercises[1];
 assert.ok(dd.proposed[0].weight>90);assert.equal(dd.proposed[1].weight,'90');
 const heldDD=buildSessionReview(withSessionPlanChoice(program,dd.change,true),day,2,'kg',partial).exercises[1];

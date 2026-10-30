@@ -60,6 +60,15 @@ try {
     await page.evaluate(()=>document.querySelectorAll('.wpb-program-schedule-row')[1].click());
     await page.waitForFunction(()=>document.querySelector('.wpb-program-schedule-caption [role="status"]')?.textContent.includes('3 training days'));
     assert.match(await page.$eval('.wpb-program-schedule-row:nth-of-type(2)',el=>el.getAttribute('aria-label')),/Upper A/);
+    const initialTargets=await page.$eval('[data-testid="weekly-schedule-sheet"]',panel=>{
+        const controls=[panel.querySelector('.wpb-program-schedule-close'),
+            panel.querySelector('.wpb-program-schedule-clear')];
+        return controls.map(el=>{const r=el.getBoundingClientRect();
+            return {role:el.className,width:r.width,height:r.height,left:r.left,right:r.right};
+        });
+    });
+    assert.ok(initialTargets.every(t=>t.width>=48&&t.height>=48&&t.left>=-1&&t.right<=393+1),
+        'Schedule close/clear meet 48px touch geometry: '+JSON.stringify(initialTargets));
     await page.click('[aria-label="Clear all scheduled workouts"]');
     await page.waitForFunction(()=>document.querySelector('.wpb-program-schedule-caption [role="status"]')?.textContent.includes('0 training days'));
     assert.equal(await page.$('[aria-label="Clear all scheduled workouts"]'),null);
@@ -75,6 +84,12 @@ try {
         const r=el.getBoundingClientRect();
         return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:innerHeight};
     });
+    const resizedClose=await page.$eval('.wpb-program-schedule-close',el=>{
+        const r=el.getBoundingClientRect();
+        return {width:r.width,height:r.height,left:r.left,right:r.right};
+    });
+    assert.ok(resizedClose.width>=48&&resizedClose.height>=48&&resizedClose.left>=-1&&resizedClose.right<=321,
+        'Schedule Close remains reachable at 320px with 200% text: '+JSON.stringify(resizedClose));
     assert.ok(geometry.left>=-1&&geometry.right<=321&&geometry.top>=-1
         &&geometry.bottom<=geometry.height+1,'320px/200% geometry stays in viewport '+JSON.stringify(geometry));
     assert.deepEqual(errors,[],'no runtime exceptions');

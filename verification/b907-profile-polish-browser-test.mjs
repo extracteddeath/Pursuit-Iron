@@ -63,6 +63,12 @@ try{
     const headingRoles=await page.$$eval('#profile-strength-title,#profile-achievements-title',nodes=>nodes.map(n=>({role:n.getAttribute('role'),level:n.getAttribute('aria-level')})));
     assert.ok(headingRoles.length===2&&headingRoles.every(h=>h.role==='heading'&&h.level==='2'),'Profile sections expose a coherent heading outline');
     const toggle=await page.$('.wpb-profile-achievement-toggle');
+    const toggleTarget=await toggle.evaluate(el=>{
+      const r=el.getBoundingClientRect();
+      return {width:r.width,height:r.height,left:r.left,right:r.right};
+    });
+    assert.ok(toggleTarget.width>=48&&toggleTarget.height>=48,
+      'Achievement disclosure meets 48px touch standard: '+JSON.stringify({width,height,theme,enlarged,toggleTarget}));
     await toggle.focus();await page.keyboard.press('Space');
     assert.equal(await toggle.evaluate(e=>e.getAttribute('aria-expanded')),'true');
     await page.waitForSelector('.wpb-profile-achievement-board');
@@ -82,7 +88,7 @@ try{
           nested:sheet.querySelectorAll('[role="dialog"]').length+(sheet.getAttribute('role')==='dialog'?1:0),focus:backdrop.contains(document.activeElement),
           earned:!!sheet.querySelector('.wpb-achievement-earned'),value,fillError,close:{width:close.width,height:close.height}};
       });
-      assert.ok(dialog.role==='dialog'&&dialog.modal==='true'&&dialog.name&&dialog.nested===0&&dialog.focus&&dialog.close.width>=44&&dialog.close.height>=44,
+      assert.ok(dialog.role==='dialog'&&dialog.modal==='true'&&dialog.name&&dialog.nested===0&&dialog.focus&&dialog.close.width>=48&&dialog.close.height>=48,
         'One named detail dialog owns native focus and Close '+JSON.stringify({width,height,theme,enlarged,dialog}));
       assert.equal(dialog.earned,earned==='1');
       if(earned==='0')assert.ok(dialog.value>=0&&dialog.value<=100&&dialog.fillError<1,'Locked detail progress uses its canonical percentage');
@@ -173,6 +179,17 @@ try{
   assert.equal(hierarchy.overflow,false,'compact Profile has no horizontal overflow');
   await page.$eval('.wpb-profile-card-actions button', b=>b.click());
   await page.waitForSelector('.wpb-profile-card-editor');
+  // The read-only metrics explanation is a real disclosure, not a tiny caption.
+  const metricSummary=await page.$eval('.wpb-profile-card-details>summary',el=>{
+    const r=el.getBoundingClientRect();
+    return {w:r.width,h:r.height,l:r.left,right:r.right};
+  });
+  assert.ok(metricSummary.w>=48&&metricSummary.h>=48&&metricSummary.l>=-1&&metricSummary.right<=width+1,
+    'Profile metric explanation has a reachable 48px disclosure: '+JSON.stringify({width,theme,metricSummary}));
+  await page.$eval('.wpb-profile-card-details>summary',el=>el.click());
+  assert.equal(await page.$eval('.wpb-profile-card-details',el=>el.open),true,
+    'Metrics explanation opens without changing card selections');
+  await page.$eval('.wpb-profile-card-details>summary',el=>el.click());
   const rowEdges=await page.$$eval('.wpb-profile-strength-cell',cells=>cells.map(c=>({label:c.querySelector('.wpb-profile-strength-label').getBoundingClientRect().left,value:c.querySelector('.mono').getBoundingClientRect().right})));
   assert.ok(rowEdges.length>=2,'populated fixture shows strength comparisons');
   assert.ok(rowEdges.every(r=>Math.abs(r.label-rowEdges[0].label)<1&&Math.abs(r.value-rowEdges[0].value)<1),'highlighted Push and other scores align');

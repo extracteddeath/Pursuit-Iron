@@ -1,8 +1,8 @@
 // Program Settings view only: staged draft, program transaction and persistence stay owned by ProgramView.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { X, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { weeksOf, editableProgramWeeks, MAX_EDITABLE_PROGRAM_WEEKS, customProgramSettingsIssues } from './engine-api.js';
-import { UiChoice } from './ui-primitives.js';
+import { UiChoice, UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const TARGET_OPTIONS = [
@@ -86,14 +86,14 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
     return _jsx("div", {
         "data-testid": "program-settings-sheet", role: "dialog", "aria-modal": true,
         "aria-labelledby": "program-settings-title", onClick: event => { if (event.target === event.currentTarget) onClose(); },
-        className: "wpb-backdrop wpb-program-settings-backdrop",
+        className: "wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-settings-backdrop",
         children: _jsxs("div", {
-            ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: e => e.stopPropagation(), className: "wpb-program-settings-panel",
+            ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: e => e.stopPropagation(), className: "wpb-ui-sheet-panel wpb-program-settings-panel",
             children: [
-                _jsxs("div", { className: "wpb-program-settings-heading", children: [
-                    _jsx("h2", { id: "program-settings-title", className: "wpb-program-settings-title", children: "Program settings" }),
-                    _jsx("button", { type: "button", "aria-label": "Close", className: "pressable hit wpb-sheet-close wpb-program-settings-close", onClick: onClose, children: _jsx(X, { size: 18 }) })] }),
-                _jsxs('div', { className: 'wpb-scroll wpb-program-settings-body', children: [
+                _jsxs("div", { className: "wpb-ui-sheet-heading wpb-program-settings-heading", children: [
+                    _jsx("h2", { id: "program-settings-title", className: "wpb-ui-sheet-title wpb-program-settings-title", children: "Program settings" }),
+                    _jsx(UiSheetClose, { className: "wpb-program-settings-close", onClick: onClose })] }),
+                _jsxs('div', { className: 'wpb-scroll wpb-program-settings-body wpb-ui-sheet-scroll', children: [
                     _jsx("p", { className: "wpb-program-settings-intro", children: program.engineSource === "pursuit-next"
                         ? "Adjust your program, then save to rebuild it with the latest program logic. Your current program stays unchanged if the rebuild cannot be completed safely."
                         : program.custom ? "Update your program settings. Swap or remove any exercises that conflict with a new constraint before saving." : "Adjust your program, then save to apply. Changes re-balance your current exercises." }),
@@ -135,7 +135,7 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
                                 selected: !!cfgDraft?.noSupersets, onClick: () => setCfgDraft(d => ({ ...d, noSupersets: !d.noSupersets })) })] }),
                         _jsx('p', { className: 'wpb-program-settings-help', children: 'These choices are treated as firm program constraints. If a requested combination cannot be built safely, the rebuild is rejected instead of silently ignoring the setting.' })] })
                 ] }),
-                _jsxs("div", { className: "wpb-program-settings-footer", children: [
+                _jsxs("div", { className: "wpb-ui-sheet-footer wpb-ui-sheet-footer-scroll wpb-program-settings-footer", children: [
                     _jsx("button", { type: "button", onClick: onClose, className: "pressable wpb-program-settings-cancel", children: "Cancel" }),
                     _jsx("button", { type: "button", "aria-label": "Save program settings",
                         "aria-describedby": settingsIssues.length ? "program-settings-issues"

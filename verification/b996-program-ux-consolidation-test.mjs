@@ -47,14 +47,16 @@ assert.ok(progression.includes("type: 'search'") &&
     'progression filters expose forgiving search and live results');
 assert.ok(css.includes('.wpb-progression-result-count{') &&
     css.includes('max-height:min(85dvh,calc(var(--visual-h,') &&
-    css.includes('.wpb-save-review-scroll{flex:1;min-height:0'),
-    'responsive CSS belongs to the original components, not new override layers');
-for (const surface of ['wpb-program-schedule-sheet','wpb-program-reference-panel','wpb-progression-choice-panel']) {
-    assert.ok(css.includes(`.${surface}{`) && css.includes(`.${surface}{box-sizing:border-box`),
-        'Program surface retains a component-owned stylesheet rule: '+surface);
-    const start = css.indexOf(`.${surface}{`);
-    assert.ok(css.slice(start, css.indexOf('}', start)).includes('max-height:min(86dvh,calc(var(--visual-h,'),
-        'Program surface respects the visible keyboard viewport: '+surface);
+    css.includes('.wpb-save-review-scroll{flex:1}') &&
+    css.includes('.wpb-ui-sheet-scroll{min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain}') &&
+    review.includes('wpb-save-review-scroll wpb-ui-sheet-scroll'),
+    'responsive CSS retains Review flex sizing and the shared sheet scroll owner');
+assert.ok(css.includes('.wpb-program-schedule-sheet{box-sizing:border-box;width:100%;max-height:min(86dvh,calc(var(--visual-h,'),
+    'Weekly Schedule retains independent keyboard-safe viewport geometry');
+assert.ok(css.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'Reference and Progression panels retain keyboard-safe viewport bounds');
+for (const surface of ['wpb-program-reference-panel','wpb-progression-choice-panel']) {
+    assert.ok(css.includes(`.${surface}{`) && progression.includes('wpb-ui-sheet-panel '+surface),
+        'Reference/Progression keep distinct paint and shared responsive geometry: '+surface);
 }
 assert.ok(css.length<=643592,'consolidated CSS does not exceed last published size ceiling');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'no additional priority overrides');

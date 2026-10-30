@@ -64,7 +64,8 @@ try{
    width:innerWidth,height:innerHeight,clientWidth:panel.clientWidth,scrollWidth:panel.scrollWidth,
    metricBounds:items.map(rect),metricOverflow:items.some(x=>x.scrollWidth>x.clientWidth+3),
    entryWhiteSpace:[...panel.querySelectorAll('.wpb-finish-entry-name')].map(el=>getComputedStyle(el).whiteSpace),
-   actions:[...panel.querySelectorAll('.wpb-finish-save,.wpb-finish-share-action,.wpb-finish-feedback-toggle')].map(rect)};
+   actions:[...panel.querySelectorAll('.wpb-finish-save,.wpb-finish-share-action,.wpb-finish-feedback-toggle')]
+    .map(el=>({name:el.className,...rect(el)}))};
  });
  for(const [width,height,font] of [[320,650,16],[320,650,32],[393,850,16],[834,900,24]]){
   await page.setViewport({width,height,isMobile:width<600,hasTouch:width<600,deviceScaleFactor:2});
@@ -81,7 +82,7 @@ try{
   assert.ok(m.metricBounds.length===3&&m.metricBounds.every(x=>x.width>0&&x.left>=-1&&x.right<=width+1),
     'all finish metrics remain visible at small widths: '+JSON.stringify({width,height,font,m}));
   assert.ok(m.entryWhiteSpace.every(value=>value!=='nowrap'),'long movement names may wrap');
-  assert.ok(m.actions.every(x=>x.height>=44),'completion actions meet touch size');
+  assert.ok(m.actions.every(x=>x.height>=48),'completion actions meet Pursuit Iron 48px touch contract');
  }
  await page.setViewport({width:393,height:850,isMobile:true,hasTouch:true,deviceScaleFactor:2});
  await page.evaluate(()=>{document.documentElement.style.fontSize='16px'});
@@ -99,7 +100,7 @@ try{
  const selected=await rating.evaluate(el=>({
   color:getComputedStyle(el).color,bg:getComputedStyle(el).backgroundColor,
   box:el.getBoundingClientRect().height}));
- assert.ok(selected.box>=44,'recovery choice has 44px minimum target');
+ assert.ok(selected.box>=48,'recovery choice has a 48px minimum target');
  await page.click('.wpb-finish-feedback-toggle');
  assert.equal(await page.$eval('.wpb-finish-feedback-toggle',e=>e.getAttribute('aria-expanded')),'false','feedback disclosure closes');
  await page.click('.wpb-finish-keep-training');

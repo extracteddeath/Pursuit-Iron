@@ -11,7 +11,16 @@ const names=['meta','metric','metric-value','record-value','metric-label','why-t
 for(const name of names){
  const role='wpb-exinfo-'+name;
  assert.ok(info.includes(role),'Missing semantic owner '+role);
- assert.ok(css.includes('.'+role+'{')||css.includes('.'+role+','),'No CSS role '+role);
+ assert.ok(css.includes('.'+role+'{')||css.includes('.'+role+',')||css.includes('.'+role+')'),'No CSS role '+role);
+}
+for(const [names,shared] of [
+  [['metric-value','record-value'],'font-size:15px;color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere'],
+  [['why-copy','cue-copy'],'font-size:13px;color:var(--wpb-theme-text);overflow-wrap:anywhere'],
+  [['metric-label','rest-caption'],'font-size:11px;color:var(--wpb-theme-muted)'],
+  [['secondary-copy','tempo-copy','demo-copy','set-helper'],'font-size:13px;color:var(--wpb-theme-muted)']
+]){
+  const rule='#root .wpb :is('+names.map(name=>'.wpb-exinfo-'+name).join(',')+'){'+shared+'}';
+  assert.ok(css.includes(rule),'One scoped typography owner required for '+names.join(','));
 }
 assert.match(info,/role: "dialog", "aria-modal": true/,'Info is an actual named modal');
 assert.match(info,/"aria-labelledby": "wpb-exinfo-title"/);
@@ -21,6 +30,9 @@ assert.ok(info.includes("ev.key === \"Escape\"")&&info.includes("ev.key !== \"Ta
 assert.ok(workout.includes('infoOpenerRef.current = event.currentTarget')&&workout.includes('opener?.isConnected'),'Closing restores keyboard focus to the Info opener');
 assert.ok(info.includes('"aria-pressed": active, onClick: () => onSetExLoadInc(ex.id, v, unit)'),'Load step choices retain exact state and writer');
 assert.ok(info.includes('setRestCustom(exIdx, restNow + 15)')&&info.includes('setRestCustom(exIdx, Math.max(15, restNow - 15))'),'Rest changes use existing state');
+const infoActionSizing=css.split('#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto,.wpb-exinfo-weight-choice){')[1]?.split('}')[0]||'';
+for(const prop of ['box-sizing:border-box','min-width:48px','min-height:48px','border:1px solid var(--wpb-theme-border)','cursor:pointer'])
+  assert.ok(infoActionSizing.includes(prop),'Info controls share '+prop);
 assert.ok(css.includes('min-width:48px;min-height:48px'),'Rest actions must meet 48px target');
 assert.ok(css.includes('max-height:min(90dvh,calc(var(--visual-h'),'Sheet must account for visual viewport');
 assert.ok((app.match(/style: \{/g)||[]).length<=1101,'Fixed Workout info CSS must not return to inline style');

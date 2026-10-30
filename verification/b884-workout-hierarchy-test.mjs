@@ -31,6 +31,17 @@ for (const stable of ['"aria-label": "weight"','"aria-label": "reps"','"data-hap
   assert.ok(workout.includes(stable), `Set-entry functionality is preserved: ${stable}`);
 }
 assert.ok(!workout.includes('Complete remaining sets'), 'Each set must be completed intentionally; no bulk-complete action');
+// Accessible disclosure/primer controls are not allowed to steal the
+// numeric logger's interaction model or regress to caption-size hit areas.
+for (const [selector,property] of [
+ ['.wpb-load-explanation summary','min-height:48px'],
+ ['#root .wpb-workout .wpb-warmup-hide','min-height:48px'],
+ ['#root .wpb-workout .wpb-warmup-finish','min-height:52px']
+]) {
+ const at=css.indexOf(selector+'{');
+ assert.ok(at>=0&&css.slice(at,css.indexOf('}',at)).includes(property),
+   'Workout supporting action retains its native touch target: '+selector);
+}
 assert.ok(css.includes('R93 / B884 — Workout is a set logger'), 'Style pass is present');
 assert.ok(css.includes('data-focus-mode="false"'), 'Focus and normal screen styling isolated');
 // The exercise header must not drift back into a tall name/tags/set/actions stack.
@@ -80,6 +91,33 @@ assert.ok(!workout.includes('padding: "8px 13px", borderRadius: 999, border: '),
 assert.ok(css.includes('/* B969: compact workout action rail.') &&
   css.includes('.wpb-workout-tools .wpb-workout-tool[data-selected="true"]'),
   'One CSS owner paints the compact icon rail and selected state');
+
+/* Design 41–43: One Workout note editor owns exercise notes.
+   Previous-session context moves into it instead of taking logger height. */
+assert.ok(!workout.includes('placeholder: "Add a note\\u2026"') && !workout.includes('children: "Last note:"'),
+  'A duplicate full-width note editor must not return below working sets');
+assert.ok(workout.includes('className: "wpb-session-notes-previous"') &&
+  workout.includes('perf[data[exIdx].id]?.note') &&
+  workout.includes('onChange: text => editNote(exIdx, text)'),
+  'Last exercise note remains readable from the existing session note editor');
+assert.ok(workout.includes('setSessionNotesOpen(true)') &&
+  workout.includes('label: "Whole session"') &&
+  workout.includes('noteRepeat: value'),
+  'Session and exercise note editors and repeat behavior stay available');
+assert.ok(css.includes('.wpb-session-notes-previous{') &&
+  css.includes('.wpb-session-notes-previous>strong{'),
+  'Previous note style is a shared theme-aware CSS role');
+
+/* Design 44–46: one accessible average-load action with no duplicate inline paint. */
+assert.ok(workout.includes('className: "pressable wpb-workout-average-action"') &&
+    workout.includes('onClick: () => levelSetsToAvg(ei)') &&
+    !workout.includes('title: "You ramped up'),
+    'Average-load remains an intentional button, without a lengthy tooltip');
+const averageAction=css.split('#root .wpb-workout .wpb-workout-average-action{')[1]?.split('}')[0]||'';
+assert.ok(averageAction.includes('min-height:48px') &&
+    averageAction.includes('background:var(--wpb-theme-bg-tint)') &&
+    css.includes('.wpb-workout-average-action:focus-visible,'),
+    'Average load uses a 48px theme-aware action and the existing focus group');
 
 /* B970: keep notes discoverable in one toolbar action and CSS-owned hint surfaces. */
 assert.ok(!workout.includes('children: "Session note · " + e.note'),

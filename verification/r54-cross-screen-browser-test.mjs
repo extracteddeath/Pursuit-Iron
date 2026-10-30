@@ -607,6 +607,16 @@ async function verifyBrowseMemory(browser,theme,width){
       assert.ok(Math.abs(actual-expected)<=2,label+' '+JSON.stringify({theme,width,expected,actual}));};
 
     await page.click('button[aria-label="Exercise library"]');await page.waitForSelector('.wpb-library');
+    // Design spec v1, 6: chips and flag filters are primary repeated touch
+    // actions. Measure the rendered targets, including responsive overrides,
+    // rather than trusting the lower-specificity base CSS declaration.
+    const libraryTargets=await page.$$eval('.wpb-library .wpb-filter-chip, .wpb-library .wpb-library-flag',controls=>
+      controls.filter(el=>el.getClientRects().length).map(el=>({
+        label:el.textContent.trim(),height:el.getBoundingClientRect().height,
+        width:el.getBoundingClientRect().width
+      })));
+    assert.ok(libraryTargets.length>=3&&libraryTargets.every(c=>c.height>=48&&c.width>=48),
+      'Library filters expose 48px touch targets without clipping '+JSON.stringify({theme,width,libraryTargets}));
     await setScroll(620);
     const browsingSpace=await page.$eval('.wpb-library',shell=>{
       const viewport=shell.getBoundingClientRect(),header=shell.querySelector('.wpb-library-header').getBoundingClientRect();

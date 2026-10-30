@@ -1,5 +1,6 @@
 // Stateless shared UI. Screen state, navigation and training stay with their feature owners.
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from 'react/jsx-runtime';
+import { X } from 'lucide-react';
 
 // R61 foundations pilot. These primitives own presentation and native button semantics only;
 // navigation, saved choices, logging and scroll memory remain with their existing screen owners.
@@ -33,4 +34,17 @@ export function UiStatus({ className = "", children, ...props }) {
 }
 export function UiSection({ className = "", ...props }) {
     return _jsx("section", { ...props, className: `wpb-ui-section ${className}` });
+}
+
+
+// Stateless close control for Program sheets and dialogs; each feature owns
+// its dismissal/confirmation state. Dialog chrome retains the existing paint.
+export function UiSheetClose({ className = "", "aria-label": label = "Close",
+    variant, chrome = "sheet", iconSize = 18, ...props }) {
+    const children = _jsx(X, { size: iconSize, "aria-hidden": true });
+    if (variant) return _jsx(UiAction, { variant, "data-icon-only": true, ...props,
+        "aria-label": label, className: `hit wpb-sheet-close ${className}`, children });
+    return _jsx("button", { type: "button", ...props, "aria-label": label,
+        className: `pressable hit ${chrome === "dialog" ? "" : "wpb-sheet-close "}wpb-ui-sheet-close ${className}`,
+        children });
 }

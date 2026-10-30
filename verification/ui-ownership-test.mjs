@@ -11,6 +11,7 @@ const programSettings = fs.readFileSync('modules/program-settings-sheet.js', 'ut
 const manualTargets = fs.readFileSync('modules/program-manual-targets.js', 'utf8');
 const backupPanel = fs.readFileSync('modules/backup-restore-panel.js', 'utf8');
 const primitives = fs.readFileSync('modules/ui-primitives.js', 'utf8');
+const sessionChoice = fs.readFileSync('modules/session-choice-dialog.js', 'utf8');
 const releaseNotes = fs.readFileSync('modules/release-notes.js', 'utf8');
 const disclosures = fs.readFileSync('modules/ui-disclosure.js', 'utf8');
 const programReference = fs.readFileSync('modules/program-reference-surfaces.js', 'utf8');
@@ -26,17 +27,383 @@ const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
 const loadingCalculator = fs.readFileSync('modules/loading-calculator.js','utf8');
 const gymLoadFields = fs.readFileSync('modules/gym-load-fields.js','utf8');
 const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
-const MAX_IMPORTANT = 2060; // M394: retire 33 exercise-row priority overrides.
-const MAX_APP_IMPORTANT = 1053; // M393: retire legacy Library and detail presentation priorities.
+const MAX_IMPORTANT = 2027; // Design audit: measured CSS priority limit after shared Workout set-option focus.
+const MAX_APP_IMPORTANT = 1014; // Design audit: retire duplicate Settings jump geometry/paint; measured runtime ceiling.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
 const MAX_INLINE_STYLE_OBJECTS = 1406; // B965: retire 49 additional literal presentation objects; never increase.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
-for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
+for(const role of ['backdrop','panel','intro','field-label','field','description','footer','cancel','save'])
   assert.ok(css.includes('.wpb-program-settings-'+role+'{'), 'Settings view lost semantic CSS owner '+role);
+assert.ok(css.includes('.wpb-ui-sheet-title{') &&
+    programSettings.includes('wpb-ui-sheet-title wpb-program-settings-title'),
+    'Settings title must use the shared sheet typography instead of a forked style owner');
 for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "program-settings-title"','htmlFor: "program-settings-folder"','htmlFor: "program-settings-description"','selected: !!cfgDraft?.noSupersets','selected: !!cfgDraft?.noBodyweight','disabled: !canApply'])
   assert.ok(programSettings.includes(token), 'Settings dialog accessibility/transaction contract lost: '+token);
 assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.includes('"wpb-backdrop", style:'), 'Static Settings shell styles must remain in CSS');
+
+assert.equal((primitives.match(/export function UiSheetClose\(/g) || []).length, 1,
+    'All Program sheets must share one accessible dismiss element');
+assert.ok(primitives.includes('if (variant) return _jsx(UiAction,') &&
+    primitives.includes('"data-icon-only": true') &&
+    primitives.includes('className: `hit wpb-sheet-close') &&
+    primitives.includes('"aria-label": label'),
+    'Tonal close buttons must preserve the existing UiAction semantics and icon-only geometry');
+for(const [name, source, handler] of [
+    ['Exercise options', exerciseOptions, 'onClick: close'],
+    ['Training maxes', trainingMaxes, 'onClick: onClose']
+]) {
+    assert.ok(source.includes('_jsx(UiSheetClose, { variant: \'tonal\'') &&
+        source.includes(handler),
+        name + ' uses the shared tonal sheet close without changing its callback');
+}
+assert.ok(trainingMaxes.includes("'data-wpb-system-back': !conversion || undefined"),
+    'Training-max Back owner still sees its original close action');
+assert.ok(!css.includes('.wpb-exercise-options-heading .wpb-sheet-close{') &&
+    !css.includes('.wpb-training-max-heading .wpb-sheet-close{'),
+    'Tonal sheet close sizing is owned by UiAction, not screen-specific flex overrides');
+for (const [name, source] of [['schedule', programSchedule], ['settings', programSettings], ['share', programShare]]) {
+    assert.ok(source.includes('_jsx(UiSheetClose,') && source.includes('wpb-program-' + name + '-close'),
+        'Program ' + name + ' must share the native close action and preserve the feature focus locator');
+}
+assert.ok(css.includes('.wpb-ui-sheet-close,#root .wpb-workout .wpb-b973-set-close{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;') &&
+    css.includes('.wpb-ui-sheet-heading{display:flex;flex-shrink:0;') &&
+    !['schedule','settings','share'].some(name => css.includes('.wpb-program-' + name + '-close{')) &&
+    !css.includes('.wpb-program-settings-heading{') && !css.includes('.wpb-program-share-heading{'),
+    'Program sheet chrome cannot be re-forked into screen-specific size owners');
+
+
+// Icon actions in Workout and Rest share one measured 48px CSS geometry owner.
+const iconActions = css.split('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool,.wpb-rest-actions>.wpb-rest-action){')[1]?.split('}')[0] || '';
+for (const size of ['display:inline-flex','align-items:center','justify-content:center',
+    'flex:0 0 48px','width:48px','min-width:48px','height:48px','min-height:48px','padding:0'])
+    assert.ok(iconActions.includes(size), 'Shared Workout/Rest icon geometry lost: '+size);
+for (const selector of ['#root .wpb-workout .wpb-workout-tools .wpb-workout-tool{',
+    '#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{']) {
+    const paint = css.split(selector)[1]?.split('}')[0] || '';
+    assert.ok(paint && !/(?:box-sizing|display|align-items|justify-content|flex|width|height|min-width|min-height|padding)\s*:/.test(paint),
+        'Workout/Rest-specific style must not re-own common icon geometry: '+selector);
+}
+
+// Workout controls share a theme-aware keyboard ring, using :is() only
+// for the single-class targets (which keeps their original specificity).
+const focusGroup = css.split('#root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,')[1]?.split('}')[0] || '';
+for (const selector of [':is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible,',
+    '.wpb-rest-actions>.wpb-rest-action:focus-visible{'])
+    assert.ok(focusGroup.includes(selector), 'Workout focus group missing: '+selector);
+assert.ok(focusGroup.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;'),
+    'Shared Workout keyboard ring must remain visible and theme-aware');
+for(const selector of ['.wpb-workout-pinned-note:focus-visible{',
+    '.wpb-workout-exercise-link:focus-visible{'])
+    assert.ok(!css.includes('#root .wpb-workout '+selector),
+        'No standalone Workout focus geometry: '+selector);
+
+// Workout note editor is the one input owner; avoid a second inline logger note.
+assert.ok(!app.includes('placeholder: "Add a note\\u2026"') &&
+  app.includes('className: "wpb-session-notes-previous"') &&
+  app.includes('onChange: text => editNote(exIdx, text)') &&
+  css.includes('.wpb-session-notes-previous{'),
+  'Session note action, repeat option and previous exercise note retain one owner');
+
+const infoTouch=css.split('#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto,.wpb-exinfo-weight-choice){')[1]?.split('}')[0]||'';
+for(const p of ['box-sizing:border-box','min-width:48px','min-height:48px','cursor:pointer'])
+  assert.ok(infoTouch.includes(p),'Shared Info touch-size owner: '+p);
+assert.ok(app.includes('className: "pressable wpb-workout-average-action"') &&
+    app.includes('onClick: () => levelSetsToAvg(ei)') &&
+    css.includes('.wpb-workout-average-action:focus-visible,'),
+    'Average load remains deliberate and keyboard accessible');
+// Silent set feedback: live-autoregulation metadata survives in the engine, but
+// an always-visible recommendation above every pending set is not a UI action.
+assert.ok(!app.includes('data-load-advice') && !app.includes('const acceptLowerLoad =') &&
+    !css.includes('wpb-load-advice'), 'Per-set coaching banner and dead styles must stay retired');
+assert.ok(app.includes('data-set-options-trigger') && app.includes('"aria-label": "weight"'),
+    'Weight and set editing remain directly available without a coaching prompt');
+
+// Workout Info text has one scope-owned token for each truly shared role.
+for(const names of [
+  ['metric-value','record-value'],['why-copy','cue-copy'],
+  ['metric-label','rest-caption'],['secondary-copy','tempo-copy','demo-copy','set-helper']
+]) {
+ const rule='#root .wpb :is('+names.map(name=>'.wpb-exinfo-'+name).join(',')+'){';
+ assert.ok(css.includes(rule),'Workout Info typography owner must stay shared: '+names.join(','));
+}
+assert.ok(app.includes('className: "wpb-b973-coach-label", children: "Coach"') &&
+    !app.includes('style: { ...eyebrowAccent() }, children: "Coach"'),
+    'Workout Coach heading cannot regain a duplicate inline style object');
+// Workout Leave and header actions share one 48px control geometry owner.
+const headerButtonGeometry=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){')[1]?.split('}')[0]||'';
+for(const token of ['box-sizing:border-box','width:48px','height:48px',
+    'background:transparent','color:var(--wpb-theme-text)','cursor:pointer'])
+    assert.ok(headerButtonGeometry.includes(token),'Header shared CSS lost '+token);
+for(const selector of ['.wpb-workout-close{','.wpb-workout-header-action{']){
+    const feature=css.split('#root .wpb-workout '+selector)[1]?.split('}')[0]||'';
+    assert.ok(feature&&!feature.includes('width:48px')&&!feature.includes('height:48px')&&!feature.includes('background:transparent'),
+      'Workout header feature rules must not own shared geometry: '+selector);
+}
+
+// A later 48px Expressive owner replaces the old 44px toolbar and Rest minima.
+assert.ok(!css.includes('margin-top:7px!important;\n  margin-bottom:7px!important;') &&
+    !css.includes('min-width:44px;\n  transition:background-color 165ms') &&
+    css.includes('margin:8px 0 7px!important;') &&
+    css.includes('min-width:48px!important;\n  min-height:48px!important;'),
+    'Old Expressive Workout sizes/margins must stay retired');
+const restPaint=css.split('#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button{')[1]?.split('}')[0]||'';
+assert.ok(restPaint.includes('border:1px solid var(--pi-r11-edge)!important;') &&
+    !restPaint.includes('min-width:48px!important;') &&
+    !restPaint.includes('min-height:48px!important;'),
+    'Expressive Rest keeps paint but inherits its 48px sizing from the shared owner');
+
+// Workout set entry keeps a shared 2px keyboard focus ring without changing
+// the specificity of the weight field or the set-index button.
+const setEntryFocus=css.split('#root .wpb-workout .wpb-set-controls .wpb-num-input:focus-visible,')[1]?.split('}')[0]||'';
+assert.ok(setEntryFocus.includes('.wpb-set-index:focus-visible{') &&
+    setEntryFocus.includes('outline:2px solid var(--pi-m3e-primary)!important;outline-offset:1px!important;') &&
+    css.split('#root .wpb-workout .wpb-set-index:focus-visible{').length===2,
+    'Workout set focus rings must have one shared rule');
+const coachChrome=css.split('#root .wpb-workout :is(.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle){')[1]?.split('}')[0]||'';
+for(const prop of ['display:flex','align-items:center','width:100%','min-height:48px','text-align:left','cursor:pointer'])
+    assert.ok(coachChrome.includes(prop),'Coach shared control chrome lost '+prop);
+for(const name of ['collapsed','toggle']){
+ const feature=css.split('#root .wpb-workout .wpb-b973-coach-'+name+'{')[1]?.split('}')[0]||'';
+ assert.ok(feature&&!feature.includes('min-height:48px')&&!feature.includes('display:flex'),
+   'Coach feature-specific paint must not duplicate shared control layout: '+name);
+}
+
+// Sheet and dialog buttons share semantics but not inappropriate sheet chrome.
+assert.ok(primitives.includes('chrome = "sheet", iconSize = 18') &&
+    primitives.includes('size: iconSize') &&
+    primitives.includes('chrome === "dialog"') &&
+    sessionChoice.includes('_jsx(UiSheetClose, { chrome: "dialog", iconSize: 20') &&
+    sessionChoice.includes('"aria-label": "Close " + title') &&
+    !sessionChoice.includes("import { X }") &&
+    programReview.includes('_jsx(UiSheetClose, { chrome: "dialog"') &&
+    programReview.includes('"aria-label": "Close change review"') &&
+    programReview.includes('className: "wpb-save-review-close"'),
+    'Native dialog controls must share the close component and preserve labels and glyph sizes');
+for(const [name,source,role] of [
+    ['Save Review',programReview,'wpb-save-review-heading'],
+    ['Exercise Options',exerciseOptions,'wpb-exercise-options-heading'],
+    ['Training Maxes',trainingMaxes,'wpb-training-max-heading']
+]) assert.ok(source.includes('wpb-ui-sheet-heading '+role),
+    name+' must reuse the shared sheet header structure');
+assert.ok(css.includes('padding:var(--pi-ui-sheet-heading-padding,10px 18px 4px)') &&
+    css.includes('.wpb-save-review-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:0;--pi-ui-sheet-title-size:1.1875rem}') &&
+    css.includes('.wpb-training-max-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:12px 18px;border-bottom:') &&
+    css.includes('.wpb-exercise-options-heading{--pi-ui-sheet-heading-gap:10px;--pi-ui-sheet-heading-padding:10px max(16px,env(safe-area-inset-left)) 8px}'),
+    'Shared header must retain zero review inset, Training Maxes divider and Exercise Options safe-area inset');
+for(const [selector,role] of [
+  ['#root .wpb .wpb-save-review-close{','Program review'],
+  ['#root .wpb-workout .wpb-b973-set-close{','Workout set editor']
+]) {
+  // The Workout class also appears in the earlier shared geometry selector.
+  // Inspect the final feature-specific rule, not that deliberate shared owner.
+  const paint=css.slice(css.lastIndexOf(selector)+selector.length).split('}')[0]||'';
+  assert.ok(paint&&!['display:','place-items:','flex:','width:','height:','min-width:','min-height:','color:'].some(prop=>paint.includes(prop)),
+    role+' close must not re-own shared icon geometry');
+}
+
+// Program sheet bodies share one scroller; each keeps its distinct inset and
+// optional flex sizing so focus, visual viewport and short-landscape stay safe.
+const programScroll=css.split('#root .wpb .wpb-ui-sheet-scroll{')[1]?.split('}')[0]||'';
+for(const item of ['min-height:0','overflow-y:auto','overscroll-behavior:contain'])
+  assert.ok(programScroll.includes(item),'Shared Program sheet scroll owner missing '+item);
+for(const [name,source,cls] of [
+  ['Save Review',programReview,'wpb-save-review-scroll'],
+  ['Program Settings',programSettings,'wpb-program-settings-body'],
+  ['Share',programShare,'wpb-program-share-body'],
+  ['Training Maxes',trainingMaxes,'wpb-training-max-body'],
+  ['Exercise Options',exerciseOptions,'wpb-exercise-options-body']
+]) assert.ok(source.includes(cls+' wpb-ui-sheet-scroll'),
+   name+' must consume one shared scroll-body owner');
+for(const role of ['wpb-program-reference-body','wpb-progression-choice-body'])
+  assert.ok(programReference.includes(role+' wpb-ui-sheet-scroll'),
+    'Reference and progression bodies share the same scroll owner: '+role);
+for(const cls of ['wpb-save-review-scroll','wpb-program-settings-body',
+    'wpb-program-share-body','wpb-training-max-body','wpb-exercise-options-body',
+    'wpb-program-reference-body','wpb-progression-choice-body']){
+  const feature=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+  assert.ok(feature&&!['overflow-y:','overscroll-behavior:','min-height:'].some(p=>feature.includes(p)),
+    'Program feature body must not fork scroll ownership: '+cls);
+}
+assert.ok(programSchedule.includes('wpb-ui-sheet-heading wpb-program-schedule-heading') &&
+    css.includes('.wpb-program-schedule-heading{--pi-ui-sheet-heading-padding:0;margin-bottom:var(--pi-space-1)}') &&
+    !css.includes('.wpb-program-schedule-heading{display:flex;'),
+    'Weekly Schedule uses the shared header while preserving its compact zero inset');
+
+
+/* Design-spec passes 24–26: existing Program primitives own header,
+   scroll and review-action geometry; features retain only their distinct paint. */
+assert.ok(programReference.includes("wpb-ui-sheet-heading wpb-progression-choice-heading"),
+    'Progression Methods title row reuses the native Program header primitive');
+const progressionHeader=css.split('#root .wpb .wpb-progression-choice-heading{')[1]?.split('}')[0]||'';
+assert.ok(progressionHeader.includes('--pi-ui-sheet-heading-gap:var(--pi-space-3)') &&
+    progressionHeader.includes('--pi-ui-sheet-heading-padding:16px 18px 10px') &&
+    progressionHeader.includes('align-items:flex-start') &&
+    progressionHeader.includes('border-bottom:1px solid var(--wpb-theme-border-soft)'),
+    'Progression Methods keeps its existing eyebrow/exercise anatomy and divider');
+for(const property of ['display:','flex-shrink:','gap:','padding:'])
+    assert.ok(!progressionHeader.includes(property) || progressionHeader.includes('--pi-ui-sheet-heading-'+property.split(':')[0]),
+        'Progression Methods may not re-own shared header layout: '+property);
+assert.ok(programScroll.includes('min-width:0'),
+    'Every Program sheet scroller shares the minimum-width guard');
+for(const cls of ['wpb-program-settings-body','wpb-program-share-body',
+    'wpb-program-reference-body','wpb-progression-choice-body','wpb-exercise-options-body']){
+    const body=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+    assert.ok(body&&!body.includes('min-width:0'),
+        'Sheet body must inherit the common min-width guard: '+cls);
+}
+const saveActionGeometry=css.split('#root .wpb :is(.wpb-save-review-confirm,.wpb-save-review-cancel){')[1]?.split('}')[0]||'';
+for(const prop of ['width:100%','min-height:48px','font-size:.9375rem','line-height:1.4',
+    'padding:13px','border-radius:12px','cursor:pointer'])
+    assert.ok(saveActionGeometry.includes(prop),'Review actions share accessible geometry: '+prop);
+for(const cls of ['wpb-save-review-confirm','wpb-save-review-cancel']){
+    const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+    assert.ok(local&&!['width:','min-height:','font-size:','line-height:','padding:','border-radius:','cursor:'].some(prop=>local.includes(prop)),
+        'Review button-specific styling only owns paint, weight and spacing: '+cls);
+}
+
+
+/* Design passes 27–30: Program overlay, panel and focus owners stay shared. */
+for(const [src,name,focus] of [
+  [programReference,'wpb-progression-choice',false],
+  [programReference,'wpb-program-reference',false],
+  [programSettings,'wpb-program-settings',true],
+  [programShare,'wpb-program-share',true],
+  [trainingMaxes,'wpb-training-max',true],
+  [exerciseOptions,'wpb-exercise-options',true],
+  [programSchedule,'wpb-program-schedule',false]
+]){
+  assert.ok(src.includes('wpb-backdrop wpb-ui-sheet-backdrop '+(focus?'wpb-ui-sheet-focus ':'')+name+'-backdrop'),
+    'Shared overlay marker missing: '+name);
+  const local=css.split('#root .wpb .'+name+'-backdrop{')[1]?.split('}')[0]||'';
+  assert.ok(local&&!local.includes('position:fixed')&&!local.includes('animation:fadeIn'),
+    'Feature should only own overlay differences: '+name);
+}
+for(const [src,cls] of [
+  [programReference,'wpb-progression-choice-panel'],
+  [programReference,'wpb-program-reference-panel'],
+  [programSettings,'wpb-program-settings-panel'],
+  [programShare,'wpb-program-share-panel'],
+  [trainingMaxes,'wpb-training-max-sheet'],
+  [exerciseOptions,'wpb-exercise-options-sheet']
+]) assert.ok(src.includes('wpb-ui-sheet-panel '+cls),'Shared panel owner missing: '+cls);
+const sharedBackdrop=css.split('#root .wpb .wpb-ui-sheet-backdrop{')[1]?.split('}')[0]||'';
+for(const p of ['position:fixed','inset:0','display:flex','align-items:flex-end',
+  'justify-content:center','background:rgba(0,0,0,.6)','animation:fadeIn .2s both'])
+  assert.ok(sharedBackdrop.includes(p),'Base overlay lost '+p);
+const sharedPanel=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
+for(const p of ['box-sizing:border-box','display:flex','flex-direction:column',
+    'min-width:0','width:100%','overflow:hidden','color:var(--wpb-theme-text)'])
+    assert.ok(sharedPanel.includes(p),'Base sheet panel lost '+p);
+for(const cls of ['wpb-program-reference-panel','wpb-progression-choice-panel',
+  'wpb-training-max-sheet','wpb-exercise-options-sheet']){
+  const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+  assert.ok(local&&!['box-sizing:','display:flex','flex-direction:','min-width:',
+    'width:100%','overflow:hidden','color:'].some(p=>local.includes(p)),
+    'Feature cannot duplicate shared sheet panel geometry: '+cls);
+}
+assert.ok(css.includes('.wpb-training-max-backdrop{align-items:center;padding:24px}') &&
+  css.includes('.wpb-program-schedule-backdrop{z-index:60;justify-content:flex-start}'),
+  'Centered Training Max and edge-aligned Weekly Schedule retain their variants');
+assert.ok(css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-visible,') &&
+  css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-visible{outline-color:Highlight}'),
+  'Shared keyboard and high contrast focus styles must remain available');
+
+
+/* Design-spec passes 31–33: common viewport and Program action dock ownership. */
+const uiSheetViewport=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
+assert.ok(uiSheetViewport.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'One Program panel viewport formula remains');
+for(const [cls,vh,gap] of [
+    ['wpb-program-settings-panel','88dvh','32px'],
+    ['wpb-program-share-panel','92dvh','32px'],
+    ['wpb-training-max-sheet','88dvh','24px'],
+    ['wpb-exercise-options-sheet','88dvh','32px']
+]){
+    const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
+    assert.ok(local&&!local.includes('max-height:min(') &&
+        local.includes('--pi-ui-sheet-max-vh:'+vh),'Height variant remains distinct: '+cls);
+    if(gap!=='24px')assert.ok(local.includes('--pi-ui-sheet-top-gap:'+gap),'Safe-area gap preserved: '+cls);
+}
+const footerBase=css.split('#root .wpb .wpb-ui-sheet-footer{')[1]?.split('}')[0]||'';
+const footerScroll=css.split('#root .wpb .wpb-ui-sheet-footer-scroll{')[1]?.split('}')[0]||'';
+for(const prop of ['flex-shrink:0','border-top:1px solid var(--wpb-theme-border-soft)'])
+    assert.ok(footerBase.includes(prop),'Shared footer divider must retain '+prop);
+for(const prop of ['overflow-y:auto','padding:8px 18px calc(env(safe-area-inset-bottom) + 16px)','background:var(--wpb-theme-bg-tint)'])
+    assert.ok(footerScroll.includes(prop),'Scrollable footer must retain '+prop);
+for(const [src,name,scroll] of [[programSettings,'wpb-program-settings-footer',true],
+    [programShare,'wpb-program-share-footer',true],[trainingMaxes,'wpb-training-max-footer',false]]){
+    assert.ok(src.includes('wpb-ui-sheet-footer '+(scroll?'wpb-ui-sheet-footer-scroll ':'')+name),
+        'Sheet footer must consume shared owner: '+name);
+    const local=css.split('#root .wpb .'+name+'{')[1]?.split('}')[0]||'';
+    assert.ok(local&&!local.includes('flex-shrink:0')&&!local.includes('border-top:'),
+        'Feature footer may not duplicate divider/shrink: '+name);
+}
+
+// Five Program sheet H2 titles share semantic type and wrapped 200%-text
+// geometry; two compact variants keep their existing 1.3 line-height.
+const commonTitle=css.split('#root .wpb .wpb-ui-sheet-title{')[1]?.split('}')[0]||'';
+for(const role of ['min-width:0','margin:0','font-size:var(--pi-ui-sheet-title-size,1.125rem)','font-weight:700',
+    'line-height:var(--pi-ui-sheet-title-leading,1.4)','overflow-wrap:anywhere'])
+    assert.ok(commonTitle.includes(role),'Shared Program sheet title missing '+role);
+for(const [name,source,selector] of [
+  ['Schedule',programSchedule,"wpb-ui-sheet-title wpb-program-schedule-title"],
+  ['Settings',programSettings,"wpb-ui-sheet-title wpb-program-settings-title"],
+  ['Share',programShare,"id: 'program-share-title', className: 'wpb-ui-sheet-title'"],
+  ['Details',programReference,"id: 'program-reference-title', className: 'wpb-ui-sheet-title'"],
+  ['Training Maxes',trainingMaxes,"id: 'program-training-max-title', className: 'wpb-ui-sheet-title'"],
+  ['Progression choice',programReference,"id: 'program-progression-title', className: 'wpb-ui-sheet-title'"],
+  ['Save review',programReview,'id: "program-save-title", className: "wpb-ui-sheet-title wpb-save-review-title"']
+]) assert.ok(source.includes(selector),name+' must reuse the common sheet title typography');
+for(const [selector,override] of [
+  ['#root .wpb .wpb-program-share-heading h2{','--pi-ui-sheet-title-leading:1.3'],
+  ['#root .wpb .wpb-training-max-heading h2{','--pi-ui-sheet-title-leading:1.3']
+]) assert.ok((css.split(selector)[1]?.split('}')[0]||'').includes(override),
+   'Compact Program sheet title preserves the original line-height: '+selector);
+assert.ok(!css.includes('.wpb-program-settings-title{') &&
+    !css.includes('.wpb-program-schedule-title{') &&
+    !css.includes('.wpb-program-reference-heading h2{'),
+    'Do not re-fork identical Program sheet title typography');
+
+
+// Passes 47–49: two formerly local sheet titles inherit the one semantic owner.
+// The smaller muted progression label and larger review heading keep their prior
+// effective font sizes through local tokens; no duplicated font/margin rules.
+for(const [owner,token] of [
+    ['#root .wpb .wpb-progression-choice-heading{','--pi-ui-sheet-title-size:1rem'],
+    ['#root .wpb .wpb-save-review-heading{','--pi-ui-sheet-title-size:1.1875rem']
+]) assert.ok((css.split(owner)[1]?.split('}')[0]||'').includes(token),
+    'Sheet-specific title size must be an override token: '+owner);
+assert.ok(css.includes('#root .wpb .wpb-progression-choice-heading h2{color:var(--wpb-theme-muted)}') &&
+    !css.includes('#root .wpb .wpb-save-review-title{') &&
+    !css.includes('#root .wpb .wpb-progression-choice-heading h2{margin:'),
+    'Sheet-specific typography must not re-fork the common title geometry');
+
+// Native Program, Review and Session dialog Close controls have one visible
+// accent focus outline. Explicit forced-colors highlight works for every dialog
+// chrome variant, including those without the wpb-sheet-close paint class.
+assert.ok(css.includes('.wpb-ui-sheet-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}') &&
+    css.includes('.wpb-ui-sheet-close:focus-visible{outline-color:Highlight}') &&
+    !css.includes('.wpb-program-reference-close:focus-visible{') &&
+    !css.includes('.wpb-progression-choice-close:focus-visible{') &&
+    !css.includes('.wpb-program-schedule-close:focus-visible{'),
+    'All native sheet/dialog Close controls must share one accessible focus ring');
+
+// Workout Focus title and warmup use one flex owner; the normal title's
+// display:contents layout and all input values are deliberately untouched.
+const workoutFlex=css.split('#root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row,')[1]?.split('}')[0]||'';
+assert.ok(workoutFlex.includes('#root .wpb-workout .wpb-warmup-step{display:flex;align-items:flex-start;gap:8px;min-width:0;') &&
+    css.split('#root .wpb-workout .wpb-warmup-step{').length===2,
+    'Workout Focus title and warmup row must have one shared geometry owner');
+const workoutFocus=css.split('#root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,')[1]?.split('}')[0]||'';
+for(const role of ['.wpb-b973-set-close','.wpb-b973-coach-collapsed','.wpb-b973-coach-toggle'])
+  assert.ok(workoutFocus.includes(role),'Workout shared focus ring missing '+role);
+assert.ok(workoutFocus.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;') &&
+    css.includes(':is(.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible{outline-color:Highlight}') &&
+    !css.includes('.wpb-load-advice>button:focus-visible{'),
+    'Workout Coach and set editor require a visible forced-colors focus ring');
+assert.ok(css.includes('.wpb-set-option-row:focus-visible{outline:2px solid var(--pi-m3e-primary)!important;outline-offset:2px!important;') &&
+    css.includes('#root .wpb-workout .wpb-set-controls [data-reference-action]:focus-visible,'),
+    'Set reference and set options share one 2px keyboard focus owner');
 
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
@@ -132,6 +499,19 @@ for (const name of ['SetupCard','ProgressionCard','ProgramReferenceSheet','Progr
 }
 assert.ok(!disclosures.includes('style:') && !programReference.includes('style:') && !programReference.includes('C.'),
     'Shared disclosure/reference presentation must stay in its CSS owner');
+assert.equal((programReference.match(/_jsx\(UiSheetClose,/g) || []).length, 2,
+    'Program reference and progression-method sheets share the native close primitive');
+assert.ok(programReference.includes("className: 'wpb-ui-sheet-heading wpb-program-reference-heading'") &&
+    css.includes('.wpb-program-reference-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3)}') &&
+    css.includes('gap:var(--pi-ui-sheet-heading-gap,var(--pi-space-2))') &&
+    !css.includes('.wpb-program-reference-heading{display:flex;'),
+    'Plan info must share the sheet-header geometry, customizing only its 12px token gap');
+for (const role of ['progression-choice-close','program-reference-close']) {
+    const match = css.match(new RegExp('\\.wpb-' + role + '\\{([^}]*)\\}'));
+    assert.ok(match && !/(?:display|place-items|flex-shrink|min-width|min-height|color)\s*:/.test(match[1]),
+        role + ' may own its distinct paint but must inherit shared button geometry');
+}
+
 assert.ok(app.includes('setProgram(p => withProgressionChoices(p, { [id]: style }))'),
     'Program and Workout must share the progression-choice writer');
 assert.ok(programReference.includes("'aria-label': 'Close progression methods'") && programReference.includes("'aria-describedby': 'program-progression-scope'"),
@@ -185,7 +565,7 @@ assert.ok(programReview.includes('useProgramSheetFocus(onClose)') &&
 assert.ok(programReview.includes('disabled: !changes.length || !!conflicts.length') &&
     programReview.includes('checked: scope === value') && programReview.includes('onChange: () => onScope(value)'),
     'Save scope and conflict guards remain owned by the existing plan transaction');
-for(const role of ['backdrop','panel','heading','title','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','confirm','cancel'])
+for(const role of ['backdrop','panel','heading','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','confirm','cancel'])
     assert.ok(css.includes('.wpb-save-review-' + role + '{'), 'Missing Program review CSS owner: ' + role);
 // Exercise the actual ceilings, even as successful cleanup creates headroom below them.
 const cssOverflow = '.bad-extra{color:red!important;}\n'.repeat(MAX_IMPORTANT - report.important + 1);

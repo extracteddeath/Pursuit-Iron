@@ -1,6 +1,7 @@
 // M365: Program weekly-schedule presentation. The parent is the sole schedule writer.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { X, Dumbbell } from 'lucide-react';
+import { Dumbbell } from 'lucide-react';
+import { UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -24,17 +25,15 @@ export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetD
     return _jsx('div', {
         'data-testid': 'weekly-schedule-sheet', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-weekly-schedule-title',
-        className: 'wpb-backdrop wpb-program-schedule-backdrop', onClick: event => { if (event.target === event.currentTarget) onClose(); },
+        className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-program-schedule-backdrop', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         children: _jsxs('div', {
             ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: event => event.stopPropagation(),
             className: 'wpb-scroll wpb-program-schedule-sheet',
             children: [
-                _jsxs('div', { className: 'wpb-program-schedule-heading', children: [
+                _jsxs('div', { className: 'wpb-ui-sheet-heading wpb-program-schedule-heading', children: [
                     _jsx('h2', { id: 'program-weekly-schedule-title',
-                        className: 'wpb-program-schedule-title', children: 'Weekly schedule' }),
-                    _jsx('button', { type: 'button', 'aria-label': 'Close', onClick: onClose,
-                        className: 'pressable hit wpb-sheet-close wpb-program-schedule-close',
-                        children: _jsx(X, { size: 18 }) })
+                        className: 'wpb-ui-sheet-title wpb-program-schedule-title', children: 'Weekly schedule' }),
+                    _jsx(UiSheetClose, { onClick: onClose, className: 'wpb-program-schedule-close' })
                 ] }),
                 _jsxs('p', { className: 'wpb-program-schedule-caption', children: [
                     'Tap a day to assign a workout — ',

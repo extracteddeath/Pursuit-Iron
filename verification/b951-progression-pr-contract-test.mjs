@@ -22,6 +22,8 @@ const gesture=app.slice(app.indexOf('const toggleDone ='),app.indexOf('const com
 assert.ok(gesture.includes('completedSetPR(set, prBaseline[data[ei].id], e1rm)'));
 assert.ok(gesture.indexOf('setPrFlash(')<gesture.indexOf('setData(d =>'), 'Celebration is an event, not a state updater');
 assert.ok(!gesture.slice(gesture.indexOf('setData(d =>')).includes('setPrFlash('));
-assert.ok(gesture.includes('const acceptLowerLoad ='),'The user must accept a lighter load');
-assert.ok(app.includes('data-load-advice'));
+assert.ok(!gesture.includes('const acceptLowerLoad ='),'Set-by-set load banners and their unused accept handler stay retired');
+assert.ok(!app.includes('data-load-advice'),'Do not render a coaching banner above every set');
+assert.ok(app.includes('s.loadAdvice') || app.includes('loadAdvice'), 'Live adaptation can still retain advisory data');
+assert.ok(app.includes('data-reference-action') && app.includes('"aria-label": "weight"'), 'Set targets and manual weight fields remain available');
 console.log('PASS B951 PR and double progression: no false records and no automatic load reductions.');

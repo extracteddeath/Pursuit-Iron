@@ -1,9 +1,9 @@
 // Training-max presentation and transient text only. ProgramView owns applying the draft.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useRef, useState } from 'react';
-import { Dumbbell, ChevronRight, X } from 'lucide-react';
+import { Dumbbell, ChevronRight } from 'lucide-react';
 import { EX_BY_ID, PCT_SCHEMES, trainingMaxForUnit, withTrainingMax, percentagePlanFor, roundTo, loadStep } from './engine-api.js';
-import { UiAction } from './ui-primitives.js';
+import { UiAction, UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const numberValue = text => {
@@ -47,16 +47,16 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
     const closeConversion = () => { setConversion(null); conversionOpener.current?.focus({ preventScroll: true }); };
     const { attachPanel, onPanelKeyDown } = useProgramSheetFocus(conversion ? closeConversion : onClose, sheetDragRef);
     const apply = () => { if (canApply) onApply(changes); };
-    return _jsx('div', { className: 'wpb-backdrop wpb-training-max-backdrop', role: 'dialog', 'aria-modal': true,
+    return _jsx('div', { className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-training-max-backdrop', role: 'dialog', 'aria-modal': true,
         'aria-labelledby': 'program-training-max-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },
-        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-training-max-sheet',
+        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-training-max-sheet',
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-training-max-heading', children: [
-                    _jsx('h2', { id: 'program-training-max-title', children: 'Training maxes' }),
-                    _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, 'data-wpb-system-back': !conversion || undefined,
-                        'aria-label': 'Close', className: 'hit wpb-sheet-close', onClick: onClose, children: _jsx(X, { size: 18 }) })
+                _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-training-max-heading', children: [
+                    _jsx('h2', { id: 'program-training-max-title', className: 'wpb-ui-sheet-title', children: 'Training maxes' }),
+                    _jsx(UiSheetClose, { variant: 'tonal', 'data-wpb-system-back': !conversion || undefined,
+                        'aria-label': 'Close', onClick: onClose })
                 ] }),
-                _jsxs('div', { className: 'wpb-scroll wpb-training-max-body', children: [
+                _jsxs('div', { className: 'wpb-scroll wpb-training-max-body wpb-ui-sheet-scroll', children: [
                     _jsx('p', { className: 'wpb-training-max-help', children: `${scheme?.name || 'Percentage training'} loads each main lift from its ${scheme?.basis || 'training max'}. Apply your maxes here, then review and save the program to keep the changes.` }),
                     _jsx('p', { className: 'wpb-training-max-help', children: 'Use 1RM calculates 90% of a recent one-rep max, rounded to the lift’s loading step. Leave a max blank to clear it.' }),
                     mainLifts.map(id => {
@@ -106,7 +106,7 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
                         ] }, id);
                     })
                 ] }),
-                _jsxs('footer', { className: 'wpb-training-max-footer', children: [
+                _jsxs('footer', { className: 'wpb-ui-sheet-footer wpb-training-max-footer', children: [
                     _jsx(UiAction, { variant: 'tonal', onClick: onClose, children: 'Cancel' }),
                     _jsx(UiAction, { variant: 'primary', disabled: !canApply, onClick: apply, children: 'Apply maxes' })
                 ] })

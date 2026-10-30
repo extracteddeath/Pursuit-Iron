@@ -1,8 +1,8 @@
 // Exercise inspection and actions. ProgramView remains the only prescription writer.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useEffect, useRef, useState } from 'react';
-import { X, Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
-import { UiAction } from './ui-primitives.js';
+import { Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
+import { UiAction, UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { PART_LABEL, formatSetup } from './engine-api.js';
 
@@ -33,20 +33,19 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
             ] })
         ]
     }, id);
-    return _jsx('div', { className: 'wpb-backdrop wpb-exercise-options-backdrop', role: 'dialog',
+    return _jsx('div', { className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-exercise-options-backdrop', role: 'dialog',
         'aria-modal': true, 'aria-labelledby': 'program-exercise-options-title',
         onClick: event => { if (event.target === event.currentTarget) dismiss(); },
-        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-exercise-options-sheet',
+        children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-exercise-options-sheet',
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-exercise-options-heading', children: [
+                _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-exercise-options-heading', children: [
                     _jsxs('div', { className: 'wpb-exercise-options-identity', children: [
                         _jsx('h2', { id: 'program-exercise-options-title', className: 'wpb-exercise-options-title', children: exercise.name }),
                         _jsx('p', { className: 'wpb-exercise-options-meta', children: `${PART_LABEL[exercise.part]} · ${exercise.type}${primary ? ' · key lift' : ''}` })
                     ] }),
-                    _jsx(UiAction, { variant: 'tonal', 'data-icon-only': true, 'aria-label': 'Close', onClick: close,
-                        className: 'hit wpb-sheet-close', children: _jsx(X, { size: 18 }) })
+                    _jsx(UiSheetClose, { variant: 'tonal', 'aria-label': 'Close', onClick: close })
                 ] }),
-                _jsxs('div', { className: 'wpb-scroll wpb-exercise-options-body', children: [
+                _jsxs('div', { className: 'wpb-scroll wpb-exercise-options-body wpb-ui-sheet-scroll', children: [
                     action('note', Pin, hasNote ? 'Edit pinned note' : 'Add pinned note',
                         setup ? [formatSetup(setup), note].filter(Boolean).join(' — ') : note || "A cue you'll see every time — seat height, tempo…", act(onNote)),
                     canLink && action('superset', Layers, linked ? 'Unlink superset' : 'Superset with next',

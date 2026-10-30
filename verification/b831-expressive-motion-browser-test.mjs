@@ -1138,6 +1138,7 @@ try {
                         radius:parseFloat(cs(cards[0])?.borderTopLeftRadius||0),
                         rowMinimum:rows.length?Math.min(...rows.map(el=>el.getBoundingClientRect().height)):0,
                         segmentHeight:seg?.getBoundingClientRect().height||0,
+                        segmentButtonHeights:[...(seg?.querySelectorAll('button')||[])].map(x=>x.getBoundingClientRect().height),
                         pickerHeight:picker?.getBoundingClientRect().height||0,
                         overflow:root.scrollWidth>root.clientWidth+1,
                         selected:!!seg?.querySelector('[aria-pressed="true"]')};
@@ -1147,6 +1148,7 @@ try {
                     r42.listImage==='none' && r42.railImage==='none' &&
                     r42.radius>=19 && r42.rowMinimum>=48 &&
                     r42.segmentHeight>=48 && r42.pickerHeight>=48 &&
+                    r42.segmentButtonHeights.length>=2 && r42.segmentButtonHeights.every(x=>x>=48) &&
                     r42.selected && !r42.overflow,
                     'R42 Settings grouped surfaces and active choices stay usable at '+width+'px: '+
                     JSON.stringify(r42));
@@ -2006,6 +2008,15 @@ try {
         assert.equal(await page.evaluate(() =>
             JSON.stringify(JSON.parse(localStorage.getItem('wpb:v1')||'{}').saved)),programBeforeOptions,
             'R22 opening and dismissing exercise options preserves the entire program');
+        // Spec v1: actual Program header touch targets must fit the phone.
+        const programHeaderTargets=await page.$$eval('.wpb-program .wpb-program-header-back,.wpb-program .wpb-program-icon-change',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {name:el.className,w:r.width,h:r.height,left:r.left,right:r.right};
+            }));
+        assert.ok(programHeaderTargets.length>=1 && programHeaderTargets.every(x=>
+            x.w>=48&&x.h>=48&&x.left>=-1&&x.right<=width+1),
+            'Program header touch targets are unclipped: '+JSON.stringify({width,programHeaderTargets}));
         const disclosureOpen=await page.$eval('.wpb-program .wpb-day-card', el => ({
             touch:el.querySelector('.wpb-day-toggle').getBoundingClientRect().height,
             panel:el.querySelector(':scope > .wpb-expand')?.getBoundingClientRect().height,
@@ -2026,6 +2037,32 @@ try {
             'disclosure motion preserves the complete saved prescription');
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]'); await page.waitForSelector('.wpb-workout');
         await page.waitForFunction(() => !document.body.innerText.includes('Resumed your in-progress workout'));
+        // Spec v1: confirm Workout header sizes and lack of overlap by
+        // measuring the real controls, not just static CSS declarations.
+        const workoutHeaderTargets=await page.$$eval(
+            '.wpb-workout-header .wpb-workout-close,.wpb-workout-header .wpb-workout-timer,.wpb-workout-header .wpb-workout-header-action',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {name:el.className,action:el.getAttribute('aria-label'),
+                    w:r.width,h:r.height,l:r.left,r:r.right,t:r.top,b:r.bottom};
+            }));
+        const overlappingHeaders=workoutHeaderTargets.some((a,i)=>workoutHeaderTargets.slice(i+1)
+            .some(b=>Math.min(a.r,b.r)-Math.max(a.l,b.l)>1&&Math.min(a.b,b.b)-Math.max(a.t,b.t)>1));
+        assert.ok(workoutHeaderTargets.length>=3 &&
+            workoutHeaderTargets.every(x=>x.w>=48&&x.h>=48&&x.l>=-1&&x.r<=width+1) &&
+            !overlappingHeaders,
+            'Workout header touch targets are distinct: '+JSON.stringify({width,workoutHeaderTargets}));
+        // The exercise rail is independently scrollable. Its buttons still
+        // use complete 48px hit targets, even when some extend offscreen.
+        const exerciseRailTargets=await page.$$eval('.wpb-workout .wpb-ex-nav .wpb-ex-nav-step',
+            nodes=>nodes.filter(el=>el.getClientRects().length).map(el=>{
+                const r=el.getBoundingClientRect();
+                return {width:r.width,height:r.height,name:el.getAttribute('aria-label')||el.textContent.trim()};
+            }));
+        assert.ok(exerciseRailTargets.length>=2 &&
+            exerciseRailTargets.every(x=>x.width>=48&&x.height>=48),
+            'Exercise rail uses the shared 48px owner rather than legacy runtime sizing: '+
+            JSON.stringify({width,exerciseRailTargets}));
         // R23: actual on-screen tool controls stay touch-safe; do not touch
         // the compact weight/reps grid, navigation ownership or log state.
         const liveToolsR23=await page.$$eval('.wpb-workout-tools .wpb-workout-tool', controls =>
@@ -2036,6 +2073,14 @@ try {
         assert.ok(liveToolsR23.length>0 && liveToolsR23.every(x=>
             x.w>=48 && x.h>=48 && x.image==='none' && x.touch==='manipulation'),
             'R23/R63 live tools retain stable 48px targets without enlarging their visual controls: '+JSON.stringify(liveToolsR23));
+        // Spec v1: workout session-context choices must remain reachable by
+        // touch without forcing a different prescription or editing typed sets.
+        const liveContextTargets=await page.$$eval('.wpb-workout .wpb-session-context>button',
+            buttons=>buttons.filter(el=>el.getClientRects().length)
+                .map(el=>({label:el.getAttribute('aria-label')||el.textContent.trim(),
+                    w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height})));
+        assert.ok(liveContextTargets.every(x=>x.w>=48&&x.h>=48),
+            'Workout session choices meet 48px tap targets: '+JSON.stringify(liveContextTargets));
         // R49: screenshot-led real workout hierarchy. A skipped exercise
         // remains reachable, but navigation never competes with logging an
         // unfinished set. The training grid and Focus mode are untouched.

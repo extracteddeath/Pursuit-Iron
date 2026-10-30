@@ -96,7 +96,7 @@ try{
     // impact layers should be visible without opening a secondary disclosure.
     await page.click('#open-revision');
     await page.waitForSelector('.wpb-program-revision');
-    const impact=await page.$eval('.wpb-program-review-scope p',rows=>rows.map(p=>({
+    const impact=await page.evaluate(()=>Array.from(document.querySelectorAll('.wpb-program-review-scope p')).map(p=>({
         label:p.querySelector('strong')?.textContent,detail:p.querySelector('span')?.textContent,
         withinViewport:(()=>{const r=p.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1})()
     })));

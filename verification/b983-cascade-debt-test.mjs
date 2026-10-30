@@ -57,7 +57,7 @@ assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
 assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').length<=2668657,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 
-// B1001: five shared type roles replace 58 repeated fixed-paint objects.
+// B1002: five shared type roles replace 58 repeated fixed-paint objects.
 const sharedRoles=['faint','support-muted','caption-faint','section-intro','confirm-copy'];
 for(const role of sharedRoles)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Shared type owner missing: '+role);

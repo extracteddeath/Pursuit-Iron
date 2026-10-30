@@ -10081,7 +10081,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 #root .wpb-workout .wpb-workout-average-action{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-top:6px;padding:10px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);font-size:13px;font-weight:600;cursor:pointer}
 
-/* B1001 — shared quiet type roles across Program, Workout and Progress.
+/* B1002 — shared quiet type roles across Program, Workout and Progress.
    Theme paint stays with --wpb-theme-*; JSX no longer creates inline paint objects. */
 #root .wpb .wpb-type-faint{color:var(--wpb-theme-faint)}
 #root .wpb .wpb-type-support-muted{font-size:13px;color:var(--wpb-theme-muted)}

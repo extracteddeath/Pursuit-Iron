@@ -444,7 +444,7 @@ console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion
         'A 12-20 historical rep ceiling cannot become an invented 21-rep prefill');
     assert.deepEqual(working.map(row=>row.target?.decisionTrace?.source?.load),[60,60,60],
         'Each workout row must trace to the prior 60-lb working load');
-    assert.deepEqual(working.map(row=>row.target?.decisionTrace?.source?.reportedRir),[null,1,null],
+    assert.deepEqual(working.map(row=>row.target?.decisionTrace?.source?.reportedRir ?? null),[null,1,null],
         'An unreported planned RIR is not actual effort: only the middle RIR was observed');
     assert.deepEqual(savedHistory,before,'Replay must not change saved user history');
 }

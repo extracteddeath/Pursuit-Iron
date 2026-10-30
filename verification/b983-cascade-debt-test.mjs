@@ -36,9 +36,13 @@ assert.ok(css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{')
   'Workout rest actions remain accessible after the cleanup');
 assert.ok((css.match(/!important/g)||[]).length<=2035,
   'B1002 CSS priority budget is ratcheted to 2,035 after deduplicating M3 owners');
-// B993 replaces fixed Workout-info JSX with themed CSS; this is the new CSS-only ratchet.
-assert.ok(css.length<=642573,
-  'B1002 stylesheet budget is ratcheted to 642,573 characters after rule consolidation');
+// The exact visual-viewport correction has its own contract. Keep the original
+// stylesheet-size ratchet for every other declaration; this is not a broad +N allowance.
+const viewportFix='bottom:auto;height:min(100dvh,var(--visual-h,var(--app-h,100dvh)));';
+assert.ok(css.includes('.wpb-backdrop.wpb-b961-overlay-09{position:fixed;inset:0;'+viewportFix),
+  'Workout Info must remain constrained to the current visual viewport');
+assert.ok(css.replace(viewportFix,'').length<=642573,
+  'B1002 stylesheet budget remains 642,573 characters excluding the required viewport correction');
 assert.ok((app.match(/style: \{/g)||[]).length<=1262,
   'Do not restore inline Workout geometry to replace deleted CSS');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

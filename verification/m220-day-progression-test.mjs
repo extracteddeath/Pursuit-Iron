@@ -1,6 +1,6 @@
 import { classifySessionAdjustment } from '../modules/session-plan.js';
 import assert from 'node:assert/strict';
-import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
+import { sessionSuggestion, lastDayPerf, dayPerfFor, prescribeSets, computeCell, EX_BY_ID } from '../modules/engine-api.js';
 
 import { linearStalled, plateauSessions, styleOverride } from '../modules/training-domain/prescriptions.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';

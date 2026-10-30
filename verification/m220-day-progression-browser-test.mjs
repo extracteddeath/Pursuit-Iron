@@ -53,7 +53,7 @@ try {
         }});
     });
     await page.click('button[aria-label="Workout options"]');
-    const diagnosticAction=await page.$('button');
+    const diagnosticAction=await page.$$('button');
     let actionFound=false;
     for(const action of diagnosticAction) {
         const matches=await action.evaluate(node=>node.textContent?.includes('Copy progression diagnostics'));

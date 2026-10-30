@@ -391,3 +391,24 @@ console.log('PASS B1004 generated sparse: skipped working position persists thro
 }
 console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion.');
 
+
+// B996: saved-state shape, anonymized. 4 x 60 lb at the top of a 12-20
+// rep range cannot earn a load increase against a new 3-set prescription.
+// The actual saved custom program records style "auto", not explicit "double".
+{
+    const { evaluateWorkoutProgression } = await import('../modules/next-engine/performance.js');
+    const current = { exercises:[{
+        exerciseId:'rear-fly', name:'Rear Delt Fly', role:'hypertrophy_isolation',
+        sets:3, progressionStyle:'auto', prescription:{reps:[12,20],rir:[0,2]}
+    }]};
+    const prior = [0,1,2,3].map(setIndex=>({
+        exerciseId:'rear-fly',setIndex,load:60,reps:20,rir:1
+    }));
+    const decision = evaluateWorkoutProgression(current,prior)[0];
+    assert.equal(decision.reasonCode,'prescription_set_count_changed');
+    assert.equal(decision.action,'hold');
+    assert.equal(decision.suggestedLoad,60);
+    assert.match(decision.reason,/4 working sets/);
+    assert.match(decision.reason,/3/);
+}
+console.log('PASS B996 saved-state auto progression: 4 sets to 3 remains non-comparable.');

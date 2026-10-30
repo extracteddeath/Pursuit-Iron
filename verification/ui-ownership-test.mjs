@@ -165,6 +165,11 @@ assert.ok(!disclosures.includes('style:') && !programReference.includes('style:'
     'Shared disclosure/reference presentation must stay in its CSS owner');
 assert.equal((programReference.match(/_jsx\(UiSheetClose,/g) || []).length, 2,
     'Program reference and progression-method sheets share the native close primitive');
+assert.ok(programReference.includes("className: 'wpb-ui-sheet-heading wpb-program-reference-heading'") &&
+    css.includes('.wpb-program-reference-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3)}') &&
+    css.includes('gap:var(--pi-ui-sheet-heading-gap,var(--pi-space-2))') &&
+    !css.includes('.wpb-program-reference-heading{display:flex;'),
+    'Plan info must share the sheet-header geometry, customizing only its 12px token gap');
 for (const role of ['progression-choice-close','program-reference-close']) {
     const match = css.match(new RegExp('\\.wpb-' + role + '\\{([^}]*)\\}'));
     assert.ok(match && !/(?:display|place-items|flex-shrink|min-width|min-height|color)\s*:/.test(match[1]),

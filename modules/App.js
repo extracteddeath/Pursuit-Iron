@@ -23,6 +23,7 @@ import { SessionChoiceDialog } from './session-choice-dialog.js';
 import { READINESS_CHOICES, readinessLabel, adjustWorkoutReadiness } from './workout-readiness.js';
 import { WorkoutExerciseNav, WorkingSetCountControl, SessionNoteEditor, selectNumericInput } from './workout-session-controls.js';
 import { completedSetPR } from './workout-pr.js';
+import { captureWorkoutProgressionReplay } from './next-engine/workout-replay.js';
 import { withSessionPlanChoice } from './session-plan.js';
 import {
     addedMinutes, advanceLegacyFirstCycleBlock, ageFrom, ALL_EQUIP_IDS, ALL_PLATES, applyCustomProgramSettings,
@@ -11218,6 +11219,37 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     const sessionIdRef = useRef(null);
     if (sessionIdRef.current == null)
         sessionIdRef.current = liveMatch?.sessionId || uid();
+    // Explicit local diagnostic: no automatic upload. Only current exercise,
+    // numeric history and decision evidence are copied; exclude notes/profile.
+    const copyProgressionDiagnostics = async () => {
+        setSessionMenu(false);
+        try {
+            const row = dataRef.current[exIdx];
+            const record = captureWorkoutProgressionReplay({
+                program, day, row, suggestion: runtimeSuggestions[exIdx],
+                cell: row ? computeCell(program, day, row.id, row.slot, weekIndex) : null,
+                history, weekIndex, unit, readiness
+            });
+            const content = JSON.stringify(record, null, 2);
+            try {
+                if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+                await navigator.clipboard.writeText(content);
+                setSnack({ msg: 'Progression diagnostics copied · contains workout weights and reps' });
+            } catch {
+                // Some Android browser/PWA contexts deny clipboard access. Explicitly
+                // save a file instead of silently dropping the user's evidence.
+                const blob = new Blob([content], { type:'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url; link.download = 'pursuit-progression-diagnostics.json';
+                document.body.appendChild(link); link.click(); link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+                setSnack({ msg: 'Progression diagnostics exported · contains workout weights and reps' });
+            }
+        } catch {
+            setSnack({ msg: 'Could not export progression diagnostics on this device' });
+        }
+    };
     const persistLive = () => {
         if (finishingRef.current)
             return false;
@@ -13576,6 +13608,9 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                 { icon: RefreshCw, label: "Reset timer", sub: "Set elapsed workout time back to zero", on: () => { setSessionMenu(false); onResetClick(); } },
                                 { icon: Plus, label: "Add exercise", sub: "Add another lift to this workout", on: () => { setSessionMenu(false); setAddEx(true); } },
                                 { icon: Pencil, label: "Session notes", ariaLabel: "Session notes", sub: sessionNote ? "Edit session and exercise notes" : "Add session and exercise notes", on: () => { setSessionMenu(false); setSessionNotesOpen(true); } },
+                                { icon: Copy, label: "Copy progression diagnostics",
+                                  sub: "Export this exercise’s weights, reps and decision trace · no notes",
+                                  on: copyProgressionDiagnostics },
                                 { icon: AlertTriangle, label: "Report an injury", sub: "Review and skip or reduce affected work for today", on: openInjury },
                                 { icon: Target, label: setDockPreview ? "Hide workout dock" : "Show workout dock",
                                   sub: "A secondary workspace for tablets and unfolded screens", on: () => {

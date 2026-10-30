@@ -154,6 +154,7 @@ assert.ok(css.includes('color:var(--wpb-theme-on-danger)')&&css.includes('backgr
   'B1008 uses real dynamic theme text and danger tint rather than a fixed color');
 
 /* B1009: a bounded 45-use static typography migration, not a new styling escape hatch. */
+assert.ok(!/className: "[^"]*pi-t-[^"]+",\s*,/.test(app),'B1009 JSX props must never contain an empty property after a migrated class');
 const b1009Contract=[
   [
     "pi-t-muted",

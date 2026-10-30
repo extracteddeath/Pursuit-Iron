@@ -7658,20 +7658,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-progress .wpb-progress-tab[aria-selected="true"]{border-bottom-color:var(--wpb-theme-accent);color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-glance-value[data-has-value="true"]{color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-body-summary[data-has-series="true"]{margin-bottom:var(--pi-space-3);}
-#root .wpb .wpb-progress .wpb-progress-body-change[data-direction="up"]{color:var(--wpb-theme-accent-ink);}
-#root .wpb .wpb-progress .wpb-progress-body-change[data-direction="down"]{color:var(--wpb-theme-warning);}
-#root .wpb .wpb-progress .wpb-progress-trend-value[data-direction="up"]{color:var(--wpb-theme-accent-ink);}
-#root .wpb .wpb-progress .wpb-progress-trend-value[data-direction="down"]{color:var(--wpb-theme-warning);}
+#root .wpb .wpb-progress :is(.wpb-progress-body-change,.wpb-progress-trend-value)[data-direction="up"]{color:var(--wpb-theme-accent-ink);}
+#root .wpb .wpb-progress :is(.wpb-progress-body-change,.wpb-progress-trend-value)[data-direction="down"]{color:var(--wpb-theme-warning);}
 #root .wpb .wpb-progress .wpb-progress-body-log:not(:disabled){background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);}
 #root .wpb .wpb-progress .wpb-progress-measure-row[data-open="true"]{border-color:var(--wpb-theme-accent-edge);}
 #root .wpb .wpb-progress .wpb-progress-measure-toggle:disabled{cursor:default;}
-#root .wpb .wpb-progress .wpb-progress-measure-toggle[aria-expanded="true"] .wpb-progress-measure-chevron{transform:rotate(180deg)}
 #root .wpb .wpb-progress .wpb-progress-measure-log:not(:disabled){background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);cursor:pointer;}
 #root .wpb .wpb-progress .wpb-progress-group-choice[aria-pressed="true"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);}
-#root .wpb .wpb-progress .wpb-history-session-toggle[aria-expanded="true"] .wpb-history-session-chevron{transform:rotate(180deg)}
+#root .wpb .wpb-progress :is(.wpb-progress-measure-toggle[aria-expanded="true"] .wpb-progress-measure-chevron,.wpb-history-session-toggle[aria-expanded="true"] .wpb-history-session-chevron){transform:rotate(180deg)}
 #root .wpb .wpb-progress .wpb-progress-lift-choice[aria-current="true"]{background:var(--wpb-theme-card);color:var(--wpb-theme-accent-ink);font-weight:800;}
 #root .wpb .wpb-progress .wpb-progress-record-row+.wpb-progress-record-row{border-top:1px solid var(--wpb-theme-border-soft)}
-#root .wpb .wpb-progress .wpb-progress-record-level[data-high="true"]{color:var(--wpb-theme-warning);background:var(--wpb-theme-warning-dim);}
 #root .wpb .wpb-progress .wpb-progress-intensity-row[data-last="false"]{margin-bottom:9px;}
 #root .wpb .wpb-progress .wpb-progress-fatigue-value[data-warning="true"],
 #root .wpb .wpb-progress .wpb-progress-fatigue-deviation[data-warning="true"]{color:var(--wpb-theme-warning);}
@@ -7682,11 +7678,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-progress .wpb-progress-range-column[data-trained="true"][data-current="true"] .wpb-progress-range-number{color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-progress .wpb-progress-range-column[data-trained="true"] .wpb-progress-range-bar{background:var(--wpb-theme-accent-faint)}
 #root .wpb .wpb-progress .wpb-progress-range-column[data-trained="true"][data-current="true"] .wpb-progress-range-bar{background:var(--wpb-theme-accent)}
-#root .wpb .wpb-progress .wpb-progress-volume-change-value[data-direction="up"]{color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);}
-#root .wpb .wpb-progress .wpb-progress-volume-change-value[data-direction="down"]{color:var(--wpb-theme-warning);background:var(--wpb-theme-warning-dim);}
+#root .wpb .wpb-progress :is(.wpb-progress-volume-change-value,.wpb-progress-lift-change)[data-direction="up"]{color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);}
 #root .wpb .wpb-progress .wpb-progress-lift-row[data-stalled="true"]{border-color:var(--wpb-theme-warning-dim);}
-#root .wpb .wpb-progress .wpb-progress-lift-change[data-direction="up"]{color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);}
-#root .wpb .wpb-progress .wpb-progress-lift-change[data-direction="down"]{color:var(--wpb-theme-warning);background:var(--wpb-theme-warning-dim);}
+#root .wpb .wpb-progress :is(.wpb-progress-record-level[data-high="true"],.wpb-progress-volume-change-value[data-direction="down"],.wpb-progress-lift-change[data-direction="down"]){color:var(--wpb-theme-warning);background:var(--wpb-theme-warning-dim);}
 
 /* B891 — favorite chart ordering and dense training-history readability. */
 .wpb-chart-favorites{margin:0 0 10px;border:1px solid var(--pi-color-divider);border-radius:14px;background:var(--pi-color-card);color:inherit;overflow:hidden}

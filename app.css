@@ -415,10 +415,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-ex-nav-step{
   border-radius:13px!important;
 }
-#root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tools{
-  margin-top:7px!important;
-  margin-bottom:7px!important;
-}
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-coach-card{
   border-radius:var(--pi-layout-radius)!important;
 }
@@ -3008,8 +3004,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   min-width:0;
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool{
-  box-sizing:border-box;
-  min-width:44px;
   transition:background-color 165ms var(--pi-ease),border-color 165ms var(--pi-ease),color 165ms var(--pi-ease)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-tool:focus-visible,
@@ -3035,9 +3029,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   flex-wrap:wrap;
 }
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button{
-  box-sizing:border-box;
-  min-width:48px!important;
-  min-height:48px!important;
   border:1px solid var(--pi-r11-edge)!important;
   border-radius:14px!important;
   background-color:var(--pi-r11-quiet)!important;

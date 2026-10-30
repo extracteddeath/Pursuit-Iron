@@ -26,7 +26,7 @@ const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
 const loadingCalculator = fs.readFileSync('modules/loading-calculator.js','utf8');
 const gymLoadFields = fs.readFileSync('modules/gym-load-fields.js','utf8');
 const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
-const MAX_IMPORTANT = 2060; // M394: retire 33 exercise-row priority overrides.
+const MAX_IMPORTANT = 2031; // Design audit: enforced priority count after Expressive Workout cleanup.
 const MAX_APP_IMPORTANT = 1014; // Design audit: retire duplicate Settings jump geometry/paint; measured runtime ceiling.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
 const MAX_INLINE_STYLE_OBJECTS = 1406; // B965: retire 49 additional literal presentation objects; never increase.
@@ -104,6 +104,18 @@ for(const selector of ['.wpb-workout-close{','.wpb-workout-header-action{']){
     assert.ok(feature&&!feature.includes('width:48px')&&!feature.includes('height:48px')&&!feature.includes('background:transparent'),
       'Workout header feature rules must not own shared geometry: '+selector);
 }
+
+// A later 48px Expressive owner replaces the old 44px toolbar and Rest minima.
+assert.ok(!css.includes('margin-top:7px!important;\n  margin-bottom:7px!important;') &&
+    !css.includes('min-width:44px;\n  transition:background-color 165ms') &&
+    css.includes('margin:8px 0 7px!important;') &&
+    css.includes('min-width:48px!important;\n  min-height:48px!important;'),
+    'Old Expressive Workout sizes/margins must stay retired');
+const restPaint=css.split('#root[data-pi-motion="expressive"] .wpb-workout .wpb-rest-actions>button{')[1]?.split('}')[0]||'';
+assert.ok(restPaint.includes('border:1px solid var(--pi-r11-edge)!important;') &&
+    !restPaint.includes('min-width:48px!important;') &&
+    !restPaint.includes('min-height:48px!important;'),
+    'Expressive Rest keeps paint but inherits its 48px sizing from the shared owner');
 
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 

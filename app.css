@@ -8116,8 +8116,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    not JSX styles or another priority override layer. Dialog/controls keep original events. */
 #root .wpb .wpb-save-review-backdrop{position:fixed;inset:0;z-index:100;padding:16px;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center}
 #root .wpb .wpb-save-review-panel{width:100%;max-width:440px;max-height:min(85dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px));display:flex;flex-direction:column;overflow:hidden;padding:18px;border-radius:20px;background:var(--wpb-theme-bg-tint);border:1px solid var(--wpb-theme-border)}
-#root .wpb .wpb-save-review-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:0}
-#root .wpb .wpb-save-review-title{font-size:1.1875rem;margin:0}
+#root .wpb .wpb-save-review-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:0;--pi-ui-sheet-title-size:1.1875rem}
 #root .wpb .wpb-save-review-close{border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);cursor:pointer}
 #root .wpb .wpb-save-review-scroll{flex:1}
 #root .wpb .wpb-save-review-intro{font-size:0.8125rem;color:var(--wpb-theme-muted);line-height:1.5}
@@ -8545,7 +8544,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-program-schedule-backdrop{z-index:60;justify-content:flex-start}
 #root .wpb .wpb-program-schedule-sheet{box-sizing:border-box;width:100%;max-height:min(86dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 24px));overflow-y:auto;overscroll-behavior:contain;padding:10px 18px calc(env(safe-area-inset-bottom) + 26px);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
 #root .wpb .wpb-program-schedule-heading{--pi-ui-sheet-heading-padding:0;margin-bottom:var(--pi-space-1)}
-#root .wpb .wpb-ui-sheet-title{min-width:0;margin:0;font-size:1.125rem;font-weight:700;line-height:var(--pi-ui-sheet-title-leading,1.4);overflow-wrap:anywhere}
+#root .wpb .wpb-ui-sheet-title{min-width:0;margin:0;font-size:var(--pi-ui-sheet-title-size,1.125rem);font-weight:700;line-height:var(--pi-ui-sheet-title-leading,1.4);overflow-wrap:anywhere}
 /* Shared Program sheet controls: 48px geometry with one paint/size owner. */
 #root .wpb .wpb-ui-sheet-close,#root .wpb-workout .wpb-b973-set-close{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;color:var(--wpb-theme-text)}
 #root .wpb .wpb-ui-sheet-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
@@ -8659,9 +8658,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* M371: progression choices share one staged program writer and one presentation owner. */
 #root .wpb .wpb-progression-choice-backdrop{z-index:80}
 #root .wpb .wpb-progression-choice-panel{max-width:44rem;border-radius:24px 24px 0 0;background:var(--wpb-theme-bg);animation:sheetUp .25s cubic-bezier(.2,.8,.2,1) both}
-#root .wpb .wpb-progression-choice-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:16px 18px 10px;align-items:flex-start;border-bottom:1px solid var(--wpb-theme-border-soft)}
+#root .wpb .wpb-progression-choice-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:16px 18px 10px;--pi-ui-sheet-title-size:1rem;align-items:flex-start;border-bottom:1px solid var(--wpb-theme-border-soft)}
 #root .wpb .wpb-progression-choice-heading>div{flex:1;min-width:0;overflow-wrap:anywhere}
-#root .wpb .wpb-progression-choice-heading h2{margin:0;font-size:1rem;font-weight:700;line-height:1.4;color:var(--wpb-theme-muted)}
+#root .wpb .wpb-progression-choice-heading h2{color:var(--wpb-theme-muted)}
 #root .wpb .wpb-progression-choice-exercise{margin:4px 0 0;font-size:1.125rem;font-weight:700;line-height:1.4}
 #root .wpb .wpb-progression-choice-close{border:1px solid var(--wpb-theme-border);border-radius:14px;background:var(--wpb-theme-card)}
 #root .wpb .wpb-progression-choice-body{padding:12px 16px calc(20px + env(safe-area-inset-bottom))}

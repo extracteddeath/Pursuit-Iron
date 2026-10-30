@@ -342,7 +342,7 @@ for(const [src,name,scroll] of [[programSettings,'wpb-program-settings-footer',t
 // Five Program sheet H2 titles share semantic type and wrapped 200%-text
 // geometry; two compact variants keep their existing 1.3 line-height.
 const commonTitle=css.split('#root .wpb .wpb-ui-sheet-title{')[1]?.split('}')[0]||'';
-for(const role of ['min-width:0','margin:0','font-size:1.125rem','font-weight:700',
+for(const role of ['min-width:0','margin:0','font-size:var(--pi-ui-sheet-title-size,1.125rem)','font-weight:700',
     'line-height:var(--pi-ui-sheet-title-leading,1.4)','overflow-wrap:anywhere'])
     assert.ok(commonTitle.includes(role),'Shared Program sheet title missing '+role);
 for(const [name,source,selector] of [
@@ -350,7 +350,9 @@ for(const [name,source,selector] of [
   ['Settings',programSettings,"wpb-ui-sheet-title wpb-program-settings-title"],
   ['Share',programShare,"id: 'program-share-title', className: 'wpb-ui-sheet-title'"],
   ['Details',programReference,"id: 'program-reference-title', className: 'wpb-ui-sheet-title'"],
-  ['Training Maxes',trainingMaxes,"id: 'program-training-max-title', className: 'wpb-ui-sheet-title'"]
+  ['Training Maxes',trainingMaxes,"id: 'program-training-max-title', className: 'wpb-ui-sheet-title'"],
+  ['Progression choice',programReference,"id: 'program-progression-title', className: 'wpb-ui-sheet-title'"],
+  ['Save review',programReview,'id: "program-save-title", className: "wpb-ui-sheet-title wpb-save-review-title"']
 ]) assert.ok(source.includes(selector),name+' must reuse the common sheet title typography');
 for(const [selector,override] of [
   ['#root .wpb .wpb-program-share-heading h2{','--pi-ui-sheet-title-leading:1.3'],
@@ -361,6 +363,20 @@ assert.ok(!css.includes('.wpb-program-settings-title{') &&
     !css.includes('.wpb-program-schedule-title{') &&
     !css.includes('.wpb-program-reference-heading h2{'),
     'Do not re-fork identical Program sheet title typography');
+
+
+// Passes 47–49: two formerly local sheet titles inherit the one semantic owner.
+// The smaller muted progression label and larger review heading keep their prior
+// effective font sizes through local tokens; no duplicated font/margin rules.
+for(const [owner,token] of [
+    ['#root .wpb .wpb-progression-choice-heading{','--pi-ui-sheet-title-size:1rem'],
+    ['#root .wpb .wpb-save-review-heading{','--pi-ui-sheet-title-size:1.1875rem']
+]) assert.ok((css.split(owner)[1]?.split('}')[0]||'').includes(token),
+    'Sheet-specific title size must be an override token: '+owner);
+assert.ok(css.includes('#root .wpb .wpb-progression-choice-heading h2{color:var(--wpb-theme-muted)}') &&
+    !css.includes('#root .wpb .wpb-save-review-title{') &&
+    !css.includes('#root .wpb .wpb-progression-choice-heading h2{margin:'),
+    'Sheet-specific typography must not re-fork the common title geometry');
 
 // Native Program, Review and Session dialog Close controls have one visible
 // accent focus outline. Explicit forced-colors highlight works for every dialog

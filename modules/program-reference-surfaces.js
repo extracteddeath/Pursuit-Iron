@@ -24,7 +24,7 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
             onClick: event => event.stopPropagation(), children: [
                 _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-progression-choice-heading', children: [
                     _jsxs('div', { children: [
-                        _jsx('h2', { id: 'program-progression-title', children: 'Progression method' }),
+                        _jsx('h2', { id: 'program-progression-title', className: 'wpb-ui-sheet-title', children: 'Progression method' }),
                         _jsx('p', { className: 'wpb-progression-choice-exercise', children: exerciseName })
                     ] }),
                     _jsx(UiSheetClose, { className: 'wpb-progression-choice-close',

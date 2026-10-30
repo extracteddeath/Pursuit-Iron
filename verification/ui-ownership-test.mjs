@@ -105,6 +105,13 @@ assert.ok(!app.includes('placeholder: "Add a note\\u2026"') &&
   css.includes('.wpb-session-notes-previous{'),
   'Session note action, repeat option and previous exercise note retain one owner');
 
+const infoTouch=css.split('#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto,.wpb-exinfo-weight-choice){')[1]?.split('}')[0]||'';
+for(const p of ['box-sizing:border-box','min-width:48px','min-height:48px','cursor:pointer'])
+  assert.ok(infoTouch.includes(p),'Shared Info touch-size owner: '+p);
+assert.ok(app.includes('className: "pressable wpb-workout-average-action"') &&
+    app.includes('onClick: () => levelSetsToAvg(ei)') &&
+    css.includes('.wpb-workout-average-action:focus-visible,'),
+    'Average load remains deliberate and keyboard accessible');
 // Silent set feedback: live-autoregulation metadata survives in the engine, but
 // an always-visible recommendation above every pending set is not a UI action.
 assert.ok(!app.includes('data-load-advice') && !app.includes('const acceptLowerLoad =') &&

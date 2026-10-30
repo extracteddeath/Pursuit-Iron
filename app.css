@@ -6914,6 +6914,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,
 #root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible,
+#root .wpb-workout .wpb-workout-average-action:focus-visible,
 #root .wpb-workout .wpb-rest-actions>.wpb-rest-action:focus-visible{
   outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;
 }
@@ -10028,11 +10029,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* B993: Workout Info bottom sheet has one visual-viewport owner and accessible controls. */
 #root .wpb .wpb-exinfo-sheet{box-sizing:border-box;display:block;width:100%;max-width:46rem;min-width:0;max-height:min(90dvh,calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 16px));overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:16px;background:var(--wpb-theme-bg-tint);border:1px solid var(--wpb-theme-border);border-bottom:0;border-radius:24px 24px 0 0;padding:8px 18px calc(env(safe-area-inset-bottom) + 26px);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
-#root .wpb .wpb-exinfo-close{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-muted);cursor:pointer}
-#root .wpb :is(.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;flex-shrink:0;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);border-radius:10px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);cursor:pointer}
+#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto,.wpb-exinfo-weight-choice){box-sizing:border-box;min-width:48px;min-height:48px;border:1px solid var(--wpb-theme-border);cursor:pointer}
+#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto){display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+#root .wpb .wpb-exinfo-close{border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-muted)}
+#root .wpb :is(.wpb-exinfo-rest-step,.wpb-exinfo-rest-auto){border-radius:10px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text)}
 #root .wpb .wpb-exinfo-rest-step{font-size:18px;font-weight:700}
 #root .wpb .wpb-exinfo-rest-auto{padding:0 10px;font-size:13px;font-weight:600;color:var(--wpb-theme-muted)}
-#root .wpb .wpb-exinfo-weight-choice{box-sizing:border-box;min-width:48px;min-height:48px;padding:9px 12px;border-radius:9px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:13px;font-weight:600;cursor:pointer}
+#root .wpb .wpb-exinfo-weight-choice{padding:9px 12px;border-radius:9px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:13px;font-weight:600}
 #root .wpb .wpb-exinfo-weight-choice[aria-pressed="true"]{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-exinfo-sheet :is(button,a,summary,input,textarea):focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(max-width:359px){#root .wpb .wpb-exinfo-sheet{padding-inline:12px}#root .wpb .wpb-exinfo-rest-row{gap:6px}}
@@ -10091,3 +10094,5 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 #root .wpb .wpb-session-notes-previous{margin:12px 0;color:var(--wpb-theme-muted);font-size:13px;line-height:1.45;overflow-wrap:anywhere}
 #root .wpb .wpb-session-notes-previous>strong{color:var(--wpb-theme-text)}
+
+#root .wpb-workout .wpb-workout-average-action{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-top:6px;padding:10px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-text);font-size:13px;font-weight:600;cursor:pointer}

@@ -108,6 +108,17 @@ assert.ok(css.includes('.wpb-session-notes-previous{') &&
   css.includes('.wpb-session-notes-previous>strong{'),
   'Previous note style is a shared theme-aware CSS role');
 
+/* Design 44–46: one accessible average-load action with no duplicate inline paint. */
+assert.ok(workout.includes('className: "pressable wpb-workout-average-action"') &&
+    workout.includes('onClick: () => levelSetsToAvg(ei)') &&
+    !workout.includes('title: "You ramped up'),
+    'Average-load remains an intentional button, without a lengthy tooltip');
+const averageAction=css.split('#root .wpb-workout .wpb-workout-average-action{')[1]?.split('}')[0]||'';
+assert.ok(averageAction.includes('min-height:48px') &&
+    averageAction.includes('background:var(--wpb-theme-bg-tint)') &&
+    css.includes('.wpb-workout-average-action:focus-visible,'),
+    'Average load uses a 48px theme-aware action and the existing focus group');
+
 /* B970: keep notes discoverable in one toolbar action and CSS-owned hint surfaces. */
 assert.ok(!workout.includes('children: "Session note · " + e.note'),
   'Exercise header must not duplicate the session note toolbar action');

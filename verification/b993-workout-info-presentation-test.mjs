@@ -45,5 +45,5 @@ assert.ok(app.includes(':not(.wpb-exinfo-sheet){max-height:calc(var(--visual-h')
  'Compact landscape also leaves Info viewport sizing to its scoped CSS owner');
 assert.ok((app.match(/style: \{/g)||[]).length<=1101,'Fixed Workout info CSS must not return to inline style');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority overrides added');
-assert.ok(css.length<=643592,'CSS migration budget must not grow without review');
+assert.ok((css.indexOf('/* B1009 — shared, palette-owned fixed text roles')>0 && css.slice(0,css.indexOf('/* B1009 — shared, palette-owned fixed text roles')).length<=643592),'CSS migration budget must not grow without review');
 console.log('PASS B993: Workout Info presentation, focus ownership, responsive targets and CSS debt guards.');

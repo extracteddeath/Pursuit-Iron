@@ -237,7 +237,7 @@ const b1009Contract=[
     "style: { fontSize: 11, color: C.faint, marginTop: 2 }"
   ]
 ];
-assert.equal((app.match(/style: \{/g)||[]).length<=874,'B1009 never restores retired inline text paint');
+assert.ok((app.match(/style: \{/g)||[]).length<=874,'B1009 never restores retired inline text paint');
 for(const [role,count,retired] of b1009Contract){
   const matches=app.match(new RegExp('(?:^|[\\s"])'+role+'(?=[\\s"])','g'))||[];
   assert.equal(matches.length,count,'B1009 shared presentation count for '+role);

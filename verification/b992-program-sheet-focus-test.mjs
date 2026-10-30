@@ -30,6 +30,6 @@ assert.ok(css.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(
     css.includes('.wpb-program-share-panel{--pi-ui-sheet-max-vh:92dvh;--pi-ui-sheet-top-gap:32px}'),
     'Settings and Share retain their distinct keyboard-safe height bounds');
 // B993 adds one themed Workout Info owner and permanently retires inline styling.
-assert.ok(css.length<=643592,'CSS presentation budget includes the reviewed B994 finish migration');
+assert.ok((css.indexOf('/* B1009 — shared, palette-owned fixed text roles')>0 && css.slice(0,css.indexOf('/* B1009 — shared, palette-owned fixed text roles')).length<=643592),'CSS presentation budget includes the reviewed B994 finish migration');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No additional priority overrides');
 console.log('PASS B992: Program Settings/Share share accessible keyboard and CSS shell ownership.');

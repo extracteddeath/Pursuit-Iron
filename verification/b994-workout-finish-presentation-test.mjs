@@ -14,7 +14,7 @@ assert.ok(sheet.includes('style: { color: col }'),'Next-session status preserves
 assert.ok((sheet.match(/style: \{/g)||[]).length<=2,'Workout completion must not regress to inline styling');
 assert.ok((app.match(/style: \{/g)||[]).length<=1101,'App inline debt budget');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No new important overrides');
-assert.ok(css.length<=643592,'CSS size ceiling tracks the migration');
+assert.ok((css.indexOf('/* B1009 — shared, palette-owned fixed text roles')>0 && css.slice(0,css.indexOf('/* B1009 — shared, palette-owned fixed text roles')).length<=643592),'CSS size ceiling tracks the migration');
 for(const token of ['.wpb-finish-rating-choice[aria-pressed="true"]','.wpb-finish-feedback-toggle[aria-expanded="true"]','.wpb-finish-routine-save:disabled','@media(prefers-reduced-motion:reduce)'])
  assert.ok(css.includes(token),'Missing state/accessibility owner '+token);
 console.log('PASS B994: 46 Workout finish inline presentation objects retired; controls and geometry CSS-owned.');

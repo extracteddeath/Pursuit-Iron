@@ -28,8 +28,14 @@ export function ProgramRevisionReview({ review, onApply, onClose }) {
             _jsx("button", { type: "button", onClick: onClose, className: "wpb-session-choice pressable", children: "Keep current plan" }),
             _jsx("button", { type: "button", onClick: onApply, "data-apply-program-review": true, className: "wpb-session-choice pressable", children: "Apply changes" })] }),
         children: _jsxs("div", { "data-program-review": true, children: [
-            _jsx("p", { children: review.message }),
-            _jsx("p", { className: "wpb-program-review-status", children: "Preview · your current plan is unchanged until you apply." }),
+            _jsx("p", { className: "wpb-program-review-status", children: "Preview · nothing changes until you apply." }),
+            _jsxs("section", { className: "wpb-program-review-scope", "aria-label": "Change impact", children: [
+                _jsxs("p", { children: [_jsx("strong", { children: "What changes" }),
+                    _jsx("span", { children: changes.count ? `${changes.count} setting or exercise difference${changes.count === 1 ? '' : 's'}` : "No visible setting or exercise differences" })] }),
+                _jsxs("p", { children: [_jsx("strong", { children: "Why" }), _jsx("span", { children: review.message })] }),
+                _jsxs("p", { children: [_jsx("strong", { children: "When" }), _jsx("span", { children: "After you choose Apply changes" })] }),
+                _jsxs("p", { children: [_jsx("strong", { children: "What stays intact" }), _jsx("span", { children: "Completed workouts; a restorable copy of the previous layout is kept" })] })
+            ] }),
             review.audit && _jsxs("section", { className: "wpb-program-review-audit", children: [
                 _jsx("h3", { children: "Volume check" }),
                 _jsx("p", { children: `${review.audit.before.length} findings before · ${review.audit.after.length} remaining after` }),

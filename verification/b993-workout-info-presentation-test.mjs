@@ -34,7 +34,15 @@ const infoActionSizing=css.split('#root .wpb :is(.wpb-exinfo-close,.wpb-exinfo-r
 for(const prop of ['box-sizing:border-box','min-width:48px','min-height:48px','border:1px solid var(--wpb-theme-border)','cursor:pointer'])
   assert.ok(infoActionSizing.includes(prop),'Info controls share '+prop);
 assert.ok(css.includes('min-width:48px;min-height:48px'),'Rest actions must meet 48px target');
+const whyDisclosure=css.split('#root .wpb .wpb-exinfo-why-disclosure{')[1]?.split('}')[0]||'';
+assert.ok(whyDisclosure.includes('min-height:48px'),'Workout Info Why disclosure must meet 48px target');
 assert.ok(css.includes('max-height:min(90dvh,calc(var(--visual-h'),'Sheet must account for visual viewport');
+// The legacy theme's !important all-sheet cap must not override Info's dedicated
+// 90dvh visual-viewport owner, including compact-landscape and detent modes.
+assert.equal((app.match(/:not\(:is\(\.wpb-program-share-panel,\.wpb-exercise-options-sheet,\.wpb-exinfo-sheet\)\)\{max-height:/g)||[]).length,4,
+ 'Generic sheet caps exclude Info in phone, tablet and both detent selectors');
+assert.ok(app.includes(':not(.wpb-exinfo-sheet){max-height:calc(var(--visual-h'),
+ 'Compact landscape also leaves Info viewport sizing to its scoped CSS owner');
 assert.ok((app.match(/style: \{/g)||[]).length<=1101,'Fixed Workout info CSS must not return to inline style');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority overrides added');
 assert.ok(css.length<=643592,'CSS migration budget must not grow without review');

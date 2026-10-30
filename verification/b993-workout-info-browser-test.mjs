@@ -53,7 +53,7 @@ try{
  assert.equal(await page.$eval('.wpb-exinfo-sheet',e=>e.getAttribute('aria-modal')),'true');
  assert.ok(await page.$eval('.wpb-exinfo-close',e=>document.activeElement===e),'opening places focus on Close');
  const summary=await page.$('.wpb-exinfo-why-disclosure');
- if(summary)assert.ok(await summary.evaluate(e=>e.getBoundingClientRect().height>=44),'Explanation disclosure must be 44px tall');
+ if(summary)assert.ok(await summary.evaluate(e=>e.getBoundingClientRect().height>=48),'Explanation disclosure must meet the 48px touch target');
  await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');
  const trapped=await page.$eval('.wpb-exinfo-sheet',sheet=>{
   const elements=[...sheet.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),summary,a[href]')]
@@ -78,7 +78,9 @@ try{
    const r=panel.getBoundingClientRect(),close=panel.querySelector('.wpb-exinfo-close').getBoundingClientRect();
    const rest=[...panel.querySelectorAll('.wpb-exinfo-rest-step')].map(b=>b.getBoundingClientRect());
    const weight=[...panel.querySelectorAll('.wpb-exinfo-weight-choice')].map(b=>b.getBoundingClientRect());
+   const style=getComputedStyle(panel);
    return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:innerHeight,width:innerWidth,
+    computedMaxHeight:style.maxHeight,detent:panel.dataset.detent,visualHeight:window.visualViewport?.height,
     clientWidth:panel.clientWidth,scrollWidth:panel.scrollWidth,close:[close.width,close.height],
     rest:rest.map(x=>[x.width,x.height]),weight:weight.map(x=>[x.width,x.height])};
   });

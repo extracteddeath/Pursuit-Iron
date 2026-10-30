@@ -94,7 +94,7 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
                     _jsx("h2", { id: "program-settings-title", className: "wpb-ui-sheet-title wpb-program-settings-title", children: "Program settings" }),
                     _jsx(UiSheetClose, { className: "wpb-program-settings-close", onClick: onClose })] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-program-settings-body wpb-ui-sheet-scroll', children: [
-                    _jsx("p", { className: "wpb-program-settings-intro", children: program.engineSource === "pursuit-next"
+                    _jsx("p", { className: "wpb-ui-sheet-copy wpb-program-settings-intro", children: program.engineSource === "pursuit-next"
                         ? "Adjust your program, then save to rebuild it with the latest program logic. Your current program stays unchanged if the rebuild cannot be completed safely."
                         : program.custom ? "Update your program settings. Swap or remove any exercises that conflict with a new constraint before saving." : "Adjust your program, then save to apply. Changes re-balance your current exercises." }),
                     settingsIssues.length > 0 && _jsxs('section', {role:'alert',id:'program-settings-issues',className:'wpb-program-settings-issues',children:[

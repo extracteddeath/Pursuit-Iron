@@ -310,6 +310,68 @@ assert.ok(css.includes('.wpb-ui-sheet-focus :is(button,input,textarea):focus-vis
   'Shared keyboard and high contrast focus styles must remain available');
 
 
+
+// Design-spec passes 50–55: one shared Program panel owns corners, theme paint,
+// and the entrance. Feature-specific width, inset, tint and timing remain variants.
+const sheetChrome=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
+for(const prop of [
+    'border-radius:var(--pi-ui-sheet-radius,var(--pi-shape-card)) var(--pi-ui-sheet-radius,var(--pi-shape-card)) 0 0',
+    'background:var(--pi-ui-sheet-fill,var(--wpb-theme-bg-tint))',
+    'animation:sheetUp var(--pi-ui-sheet-enter-duration,.25s) var(--pi-ui-sheet-enter-ease,cubic-bezier(.2,.8,.2,1)) both'
+]) assert.ok(sheetChrome.includes(prop), 'Shared Program sheet chrome missing '+prop);
+for(const [owner,properties] of [
+    ['#root .wpb :is(.wpb-program-settings-panel,.wpb-program-share-panel){',
+        ['max-width:46rem','--pi-ui-sheet-radius:24px','--pi-ui-sheet-enter-duration:.28s','--pi-ui-sheet-enter-ease:cubic-bezier(.2,.7,.3,1)']],
+    ['#root .wpb .wpb-program-reference-panel{',
+        ['max-width:56rem','--pi-ui-sheet-radius:24px','--pi-ui-sheet-enter-duration:.26s','--pi-ui-sheet-enter-ease:cubic-bezier(.2,.8,.3,1)']],
+    ['#root .wpb .wpb-progression-choice-panel{',
+        ['max-width:44rem','--pi-ui-sheet-radius:24px','--pi-ui-sheet-fill:var(--wpb-theme-bg)']],
+    ['#root .wpb .wpb-training-max-sheet{',
+        ['--pi-ui-sheet-max-vh:88dvh','max-width:44rem']],
+    ['#root .wpb .wpb-exercise-options-sheet{',
+        ['--pi-ui-sheet-max-vh:88dvh','--pi-ui-sheet-top-gap:32px']]
+]){
+    const local=css.split(owner)[1]?.split('}')[0]||'';
+    assert.ok(local,'Sheet variant owner missing '+owner);
+    for(const prop of properties) assert.ok(local.includes(prop), 'Sheet variant lost '+prop+': '+owner);
+    for(const prop of ['border-radius:','background:','animation:'])
+        assert.ok(!local.includes(prop), 'Sheet-specific chrome must not be forked: '+owner+' '+prop);
+}
+assert.ok(css.includes('#root .wpb :is(.wpb-training-max-sheet,.wpb-exercise-options-sheet){border:1px solid var(--wpb-theme-border);border-bottom:0}'),
+    'Exercise Options and Training Maxes share the same single open-bottom border owner');
+assert.ok(css.includes('#root .wpb .wpb-training-max-sheet{border-bottom:1px solid var(--wpb-theme-border);border-radius:var(--pi-shape-card)}'),
+    'Centered Training Maxes retains complete edge and corner treatment');
+
+
+// Passes 56–59: explanatory sheet text uses one semantic support-copy owner.
+const sheetCopy=css.split('#root .wpb .wpb-ui-sheet-copy{')[1]?.split('}')[0]||'';
+for(const prop of ['font-size:var(--pi-type-support,.8125rem)','line-height:var(--pi-ui-sheet-copy-leading,1.5)','color:var(--wpb-theme-muted)','overflow-wrap:anywhere'])
+    assert.ok(sheetCopy.includes(prop),'Common Program copy lost '+prop);
+for(const [source,name,localProp] of [
+    [programReference,'wpb-program-reference-intro','margin:0 0 12px'],
+    [programReference,'wpb-progression-choice-scope','margin:0 0 12px'],
+    [trainingMaxes,'wpb-training-max-help','margin:0 0 12px'],
+    [programSettings,'wpb-program-settings-intro','--pi-ui-sheet-copy-leading:1.45'],
+    [programSchedule,'wpb-program-schedule-caption','--pi-ui-sheet-copy-leading:1.45']
+]){
+    assert.ok(source.includes('wpb-ui-sheet-copy '+name),'Program copy must use the same class: '+name);
+    const local=css.split('#root .wpb .'+name+'{')[1]?.split('}')[0]||'';
+    assert.ok(local.includes(localProp),'Feature copy spacing/line-height missing: '+name);
+    for(const duplicate of ['font-size:','color:','line-height:'])
+        assert.ok(!local.includes(duplicate),'Feature copy must not duplicate shared type: '+name+' '+duplicate);
+}
+
+
+// Proposed design-spec §§5.2,6,7.2,9.3,10: real recovery from empty Plan results.
+assert.ok(programReference.includes("role: 'search', 'aria-label': 'Find a lift'") &&
+    programReference.includes("'aria-label': 'Clear lift search'") &&
+    programReference.includes("'No lifts are scheduled in this program yet.'") &&
+    programReference.includes("children: 'Show all lifts'"),
+    'Plan lift progression must expose accessible search, no-match recovery and genuine empty state');
+assert.ok(programReference.includes("variant: 'tonal', 'data-icon-only': true, className: 'wpb-progression-page'") &&
+    css.includes('.wpb-progression-filter{min-width:0;min-height:48px'),
+    'Pager and filter controls use shared >=48px targets instead of an alternate skin');
+
 /* Design-spec passes 31–33: common viewport and Program action dock ownership. */
 const uiSheetViewport=css.split('#root .wpb .wpb-ui-sheet-panel{')[1]?.split('}')[0]||'';
 assert.ok(uiSheetViewport.includes('max-height:min(var(--pi-ui-sheet-max-vh,86dvh),calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - var(--pi-ui-sheet-top-gap,24px)))'),'One Program panel viewport formula remains');

@@ -14,8 +14,9 @@ const fixture=[
 "import {ProgramSaveReview} from '/modules/program-review-surfaces.js';",
 "import {ProgramExerciseOptions} from '/modules/program-exercise-options.js';",
 "import {HistoryEditSheet} from '/modules/history-editor.js';",
-"import {ProgramReferenceSheet,ProgressionChoiceSheet} from '/modules/program-reference-surfaces.js';",
+"import {ProgramReferenceSheet,ProgressionChoiceSheet,ProgressionCard} from '/modules/program-reference-surfaces.js';",
 "import {InfoCard} from '/modules/ui-disclosure.js';",
+"const sampleProgram={id:'spec-test',custom:true,weeks:3,config:{unit:'lb',weeks:3,progression:'manual',goal:'both',experience:'intermediate',deload:true},days:[{id:'lower',label:'Lower',primaryIndex:0,exercises:['seated-calf']}],overrides:{'lower:0':{sets:3,reps:'12-20',rir:'2',progressionStyle:'double'}}};",
 "function Demo(){const [sheet,setSheet]=React.useState('');const [expanded,setExpanded]=React.useState(false);",
 "return React.createElement('main',{className:'wpb'},",
 "React.createElement('button',{id:'open-review',onClick:()=>setSheet('review')},'Review changes'),",
@@ -25,6 +26,7 @@ const fixture=[
 "React.createElement('button',{id:'open-progression',onClick:()=>setSheet('progression')},'Progression method'),",
 "React.createElement(InfoCard,{icon:Info,title:'Details',subtitle:'Show and hide',open:expanded,onToggle:()=>setExpanded(x=>!x)},",
 "React.createElement('button',{id:'inside-reveal'},'Inside')),",
+"React.createElement(ProgressionCard,{program:sampleProgram,open:true,onToggle:()=>{}}),",
 "sheet==='review'&&React.createElement(ProgramSaveReview,{program:{name:'Test',cycleId:null},changes:[],scope:'program',onScope:()=>{},",
 "conflicts:[],onConfirm:()=>{},onClose:()=>setSheet('')}),",
 "sheet==='exercise'&&React.createElement(ProgramExerciseOptions,{exercise:{name:'Bench Press',part:'chest',type:'compound'},primary:true,",
@@ -139,6 +141,36 @@ try {
     assert.equal(await page.$eval(trigger,el=>el===document.activeElement),true,
       selector+' restores its trigger after Escape');
   }
+  // Design spec §§6,7.2,9.3,10: 320px/200%-type no-match recovery.
+  await page.waitForSelector('.wpb-progression-search');
+  const initialSearch=await page.$eval('.wpb-progression-search-clear',el=>({
+    disabled:el.disabled,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,
+    visible:getComputedStyle(el).visibility
+  }));
+  assert.ok(initialSearch.disabled&&initialSearch.visible==='hidden',
+    'Empty lift search does not display a useless icon');
+  assert.ok(initialSearch.width>=47&&initialSearch.height>=47,'Clear action reserves a 48px target without shifting the field');
+  const filterHeight=await page.$eval('.wpb-progression-filter',el=>el.getBoundingClientRect().height);
+  assert.ok(filterHeight>=48,'All filter targets satisfy the 48px Pursuit Iron rule');
+  await page.type('.wpb-progression-search','no-such-lift');
+  await page.waitForFunction(()=>document.querySelector('.wpb-progression-result-count')?.textContent?.startsWith('0 of 1'));
+  assert.ok(await page.$('.wpb-progression-reset'),'No results includes an actionable recovery');
+  await page.click('.wpb-progression-reset');
+  assert.equal(await page.$eval('.wpb-progression-search',el=>el.value),'','Recovery clears only the UI query');
+  assert.equal(await page.$eval('.wpb-progression-filter',el=>el.getAttribute('aria-pressed')),'true');
+  assert.match(await page.$eval('.wpb-progression-result-count',el=>el.textContent),/1 of 1/);
+  await page.type('.wpb-progression-search','calf');
+  assert.equal(await page.$eval('.wpb-progression-search-clear',el=>el.disabled),false);
+  await page.click('.wpb-progression-search-clear');
+  assert.equal(await page.$eval('.wpb-progression-search',el=>el.value),'','Clear is explicit and does not change the plan');
+  await page.click('button[aria-label="Later weeks"]');
+  assert.match(await page.$eval('.wpb-progression-page-label',el=>el.textContent),/Weeks 2–3 of 4/);
+  await page.click('button[aria-label="Later weeks"]');
+  assert.match(await page.$eval('.wpb-progression-page-label',el=>el.textContent),/Weeks 3–4 of 4/);
+  assert.equal(await page.$eval('button[aria-label="Later weeks"]',el=>el.disabled),true);
+  assert.ok(await page.$eval('button[aria-label="Earlier weeks"]',el=>el.getBoundingClientRect().width>=48));
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),
+    'Search/filter/pager cannot introduce document overflow at 320px and 200% text');
   assert.deepEqual(errors,[],'no runtime errors from shared Program focus or motion fallback');
   console.log('PASS B996 browser: Program review focus/geometry, destructive Escape, focus restore and resilient disclosure.');
 } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}

@@ -1,3 +1,12 @@
+## Build 998 — Design specification passes 50–110 (release candidate)
+
+- Consolidated Program and planning sheet chrome, semantic text roles, shared week controls and recoverable search across saved programs without modifying training prescriptions.
+- Clarified consequential saved-set versus next-workout load proposals, including truthful before/after comparisons, scope, and reversible actions.
+- Reduced Home Game Plan density by keeping executable targets visible and detailed coaching behind the existing disclosure; complex set targets remain fully inspectable.
+- Aligned remaining Workout pinned-note, Info explanation, and Gallery actions with 48px effective targets and preserved keyboard/200%-text behavior.
+- Corrected a legacy draggable-sheet priority override that could place Workout Info above the visible viewport after resizing; its dedicated viewport cap now owns height in normal, large-detent and compact-landscape modes.
+- Expanded exact-head source and seven browser-shard contracts. No engine, saved data, workout logging, automatic load selection, or PR detection changes. Release and hosted/offline verification are mandatory before publication; physical Android acceptance remains separate.
+
 ## Build 989 — Program, Home and Workout Material 3 consolidation (release candidate)
 
 - Consolidated Program Save Review, History correction, training-max, Program Settings and Session dialogs on a shared keyboard/focus owner. Escape, Tab containment, return focus and destructive-confirmation cancellation work consistently across sheets.

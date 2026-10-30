@@ -57,8 +57,8 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
                         'aria-label': 'Close', onClick: onClose })
                 ] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-training-max-body wpb-ui-sheet-scroll', children: [
-                    _jsx('p', { className: 'wpb-training-max-help', children: `${scheme?.name || 'Percentage training'} loads each main lift from its ${scheme?.basis || 'training max'}. Apply your maxes here, then review and save the program to keep the changes.` }),
-                    _jsx('p', { className: 'wpb-training-max-help', children: 'Use 1RM calculates 90% of a recent one-rep max, rounded to the lift’s loading step. Leave a max blank to clear it.' }),
+                    _jsx('p', { className: 'wpb-ui-sheet-copy wpb-training-max-help', children: `${scheme?.name || 'Percentage training'} loads each main lift from its ${scheme?.basis || 'training max'}. Apply your maxes here, then review and save the program to keep the changes.` }),
+                    _jsx('p', { className: 'wpb-ui-sheet-copy wpb-training-max-help', children: 'Use 1RM calculates 90% of a recent one-rep max, rounded to the lift’s loading step. Leave a max blank to clear it.' }),
                     mainLifts.map(id => {
                         const ex = EX_BY_ID[id];
                         if (!ex) return null;

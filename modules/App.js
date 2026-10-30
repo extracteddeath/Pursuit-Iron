@@ -81,7 +81,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='997';
+const __APP_VERSION__='4.0.0'; const __BUILD__='998';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -1730,7 +1730,7 @@ function StyleTag({ theme } = {}) {
           margin-left:auto!important;margin-right:auto!important;margin-bottom:16px!important;
           border-radius:var(--r-sheet)!important;
           border:1px solid var(--hairline)!important;}
-        .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(100dvh - 32px)!important;}
+        .wpb-backdrop>[data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:calc(100dvh - 32px)!important;}
       }
 
       /* Screen-specific de-cardification. These are deliberate exceptions where grouped rows read
@@ -2179,8 +2179,6 @@ function StyleTag({ theme } = {}) {
 
       .wpb-page-scroll :is(input,textarea,select,[contenteditable="true"]){scroll-margin-top:88px;scroll-margin-bottom:132px;}
 
-      /* Bottom sheets: one physical model. The visual viewport drives --app-h while the keyboard is
-         open, so this ceiling automatically prevents a sheet from disappearing behind the IME. */
       .wpb [data-sheet-drag]{
         overscroll-behavior:contain;scroll-padding-top:20px;
         scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom));
@@ -2190,9 +2188,9 @@ function StyleTag({ theme } = {}) {
          open, so this ceiling automatically prevents a sheet from disappearing behind the IME. */
       .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){
         border-radius:18px 18px 0 0!important;}
-      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
-      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="content"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:min(68dvh,540px)!important;}
-      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="content"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:min(68dvh,540px)!important;}
+      .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet))[data-detent="large"]:not(:is(.wpb-program-share-panel,.wpb-exercise-options-sheet,.wpb-exinfo-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 10px)!important;}
       .wpb [data-sheet-drag][data-dragging="1"]{box-shadow:0 -18px 48px rgba(0,0,0,.22);}
       .wpb [data-sheet-drag] :is(input,textarea,select){scroll-margin-top:68px;scroll-margin-bottom:140px;}
       .wpb [data-sheet-drag]::before{width:36px;height:4px;margin-bottom:10px;opacity:.9;}
@@ -2302,7 +2300,7 @@ function StyleTag({ theme } = {}) {
         .wpb-onboarding-footer{padding-top:7px!important;padding-bottom:calc(env(safe-area-inset-bottom) + 8px)!important;}
         .wpb-wizard-heading{margin-bottom:10px!important;}
 
-        .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 4px)!important;}
+        .wpb [data-sheet-drag]:not(:where(.wpb-selection-sheet,.wpb-history-editor-sheet)):not(.wpb-exinfo-sheet){max-height:calc(var(--visual-h,var(--app-h,100dvh)) - env(safe-area-inset-top) - 4px)!important;}
       }
 
       @media(max-height:420px) and (orientation:landscape){

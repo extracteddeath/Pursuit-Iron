@@ -54,7 +54,7 @@ try{
   await page.goto('http://127.0.0.1:8804/index.html',{waitUntil:'networkidle0'});await page.waitForSelector('.wpb-home');
   await page.waitForSelector('.wpb-plan-change-banner[aria-label^="Review "]');
   const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
-  assert.match(await page.$eval('.wpb-plan-change-banner',n=>n.innerText),/1 upcoming adjustment/);
+  assert.match(await page.$eval('.wpb-plan-change-banner',n=>n.innerText),/1 plan adjustment/);
   const homeCoach=await page.evaluate(()=>{
    const hero=document.querySelector('.wpb-home-hero'),game=document.querySelector('.wpb-home-game-plan');
    const outline=hero?.querySelector('.wpb-home-session-outline');
@@ -68,7 +68,16 @@ try{
    'Home has its own concise coaching card, not a second workout outline: '+JSON.stringify(homeCoach));
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/82.5 kg × 6/);
   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/);
-  if(width===900)assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/23-second rests/,'game plan honors the logger rest scale');
+  if(width===900){
+   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/Myo-reps/,
+    'Collapsed Game Plan identifies the technique without full instructions');
+   await page.click('[data-game-plan-exercise="bb-row"] summary');
+   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"] details>p',n=>n.innerText),/23-second rests/,
+    'Expanded Game Plan retains the logger-scaled Myo-reps rest interval');
+   await page.click('[data-game-plan-exercise="bb-row"] summary');
+   assert.equal(await page.$eval('[data-game-plan-exercise="bb-row"] details',n=>n.open),false,
+    'Leave the Home Game Plan collapsed before continuing the workout journey');
+  }
   assert.ok(await page.$('[data-pr-exercise="bb-row"]'));assert.equal(await page.$('[data-pr-exercise="bb-bench"]'),null,'no fabricated RIR-adjusted PR');
   assert.equal(await page.$eval('.wpb-home',n=>n.scrollWidth<=n.clientWidth+1),true);
   await page.screenshot({path:`/tmp/b904-home-${width}.png`});
@@ -130,8 +139,16 @@ try{
     'The shorter plan holds the previously trained load without inventing a new increase');
    assert.match(shortState.row,/90 kg × 8/,
     'The shortened 2-set prescription holds the last comparable 90-kg working load');
-   assert.match(shortState.row,/Different set counts cannot earn an automatic load change/,
-    'Both changed-set-count exercises must explain why progression is paused');
+   assert.doesNotMatch(shortState.row,/Different set counts cannot earn an automatic load change/,
+    'Collapsed Game Plan stays concise until the athlete asks why');
+   await page.click('[data-game-plan-exercise="bb-row"] summary');
+   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"] details>p',n=>n.innerText),
+    /Different set counts cannot earn an automatic load change/,
+    'Full progression safety explanation remains available on demand');
+   // Return the disclosure to its original collapsed state before testing
+   // Full/Short session target previews; open details intentionally hides them.
+   await page.click('[data-game-plan-exercise="bb-row"] summary');
+   assert.equal(await page.$eval('[data-game-plan-exercise="bb-row"] details',n=>n.open),false);
    await clickText('Full');
    await page.waitForFunction(()=>{
     const row=document.querySelector('[data-game-plan-exercise="bb-row"]')?.innerText||'';
@@ -168,7 +185,11 @@ try{
   const baseline=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
   await page.waitForSelector('[aria-label="Keep previous load for Dumbbell Bench Press"]');
-  assert.match(await page.$eval('.wpb-plan-review-intro',n=>n.innerText),/Week 4.*upcoming workout/);
+  assert.match(await page.$eval('.wpb-plan-review-intro',n=>n.innerText),/Upper · Week 4/,
+   'Plan review heading identifies the exact week without crowding its scope');
+  assert.match(await page.$eval('.wpb-plan-changes-body>.wpb-plan-review-basis',n=>n.innerText),
+   /Load choices apply to this workout.*Completed history stays intact/,
+   'Separate scope explanation remains visible in the improved review hierarchy');
   assert.match(await page.$eval('[data-plan-change="db-bench"]',n=>n.innerText),/50 → 55 lb/);
   await reveal(page,'db-bench');
   const card=await page.$eval('[data-plan-change="db-bench"]',n=>n.innerText);

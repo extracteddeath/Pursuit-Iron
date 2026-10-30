@@ -115,6 +115,23 @@ export function auditWorkoutProgressionReplay(record) {
     const issues = [];
     for (const row of record.rows) {
         if (row.kind !== 'work' || row.done || row.owner !== 'prescription') continue;
+        const adjustment = row.liveAdjustment;
+        if (adjustment && Array.isArray(adjustment.sourceIndices)) {
+            const snapshots = adjustment.sourceObservations;
+            const supported = Array.isArray(snapshots)
+                && snapshots.length === adjustment.sourceIndices.length
+                && adjustment.pendingIndex === row.rowIndex
+                && snapshots.every((snapshot, i) => {
+                    const source = record.rows[adjustment.sourceIndices[i]];
+                    return source?.rowIndex === snapshot.index && source?.done
+                        && source.load === snapshot.load && source.reps === snapshot.reps
+                        && source.actualRir === snapshot.actualRIR;
+                });
+            if (!supported) issues.push({
+                code:'stale_or_unverifiable_live_adjustment',
+                workingSetIndex:row.workingSetIndex
+            });
+        }
         const pending = !row.liveAdjustment && row.readinessFactor == null;
         if (pending && row.target.load != null && row.load !== row.target.load)
             issues.push({ code:'unexplained_pending_load', workingSetIndex:row.workingSetIndex });

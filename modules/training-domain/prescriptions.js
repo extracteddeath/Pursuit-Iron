@@ -959,7 +959,8 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const weight = result.suggestedLoad ?? result.currentLoad;
     return { unit, lastUnit: last.unit ?? unit, weight, dir: weight > result.currentLoad ? "up" : weight < result.currentLoad ? "down" : "hold",
         action: result.action, reasonCode: result.reasonCode, reps: cell.range, target: result.suggestedReps ?? lo,
-        setTargets: result.setTargets, last: last.perf[ex.id], confidence: result.confidence, reason: result.reason };
+        setTargets: result.setTargets, last: last.perf[ex.id], sourceEntryId: last.id ?? null,
+        confidence: result.confidence, reason: result.reason };
 
 }
 
@@ -1159,6 +1160,7 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
             schemaVersion: 1, programId: String(program.id), dayId: String(day.id),
             exerciseId: ex.id, slot, weekIndex, workingSetIndex: index,
             source: previous ? { load: previous.w, reps: previous.r,
+                ...(sug?.sourceEntryId != null ? { historyEntryId: String(sug.sourceEntryId) } : {}),
                 ...(previous.rir !== null ? { reportedRir: previous.rir } : {}),
                 ...(previous.summary ? { summaryOnly: true } : {}) } : null,
             evaluation: { action: origin ?? (estimate ? 'starting_estimate' : sug?.action || 'initial'),

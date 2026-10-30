@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 992,
+  "build": 993,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "8c096fb312192f50c836326e2a98972b5a64af09d3a6fd31433a078655ac5e64",
+  "runtimeAggregate": "0ac1abcafdd027cc788ac8dc31224b5391c0babe51d81f1ba093d1cea7406bc8",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -112,7 +112,7 @@
     "modules/program-volume-surfaces.js": "2be8baf785731d52ddf8fa72b36ec64fc8a0c4fd5ddf6b4bcf78026194ca5c4b",
     "modules/release-notes.js": "138d46cf4b336306f8fa34202e1637b29f011347198da570c6bb23a2f0c5d558",
     "modules/session-choice-dialog.js": "7f4b263f457bb7ea7a08f11eab1a7888295d4a65d1dc6d6a646a65b8f465359e",
-    "modules/session-plan.js": "6b4b562f81d4a97b8d73ed892898f94180f617ce77d16c8fd4128a8781c903c8",
+    "modules/session-plan.js": "4229495140e0cf357a436537c4af7ff48c94a47c810450d714407a01173543f1",
     "modules/session-tools.js": "bb47e4bbcef367a3a27b0cbd23393379d63a5c8ea41ba31172f342fa76795776",
     "modules/training-domain.js": "b0ab1dfc9b363f4ee7c467039aacf06a9fd9b635b92c224d4aa151cccc596f47",
     "modules/training-domain/analytics.js": "293b2f401a91f3402821a72e4b77667907f704ef2e5cd57cfe010f11e0ceb153",
@@ -140,7 +140,8 @@
     "vendor/react-jsx-runtime.js": "bde9f287ac956c2a8873443da27dbb828de7ee82bcec262b703aceab2a745954",
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
-    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c"
+    "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
+    "modules/next-engine/workout-replay.js": "edbd44360bbb663059fc248de934257be600434a343187771e588e5e3a8805b8"
   },
   "localCandidate": {
     "name": "Pursuit Iron 4.0 · M234 Candidate Selection Hardening",
@@ -148,10 +149,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "a0774b92116be4f7651817f7a15fe89e2398652c6c5e4c0a5ef7f77c7277c664",
-    "index.html": "c87084ae7bbb460792a799c7ffcda1acc6b2802389be6205100eb59d12fbb390",
-    "sw.js": "4c0009805788f0b9b9201ed1e7635b7464953f65f3a1b2445f3609b3b9c0aaf2",
-    "BUILD_PROFILE.json": "0d34205883c1110b8744275921ed9803e0c8e733dcea384c950abf8491c0aca8",
+    "modules/App.js": "339db937526faaee484d68ccfd522803aaa2d307556743e4df43e0de69812682",
+    "index.html": "7cbc2e99f43d54765f788b447001b275bf1a8825c803b3ee2da28e142d589116",
+    "sw.js": "f5ff288efdcf1ee80a244fbc024093b5adb2395eb815c58188f0664b981970a8",
+    "BUILD_PROFILE.json": "2facc98a4c0e77802dc084e56937656128089a93d3ec59d303bc4cb81fc7cc59",
     "CHANGELOG.md": "79ca5451b4bc350612c3f63d511054acaa42552e94b93676df9513ba2e261f52",
     "app.css": "763e474dd9a7a75c3f00e422962cdd8b4820f4dd2e05276d79c30e6b046be09e",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -160,6 +161,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b992-r208def3b42eb9873",
-  "uiMilestone": "Build 992 · Verified per-set provenance across units"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b993-r0000000000000000",
+  "uiMilestone": "Build 993 · Workout progression diagnostic replay"
 }

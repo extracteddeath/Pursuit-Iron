@@ -130,8 +130,12 @@ try{
     'The shorter plan holds the previously trained load without inventing a new increase');
    assert.match(shortState.row,/90 kg × 8/,
     'The shortened 2-set prescription holds the last comparable 90-kg working load');
-   assert.match(shortState.row,/Different set counts cannot earn an automatic load change/,
-    'Both changed-set-count exercises must explain why progression is paused');
+   assert.doesNotMatch(shortState.row,/Different set counts cannot earn an automatic load change/,
+    'Collapsed Game Plan stays concise until the athlete asks why');
+   await page.click('[data-game-plan-exercise="bb-row"] summary');
+   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"] details>p',n=>n.innerText),
+    /Different set counts cannot earn an automatic load change/,
+    'Full progression safety explanation remains available on demand');
    await clickText('Full');
    await page.waitForFunction(()=>{
     const row=document.querySelector('[data-game-plan-exercise="bb-row"]')?.innerText||'';

@@ -89,7 +89,7 @@ try{
  assert.ok(geometry.left>=-1&&geometry.right<=321,'compact set control fits screen '+JSON.stringify(geometry));
 
  // Design spec §§6,7.1,9.2,10: collapsed advice shows an actionable target instead of repeating its explanation.
- const previews=await page.$eval('#game-plan-test .wpb-game-plan-highlight-copy',els=>els.map(el=>({
+ const previews=await page.evaluate(()=>Array.from(document.querySelectorAll('#game-plan-test .wpb-game-plan-highlight-copy')).map(el=>({
    id:el.closest('[data-game-plan-exercise]')?.getAttribute('data-game-plan-exercise'),
    preview:el.querySelector('.wpb-game-plan-highlight-preview')?.textContent,
    explanation:el.querySelector('p')?.textContent,
@@ -117,7 +117,7 @@ try{
  await page.keyboard.press('Enter');
  assert.equal(await page.$eval('[data-game-plan-exercise="myo"] details',el=>el.open),false,
    'Keyboard operates the native details without modifying the plan');
- const banners=await page.$eval('#plan-banner-test .wpb-plan-change-banner',els=>els.map(el=>el.innerText));
+ const banners=await page.evaluate(()=>Array.from(document.querySelectorAll('#plan-banner-test .wpb-plan-change-banner')).map(el=>el.innerText));
  assert.equal(banners.length,3);
  assert.ok(banners.every(x=>x.includes('1 plan adjustment')&&!x.includes('upcoming adjustment')),
    'An already-saved revision must not be mislabeled as upcoming-only');

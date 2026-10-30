@@ -128,9 +128,18 @@ try{
     'A 3-set history cannot earn a new 2-set shortened-session load; no pending change means no review');
    assert.match(shortState.bench,/80 kg × 8/,
     'The shorter plan holds the previously trained load without inventing a new increase');
-   assert.match(shortState.row,/90 kg × 9/,
-    'Shortening retains ordinary row progression');
+   assert.match(shortState.row,/90 kg × 8/,
+    'The shortened 2-set prescription holds the last comparable 90-kg working load');
+   assert.match(shortState.row,/Different set counts cannot earn an automatic load change/,
+    'Both changed-set-count exercises must explain why progression is paused');
    await clickText('Full');
+   await page.waitForFunction(()=>{
+    const row=document.querySelector('[data-game-plan-exercise="bb-row"]')?.innerText||'';
+    const bench=document.querySelector('[data-game-plan-exercise="bb-bench"]')?.innerText||'';
+    return row.includes('90 kg × 9') && bench.includes('80 kg × 6');
+   });
+   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/,
+    'Restoring Full re-enables ordinary rep progression without changing logged history');
    await clickText('Start workout');await page.waitForSelector('.wpb-workout');await clickText('Skip');
    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live'))?.data?.some(r=>r.id==='bb-bench'));
    let live=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));

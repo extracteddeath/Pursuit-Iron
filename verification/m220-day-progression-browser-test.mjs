@@ -3,14 +3,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import puppeteer from 'puppeteer-core';
-import { program, history, squatProgram, squatDay, squatHistory, inclineProgram, inclineHistory } from './m220-day-progression-test.mjs';
+import { program, history, squatProgram, squatDay, squatHistory, inclineProgram, inclineHistory, rearProgram, rearHistory } from './m220-day-progression-test.mjs';
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const importMap = fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script type="importmap">[\s\S]*?<\/script>/)[0];
 const snapshot = {schemaVersion:2,programId:program.id,dayId:'lower',weekIndex:1,dayExSig:'seated-calf',exIdx:0,elapsedMs:3800000,restPaused:true,restRemain:50,restMax:90,data:[{id:'seated-calf',slot:0,sets:Array.from({length:5},(_,i)=>({weight:i===2?'212.5':'210',reps:'20',done:i===0,auto:i!==2,valueOwner:i===2?'user':'prescription',target:{w:'210',reps:'12-20',rir:'2',prefillReps:'20'}}))}]};
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/app.css">${importMap}</head><body><div id="root"></div><script type="module">
 import React from '/vendor/react.js';import {createRoot} from '/vendor/react-dom-client.js';import RootApp,{WorkoutSession,StyleTag} from '/modules/App.js';import {installAppMotion} from '/modules/ui-motion.js';
-const params=new URL(location.href).searchParams,squat=params.has('squat'),incline=params.has('incline');
-const program=incline?${JSON.stringify(inclineProgram)}:squat?${JSON.stringify(squatProgram)}:${JSON.stringify(program)},history=incline?${JSON.stringify(inclineHistory)}:squat?${JSON.stringify(squatHistory)}:${JSON.stringify(history)},day=squat?program.days.find(d=>d.id===${JSON.stringify(squatDay.id)}):program.days[0],resume=params.has('resume');
+const params=new URL(location.href).searchParams,squat=params.has('squat'),incline=params.has('incline'),rear=params.has('rear');
+const program=rear?${JSON.stringify(rearProgram)}:incline?${JSON.stringify(inclineProgram)}:squat?${JSON.stringify(squatProgram)}:${JSON.stringify(program)},history=rear?${JSON.stringify(rearHistory)}:incline?${JSON.stringify(inclineHistory)}:squat?${JSON.stringify(squatHistory)}:${JSON.stringify(history)},day=squat?program.days.find(d=>d.id===${JSON.stringify(squatDay.id)}):program.days[0],resume=params.has('resume');
 if(params.has('custom')){program.custom=true;delete program.engineSource;}
 const owner=createRoot(document.getElementById('root'));localStorage.setItem('wpb:v1',JSON.stringify({v:13,saved:[],history:[],cycles:[],perf:{},drafts:{},tombs:{},theme:'ice',unit:'lb',unitChosen:true,experience:'intermediate',seenIntro:999,seenWhatsNew:999,installDismissedAt:Date.now(),lastBackup:Date.now()}));owner.render(React.createElement(RootApp));installAppMotion(document.getElementById('root'));window.mountProgressionWorkout=()=>{localStorage.removeItem('wpb:live');if(resume){const saved=squat?{schemaVersion:2,programId:program.id,dayId:day.id,weekIndex:1,dayExSig:day.exercises.join('|'),exIdx:0,elapsedMs:3800000,restPaused:true,restRemain:50,restMax:90,data:[{id:'back-squat',slot:0,note:'',sets:Array.from({length:4},(_,i)=>({weight:i===2?'200':'215',reps:i===0?'3':i===2?'6':'5',done:i===0,auto:i!==2,valueOwner:i===2?'user':'prescription',target:{w:'215',reps:'5-8',rir:'2',prefillReps:'5'}}))}]}:${JSON.stringify(snapshot)};if(incline){saved.programId=program.id;saved.dayId=day.id;saved.dayExSig=day.exercises.join('|');saved.data=[{id:'low-inc-bb-bench',slot:0,note:'J-hooks 7.5',sets:Array.from({length:4},(_,i)=>({weight:i===2?'197.5':'210',reps:i===0?'5':'6',done:i===0,auto:i!==2,valueOwner:i===2?'user':'prescription',target:{w:'210',reps:'6-8',rir:'2',prefillReps:i===0?'5':'6'}}))}];}localStorage.setItem('wpb:live',JSON.stringify(saved));}
 owner.render(React.createElement('div',{className:'wpb',style:{height:'100%'}},React.createElement(StyleTag),React.createElement(WorkoutSession,{program,day,weekIndex:1,unit:'lb',perf:history[0].perf,history,restAutoStart:false,warmupCard:false,onExit:()=>{},onFinish:()=>{},setUnit:()=>{}})));};
@@ -33,6 +33,19 @@ try {
     await page.click('button[aria-label="Show previous workout values"]');
     const lastText=await page.$eval('.wpb-workout',n=>n.innerText);
     assert.match(lastText,/205×16/);assert.match(lastText,/205×12/);
+    // B1002 screenshot: a later isolation exercise must preserve the 60 lb
+    // working load across all three rows; the UI must show the matching raw LAST.
+    await open('?rear');
+    const rearWork='[data-testid^="set-0-"][data-warm="0"][data-sub="0"]';
+    const rearWeights=await page.$eval(`${rearWork} input[aria-label="weight"]`, nodes=>nodes.map(node=>node.value));
+    const rearReps=await page.$eval(`${rearWork} input[aria-label="reps"]`, nodes=>nodes.map(node=>node.value));
+    assert.deepEqual(rearWeights,['60','60','60'],'B1002: last 60x20 cannot prefill 55x21 on the third set');
+    assert.deepEqual(rearReps,['21','21','21'],'B1002: rep-only advance remains inside planned rep range');
+    await page.click('button[aria-label="Show previous workout values"]');
+    const rearLast=await page.$eval(rearWork, nodes=>nodes.map(node=>node.textContent));
+    assert.equal(rearLast.length,3);
+    for(const row of rearLast)assert.match(row,/60×20/,'visible LAST must match the same three history rows');
+    await page.screenshot({path:path.join(root,'verification/b1002-rear-fly-phone.png')});
     await open('?resume');
     assert.deepEqual(await values(),['205','212.5','205','205'],'untouched pending automatic loads refresh while the manual load survives');
     const resumedCalf=await savedWorkSets();

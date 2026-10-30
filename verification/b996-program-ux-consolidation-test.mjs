@@ -47,8 +47,10 @@ assert.ok(progression.includes("type: 'search'") &&
     'progression filters expose forgiving search and live results');
 assert.ok(css.includes('.wpb-progression-result-count{') &&
     css.includes('max-height:min(85dvh,calc(var(--visual-h,') &&
-    css.includes('.wpb-save-review-scroll{flex:1;min-height:0'),
-    'responsive CSS belongs to the original components, not new override layers');
+    css.includes('.wpb-save-review-scroll{flex:1}') &&
+    css.includes('.wpb-ui-sheet-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain}') &&
+    review.includes('wpb-save-review-scroll wpb-ui-sheet-scroll'),
+    'responsive CSS retains Review flex sizing and the shared sheet scroll owner');
 for (const surface of ['wpb-program-schedule-sheet','wpb-program-reference-panel','wpb-progression-choice-panel']) {
     assert.ok(css.includes(`.${surface}{`) && css.includes(`.${surface}{box-sizing:border-box`),
         'Program surface retains a component-owned stylesheet rule: '+surface);

@@ -151,8 +151,8 @@
   "uiFiles": {
     "modules/App.js": "2909f06cf104e75f0c567c5066a9b34147dd03352d4b5363f916334d8de449f6",
     "index.html": "94f13bcbad124167131fc43e51c34a9d19e40afdb4b4a6420add2f4fbff4954c",
-    "sw.js": "337cdc27d4456a70f4202b00e030c723c81b5af39418c85ef1fce44266aa6377",
-    "BUILD_PROFILE.json": "1f6025fb31519c9556ae013e1d152e0b10db87ec2018ae2187deae83de9ce680",
+    "sw.js": "e69caf8cfdddcf0a534c72c4ef07c4b0c82b6fa16ee74e3459326208217d7f53",
+    "BUILD_PROFILE.json": "89e023a2c8dda10701b3eef42d489dc63d361fc146b5425d6d521ebaf83a542c",
     "CHANGELOG.md": "79ca5451b4bc350612c3f63d511054acaa42552e94b93676df9513ba2e261f52",
     "app.css": "763e474dd9a7a75c3f00e422962cdd8b4820f4dd2e05276d79c30e6b046be09e",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -161,6 +161,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b996-ra6809f4f69a8a503",
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b996-ref247b6cdcafab21",
   "uiMilestone": "Build 996 · Saved-state machine increments and verified progression replay"
 }

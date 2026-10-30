@@ -440,6 +440,12 @@ console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion
     assert.equal(working.length,3,'Next week still prescribes exactly three working sets');
     assert.deepEqual(working.map(row=>Number(row.weight)),[60,60,60],
         'Live workout must preserve 60 lb on every rep-only/held row');
+    assert.ok(working.every(row=>Number(row.reps)>=12 && Number(row.reps)<=20),
+        'A 12-20 historical rep ceiling cannot become an invented 21-rep prefill');
+    assert.deepEqual(working.map(row=>row.target?.decisionTrace?.source?.load),[60,60,60],
+        'Each workout row must trace to the prior 60-lb working load');
+    assert.deepEqual(working.map(row=>row.target?.decisionTrace?.source?.reportedRir),[null,1,null],
+        'An unreported planned RIR is not actual effort: only the middle RIR was observed');
     assert.deepEqual(savedHistory,before,'Replay must not change saved user history');
 }
 console.log('PASS B997 real backup replay: 3 completed of 4 prescribed cannot promote 60 to 65 after week changes to 3 sets.');

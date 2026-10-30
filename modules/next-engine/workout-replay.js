@@ -146,5 +146,38 @@ export function auditWorkoutProgressionReplay(record) {
             && Math.abs(row.trace.source.load - row.trace.target.load) > .000001)
             issues.push({ code:'unearned_double_progression_load', workingSetIndex:row.workingSetIndex });
     }
+    // Independent same-position provenance for classic rep-only progression.
+    // Both the app and the opt-in CLI share this exact audit.
+    if (record.progressionStyle === 'double'
+        && ['add_reps', 'hold', 'hold_load'].includes(record.suggestion?.action)) {
+        const comparable = Array.isArray(record.history) && record.history.find(entry =>
+            entry?.weekIndex === record.weekIndex && entry?.unit === record.unit
+            && Array.isArray(entry.sets) && entry.sets.length);
+        if (comparable) {
+            const byIndex = new Map(), duplicates = new Set();
+            for (const prior of comparable.sets) {
+                if (!Number.isInteger(prior?.setIndex) || prior.setIndex < 0) continue;
+                if (byIndex.has(prior.setIndex)) duplicates.add(prior.setIndex);
+                else byIndex.set(prior.setIndex, prior);
+            }
+            for (const row of record.rows) {
+                if (row.kind !== 'work' || row.done || row.owner !== 'prescription'
+                    || (row.readinessFactor != null && row.readinessFactor !== 1)
+                    || !Number.isInteger(row.workingSetIndex)) continue;
+                const source = byIndex.get(row.workingSetIndex);
+                if (!source || duplicates.has(row.workingSetIndex) || !(source.load > 0)) continue;
+                const target = row.target?.load;
+                if (Number.isFinite(target) && Math.abs(target - source.load) > .011)
+                    issues.push({ code: 'unearned_double_progression_history_load',
+                        workingSetIndex: row.workingSetIndex,
+                        previousLoad: source.load, proposedLoad: target });
+                const proposed = record.suggestion?.setTargets?.[row.workingSetIndex]?.load;
+                if (Number.isFinite(proposed) && Math.abs(proposed - source.load) > .011)
+                    issues.push({ code: 'unearned_double_progression_suggestion_load',
+                        workingSetIndex: row.workingSetIndex,
+                        previousLoad: source.load, proposedLoad: proposed });
+            }
+        }
+    }
     return issues;
 }

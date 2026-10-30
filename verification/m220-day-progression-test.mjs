@@ -372,3 +372,24 @@ console.log('PASS B1003 skipped-middle: logger, history, LAST, progression and W
         'Missing set #2 must not consume set #3 history');
 }
 console.log('PASS B1004 generated sparse: skipped working position persists through engine adapter.');
+
+// B995: a historical full session is non-comparable to a shortened session.
+{
+    const { evaluateWorkoutProgression } = await import('../modules/next-engine/performance.js');
+    const shortened = { exercises:[{
+        exerciseId:'rear-fly', name:'Rear Delt Fly', role:'hypertrophy_isolation',
+        sets:2, progressionStyle:'double', prescription:{reps:[15,25],rir:[2,2]}
+    }]};
+    const actual=[0,1,2].map(setIndex=>({exerciseId:'rear-fly',setIndex,load:60,reps:25,rir:2}));
+    const result=evaluateWorkoutProgression(shortened,actual)[0];
+    assert.equal(result.reasonCode,'prescription_set_count_changed');
+    assert.equal(result.action,'hold');assert.equal(result.suggestedLoad,60);
+    assert.doesNotMatch(result.reason,/only 3 of 2|incomplete/i);
+    assert.match(result.reason,/3 working sets/);
+    assert.match(result.reason,/2/);
+    const overshoot=evaluateWorkoutProgression(shortened,actual.map(row=>({...row,reps:12,rir:0})))[0];
+    assert.equal(overshoot.reasonCode,'prescription_set_count_changed',
+        'A shortened set-count mismatch never becomes a corrective automatic deload');
+}
+console.log('PASS B995: shortening means non-comparable, never 3-of-2 completion.');
+

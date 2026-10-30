@@ -174,6 +174,16 @@ function evaluateProgression(session, performedSets, context = {}) {
         if (exposure.interrupted && !completedPrescription) {
             return decision(ex, { outcome: 'interrupted', reasonCode: 'interrupted_exposure', action: 'review', confidence: 'high', reason: 'The workout was interrupted before the prescribed sets were completed. Do not interpret missing work as either progression success or a load failure.', currentLoad, suggestedLoad: currentLoad, estimated1RM });
         }
+        // A prior exposure with more sets than today's shortened prescription
+        // cannot qualify for a new load or be called "only 3 of 2" completed sets.
+        if (actual.length > ex.sets) {
+            return decision(ex, {
+                outcome: 'non_comparable', reasonCode: 'prescription_set_count_changed',
+                action: 'hold', confidence: 'high',
+                reason: `The prior exposure logged ${actual.length} working sets, while the current prescription calls for ${ex.sets}. Different set counts cannot earn an automatic load change. Keep the prior working load until a comparable session is completed.`,
+                currentLoad, suggestedLoad: currentLoad, estimated1RM
+            });
+        }
         // Missing work blocks earned progression, but completed rep misses still describe the load.
         // Evaluate those observations before the completion hold, without treating an unlogged set
         // as a failure. Explicit edit/readiness/interruption protections above retain precedence.

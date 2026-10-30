@@ -168,7 +168,11 @@ try{
   const baseline=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:v1')));
   await page.click('.wpb-plan-change-banner[aria-label^="Review "]');
   await page.waitForSelector('[aria-label="Keep previous load for Dumbbell Bench Press"]');
-  assert.match(await page.$eval('.wpb-plan-review-intro',n=>n.innerText),/Week 4.*upcoming workout/);
+  assert.match(await page.$eval('.wpb-plan-review-intro',n=>n.innerText),/Upper · Week 4/,
+   'Plan review heading identifies the exact week without crowding its scope');
+  assert.match(await page.$eval('.wpb-plan-changes-body>.wpb-plan-review-basis',n=>n.innerText),
+   /Load choices apply to this workout.*Completed history stays intact/,
+   'Separate scope explanation remains visible in the improved review hierarchy');
   assert.match(await page.$eval('[data-plan-change="db-bench"]',n=>n.innerText),/50 → 55 lb/);
   await reveal(page,'db-bench');
   const card=await page.$eval('[data-plan-change="db-bench"]',n=>n.innerText);

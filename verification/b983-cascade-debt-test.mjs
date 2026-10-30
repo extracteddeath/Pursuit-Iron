@@ -62,7 +62,11 @@ const b1005SharedRules=css.slice(b1005Start,b1006Start);
 const b1007Start=css.indexOf('/* B1007 — round steps');
 assert.ok(b1007Start>b1006Start,'B1007 shared owners must follow B1006');
 const b1006SharedRules=css.slice(b1006Start,b1007Start);
-const b1007SharedRules=css.slice(b1007Start);
+const b1008Start=css.indexOf('/* B1008 — unified destructive actions');
+assert.ok(b1008Start>b1007Start,'B1008 shared danger owner must follow B1007');
+const b1007SharedRules=css.slice(b1007Start,b1008Start);
+const b1008SharedRules=css.slice(b1008Start);
+assert.ok(b1008SharedRules.length<=591,'B1008 danger styles must stay compact');
 assert.ok(b1007SharedRules.length<=690,'B1007 presentation owner must remain compact');
 assert.ok(b1006SharedRules.length<=978,'B1006 CSS must remain compact');
 assert.ok(b1005SharedRules.length<=1288,'B1005 rules must remain compact');
@@ -76,14 +80,14 @@ for(const role of b1003RoleNames)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Missing B1003 type owner '+role);
 for(const old of ["style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }","style: { fontSize: 15, fontWeight: 600, color: C.text }","style: { fontSize: 12, color: C.muted, marginTop: 2 }","style: { fontSize: 13, fontWeight: 700, color: C.text }","style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }","style: { fontSize: 13, color: C.text, lineHeight: 1.45 }","style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }"])
   assert.ok(!app.includes(old),'Old inline type object restored: '+old);
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').length<=637454,
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
-assert.ok((app.match(/style: \{/g)||[]).length<=924,
+assert.ok((app.match(/style: \{/g)||[]).length<=919,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').length<=2661926,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').length<=2661215,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.
@@ -131,4 +135,17 @@ for(const [role,n,old] of b1007Roles){
 for(const label of ['Decrease rounds','Increase rounds'])
   assert.equal((app.match(new RegExp('"aria-label": "'+label+'"','g'))||[]).length,1,
     'Round adjustment must preserve a spoken action label: '+label);
+
+/* B1008: destructive actions use live saved-theme palette roles and preserve callbacks. */
+for(const themeRole of ['"on-danger": C.dangerText','"danger-dim": C.dangerDim'])
+  assert.ok(app.includes(themeRole),'B1008 missing live theme palette mapping: '+themeRole);
+assert.equal((app.match(/wpb-dialog-danger"/g)||[]).length,2,'Two destructive menu confirmations share danger action');
+assert.equal((app.match(/wpb-dialog-danger wpb-dialog-danger-flex"/g)||[]).length,1,
+  'Delete day confirmation keeps its centered destructive action');
+assert.equal((app.match(/className: "wpb-danger-emblem"/g)||[]).length,2,
+  'Both destructive dialog emblems share the theme palette role');
+for(const legacy of ["style: { width: \"100%\", padding: \"13px\", borderRadius: 12, border: \"none\", background: C.danger, color: C.dangerText, fontWeight: 700, cursor: \"pointer\", marginBottom: 8, display: \"flex\", alignItems: \"center\", justifyContent: \"center\", gap: 6 }","style: { width: \"100%\", padding: \"13px\", borderRadius: 12, border: \"none\", background: C.danger, color: C.dangerText, fontWeight: 700, cursor: \"pointer\", marginBottom: 8 }","style: { width: 38, height: 38, borderRadius: 12, background: C.dangerDim, display: \"flex\", alignItems: \"center\", justifyContent: \"center\", flexShrink: 0 }"])
+  assert.ok(!app.includes(legacy),'B1008 retired destructive styling must stay retired');
+assert.ok(css.includes('color:var(--wpb-theme-on-danger)')&&css.includes('background:var(--wpb-theme-danger-dim)'),
+  'B1008 uses real dynamic theme text and danger tint rather than a fixed color');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

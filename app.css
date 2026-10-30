@@ -10130,3 +10130,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb :is(.wpb-compare-note,.wpb-quiet-note){font-size:var(--pi-type-caption);color:var(--wpb-theme-faint)}
 #root .wpb .wpb-compare-note{margin-top:16px;line-height:1.5;padding:0 2px}
 #root .wpb .wpb-quiet-note{margin-top:12px;line-height:1.45;font-style:italic}
+/* B1008 — unified destructive actions and theme-safe danger emblems. */
+#root .wpb .wpb-dialog-danger{box-sizing:border-box;width:100%;min-height:48px;padding:13px;border-radius:12px;border:0;background:var(--wpb-theme-danger);color:var(--wpb-theme-on-danger);font-weight:700;cursor:pointer;margin-bottom:8px}
+#root .wpb .wpb-dialog-danger-flex{display:flex;align-items:center;justify-content:center;gap:6px}
+#root .wpb .wpb-danger-emblem{width:38px;height:38px;border-radius:12px;background:var(--wpb-theme-danger-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}

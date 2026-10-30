@@ -761,6 +761,27 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
 
 }
 
+// A rep-only classic double progression has no authority to rewrite the load of any
+// completed prior working set. Preserve each set position (including genuine mixed-load
+// history) so a stale per-set tuner cannot turn 60x20 into an unsolicited 55x21.
+// Explicitly earned increases, recovery corrections and user-held reviews have
+// separate owners and must not be converted into ordinary holds here.
+export function retainDoubleProgressionSetLoads(suggestion, previousLoads) {
+    if (!suggestion || !['add_reps', 'hold', 'hold_load'].includes(suggestion.action)
+        || !Array.isArray(suggestion.setTargets) || !Array.isArray(previousLoads)
+        || !previousLoads.length || suggestion.setTargets.length !== previousLoads.length
+        || !previousLoads.every(w => Number.isFinite(w) && w > 0))
+        return suggestion;
+    const corrected = suggestion.setTargets.map((target, index) => ({
+        ...target, weight: previousLoads[index]
+    }));
+    const sameTargets = corrected.every((target, index) =>
+        Number(suggestion.setTargets[index]?.weight) === target.weight);
+    if (sameTargets && Number(suggestion.weight) === previousLoads[0])
+        return suggestion;
+    return { ...suggestion, weight: previousLoads[0], dir: 'hold', setTargets: corrected };
+}
+
 // Review and Workout consume this same boundary. A user can decline one upcoming
 // load/rep recommendation without changing the progression method or stored history.
 function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
@@ -790,6 +811,20 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
                 dir: 'hold', action: 'hold_load', optionalLowerLoad: lower,
                 setTargets: heldTargets,
                 reason: `Keep your previous working-set loads and build reps. You can choose ${lower} ${unit} if today's performance calls for a reduction.` };
+        }
+    }
+    // This is the last shared boundary before both Review and Workout create their rows.
+    // An ordinary rep advance must never lower a later set simply because an
+    // independent tuner supplied a different per-set load.
+    if (suggestion && !program.config?.percentScheme) {
+        const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+        const style = ex && resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, dayPerf, history, day.id);
+        if (style === 'double') {
+            const fromUnit = suggestion.lastUnit || unit;
+            const previousLoads = completedHistorySets(suggestion.last)
+                .map(row => convertHistoryLoad(row.w, fromUnit, unit))
+                .map(w => w > 0 ? loadableAtOrBelow(ex, w, unit) : null);
+            suggestion = retainDoubleProgressionSetLoads(suggestion, previousLoads);
         }
     }
     if (!suggestion || !applyReviewChoice || !program.sessionPlanChoices || !Object.keys(program.sessionPlanChoices).length) return suggestion;

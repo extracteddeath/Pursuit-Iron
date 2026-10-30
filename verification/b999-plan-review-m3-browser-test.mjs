@@ -32,7 +32,7 @@ const fixture=[
 "onApply:()=>{window.applied++;setRevision(false)},onClose:()=>setRevision(false)}));}",
 "createRoot(document.getElementById('root')).render(React.createElement(Demo));"
 ].join('\n');
-const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">'
+const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     +'<link rel="stylesheet" href="/app.css">'+map+'</head><body><div id="root"></div><script type="module">'+fixture+'</script></body></html>';
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html'};
 const server=http.createServer((req,res)=>{
@@ -56,6 +56,8 @@ try{
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
     await page.goto('http://127.0.0.1:'+server.address().port+'/b999.html',{waitUntil:'networkidle0'});
     await page.evaluate(()=>document.documentElement.style.fontSize='32px');
+    assert.equal(await page.evaluate(()=>document.characterSet.toUpperCase()),'UTF-8',
+        'Actual Plan comparison text must be decoded as UTF-8, not mangled arrows');
     await page.click('#open-plan');
     await page.waitForSelector('.wpb-plan-changes-dialog');
     const sizes=await page.evaluate(()=>{

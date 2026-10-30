@@ -37,8 +37,8 @@ assert.ok(css.includes('#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{')
 assert.ok((css.match(/!important/g)||[]).length<=2035,
   'B1002 CSS priority budget is ratcheted to 2,035 after deduplicating M3 owners');
 // B993 replaces fixed Workout-info JSX with themed CSS; this is the new CSS-only ratchet.
-assert.ok(css.length<=642573,
-  'B1002 stylesheet budget is ratcheted to 642,573 characters after rule consolidation');
+assert.ok(css.length<=642550,
+  'B1002 stylesheet budget is ratcheted to 642,550 characters after rule consolidation');
 assert.ok((app.match(/style: \{/g)||[]).length<=1262,
   'Do not restore inline Workout geometry to replace deleted CSS');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

@@ -185,3 +185,48 @@ const moreSets = classify(held, [{ weight: 200, reps: 7 }], { action: 'add_reps'
 assert.equal(moreSets.category, 'Sets updated');
 assert.equal(moreSets.summary, '3 → 4 planned sets');
 console.log('PASS B943: ordinary reps are not changes; material load, plateau and saved planned-set changes are distinguished.');
+
+
+// B1002 / 148555.png: Rear Delt Fly, three prior 60x20 sets. An unexplained
+// third-set 55x21 is neither a rep-first advance nor a user-approved deload.
+{
+    const { retainDoubleProgressionSetLoads } = await import('../modules/training-domain/prescriptions.js');
+    const rearProgram = { id:'b1002-rear-fly',custom:true,engineV:4,weeks:6,
+        config:{weeks:6,unit:'lb',goal:'hypertrophy',progression:'double',experience:'intermediate',deload:false},
+        days:[{id:'upper',label:'Upper',primaryIndex:-1,exercises:['rear-fly']}],
+        overrides:{'upper:0':{sets:3,reps:'15-25',rir:'2',progressionStyle:'double'}} };
+    const prior = [{id:'b1002-prior',programId:rearProgram.id,dayId:'upper',date:Date.UTC(2026,9,28),
+        weekIndex:1,unit:'lb',perf:{'rear-fly':{weight:60,reps:20,
+            sets:[0,1,2].map(() => ({w:60,r:20,rir:2,tr:2,done:true}))}}}];
+    const before = structuredClone(prior);
+    const advice = sessionSuggestion(rearProgram,rearProgram.days[0],0,null,'lb',1,prior);
+    assert.equal(advice.action,'add_reps');
+    assert.deepEqual(advice.setTargets.map(t=>[t.weight,t.reps]),[[60,21],[60,21],[60,21]],
+        'equal previous loads progress reps at 60 lb, not an arbitrary 55 lb on set 3');
+    const rows = prescribeSets(rearProgram,rearProgram.days[0],EX_BY_ID['rear-fly'],0,1,'lb',
+        advice,{}, {},prior,false);
+    assert.deepEqual(rows.map(s=>[s.weight,s.reps]),[['60','21'],['60','21'],['60','21']],
+        'Workout row defaults and canonical recommendation must agree');
+    const stray = {...advice,setTargets:advice.setTargets.map((t,i)=>i===2?{...t,weight:55}:t)};
+    const fixed = retainDoubleProgressionSetLoads(stray,[60,60,60]);
+    assert.deepEqual(fixed.setTargets.map(t=>[t.weight,t.reps]),[[60,21],[60,21],[60,21]],
+        'rep-only progression cannot smuggle a load drop into one set');
+    assert.equal(fixed.weight,60);
+    assert.equal(retainDoubleProgressionSetLoads(fixed,[60,60,60]),fixed,
+        'clean suggestions preserve identity and remain stable through rerenders');
+    const recovered = refreshPendingSetTargets([
+        {auto:true,done:false,valueOwner:'prescription',weight:'55',reps:'21',
+            target:{w:'55',reps:'15-25',prefillReps:'21'}}
+    ],[rows[2]]);
+    assert.equal(recovered[0].weight,'60','untouched pending rows may be repaired on resume');
+    const action = retainDoubleProgressionSetLoads({...stray,action:'decrease_load'},[60,60,60]);
+    assert.equal(action,stray.action === 'decrease_load' ? stray : action);
+    assert.equal(action.setTargets[2].weight,55,'an explicit correction remains independently owned');
+    const increased = retainDoubleProgressionSetLoads({...stray,action:'increase_load'},[60,60,60]);
+    assert.equal(increased.setTargets[2].weight,55,'earned load changes must not be blocked');
+    const mixed = retainDoubleProgressionSetLoads(stray,[60,60,55]);
+    assert.deepEqual(mixed.setTargets.map(t=>t.weight),[60,60,55],
+        'genuine prior mixed-load work retains its individual set load');
+    assert.deepEqual(prior,before,'history remains immutable throughout recommendation and render');
+}
+console.log('PASS B1002: classic double per-set load invariants, 60x20 to 60x21, opt-in corrections and resume.');

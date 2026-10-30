@@ -10134,7 +10134,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-dialog-danger{box-sizing:border-box;width:100%;min-height:48px;padding:13px;border-radius:12px;border:0;background:var(--wpb-theme-danger);color:var(--wpb-theme-on-danger);font-weight:700;cursor:pointer;margin-bottom:8px}
 #root .wpb .wpb-dialog-danger-flex{display:flex;align-items:center;justify-content:center;gap:6px}
 #root .wpb .wpb-danger-emblem{width:38px;height:38px;border-radius:12px;background:var(--wpb-theme-danger-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-
 /* B1009 — shared, palette-owned fixed text roles (dynamic metrics remain inline). */
 #root .wpb :is(.pi-t-muted,.pi-t-caption-mt2,.pi-t-muted-600,.pi-t-caption-muted,.pi-t-explain,.pi-t-form-label,.pi-t-body-mb16,.pi-t-support-mt1){color:var(--wpb-theme-muted)}
 #root .wpb :is(.pi-t-strong,.pi-t-body-mb16){font-size:var(--pi-type-body)}

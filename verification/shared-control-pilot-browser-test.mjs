@@ -60,6 +60,8 @@ try{
   assert.equal(actions[1].disabled,true,'Unchanged program cannot be saved');
   assert.ok(actions.every(x=>x.height>=48&&x.width>=48&&x.left>=-1&&x.right<=width+1),'Footer actions remain reachable: '+JSON.stringify(actions));
   assert.ok(actions[1].height>=52,'Primary action is at least 52px');
+  // Capture the actual shared component composition for visual sign-off.
+  await page.screenshot({path:path.join(root,'verification/shared-pilot-program-sheet-'+width+'.png')});
   const weeks='[aria-label="Block length in weeks"]';
   // Use real keys so React receives the raw invalid draft; never mutate input.value manually.
   await page.click(weeks);

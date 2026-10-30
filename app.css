@@ -9928,9 +9928,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-strength-detail-chip--best{color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim)}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-strength-detail{animation:none}}
 
+/* Shared-control pilot: Settings navigation and plate choices use the same
+   accessible UiAction/UiChoice owners as the rest of the interface. Feature CSS
+   owns spacing only; theme paint, selection and focus stay in the primitives. */
+#root .wpb .wpb-settings .wpb-settings-link.wpb-ui-action[data-action="tonal"]{width:100%;min-width:0;gap:var(--pi-space-3);padding:var(--pi-space-3) var(--pi-space-4);margin-bottom:var(--pi-space-2);border-radius:var(--pi-shape-card);justify-content:flex-start;text-align:left}
+#root .wpb .wpb-settings-plates-card{padding:var(--pi-space-3) var(--pi-space-4)}
+#root .wpb .wpb-settings-plate-choice{min-width:48px;min-height:48px;padding:8px 13px;font-size:var(--pi-type-support);white-space:normal;overflow-wrap:anywhere}
+
 /* B988 — Gallery: semantic M3 filter states, large touch targets, CSS-owned UI. */
-#root .wpb .wpb-gallery-chip{flex-shrink:0;padding:6px 12px;min-height:48px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-muted)}
-#root .wpb .wpb-gallery-chip--selected{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-gallery-chip{flex-shrink:0;padding:6px 12px;min-height:48px;border-radius:var(--pi-shape-action);font-size:var(--pi-type-support);font-weight:600;white-space:normal;overflow-wrap:anywhere}
+#root .wpb .wpb-gallery-back{flex:0 0 48px;min-width:48px;min-height:48px}
 #root .wpb .wpb-gallery-header{position:sticky;top:0;z-index:10;background:var(--wpb-theme-bg);border-bottom:1px solid var(--wpb-theme-border);padding:12px 16px;display:flex;align-items:center;gap:12px}
 #root .wpb .wpb-gallery-title{font-size:18px;font-weight:800;letter-spacing:-.3px;color:var(--wpb-theme-text)}
 #root .wpb .wpb-gallery-subtitle{font-size:13px;color:var(--wpb-theme-faint)}

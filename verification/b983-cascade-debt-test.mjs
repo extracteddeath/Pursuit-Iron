@@ -50,21 +50,28 @@ assert.ok(css.includes(reviewScopeRule), 'Compact program-impact grid must use a
 // Explicitly segregate this fixed CSS role migration from legacy stylesheet debt.
 const b1003Start=css.indexOf('/* B1003 — shared fixed type roles');
 assert.ok(b1003Start>=0,'B1003 CSS role block is present');
-const b1003SharedTypeRules=css.slice(b1003Start);
-assert.ok(b1003SharedTypeRules.length<=731,'B1003 type roles must stay compact');
+const b1004Start=css.indexOf('/* B1004 — six confirmation CTAs');
+assert.ok(b1004Start>b1003Start,'B1004 button owner follows fixed type owners');
+const b1003SharedTypeRules=css.slice(b1003Start,b1004Start);
+const b1004SharedButtonRules=css.slice(b1004Start);
+assert.ok(b1004SharedButtonRules.length<=394,'B1004 shared button must not grow');
+assert.ok(css.includes('#root .wpb .wpb-dialog-primary-action{'),'Primary dialog action owner must exist');
+assert.ok(!app.includes("className: \"pressable\", style: { width: \"100%\", padding: \"13px\", borderRadius: 12, border: \"none\", background: C.accent, color: C.accentText, fontWeight: 700, cursor: \"pointer\", marginBottom: 8, display: \"flex\", alignItems: \"center\", justifyContent: \"center\", gap: 6 }"),'Six old inline primary CTA styles must not return');
+assert.equal((app.match(/className: "pressable wpb-dialog-primary-action"/g)||[]).length,6,'All six confirmation primary actions share the owner');
+assert.ok(b1003SharedTypeRules.length<=732,'B1003 type roles must stay compact');
 const b1003RoleNames=["body-muted","value","subline","strong-label","footnote","body","helper"];
 for(const role of b1003RoleNames)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Missing B1003 type owner '+role);
 for(const old of ["style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }","style: { fontSize: 15, fontWeight: 600, color: C.text }","style: { fontSize: 12, color: C.muted, marginTop: 2 }","style: { fontSize: 13, fontWeight: 700, color: C.text }","style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }","style: { fontSize: 13, color: C.text, lineHeight: 1.45 }","style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }"])
   assert.ok(!app.includes(old),'Old inline type object restored: '+old);
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').length<=637454,
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
-assert.ok((app.match(/style: \{/g)||[]).length<=1003,
+assert.ok((app.match(/style: \{/g)||[]).length<=997,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').length<=2668250,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').length<=2668250,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.

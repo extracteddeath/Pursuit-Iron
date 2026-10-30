@@ -10097,3 +10097,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-type-footnote{font-size:11px;color:var(--wpb-theme-faint);margin-top:8px;line-height:1.4}
 #root .wpb .wpb-type-body{font-size:13px;color:var(--wpb-theme-text);line-height:1.45}
 #root .wpb .wpb-type-helper{font-size:13px;color:var(--wpb-theme-muted);margin-top:2px;line-height:1.4}
+
+/* B1004 — six confirmation CTAs share the existing theme and pressable action. */
+#root .wpb .wpb-dialog-primary-action{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-bottom:8px;padding:13px;border:0;border-radius:12px;background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-weight:700;cursor:pointer}

@@ -117,9 +117,13 @@ try{
         /Planned set changes are saved in your program; load choices affect this workout/);
     assert.match(await page.$eval('.wpb-plan-change-summary',el=>el.textContent),/3 → 4 planned sets/);
     assert.equal(await page.$eval('.wpb-plan-change-more',el=>el.open),false);
-    assert.equal(await page.$eval('.wpb-plan-target-diff',el=>!!el.getClientRects().length),false,
-        'Multi-consequence review keeps the secondary load comparison in the disclosure');
+    // Native details can keep a layout rect for descendants using UA content-visibility,
+    // so rectangle presence alone does not mean closed content is disclosed.
+    assert.equal(await page.$eval('.wpb-plan-target-diff',el=>el.closest('details')?.open),false,
+        'Multi-consequence review keeps the secondary load comparison inside closed native details');
     await page.click('.wpb-plan-change-more>summary');
+    assert.equal(await page.$eval('.wpb-plan-target-diff',el=>el.closest('details')?.open),true,
+        'Opening details exposes the secondary load comparison in the native disclosure');
     assert.match(await page.$eval('.wpb-plan-target-diff',el=>el.textContent),/185 lb/);
     assert.equal(await page.evaluate(()=>window.choices.length),1,
         'Browsing mixed and saved-set proposals never modifies training state');

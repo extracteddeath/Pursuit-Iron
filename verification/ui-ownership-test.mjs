@@ -32,11 +32,24 @@ const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
 const MAX_INLINE_STYLE_OBJECTS = 1406; // B965: retire 49 additional literal presentation objects; never increase.
 
 // M367: Settings is a named, keyboard-focusable dialog with explicit labels and state.
-for(const role of ['backdrop','panel','heading','title','close','intro','field-label','field','description','footer','cancel','save'])
+for(const role of ['backdrop','panel','title','intro','field-label','field','description','footer','cancel','save'])
   assert.ok(css.includes('.wpb-program-settings-'+role+'{'), 'Settings view lost semantic CSS owner '+role);
 for(const token of ['role: "dialog"','"aria-modal": true','"aria-labelledby": "program-settings-title"','htmlFor: "program-settings-folder"','htmlFor: "program-settings-description"','selected: !!cfgDraft?.noSupersets','selected: !!cfgDraft?.noBodyweight','disabled: !canApply'])
   assert.ok(programSettings.includes(token), 'Settings dialog accessibility/transaction contract lost: '+token);
 assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.includes('"wpb-backdrop", style:'), 'Static Settings shell styles must remain in CSS');
+
+assert.equal((primitives.match(/export function UiSheetClose\\(/g) || []).length, 1,
+    'All Program sheets must share one accessible dismiss element');
+for (const [name, source] of [['schedule', programSchedule], ['settings', programSettings], ['share', programShare]]) {
+    assert.ok(source.includes('_jsx(UiSheetClose,') && source.includes('wpb-program-' + name + '-close'),
+        'Program ' + name + ' must share the native close action and preserve the feature focus locator');
+}
+assert.ok(css.includes('.wpb-ui-sheet-close{display:grid;place-items:center;min-width:48px;min-height:48px;flex-shrink:0;') &&
+    css.includes('.wpb-ui-sheet-heading{display:flex;flex-shrink:0;') &&
+    !['schedule','settings','share'].some(name => css.includes('.wpb-program-' + name + '-close{')) &&
+    !css.includes('.wpb-program-settings-heading{') && !css.includes('.wpb-program-share-heading{'),
+    'Program sheet chrome cannot be re-forked into screen-specific size owners');
+
 
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 

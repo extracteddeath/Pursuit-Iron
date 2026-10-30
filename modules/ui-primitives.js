@@ -1,5 +1,6 @@
 // Stateless shared UI. Screen state, navigation and training stay with their feature owners.
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from 'react/jsx-runtime';
+import { X } from 'lucide-react';
 
 // R61 foundations pilot. These primitives own presentation and native button semantics only;
 // navigation, saved choices, logging and scroll memory remain with their existing screen owners.
@@ -33,4 +34,12 @@ export function UiStatus({ className = "", children, ...props }) {
 }
 export function UiSection({ className = "", ...props }) {
     return _jsx("section", { ...props, className: `wpb-ui-section ${className}` });
+}
+
+
+// One stateless dismiss control shared by Program sheets; each feature owns dismissal state.
+export function UiSheetClose({ className = "", label = "Close", ...props }) {
+    return _jsx("button", { type: "button", ...props, "aria-label": label,
+        className: `pressable hit wpb-sheet-close wpb-ui-sheet-close ${className}`,
+        children: _jsx(X, { size: 18, "aria-hidden": true }) });
 }

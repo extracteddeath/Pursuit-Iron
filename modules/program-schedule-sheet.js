@@ -1,6 +1,7 @@
 // M365: Program weekly-schedule presentation. The parent is the sole schedule writer.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
-import { X, Dumbbell } from 'lucide-react';
+import { Dumbbell } from 'lucide-react';
+import { UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -32,9 +33,7 @@ export function WeeklyScheduleSheet({ program, onCycle, onClear, onClose, sheetD
                 _jsxs('div', { className: 'wpb-program-schedule-heading', children: [
                     _jsx('h2', { id: 'program-weekly-schedule-title',
                         className: 'wpb-program-schedule-title', children: 'Weekly schedule' }),
-                    _jsx('button', { type: 'button', 'aria-label': 'Close', onClick: onClose,
-                        className: 'pressable hit wpb-sheet-close wpb-program-schedule-close',
-                        children: _jsx(X, { size: 18 }) })
+                    _jsx(UiSheetClose, { onClick: onClose, className: 'wpb-program-schedule-close' })
                 ] }),
                 _jsxs('p', { className: 'wpb-program-schedule-caption', children: [
                     'Tap a day to assign a workout — ',

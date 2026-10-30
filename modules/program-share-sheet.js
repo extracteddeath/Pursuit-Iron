@@ -2,8 +2,8 @@
 // Transient clipboard feedback belongs here; App retains program and navigation state.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useRef, useState } from 'react';
-import { X, Check, Copy, Layers } from 'lucide-react';
-import { UiAction } from './ui-primitives.js';
+import { Check, Copy, Layers } from 'lucide-react';
+import { UiAction, UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { SPLITS, weeksOf, daysInWeek, sessionPrescriptionRows, effortLabel,
     percentagePlanFor, gallerySubmission, galleryIssueBody } from './engine-api.js';
@@ -71,10 +71,9 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
         'aria-labelledby': 'program-share-title', 'aria-describedby': 'program-share-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         className: 'wpb-backdrop wpb-program-share-backdrop', children:
         _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-program-share-panel', onClick: event => event.stopPropagation(), children: [
-            _jsxs('header', { className: 'wpb-program-share-heading', children: [
+            _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-program-share-heading', children: [
                 _jsx('h2', { id: 'program-share-title', children: 'Share program' }),
-                _jsx(UiAction, { 'aria-label': 'Close', 'data-icon-only': true,
-                    className: 'hit wpb-sheet-close wpb-program-share-close', onClick: onClose, children: _jsx(X, { size: 18 }) })
+                _jsx(UiSheetClose, { className: 'wpb-program-share-close', onClick: onClose })
             ] }),
             _jsxs('div', { className: 'wpb-scroll wpb-program-share-body', children: [
                 _jsx('p', { id: 'program-share-scope', children: `${weekIndex > weeksOf(program) ? 'Deload' : 'Week ' + weekIndex + ' of ' + weeksOf(program)} · Saved sets, reps and target effort.` }),

@@ -1,4 +1,5 @@
 import { exerciseAt } from '../next-engine/shell-projection.js';
+import { canonicalExerciseIncrement } from '../next-engine/loading.js';
 // Canonical records domain. Maintained production source; independent of React and browser APIs.
 import { programWorkingWeeks } from "../program-duration.js";
 import { getNextShellCell, canonicalRepRange, canonicalShellSetCount } from "../next-engine/app-shell-adapter.js";
@@ -664,8 +665,8 @@ let EX_LOAD_INC = {};
 function loadStep(ex, unit) {
     // A per-exercise increment (e.g. a specific machine's pin-stack notch) wins over everything —
     // it's the user telling us exactly how this machine actually moves.
-    if (ex && EX_LOAD_INC[ex.id] && EX_LOAD_INC[ex.id].v > 0 && EX_LOAD_INC[ex.id].unit === unit)
-        return EX_LOAD_INC[ex.id].v;
+    const selectedIncrement = ex ? canonicalExerciseIncrement(EX_LOAD_INC[ex.id], unit) : null;
+    if (selectedIncrement > 0) return selectedIncrement;
     // User-set global plate increment wins next when it applies (their actual smallest jump).
     if (LOAD_INC.v > 0 && LOAD_INC.unit === unit)
         return LOAD_INC.v;

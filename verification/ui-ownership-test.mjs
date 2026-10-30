@@ -27,7 +27,7 @@ const historyEditor = fs.readFileSync('modules/history-editor.js', 'utf8');
 const loadingCalculator = fs.readFileSync('modules/loading-calculator.js','utf8');
 const gymLoadFields = fs.readFileSync('modules/gym-load-fields.js','utf8');
 const presentationSource = loadingCalculator + '\n' + gymLoadFields + '\n' + disclosures + '\n' + programReference + '\n' + releaseNotes + '\n' + primitives + '\n' + app + '\n' + programReview + '\n' + programSchedule + '\n' + programSettings + '\n' + backupPanel + '\n' + programVolume + '\n' + loadWave + '\n' + programShare + '\n' + exerciseOptions + '\n' + exerciseNotes + '\n' + trainingMaxes + '\n' + contextMenus + '\n' + historyEditor + '\n' + manualTargets;
-const MAX_IMPORTANT = 2029; // Design audit: measured CSS priority limit after Workout focus consolidation.
+const MAX_IMPORTANT = 2027; // Design audit: measured CSS priority limit after shared Workout set-option focus.
 const MAX_APP_IMPORTANT = 1014; // Design audit: retire duplicate Settings jump geometry/paint; measured runtime ceiling.
 const MAX_REPEAT_IMPORTANT = 0; // M387: remove a competing menu border owner.
 const MAX_INLINE_STYLE_OBJECTS = 1406; // B965: retire 49 additional literal presentation objects; never increase.
@@ -236,7 +236,7 @@ assert.ok(css.includes('.wpb-ui-sheet-close:focus-visible{outline:2px solid var(
 // display:contents layout and all input values are deliberately untouched.
 const workoutFlex=css.split('#root .wpb-workout[data-focus-mode="true"] .wpb-exercise-title-row,')[1]?.split('}')[0]||'';
 assert.ok(workoutFlex.includes('#root .wpb-workout .wpb-warmup-step{display:flex;align-items:flex-start;gap:8px;min-width:0;') &&
-    !css.includes('#root .wpb-workout .wpb-warmup-step{'),
+    (css.match(/#root \\.wpb-workout \\.wpb-warmup-step\\{/g)||[]).length===1,
     'Workout Focus title and warmup row must have one shared geometry owner');
 const workoutFocus=css.split('#root .wpb-workout :is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,')[1]?.split('}')[0]||'';
 for(const role of ['.wpb-b973-set-close','.wpb-b973-coach-collapsed','.wpb-b973-coach-toggle','.wpb-load-advice>button'])

@@ -230,3 +230,53 @@ export const rearHistory = [{id:'b1002-prior',programId:rearProgram.id,dayId:'up
     assert.deepEqual(prior,before,'history remains immutable throughout recommendation and render');
 }
 console.log('PASS B1002: classic double per-set load invariants, 60x20 to 60x21, opt-in corrections and resume.');
+
+// B1003 skipped-middle working set: preserving ordinal identity must survive
+// Workout -> logger -> JSON history -> LAST -> both progression evaluators.
+{
+    const { loggedWorkoutPerformance } = await import('../modules/training-domain/prescriptions.js');
+    const { evaluateWorkoutProgression } = await import('../modules/next-engine/performance.js');
+    const base = prescribeSets(rearProgram, rearProgram.days[0], EX_BY_ID['rear-fly'],
+        0, 1, 'lb', { weight: 60, target: 20, action: 'initial' }, {}, {}, [], false);
+    const loggedRows = base.map((row, i) => ({
+        ...row, done: i !== 1, weight: i === 2 ? '55' : '60',
+        reps: i === 2 ? '18' : '20', actualRIR: i === 1 ? null : 2
+    }));
+    const saved = loggedWorkoutPerformance(rearProgram, rearProgram.days[0],
+        [{ id:'rear-fly', slot:0, sets:loggedRows }], 1, 'lb', {}, []);
+    const prior = JSON.parse(JSON.stringify(saved['rear-fly']));
+    assert.deepEqual(prior.sets.map(row => row.workingSetIndex),[0,2],
+        'Logger must not silently compact skipped set #2 into set #1');
+    assert.deepEqual(previousWorkoutSet(prior,0).r,20);
+    assert.equal(previousWorkoutSet(prior,1),null,
+        'LAST cannot show completed set #3 under skipped set #2');
+    assert.equal(previousWorkoutSet(prior,2).w,55);
+    const actual = prior.sets.map(row => ({
+        exerciseId:'rear-fly',setIndex:row.workingSetIndex,load:row.w,
+        reps:row.r,rir:row.rirReported ? row.rir : null
+    }));
+    const session = { exercises:[{ exerciseId:'rear-fly', name:'Rear Delt Fly',
+        role:'hypertrophy_isolation',sets:3,progressionStyle:'double',
+        prescription:{reps:[15,25],rir:[2,2]} }]};
+    const decision = evaluateWorkoutProgression(session,actual)[0];
+    assert.equal(decision.outcome,'incomplete');
+    assert.notEqual(decision.action,'increase_load');
+    assert.deepEqual(decision.setTargets.map(row=>row.weight),[60,60,55],
+        'Progression must retain the actual third-set weight at ordinal 2');
+    const entry={id:'b1003-history',programId:rearProgram.id,
+        dayId:'upper',date:Date.UTC(2026,9,28),weekIndex:1,
+        unit:'lb',perf:saved};
+    const advice=sessionSuggestion(rearProgram,rearProgram.days[0],0,null,'lb',1,[entry]);
+    assert.notEqual(advice.action,'increase_load');
+    const next=prescribeSets(rearProgram,rearProgram.days[0],
+        EX_BY_ID['rear-fly'],0,1,'lb',advice,{}, {},[entry],false);
+    assert.deepEqual(next.map(row=>Number(row.weight)),[60,60,55],
+        'Saved custom history must preserve set ordinal through next actual Workout targets');
+    const duplicates=evaluateWorkoutProgression(session,[
+        {...actual[0],setIndex:0,reps:25},
+        {...actual[0],setIndex:1,reps:25},
+        {...actual[0],setIndex:1,reps:25}])[0];
+    assert.notEqual(duplicates.action,'increase_load',
+        'Three records are not three completed sets when a position is duplicated');
+}
+console.log('PASS B1003 skipped-middle: logger, history, LAST, progression and Workout positions match.');

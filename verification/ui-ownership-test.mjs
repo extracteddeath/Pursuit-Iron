@@ -187,7 +187,7 @@ for(const [name,source,role] of [
 ]) assert.ok(source.includes('wpb-ui-sheet-heading '+role),
     name+' must reuse the shared sheet header structure');
 assert.ok(css.includes('padding:var(--pi-ui-sheet-heading-padding,10px 18px 4px)') &&
-    css.includes('.wpb-save-review-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:0}') &&
+    css.includes('.wpb-save-review-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:0;--pi-ui-sheet-title-size:1.1875rem}') &&
     css.includes('.wpb-training-max-heading{--pi-ui-sheet-heading-gap:var(--pi-space-3);--pi-ui-sheet-heading-padding:12px 18px;border-bottom:') &&
     css.includes('.wpb-exercise-options-heading{--pi-ui-sheet-heading-gap:10px;--pi-ui-sheet-heading-padding:10px max(16px,env(safe-area-inset-left)) 8px}'),
     'Shared header must retain zero review inset, Training Maxes divider and Exercise Options safe-area inset');

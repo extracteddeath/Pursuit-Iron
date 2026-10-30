@@ -28,6 +28,8 @@ jobs:
           node-version: '22'
       - name: Syntax-check browser verification files before starting Chromium
         run: find verification -name '*-browser-test.mjs' -print0 | xargs -0 -n 1 node --check
+      - name: Syntax-check app module before any browser work
+        run: node --check modules/App.js
       - name: Verify all UI integration source contracts
         run: node scripts/verify-engine-contracts.mjs integration
 
@@ -60,7 +62,7 @@ jobs:
     # A single release identity is generated ONLY after all seven Chromium
     # shards and the full integration source group pass on the same PR head.
     needs: [source-contracts, ui-browser]
-    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421) && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422) && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

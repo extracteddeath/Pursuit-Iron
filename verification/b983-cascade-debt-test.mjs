@@ -65,7 +65,15 @@ const b1006SharedRules=css.slice(b1006Start,b1007Start);
 const b1008Start=css.indexOf('/* B1008 — unified destructive actions');
 assert.ok(b1008Start>b1007Start,'B1008 shared danger owner must follow B1007');
 const b1007SharedRules=css.slice(b1007Start,b1008Start);
-const b1008SharedRules=css.slice(b1008Start);
+const b1009Start=css.indexOf('/* B1009 — shared, palette-owned fixed text roles');
+assert.ok(b1009Start>b1008Start,'B1009 shared typography follows B1008 destructive paint');
+const b1008SharedRules=css.slice(b1008Start,b1009Start);
+const b1010Start=css.indexOf('/* B1010 — Program round adjusters');
+assert.ok(b1010Start>b1009Start,'B1010 round touch owner follows shared typography');
+const b1009SharedRules=css.slice(b1009Start,b1010Start);
+const b1010SharedRules=css.slice(b1010Start);
+assert.ok(b1010SharedRules.length<=350,'B1010 round hit geometry owner must stay compact');
+assert.ok(b1009SharedRules.length<=1500,'B1009 shared typography must stay compact');
 assert.ok(b1008SharedRules.length<=591,'B1008 danger styles must stay compact');
 assert.ok(b1007SharedRules.length<=690,'B1007 presentation owner must remain compact');
 assert.ok(b1006SharedRules.length<=978,'B1006 CSS must remain compact');
@@ -80,14 +88,14 @@ for(const role of b1003RoleNames)
   assert.ok(css.includes('#root .wpb .wpb-type-'+role+'{'),'Missing B1003 type owner '+role);
 for(const old of ["style: { fontSize: 13, color: C.muted, lineHeight: 1.5 }","style: { fontSize: 15, fontWeight: 600, color: C.text }","style: { fontSize: 12, color: C.muted, marginTop: 2 }","style: { fontSize: 13, fontWeight: 700, color: C.text }","style: { fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.4 }","style: { fontSize: 13, color: C.text, lineHeight: 1.45 }","style: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.4 }"])
   assert.ok(!app.includes(old),'Old inline type object restored: '+old);
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').length<=637454,
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
-assert.ok((app.match(/style: \{/g)||[]).length<=919,
+assert.ok((app.match(/style: \{/g)||[]).length<=874,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').length<=2661215,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').length<=2659430,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.
@@ -115,7 +123,7 @@ for(const [role,count,old] of b1005Roles){
 }
 
 /* B1006: style roles must be preserved without restoring fixed inline objects. */
-const b1006Roles=[["wpb-quiet-faint",3,"style: { background: \"none\", border: \"none\", color: C.faint, cursor: \"pointer\", padding: 2 }"],["wpb-quiet-back",2,"style: { background: \"none\", border: \"none\", color: C.text, cursor: \"pointer\", padding: 4 }"],["wpb-compare-panel",2,"style: { background: C.card, borderRadius: 16, padding: \"4px 15px 13px\", marginBottom: 16 }"],["wpb-compact-card",3,"style: { padding: \"10px 12px\", borderRadius: 12, background: C.card }"],["wpb-compare-cue",2,"style: { background: C.card, borderRadius: 12, padding: \"11px 13px\" }"],["wpb-split-choices",2,"style: { display: \"flex\", background: C.card, borderRadius: 12, padding: 2 }"],["wpb-review-inset",2,"style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: \"12px 13px\" }"],["wpb-type-micro-faint",5,"style: { fontSize: 11, color: C.faint, fontWeight: 600 }"]];
+const b1006Roles=[["wpb-quiet-faint",3,"style: { background: \"none\", border: \"none\", color: C.faint, cursor: \"pointer\", padding: 2 }"],["wpb-quiet-back",2,"style: { background: \"none\", border: \"none\", color: C.text, cursor: \"pointer\", padding: 4 }"],["wpb-compare-panel",2,"style: { background: C.card, borderRadius: 16, padding: \"4px 15px 13px\", marginBottom: 16 }"],["wpb-compact-card",3,"style: { padding: \"10px 12px\", borderRadius: 12, background: C.card }"],["wpb-compare-cue",2,"style: { background: C.card, borderRadius: 12, padding: \"11px 13px\" }"],["wpb-split-choices",2,"style: { display: \"flex\", background: C.card, borderRadius: 12, padding: 2 }"],["wpb-review-inset",2,"style: { marginBottom: 12, background: C.bg2, borderRadius: 12, padding: \"12px 13px\" }"],["wpb-type-micro-faint",8,"style: { fontSize: 11, color: C.faint, fontWeight: 600 }"]];
 for(const [role,count,old] of b1006Roles){
   assert.ok(css.includes('.'+role),'B1006 owner missing: '+role);
   assert.equal((app.match(new RegExp('\\b'+role+'\\b','g'))||[]).length,count,
@@ -148,4 +156,171 @@ for(const legacy of ["style: { width: \"100%\", padding: \"13px\", borderRadius:
   assert.ok(!app.includes(legacy),'B1008 retired destructive styling must stay retired');
 assert.ok(css.includes('color:var(--wpb-theme-on-danger)')&&css.includes('background:var(--wpb-theme-danger-dim)'),
   'B1008 uses real dynamic theme text and danger tint rather than a fixed color');
+
+/* B1011: semantic font/color paint has one class owner; remaining inline geometry is intentional. */
+// B1009 counts below already represent the FINAL cumulative JSX usage, including
+// later B1011 reuses. Do not add b1011Roles deltas a second time; B1006's
+// earlier wpb-type-micro-faint count is separately adjusted from 5 to 8.
+const b1011Roles=[
+  [
+    "wpb-type-support-muted",
+    3
+  ],
+  [
+    "pi-t-muted-600",
+    4
+  ],
+  [
+    "wpb-type-caption-faint",
+    8
+  ],
+  [
+    "wpb-type-body-muted",
+    17
+  ],
+  [
+    "pi-t-strong",
+    4
+  ],
+  [
+    "wpb-type-body",
+    2
+  ],
+  [
+    "pi-t-caption-muted",
+    7
+  ],
+  [
+    "wpb-type-micro-faint",
+    3
+  ],
+  [
+    "pi-t-text-700",
+    3
+  ],
+  [
+    "pi-t-text-600",
+    2
+  ],
+  [
+    "wpb-type-value",
+    1
+  ]
+];
+for(const [name,additional] of b1011Roles){
+  assert.ok(additional>=1,'Reviewed semantic role must be used: '+name);
+  assert.ok(css.includes('.'+name),'B1011 must reuse an existing class rather than adding CSS: '+name);
+}
+assert.ok(!app.includes('className: "wpb-type-body-muted", ,'),
+  'B1011 JSX merge must never emit empty comma properties');
+
+/* B1010: physical 48px controls replace overlapping pseudo-hit surfaces. */
+assert.equal((app.match(/className: "pressable wpb-round-step"/g)||[]).length,2,
+  'Both round adjustment buttons have physical touch targets, not overlapping hit pseudo-elements');
+assert.ok(!app.includes('pressable hit wpb-round-step'),
+  'Round controls cannot reinstate overlapping pseudo-hit areas');
+assert.equal((app.match(/wpb-round-row/g)||[]).length,1,
+  'Only the superset/circuit round row can claim this responsive layout owner');
+assert.ok(css.includes('.wpb-round-step{width:48px;height:48px'),
+  'Round controls must retain real 48px dimensions');
+assert.ok(b1010SharedRules.includes('flex-wrap:wrap')&&
+  b1010SharedRules.includes('min-width:48px;min-height:48px'),
+  'Compact Program row and reset action must remain responsive and physically tappable');
+assert.equal((b1010SharedRules.match(/!important/g)||[]).length,0,
+  'New semantic control geometry must not add priority overrides');
+
+/* B1009: a bounded 45-use static typography migration, not a new styling escape hatch. */
+assert.ok(!/className: "[^"]*pi-t-[^"]+",\s*,/.test(app),'B1009 JSX props must never contain an empty property after a migrated class');
+const b1009Contract=[
+  [
+    "pi-t-muted",
+    5,
+    "style: { color: C.muted }"
+  ],
+  [
+    "pi-t-strong",
+    8,
+    "style: { fontSize: 15, fontWeight: 700, color: C.text }"
+  ],
+  [
+    "pi-t-text",
+    4,
+    "style: { color: C.text }"
+  ],
+  [
+    "pi-t-caption-mt2",
+    3,
+    "style: { fontSize: 11, color: C.muted, marginTop: 2 }"
+  ],
+  [
+    "pi-t-caption-f1",
+    3,
+    "style: { fontSize: 11, color: C.faint, marginTop: 1 }"
+  ],
+  [
+    "pi-t-muted-600",
+    7,
+    "style: { color: C.muted, fontWeight: 600 }"
+  ],
+  [
+    "pi-t-text-600",
+    5,
+    "style: { color: C.text, fontWeight: 600 }"
+  ],
+  [
+    "pi-t-text-700",
+    6,
+    "style: { color: C.text, fontWeight: 700 }"
+  ],
+  [
+    "pi-t-caption-muted",
+    10,
+    "style: { fontSize: 11, color: C.muted }"
+  ],
+  [
+    "pi-t-explain",
+    2,
+    "style: { fontSize: 12, color: C.muted, lineHeight: 1.4, marginBottom: 8 }"
+  ],
+  [
+    "pi-t-form-label",
+    2,
+    "style: { fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }"
+  ],
+  [
+    "pi-t-chart-label",
+    2,
+    "style: { fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }"
+  ],
+  [
+    "pi-t-body-mb16",
+    2,
+    "style: { fontSize: 15, color: C.muted, marginBottom: 16 }"
+  ],
+  [
+    "pi-t-support-mt1",
+    2,
+    "style: { fontSize: 13, color: C.muted, marginTop: 1 }"
+  ],
+  [
+    "pi-t-faint-auto",
+    2,
+    "style: { fontSize: 11, color: C.faint, marginLeft: \"auto\" }"
+  ],
+  [
+    "pi-t-faint-mt2",
+    2,
+    "style: { fontSize: 11, color: C.faint, marginTop: 2 }"
+  ]
+];
+assert.ok((app.match(/style: \{/g)||[]).length<=874,'B1009 never restores retired inline text paint');
+for(const [role,count,retired] of b1009Contract){
+  const matches=app.match(new RegExp('(?:^|[\\s"])'+role+'(?=[\\s"])','g'))||[];
+  assert.equal(matches.length,count,'B1009 shared presentation count for '+role);
+  assert.ok(!app.includes(retired),'B1009 fixed inline typography must stay retired: '+role);
+  assert.ok(css.includes('.'+role),'B1009 CSS role missing: '+role);
+}
+assert.equal((b1009SharedRules.match(/!important/g)||[]).length,0,
+  'B1009 static text roles must never introduce priority overrides');
+
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

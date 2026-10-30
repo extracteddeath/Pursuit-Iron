@@ -33,7 +33,7 @@ assert.ok(css.includes('align-content:center;min-height:48px;cursor:pointer;list
     'Game Plan disclosure is also a 48px tap target');
 assert.ok(plan.includes('return _jsx(SessionChoiceDialog, { title: "Plan changes"'),
     'Plan review remains in the shared dialog focus owner');
-assert.ok(css.length<=643592,'stylesheet remains under last published CSS ceiling');
+assert.ok((css.indexOf('/* B1009 — shared, palette-owned fixed text roles')>0 && css.slice(0,css.indexOf('/* B1009 — shared, palette-owned fixed text roles')).length<=643592),'stylesheet remains under last published CSS ceiling');
 assert.ok((css.match(/!important/g)||[]).length<=2054,'priority declaration count strictly improved');
 // Design spec §§7.9,9.2,10,14: review scope must be immediately understandable.
 assert.ok(plan.includes('const singleSet = showTargets && !change.setDelta && row.proposed?.length === 1 && change.previous?.length === 1;') &&

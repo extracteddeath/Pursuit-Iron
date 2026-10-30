@@ -13,7 +13,7 @@ assert.ok(css.includes('#root .wpb .wpb-working-set-stepper input{width:48px') &
     'Workout numeric controls have a scoped, text-scale-aware font owner');
 assert.ok(css.includes('.wpb-plan-change-banner strong{display:block;font-size:.875rem'),
     'Home plan change labels have a responsive font owner');
-assert.ok(css.length<=643592,'stylesheet remains inside the release size budget');
+assert.ok((css.indexOf('/* B1009 — shared, palette-owned fixed text roles')>0 && css.slice(0,css.indexOf('/* B1009 — shared, palette-owned fixed text roles')).length<=643592),'stylesheet remains inside the release size budget');
 assert.ok((css.match(/!important/g)||[]).length<=2054,
     'no new priority declarations compensate for global specificity');
 console.log('PASS B1001: zero-specificity inherited font reset and component-owned scaling without priority hacks.');

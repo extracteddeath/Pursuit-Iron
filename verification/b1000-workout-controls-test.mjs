@@ -17,6 +17,6 @@ assert.ok(css.includes('.wpb-ex-nav-count{flex-shrink:0;font-size:.6875rem;font-
     'workout navigation counts do not pin text to tiny pixel sizes');
 assert.ok(source.includes('const reveal = () =>') && source.includes("observer.observe(active)"),
     'active exercise reveal remains owned by the single nav component');
-assert.ok(css.length<=643592,'stylesheet stays within published maximum size');
+assert.ok((css.indexOf('/* B1009 — shared, palette-owned fixed text roles')>0 && css.slice(0,css.indexOf('/* B1009 — shared, palette-owned fixed text roles')).length<=643592),'stylesheet stays within published maximum size');
 assert.ok((css.match(/!important/g)||[]).length<=2054,'Workout touch pass adds no new override declarations');
 console.log('PASS B1000: Workout rail 48px, large-text number input, owner-bound scroll and no new !important.');

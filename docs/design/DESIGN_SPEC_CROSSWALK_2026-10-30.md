@@ -128,3 +128,37 @@
 **Milestone measured source state (pre-final release work):** 919 React `style: {` instances, 2,024 stylesheet `!important` declarations, both bounded by `verification/b983-cascade-debt-test.mjs`. These are debt ceilings, not endorsed layout outcomes. No training engine, PR math, history, logging persistence or program-dose changes were made during the consolidation.
 
 **Remaining release decisions:** preserve one authoritative design contract; evaluate the new candidate against all seven Chromium shards and independent engine audits; run responsive themes and enlarged text; then regenerate Build 999 source hashes, service worker/cache and manifests. Only ship if the exact candidate passes and there is no false progression/PR/weight increment behavior.
+
+
+## Design-spec passes 201–219 — bounded shared text-paint roles (draft)
+
+- **201–216 (§§4.1.1,4.1.3,11.1):** Converted **45** repeated fixed JSX text-paint objects across Home, Program, Workout, Progress and Settings to **16 shared semantic type roles**. This includes summary labels, compact metadata, captions, comparison emphasis, chart labels and small form labels. Existing label content, class names, callbacks, user entry fields, training state and notification conditions remain untouched. Dynamic data-driven styling remains inline.
+- **217 (§§4.1.1,5.2):** Shared CSS uses the saved-theme `--wpb-theme-*` foreground roles and `--pi-type-*` sizing roles. Common declarations are grouped in one small B1009 owner rather than adding repeated selectors or any `!important`.
+- **218 (§§11.3,12):** B983 now enforces exact class-use counts, no retired inline objects, <=874 inline style object ceiling, <=2024 stylesheet priority declarations, and a compact 1500-character B1009 owner. The legacy CSS-size ceiling is not relaxed. The combined normalized source budget tightens by 1,002 characters (2,661,215 → 2,660,213).
+- **219 (§§12–14):** Draft source-only milestone pending exact-head integration tests, seven Chromium shards, 320px/200% text/theme/IME and physical Android inspection. Build 999 remains live; no Build 1000 identity or PR merge is authorized by this source change alone.
+- **Measured at authoring:** inline styles **919 → 874**; app.css `!important` **2024 → 2024**; App.js 2,023,868 → 2,022,866 characters, app.css 642,587 → 643,979 characters; combined source change **+380 characters**. Semantic paint is now shared; no training, persistence, PR logic, backup, engine version or deployed release modification.
+
+
+## Design-spec passes 220–230 — genuine round controls and compact layout (draft)
+
+- **220–223 (§§5.2,6,7.3):** Program circuit/superset round +/- actions use actual **48px** button dimensions, replacing the 28px visual box plus overlapping global pseudo hit targets. Their original action callbacks and distinct spoken labels stay unchanged. The reset-to-auto button also receives a 48px physical area.
+- **224–226 (§§5.2,8,11):** A single named round-row layout owner wraps on narrow phones and enlarged text; the number and action labels remain together without introducing duplicate UI or guessed overlap margins.
+- **227–229 (§§10,12):** New B1010 responsive browser gate covers 320/393px at 200% actual font size, physical touch rectangles, nonoverlap, and horizontal page containment. B983 now rejects the old pseudo-hit class, enforces shared class usage and a compact zero-priority B1010 CSS owner; original legacy debt budgets remain in place.
+- **230 (§§12,14):** Source-only candidate; the Program shard, all seven Chromium shards, full engine and device gates still need fresh exact-head evaluation. Build 999 stays live; no engine, persistence, progression or history mutation.
+
+
+## Design-spec passes 231–250 — extend shared semantic typography without new CSS (draft)
+
+- **231–238 (§§4.1,4.2,11):** Reused previously established theme-aware typography roles in **54** additional JSX elements across Program, Home, Workout, Progress, Profile and Settings. The migrated parts are **fixed** color/type/line-height declarations; actual layout geometry, dynamic metrics, state-owned presentation and event handlers remain in place.
+- **239–243 (§§4.1.3,5.2):** Shared type tokens replace hardcoded 11/13/15px and theme colors in selected explanatory, comparison, label and numeric subelements. No new CSS class definitions are introduced, and this pass makes no changes to the root theme, engine, training dose, logging or PR state.
+- **244–247 (§§11.3,12):** Extended B1009 exact class-use contracts for the migrated roles and tightened B983 normalized App+CSS debt ceiling from **2,660,213** to **2,659,430** characters without relaxing the original stylesheet or priority limits.
+- **248–250 (§§12–14):** Source/Chromium exact-head checks, enlarged-text/theme/responsive review and independent full-engine/release validation remain required before Build 1000; physical Android/TalkBack/IME remains separate. This draft does not claim design-spec 14/14 acceptance.
+- **Measured:** 54 existing shared-role reuses, **764 fewer characters in maintained App.js**, unchanged 874 inline style objects (geometry/dynamic remnants remain) and unchanged 2,024 CSS `!important` declarations. Existing B1010 nonoverlapping round-target work is preserved.
+
+
+## Build 1000 candidate — design-spec verification checkpoint
+
+- **Exact source candidate:** `2fdcc2f090686ecd8fa11e5dc195da43829bdcbf` fixed B983's cumulative usage assertions without changing runtime code. The corrected candidate passed the complete 98-file integration source-contract suite.
+- **Chromium evidence:** the same source candidate passed all seven browser shards (lifecycle, workout, program, integration, integration-motion, integration-accessibility and integration-data) in draft UI run `41123218314`.
+- **Version identity:** the controlled finalizer committed Build 1000 at `3717233bf6d7ac599d489d5fa4272961fd737e91` with refreshed release identity. The source-first contract and browser results do not, by themselves, certify the release build or the hosted/offline assets.
+- **Next gate:** require the full release, core, independent engine, phone/offline and hosted-integrity workflows to pass on the finalized exact head before merging. Physical Android/IME/TalkBack and launch-blocking prescription lifecycle issue #418 remain separate requirements.

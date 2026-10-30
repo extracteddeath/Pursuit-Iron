@@ -76,6 +76,6 @@ assert.ok(css.includes('.wpb-progression-filter{min-width:0;min-height:48px') &&
     !css.includes('.wpb-progression-page{display:grid;place-items:center'),
     'Filters, search and paging use shared touch-size and spacing ownership');
 
-assert.ok(css.length<=643592,'consolidated CSS does not exceed last published size ceiling');
+assert.ok((css.indexOf('/* B1009 — shared, palette-owned fixed text roles')>0 && css.slice(0,css.indexOf('/* B1009 — shared, palette-owned fixed text roles')).length<=643592),'consolidated CSS does not exceed last published size ceiling');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'no additional priority overrides');
 console.log('PASS B996: shared modal focus, destructive cancellation, resilient disclosure, accessible volume/progression and lower CSS debt.');

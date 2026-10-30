@@ -27,6 +27,18 @@ for (const [selector,property] of [
   assert.ok(start>=0 && css.slice(start,css.indexOf('}',start)).includes(property),
     'Header hit area must use its existing CSS owner: '+selector);
 }
+// Design-spec one-owner rule: the dynamic theme must never shrink the
+// Workout header or exercise navigation underneath the CSS-owned hit area.
+for(const obsolete of [
+ '.wpb-workout-actions>button{\\n        width:40px!important',
+ '.wpb-workout-header-action,.wpb-workout-close{min-width:38px!important',
+ '.wpb-workout .wpb-ex-nav>button{border-radius:10px!important;min-width:40px!important',
+ '.wpb-workout .wpb-ex-nav>button{\\n        min-width:34px!important',
+ '.wpb-ex-nav-step{height:38px!important'
+]) assert.ok(!app.includes(obsolete),'Retired runtime sizing must stay retired: '+obsolete);
+assert.ok(css.includes('#root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{') &&
+  css.includes('height:48px!important;min-height:48px!important;'),
+  'Exercise navigation uses the single CSS-owned 48px geometry');
 assert.ok(!css.slice(css.indexOf('/* B991:')).includes('!important'),'No priority overrides in new CSS');
 assert.ok((css.match(/!important/g)||[]).length<=2060,'No priority-debt increase');
 assert.ok((app.match(/style: \\{/g)||[]).length<=1101,'No new inline presentation');

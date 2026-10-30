@@ -48,3 +48,16 @@ export function UiSheetClose({ className = "", "aria-label": label = "Close",
         className: `pressable hit ${chrome === "dialog" ? "" : "wpb-sheet-close "}wpb-ui-sheet-close ${className}`,
         children });
 }
+
+
+// One labeled family of mutually exclusive choices. This uses native buttons and
+// aria-pressed (a group of toggle choices, not an ARIA tablist), so screen owners
+// only supply options and changes. The existing .wpb-segmented track owns geometry.
+export function UiSegmented({ label, options, value, onChange, className = "" }) {
+    return _jsx("div", { role: "group", "aria-label": label,
+        className: `wpb-segmented ${className}`.trim(),
+        children: options.map(([key, text]) => _jsx(UiChoice, {
+            kind: "tab", selected: Object.is(value, key),
+            onClick: () => onChange(key), children: text
+        }, String(key))) });
+}

@@ -358,7 +358,7 @@ export function nextWorkoutSuggestionForShell(program, history, legacyExercises,
         target: decision.suggestedReps,
         setTargets: decision.setTargets,
         last, lastUnit: lastEntry?.unit || evaluationUnit,
-        action: decision.action,
+        sourceEntryId: lastEntry?.id ?? null, action: decision.action, reasonCode: decision.reasonCode,
         confidence: decision.confidence
     };
 }
@@ -449,7 +449,7 @@ export function nextWorkoutSuggestionFromPerformedShell(program, legacyExercises
         target: decision.suggestedReps,
         setTargets: decision.setTargets?.map(t => ({ ...t, weight: convert(t.weight) })),
         last,
-        action: decision.action,
+        action: decision.action, reasonCode: decision.reasonCode,
         confidence: decision.confidence
     };
 }

@@ -10152,7 +10152,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .pi-t-body-mb16{margin-bottom:16px}
 #root .wpb .pi-t-faint-auto{margin-left:auto}
 
-/* B1010 — Program round adjusters: actual non-overlapping 48px targets. */
+/* B1010 — Program round adjusters. */
 #root .wpb .wpb-round-row{flex-wrap:wrap;gap:8px}
 #root .wpb .wpb-round-row>.wpb-layout-row-tight{flex-wrap:wrap;justify-content:flex-end}
 #root .wpb .wpb-round-row>.wpb-layout-row-tight>.wpb-quiet-faint{min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center}

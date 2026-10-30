@@ -97,6 +97,7 @@ export const contractGroups = Object.freeze({
         'b1000-workout-controls-test.mjs',
         'b1001-root-font-owner-test.mjs',
         'shared-control-pilot-test.mjs',
+        'settings-segmented-owner-test.mjs',
         'b983-cascade-debt-test.mjs',
         'b964-scroll-layout-owner-test.mjs',
         'b965-workout-shell-layout-owner-test.mjs',
@@ -237,6 +238,7 @@ export const browserShards = Object.freeze({
         'b1000-workout-controls-browser-test.mjs',
         'b1001-root-font-owner-browser-test.mjs',
         'shared-control-pilot-browser-test.mjs',
+        'settings-segmented-browser-test.mjs',
         'b998-ui-controls-browser-test.mjs',
         'b999-plan-review-m3-browser-test.mjs',
         'b966-context-menu-keyboard-browser-test.mjs'

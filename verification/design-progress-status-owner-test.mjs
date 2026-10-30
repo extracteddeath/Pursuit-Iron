@@ -26,7 +26,13 @@ assert.ok(!css.includes(prefix + '.wpb-progress-record-level[data-high="true"]{c
   'Record warning reuses the down-state semantic owner');
 assert.ok(!css.includes(prefix + '.wpb-history-session-toggle[aria-expanded="true"] .wpb-history-session-chevron{transform:rotate(180deg)'),
   'Expanded disclosures share one state presentation owner');
-const source = css.slice(css.indexOf('/* B891'), css.indexOf('/* B891') + 1);
+// Profile reuses the same section rhythm and caption color without duplicate owners.
+assert.ok(css.includes('#root .wpb .wpb-profile .wpb-profile-achievement-board,#root .wpb .wpb-profile-score-trend{margin-top:12px;padding-top:12px;border-top:1px solid var(--wpb-theme-border-soft)}'));
+assert.ok(css.includes('#root .wpb :is(.wpb-profile-trend-delta,.wpb-profile-pattern-level){font-size:var(--pi-type-caption);font-weight:700;color:var(--pi-profile-trend-ink)}'));
+assert.ok(css.includes('#root .wpb .wpb-profile-pattern-delta{font-size:var(--pi-type-caption);font-weight:600;color:var(--pi-profile-trend-ink)}'));
+assert.ok(!css.includes('#root .wpb .wpb-profile-score-trend{margin-top:12px;') &&
+  !css.includes('#root .wpb .wpb-profile-pattern-level{font-size:11px'),
+  'Profile rhythm and metrics cannot regain duplicate literal owners');
 assert.equal((css.match(/!important/g) || []).length, 2024, 'No new priority declarations');
-assert.ok(css.length <= 643992, 'Source consolidation must reduce—not expand—CSS debt');
-console.log('PASS design Progress status ownership: six common paint/number/disclosure roles; no priority growth.');
+assert.ok(css.length <= 643872, 'Source consolidation must reduce—not expand—CSS debt');
+console.log('PASS design Progress/Profile: shared state, metric and section owners; no priority growth.');

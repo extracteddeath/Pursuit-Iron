@@ -1761,7 +1761,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   border-radius:27px 27px 17px 27px!important;
 }
 #root[data-pi-motion="expressive"] .wpb-profile.wpb-profile.wpb-profile .wpb-profile-achievement-toggle{
-  min-height:46px;
   border-radius:17px;
 }
 /* Library: make the search the prominent instrument, distinct from a

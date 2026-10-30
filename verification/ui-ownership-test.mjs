@@ -218,6 +218,16 @@ assert.ok(!css.includes('.wpb-program-settings-title{') &&
     !css.includes('.wpb-program-reference-heading h2{'),
     'Do not re-fork identical Program sheet title typography');
 
+// Native Program, Review and Session dialog Close controls have one visible
+// accent focus outline. Explicit forced-colors highlight works for every dialog
+// chrome variant, including those without the wpb-sheet-close paint class.
+assert.ok(css.includes('.wpb-ui-sheet-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}') &&
+    css.includes('.wpb-ui-sheet-close:focus-visible{outline-color:Highlight}') &&
+    !css.includes('.wpb-program-reference-close:focus-visible{') &&
+    !css.includes('.wpb-progression-choice-close:focus-visible{') &&
+    !css.includes('.wpb-program-schedule-close:focus-visible{'),
+    'All native sheet/dialog Close controls must share one accessible focus ring');
+
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
 function repeatedImportantDeclarations(source) {

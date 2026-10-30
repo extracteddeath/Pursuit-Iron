@@ -8553,6 +8553,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-ui-sheet-title{min-width:0;margin:0;font-size:1.125rem;font-weight:700;line-height:var(--pi-ui-sheet-title-leading,1.4);overflow-wrap:anywhere}
 /* Shared Program sheet controls: 48px geometry with one paint/size owner. */
 #root .wpb .wpb-ui-sheet-close,#root .wpb-workout .wpb-b973-set-close{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;color:var(--wpb-theme-text)}
+#root .wpb .wpb-ui-sheet-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 #root .wpb .wpb-program-schedule-caption{margin:0 0 var(--pi-space-4);color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.45}
 #root .wpb .wpb-program-schedule-row{display:flex;align-items:center;gap:var(--pi-space-3);box-sizing:border-box;width:100%;min-height:54px;padding:12px 14px;margin-bottom:6px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);text-align:left;cursor:pointer}
 #root .wpb .wpb-program-schedule-row[data-assigned="true"]{background:var(--wpb-theme-accent-dim);border-color:var(--wpb-theme-accent-edge)}
@@ -8566,7 +8567,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-program-schedule-icon{flex-shrink:0;color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-program-schedule-hint{flex-shrink:0;font-size:.6875rem;color:var(--wpb-theme-faint)}
 #root .wpb .wpb-program-schedule-clear{width:100%;min-height:48px;padding:11px;margin-top:6px;border:1px solid var(--wpb-theme-border);border-radius:12px;background:transparent;color:var(--wpb-theme-muted);font-size:.8125rem;font-weight:600;cursor:pointer}
-#root .wpb .wpb-program-schedule-row:focus-visible,#root .wpb .wpb-program-schedule-clear:focus-visible,#root .wpb .wpb-program-schedule-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+#root .wpb .wpb-program-schedule-row:focus-visible,#root .wpb .wpb-program-schedule-clear:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-program-schedule-backdrop,#root .wpb .wpb-program-schedule-sheet{animation:none}}
 @media(forced-colors:active){#root .wpb .wpb-program-schedule-row,#root .wpb .wpb-program-schedule-clear{border-color:ButtonText}#root .wpb .wpb-program-schedule-row[data-assigned="true"],#root .wpb .wpb-program-schedule-row[data-today="true"]{border-color:Highlight}#root .wpb .wpb-program-schedule-row:focus-visible{outline-color:Highlight}}
 
@@ -8591,7 +8592,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-program-reference-close{border:0;background:transparent}
 #root .wpb .wpb-program-reference-body{min-width:0;padding:8px 18px calc(env(safe-area-inset-bottom) + 20px)}
 #root .wpb .wpb-program-reference-intro{margin:0 0 12px;font-size:.8125rem;line-height:1.5;color:var(--wpb-theme-muted)}
-#root .wpb .wpb-program-reference-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+
 #root .wpb .wpb-program-setup-chips{display:flex;flex-wrap:wrap;gap:6px}
 #root .wpb .wpb-program-setup-chip{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;min-width:0;max-width:100%;padding:7px 11px;border-radius:12px;background:var(--wpb-theme-bg-tint);overflow-wrap:anywhere}
 #root .wpb .wpb-program-setup-chip[data-tone="accent"]{background:var(--wpb-theme-accent-dim)}
@@ -8671,12 +8672,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-progression-choice-copy{display:flex;flex-direction:column;gap:4px;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-progression-choice-copy strong{font-size:.9375rem;line-height:1.4;font-weight:650}
 #root .wpb .wpb-progression-choice-copy>span{font-size:.8125rem;font-weight:400;line-height:1.5;color:var(--wpb-theme-muted)}
-#root .wpb .wpb-progression-choice-close:focus-visible{outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px}
+
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-progression-choice-backdrop,#root .wpb .wpb-progression-choice-panel{animation:none}}
 @media(forced-colors:active){
   #root .wpb .wpb-progression-choice-panel{border:1px solid CanvasText;background:Canvas;color:CanvasText}
   #root .wpb .wpb-progression-choice[aria-pressed="true"]{border:2px solid Highlight}
-  #root .wpb .wpb-progression-choice-close:focus-visible{outline-color:Highlight}
+  #root .wpb .wpb-ui-sheet-close:focus-visible{outline-color:Highlight}
 }
 
 /* M366: single theme-backed block-duration presentation; keep numeric validity in the view. */

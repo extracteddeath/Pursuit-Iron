@@ -38,8 +38,8 @@ assert.ok(css.includes('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-t
 assert.ok((css.match(/!important/g)||[]).length<=2029,
   'Workout shared focus-ring priority debt capped at 2029');
 // B993 replaces fixed Workout-info JSX with themed CSS; this is the new CSS-only ratchet.
-assert.ok(css.length<=640355,
-  'Shared Program sheet title typography caps CSS at 640355 characters');
+assert.ok(css.length<=640164,
+  'Shared Program dialog Close focus geometry caps CSS at 640164 characters');
 assert.ok((app.match(/style: \{/g)||[]).length<=1262,
   'Do not restore inline Workout geometry to replace deleted CSS');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

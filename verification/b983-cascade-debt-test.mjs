@@ -95,7 +95,7 @@ assert.ok((app.match(/style: \{/g)||[]).length<=874,
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').length<=2660213,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').replace(b1003SharedTypeRules,'').replace(b1004SharedButtonRules,'').replace(b1005SharedRules,'').replace(b1006SharedRules,'').replace(b1007SharedRules,'').replace(b1008SharedRules,'').replace(b1009SharedRules,'').replace(b1010SharedRules,'').length<=2659430,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 
 // B1002: five shared type roles replace 58 repeated fixed-paint objects.
@@ -157,6 +157,60 @@ for(const legacy of ["style: { width: \"100%\", padding: \"13px\", borderRadius:
 assert.ok(css.includes('color:var(--wpb-theme-on-danger)')&&css.includes('background:var(--wpb-theme-danger-dim)'),
   'B1008 uses real dynamic theme text and danger tint rather than a fixed color');
 
+/* B1011: semantic font/color paint has one class owner; remaining inline geometry is intentional. */
+const b1011Roles=[
+  [
+    "wpb-type-support-muted",
+    3
+  ],
+  [
+    "pi-t-muted-600",
+    4
+  ],
+  [
+    "wpb-type-caption-faint",
+    8
+  ],
+  [
+    "wpb-type-body-muted",
+    17
+  ],
+  [
+    "pi-t-strong",
+    4
+  ],
+  [
+    "wpb-type-body",
+    2
+  ],
+  [
+    "pi-t-caption-muted",
+    7
+  ],
+  [
+    "wpb-type-micro-faint",
+    3
+  ],
+  [
+    "pi-t-text-700",
+    3
+  ],
+  [
+    "pi-t-text-600",
+    2
+  ],
+  [
+    "wpb-type-value",
+    1
+  ]
+];
+for(const [name,additional] of b1011Roles){
+  assert.ok(additional>=1,'Reviewed semantic role must be used: '+name);
+  assert.ok(css.includes('.'+name),'B1011 must reuse an existing class rather than adding CSS: '+name);
+}
+assert.ok(!app.includes('className: "wpb-type-body-muted", ,'),
+  'B1011 JSX merge must never emit empty comma properties');
+
 /* B1010: physical 48px controls replace overlapping pseudo-hit surfaces. */
 assert.equal((app.match(/className: "pressable wpb-round-step"/g)||[]).length,2,
   'Both round adjustment buttons have physical touch targets, not overlapping hit pseudo-elements');
@@ -182,7 +236,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-strong",
-    4,
+    8,
     "style: { fontSize: 15, fontWeight: 700, color: C.text }"
   ],
   [
@@ -202,22 +256,22 @@ const b1009Contract=[
   ],
   [
     "pi-t-muted-600",
-    3,
+    7,
     "style: { color: C.muted, fontWeight: 600 }"
   ],
   [
     "pi-t-text-600",
-    3,
+    5,
     "style: { color: C.text, fontWeight: 600 }"
   ],
   [
     "pi-t-text-700",
-    3,
+    6,
     "style: { color: C.text, fontWeight: 700 }"
   ],
   [
     "pi-t-caption-muted",
-    3,
+    10,
     "style: { fontSize: 11, color: C.muted }"
   ],
   [

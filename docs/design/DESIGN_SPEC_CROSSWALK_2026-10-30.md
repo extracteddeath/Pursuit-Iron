@@ -145,3 +145,12 @@
 - **224–226 (§§5.2,8,11):** A single named round-row layout owner wraps on narrow phones and enlarged text; the number and action labels remain together without introducing duplicate UI or guessed overlap margins.
 - **227–229 (§§10,12):** New B1010 responsive browser gate covers 320/393px at 200% actual font size, physical touch rectangles, nonoverlap, and horizontal page containment. B983 now rejects the old pseudo-hit class, enforces shared class usage and a compact zero-priority B1010 CSS owner; original legacy debt budgets remain in place.
 - **230 (§§12,14):** Source-only candidate; the Program shard, all seven Chromium shards, full engine and device gates still need fresh exact-head evaluation. Build 999 stays live; no engine, persistence, progression or history mutation.
+
+
+## Design-spec passes 231–250 — extend shared semantic typography without new CSS (draft)
+
+- **231–238 (§§4.1,4.2,11):** Reused previously established theme-aware typography roles in **54** additional JSX elements across Program, Home, Workout, Progress, Profile and Settings. The migrated parts are **fixed** color/type/line-height declarations; actual layout geometry, dynamic metrics, state-owned presentation and event handlers remain in place.
+- **239–243 (§§4.1.3,5.2):** Shared type tokens replace hardcoded 11/13/15px and theme colors in selected explanatory, comparison, label and numeric subelements. No new CSS class definitions are introduced, and this pass makes no changes to the root theme, engine, training dose, logging or PR state.
+- **244–247 (§§11.3,12):** Extended B1009 exact class-use contracts for the migrated roles and tightened B983 normalized App+CSS debt ceiling from **2,660,213** to **2,659,430** characters without relaxing the original stylesheet or priority limits.
+- **248–250 (§§12–14):** Source/Chromium exact-head checks, enlarged-text/theme/responsive review and independent full-engine/release validation remain required before Build 1000; physical Android/TalkBack/IME remains separate. This draft does not claim design-spec 14/14 acceptance.
+- **Measured:** 54 existing shared-role reuses, **764 fewer characters in maintained App.js**, unchanged 874 inline style objects (geometry/dynamic remnants remain) and unchanged 2,024 CSS `!important` declarations. Existing B1010 nonoverlapping round-target work is preserved.

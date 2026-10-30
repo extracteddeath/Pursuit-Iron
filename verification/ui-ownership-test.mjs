@@ -243,7 +243,7 @@ for(const role of ['.wpb-b973-set-close','.wpb-b973-coach-collapsed','.wpb-b973-
   assert.ok(workoutFocus.includes(role),'Workout shared focus ring missing '+role);
 assert.ok(workoutFocus.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;') &&
     css.includes(':is(.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible{outline-color:Highlight}') &&
-    !css.includes('.wpb-load-advice>button:focus-visible{'),
+    css.split('#root .wpb-workout .wpb-load-advice>button:focus-visible{').length===2,
     'Workout Coach and set editor require a visible forced-colors focus ring');
 assert.ok(css.includes('.wpb-set-option-row:focus-visible{outline:2px solid var(--pi-m3e-primary)!important;outline-offset:2px!important;') &&
     css.includes('#root .wpb-workout .wpb-set-controls [data-reference-action]:focus-visible,'),

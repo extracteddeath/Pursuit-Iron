@@ -15,7 +15,7 @@ const fixture=[
 "const rows=Array.from({length:18},()=>({id:'bb-bench',sets:[]}));",
 "return React.createElement('main',{className:'wpb wpb-workout'},",
 "React.createElement(WorkoutExerciseNav,{data:rows,exIdx:index,onSelect:setIndex}),",
-"React.createElement('div',{className:'wpb-workout-scroll'},React.createElement('button',{type:'button',className:'wpb-workout-pinned-note','aria-label':'Edit pinned note for Bench'},'Pinned setup note')),"
+"React.createElement('div',{className:'wpb-workout-scroll'},React.createElement('button',{type:'button',className:'wpb-workout-pinned-note','aria-label':'Edit pinned note for Bench'},'Pinned setup note')),",
 "React.createElement(WorkingSetCountControl,{label:'Working sets',value:count,onChange:setCount}));}",
 "createRoot(document.getElementById('root')).render(React.createElement(Demo));"
 ].join('\n');

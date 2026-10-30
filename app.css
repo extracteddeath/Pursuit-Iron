@@ -7658,6 +7658,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-progress .wpb-progress-tab[aria-selected="true"]{border-bottom-color:var(--wpb-theme-accent);color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-glance-value[data-has-value="true"]{color:var(--wpb-theme-text);}
 #root .wpb .wpb-progress .wpb-progress-body-summary[data-has-series="true"]{margin-bottom:var(--pi-space-3);}
+#root .wpb .wpb-progress :is(.wpb-progress-body-change,.wpb-progress-trend-value,.wpb-progress-volume-change-value,.wpb-progress-lift-change){font-variant-numeric:tabular-nums}
 #root .wpb .wpb-progress :is(.wpb-progress-body-change,.wpb-progress-trend-value)[data-direction="up"]{color:var(--wpb-theme-accent-ink);}
 #root .wpb .wpb-progress :is(.wpb-progress-body-change,.wpb-progress-trend-value)[data-direction="down"]{color:var(--wpb-theme-warning);}
 #root .wpb .wpb-progress .wpb-progress-body-log:not(:disabled){background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);}

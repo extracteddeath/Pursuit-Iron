@@ -1,6 +1,6 @@
-# Pursuit Iron — design-spec acceptance crosswalk (passes 50–132)
+# Pursuit Iron — design-spec acceptance crosswalk (passes 50–200)
 
-**Target authority:** Proposed [Design System & UX Specification v1.0.0](https://github.com/extracteddeath/Pursuit-Iron/blob/docs/pursuit-iron-design-spec-v1-20261029/docs/design/PURSUIT_IRON_DESIGN_SPEC_V1.md) (PR #415); existing `DESIGN_SYSTEM.md` and shipped Build 997 remain production owners until the spec itself is approved. **Do not infer certification from this crosswalk.**
+**Target authority:** Proposed [Design System & UX Specification v1.0.0](https://github.com/extracteddeath/Pursuit-Iron/blob/docs/pursuit-iron-design-spec-v1-20261029/docs/design/PURSUIT_IRON_DESIGN_SPEC_V1.md) (PR #415); existing `DESIGN_SYSTEM.md` and shipped Build 998 remain production owners until the proposed specification is approved. **Do not infer certification from this crosswalk.**
 
 | Design-spec requirement | Implemented improvement | Verification / evidence | Acceptance status |
 |---|---|---|---|
@@ -111,3 +111,20 @@
 - **131–132 (§§11.3,12):** Strengthened B983 to enforce **exactly six** shared action uses, absence of the old 228-character inline action, bounded `B1004` CSS owner, no legacy CSS growth outside named type/button migration blocks, and a tighter **997 inline-object limit**. Cumulative pass-110→132: **98** fewer inline `style: {` objects, from 1,095 to 997; app.css `!important` from 2,027 to 2,024, embedded App priority still 1,014.
 - **Source-size outcome:** Relative to pass 125, `App.js` shrank 1,320 characters, app.css grew 395 for one shared owner: combined shipped sources **925 characters smaller**. Relative to pass 110, combined sources are approximately 1,757 characters smaller. This is source-level verification only: confirm visual/action behavior in Chromium at 320px / enlarged text and physical Android before release.
 - **Release boundary:** Build 998 is published; passes 111–132 remain on draft PR #421 toward the next approximately 50-pass release. No training engine, automatic progression, load fields, logger, history, program persistence or PR detection changes.
+
+
+## Passes 111–200 — shared ownership, correctness and candidate handoff
+
+**Scope:** This milestone records UI source consolidation, not a claim that every requirement of the proposed spec is satisfied. The two specification files are carried into this working branch from [PR #415](https://github.com/extracteddeath/Pursuit-Iron/pull/415) without promoting their *Proposed* status to final Android certification. Production remains Build 998 while a Build 999 candidate is prepared.
+
+| Spec principle | Verified source change | Evidence / release limitation |
+|---|---|---|
+| §§4–6,11: shared semantic styling | Passes 111–157 converted 161 fixed inline objects to shared typography, quiet actions, compare cards and confirmation styles (1,095 → 934). | B983 source budget, themed roles, browser shards on prior exact heads; no claim that all legacy inline geometry is gone |
+| §§6,7.3,8,10: understandable interaction | Passes 158–174 share meter/round controls and footnotes; round +/- controls now carry distinct spoken labels. | B983 guard and draft Chromium candidate; pre-existing 44px expanded hit zones still require physical-device review against proposed 48px preference |
+| §§4.2,5.2,7.3: contrasting user-selected themes | Passes 175–190 expose live danger foreground and dim tokens; destructive actions share them without changing delete callbacks. | CSS inherits computed palette, no new fixed hex; 20 themes, forced colors, large text and physical Android are separate gates |
+| §§7.3,11.2: avoid repetitive set coaching | Passes 191–200 verify per-set load-coaching banners and stale accept handler are absent; no automatic weight change; remove outdated source comment. | B951 progression/PR test verifies manual steppers remain, load advisory data stays separate from display |
+| §§12–14: honest readiness | Build identity/offline hashes must be regenerated and checked after source/browser checks; no public launch or 14/14 claim without actual Android/TalkBack/IME/backup acceptance. | Current changes remain draft until all release gates pass |
+
+**Milestone measured source state (pre-final release work):** 919 React `style: {` instances, 2,024 stylesheet `!important` declarations, both bounded by `verification/b983-cascade-debt-test.mjs`. These are debt ceilings, not endorsed layout outcomes. No training engine, PR math, history, logging persistence or program-dose changes were made during the consolidation.
+
+**Remaining release decisions:** preserve one authoritative design contract; evaluate the new candidate against all seven Chromium shards and independent engine audits; run responsive themes and enlarged text; then regenerate Build 999 source hashes, service worker/cache and manifests. Only ship if the exact candidate passes and there is no false progression/PR/weight increment behavior.

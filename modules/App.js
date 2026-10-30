@@ -11832,8 +11832,8 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
         if (advanceTo >= 0 && advanceTo !== ei)
             goEx(advanceTo);
     };
-    // Apply the canonical session-only guards to observed reps/RIR; never infer unreported effort.
-    // No automatic weight drop: only tapping the recommendation applies it.
+    // Preserve observed reps/RIR; keep load advice as data, never repeated set banners.
+    // Weight changes remain with the user's manual set controls.
     const computeNextPrefill = (sets, si, ex, slot) => {
         if (program.config?.progression === 'manual' || program.config?.percentScheme || !ex) return sets;
         const cell = computeCell(program, day, ex.id, slot, weekIndex);

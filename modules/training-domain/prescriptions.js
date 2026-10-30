@@ -1154,12 +1154,17 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
     // and before live user edits so the original automatic prefill is auditable.
     const decisionTraceFor = (index, load, reps, origin = null) => {
         const previous = previousWorkoutSet(sug?.last, index);
+        const priorUnit = sug?.lastUnit || sug?.unit || unit;
+        const comparableLoad = previous?.w > 0
+            ? loadableAtOrBelow(ex, convertHistoryLoad(previous.w, priorUnit, unit), unit)
+            : null;
         const numeric = value => value !== null && value !== undefined && value !== ''
             && Number.isFinite(Number(value)) ? Number(value) : null;
         return {
             schemaVersion: 1, programId: String(program.id), dayId: String(day.id),
             exerciseId: ex.id, slot, weekIndex, workingSetIndex: index,
-            source: previous ? { load: previous.w, reps: previous.r,
+            source: previous ? { load: comparableLoad, reps: previous.r,
+                originalLoad: previous.w, originalUnit: priorUnit, unit,
                 ...(sug?.sourceEntryId != null ? { historyEntryId: String(sug.sourceEntryId) } : {}),
                 ...(previous.rir !== null ? { reportedRir: previous.rir } : {}),
                 ...(previous.summary ? { summaryOnly: true } : {}) } : null,

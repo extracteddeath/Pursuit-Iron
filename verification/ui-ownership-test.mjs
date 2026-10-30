@@ -89,8 +89,7 @@ for (const selector of ['#root .wpb-workout .wpb-workout-tools .wpb-workout-tool
 // for the single-class targets (which keeps their original specificity).
 const focusGroup = css.split('#root .wpb-workout .wpb-exercise-head-actions>button:focus-visible,')[1]?.split('}')[0] || '';
 for (const selector of [':is(.wpb-workout-pinned-note,.wpb-workout-exercise-link,.wpb-b973-set-close,.wpb-b973-coach-collapsed,.wpb-b973-coach-toggle):focus-visible,',
-    '.wpb-rest-actions>.wpb-rest-action:focus-visible,',
-    '.wpb-load-advice>button:focus-visible{'])
+    '.wpb-rest-actions>.wpb-rest-action:focus-visible{'])
     assert.ok(focusGroup.includes(selector), 'Workout focus group missing: '+selector);
 assert.ok(focusGroup.includes('outline:2px solid var(--wpb-theme-accent-ink);outline-offset:2px;'),
     'Shared Workout keyboard ring must remain visible and theme-aware');
@@ -98,6 +97,13 @@ for(const selector of ['.wpb-workout-pinned-note:focus-visible{',
     '.wpb-workout-exercise-link:focus-visible{'])
     assert.ok(!css.includes('#root .wpb-workout '+selector),
         'No standalone Workout focus geometry: '+selector);
+
+// Silent set feedback: live-autoregulation metadata survives in the engine, but
+// an always-visible recommendation above every pending set is not a UI action.
+assert.ok(!app.includes('data-load-advice') && !app.includes('const acceptLowerLoad =') &&
+    !css.includes('wpb-load-advice'), 'Per-set coaching banner and dead styles must stay retired');
+assert.ok(app.includes('data-set-options-trigger') && app.includes('aria-label="weight"'),
+    'Weight and set editing remain directly available without a coaching prompt');
 
 // Workout Leave and header actions share one 48px control geometry owner.
 const headerButtonGeometry=css.split('#root .wpb-workout :is(.wpb-workout-close,.wpb-workout-header-action){')[1]?.split('}')[0]||'';

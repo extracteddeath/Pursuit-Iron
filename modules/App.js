@@ -11803,15 +11803,6 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
     };
     // Apply the canonical session-only guards to observed reps/RIR; never infer unreported effort.
     // No automatic weight drop: only tapping the recommendation applies it.
-    const acceptLowerLoad = (ei, si) => setData(rows => rows.map((e, i) => i !== ei ? e : {
-        ...e, sets: e.sets.map((s, j) => {
-            const w = Number(s.loadAdvice?.toLoad);
-            if (j !== si || s.done || !(w > 0 && w < Number(s.weight))) return s;
-            const { loadAdvice, liveAdjustment, retuneFrom, retuneSrc, ...rest } = s;
-            return { ...rest, weight: String(w), auto: false, valueOwner: "user",
-                recoveryLimited: true, autoTuned: false, hint: undefined };
-        })
-    }));
     const computeNextPrefill = (sets, si, ex, slot) => {
         if (program.config?.progression === 'manual' || program.config?.percentScheme || !ex) return sets;
         const cell = computeCell(program, day, ex.id, slot, weekIndex);
@@ -12726,13 +12717,7 @@ function WorkoutSession({ warmupCard = true, onSetWarmupCard, program: sourcePro
                                     borderLeft: `4px solid ${isActive ? C.accent : isEffort ? `${C.accent}55` : "transparent"}`,
                                     background: isActive ? C.accentDim : "transparent",
                                     transition: "opacity .18s, background .18s"
-                                }, children: [!s.done && s.loadAdvice && Number(s.loadAdvice.toLoad) < Number(s.weight) &&
-                                    _jsxs("div", { className: "wpb-load-advice", "data-load-advice": true, children: [
-                                        _jsx("span", { children: `Keep ${s.weight} ${unit}, or consider ${s.loadAdvice.toLoad} ${unit} if today's performance warrants it.` }),
-                                        _jsx("button", { type: "button", className: "pressable", onClick: () => acceptLowerLoad(ei, si),
-                                            "aria-label": `Use suggested ${s.loadAdvice.toLoad} ${unit} for set ${label}`,
-                                            children: `Use ${s.loadAdvice.toLoad} ${unit}` })
-                                    ] }), _jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 7 : 8, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsxs("button", { type: "button", "data-set-options-trigger": true, "data-noswipe": true,
+                                }, children: [_jsxs("div", { className: "wpb-set-controls", style: { display: "flex", alignItems: "flex-start", flexWrap: "nowrap", gap: narrowSet ? 7 : 8, paddingTop: 2, paddingBottom: 2, paddingRight: 2, paddingLeft: s.sub ? 8 : 2, opacity: (s.warm || s.sub) && !s.done ? 0.85 : 1, borderLeft: s.sub ? `2px solid ${C.accentDim}` : "none" }, children: [_jsxs("button", { type: "button", "data-set-options-trigger": true, "data-noswipe": true,
                                             onClick: () => { setSetOptions({ ei, si }); setSetRemoveConfirm(false); },
                                             "aria-haspopup": "dialog", "aria-expanded": setOptions?.ei === ei && setOptions?.si === si,
                                             "aria-label": `Options for ${s.warm ? "warm-up" : s.sub ? s.kind : "working"} set ${label}`,

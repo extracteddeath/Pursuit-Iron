@@ -85,9 +85,11 @@ try {
     assert.equal(await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]', n => n.value), '100', 'pending row remains unchanged while advice is displayed');
     const snapshot = await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:live')));
     assert.equal(snapshot.data[0].sets[2].loadAdvice.toLoad, 95);
+    assert.equal(await page.$('[data-load-advice]'), null, 'silent adaptation must not add per-set coaching banners');
     await page.reload({ waitUntil: 'networkidle0' }); await page.waitForSelector('[data-testid="set-0-2"]');
     assert.deepEqual(await values(), ['100', '100', '100'], 'live adaptation survives real component recovery');
     assert.equal(await page.$eval('[data-testid="set-0-2"] input[aria-label="weight"]', n => n.value), '100', 'recovered row retains unchanged load');
+    assert.equal(await page.$('[data-load-advice]'), null, 'persisted advice must not resurrect a banner');
     await page.click('[data-testid="set-0-0"] button[aria-label="Mark set not done"]');
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:live'))?.data[0].sets[2].weight === '100');
     assert.deepEqual(await values(), ['100', '100', '100']);

@@ -1360,11 +1360,11 @@ function StyleTag({ theme } = {}) {
       }
       .wpb-workout-actions{gap:6px!important;}
       .wpb-workout-actions>button{
-        width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;
+        width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
         border-radius:10px!important;
       }
-      .wpb-workout-actions>.wpb-workout-finish:not([style*='width: 34']){
-        width:auto!important;min-width:32px!important;padding-left:11px!important;padding-right:11px!important;
+      .wpb-workout-actions>.wpb-workout-finish:not([data-compact='true']){
+        width:auto!important;min-width:48px!important;padding-left:11px!important;padding-right:11px!important;
       }
       .wpb-workout .wpb-ex-nav{
         gap:6px!important;margin-top:8px!important;padding-bottom:0!important;
@@ -2175,11 +2175,10 @@ function StyleTag({ theme } = {}) {
       .wpb-onboarding>.wpb-onboarding-footer{margin-left:0!important;margin-right:0!important;padding-left:22px!important;padding-right:22px!important;background:${C.bg}!important;}
       .wpb-history-detail-head{min-height:50px;}
       .wpb-history-actions>button,.wpb-history-actions>span>button{min-width:40px!important;min-height:40px!important;}
-      .wpb-workout-header-action,.wpb-workout-close{min-width:40px!important;min-height:40px!important;}
+      .wpb-workout-header-action,.wpb-workout-close{min-width:48px!important;min-height:48px!important;}
       .wpb-ex-nav-step{will-change:padding,border-color,background-color;}
       .wpb-ex-nav-name{will-change:max-width,opacity,transform;margin-left;}
       @media(max-width:380px){
-        .wpb-workout-header-action,.wpb-workout-close{min-width:38px!important;min-height:38px!important;width:38px!important;height:38px!important;}
         .wpb-workout-actions{gap:4px!important;}
         .wpb-ex-nav-step{height:38px!important;min-width:38px!important;padding-left:9px!important;padding-right:9px!important;}
         .wpb-history-detail-head{align-items:flex-start!important;gap:8px!important;}

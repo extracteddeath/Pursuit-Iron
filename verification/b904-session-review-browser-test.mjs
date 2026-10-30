@@ -68,7 +68,16 @@ try{
    'Home has its own concise coaching card, not a second workout outline: '+JSON.stringify(homeCoach));
   assert.match(await page.$eval('[data-game-plan-exercise="bb-bench"]',n=>n.innerText),/82.5 kg × 6/);
   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/90 kg × 9/);
-  if(width===900)assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/23-second rests/,'game plan honors the logger rest scale');
+  if(width===900){
+   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"]',n=>n.innerText),/Myo-reps/,
+    'Collapsed Game Plan identifies the technique without full instructions');
+   await page.click('[data-game-plan-exercise="bb-row"] summary');
+   assert.match(await page.$eval('[data-game-plan-exercise="bb-row"] details>p',n=>n.innerText),/23-second rests/,
+    'Expanded Game Plan retains the logger-scaled Myo-reps rest interval');
+   await page.click('[data-game-plan-exercise="bb-row"] summary');
+   assert.equal(await page.$eval('[data-game-plan-exercise="bb-row"] details',n=>n.open),false,
+    'Leave the Home Game Plan collapsed before continuing the workout journey');
+  }
   assert.ok(await page.$('[data-pr-exercise="bb-row"]'));assert.equal(await page.$('[data-pr-exercise="bb-bench"]'),null,'no fabricated RIR-adjusted PR');
   assert.equal(await page.$eval('.wpb-home',n=>n.scrollWidth<=n.clientWidth+1),true);
   await page.screenshot({path:`/tmp/b904-home-${width}.png`});

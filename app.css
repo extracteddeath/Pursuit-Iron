@@ -9393,22 +9393,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* B969: compact workout action rail. All actions remain named for assistive tech;
    only the icon paints, and the available horizontal width is used for logging. */
-#root .wpb-workout .wpb-workout-tools .wpb-workout-tool{
-  box-sizing:border-box;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  flex:0 0 48px;
-  width:48px;
-  min-width:48px;
-  height:48px;
-  min-height:48px;
-  padding:0;
-  line-height:1;
-  border-radius:12px;
-  color:var(--wpb-theme-muted);
-  background:transparent;
-}
+#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool,.wpb-rest-actions>.wpb-rest-action){box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:0 0 48px;width:48px;min-width:48px;height:48px;min-height:48px;padding:0}
+#root .wpb-workout .wpb-workout-tools .wpb-workout-tool{line-height:1;border-radius:12px;color:var(--wpb-theme-muted);background:transparent}
 #root .wpb-workout .wpb-workout-tools .wpb-workout-tool>svg{
   display:block;
   flex-shrink:0;
@@ -9921,9 +9907,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-rest-ring{color:var(--wpb-theme-accent-ink);}
 #root .wpb-workout .wpb-rest-card[data-paused="true"] .wpb-rest-ring{color:var(--wpb-theme-warning);}
 #root .wpb-workout .wpb-rest-actions>.wpb-rest-action{
-  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
-  flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;
-  padding:0;border:1px solid var(--wpb-theme-border);border-radius:12px;
+  border:1px solid var(--wpb-theme-border);border-radius:12px;
   background:var(--wpb-theme-card);color:var(--wpb-theme-text);
   font-size:13px;font-weight:600;cursor:pointer;
 }

@@ -69,6 +69,18 @@ assert.ok(css.includes('.wpb-ui-sheet-close{display:grid;place-items:center;min-
     'Program sheet chrome cannot be re-forked into screen-specific size owners');
 
 
+// Icon actions in Workout and Rest share one measured 48px CSS geometry owner.
+const iconActions = css.split('#root .wpb-workout :is(.wpb-workout-tools .wpb-workout-tool,.wpb-rest-actions>.wpb-rest-action){')[1]?.split('}')[0] || '';
+for (const size of ['display:inline-flex','align-items:center','justify-content:center',
+    'flex:0 0 48px','width:48px','min-width:48px','height:48px','min-height:48px','padding:0'])
+    assert.ok(iconActions.includes(size), 'Shared Workout/Rest icon geometry lost: '+size);
+for (const selector of ['#root .wpb-workout .wpb-workout-tools .wpb-workout-tool{',
+    '#root .wpb-workout .wpb-rest-actions>.wpb-rest-action{']) {
+    const paint = css.split(selector)[1]?.split('}')[0] || '';
+    assert.ok(paint && !/(?:box-sizing|display|align-items|justify-content|flex|width|height|min-width|min-height|padding)\s*:/.test(paint),
+        'Workout/Rest-specific style must not re-own common icon geometry: '+selector);
+}
+
 const allowedDebtKeys = new Set(); // B954: no competing important-property owners
 
 function repeatedImportantDeclarations(source) {

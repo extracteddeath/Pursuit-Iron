@@ -16,11 +16,17 @@ export function sessionTargetsText(sets, unit) {
 export function PlanChangeBanner({ review, onClick }) {
     if (!review?.changes.length) return null;
     const held = review.changes.filter(row => row.change.undone).length;
+    const savedSets = review.changes.some(row => !!row.change.setDelta);
+    const workoutLoads = review.changes.some(row => !!row.change.loadChanged);
+    const summary = held ? `${held} prior load${held === 1 ? '' : 's'} kept · See details`
+        : savedSets && workoutLoads ? "Review saved sets and workout loads"
+        : savedSets ? "Review saved program set changes"
+        : workoutLoads ? "Review workout load choices" : "Review details";
     const count = review.changes.length;
     return _jsxs("button", { type: "button", className: "wpb-plan-change-banner pressable", onClick, "aria-label": `Review ${count} plan adjustment${count === 1 ? '' : 's'}${held ? `, ${held} prior load${held === 1 ? '' : 's'} kept` : ''}`, children: [
         _jsx("span", { className: "wpb-session-plan-icon", 'aria-hidden': true, children: _jsx(History, { size: 19 }) }),
         _jsxs("span", { children: [_jsx("strong", { children: `${count} upcoming adjustment${count === 1 ? '' : 's'}` }),
-            _jsx("span", { children: held ? `${held} prior load${held === 1 ? '' : 's'} kept · See details` : "Review load and planned sets" })] }),
+            _jsx("span", { children: summary })] }),
         _jsx(ChevronRight, { size: 18, 'aria-hidden': true })] });
 }
 // The Home hero is a workout preview, not a second coaching feed.
@@ -80,12 +86,18 @@ export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose })
     // A planned-set revision is a saved program edit, while load holds are scoped
     // to this next workout. Do not mislabel both as a one-session change.
     const hasSavedSetChanges = review.changes.some(row => !!row.change.setDelta);
+    const hasWorkoutLoadChoices = review.changes.some(row => !!row.change.loadChanged);
+    const scopeText = hasSavedSetChanges && hasWorkoutLoadChoices
+        ? "Planned set changes are saved in your program; load choices affect this workout. Completed history stays intact."
+        : hasSavedSetChanges
+            ? "Planned set changes are saved in your program. Completed history stays intact."
+            : hasWorkoutLoadChoices
+                ? "Load choices apply to this workout. Completed history stays intact."
+                : "There are no load or planned set changes to review. Completed history stays intact.";
     return _jsx(SessionChoiceDialog, { title: "Plan changes", onClose, className: "wpb-plan-changes-dialog",
         children: _jsxs("div", { className: "wpb-plan-changes-body", children: [
             _jsx("p", { className: "wpb-plan-review-intro", children: `${dayLabel} · Week ${review.weekIndex}` }),
-            _jsx("p", { className: "wpb-plan-review-basis", children: hasSavedSetChanges
-                ? "Planned set changes affect your saved program. Load choices affect this workout. Completed history stays intact."
-                : "Load choices affect this workout. Completed history stays intact." }),
+            _jsx("p", { className: "wpb-plan-review-basis", children: scopeText }),
             !review.changes.length && _jsx("p", { children: "No meaningful changes to review." }),
             ...review.changes.map(row => {
                 const change = row.change;
@@ -93,7 +105,8 @@ export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose })
                 const showTargets = change.loadChanged;
                 // The first useful comparison should not require an extra tap.
                 // Longer set-by-set diffs stay in the existing disclosure to avoid crowding.
-                const singleSet = showTargets && row.proposed?.length === 1 && change.previous?.length === 1;
+                // A saved set revision must remain visible even if its only load diff fits in one row.
+                const singleSet = showTargets && !change.setDelta && row.proposed?.length === 1 && change.previous?.length === 1;
                 const targetDetails = showTargets && _jsx("ol", { className: "wpb-plan-target-diff",
                     "aria-label": "Previous and upcoming working-set loads", children:
                     row.proposed.map((set, i) => _jsxs("li", { children: [
@@ -124,8 +137,9 @@ export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose })
                         onClick: () => onChoice(review.programId, review.dayId, review.weekIndex, row.id,
                             !change.undone, review.sessionLengthPlan, row.slot),
                         children: change.undone ? "Use recommended load" : "Keep previous load" })
-                        : _jsx("p", { className: "wpb-plan-review-basis", children: change.kind === 'sets'
-                            ? "To revise planned sets, edit your saved program."
+                        : _jsx("p", { className: "wpb-plan-review-basis", children: change.setDelta && change.loadChanged
+                            ? "Revise planned sets in your program; the previous load cannot be restored here."
+                            : change.kind === 'sets' ? "To revise planned sets, edit your saved program."
                             : "The previous load cannot be restored exactly with this equipment." })
                 ] }, row.id + ':' + row.slot);
             })

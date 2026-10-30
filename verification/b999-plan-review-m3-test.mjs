@@ -36,16 +36,24 @@ assert.ok(plan.includes('return _jsx(SessionChoiceDialog, { title: "Plan changes
 assert.ok(css.length<=643592,'stylesheet remains under last published CSS ceiling');
 assert.ok((css.match(/!important/g)||[]).length<=2054,'priority declaration count strictly improved');
 // Design spec §§7.9,9.2,10,14: review scope must be immediately understandable.
-assert.ok(plan.includes('const singleSet = showTargets && row.proposed?.length === 1 && change.previous?.length === 1;') &&
+assert.ok(plan.includes('const singleSet = showTargets && !change.setDelta && row.proposed?.length === 1 && change.previous?.length === 1;') &&
   plan.includes('singleSet && targetDetails') && plan.includes('!singleSet && targetDetails'),
   'Single-set load before/after is immediately visible; multi-set detail stays disclosed once');
 assert.ok(plan.includes('review.changes.some(row => !!row.change.setDelta)') &&
-  plan.includes('Saved program set edits; load holds apply to this workout.') &&
-  plan.includes('Load choices apply to this workout.') &&
+  plan.includes('review.changes.some(row => !!row.change.loadChanged)') &&
+  plan.includes('Planned set changes are saved in your program; load choices affect this workout.') &&
+  plan.includes('Planned set changes are saved in your program. Completed history stays intact.') &&
+  plan.includes('Load choices apply to this workout. Completed history stays intact.') &&
+  plan.includes('change.setDelta && change.loadChanged') &&
   plan.includes('!singleSet && _jsx("p", { className: "wpb-plan-change-summary"') &&
   plan.includes('children: "Last → Upcoming"') &&
   plan.includes('singleSet ? "Why this change?" : "Why and set comparison"'),
   'Plan changes state scope upfront and keep optional reasoning concise');
+assert.ok(plan.includes('const summary = held ?') &&
+  plan.includes('Review saved sets and workout loads') &&
+  plan.includes('Review saved program set changes') &&
+  plan.includes('Review workout load choices'),
+  'Home/Plan change banner names only the kind of action that exists');
 for(const name of ['What changes','Why','When','What stays intact'])
   assert.ok(revision.includes('children: "'+name+'"'),'Rebuild impact must expose named '+name+' layer');
 assert.ok(revision.includes('className: "wpb-program-review-scope"') &&

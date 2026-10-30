@@ -14,17 +14,20 @@ const fixture=[
 "const originalProgram={id:'demo',weeks:4,config:{goal:'both',session:'s60',weeks:4,unit:'lb'},days:[]};",
 "const rebuiltProgram={...originalProgram,config:{...originalProgram.config,goal:'strength'}};",
 "window.choices=[];window.applied=0;",
-"function Demo(){const [open,setOpen]=React.useState(false);const [revision,setRevision]=React.useState(false);",
+"function Demo(){const [open,setOpen]=React.useState('');const [revision,setRevision]=React.useState(false);",
 "const change={undone:false,category:'Load increase',summary:'Review a higher training load',kind:'load',",
 "previous:[{weight:180,reps:8}],loadChanged:true,canUndo:true,source:{date:Date.now()}};",
-"const review={weekIndex:2,programId:'demo',dayId:'upper',unit:'lb',changes:[{id:'bench',",
-"name:'Barbell Bench Press with a long exercise label',change,proposed:[{weight:185,reps:8}],",
-"proposedReason:'Built enough reps across sessions to raise the load'}]};",
+"const loadRow={id:'bench',name:'Barbell Bench Press with a long exercise label',change,proposed:[{weight:185,reps:8}],proposedReason:'Built enough reps across sessions to raise the load'};",
+"const savedOnly={id:'bench',name:'Barbell Bench Press with a long exercise label',change:{kind:'sets',category:'Sets updated',summary:'3 → 4 planned sets',setDelta:{before:3,after:4},loadChanged:false,canUndo:false},proposed:[],proposedReason:'Your saved program was edited'};",
+"const mixed={...savedOnly,change:{...savedOnly.change,summary:'3 → 4 planned sets · 180 → 185 lb',loadChanged:true,previous:[{weight:180,reps:8}]},proposed:[{weight:185,reps:8}]};",
+"const review={weekIndex:2,programId:'demo',dayId:'upper',unit:'lb',changes:open==='sets'?[savedOnly]:open==='mixed'?[mixed]:[loadRow]};",
 "return React.createElement('main',{className:'wpb'},",
-"React.createElement('button',{id:'open-plan',onClick:()=>setOpen(true)},'Review adjustments'),",
+"React.createElement('button',{id:'open-plan',onClick:()=>setOpen('load')},'Review load'),",
+"React.createElement('button',{id:'open-plan-sets',onClick:()=>setOpen('sets')},'Review saved sets'),",
+"React.createElement('button',{id:'open-plan-mixed',onClick:()=>setOpen('mixed')},'Review combined changes'),",
 "React.createElement('button',{id:'open-revision',onClick:()=>setRevision(true)},'Review rebuild'),",
 "open&&React.createElement(PlanChangesDialog,{review,dayLabel:'Upper',busy:false,",
-"onChoice:(...args)=>window.choices.push(args),onClose:()=>setOpen(false)}),",
+"onChoice:(...args)=>window.choices.push(args),onClose:()=>setOpen('')}),",
 "revision&&React.createElement(ProgramRevisionReview,{review:{title:'Review program rebuild',message:'Shift the goal toward strength',before:originalProgram,after:rebuiltProgram},",
 "onApply:()=>{window.applied++;setRevision(false)},onClose:()=>setRevision(false)}));}",
 "createRoot(document.getElementById('root')).render(React.createElement(Demo));"
@@ -73,9 +76,11 @@ try{
         'Plan actions and disclosure remain >=48px: '+JSON.stringify(sizes));
     assert.ok(sizes.textSize>=24,'200% text scales the review narrative: '+JSON.stringify(sizes));
     assert.equal(sizes.focus,true,'shared modal focus trap receives initial focus');
-    assert.match(await page.$eval('.wpb-plan-review-intro',el=>el.textContent),/Load choices apply to this workout.*Completed history stays intact/);
+    assert.match(await page.$eval('.wpb-plan-review-intro',el=>el.textContent),/Upper · Week 2/);
+    assert.match(await page.$eval('.wpb-plan-changes-body>.wpb-plan-review-basis',el=>el.textContent),
+        /Load choices apply to this workout.*Completed history stays intact/);
     assert.equal(await page.$('.wpb-plan-change-summary'),null,'Visible single-set diff replaces duplicate load summary');
-    assert.equal(await page.$eval('.wpb-plan-review-basis',el=>el.textContent),'Last → Upcoming');
+    assert.equal(await page.$eval('.wpb-plan-change-card .wpb-plan-review-basis',el=>el.textContent),'Last → Upcoming');
     const visibleDiff=await page.$eval('.wpb-plan-target-diff',el=>({
         visible:!!el.getClientRects().length,text:el.innerText,labels:el.getAttribute('aria-label')
     }));
@@ -93,6 +98,31 @@ try{
     await page.waitForFunction(()=>!document.querySelector('.wpb-plan-changes-dialog'));
     assert.equal(await page.$eval('#open-plan',el=>el===document.activeElement),true,
         'Escape restores focus to opener');
+    // §§7.2,7.9: a saved set edit must not be described as a next-workout load choice.
+    await page.click('#open-plan-sets');
+    await page.waitForSelector('.wpb-plan-changes-dialog');
+    assert.match(await page.$eval('.wpb-plan-changes-body>.wpb-plan-review-basis',el=>el.textContent),
+        /Planned set changes are saved in your program\. Completed history stays intact/);
+    assert.equal(await page.$('.wpb-plan-undo'),null,'Saved set edit must not offer a fake load Undo');
+    assert.match(await page.$eval('.wpb-plan-change-summary',el=>el.textContent),/3 → 4 planned sets/);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(()=>!document.querySelector('.wpb-plan-changes-dialog'));
+    assert.equal(await page.$eval('#open-plan-sets',el=>el===document.activeElement),true);
+    // Combined changes retain their saved-set consequence; load diff stays in details.
+    await page.click('#open-plan-mixed');
+    await page.waitForSelector('.wpb-plan-changes-dialog');
+    assert.match(await page.$eval('.wpb-plan-changes-body>.wpb-plan-review-basis',el=>el.textContent),
+        /Planned set changes are saved in your program; load choices affect this workout/);
+    assert.match(await page.$eval('.wpb-plan-change-summary',el=>el.textContent),/3 → 4 planned sets/);
+    assert.equal(await page.$eval('.wpb-plan-change-more',el=>el.open),false);
+    assert.equal(await page.$eval('.wpb-plan-target-diff',el=>!!el.getClientRects().length),false,
+        'Multi-consequence review keeps the secondary load comparison in the disclosure');
+    await page.click('.wpb-plan-change-more>summary');
+    assert.match(await page.$eval('.wpb-plan-target-diff',el=>el.textContent),/185 lb/);
+    assert.equal(await page.evaluate(()=>window.choices.length),1,
+        'Browsing mixed and saved-set proposals never modifies training state');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(()=>!document.querySelector('.wpb-plan-changes-dialog'));
     // A program rebuild is a separate, consequential transaction. Its four
     // impact layers should be visible without opening a secondary disclosure.
     await page.click('#open-revision');

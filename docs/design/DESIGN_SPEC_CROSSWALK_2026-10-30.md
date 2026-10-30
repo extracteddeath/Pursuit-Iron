@@ -35,3 +35,16 @@
 
 
 **Passes 77–79 truthfulness correction (§§7.9,9.2,10):** The canonical `sessionPlanChange` distinguishes `setDelta` (saved program revision provenance) from a reversible next-workout load choice. Plan review now displays the corresponding scope honestly, and a single visible comparison is labeled **Last → Upcoming** without duplicating the same weight summary. B999 source/browser checks enforce this distinction. User data and engine classification remain untouched.
+
+
+## Passes 83–89 — truthful mixed-change reviews and direct contract repair
+
+| Spec clause | Improvement | Concrete check | Status |
+|---|---|---|---|
+| §7.2 / §7.9 | A Plan banner now names **saved sets**, **workout loads**, or **both** from the real review record; never shows both categories by default | B999 source guard checks all three labels; no change to review event/persistence | CI on exact final head required |
+| §7.9 / §9.2 | Plan scope text varies with actual `setDelta` and `loadChanged`; a saved-only edit is not mislabeled as a workout load choice | B999 browser opens load-only, saved-set-only, and combined cases at 320px/200%-sized text | CI on exact final head required |
+| §6 / §7.9 | If both set count and load change, the saved set delta remains visible; optional detailed load comparison stays inside native disclosure | B999 tests 3→4 planned sets remains visible and load details are readable on expansion | CI on exact final head required |
+| §9.3 / §10 | No fake Undo offered for saved set edit; combined non-restorable load explains separate consequences | B999 source and browser tests focus restoration + one onChoice callback | CI on exact final head required |
+| §12 | Repair stale source guard left by the previous wording pass; use source assertions that match the intended new semantics | `verification/b999-plan-review-m3-test.mjs`; monitor source-contract job | CI on exact final head required |
+
+**Source of truth:** `modules/session-plan.js` supplies distinct `setDelta` and `loadChanged` flags. These passes only change text and when existing presentation branches render. Previously logged values, plan choice callbacks and actual program persistence are untouched; no extra CSS or priority declarations.

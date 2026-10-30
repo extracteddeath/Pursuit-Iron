@@ -190,6 +190,18 @@ for (const adjustment of [adjusted.sets, capped.sets]) {
         'Old evidence-free automatic suggestions must fail closed during restore');
     assert.deepEqual(reconcileRestoredLiveAdjustments(repaired),repaired);
 }
+const { captureWorkoutProgressionReplay, auditWorkoutProgressionReplay } =
+    await import('../modules/next-engine/workout-replay.js');
+const replayOf = rows => captureWorkoutProgressionReplay({
+    program, day:program.days[0], row:{id:ex.id,slot:0,sets:rows},
+    suggestion:null,cell,history:[],weekIndex:1,unit:'lb',readiness:{factor:1}
+});
+assert.deepEqual(auditWorkoutProgressionReplay(replayOf(capped.sets)),[],
+    'Real pending rep cap with matching evidence must be explainable in an opt-in export');
+const stale=structuredClone(capped.sets);stale[0].actualRIR=4;
+assert.ok(auditWorkoutProgressionReplay(replayOf(stale))
+    .some(issue=>issue.code==='stale_or_unverifiable_live_adjustment'),
+    'Independent replay audit must detect changed effort evidence');
 console.log('PASS B994 source fingerprint: edited completed work cannot authorize stale live caps or suggested loads after resume.');
 const orphanCap = structuredClone(capped.sets);orphanCap[0].done = false;
 orphanCap[1].suggested = { weight: '95', reps: '8' };

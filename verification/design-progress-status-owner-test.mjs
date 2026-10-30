@@ -15,7 +15,7 @@ const owners = [
   [':is(.wpb-progress-body-change,.wpb-progress-trend-value,.wpb-progress-volume-change-value,.wpb-progress-lift-change)', 'font-variant-numeric:tabular-nums']
 ];
 for (const [selector, declarations] of owners) {
-  const full = prefix + selector + '{' + declarations + '}';
+  const full = prefix + selector + '{' + declarations; // terminal semicolon is optional CSS syntax
   assert.equal(css.split(full).length - 1, 1, 'Exactly one semantic owner: ' + selector);
 }
 for (const role of ['body-change','trend-value','volume-change-value','lift-change']) {

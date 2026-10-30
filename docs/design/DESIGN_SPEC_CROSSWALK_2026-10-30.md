@@ -154,3 +154,11 @@
 - **244–247 (§§11.3,12):** Extended B1009 exact class-use contracts for the migrated roles and tightened B983 normalized App+CSS debt ceiling from **2,660,213** to **2,659,430** characters without relaxing the original stylesheet or priority limits.
 - **248–250 (§§12–14):** Source/Chromium exact-head checks, enlarged-text/theme/responsive review and independent full-engine/release validation remain required before Build 1000; physical Android/TalkBack/IME remains separate. This draft does not claim design-spec 14/14 acceptance.
 - **Measured:** 54 existing shared-role reuses, **764 fewer characters in maintained App.js**, unchanged 874 inline style objects (geometry/dynamic remnants remain) and unchanged 2,024 CSS `!important` declarations. Existing B1010 nonoverlapping round-target work is preserved.
+
+
+## Build 1000 candidate — design-spec verification checkpoint
+
+- **Exact source candidate:** `2fdcc2f090686ecd8fa11e5dc195da43829bdcbf` fixed B983's cumulative usage assertions without changing runtime code. The corrected candidate passed the complete 98-file integration source-contract suite.
+- **Chromium evidence:** the same source candidate passed all seven browser shards (lifecycle, workout, program, integration, integration-motion, integration-accessibility and integration-data) in draft UI run `41123218314`.
+- **Version identity:** the controlled finalizer committed Build 1000 at `3717233bf6d7ac599d489d5fa4272961fd737e91` with refreshed release identity. The source-first contract and browser results do not, by themselves, certify the release build or the hosted/offline assets.
+- **Next gate:** require the full release, core, independent engine, phone/offline and hosted-integrity workflows to pass on the finalized exact head before merging. Physical Android/IME/TalkBack and launch-blocking prescription lifecycle issue #418 remain separate requirements.

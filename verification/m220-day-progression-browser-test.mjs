@@ -87,8 +87,10 @@ try {
         const setWeights=await page.$$eval(`${workSelector} input[aria-label="weight"]`,ns=>ns.map(n=>n.value));
         const setReps=await page.$$eval(`${workSelector} input[aria-label="reps"]`,ns=>ns.map(n=>n.value));
         assert.deepEqual(setWeights,['205','210','215','205']);assert.deepEqual(setReps,['5','5','5','5']);
-        assert.equal(await page.$eval('[data-load-advice]',el=>el.querySelector('button')?.textContent?.trim()),'Use 190 lb',
-            'A lighter squat recommendation must require an explicit Use action');
+        assert.equal((await page.$('[data-load-advice]')).length,0,
+            'Fatigue guidance remains optional metadata rather than a per-set coaching banner');
+        assert.deepEqual(await page.$eval(`${workSelector} input[aria-label="weight"]`,ns=>ns.map(n=>n.value)),
+            ['205','210','215','205'],'The engine must not silently lower any working-set load');
         for(const warm of await page.$$('[data-testid^="set-0-"][data-warm="1"] button[aria-label="Mark set done"]'))await warm.click();
         const first=workRows[0];
         await page.click('button[aria-label="Show previous workout values"]');
@@ -140,5 +142,5 @@ try {
         assert.deepEqual(restored.map(s=>s.reps),['5','6','6','6']);
     }
     assert.deepEqual(errors,[]);
-    console.log('PASS M220 browser: rep-first double progression, opt-in fatigue advice, protected resume, honest LAST and tap-to-fill.');
+    console.log('PASS M220 browser: rep-first double progression, silent fatigue advice, protected resume, honest LAST and tap-to-fill.');
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

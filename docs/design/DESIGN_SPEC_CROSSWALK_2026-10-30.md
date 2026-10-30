@@ -162,3 +162,11 @@
 - **Chromium evidence:** the same source candidate passed all seven browser shards (lifecycle, workout, program, integration, integration-motion, integration-accessibility and integration-data) in draft UI run `41123218314`.
 - **Version identity:** the controlled finalizer committed Build 1000 at `3717233bf6d7ac599d489d5fa4272961fd737e91` with refreshed release identity. The source-first contract and browser results do not, by themselves, certify the release build or the hosted/offline assets.
 - **Next gate:** require the full release, core, independent engine, phone/offline and hosted-integrity workflows to pass on the finalized exact head before merging. Physical Android/IME/TalkBack and launch-blocking prescription lifecycle issue #418 remain separate requirements.
+
+
+## Post-Build 1000 consolidation — Progress status owner (candidate)
+
+- **Actual consolidation:** equivalent up/down state paints for body measurements, trends, per-muscle volume changes and lift changes now share a small number of class-preserving :is() selectors. High-volume record warning inherits the same warning treatment; expanded history/measurement chevrons share one rotation rule.
+- **Visual refinement:** numeric status deltas use tabular digits for steadier alignment. No changes to the data values, direction classification, log/history, training prescriptions, or program state.
+- **Measured source:** app.css 644,317 → 643,992 characters (325 fewer, even after the new tabular-digit style). Unchanged stylesheet !important count of 2,024. No React inline-style objects added. No new global overrides or root selector hacks.
+- **Verification:** separate Progress source role contract and a real Chromium 320/393px 200%-text test for color roles, tint, chevron state and numeric typography. Full exact-commit browser/source/engine and offline gates remain prerequisites to release; no production build increment in this branch.

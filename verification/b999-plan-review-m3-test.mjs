@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const css=fs.readFileSync('app.css','utf8');
 const plan=fs.readFileSync('modules/plan-session-surfaces.js','utf8');
+const revision=fs.readFileSync('modules/program-review-surfaces.js','utf8');
 const getRule=prefix=>{
     const pos=css.indexOf(prefix+'{');
     assert.ok(pos>=0,'owner exists: '+prefix);
@@ -34,4 +35,16 @@ assert.ok(plan.includes('return _jsx(SessionChoiceDialog, { title: "Plan changes
     'Plan review remains in the shared dialog focus owner');
 assert.ok(css.length<=643592,'stylesheet remains under last published CSS ceiling');
 assert.ok((css.match(/!important/g)||[]).length<=2054,'priority declaration count strictly improved');
+// Design spec §§7.9,9.2,10,14: review scope must be immediately understandable.
+assert.ok(plan.includes('const singleSet = showTargets && row.proposed?.length === 1 && change.previous?.length === 1;') &&
+  plan.includes('singleSet && targetDetails') && plan.includes('!singleSet && targetDetails'),
+  'Single-set load before/after is immediately visible; multi-set detail stays disclosed once');
+assert.ok(plan.includes('Upcoming workout only. Completed history stays intact.') &&
+  plan.includes('singleSet ? "Why this change?" : "Why and set comparison"'),
+  'Plan changes state scope upfront and keep optional reasoning concise');
+for(const name of ['What changes','Why','When','What stays intact'])
+  assert.ok(revision.includes('children: "'+name+'"'),'Rebuild impact must expose named '+name+' layer');
+assert.ok(revision.includes('changes.count ?') && revision.includes('Completed workouts; a restorable copy') &&
+  css.includes('.wpb-program-review-scope{display:grid;gap:var(--pi-space-2)'),
+  'Review shows actual difference count, history preservation and scale-based layout');
 console.log('PASS B999: scoped Plan review style, 48px disclosures, scalable type and six removed overrides.');

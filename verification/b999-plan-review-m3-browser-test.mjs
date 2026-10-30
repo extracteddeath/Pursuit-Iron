@@ -66,6 +66,14 @@ try{
         'Plan actions and disclosure remain >=48px: '+JSON.stringify(sizes));
     assert.ok(sizes.textSize>=24,'200% text scales the review narrative: '+JSON.stringify(sizes));
     assert.equal(sizes.focus,true,'shared modal focus trap receives initial focus');
+    assert.match(await page.$eval('.wpb-plan-review-intro',el=>el.textContent),/Upcoming workout only.*Completed history stays intact/);
+    const visibleDiff=await page.$eval('.wpb-plan-target-diff',el=>({
+        visible:!!el.getClientRects().length,text:el.innerText,labels:el.getAttribute('aria-label')
+    }));
+    assert.ok(visibleDiff.visible&&visibleDiff.text.includes('180 lb')&&visibleDiff.text.includes('185 lb'),
+        'One-set before/after must be readable before opening Why: '+JSON.stringify(visibleDiff));
+    assert.ok(visibleDiff.labels.includes('Previous and upcoming'),'Before/after has a usable screen-reader name');
+    assert.equal(await page.$eval('.wpb-plan-change-more',el=>el.open),false,'Why starts collapsed, not a text wall');
     await page.click('.wpb-plan-change-more>summary');
     assert.equal(await page.$eval('.wpb-plan-change-more',el=>el.open),true,
         'details are available without changing the logged workout');

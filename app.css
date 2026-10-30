@@ -8144,6 +8144,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb-program-revision h3,.wpb-program-change-details h3,.wpb-program-layout-history h3{font-size:.9375rem;margin:0 0 8px}
 .wpb-program-revision h4,.wpb-program-change-details h4{font-size:.75rem;margin:0 0 6px;color:var(--wpb-theme-muted)}
 .wpb-program-review-status{padding:10px 12px;border-radius:14px;background:var(--wpb-theme-accent-dim)}
+#root .wpb .wpb-program-review-scope{display:grid;gap:var(--pi-space-2);margin:var(--pi-space-3) 0}
+#root .wpb .wpb-program-review-scope p{display:grid;gap:2px;margin:0;font-size:var(--pi-type-support);line-height:1.45;overflow-wrap:anywhere}
+#root .wpb .wpb-program-review-scope strong{color:var(--wpb-theme-muted);font-size:var(--pi-type-label)}
 .wpb-program-review-setting{display:grid;gap:5px;padding:12px 0;border-bottom:1px solid var(--pi-color-divider);font-size:.8125rem;overflow-wrap:anywhere}
 .wpb-program-review-day,.wpb-program-review-audit,.wpb-program-layout-history{margin:16px 0;padding:14px;border:1px solid var(--pi-color-divider);border-radius:18px;background:var(--wpb-theme-card)}
 .wpb-program-review-row{padding:12px 0;border-top:1px solid var(--pi-color-divider);overflow-wrap:anywhere}

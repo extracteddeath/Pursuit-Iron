@@ -16,3 +16,16 @@
 **Visual improvement criterion:** a real recovery affordance and roomier, consistent touch targets—not a CSS-only reshuffle. Focus ring, title, and card hierarchy must remain legible at compact 320px and 200% text; all search, week and filter behavior stays view-local. **No engine/load/persistence change.**
 
 **Release gate:** Keep this work on a draft PR until source and seven Chromium shards pass. Release identity and offline cache must be regenerated only after UI verification; physical Android/TalkBack/IME sign-off is separately required for public launch.
+
+
+## Passes 67–73: Plan review comprehension and verified scope
+
+| Spec clause | Concrete change | Evidence | Status |
+|---|---|---|---|
+| §7.9 What changes | One-set load comparisons now appear directly on Plan change cards, with no disclosure required. Multi-set comparisons remain grouped under native details; never duplicate the same comparison twice. | B999 source + 320px/200%-type browser asserts 180→185 lb before opening details | Await exact-head CI |
+| §7.9 Why | Short disclosure **Why this change?** preserves explainable source and supporting details without crowding the initial view. | Existing B999 disclosure/keyboard and new direct-before-drawer checks | Await exact-head CI |
+| §7.9 When/where | Plan review says **Upcoming workout only**; Program rebuild says **After you choose Apply changes**. | Source contracts and B999 browser text check | Await exact-head CI |
+| §7.9 What stays intact | Plan review expressly names completed history, Program rebuild names completed workouts and the restorable previous layout. | B999 source + existing revision snapshot contract | Await exact-head CI |
+| §§6,9.2,14 Purpose/clarity | Rebuild now shows a compact, four-part impact summary, based on the actual `reviewProgramChanges().count`, rather than repeating a generic paragraph. | B999 source guards; existing Program revision browser checks | Await exact-head CI |
+
+**Bounded scope:** Presentation-only. The Plan `onChoice` delegate and Program rebuild `onApply` action, snapshot and failure handling are unchanged. Do not claim a 14/14 score without images/Android testing.

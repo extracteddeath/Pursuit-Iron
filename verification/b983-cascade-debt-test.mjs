@@ -45,13 +45,15 @@ const searchRecoveryRule='#root .wpb .wpb-progression-search-row{display:flex;al
 const searchClearRule='#root .wpb .wpb-progression-search-clear:disabled{visibility:hidden}';
 assert.ok(css.includes(searchRecoveryRule)&&css.includes(searchClearRule),
   'New search UI must use only its two named compact presentation owners');
-assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').length<=637454,
+const reviewScopeRule="#root .wpb .wpb-program-review-scope{display:grid;gap:var(--pi-space-2);margin:var(--pi-space-3) 0}\n#root .wpb .wpb-program-review-scope p{display:grid;gap:2px;margin:0;font-size:var(--pi-type-support);line-height:1.45;overflow-wrap:anywhere}\n#root .wpb .wpb-program-review-scope strong{color:var(--wpb-theme-muted);font-size:var(--pi-type-label)}\n";
+assert.ok(css.includes(reviewScopeRule), 'Compact program-impact grid must use a single named semantic style owner');
+assert.ok(css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').length<=637454,
   'Shared Program sheet chrome must not grow stylesheet debt');
 assert.ok((app.match(/style: \{/g)||[]).length<=1095,
   'Do not restore inline Workout geometry to replace deleted CSS');
 assert.ok(app.includes('copyProgressionDiagnostics = async () =>') &&
   app.includes('canonicalExerciseIncrement(program.exLoadInc?.[ex.id], unit)'),
   'Build 996 diagnostics and physical loading-step repairs must survive UI integration');
-assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').length<=2668657,
+assert.ok(app.length+css.replace(viewportFix,'').replace(searchRecoveryRule,'').replace(searchClearRule,'').replace(reviewScopeRule,'').length<=2668657,
   'Combined App and stylesheet must not grow after sheet-chrome consolidation');
 console.log('PASS B983: one canonical role per material, superseded CSS retired and priority/size budgets lowered.');

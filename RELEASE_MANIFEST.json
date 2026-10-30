@@ -2,10 +2,10 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 994,
+  "build": 995,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
-  "runtimeAggregate": "0601e6eb0b3d3eefb64294302aad1fb46523fe4f866ab649a81f4d2c7e3e337c",
+  "runtimeAggregate": "327fcab44b2ae2d2daf5c9287a02b752efff0d70d4855301197e066a043389b6",
   "runtimeFiles": {
     "modules/app-storage-ownership.js": "765ef4d37d4f73967fee7ef1942de229e905e112c7735b53de86a8e7106b3e39",
     "modules/backup-restore-panel.js": "194d953c2478a300c21e303c19fd7dd27ac436ddef21bcacaa7b8299d60123df",
@@ -57,7 +57,7 @@
     "modules/next-engine/method-policy.js": "b5b0a4f214c768ab76050d3daad56f0afea0b533b0fea470859ef475ad16d828",
     "modules/next-engine/observed-volume-response.js": "ad63c6c1b3eefdc4a254b78bf3d0f54bce487b0b4c111e352a1d7107f11f2dff",
     "modules/next-engine/percentage-protocols.js": "6898b022d081d4bab891cc32de5b321be944187f3d846dc69fb66f15c8d44f4b",
-    "modules/next-engine/performance.js": "fc3caf0431a5102557d93f40668279be0e2f2b105c848ad34c4f321c340f41b5",
+    "modules/next-engine/performance.js": "dd24be655a275b125386cde89f09e883cf0ace437db733a74dc7ebc534a1f21b",
     "modules/next-engine/phase-policy.js": "31770fb6bc4f3834acfc321e95206a9be384faa3731e97f60cec814cabd3150f",
     "modules/next-engine/phase-transition.js": "81d91bb067c575b9bd48aae9c74647af946f496ae0358b0d6b06d6bfe53e5b05",
     "modules/next-engine/prescription.js": "635f5a313c2833c143073b88fffc59561a42d6d19be6e82a46b3c2f9baec4eb8",
@@ -141,7 +141,7 @@
     "vendor/react-shared-JU7Z5GYC.js": "b8893896e31178fb4c8c0ce42cae975bec57bb70596c012d5d5c439cd20717d8",
     "vendor/react-shared-V673FGIV.js": "591c4bd8b0aae646cba73ca7ac17a2c2c950bdbaf288529ea14b691f2a4a9f22",
     "vendor/react.js": "24b2d220a5b2637cf3fb78fe0d961f227ea0a4b960485dbfb03c9d276e72147c",
-    "modules/next-engine/workout-replay.js": "79be7cf86b0cd4d44768cbf92717381b8c7a6723f1e6a174a51f48a0f867f25f"
+    "modules/next-engine/workout-replay.js": "69c6cda490581e1e8b7aebe39a7562bebca5b4433e236ed4fb9c98de69b30bbe"
   },
   "localCandidate": {
     "name": "Pursuit Iron 4.0 · M234 Candidate Selection Hardening",
@@ -149,10 +149,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "17269013174107f592a76841c8cfaa663c02c0c42128c032a049d784de186407",
-    "index.html": "929c4c1bb8dd29122443c92f94649cfcc4e021988d0f6ca5ee75185868cc0352",
-    "sw.js": "b90b65a0aee128ee385f7bea5862f64f943599f376001dfbf960ea67ffd1fe14",
-    "BUILD_PROFILE.json": "6f7ac1bf560d2256eb13b21f437ab606f1bb4d4746ab2d02fd2429b60bc1fa9f",
+    "modules/App.js": "bc1f0efb5c2abf614f8bfb3dd02539334c6498432455db4ab4d73630e7c27351",
+    "index.html": "7a2d0b901fd93f5dfcd2c134a8bcfb0edbc67b030fcdc2ccdc8348f7b52ae3d9",
+    "sw.js": "cf9054ba729618acc66305d0ea928d2df8414851a364fd687afc1c658ced4f6a",
+    "BUILD_PROFILE.json": "ea213abf4a521bc8c010dfebf7cb330ad03fd3e009ffcd419405da0ab85b0ed8",
     "CHANGELOG.md": "79ca5451b4bc350612c3f63d511054acaa42552e94b93676df9513ba2e261f52",
     "app.css": "763e474dd9a7a75c3f00e422962cdd8b4820f4dd2e05276d79c30e6b046be09e",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -161,6 +161,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b994-ra04fe0f0ec56495c",
-  "uiMilestone": "Build 994 · Evidence-bound live adjustments and workout replay"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b995-rb428cf9501392464",
+  "uiMilestone": "Build 995 · Comparable set counts and verified progression replay"
 }

@@ -209,6 +209,34 @@ export const rearHistory = [{id:'b1002-prior',programId:rearProgram.id,dayId:'up
     const { auditSetDecisionTraces } = await import('../modules/training-domain/prescriptions.js');
     assert.deepEqual(auditSetDecisionTraces(rows),[],
         'Real screenshot rows must pass the same per-set provenance audit as full lifecycle');
+    // The exported replay captures ACTUAL workout rows (not a parallel evaluator fixture)
+    // and intentionally cannot leak notes or profile fields.
+    const { captureWorkoutProgressionReplay, auditWorkoutProgressionReplay } =
+        await import('../modules/next-engine/workout-replay.js');
+    const captured=captureWorkoutProgressionReplay({program:rearProgram,
+        day:rearProgram.days[0],row:{id:'rear-fly',slot:0,note:'DO NOT EXPORT',
+            sets:rows.map(row=>({...row,note:'DO NOT EXPORT'}))},
+        suggestion:advice,cell:computeCell(rearProgram,rearProgram.days[0],'rear-fly',0,1),
+        history:[{...prior[0],note:'DO NOT EXPORT',perf:{'rear-fly':{
+            ...prior[0].perf['rear-fly'],note:'DO NOT EXPORT'}}}],
+        weekIndex:1,unit:'lb',readiness:{factor:1}});
+    assert.equal(captured.kind,'pursuit-iron-progression-replay');
+    assert.equal(captured.rows.length,3);
+    assert.deepEqual(captured.rows.map(row=>row.trace.source.load),[60,60,60]);
+    assert.deepEqual(auditWorkoutProgressionReplay(captured),[],
+        'Valid 60×20 to 60×21 session has no contradictory prescription evidence');
+    assert.ok(!JSON.stringify(captured).includes('DO NOT EXPORT'),
+        'User notes must not leak through the opted-in progression report');
+    const injected=JSON.parse(JSON.stringify(captured));
+    injected.rows[2].load=55;
+    assert.ok(auditWorkoutProgressionReplay(injected)
+        .some(issue=>issue.code==='unexplained_pending_load'&&issue.workingSetIndex===2),
+        'The diagnostic must catch an unexplained automatic 55-lb third set');
+    const manual=JSON.parse(JSON.stringify(injected));
+    manual.rows[2].owner='user';
+    assert.ok(!auditWorkoutProgressionReplay(manual)
+        .some(issue=>issue.code==='unexplained_pending_load'),
+        'User-entered loads are not falsely classified as engine changes');
     const corrupted = rows.map((row,i) => i===2 ? {...row,target:{...row.target,
         decisionTrace:{...row.target.decisionTrace,target:{...row.target.decisionTrace.target,load:55}}}} : row);
     assert.ok(auditSetDecisionTraces(corrupted).some(x=>x.code==='unearned_load_change'),

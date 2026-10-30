@@ -45,6 +45,27 @@ try {
     const rearLast=await page.$$eval(rearWork, nodes=>nodes.map(node=>node.textContent));
     assert.equal(rearLast.length,3);
     for(const row of rearLast)assert.match(row,/60×20/,'visible LAST must match the same three history rows');
+    // Exercise a real opt-in export from the Workout menu, without writing any
+    // file or accessing the device's real clipboard in headless Chrome.
+    await page.evaluate(()=>{
+        Object.defineProperty(navigator,'clipboard',{configurable:true,value:{
+            writeText:async content=>{window.__progressionReplay=JSON.parse(content);}
+        }});
+    });
+    await page.click('button[aria-label="Workout options"]');
+    const diagnosticAction=await page.$('button');
+    let actionFound=false;
+    for(const action of diagnosticAction) {
+        const matches=await action.evaluate(node=>node.textContent?.includes('Copy progression diagnostics'));
+        if(matches){await action.click();actionFound=true;break;}
+    }
+    assert.ok(actionFound,'Workout options must expose an explicit diagnostic export action');
+    await page.waitForFunction(()=>window.__progressionReplay?.kind==='pursuit-iron-progression-replay');
+    const replay=await page.evaluate(()=>window.__progressionReplay);
+    assert.deepEqual(replay.rows.filter(row=>row.kind==='work').map(row=>row.load),[60,60,60]);
+    assert.deepEqual(replay.rows.filter(row=>row.kind==='work').map(row=>row.trace?.source?.load),[60,60,60]);
+    assert.ok(!JSON.stringify(replay).includes('Seat on 5'),
+        'Pinned setup and free-text notes must not be included in the support export');
     await page.screenshot({path:path.join(root,'verification/b1002-rear-fly-phone.png')});
     await open('?rear&resume');
     assert.deepEqual(await page.$$eval(`${rearWork} input[aria-label="weight"]`,nodes=>nodes.map(node=>node.value)),

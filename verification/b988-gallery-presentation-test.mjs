@@ -11,7 +11,11 @@ for(const name of ['chip','header','message','retry','program','coached','tag','
  assert.equal(css.split('#root .wpb .wpb-gallery-'+name+'{').length-1,1,
    'Gallery '+name+' CSS has one owner');
 }
-assert.ok(gallery.includes('"aria-pressed": active'),'Filter state must be accessible');
+assert.ok(gallery.includes('const Chip = ({ active, onClick, children }) => (_jsx(UiChoice,') &&
+    gallery.includes('selected: active'), 'Gallery filters must inherit UiChoice aria-pressed and theme states');
+assert.ok(gallery.includes('role: "group"') && gallery.includes('"Training days filter"'),
+    'Separate filter dimensions must have accessible group names');
+assert.ok(!css.includes('.wpb-gallery-chip--selected{'), 'Gallery selected-state paint belongs to the shared choice');
 assert.ok(gallery.includes('disabled: res && res.ok'),'Imported programs must prevent duplicate actions');
 assert.ok(gallery.includes('setRetryKey(k => k + 1)'),'Offline retry stays functional');
 const scope=css.slice(css.indexOf('/* B988 — Gallery'),css.indexOf('/* B991: Workout/Program header'));

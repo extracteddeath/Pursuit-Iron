@@ -53,7 +53,7 @@ try{
  assert.equal(await page.$eval('.wpb-exinfo-sheet',e=>e.getAttribute('aria-modal')),'true');
  assert.ok(await page.$eval('.wpb-exinfo-close',e=>document.activeElement===e),'opening places focus on Close');
  const summary=await page.$('.wpb-exinfo-why-disclosure');
- if(summary)assert.ok(await summary.evaluate(e=>e.getBoundingClientRect().height>=44),'Explanation disclosure must be 44px tall');
+ if(summary)assert.ok(await summary.evaluate(e=>e.getBoundingClientRect().height>=48),'Explanation disclosure must meet the 48px touch target');
  await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');
  const trapped=await page.$eval('.wpb-exinfo-sheet',sheet=>{
   const elements=[...sheet.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),summary,a[href]')]

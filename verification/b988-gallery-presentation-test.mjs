@@ -14,8 +14,12 @@ for(const name of ['chip','header','message','retry','program','coached','tag','
 assert.ok(gallery.includes('"aria-pressed": active'),'Filter state must be accessible');
 assert.ok(gallery.includes('disabled: res && res.ok'),'Imported programs must prevent duplicate actions');
 assert.ok(gallery.includes('setRetryKey(k => k + 1)'),'Offline retry stays functional');
-const scope=css.slice(css.indexOf('/* B988 — Gallery'));
+const scope=css.slice(css.indexOf('/* B988 — Gallery'),css.indexOf('/* B991: Workout/Program header'));
 assert.ok(!scope.includes('!important'),'No new CSS priority overrides');
-assert.ok(scope.includes('min-height:44px')&&scope.includes('min-height:48px'),'Touch targets remain usable');
+for(const name of ['chip','retry','import']){
+ const rule=css.split('#root .wpb .wpb-gallery-'+name+'{')[1]?.split('}')[0]||'';
+ assert.ok(rule.includes('min-height:48px'),'Gallery '+name+' has a 48px effective touch minimum');
+}
+assert.ok(!scope.includes('min-height:44px'),'Gallery must not reintroduce undersized actions');
 assert.ok((app.match(/style: \{/g)||[]).length<=1203,'Inline debt budget cannot grow');
 console.log('PASS B988: Gallery accessibility, styling ownership, import and offline retry');

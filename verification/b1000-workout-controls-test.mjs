@@ -9,6 +9,10 @@ assert.ok(css.includes('.wpb-working-set-stepper input{width:clamp(56px,4rem,88p
     'typed multi-digit set counts must remain legible at 200% Android font scaling');
 assert.ok(css.includes('font-size:1.25rem;font-weight:700;box-sizing:border-box'),
     'the numeric stepper scales with accessible text size');
+for (const prefix of [
+    'button[aria-label^="Edit pinned note for "]{\n  box-sizing:border-box;\n  min-height:48px!important;',
+    'button[aria-label^="Edit pinned note for "]{\n  min-height:48px!important;'
+]) assert.ok(css.includes(prefix),'Workout pinned-note actions retain a shared 48px minimum in both theme scopes');
 assert.ok(css.includes('.wpb-ex-nav-count{flex-shrink:0;font-size:.6875rem;font-weight:600}'),
     'workout navigation counts do not pin text to tiny pixel sizes');
 assert.ok(source.includes('const reveal = () =>') && source.includes("observer.observe(active)"),

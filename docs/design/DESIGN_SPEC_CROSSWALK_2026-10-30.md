@@ -62,3 +62,12 @@
 | §§5,10 keyboard and responsive stability | Existing themed summary controls (≥48px) and no horizontal overflow at 320px/200% text; no new action or CSS owner | B998 browser and Home entry hierarchy | Exact-head CI required |
 
 **Source of truth:** Live `review.exercises[].effective`, `protocol.type`, `opportunity` and classified `changes`, never a second prescription model. All changes are within the shared `modules/plan-session-surfaces.js` presentation owner, with **no app CSS, motion, engine, history or persistence changes**. CI and physical-device evidence remain distinct requirements.
+
+
+### Passes 102–106 — remaining action touch targets (spec §§4.1.4,5.2,6,7.3,10,12)
+- **102:** Workout's pinned-note edit action now has a 48px minimum in both its theme-scoped and shared declarations (previously 44px); no new override or note behavior change.
+- **103:** The actual Workout Info **Why** disclosure summary now has a 48px minimum instead of 44px. Existing native disclosure, focus/close, explanation and rest writers are unchanged.
+- **104:** Gallery filter and retry actions are 48px tall, matching the already-48px import action. All original filter, offline retry and import guards remain unchanged.
+- **105:** Expanded B1000/B993 browser and source checks to measure pinned-note and explanation summary geometry at enlarged text, while preserving the existing navigation and Info keyboard journey.
+- **106:** Corrected the B988 no-`!important` guard to inspect only the Gallery's own CSS region, not every later module's stylesheet, and ratcheted exact chip/retry/import minima to 48px.
+- **Scope:** Five CSS declaration values changed from 44px to 48px, with no CSS byte growth, new `!important`, inline styling, engine/logging/state changes or build bump. Keep draft PR #420; run full exact-head CI and real Android visual/IME checks before merge or release. This is not a screen-level 14/14 certification.

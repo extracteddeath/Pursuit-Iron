@@ -4297,7 +4297,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root[data-pi-motion="expressive"] .wpb-workout .wpb-workout-scroll>
   button[aria-label^="Edit pinned note for "]{
   box-sizing:border-box;
-  min-height:44px!important;
+  min-height:48px!important;
   margin-bottom:7px!important;
   padding:8px 10px!important;
   border:1px solid color-mix(in srgb,var(--pi-m3e-primary) 24%,transparent)!important;
@@ -6939,7 +6939,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   outline-offset:2px!important;
 }
 #root .wpb-workout .wpb-workout-scroll>button[aria-label^="Edit pinned note for "]{
-  min-height:44px!important;
+  min-height:48px!important;
   margin-bottom:9px!important;
   padding:8px 11px!important;
   border-radius:12px!important;
@@ -9952,7 +9952,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(prefers-reduced-motion:reduce){#root .wpb .wpb-strength-detail{animation:none}}
 
 /* B988 — Gallery: semantic M3 filter states, large touch targets, CSS-owned UI. */
-#root .wpb .wpb-gallery-chip{flex-shrink:0;padding:6px 12px;min-height:44px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-muted)}
+#root .wpb .wpb-gallery-chip{flex-shrink:0;padding:6px 12px;min-height:48px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-muted)}
 #root .wpb .wpb-gallery-chip--selected{border-color:var(--wpb-theme-accent);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-gallery-header{position:sticky;top:0;z-index:10;background:var(--wpb-theme-bg);border-bottom:1px solid var(--wpb-theme-border);padding:12px 16px;display:flex;align-items:center;gap:12px}
 #root .wpb .wpb-gallery-title{font-size:18px;font-weight:800;letter-spacing:-.3px;color:var(--wpb-theme-text)}
@@ -9960,7 +9960,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-gallery-message{margin-top:20px;border-radius:12px;background:var(--wpb-theme-card);padding:20px 18px;text-align:center}
 #root .wpb .wpb-gallery-message-title{font-size:15px;font-weight:700;color:var(--wpb-theme-text);margin-bottom:4px}
 #root .wpb .wpb-gallery-message-text{font-size:13px;color:var(--wpb-theme-muted);line-height:1.5}
-#root .wpb .wpb-gallery-retry{margin-top:14px;min-height:44px;padding:10px 16px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card-high);color:var(--wpb-theme-text);font-size:14px;font-weight:700;cursor:pointer}
+#root .wpb .wpb-gallery-retry{margin-top:14px;min-height:48px;padding:10px 16px;border-radius:12px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card-high);color:var(--wpb-theme-text);font-size:14px;font-weight:700;cursor:pointer}
 #root .wpb .wpb-gallery-empty-text{font-size:13px;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-gallery-count{font-size:13px;color:var(--wpb-theme-faint);margin-bottom:8px}
 #root .wpb .wpb-gallery-no-match{padding:32px 0;text-align:center;color:var(--wpb-theme-muted);font-size:13px}
@@ -10011,7 +10011,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb :is(.wpb-exinfo-why-copy,.wpb-exinfo-cue-copy){font-size:13px;color:var(--wpb-theme-text);overflow-wrap:anywhere}
 #root .wpb .wpb-exinfo-why-copy{line-height:1.45}
 #root .wpb .wpb-exinfo-why-chip{font-size:11px;font-weight:700;color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-bg-tint);padding:4px 7px;border-radius:8px}
-#root .wpb .wpb-exinfo-why-disclosure{cursor:pointer;color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:700;padding:8px 0;min-height:44px;display:list-item}
+#root .wpb .wpb-exinfo-why-disclosure{cursor:pointer;color:var(--wpb-theme-accent-ink);font-size:12px;font-weight:700;padding:8px 0;min-height:48px;display:list-item}
 #root .wpb .wpb-exinfo-muted{color:var(--wpb-theme-muted)}
 #root .wpb .wpb-exinfo-rest-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:var(--wpb-theme-card);border-radius:12px;padding:10px 12px;margin-bottom:12px;min-width:0}
 

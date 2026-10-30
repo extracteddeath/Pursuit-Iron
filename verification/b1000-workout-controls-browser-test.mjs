@@ -15,6 +15,7 @@ const fixture=[
 "const rows=Array.from({length:18},()=>({id:'bb-bench',sets:[]}));",
 "return React.createElement('main',{className:'wpb wpb-workout'},",
 "React.createElement(WorkoutExerciseNav,{data:rows,exIdx:index,onSelect:setIndex}),",
+"React.createElement('div',{className:'wpb-workout-scroll'},React.createElement('button',{type:'button',className:'wpb-workout-pinned-note','aria-label':'Edit pinned note for Bench'},'Pinned setup note')),"
 "React.createElement(WorkingSetCountControl,{label:'Working sets',value:count,onChange:setCount}));}",
 "createRoot(document.getElementById('root')).render(React.createElement(Demo));"
 ].join('\n');
@@ -59,13 +60,14 @@ try {
         const input=document.querySelector('.wpb-working-set-stepper input');
         const buttons=[...document.querySelectorAll('.wpb-working-set-stepper button')];
         const nav=document.querySelector('.wpb-ex-nav-step').getBoundingClientRect();
+        const pinned=document.querySelector('.wpb-workout-pinned-note').getBoundingClientRect();
         const inputRect=input.getBoundingClientRect();
         return {inputWidth:inputRect.width,fontSize:parseFloat(getComputedStyle(input).fontSize),
             buttonSizes:buttons.map(el=>el.getBoundingClientRect().height),
-            navHeight:nav.height,pageWidth:document.documentElement.scrollWidth,viewport:innerWidth};
+            navHeight:nav.height,pinnedHeight:pinned.height,pageWidth:document.documentElement.scrollWidth,viewport:innerWidth};
     });
-    assert.ok(scaled.navHeight>=48&&scaled.buttonSizes.every(size=>size>=48),
-        'scaled workout navigation and steppers retain touch targets: '+JSON.stringify(scaled));
+    assert.ok(scaled.navHeight>=48&&scaled.pinnedHeight>=48&&scaled.buttonSizes.every(size=>size>=48),
+        'scaled Workout navigation, pinned note and steppers retain touch targets: '+JSON.stringify(scaled));
     assert.ok(scaled.inputWidth>=56&&scaled.fontSize>=38,
         'two digit input stays legible at 200% text: '+JSON.stringify(scaled));
     assert.ok(scaled.pageWidth<=321,'only navigation rail scrolls, not the whole screen: '+JSON.stringify(scaled));

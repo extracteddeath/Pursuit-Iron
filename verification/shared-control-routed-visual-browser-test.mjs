@@ -38,12 +38,12 @@ try{
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const origin='http://127.0.0.1:'+server.address().port+'/';
   for(const theme of ['rose','rosewater']){
-    for(const width of [320,393,834,1280]){
+    for(const [width,height] of [[320,740],[393,850],[834,850],[900,480],[1280,850]]){
       const context=await browser.createBrowserContext();
       const page=await context.newPage(),errors=[];
       page.on('pageerror',error=>errors.push(error.message));
       try{
-        await page.setViewport({width,height:width===320?740:850,
+        await page.setViewport({width,height,
           deviceScaleFactor:1,isMobile:width<=393,hasTouch:width<=393});
         await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
         await page.evaluateOnNewDocument(seed=>
@@ -69,7 +69,7 @@ try{
         assert.ok(nav.every(row=>row.height>=48) && nav.filter(row=>row.selected==='tonal').length===4 &&
           nav.some(row=>row.text.includes('Your gyms')&&row.selected==='text'),
           'Four standalone tonal actions and a contained text action retain 48px hit targets: '+JSON.stringify(nav));
-        if(width===320||width===834){
+        if(width===320||width===834||width===900){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-settings-top-${theme}-${width}.png`)});
         }
         // Inspect real routed fields, not only the isolated component fixture.
@@ -97,7 +97,7 @@ try{
           .find(el=>el.textContent.includes('Browse shared programs')));
         assert.ok(galleryButton.asElement(),'Settings gallery navigation is available');
         await galleryButton.asElement().evaluate(el=>el.scrollIntoView({block:'center'}));
-        if(width===320||width===834){
+        if(width===320||width===834||width===900){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-settings-actions-${theme}-${width}.png`)});
         }
         await galleryButton.asElement().click();
@@ -115,7 +115,15 @@ try{
         const picked=await page.$$eval('.wpb-gallery-chip',nodes=>
           nodes.filter(n=>n.getAttribute('aria-pressed')==='true').length);
         assert.ok(picked>=3,'Three Gallery filter dimensions expose selected state');
-        if(width===320||width===834){
+        const splitOptions=await page.$('div[role="group"][aria-label="Split filter"] .wpb-gallery-chip');
+        assert.ok(splitOptions.length>=2,'Real Gallery provides a non-All split choice');
+        await splitOptions[1].click();
+        assert.equal(await splitOptions[1].evaluate(el=>el.getAttribute('aria-pressed')),'true',
+          'Real Gallery filter announces the new selected choice');
+        await splitOptions[0].click();
+        assert.equal(await splitOptions[0].evaluate(el=>el.getAttribute('aria-pressed')),'true',
+          'Gallery All filter resets selected state');
+        if(width===320||width===834||width===900){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-gallery-${theme}-${width}.png`)});
         }
         const galleryLayout=await layout();

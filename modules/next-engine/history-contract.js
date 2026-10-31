@@ -35,11 +35,11 @@ export function previousWorkoutSet(perf, index) {
     // an earlier set was skipped. Never compress set 3 into the display for set 2.
     const completed = hasRows ? completedHistorySets(perf) : [];
     const positioned = completed.some(set => Number.isInteger(set.workingSetIndex) && set.workingSetIndex >= 0);
-    // Pre-index legacy snapshots sometimes retain an undone row or null placeholder.
+    // Pre-index legacy snapshots sometimes retain an unfinished working row.
     // Preserve its original working ordinal rather than compressing the completed
-    // list and displaying set 3 as the LAST value for skipped set 2. A snapshot
-    // that contains only completed rows still behaves as before.
-    const rawWorking = hasRows ? perf.sets.filter(set => !set || (!set.warm && !set.sub)) : [];
+    // list and displaying set 3 as LAST for skipped set 2. Malformed null rows
+    // still do not occupy working ordinals; completed-only history is unchanged.
+    const rawWorking = hasRows ? perf.sets.filter(set => set && !set.warm && !set.sub) : [];
     const row = hasRows ? positioned
         ? completed.find(set => set.workingSetIndex === index) : rawWorking[index]
         : perf ? { w: perf.weight, r: perf.reps, summary: true } : null;

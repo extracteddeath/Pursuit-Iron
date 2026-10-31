@@ -115,14 +115,18 @@ try{
         const picked=await page.$$eval('.wpb-gallery-chip',nodes=>
           nodes.filter(n=>n.getAttribute('aria-pressed')==='true').length);
         assert.ok(picked>=3,'Three Gallery filter dimensions expose selected state');
-        const splitOptions=await page.$$('div[role="group"][aria-label="Split filter"] .wpb-gallery-chip');
-        assert.ok(splitOptions.length>=2,'Real Gallery provides a non-All split choice');
-        await splitOptions[1].click();
-        assert.equal(await splitOptions[1].evaluate(el=>el.getAttribute('aria-pressed')),'true',
-          'Real Gallery filter announces the new selected choice');
-        await splitOptions[0].click();
-        assert.equal(await splitOptions[0].evaluate(el=>el.getAttribute('aria-pressed')),'true',
-          'Gallery All filter resets selected state');
+        // Data-driven Gallery only renders dimensions with at least two distinct values.
+        // Exercise the first visible filter row instead of assuming Split is always present.
+        const filterRow=await page.$('[role="group"][aria-label$="filter"]');
+        assert.ok(filterRow,'Gallery renders a named selectable filter dimension');
+        const filterOptions=await filterRow.$$('.wpb-gallery-chip');
+        assert.ok(filterOptions.length>=2,'A visible filter has an All and a specific choice');
+        await filterOptions[1].click();
+        assert.equal(await filterOptions[1].evaluate(el=>el.getAttribute('aria-pressed')),'true',
+          'Real Gallery announces selected choice in its visible filter row');
+        await filterOptions[0].click();
+        assert.equal(await filterOptions[0].evaluate(el=>el.getAttribute('aria-pressed')),'true',
+          'Real Gallery resets selection to All');
         if(width===320||width===834||width===900){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-gallery-${theme}-${width}.png`)});
         }

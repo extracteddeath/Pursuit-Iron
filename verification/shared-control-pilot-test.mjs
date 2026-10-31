@@ -47,7 +47,7 @@ assert.ok(settings.includes('className: "mono wpb-ui-control", style: { width: 1
 assert.ok(!settings.includes('colorScheme: "dark"'),'Reminder picker must respect theme and device color scheme');
 assert.ok(settings.includes('_jsxs(UiAction, { variant: "text", "data-align": "start", onClick: onGyms'),
  'Gyms row must use shared text action without nesting a second card');
-assert.ok(settings.includes('isSelected: v => (minInc.v || 0) === v && (v === 0 || minInc.unit === unit)'),
+assert.ok(settings.includes('value: minInc.v && minInc.unit !== unit ? null : (minInc.v || 0)'),
  'Smallest jump selected state remains scoped to selected weight unit');
 
 // Staged Program settings keep original writers/validation with shared footer actions.

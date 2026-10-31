@@ -14,6 +14,17 @@ const sourceSet = (set, fallbackIndex) => ({
     load: numeric(set?.w), reps: numeric(set?.r),
     reportedRir: observedHistoryRIR(set)
 });
+// Legacy history can retain an incomplete working row without workingSetIndex.
+// Match the Workout/LAST source-of-truth: count original working ordinals before
+// excluding incomplete observations. Null, warmup and extension rows are not
+// working positions. Compressing completed rows first falsely reassigns set 3
+// to set 2 and can make a replay audit certify an unearned load change.
+const positionedHistorySources = perf => {
+    const completed = new Set(completedHistorySets(perf));
+    return (Array.isArray(perf?.sets) ? perf.sets : [])
+        .filter(set => set && !set.warm && !set.sub)
+        .flatMap((set, index) => completed.has(set) ? [sourceSet(set, index)] : []);
+};
 const simplifiedTrace = value => value?.schemaVersion === 1 ? {
     schemaVersion: 1,
     workingSetIndex: ordinal(value.workingSetIndex),
@@ -62,7 +73,7 @@ export function captureWorkoutProgressionReplay({ program, day, row, suggestion,
         .sort((a, b) => Number(b.date || 0) - Number(a.date || 0)).slice(0, 8)
         .map(entry => ({
             weekIndex: ordinal(entry.weekIndex), unit: entry.unit === 'kg' ? 'kg' : 'lb',
-            sets: completedHistorySets(entry.perf[id]).map(sourceSet)
+            sets: positionedHistorySources(entry.perf[id])
         }));
     let workIndex = 0;
     const rows = row.sets.map((set, index) => {

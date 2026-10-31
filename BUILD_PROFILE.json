@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 74,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1005-r4ee18a94f5b4e526",
-  "uiMilestone": "Build 1005 · Preserve skipped legacy set positions"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1006-r679642c2d278ed8d",
+  "uiMilestone": "Build 1006 · Sparse historical progression replay parity"
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, computeCell, prescribeSets, EX_BY_ID, previousWorkoutSet } from '../modules/engine-api.js';
+import { sessionSuggestion, computeCell, prescribeSets, EX_BY_ID, previousWorkoutSet,
+    captureWorkoutProgressionReplay, auditWorkoutProgressionReplay } from '../modules/engine-api.js';
 import { retainDoubleProgressionSetLoads } from '../modules/training-domain/prescriptions.js';
 
 import { setExLoadInc } from '../modules/training-domain/records.js';
@@ -168,3 +169,74 @@ console.log('PASS M418 positional double holds: skipped working sets cannot shif
     assert.equal(previousWorkoutSet(withNull, 2), null);
 }
 console.log('PASS M418 unindexed legacy skips: positional LAST and evaluator cannot earn a false increase.');
+
+// M418 replay parity after B1005: prior workout history with an uncompleted
+// second set must keep indices 0,2,3 in a privacy-scoped support export.
+// A diagnostic must never compress later observations into false positions.
+{
+    const history = [{
+        id:'legacy-replay-gap', programId: program.id, dayId: program.days[0].id,
+        weekIndex:1, date:Date.now()+4, unit:'lb',
+        perf:{'back-squat':{ weight:215, reps:3, sets:[
+            {w:200,r:3,rir:0,done:true},
+            {w:205,r:0,done:false},
+            {w:210,r:2,rir:0,done:true},
+            {w:215,r:2,rir:0,done:true}
+        ]}}
+    }];
+    const before = structuredClone(history);
+    const suggestion = sessionSuggestion(program,program.days[0],0,null,'lb',1,history);
+    const liveSets = prescribeSets(program,program.days[0],EX_BY_ID['back-squat'],
+        0,1,'lb',suggestion,null,{},history,false);
+    assert.equal(liveSets.filter(row=>!row.warm&&!row.sub).length,3);
+    const replay = captureWorkoutProgressionReplay({
+        program,day:program.days[0],row:{id:'back-squat',slot:0,sets:liveSets},
+        suggestion,cell:computeCell(program,program.days[0],'back-squat',0,1),
+        history,weekIndex:1,unit:'lb',readiness:{factor:1}
+    });
+    assert.deepEqual(replay.history[0].sets.map(row=>row.setIndex),[0,2,3],
+        'Replay must not compress historical 0,2,3 into 0,1,2');
+    assert.deepEqual(replay.history[0].sets.map(row=>row.load),[200,210,215]);
+    assert.deepEqual(auditWorkoutProgressionReplay(replay),[],
+        'Canonical Workout targets must agree with original history positions');
+    const corrupt = structuredClone(replay);
+    // Simulate an app mistakenly importing the fourth historical load as
+    // today's third prescription. Make all local traces self-consistent;
+    // independent historical replay must still reject this forgery.
+    const row = corrupt.rows[2];
+    row.load=215;row.target.load=215;
+    if (row.trace) row.trace.target.load=215;
+    if (corrupt.suggestion.setTargets?.[2]) corrupt.suggestion.setTargets[2].load=215;
+    const errors = auditWorkoutProgressionReplay(corrupt);
+    assert.ok(errors.some(issue=>issue.code==='unearned_double_progression_history_load'
+        && issue.workingSetIndex===2 && issue.previousLoad===210
+        && issue.proposedLoad===215),
+        'Replay audit must independently catch the false later-set load');
+    assert.deepEqual(history,before,'History capture and audit must never mutate saved observations');
+
+    // Modern sparse saves already carry explicit ordinals and must keep them.
+    const indexed = structuredClone(history);
+    indexed[0].perf['back-squat'].sets = [
+        {w:200,r:3,done:true,workingSetIndex:0},
+        {w:210,r:2,done:true,workingSetIndex:2},
+        {w:215,r:2,done:true,workingSetIndex:3}
+    ];
+    const modern = captureWorkoutProgressionReplay({
+        program,day:program.days[0],row:{id:'back-squat',slot:0,sets:liveSets},
+        suggestion,cell:computeCell(program,program.days[0],'back-squat',0,1),
+        history:indexed,weekIndex:1,unit:'lb',readiness:{factor:1}
+    });
+    assert.deepEqual(modern.history[0].sets.map(row=>row.setIndex),[0,2,3],
+        'Modern explicit workingSetIndex remains authoritative');
+
+    const malformed = structuredClone(history);
+    malformed[0].perf['back-squat'].sets.splice(1,0,null);
+    const legacyNull = captureWorkoutProgressionReplay({
+        program,day:program.days[0],row:{id:'back-squat',slot:0,sets:liveSets},
+        suggestion,cell:computeCell(program,program.days[0],'back-squat',0,1),
+        history:malformed,weekIndex:1,unit:'lb',readiness:{factor:1}
+    });
+    assert.deepEqual(legacyNull.history[0].sets.map(row=>row.setIndex),[0,2,3],
+        'Malformed nulls do not count as completed or pending working positions');
+}
+console.log('PASS M418 replay provenance: sparse legacy and modern positions, negative audit and immutable history.');

@@ -64,7 +64,8 @@ try{
           return {text:node.textContent.trim(),height:rect.height,width:rect.width,
             selected:node.getAttribute('data-action')};
         }));
-        assert.equal(nav.length,4,'Four migrated Settings destination actions are rendered; the legacy Gyms row is separate');
+        assert.equal(nav.length,5,'All five Settings destinations use the same shared action');
+        assert.ok(nav.some(row=>row.text.includes('Your gyms')),'Gym navigation keeps its reachable entry point');
         assert.ok(nav.every(row=>row.height>=48&&row.selected==='tonal'),
           'Shared Settings navigation has consistent real hit targets: '+JSON.stringify(nav));
         if(width===320||width===834){

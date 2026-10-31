@@ -766,20 +766,34 @@ function engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, h
 // history) so a stale per-set tuner cannot turn 60x20 into an unsolicited 55x21.
 // Explicitly earned increases, recovery corrections and user-held reviews have
 // separate owners and must not be converted into ordinary holds here.
+// Preserve actual working-set identity even when set 2 was skipped but set 3
+// was logged. A filtered completed-set array is NOT indexed by prescribed row.
+function positionedPriorLoads(perf, count, ex, fromUnit, toUnit) {
+    return Array.from({ length: count }, (_, index) => {
+        const observed = previousWorkoutSet(perf, index);
+        const converted = observed && convertHistoryLoad(observed.w, fromUnit, toUnit);
+        return ex && converted > 0 ? loadableAtOrBelow(ex, converted, toUnit) : null;
+    });
+}
+
 export function retainDoubleProgressionSetLoads(suggestion, previousLoads) {
     if (!suggestion || !['add_reps', 'hold', 'hold_load'].includes(suggestion.action)
         || !Array.isArray(suggestion.setTargets) || !Array.isArray(previousLoads)
         || !previousLoads.length || suggestion.setTargets.length !== previousLoads.length
-        || !previousLoads.every(w => Number.isFinite(w) && w > 0))
+        || !previousLoads.some(w => Number.isFinite(w) && w > 0))
         return suggestion;
+    // A missing historical position has no earned hold load. Keep its existing
+    // proposed target, but never copy a later completed set into that position.
     const corrected = suggestion.setTargets.map((target, index) => ({
-        ...target, weight: previousLoads[index]
+        ...target, weight: Number.isFinite(previousLoads[index]) && previousLoads[index] > 0
+            ? previousLoads[index] : target.weight
     }));
+    const first = corrected[0]?.weight ?? suggestion.weight;
     const sameTargets = corrected.every((target, index) =>
-        Number(suggestion.setTargets[index]?.weight) === target.weight);
-    if (sameTargets && Number(suggestion.weight) === previousLoads[0])
+        Number(suggestion.setTargets[index]?.weight) === Number(target.weight));
+    if (sameTargets && Number(suggestion.weight) === Number(first))
         return suggestion;
-    return { ...suggestion, weight: previousLoads[0], dir: 'hold', setTargets: corrected,
+    return { ...suggestion, weight: first, dir: 'hold', setTargets: corrected,
         traceAdjustments: [...(suggestion.traceAdjustments || []), 'unearned_load_drop_prevented'] };
 }
 
@@ -795,12 +809,11 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
         const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
         const style = ex && resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, dayPerf, history, day.id);
         const historyUnit = suggestion.lastUnit || unit;
-        const loads = ex ? completedHistorySets(suggestion.last)
-            .map(row => convertHistoryLoad(row.w, historyUnit, unit))
-            .filter(w => Number.isFinite(w) && w > 0)
-            .map(w => loadableAtOrBelow(ex, w, unit)) : [];
+        const count = suggestion.setTargets?.length ?? (ex ? Number(computeCell(program, day, ex.id, slot, weekIndex)?.sets) || 0 : 0);
+        const loads = ex ? positionedPriorLoads(suggestion.last, count, ex, historyUnit, unit) : [];
+        const observedLoads = loads.filter(w => Number.isFinite(w) && w > 0);
         const summary = convertHistoryLoad(suggestion.last?.weight, historyUnit, unit);
-        const fallback = loads.length ? Math.min(...loads)
+        const fallback = observedLoads.length ? Math.min(...observedLoads)
             : ex && Number(summary) > 0 ? loadableAtOrBelow(ex, Number(summary), unit) : 0;
         const heldTargets = suggestion.setTargets?.map((target, index) => ({
             ...target, weight: loads[index] || fallback, earnedLoadIncrease: false
@@ -822,9 +835,8 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
         const style = ex && resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, dayPerf, history, day.id);
         if (style === 'double') {
             const fromUnit = suggestion.lastUnit || unit;
-            const previousLoads = completedHistorySets(suggestion.last)
-                .map(row => convertHistoryLoad(row.w, fromUnit, unit))
-                .map(w => w > 0 ? loadableAtOrBelow(ex, w, unit) : null);
+            const previousLoads = positionedPriorLoads(suggestion.last,
+                suggestion.setTargets?.length ?? 0, ex, fromUnit, unit);
             suggestion = retainDoubleProgressionSetLoads(suggestion, previousLoads);
         }
     }

@@ -61,6 +61,11 @@ assert.ok(gallery.includes('setResults(prev => ({ ...prev, [e.code]: r }))'), 'I
 assert.ok(!gallery.includes('wpb-gallery-chip--selected'), 'No duplicate Gallery selected-paint owner');
 assert.ok(!css.includes('.wpb-gallery-chip--selected{'), 'Shared choice handles selected paint');
 
+assert.ok(gallery.includes('className: "wpb-ui-card wpb-gallery-program"'),
+ 'Gallery card paint delegates to the shared surface role');
+assert.ok(css.includes('#root .wpb .wpb-gallery-program{padding:15px 15px 13px}'),
+ 'Gallery retains only feature-specific card inset geometry');
+
 // Staged Program settings keep original writers/validation with shared footer actions.
 assert.ok(program.includes("import { UiAction, UiChoice, UiSheetClose }"));
 assert.ok(program.includes('_jsx(UiAction, { variant: "tonal", onClick: onClose, className: "wpb-program-settings-cancel"'));

@@ -22,7 +22,7 @@ const fixture=[
 "function Demo(){const [count,setCount]=React.useState('');window.setWorkingSets=setCount;",
 "const [a,setA]=React.useState(true);const [b,setB]=React.useState(false);",
 "const [choice,setChoice]=React.useState('first');const [exercise,setExercise]=React.useState(0);",
-"const choose=i=>{window.exerciseChanges.push(i);setExercise(i)};"
+"const choose=i=>{window.exerciseChanges.push(i);setExercise(i)};",
 "const review={exercises:[{id:'bench',slot:0,name:'Barbell Bench Press',cell:{sets:3,range:'8–10'}}]};",
 "return React.createElement('main',{className:'wpb'},",
 "React.createElement(WorkingSetCountControl,{value:count,onChange:setCount,label:'Working sets'}),",

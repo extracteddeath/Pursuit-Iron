@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { waitForRouteOrDiagnose } from './browser-route-diagnostics.mjs';
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 const program = { id: 'm219-ui', name: 'UI integration', custom: true, weeks: 4,
@@ -48,11 +49,11 @@ try {
     await page.waitForSelector('.wpb-tabbar');
     const settled = () => page.evaluate(() => Promise.allSettled(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished)));
     const clickText = text => page.$$eval('button', (buttons, label) => { const b = buttons.find(n => n.textContent.trim() === label); if (!b) throw new Error('Missing button: ' + label); b.click(); }, text);
-    await page.click('[data-tab="plan"]'); await page.waitForSelector('.wpb-plan-view');
+    await page.click('[data-tab="plan"]'); await waitForRouteOrDiagnose(page, '.wpb-plan-view', {label:'m219 Plan tab',errors});
     const standard = await page.$eval('[data-plan-week="1"]', n => n.textContent);
     await page.click('[data-tab="settings"]'); await clickText('Long');
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('wpb:v1')).restScale === 1.3);
-    await page.click('[data-tab="plan"]'); await page.waitForSelector('.wpb-plan-view');
+    await page.click('[data-tab="plan"]'); await waitForRouteOrDiagnose(page, '.wpb-plan-view', {label:'m219 Plan tab',errors});
     const longer = await page.$eval('[data-plan-week="1"]', n => n.textContent);
     assert.notEqual(longer, standard, 'Plan refreshes time after changing rest length');
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('wpb:v1')).saved), initial.saved, 'changing rest duration cannot rewrite training prescriptions');

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { waitForRouteOrDiagnose } from './browser-route-diagnostics.mjs';
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 // M3E 2026 design contract: colored surfaces stay tonal, never decorative
@@ -530,7 +531,7 @@ try {
         // Root tabs keep their navigation semantics, respond immediately, and settle without layout growth.
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
-            await page.waitForSelector(`[data-view-frame="${tab}"]`);
+            await waitForRouteOrDiagnose(page, `[data-view-frame="${tab}"]`, {label:'b831 navigation '+tab, errors});
             // Root frames are the stable render owner; data-pi-surface is reserved for actual
             // moving cards/sheets, not the entire route. Keep the entrance-count assertion below.
             // M377: ordinary root navigation must not set five cards moving.

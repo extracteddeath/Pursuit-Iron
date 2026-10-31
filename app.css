@@ -10149,9 +10149,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb :is(.pi-t-caption-f1,.pi-t-faint-auto,.pi-t-faint-mt2){color:var(--wpb-theme-faint)}
 #root .wpb :is(.pi-t-caption-f1,.pi-t-support-mt1){margin-top:1px}
 #root .wpb :is(.pi-t-muted-600,.pi-t-text-600,.pi-t-form-label,.pi-t-chart-label){font-weight:600}
-#root .wpb .pi-t-explain{font-size:var(--pi-type-label)}
-#root .wpb .pi-t-explain{line-height:1.4}
-#root .wpb .pi-t-explain{margin-bottom:8px}
+#root .wpb .pi-t-explain{font-size:var(--pi-type-label);line-height:1.4;margin-bottom:8px}
 #root .wpb :is(.pi-t-form-label,.pi-t-chart-label){margin-bottom:4px}
 #root .wpb :is(.pi-t-chart-label,.pi-t-support-mt1){font-size:var(--pi-type-support)}
 #root .wpb .pi-t-body-mb16{margin-bottom:16px}

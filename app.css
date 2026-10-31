@@ -7248,7 +7248,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B888: compact session choices and readable note editors share theme surfaces. */
 .wpb-session-context{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;flex-shrink:0}
 .wpb-session-context>button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:48px;padding:8px 12px;border-radius:14px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border:1px solid var(--wpb-theme-border);text-align:left}
-/* Workout rail: one theme owner, adaptable touch targets. */
+/* Workout rail. */
 #root .wpb-workout .wpb-ex-nav{
   display:flex;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;
   padding:2px 3px 4px!important;overscroll-behavior-x:contain;

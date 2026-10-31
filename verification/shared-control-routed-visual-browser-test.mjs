@@ -82,6 +82,33 @@ try{
         }));
         assert.ok(initialFields.every(field=>field?.shared&&field.height>=48&&field.font>=16),
           'Profile fields retain 48px native focus and at least 16px text: '+JSON.stringify(initialFields));
+        // Confirm the shared segmented primitive preserves six exclusive button groups,
+        // and that real preference setters still respond to interaction.
+        const segments=await page.$$eval('.wpb-settings .wpb-segmented',groups=>groups.map(g=>({
+          label:g.getAttribute('aria-label'),buttons:g.querySelectorAll('button').length,
+          active:g.querySelectorAll('button[aria-pressed="true"]').length
+        })));
+        assert.equal(segments.length,6,'All six Settings segmented groups share their original track');
+        assert.ok(segments.every(g=>g.label&&g.buttons>=2&&g.active===1),
+          'Each Settings segmented group stays an exclusive named choice: '+JSON.stringify(segments));
+        const effort='.wpb-settings .wpb-segmented[aria-label="Effort scale"] > button';
+        await page.click(effort+':nth-of-type(2)');
+        await page.waitForFunction(selector=>
+          document.querySelector(selector)?.getAttribute('aria-pressed')==='true',
+          {},effort+':nth-of-type(2)');
+        await page.click(effort+':nth-of-type(1)');
+        await page.waitForFunction(selector=>
+          document.querySelector(selector)?.getAttribute('aria-pressed')==='true',
+          {},effort+':nth-of-type(1)');
+        const jumps='.wpb-settings .wpb-segmented[aria-label="Smallest jump"] > button';
+        await page.click(jumps+':nth-of-type(2)');
+        await page.waitForFunction(selector=>
+          document.querySelector(selector)?.getAttribute('aria-pressed')==='true',
+          {},jumps+':nth-of-type(2)');
+        await page.click(jumps+':nth-of-type(1)');
+        await page.waitForFunction(selector=>
+          document.querySelector(selector)?.getAttribute('aria-pressed')==='true',
+          {},jumps+':nth-of-type(1)');
         const reminderToggle=await page.$('[aria-label="Training reminders"]');
         assert.ok(reminderToggle,'Reminder switch exists');
         if(await reminderToggle.evaluate(el=>el.getAttribute('aria-checked'))!=='true')
@@ -122,9 +149,11 @@ try{
         const filterOptions=await filterRow.$$('.wpb-gallery-chip');
         assert.ok(filterOptions.length>=2,'A visible filter has an All and a specific choice');
         await filterOptions[1].click();
+        await page.waitForFunction(el=>el.getAttribute('aria-pressed')==='true',{},filterOptions[1]);
         assert.equal(await filterOptions[1].evaluate(el=>el.getAttribute('aria-pressed')),'true',
           'Real Gallery announces selected choice in its visible filter row');
         await filterOptions[0].click();
+        await page.waitForFunction(el=>el.getAttribute('aria-pressed')==='true',{},filterOptions[0]);
         assert.equal(await filterOptions[0].evaluate(el=>el.getAttribute('aria-pressed')),'true',
           'Real Gallery resets selection to All');
         if(width===320||width===834||width===900){

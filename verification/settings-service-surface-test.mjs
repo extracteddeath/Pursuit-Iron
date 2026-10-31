@@ -15,5 +15,5 @@ assert.ok(service.includes('as: "a", href: SUPPORT_URL')&&service.includes('as: 
 assert.ok(service.includes('variant: "tonal", onClick: onShowWhatsNew'),'Changelog action keeps its callback');
 assert.ok(service.includes('mailto:'+'${BUG_EMAIL}'),'Bug report must preserve mailto subject/body');
 assert.ok(!service.includes('background: C.card') && !service.includes('borderRadius: 12'),'Old support-card inline painting must stay retired');
-assert.equal((css.match(/!important/g)||[]).length,2024,'No priority rules were added');
+assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No priority rules were added');
 console.log('PASS Settings presentation: 20 static inline styles migrated to shared owners.');

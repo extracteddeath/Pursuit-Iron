@@ -28,5 +28,5 @@ assert.ok(plan.includes('onClick: () => onOpenDay && onOpenDay(d.dayId, w.week)'
 assert.ok(plan.includes('role: "group"') &&
  plan.includes('pane === "schedule" && featuredWeek'),
  'Plan selected week and disclosure structure remain');
-assert.equal((css.match(/!important/g)||[]).length,2024,'No priority overrides added');
+assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No priority overrides added');
 console.log('PASS Plan shared utilities: five fixed presentations retired, navigation intact.');

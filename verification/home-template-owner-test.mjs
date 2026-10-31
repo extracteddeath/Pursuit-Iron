@@ -22,5 +22,5 @@ assert.ok(home.includes('onChange: e => setTplQuery(e.target.value)') && home.in
  'Search stays editable and named');
 assert.ok(!home.includes('chipStyle(on)') && !home.includes('const chipStyle = (on)'),
  'Browser filter styling must come from semantic state, not computed inline paint');
-assert.equal((css.match(/!important/g)||[]).length,2024,'No new priority overrides');
+assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No new priority overrides');
 console.log('PASS Home template owner: native actions, selected filters, dynamic callbacks, shared tokens.');

@@ -4,7 +4,7 @@ import { uiStyleBudget } from './ui-style-budgets.mjs';
 
 const css=fs.readFileSync('app.css','utf8');
 assert.equal(css.length,uiStyleBudget.cssCharacters,'CSS cap tracks the actual retired source');
-assert.equal((css.match(/!important/g)||[]).length,2024,'No loss or addition of priority declarations');
+assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No loss or addition of priority declarations');
 const checks=[
  ['.wpb-tabbar .wpb-tab::before','top:4px!important','display:block!important'],
  ['.wpb-day-card[data-next="true"]','background-image:none!important','background:var(--pi-color-card)!important'],

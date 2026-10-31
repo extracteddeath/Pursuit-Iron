@@ -1,3 +1,4 @@
+import { uiStyleBudget } from './ui-style-budgets.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { inspectCascade } from '../scripts/audit-css-cascade-ownership.mjs';
@@ -20,7 +21,7 @@ const result=inspectCascade(css);
 assert.equal(result.cssCharacters,css.length,'Source inventory measures current stylesheet');
 assert.ok(Number.isInteger(result.sharedDeclarationFamilyCount) &&
   result.sharedDeclarationFamilies.length<=40,'Shared-family inventory is bounded and measurable');
-assert.equal(result.priorityDeclarations,2024,'No new CSS priority debt');
+assert.ok(result.priorityDeclarations <= uiStyleBudget.cssPriorityDeclarations,'No new CSS priority debt');
 assert.ok(result.rules>3000 && result.scopedRepeatedSelectors>50,
   'Inventory must cover legacy CSS rather than only the new component layer');
 for(const key of ['home','plan','settings','progress','profile','workout'])

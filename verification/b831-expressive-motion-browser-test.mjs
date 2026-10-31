@@ -900,12 +900,15 @@ try {
                     const raised=role('--pi-r11-raised');
                     const control=role('--pi-color-control');
                     const hero=role('--pi-r11-hero');
+                     // Home preview is intentionally mixed from these two shared materials.
+                     probe.style.backgroundColor='color-mix(in srgb,var(--pi-color-control) 78%,var(--pi-color-feature) 22%)';
+                     const expectedPreview=bg(probe);
                     probe.remove();
                     const header=home.querySelector('.wpb-home-header');
                     const feature=home.querySelector('.wpb-home-hero');
                     const redundantStrip=home.querySelector('.wpb-metric-strip');
                     const preview=home.querySelector('.wpb-home-session-preview');
-                    return {quiet,raised,hero,control,appBar,
+                    return {quiet,raised,hero,control,appBar,expectedPreview,
                         header:bg(header),feature:bg(feature),hasRedundantStrip:!!redundantStrip,
                         preview:bg(preview),headerImage:cs(header)?.backgroundImage,
                         heroImage:cs(feature)?.backgroundImage,
@@ -914,7 +917,7 @@ try {
                 assert.ok(homeTonesR45.header===homeTonesR45.appBar&&
                     !homeTonesR45.hasRedundantStrip&&
                     homeTonesR45.feature===homeTonesR45.hero&&
-                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.control)&&
+                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.expectedPreview)&&
                     homeTonesR45.headerImage==='none'&&
                     homeTonesR45.heroImage==='none'&&
                     homeTonesR45.hero!==homeTonesR45.quiet&&

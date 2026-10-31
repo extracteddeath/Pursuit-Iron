@@ -63,7 +63,7 @@ assert.ok(program.includes('ref: attachPanel')&&program.includes('onKeyDown: onP
 
 // Ratchet against reintroducing presentation debt, without touching dynamic set geometry.
 assert.ok((app.match(/style:\s*\{/g)||[]).length<=uiStyleBudget.appInlineObjects,'Static inline App.js debt must keep falling');
-assert.equal((css.match(/!important/g)||[]).length,2024,'Shared controls cannot add CSS priority hacks');
+assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'Shared controls cannot add CSS priority hacks');
 assert.ok(!css.includes('.wpb-gallery-chip--selected'),'Old Gallery state paint must stay retired');
 assert.ok(css.length<=uiStyleBudget.cssCharacters,'Shared-control pilot must remain within the current measured shared-foundation CSS budget');
 assert.equal(css.split('.wpb-profile-card-metrics{display:grid').length-1,1,'Expressive metric layout must retain one canonical owner');

@@ -19,5 +19,5 @@ for(const existing of ['onClick: () => onOpenCycles(cycleInfo.cycle.id)','onClic
  assert.ok(home.includes(existing),'Cycle and backup behavior must remain intact: '+existing);
 assert.ok(css.includes('wpb-s956-textoverflow-ellipsis') && css.includes('pi-t-text-600') && css.includes('pi-t-caption-mt2'),
  'Utility roles must resolve in the canonical stylesheet');
-assert.equal((css.match(/!important/g)||[]).length,2024,'No additional CSS priority debt');
+assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No additional CSS priority debt');
 console.log('PASS Home fixed style utility reuse: five inline objects retired with original controls intact.');

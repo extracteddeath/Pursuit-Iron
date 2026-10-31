@@ -18,7 +18,7 @@ assert.ok(primitives.includes('export function UiCard(') && primitives.includes(
 const cardOwner=primitives.slice(primitives.indexOf('export function UiCard('),
  primitives.indexOf('export function UiAction('));
 assert.ok(!cardOwner.includes('style:'),'UiCard cannot introduce new inline presentation');
-assert.equal((css.match(/!important/g)||[]).length,2024,'No additional CSS priority');
+assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'No additional CSS priority');
 assert.ok(css.length<=uiStyleBudget.cssCharacters,'Stylesheet must not exceed observed migration baseline');
 assert.ok(report.appInlineStyleObjects<=uiStyleBudget.appInlineObjects,'No additional App inline presentation');
 const diagnostics=app.slice(app.indexOf('function SettingsView('),app.indexOf('function CompareView(',app.indexOf('function SettingsView(')));

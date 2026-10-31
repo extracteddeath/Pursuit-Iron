@@ -35,6 +35,6 @@ assert.ok(!css.split('\n').some(line =>
   line.startsWith('#root .wpb .wpb-profile-score-trend{') ||
   line.startsWith('#root .wpb .wpb-profile-pattern-level{font-size:11px')),
   'Profile rhythm and metrics cannot regain duplicate standalone owners');
-assert.equal((css.match(/!important/g) || []).length, 2024, 'No new priority declarations');
+assert.ok((css.match(/!important/g) || []).length <= uiStyleBudget.cssPriorityDeclarations, 'No new priority declarations');
 assert.ok(css.length<=uiStyleBudget.cssCharacters, 'Presentation CSS must remain within its measured post-foundation budget');
 console.log('PASS design Progress/Profile: shared state, metric and section owners; no priority growth.');

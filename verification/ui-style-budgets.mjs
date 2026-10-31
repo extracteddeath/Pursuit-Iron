@@ -3,6 +3,8 @@
  */
 export const uiStyleBudget=Object.freeze({
   cssCharacters:657201,
+  // Monotonic priority debt ceiling: reductions are welcome, additions are not.
+  cssPriorityDeclarations:2023,
   appInlineObjects:803,
   settingsInlineObjects:6,
   b1011CssCharacters:8577,

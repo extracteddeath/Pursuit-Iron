@@ -16261,8 +16261,41 @@ function UiNotice({ message, onUndo, onDismiss, action, actionLabel }) {
     ] });
 }
 function TabBar({ view, onNav }) {
+    const railRef = useRef(null);
+    // A fixed 72px offset let the minimized workout dock cover the first 50px
+    // of the responsive bottom navigation. The nav can exceed 120px at phone
+    // widths and enlarged text. Measure its real block extent instead; in rail
+    // mode the dock stays at the ordinary bottom inset.
+    useLayoutEffect(() => {
+        const rail = railRef.current;
+        const host = rail?.closest('.wpb');
+        if (!rail || !host) return;
+        const measure = () => {
+            const bounds = rail.getBoundingClientRect();
+            const verticalRail = getComputedStyle(rail).flexDirection === 'column' &&
+                getComputedStyle(rail).display.includes('flex');
+            const occupied = verticalRail ? 4 :
+                Math.max(0, Math.ceil(host.getBoundingClientRect().bottom - bounds.top));
+            const value = occupied + 'px';
+            if (host.style.getPropertyValue('--pi-nav-dock-clearance') !== value)
+                host.style.setProperty('--pi-nav-dock-clearance', value);
+        };
+        measure();
+        const observer = typeof ResizeObserver === 'function' ?
+            new ResizeObserver(measure) : null;
+        observer?.observe(rail);
+        observer?.observe(host);
+        window.addEventListener('resize', measure, { passive: true });
+        window.visualViewport?.addEventListener('resize', measure, { passive: true });
+        return () => {
+            observer?.disconnect();
+            window.removeEventListener('resize', measure);
+            window.visualViewport?.removeEventListener('resize', measure);
+            host.style.removeProperty('--pi-nav-dock-clearance');
+        };
+    }, []);
     const tabs = [["home", "Home", HomeIcon], ["plan", "Plan", Calendar], ["progress", "Progress", TrendingUp], ["profile", "Profile", Medal], ["settings", "Settings", Settings2]];
-    return _jsx("div", { className: "wpb-tabbar", role: "navigation", "aria-label": "Primary", children: tabs.map(([id, label, Icon]) =>
+    return _jsx("div", { ref: railRef, className: "wpb-tabbar", role: "navigation", "aria-label": "Primary", children: tabs.map(([id, label, Icon]) =>
         _jsxs("button", { className: "pressable wpb-tab", onClick: () => onNav(id), "aria-label": label,
             "data-tab": id, "aria-current": view === id ? "page" : undefined, children: [
                 _jsx(Icon, { size: 21, strokeWidth: view === id ? 2.6 : 2, "aria-hidden": true }),

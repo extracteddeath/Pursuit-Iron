@@ -159,6 +159,14 @@ try{
         if(width===320||width===834||width===900){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-gallery-${theme}-${width}.png`)});
         }
+        const galleryCards=await page.$$eval('.wpb-gallery-program',nodes=>nodes.map(el=>{
+          const css=getComputedStyle(el),rect=el.getBoundingClientRect();
+          return {shared:el.classList.contains('wpb-ui-card'),width:rect.width,
+            background:css.backgroundColor,border:css.borderTopWidth,radius:css.borderTopLeftRadius};
+        }));
+        assert.ok(galleryCards.length>0&&galleryCards.every(c=>c.shared&&c.width>0&&
+          c.background!=='rgba(0, 0, 0, 0)'&&parseFloat(c.border)>0),
+          'Real Gallery cards inherit shared opaque card surfaces: '+JSON.stringify(galleryCards));
         const galleryLayout=await layout();
         assert.ok(galleryLayout.scrollWidth<=width+2,
           'Gallery spills horizontally: '+JSON.stringify({theme,width,galleryLayout}));

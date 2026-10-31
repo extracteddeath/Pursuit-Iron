@@ -72,8 +72,8 @@ async function run() {
     try {
       // Compare fresh tip before deletion: never discard a branch advanced
       // after the merged PR was recorded or after this run took its snapshot.
-      const current = await api('GET', 'branches/' + escaped);
-      if (current.protected || current.commit.sha !== branch.commit.sha) {
+      const current = await api('GET', 'git/ref/heads/' + escaped);
+      if (current.object?.sha !== branch.commit.sha) {
         changed++;
         console.log('PRESERVE changed/protected: ' + branch.name);
         continue;

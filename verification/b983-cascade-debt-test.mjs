@@ -240,12 +240,12 @@ assert.ok(b1010SharedRules.includes('flex-wrap:wrap')&&
 assert.equal((b1010SharedRules.match(/!important/g)||[]).length,0,
   'New semantic control geometry must not add priority overrides');
 
-/* B1009: a bounded 45-use static typography migration, not a new styling escape hatch. */
+/* B1009: bounded shared typography ownership; counts include later verified Home consumers. */
 assert.ok(!/className: "[^"]*pi-t-[^"]+",\s*,/.test(app),'B1009 JSX props must never contain an empty property after a migrated class');
 const b1009Contract=[
   [
     "pi-t-muted",
-    5,
+    6,
     "style: { color: C.muted }"
   ],
   [
@@ -260,7 +260,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-caption-mt2",
-    3,
+    4,
     "style: { fontSize: 11, color: C.muted, marginTop: 2 }"
   ],
   [
@@ -275,7 +275,7 @@ const b1009Contract=[
   ],
   [
     "pi-t-text-600",
-    5,
+    7,
     "style: { color: C.text, fontWeight: 600 }"
   ],
   [

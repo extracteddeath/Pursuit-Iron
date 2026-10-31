@@ -10,8 +10,8 @@ const end=app.indexOf('function UiNotice(',start);
 assert.ok(start>=0 && end>start,'Home component still has its own measured source range');
 const home=app.slice(start,end);
 assert.equal((home.match(/style:\s*\{/g)||[]).length,16,'Home fixed-presentation migration has no regression');
-assert.equal(report.appInlineStyleObjects,810,'App-wide inline debt must not grow');
-assert.equal(uiStyleBudget.appInlineObjects,810,'Tightened debt ceiling must match measured code');
+assert.equal(report.appInlineStyleObjects,805,'App-wide inline debt must not grow');
+assert.equal(uiStyleBudget.appInlineObjects,805,'Tightened debt ceiling must match measured code');
 for(const owner of ['pi-t-strong wpb-s956-flex-1','pi-t-text-600','pi-t-muted wpb-s956-overflow-hidden','pi-t-caption-mt2'])
  assert.ok(home.includes(owner),'Home must reuse the existing presentation utility '+owner);
 for(const existing of ['onClick: () => onOpenCycles(cycleInfo.cycle.id)','onClick: onBackup',

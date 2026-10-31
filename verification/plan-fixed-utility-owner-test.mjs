@@ -9,6 +9,13 @@ const end=app.indexOf('\nfunction ',start+1);
 const plan=app.slice(start,end);
 assert.ok(start>0 && end>start,'Plan has one screen owner');
 assert.equal((plan.match(/style:\s*\{/g)||[]).length,22,'Plan utility adoption and owner retirement must not regress');
+assert.ok(plan.includes('className: "mono pi-t-muted wpb-s956-fontsize-13 wpb-s956-margintop-2"'),
+  'Week set/time metadata must use the shared muted text utilities');
+assert.ok(plan.includes('className: "wpb-plan-glance", children:'),
+  'The Plan metric grid must defer its geometry to the existing expressive CSS owner');
+assert.ok(css.includes('.wpb-plan-view .wpb-plan-glance{'),
+  'The already established responsive metric-grid owner must remain available');
+
 assert.equal(report.appInlineStyleObjects,803,'App style debt ceiling must reflect five retired values');
 assert.equal(uiStyleBudget.appInlineObjects,803,'Budget ratchet must track actual app');
 assert.equal(css.length,uiStyleBudget.cssCharacters,'Plan migration cannot add CSS');

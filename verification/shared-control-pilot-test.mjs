@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const app=fs.readFileSync('modules/App.js','utf8');
 const program=fs.readFileSync('modules/program-settings-sheet.js','utf8');
+const primitives=fs.readFileSync('modules/ui-primitives.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 const settings=app.slice(app.indexOf('function SettingsView('),app.indexOf('function CompareView('));
 const gallery=app.slice(app.indexOf('function GalleryView('),app.indexOf('/* ⚠ ONE OWNER',app.indexOf('function GalleryView(')));
@@ -24,6 +25,18 @@ assert.ok(settings.includes('"aria-label": `Available ${unit} plates per side`')
 assert.ok(settings.includes('setPlates({ ...plates, [unit]: next })'), 'Plate inventory persistence remains unchanged');
 assert.ok(settings.includes('className: "wpb-ui-card"'));
 assert.ok(!settings.includes('background: on ? C.accent : C.bg2'), 'Plate paint belongs to shared UiChoice');
+
+// One shared native Settings segmented family retains the pre-existing moving track.
+assert.ok(primitives.includes('export function UiSegmented('),'Segmented group has a reusable semantic owner');
+assert.ok(primitives.includes('role: "group", "aria-label": label') &&
+ primitives.includes('"aria-pressed": isSelected ? !!isSelected(choice) : value === choice'),
+ 'Segmented groups retain named native pressed semantics and custom unit-aware selection');
+assert.equal((settings.match(/_jsx\\(UiSegmented, /g)||[]).length,6,
+ 'All six Settings segmented groups use the same native family');
+for(const label of ['Weight unit','Training experience','Effort scale','Smallest jump','Rest length','Sex'])
+ assert.ok(settings.includes('UiSegmented, { label: "'+label+'"'),'Settings segmented group survives: '+label);
+assert.ok(!settings.includes('className: "wpb-segmented"'),
+ 'Settings does not duplicate segmented group JSX outside the shared owner');
 
 // Shared field paint handles consistent font, borders, focus and theme without overriding inputs.
 for(const label of ['"Reminder time"','`Bodyweight (${unit})`','"Birthday"'])

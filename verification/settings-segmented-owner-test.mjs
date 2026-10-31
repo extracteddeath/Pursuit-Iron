@@ -16,7 +16,7 @@ assert.ok(!settings.includes('role: "group", "aria-label": "Weight unit"') &&
  !settings.includes('role: "group", "aria-label": "Rest length"') &&
  !settings.includes('role: "group", "aria-label": "Smallest jump"'),
  'No parallel per-screen native segmented button renderers');
-assert.ok(settings.includes('minInc.v && minInc.unit !== unit ? null : (minInc.v || 0)') &&
+assert.ok(settings.includes('isSelected: v => (minInc.v || 0) === v && (v === 0 || minInc.unit === unit)') &&
  settings.includes('onChange: v => setMinInc({ v, unit: v ? unit : null })'),
  'Plate increment selection must remain unit scoped and persist canonical v/unit');
 assert.ok(settings.includes('onChange: setLoadMode') && settings.includes('onChange: setRestScale') &&

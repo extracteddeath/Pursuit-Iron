@@ -1,3 +1,4 @@
+import { uiStyleBudget } from './ui-style-budgets.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -75,7 +76,7 @@ const b1011Start=css.indexOf('/* B1011 — Settings service, diagnostics and imp
 assert.ok(b1011Start>b1010Start,'B1011 Settings owner follows Program controls');
 const b1010SharedRules=css.slice(b1010Start,b1011Start);
 const b1011SettingsRules=css.slice(b1011Start);
-assert.ok(b1011SettingsRules.length<=8412,'B1011 Settings owner must remain bounded');
+assert.ok(b1011SettingsRules.length<=uiStyleBudget.b1011CssCharacters,'B1011 Settings owner must remain bounded');
 for(const role of ['wpb-settings-feedback','wpb-settings-diagnostic-run','wpb-settings-import-sheet'])
  assert.ok(b1011SettingsRules.includes('.wpb .'+role+'{'),'Audited Settings owner missing: '+role);
 assert.ok(b1010SharedRules.length<=350,'B1010 round hit geometry owner must stay compact');

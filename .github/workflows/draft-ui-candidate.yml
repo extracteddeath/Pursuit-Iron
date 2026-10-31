@@ -57,12 +57,20 @@ jobs:
         env:
           CHROME_BIN: /usr/bin/google-chrome
         run: node scripts/verify-browser-contracts.mjs ${{ matrix.shard }}
+      - name: Preserve responsive visual evidence for review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: draft-ui-visual-${{ matrix.shard }}-${{ github.event.pull_request.number }}
+          path: verification/*.png
+          if-no-files-found: ignore
+          retention-days: 7
 
   stage-monotonic-build:
     # A single release identity is generated ONLY after all seven Chromium
     # shards and the full integration source group pass on the same PR head.
     needs: [source-contracts, ui-browser]
-    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427) && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427 || github.event.pull_request.number == 430) && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -90,7 +98,9 @@ jobs:
           import fs from 'node:fs';
           const file = 'RELEASE_MANIFEST.json';
           const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-          manifest.uiMilestone = process.env.TARGET_BRANCH === 'feature/gallery-shared-card-roles'
+          manifest.uiMilestone = process.env.TARGET_BRANCH === 'feature/b1002-settings-routed-controls'
+            ? `Build ${manifest.build} · Settings native field and routed control consolidation`
+            : process.env.TARGET_BRANCH === 'feature/gallery-shared-card-roles'
             ? `Build ${manifest.build} · Shared Settings, Gallery and Progress M3 consolidation`
             : `Build ${manifest.build} · Program, Home and Workout M3 consolidation`;
           fs.writeFileSync(file, JSON.stringify(manifest, null, 2) + '\n');

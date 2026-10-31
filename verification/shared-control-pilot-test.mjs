@@ -35,6 +35,21 @@ assert.ok(gallery.includes('setResults(prev => ({ ...prev, [e.code]: r }))'), 'I
 assert.ok(!gallery.includes('wpb-gallery-chip--selected'), 'No duplicate Gallery selected-paint owner');
 assert.ok(!css.includes('.wpb-gallery-chip--selected{'), 'Shared choice handles selected paint');
 
+// B1002: the three native profile/reminder inputs use one CSS-owned field role.
+// Retain native picker types, state writers, widths and estimated-birthday paint.
+for(const label of ['Reminder time','Birthday'])
+ assert.ok(settings.includes('"aria-label": "'+label+'"'),'Native field must retain its label: '+label);
+assert.ok(settings.includes('`Bodyweight (${unit})`'),'Weight field retains its unit-aware accessible name');
+assert.ok(settings.includes('className: "mono wpb-ui-control", style: { width: 148 }')&&
+ settings.includes('className: "mono wpb-ui-control", style: { width: 76, textAlign: "center" }')&&
+ settings.includes('borderColor: birthEst && birth ? C.warn : undefined'),
+ 'Shared settings fields retain responsive sizing, native pickers and birthday estimation warning');
+assert.ok(!settings.includes('colorScheme: "dark"'),'Reminder picker must respect theme and device color scheme');
+assert.ok(settings.includes('_jsxs(UiAction, { variant: "text", "data-align": "start", onClick: onGyms'),
+ 'Gyms row must use shared text action without nesting a second card');
+assert.ok(settings.includes('value: minInc.v && minInc.unit !== unit ? null : (minInc.v || 0)'),
+ 'Smallest jump selected state remains scoped to selected weight unit');
+
 // Staged Program settings keep original writers/validation with shared footer actions.
 assert.ok(program.includes("import { UiAction, UiChoice, UiSheetClose }"));
 assert.ok(program.includes('_jsx(UiAction, { variant: "tonal", onClick: onClose, className: "wpb-program-settings-cancel"'));

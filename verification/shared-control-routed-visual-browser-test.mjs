@@ -81,6 +81,8 @@ try{
         await galleryButton.asElement().click();
         await galleryButton.dispose();
         await page.waitForSelector('.wpb-gallery-title');
+        // Gallery data arrives asynchronously. Assert after its real filter controls mount.
+        await page.waitForSelector('.wpb-gallery-chip');
         assert.match(await page.$eval('.wpb-gallery-title',node=>node.textContent),/Shared programs/);
         assert.ok(await page.$eval('.wpb-gallery-back',el=>{
           const r=el.getBoundingClientRect();
@@ -97,6 +99,14 @@ try{
         const galleryLayout=await layout();
         assert.ok(galleryLayout.scrollWidth<=width+2,
           'Gallery spills horizontally: '+JSON.stringify({theme,width,galleryLayout}));
+        // Real full-screen composition, not merely the small isolated pilot fixture.
+        if(width===320){
+          await page.evaluate(()=>document.documentElement.style.fontSize='32px');
+          const enlarged=await layout();
+          assert.ok(enlarged.scrollWidth<=width+2,
+            'Gallery spills horizontally with 200% text: '+JSON.stringify({theme,width,enlarged}));
+          await page.screenshot({path:path.join(root,`verification/shared-pilot-gallery-200pct-${theme}-${width}.png`)});
+        }
         assert.deepEqual(errors,[],'No routed Settings/Gallery browser exceptions: '+theme+' '+width);
         console.log('PASS routed shared-control visuals: '+theme+' '+width+'px');
       }finally{await context.close();}

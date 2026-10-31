@@ -29,7 +29,7 @@ Run: node scripts/audit-ui-style-ownership.mjs --json
 
 Reports canonical primitive adoption, inline-style objects by destination, static CSS class vocabulary, external and embedded !important usage. This is static source evidence, not computed CSS or design proof.
 
-Current measured limits after the Settings service migration: 845 App inline style objects, 2,024 external CSS priority declarations, zero new standard-card bypasses, and 647,928 app.css characters. Moving 20 static inline styles into owned CSS temporarily grew the stylesheet; the next phase must remove superseded selectors.
+Measured after the Settings service and Diagnostics migrations: 835 App inline style objects (10 fewer than the previous pass), 2,024 external CSS priority declarations (unchanged), zero new standard-card bypasses, and 651,050 app.css characters. The stylesheet temporarily grew as inline declarations became a single named role family; this does not yet count as total CSS debt reduction. The next phase needs removal of superseded selectors and a lower combined-presentation budget.
 
 The Build 1008 Profile spacing contract was out of date, and is reconciled with the maintained CSS. No training logic or storage behavior was modified.
 
@@ -42,3 +42,5 @@ The Build 1008 Profile spacing contract was out of date, and is reconciled with 
 5. Workout/Focus last, as one specialized logged-set system, with Android browser and physical device verification.
 
 Only lower style-debt ceilings when the corresponding code truly disappears; do not weaken gates merely to pass a visual change.
+
+The Diagnostics slice retains its quick/full test handlers, result outcomes and progress width; the rest of its static presentation now belongs to class-owned CSS. No logger or engine logic was changed.

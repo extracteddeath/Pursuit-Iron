@@ -10162,6 +10162,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 /* B1011 — Settings service, diagnostics and import presentation: one audited owner. */
 /* Settings service and identity surfaces: one themed owner, no inline paint. */
+.wpb .wpb-settings-reset-all{width:100%;padding:var(--pi-space-3);font-size:var(--pi-type-body);white-space:normal;line-height:1.4;min-height:var(--pi-control-min)}
 .wpb .wpb-settings-feedback{margin-bottom:var(--pi-space-4)}
 .wpb .wpb-settings-note{font-size:var(--pi-type-support);line-height:1.55;color:var(--pi-color-on-muted);margin-bottom:var(--pi-space-3)}
 .wpb .wpb-settings-cta,.wpb .wpb-settings-support-cta{display:flex;align-items:center;justify-content:center;gap:var(--pi-space-2);min-height:var(--pi-control-min);padding:var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);font-size:var(--pi-type-body);font-weight:700;text-decoration:none}

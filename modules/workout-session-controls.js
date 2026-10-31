@@ -5,11 +5,20 @@ import { useRef, useLayoutEffect } from 'react';
 import { Check } from 'lucide-react';
 import { EX_BY_ID, isWorkSet } from './engine-api.js';
 import { workoutNavLabel } from './workout-nav-labels.js';
+import { navigateChoiceRow } from './ui-choice-navigation.js';
 
 export function selectNumericInput(event) {
     const input = event.currentTarget;
     if (!input.readOnly && !input.disabled)
         input.select();
+}
+
+// Reveal a single button inside its rail; never scroll the workout page itself.
+function revealExerciseInRail(list, active) {
+    if (!list?.isConnected || !active?.isConnected) return;
+    const a = active.getBoundingClientRect(), r = list.getBoundingClientRect();
+    if (a.left < r.left + 4) list.scrollLeft -= r.left + 4 - a.left;
+    else if (a.right > r.right - 4) list.scrollLeft += a.right - r.right + 4;
 }
 
 export function WorkoutExerciseNav({ data, exIdx, onSelect }) {
@@ -19,12 +28,7 @@ export function WorkoutExerciseNav({ data, exIdx, onSelect }) {
         if (!list || !active) return;
         // Selection changes and responsive reflow both need to reveal the
         // current exercise, without scrolling the surrounding workout page.
-        const reveal = () => {
-            if (!list.isConnected || !active.isConnected) return;
-            const a = active.getBoundingClientRect(), r = list.getBoundingClientRect();
-            if (a.left < r.left + 4) list.scrollLeft -= r.left + 4 - a.left;
-            else if (a.right > r.right - 4) list.scrollLeft += a.right - r.right + 4;
-        };
+        const reveal = () => revealExerciseInRail(list, active);
         reveal();
         if (typeof ResizeObserver !== 'function') {
             window.addEventListener('resize', reveal);
@@ -35,7 +39,13 @@ export function WorkoutExerciseNav({ data, exIdx, onSelect }) {
         observer.observe(active);
         return () => observer.disconnect();
     }, [exIdx, data.length]);
-    return _jsx("nav", { ref: rail, className: "wpb-hscroll wpb-ex-nav", "aria-label": "Workout exercises", children: data.map((row, i) => {
+    return _jsx("nav", { ref: rail, className: "wpb-hscroll wpb-ex-nav", "aria-label": "Workout exercises",
+        onKeyDown: event => navigateChoiceRow(event, onSelect),
+        onFocus: event => {
+            const focused = event.target?.closest?.('.wpb-ex-nav-step');
+            if (focused) revealExerciseInRail(rail.current, focused);
+        },
+        children: data.map((row, i) => {
         const work = row.sets.filter(isWorkSet), done = work.filter(s => s.done).length;
         const complete = work.length > 0 && done === work.length, active = i === exIdx;
         const name = EX_BY_ID[row.id]?.name || "Exercise";

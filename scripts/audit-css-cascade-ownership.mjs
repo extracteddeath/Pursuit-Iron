@@ -32,8 +32,11 @@ export function inspectCascade(css) {
         scan(i+1,stop,[...scope,header]);
       else if(header&&!header.startsWith('@')) {
         const declarations=clean.slice(i+1,stop);
-        const props=[...declarations.matchAll(/(?:^|;)\s*([\w-]+)\s*:/g)].map(m=>m[1]);
-        rules.push({selector:header,scope:scope.join(' | ')||'root',start:from,properties:[...new Set(props)]});
+        const pairs=[...declarations.matchAll(/(?:^|;)\s*([\w-]+)\s*:\s*([^;{}]*)/g)]
+          .map(m=>[m[1],m[2].trim().replace(/\s+/g,' ')]);
+        const props=pairs.map(([name])=>name);
+        rules.push({selector:header,scope:scope.join(' | ')||'root',start:from,
+          properties:[...new Set(props)],pairs});
       }
       i=stop+1;from=i;
     }
@@ -52,12 +55,33 @@ export function inspectCascade(css) {
       repeatedProperties:[...freq].filter(([,n])=>n>1).map(([key])=>key).sort(),
       locations:rows.map(row=>row.start)};
   }).sort((a,b)=>b.repeatedProperties.length-a.repeatedProperties.length||b.blocks-a.blocks);
+  // A repeated declaration block across *different* selectors is a migration lead,
+  // not proof those selectors can be merged: specificity, DOM ancestry, and source
+  // order may differ. Include scope in the signature to avoid media-query false hits.
+  const sharedBlocks=new Map();
+  for(const rule of rules) {
+    if(rule.pairs.length<3)continue; // ignore incidental one-property similarities
+    const signature=rule.pairs.map(([key,value])=>key+':'+value).join(';');
+    const groupKey=rule.scope+'\\0'+signature;
+    if(!sharedBlocks.has(groupKey))sharedBlocks.set(groupKey,[]);
+    sharedBlocks.get(groupKey).push(rule);
+  }
+  const sharedDeclarationFamilies=[...sharedBlocks.values()]
+    .filter(group=>new Set(group.map(rule=>rule.selector)).size>1)
+    .map(group=>({scope:group[0].scope,
+      declarations:group[0].pairs.map(([key,value])=>key+':'+value),
+      selectors:[...new Set(group.map(rule=>rule.selector))],
+      locations:group.map(rule=>rule.start)}))
+    .sort((a,b)=>b.selectors.length-a.selectors.length ||
+      b.declarations.length-a.declarations.length);
   const areas=Object.fromEntries(['home','plan','settings','progress','profile','workout','library','onboarding']
     .map(area=>[area,{rules:rules.filter(r=>r.selector.includes('.wpb-'+area)).length,
       repeatedSelectors:collisions.filter(r=>r.selector.includes('.wpb-'+area)).length}]));
   return {cssCharacters:css.length,priorityDeclarations:(css.match(/!important/g)||[]).length,
     rules:rules.length,scopedRepeatedSelectors:collisions.length,
     potentialSamePropertyOverrides:collisions.filter(x=>x.repeatedProperties.length>0).length,
+    sharedDeclarationFamilyCount:sharedDeclarationFamilies.length,
+    sharedDeclarationFamilies:sharedDeclarationFamilies.slice(0,40),
     areas,hotspots:collisions.slice(0,40)};
 }
 

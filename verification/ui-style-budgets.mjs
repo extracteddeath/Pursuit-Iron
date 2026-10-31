@@ -2,7 +2,7 @@
  * The B1011 family is isolated after original B1009/B1010 budgets. No new !important debt.
  */
 export const uiStyleBudget=Object.freeze({
-  cssCharacters:657244,
+  cssCharacters:657270,
   appInlineObjects:803,
   settingsInlineObjects:6,
   b1011CssCharacters:8577,

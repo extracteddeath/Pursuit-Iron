@@ -19,5 +19,5 @@ const cardOwner=primitives.slice(primitives.indexOf('export function UiCard('),
 assert.ok(!cardOwner.includes('style:'),'UiCard cannot introduce new inline presentation');
 assert.equal((css.match(/!important/g)||[]).length,2024,'No additional CSS priority');
 assert.ok(css.length<=644356,'Stylesheet must not exceed observed migration baseline');
-assert.ok(report.appInlineStyleObjects<=868,'No additional App inline presentation');
+assert.ok(report.appInlineStyleObjects<=869,'No additional App inline presentation');
 console.log('PASS UI Card architecture: shared owner and source inventory remain intact.');

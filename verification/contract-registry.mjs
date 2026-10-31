@@ -73,6 +73,7 @@ export const contractGroups = Object.freeze({
         'm188-production-torture-test.mjs'
     ]),
     integration: Object.freeze([
+        'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
         'plan-choice-ownership-test.mjs',
         'ui-ownership-test.mjs',

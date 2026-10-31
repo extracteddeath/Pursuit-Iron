@@ -949,10 +949,10 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
     const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex);
     const rir = effortBounds(cell.rir) || [2, 2];
     // Keep the original ordinal *before* filtering unfinished work. Pre-index
-    // history may still contain skipped/null rows; filtering first falsely
+    // history may still contain skipped working rows; filtering first falsely
     // promotes sets 0,2,3 into a complete 0,1,2 exposure and can earn weight.
     const work = (Array.isArray(last.perf[ex.id].sets) ? last.perf[ex.id].sets : [])
-        .filter(x => !x || (!x.warm && !x.sub))
+        .filter(x => x && !x.warm && !x.sub)
         .map((row, index) => ({ row, index }))
         .filter(({ row: x }) => x && x.done !== false && historyNumber(x.w) !== null && historyNumber(x.w) >= 0
             && historyNumber(x.r) > 0);

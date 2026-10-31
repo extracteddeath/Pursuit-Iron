@@ -28,4 +28,22 @@ assert.ok(home.includes('const compactDose = row.effective.length > 1') &&
     'Game Plan scans quickly and saved edits cannot be misrepresented as future-only');
 assert.ok(css.includes('.wpb-working-set-stepper') && css.includes('.wpb-home-outline-toggle'),
     'controls retain their established themed CSS owners');
+const sharedChoices=fs.readFileSync('modules/ui-choice-navigation.js','utf8');
+const primitives=fs.readFileSync('modules/ui-primitives.js','utf8');
+assert.ok(sharedChoices.includes("event.key === 'ArrowRight'") &&
+    sharedChoices.includes("event.key === 'ArrowLeft'") &&
+    sharedChoices.includes("event.key === 'Home'") &&
+    sharedChoices.includes("event.key === 'End'") &&
+    sharedChoices.includes("choice.button.focus({ preventScroll: true })") &&
+    sharedChoices.includes("!button.disabled") &&
+    sharedChoices.includes("button.getClientRects().length > 0"),
+    'Native choice row supports arrow/Home/End and skips unavailable choices without scrolling the page');
+assert.ok(primitives.includes("onKeyDown: event => navigateChoiceRow(event, index => onChange(options[index][0]))"),
+    'Shared segmented groups use the same user-owned selection transaction on keyboard and tap');
+assert.ok(controls.includes("onKeyDown: event => navigateChoiceRow(event, onSelect)") &&
+    controls.includes("onFocus: event =>") &&
+    controls.includes("revealExerciseInRail(rail.current, focused)"),
+    'Exercise rail uses the same workout selection owner and reveals focused steps locally');
+assert.ok(css.includes('scroll-snap-type:x proximity') && css.includes('.wpb-ex-nav-step:focus-visible'),
+    'Workout rail exposes finger-friendly inertial navigation and visible keyboard focus');
 console.log('PASS B998: unique Home outline controls, meaningful plan banner and bounded set steppers.');

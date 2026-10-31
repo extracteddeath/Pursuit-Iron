@@ -1,6 +1,7 @@
 // Stateless shared UI. Screen state, navigation and training stay with their feature owners.
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from 'react/jsx-runtime';
 import { X } from 'lucide-react';
+import { navigateChoiceRow } from './ui-choice-navigation.js';
 
 // R61 foundations pilot. These primitives own presentation and native button semantics only;
 // navigation, saved choices, logging and scroll memory remain with their existing screen owners.
@@ -56,6 +57,7 @@ export function UiSheetClose({ className = "", "aria-label": label = "Close",
 export function UiSegmented({ label, options, value, onChange, className = "" }) {
     return _jsx("div", { role: "group", "aria-label": label,
         className: `wpb-segmented ${className}`.trim(),
+        onKeyDown: event => navigateChoiceRow(event, index => onChange(options[index][0])),
         children: options.map(([key, text]) => _jsx(UiChoice, {
             kind: "tab", selected: Object.is(value, key),
             onClick: () => onChange(key), children: text

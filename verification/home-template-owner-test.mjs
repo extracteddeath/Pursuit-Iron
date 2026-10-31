@@ -5,8 +5,8 @@ import { uiStyleBudget } from './ui-style-budgets.mjs';
 const app=fs.readFileSync('modules/App.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 const home=app.slice(app.indexOf('function Home('),app.indexOf('function UiNotice(',app.indexOf('function Home(')));
-assert.equal(report.appInlineStyleObjects,803,'Template migration must not regain inline paint');
-assert.equal(uiStyleBudget.appInlineObjects,803,'Budget must reflect retired inline styles');
+assert.ok(report.appInlineStyleObjects<=uiStyleBudget.appInlineObjects,'Template migration must not regain inline paint');
+assert.equal(uiStyleBudget.appInlineObjects,801,'Budget must reflect retired inline styles');
 assert.equal((home.match(/style:\s*\{/g)||[]).length,16,'Home template inline owners stay retired');
 assert.equal(report.shared.Card.appCalls,26,'Three template actions must use UiCard with native button semantics');
 for(const owner of ['wpb-template-card','wpb-template-featured','wpb-template-row','wpb-template-sheet','wpb-template-search-input','wpb-template-filter','wpb-template-gym-choice','wpb-template-filter-clear','wpb-template-browse-link'])

@@ -52,3 +52,5 @@ B1011 groups migrated Settings presentation in one bounded owner after B1010. It
 Presentation debt budgets now live in one verification/ui-style-budgets.mjs source of truth. At this checkpoint: 830 inline objects in App.js, six remaining in Settings, 652,934 CSS characters, 8,577 of them in the B1011 Settings family. Budgets are ceilings, not a completed consolidation claim.
 
 Home's first utility reuse slice removes five fixed inline styles from the cycle name/week/day labels and backup microcopy, with no new CSS selectors, priority overrides, or runtime event changes. App inline objects: 830 → 825; Home: 36 → 31. Preserve dynamic cycle flex/phase colors for a separate stateful-owner pass. This is source validation, not screenshot certification.
+
+The read-only `node scripts/audit-css-cascade-ownership.mjs --json` report now classifies repeated selectors by their actual at-rule context, repeated CSS properties and top Home/Plan/etc. hotspots. These are candidate conflicts, not proof of dead selectors. Use computed-style/browser comparison before deleting a cascade owner; this tool does not rewrite styling or alter any training behavior.

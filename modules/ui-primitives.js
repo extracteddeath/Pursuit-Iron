@@ -27,6 +27,17 @@ export function UiChoice({ selected, kind = "chip", className = "", label, capti
             caption != null && _jsx("span", { className: "mono wpb-ui-choice-caption", children: caption })
         ] }) : children });
 }
+// Shared exclusive-choice group. The consuming screen owns its selected value and
+// existing track animation; this primitive only owns group/button semantics and mapping.
+// Preserve per-option native buttons (not a new visual pill or radio proxy).
+export function UiSegmented({ label, options, value, onChange, isSelected, className = "", optionClassName = "hit" }) {
+    return _jsx("div", { className: `wpb-segmented${className ? " " + className : ""}`,
+        role: "group", "aria-label": label, children: options.map(([choice, text]) =>
+            _jsx("button", { type: "button", onClick: () => onChange(choice),
+                "aria-pressed": isSelected ? !!isSelected(choice) : value === choice,
+                className: `pressable${optionClassName ? " " + optionClassName : ""}`,
+                children: text }, String(choice))) });
+}
 export function UiStatus({ className = "", children, ...props }) {
     // Static guidance is not a live announcement. Dynamic save/failure announcements keep their
     // existing status owner rather than repeating every time a view mounts.

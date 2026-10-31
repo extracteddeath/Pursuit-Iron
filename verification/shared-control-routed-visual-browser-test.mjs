@@ -59,12 +59,12 @@ try{
         });
         const top=await layout();
         assert.ok(top.scrollWidth<=width+2,'Settings spills horizontally: '+JSON.stringify({theme,width,top}));
-        const nav=await page.$$eval('.wpb-settings-navigation',nodes=>nodes.map(node=>{
+        const nav=await page.$eval('.wpb-settings-navigation.wpb-settings-link',nodes=>nodes.map(node=>{
           const rect=node.getBoundingClientRect();
           return {text:node.textContent.trim(),height:rect.height,width:rect.width,
             selected:node.getAttribute('data-action')};
         }));
-        assert.equal(nav.length,4,'All four Settings destination actions are rendered');
+        assert.equal(nav.length,4,'Four migrated Settings destination actions are rendered; the legacy Gyms row is separate');
         assert.ok(nav.every(row=>row.height>=48&&row.selected==='tonal'),
           'Shared Settings navigation has consistent real hit targets: '+JSON.stringify(nav));
         if(width===320||width===834){

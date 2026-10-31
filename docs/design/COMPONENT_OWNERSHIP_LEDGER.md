@@ -29,7 +29,7 @@ Run: node scripts/audit-ui-style-ownership.mjs --json
 
 Reports canonical primitive adoption, inline-style objects by destination, static CSS class vocabulary, external and embedded !important usage. This is static source evidence, not computed CSS or design proof.
 
-Current measured limits: 868 App inline style objects, 2,024 external CSS priority declarations, zero new standard-card bypasses, and 644,356 app.css characters after consolidating three redundant caption rules.
+Current measured limits: 869 App inline style objects, 2,024 external CSS priority declarations, zero new standard-card bypasses, and 644,356 app.css characters after consolidating three redundant caption rules.
 
 The Build 1008 Profile spacing contract was out of date, and is reconciled with the maintained CSS. No training logic or storage behavior was modified.
 

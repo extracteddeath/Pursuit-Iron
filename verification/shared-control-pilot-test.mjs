@@ -21,7 +21,7 @@ assert.ok(css.includes('#root .wpb .wpb-settings .wpb-settings-link.wpb-ui-actio
 assert.ok(settings.includes('_jsx(UiChoice, { kind: "chip", selected: on, "aria-label": `${p} ${unit} plate`'));
 assert.ok(settings.includes('"aria-label": `Available ${unit} plates per side`'));
 assert.ok(settings.includes('setPlates({ ...plates, [unit]: next })'), 'Plate inventory persistence remains unchanged');
-assert.ok(settings.includes('className: "wpb-ui-card"'));
+assert.ok(settings.includes('_jsxs(UiCard, { className: ""'), 'Plate inventory preserves the UiCard class and native layout');
 assert.ok(!settings.includes('background: on ? C.accent : C.bg2'), 'Plate paint belongs to shared UiChoice');
 
 // Gallery filters use the same choice states, with named groups for each dimension.

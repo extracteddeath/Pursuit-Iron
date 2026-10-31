@@ -4,7 +4,7 @@ const app=fs.readFileSync('modules/App.js','utf8'),css=fs.readFileSync('app.css'
 const start=app.indexOf('function GalleryView('),end=app.indexOf('/* ⚠ ONE OWNER',start);
 const gallery=app.slice(start,end);
 assert.ok(start>0&&end>start,'Gallery source is present');
-assert.equal(gallery.split('className: "wpb-ui-card wpb-gallery-program"').length-1,1,
+assert.equal(gallery.split('_jsxs(UiCard, { className: "wpb-gallery-program"').length-1,1,
  'Gallery program cards use the same standard card role as Settings rather than duplicate visual paint');
 const rule='#root .wpb .wpb-gallery-program{';
 assert.equal(css.split(rule).length-1,1,'Only one Gallery card layout owner');

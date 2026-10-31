@@ -59,7 +59,7 @@ try{
         });
         const top=await layout();
         assert.ok(top.scrollWidth<=width+2,'Settings spills horizontally: '+JSON.stringify({theme,width,top}));
-        const nav=await page.$eval('.wpb-settings-navigation',nodes=>nodes.map(node=>{
+        const nav=await page.$$eval('.wpb-settings-navigation',nodes=>nodes.map(node=>{
           const rect=node.getBoundingClientRect();
           return {text:node.textContent.trim(),height:rect.height,width:rect.width,
             selected:node.getAttribute('data-action')};

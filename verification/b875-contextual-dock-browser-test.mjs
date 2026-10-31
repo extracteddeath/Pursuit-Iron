@@ -222,14 +222,13 @@ try {
         // M436: Undo must belong to THIS injury adjustment, not a different
         // global Undo from program changes, logging, or another transient toast.
         // Keep an actual pointer click and fail on an ambiguous or missing owner.
-        const injuryUndo = () => [...document.querySelectorAll('.wpb-workout button')]
+        const injuryUndoCount = () => [...document.querySelectorAll('.wpb-workout button')]
             .filter(button => button.textContent?.trim() === 'Undo'
                 && button.parentElement?.querySelector('span')?.textContent?.includes('Remaining affected sets reduced for today')
-                && button.getClientRects().length > 0);
-        await page.waitForFunction(injuryUndo);
-        const owners = await page.evaluate(injuryUndo);
-        // DOM elements cannot be serialized as useful evidence; explicitly count.
-        assert.equal(owners.length, 1, 'exactly one visible injury-specific Undo action must exist');
+                && button.getClientRects().length > 0).length;
+        await page.waitForFunction(injuryUndoCount);
+        const owners = await page.evaluate(injuryUndoCount);
+        assert.equal(owners, 1, 'exactly one visible injury-specific Undo action must exist');
         const undoHandle = await page.evaluateHandle(() => [...document.querySelectorAll('.wpb-workout button')]
             .find(button => button.textContent?.trim() === 'Undo'
                 && button.parentElement?.querySelector('span')?.textContent?.includes('Remaining affected sets reduced for today')

@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import {
     EXERCISES, EX_BY_ID, exerciseAt, computeCell, getNextShellCell,
     prescribeSets, sessionSuggestion, loggedWorkoutPerformance, summarizeSession,
-    normalizeEditedHistoryEntry, resolveNextShellExerciseId
+    normalizeEditedHistoryEntry, resolveNextShellExerciseId, previousWorkoutSet
 } from '../modules/engine-api.js';
 import { generateNextCycleForShell, advanceNextCycleForShell } from '../modules/next-engine/cycle-runtime-adapter.js';
 import { analyzeShellHistoryForNextEngine, nextWorkoutSuggestionForShell } from '../modules/next-engine/workout-history-adapter.js';
 import { refreshPendingSetTargets } from '../modules/next-engine/workout-runtime.js';
-import { auditSetDecisionTraces } from '../modules/training-domain/prescriptions.js';
+import { auditSetDecisionTraces, loadableAtOrBelow } from '../modules/training-domain/prescriptions.js';
 import { config, ids } from './m265-generation-fixture.mjs';
 
 // M340: one continuous, serialized program/cycle -> prescription -> live set ->
@@ -19,7 +19,8 @@ const countWorking = perf => Object.values(perf).reduce((sum, lift) =>
 const maxRep = cell => Number(String(cell.reps).match(/[0-9]+/g)?.at(-1)) || 8;
 const targetRir = cell => Number(String(cell.rir).match(/[0-9]+/g)?.[0] ?? 2);
 const trace = { scenario: 'M340 continuous engine lifecycle', seed: 34011, stages: [],
-    sessions: 0, workingSets: 0, protectedRefreshCases: 0, generatedBlocks: 0, cycleTransitions: 0 };
+    sessions: 0, workingSets: 0, protectedRefreshCases: 0, provenanceCases: 0, persistedTraceCases: 0,
+    loadGridCases: 0, generatedBlocks: 0, cycleTransitions: 0 };
 function stage(name, detail = {}) {
     trace.stages.push({ name, ...detail });
     console.log('LIFECYCLE_STAGE ' + JSON.stringify(trace.stages.at(-1)));
@@ -65,6 +66,50 @@ function completeRealWorkout(p, day, week, prior) {
         const rows = prescribeSets(p, day, ex, slot, week, 'lb', suggestion, null, {}, prior, true);
         assert.deepEqual(auditSetDecisionTraces(rows),[],
             'An actual Workout target diverged from recorded engine evidence: ' + day.id + ':' + slot);
+        // M418: audit the actual displayed target, its exact prior position,
+        // and the loading grid used by this Workout. These checks use the real
+        // sessionSuggestion + prescribeSets path for *every* exercise slot.
+        const auditRows = rows.filter(set => !set.warm && !set.sub && !set.added);
+        for (const [setIndex, row] of auditRows.entries()) {
+            const evidence = row.target?.decisionTrace;
+            assert.ok(evidence && evidence.schemaVersion === 1,
+                'Fresh working target lacks diagnostic provenance: ' + day.id + ':' + slot + ':' + setIndex);
+            assert.deepEqual([evidence.programId, evidence.dayId, evidence.exerciseId,
+                evidence.slot, evidence.weekIndex, evidence.workingSetIndex],
+                [String(p.id), String(day.id), ex.id, slot, week, setIndex],
+                'Trace identity was borrowed from a different plan/day/exercise/set');
+            assert.equal(evidence.target.unit, 'lb');
+            assert.equal(evidence.target.load, Number(row.weight) || null,
+                'Displayed set load is not its recorded prescription decision');
+            assert.equal(evidence.target.reps, Number(row.reps),
+                'Displayed set reps are not their recorded prescription decision');
+            const previous = previousWorkoutSet(suggestion?.last, setIndex);
+            assert.equal(evidence.source?.originalLoad ?? null, previous?.w ?? null,
+                'Trace history source does not match this set position');
+            assert.equal(evidence.source?.reps ?? null, previous?.r ?? null,
+                'Trace historical reps do not match this set position');
+            if (previous && suggestion?.sourceEntryId != null)
+                assert.equal(evidence.source.historyEntryId, String(suggestion.sourceEntryId),
+                    'Trace points at the wrong prior workout entry');
+            if (Number(row.weight) > 0) {
+                const prescribed = Number(row.weight);
+                assert.ok(Math.abs(loadableAtOrBelow(ex, prescribed, 'lb') - prescribed) < 1e-6,
+                    'Prescribed weight is not on the exercise equipment grid: ' +
+                    JSON.stringify({ day: day.id, slot, setIndex, prescribed }));
+                trace.loadGridCases++;
+            }
+            trace.provenanceCases++;
+        }
+        // The existing trace auditor must catch tampering, not just bless
+        // correct rows; a migrated/persisted record cannot rewrite one target.
+        if (auditRows.length) {
+            const corrupted = clone(rows);
+            const tampered = corrupted.find(row => !row.warm && !row.sub && !row.added);
+            tampered.target.decisionTrace.target.reps += 1;
+            assert.ok(auditSetDecisionTraces(corrupted).some(v =>
+                v.code === 'display_target_diverges_from_trace'),
+                'Target/trace corruption escaped the existing audit');
+        }
         const works = rows.filter(set => !set.warm && !set.sub);
         if (suggestion?.action === 'add_reps' && cell.progressionStyle === 'double'
             && Array.isArray(suggestion.setTargets) && suggestion.setTargets.length === works.length) {
@@ -151,6 +196,25 @@ function completeRealWorkout(p, day, week, prior) {
             'Log prescription identity/schema mismatch: ' + JSON.stringify({ id, expected: engineId, actual: result.prescription, day: day.id, slot: submitted.find(e => e.id === id)?.slot, authored: day.exercises }));
         assert.ok(result.sets.every(set => Number.isFinite(set.w) && Number.isFinite(set.r)
             && set.r > 0), 'Log contains an invalid completed numeric set');
+        // The logged set must retain the original prescription *and* the
+        // applied, user-observed values so later history replay is explainable.
+        const workoutRows = submitted.find(row => row.id === id)?.sets
+            .filter(row => !row.warm && !row.sub && !row.added) || [];
+        for (const [setIndex, sourceRow] of workoutRows.entries()) {
+            const storedRow = result.sets.find(row => row.workingSetIndex === setIndex);
+            assert.ok(storedRow?.decisionTrace?.schemaVersion === 1,
+                'Logged working set lost its decision trace: ' +
+                JSON.stringify({ day: day.id, slot, setIndex }));
+            const expectedTrace = sourceRow.target.decisionTrace;
+            const { applied, ...originalTrace } = storedRow.decisionTrace;
+            assert.deepEqual(originalTrace, expectedTrace,
+                'Logger changed the original prescribed decision: ' +
+                JSON.stringify({ day: day.id, slot, setIndex }));
+            assert.deepEqual([applied.load, applied.reps, applied.owner],
+                [storedRow.w, storedRow.r, sourceRow.valueOwner],
+                'Logger failed to distinguish actual performance from the prefill');
+            trace.persistedTraceCases++;
+        }
     }
     const date = Date.UTC(2026, 9, 1 + serial++);
     const entry = { id: 'm340-log-' + serial, programId: p.id, programName: p.name,
@@ -247,7 +311,14 @@ for (let block = 0; block < 2; block++) {
     }
 }
 stage('audit-finished', { sessions: trace.sessions, workingSets: trace.workingSets,
-    protectedRefreshCases: trace.protectedRefreshCases });
+    protectedRefreshCases: trace.protectedRefreshCases,
+    provenanceCases: trace.provenanceCases, persistedTraceCases: trace.persistedTraceCases,
+    loadGridCases: trace.loadGridCases });
 assert.ok(trace.protectedRefreshCases > trace.workingSets,
     'Every working set position must be audited in multiple protected states');
+assert.equal(trace.provenanceCases, trace.workingSets,
+    'Every completed working-set position must have prior-source and load evidence');
+assert.equal(trace.persistedTraceCases, trace.workingSets,
+    'Every completed working-set position must preserve its trace during logging');
+assert.ok(trace.loadGridCases > 0, 'At least one weighted set must validate its equipment grid');
 console.log('ENGINE_LIFECYCLE_AUDIT ' + JSON.stringify({ status: 'pass', ...trace }));

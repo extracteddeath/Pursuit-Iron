@@ -6832,6 +6832,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-ex-nav{
   gap:6px!important;
   margin-top:7px!important;
+  padding-bottom:2px!important;
   scroll-padding-inline:4px;
 }
 #root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{
@@ -7065,9 +7066,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
     color:FieldText!important;
   }
 }
-/* Completed rows remain compact even when their actual-effort tag appears
-   under reps. B884 active inputs are taller, but logged history should never
-   grow into a second card or hide the next editable set. */
+/* Completed working sets remain compact; active inputs retain their height. */
 #root .wpb-workout [data-testid^="set-"][data-done="1"] .wpb-set-controls{
   padding-block:2px!important;
 }
@@ -7258,7 +7257,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   display:inline-flex;align-items:center;justify-content:center;gap:7px;
   scroll-snap-align:start;
   flex:0 0 auto;width:auto!important;min-width:92px!important;max-width:208px;
-  min-height:48px!important;padding:0 12px!important;
+  height:48px!important;min-height:48px!important;padding:0 12px!important;
   border:1px solid var(--wpb-theme-border);border-radius:22px!important;
   background:var(--wpb-theme-card);color:var(--wpb-theme-muted);cursor:pointer;
   transition:background-color 160ms var(--e-out),border-radius 180ms var(--e-out);

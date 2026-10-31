@@ -40,8 +40,8 @@ assert.ok(!css.includes('.wpb-gallery-chip--selected{'), 'Shared choice handles 
 for(const label of ['Reminder time','Birthday'])
  assert.ok(settings.includes('"aria-label": "'+label+'"'),'Native field must retain its label: '+label);
 assert.ok(settings.includes('`Bodyweight (${unit})`'),'Weight field retains its unit-aware accessible name');
-assert.ok(settings.includes('className: "mono wpb-ui-control", style: { width: 148 }')&&
- settings.includes('className: "mono wpb-ui-control", style: { width: 76, textAlign: "center" }')&&
+assert.ok(settings.includes('className: "mono wpb-ui-control wpb-settings-time-input"')&&
+ settings.includes('className: "mono wpb-ui-control wpb-settings-weight-input"')&&
  settings.includes('borderColor: birthEst && birth ? C.warn : undefined'),
  'Shared settings fields retain responsive sizing, native pickers and birthday estimation warning');
 assert.ok(!settings.includes('colorScheme: "dark"'),'Reminder picker must respect theme and device color scheme');

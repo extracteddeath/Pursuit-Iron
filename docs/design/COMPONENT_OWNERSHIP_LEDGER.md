@@ -75,3 +75,13 @@ merely to chase a source-count reduction. Next CSS retirement should prove
 computed parity first, then replace exact-equality priority assertions with a
 single monotonic budget before reducing legitimately superseded declarations.
 The source gate for this inventory uses a forced-colors/media-scope fixture.
+
+B1015 Plan source retirement: two more fixed presentation objects were removed from
+PlanView without touching navigation, week selection, or training prescriptions.
+Week set/time metadata now reuses the existing muted/type/margin utilities.
+The glance metrics row now relies on its pre-existing expressive grid owner
+rather than carrying conflicting inline flex, gap, border and spacing.
+Source totals ratchet App 805 → 803 and Plan 24 → 22. No app.css bytes or
+priority declarations were added; Home remains at 16 inline objects. The
+source contract checks the actual CSS owner and callbacks. This is not a
+substitute for browser screenshot, saved-state, or physical Android acceptance.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { selectMergedBranchTips } from '../scripts/prune-merged-branches.mjs';
+import { selectMergedBranchTips } from './branch-hygiene-selection.mjs';
 
 const repository = 'extracteddeath/Pursuit-Iron';
 const branch = (name, sha, protectedBranch = false) =>

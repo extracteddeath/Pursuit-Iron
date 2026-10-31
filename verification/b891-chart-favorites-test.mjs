@@ -29,7 +29,7 @@ assert.ok(sharedControl.includes('data-icon-only="true"')&&sharedControl.include
 assert.ok(sharedControl.includes('min-height:var(--pi-control-min)') && css.includes('--pi-control-min:48px;'),'all shared editor actions inherit the canonical 48px minimum');
 assert.ok(!/!important/.test(sharedControl.replace(/\/\*[\s\S]*?\*\//g,'')),'shared editor adds no priority overrides');
 assert.ok(app.slice(app.indexOf('function ChartFavoritesManager('),app.indexOf('function HistoryView(')).includes('variant: "tonal"'),'chart actions reuse UiAction');
-assert.ok(css.includes('--pi-shape-card:20px;')&&css.includes('--pi-shape-action:14px;')&&css.includes('--pi-motion-paint:160ms;'),'cross-screen shape and motion vocabulary is centralized');
+assert.ok(css.includes('--pi-shape-card:24px;')&&css.includes('--pi-shape-action:18px;')&&css.includes('--pi-shape-feature:30px;')&&css.includes('--pi-motion-paint:160ms;'),'cross-screen shape and motion vocabulary is centralized');
 assert.match(b911,/\.wpb-chart-favorite-name\{[\s\S]*?overflow-wrap:anywhere/,'long chart labels wrap');
 assert.ok(css.includes(':is(.wpb-ui-action,.wpb-ui-choice):focus-visible')&&css.includes('@media (prefers-reduced-motion:reduce){#root button')&&css.includes('.wpb-ui-action.wpb-ui-action[data-action],.wpb-ui-choice.wpb-ui-choice)'),'shared focus, reduced motion and forced colors remain owned globally');
 assert.ok(!/transition:[^;]*(width|height|margin|padding|transform)/.test(b911),'no geometry-affecting control motion');

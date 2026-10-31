@@ -35,5 +35,5 @@ assert.ok(!css.split('\n').some(line =>
   line.startsWith('#root .wpb .wpb-profile-pattern-level{font-size:11px')),
   'Profile rhythm and metrics cannot regain duplicate standalone owners');
 assert.equal((css.match(/!important/g) || []).length, 2024, 'No new priority declarations');
-assert.ok(css.length <= 643872, 'Source consolidation must reduce—not expand—CSS debt');
+assert.ok(css.length <= 644408, 'Presentation CSS must remain within its measured post-foundation budget');
 console.log('PASS design Progress/Profile: shared state, metric and section owners; no priority growth.');

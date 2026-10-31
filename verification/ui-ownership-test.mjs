@@ -842,7 +842,7 @@ for (const owner of ['Home','ProfileView','SettingsView','HistoryView','PlanView
  const start=app.indexOf('function '+owner+'('), end=app.indexOf('\nfunction ', start+12);
  assert.ok(app.slice(start,end).includes('UiRootHeader'), owner+' uses the shared root app bar');
 }
-assert.ok(css.includes('--pi-type-screen-title:1.625rem') && css.includes('.wpb-summary-grid'), 'Scalable title and summary roles remain shared');
+assert.ok(css.includes('--pi-type-screen-title:clamp(1.75rem,1.55rem + 1vw,2.125rem)') && css.includes('.wpb-summary-grid'), 'Scalable title and summary roles remain shared');
 const noticeStyle=css.slice(css.indexOf('.wpb .wpb-notice{'),css.indexOf('.wpb .wpb-notice[data-positioned'));
 assert.ok(noticeStyle.includes('transition-property:none'), 'Notice clearance cannot animate through a newly returned Resume control');
 

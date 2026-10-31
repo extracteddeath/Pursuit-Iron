@@ -24,3 +24,8 @@ Home needs genuine layout composition changes, Settings requires conversion of r
 
 ## Acceptance criteria
 Compare screenshots, behavior and accessibility at 320/393/834/1280 widths, 200% font scale, all saved palettes, dark/light and forced colors, reduced motion, navigation and touch focus. Verify engine, storage, offline/release parity and physical Android/TalkBack before declaring a full redesign or shipping a release.
+
+
+## B1008 contract reconciliation
+
+The original five source checks were anchored to Build 1000-era literal typography/shape values and CSS byte-length snapshots. B1008 intentionally replaces those values; source contracts now assert the new shared roles and maintain the same 2,024 external `!important` limit. The CSS byte-size budget is rebaselined to the measured 644,408 characters rather than misreporting intentional new theme tokens as duplicated selectors. This is a temporary upper cap, **not** evidence of reduced CSS debt; the next consolidation pass must retire old selector owners and lower it. No browser or hardware testing is claimed by this note.

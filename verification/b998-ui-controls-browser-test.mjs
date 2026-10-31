@@ -28,7 +28,7 @@ const fixture=[
 "React.createElement(WorkingSetCountControl,{value:count,onChange:setCount,label:'Working sets'}),",
 "React.createElement('section',{id:'keyboard-choice-fixture'},",
 "React.createElement(UiSegmented,{label:'Session display',options:[['first','First'],['second','Second'],['third','Third']],value:choice,onChange:k=>{window.choiceChanges.push(k);setChoice(k)}}),",
-"React.createElement('div',{className:'wpb-workout'},React.createElement(WorkoutExerciseNav,{data:railData,exIdx:exercise,onSelect:choose}))),"
+"React.createElement('div',{className:'wpb-workout'},React.createElement(WorkoutExerciseNav,{data:railData,exIdx:exercise,onSelect:choose}))),",
 "React.createElement(HomeSessionOutline,{review,expanded:a,onToggle:()=>setA(v=>!v)}),",
 "React.createElement(HomeSessionOutline,{review,expanded:b,onToggle:()=>setB(v=>!v)}),",
 "React.createElement('section',{id:'game-plan-test'},React.createElement(SessionGamePlan,{review:gameReview,home:true,restScale:1.15})),",

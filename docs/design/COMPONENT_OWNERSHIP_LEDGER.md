@@ -95,3 +95,13 @@ the original calculated fill width and palette paint. app.css remains exactly
 inline paint or engine changes were added. Historical Home source contracts now
 use the same monotonic 801-object budget instead of failing on reductions.
 This is source-level consolidation awaiting browser/Android acceptance.
+
+R76 verified-source consolidation: three pairs of adjacent equal-declaration rules
+were merged into shared selector groups without changing selector specificity,
+media state, element tags, keyboard handling, or feature callbacks. The family
+spans Progress/Settings/Exercise moving-indicator paint, wizard layout/step
+width, and the shared idle-tab transition. Stylesheet size 657,201 → 656,982
+(−219 characters), external priority declarations 2,023 → 2,019 (−4).
+This is actual CSS debt retirement, not merely moving inline styles. The
+shared priority and stylesheet ceilings were ratcheted down. Browser parity
+and final CI are required before merging into production.

@@ -525,13 +525,10 @@ display:block!important;
   z-index:1;
   min-width:0;
 }
+/* Selected indicator buttons share one transparent paint owner across Progress,
+   Settings and exercise details; each selector keeps its original specificity. */
 #root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs[data-pi-m3-track]>button[aria-selected="true"],
-#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented[data-pi-m3-track]>button[aria-pressed="true"]{
-  background:transparent!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
-/* Exercise detail uses the same theme-native moving indicator as Progress. */
+#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented[data-pi-m3-track]>button[aria-pressed="true"],
 #root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs[data-pi-m3-track]>button[aria-selected="true"]{
   background:transparent!important;
   background-image:none!important;
@@ -5736,10 +5733,7 @@ background:var(--pi-color-card)!important;
 /* R71 / Build 851 — responsive Program and Cycle setup.
    One Wizard, one form state, one final-generation action. The review pane
    reads that state; it never invokes the engine or owns a separate draft. */
-#root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout{
-  min-width:0;
-  width:100%;
-}
+#root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout,
 #root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout>.wpb-wizard-step{
   min-width:0;
   width:100%;
@@ -6139,10 +6133,7 @@ background:var(--pi-color-card)!important;
    fill on the button made the indicator look doubled during fast navigation.
    Animate hover tint only while the button is still idle. */
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-settings .wpb-segmented,.wpb-plan-panes,.wpb-premium-tabs,.wpb-progress-grouping,.wpb-library-flag-filter,.wpb-exercise-tabs,.wpb-exercise-window-tabs)
-  >button:not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="page"]){
-  transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease),
-             background-color var(--pi-r73-state-duration) var(--pi-r73-state-ease)!important;
-}
+  >button:not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="page"]),
 #root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs
   >button:not([aria-selected="true"]){
   transition:color var(--pi-r73-state-duration) var(--pi-r73-state-ease),

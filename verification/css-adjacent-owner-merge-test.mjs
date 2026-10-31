@@ -21,4 +21,28 @@ for(const [selector,first,second] of checks){
  const body=css.slice(match,css.indexOf('}',match)+1);
  assert.ok(body.includes(first)&&body.includes(second),'Adjacent owner was not actually consolidated: '+selector);
 }
+
+// R76: Adjacent *identical* declarations now have one rule with the original
+// full selector list. Keeping selector specificity and state predicates avoids
+// reintroducing a new priority override to hide conflicts.
+const sharedSelected='#root[data-pi-motion="expressive"] .wpb-progress .wpb-premium-tabs[data-pi-m3-track]>button[aria-selected="true"],\n' +
+ '#root[data-pi-motion="expressive"] .wpb-settings .wpb-segmented[data-pi-m3-track]>button[aria-pressed="true"],\n' +
+ '#root[data-pi-motion="expressive"] .wpb .wpb-exercise-tabs[data-pi-m3-track]>button[aria-selected="true"]{';
+assert.ok(css.includes(sharedSelected),'Progress/Settings/Exercise selected buttons share one owner');
+const selectedBody=css.split(sharedSelected)[1]?.split('}')[0]||'';
+assert.ok(selectedBody.includes('background:transparent!important;') &&
+ selectedBody.includes('background-image:none!important;') &&
+ selectedBody.includes('box-shadow:none!important;'),'Moving indicator buttons retain original transparent paint');
+const sharedWizard='#root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout,\n' +
+ '#root[data-pi-motion="expressive"] .wpb .wpb-wizard-layout>.wpb-wizard-step{';
+assert.ok(css.includes(sharedWizard),'Wizard container and step share the same sizing owner');
+assert.ok(css.split(sharedWizard)[1]?.split('}')[0].includes('min-width:0;\n  width:100%;'),
+ 'Wizard retains the existing full-width/min-width geometry');
+const sharedTransition='#root[data-pi-motion="expressive"] .wpb .wpb-progress.wpb-progress .wpb-premium-tabs\n' +
+ '  >button:not([aria-selected="true"]){';
+assert.ok(css.includes(sharedTransition),'Specific Progress unselected selector remains grouped for state parity');
+assert.equal(css.split(sharedTransition).length-1,1,'Specific Progress idle tab selector appears once');
+assert.ok(css.split(sharedTransition)[1]?.split('}')[0].includes('transition:color var(--pi-r73-state-duration)'),
+ 'Shared idle tab transition preserves the original timing and token');
+
 console.log('PASS CSS retirement: three adjacent same-selector roles merged without changing priority or conditions.');

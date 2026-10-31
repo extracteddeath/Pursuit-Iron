@@ -2,9 +2,9 @@
  * The B1011 family is isolated after original B1009/B1010 budgets. No new !important debt.
  */
 export const uiStyleBudget=Object.freeze({
-  cssCharacters:657201,
+  cssCharacters:656982,
   // Monotonic priority debt ceiling: reductions are welcome, additions are not.
-  cssPriorityDeclarations:2023,
+  cssPriorityDeclarations:2019,
   appInlineObjects:801,
   settingsInlineObjects:6,
   b1011CssCharacters:8577,

@@ -3761,6 +3761,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb .wpb-settings-method-intro{padding:0 var(--pi-space-1) var(--pi-space-2)}
 .wpb .wpb-settings-reference-name{margin-bottom:2px;font-size:var(--pi-type-support);font-weight:700}
 /* Diagnostics inherits Settings' semantic type, surface and focus roles. */
+/* Import sheet retains its existing drag/focus/callback contracts and native form semantics. */
+.wpb .wpb-settings-import-sheet{box-sizing:border-box;width:100%;padding:var(--pi-space-3) var(--pi-space-4) calc(env(safe-area-inset-bottom) + 26px);border-top:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--pi-color-card);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+.wpb .wpb-settings-import-input{display:block;width:100%;height:150px;margin-bottom:var(--pi-space-3);resize:none;line-height:1.5}
+.wpb .wpb-settings-import-result{margin-bottom:var(--pi-space-3);font-size:var(--pi-type-support);font-weight:500;line-height:1.45;color:var(--wpb-theme-accent-ink)}
+.wpb .wpb-settings-import-result[data-outcome="error"]{color:var(--wpb-theme-danger)}
+.wpb .wpb-settings-import-submit{display:block;width:100%;min-height:var(--pi-control-min);padding:var(--pi-space-3);border:0;border-radius:var(--pi-shape-action);background:var(--pi-color-active);color:var(--pi-color-on-active);font-size:var(--pi-type-body);font-weight:700;cursor:pointer}
+.wpb .wpb-settings-import-submit:disabled{background:var(--pi-color-control);color:var(--pi-color-on-muted);cursor:default;opacity:.65}
+.wpb .wpb-settings-import-submit:focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.wpb .wpb-settings-import-sheet{animation:none}}
+@media(forced-colors:active){.wpb .wpb-settings-import-sheet,.wpb .wpb-settings-import-input{border-color:CanvasText}.wpb .wpb-settings-import-submit{background:Highlight;color:HighlightText}}
 .wpb .wpb-settings-diagnostic-intro{padding:0 var(--pi-space-1) var(--pi-space-3);color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.6}
 .wpb .wpb-settings-diagnostic-run{display:flex;align-items:center;justify-content:center;gap:var(--pi-space-2);width:100%;min-height:var(--pi-control-min);padding:var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-card);color:var(--wpb-theme-text);font-size:var(--pi-type-body);font-weight:650;cursor:pointer}
 .wpb .wpb-settings-diagnostic-run[data-running="true"]{border-color:var(--pi-color-warning);color:var(--pi-color-warning)}

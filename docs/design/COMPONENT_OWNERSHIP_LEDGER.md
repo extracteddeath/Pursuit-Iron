@@ -46,3 +46,5 @@ Only lower style-debt ceilings when the corresponding code truly disappears; do 
 The Diagnostics slice retains its quick/full test handlers, result outcomes and progress width; the rest of its static presentation now belongs to class-owned CSS. No logger or engine logic was changed.
 
 The Settings import sheet now has named presentation roles for the sheet, textarea, result and disabled submit. The existing drag/ref, textarea state writer and import callback remain unchanged. Total inline objects are lower, while the external CSS has grown temporarily; owner retirement still remains.
+
+B1011 groups migrated Settings presentation in one bounded owner after B1010. Its separately counted CSS remains subject to a strict 8,412-character ceiling and unchanged priority rule counts; the legacy pre-B1009 source ceiling is not relaxed. Growth here does not count as net stylesheet debt reduction.

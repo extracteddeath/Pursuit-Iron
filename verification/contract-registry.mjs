@@ -76,6 +76,7 @@ export const contractGroups = Object.freeze({
         'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
         'home-utility-owner-test.mjs',
+        'home-template-owner-test.mjs',
         'css-cascade-owner-inventory-test.mjs',
         'css-adjacent-owner-merge-test.mjs',
         'plan-choice-ownership-test.mjs',

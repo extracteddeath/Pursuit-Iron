@@ -10212,3 +10212,27 @@ background:var(--pi-color-card)!important;
 
 @media(forced-colors:active){.wpb .wpb-settings-cta,.wpb .wpb-settings-support-cta{background:Highlight;color:HighlightText}}
 
+
+/* B1012 — one token-owned template discovery/selection family for Home. */
+#root .wpb .wpb-template-browse-link{display:inline-flex;align-items:center;gap:var(--pi-space-1);padding:var(--pi-space-1);font-size:var(--pi-type-support);font-weight:700;color:var(--wpb-theme-accent-ink);min-height:44px;text-decoration:none}
+#root .wpb .wpb-template-card.wpb-ui-card{display:flex;box-sizing:border-box;min-width:0;min-height:var(--pi-control-min);padding:var(--pi-space-3);text-align:left;color:var(--wpb-theme-text);cursor:pointer;gap:var(--pi-space-3)}
+#root .wpb .wpb-template-featured{flex:0 0 210px;max-width:78vw;flex-direction:column;align-items:stretch}
+#root .wpb .wpb-template-desc{font-size:var(--pi-type-support);line-height:1.4;color:var(--pi-color-on-muted);margin-top:var(--pi-space-1);min-height:2.8em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#root .wpb .wpb-template-use{display:flex;align-items:center;gap:var(--pi-space-1);margin-top:auto;padding-top:var(--pi-space-2);color:var(--wpb-theme-accent-ink);font-size:var(--pi-type-support);font-weight:650}
+#root .wpb .wpb-template-browse-card{flex:0 0 130px;flex-direction:column;align-items:center;justify-content:center;gap:var(--pi-space-2);border-style:dashed;border-color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);text-align:center}
+#root .wpb .wpb-template-sheet{display:flex;flex-direction:column;min-width:0;max-height:92%;border-top:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card) var(--pi-shape-card) 0 0;background:var(--wpb-theme-bg);animation:sheetUp .28s cubic-bezier(.2,.7,.3,1) both}
+#root .wpb .wpb-template-search{display:flex;align-items:center;gap:var(--pi-space-2);padding:var(--pi-space-2) var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control)}
+#root .wpb .wpb-template-search:focus-within{outline:2px solid var(--wpb-focus);outline-offset:2px}
+#root .wpb .wpb-template-search-input{flex:1;min-width:0;min-height:32px;padding:0;border:0;outline:0;background:transparent;color:var(--wpb-theme-text);font:inherit;font-size:var(--pi-type-body)}
+#root .wpb .wpb-template-gym-label,#root .wpb .wpb-template-category{flex-shrink:0;color:var(--pi-color-on-muted);font-size:var(--pi-type-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+#root .wpb .wpb-template-category{margin:var(--pi-space-1) 2px var(--pi-space-2)}
+#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice){flex-shrink:0;min-height:44px;padding:var(--pi-space-2) var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-pill);background:var(--pi-color-card);color:var(--pi-color-on-muted);white-space:nowrap;font-size:var(--pi-type-support);font-weight:650}
+#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice)[aria-pressed="true"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);border-color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-template-filter-clear{min-height:44px;flex-shrink:0;padding:var(--pi-space-2) var(--pi-space-3);border:1px dashed var(--pi-color-divider);border-radius:var(--pi-shape-pill);color:var(--pi-color-on-muted);font-size:var(--pi-type-support)}
+#root .wpb .wpb-template-empty{text-align:center;color:var(--pi-color-on-muted);font-size:var(--pi-type-body);padding:var(--pi-space-6) var(--pi-space-2)}
+#root .wpb .wpb-template-row{width:100%;align-items:center;margin-bottom:var(--pi-space-2)}
+#root .wpb .wpb-template-row-icon{flex:0 0 34px;width:34px;height:34px;border-radius:var(--pi-shape-action);background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);display:flex;align-items:center;justify-content:center}
+#root .wpb .wpb-template-card:focus-visible,#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice,.wpb-template-browse-link,.wpb-template-filter-clear):focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px}
+@media(max-width:359px){#root .wpb .wpb-template-featured{flex-basis:190px;max-width:78vw}#root .wpb .wpb-template-card.wpb-ui-card{padding:var(--pi-space-2)}}
+@media(prefers-reduced-motion:reduce){#root .wpb .wpb-template-sheet{animation:none}}
+@media(forced-colors:active){#root .wpb .wpb-template-card,#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice,.wpb-template-search){border-color:CanvasText}#root .wpb :is(.wpb-template-filter,.wpb-template-gym-choice)[aria-pressed="true"]{background:Highlight;color:HighlightText}}

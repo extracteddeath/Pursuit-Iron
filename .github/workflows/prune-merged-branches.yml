@@ -1,0 +1,45 @@
+name: Prune merged head branches (conservative)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/prune-merged-branches.mjs
+      - .github/workflows/prune-merged-branches.yml
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List eligible branches without deleting
+        type: boolean
+        required: true
+        default: true
+      confirm:
+        description: For actual deletion enter DELETE-MERGED
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: merged-branch-hygiene
+  cancel-in-progress: false
+
+jobs:
+  prune-verified-merged-heads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify conservative branch eligibility boundaries
+        run: node --test verification/repo-hygiene-test.mjs
+      - name: Delete only exact heads of merged pull requests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+          CONFIRM: ${{ github.event_name == 'push' && 'DELETE-MERGED' || inputs.confirm }}
+        run: node scripts/prune-merged-branches.mjs

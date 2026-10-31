@@ -8,9 +8,9 @@ const settings=app.slice(app.indexOf('function SettingsView('),app.indexOf('func
 const gallery=app.slice(app.indexOf('function GalleryView('),app.indexOf('/* ⚠ ONE OWNER',app.indexOf('function GalleryView(')));
 assert.ok(settings.length>10000&&gallery.length>4000,'Source must contain real Settings/Gallery views');
 
-// Four navigation actions use one shared button and one feature geometry owner.
-assert.equal(settings.split('className: "wpb-settings-navigation wpb-settings-link"').length-1,5,'Five Settings destinations share the same native action family');
-assert.ok(settings.includes('_jsxs(UiAction, { variant: "tonal", "data-align": "start", onClick: onGyms'), 'Gym navigation adopts the shared action without a nested card');
+// Four destination cards and the contained Gyms row share native action semantics.
+assert.equal(settings.split('className: "wpb-settings-navigation wpb-settings-link"').length-1,4,'Four standalone Settings destinations share one tonal action');
+assert.ok(settings.includes('className: "wpb-ui-card wpb-settings-card", children: _jsxs(UiAction, { variant: "text", "data-align": "start", onClick: onGyms'), 'Gyms retains its shared card with one transparent shared action');
 assert.ok(settings.includes('_jsxs(UiAction, { variant: "tonal", "data-align": "start", onClick: onLibrary'));
 assert.ok(settings.includes('_jsxs(UiAction, { variant: "tonal", "data-align": "start", onClick: onGallery'));
 assert.ok(!settings.includes('marginBottom: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, cursor: "pointer", textAlign: "left"'),

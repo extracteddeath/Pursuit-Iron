@@ -19,7 +19,7 @@ const countWorking = perf => Object.values(perf).reduce((sum, lift) =>
 const maxRep = cell => Number(String(cell.reps).match(/[0-9]+/g)?.at(-1)) || 8;
 const targetRir = cell => Number(String(cell.rir).match(/[0-9]+/g)?.[0] ?? 2);
 const trace = { scenario: 'M340 continuous engine lifecycle', seed: 34011, stages: [],
-    sessions: 0, workingSets: 0, generatedBlocks: 0, cycleTransitions: 0 };
+    sessions: 0, workingSets: 0, protectedRefreshCases: 0, generatedBlocks: 0, cycleTransitions: 0 };
 function stage(name, detail = {}) {
     trace.stages.push({ name, ...detail });
     console.log('LIFECYCLE_STAGE ' + JSON.stringify(trace.stages.at(-1)));
@@ -80,20 +80,47 @@ function completeRealWorkout(p, day, week, prior) {
         // Rendering the same untouched workout twice must never drift a second-set load.
         const again = prescribeSets(p, day, ex, slot, week, 'lb', suggestion, null, {}, prior, true);
         assert.deepEqual(again, rows, 'A read recomputed live targets without new history');
-        if (works.length >= 2) {
-            const paused = clone(rows);
-            const indices = paused.map((set, i) => !set.warm && !set.sub ? i : -1).filter(i => i >= 0);
-            paused[indices[0]].done = true;
-            paused[indices[1]].valueOwner = 'user';
-            paused[indices[1]].auto = false;
-            paused[indices[1]].weight = '37';
-            const untouchedPaused = clone(paused);
-            const restored = refreshPendingSetTargets(paused, again);
-            assert.equal(restored[indices[0]].weight, paused[indices[0]].weight,
-                'Resume rewrote a completed load');
-            assert.equal(restored[indices[1]].weight, '37',
-                'Resume rewrote a manually edited later-set load');
-            assert.deepEqual(paused, untouchedPaused, 'Resume must not mutate its saved input rows');
+        // M418: protected rows must survive a CHANGED prescription, not merely
+        // a read of identical targets. Replaying every slot/set position exposes
+        // late-exercise ownership defects a first-exercise-only test would miss.
+        const newer = clone(again).map(set => {
+            if (set.warm || set.sub || set.added) return set;
+            const weight = String((Number(set.weight) || 95) + 5);
+            const reps = String((Number(set.reps) || 8) + 1);
+            return { ...set, weight, reps, target: {
+                ...set.target, w: weight, prefillReps: reps
+            } };
+        });
+        const workingIndices = rows.map((set, i) =>
+            !set.warm && !set.sub && !set.added ? i : -1).filter(i => i >= 0);
+        for (const index of workingIndices) {
+            for (const state of ['manual-prefill', 'manual-edited', 'completed']) {
+                const paused = clone(rows), edited = paused[index];
+                // A user can own the row by editing RIR alone, leaving weight
+                // and reps equal to their original automatic prefills.
+                edited.actualRIR = 1;
+                if (state.startsWith('manual')) {
+                    edited.valueOwner = 'user';
+                    edited.auto = false;
+                }
+                if (state !== 'manual-prefill') {
+                    edited.weight = String(37 + index);
+                    edited.reps = '11';
+                }
+                if (state === 'completed') edited.done = true;
+                const saved = clone(paused);
+                const restored = refreshPendingSetTargets(paused, newer);
+                for (const field of ['weight', 'reps', 'actualRIR', 'valueOwner',
+                    'auto', 'done', 'target']) {
+                    assert.deepEqual(restored[index][field], saved[index][field],
+                        'M418 refresh overwrote ' + state + ' ' + field + ' in ' +
+                        JSON.stringify({ day: day.id, slot, set: index, week }));
+                }
+                assert.deepEqual(paused, saved,
+                    'M418 refresh mutated its saved input at ' +
+                    JSON.stringify({ day: day.id, slot, set: index, state, week }));
+                trace.protectedRefreshCases++;
+            }
         }
         // This is a completed workout, not a synthetic perf map. The real logger
         // serializes the rows, their targets, RIR provenance, techniques and identity.
@@ -219,5 +246,8 @@ for (let block = 0; block < 2; block++) {
         stage('cycle-completed', { blocks: 2, totalLogs: history.length });
     }
 }
-stage('audit-finished', { sessions: trace.sessions, workingSets: trace.workingSets });
+stage('audit-finished', { sessions: trace.sessions, workingSets: trace.workingSets,
+    protectedRefreshCases: trace.protectedRefreshCases });
+assert.ok(trace.protectedRefreshCases > trace.workingSets,
+    'Every working set position must be audited in multiple protected states');
 console.log('ENGINE_LIFECYCLE_AUDIT ' + JSON.stringify({ status: 'pass', ...trace }));

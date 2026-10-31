@@ -3731,8 +3731,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 
 /* Cohesion 20 — Settings groups and stable row composition. */
-.wpb .wpb-settings-card.wpb-ui-card{padding:0;margin:0 0 var(--pi-space-3);overflow:visible;container-type:inline-size;}
-.wpb .wpb-settings-title{margin:var(--pi-space-4) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);line-height:1.4;font-weight:750;letter-spacing:.015em;color:var(--pi-color-on-muted);text-transform:none;}
+.wpb .wpb-settings-card.wpb-ui-card{padding:0;margin:0 0 var(--pi-space-4);overflow:visible;container-type:inline-size;}
+.wpb .wpb-settings-title{margin:var(--pi-space-5) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);line-height:1.4;font-weight:720;letter-spacing:.005em;color:var(--pi-color-on-muted);text-transform:none;}
 .wpb .wpb-settings-row,.wpb .wpb-settings-navigation{box-sizing:border-box;display:flex;align-items:center;gap:var(--pi-space-3);min-width:0;min-height:var(--pi-control-min);padding:var(--pi-space-3);border:0;background:transparent;color:inherit;}
 .wpb .wpb-settings-row{flex-wrap:wrap;}
 .wpb .wpb-settings-row-copy{flex:1 1 8rem;min-width:0;overflow-wrap:anywhere;}
@@ -3759,7 +3759,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb .wpb-settings>.wpb-page-scroll{flex:1;overflow-y:auto;padding:var(--pi-space-2) var(--pi-page-inset) var(--pi-space-8)}
 .wpb .wpb-settings [data-settings-anchor]{scroll-margin-top:var(--pi-space-2)}
 /* Settings choices keep the existing measured selection track and callbacks. */
-.wpb .wpb-settings .wpb-segmented{box-sizing:border-box;display:flex;max-width:100%;padding:3px;border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-control);box-shadow:none}
+.wpb .wpb-settings .wpb-segmented{box-sizing:border-box;display:flex;max-width:100%;padding:3px;border:1px solid color-mix(in srgb,var(--pi-color-divider) 40%,transparent);border-radius:var(--pi-shape-action);background:var(--pi-color-control);box-shadow:none}
 .wpb .wpb-settings .wpb-segmented>button{display:flex;align-items:center;justify-content:center;min-width:48px;min-height:48px;padding:var(--pi-space-2) var(--pi-space-1);border:0;border-radius:calc(var(--pi-shape-action) - var(--pi-space-1));background:transparent;color:var(--pi-color-on-control);font-size:var(--pi-type-support);font-weight:650;cursor:pointer}
 .wpb .wpb-settings .wpb-experience-segmented{width:100%}
 .wpb .wpb-theme-picker{background:var(--pi-color-card);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-card);overflow:hidden}
@@ -4352,9 +4352,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   /* One shared geometry and paint vocabulary. Use within existing component
      selectors rather than appending screen-specific !important overrides.
      The hero, normal surface and controls remain deliberately distinct. */
-  --pi-shape-feature:24px;
-  --pi-shape-card:20px;
-  --pi-shape-action:14px;
+  /* M3E surface/shape scale: one named owner for featured, grouped and actionable surfaces. */
+  --pi-shape-feature:30px;
+  --pi-shape-card:24px;
+  --pi-shape-action:18px;
+  --pi-shape-pill:999px;
+  --pi-shape-identity:32px 16px 32px 32px;
   --pi-motion-paint:160ms;
   --pi-control-touch:48px;
   
@@ -4932,13 +4935,13 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* M270 — shared root typography, readable destination names and notices.
    Root screens share roles; Workout/Focus geometry remains independent. */
 
-.wpb{--pi-type-screen-title:1.625rem;--pi-type-navigation:.75rem;}
+.wpb{--pi-type-screen-title:clamp(1.75rem,1.55rem + 1vw,2.125rem);--pi-type-navigation:.8125rem;}
 
 /* Root titles are destination names: keep each word whole. Flex wrapping sends
    trailing toolbar actions to a new row at 200% text instead of splitting Profile. */
 #root .wpb .wpb-screen-title{
-  min-width:min-content;margin:0;font-size:var(--pi-type-screen-title);font-weight:750;
-  line-height:1.22;letter-spacing:-.035em;overflow-wrap:normal;word-break:normal;text-wrap:balance;
+  min-width:min-content;margin:0;font-size:var(--pi-type-screen-title);font-weight:780;
+  line-height:1.17;letter-spacing:-.04em;overflow-wrap:normal;word-break:normal;text-wrap:balance;
 }
 
 /* M271 — one root app bar: same title anchor, inset, action row and scroll fill.
@@ -5029,8 +5032,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
    Screen components own composition; classes own static surface and control paint. */
 .wpb .wpb-ui-card{
   box-sizing:border-box;min-width:0;padding:var(--pi-card-padding);
-  border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
-  border-radius:var(--pi-shape-card,20px);
+  border:1px solid color-mix(in srgb,var(--pi-color-divider,var(--wpb-theme-border)) 55%,transparent);
+  border-radius:var(--pi-shape-card,24px);
   background:var(--pi-color-card,var(--wpb-theme-card));
   color:var(--pi-color-on-control,var(--wpb-theme-text));
   box-shadow:var(--pi-shadow-card);
@@ -5065,7 +5068,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   gap:var(--pi-space-2);min-width:var(--pi-control-min);min-height:var(--pi-control-min);
   padding:var(--pi-space-2) var(--pi-control-padding-inline);
   border:1px solid var(--pi-color-divider,var(--wpb-theme-border));
-  border-radius:var(--pi-shape-action,14px);background:var(--pi-color-control,var(--wpb-theme-card-high));
+  border-radius:var(--pi-shape-action,18px);background:var(--pi-color-control,var(--wpb-theme-card-high));
   color:var(--pi-color-on-control,var(--wpb-theme-text));font:inherit;
   font-size:var(--pi-type-support);font-weight:var(--pi-weight-action);line-height:1.4;
   cursor:pointer;touch-action:manipulation;box-shadow:var(--pi-shadow-card);
@@ -8352,7 +8355,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* B909 — Prototype-aligned Home coaching: short insight card outside workout hero. */
 #root .wpb .wpb-plan-change-banner{
   min-height:56px;margin:0 0 var(--pi-space-2);padding:var(--pi-space-2) var(--pi-space-3);
-  border-radius:var(--pi-shape-card);background:var(--wpb-theme-accent-dim);
+  border-radius:var(--pi-shape-card);background:var(--pi-color-card,var(--wpb-theme-card));
 }
 #root .wpb .wpb-plan-change-banner .wpb-session-plan-icon{width:32px;height:32px;border-radius:var(--pi-shape-action)}
 #root .wpb .wpb-plan-change-banner strong{font-size:.875rem}
@@ -8360,7 +8363,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 /* Home outline owns its inset; legacy M3 preview rules no longer stack padding. */
 #root .wpb .wpb-home-session-preview{
   position:relative;margin:0;padding:0 var(--pi-space-3);
-  min-width:0;border-radius:var(--pi-shape-card);background:var(--pi-color-control);
+  min-width:0;border-radius:var(--pi-shape-card);background:color-mix(in srgb,var(--pi-color-control) 78%,var(--pi-color-feature) 22%);
 }
 #root .wpb .wpb-home-preview-action{
   width:100%;min-height:var(--pi-control-min);margin:0;padding:var(--pi-space-2);
@@ -8994,10 +8997,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 .wpb-profile-share-card h2{margin:0 0 var(--pi-space-1);font-size:clamp(1.5rem,5vw,2rem);line-height:1.16;letter-spacing:-.035em;overflow-wrap:anywhere}
 .wpb-profile-card-caption{margin:0;color:var(--wpb-theme-muted);font-size:.8125rem;line-height:1.5}
-.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--pi-space-3);margin:var(--pi-space-3) 0 0}
-.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) 0;border-top:1px solid var(--pi-color-divider,var(--wpb-theme-border))}
+.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-2) var(--pi-space-3);margin:var(--pi-space-4) 0 0}
+.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) var(--pi-space-1);border:0;overflow-wrap:anywhere}
+.wpb-profile-card-metrics>div:nth-child(-n+2){padding:var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--pi-color-control,var(--wpb-theme-card-high))}
 .wpb-profile-card-metrics dt{font-size:.75rem;font-weight:650;color:var(--wpb-theme-muted)}
-.wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:.875rem;font-weight:750;line-height:1.4;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.wpb-profile-card-metrics dd{margin:var(--pi-space-1) 0;font-size:var(--pi-type-body);font-weight:750;line-height:1.35;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.wpb-profile-card-metrics>div:nth-child(-n+2) dd{font-size:clamp(1.0625rem,2.6vw,1.375rem);letter-spacing:-.025em}
 .wpb-profile-card-metrics dd>span{display:block}
 .wpb-profile-card-metrics p{margin:0;font-size:.6875rem;line-height:1.5;color:var(--wpb-theme-muted)}
 .wpb-profile-card-actions{margin-top:var(--pi-space-2)}
@@ -9007,7 +9012,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 @media(max-width:360px){.wpb-profile-share-card{padding:16px}}
 @media(forced-colors:active){.wpb-profile-share-card,.wpb-profile-card-actions>button{border:1px solid CanvasText}.wpb-profile-card-field :is(input,select){border-color:CanvasText}}
 
-@container pi-r77-profile (max-width:15em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
+@container pi-r77-profile (max-width:22em){.wpb-profile-card-metrics{grid-template-columns:minmax(0,1fr)}}
 .wpb-profile-share-toggles button[aria-pressed="true"] span{background:var(--pi-color-card,var(--wpb-theme-card))}
 
 /* Cohesion 20: switch tracks have explicit contrast and no legacy thumb geometry.

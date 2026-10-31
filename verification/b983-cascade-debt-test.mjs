@@ -245,7 +245,7 @@ assert.ok(!/className: "[^"]*pi-t-[^"]+",\s*,/.test(app),'B1009 JSX props must n
 const b1009Contract=[
   [
     "pi-t-muted",
-    6,
+    7,
     "style: { color: C.muted }"
   ],
   [

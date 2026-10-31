@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 // Read-only source audit; computed styles and real-device behavior require browser checks.
 const app=fs.readFileSync('modules/App.js','utf8');
@@ -46,7 +47,7 @@ export const report={
  unownedStandardCardCallSites:count(app,/_(?:jsx|jsxs)\("(?:div|section|article)", \{ className: "wpb-ui-card(?:\s|")/g),
  screens,shared
 };
-if(process.argv[1] && fileURLToPath(import.meta.url)===process.argv[1]){
+if(process.argv[1] && fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
  if(process.argv.includes('--json')) console.log(JSON.stringify(report,null,2));
  else {
   console.log('UI ownership:',JSON.stringify({cssCharacters:report.cssCharacters,

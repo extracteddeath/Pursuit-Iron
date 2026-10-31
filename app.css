@@ -3769,11 +3769,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb .wpb-settings-diagnostic-track{height:3px;margin-top:var(--pi-space-2);border-radius:var(--pi-shape-pill);overflow:hidden;background:var(--pi-color-divider)}
 .wpb .wpb-settings-diagnostic-fill{height:100%;border-radius:inherit;background:var(--pi-color-active);transition:width .15s var(--pi-ease)}
 .wpb .wpb-settings-diagnostic-result{margin-top:var(--pi-space-2);padding:var(--pi-space-3);border:1px solid color-mix(in srgb,var(--pi-color-active) 34%,transparent);border-radius:var(--pi-shape-action);background:var(--pi-color-feature)}
-.wpb .wpb-settings-diagnostic-result[data-outcome="fail"]{border-color:color-mix(in srgb,var(--pi-color-warning) 34%,transparent);background:var(--pi-color-control)}
+.wpb .wpb-settings-diagnostic-result[data-outcome="fail"]{border-color:color-mix(in srgb,var(--wpb-theme-danger) 34%,transparent);background:color-mix(in srgb,var(--wpb-theme-danger) 8%,var(--pi-color-card))}
 .wpb .wpb-settings-diagnostic-result-title{display:flex;align-items:center;gap:var(--pi-space-2);font-size:var(--pi-type-body);font-weight:700;color:var(--wpb-theme-accent-ink)}
-.wpb .wpb-settings-diagnostic-result[data-outcome="fail"] .wpb-settings-diagnostic-result-title{color:var(--pi-color-warning)}
+.wpb .wpb-settings-diagnostic-result[data-outcome="fail"] .wpb-settings-diagnostic-result-title{color:var(--wpb-theme-danger)}
 .wpb .wpb-settings-diagnostic-result-copy{margin-top:var(--pi-space-1);font-size:var(--pi-type-support);color:var(--pi-color-on-muted);line-height:1.45}
-.wpb .wpb-settings-diagnostic-error{margin-top:var(--pi-space-1);font-size:var(--pi-type-caption);color:var(--pi-color-warning);line-height:1.4;overflow-wrap:anywhere}
+.wpb .wpb-settings-diagnostic-error{margin-top:var(--pi-space-1);font-size:var(--pi-type-caption);color:var(--wpb-theme-danger);line-height:1.4;overflow-wrap:anywhere}
 .wpb .wpb-settings-diagnostic-overflow{margin-top:var(--pi-space-1);font-size:var(--pi-type-caption);color:var(--pi-color-on-muted)}
 .wpb .wpb-settings-diagnostic-run:focus-visible,.wpb .wpb-settings-diagnostic-full:focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.wpb .wpb-settings-diagnostic-fill{transition:none}}

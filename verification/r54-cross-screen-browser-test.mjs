@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
-import { waitForRouteOrDiagnose } from './browser-route-diagnostics.mjs';
+import { waitForRouteOrDiagnose, assertNavigationTapClear } from './browser-route-diagnostics.mjs';
 import { sessionPrescriptionRows, effortLabel, weeksOf, EXERCISES, generateNextProgramForShell } from '../modules/engine-api.js';
 
 // R54: screenshot and semantic-state contract for routes R53's paired primary
@@ -469,6 +469,7 @@ async function verifyNavigationFlow(browser,theme,width){
     assert.equal(minimized.data[0].sets[0].weight,'185','Minimizing retains typed set values');
 
     // Resuming from a different tab should return to that tab, keeping the same live workout.
+    await assertNavigationTapClear(page, 'progress');
     await page.click('[data-tab="progress"]');
     await assertResumeClear(page);
     await page.click('.wpb-live-dock button[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');

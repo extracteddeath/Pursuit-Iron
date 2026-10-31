@@ -37,7 +37,7 @@ const url = `http://127.0.0.1:${server.address().port}/`;
 let browser;
 try {
     browser = await puppeteer.launch({ executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
-    for (const [width, theme, reduced] of [[320,'amethyst',false],[430,'rosewater',true],[800,'amethyst',false],[1280,'rosewater',false]]) {
+    for (const [width, theme, reduced] of [[320,'amethyst',false],[393,'rosewater',true],[800,'amethyst',false],[1280,'rosewater',false]]) {
         const context = await browser.createBrowserContext();
         const page = await context.newPage(); const errors = [];
         page.on('pageerror', error => errors.push(error.message));
@@ -219,11 +219,38 @@ try {
         assert.deepEqual(adjusted.data[0].sets,before[0].sets.slice(0,3));
         assert.doesNotMatch(await page.$eval(dock,el=>el.textContent), /This set/);
         assert.equal(await page.$('.wpb-tech-cue'), null, 'affected lift no longer offers the prescribed failure technique');
-        await page.waitForSelector('xpath/.//button[normalize-space(.)="Undo"]');
-        await (await page.$('xpath/.//button[normalize-space(.)="Undo"]')).click();
+        // M436: Undo must belong to THIS injury adjustment, not a different
+        // global Undo from program changes, logging, or another transient toast.
+        // Keep an actual pointer click and fail on an ambiguous or missing owner.
+        const injuryUndo = () => [...document.querySelectorAll('.wpb-workout button')]
+            .filter(button => button.textContent?.trim() === 'Undo'
+                && button.parentElement?.querySelector('span')?.textContent?.includes('Remaining affected sets reduced for today')
+                && button.getClientRects().length > 0);
+        await page.waitForFunction(injuryUndo);
+        const owners = await page.evaluate(injuryUndo);
+        // DOM elements cannot be serialized as useful evidence; explicitly count.
+        assert.equal(owners.length, 1, 'exactly one visible injury-specific Undo action must exist');
+        const undoHandle = await page.evaluateHandle(() => [...document.querySelectorAll('.wpb-workout button')]
+            .find(button => button.textContent?.trim() === 'Undo'
+                && button.parentElement?.querySelector('span')?.textContent?.includes('Remaining affected sets reduced for today')
+                && button.getClientRects().length > 0));
+        const undoButton = undoHandle.asElement();
+        assert.ok(undoButton, 'injury-specific Undo must resolve to a real button');
+        await undoButton.click(); await undoHandle.dispose();
         await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).injuryReports?.length===0);
         assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')).data),before);
+        // A stale write must not resurrect the removed injury on a real resume.
+        if (width <= 393) {
+            await page.reload({waitUntil:'networkidle0'});
+            await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+            await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
+            await page.waitForSelector('.wpb-workout');
+            const restored = await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
+            assert.equal(restored.injuryReports?.length ?? 0,0,'Undo remains persisted after offline-style resume');
+            assert.deepEqual(restored.data,before,'Undo restores all original user-owned set values on resume');
+        }
         await option('Report an injury'); await page.waitForSelector('.wpb-injury-reduce'); await page.click('.wpb-injury-reduce');
+        await page.waitForFunction(()=>JSON.parse(localStorage.getItem('wpb:live')).injuryReports?.length===1);
         await page.reload({waitUntil:'networkidle0'});
         await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
         await page.waitForSelector('.wpb-workout');

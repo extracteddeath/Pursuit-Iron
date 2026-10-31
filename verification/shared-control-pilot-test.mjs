@@ -31,7 +31,7 @@ assert.ok(primitives.includes('export function UiSegmented('),'Segmented group h
 assert.ok(primitives.includes('role: "group", "aria-label": label') &&
  primitives.includes('"aria-pressed": isSelected ? !!isSelected(choice) : value === choice'),
  'Segmented groups retain named native pressed semantics and custom unit-aware selection');
-assert.equal((settings.match(/_jsx\\(UiSegmented, /g)||[]).length,6,
+assert.equal(settings.split('_jsx(UiSegmented, ').length-1,6,
  'All six Settings segmented groups use the same native family');
 for(const label of ['Weight unit','Training experience','Effort scale','Smallest jump','Rest length','Sex'])
  assert.ok(settings.includes('UiSegmented, { label: "'+label+'"'),'Settings segmented group survives: '+label);

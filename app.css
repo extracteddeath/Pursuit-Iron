@@ -3760,6 +3760,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb .wpb-settings-legal{padding:var(--pi-space-2) var(--pi-space-1) 0;font-size:var(--pi-type-caption);line-height:1.55;color:var(--pi-color-on-muted)}
 .wpb .wpb-settings-method-intro{padding:0 var(--pi-space-1) var(--pi-space-2)}
 .wpb .wpb-settings-reference-name{margin-bottom:2px;font-size:var(--pi-type-support);font-weight:700}
+.wpb .wpb-settings-haptics-explainer{margin-top:var(--pi-space-1)}
+.wpb .wpb-settings .wpb-ui-control.wpb-settings-time-input{width:9.25rem;max-width:100%}
+.wpb .wpb-settings .wpb-ui-control.wpb-settings-weight-input{width:4.75rem;max-width:100%;text-align:center}
+.wpb .wpb-settings .wpb-settings-clear-history{border:0;background:transparent;color:var(--wpb-theme-danger);padding:var(--pi-space-2);font-size:var(--pi-type-support);font-weight:650}
+
 @media(forced-colors:active){.wpb .wpb-settings-cta,.wpb .wpb-settings-support-cta{background:Highlight;color:HighlightText}}
 
 .wpb .wpb-settings-row--stack{flex-direction:column;align-items:stretch;}

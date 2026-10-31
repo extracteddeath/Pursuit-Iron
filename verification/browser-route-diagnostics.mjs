@@ -45,3 +45,33 @@ export async function waitForRouteOrDiagnose(page, selector, { label = 'route', 
     throw new Error('Browser route did not appear: ' + message, {cause});
   }
 }
+
+/**
+ * Verify that the center of a native navigation target is actually tappable.
+ * This is read-only: diagnose overlapping workout docks, toasts and overlays
+ * BEFORE a scripted tap can accidentally resume or modify a live session.
+ */
+export async function assertNavigationTapClear(page, tab) {
+  const observed = await page.evaluate(id => {
+    const target = document.querySelector('button[data-tab="' + id + '"]');
+    if (!target) return { tab: id, present: false };
+    const bounds = target.getBoundingClientRect();
+    const x = bounds.left + bounds.width / 2, y = bounds.top + bounds.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    const dock = document.querySelector('.wpb-live-dock');
+    const rail = document.querySelector('.wpb-tabbar');
+    const box = el => el ? (() => {
+      const r = el.getBoundingClientRect();
+      return { top: +r.top.toFixed(1), bottom: +r.bottom.toFixed(1),
+        height: +r.height.toFixed(1), zIndex: getComputedStyle(el).zIndex };
+    })() : null;
+    return {tab: id, present: true, tappable: !!hit && target.contains(hit),
+      hit: hit?.getAttribute('aria-label') || hit?.className?.baseVal ||
+        hit?.className || hit?.tagName || null, tabBounds: box(target),
+      dockBounds: box(dock), railBounds: box(rail),
+      dockHasTabs: dock?.getAttribute('data-has-tabs') || null};
+  }, tab);
+  if(!observed.tappable) throw new Error('Navigation target is obstructed: ' +
+    JSON.stringify(observed));
+  return observed;
+}

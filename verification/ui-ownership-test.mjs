@@ -794,7 +794,11 @@ assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,57,"Workou
 const b957NewOwners=["wpb-s957-letterspacing-0-3","wpb-s957-padding-0-2px","wpb-s957-gap-2","wpb-s957-gap-16","wpb-s957-padding-3-5px-0","wpb-s957-height-100","wpb-s957-padding-14px-16px-6px","wpb-s957-margintop-4","wpb-s957-lineheight-1-5","wpb-s957-texttransform-capitalize"];
 assert.equal(b957NewOwners.length,10);
 for(const cls of b957NewOwners)assert.ok(css.includes("."+cls+","),"Missing B957 CSS owner "+cls);
-assert.equal((app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,15,"Home shared owner regression");
+assert.equal((app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,17,"Home shared owner adoption (15 existing + 2 new cycle utilities)");
+const b1012Home=app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0];
+assert.ok(b1012Home.includes('className: "pi-t-strong wpb-s956-flex-1') &&
+ b1012Home.includes('className: "pi-t-muted wpb-s956-overflow-hidden'),
+ 'Two additional Home utilities intentionally raise source adoption from 15 to 17');
 assert.equal((app.split("function SettingsView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,20,"SettingsView shared owner regression");
 assert.equal((app.split("function ProgressDetail(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,10,"ProgressDetail shared owner regression");
 assert.equal((app.split("function StrengthSnapshotCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"StrengthSnapshotCard shared owner regression");

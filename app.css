@@ -10212,7 +10212,6 @@ background:var(--pi-color-card)!important;
 
 @media(forced-colors:active){.wpb .wpb-settings-cta,.wpb .wpb-settings-support-cta{background:Highlight;color:HighlightText}}
 
-
 /* B1012 — one token-owned template discovery/selection family for Home. */
 #root .wpb .wpb-template-browse-link{display:inline-flex;align-items:center;gap:var(--pi-space-1);padding:var(--pi-space-1);font-size:var(--pi-type-support);font-weight:700;color:var(--wpb-theme-accent-ink);min-height:44px;text-decoration:none}
 #root .wpb .wpb-template-card.wpb-ui-card{display:flex;box-sizing:border-box;min-width:0;min-height:var(--pi-control-min);padding:var(--pi-space-3);text-align:left;color:var(--wpb-theme-text);cursor:pointer;gap:var(--pi-space-3)}

@@ -3,20 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { selectMergedBranchTips } from '../verification/branch-hygiene-selection.mjs';
 
-export function selectMergedBranchTips({ branches, mergedPRs, openPRs, repository, defaultBranch = 'main' }) {
-  const exact = new Set(mergedPRs
-    .filter(pr => pr.merged_at && pr.head?.repo?.full_name === repository)
-    .map(pr => pr.head.ref + ':' + pr.head.sha));
-  const active = new Set(openPRs
-    .filter(pr => pr.head?.repo?.full_name === repository)
-    .map(pr => pr.head.ref));
-  return branches.filter(branch =>
-    !branch.protected
-    && ![defaultBranch, 'main', 'beta'].includes(branch.name)
-    && !active.has(branch.name)
-    && exact.has(branch.name + ':' + branch.commit.sha));
-}
 
 async function run() {
   const repository = process.env.GITHUB_REPOSITORY;

@@ -17,6 +17,10 @@ export function UiRootHeader({ title, titleClassName = "", actions, actionsClass
         ] }), children
     ] });
 }
+// Canonical surface owner: preserve each caller's existing DOM tag, aria state, and feature classes.
+export function UiCard({ as: Element = "div", className = "", ...props }) {
+    return _jsx(Element, { ...props, className: `wpb-ui-card ${className}`.trim() });
+}
 export function UiAction({ variant = "secondary", className = "", ...props }) {
     // Components own static visual properties; only runtime-measured styles are forwarded.
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant });

@@ -16,6 +16,12 @@ assert.ok(gallery.includes('const Chip = ({ active, onClick, children }) => (_js
 assert.ok(gallery.includes('role: "group"') && gallery.includes('"Training days filter"'),
     'Separate filter dimensions must have accessible group names');
 assert.ok(!css.includes('.wpb-gallery-chip--selected{'), 'Gallery selected-state paint belongs to the shared choice');
+assert.ok(gallery.includes('className: "wpb-ui-card wpb-gallery-program"'),
+ 'Gallery programs use the same shared card surface as other screens');
+const galleryCardRule=css.split('#root .wpb .wpb-gallery-program{')[1]?.split('}')[0]||'';
+assert.ok(galleryCardRule.includes('padding:')&&!galleryCardRule.includes('background:')&&
+ !galleryCardRule.includes('border-radius:'),
+ 'Gallery owns only card layout; shared ui-card owns paint and radius');
 assert.ok(gallery.includes('disabled: res && res.ok'),'Imported programs must prevent duplicate actions');
 assert.ok(gallery.includes('setRetryKey(k => k + 1)'),'Offline retry stays functional');
 const scope=css.slice(css.indexOf('/* B988 — Gallery'),css.indexOf('/* B991: Workout/Program header'));

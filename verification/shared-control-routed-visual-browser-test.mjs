@@ -148,13 +148,38 @@ try{
         assert.ok(filterRow,'Gallery renders a named selectable filter dimension');
         const filterOptions=await filterRow.$$('.wpb-gallery-chip');
         assert.ok(filterOptions.length>=2,'A visible filter has an All and a specific choice');
+        // React may replace chip nodes when the result set changes. Assert live,
+        // user-visible state rather than a stale ElementHandle from before the click.
+        const groupLabel=await filterRow.evaluate(el=>el.getAttribute('aria-label'));
+        const selectedText=await filterOptions[1].evaluate(el=>el.textContent.trim());
+        const liveChoice=async text=>page.evaluate(({groupLabel,text})=>{
+          const group=[...document.querySelectorAll('[role="group"]')]
+            .find(el=>el.getAttribute('aria-label')===groupLabel);
+          return [...(group?.querySelectorAll('.wpb-gallery-chip')||[])]
+            .find(el=>el.textContent.trim()===text)?.getAttribute('aria-pressed')||null;
+        },{groupLabel,text});
         await filterOptions[1].click();
-        await page.waitForFunction(el=>el.getAttribute('aria-pressed')==='true',{},filterOptions[1]);
-        assert.equal(await filterOptions[1].evaluate(el=>el.getAttribute('aria-pressed')),'true',
+        await page.waitForFunction(({groupLabel,selectedText})=>{
+          const group=[...document.querySelectorAll('[role="group"]')]
+            .find(el=>el.getAttribute('aria-label')===groupLabel);
+          return [...(group?.querySelectorAll('.wpb-gallery-chip')||[])]
+            .some(el=>el.textContent.trim()===selectedText&&el.getAttribute('aria-pressed')==='true');
+        },{},{groupLabel,selectedText});
+        assert.equal(await liveChoice(selectedText),'true',
           'Real Gallery announces selected choice in its visible filter row');
-        await filterOptions[0].click();
-        await page.waitForFunction(el=>el.getAttribute('aria-pressed')==='true',{},filterOptions[0]);
-        assert.equal(await filterOptions[0].evaluate(el=>el.getAttribute('aria-pressed')),'true',
+        const liveGroup=await page.$('[role="group"][aria-label="'+groupLabel+'"]');
+        assert.ok(liveGroup,'Filter group remains available after narrowing the results');
+        const liveOptions=await liveGroup.$('.wpb-gallery-chip');
+        const allOption=await liveOptions[0].evaluate(el=>el.textContent.trim());
+        assert.ok(allOption,'Gallery retains its All/reset choice');
+        await liveOptions[0].click();
+        await page.waitForFunction(({groupLabel,allOption})=>{
+          const group=[...document.querySelectorAll('[role="group"]')]
+            .find(el=>el.getAttribute('aria-label')===groupLabel);
+          return [...(group?.querySelectorAll('.wpb-gallery-chip')||[])]
+            .some(el=>el.textContent.trim()===allOption&&el.getAttribute('aria-pressed')==='true');
+        },{},{groupLabel,allOption});
+        assert.equal(await liveChoice(allOption),'true',
           'Real Gallery resets selection to All');
         if(width===320||width===834||width===900){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-gallery-${theme}-${width}.png`)});

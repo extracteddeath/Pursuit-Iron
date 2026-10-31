@@ -530,7 +530,9 @@ try {
         // Root tabs keep their navigation semantics, respond immediately, and settle without layout growth.
         for (const tab of ['plan','progress','profile','settings','home']) {
             await page.click(`[data-tab="${tab}"]`);
-            await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
+            await page.waitForSelector(`[data-view-frame="${tab}"]`);
+            // Root frames are the stable render owner; data-pi-surface is reserved for actual
+            // moving cards/sheets, not the entire route. Keep the entrance-count assertion below.
             // M377: ordinary root navigation must not set five cards moving.
             // Preserve the measured indicator and real route while only one
             // meaningful card can arrive. The chosen nav icon does not bounce.

@@ -10,7 +10,7 @@ assert.ok(!block.includes('translate:0 -')&&!block.includes('opacity:0'),'No spr
 for(const s of ['.wpb-settings .wpb-segmented>button','.wpb-wizard-option','.wpb-wizard-choice','.wpb-wizard-preset'])
  assert.ok(block.includes(s),'Selection paint styles cover '+s);
 assert.ok(block.includes('prefers-reduced-motion:reduce')&&block.includes('forced-colors:active')&&block.includes('transition:none!important'));
-assert.ok(app.includes('className: "wpb-wizard-progress"')&&app.includes('className: "wpb-segmented"'),'Underlying progress and settings choice DOM remain');
+assert.ok(app.includes('className: "wpb-wizard-progress"')&&app.includes('_jsx(UiSegmented, { label: "Weight unit"'),'Underlying progress and settings choice DOM remain');
 const nav=app.slice(app.indexOf('function SettingsView('),app.indexOf('function ',app.indexOf('function SettingsView(')+20));
 const chooser=nav.slice(nav.indexOf('className: "wpb-settings-jump"'),nav.indexOf('className: "wpb-scroll wpb-page-scroll"'));
 assert.ok(chooser.includes('Go to Settings section')&&chooser.includes('Sections'),'Native control declares section-navigation purpose');

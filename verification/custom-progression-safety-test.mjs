@@ -163,8 +163,8 @@ console.log('PASS M418 positional double holds: skipped working sets cannot shif
     assert.deepEqual(legacyGapHistory, original, 'Legacy history is immutable during target calculation');
 
     const withNull = { sets: [legacyRows[0], null, legacyRows[2]] };
-    assert.equal(previousWorkoutSet(withNull, 1), null,
-        'An explicit null history slot is also a missing position');
-    assert.equal(previousWorkoutSet(withNull, 2)?.r, 15);
+    assert.equal(previousWorkoutSet(withNull, 1)?.r, 15,
+        'Malformed null records do not consume a working-set ordinal');
+    assert.equal(previousWorkoutSet(withNull, 2), null);
 }
 console.log('PASS M418 unindexed legacy skips: positional LAST and evaluator cannot earn a false increase.');

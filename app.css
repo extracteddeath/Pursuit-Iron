@@ -325,7 +325,6 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 /* Navigation: a quiet tonal pill sits under the icon. Labels stay visible without expanding the bar. */
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar{
-  padding:3px 6px calc(4px + env(safe-area-inset-bottom))!important;
   isolation:isolate;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab{

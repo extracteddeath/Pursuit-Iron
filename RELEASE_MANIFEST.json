@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1007,
+  "build": 1008,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "ad677153512dc782fab78b0d0b814a7ccfe9935536d2ffbc96ec4177279ae0de",
@@ -150,18 +150,18 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "c402a5c77937e19d295e6632a721f886714681428f2d537f116c7b04cefdd9f4",
-    "index.html": "082f985d5f025085ef25c97e77497b45695bd6af60480c19d9fa3eb20596d8c7",
-    "sw.js": "4e82c701b24e1904cf4fdd651a1db46e29ee0a7f1a76077f706c20b48a32c343",
-    "BUILD_PROFILE.json": "67dd24151e423be55bffe882b32bae827a84bdc8967426692d5f1e67ec00c74f",
+    "modules/App.js": "d6f48ddfe0967045a4a0d1a91747c70025319b306d6d340af663f51b2bc8a689",
+    "index.html": "7e69cd6fd56caf608d8d5d6f1fd59d44c816fbd466895468838a8e3a5cdaf81a",
+    "sw.js": "4b9e1cc374085d97cba1cd22a2f0a35c327cc6f78045d737a21fb059ea71582e",
+    "BUILD_PROFILE.json": "b2cc16c8a203547e825f8d750af39431050436e30845547c50bf369496d65ca8",
     "CHANGELOG.md": "0e3f7d796a743e83f0c9ef4c505d25473ff860d1e5cb8acebe6b3456f71eac19",
-    "app.css": "a969d4fbbedf3207aec0e8032185d9ed471114457b0f07bd8fcc4d3ceb70a36c",
+    "app.css": "211e705d23f43f6be2bdac0f9092530a087ce21d80439b2591b9f99690f8c018",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
     "manifest.webmanifest": "88ddb5d05bb87be82d76edc15a39119f3241d04ad0a2cce53fafbd3097154406"
   },
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1007-red5d1135cda954d5",
-  "uiMilestone": "Build 1007 · Native workout and shared choice navigation"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1008-r1d743f148b3bdcea",
+  "uiMilestone": "Build 1008 · Expressive shared screen foundations"
 }

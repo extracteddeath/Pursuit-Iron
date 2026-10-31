@@ -7254,14 +7254,19 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb-workout .wpb-ex-nav{
   display:flex;overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;
   padding:2px 3px 4px!important;overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
 }
 #root .wpb-workout .wpb-ex-nav .wpb-ex-nav-step{
   display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  scroll-snap-align:start;
   flex:0 0 auto;width:auto!important;min-width:92px!important;max-width:208px;
   height:48px!important;min-height:48px!important;padding:0 12px!important;
   border:1px solid var(--wpb-theme-border);border-radius:22px!important;
   background:var(--wpb-theme-card);color:var(--wpb-theme-muted);cursor:pointer;
   transition:background-color 160ms var(--e-out),border-radius 180ms var(--e-out);
+}
+#root .wpb-workout .wpb-ex-nav-step:focus-visible{
+  outline:2px solid var(--wpb-theme-accent);outline-offset:2px;
 }
 #root .wpb-workout .wpb-ex-nav-step[data-active="1"]{
   background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);

@@ -115,7 +115,7 @@ try{
         const picked=await page.$$eval('.wpb-gallery-chip',nodes=>
           nodes.filter(n=>n.getAttribute('aria-pressed')==='true').length);
         assert.ok(picked>=3,'Three Gallery filter dimensions expose selected state');
-        const splitOptions=await page.$('div[role="group"][aria-label="Split filter"] .wpb-gallery-chip');
+        const splitOptions=await page.$$('div[role="group"][aria-label="Split filter"] .wpb-gallery-chip');
         assert.ok(splitOptions.length>=2,'Real Gallery provides a non-All split choice');
         await splitOptions[1].click();
         assert.equal(await splitOptions[1].evaluate(el=>el.getAttribute('aria-pressed')),'true',

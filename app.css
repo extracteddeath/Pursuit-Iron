@@ -3760,6 +3760,25 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 .wpb .wpb-settings-legal{padding:var(--pi-space-2) var(--pi-space-1) 0;font-size:var(--pi-type-caption);line-height:1.55;color:var(--pi-color-on-muted)}
 .wpb .wpb-settings-method-intro{padding:0 var(--pi-space-1) var(--pi-space-2)}
 .wpb .wpb-settings-reference-name{margin-bottom:2px;font-size:var(--pi-type-support);font-weight:700}
+/* Diagnostics inherits Settings' semantic type, surface and focus roles. */
+.wpb .wpb-settings-diagnostic-intro{padding:0 var(--pi-space-1) var(--pi-space-3);color:var(--pi-color-on-muted);font-size:var(--pi-type-support);line-height:1.6}
+.wpb .wpb-settings-diagnostic-run{display:flex;align-items:center;justify-content:center;gap:var(--pi-space-2);width:100%;min-height:var(--pi-control-min);padding:var(--pi-space-3);border:1px solid var(--pi-color-divider);border-radius:var(--pi-shape-action);background:var(--pi-color-card);color:var(--wpb-theme-text);font-size:var(--pi-type-body);font-weight:650;cursor:pointer}
+.wpb .wpb-settings-diagnostic-run[data-running="true"]{border-color:var(--pi-color-warning);color:var(--pi-color-warning)}
+.wpb .wpb-settings-diagnostic-full{display:block;width:100%;min-height:var(--pi-control-min);margin-top:var(--pi-space-2);padding:var(--pi-space-2);border:0;border-radius:var(--pi-shape-action);background:transparent;cursor:pointer}
+.wpb .wpb-settings-diagnostic-progress{margin-top:var(--pi-space-2);padding:var(--pi-space-2) var(--pi-space-3);border-radius:var(--pi-shape-action);background:var(--pi-color-card);color:var(--pi-color-on-muted);font-size:var(--pi-type-caption);line-height:1.45}
+.wpb .wpb-settings-diagnostic-track{height:3px;margin-top:var(--pi-space-2);border-radius:var(--pi-shape-pill);overflow:hidden;background:var(--pi-color-divider)}
+.wpb .wpb-settings-diagnostic-fill{height:100%;border-radius:inherit;background:var(--pi-color-active);transition:width .15s var(--pi-ease)}
+.wpb .wpb-settings-diagnostic-result{margin-top:var(--pi-space-2);padding:var(--pi-space-3);border:1px solid color-mix(in srgb,var(--pi-color-active) 34%,transparent);border-radius:var(--pi-shape-action);background:var(--pi-color-feature)}
+.wpb .wpb-settings-diagnostic-result[data-outcome="fail"]{border-color:color-mix(in srgb,var(--pi-color-warning) 34%,transparent);background:var(--pi-color-control)}
+.wpb .wpb-settings-diagnostic-result-title{display:flex;align-items:center;gap:var(--pi-space-2);font-size:var(--pi-type-body);font-weight:700;color:var(--wpb-theme-accent-ink)}
+.wpb .wpb-settings-diagnostic-result[data-outcome="fail"] .wpb-settings-diagnostic-result-title{color:var(--pi-color-warning)}
+.wpb .wpb-settings-diagnostic-result-copy{margin-top:var(--pi-space-1);font-size:var(--pi-type-support);color:var(--pi-color-on-muted);line-height:1.45}
+.wpb .wpb-settings-diagnostic-error{margin-top:var(--pi-space-1);font-size:var(--pi-type-caption);color:var(--pi-color-warning);line-height:1.4;overflow-wrap:anywhere}
+.wpb .wpb-settings-diagnostic-overflow{margin-top:var(--pi-space-1);font-size:var(--pi-type-caption);color:var(--pi-color-on-muted)}
+.wpb .wpb-settings-diagnostic-run:focus-visible,.wpb .wpb-settings-diagnostic-full:focus-visible{outline:2px solid var(--wpb-focus);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.wpb .wpb-settings-diagnostic-fill{transition:none}}
+@media(forced-colors:active){.wpb .wpb-settings-diagnostic-result,.wpb .wpb-settings-diagnostic-run{border-color:CanvasText}}
+
 .wpb .wpb-settings-haptics-explainer{margin-top:var(--pi-space-1)}
 .wpb .wpb-settings .wpb-ui-control.wpb-settings-time-input{width:9.25rem;max-width:100%}
 .wpb .wpb-settings .wpb-ui-control.wpb-settings-weight-input{width:4.75rem;max-width:100%;text-align:center}

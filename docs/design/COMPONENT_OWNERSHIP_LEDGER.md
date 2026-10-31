@@ -62,3 +62,16 @@ B1012 Home template discovery retired 15 inline style objects (App 825 → 810) 
 B1012 source-gate reconciliation: two new Home utility consumers update the exact adoption count from 15 to 17. Removed one separator newline between B1011 and B1012, preserving the original 8,577-character Settings CSS ceiling and tightening total CSS to 657,244 and B1012 to 4,564. No UI or algorithm change in this reconciliation.
 
 B1013 Plan utility adoption: replaced five static inline style objects in PlanView (29 → 24) with existing shared classes for exercise leads, muscle focus, set-count alignment, week-intent body and phase-description spacing. App-wide inline ownership fell 810 → 805 with zero new CSS or priority declarations; Plan scroll, selected weeks, training engine and session callbacks remain untouched. The focus and description spacing now follows the shared 2px utility rhythm rather than a bespoke 1px exception.
+
+B1014 cross-selector declaration inventory: the CSS audit now detects exact repeated
+three-or-more-property declaration blocks across *different* selectors, retaining
+at-rule scope, selector names, and source offsets. The current 657,244-character
+stylesheet yields 51 candidate families in a conservative read-only scan.
+These are consolidation leads, not safe automated merges: selectors may differ
+in specificity, DOM ancestry, active states, or precedence. The most repeated
+families are high-contrast surface paint and shared selected-tab transitions.
+Do not create an additional late override or change the 2,024-priority ceiling
+merely to chase a source-count reduction. Next CSS retirement should prove
+computed parity first, then replace exact-equality priority assertions with a
+single monotonic budget before reducing legitimately superseded declarations.
+The source gate for this inventory uses a forced-colors/media-scope fixture.

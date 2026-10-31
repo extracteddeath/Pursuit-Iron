@@ -70,7 +70,7 @@ jobs:
     # A single release identity is generated ONLY after all seven Chromium
     # shards and the full integration source group pass on the same PR head.
     needs: [source-contracts, ui-browser]
-    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427 || github.event.pull_request.number == 430 || github.event.pull_request.number == 433 || github.event.pull_request.number == 434) && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427 || github.event.pull_request.number == 430 || github.event.pull_request.number == 433 || github.event.pull_request.number == 434 || github.event.pull_request.number == 435) && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -98,7 +98,9 @@ jobs:
           import fs from 'node:fs';
           const file = 'RELEASE_MANIFEST.json';
           const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-          manifest.uiMilestone = process.env.TARGET_BRANCH === 'fix/b1004-positional-double-hold'
+          manifest.uiMilestone = process.env.TARGET_BRANCH === 'fix/b1005-legacy-skipped-work-position'
+            ? `Build ${manifest.build} · Preserve skipped legacy set positions`
+            : process.env.TARGET_BRANCH === 'fix/b1004-positional-double-hold'
             ? `Build ${manifest.build} · Correct positional double-progression load holds`
             : process.env.TARGET_BRANCH === 'fix/b1003-live-advice-provenance-gate'
             ? `Build ${manifest.build} · Verified live-load suggestion consent diagnostics`

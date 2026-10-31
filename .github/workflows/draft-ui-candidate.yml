@@ -30,6 +30,8 @@ jobs:
         run: find verification -name '*-browser-test.mjs' -print0 | xargs -0 -n 1 node --check
       - name: Syntax-check app module before any browser work
         run: node --check modules/App.js
+      - name: Verify branch housekeeping safety rules
+        run: node --test verification/repo-hygiene-test.mjs
       - name: Verify all UI integration source contracts
         run: node scripts/verify-engine-contracts.mjs integration
 

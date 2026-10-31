@@ -892,7 +892,7 @@ assert.ok(jumpOwner.includes('.wpb-settings.wpb-settings>.wpb-settings-jump{') &
 assert.ok(jumpOwner.includes('border-radius:var(--pi-shape-action)!important;') &&
   jumpOwner.includes('.wpb-settings-jump-control select{'),
   'Settings category choice shares the action shape and 48px touch owner');
-assert.ok(css.includes('.wpb .wpb-settings-title{margin:var(--pi-space-4) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);') &&
+assert.ok(css.includes('.wpb .wpb-settings-title{margin:var(--pi-space-5) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);') &&
   css.includes('.wpb .wpb-settings-row-description{font-size:var(--pi-type-support);'),
   'Settings headings and descriptions keep a legible shared support type role');
 assert.ok(!css.includes('.wpb-settings .wpb-settings-jump{\n  padding-bottom:8px!important;') &&

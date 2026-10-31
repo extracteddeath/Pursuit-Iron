@@ -11,17 +11,24 @@ const fixture=[
 "import React from '/vendor/react.js';",
 "import {createRoot} from '/vendor/react-dom-client.js';",
 "import {HomeSessionOutline,SessionGamePlan,PlanChangeBanner} from '/modules/plan-session-surfaces.js';",
-"import {WorkingSetCountControl} from '/modules/workout-session-controls.js';",
+"import {WorkingSetCountControl,WorkoutExerciseNav} from '/modules/workout-session-controls.js';",
+"import {UiSegmented} from '/modules/ui-primitives.js';",
 "const gameReview={unit:'lb',exercises:[{id:'bench',slot:0,name:'Barbell Bench Press',effective:[{weight:185,reps:8},{weight:185,reps:8}],protocol:{type:'straight'},change:{undone:false,changed:true},reason:'Earn more reps before raising the load.',opportunity:null},{id:'myo',slot:0,name:'Cable Curl',effective:[{weight:50,reps:12},{weight:45,reps:13},{weight:40,reps:14}],protocol:{type:'myo_reps'},change:{undone:false,changed:false},reason:'Control fatigue across the set.',opportunity:null},{id:'pr',slot:0,name:'Seated Row',effective:[{weight:100,reps:8}],protocol:{type:'straight'},change:{undone:false,changed:false},opportunity:{type:'reps',bestReps:8},reason:'Keep the reps clean.'}]};",
 "const savedReview={changes:[{change:{setDelta:{before:3,after:4},loadChanged:false,undone:false}}]};",
 "const loadReview={changes:[{change:{setDelta:null,loadChanged:true,undone:false}}]};",
 "const mixedReview={changes:[{change:{setDelta:{before:3,after:4},loadChanged:true,undone:false}}]};",
-"window.bannerClicks=0;",
+"window.bannerClicks=0;window.exerciseChanges=[];window.choiceChanges=[];",
+"const railData=Array.from({length:9},(_,i)=>({id:i%2?'inc-curl':'bb-bench',sets:[{reps:8,weight:100+i*5,done:i%3===0}]}));",
 "function Demo(){const [count,setCount]=React.useState('');window.setWorkingSets=setCount;",
 "const [a,setA]=React.useState(true);const [b,setB]=React.useState(false);",
+"const [choice,setChoice]=React.useState('first');const [exercise,setExercise]=React.useState(0);",
+"const choose=i=>{window.exerciseChanges.push(i);setExercise(i)};"
 "const review={exercises:[{id:'bench',slot:0,name:'Barbell Bench Press',cell:{sets:3,range:'8–10'}}]};",
 "return React.createElement('main',{className:'wpb'},",
 "React.createElement(WorkingSetCountControl,{value:count,onChange:setCount,label:'Working sets'}),",
+"React.createElement('section',{id:'keyboard-choice-fixture'},",
+"React.createElement(UiSegmented,{label:'Session display',options:[['first','First'],['second','Second'],['third','Third']],value:choice,onChange:k=>{window.choiceChanges.push(k);setChoice(k)}}),",
+"React.createElement('div',{className:'wpb-workout'},React.createElement(WorkoutExerciseNav,{data:railData,exIdx:exercise,onSelect:choose}))),"
 "React.createElement(HomeSessionOutline,{review,expanded:a,onToggle:()=>setA(v=>!v)}),",
 "React.createElement(HomeSessionOutline,{review,expanded:b,onToggle:()=>setB(v=>!v)}),",
 "React.createElement('section',{id:'game-plan-test'},React.createElement(SessionGamePlan,{review:gameReview,home:true,restScale:1.15})),",
@@ -64,6 +71,41 @@ try{
  assert.deepEqual(ids.map(x=>x.expanded),['true','false']);
  await page.$$eval('.wpb-home-outline-toggle',items=>items[1].click());
  assert.equal(await page.$$eval('.wpb-home-outline-toggle',nodes=>nodes[1].getAttribute('aria-expanded')),'true');
+
+ // Shared native-style choice navigation: focus, selection and scroll belong to their original owners.
+ const group='[aria-label="Session display"]',rail='.wpb-ex-nav';
+ await page.focus(group+' button:nth-child(1)');
+ await page.keyboard.press('ArrowRight');
+ assert.equal(await page.$eval(group+' button:nth-child(2)',el=>el.getAttribute('aria-pressed')),'true');
+ assert.equal(await page.$eval(group+' button:nth-child(2)',el=>el===document.activeElement),true);
+ await page.keyboard.press('End');
+ assert.equal(await page.$eval(group+' button:nth-child(3)',el=>el.getAttribute('aria-pressed')),'true');
+ await page.keyboard.press('ArrowRight');
+ assert.equal(await page.$eval(group+' button:nth-child(1)',el=>el.getAttribute('aria-pressed')),'true',
+   'Arrow navigation wraps choices and uses the same onChange as taps');
+ await page.keyboard.press('Home');
+ assert.equal(await page.evaluate(()=>window.choiceChanges.length),3,
+   'Home at the first option does not generate a redundant user change');
+ await page.focus(rail+' button:first-child');
+ await page.keyboard.press('End');
+ assert.equal(await page.$eval(rail+' button:last-child',el=>el.getAttribute('aria-current')),'step',
+   'End switches to the last workout exercise');
+ assert.equal(await page.$eval(rail+' button:last-child',el=>el===document.activeElement),true);
+ const railScroll=await page.$eval(rail,el=>({left:el.scrollLeft,max:el.scrollWidth-el.clientWidth}));
+ assert.ok(railScroll.max>0 && railScroll.left>0,'Last focused exercise is revealed within the rail: '+JSON.stringify(railScroll));
+ await page.keyboard.press('Home');
+ assert.equal(await page.$eval(rail+' button:first-child',el=>el.getAttribute('aria-current')),'step');
+ await page.keyboard.press('ArrowLeft');
+ assert.equal(await page.$eval(rail+' button:last-child',el=>el.getAttribute('aria-current')),'step',
+   'ArrowLeft wraps using the same exercise-select callback');
+ assert.deepEqual(await page.evaluate(()=>window.exerciseChanges),[8,0,8],
+   'Keyboard exercise changes produce exactly the same indexed workout owner actions as taps');
+ // Disabled choices are never a keyboard selection destination.
+ await page.$eval(group+' button:nth-child(2)',el=>el.disabled=true);
+ await page.focus(group+' button:nth-child(1)');
+ await page.keyboard.press('ArrowRight');
+ assert.equal(await page.$eval(group+' button:nth-child(3)',el=>el===document.activeElement),true,
+   'Shared segmented choices skip disabled options');
  const add='[aria-label="Increase Working sets"]',minus='[aria-label="Decrease Working sets"]';
  await page.click(add);
  assert.equal(await page.$eval('[aria-label="Working sets"]',el=>el.value),'2','blank draft step is finite');

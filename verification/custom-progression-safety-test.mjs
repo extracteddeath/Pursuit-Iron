@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { sessionSuggestion, computeCell, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
+import { retainDoubleProgressionSetLoads } from '../modules/training-domain/prescriptions.js';
 
 import { setExLoadInc } from '../modules/training-domain/records.js';
 const program={id:'custom1',custom:true,config:{unit:'lb'},overrides:{'d1:0':{sets:3,reps:'5-8',rir:'2',progressionStyle:'double'}},days:[{id:'d1',exercises:['back-squat']}]};
@@ -83,3 +84,46 @@ try {
         'explicit fractional equipment increments remain valid');
 } finally { setExLoadInc({}); }
 console.log('PASS custom load grid: 38.5 lb and converted references snap to 35 on 5 lb equipment; earned increases and real fractional stock preserved.');
+
+// M418: a skipped or undone earlier working set cannot shift a later completed
+// load into the wrong position. The canonical last-set/history source uses
+// workingSetIndex, not a compressed completed-row array.
+{
+    const proposed = { action: 'add_reps', weight: 195, setTargets: [
+        { weight: 195, reps: 7 }, { weight: 190, reps: 6 }, { weight: 200, reps: 5 }
+    ] };
+    const remembered = retainDoubleProgressionSetLoads(proposed, [195, null, 205]);
+    assert.deepEqual(remembered.setTargets.map(t => t.weight), [195, 190, 205],
+        'A missing second position cannot inherit the third completed load');
+    assert.equal(remembered.weight, 195);
+    assert.deepEqual(proposed.setTargets.map(t => t.weight), [195, 190, 200],
+        'The evaluator decision is never mutated by a hold safeguard');
+
+    const gapLog = [{
+        id: 'positioned-partial', programId: program.id, dayId: program.days[0].id,
+        date: Date.now() + 2, unit: 'lb', perf: { 'back-squat': {
+            weight: 215, reps: 2, sets: [
+                { workingSetIndex: 0, w: 200, r: 3, done: true, rir: 0 },
+                { workingSetIndex: 1, w: 205, r: 0, done: false },
+                { workingSetIndex: 2, w: 210, r: 2, done: true, rir: 0 },
+                { workingSetIndex: 3, w: 215, r: 2, done: true, rir: 0 }
+            ]
+        } }
+    }];
+    const saved = structuredClone(gapLog);
+    const next = sessionSuggestion(program, program.days[0], 0, null, 'lb', 1, gapLog);
+    assert.ok(next && Array.isArray(next.setTargets) && next.setTargets.length === 3,
+        'An incomplete positioned exposure still creates the three prescribed sets');
+    assert.equal(next.setTargets[0].weight, 200,
+        'First set retains its actual 200 lb load');
+    assert.equal(next.setTargets[2].weight, 210,
+        'Third set retains 210 lb, never the later 215 lb fourth set');
+    const prefill = prescribeSets(program, program.days[0], EX_BY_ID['back-squat'],
+        0, 1, 'lb', next, null, {}, gapLog, false).filter(row => !row.warm && !row.sub);
+    assert.equal(Number(prefill[2].weight), 210,
+        'Workout prefill must preserve the same third-set history identity as the recommendation');
+    assert.equal(prefill[2].target.decisionTrace.source.originalLoad, 210,
+        'Source trace and displayed third-set load must agree on historical position');
+    assert.deepEqual(gapLog, saved, 'Position-aware targeting must not rewrite history');
+}
+console.log('PASS M418 positional double holds: skipped working sets cannot shift later loads.');

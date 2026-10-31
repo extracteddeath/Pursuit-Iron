@@ -10155,7 +10155,12 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .pi-t-body-mb16{margin-bottom:16px}
 #root .wpb .pi-t-faint-auto{margin-left:auto}
 
-/* Migrated Settings presentation — canonical feature owner after fixed type roles. */
+/* B1010 — Program round adjusters. */
+#root .wpb .wpb-round-row{flex-wrap:wrap;gap:8px}
+#root .wpb .wpb-round-row>.wpb-layout-row-tight{flex-wrap:wrap;justify-content:flex-end}
+#root .wpb .wpb-round-row>.wpb-layout-row-tight>.wpb-quiet-faint{min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center}
+
+/* B1011 — Settings service, diagnostics and import presentation: one audited owner. */
 /* Settings service and identity surfaces: one themed owner, no inline paint. */
 .wpb .wpb-settings-feedback{margin-bottom:var(--pi-space-4)}
 .wpb .wpb-settings-note{font-size:var(--pi-type-support);line-height:1.55;color:var(--pi-color-on-muted);margin-bottom:var(--pi-space-3)}
@@ -10213,7 +10218,3 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 
 @media(forced-colors:active){.wpb .wpb-settings-cta,.wpb .wpb-settings-support-cta{background:Highlight;color:HighlightText}}
 
-/* B1010 — Program round adjusters. */
-#root .wpb .wpb-round-row{flex-wrap:wrap;gap:8px}
-#root .wpb .wpb-round-row>.wpb-layout-row-tight{flex-wrap:wrap;justify-content:flex-end}
-#root .wpb .wpb-round-row>.wpb-layout-row-tight>.wpb-quiet-faint{min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center}

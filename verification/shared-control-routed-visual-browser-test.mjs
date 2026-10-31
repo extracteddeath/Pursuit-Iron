@@ -72,6 +72,27 @@ try{
         if(width===320||width===834){
           await page.screenshot({path:path.join(root,`verification/shared-pilot-settings-top-${theme}-${width}.png`)});
         }
+        // Inspect real routed fields, not only the isolated component fixture.
+        const initialFields=await page.evaluate(()=>['input[aria-label^="Bodyweight ("]','input[aria-label="Birthday"]'].map(selector=>{
+          const el=document.querySelector('.wpb-settings '+selector);
+          if(!el)return null;
+          const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
+          return {height:rect.height,width:rect.width,font:parseFloat(style.fontSize),
+            shared:el.classList.contains('wpb-ui-control'),value:el.value};
+        }));
+        assert.ok(initialFields.every(field=>field?.shared&&field.height>=48&&field.font>=16),
+          'Profile fields retain 48px native focus and at least 16px text: '+JSON.stringify(initialFields));
+        const reminderToggle=await page.$('[aria-label="Training reminders"]');
+        assert.ok(reminderToggle,'Reminder switch exists');
+        if(await reminderToggle.evaluate(el=>el.getAttribute('aria-checked'))!=='true')
+          await reminderToggle.click();
+        await page.waitForSelector('input[aria-label="Reminder time"]');
+        const timeField=await page.$eval('input[aria-label="Reminder time"]',el=>({
+          shared:el.classList.contains('wpb-ui-control'),height:el.getBoundingClientRect().height,
+          font:parseFloat(getComputedStyle(el).fontSize),type:el.type
+        }));
+        assert.ok(timeField.shared&&timeField.height>=48&&timeField.font>=16&&timeField.type==='time',
+          'Reminder time inherits shared paint but retains native picker: '+JSON.stringify(timeField));
         const galleryButton=await page.evaluateHandle(()=>[...document.querySelectorAll('.wpb-settings-navigation')]
           .find(el=>el.textContent.includes('Browse shared programs')));
         assert.ok(galleryButton.asElement(),'Settings gallery navigation is available');

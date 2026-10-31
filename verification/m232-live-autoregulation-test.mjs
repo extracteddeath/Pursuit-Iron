@@ -198,6 +198,36 @@ const replayOf = rows => captureWorkoutProgressionReplay({
 });
 assert.deepEqual(auditWorkoutProgressionReplay(replayOf(capped.sets)),[],
     'Real pending rep cap with matching evidence must be explainable in an opt-in export');
+
+assert.deepEqual(auditWorkoutProgressionReplay(replayOf(adjusted.sets)), [],
+    'Genuine two-miss advice is a recommendation, not an applied load change');
+for (const [change, mutate, expected] of [
+    ['silently lowered pending load', row => { row.weight = '95'; }, 'unapproved_pending_load_change'],
+    ['silently lowered auto-owned target', row => { row.target.w = '95'; }, 'unapproved_pending_load_change'],
+    ['stale advice for a different grid step', row => { row.loadAdvice.toLoad = 90; }, 'invalid_live_load_advice'],
+    ['tampered reduction evidence', row => { row.liveAdjustment.toLoad = 90; }, 'invalid_live_load_advice'],
+    ['historical automatic reduction action', row => { row.liveAdjustment.action = 'reduce_pending_load'; }, 'unapproved_automatic_load_reduction']
+]) {
+    const saved = structuredClone(adjusted.sets);
+    mutate(saved[2]);
+    const replay = replayOf(saved);
+    assert.ok(auditWorkoutProgressionReplay(replay).some(issue => issue.code === expected),
+        'Replay must detect ' + change + ' even when the two-miss source fingerprint is intact');
+    assert.equal(saved[2].valueOwner, 'prescription', 'No user approval was recorded');
+}
+// A real manual edit transfers ownership; the diagnostic must not call the
+// lifter's explicit minus-stepper action an automatic engine intervention.
+const manuallyLowered = structuredClone(adjusted.sets);
+manuallyLowered[2].weight = '95';
+manuallyLowered[2].valueOwner = 'user';
+manuallyLowered[2].auto = false;
+assert.deepEqual(auditWorkoutProgressionReplay(replayOf(manuallyLowered)), [],
+    'User-owned load reductions remain allowed even with retained advice metadata');
+const serializedAdvice = JSON.parse(JSON.stringify(adjusted.sets));
+assert.deepEqual(auditWorkoutProgressionReplay(replayOf(serializedAdvice)), [],
+    'Valid advice evidence remains auditable after offline session serialization');
+console.log('PASS B1003 advisory consent: evidence alone never authorizes a pending load change.');
+
 const stale=structuredClone(capped.sets);stale[0].actualRIR=4;
 assert.ok(auditWorkoutProgressionReplay(replayOf(stale))
     .some(issue=>issue.code==='stale_or_unverifiable_live_adjustment'),

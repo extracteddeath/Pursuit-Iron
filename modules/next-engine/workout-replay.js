@@ -132,6 +132,32 @@ export function auditWorkoutProgressionReplay(record) {
                 workingSetIndex:row.workingSetIndex
             });
         }
+        // A proposal is never consent. Older sessions can carry a valid
+        // two-miss evidence fingerprint yet still have an app-owned pending load
+        // silently overwritten. Check the pre-advice snapshot independently of
+        // the evidence; a manually accepted edit has user ownership instead.
+        if (adjustment?.action === 'suggest_pending_load_reduction') {
+            const original = row.retuneFrom?.load;
+            const advice = row.loadAdvice;
+            const sameLoad = original != null && row.load === original
+                && (row.readinessFactor != null || row.target.load == null
+                    || row.target.load === original);
+            if (!sameLoad)
+                issues.push({ code:'unapproved_pending_load_change',
+                    workingSetIndex:row.workingSetIndex });
+            if (!advice || advice.fromLoad !== original
+                || advice.fromLoad !== adjustment.fromLoad
+                || advice.toLoad !== adjustment.toLoad
+                || !(advice.toLoad > 0 && advice.toLoad < advice.fromLoad)
+                || advice.reasonCode !== adjustment.reasonCode)
+                issues.push({ code:'invalid_live_load_advice',
+                    workingSetIndex:row.workingSetIndex });
+        }
+        // No current engine path authorizes an automatic pending load cut.
+        // Legacy adjustment labels are evidence of an action, not user consent.
+        if (adjustment?.action === 'reduce_pending_load')
+            issues.push({ code:'unapproved_automatic_load_reduction',
+                workingSetIndex:row.workingSetIndex });
         const pending = !row.liveAdjustment && row.readinessFactor == null;
         if (pending && row.target.load != null && row.load !== row.target.load)
             issues.push({ code:'unexplained_pending_load', workingSetIndex:row.workingSetIndex });

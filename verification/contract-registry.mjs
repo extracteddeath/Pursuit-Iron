@@ -230,6 +230,7 @@ export const browserShards = Object.freeze({
         'r65-adaptive-shell-browser-test.mjs'
     ]),
     'integration-accessibility': Object.freeze([
+        'shared-control-routed-visual-browser-test.mjs',
         'r74-accessibility-browser-test.mjs',
         'b959-session-dialog-browser-test.mjs',
         'b992-program-sheet-focus-browser-test.mjs',
@@ -237,7 +238,6 @@ export const browserShards = Object.freeze({
         'b1000-workout-controls-browser-test.mjs',
         'b1001-root-font-owner-browser-test.mjs',
         'shared-control-pilot-browser-test.mjs',
-        'shared-control-routed-visual-browser-test.mjs',
         'b998-ui-controls-browser-test.mjs',
         'b999-plan-review-m3-browser-test.mjs',
         'b966-context-menu-keyboard-browser-test.mjs'

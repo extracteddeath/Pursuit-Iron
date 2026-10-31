@@ -9612,7 +9612,7 @@ background:var(--pi-color-card)!important;
 #root .wpb-live-dock{
   position:absolute;left:8px;right:8px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:35;
 }
-#root .wpb-live-dock[data-has-tabs="true"]{bottom:calc(72px + env(safe-area-inset-bottom));}
+#root .wpb-live-dock[data-has-tabs="true"]{bottom:calc(var(--pi-nav-dock-clearance, 124px) + var(--pi-space-2, 8px));}
 #root .wpb-live-dock .wpb-b975-live-surface{
   display:flex;align-items:center;gap:10px;min-width:0;
   background:var(--wpb-theme-accent);color:var(--wpb-theme-accent-text);

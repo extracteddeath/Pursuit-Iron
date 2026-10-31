@@ -25,6 +25,18 @@ assert.ok(settings.includes('setPlates({ ...plates, [unit]: next })'), 'Plate in
 assert.ok(settings.includes('className: "wpb-ui-card"'));
 assert.ok(!settings.includes('background: on ? C.accent : C.bg2'), 'Plate paint belongs to shared UiChoice');
 
+// Shared field paint handles consistent font, borders, focus and theme without overriding inputs.
+for(const label of ['"Reminder time"','`Bodyweight (${unit})`','"Birthday"'])
+ assert.ok(settings.includes('"aria-label": '+label),'Settings input still exposes '+label);
+assert.ok(settings.includes('"aria-label": "Reminder time", type: "time"') &&
+ settings.includes('className: "mono wpb-ui-control", style: { width: 148 }'),
+ 'Reminder time uses a shared field with native time editing');
+assert.ok(settings.includes('className: "mono wpb-ui-control", style: { width: 76, textAlign: "center" }'),
+ 'Bodyweight uses shared field paint but keeps its compact geometry');
+assert.ok(settings.includes('borderColor: birthEst && birth ? C.warn : undefined'),
+ 'Estimated birthday keeps its meaningful warning boundary');
+assert.ok(!settings.includes('colorScheme: "dark"'), 'No forced dark time picker on a light theme');
+
 // Gallery filters use the same choice states, with named groups for each dimension.
 assert.ok(gallery.includes('const Chip = ({ active, onClick, children }) => (_jsx(UiChoice, { kind: "chip", selected: active'));
 for(const name of ['Split filter','Training days filter','Training goal filter'])

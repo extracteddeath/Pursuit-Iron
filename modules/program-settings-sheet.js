@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { Check } from 'lucide-react';
 import { weeksOf, editableProgramWeeks, MAX_EDITABLE_PROGRAM_WEEKS, customProgramSettingsIssues } from './engine-api.js';
-import { UiChoice, UiSheetClose } from './ui-primitives.js';
+import { UiAction, UiChoice, UiSheetClose } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const TARGET_OPTIONS = [
@@ -136,11 +136,11 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
                         _jsx('p', { className: 'wpb-program-settings-help', children: 'These choices are treated as firm program constraints. If a requested combination cannot be built safely, the rebuild is rejected instead of silently ignoring the setting.' })] })
                 ] }),
                 _jsxs("div", { className: "wpb-ui-sheet-footer wpb-ui-sheet-footer-scroll wpb-program-settings-footer", children: [
-                    _jsx("button", { type: "button", onClick: onClose, className: "pressable wpb-program-settings-cancel", children: "Cancel" }),
-                    _jsx("button", { type: "button", "aria-label": "Save program settings",
+                    _jsx(UiAction, { variant: "tonal", onClick: onClose, className: "wpb-program-settings-cancel", children: "Cancel" }),
+                    _jsx(UiAction, { variant: "primary", "aria-label": "Save program settings",
                         "aria-describedby": settingsIssues.length ? "program-settings-issues"
                             : (!validWeeks && !cycleLengthOwned ? "program-weeks-error" : undefined),
-                        onClick: applyCfgDraft, disabled: !canApply, className: "pressable wpb-program-settings-save", children: cfgDirty
+                        onClick: applyCfgDraft, disabled: !canApply, className: "wpb-program-settings-save", children: cfgDirty
                         ? _jsxs('span', { children: [_jsx(Check, { size: 17, 'aria-hidden': true }), ' Save changes'] })
                         : "No changes" })] })
             ]

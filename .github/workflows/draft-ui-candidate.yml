@@ -62,7 +62,7 @@ jobs:
     # A single release identity is generated ONLY after all seven Chromium
     # shards and the full integration source group pass on the same PR head.
     needs: [source-contracts, ui-browser]
-    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422) && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.pull_request.draft && (github.event.pull_request.number == 414 || github.event.pull_request.number == 416 || github.event.pull_request.number == 420 || github.event.pull_request.number == 421 || github.event.pull_request.number == 422 || github.event.pull_request.number == 427) && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -90,7 +90,9 @@ jobs:
           import fs from 'node:fs';
           const file = 'RELEASE_MANIFEST.json';
           const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-          manifest.uiMilestone = `Build ${manifest.build} · Program, Home and Workout M3 consolidation`;
+          manifest.uiMilestone = process.env.TARGET_BRANCH === 'feature/gallery-shared-card-roles'
+            ? `Build ${manifest.build} · Shared Settings, Gallery and Progress M3 consolidation`
+            : `Build ${manifest.build} · Program, Home and Workout M3 consolidation`;
           fs.writeFileSync(file, JSON.stringify(manifest, null, 2) + '\n');
           NODE
             node scripts/finalize-release.mjs --next-build

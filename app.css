@@ -341,11 +341,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   background:color-mix(in srgb,currentColor 14%,transparent)!important;
   opacity:0!important;
   pointer-events:none;
-}
 /* Override the legacy display:none !important on the old top-marker.
    The new icon pill must paint above the button background but below its glyph. */
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab::before{
-  display:block!important;
+display:block!important;
   z-index:0!important;
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab[aria-current="page"]{
@@ -4612,12 +4610,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 }
 #root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
   background-image:none!important;
-}
-
 /* R54 — shared design roles in the *expanded* full Program. The live workout
    logger is excluded. Next is signalled by an accent edge, not a gray slab. */
-#root[data-pi-motion="expressive"] .wpb .wpb-program.wpb-program .wpb-day-card[data-next="true"]{
-  background:var(--pi-color-card)!important;
+background:var(--pi-color-card)!important;
   border-color:color-mix(in srgb,var(--pi-m3e-primary) 36%,var(--pi-color-divider))!important;
 }
 #root[data-pi-motion="expressive"] .wpb-program .wpb-day-card>.wpb-expand{
@@ -5277,9 +5272,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
   max-width:var(--pi-reading-max);
   margin-inline:auto;
   padding-inline:var(--pi-page-inset)!important;
-}
-#root[data-pi-motion="expressive"] .wpb .wpb-home>.wpb-home-compose-bar{
-  /* Reserve real layout space so an options/search control cannot appear
+/* Reserve real layout space so an options/search control cannot appear
      visible to native scrolling while sitting behind Create or Quick. */
   position:relative!important;
   inset:auto!important;

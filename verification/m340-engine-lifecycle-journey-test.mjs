@@ -80,20 +80,33 @@ function completeRealWorkout(p, day, week, prior) {
         // Rendering the same untouched workout twice must never drift a second-set load.
         const again = prescribeSets(p, day, ex, slot, week, 'lb', suggestion, null, {}, prior, true);
         assert.deepEqual(again, rows, 'A read recomputed live targets without new history');
-        if (works.length >= 2) {
-            const paused = clone(rows);
-            const indices = paused.map((set, i) => !set.warm && !set.sub ? i : -1).filter(i => i >= 0);
-            paused[indices[0]].done = true;
-            paused[indices[1]].valueOwner = 'user';
-            paused[indices[1]].auto = false;
-            paused[indices[1]].weight = '37';
-            const untouchedPaused = clone(paused);
-            const restored = refreshPendingSetTargets(paused, again);
-            assert.equal(restored[indices[0]].weight, paused[indices[0]].weight,
-                'Resume rewrote a completed load');
-            assert.equal(restored[indices[1]].weight, '37',
-                'Resume rewrote a manually edited later-set load');
-            assert.deepEqual(paused, untouchedPaused, 'Resume must not mutate its saved input rows');
+        // M418: every working-set position on every exercise, including late slots,
+        // must preserve the athlete's saved values across a target refresh. Checking
+        // only the second set misses first/last-row ownership and RIR regressions.
+        const workingIndices = rows.map((row, index) => !row.warm && !row.sub ? index : -1)
+            .filter(index => index >= 0);
+        for (const index of workingIndices) {
+            for (const state of ['manual', 'completed']) {
+                const paused = clone(rows), edited = paused[index];
+                edited.weight = String(37 + index);
+                edited.reps = '11';
+                edited.actualRIR = 1;
+                if (state === 'manual') {
+                    edited.valueOwner = 'user';
+                    edited.auto = false;
+                } else {
+                    edited.done = true;
+                }
+                const beforeRefresh = clone(paused);
+                const restored = refreshPendingSetTargets(paused, again);
+                for (const field of ['weight', 'reps', 'actualRIR', 'valueOwner', 'done']) {
+                    assert.deepEqual(restored[index][field], beforeRefresh[index][field],
+                        'M418 restore rewrote ' + state + ' ' + field + ' at '
+                            + JSON.stringify({ day: day.id, slot, set: index }));
+                }
+                assert.deepEqual(paused, beforeRefresh,
+                    'M418 target refresh mutated saved ' + state + ' rows at ' + day.id + ':' + slot);
+            }
         }
         // This is a completed workout, not a synthetic perf map. The real logger
         // serializes the rows, their targets, RIR provenance, techniques and identity.

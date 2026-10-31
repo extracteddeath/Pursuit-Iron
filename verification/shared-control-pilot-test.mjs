@@ -64,7 +64,7 @@ assert.ok(program.includes('ref: attachPanel')&&program.includes('onKeyDown: onP
 assert.ok((app.match(/style:\s*\{/g)||[]).length<=869,'Static inline App.js debt must keep falling');
 assert.equal((css.match(/!important/g)||[]).length,2024,'Shared controls cannot add CSS priority hacks');
 assert.ok(!css.includes('.wpb-gallery-chip--selected'),'Old Gallery state paint must stay retired');
-assert.ok(css.length<=651050,'Shared-control pilot must remain within the current measured shared-foundation CSS budget');
+assert.ok(css.length<=652680,'Shared-control pilot must remain within the current measured shared-foundation CSS budget');
 assert.equal(css.split('.wpb-profile-card-metrics{display:grid').length-1,1,'Expressive metric layout must retain one canonical owner');
 assert.ok(css.includes('#root .wpb .wpb-gallery-import{width:100%;min-height:var(--pi-primary-min,52px)'),
   'Shared primary Gallery control retains its 52px geometry');

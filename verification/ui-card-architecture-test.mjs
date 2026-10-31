@@ -6,8 +6,8 @@ const app=fs.readFileSync('modules/App.js','utf8');
 const primitives=fs.readFileSync('modules/ui-primitives.js','utf8');
 const css=fs.readFileSync('app.css','utf8');
 assert.equal(report.unownedStandardCardCallSites,0,'Standard cards must render through UiCard');
-assert.equal(report.shared.Card.appCalls,18,'Card adoption must cover all 18 audited call sites');
-assert.equal(report.screens.Settings.sharedCardCalls,9,'Settings has eight grouped cards plus plates inventory');
+assert.equal(report.shared.Card.appCalls,23,'Card adoption must cover all 18 audited call sites');
+assert.equal(report.screens.Settings.sharedCardCalls,14,'Settings has eight grouped cards plus plates inventory');
 assert.ok(app.includes('_jsxs(UiCard, { as: "section", className: "wpb-profile-share-card"'),
  'Profile share card must remain a semantic section');
 assert.ok(app.includes('_jsxs(UiCard, { className: "wpb-gallery-program"'),

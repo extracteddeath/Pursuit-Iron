@@ -17,16 +17,11 @@ Every original remains retrievable through the immutable [Build 1006 predecessor
 | `M205_ENGINE_AUDIT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M205_ENGINE_AUDIT.md) |
 | `M206_WORKING_WEEK_VOLUME_REPORT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M206_WORKING_WEEK_VOLUME_REPORT.md) |
 | `M224_ENGINE_AUDIT_REPAIR.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M224_ENGINE_AUDIT_REPAIR.md) |
-| `M228_CANONICAL_ENGINE_REPORT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M228_CANONICAL_ENGINE_REPORT.md) |
-| `M229_DOMAIN_CONTRACTS_REPORT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M229_DOMAIN_CONTRACTS_REPORT.md) |
-| `M230_REALIZER_DECOMPOSITION_REPORT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M230_REALIZER_DECOMPOSITION_REPORT.md) |
-| `M231_ATHLETE_RESPONSE_REPORT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M231_ATHLETE_RESPONSE_REPORT.md) |
-| `M232_LIVE_AUTOREGULATION_REPORT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M232_LIVE_AUTOREGULATION_REPORT.md) |
-| `M233_SEMANTIC_EXERCISE_GRAPH_REPORT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M233_SEMANTIC_EXERCISE_GRAPH_REPORT.md) |
-| `M234_CANDIDATE_OPTIMIZATION_REPORT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/M234_CANDIDATE_OPTIMIZATION_REPORT.md) |
 | `R91_HOME_HIERARCHY_AUDIT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/R91_HOME_HIERARCHY_AUDIT.md) |
 | `R92_HOME_DENSITY_AUDIT.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/R92_HOME_DENSITY_AUDIT.md) |
 | `DESIGN_PURPOSE_AUDIT_M334.md` | [View at Build 1006](https://github.com/extracteddeath/Pursuit-Iron/blob/4aef89742e79c983f6cf5c6a57b52f02e5e16b09/DESIGN_PURPOSE_AUDIT_M334.md) |
+
+**Engine milestone contract reports M228–M234 remain at the repository root because the M235 engine verification directly checks their presence.**
 
 **Retained active references:** `README.md`, `ENGINE_ARCHITECTURE.md`, `DESIGN_SYSTEM.md`, `UI_INTERACTIONS.md`, `NEXT_APP_UPDATE_PLAN.md`, `M235_ENGINE_VERIFICATION_2_REPORT.md`, `M236_VERIFICATION_ASSURANCE_REPORT.md`, `M237_CI_SUPPLY_CHAIN_REPORT.md`, `M340–M344` lifecycle evidence and the newer engine/UI release readiness documents. Keep regression fixtures and source/browser verification files in place.
 

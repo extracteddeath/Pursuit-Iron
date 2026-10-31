@@ -9947,7 +9947,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root .wpb .wpb-gallery-empty-text{font-size:13px;color:var(--wpb-theme-muted)}
 #root .wpb .wpb-gallery-count{font-size:13px;color:var(--wpb-theme-faint);margin-bottom:8px}
 #root .wpb .wpb-gallery-no-match{padding:32px 0;text-align:center;color:var(--wpb-theme-muted);font-size:13px}
-#root .wpb .wpb-gallery-program{border-radius:16px;background:var(--wpb-theme-card);padding:15px 15px 13px}
+#root .wpb .wpb-gallery-program{padding:15px 15px 13px}
 #root .wpb .wpb-gallery-program-title{font-size:15px;font-weight:700;color:var(--wpb-theme-text);letter-spacing:-.2px}
 #root .wpb .wpb-gallery-program-meta{font-size:13px;color:var(--wpb-theme-faint);margin-top:2px}
 #root .wpb .wpb-gallery-coached{flex-shrink:0;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--wpb-theme-accent-ink);background:var(--wpb-theme-accent-dim);border-radius:8px;padding:3px 7px}

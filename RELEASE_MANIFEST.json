@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "milestone": "M234",
   "appVersion": "4.0.0",
-  "build": 1001,
+  "build": 1002,
   "engineVersion": "0.65.9",
   "candidateStatus": "verification_enforced_by_ci",
   "runtimeAggregate": "632ff1f2ce286d0caf1aaedacf7e3afbc74ddc68c443e72f127175e3b3964fd3",
@@ -149,10 +149,10 @@
     "validation": "Full-object static candidate caching, constraint-first ranking, bounded expensive evaluation, M230 decomposition preservation and M228–M234 permanent engine contracts."
   },
   "uiFiles": {
-    "modules/App.js": "c073356a2001f0a5d45e9b62c906b1a4af118caa978f1dd8b6696c708a3c5c19",
-    "index.html": "0750a53fcebb2105d84e38c0403f47a8e7a5c9174d93062715cc72e628181376",
-    "sw.js": "110086c05fff7f0548fe2175e0e2b59e3c17f6b796b05abd53af83440773ed5a",
-    "BUILD_PROFILE.json": "069f1bda478e26726b25fdb9ae6f9bdff74a89c74666904b129616ac74999c2e",
+    "modules/App.js": "37589f1628bd0958683cde88f212215399d99c11bb8b2fe192a73c6cdf7aab00",
+    "index.html": "85fde12815fc4c337bda629b4d4488eb41fe8ea1dbc2116cea555469b8a7062f",
+    "sw.js": "0aa89d43aadb311ebfd8f84e0bb0e5953afdf4edfd40b0177517960099aae102",
+    "BUILD_PROFILE.json": "fac724d1b6b2a8b50050cf70cc3397a43f5fc22bd9bc3a8f8bb493d64e6ada2d",
     "CHANGELOG.md": "0e3f7d796a743e83f0c9ef4c505d25473ff860d1e5cb8acebe6b3456f71eac19",
     "app.css": "b37b49b661b36ce61670e99bab08f2fc58f2e027607e95028d254d4b743572e4",
     "privacy.html": "ad9a4a48bff18dee4dc20b079f783c58ca56d69ad03884879445451e0a8ee96c",
@@ -161,6 +161,6 @@
   "sourceFilesStatus": "JavaScript modules are the maintained production source. Runtime and UI hashes certify this release; historical source provenance is retained in git.",
   "runtimeAggregateAlgorithm": "sha256(sorted path:sha256 newline records)",
   "runtimeHotfix": "Reuse catalog and loading snapshots only within one canonical history analysis; retain independent inventory outputs and refresh coaching for complete factual inputs and elapsed recovery time.",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1001-r187a35fe9dfe69dd",
-  "uiMilestone": "Build 1001 · Shared Settings, Gallery and Progress M3 consolidation"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1002-rbea138c11fa785e0",
+  "uiMilestone": "Build 1002 · Settings native field and routed control consolidation"
 }

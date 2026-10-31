@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 74,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1001-r187a35fe9dfe69dd",
-  "uiMilestone": "Build 1001 · Shared Settings, Gallery and Progress M3 consolidation"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1002-rbea138c11fa785e0",
+  "uiMilestone": "Build 1002 · Settings native field and routed control consolidation"
 }

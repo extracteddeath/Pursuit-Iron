@@ -75,6 +75,7 @@ export const contractGroups = Object.freeze({
     integration: Object.freeze([
         'repo-hygiene-test.mjs',
         'home-entry-hierarchy-test.mjs',
+        'home-utility-owner-test.mjs',
         'plan-choice-ownership-test.mjs',
         'ui-ownership-test.mjs',
         'b960-static-presentation-test.mjs',

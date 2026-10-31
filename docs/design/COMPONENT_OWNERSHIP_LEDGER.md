@@ -50,3 +50,5 @@ The Settings import sheet now has named presentation roles for the sheet, textar
 B1011 groups migrated Settings presentation in one bounded owner after B1010. Its separately counted CSS remains subject to a strict 8,412-character ceiling and unchanged priority rule counts; the legacy pre-B1009 source ceiling is not relaxed. Growth here does not count as net stylesheet debt reduction.
 
 Presentation debt budgets now live in one verification/ui-style-budgets.mjs source of truth. At this checkpoint: 830 inline objects in App.js, six remaining in Settings, 652,934 CSS characters, 8,577 of them in the B1011 Settings family. Budgets are ceilings, not a completed consolidation claim.
+
+Home's first utility reuse slice removes five fixed inline styles from the cycle name/week/day labels and backup microcopy, with no new CSS selectors, priority overrides, or runtime event changes. App inline objects: 830 → 825; Home: 36 → 31. Preserve dynamic cycle flex/phase colors for a separate stateful-owner pass. This is source validation, not screenshot certification.

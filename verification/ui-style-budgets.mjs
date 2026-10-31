@@ -3,7 +3,7 @@
  */
 export const uiStyleBudget=Object.freeze({
   cssCharacters:652934,
-  appInlineObjects:830,
+  appInlineObjects:825,
   settingsInlineObjects:6,
   b1011CssCharacters:8577
 });

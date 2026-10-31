@@ -26,9 +26,9 @@ async function run() {
     throw new Error('A valid GitHub Actions repository and token are required.');
   if (!dryRun && process.env.CONFIRM !== 'DELETE-MERGED')
     throw new Error('Deletion requires an explicit DELETE-MERGED confirmation.');
-  const base = 'https://api.github.com/repos/' + repository + '/';
+  const base = 'https://api.github.com/repos/' + repository;
   const api = async (method, endpoint) => {
-    const res = await fetch(base + endpoint, {
+    const res = await fetch(base + (endpoint ? '/' + endpoint : ''), {
       method, headers: {
         Authorization: 'Bearer ' + token,
         Accept: 'application/vnd.github+json',

@@ -948,16 +948,21 @@ function customProgramSuggestion(program, day, slot, unit, weekIndex, history) {
         rir: Array.isArray(saved.rir) ? saved.rir.join('-') : saved.rir } : currentCell;
     const [lo, hi] = cellRepRange(cell, program, ex, slot === day?.primaryIndex);
     const rir = effortBounds(cell.rir) || [2, 2];
+    // Keep the original ordinal *before* filtering unfinished work. Pre-index
+    // history may still contain skipped/null rows; filtering first falsely
+    // promotes sets 0,2,3 into a complete 0,1,2 exposure and can earn weight.
     const work = (Array.isArray(last.perf[ex.id].sets) ? last.perf[ex.id].sets : [])
-        .filter(x => x && !x.warm && !x.sub && x.done !== false && historyNumber(x.w) !== null && historyNumber(x.w) >= 0
+        .filter(x => !x || (!x.warm && !x.sub))
+        .map((row, index) => ({ row, index }))
+        .filter(({ row: x }) => x && x.done !== false && historyNumber(x.w) !== null && historyNumber(x.w) >= 0
             && historyNumber(x.r) > 0);
     if (!work.length) return null;
     const style = resolveStyle(program, ex, slot === day.primaryIndex, weekIndex, null, history, day.id);
     const rack = gymRackFor(ex, unit), step = loadStep(ex, unit);
     const loadingInventory = { unit, exerciseOverrides: { [ex.id]: rack?.length
         ? { availableLoads: rack } : { increment: step, minimum: 0 } } };
-    const performed = work.map((x, i) => ({ exerciseId: ex.id,
-        setIndex: Number.isInteger(x.workingSetIndex) && x.workingSetIndex >= 0 ? x.workingSetIndex : i,
+    const performed = work.map(({ row: x, index }) => ({ exerciseId: ex.id,
+        setIndex: Number.isInteger(x.workingSetIndex) && x.workingSetIndex >= 0 ? x.workingSetIndex : index,
         load: conv(x.w), reps: Number(x.r),
         ...historyExposureContext(x), rir: observedHistoryRIR(x) }));
     const exercise = { exerciseId: ex.id, name: ex.name, role: cell.role, sets: Number(cell.sets),

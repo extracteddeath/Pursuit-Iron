@@ -1919,6 +1919,26 @@ display:block!important;
   font-size:clamp(24px,6vw,30px)!important;
   letter-spacing:-.048em;
 }
+/* B1016 — Plan typography and completion use live palette roles, not per-render paint.
+   Phase/schedule actions preserve their original callbacks; fill width is calculated in React. */
+#root .wpb :is(.wpb-plan-eyebrow,.wpb-plan-next-label){font-size:11px;font-weight:700;color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-plan-eyebrow{letter-spacing:.7px}
+#root .wpb .wpb-plan-next-label{letter-spacing:.3px;flex-shrink:0}
+#root .wpb .wpb-plan-open-cue{font-size:13px;font-weight:700;color:var(--wpb-theme-accent-ink);flex-shrink:0}
+#root .wpb .wpb-plan-phase-header{
+  display:flex;align-items:center;gap:var(--pi-space-2);min-width:0;
+  background:transparent;border-bottom:1px solid var(--wpb-theme-border-soft);
+  padding:var(--pi-space-2) 0;margin:var(--pi-space-2) 0;
+}
+#root .wpb .wpb-plan-phase-name{font-size:15px;font-weight:650;color:var(--wpb-theme-text);overflow-wrap:anywhere;line-height:1.3}
+#root .wpb .wpb-plan-completion-summary{
+  display:flex;align-items:baseline;justify-content:space-between;gap:var(--pi-space-2);
+  min-width:0;font-size:var(--pi-type-support);color:var(--wpb-theme-muted);margin-bottom:var(--pi-space-1);
+}
+#root .wpb .wpb-plan-completion-percent{color:var(--wpb-theme-accent-ink);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+#root .wpb .wpb-plan-completion-track{height:4px;border-radius:999px;background:var(--wpb-theme-bg-tint);overflow:hidden}
+#root .wpb .wpb-plan-completion-fill{height:100%;border-radius:inherit;background:var(--wpb-theme-accent);transition:width .3s var(--pi-ease)}
+@media(prefers-reduced-motion:reduce){#root .wpb .wpb-plan-completion-fill{transition:none}}
 #root[data-pi-motion="expressive"] .wpb .wpb-plan-completion{
   margin:7px 2px 14px!important;
   padding:0!important;

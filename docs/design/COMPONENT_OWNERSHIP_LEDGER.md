@@ -85,3 +85,5 @@ Source totals ratchet App 805 → 803 and Plan 24 → 22. No app.css bytes or
 priority declarations were added; Home remains at 16 inline objects. The
 source contract checks the actual CSS owner and callbacks. This is not a
 substitute for browser screenshot, saved-state, or physical Android acceptance.
+
+B1016 Plan material ownership: eight fixed inline presentation objects retired (Plan 22 → 14, App 803 → 795). The Next eyebrow/action cue, week Next label, phase header/title, completion summary/percentage/track/fill use live CSS palette tokens. Only the actual calculated completion width remains inline; the track now exposes a clamped accessible progressbar value. Existing event callbacks, week browsing state, sessions and engine prescriptions are unchanged. app.css grew 1,652 characters (657,201 → 658,853) during ownership migration, while App.js shrank 445 characters; this is NOT net stylesheet debt retirement. CSS priority remains 2,023 with no new !important declarations. Require all draft browser shards, especially Plan contrast and zoom, before merge.

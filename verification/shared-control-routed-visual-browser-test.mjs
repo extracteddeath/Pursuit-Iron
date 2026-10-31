@@ -169,10 +169,10 @@ try{
           'Real Gallery announces selected choice in its visible filter row');
         const liveGroup=await page.$('[role="group"][aria-label="'+groupLabel+'"]');
         assert.ok(liveGroup,'Filter group remains available after narrowing the results');
-        const liveOptions=await liveGroup.$('.wpb-gallery-chip');
-        const allOption=await liveOptions[0].evaluate(el=>el.textContent.trim());
-        assert.ok(allOption,'Gallery retains its All/reset choice');
-        await liveOptions[0].click();
+        const liveReset=await liveGroup.$('.wpb-gallery-chip');
+        assert.ok(liveReset,'Gallery retains its All/reset choice');
+        const allOption=await liveReset.evaluate(el=>el.textContent.trim());
+        await liveReset.click();
         await page.waitForFunction(({groupLabel,allOption})=>{
           const group=[...document.querySelectorAll('[role="group"]')]
             .find(el=>el.getAttribute('aria-label')===groupLabel);

@@ -6,6 +6,6 @@
   "runtime": "React 18.3.1 (production ESM, single shared instance)",
   "nextRuntimeModules": 74,
   "storageNamespace": "wpb",
-  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1004-r3d721875dc7c61db",
-  "uiMilestone": "Build 1004 · Correct positional double-progression load holds"
+  "cache": "pursuit-iron-production-v4-0-0-m234-candidate-selection-b1005-r4ee18a94f5b4e526",
+  "uiMilestone": "Build 1005 · Preserve skipped legacy set positions"
 }

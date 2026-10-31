@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { sessionSuggestion, computeCell, prescribeSets, EX_BY_ID } from '../modules/engine-api.js';
+import { sessionSuggestion, computeCell, prescribeSets, EX_BY_ID, previousWorkoutSet } from '../modules/engine-api.js';
 import { retainDoubleProgressionSetLoads } from '../modules/training-domain/prescriptions.js';
 
 import { setExLoadInc } from '../modules/training-domain/records.js';
@@ -127,3 +127,44 @@ console.log('PASS custom load grid: 38.5 lb and converted references snap to 35 
     assert.deepEqual(gapLog, saved, 'Position-aware targeting must not rewrite history');
 }
 console.log('PASS M418 positional double holds: skipped working sets cannot shift later loads.');
+
+// M418 follow-up: pre-index legacy history can retain a skipped row but no
+// workingSetIndex metadata. Completion must not turn positions 0,2,3 into
+// an apparently complete three-set exposure (and earn a false load increase).
+{
+    const legacyRows = [
+        { w: 100, r: 15, rir: 2, done: true },
+        { w: 100, r: 0, done: false },
+        { w: 100, r: 15, rir: 2, done: true },
+        { w: 100, r: 15, rir: 2, done: true }
+    ];
+    const legacyGapHistory = [{
+        id: 'legacy-unindexed-gap', programId: arrayProgram.id, dayId: arrayProgram.days[0].id,
+        date: Date.now() + 3, unit: 'lb',
+        perf: { 'back-squat': { weight: 100, reps: 15, sets: legacyRows } }
+    }];
+    const original = structuredClone(legacyGapHistory);
+    const observed = legacyGapHistory[0].perf['back-squat'];
+    assert.equal(previousWorkoutSet(observed, 0).r, 15);
+    assert.equal(previousWorkoutSet(observed, 1), null,
+        'LAST set 2 must remain missing, not borrow the third completed working set');
+    assert.equal(previousWorkoutSet(observed, 2).r, 15);
+    assert.equal(previousWorkoutSet(observed, 3).r, 15);
+    const next = sessionSuggestion(arrayProgram, arrayProgram.days[0], 0, null, 'lb', 1, legacyGapHistory);
+    assert.ok(next);
+    assert.notEqual(next.action, 'increase_load',
+        'Three completed rows at positions 0, 2, 3 are not three prescribed sets 0, 1, 2');
+    assert.equal(next.weight, 100, 'An incomplete unindexed exposure cannot earn 105 lb');
+    const rows = prescribeSets(arrayProgram, arrayProgram.days[0], EX_BY_ID['back-squat'],
+        0, 1, 'lb', next, null, {}, legacyGapHistory, false).filter(row => !row.warm && !row.sub);
+    assert.equal(rows[1].target.decisionTrace.source, null,
+        'Executable Workout trace must not falsely credit a skipped middle set');
+    assert.equal(rows[2].target.decisionTrace.source.originalLoad, 100);
+    assert.deepEqual(legacyGapHistory, original, 'Legacy history is immutable during target calculation');
+
+    const withNull = { sets: [legacyRows[0], null, legacyRows[2]] };
+    assert.equal(previousWorkoutSet(withNull, 1), null,
+        'An explicit null history slot is also a missing position');
+    assert.equal(previousWorkoutSet(withNull, 2)?.r, 15);
+}
+console.log('PASS M418 unindexed legacy skips: positional LAST and evaluator cannot earn a false increase.');

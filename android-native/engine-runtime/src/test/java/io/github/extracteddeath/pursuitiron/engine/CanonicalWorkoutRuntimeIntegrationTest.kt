@@ -215,6 +215,57 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=120000) fun canonicalMyoAndDropExtensionsSurviveNativeJournalAndHistory() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Advanced extensions",unit="kg"),
+                "create-advanced","program-advanced",1000,223)))
+            for ((method,kind,count) in listOf(
+                Triple("myo-reps","myo",3),Triple("drop set","drop",2)
+            )) {
+                // Author the test cue in an actual saved canonical weekly cell.
+                // The JS engine still generates all loads and extension rows.
+                val source=JSONObject(proposal.snapshot)
+                val program=source.getJSONArray("saved").getJSONObject(0)
+                val firstDay=program.getJSONArray("days").getJSONObject(0)
+                val prescription=program.getJSONObject("nextWeekPrescriptions")
+                    .getJSONObject("${firstDay.getString("id")}:0").getJSONObject("1")
+                prescription.put("tech",method)
+                val original=source.toString()
+                val drive=Drive();val recovery=Drive()
+                val store=CanonicalWorkoutStorePersistence(drive,engine)
+                val journal=WorkoutJournalPersistence(recovery)
+                assertTrue(store.initialize(original))
+                val plan=checkNotNull(engine.prepareWorkout(original,
+                    NativeWorkoutCodec.startJson("program-advanced","workout-${kind}",2000)))
+                val extensions=plan.exercises.first().sets.filter { it.isExtension }
+                assertEquals(count,extensions.size)
+                assertTrue(extensions.all { it.kind==kind && it.extensionRestSeconds==15 })
+                var progress=checkNotNull(store.beginIssuedSession(plan,journal))
+                for((index,slot) in plan.slots.withIndex()) {
+                    progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,
+                        progress.journal.revision,JournalSetIntent("extension-set-$index",slot,
+                            JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",6,null)))))
+                }
+                assertEquals(0,progress.journal.unresolvedCount)
+                val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                    JournalFinishIntent("extension-finish",62000,60000)))
+                assertTrue(checkNotNull(store.complete(plan.session,finished.revision,journal)).recoveryCleared)
+                val stored=JSONObject(String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+                val history=stored.getJSONArray("history").getJSONObject(0)
+                val observations=history.getJSONObject("nativeSetObservations").getJSONArray("events")
+                assertEquals(plan.slots.size,observations.length())
+                val logged=history.getJSONObject("perf").getJSONObject(plan.exercises.first().id)
+                    .getJSONArray("sets")
+                val loggedKinds=(0 until logged.length()).map { logged.getJSONObject(it) }
+                    .filter { it.optBoolean("sub",false) }.map { it.getString("kind") }
+                assertEquals(List(count){kind},loggedKinds)
+                assertNull(journal.recover())
+            }
+        } }
+    }
+
     @Test(timeout=60000) fun cancelledRuntimeResponseCannotPublishHistoryAndExactRetryStillWorks() {
         NodeTransport().use { node -> runBlocking {
             val delayed=CompletableDeferred<String>()

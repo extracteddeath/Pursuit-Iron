@@ -46,7 +46,7 @@ function finishedJournal(raw) {
   ensure(typeof raw === 'string' && utf8ByteLength(raw) <= 256 * 1024);
   const j = JSON.parse(raw);
   ensure(exact(j, ['format','session','slots','startRevision','events','finish']) &&
-    j.format === 2 && integer(j.startRevision, 0, MAX_REV));
+    [2,3].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
   const s = j.session;
   ensure(exact(s, ['reference','workoutId','dayId','weekIndex','unit','startedAt']) &&
     validId(s.workoutId) && validId(s.dayId) && integer(s.weekIndex, 1, 104) &&
@@ -54,19 +54,24 @@ function finishedJournal(raw) {
   ensure(Array.isArray(j.slots) && j.slots.length >= 1 && j.slots.length <= 480 &&
     j.slots.every(validSlot) &&
     new Set(j.slots.map(v => `${v.exerciseIndex}:${v.setIndex}`)).size === j.slots.length);
-  ensure(Array.isArray(j.events) && j.events.length === j.slots.length);
-  const operations = new Set(), positions = new Set();
+  ensure(Array.isArray(j.events) && (j.format===2 ? j.events.length===j.slots.length :
+    j.events.length>j.slots.length && j.events.length<=1024));
+  const operations = new Set(), positions = new Map();
+  let corrections=0;
   for (const [i, event] of j.events.entries()) {
-    ensure(exact(event, ['operationId','slot','disposition','values','fromRevision','toRevision']) &&
+    ensure(exact(event, ['operationId','slot','disposition','values','fromRevision','toRevision',
+      ...(j.format===3?['replacesOperationId']:[])]) &&
       validId(event.operationId) && !operations.has(event.operationId) &&
       validSlot(event.slot) &&
       integer(event.fromRevision, 0, MAX_REV - 1) &&
       event.fromRevision === j.startRevision + i && event.toRevision === event.fromRevision + 1 &&
       j.slots.some(slot => equalJson(slot, event.slot)));
     const position = `${event.slot.exerciseIndex}:${event.slot.setIndex}`;
-    ensure(!positions.has(position));
+    const replaces=j.format===3?event.replacesOperationId:null,prior=positions.get(position);
+    ensure(prior ? validId(replaces) && replaces===prior.operationId : replaces===null);
+    if(prior)corrections++;
     operations.add(event.operationId);
-    positions.add(position);
+    positions.set(position,event);
     if (event.disposition === 'SKIPPED') ensure(event.values === null);
     else {
       const v = event.values;
@@ -76,6 +81,7 @@ function finishedJournal(raw) {
           (typeof v.load === 'string' && load.test(v.load) && v.unit === s.unit)));
     }
   }
+  ensure(positions.size===j.slots.length && (j.format===2 || corrections>0));
   const f = j.finish;
   ensure(exact(f, ['operationId','fromRevision','toRevision','completedAt','durationMs']) &&
     validId(f.operationId) && !operations.has(f.operationId) &&
@@ -83,10 +89,10 @@ function finishedJournal(raw) {
     f.fromRevision === j.startRevision + j.events.length &&
     f.toRevision === f.fromRevision + 1 && integer(f.completedAt, s.startedAt, MAX_DATE) &&
     integer(f.durationMs, 0, f.completedAt - s.startedAt));
-  return j;
+  return {journal:j,observations:Array.from(positions.values())};
 }
 
-function canonicalEntry(origin, journal, handoffSha256, issued = null) {
+function canonicalEntry(origin, journal, handoffSha256, issued = null, events = journal.events) {
   const s = journal.session, f = journal.finish;
   const program = origin.saved.find(p => p.id === s.reference.programId);
   ensure(program && integer(weeksOf(program), 1, 104) && s.weekIndex <= weeksOf(program));
@@ -107,7 +113,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
     const sets = prescribed.map((target, setIndex) => {
       const slot = {exerciseIndex, setIndex, exerciseId: currentId};
       slots.push(slot);
-      const event = journal.events.find(e => equalJson(e.slot, slot));
+      const event = events.find(e => equalJson(e.slot, slot));
       ensure(event);
       if (event.disposition === 'SKIPPED') return {...target, done:false};
       const values = event.values;
@@ -134,7 +140,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
   // journal's durable finish time so retries are deterministic after a crash.
   for (const perf of Object.values(performance)) perf.date = f.completedAt;
   const observations = Object.values(performance).flatMap(p => p.sets);
-  const completed = journal.events.filter(e => e.disposition === 'COMPLETED');
+  const completed = events.filter(e => e.disposition === 'COMPLETED');
   if(issued) {
     // Sub-sets remain fully loggable but do not become new working-set
     // ordinals. The web history adapter owns how they influence volume.
@@ -178,8 +184,10 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
     engineV:program.engineV || 1, weekIndex:s.weekIndex, unit:s.unit,
     setsDone:completed.length, totalSets:slots.length, volume,
     durationMin:Math.max(1, Math.round(f.durationMs / 60000)), perf:performance,
-    ...(issued ? {nativeSetObservations:{format:1,events:journal.events.map(event=>({
+    ...(issued ? {nativeSetObservations:{format:1,events:events.map(event=>({
       slot:event.slot,disposition:event.disposition,values:event.values}))}} : {}),
+    ...(journal.format===3 ? {nativeSetRevisions:{format:1,startRevision:journal.startRevision,
+      events:journal.events,finish:journal.finish}} : {}),
     nativeCompletion:{format:2, handoffSha256,
       sourceSnapshotSha256:s.reference.snapshotSha256, journalRevision:f.toRevision}
   };
@@ -193,7 +201,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
  */
 export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw, issuedRaw = null) {
   try {
-    const journal = finishedJournal(handoffRaw);
+    const {journal,observations} = finishedJournal(handoffRaw);
     ensure(matchesCurrentReadOnlyProgram(originRaw, journal.session.reference));
     const origin = storeFrom(originRaw), current = storeFrom(currentRaw);
     const issued = issuedRaw===null ? null : issuedNativeWorkoutFrom(originRaw,issuedRaw);
@@ -204,7 +212,7 @@ export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw
       ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value);
     // Canonical helpers use optional undefined fields. Compare exactly what
     // survives a real JSON store round-trip, rather than in-memory optionals.
-    const entry = JSON.parse(JSON.stringify(canonicalEntry(origin, journal, sha(semanticHandoff),issued?.plan)));
+    const entry = JSON.parse(JSON.stringify(canonicalEntry(origin, journal, sha(semanticHandoff),issued?.plan,observations)));
     const existing = current.history.filter(h => h.id === entry.id);
     ensure(!own(current.tombs, entry.id));
     let candidateRaw;

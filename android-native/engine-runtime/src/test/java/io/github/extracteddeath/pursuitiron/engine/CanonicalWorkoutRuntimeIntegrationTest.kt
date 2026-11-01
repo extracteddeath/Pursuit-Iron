@@ -352,6 +352,90 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun activeEditsSurviveRecoveryAndPublishLatestValuesWithOriginalAudit() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            for(tech in listOf("myo-reps","drop set")) {
+                val suffix=if(tech=="myo-reps")"myo" else "drop"
+                val programId="program-active-$suffix";val workoutId="workout-active-$suffix"
+                val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                    NativeProgramProfile(unit="kg"),"create-active-$suffix",programId,1000,223)))
+                val seeded=JSONObject(proposal.snapshot);val program=seeded.getJSONArray("saved").getJSONObject(0)
+                val day=program.getJSONArray("days").getJSONObject(0)
+                program.getJSONObject("nextWeekPrescriptions").getJSONObject(day.getString("id")+":0")
+                    .getJSONObject("1").put("tech",tech)
+                val origin=seeded.toString()
+                val plan=checkNotNull(engine.prepareWorkout(origin,NativeWorkoutCodec.startJson(programId,workoutId,2000)))
+                val extension=plan.exercises[0].sets.first { it.isExtension }
+                val drive=Drive();val recovery=Drive()
+                var owner=CanonicalWorkoutStorePersistence(drive,engine);var journal=WorkoutJournalPersistence(recovery)
+                assertTrue(owner.initialize(origin))
+                var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+                val first=plan.slots[0]
+                val initial=JournalSetIntent("original-first",first,JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",6,null))
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,0,initial)))
+                val correction=initial.copy(operationId="edit-first",values=JournalSetValues("0","kg",8,2),replacesOperationId=initial.operationId)
+                recovery.failBeforeWrite=true
+                assertTrue(runCatching { journal.recordSet(plan.session,1,correction) }.isFailure)
+                assertEquals("40",checkNotNull(journal.recover()).completed.single().intent.values?.load)
+                recovery.failBeforeWrite=false;recovery.failAfterWrite=true
+                assertTrue(runCatching { journal.recordSet(plan.session,1,correction) }.isFailure)
+                recovery.failAfterWrite=false
+                owner=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+                progress=checkNotNull(owner.recoverIssuedSession(journal))
+                assertEquals(plan.issuedJson,progress.plan.issuedJson)
+                assertEquals(2,progress.journal.events.size);assertEquals(1,progress.journal.completed.size)
+                assertEquals("0",progress.journal.completed.single().intent.values?.load)
+                val writes=recovery.writes
+                assertNotNull(journal.recordSet(plan.session,1,correction))
+                assertEquals(writes,recovery.writes)
+                assertEquals("0",checkNotNull(journal.recordSet(plan.session,0,initial)).completed.single().intent.values?.load)
+                assertNull(journal.recordSet(plan.session,progress.journal.revision,correction.copy(operationId="stale-edit")))
+                for((index,slot) in plan.slots.withIndex().drop(1)) {
+                    val skipped=index==1
+                    progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,
+                        JournalSetIntent("original-$index",slot,if(skipped)JournalSetDisposition.SKIPPED else JournalSetDisposition.COMPLETED,
+                            if(skipped)null else JournalSetValues("40","kg",6,null)))))
+                }
+                for((slot,load,reps) in listOf(Triple(plan.slots[1],"45",8),Triple(extension.slot,"25",5))) {
+                    val prior=progress.journal.completed.single { it.intent.slot==slot }
+                    progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,
+                        JournalSetIntent("correct-${slot.setIndex}",slot,JournalSetDisposition.COMPLETED,
+                            JournalSetValues(load,"kg",reps,0),prior.intent.operationId))))
+                }
+                val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,JournalFinishIntent("finish-active",62000,60000)))
+                val handoff=JSONObject(checkNotNull(journal.finishedHandoff(plan.session,finished.revision)))
+                assertEquals(3,handoff.getInt("format"))
+                assertEquals(plan.slots.size+3,handoff.getJSONArray("events").length())
+                drive.failAfterWrite=true
+                assertTrue(runCatching { owner.complete(plan.session,finished.revision,journal) }.isFailure)
+                drive.failAfterWrite=false;owner=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+                assertTrue(checkNotNull(owner.complete(plan.session,finished.revision,journal)).recoveryCleared)
+                assertNull(journal.recover())
+                val snapshot=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+                val entry=JSONObject(snapshot).getJSONArray("history").getJSONObject(0)
+                assertEquals(plan.slots.size,entry.getInt("setsDone"));assertEquals(plan.slots.size,entry.getInt("totalSets"))
+                val audit=entry.getJSONObject("nativeSetRevisions")
+                assertEquals(handoff.getJSONArray("events").toString(),audit.getJSONArray("events").toString())
+                assertEquals("40",audit.getJSONArray("events").getJSONObject(0).getJSONObject("values").getString("load"))
+                assertEquals(plan.slots.size,entry.getJSONObject("nativeSetObservations").getJSONArray("events").length())
+                val sets=entry.getJSONObject("perf").getJSONObject(first.exerciseId).getJSONArray("sets")
+                val main=(0 until sets.length()).map { sets.getJSONObject(it) }.filter { !it.optBoolean("sub") }
+                assertFalse(main.any { it.getInt("workingSetIndex")==0 })
+                assertTrue(main.any { it.getInt("workingSetIndex")==1 && it.getInt("w")==45 && it.getInt("r")==8 })
+                assertTrue((0 until sets.length()).map { sets.getJSONObject(it) }.any { it.optBoolean("sub") && it.getInt("w")==25 })
+                val view=checkNotNull(engine.inspectHistory(snapshot,workoutId));val ex=view.exercises[0];val set=ex.sets[0]
+                assertNotNull(owner.correctHistory(NativeHistoryCodec.correctionJson(view,"later-history-edit",70000,
+                    listOf(NativeHistoryChange(ex.id,set.setIndex,"50",9,null)))))
+                val after=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+                assertEquals(audit.toString(),JSONObject(after).getJSONArray("history").getJSONObject(0).getJSONObject("nativeSetRevisions").toString())
+                val next=checkNotNull(engine.prepareWorkout(after,NativeWorkoutCodec.startJson(programId,"next-$suffix",71000)))
+                assertNotEquals(plan.session.dayId,next.session.dayId)
+                assertNotNull(owner.beginIssuedSession(next,journal))
+            }
+        } }
+    }
+
     @Test(timeout=60000) fun canonicalHistoryCorrectionSurvivesDiskFullLostAcknowledgementRestartAndExactRetry() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

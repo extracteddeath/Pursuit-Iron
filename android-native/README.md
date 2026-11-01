@@ -17,8 +17,8 @@ verified personal workout -> set logging -> interruption/resume -> workout
 completion -> saved history and correct next-workout/progression decisions.
 The source implementation now covers the standard working-set journey and
 engine-issued myo/drop extension recording and one-shot deload consumption.
-Corrections to retained sets in the latest saved native workout are connected
-through canonical history. Real-device acceptance remains pending; the build
+Durable in-workout corrections and corrections to retained sets in the latest
+saved native workout are connected through the journal and canonical history. Real-device acceptance remains pending; the build
 freeze remains active.
 
 The instructions below describe how **older previously produced** artifacts
@@ -306,3 +306,30 @@ Packaged-runtime JVM tests cover write failure before publication, lost
 acknowledgement after publication, restart, exact retry, response tampering
 and a workout starting while a correction is being prepared. These source
 checks do not constitute physical-device or APK acceptance.
+
+### Correct a set before finishing
+
+Completed and skipped rows expose the same shared correction sheet used by
+saved-history editing. It corrects load, reps and optional actual RIR; completed
+sets can be marked skipped with confirmation, and skipped sets can be recorded.
+The original issued targets remain pinned. Each correction replaces an exact
+prior receipt, and the UI waits for durable acknowledgement before updating.
+Both correction sheets use the shared keyboard/scroll layout and reject drag
+dismissal while a save is pending.
+
+An edited private journal uses format 3, appending rather than destroying
+prior receipts. The completed-slot projection contains only the current value,
+so editing does not create extra sets or advance workout progress. Legacy,
+unedited format-2 journals retain their original wire identity. Recovery rejects
+malformed chains, stale replacements and duplicate durable events. Storage
+reservation prevents corrections from consuming the space needed to log all
+remaining slots and Finish.
+
+The packaged canonical completion path validates the chain, logs only its
+latest observations and persists the full original `nativeSetRevisions` audit
+with history before journal retirement. Exact retries cannot duplicate history
+or undo later values. The packaged-runtime JVM tests exercise both myo and drop
+workouts through interrupted correction writes, restart, skipped-set restoration,
+zero loads, extension edits, interrupted completion, saved-history correction
+and next-session selection. Physical-device acceptance and APK builds remain
+separate and frozen.

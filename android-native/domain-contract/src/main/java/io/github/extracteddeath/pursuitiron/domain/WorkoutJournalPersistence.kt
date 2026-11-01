@@ -30,7 +30,6 @@ interface WorkoutJournalBytes {
 class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
     companion object {
         const val MAX_JOURNAL_BYTES = 256 * 1024
-        private const val FORMAT = 2
     }
 
     private val guard = Any()
@@ -134,7 +133,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         return JournalSetValues(load,unit,rep.toInt(),rir)
     }
 
-    private fun eventJson(entry: JournalSetCommit): JSONObject {
+    private fun eventJson(entry: JournalSetCommit, version: Int): JSONObject {
         val intent = entry.intent
         val receipt = entry.receipt
         return JSONObject()
@@ -144,6 +143,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             .put("values",valuesJson(intent.values))
             .put("fromRevision",receipt.fromRevision)
             .put("toRevision",receipt.toRevision)
+            .apply { if(version==3)put("replacesOperationId",intent.replacesOperationId ?: JSONObject.NULL) }
     }
 
     private fun finishJson(entry: JournalFinishCommit?): Any =
@@ -155,22 +155,23 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             .put("durationMs",entry.intent.durationMs)
 
     private fun initialRevision(state: WorkoutJournalState): Long =
-        state.revision - state.completed.size.toLong() - if (state.isFinished) 1L else 0L
+        state.revision - state.events.size.toLong() - if (state.isFinished) 1L else 0L
 
+    private fun format(state: WorkoutJournalState)=if(state.events.any { it.intent.replacesOperationId!=null })3 else 2
     private fun payloadJson(state: WorkoutJournalState) = JSONObject()
-            .put("format",FORMAT)
+            .put("format",format(state))
             .put("session",keyJson(state.session))
             .put("slots",JSONArray().apply { state.slots.forEach { put(slotJson(it)) } })
             .put("startRevision",initialRevision(state))
             .put("events",JSONArray().apply {
-                state.completed.forEach { put(eventJson(it)) }
+                state.events.forEach { put(eventJson(it,format(state))) }
             })
             .put("finish",finishJson(state.finish))
 
     private fun encode(state: WorkoutJournalState): ByteArray {
         val payload = payloadJson(state).toString()
         val envelope = JSONObject()
-            .put("format",FORMAT)
+            .put("format",format(state))
             .put("payload",payload)
             .put("sha256",sha(payload.toByteArray(StandardCharsets.UTF_8)))
             .toString().toByteArray(StandardCharsets.UTF_8)
@@ -188,7 +189,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         require(source.size in 1..MAX_JOURNAL_BYTES)
         val envelope=JSONObject(String(source,StandardCharsets.UTF_8))
         exact(envelope,"format","payload","sha256")
-        require(number(envelope,"format") == FORMAT.toLong())
+        val version=number(envelope,"format").also { require(it in 2L..3L) }.toInt()
         val payload = text(envelope,"payload")
         val digest = text(envelope,"sha256")
         val actual = sha(payload.toByteArray(StandardCharsets.UTF_8))
@@ -199,26 +200,31 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             ))
         val data=JSONObject(payload)
         exact(data,"format","session","slots","startRevision","events","finish")
-        require(number(data,"format") == FORMAT.toLong())
+        require(number(data,"format") == version.toLong())
         val key=readKey(data.getJSONObject("session"))
         val slotsJson=data.getJSONArray("slots")
         require(slotsJson.length() in 1..480)
         val slots=(0 until slotsJson.length()).map { readSlot(slotsJson.getJSONObject(it)) }
         var state=requireNotNull(WorkoutJournalPolicy.open(key,slots,number(data,"startRevision")))
         val events=data.getJSONArray("events")
-        require(events.length() <= slots.size)
+        require(events.length() <= if(version==2)slots.size else WorkoutJournalPolicy.MAX_EVENTS)
         for (index in 0 until events.length()) {
             val raw=events.getJSONObject(index)
-            exact(raw,"operationId","slot","disposition","values","fromRevision","toRevision")
+            if(version==3)exact(raw,"operationId","slot","disposition","values","fromRevision","toRevision","replacesOperationId")
+            else exact(raw,"operationId","slot","disposition","values","fromRevision","toRevision")
             val op=text(raw,"operationId")
             val slot=readSlot(raw.getJSONObject("slot"))
             val disposition=JournalSetDisposition.valueOf(text(raw,"disposition"))
             val values=readValues(raw.get("values"))
-            val intent=JournalSetIntent(op,slot,disposition,values)
+            val replaces=if(version==3 && !raw.isNull("replacesOperationId"))text(raw,"replacesOperationId") else null
+            val intent=JournalSetIntent(op,slot,disposition,values,replaces)
             val receipt=JournalSetReceipt(key,op,slot,disposition,values,
-                number(raw,"fromRevision"),number(raw,"toRevision"))
+                number(raw,"fromRevision"),number(raw,"toRevision"),replaces)
+            // Replays are valid API retries, but never duplicate durable log entries.
+            require(receipt.fromRevision==state.revision)
             state=requireNotNull(WorkoutJournalPolicy.afterPersistedSet(state,intent,receipt))
         }
+        require(format(state)==version)
         if (!data.isNull("finish")) {
             val finish=data.getJSONObject("finish")
             exact(finish,"operationId","fromRevision","toRevision","completedAt","durationMs")
@@ -302,18 +308,38 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         if (current.session != session) return@synchronized null
         // Crash-after-commit retry: identical operation and payload can safely
         // recover a previously acknowledged write, even with an older CAS.
-        val replay=current.completed.find { it.intent.operationId == intent.operationId }
+        val replay=current.events.find { it.intent.operationId == intent.operationId }
         if (replay != null) return@synchronized if (replay.intent == intent &&
             replay.receipt.fromRevision == expectedRevision) current else null
         if (expectedRevision != current.revision) return@synchronized null
         val receipt=JournalSetReceipt(
             session,intent.operationId,intent.slot,intent.disposition,intent.values,
-            current.revision,current.revision+1
+            current.revision,current.revision+1,intent.replacesOperationId
         )
         val next=WorkoutJournalPolicy.afterPersistedSet(current,intent,receipt)
             ?: return@synchronized null
+        if(intent.replacesOperationId!=null && !hasFinishCapacity(next))return@synchronized null
         save(next)
         next
+    }
+
+    /** Editing cannot spend the bytes needed to log the remaining slots and Finish. */
+    private fun hasFinishCapacity(state: WorkoutJournalState): Boolean {
+        val payload=payloadJson(state)
+        val events=payload.getJSONArray("events")
+        val unresolved=state.slots.filter { slot -> state.completed.none { it.intent.slot==slot } }
+        var revision=state.revision
+        for(slot in unresolved) {
+            events.put(JSONObject().put("operationId","x".repeat(128)).put("slot",slotJson(slot))
+                .put("disposition","COMPLETED").put("values",valuesJson(JournalSetValues("99999.999",state.session.unit,100,10)))
+                .put("fromRevision",revision).put("toRevision",revision+1).put("replacesOperationId",JSONObject.NULL))
+            revision++
+        }
+        payload.put("finish",JSONObject().put("operationId","x".repeat(128))
+            .put("fromRevision",revision).put("toRevision",revision+1)
+            .put("completedAt",8_640_000_000_000_000L).put("durationMs",8_640_000_000_000_000L))
+        val envelope=JSONObject().put("format",3).put("payload",payload.toString()).put("sha256","f".repeat(64))
+        return envelope.toString().toByteArray(StandardCharsets.UTF_8).size<=MAX_JOURNAL_BYTES
     }
 
     fun finish(

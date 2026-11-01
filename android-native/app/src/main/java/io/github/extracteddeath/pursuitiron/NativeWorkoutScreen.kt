@@ -16,7 +16,8 @@ import io.github.extracteddeath.pursuitiron.domain.*
 @Composable
 internal fun NativeWorkoutScreen(
     state: NativeRuntimeState,onStart: ()->Unit,
-    onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,onFinish: ()->Unit
+    onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,onFinish: ()->Unit,
+    onCorrect: (JournalSetIntent)->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -103,7 +104,8 @@ internal fun NativeWorkoutScreen(
             setDraftStates.SaveableStateProvider(
                 "${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}"
             ) {
-                NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord)
+                NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord,
+                    onCorrect,state.workoutError)
             }
         }
     }
@@ -136,7 +138,8 @@ internal fun NativeWorkoutScreen(
 
 @Composable
 private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,commit: JournalSetCommit?,busy: Boolean,
-    showLast: Boolean,onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit) {
+    showLast: Boolean,onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,
+    onCorrect: (JournalSetIntent)->Unit,error: String?) {
     var load by rememberSaveable { mutableStateOf(set.load) }
     var reps by rememberSaveable { mutableStateOf(set.reps) }
     // Optional actual effort starts empty, independently of the prescribed RIR.
@@ -170,6 +173,7 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
                 Text("${value.load} ${value.unit} × ${value.reps} · saved")
                 Text(value.rir?.let { "$it RIR reported" } ?: "RIR not reported",style=MaterialTheme.typography.bodySmall)
             }
+            NativeActiveSetCorrection(session,set,commit,busy,error,onCorrect)
         } else {
             NativeSetValueFields(session.unit,load,reps,rir,!busy,{load=it},{reps=it},{rir=it})
             val validLoad=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$"))

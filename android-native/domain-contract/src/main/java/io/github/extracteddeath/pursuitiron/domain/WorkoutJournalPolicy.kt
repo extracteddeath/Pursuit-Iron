@@ -25,7 +25,8 @@ data class JournalSetIntent(
     val operationId: String,
     val slot: JournalSetSlot,
     val disposition: JournalSetDisposition,
-    val values: JournalSetValues?
+    val values: JournalSetValues?,
+    val replacesOperationId: String? = null
 )
 
 data class JournalSetReceipt(
@@ -35,7 +36,8 @@ data class JournalSetReceipt(
     val disposition: JournalSetDisposition,
     val storedValues: JournalSetValues?,
     val fromRevision: Long,
-    val toRevision: Long
+    val toRevision: Long,
+    val replacesOperationId: String? = null
 )
 
 data class JournalSetCommit(val intent: JournalSetIntent, val receipt: JournalSetReceipt)
@@ -60,13 +62,15 @@ class WorkoutJournalState internal constructor(
     val slots: List<JournalSetSlot>,
     val revision: Long,
     val completed: List<JournalSetCommit>,
-    val finish: JournalFinishCommit?
+    val finish: JournalFinishCommit?,
+    val events: List<JournalSetCommit> = completed
 ) {
     val isFinished get() = finish != null
     val unresolvedCount get() = slots.size - completed.size
 }
 
 object WorkoutJournalPolicy {
+    const val MAX_EVENTS = 1024
     private const val MAX_REV = 9_007_199_254_740_991L
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
     private val exerciseId = Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
@@ -81,6 +85,7 @@ object WorkoutJournalPolicy {
 
     private fun validIntent(intent: JournalSetIntent): Boolean =
         id.matches(intent.operationId) &&
+            (intent.replacesOperationId == null || id.matches(intent.replacesOperationId)) &&
             when (intent.disposition) {
                 JournalSetDisposition.SKIPPED -> intent.values == null
                 JournalSetDisposition.COMPLETED -> validObservation(intent.values)
@@ -119,19 +124,25 @@ object WorkoutJournalPolicy {
             (intent.values?.unit != null && intent.values.unit != state.session.unit) ||
             ack.operationId != intent.operationId || ack.slot != intent.slot ||
             ack.disposition != intent.disposition ||
-            ack.storedValues != intent.values) return null
-        val replay = state.completed.find { it.intent.operationId == intent.operationId }
+            ack.storedValues != intent.values || ack.replacesOperationId != intent.replacesOperationId) return null
+        val replay = state.events.find { it.intent.operationId == intent.operationId }
         if (replay != null)
             return if (replay.intent == intent && replay.receipt == ack) state else null
-        if (state.isFinished || intent.slot !in state.slots ||
-            state.completed.any { it.intent.slot == intent.slot } ||
+        val prior = state.completed.find { it.intent.slot == intent.slot }
+        if (state.isFinished || intent.slot !in state.slots || state.events.size >= MAX_EVENTS ||
+            (prior == null && intent.replacesOperationId != null) ||
+            (prior != null && intent.replacesOperationId != prior.intent.operationId) ||
+            // Reserve one original receipt for every unresolved slot.
+            (prior != null && state.events.size + state.unresolvedCount >= MAX_EVENTS) ||
             ack.fromRevision != state.revision ||
             !increment(ack.fromRevision, ack.toRevision)) return null
         val next = ArrayList(state.completed)
-        next += JournalSetCommit(intent, ack)
+        val committed=JournalSetCommit(intent, ack)
+        if(prior==null)next += committed else next[next.indexOf(prior)] = committed
+        val events=ArrayList(state.events).apply { add(committed) }
         return WorkoutJournalState(
             state.session, state.slots, ack.toRevision,
-            Collections.unmodifiableList(next), null
+            Collections.unmodifiableList(next), null, Collections.unmodifiableList(events)
         )
     }
 
@@ -145,7 +156,7 @@ object WorkoutJournalPolicy {
             intent.completedAt !in state.session.startedAt..8_640_000_000_000_000L ||
             intent.durationMs !in 0..(intent.completedAt - state.session.startedAt) ||
             ack.completedAt != intent.completedAt || ack.durationMs != intent.durationMs ||
-            state.completed.any { it.intent.operationId == intent.operationId }) return null
+            state.events.any { it.intent.operationId == intent.operationId }) return null
         val replay = state.finish
         if (replay != null)
             return if (replay.intent == intent && replay.receipt == ack) state else null
@@ -153,7 +164,7 @@ object WorkoutJournalPolicy {
             !increment(ack.fromRevision, ack.toRevision)) return null
         return WorkoutJournalState(
             state.session, state.slots, ack.toRevision, state.completed,
-            JournalFinishCommit(intent, ack)
+            JournalFinishCommit(intent, ack), state.events
         )
     }
 }

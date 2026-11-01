@@ -24,6 +24,7 @@ jobs:
           node android-native/engine-bridge/native-onboarding-test.mjs
           node android-native/engine-bridge/native-workout-test.mjs
           node android-native/engine-bridge/native-workout-deload-test.mjs
+          node android-native/engine-bridge/native-workout-correction-test.mjs
           node android-native/engine-bridge/native-history-test.mjs
           node android-native/engine-bridge/backup-schema-check-test.mjs
           node android-native/engine-bridge/sandbox-compat-test.mjs

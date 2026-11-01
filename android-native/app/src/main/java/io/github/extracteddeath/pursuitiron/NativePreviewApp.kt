@@ -58,6 +58,7 @@ import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
 import io.github.extracteddeath.pursuitiron.domain.JournalSetSlot
 import io.github.extracteddeath.pursuitiron.domain.JournalSetDisposition
 import io.github.extracteddeath.pursuitiron.domain.JournalSetValues
+import io.github.extracteddeath.pursuitiron.domain.JournalSetIntent
 import androidx.compose.runtime.remember
 
 /** Navigation follows training tasks instead of mirroring React screens. */
@@ -84,6 +85,7 @@ internal fun NativePreviewApp(
     onEditProgram: ()->Unit = {},
     onStartWorkout: ()->Unit = {},
     onRecordSet: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit = {_,_,_->},
+    onCorrectSet: (JournalSetIntent)->Unit = {},
     onFinishWorkout: ()->Unit = {},
     onCorrectHistory: (String)->Unit = {},
     onReloadHistory: ()->Unit = {}
@@ -203,7 +205,7 @@ internal fun NativePreviewApp(
                                     startWorkout=onStartWorkout,
                                     setupProgram={exploreDemo=false})
                                 NativeDestination.TRAIN -> if(onboarding?.saved!=null && selectedTrainingDay==null)
-                                    NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout)
+                                    NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet)
                                 else TrainScreen(
                                     openTools = { sheet = 3 },
                                     syntheticOutlineReader = syntheticOutlineReader,

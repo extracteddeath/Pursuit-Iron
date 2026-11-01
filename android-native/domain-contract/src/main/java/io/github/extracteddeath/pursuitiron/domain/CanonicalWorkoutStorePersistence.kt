@@ -325,14 +325,24 @@ class CanonicalWorkoutStorePersistence(
         if(pending.issuedWorkout!=null) {
             val observations=entry.getJSONObject("nativeSetObservations")
             exact(observations,"format","events");require(number(observations,"format")==1L)
-            val events=JSONObject(handoff).getJSONArray("events")
-            val expected=JSONArray().apply { for(i in 0 until events.length()) {
-                val event=events.getJSONObject(i)
-                put(JSONObject().put("slot",event.getJSONObject("slot"))
-                    .put("disposition",event.get("disposition")).put("values",event.get("values")))
+            val expected=JSONArray().apply { journal.completed.forEach { commit ->
+                val intent=commit.intent;val value=intent.values
+                put(JSONObject().put("slot",JSONObject().put("exerciseIndex",intent.slot.exerciseIndex)
+                    .put("setIndex",intent.slot.setIndex).put("exerciseId",intent.slot.exerciseId))
+                    .put("disposition",intent.disposition.name).put("values",value?.let {
+                        JSONObject().put("load",it.load ?: JSONObject.NULL).put("unit",it.unit ?: JSONObject.NULL)
+                            .put("reps",it.reps).put("rir",it.rir ?: JSONObject.NULL)
+                    } ?: JSONObject.NULL))
             } }
             require(equivalent(observations.getJSONArray("events"),expected))
         }
+        if(journal.events.size!=journal.completed.size) {
+            val audit=entry.getJSONObject("nativeSetRevisions");val input=JSONObject(handoff)
+            exact(audit,"format","startRevision","events","finish")
+            require(number(audit,"format")==1L && number(audit,"startRevision")==number(input,"startRevision") &&
+                equivalent(audit.getJSONArray("events"),input.getJSONArray("events")) &&
+                equivalent(audit.getJSONObject("finish"),input.getJSONObject("finish")))
+        } else require(!entry.has("nativeSetRevisions"))
         val identity=entry.getJSONObject("nativeCompletion")
         exact(identity,"format","handoffSha256","sourceSnapshotSha256","journalRevision")
         require(number(identity,"format")==2L && number(identity,"journalRevision")==journal.revision &&

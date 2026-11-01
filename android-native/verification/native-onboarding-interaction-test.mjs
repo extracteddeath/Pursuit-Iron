@@ -63,7 +63,8 @@ assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workout
   train.includes('val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull') &&
   train.includes('it.slot !in committedSlots') &&
   train.includes('visibleSets.forEach { set->') &&
-  train.includes('NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord)') &&
+  train.includes('NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord,') &&
+  train.includes('onCorrect,state.workoutError)') &&
   train.includes('FilterChip(selected=focusMode,onClick={focusMode=!focusMode}') &&
   train.includes('val setDraftStates=rememberSaveableStateHolder()'),
   'Focus mode must project the identical receipt-based set logger and preserve unsent drafts');
@@ -118,6 +119,21 @@ assert.ok(host.includes('val completion=owner.lastCompletionReceipt()') &&
   !host.includes('workoutError=null,completion=null'),
   'Starting the next workout must not hide the previous confirmed history receipt');
 const historyUi=fs.readFileSync(root+'NativeHistoryPanel.kt','utf8');
+const activeEdit=fs.readFileSync(root+'NativeActiveSetCorrection.kt','utf8');
+assert.ok(controls.includes('internal fun NativeSetEditSheet(') &&
+  controls.includes('confirmValueChange={it!=SheetValue.Hidden || !currentBusy}') &&
+  controls.includes('imePadding().verticalScroll(rememberScrollState())') &&
+  historyUi.includes('NativeSetEditSheet(state.historyBusy,') && activeEdit.includes('NativeSetEditSheet(busy,'),
+  'Both correction sheets share keyboard layout and prevent drag-dismissal during an unacknowledged save');
+assert.ok(train.includes('NativeActiveSetCorrection(session,set,commit,busy,error,onCorrect)') &&
+  activeEdit.includes('rememberSaveable(commit.intent.operationId)') &&
+  activeEdit.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy') &&
+  activeEdit.includes('onCorrect(JournalSetIntent(id,set.slot,disposition,values,commit.intent.operationId))') &&
+  activeEdit.includes('pendingDisposition==JournalSetDisposition.SKIPPED.name') &&
+  activeEdit.includes('Mark this set as skipped?') && activity.includes('onCorrectSet=runtime::correctSet') &&
+  host.includes('previous?.receipt?.fromRevision ?: progress.journal.revision,intent)') &&
+  !activeEdit.includes('recordSet(') && !activeEdit.includes('commitAtomically'),
+  'Active edits share controls, bind the prior receipt, preserve exact retry intent and wait for durable acknowledgement');
 assert.ok(historyUi.includes('NativeSetValueFields(history.unit,load,reps,rir,!busy') &&
   historyUi.includes('val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy') &&
   historyUi.includes('val exact=command ?: NativeHistoryCodec.correctionJson(') &&

@@ -1,13 +1,10 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.*
 import java.util.UUID
 
@@ -66,12 +63,9 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     val exercise=history.exercises.firstOrNull { it.id==selectedExercise }
     val set=exercise?.sets?.firstOrNull { it.setIndex==selectedSet }
     if(exercise!=null && set!=null) {
-        ModalBottomSheet(onDismissRequest={if(!state.historyBusy)selectedExercise=null}) {
-            Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
-                verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                NativeHistorySetEditor(history,exercise,set,state.historyBusy,state.historyError,onCorrect,
-                    onCancel={selectedExercise=null})
-            }
+        NativeSetEditSheet(state.historyBusy,onDismiss={selectedExercise=null}) {
+            NativeHistorySetEditor(history,exercise,set,state.historyBusy,state.historyError,onCorrect,
+                onCancel={selectedExercise=null})
         }
     }
 }

@@ -201,24 +201,34 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     }
 
     fun recordSet(slot: JournalSetSlot,disposition: JournalSetDisposition,values: JournalSetValues?) {
+        persistSet(JournalSetIntent("set-"+UUID.randomUUID(),slot,disposition,values))
+    }
+
+    fun correctSet(intent: JournalSetIntent) {
+        if(intent.replacesOperationId==null)return
+        persistSet(intent)
+    }
+
+    private fun persistSet(intent: JournalSetIntent) {
         val current=mutable.value;val progress=current.workout ?: return
         if(current.workoutBusy || current.workoutBlocked || progress.journal.isFinished)return
         // A blank load is never turned into zero; target RIR is never actual RIR.
-        if(disposition==JournalSetDisposition.COMPLETED && (values?.load==null || values.unit!=progress.plan.session.unit || values.reps !in 1..100))return
+        val values=intent.values
+        if(intent.disposition==JournalSetDisposition.COMPLETED && (values?.load==null || values.unit!=progress.plan.session.unit || values.reps !in 1..100))return
         val owner=store ?: return;val recovery=journal ?: return
         mutable.update { it.copy(workoutBusy=true,workoutError=null) }
         scope.launch {
             try {
-                val next=checkNotNull(recovery.recordSet(progress.plan.session,progress.journal.revision,
-                    JournalSetIntent("set-"+UUID.randomUUID(),slot,disposition,values)))
+                val previous=progress.journal.events.firstOrNull { it.intent==intent }
+                val next=checkNotNull(recovery.recordSet(progress.plan.session,
+                    previous?.receipt?.fromRevision ?: progress.journal.revision,intent))
                 mutable.update { it.copy(workout=NativeWorkoutProgress(progress.plan,next),workoutBusy=false,workoutError=null) }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 val restored=runCatching { owner.recoverIssuedSession(recovery) }.getOrNull()
-                val confirmed=restored?.journal?.completed?.any { it.intent.slot==slot &&
-                    it.intent.disposition==disposition && it.intent.values==values }==true
+                val confirmed=restored?.journal?.events?.any { it.intent==intent }==true
                 mutable.update { it.copy(workout=restored ?: it.workout,workoutBusy=false,
-                    workoutError=if(confirmed)null else "This set could not be confirmed as saved. Your entries are still here. Try again.") }
+                    workoutError=if(confirmed)null else "This set change could not be confirmed. Your saved sets are kept. Review your entries and try again.") }
             }
         }
     }

@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "feature": "progressionPreview",
+  "semantics": "Read-only fixed expectations. Canonical JS is verified now; native Kotlin must reproduce every case before activation.",
+  "cases": [
+    {
+      "id": "rep-floor-no-premature-load-promotion",
+      "params": {
+        "exerciseId": "back_squat",
+        "repMin": 5,
+        "repMax": 8,
+        "targetRir": 2,
+        "sets": [
+          {
+            "load": 200,
+            "reps": 3,
+            "rir": null
+          },
+          {
+            "load": 205,
+            "reps": 3,
+            "rir": null
+          },
+          {
+            "load": 210,
+            "reps": 2,
+            "rir": null
+          },
+          {
+            "load": 215,
+            "reps": 2,
+            "rir": 0
+          }
+        ],
+        "equipmentAvailable": [
+          "barbell",
+          "rack"
+        ]
+      },
+      "expected": {
+        "action": "decrease_load",
+        "suggestedLoad": 185,
+        "suggestedReps": 5
+      }
+    },
+    {
+      "id": "successful-double-progression",
+      "params": {
+        "exerciseId": "back_squat",
+        "repMin": 5,
+        "repMax": 8,
+        "targetRir": 2,
+        "sets": [
+          {
+            "load": 185,
+            "reps": 8,
+            "rir": 2
+          },
+          {
+            "load": 185,
+            "reps": 8,
+            "rir": 2
+          },
+          {
+            "load": 185,
+            "reps": 8,
+            "rir": 2
+          }
+        ],
+        "equipmentAvailable": [
+          "barbell",
+          "rack"
+        ]
+      },
+      "expected": {
+        "action": "increase_load",
+        "suggestedLoad": 190
+      }
+    },
+    {
+      "id": "in-range-reps-before-weight",
+      "params": {
+        "exerciseId": "back_squat",
+        "repMin": 5,
+        "repMax": 8,
+        "targetRir": 2,
+        "sets": [
+          {
+            "load": 185,
+            "reps": 5,
+            "rir": 2
+          },
+          {
+            "load": 185,
+            "reps": 5,
+            "rir": 2
+          },
+          {
+            "load": 185,
+            "reps": 5,
+            "rir": 2
+          }
+        ],
+        "equipmentAvailable": [
+          "barbell",
+          "rack"
+        ]
+      },
+      "expected": {
+        "action": "add_reps",
+        "suggestedLoad": 185
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+# Language-neutral engine contracts — future Kotlin migration
+
+This folder records external behavioral expectations, **not implementation formulas**.
+The JavaScript engine in `modules/engine-api.js` remains canonical until a feature is
+separately certified and deliberately promoted. The Kotlin protocol DTO and
+`ParityGatedProgressionRouter` are inactive infrastructure for a future switch.
+
+## Why this enables Kotlin
+
+- Inputs and outputs are schema-first and carry stable exercise IDs, loads, reps,
+  RIR, revision identity and source provenance. Kotlin is not forced to mimic React.
+- Golden cases are fixed expectations checked against the JS engine. Kotlin
+  implementations must replay the same cases **plus broader independent fixtures**
+  and compare results without tolerance-based rounding for equipment increments.
+- Features are promoted individually, not by a global "Kotlin enabled" flag.
+  The per-feature gate requires exact protocol, canonical source and fixture digests,
+  plus explicit approved backend identity. Uncertified backends fail closed.
+- A backend execution failure is returned as an error; there is no automatic
+  second execution on a different engine (especially important for future writes).
+- `progressionPreview` is diagnostic and read-only. An engine backend that can
+  write training history requires a new transactional contract with idempotency,
+  edit clocks, tombstones and durable rollback.
+
+## Suggested port order
+
+1. Pure data normalization and input validation.
+2. Equipment-specific loading steps and plate inventory / unit semantics.
+3. Double progression, RIR and fatigue-aware set suggestions.
+4. Session duration, readiness and injury restrictions.
+5. Program planning, weekly volume and adaptive blocks.
+6. Workout history, correction-safe analytics, personal records.
+7. Stateful execution and full native storage migration **last**.
+
+A parity match is not evidence that the historical JS policy is perfect.
+When fixing a known engine defect, add a new golden expectation and independently
+validate the intended behavior before updating either implementation.
+
+## Constraints
+
+There is no embedded JavaScript runtime on Android yet and no Kotlin calculation
+engine. These are typed contracts and read-only JS fixtures only; do not claim
+a usable native training engine, import a personal backup, or enable real logging.

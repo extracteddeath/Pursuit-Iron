@@ -1,20 +1,56 @@
 package io.github.extracteddeath.pursuitiron.domain
 
 /**
- * Protocol schema only. Android runtime integration remains disabled until
- * canonical JS parity and signed source-closure verification are complete.
+ * The wire schema is versioned independently of its implementation language.
+ * The actual JSON codec and native JS runtime are NOT yet connected.
+ * Kotlin must not invent engine decisions or serialize params as Map<String, String>.
  */
 object EngineProtocol {
     const val VERSION: Int = 1
     const val METHOD_HANDSHAKE: String = "handshake"
     const val METHOD_CATALOG_SUMMARY: String = "catalogSummary"
+    const val METHOD_PROGRESSION_PREVIEW: String = "progressionPreview"
+}
+
+data class ObservedWorkingSet(
+    val load: Double,
+    val reps: Int,
+    val rir: Int?
+)
+
+data class ProgressionPreviewInput(
+    val exerciseId: String,
+    val repMin: Int,
+    val repMax: Int,
+    val targetRir: Int,
+    val sets: List<ObservedWorkingSet>,
+    val equipmentAvailable: List<String>
+) {
+    /**
+     * Exactly the same bounds as the read-only JS bridge.
+     * This validates transport values; it does not implement progression.
+     */
+    fun hasValidShape(): Boolean =
+        Regex("^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$").matches(exerciseId) &&
+        repMin in 1..100 && repMax in repMin..100 && targetRir in 0..10 &&
+        sets.size in 1..8 &&
+        sets.all { it.load.isFinite() && it.load in 0.0..2500.0 &&
+            it.reps in 0..100 && (it.rir == null || it.rir in 0..10) } &&
+        equipmentAvailable.size <= 32 &&
+        equipmentAvailable.all { Regex("^[a-z0-9_-]{1,40}$").matches(it) } &&
+        equipmentAvailable.size == equipmentAvailable.toSet().size
+}
+
+sealed interface EngineParams {
+    data object Empty : EngineParams
+    data class ProgressionPreview(val input: ProgressionPreviewInput) : EngineParams
 }
 
 data class EngineRequest(
     val protocolVersion: Int = EngineProtocol.VERSION,
     val id: String,
     val method: String,
-    val params: Map<String, String> = emptyMap()
+    val params: EngineParams = EngineParams.Empty
 )
 
 data class EngineError(val code: String, val message: String)
@@ -29,4 +65,17 @@ data class EngineHandshake(
     val engineSource: String,
     val engineCertified: Boolean,
     val capabilities: List<String>
+)
+
+data class ProgressionSetTarget(val weight: Double?, val reps: Int?)
+
+data class ProgressionPreviewResult(
+    val source: String,
+    val previewOnly: Boolean,
+    val action: String,
+    val suggestedLoad: Double?,
+    val suggestedReps: Int?,
+    val reasonCode: String?,
+    val confidence: String?,
+    val setTargets: List<ProgressionSetTarget>
 )

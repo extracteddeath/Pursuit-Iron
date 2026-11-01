@@ -60,3 +60,7 @@ B. Isolated JS runtime bundle with immutable canonical export manifest, handshak
 C. Read-only data bridge with canonical historical projections and safe preview import.
 D. Real Workout vertical slice with transactional set logging, failure recovery and device tests.
 E. Program authoring, insights, library and full-feature acceptance; then release readiness.
+
+## Future Kotlin engine without an all-at-once rewrite
+
+The `domain-contract` package now defines typed `ProgressionPreviewInput`, `ProgressionPreviewResult` and `ParityGatedProgressionRouter` contracts. Read-only fixed JS golden fixtures in `engine-contract/` are regression-checked in source CI. Certified Kotlin backends may eventually replace JS per feature when they exactly match protocol version, pinned source digest and independent fixture digest. No Kotlin training formulas are in production; feature routing currently has no certified runtime backend.

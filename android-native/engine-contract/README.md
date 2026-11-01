@@ -40,3 +40,5 @@ validate the intended behavior before updating either implementation.
 There is no embedded JavaScript runtime on Android yet and no Kotlin calculation
 engine. These are typed contracts and read-only JS fixtures only; do not claim
 a usable native training engine, import a personal backup, or enable real logging.
+
+Kotlin domain-level unit tests run with `:domain-contract:testDebugUnitTest` in a separate workflow; this **compiles the Kotlin engine seam without generating or deploying an APK**. The JavaScript golden cases remain the baseline until the platform-specific JSON codec is implemented and validated.

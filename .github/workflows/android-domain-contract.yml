@@ -1,4 +1,4 @@
-name: Kotlin engine contract compile
+name: Kotlin engine contract tests
 
 on:
   push:
@@ -36,6 +36,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
-      - name: Compile Kotlin engine interface without producing an APK
+      - name: Compile and test Kotlin engine interface without producing an APK
         working-directory: android-native
-        run: gradle :domain-contract:compileDebugKotlin --no-daemon --stacktrace
+        run: gradle :domain-contract:testDebugUnitTest --no-daemon --stacktrace

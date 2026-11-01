@@ -244,3 +244,25 @@ pass also verifies that the transient session still holds the exact same
 approved presentation object; a source update that invalidates the session
 therefore cannot be reused by a subsequent recomposition while the callback
 is being delivered to Compose's main thread.
+
+
+## Canonical current-Plan projection transport adapter (not connected)
+
+The new CanonicalCurrentPlanSourceAdapter connects a future certified
+CanonicalCurrentPlanReadPort to CurrentReadOnlyPlanGateway. The port returns
+a current-store reference including exact digest and program revision,
+an explicitly checked tombstone, and a bounded canonical JavaScript
+read-only program transport. The adapter checks revision and deletion,
+decodes through the strict ReadOnlyProgramTransportCodec, independently
+policy-inspects the result, and delegates committed-change subscriptions.
+The gateway re-fetches current evidence before and after projection.
+
+No current store port implementation exists in the native app. The adapter
+has no storage access, and does NOT authenticate bytes, import an offline
+backup, update a program, merge stores, or enable workouts. A future native
+device-certified canonical owner must implement the port and ensure exact
+source-byte trust, current revision, and all change notifications.
+
+Kotlin tests use the same wholly synthetic v13 wire fixture as canonical JS,
+including deletions, revision drift, malformed/writable payloads, missing
+records, subscription release, failures and cancellation.

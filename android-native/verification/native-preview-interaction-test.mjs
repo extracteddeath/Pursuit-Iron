@@ -189,6 +189,18 @@ assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structur
 const sourceContract = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/CurrentReadOnlyPlanGateway.kt', 'utf8'
 );
+const canonicalAdapter = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/CanonicalCurrentPlanSourceAdapter.kt', 'utf8'
+);
+assert.ok(canonicalAdapter.includes('ReadOnlyProgramTransportCodec.decode(') &&
+  canonicalAdapter.includes('ReadOnlyProgramPresentationPolicy.inspect(') &&
+  canonicalAdapter.includes('readCurrentProjection(') &&
+  canonicalAdapter.includes('subscribeCommittedChanges(') &&
+  !canonicalAdapter.includes('SharedPreferences') &&
+  !canonicalAdapter.includes('openOutputStream') &&
+  !canonicalAdapter.includes('parseStoredData(') &&
+  !shell.includes('CanonicalCurrentPlanSourceAdapter('),
+  'Current canonical projection adapter must remain separate from offline backups and the shipping preview');
 assert.ok(sourceContract.includes('fun subscribeCanonicalChanges(onChanged: () -> Unit): AutoCloseable') &&
   sourceContract.includes('override fun subscribeCanonicalChanges('),
   'Current store adapter requires explicit, disposable canonical change monitoring');

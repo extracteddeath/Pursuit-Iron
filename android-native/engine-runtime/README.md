@@ -38,3 +38,7 @@ Run `Android sandbox on-device engine proof (milestone)` through manual dispatch
 Instrumentation-only exception diagnostics now reside in `src/androidTest/` rather than in the shipping Java library; the main sandbox probe never exposes test exception introspection or read/write arbitrary engine operations.
 
 A real emulator trace verified that Android JavaScriptEngine lacks the `structuredClone` global used by the canonical equipment inventory defaults. The Android-only bundle now initializes a bounded fallback that copies plain data without modifying web engine modules. The following milestone retests actual V8 progression outputs against a full-field canonical Node oracle rather than simply trusting the handshake.
+
+## Reusable disconnected read-only worker
+
+`CanonicalJsReadOnlyService` manages a single-worker AndroidX sandbox lifecycle: external bundle SHA-256 verification, handshake, bounded read-only progression JSON requests, fail-closed errors, an exclusive per-process sandbox lease, and non-blocking cleanup. The class is **not connected to Compose or workout data**; its outputs are unapproved diagnostics until independently routed through the pinned Kotlin feature gate. It intentionally has no retry on engine failure and no write-capable methods. The next instrumented device milestone must verify reuse, explicit close and crash behavior before any user-facing integration.

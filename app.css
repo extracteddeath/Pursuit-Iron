@@ -8039,7 +8039,7 @@ background:var(--pi-color-card)!important;
 .wpb-program-set-review .wpb-working-set-control{margin-bottom:0}
 #root .wpb-exercise-meta .wpb-adjust-sets{min-height:44px;padding:5px 10px;font-size:12px;width:auto;margin:0;background:var(--wpb-theme-card);border:1px solid var(--wpb-theme-border)}
 /* Build 904: one session game plan and reviewable progression decisions. */
-#root .wpb-plan-change-banner{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;margin:12px 0 18px;padding:15px;border:1px solid var(--wpb-theme-border);border-radius:22px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-text);text-align:left;font:inherit;cursor:pointer}
+#root .wpb-plan-change-banner{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;margin:12px 0 18px;text-align:left;justify-content:flex-start}
 .wpb-plan-change-banner>span:nth-child(2){flex:1;min-width:0}.wpb-plan-change-banner strong{display:block;font-size:.875rem;line-height:1.4}.wpb-plan-change-banner>span:nth-child(2)>span{display:block;font-size:.75rem;line-height:1.5;color:var(--wpb-theme-muted);margin-top:4px}.wpb-plan-change-banner>svg{flex-shrink:0}
 .wpb-session-plan-icon{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:13px;background:var(--wpb-theme-card);color:var(--wpb-theme-accent-ink)}
 #root .wpb-session-game-plan{padding:14px;margin-top:14px;border:1px solid var(--wpb-theme-border);border-radius:21px;background:var(--wpb-theme-card);color:var(--wpb-theme-text)}
@@ -8053,7 +8053,7 @@ background:var(--pi-color-card)!important;
 .wpb-plan-review-intro{font-size:13px;line-height:1.6;color:var(--wpb-theme-muted)}#root .wpb .wpb-plan-review-basis{font-size:.75rem;color:var(--wpb-theme-muted);line-height:1.5}
 .wpb-plan-change-card{margin:14px 0;padding:15px;border:1px solid var(--wpb-theme-border);border-radius:20px;background:var(--wpb-theme-card)}.wpb-plan-change-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}.wpb-plan-change-title h3{margin:0;font-size:16px;line-height:1.4;overflow-wrap:anywhere;flex:1 1 140px}.wpb-plan-change-title>span{font-size:10px;letter-spacing:.3px;text-transform:uppercase;color:var(--wpb-theme-accent-ink);font-weight:750;background:var(--wpb-theme-accent-dim);padding:4px 8px;border-radius:7px}
 .wpb-plan-target-diff{list-style:none;padding:0;margin:12px 0}.wpb-plan-target-diff li{display:grid;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--wpb-theme-border);font-size:13px;line-height:1.5}.wpb-plan-target-diff li>span:first-child{grid-column:1 / -1;font-size:11px;color:var(--wpb-theme-muted)}.wpb-plan-target-diff strong{color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}.wpb-plan-before{color:var(--wpb-theme-muted);text-decoration:line-through;overflow-wrap:anywhere}
-.wpb-plan-undo{min-height:48px;margin-top:12px;padding:10px 14px;border:1px solid var(--wpb-theme-border);border-radius:14px;background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink);font:inherit;font-size:13px;font-weight:750;cursor:pointer}.wpb-plan-undo:disabled{opacity:.5}
+.wpb-plan-undo{margin-top:12px}
 
 #root .wpb .wpb-plan-changes-dialog .wpb-plan-undo{min-height:48px;font-size:.8125rem;line-height:1.4;padding:10px 14px;border-radius:var(--pi-shape-action)}
 .wpb-plan-change-card[data-undone="true"] .wpb-plan-target-diff strong{color:var(--wpb-theme-muted)}
@@ -8346,8 +8346,7 @@ background:var(--pi-color-card)!important;
 }
 #root .wpb .wpb-home-outline-toggle{
   display:flex;align-items:center;gap:8px;width:100%;min-height:48px;
-  padding:6px 0;border:0;background:transparent;text-align:left;
-  color:var(--wpb-theme-text);font:inherit;cursor:pointer;
+  padding:6px 0;text-align:left;justify-content:flex-start;
 }
 .wpb-home-outline-toggle>strong{flex:1;font-size:.8125rem;font-weight:750}
 .wpb-home-outline-toggle>span{font-size:.75rem;color:var(--wpb-theme-muted)}
@@ -8518,9 +8517,8 @@ background:var(--pi-color-card)!important;
 
 /* M370 — one disclosure shell and program reference hierarchy. */
 #root .wpb .wpb-motion-reveal{height:0;overflow:hidden}
-#root .wpb .wpb-info-card{min-width:0;margin-bottom:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);border-radius:16px;overflow:hidden}
+#root .wpb .wpb-info-card.wpb-ui-card{padding:0;margin-bottom:12px;overflow:hidden}
 #root .wpb .wpb-info-card-toggle,#root .wpb .wpb-info-card-static-head{box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:48px;padding:14px 16px;border:0;background:none;color:var(--wpb-theme-text);text-align:left;line-height:1.4}
-#root .wpb .wpb-info-card-toggle{cursor:pointer}
 #root .wpb .wpb-info-card-icon{display:grid;place-items:center;flex-shrink:0;width:34px;height:34px;border-radius:12px;background:var(--wpb-theme-bg-tint);color:var(--wpb-theme-accent-ink)}
 #root .wpb .wpb-info-card-heading-copy{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
 #root .wpb .wpb-info-card-title{font-size:.9375rem;font-weight:700}
@@ -9126,10 +9124,8 @@ background:var(--pi-color-card)!important;
   font:inherit;font-size:var(--pi-type-support);color:inherit;
 }
 #root .wpb button.wpb-volume-part-trigger{cursor:pointer;min-height:44px}
-#root .wpb .wpb-volume-detail-toggle{display:flex;align-items:center;gap:6px;min-height:44px;margin-top:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--wpb-theme-border);background:var(--wpb-theme-card);color:var(--wpb-theme-muted);font-size:var(--pi-type-support);font-weight:600;text-align:left;cursor:pointer}
-#root .wpb .wpb-volume-detail-toggle[aria-expanded="true"]{background:var(--wpb-theme-accent-dim);color:var(--wpb-theme-accent-ink)}
+#root .wpb .wpb-volume-detail-toggle{margin-top:8px;justify-content:flex-start;text-align:left}
 #root .wpb button.wpb-volume-part-trigger:focus-visible,
-#root .wpb .wpb-volume-detail-toggle:focus-visible,
 #root .wpb .wpb-volume-ramp-scroll:focus-visible{
   outline:2px solid var(--wpb-focus,currentColor);
   outline-offset:3px;border-radius:4px;

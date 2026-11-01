@@ -109,6 +109,7 @@ export const contractGroups = Object.freeze({
         'shared-sheet-heading-owner-test.mjs',
         'shared-ui-coverage-inventory-test.mjs',
         'ui-element-coverage-test.mjs',
+        'shared-plan-disclosure-owners-test.mjs',
         'settings-service-surface-test.mjs',
         'shared-control-pilot-test.mjs',
         'settings-segmented-owner-test.mjs',

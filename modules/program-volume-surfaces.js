@@ -4,6 +4,7 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from 'react/jsx-runtime';
 import { useState, useMemo, useId } from 'react';
 import { Layers, ChevronDown } from 'lucide-react';
+import { UiAction } from './ui-primitives.js';
 import {
     PART_LABEL, PART_ORDER, SUBMUSCLE_LABEL, SUB_LANDMARKS, fmtSets,
     landmarkFor, compositeMrv, weekMuscleBreakdown, weeklyVolume, weeksOf
@@ -34,7 +35,7 @@ export function VolumeBars({ volume, subVolume, target, program = null, week = 0
             "aria-valuemin": 0, "aria-valuemax": scale, "aria-valuenow": v,
             "aria-valuetext": `${fmtSets(v)} estimated sets, ${zone.label}`, children: [_jsx("div", { className: "wpb-volume-band", style: { left: `${(lm.mev / scale) * 100}%`, width: `${((lm.mrv - lm.mev) / scale) * 100}%` } }), _jsx("div", { className: "wpb-bar", style: { background: zone.color, transform: `translateX(-${100 - Math.min(100, (v / scale) * 100)}%)` } })] })] }, k));
     };
-    return (_jsxs(_Fragment, { children: [subVolume && (_jsxs("button", { onClick: () => setGranular(g => !g), "aria-expanded": granular, type: "button", className: "pressable wpb-volume-detail-toggle", children: [_jsx(Layers, { size: 13 }), " ", granular ? "Hide" : "Show", " delt heads & detail"] })), parts.map(p => {
+    return (_jsxs(_Fragment, { children: [subVolume && (_jsxs(UiAction, { variant: "tonal", onClick: () => setGranular(g => !g), "aria-expanded": granular, "data-emphasis": granular ? "accent" : undefined, className: "wpb-volume-detail-toggle", children: [_jsx(Layers, { size: 13 }), " ", granular ? "Hide" : "Show", " delt heads & detail"] })), parts.map(p => {
                 const v = volume[p] || 0;
                 const tgt = target ? (target[p] || 0) : 0;
                 const { mev } = landmarkFor(p, program?.config?.experience, program);

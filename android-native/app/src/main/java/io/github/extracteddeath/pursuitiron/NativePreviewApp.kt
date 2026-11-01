@@ -68,6 +68,7 @@ private enum class NativeDestination(val title: String, val icon: ImageVector) {
 internal fun NativePreviewApp(
     schemaVerifier: CanonicalBackupSchemaVerifier? = null,
     schemaVerifierLoading: Boolean = false,
+    syntheticOutlineReader: CanonicalSyntheticOutlineReader? = null,
     // Neither an active program nor the current canonical store is connected.
     activeProgramId: String? = null,
     currentPlanSource: CurrentReadOnlyPlanSource = UnconnectedCurrentReadOnlyPlanSource,
@@ -172,6 +173,7 @@ internal fun NativePreviewApp(
                                     adjustSession = { sheet = 1 })
                                 NativeDestination.TRAIN -> TrainScreen(
                                     openTools = { sheet = 3 },
+                                    syntheticOutlineReader = syntheticOutlineReader,
                                     selectedDay = selectedTrainingDay,
                                     currentPlan = visiblePlan,
                                     returnToPlan = { selectedTrainingDay = null; section = 2 }

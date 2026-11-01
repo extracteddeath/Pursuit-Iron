@@ -104,6 +104,7 @@ private fun editPreviewValue(values: IntArray, index: Int, value: Int): IntArray
 @Composable
 internal fun TrainScreen(
     openTools: () -> Unit,
+    syntheticOutlineReader: CanonicalSyntheticOutlineReader? = null,
     selectedDay: ReadOnlyTrainingDaySelection? = null,
     currentPlan: ReadOnlyProgramPresentation = ReadOnlyProgramPresentation.Unavailable,
     returnToPlan: () -> Unit = {}
@@ -247,6 +248,7 @@ internal fun TrainScreen(
         supportingText = { Text("This note exists only in the preview UI; it is not workout history.") },
         maxLines = 3)
     if (!focus) Spacer(Modifier.height(4.dp))
+    SyntheticCanonicalWorkoutPanel(reader = syntheticOutlineReader)
 }
 
 @Composable

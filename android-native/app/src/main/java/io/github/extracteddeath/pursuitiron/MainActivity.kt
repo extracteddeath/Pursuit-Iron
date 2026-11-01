@@ -46,7 +46,8 @@ class MainActivity : ComponentActivity() {
             PursuitIronTheme {
                 NativePreviewApp(
                     schemaVerifier = readOnlyVerifier,
-                    schemaVerifierLoading = verifierLoading
+                    schemaVerifierLoading = verifierLoading,
+                    syntheticOutlineReader = readOnlyVerifier
                 )
             }
         }

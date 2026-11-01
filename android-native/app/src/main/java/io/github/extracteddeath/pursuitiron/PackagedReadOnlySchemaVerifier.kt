@@ -7,6 +7,8 @@ import io.github.extracteddeath.pursuitiron.domain.UnverifiedBackupFingerprint
 import io.github.extracteddeath.pursuitiron.engine.CanonicalJsReadOnlyService
 import io.github.extracteddeath.pursuitiron.engine.CanonicalJsSandboxProbe
 import io.github.extracteddeath.pursuitiron.engine.SandboxBackupSchemaInspector
+import io.github.extracteddeath.pursuitiron.engine.SandboxWorkoutOutline
+import io.github.extracteddeath.pursuitiron.domain.WorkoutOutline
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException
@@ -17,13 +19,18 @@ import java.io.InputStream
  * verified canonical source snapshot. No URL or user-supplied script/manifest.
  *
  * The default source checkout intentionally contains no such bundled asset,
- * so its Compose preview stays disconnected. This class exposes only the
- * metadata-only schema inspector, never workouts, prescriptions or writes.
+ * so its Compose preview stays disconnected. This class exposes metadata probes and synthetic-only engine outlines;
+ * never personal workout prescriptions or writes.
  */
 internal class PackagedReadOnlySchemaVerifier private constructor(
     private val worker: CanonicalJsReadOnlyService
-) : CanonicalBackupSchemaVerifier, AutoCloseable {
+) : CanonicalBackupSchemaVerifier, CanonicalSyntheticOutlineReader, AutoCloseable {
     private val schema = SandboxBackupSchemaInspector(worker)
+
+    private val outlines = SandboxWorkoutOutline(worker)
+
+    override suspend fun inspectSyntheticOutline(split: String, dayIndex: Int): Result<WorkoutOutline> =
+        outlines.inspect(split, dayIndex)
 
     override suspend fun inspect(
         exactSmallCopy: ByteArray,

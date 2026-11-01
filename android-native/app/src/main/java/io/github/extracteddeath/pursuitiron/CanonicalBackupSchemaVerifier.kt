@@ -22,3 +22,8 @@ internal interface CanonicalBackupSchemaVerifier {
         fingerprint: UnverifiedBackupFingerprint
     ): Result<BackupSavedProgramInventory>
 }
+
+/** Fixed synthetic canonical engine output only; never an athlete workout. */
+internal interface CanonicalSyntheticOutlineReader {
+    suspend fun inspectSyntheticOutline(split: String, dayIndex: Int): Result<io.github.extracteddeath.pursuitiron.domain.WorkoutOutline>
+}

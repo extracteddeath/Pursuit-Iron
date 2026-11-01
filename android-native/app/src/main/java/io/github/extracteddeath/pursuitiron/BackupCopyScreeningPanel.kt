@@ -46,7 +46,8 @@ private sealed interface BackupScreeningStage {
 
 @Composable
 internal fun BackupCopyScreeningPanel(
-    verifier: CanonicalBackupSchemaVerifier? = null
+    verifier: CanonicalBackupSchemaVerifier? = null,
+    verifierLoading: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -193,7 +194,11 @@ internal fun BackupCopyScreeningPanel(
                 Text("Clear result")
             }
         }
-        if (verifier == null) {
+        if (verifierLoading) {
+            Text("Checking local read-only engine compatibility…",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (verifier == null) {
             Text("Canonical file validation is not connected in this preview.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -125,3 +125,16 @@ label. It is separate from the active `SavedProgramOverviewPanel` gate:
 no card is clickable, and no saved backup row can activate a training
 program. The actual API-36 emulator gate tests the canonical projection
 with an equal-time deletion and synthetic private history.
+
+### Cold-start scheduling and Activity lifecycle
+
+The optional embedded read-only canonical JavaScript bundle can be several
+megabytes. Native startup now composes the first frame **before** the app
+opens its assets, reads the manifest, verifies SHA-256 or creates its
+sandbox service. A bounded local IO coroutine performs those checks, and
+the UI shows a neutral verifying state until it completes. No network or
+user-file reads are involved. Even if the Activity is destroyed during
+asset loading, the noncancellable Main-thread handoff closes the newly
+constructed verifier rather than installing it into a stale Activity.
+Missing/invalid assets remain fail-closed; training functionality remains
+unconnected. Routine changes require only Compose compilation, not an APK.

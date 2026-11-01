@@ -64,8 +64,13 @@ assert.ok(!packaged.includes('previewAsync(') &&
   !packaged.includes('takePersistableUriPermission('),
   'Read-only UI path must expose no prescriptions, writes or persistent grants');
 assert.ok(activity.includes('readOnlyVerifier?.close()') &&
-  activity.includes('PackagedReadOnlySchemaVerifier.openIfPackaged(this)'),
-  'Native sandbox service must close with the activity lifecycle');
+  activity.includes('PackagedReadOnlySchemaVerifier.openIfPackaged(') &&
+  activity.includes('assetScope.launch') &&
+  activity.includes('CoroutineScope(SupervisorJob() + Dispatchers.IO)') &&
+  activity.includes('withContext(NonCancellable + Dispatchers.Main.immediate)') &&
+  activity.indexOf('setContent {') < activity.indexOf('assetScope.launch') &&
+  activity.includes('if (released) loaded?.close()'),
+  'Read-only bundle must load off the first frame, close on destruction, and never leak cancelled results');
 
 const backupInventoryUi = fs.readFileSync(root + 'BackupSavedProgramInventoryPanel.kt','utf8');
 assert.ok(backupInventoryUi.includes('BACKUP COPY · NOT YOUR ACTIVE PLAN') &&
@@ -84,8 +89,8 @@ const fingerprint = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupScreening.kt',
   'utf8'
 );
-assert.ok(screens.includes('BackupCopyScreeningPanel(verifier = schemaVerifier)'),
-  'Plan includes explicit, fingerprint-only file screening');
+assert.ok(screens.includes('BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading)'),
+  'Plan includes an asynchronous verifier gate and explicit file screening');
 assert.ok(screening.includes('ActivityResultContracts.OpenDocument()'),
   'Android document picker requires user selection');
 assert.ok(screening.includes('withContext(Dispatchers.IO)') &&
@@ -96,6 +101,8 @@ assert.ok(screening.includes('ReadOnlyBackupCandidateReader.screen(source)') &&
   screening.includes('verifier!!.inspect('),
   'Explicit small-source schema selection must use bounded intake, no persistent bytes');
 assert.ok(screening.includes('if (verifier != null)') &&
+  screening.includes('if (verifierLoading)') &&
+  screening.includes('Checking local read-only engine compatibility') &&
   screening.includes('Canonical file validation is not connected in this preview'),
   'Disconnected Compose preview cannot offer a fake schema validation');
 assert.ok(screening.includes('is ReadOnlyDocumentScreening.FingerprintOnly') &&
@@ -137,7 +144,8 @@ assert.ok(screens.includes('programSummary: ReadOnlyProgramSummary? = null') &&
 assert.ok(screens.includes('ReadOnlyProgramPresentationPolicy.inspect(') &&
   screens.includes('programPresentation is ReadOnlyProgramPresentation.Structure'),
   'Saved-program UI must be behind the independent current-revision gate');
-assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen(schemaVerifier = schemaVerifier)'),
+assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen(') &&
+  shell.includes('schemaVerifierLoading = schemaVerifierLoading'),
   'The installable preview must not supply an unverified personal backup');
 assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structure'),
   'Shared saved-program composable must accept only policy-approved structure');

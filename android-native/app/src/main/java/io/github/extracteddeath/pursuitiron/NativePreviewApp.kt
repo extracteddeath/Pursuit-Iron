@@ -60,7 +60,10 @@ private enum class NativeDestination(val title: String, val icon: ImageVector) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun NativePreviewApp(schemaVerifier: CanonicalBackupSchemaVerifier? = null) {
+internal fun NativePreviewApp(
+    schemaVerifier: CanonicalBackupSchemaVerifier? = null,
+    schemaVerifierLoading: Boolean = false
+) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
     var readiness by rememberSaveable { mutableStateOf("Normal") }
@@ -134,7 +137,10 @@ internal fun NativePreviewApp(schemaVerifier: CanonicalBackupSchemaVerifier? = n
                                     openTrain = { section = 1 }, openPlan = { section = 2 },
                                     adjustSession = { sheet = 1 })
                                 NativeDestination.TRAIN -> TrainScreen(openTools = { sheet = 3 })
-                                NativeDestination.PLAN -> PlanScreen(schemaVerifier = schemaVerifier)
+                                NativeDestination.PLAN -> PlanScreen(
+                                    schemaVerifier = schemaVerifier,
+                                    schemaVerifierLoading = schemaVerifierLoading
+                                )
                                 NativeDestination.INSIGHTS -> InsightsScreen()
                             }
                             ConnectionNotice(status)

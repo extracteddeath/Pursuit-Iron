@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "selectedProgramId": "synthetic-program",
+  "rawSnapshot": "{\"v\":13,\"savedAt\":100,\"saved\":[{\"id\":\"synthetic-program\",\"updatedAt\":42,\"name\":\"Synthetic full body\",\"custom\":true,\"weeks\":6,\"config\":{\"goal\":\"hypertrophy\"},\"days\":[{\"id\":\"synthetic-day-1\",\"label\":\"Full body A\",\"exercises\":[\"bb-bench\",\"cable-fly\"]},{\"id\":\"synthetic-day-2\",\"label\":\"Full body B\",\"exercises\":[\"romanian-deadlift\"]}]}],\"tombs\":{},\"history\":[],\"cycles\":[],\"custom\":[],\"gyms\":[],\"perf\":{}}",
+  "wire": {
+    "protocolVersion": 1,
+    "source": "modules/engine-api.js:parseStoredData",
+    "readOnly": true,
+    "reference": {
+      "programId": "synthetic-program",
+      "programUpdatedAt": 42,
+      "storeSavedAt": 100,
+      "storeVersion": 13,
+      "snapshotSha256": "4380bb2d95af63b038d0dcc66864877ddcb34d68050b6452bbee85f5741f6b48"
+    },
+    "program": {
+      "id": "synthetic-program",
+      "name": "Synthetic full body",
+      "custom": true,
+      "goal": "hypertrophy",
+      "weeks": 6,
+      "days": [
+        {
+          "id": "synthetic-day-1",
+          "label": "Full body A",
+          "exerciseIds": [
+            "bb-bench",
+            "cable-fly"
+          ]
+        },
+        {
+          "id": "synthetic-day-2",
+          "label": "Full body B",
+          "exerciseIds": [
+            "romanian-deadlift"
+          ]
+        }
+      ]
+    }
+  }
+}

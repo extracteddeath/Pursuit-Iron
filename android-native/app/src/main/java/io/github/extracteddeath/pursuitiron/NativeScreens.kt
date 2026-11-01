@@ -238,6 +238,8 @@ internal fun PlanScreen(
         // Unconnected Plan remains illustrative and cannot prescribe a workout.
         WorkoutOutlinePanel(outline = null)
     }
+    // Fingerprint-only document chooser never unlocks personal program display.
+    BackupCopyScreeningPanel()
     SectionLabel("Plan essentials")
     PursuitCard {
         Text("Equipment and exercise choice", style = MaterialTheme.typography.titleMedium)

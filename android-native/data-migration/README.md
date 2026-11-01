@@ -71,3 +71,19 @@ preview supplies no source or current-reference evidence, so `PlanScreen`
 continues to show the explicitly illustrative `WorkoutOutlinePanel(null)`.
 This is **not** device data-import certification. The future authoritative
 data-source adapter must verify the current store on each display/resume.
+
+## Native document picker: byte screening, not import
+
+The Compose Plan preview has an **explicit, user-initiated Android document
+picker**. The selected provider stream is read on Dispatchers.IO in 32-KiB
+chunks, rejected when empty, stalled or larger than **50 MiB**, fingerprinted
+with SHA-256, and closed. No file bytes, name, source URI, persistable URI
+permission or raw error are saved. Compose holds a temporary byte count and
+short fingerprint until cleared or the screen is recreated.
+
+This is deliberately NOT canonical JSON validation. Because the native
+preview does not run the trusted v13 JavaScript parser, screening does not
+authorize the program presentation gate or any workout action. Future work
+must certify a read-only canonical parser on device, consent, safe source
+lifetimes and current revision/tombstone verification before showing user
+programs; do not implement an independent Kotlin merge.

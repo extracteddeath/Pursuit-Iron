@@ -60,3 +60,11 @@ passes no program or reference, keeps `outline = null`, and neither reads nor
 logs any user backup.
 
 The `Native Compose UI compile (no APK)` workflow compiles source edits without making a distributable build. A new installable APK is still produced only by the existing explicit `PREVIEW_MILESTONE.md` gate. Next milestones must implement a schema-validated, revision-aware **read-only user program reference** and safe data import before promoting any personalized workout outline; workout logging remains disabled.
+
+### User-selected backup screening (not an import)
+
+The native Plan preview can select a backup copy through Android's document
+picker, stream it off the UI thread, enforce 50 MiB, and display a temporary
+byte count/fingerprint. It does **not** validate JSON, import data, grant
+persisted access, populate Plan with real workouts or enable training.
+The current-revision program gate stays disconnected from this feature.

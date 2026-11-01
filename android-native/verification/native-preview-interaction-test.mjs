@@ -48,6 +48,28 @@ const outlinePolicy = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/OutlinePresentation.kt',
   'utf8'
 );
+const screening = fs.readFileSync(root + 'BackupCopyScreeningPanel.kt', 'utf8');
+const fingerprint = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupScreening.kt',
+  'utf8'
+);
+assert.ok(screens.includes('BackupCopyScreeningPanel()'),
+  'Plan includes explicit, fingerprint-only file screening');
+assert.ok(screening.includes('ActivityResultContracts.OpenDocument()'),
+  'Android document picker requires user selection');
+assert.ok(screening.includes('withContext(Dispatchers.IO)') &&
+  screening.includes('ReadOnlyBackupScreening.fingerprint(source)'),
+  'Selected bytes are screened off the main thread');
+for (const forbidden of ['takePersistableUriPermission', 'SharedPreferences',
+  'openOutputStream', 'rememberSaveable', 'parseStoredData(', 'SavedProgramOverviewPanel(']) {
+  assert.ok(!screening.includes(forbidden),
+    'Fingerprinted copies must not be persisted or grant data authority: ' + forbidden);
+}
+assert.ok(fingerprint.includes('MAX_COPY_BYTES = 50L * 1024 * 1024') &&
+  fingerprint.includes('source.use { input ->') &&
+  fingerprint.includes('MessageDigest.getInstance("SHA-256")'),
+  'Screening streams are bounded, closed and fingerprinted');
+
 const nativeUiWorkflow = fs.readFileSync(
   '.github/workflows/android-compose-ui-compile.yml', 'utf8'
 );

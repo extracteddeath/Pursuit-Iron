@@ -15,7 +15,7 @@ const id = (value, max = 128) =>
   /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value);
 const text = (value, max) =>
   typeof value === 'string' && value.length > 0 && value.length <= max &&
-  value.trim().length > 0 && !/[\x00-\x1f\x7f]/.test(value);
+  value.trim().length > 0 && !/[\x00-\x1f\x7f-\x9f]/.test(value);
 const integer = (v, min, max) => Number.isSafeInteger(v) && v >= min && v <= max;
 const plain = value => value && typeof value === 'object' && !Array.isArray(value);
 

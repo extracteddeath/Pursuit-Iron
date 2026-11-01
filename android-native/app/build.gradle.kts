@@ -26,6 +26,8 @@ android {
 }
 dependencies {
     implementation(project(":domain-contract"))
+    // Read-only metadata gateway only; training UI still uses UnconnectedEngineGateway.
+    implementation(project(":engine-runtime"))
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.compose.ui:ui")

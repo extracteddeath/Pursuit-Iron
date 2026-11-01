@@ -20,14 +20,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
+    private var readOnlyVerifier: PackagedReadOnlySchemaVerifier? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // App-scoped, local-only sandbox. Missing or invalid assets fail closed.
+        readOnlyVerifier = PackagedReadOnlySchemaVerifier.openIfPackaged(this)
         setContent {
             PursuitIronTheme {
-                NativePreviewApp()
+                NativePreviewApp(schemaVerifier = readOnlyVerifier)
             }
         }
+    }
+
+    override fun onDestroy() {
+        // Close asynchronously; never block the Android UI thread.
+        readOnlyVerifier?.close()
+        readOnlyVerifier = null
+        super.onDestroy()
     }
 }
 

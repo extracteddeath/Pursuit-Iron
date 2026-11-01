@@ -48,12 +48,31 @@ const outlinePolicy = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/OutlinePresentation.kt',
   'utf8'
 );
+const packaged = fs.readFileSync(root + 'PackagedReadOnlySchemaVerifier.kt', 'utf8');
+const activity = fs.readFileSync(root + 'MainActivity.kt', 'utf8');
+assert.ok(packaged.includes('CanonicalJsSandboxProbe.verifyBundleBytes(binary, expected)') &&
+  packaged.includes('SandboxBackupSchemaInspector(worker)') &&
+  packaged.includes('openIfPackaged(context: Context)'),
+  'Packaged read-only schema service must validate local JS bundle before any call');
+assert.ok(packaged.includes('metadata.get("approvedForWorkoutExecution") === false') &&
+  packaged.includes('metadata.get("androidSandboxParityVerified") === false'),
+  'Bundle manifest may not claim training approval or sandbox parity certification');
+assert.ok(!packaged.includes('previewAsync(') &&
+  !packaged.includes('syntheticOutlineAsync(') &&
+  !packaged.includes('lookupExercisesAsync(') &&
+  !packaged.includes('openOutputStream(') &&
+  !packaged.includes('takePersistableUriPermission('),
+  'Read-only UI path must expose no prescriptions, writes or persistent grants');
+assert.ok(activity.includes('readOnlyVerifier?.close()') &&
+  activity.includes('PackagedReadOnlySchemaVerifier.openIfPackaged(this)'),
+  'Native sandbox service must close with the activity lifecycle');
+
 const screening = fs.readFileSync(root + 'BackupCopyScreeningPanel.kt', 'utf8');
 const fingerprint = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupScreening.kt',
   'utf8'
 );
-assert.ok(screens.includes('BackupCopyScreeningPanel()'),
+assert.ok(screens.includes('BackupCopyScreeningPanel(verifier = schemaVerifier)'),
   'Plan includes explicit, fingerprint-only file screening');
 assert.ok(screening.includes('ActivityResultContracts.OpenDocument()'),
   'Android document picker requires user selection');
@@ -100,7 +119,7 @@ assert.ok(screens.includes('programSummary: ReadOnlyProgramSummary? = null') &&
 assert.ok(screens.includes('ReadOnlyProgramPresentationPolicy.inspect(') &&
   screens.includes('programPresentation is ReadOnlyProgramPresentation.Structure'),
   'Saved-program UI must be behind the independent current-revision gate');
-assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen()'),
+assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen(schemaVerifier = schemaVerifier)'),
   'The installable preview must not supply an unverified personal backup');
 assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structure'),
   'Shared saved-program composable must accept only policy-approved structure');

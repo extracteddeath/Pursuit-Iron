@@ -77,3 +77,26 @@ new picker action reads one complete copy, captures only up to 128 KiB and
 drops those bytes after canonical schema checking. Full-sized files stay
 fingerprint-only; the UI cannot imply that large or truncated files passed.
 The ordinary preview remains unconnected.
+
+### Opt-in, packaged read-only canonical verifier for native preview
+
+The app now depends on the isolated `engine-runtime` **only through**
+`PackagedReadOnlySchemaVerifier`, which exposes the schema-count inspector,
+not an engine gateway. `UnconnectedEngineGateway` still owns training and
+all workout actions remain disabled.
+
+An ordinary source checkout has **no canonical bundle assets** and therefore
+`openIfPackaged` yields null; there is no network loading or implicit
+user-file access. The opt-in preview APK **milestone workflow only** exports
+the exact canonical snapshot, checks parity, compiles the allowlisted
+offline IIFE and checks the actual bundle exports. It then packages the
+local bundle and matching signed-app asset manifest *only for debug builds*.
+Android verifies the bundle checksum and fail-closed certification flags
+before creating the isolated worker. An explicit user-selected small JSON
+copy can then return **collection counts only**; app lifecycle closes the
+worker without blocking the UI.
+
+No full-backup import or private workout history access is enabled. Large
+backups are fingerprint-only, and no current-snapshot program reference
+is obtained from this metadata-only source. A device-tested preview APK is
+still a future milestone; no APK is built by ordinary source commits.

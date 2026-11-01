@@ -183,7 +183,8 @@ internal fun TrainScreen(openTools: () -> Unit) {
 internal fun PlanScreen(
     programSummary: ReadOnlyProgramSummary? = null,
     currentProgramReference: ReadOnlyProgramReference? = null,
-    currentProgramTombstoneAt: Long? = null
+    currentProgramTombstoneAt: Long? = null,
+    schemaVerifier: CanonicalBackupSchemaVerifier? = null
 ) {
     var goal by rememberSaveable { mutableStateOf("Hypertrophy") }
     var days by rememberSaveable { mutableIntStateOf(4) }
@@ -239,7 +240,7 @@ internal fun PlanScreen(
         WorkoutOutlinePanel(outline = null)
     }
     // Fingerprint-only document chooser never unlocks personal program display.
-    BackupCopyScreeningPanel()
+    BackupCopyScreeningPanel(verifier = schemaVerifier)
     SectionLabel("Plan essentials")
     PursuitCard {
         Text("Equipment and exercise choice", style = MaterialTheme.typography.titleMedium)

@@ -13,8 +13,20 @@ const manifest = read('engine-contract/create-bundle-manifest.mjs');
 const settings = read('settings.gradle.kts');
 
 assert.match(settings, /include\(":app", ":domain-contract", ":engine-runtime"\)/);
-assert.doesNotMatch(app, /implementation\(project\(":engine-runtime"\)\)/,
-  'Production-like demo cannot silently import an uncertified engine');
+assert.match(app, /implementation\(project\(":engine-runtime"\)\)/,
+  'App needs the independently gated read-only metadata runtime');
+const shell = read('app/src/main/java/io/github/extracteddeath/pursuitiron/NativePreviewApp.kt');
+const activity = read('app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt');
+const packaged = read('app/src/main/java/io/github/extracteddeath/pursuitiron/PackagedReadOnlySchemaVerifier.kt');
+assert.match(shell, /UnconnectedEngineGateway\(\)\.status/,
+  'Training navigation must stay disconnected from the read-only metadata service');
+assert.match(packaged, /CanonicalJsSandboxProbe.verifyBundleBytes\(binary, expected\)/);
+assert.match(activity, /readOnlyVerifier\?\.close\(\)/);
+assert.ok(!packaged.includes('generateNextProgramForShell') &&
+  !packaged.includes('updateHistory') &&
+  !packaged.includes('deleteHistory') &&
+  !packaged.includes('lookupExercisesAsync'),
+  'App may only connect the canonical backup metadata checker');
 assert.match(runtime, /androidx\.javascriptengine:javascriptengine:1\.1\.1/);
 for (const guard of [
   'JavaScriptSandbox.isSupported()', 'JavaScriptSandbox.createConnectedInstanceAsync',

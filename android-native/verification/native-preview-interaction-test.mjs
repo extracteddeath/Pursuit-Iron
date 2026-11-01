@@ -338,3 +338,20 @@ assert.doesNotMatch(nativeUiWorkflow, /assembleDebug/,
   'Routine Compose source commits must not assemble a preview APK');
 
 console.log('PASS native preview context preservation, focus parity and touch accessibility source contracts');
+
+
+// The private crash-recovery journal is not permitted to unlock demo logging.
+const journalBytes = fs.readFileSync(root + 'AppPrivateWorkoutJournalBytes.kt','utf8');
+const journalLogic = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/WorkoutJournalPersistence.kt','utf8');
+assert.ok(journalBytes.includes('AtomicFile(') &&
+  journalBytes.includes('context.noBackupFilesDir') &&
+  journalBytes.includes('file.finishWrite(output)') &&
+  journalBytes.includes('file.failWrite(output)') &&
+  journalLogic.includes('WorkoutJournalPolicy.afterPersistedSet') &&
+  journalLogic.includes('WorkoutJournalPolicy.afterPersistedFinish') &&
+  journalLogic.includes('bytes.commitAtomically(content)') &&
+  journalLogic.includes('MessageDigest.isEqual') &&
+  !shell.includes('WorkoutJournalPersistence(') &&
+  !activity.includes('WorkoutJournalPersistence('),
+  'Private workout journal cannot bypass canonical engine and history certification');

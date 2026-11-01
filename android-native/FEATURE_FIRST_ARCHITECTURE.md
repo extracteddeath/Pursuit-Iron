@@ -181,3 +181,23 @@ or an active workout logger. The next implementation must supply canonical
 session slots and atomic store receipts; the native preview remains disabled
 for real set completion. The APK build freeze remains active until onboarding,
 program generation, logging, resume and workout completion all work together.
+
+
+## Durable workout interruption staging (not active workout history)
+
+The native app now has an unwired private Android AtomicFile bytes owner.
+The pure Kotlin WorkoutJournalPersistence validates and atomically saves a
+bounded, SHA-checked private pending-session journal. It reconstructs the
+exact saved user-owned set load/reps/RIR and skip/finish acknowledgements on
+restart by replaying them through WorkoutJournalPolicy. Each write is
+compare-and-swap revision-checked; exact operation-ID retries after a crash
+return the committed state without duplicating a set. Failure or corruption
+does not silently reset a session or manufacture a completed workout.
+
+This is a crash recovery staging journal, NEVER the canonical v13 history or
+a separate training engine. It is deliberately NOT connected to MainActivity
+or the Train tab, and its single-process writer and Android AtomicFile crash
+semantics still require device acceptance. Later work must authenticate a
+real canonical athlete session and safely publish finished sets to canonical
+v13 history before live logging can be enabled. APK production stays frozen
+until onboarding through completed-workout history passes end-to-end.

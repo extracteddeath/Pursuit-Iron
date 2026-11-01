@@ -24,3 +24,13 @@ progression result failed. This milestone reruns the seven real-device cases
 and, only upon a synthetic `ENGINE_UNAVAILABLE` failure, invokes a separate
 diagnostic-only JS bundle to report the exception name/message. This bundle is
 limited to synthetic test fixtures and never installed into a product APK.
+
+## Milestone 3 — canonical loading default clone compatibility
+
+The preceding Android API-36 emulator run successfully initialized the engine
+and confirmed that the **first progression call failed because** the sandbox
+lacks the Web `structuredClone` global. The Android-only entry now supplies
+a restricted clone implementation exclusively for plain factory inventory
+records, leaving all canonical policy modules untouched. This run must prove
+all seven cases with **full field-for-field canonical result comparison** and
+a denied `deleteHistory` method. No live workout data or build promotion.

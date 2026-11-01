@@ -165,3 +165,19 @@ a single TrainingSetHeader. M3 typography, position, ordinals and progress
 are consistent across both screens, with no training calculations or storage
 access in the shared component. This prevents a third divergent set header
 when certified personal training is connected.
+
+
+## Receipt-first transaction lifecycle (not yet wired to storage)
+
+WorkoutJournalPolicy is a pure, immutable persistence-acknowledgement reducer.
+It accepts only an exact persisted receipt matching the user-owned observed
+load, reps and RIR, canonical program/session identity, set position and
+compare-and-swap revision. Retries are idempotent, overlapping set writes and
+stale receipts are rejected. A completed session requires every planned set
+to be durably completed or skipped, plus a separate store-confirmed finish.
+
+This is not the canonical training engine, a data store, a program generator,
+or an active workout logger. The next implementation must supply canonical
+session slots and atomic store receipts; the native preview remains disabled
+for real set completion. The APK build freeze remains active until onboarding,
+program generation, logging, resume and workout completion all work together.

@@ -12,14 +12,21 @@ object ReadOnlyBackupScreening {
     const val MAX_COPY_BYTES = 50L * 1024 * 1024
     private val hexDigits = "0123456789abcdef".toCharArray()
 
-    fun fingerprint(source: InputStream, maxBytes: Long = MAX_COPY_BYTES): UnverifiedBackupFingerprint {
+    fun fingerprint(
+        source: InputStream,
+        maxBytes: Long = MAX_COPY_BYTES,
+        checkActive: () -> Unit = {}
+    ): UnverifiedBackupFingerprint {
         require(maxBytes in 1..MAX_COPY_BYTES) { "Invalid screening limit" }
         return source.use { input ->
             val sha = MessageDigest.getInstance("SHA-256")
             val buffer = ByteArray(32 * 1024)
             var count = 0L
             while (true) {
+                // Cancel a no-longer-visible preview between provider reads.
+                checkActive()
                 val read = input.read(buffer)
+                checkActive()
                 if (read == -1) break
                 if (read == 0) throw IOException("Input made no progress")
                 if (count > maxBytes - read) throw IOException("File exceeds screening limit")

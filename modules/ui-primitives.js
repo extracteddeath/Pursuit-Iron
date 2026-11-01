@@ -60,6 +60,16 @@ export function UiSection({ className = "", ...props }) {
 }
 
 
+// One header anatomy for Program sheets. A caller may retain its original native
+// header/div tag, heading, close action, accessibility attributes and feature classes.
+// Styling stays with the existing wpb-ui-sheet-heading CSS role.
+export function UiSheetHeading({ as: Element = "div", className = "", ...props }) {
+    const names = className.trim().split(/\s+/).filter(Boolean);
+    const classes = names.includes("wpb-ui-sheet-heading")
+        ? className : `wpb-ui-sheet-heading ${className}`.trim();
+    return _jsx(Element, { ...props, className: classes });
+}
+
 // Stateless close control for Program sheets and dialogs; each feature owns
 // its dismissal/confirmation state. Dialog chrome retains the existing paint.
 export function UiSheetClose({ className = "", "aria-label": label = "Close",

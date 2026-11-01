@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useState } from 'react';
 import { Check, Settings2, TrendingUp, Star, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { weeksOf, sessionPrescriptionRows, EX_BY_ID, PROG_STYLES, effortLabel, computeCell, exerciseAt } from './engine-api.js';
-import { UiAction, UiChoice, UiSheetClose } from './ui-primitives.js';
+import { UiAction, UiChoice, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { InfoCard } from './ui-disclosure.js';
 
@@ -22,7 +22,7 @@ export function ProgressionChoiceSheet({ exerciseName, selected, automaticLabel,
         'aria-labelledby': 'program-progression-title', 'aria-describedby': 'program-progression-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         children: _jsxs('section', { className: 'wpb-ui-sheet-panel wpb-progression-choice-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-progression-choice-heading', children: [
+                _jsxs(UiSheetHeading, { as: 'header', className: 'wpb-ui-sheet-heading wpb-progression-choice-heading', children: [
                     _jsxs('div', { children: [
                         _jsx('h2', { id: 'program-progression-title', className: 'wpb-ui-sheet-title', children: 'Progression method' }),
                         _jsx('p', { className: 'wpb-progression-choice-exercise', children: exerciseName })
@@ -53,7 +53,7 @@ export function ProgramReferenceSheet({ onClose, sheetDragRef, children }) {
         'aria-labelledby': 'program-reference-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         children: _jsxs('div', { className: 'wpb-ui-sheet-panel wpb-program-reference-panel', ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown,
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('div', { className: 'wpb-ui-sheet-heading wpb-program-reference-heading', children: [
+                _jsxs(UiSheetHeading, { className: 'wpb-ui-sheet-heading wpb-program-reference-heading', children: [
                     _jsx('h2', { id: 'program-reference-title', className: 'wpb-ui-sheet-title', children: 'Plan info' }),
                     _jsx(UiSheetClose, { className: 'wpb-program-reference-close',
                         'aria-label': 'Close program details', onClick: onClose })

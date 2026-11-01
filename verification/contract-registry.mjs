@@ -106,6 +106,7 @@ export const contractGroups = Object.freeze({
         'b1011-m3e-foundation-test.mjs',
         'ui-card-architecture-test.mjs',
         'shared-metric-owner-test.mjs',
+        'shared-sheet-heading-owner-test.mjs',
         'settings-service-surface-test.mjs',
         'shared-control-pilot-test.mjs',
         'settings-segmented-owner-test.mjs',

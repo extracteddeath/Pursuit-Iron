@@ -18,6 +18,7 @@ const clone = v => JSON.parse(JSON.stringify(v));
 const digest = raw => createHash('sha256').update(raw).digest('hex');
 const before = JSON.stringify(f);
 const prepared = prepare();
+assert.deepEqual(prepared,f.preparation,'the exact canonical preparation is shared with Kotlin persistence tests');
 const entry = prepared.historyEntry;
 for (const [key, expected] of Object.entries(f.expected)) {
   if (key === 'workingSetIndices' || key === 'observedRir') continue;
@@ -27,6 +28,8 @@ assert.equal(prepared.persisted,false);
 assert.equal(prepared.approvedForWorkoutExecution,false);
 assert.equal(prepared.preparedOnly,true);
 assert.equal(prepared.expectedSnapshotSha256,digest(f.rawSnapshot));
+assert.equal(prepared.sourceSnapshotSha256,digest(f.rawSnapshot));
+assert.equal(prepared.inputHandoffSha256,digest(wire));
 assert.equal(prepared.candidateSnapshotSha256,digest(prepared.candidateSnapshot));
 assert.equal(Object.keys(entry.perf).length,1,'skipped exercise has no fabricated history');
 const bench = entry.perf['bb-bench'];

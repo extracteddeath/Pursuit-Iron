@@ -156,3 +156,18 @@ asset loading, the noncancellable Main-thread handoff closes the newly
 constructed verifier rather than installing it into a stale Activity.
 Missing/invalid assets remain fail-closed; training functionality remains
 unconnected. Routine changes require only Compose compilation, not an APK.
+
+### Canonical workout store transaction foundation
+
+The unconnected native storage owner now retains one canonical snapshot,
+the pending session's exact source snapshot and a durable history receipt in
+one atomic file. It consumes canonical JS completion candidates, rechecks
+the current store after engine execution, and clears recovery only after
+confirmed history publication. Restart/fault tests use the actual canonical
+JS golden history result shared with Kotlin, including simultaneous finish
+attempts and crashes during cleanup. App-private Android writes explicitly
+sync and verify their committed bytes.
+
+The preview does not instantiate this owner. A pinned completion-runtime
+implementation, native onboarding/program creation and device acceptance are
+still required before live workout logging. APK generation remains frozen.

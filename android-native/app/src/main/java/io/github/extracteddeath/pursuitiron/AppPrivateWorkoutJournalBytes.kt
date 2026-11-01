@@ -23,7 +23,8 @@ internal class AppPrivateWorkoutJournalBytes(context: Context) : WorkoutJournalB
     override fun read(): ByteArray? {
         val stream = try {
             file.openRead()
-        } catch (_: FileNotFoundException) {
+        } catch (failure: FileNotFoundException) {
+            if (file.exists()) throw IOException("Existing workout journal is unreadable",failure)
             return null
         }
         stream.use { input ->
@@ -45,10 +46,20 @@ internal class AppPrivateWorkoutJournalBytes(context: Context) : WorkoutJournalB
         val output = file.startWrite()
         try {
             output.write(bytes)
+            output.fd.sync()
             file.finishWrite(output)
         } catch (failure: Exception) {
             file.failWrite(output)
             throw failure
         }
+        val observed=read() ?: throw IOException("Workout journal commit missing")
+        try {
+            if (!observed.contentEquals(bytes)) throw IOException("Workout journal commit mismatch")
+        } finally { observed.fill(0) }
+    }
+
+    override fun clearAtomically() {
+        file.delete()
+        if (file.exists()) throw IOException("Workout recovery could not be retired")
     }
 }

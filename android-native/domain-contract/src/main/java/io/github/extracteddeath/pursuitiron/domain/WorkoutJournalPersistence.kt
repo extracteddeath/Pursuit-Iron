@@ -14,6 +14,8 @@ import java.security.MessageDigest
 interface WorkoutJournalBytes {
     fun read(): ByteArray?
     fun commitAtomically(bytes: ByteArray)
+    /** All old bytes or absence after a crash. Must not erase another file. */
+    fun clearAtomically() { throw UnsupportedOperationException("Journal retirement unavailable") }
 }
 
 /**
@@ -263,6 +265,16 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             if (state.session != session || state.revision != expectedRevision ||
                 !state.isFinished) return@synchronized null
             payloadJson(state).toString()
+        }
+
+    /** Only the canonical store owner can supply this durable history receipt. */
+    internal fun retireAfterHistory(receipt: CanonicalWorkoutHistoryReceipt): Boolean =
+        synchronized(guard) {
+            val state=readOwned() ?: return@synchronized true
+            if (state.session != receipt.session || state.revision != receipt.journalRevision ||
+                !state.isFinished) return@synchronized false
+            bytes.clearAtomically()
+            readOwned() == null
         }
 
     /** Does not overwrite unresolved or finished sessions, even after crashes. */

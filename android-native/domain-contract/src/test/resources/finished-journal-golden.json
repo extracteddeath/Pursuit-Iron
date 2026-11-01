@@ -121,5 +121,81 @@
       2,
       null
     ]
+  },
+  "preparation": {
+    "source": "modules/engine-api.js:loggedWorkoutPerformance+mergeStores",
+    "preparedOnly": true,
+    "persisted": false,
+    "approvedForWorkoutExecution": false,
+    "sourceSnapshotSha256": "2e470362a7317c4fd1ccc25b9674cf9f64c93b3d15953ac26f2ab83bb1d2b362",
+    "inputHandoffSha256": "1077fd7ca8805780faaf50f44891820c41ce09540b6ab97c72863d6ef56ff2c2",
+    "expectedSnapshotSha256": "2e470362a7317c4fd1ccc25b9674cf9f64c93b3d15953ac26f2ab83bb1d2b362",
+    "candidateSnapshotSha256": "9f1315e1cb35b64f3822f2a3fd209576f969b840f3aafa19ebbe51f3d0b292f0",
+    "candidateSnapshot": "{\"v\":13,\"savedAt\":61000,\"saved\":[{\"id\":\"synthetic-program\",\"updatedAt\":42,\"name\":\"Synthetic custom plan\",\"custom\":true,\"weeks\":6,\"config\":{\"goal\":\"strength\",\"weeks\":6,\"unit\":\"lb\",\"progression\":\"double\"},\"days\":[{\"id\":\"synthetic-day\",\"label\":\"Upper\",\"exercises\":[\"bb-bench\",\"cable-fly\"],\"primaryIndex\":0}],\"overrides\":{\"synthetic-day:0\":{\"sets\":3,\"reps\":\"5-8\",\"rir\":\"2\",\"rest\":120,\"tech\":null,\"progressionStyle\":\"double\"},\"synthetic-day:1\":{\"sets\":1,\"reps\":\"10-15\",\"rir\":\"2\",\"rest\":60,\"tech\":null,\"progressionStyle\":\"double\"}}}],\"history\":[{\"id\":\"synthetic-workout\",\"date\":61000,\"updatedAt\":61000,\"programId\":\"synthetic-program\",\"programName\":\"Synthetic custom plan\",\"dayId\":\"synthetic-day\",\"dayLabel\":\"Upper\",\"engineV\":1,\"weekIndex\":1,\"unit\":\"lb\",\"setsDone\":2,\"totalSets\":4,\"volume\":2597,\"durationMin\":1,\"perf\":{\"bb-bench\":{\"weight\":185.5,\"reps\":6,\"date\":61000,\"sets\":[{\"workingSetIndex\":0,\"w\":185.5,\"r\":8,\"rir\":2,\"rirReported\":true,\"tr\":2,\"pt\":\"5-8\"},{\"workingSetIndex\":2,\"w\":185.5,\"r\":6,\"rir\":2,\"rirReported\":false,\"tr\":2,\"pt\":\"5-8\"}],\"noteRepeat\":\"none\",\"prescription\":{\"schemaVersion\":1,\"exerciseId\":\"bb-bench\",\"sets\":3,\"reps\":\"5-8\",\"range\":\"5-8\",\"rir\":\"2\",\"rest\":120,\"tech\":null,\"role\":\"accessory\",\"progressionStyle\":\"double\",\"note\":\"Your program\",\"custom\":true}}},\"nativeCompletion\":{\"format\":2,\"handoffSha256\":\"2161e27234c538b0d4a6b853fd0070ad122b10477c4669bdb98890cb35f238f0\",\"sourceSnapshotSha256\":\"2e470362a7317c4fd1ccc25b9674cf9f64c93b3d15953ac26f2ab83bb1d2b362\",\"journalRevision\":12}}],\"cycles\":[],\"custom\":[],\"gyms\":[],\"tombs\":{},\"perf\":{\"bb-bench\":{\"weight\":185.5,\"reps\":6,\"date\":61000,\"sets\":[{\"workingSetIndex\":0,\"w\":185.5,\"r\":8,\"rir\":2,\"rirReported\":true,\"tr\":2,\"pt\":\"5-8\"},{\"workingSetIndex\":2,\"w\":185.5,\"r\":6,\"rir\":2,\"rirReported\":false,\"tr\":2,\"pt\":\"5-8\"}],\"noteRepeat\":\"none\",\"prescription\":{\"schemaVersion\":1,\"exerciseId\":\"bb-bench\",\"sets\":3,\"reps\":\"5-8\",\"range\":\"5-8\",\"rir\":\"2\",\"rest\":120,\"tech\":null,\"role\":\"accessory\",\"progressionStyle\":\"double\",\"note\":\"Your program\",\"custom\":true}}},\"banned\":[],\"bwLog\":[],\"measurements\":{},\"exNotes\":{},\"exSetup\":{},\"injuryLog\":[],\"goals\":{},\"canaryResearch\":{\"schemaVersion\":1,\"enabled\":false,\"consentVersion\":1,\"consentAt\":null,\"enrollmentId\":null,\"trials\":[]}}",
+    "alreadyPresent": false,
+    "historyEntry": {
+      "id": "synthetic-workout",
+      "date": 61000,
+      "updatedAt": 61000,
+      "programId": "synthetic-program",
+      "programName": "Synthetic custom plan",
+      "dayId": "synthetic-day",
+      "dayLabel": "Upper",
+      "engineV": 1,
+      "weekIndex": 1,
+      "unit": "lb",
+      "setsDone": 2,
+      "totalSets": 4,
+      "volume": 2597,
+      "durationMin": 1,
+      "perf": {
+        "bb-bench": {
+          "weight": 185.5,
+          "reps": 6,
+          "date": 61000,
+          "sets": [
+            {
+              "workingSetIndex": 0,
+              "w": 185.5,
+              "r": 8,
+              "rir": 2,
+              "rirReported": true,
+              "tr": 2,
+              "pt": "5-8"
+            },
+            {
+              "workingSetIndex": 2,
+              "w": 185.5,
+              "r": 6,
+              "rir": 2,
+              "rirReported": false,
+              "tr": 2,
+              "pt": "5-8"
+            }
+          ],
+          "noteRepeat": "none",
+          "prescription": {
+            "schemaVersion": 1,
+            "exerciseId": "bb-bench",
+            "sets": 3,
+            "reps": "5-8",
+            "range": "5-8",
+            "rir": "2",
+            "rest": 120,
+            "tech": null,
+            "role": "accessory",
+            "progressionStyle": "double",
+            "note": "Your program",
+            "custom": true
+          }
+        }
+      },
+      "nativeCompletion": {
+        "format": 2,
+        "handoffSha256": "2161e27234c538b0d4a6b853fd0070ad122b10477c4669bdb98890cb35f238f0",
+        "sourceSnapshotSha256": "2e470362a7317c4fd1ccc25b9674cf9f64c93b3d15953ac26f2ab83bb1d2b362",
+        "journalRevision": 12
+      }
+    }
   }
 }

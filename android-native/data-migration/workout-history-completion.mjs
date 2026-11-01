@@ -191,6 +191,7 @@ export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw
     return Object.freeze({
       source:'modules/engine-api.js:loggedWorkoutPerformance+mergeStores',
       preparedOnly:true, persisted:false, approvedForWorkoutExecution:false,
+      sourceSnapshotSha256:sha(originRaw), inputHandoffSha256:sha(handoffRaw),
       expectedSnapshotSha256:sha(currentRaw),
       candidateSnapshotSha256:sha(candidateRaw), candidateSnapshot:candidateRaw,
       alreadyPresent:existing.length === 1, historyEntry:entry

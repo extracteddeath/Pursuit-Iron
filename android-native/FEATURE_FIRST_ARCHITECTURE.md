@@ -234,3 +234,38 @@ consumption still need their canonical owners; unsupported cases cannot silently
 drop observations. Onboarding, native program creation, the authenticated live
 session and the full persistence/resume/completion journey remain unfinished.
 The preview and all APK generation stay disabled.
+
+## Atomic canonical store and recovery retirement
+
+`CanonicalWorkoutStorePersistence` now implements the current-snapshot owner
+with one bounded, app-private atomic file. It stores the canonical snapshot,
+the pending workout's exact originating snapshot/session/slot roster, and a
+durable canonical history receipt together. Canonical JavaScript remains the
+only schema, history, merge and training calculation owner.
+
+Initialization requires `PinnedCanonicalWorkoutStoreEngine` validation. Finish
+preparation runs outside the storage lock; publication rechecks the current
+snapshot after the engine returns. The preparation is bound to the exact
+origin, current snapshot and finished-journal bytes, with the same canonical
+golden output checked by Node and Kotlin. Cancelled calls, stale inputs,
+conflicting identities and malformed output leave recovery intact.
+
+Only a confirmed canonical history receipt permits private journal retirement.
+The exact origin remains pinned until recovery cleanup succeeds. Fault injection
+covers disk-full before history publication, a crash after commit, failures
+before/after journal deletion, failed origin retirement, simultaneous finish
+requests, corruption and restart. An identical retry acknowledges the saved
+workout without inserting another history row. After cleanup, the next session
+can pin its own origin and start its own journal.
+
+The Android byte owners explicitly sync writes and verify the committed bytes
+before acknowledgement. Snapshot reads are detached and transferred buffers are
+wiped; change listeners track committed canonical snapshots. The initial native
+snapshot window remains 1 MiB, with a separately bounded 16 MiB private envelope.
+Oversized and corrupt stores are preserved and rejected, never treated as empty.
+
+This is unconnected persistence infrastructure. The preview instantiates neither
+private store nor training writer, and no implementation of the new pinned
+workout-store engine is connected yet. Native onboarding/program creation,
+runtime session authentication, Android interruption acceptance and the complete
+user journey remain pending. No APK generation or real workout logging is enabled.

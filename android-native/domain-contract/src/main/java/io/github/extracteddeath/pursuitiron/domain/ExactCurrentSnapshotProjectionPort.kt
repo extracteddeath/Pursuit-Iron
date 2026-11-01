@@ -9,7 +9,8 @@ import java.util.concurrent.CancellationException
  * FUTURE, CURRENT canonical store owner. Must be the app's authoritative
  * storage owner, never document picker, imported backup, shared prefs clone or
  * a cached transport DTO. Ownership of the returned ByteArray transfers to
- * the caller, which MUST wipe it. No implementation is shipped in the app.
+ * the caller, which MUST wipe it. The preview supplies no current-store owner;
+ * the private transactional owner requires pinned canonical validation first.
  */
 interface CanonicalCurrentSnapshotOwner {
     suspend fun readOwnedCurrentStoreBytes(): ByteArray?

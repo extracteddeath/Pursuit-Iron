@@ -1,0 +1,48 @@
+name: Canonical Android engine JS bundle proof (no APK)
+
+on:
+  push:
+    branches:
+      - architecture/android-compose-foundation
+    paths:
+      - 'android-native/engine-bridge/**'
+      - 'android-native/engine-contract/**'
+      - '.github/workflows/android-engine-bundle.yml'
+      - 'modules/engine-api.js'
+      - 'modules/next-engine/**'
+      - 'modules/training-domain/**'
+  workflow_dispatch:
+
+concurrency:
+  group: android-engine-bundle-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compile-canonical-js:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm existing canonical protocol and fixture behavior
+        run: |
+          node android-native/engine-bridge/protocol-test.mjs
+          node android-native/engine-contract/contract-parity-test.mjs
+      - name: Produce disposable offline JavaScript IIFE with pinned esbuild
+        run: |
+          temp="$(mktemp -d)"
+          echo "BUNDLE_PROOF_DIR=$temp" >> "$GITHUB_ENV"
+          npx --yes esbuild@0.28.2 android-native/engine-bridge/protocol.mjs \
+            --bundle --format=iife --platform=browser --target=es2020 \
+            --global-name=PursuitIronBridge --legal-comments=none \
+            --metafile="$temp/metafile.json" --outfile="$temp/engine.js"
+      - name: Check offline bundle, source imports, syntax and digest
+        run: |
+          node --check "$BUNDLE_PROOF_DIR/engine.js"
+          node android-native/engine-bridge/verify-bundle-structure.mjs \
+            "$BUNDLE_PROOF_DIR/engine.js" "$BUNDLE_PROOF_DIR/metafile.json"

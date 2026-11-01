@@ -54,6 +54,8 @@ jobs:
           node verification/b944-readiness-test.mjs
           node verification/m222-custom-program-parity-test.mjs
           node verification/m190-progression-lifecycle-test.mjs
+      - name: Verify native engine sandbox separation, failure gates and build cadence
+        run: node android-native/verification/engine-sandbox-isolation-test.mjs
       - name: Verify native preview cannot run without canonical engine
         run: |
           test -f modules/engine-api.js

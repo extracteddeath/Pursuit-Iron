@@ -50,7 +50,7 @@ assert.ok(css.split(sharedTransition)[1]?.split('}')[0].includes('transition:col
 // widening any selector's specificity, media condition or state predicate.
 assert.ok(css.includes('#root [role="tab"][aria-selected="true"],#root [aria-current="page"]{font-weight:700}'),
     'Active tabs and page links retain their original bold state with one paint owner');
-const nowrap='#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span,\\n'
+const nowrap='#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span,' + String.fromCharCode(10)
     +'#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-action-tile,.wpb-plan-up-next,';
 assert.ok(css.includes(nowrap),'Nav labels and responsive cards share one min-width owner');
 assert.equal((css.match(/!important/g)||[]).length, uiStyleBudget.cssPriorityDeclarations,

@@ -59,6 +59,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -186,11 +188,15 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
         .apply { if (name.isNotBlank()) put("name", name.trim().take(60)) }
         .apply { if (!cyc) { if (endless) put("endless", true).put("weeks", 5).put("deload", true).put("progression", "auto") else put("weeks", weeks).put("deload", deload).put("progression", progression) } else put("deload", deload) }
     LaunchedEffect(goal, exp, days, session, equip, noRack) { pick = vm.recommend(config()) }
+    var avail by remember { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(goal, exp, days, session, equip, noRack, noBodyweight) { avail = vm.splitOptions(config()) }
+    val splitOk = { id: String? -> id != null && (avail?.optJSONObject(id)?.optBoolean("ok", true) ?: true) }
 
     val sessIdx = { id: String? -> SESS.indexOfFirst { it.first == id } }
     val splits = opts.list("splits").filter { sp -> sp.optJSONArray("days")?.let { a -> (0 until a.length()).any { a.optInt(it) == days } } ?: true }
     val fits = { sp: JSONObject, ses: String -> val i = sessIdx(ses); (sp.s("minSession").let { it.isBlank() || it == "null" || i >= sessIdx(it) }) && (sp.s("maxSession").let { it.isBlank() || it == "null" || i <= sessIdx(it) }) }
-    val chosenSplit = split?.takeIf { s -> splits.any { it.s("id") == s } } ?: pick?.takeIf { p -> splits.any { it.s("id") == p } } ?: splits.firstOrNull { fits(it, session) }?.s("id") ?: splits.firstOrNull()?.s("id")
+    val chosenSplit = split?.takeIf { s -> splits.any { it.s("id") == s } && splitOk(s) } ?: pick?.takeIf { p -> splits.any { it.s("id") == p } && splitOk(p) }
+        ?: splits.firstOrNull { fits(it, session) && splitOk(it.s("id")) }?.s("id") ?: splits.firstOrNull { splitOk(it.s("id")) }?.s("id")
     val sd = splits.firstOrNull { it.s("id") == chosenSplit }
     val sessChoices = SESS.filter { sd == null || fits(sd, it.first) }
     val effSession = if (sessChoices.any { it.first == session }) session else sessChoices.firstOrNull()?.first ?: session
@@ -310,8 +316,26 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         val n = opts.list("splits").count { sp -> sp.optJSONArray("days")?.let { a -> (0 until a.length()).any { a.optInt(it) == d } } ?: true }
                         WzOption("$d days / week", "$n compatible splits", WZ.cal, days == d) { days = d; split = null }
                     }
-                    "split" -> splits.sortedBy { if (it.s("id") == pick) 0 else 1 }.forEach { sp ->
-                        WzOption(sp.s("name") + if (sp.s("id") == pick) " · Recommended" else "", sp.s("blurb"), WZ.rep, sp.s("id") == chosenSplit) { split = sp.s("id") }
+                    "split" -> {
+                        // The design: availability is checked against this gym first; splits it can't run sort last, disabled, naming what they need.
+                        val blocked = splits.count { !splitOk(it.s("id")) }
+                        Text(if (avail == null) "Checking your equipment…" else "Availability checked against your equipment. Choose an available split to continue.",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+                        if (blocked > 0) Text((if (blocked == 1) "One program can’t be built with your current equipment, so it’s" else "$blocked programs can’t be built with your current equipment, so they’re") +
+                            " marked below. Add equipment in your gym settings to open ${if (blocked == 1) "it" else "them"} up.",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer,
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.tertiaryContainer).padding(horizontal = 12.dp, vertical = 10.dp))
+                        splits.sortedWith(compareBy({ if (splitOk(it.s("id"))) 0 else 1 }, { if (it.s("id") == pick) 0 else 1 })).forEach { sp ->
+                            val id = sp.s("id"); val v = avail?.optJSONObject(id); val ok = splitOk(id)
+                            val note = when {
+                                !ok && v?.s("kind") == "lifts" -> "Needs equipment for: " + v.strings("items").joinToString(", ")
+                                !ok -> "Not enough exercises with your equipment" + (v?.strings("items")?.takeIf { it.isNotEmpty() }?.let { " for ${it.joinToString(", ")}" } ?: "")
+                                v?.optJSONArray("okLabels") != null -> "Works at $days days with ${v.strings("okLabels").joinToString(" or ")} sessions"
+                                v?.optJSONArray("runsAt") != null -> "Runs at " + v.strings("runsAt").joinToString(", ")
+                                else -> null
+                            }
+                            WzOption(sp.s("name") + if (id == pick && ok) " · Recommended" else "", sp.s("blurb"), WZ.rep, id == chosenSplit, enabled = ok, note = note) { if (ok) split = id }
+                        }
                     }
                     "session" -> sessChoices.forEach { (id, l) -> WzOption(l, "Optimized inside this time band", WZ.clock, effSession == id) { session = id } }
                     "equipment" -> EquipmentStep(opts, equip, { equip = it }, noRack, { noRack = it }, noBodyweight, { noBodyweight = it })
@@ -442,13 +466,13 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
 
 /** The design's option card: icon tile, label and supporting text; selected squares off with a primary outline. */
 @Composable
-private fun WzOption(label: String, sub: String?, icon: ImageVector, on: Boolean, onClick: () -> Unit) {
+private fun WzOption(label: String, sub: String?, icon: ImageVector, on: Boolean, enabled: Boolean = true, note: String? = null, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val r by animateDpAsState(if (on) 22.dp else 18.dp, Motion.spatialFast(), label = "opt")
     val ir by animateDpAsState(if (on) 14.dp else 20.dp, Motion.spatialFast(), label = "optI")
     val bg by animateColorAsState(if (on) cs.secondaryContainer else cs.surfaceContainerLow, Motion.effects(), label = "optBg")
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(r)).background(bg).border(if (on) 2.dp else 1.dp, if (on) cs.primary else cs.outlineVariant, RoundedCornerShape(r))
-        .clickable(onClick = onClick).semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on }.padding(horizontal = 16.dp, vertical = 14.dp),
+        .alpha(if (enabled) 1f else 0.55f).clickable(enabled = enabled, onClick = onClick).semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on; if (!enabled) disabled() }.padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(Modifier.size(40.dp).clip(RoundedCornerShape(ir)).background(if (on) cs.primary else cs.surfaceContainerHigh), contentAlignment = Alignment.Center) {
             Icon(icon, null, Modifier.size(20.dp), tint = if (on) cs.onPrimary else cs.onSurfaceVariant)
@@ -456,6 +480,7 @@ private fun WzOption(label: String, sub: String?, icon: ImageVector, on: Boolean
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold), color = if (on) cs.onSecondaryContainer else cs.onSurface)
             if (!sub.isNullOrBlank()) Text(sub, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = (if (on) cs.onSecondaryContainer else cs.onSurface).copy(alpha = 0.8f), modifier = Modifier.padding(top = 2.dp))
+            if (!note.isNullOrBlank()) Text(note, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = if (enabled) cs.primary else cs.error, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }

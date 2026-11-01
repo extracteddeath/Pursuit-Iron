@@ -51,6 +51,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pursuitiron.app.AppViewModel
 import com.pursuitiron.app.ui.common.Kicker
 import com.pursuitiron.app.ui.common.PiIcons
@@ -110,11 +111,21 @@ fun PlanActions(p: JSONObject, onEdit: () -> Unit, onReview: () -> Unit, onSched
 
 /** The design's Programs: every program, active first; tap one for its options; browse and add shared ones. */
 @Composable
-fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit, onClose: () -> Unit) {
+fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit, onSettings: (String) -> Unit = {}, onClose: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     var d by remember { mutableStateOf<JSONObject?>(null) }
-    LaunchedEffect(vm.plan) { d = vm.programsList() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val refresh: () -> Unit = { scope.launch { d = vm.programsList() } }
+    LaunchedEffect(vm.plan, vm.home) { d = vm.programsList() }
     var sel by remember { mutableStateOf<String?>(null) }
+    var renaming by remember { mutableStateOf<String?>(null) }
+    var renameText by remember { mutableStateOf("") }
+    var switchTo by remember { mutableStateOf<JSONObject?>(null) }
+    switchTo?.let { pr -> androidx.compose.material3.AlertDialog(onDismissRequest = { switchTo = null }, title = { Text("Switch to ${pr.s("name")}?") },
+        text = { Text("Your next session comes from ${pr.s("name")}. ${d?.s("activeName")?.takeIf { it.isNotBlank() }?.let { "$it stays in your programs, and " } ?: ""}everything you’ve logged stays.") },
+        confirmButton = { Button(onClick = { vm.switchProgram(pr.s("id"), pr.s("name")); switchTo = null; onClose() }) { Text("Switch") } },
+        dismissButton = { TextButton(onClick = { switchTo = null }) { Text("Cancel") } }) }
     var addShared by remember { mutableStateOf(false) }
     if (addShared) { AddSharedProgramSheet(vm) { addShared = false; vm.viewModelScope.launch { d = vm.programsList() } }; return }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -131,25 +142,53 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
             val x = d ?: run { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
             Text("${x.i("count")} program${if (x.i("count") == 1) "" else "s"} · tap one for its options", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             x.list("programs").forEach { pr ->
-                val active = pr.b("active"); val open = sel == pr.s("id")
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(if (active) cs.primaryContainer else cs.surfaceContainerLow)
-                    .clickable { sel = if (open) null else pr.s("id") }.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                val id = pr.s("id"); val active = pr.b("active"); val queued = pr.b("queued"); val open = sel == id
+                val fg = if (active) cs.onPrimaryContainer else cs.onSurface
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(if (open) 28.dp else 24.dp)).background(if (active) cs.primaryContainer else cs.surfaceContainerLow)
+                    .clickable(onClickLabel = if (open) "Close options" else "Options") { sel = if (open) null else id; renaming = null }.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         com.pursuitiron.app.ui.common.IconTile(pr.optJSONObject("icon"), 48.dp)
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(pr.s("name"), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                                if (active) Text("ACTIVE", style = MaterialTheme.typography.labelSmall, color = cs.onPrimary, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(cs.primary).padding(horizontal = 8.dp, vertical = 3.dp))
+                                Text(pr.s("name"), style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp), color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                if (active || queued) Text(if (active) "ACTIVE" else "QUEUED", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, letterSpacing = 0.3.sp),
+                                    color = if (active) cs.onPrimary else cs.onTertiaryContainer, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (active) cs.primary else cs.tertiaryContainer).padding(horizontal = 8.dp, vertical = 3.dp))
                             }
-                            Text(pr.s("sub"), style = MaterialTheme.typography.bodySmall, color = if (active) cs.onPrimaryContainer else cs.onSurfaceVariant)
-                            Text(pr.s("meta"), style = MaterialTheme.typography.labelMedium, color = if (active) cs.onPrimaryContainer else cs.onSurface)
+                            Text(pr.s("sub"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = fg.copy(alpha = 0.8f))
+                            Text(pr.s("meta"), style = MaterialTheme.typography.labelMedium, color = fg)
                         }
                     }
-                    if (open) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (!active) Button(onClick = { vm.loadPlan(pr.s("id"), null); vm.pin(pr.s("id")); onClose() }) { Text("Train this") }
-                        OutlinedButton(onClick = { onClose(); vm.openEditor(pr.s("id")) }) { Text("Edit") }
-                        if (!active) TextButton(onClick = { vm.loadPlan(pr.s("id"), null); onClose() }) { Text("View") }
-                        ProgramMenuButton(vm, pr.s("id"), pr.s("name"))
+                    if (renaming == id) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.TextField(renameText, { renameText = it.take(60) }, Modifier.weight(1f), singleLine = true, label = { Text("Program name") },
+                            shape = RoundedCornerShape(14.dp), colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = cs.surface, unfocusedContainerColor = cs.surface,
+                                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
+                        Surface(onClick = { if (renameText.isNotBlank()) vm.renameProgram(id, renameText) { renaming = null; refresh() } }, color = cs.primary, contentColor = cs.onPrimary, shape = CircleShape, modifier = Modifier.height(44.dp)) {
+                            Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Save", style = MaterialTheme.typography.labelLarge) }
+                        }
+                        TextButton(onClick = { renaming = null }) { Text("Cancel") }
+                    }
+                    if (open) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (!active) ProgPill("Switch now", PiIcons.ChevronRight, primary = true) { switchTo = pr }
+                            if (!active && !pr.b("quick") && x.b("canQueue")) ProgPill(if (queued) "Queued for next block" else "Queue for next block", PiIcons.Timer) {
+                                vm.queueProgram(if (queued) null else id, pr.s("name")) { refresh() }
+                            }
+                            if (active) ProgPill("Program settings", PiIcons.Sliders, primary = true) { onClose(); onSettings(id) }
+                            if (pr.b("percent")) ProgPill("Training maxes", PiIcons.Wave) { onClose(); vm.tmFor = id }
+                            ProgPill("Edit", PiIcons.Pencil) { onClose(); vm.openEditor(id) }
+                            ProgPill("Duplicate", PiIcons.Copy) { vm.duplicateProgram(id) { nid, nname -> refresh(); sel = nid; renaming = nid; renameText = nname } }
+                            ProgPill("Rename", PiIcons.List) { renaming = id; renameText = pr.s("name") }
+                            ProgPill("Share as text", PiIcons.Share) {
+                                scope.launch {
+                                    val t = vm.programText(id) ?: return@launch
+                                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                        .putExtra(android.content.Intent.EXTRA_SUBJECT, t.s("name")).putExtra(android.content.Intent.EXTRA_TEXT, t.s("text"))
+                                    runCatching { ctx.startActivity(android.content.Intent.createChooser(send, "Share ${t.s("name")}")) }.onFailure { vm.toast("No app to share with") }
+                                }
+                            }
+                            if (!active) ProgPill("Delete", PiIcons.Trash, danger = true) { vm.deleteProgram(id); sel = null; scope.launch { kotlinx.coroutines.delay(250); refresh() } }
+                        }
+                        if (active) Text("This is the program you’re running. Switch to another before deleting it.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
                     }
                 }
             }
@@ -169,6 +208,18 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
                     Icon(PiIcons.Download, null, Modifier.size(18.dp)); Text("  Add a shared program", style = MaterialTheme.typography.titleSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
                 }
             }
+        }
+    }
+}
+
+/** The design's program action: a 40dp pill, primary for the main move, red for Delete. */
+@Composable
+private fun ProgPill(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, primary: Boolean = false, danger: Boolean = false, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Surface(onClick = onClick, color = when { primary -> cs.primary; danger -> cs.errorContainer; else -> cs.secondaryContainer },
+        contentColor = when { primary -> cs.onPrimary; danger -> cs.onErrorContainer; else -> cs.onSecondaryContainer }, shape = CircleShape, modifier = Modifier.height(40.dp)) {
+        Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(icon, null, Modifier.size(16.dp)); Text(label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
         }
     }
 }

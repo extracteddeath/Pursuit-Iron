@@ -212,6 +212,35 @@ function upNext() {
     return { program: active, day: active.days[c.dayIndex], dayIndex: c.dayIndex, weekIndex: c.weekIndex || 1, scheduled: c.scheduled };
 }
 
+/* The design's program queue: a program waits for the one you train to finish its block, then takes over.
+   A block is finished when every day of every week (deload included) has been logged against it. Endless
+   programs never finish and cycle blocks advance with their cycle, so neither can hand over to a queue. */
+function queuedId() { const q = S.store.queuedProgramId; return q && programById(q) ? q : null; }
+function canHandOver(p) { return !!p && !p.config?.endless && !p.cycleId && !p.quick; }
+function blockFinished(p, H) {
+    if (!canHandOver(p)) return false;
+    const dpw = p.days.length, maxWeek = Math.max(1, E.weeksOf(p) + (p.config?.deload ? 1 : 0));
+    const seen = new Set();
+    H.filter((h) => h.programId === p.id).forEach((h) => { const di = p.days.findIndex((d) => d.id === h.dayId); const w = Number(h.weekIndex); if (di >= 0 && w >= 1 && w <= maxWeek) seen.add(w + ':' + di); });
+    return seen.size >= dpw * maxWeek;
+}
+export function queueProgram({ id = null } = {}) {
+    if (id == null) { delete S.store.queuedProgramId; markStore(); return { ok: true, queued: null }; }
+    const p = programById(id); if (!p) return { ok: false, error: 'That program no longer exists.' };
+    const nx = upNext();
+    if (nx?.program.id === id) return { ok: false, error: 'That is the program you train now.' };
+    if (!canHandOver(nx?.program)) return { ok: false, error: nx?.program.config?.endless ? 'The program you train runs continuously, so it has no block end to queue after. Switch instead.' : 'The program you train is a cycle block; the cycle picks the next block. Switch instead.' };
+    S.store.queuedProgramId = id; markStore();
+    return { ok: true, queued: id, name: p.name };
+}
+export function renameProgram({ id, name } = {}) {
+    const p = programById(id), n = String(name || '').trim().slice(0, 60);
+    if (!p) return { ok: false, error: 'That program no longer exists.' };
+    if (!n) return { ok: false, error: 'Give it a name.' };
+    setList('saved', saved().map((x) => (x.id === id ? { ...x, name: n, updatedAt: now() } : x)));
+    return { ok: true, name: n };
+}
+
 /* The design's weekly recap: the same 7-day window as E.weeklyRecap, plus the time trained, the dates it
    covers and the week's best set (highest e1RM), in the unit shown. */
 function recapExtras(H, u) {
@@ -307,9 +336,10 @@ export function programsList() {
             : x.config?.percentScheme ? 'Percentage-based · training-max methods'
             : [x.templateId ? 'From a template' : 'Saved' + (x.createdAt ? ' ' + fmtD(x.createdAt) : ''), ran.length ? `ran ${ran.length} session${ran.length === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ');
         const meta = [`${x.days.length} day${x.days.length === 1 ? '' : 's'}`, sess ? sess.label.replace(/^Up to /, '≤').replace(/ to /, '–').replace(' minutes', ' min').replace(/^Over /, '') : null, sets ? `${sets} sets in week 1` : null, x.config?.percentScheme ? '% of training max' : null].filter(Boolean).join(' · ');
-        return { id: x.id, name: x.name, active: x.id === nx?.program.id, quick: !!x.quick, cycleId: c ? c.id : null, sub, meta, icon: iconFor(x.id, x.config?.goal, false), dayId: x.days[0]?.id || null, exercises: x.days[0]?.exercises.length || 0, lifts: (x.days[0]?.exercises || []).slice(0, 4).map(exName) };
+        return { id: x.id, name: x.name, active: x.id === nx?.program.id, queued: x.id === queuedId(), percent: !!x.config?.percentScheme, quick: !!x.quick, cycleId: c ? c.id : null, sub, meta, icon: iconFor(x.id, x.config?.goal, false), dayId: x.days[0]?.id || null, exercises: x.days[0]?.exercises.length || 0, lifts: (x.days[0]?.exercises || []).slice(0, 4).map(exName) };
     });
-    return { count: rows.length, programs: [...rows.filter((r) => r.active), ...rows.filter((r) => !r.active && !r.quick), ...rows.filter((r) => !r.active && r.quick)] };
+    return { count: rows.length, canQueue: canHandOver(nx?.program), activeName: nx?.program.name || null,
+        programs: [...rows.filter((r) => r.active), ...rows.filter((r) => !r.active && !r.quick), ...rows.filter((r) => !r.active && r.quick)] };
 }
 
 /* The design's Program details: how the program was built, the muscle priorities with this week's sets,
@@ -1511,12 +1541,18 @@ export function finishSession({ keep = null } = {}) {
     } catch { fresh = []; }
     Object.assign(S.store, { perf: nextPerf, tombs, injuryLog });
     setList('history', nextHistory); setList('saved', nextSaved);
+    // The design's queue: the block you just finished hands over to the queued program at week 1.
+    let switchedTo = null;
+    const q = queuedId();
+    if (q && q !== program.id && blockFinished(programById(program.id) || program, nextHistory)) {
+        S.store.pinnedId = q; delete S.store.queuedProgramId; switchedTo = programById(q).name;
+    }
     S.live = null; markStore(); markLive();
     // The design's finish page answers "keep in the program?" per change; unanswered ones stay this workout only.
     let keptChanges = null;
     if (keep && entry.programUpdateStatus === 'pending') keptChanges = settleProgramUpdate(entry.id, keep);
     return { ok: true, entryId: entry.id, kept: keptChanges, unit: u, setsDone: doneSets, totalSets, volume: Math.round(volume), durationMin: log.durationMin,
-        achievements: fresh.map((m) => ({ id: m.id, label: m.label })), prs: summaryPRs(entry, H) };
+        achievements: fresh.map((m) => ({ id: m.id, label: m.label })), prs: summaryPRs(entry, H), switchedTo };
 }
 
 function summaryPRs(entry, H) {
@@ -2004,6 +2040,26 @@ export function recommend({ config }) {
     const cfg = programConfig(config);
     let next = null; try { next = E.recommendNextSplitForShell(cfg, [], EXERCISES, 63063); } catch { next = null; }
     try { const rec = E.recommendedSplit(cfg, next); return rec && E.SPLITS[rec]?.days.includes(cfg.days) ? rec : null; } catch { return null; }
+}
+/* App.js Wizard split step: which splits this gym can run, before choosing one. Named strength programs are barbell-lift
+   contracts (E.splitContractGaps names the lifts they need); anything else refused at this session length is retried at
+   the other lengths the split allows. Cheap: the engine's feasibility filter, no generation. */
+export function splitOptions({ config } = {}) {
+    const cfg = programConfig(config), out = {};
+    const order = (E.SESSIONS || []).map((x) => x.id);
+    const fits = (sp, ses) => { const i = order.indexOf(ses); return (!sp.minSession || i >= order.indexOf(sp.minSession)) && (!sp.maxSession || i <= order.indexOf(sp.maxSession)); };
+    const check = (c) => { try { return E.splitBuildability(c, EXERCISES) || { ok: true }; } catch { return { ok: true }; } };
+    const label = (id) => ((E.SESSIONS || []).find((x) => x.id === id)?.label || id).replace(/^Up to /, 'up to ').replace(/ to (\d)/, '–$1').replace(' minutes', ' min').replace(/^Over /, 'over ');
+    Object.entries(E.SPLITS).filter(([, sp]) => sp.days.includes(cfg.days)).forEach(([k, sp]) => {
+        let v = check({ ...cfg, split: k });
+        if (!v.ok && v.kind !== 'lifts') {
+            const okS = order.filter((ses) => ses !== cfg.session && fits(sp, ses) && check({ ...cfg, split: k, session: ses }).ok);
+            if (okS.length) v = { ok: true, okSessions: okS, okLabels: okS.map(label) };
+        }
+        const runsAt = sp.minSession || sp.maxSession ? order.filter((ses) => fits(sp, ses)).map(label) : null;
+        out[k] = { ok: v.ok !== false, kind: v.kind || null, items: (v.items || []).map(String), okLabels: v.okLabels || null, runsAt };
+    });
+    return out;
 }
 /* App.js handleGenerate: banned lifts honoured, the route stamped, the equipment remembered, and a
    unit picked here goes through switchUnit once a unit has been chosen (so loads convert). */
@@ -2917,9 +2973,10 @@ export function deleteProgram({ id }) {
     const owner = cycles().find((c) => c.blockIds.includes(id));
     if (owner?.engineSource === 'pursuit-next') return { ok: false, error: 'Cycle blocks stay with their cycle. Delete the cycle instead, or duplicate this block as a standalone program.' };
     if (S.live?.programId === id) return { ok: false, error: 'Finish or discard the workout in progress first.' };
-    S.undo = { saved: saved(), cycles: cycles(), pinnedId: S.store.pinnedId };
+    S.undo = { saved: saved(), cycles: cycles(), pinnedId: S.store.pinnedId, queuedProgramId: S.store.queuedProgramId };
     setList('saved', saved().filter((p) => p.id !== id));
     if (S.store.pinnedId === id) S.store.pinnedId = null;
+    if (S.store.queuedProgramId === id) delete S.store.queuedProgramId;
     setList('cycles', cycles().map((c) => {
         if (!c.blockIds.includes(id)) return c;
         const ri = c.blockIds.indexOf(id), blockIds = c.blockIds.filter((b) => b !== id), blockMeta = (c.blockMeta || []).filter((m) => m.id !== id), was = c.activeBlock || 0;

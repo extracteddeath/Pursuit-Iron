@@ -289,7 +289,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val k = r.optJSONObject("kept")
         val keptN = k?.takeIf { it.s("error").isBlank() }?.i("applied") ?: 0
         toast((if (quick) "Quick workout saved · your program is unchanged" else if (nudged > 0) "Saved · next session adjusted for $nudged ${if (nudged == 1) "muscle" else "muscles"}" else if (keptN > 0) "Session saved · $keptN ${if (keptN == 1) "change" else "changes"} kept in the program" else "Session saved · week updated") +
-            (if (earned.isNotEmpty()) " · earned ${earned.joinToString(", ")}" else ""))
+            (if (earned.isNotEmpty()) " · earned ${earned.joinToString(", ")}" else "") +
+            (r.s("switchedTo").takeIf { it.isNotBlank() && !r.isNull("switchedTo") }?.let { " · block done, $it starts next" } ?: ""))
         if (routineName != null && routineIds.isNotEmpty()) {
             val sr = obj("saveRoutine", jsonOf("ids" to JSONArray(routineIds), "name" to routineName))
             if (sr?.b("ok") == true) toast("Saved \"${sr.s("name")}\" to your library")
@@ -391,6 +392,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         fun pin(programId: String) = launchCore { call("pinProgram", jsonOf("id" to programId)); refreshHomeSide(); toast("Now training: ${plan?.s("name").orEmpty()}") }
 
     suspend fun recommend(config: JSONObject): String? = call("recommend", jsonOf("config" to config)) as? String
+    /** App.js Wizard split step: which splits this gym can run (lifts a contract split needs, lengths it runs at). */
+    suspend fun splitOptions(config: JSONObject): JSONObject? = obj("splitOptions", jsonOf("config" to config))
 
     fun createProgram(config: JSONObject) = launchCore {
         val r = working("Building your program") { obj("createProgram", jsonOf("config" to config)) } ?: return@launchCore
@@ -590,9 +593,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         hap(Hap.Undo); refreshHomeSide(); plan = obj("plan")
         toast("Deleted ${r.s("name")}") { launchCore { call("undo"); refreshHomeSide(); plan = obj("plan"); toast("Restored") } }
     }
-    fun duplicateProgram(id: String) = launchCore {
+    /** The design's program row: rename in place. */
+    fun renameProgram(id: String, name: String, done: () -> Unit = {}) = launchCore {
+        val r = obj("renameProgram", jsonOf("id" to id, "name" to name)) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't rename that")); return@launchCore }
+        refreshHomeSide(); plan = obj("plan", jsonOf("programId" to plan?.s("programId"))); toast("Renamed to ${r.s("name")}"); done()
+    }
+    /** The design's Queue for next block: the program takes over when the one you train finishes its block (null clears it). */
+    fun queueProgram(id: String?, name: String, done: () -> Unit = {}) = launchCore {
+        val r = obj("queueProgram", if (id != null) jsonOf("id" to id) else JSONObject()) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't queue that")); return@launchCore }
+        hap(Hap.Tick); toast(if (id != null) "$name queued · starts after this block" else "$name is no longer queued"); done()
+    }
+    /** The design's Switch now: the next session comes from this program. */
+    fun switchProgram(id: String, name: String) = launchCore {
+        call("pinProgram", jsonOf("id" to id)); hap(Hap.Done); refreshHomeSide(); plan = obj("plan", jsonOf("programId" to id)); toast("Now training: $name")
+    }
+    fun duplicateProgram(id: String, done: (String, String) -> Unit = { _, _ -> }) = launchCore {
         val r = obj("duplicateProgram", jsonOf("id" to id)) ?: return@launchCore
-        if (r.b("ok")) { refreshHomeSide(); plan = obj("plan"); toast("Duplicated as ${r.s("name")}" + if (r.b("detached")) " · detached from its cycle" else "") }
+        if (r.b("ok")) { refreshHomeSide(); plan = obj("plan"); toast("Duplicated · give it a name" + if (r.b("detached")) " · detached from its cycle" else ""); done(r.s("id"), r.s("name")) }
     }
 
     /* ---------------------------------------------------------------- library */

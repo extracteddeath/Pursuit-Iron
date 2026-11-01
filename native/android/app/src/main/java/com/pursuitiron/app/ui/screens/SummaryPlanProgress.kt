@@ -141,7 +141,7 @@ fun PlanScreen(vm: AppViewModel) {
     if (matrixOpen) WeekByWeekSheet(vm, p.s("programId")) { matrixOpen = false }
     if (compareOpen) CompareSheet(vm) { compareOpen = false }
     if (galleryOpen) GallerySheet(vm) { galleryOpen = false }
-    if (programsOpen) ProgramsSheet(vm, onCompare = { compareOpen = true }, onGallery = { galleryOpen = true }) { programsOpen = false }
+    if (programsOpen) ProgramsSheet(vm, onCompare = { compareOpen = true }, onGallery = { galleryOpen = true }, onSettings = { id -> if (id != p.s("programId")) vm.loadPlan(id, null); settingsOpen = true }) { programsOpen = false }
     if (detailsOpen) ProgramDetailsSheet(vm, p.s("programId"), onSettings = { settingsOpen = true }) { detailsOpen = false }
     if (settingsOpen) { vm.settingsProgramId = p.s("programId"); ProgramSettingsSheet(vm) { settingsOpen = false; vm.settingsProgramId = null } }
     if (reviewOpen) BlockReviewSheet(vm, p.s("cycleId").ifBlank { p.s("programId") }, (vm.cycles?.list("cycles")?.firstOrNull { it.s("id") == p.s("cycleId") }?.i("activeBlock") ?: 0)) { reviewOpen = false }

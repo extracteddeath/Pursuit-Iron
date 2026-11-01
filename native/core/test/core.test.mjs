@@ -1017,7 +1017,6 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(d.from.kind === 'related' && d.from.id === 'bb-bench' && w > 28 && w < 38, 'a dumbbell press reads off the barbell bench (' + w.toFixed(1) + ' kg per hand)');
   ok(E.startingEstimate('bb-bench', { history: H, unit: 'kg' }).from.kind === 'own' && E.startingEstimate('pullup', { history: H, unit: 'kg' }) === null, 'own history wins; bodyweight lifts get no load estimate'); }
 
-console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);
 
 // The design's finish page: too easy / about right / too much per muscle, the next day, time and volume
 { C.init({ store: JSON.stringify({ unit: 'kg' }) });
@@ -1032,3 +1031,26 @@ console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0)
   C.act({ type: 'feedback', part, diff: -1 });
   const r = C.finishSession(); const h = C.history ? null : null;
   ok(r && r.ok !== false, 'finish with a difficulty answer'); }
+
+// The design's program library: rename, queue for the next block, hand over when the block is done
+{ C.init({}); const eq = ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'];
+  const a = C.createProgram({ config: { name: 'A', goal: 'both', experience: 'intermediate', split: 'full_body', days: 2, session: 's45', weeks: 1, deload: false, equipment: eq }, seed: 3 });
+  const b = C.createProgram({ config: { name: 'B', goal: 'both', experience: 'intermediate', split: 'full_body', days: 2, session: 's45', equipment: eq }, seed: 4 });
+  const ids = JSON.parse(C.exportStore()).saved.map((p) => p.id), [ia, ib] = ids;
+  C.pinProgram({ id: ia });
+  ok(C.renameProgram({ id: ib, name: '  Next up  ' }).name === 'Next up' && C.renameProgram({ id: ib, name: ' ' }).ok === false, 'rename trims and refuses a blank name');
+  ok(C.queueProgram({ id: ia }).ok === false, 'the active program cannot queue itself');
+  const q = C.queueProgram({ id: ib }); let pl = C.programsList();
+  ok(q.ok && pl.canQueue && pl.programs.find((p) => p.id === ib).queued, 'queued for the next block');
+  const logDay = () => { const s = C.startSession({}); s.exercises.forEach((e, ei) => e.sets.forEach((x) => { if (!x.warm && !x.sub) { C.act({ type: 'edit', ei, si: x.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei, si: x.i, field: 'reps', value: '8' }); C.act({ type: 'toggle', ei, si: x.i }); } })); return C.finishSession(); };
+  const r1 = logDay(); ok(!r1.switchedTo && C.home().next.programId === ia, 'half the block: still on A');
+  const r2 = logDay(); ok(r2.switchedTo === 'Next up' && C.home().next.programId === ib && C.home().next.weekIndex === 1, 'block done: hands over to the queued program at week 1 (' + r2.switchedTo + ')');
+  ok(!C.programsList().programs.some((p) => p.queued), 'the queue clears after the hand-over'); }
+
+// The design's split step: splits this gym can't run say which lifts they need, before you pick one
+{ const dbOnly = C.splitOptions({ config: { goal: 'strength', experience: 'intermediate', days: 3, session: 's60', equipment: ['dumbbell', 'bench'] } });
+  ok(dbOnly.full_body.ok && dbOnly.texas && dbOnly.texas.ok === false && dbOnly.texas.kind === 'lifts' && dbOnly.texas.items.includes('back squat'), 'a dumbbell gym: Texas needs the barbell lifts, full body runs');
+  const full = C.splitOptions({ config: { goal: 'strength', experience: 'intermediate', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  ok(Object.values(full).every((v) => v.ok) && full.phul.runsAt && full.phul.runsAt[0] === '40–60 min', 'a full gym runs every 4-day split; PHUL says which lengths it runs at (' + (full.phul.runsAt || []).join(', ') + ')'); }
+
+console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

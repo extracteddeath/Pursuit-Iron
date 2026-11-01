@@ -554,6 +554,30 @@ if prog_open and scroll_to(r"Browse shared programs", tries=4, step=500):
         adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
 else:
     FAILS.append("no Programs sheet with shared programs on Plan")
+# The design's program rows: options in place (Program settings on the active one; Duplicate, then the copy
+# opens with its name field, Switch now and Queue for next block; Delete with undo)
+scroll_up_to(r"^Program: ", tries=10)
+if tap(r"^Program: ", "programs-rows", required=False) and tap(r"^\|ACTIVE$", "program-active-open", required=False):
+    if not find(r"^\|Program settings$", timeout=3) or not find(r"Switch to another before deleting it", timeout=2):
+        FAILS.append("the active program row has no Program settings or delete note")
+    if tap(r"^\|Duplicate$", "program-duplicate", required=False):
+        if not find(r"^\|Program name$|^Program name\|", timeout=4):
+            FAILS.append("a duplicated program does not open its name field")
+        tap(r"^\|Cancel$", required=False)
+        if tap(r"^\|Queue for next block$", "program-queue", required=False):
+            if not find(r"queued · starts after this block|^\|QUEUED$", timeout=4):
+                FAILS.append("queueing a program shows no QUEUED badge or toast")
+            shot("program-queued")
+        else:
+            FAILS.append("no Queue for next block on another program")
+        if not scroll_to(r"^\|Delete$", tries=3, step=300) or not tap(r"^\|Delete$", required=False):
+            FAILS.append("no Delete on the copied program")
+    else:
+        FAILS.append("no Duplicate on the program row")
+    back()
+    time.sleep(1)
+else:
+    FAILS.append("could not open a program row's options")
 # Lift progression lives in Program settings (the Plan action row): the block's methods, each lift's reason
 scroll_up_to(r"^\|Edit program$|Review block", tries=10)
 # The design's Block review page: sessions against the plan (or why it's too early), with Start next block

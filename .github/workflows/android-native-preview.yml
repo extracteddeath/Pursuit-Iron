@@ -9,6 +9,10 @@ on:
       - '.github/workflows/android-native-preview.yml'
   workflow_dispatch:
 
+concurrency:
+  group: native-android-preview-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

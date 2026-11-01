@@ -157,6 +157,12 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             val plan=checkNotNull(engine.prepareWorkout(proposal.snapshot,
                 NativeWorkoutCodec.startJson("program-journey","workout-journey",2000)))
             assertEquals("kg",plan.session.unit);assertEquals(1,plan.session.weekIndex)
+            // The packaged canonical source, not Kotlin, owns muscle exposure.
+            val muscleReview=checkNotNull(engine.inspectWorkoutMuscles(proposal.snapshot,plan.issuedJson))
+            assertEquals(plan.session.workoutId,muscleReview.workoutId)
+            assertEquals(plan.exercises.size,muscleReview.rows.size)
+            assertTrue(muscleReview.parts.containsAll(muscleReview.rows.flatMap { it.involvedParts }))
+            assertTrue(muscleReview.rows.all { it.primaryPart in it.involvedParts })
             // Crash between pinning the issued targets and creating the journal.
             drive.failAfterWrite=true
             assertTrue(runCatching { store.beginIssuedSession(plan,journal) }.isFailure)
@@ -255,6 +261,10 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 NativeWorkoutCodec.startJson("short-program","short-workout",2000,preview.minutes)))
             assertEquals(preview.minutes,plan.shortenedMinutes)
             assertEquals(preview.estimatedMinutes,plan.shortenedEstimatedMinutes)
+            val muscleReview=checkNotNull(engine.inspectWorkoutMuscles(proposal.snapshot,plan.issuedJson))
+            assertEquals(plan.session.workoutId,muscleReview.workoutId)
+            assertEquals(plan.exercises.size,muscleReview.rows.size)
+            assertTrue(muscleReview.rows.all { it.primaryPart in it.involvedParts })
             assertTrue(plan.slots.isNotEmpty())
             var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
             owner=CanonicalWorkoutStorePersistence(drive,engine)

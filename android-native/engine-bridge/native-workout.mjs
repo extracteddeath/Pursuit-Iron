@@ -2,7 +2,8 @@
 import {
   parseStoredData, nextSessionCursor, exerciseAt, computeCell, EX_BY_ID,
   buildLifterModel, calibratedAnchorPerf, sessionSuggestion, prescribeSets,
-  lastDayPerf, effectiveRest, goalForDay, weeksOf
+  lastDayPerf, effectiveRest, goalForDay, weeksOf, computeCell as cellForProtocol,
+  techniqueProtocolFromCell
 } from '../../modules/engine-api.js';
 import { inspectNativeProgram } from './native-onboarding.mjs';
 import { deriveReadOnlyProgramReference, matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
@@ -46,9 +47,9 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
     if(!(computeCell(program,day,exerciseId,slot,weekIndex).sets>0))return null;
     const suggestion=sessionSuggestion(program,day,slot,anchors,unit,weekIndex,store.history);
     const sets=prescribeSets(program,day,ex,slot,weekIndex,unit,suggestion,anchors,store.perf,store.history,true);
-    // Advanced sub-set ownership needs a separate journal contract. Never drop
-    // the engine's extra rows and claim this is a complete executable session.
-    ensure(!sets.some(set=>set.sub));
+    // Every engine-issued extension has its own journal slot. Never strip
+    // myo/drop rows from a personal workout or synthesize new prescriptions.
+    ensure(sets.filter(set=>!set.warm).length<=20);
     const last=(previous[exerciseId]?.sets || []).filter(set=>!set.warm && !set.sub && set.done!==false);
     return {id:exerciseId,slot,name:ex.name,
       restSeconds:effectiveRest(goalForDay(program,day),ex,slot===day.primaryIndex,
@@ -89,19 +90,37 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
       row.name===EX_BY_ID[row.id]?.name && integer(row.restSeconds,0,3600) &&
       typeof row.superset==='boolean' && Array.isArray(row.previous) && row.previous.length<=20 &&
       Array.isArray(row.sets) && row.sets.length>=1 && row.sets.length<=40);
-    let working=0;
+    let working=0, extension=0, extensionKind=null, reachedExtension=false;
+    const protocol=techniqueProtocolFromCell(cellForProtocol(program,day,row.id,row.slot,s.weekIndex));
     for(const set of row.sets) {
       ensure(object(set) && set.done===false && set.auto===true && typeof set.warm==='boolean' &&
-        !set.sub && typeof set.weight==='string' && typeof set.reps==='string' &&
+        typeof set.weight==='string' && typeof set.reps==='string' &&
         set.weight.length<=16 && set.reps.length<=16 && object(set.target));
-      if(!set.warm) {
+      if(set.warm) {
+        ensure(!reachedExtension);
+      } else if(set.sub===true) {
+        reachedExtension=true;extension++;
+        ensure(set.prescribed===true && ['myo','drop'].includes(set.kind) &&
+          !own(set.target,'decisionTrace') && !set.warm &&
+          (set.kind==='myo' && set.myo===true || set.kind==='drop' && typeof set.dropF==='number') &&
+          integer(set.target.rest,1,60) &&
+          (extensionKind===null || extensionKind===set.kind));
+        extensionKind=set.kind;
+      } else {
+        ensure(!reachedExtension && !set.sub);
         const trace=set.target.decisionTrace;
         ensure(trace?.schemaVersion===1 && trace.programId===program.id && trace.dayId===day.id &&
           trace.exerciseId===row.id && trace.slot===row.slot && trace.weekIndex===s.weekIndex &&
           trace.workingSetIndex===working++);
       }
     }
-    ensure(working>=1 && working<=20);
+    ensure(working>=1 && working<=20 && working+extension<=20);
+    // A forged or incomplete extension roster is never a valid issued session.
+    if(protocol.type==='myo_reps')
+      ensure(extensionKind==='myo' && extension===protocol.miniSets.minimum);
+    else if(protocol.type==='drop_set')
+      ensure(extensionKind==='drop' && extension===protocol.drops.length);
+    else ensure(extension===0);
   }
   const slots=slotsFor(p.rows);ensure(slots.length>=1 && slots.length<=480);
   return {plan:p,slots};

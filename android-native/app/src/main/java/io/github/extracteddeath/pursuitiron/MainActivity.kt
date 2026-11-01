@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
                     onSkipExercise=runtime::skipRemainingExercise,
                     onInspectMuscles=runtime::inspectWorkoutMuscles,
                     onSkipAffectedMuscle=runtime::skipAffectedMuscle,
+                    onReduceAffectedMuscle=runtime::reduceAffectedMuscle,
                     onFinishWorkout=runtime::finishWorkout,
                     onCorrectHistory=runtime::correctHistory,
                     onReloadHistory=runtime::reloadHistory,

@@ -103,6 +103,48 @@ class NativeSessionSkipPolicyTest {
         assertEquals(1,current.unresolvedCount)
     }
 
+    @Test fun reductionUsesOriginalIssuedBoundariesAndRetryNeverHalvesAgain() {
+        // Four working/extension slots: retain first two, select last two.
+        val all=listOf(a,b,extension,JournalSetSlot(0,3,"bb-bench"),other,
+            JournalSetSlot(1,1,"cable-row"),JournalSetSlot(1,2,"cable-row"))
+        val disk=MemoryBytes()
+        var journal=WorkoutJournalPersistence(disk)
+        var state=checkNotNull(journal.begin(session,all,0))
+        val selected=NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders")
+        assertEquals(listOf(extension,all[3],all[6]),selected)
+        // A completed late set remains completed even though the target is cut.
+        state=checkNotNull(journal.recordSet(session,state.revision,
+            JournalSetIntent("completed-late",extension,JournalSetDisposition.COMPLETED,value)))
+        assertEquals(listOf(all[3],all[6]),NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders"))
+        disk.failAfterCommit=true
+        assertThrows(IllegalStateException::class.java) {
+            journal.recordSet(session,state.revision,intent(all[3],"reduce-first"))
+        }
+        disk.failAfterCommit=false
+        journal=WorkoutJournalPersistence(disk)
+        state=checkNotNull(journal.recover())
+        assertEquals(listOf(all[6]),NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders"))
+        state=checkNotNull(journal.recordSet(session,state.revision,intent(all[6],"reduce-last")))
+        assertTrue(NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders").isEmpty())
+        assertEquals(JournalSetDisposition.COMPLETED,
+            state.completed.single { it.intent.slot==extension }.intent.disposition)
+        assertEquals(listOf(a,b,other,all[5]),state.slots.filter {
+            it !in state.completed.map { c -> c.intent.slot }
+        })
+        // Repeating the button must not skip any earlier retained set.
+        assertTrue(NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders").isEmpty())
+        val changed=review.copy(workoutId="wrong")
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeSessionSkipPolicy.reduceAffected(state,changed,"shoulders")
+        }
+    }
+
+    @Test fun oneSetLiftCannotBeReducedAndAlreadyLoggedLateSetsStay() {
+        val all=listOf(a,other)
+        val state=checkNotNull(WorkoutJournalPolicy.open(session,all,0))
+        assertTrue(NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders").isEmpty())
+    }
+
     @Test fun forgedReviewOrUnknownMuscleCannotSelectJournalSlots() {
         val open=checkNotNull(WorkoutJournalPolicy.open(session,slots,0))
         val invalid=listOf(

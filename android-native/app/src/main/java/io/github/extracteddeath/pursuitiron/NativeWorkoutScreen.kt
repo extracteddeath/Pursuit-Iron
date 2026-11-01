@@ -20,7 +20,8 @@ internal fun NativeWorkoutScreen(
     onCorrect: (JournalSetIntent)->Unit = {},
     onSkipExercise: (Int)->Unit = {},
     onInspectMuscles: ()->Unit = {},
-    onSkipAffectedMuscle: (String)->Unit = {}
+    onSkipAffectedMuscle: (String)->Unit = {},
+    onReduceAffectedMuscle: (String)->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -66,6 +67,7 @@ internal fun NativeWorkoutScreen(
     PageHeading("WEEK ${plan.session.weekIndex}",plan.dayLabel,plan.programName)
     var affectedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
     var confirmAffectedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
+    var confirmReducedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
     PursuitCard {
         Text("Affected muscle review",style=MaterialTheme.typography.titleMedium)
         Text("Shows muscles involved in this workout, including secondary work. Review potentially affected lifts; nothing is skipped automatically.",
@@ -99,6 +101,18 @@ internal fun NativeWorkoutScreen(
                 val pendingRelated=journal.slots.count {
                     it.exerciseIndex in relatedIndices && it !in committedSlots
                 }
+                val pendingReduction=runCatching {
+                    NativeSessionSkipPolicy.reduceAffected(journal,review,affectedPart)
+                }.getOrDefault(emptyList()).size
+                if(pendingReduction>0 && !journal.isFinished) {
+                    OutlinedButton(onClick={confirmReducedPart=affectedPart},
+                        enabled=!state.workoutBusy && !state.historyBusy,
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Reduce planned work · skip $pendingReduction unfinished sets")
+                    }
+                    Text("Keeps the first half of originally issued sets per related exercise, rounded up. Already logged sets stay logged.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
                 if(pendingRelated>0 && !journal.isFinished) {
                     FilledTonalButton(onClick={confirmAffectedPart=affectedPart},
                         enabled=!state.workoutBusy && !state.historyBusy,
@@ -112,6 +126,25 @@ internal fun NativeWorkoutScreen(
             Text("Muscle involvement is not medical guidance. Avoid movements that cause pain.",
                 style=MaterialTheme.typography.bodySmall)
         }
+    }
+    if(confirmReducedPart.isNotEmpty()) {
+        val review=state.muscleReview
+        val removed=review?.let {
+            runCatching { NativeSessionSkipPolicy.reduceAffected(journal,it,confirmReducedPart) }
+                .getOrDefault(emptyList())
+        }.orEmpty()
+        val named=review?.rows?.filter { confirmReducedPart in it.involvedParts }
+            ?.map { it.name }?.distinct().orEmpty()
+        AlertDialog(onDismissRequest={confirmReducedPart=""},
+            title={Text("Reduce planned work for $confirmReducedPart?")},
+            text={Text("${removed.size} unfinished late sets will be saved as skipped across ${named.joinToString(", ")}. The first half of each original prescription remains available, and all completed sets are preserved. This does not change future workouts.")},
+            confirmButton={Button(onClick={
+                val approved=confirmReducedPart
+                confirmReducedPart=""
+                onReduceAffectedMuscle(approved)
+            },enabled=removed.isNotEmpty() && !state.workoutBusy && !state.historyBusy &&
+                !journal.isFinished) { Text("Confirm reduced work") }},
+            dismissButton={TextButton(onClick={confirmReducedPart=""}) { Text("Keep full workout") }})
     }
     if(confirmAffectedPart.isNotEmpty()) {
         val selected=state.muscleReview?.rows?.filter { confirmAffectedPart in it.involvedParts }.orEmpty()

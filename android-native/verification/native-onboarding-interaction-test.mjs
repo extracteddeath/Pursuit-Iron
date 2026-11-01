@@ -46,6 +46,16 @@ assert.ok(host.includes('fun skipAffectedMuscle(part: String)') &&
   train.includes('Completed work is preserved.') &&
   train.includes('it.exerciseIndex in relatedIndices && it !in committedSlots'),
   'Muscle-wide skipping must be explicitly confirmed and only save unresolved issued slots');
+// An injury-related dose reduction has a stable original-issued-set boundary.
+assert.ok(host.includes('fun reduceAffectedMuscle(part: String)') &&
+  host.includes('NativeSessionSkipPolicy.reduceAffected(it,review,part)') &&
+  activity.includes('onReduceAffectedMuscle=runtime::reduceAffectedMuscle') &&
+  shell.includes('onSkipAffectedMuscle,onReduceAffectedMuscle') &&
+  train.includes('NativeSessionSkipPolicy.reduceAffected(journal,review,affectedPart)') &&
+  train.includes('Confirm reduced work') &&
+  train.includes('onReduceAffectedMuscle(approved)') &&
+  train.includes('The first half of each original prescription remains available'),
+  'Reduced planned work must be confirmed and originate from stable canonical issued slots');
 // Short-session previews come only from the canonical engine and cannot
 // masquerade as an applied session or a UI-computed training prescription.
 assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine preview")') &&

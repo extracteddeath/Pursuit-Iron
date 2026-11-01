@@ -218,6 +218,24 @@ history, not a completed working set or an invented failure.
 No injury diagnosis, persistent injury-report reason, automatic session
 reshaping or future-plan change is claimed in this pass.
 
+## Follow-up: deterministic, confirmed reduced work for affected muscles
+
+Users can now choose a **reduce planned work** action for a muscle identified
+by the canonical issued-workout review. Selection keeps the first half
+(rounded up) of *originally issued* sets in every related exercise and offers
+to skip only the unresolved late-set tail. It is not half of a changing
+pending count: crash/retry cannot cause repeated 50% reductions. If a set
+in the tail was previously logged, that original completion is retained.
+All reduction skips use the same ordered, atomic CAS journal writer as
+per-exercise skips, and the UI previews exactly the policy-selected count
+before an explicit second confirmation.
+
+This step is a session-scoped, user-controlled dose reduction. It does NOT
+yet record a durable injury reason, auto-diagnose symptoms, adjust new loads,
+or mark the original canonical prescription as modified. Such metadata
+needs a versioned, recovery-safe journal/history protocol instead of
+silently inventing annotations in Kotlin.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of

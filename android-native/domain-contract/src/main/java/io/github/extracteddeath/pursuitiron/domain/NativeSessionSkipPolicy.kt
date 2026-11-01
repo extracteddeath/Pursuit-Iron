@@ -34,6 +34,28 @@ object NativeSessionSkipPolicy {
         return journal.slots.filter { it.exerciseIndex in affected && it !in resolved }
     }
 
+    /**
+     * Stable half-dose cap for explicitly reviewed muscle involvement.
+     * Keep the first ceil(original issued slots / 2) slots PER exercise.
+     * Never erase an already completed or skipped observation.
+     *
+     * The fixed issue-order boundary is intentional: recomputing "half the
+     * currently pending sets" after a partial write would skip more and more
+     * on every crash retry. An already completed late set stays completed.
+     * This is a user-confirmed selection, never a new engine prescription.
+     */
+    fun reduceAffected(journal: WorkoutJournalState,review: NativeWorkoutMuscleReview,
+        part: String): List<JournalSetSlot> {
+        val pending=remainingAffected(journal,review,part).toSet()
+        val affected=review.rows.filter { part in it.involvedParts }.map { it.exerciseIndex }.toSet()
+        val candidate=journal.slots.filter { it.exerciseIndex in affected }
+            .groupBy { it.exerciseIndex }.values.flatMap { sets ->
+                val ordered=sets.sortedBy { it.setIndex }
+                ordered.drop((ordered.size+1)/2)
+            }.toSet()
+        return journal.slots.filter { it in candidate && it in pending }
+    }
+
     fun remaining(journal: WorkoutJournalState,exerciseIndex: Int): List<JournalSetSlot> {
         require(!journal.isFinished && exerciseIndex in 0..47)
         val slots=journal.slots.filter { it.exerciseIndex==exerciseIndex }

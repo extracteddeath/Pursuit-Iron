@@ -93,6 +93,7 @@ internal fun NativePreviewApp(
     onSkipExercise: (Int)->Unit = {},
     onInspectMuscles: ()->Unit = {},
     onSkipAffectedMuscle: (String)->Unit = {},
+    onReduceAffectedMuscle: (String)->Unit = {},
     onFinishWorkout: ()->Unit = {},
     onCorrectHistory: (String)->Unit = {},
     onReloadHistory: ()->Unit = {},
@@ -222,7 +223,7 @@ internal fun NativePreviewApp(
                                     previewShorterSession=onPreviewShortSession,
                                     startShortWorkout=onStartShortWorkout)
                                 NativeDestination.TRAIN -> if(onboarding?.saved!=null && selectedTrainingDay==null)
-                                    NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet,onSkipExercise,onInspectMuscles,onSkipAffectedMuscle)
+                                    NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet,onSkipExercise,onInspectMuscles,onSkipAffectedMuscle,onReduceAffectedMuscle)
                                 else TrainScreen(
                                     openTools = { sheet = 3 },
                                     syntheticOutlineReader = syntheticOutlineReader,

@@ -358,7 +358,21 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     }
 
     /**
-     * Both single-exercise and muscle-wide skips use the same durable receipts.
+     * Reduce the original issued work by a stable 50% cap per affected lift.
+     * Reconfirming after a lost acknowledgement only sees the same remaining
+     * tail slots, never the "half again" error from recomputing an open dose.
+     */
+    fun reduceAffectedMuscle(part: String) {
+        val current=mutable.value
+        val plan=current.workout?.plan ?: return
+        val review=current.muscleReview?.takeIf { it.workoutId==plan.session.workoutId } ?: return
+        skipSelectedIssuedSlots {
+            NativeSessionSkipPolicy.reduceAffected(it,review,part)
+        }
+    }
+
+    /**
+     * Single-exercise skips, all-related skips and reduced work share durable receipts.
      * After an interrupted write the new invocation chooses only pending slots.
      * No injury diagnosis or reason is inferred from a generic SKIPPED receipt.
      */

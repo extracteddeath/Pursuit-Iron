@@ -1,25 +1,27 @@
-# Pursuit Iron — Android-first Compose foundation
+# Pursuit Iron — Android-first Compose preview
 
-This is a new, isolated Android presentation layer. It does **not** replace the hosted web app, change user data, alter the canonical JavaScript training engine, or claim engine parity.
+This is an **isolated native Android design preview**, not a replacement for the live web app. It uses Jetpack Compose, Material 3 dynamic color, Android native navigation and demo-only Workout controls. The canonical JS engine is deliberately disconnected. No existing program, history or backup is read, written or synced.
 
-## Build prerequisites
+## View the Android app on a phone
 
-Android Studio with Android SDK 36 and JDK 17. Open `android-native/` as a Gradle project. The Gradle wrapper JAR and Android SDK are not checked into this initial scaffold; generate the wrapper in a trusted local Android Studio environment and pin/verify its distribution before using CI. The versions below are **bootstrap pins**, not a claim that they are the newest Google releases. Verify compatibility against official Android documentation before promoting to release.
+1. Open [GitHub Actions → Native Android preview APK](https://github.com/extracteddeath/Pursuit-Iron/actions/workflows/android-native-preview.yml).
+2. Open the **latest successful** run for the `architecture/android-compose-foundation` branch.
+3. Under **Artifacts**, download `pursuit-iron-native-preview` (a ZIP).
+4. Extract the ZIP on your Android device or computer, then install `app-debug.apk`. Android may ask you to allow installation from the Files app or browser temporarily. Only install artifacts from your own repository's verified workflow.
+5. Launch **Pursuit Iron Native Preview**. Navigate Today, Plan, Workout and Progress. The demo steppers change temporary UI state only; no workouts can be started.
+
+Debug APKs use CI-generated test signing keys. A newer preview may fail to install over an older one; uninstall the old **Native Preview** first and then install the new APK. It uses a separate `.preview` package ID and must not replace a future Play Store version.
+
+**If no successful run or artifact is present, there is no installable APK yet.** The branch alone is source code, not a runnable app. You can also open `android-native/` in Android Studio with JDK 17 / Android SDK 36, provision Gradle 8.13 and run the `app` debug configuration.
 
 ## Architecture
 
-- `app`: Compose Material 3 theme, native Android Activity, accessible app shell and a static workout preview.
-- `domain-contract`: Kotlin-only interface and explicit engine readiness state. **No fake training suggestions.**
-- `modules/engine-api.js` remains the source of truth in the web app. No engine files are copied or rewritten in this scaffold.
-- Future `engine-bridge`: a strictly isolated JS runtime adapter with canonical export parity tests; Kotlin engine migration can follow only after golden-fixture equivalence.
-- Future `data`: versioned, non-destructive JSON import from a user-exported web backup; never overwrite existing backups or silently initialize a new program.
+- `app`: Android Activity, Compose Material 3 theme, native preview navigation and sample Workout controls.
+- `domain-contract`: Kotlin-only engine gateway contract, explicitly unconnected in this preview.
+- `engine-bridge/protocol.mjs`: allowlisted, read-only protocol referencing canonical `modules/engine-api.js`. Handshake does not certify engine parity.
+- `data-migration/`: read-only structural and canonical-parser verification of explicitly supplied backup copies; native import is not enabled.
+- Production training logic remains in `modules/engine-api.js`; `modules/next-engine/` and `modules/training-domain/`.
 
-## Gates before any release
+## Release gates not met
 
-1. Compile on Android SDK 36, verify Material3 dependencies and theme with Android Studio.
-2. Confirm dark/light, system dynamic color on Android 12+, text scaling, TalkBack, 48dp minimum targets, reduced-motion and edge-to-edge/insets on real hardware.
-3. Build a deterministic, JSON-safe engine contract; replay real program/history fixtures against the canonical JS engine and bridge, checking weight increments, DP, RIR, cycle transitions, injuries, time trims and revision ownership.
-4. Import a **copy** of a real backup; verify schema/version/hash and round-trip without loss. No writes to web storage or Play release until approved.
-5. Rebuild one complete Workout vertical slice and exercise interruptions/background/resume before migrating other screens.
-
-**Current status:** source scaffold only; not compiled, not device-tested, not Play-ready.
+Actual Android runtime engine execution; fixture equivalence for load rounding, double progression, RIR and cycles; native backup import/round-trip; real-device accessibility, IME, text scaling and interruption certification. Debug APK is **not** a production Play Store release.

@@ -13,6 +13,12 @@ android {
         versionCode = 1
         versionName = "0.1.0-native-foundation"
     }
+    buildTypes {
+        getByName("debug") {
+            // This preview can coexist with a future Play Store package.
+            applicationIdSuffix = ".preview"
+        }
+    }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -27,5 +33,6 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

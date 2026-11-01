@@ -33,3 +33,9 @@ This is a **source-level audit, not a rendered-DOM or computed-style certificate
 5. Treat compact Workout/Focus inputs as separately certified high-risk surfaces; protect logging, plate math, storage, timer and Android resume.
 
 This first pass creates a complete source-based review queue; it does not imply every runtime screen or state has already passed a visual audit.
+
+## Verified initial source baseline
+
+The source-contract run at B1024 recorded **4,345 JSX calls** across **22** first-party JSX modules: **4,120 native nodes** and **225 shared Ui* calls**. **531 native interactive nodes** and **87 raw surfaces** enter semantic review; **1,999** static class tokens were observed. These are counts of source call sites, not rendered instances or defect counts. The source CI passed; the more detailed component and browser audit remains gated separately.
+
+The counts are ratcheted in `verification/ui-element-budgets.mjs`: future UI work must not silently increase unshared interaction/surface candidates or remove shared adoption. The numbers do not justify automatically replacing native inputs or specialized workout controls.

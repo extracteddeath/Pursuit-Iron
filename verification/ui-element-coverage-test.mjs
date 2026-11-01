@@ -2,7 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { auditUiElements } from '../scripts/audit-ui-elements.mjs';
 import { uiStyleBudget } from './ui-style-budgets.mjs';
+import { uiElementBudget } from './ui-element-budgets.mjs';
 const result=auditUiElements();
+assert.ok(result.totals.rawInteractive<=uiElementBudget.rawInteractive,
+ 'The audit must not silently grow native interaction debt; migrate through shared controls or review this budget');
+assert.ok(result.totals.rawSurfaceCandidates<=uiElementBudget.rawSurfaceCandidates,
+ 'Surface/card duplication must not grow without an explicit design review');
+assert.ok(result.totals.shared>=uiElementBudget.minSharedComponents,
+ 'Universal shared-component call sites must not disappear without replacement');
 assert.ok(result.totals.jsxFiles>=15,'Inventory must include the extracted UI modules, not just App.js');
 assert.ok(result.totals.elements>500&&result.totals.native>400,'Every native JSX call is in scope');
 for(const owner of ['Home','Plan','Program','Next workout','Cycles','Wizard','Library',

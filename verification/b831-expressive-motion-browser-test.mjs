@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { waitForRouteOrDiagnose, assertNavigationTapClear } from './browser-route-diagnostics.mjs';
 
 const root = path.resolve(new URL('../', import.meta.url).pathname);
 // M3E 2026 design contract: colored surfaces stay tonal, never decorative
@@ -529,8 +530,11 @@ try {
         }, selectors);
         // Root tabs keep their navigation semantics, respond immediately, and settle without layout growth.
         for (const tab of ['plan','progress','profile','settings','home']) {
+            await assertNavigationTapClear(page, tab);
             await page.click(`[data-tab="${tab}"]`);
-            await page.waitForSelector(`[data-view-frame="${tab}"][data-pi-surface]`);
+            await waitForRouteOrDiagnose(page, `[data-view-frame="${tab}"]`, {label:'b831 navigation '+tab, errors});
+            // Root frames are the stable render owner; data-pi-surface is reserved for actual
+            // moving cards/sheets, not the entire route. Keep the entrance-count assertion below.
             // M377: ordinary root navigation must not set five cards moving.
             // Preserve the measured indicator and real route while only one
             // meaningful card can arrive. The chosen nav icon does not bounce.
@@ -896,12 +900,15 @@ try {
                     const raised=role('--pi-r11-raised');
                     const control=role('--pi-color-control');
                     const hero=role('--pi-r11-hero');
+                     // Home preview is intentionally mixed from these two shared materials.
+                     probe.style.backgroundColor='color-mix(in srgb,var(--pi-color-control) 78%,var(--pi-color-feature) 22%)';
+                     const expectedPreview=bg(probe);
                     probe.remove();
                     const header=home.querySelector('.wpb-home-header');
                     const feature=home.querySelector('.wpb-home-hero');
                     const redundantStrip=home.querySelector('.wpb-metric-strip');
                     const preview=home.querySelector('.wpb-home-session-preview');
-                    return {quiet,raised,hero,control,appBar,
+                    return {quiet,raised,hero,control,appBar,expectedPreview,
                         header:bg(header),feature:bg(feature),hasRedundantStrip:!!redundantStrip,
                         preview:bg(preview),headerImage:cs(header)?.backgroundImage,
                         heroImage:cs(feature)?.backgroundImage,
@@ -910,7 +917,7 @@ try {
                 assert.ok(homeTonesR45.header===homeTonesR45.appBar&&
                     !homeTonesR45.hasRedundantStrip&&
                     homeTonesR45.feature===homeTonesR45.hero&&
-                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.control)&&
+                    (!homeTonesR45.preview||homeTonesR45.preview===homeTonesR45.expectedPreview)&&
                     homeTonesR45.headerImage==='none'&&
                     homeTonesR45.heroImage==='none'&&
                     homeTonesR45.hero!==homeTonesR45.quiet&&
@@ -1029,7 +1036,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(state.count===3 && state.size===26 && state.firstRadius>=26 &&
+                assert.ok(state.count===3 && state.size>=28 && state.size<=34 && state.firstRadius>=26 &&
                     state.firstSize>=24 && state.buttons===4 && state.selected===1 &&
                     state.trackFill?.length>3 && !state.overflow,
                     'Plan has a real featured week and elastic four-pane navigator: '+JSON.stringify(state));
@@ -1102,7 +1109,7 @@ try {
                         pickerBackground:picker ? getComputedStyle(picker).backgroundImage : '',
                         overflow:el.scrollWidth>el.clientWidth+1 };
                 });
-                assert.ok(heading.titleSize===26 && heading.pickerHeight>=44 &&
+                assert.ok(heading.titleSize>=28 && heading.titleSize<=34 && heading.pickerHeight>=44 &&
                     heading.selectHeight>=44 && heading.headerHeight<115 &&
                     heading.pickerBackground==='none' && !heading.overflow,
                     'R18 Settings keeps a compact header and functional section jump: '+JSON.stringify(heading));
@@ -1162,8 +1169,8 @@ try {
                         actionHeight: actions.getBoundingClientRect().height,
                         scrolled: el.closest('.wpb-home')?.dataset.scrolled==='1' };
                 });
-                // M270: the five root titles share the same 1.625rem role.
-                const expectedSize=homeType.size===26;
+                // M270: root destinations share the same responsive 1.75–2.125rem title scale.
+                const expectedSize=homeType.size>=28&&homeType.size<=34;
                 assert.ok(expectedSize && homeType.weight >= 700,
                     'Home title keeps a stable expressive type scale while clipping smoothly: '+JSON.stringify(homeType));
                 assert.ok(homeType.actionHeight >= 48, 'Home root actions retain full-size targets');
@@ -1223,7 +1230,7 @@ try {
                         overflow:el.scrollWidth>el.clientWidth+1
                     };
                 });
-                assert.ok(profileR17.title===26 && profileR17.headerHeight<=112 &&
+                assert.ok(profileR17.title>=28 && profileR17.title<=34 && profileR17.headerHeight<=112 &&
                     profileR17.identityHeight<=40 && profileR17.identityBorder==='0px' &&
                     profileR17.identityBackground==='rgba(0, 0, 0, 0)' &&
                     profileR17.editHeight>=44 && !profileR17.overflow,

@@ -17,7 +17,9 @@ const program={
 const store=theme=>({
   v:13,savedAt:1,saved:[program],cycles:[],history:[{
     id:'r70-progress-fixture',programId:program.id,programName:program.name,
-    dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now()-86400000,
+    // R80: this layout fixture must stay in the current displayed calendar month,
+    // including on the first day of a month. Date-only history has its own R79 test.
+    dayId:'upper',dayLabel:'Upper',weekIndex:1,date:Date.now(),
     unit:'lb',duration:2400,totalSets:2,tonnage:1320,
     perf:{'bb-bench':{weight:185,reps:6,
       sets:[{w:185,r:6,done:true,rir:2,rirReported:true}]},
@@ -126,7 +128,7 @@ try{
             tabs:[...document.querySelectorAll('[data-tab]')].map(el=>({
               visible:el.innerText.trim(),name:el.getAttribute('aria-label')}))
           }));
-          assert.ok(shell.title.length===1&&shell.title[0].size==='26px'&&shell.title[0].tag==='H1',
+          assert.ok(shell.title.length===1&&Math.abs(parseFloat(shell.title[0].size)-Math.min(34,Math.max(28,24.8+width/100)))<.6&&shell.title[0].tag==='H1',
             'M270 root titles share one relative typography role: '+JSON.stringify({route,shell}));
           assert.equal(shell.headers,1,'Exactly one shared root app bar');
           assert.equal(shell.back,0,'Root app bars never imply a parent screen');
@@ -138,7 +140,7 @@ try{
             await page.screenshot({path:path.join(root,'verification/m271-'+theme+'-'+width+'-'+route+'-phone.png')});
             await page.evaluate(()=>document.documentElement.style.fontSize='32px');
             const large=await page.$eval('.wpb-root-header h1',el=>({x:el.getBoundingClientRect().left,y:el.getBoundingClientRect().top,size:getComputedStyle(el).fontSize}));
-            assert.equal(large.size,'52px','Shared root title honors enlarged text');
+            assert.ok(Math.abs(parseFloat(large.size)-Math.min(68,Math.max(56,49.6+width/100)))<.6,'Shared root title scales with the canonical clamp at 200% text: '+JSON.stringify(large));
             largeTitleAnchor ||= large;
             assert.ok(Math.abs(large.x-largeTitleAnchor.x)<1&&Math.abs(large.y-largeTitleAnchor.y)<1,
               'Enlarged root titles keep the same anchor: '+JSON.stringify({route,large,largeTitleAnchor}));

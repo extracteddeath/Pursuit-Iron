@@ -1,3 +1,4 @@
+import { uiStyleBudget } from './ui-style-budgets.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -21,7 +22,7 @@ assert.ok(css.includes('#root .wpb .wpb-settings .wpb-settings-link.wpb-ui-actio
 assert.ok(settings.includes('_jsx(UiChoice, { kind: "chip", selected: on, "aria-label": `${p} ${unit} plate`'));
 assert.ok(settings.includes('"aria-label": `Available ${unit} plates per side`'));
 assert.ok(settings.includes('setPlates({ ...plates, [unit]: next })'), 'Plate inventory persistence remains unchanged');
-assert.ok(settings.includes('className: "wpb-ui-card"'));
+assert.ok(settings.includes('_jsxs(UiCard, { className: ""'), 'Plate inventory preserves the UiCard class and native layout');
 assert.ok(!settings.includes('background: on ? C.accent : C.bg2'), 'Plate paint belongs to shared UiChoice');
 
 // Gallery filters use the same choice states, with named groups for each dimension.
@@ -40,8 +41,8 @@ assert.ok(!css.includes('.wpb-gallery-chip--selected{'), 'Shared choice handles 
 for(const label of ['Reminder time','Birthday'])
  assert.ok(settings.includes('"aria-label": "'+label+'"'),'Native field must retain its label: '+label);
 assert.ok(settings.includes('`Bodyweight (${unit})`'),'Weight field retains its unit-aware accessible name');
-assert.ok(settings.includes('className: "mono wpb-ui-control", style: { width: 148 }')&&
- settings.includes('className: "mono wpb-ui-control", style: { width: 76, textAlign: "center" }')&&
+assert.ok(settings.includes('className: "mono wpb-ui-control wpb-settings-time-input"')&&
+ settings.includes('className: "mono wpb-ui-control wpb-settings-weight-input"')&&
  settings.includes('borderColor: birthEst && birth ? C.warn : undefined'),
  'Shared settings fields retain responsive sizing, native pickers and birthday estimation warning');
 assert.ok(!settings.includes('colorScheme: "dark"'),'Reminder picker must respect theme and device color scheme');
@@ -51,7 +52,11 @@ assert.ok(settings.includes('value: minInc.v && minInc.unit !== unit ? null : (m
  'Smallest jump selected state remains scoped to selected weight unit');
 
 // Staged Program settings keep original writers/validation with shared footer actions.
-assert.ok(program.includes("import { UiAction, UiChoice, UiSheetClose }"));
+// Check actual symbols, not a frozen import-order snapshot: new shared owners
+// may join this import without changing any Settings callback or selection behavior.
+const primitiveLine=program.split(String.fromCharCode(10)).find(line => line.includes("from './ui-primitives.js'")) || '';
+for(const symbol of ['UiAction','UiChoice','UiSheetClose','UiSheetHeading'])
+    assert.ok(primitiveLine.includes(symbol),'Program settings retains required shared UI primitive '+symbol);
 assert.ok(program.includes('_jsx(UiAction, { variant: "tonal", onClick: onClose, className: "wpb-program-settings-cancel"'));
 assert.ok(program.includes('_jsx(UiAction, { variant: "primary", "aria-label": "Save program settings"'));
 assert.ok(program.includes('onClick: applyCfgDraft, disabled: !canApply'));
@@ -61,10 +66,10 @@ assert.ok(program.includes('ref: attachPanel')&&program.includes('onKeyDown: onP
   'Shared Program Settings action must not interfere with focus trapping');
 
 // Ratchet against reintroducing presentation debt, without touching dynamic set geometry.
-assert.ok((app.match(/style:\s*\{/g)||[]).length<=869,'Static inline App.js debt must keep falling');
-assert.equal((css.match(/!important/g)||[]).length,2024,'Shared controls cannot add CSS priority hacks');
+assert.ok((app.match(/style:\s*\{/g)||[]).length<=uiStyleBudget.appInlineObjects,'Static inline App.js debt must keep falling');
+assert.ok((css.match(/!important/g)||[]).length <= uiStyleBudget.cssPriorityDeclarations,'Shared controls cannot add CSS priority hacks');
 assert.ok(!css.includes('.wpb-gallery-chip--selected'),'Old Gallery state paint must stay retired');
-assert.ok(css.length<=644408,'Shared-control pilot must remain within the current measured shared-foundation CSS budget');
+assert.ok(css.length<=uiStyleBudget.cssCharacters,'Shared-control pilot must remain within the current measured shared-foundation CSS budget');
 assert.equal(css.split('.wpb-profile-card-metrics{display:grid').length-1,1,'Expressive metric layout must retain one canonical owner');
 assert.ok(css.includes('#root .wpb .wpb-gallery-import{width:100%;min-height:var(--pi-primary-min,52px)'),
   'Shared primary Gallery control retains its 52px geometry');

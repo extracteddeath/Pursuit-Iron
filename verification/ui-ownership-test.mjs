@@ -44,7 +44,9 @@ assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.incl
 
 assert.equal((primitives.match(/export function UiSheetClose\(/g) || []).length, 1,
     'All Program sheets must share one accessible dismiss element');
-assert.ok(primitives.includes('if (variant) return _jsx(UiAction,') &&
+assert.ok(primitives.includes('export function UiIconAction(') &&
+    primitives.includes('return _jsx(UiAction, { variant, "aria-label": label, "data-icon-only": true, ...props })') &&
+    primitives.includes('if (variant) return _jsx(UiIconAction, { variant, ...props,') &&
     primitives.includes('"data-icon-only": true') &&
     primitives.includes('className: `hit wpb-sheet-close') &&
     primitives.includes('"aria-label": label'),
@@ -252,15 +254,29 @@ for(const cls of ['wpb-program-settings-body','wpb-program-share-body',
     assert.ok(body&&!body.includes('min-width:0'),
         'Sheet body must inherit the common min-width guard: '+cls);
 }
+// B1027: footer layout remains local; sizing, state, typography and paint
+// now belong to shared UiAction variants instead of a second footer-specific
+// button system. Preserve both callbacks and the real 48/52px touch contract.
 const saveActionGeometry=css.split('#root .wpb :is(.wpb-save-review-confirm,.wpb-save-review-cancel){')[1]?.split('}')[0]||'';
-for(const prop of ['width:100%','min-height:48px','font-size:.9375rem','line-height:1.4',
-    'padding:13px','border-radius:12px','cursor:pointer'])
-    assert.ok(saveActionGeometry.includes(prop),'Review actions share accessible geometry: '+prop);
-for(const cls of ['wpb-save-review-confirm','wpb-save-review-cancel']){
-    const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
-    assert.ok(local&&!['width:','min-height:','font-size:','line-height:','padding:','border-radius:','cursor:'].some(prop=>local.includes(prop)),
-        'Review button-specific styling only owns paint, weight and spacing: '+cls);
-}
+assert.ok(saveActionGeometry.includes('width:100%'),
+    'Review actions retain full-width footer composition');
+for(const token of ['min-height:','font-size:','line-height:','padding:','border-radius:','cursor:'])
+    assert.ok(!saveActionGeometry.includes(token),
+        'Shared action owner must supply footer geometry instead of feature CSS: '+token);
+const sharedTonal=css.split('#root .wpb .wpb-ui-action[data-action="tonal"]{')[1]?.split('}')[0]||'';
+const sharedPrimary=css.split('#root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="primary"]{')[1]?.split('}')[0]||'';
+assert.ok(sharedTonal.includes('min-height:var(--pi-control-min)') &&
+    sharedPrimary.includes('min-height:var(--pi-primary-min,52px)'),
+    'Save review and Keep editing use shared 52px primary and 48px tonal control sizing');
+assert.ok(programReview.includes('_jsx(UiAction, { variant: "primary", disabled: !changes.length || !!conflicts.length') &&
+    programReview.includes('_jsx(UiAction, { variant: "tonal", onClick: onClose') &&
+    programReview.includes('className: "wpb-save-review-confirm"') &&
+    programReview.includes('className: "wpb-save-review-cancel"'),
+    'Save review retains disabled/confirm semantics and Keep editing retains its close callback');
+assert.ok(!css.includes('#root .wpb .wpb-save-review-confirm{') &&
+    css.includes('#root .wpb .wpb-save-review-cancel{margin-top:8px}'),
+    'Program feature CSS retains only needed footer spacing, not its own button paint');
+
 
 
 /* Design passes 27–30: Program overlay, panel and focus owners stay shared. */
@@ -627,8 +643,15 @@ assert.ok(programReview.includes('useProgramSheetFocus(onClose)') &&
 assert.ok(programReview.includes('disabled: !changes.length || !!conflicts.length') &&
     programReview.includes('checked: scope === value') && programReview.includes('onChange: () => onScope(value)'),
     'Save scope and conflict guards remain owned by the existing plan transaction');
-for(const role of ['backdrop','panel','heading','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','confirm','cancel'])
+// The confirmation action no longer needs a feature-level CSS owner. Its
+// primary styling belongs to UiAction, while the footer and cancel margin
+// remain intentionally local.
+for(const role of ['backdrop','panel','heading','close','scroll','intro','scope','legend','option','help','count','change','name','summary','alert','undo','footer','cancel'])
     assert.ok(css.includes('.wpb-save-review-' + role + '{'), 'Missing Program review CSS owner: ' + role);
+assert.ok(!css.includes('.wpb-save-review-confirm{') &&
+    css.includes('#root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="primary"]{') &&
+    programReview.includes('_jsx(UiAction, { variant: "primary", disabled: !changes.length || !!conflicts.length'),
+    'Save confirmation now inherits shared primary paint and disabled semantics');
 // Exercise the actual ceilings, even as successful cleanup creates headroom below them.
 const cssOverflow = '.bad-extra{color:red!important;}\n'.repeat(MAX_IMPORTANT - report.important + 1);
 const appOverflow = '.bad-embedded{color:red!important;}\n'.repeat(MAX_APP_IMPORTANT - report.appImportant + 1);
@@ -687,7 +710,7 @@ for(const selector of ['input:not([type="range"]):not(.wpb-ui-control)', 'select
 const action=primitives.slice(primitives.indexOf('function UiAction('),primitives.indexOf('function UiChoice('));
 assert.ok(!action.includes('style: {') && !action.includes('C.accent'),
   'Shared UiAction may not inject presentation overrides at render time');
-for(const str of ['wpb-ui-card wpb-profile-share-card','wpb-ui-card wpb-custom-cycle',
+for(const str of ['className: "wpb-profile-share-card"','className: "wpb-custom-cycle"',
   'wpb-ui-control','wpb-ui-field wpb-profile-card-field','wpb-ui-stack wpb-custom-cycle-list',
   'wpb-ui-row wpb-profile-card-actions'])
   assert.ok(app.includes(str),'Migrated screen must continue to use shared primitive: '+str);
@@ -794,7 +817,11 @@ assert.equal((b956Workout.match(/className: "wpb-s956-/g)||[]).length,57,"Workou
 const b957NewOwners=["wpb-s957-letterspacing-0-3","wpb-s957-padding-0-2px","wpb-s957-gap-2","wpb-s957-gap-16","wpb-s957-padding-3-5px-0","wpb-s957-height-100","wpb-s957-padding-14px-16px-6px","wpb-s957-margintop-4","wpb-s957-lineheight-1-5","wpb-s957-texttransform-capitalize"];
 assert.equal(b957NewOwners.length,10);
 for(const cls of b957NewOwners)assert.ok(css.includes("."+cls+","),"Missing B957 CSS owner "+cls);
-assert.equal((app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,15,"Home shared owner regression");
+assert.equal((app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,17,"Home shared owner adoption (15 existing + 2 new cycle utilities)");
+const b1012Home=app.split("function Home(")[1].split(String.fromCharCode(10)+"function ")[0];
+assert.ok(b1012Home.includes('className: "pi-t-strong wpb-s956-flex-1') &&
+ b1012Home.includes('className: "pi-t-muted wpb-s956-overflow-hidden'),
+ 'Two additional Home utilities intentionally raise source adoption from 15 to 17');
 assert.equal((app.split("function SettingsView(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,20,"SettingsView shared owner regression");
 assert.equal((app.split("function ProgressDetail(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,10,"ProgressDetail shared owner regression");
 assert.equal((app.split("function StrengthSnapshotCard(")[1].split(String.fromCharCode(10)+"function ")[0].match(/className: "[^"]*wpb-s95(?:6|7)-/g)||[]).length,9,"StrengthSnapshotCard shared owner regression");
@@ -830,7 +857,8 @@ assert.equal((club.match(/style: \{/g) || []).length, 1, 'Club keeps only its ca
 assert.ok(club.includes('style: { width: `${snap.thousandPct}%` }'), 'Club progress derives from the canonical snapshot');
 assert.equal((club.match(/variant: "tonal"/g) || []).length, 2, 'Club share and measure controls reuse UiAction');
 const settingsView = app.slice(app.indexOf('function SettingsView('), app.indexOf('/* ============================== CYCLES VIEW'));
-assert.equal((settingsView.match(/className: "wpb-ui-card wpb-settings-card"/g) || []).length, 8, 'All eight Settings row groups use shared cards');
+assert.equal((settingsView.match(/className: "wpb-settings-card"/g) || []).length, 8, 'All eight Settings row groups use UiCard');
+assert.ok(primitives.includes('export function UiCard('), 'Standard cards must use one semantic owner');
 assert.ok(!settingsView.includes('style: { background: C.card, borderRadius: 16, overflow: "hidden"'), 'No unnamed legacy row cards remain');
 
 // M270: shared shell roles cannot silently regain per-screen typography or aliases.
@@ -869,9 +897,9 @@ assert.ok(!css.includes('padding-top:11px!important;\n  padding-bottom:8px!impor
 
 // M278: Profile's active three-score comparison has one responsive owner;
 // the editable share-card uses the same 4/8/12/16px spacing vocabulary.
-assert.ok(css.includes('.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--pi-space-3);margin:var(--pi-space-3) 0 0}'),
+assert.ok(css.includes('.wpb-profile-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--pi-space-2) var(--pi-space-3);margin:var(--pi-space-4) 0 0}'),
     'Share-card metric groups keep shared spacing instead of one-off margins');
-assert.ok(css.includes('.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) 0;'),
+assert.ok(css.includes('.wpb-profile-card-metrics>div{min-width:0;padding:var(--pi-space-2) var(--pi-space-1);'),
     'Share-card metric rows keep the shared internal rhythm');
 assert.ok(css.includes('.wpb-profile-strength-grid>.wpb-profile-strength-cell{'),
     'Strength comparison cells still share one explicit active row layout');
@@ -891,7 +919,7 @@ assert.ok(jumpOwner.includes('.wpb-settings.wpb-settings>.wpb-settings-jump{') &
 assert.ok(jumpOwner.includes('border-radius:var(--pi-shape-action)!important;') &&
   jumpOwner.includes('.wpb-settings-jump-control select{'),
   'Settings category choice shares the action shape and 48px touch owner');
-assert.ok(css.includes('.wpb .wpb-settings-title{margin:var(--pi-space-4) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);') &&
+assert.ok(css.includes('.wpb .wpb-settings-title{margin:var(--pi-space-5) var(--pi-space-1) var(--pi-space-2);font-size:var(--pi-type-support);') &&
   css.includes('.wpb .wpb-settings-row-description{font-size:var(--pi-type-support);'),
   'Settings headings and descriptions keep a legible shared support type role');
 assert.ok(!css.includes('.wpb-settings .wpb-settings-jump{\n  padding-bottom:8px!important;') &&

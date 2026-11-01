@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { waitForRouteOrDiagnose, assertNavigationTapClear } from './browser-route-diagnostics.mjs';
 import { sessionPrescriptionRows, effortLabel, weeksOf, EXERCISES, generateNextProgramForShell } from '../modules/engine-api.js';
 
 // R54: screenshot and semantic-state contract for routes R53's paired primary
@@ -146,7 +147,7 @@ async function verifyProgramExerciseOptions(browser){
       await page.waitForSelector(opener);
       const training=()=>page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('wpb:v1'));return JSON.stringify({saved:s.saved,cycles:s.cycles,history:s.history,drafts:s.drafts,exNotes:s.exNotes,exSetup:s.exSetup});});
       const before=await training();
-      const open=async()=>{await page.$eval(opener,button=>{button.scrollIntoView({block:'center'});button.focus();button.click();});await page.waitForSelector(selector,{visible:true});};
+      const open=async()=>{await page.$eval(opener,button=>{button.scrollIntoView({block:'center'});button.focus();button.click();});await waitForRouteOrDiagnose(page, selector, {label:'r54 visible resume control',options:{visible:true}});};
       const click=async label=>page.$$eval('.wpb-exercise-options-sheet button',(buttons,label)=>{
         const button=buttons.find(node=>node.textContent.trim().startsWith(label));
         if(!button)throw new Error('Missing exercise action '+label);button.click();
@@ -366,7 +367,7 @@ async function verifyPinnedNoteTransactions(browser){
 
 async function assertResumeClear(page){
   const selector='.wpb-live-dock button[aria-label="Resume workout"]';
-  await page.waitForSelector(selector,{visible:true});
+  await waitForRouteOrDiagnose(page, selector, {label:'r54 visible resume control',options:{visible:true}});
   const target=await page.$eval(selector,button=>{
     const box=button.getBoundingClientRect();
     const top=document.elementFromPoint(box.left+box.width/2,box.top+box.height/2);
@@ -462,12 +463,13 @@ async function verifyNavigationFlow(browser,theme,width){
     await weight.click();await page.keyboard.down('Control');await page.keyboard.press('KeyA');await page.keyboard.up('Control');
     await page.keyboard.type('185');await page.keyboard.press('Tab');
     await page.evaluate(()=>history.back());await page.waitForSelector('.wpb-workout',{hidden:true});await assertPlan(3);
-    await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+    await waitForRouteOrDiagnose(page, '.wpb-live-dock button[aria-label="Resume workout"]', {label:'r54 resumed dock',errors});
     const minimized=await page.evaluate(()=>JSON.parse(localStorage.getItem('wpb:live')));
     assert.equal(minimized.weekIndex,3,'Minimizing does not replace the selected workout week');
     assert.equal(minimized.data[0].sets[0].weight,'185','Minimizing retains typed set values');
 
     // Resuming from a different tab should return to that tab, keeping the same live workout.
+    await assertNavigationTapClear(page, 'progress');
     await page.click('[data-tab="progress"]');
     await assertResumeClear(page);
     await page.click('.wpb-live-dock button[aria-label="Resume workout"]');await page.waitForSelector('.wpb-workout');
@@ -950,7 +952,7 @@ try{
     // geometry-protected by B825, R49 and the independent workout shard.
     await page.evaluate(live=>localStorage.setItem('wpb:live',JSON.stringify(live)),snapshot);
     await page.reload({waitUntil:'networkidle0'});
-    await page.waitForSelector('.wpb-live-dock button[aria-label="Resume workout"]');
+    await waitForRouteOrDiagnose(page, '.wpb-live-dock button[aria-label="Resume workout"]', {label:'r54 resumed dock',errors});
     await page.click('.wpb-live-dock button[aria-label="Resume workout"]');
     const workout=await audit('.wpb-workout');
     const inputs=await page.evaluate(()=>[...document.querySelectorAll(

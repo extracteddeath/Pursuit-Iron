@@ -3,7 +3,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo, useRef, useState } from 'react';
 import { Check, Copy, Layers } from 'lucide-react';
-import { UiAction, UiSheetClose } from './ui-primitives.js';
+import { UiAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { SPLITS, weeksOf, daysInWeek, sessionPrescriptionRows, effortLabel,
     percentagePlanFor, gallerySubmission, galleryIssueBody } from './engine-api.js';
@@ -71,7 +71,7 @@ export function ShareProgramSheet({ program, shareCode, weekIndex = 1, loadMode,
         'aria-labelledby': 'program-share-title', 'aria-describedby': 'program-share-scope', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         className: 'wpb-backdrop wpb-ui-sheet-backdrop wpb-ui-sheet-focus wpb-program-share-backdrop', children:
         _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-program-share-panel', onClick: event => event.stopPropagation(), children: [
-            _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-program-share-heading', children: [
+            _jsxs(UiSheetHeading, { as: 'header', className: 'wpb-ui-sheet-heading wpb-program-share-heading', children: [
                 _jsx('h2', { id: 'program-share-title', className: 'wpb-ui-sheet-title', children: 'Share program' }),
                 _jsx(UiSheetClose, { className: 'wpb-program-share-close', onClick: onClose })
             ] }),

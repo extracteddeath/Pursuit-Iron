@@ -590,9 +590,10 @@ try{
         },tab);
         const density=await measure();
         assert.ok(!density.overflow,'R57 destination must not overflow: '+JSON.stringify({tab,density}));
-        // M270 gives every root the same 26px title role; retain each
-        // destination's compact geometry and full-size action checks below.
-        assert.equal(density.titleSize,26,'Root destination uses the shared title size: '+JSON.stringify({tab,density}));
+        // The root title follows one responsive clamp(1.75rem,1.55rem + 1vw,2.125rem) role.
+        // Compare the computed value across destinations rather than pinning obsolete 26px.
+        const expectedRootTitle=Math.min(34,Math.max(28,24.8+density.viewport/100));
+        assert.ok(Math.abs(density.titleSize-expectedRootTitle)<.7,'Root destination uses the canonical responsive title: '+JSON.stringify({tab,density,expectedRootTitle}));
         if(tab==='plan'){
           assert.ok(density.row&&!density.back&&density.title&&density.title.top>=density.row.top,
             'Plan root has no Back action and keeps its title in the shared row: '+JSON.stringify(density));

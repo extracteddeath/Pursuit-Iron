@@ -115,7 +115,7 @@ try{
             };
           });
           assert.ok(hierarchy.opaque&&hierarchy.railBottom>=8&&hierarchy.jumpHeight>=48&&
-            hierarchy.selectHeight>=48&&Math.abs(hierarchy.jumpRadius-14)<1&&
+            hierarchy.selectHeight>=48&&Math.abs(hierarchy.jumpRadius-18)<1&&
             hierarchy.titleSize>=13&&hierarchy.descriptionSize>=13&&hierarchy.withinViewport&&
             hierarchy.nativeSelectNamed&&hierarchy.selectWidth>=130&&
             hierarchy.visibleLabelHidden===(width<=420),

@@ -4,6 +4,7 @@ import { History, ChevronRight, ChevronDown, TrendingUp, Trophy, Zap } from 'luc
 import { useId } from 'react';
 import { workoutTechniqueRest } from './workout-context.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
+import { UiAction, UiCard } from './ui-primitives.js';
 
 export function sessionLoadText(set, unit) {
     const w = set?.weight === "" || set?.weight == null ? null : Number(set.weight), reps = Number(set?.reps);
@@ -23,7 +24,7 @@ export function PlanChangeBanner({ review, onClick }) {
         : savedSets ? "Review saved program set changes"
         : workoutLoads ? "Review workout load choices" : "Review details";
     const count = review.changes.length;
-    return _jsxs("button", { type: "button", className: "wpb-plan-change-banner pressable", onClick, "aria-label": `Review ${count} plan adjustment${count === 1 ? '' : 's'}${held ? `, ${held} prior load${held === 1 ? '' : 's'} kept` : ''}`, children: [
+    return _jsxs(UiAction, { variant: "tonal", "data-emphasis": "accent", className: "wpb-plan-change-banner", onClick, "aria-label": `Review ${count} plan adjustment${count === 1 ? '' : 's'}${held ? `, ${held} prior load${held === 1 ? '' : 's'} kept` : ''}`, children: [
         _jsx("span", { className: "wpb-session-plan-icon", 'aria-hidden': true, children: _jsx(History, { size: 19 }) }),
         _jsxs("span", { children: [_jsx("strong", { children: `${count} plan adjustment${count === 1 ? '' : 's'}` }),
             _jsx("span", { children: summary })] }),
@@ -35,7 +36,7 @@ export function HomeSessionOutline({ review, expanded, onToggle }) {
     const listId = useId();
     if (!review?.exercises.length) return null;
     return _jsxs("section", { className: "wpb-home-session-outline", "aria-label": "Session outline", children: [
-        _jsxs("button", { type: "button", className: "wpb-home-outline-toggle pressable", onClick: onToggle,
+        _jsxs(UiAction, { variant: "text", className: "wpb-home-outline-toggle", onClick: onToggle,
             "aria-expanded": expanded, "aria-controls": listId,
             "aria-label": `${expanded ? 'Hide' : 'Show'} all ${review.exercises.length} session exercises`, children: [
                 _jsx("strong", { children: "Session outline" }),
@@ -56,7 +57,7 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
             + (row.protocol.type !== 'straight' ? 2 : 0) + (row.change.changed ? 1 : 0);
         return score(b) - score(a);
     }).slice(0, 3);
-    return _jsxs("section", { className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""),
+    return _jsxs(UiCard, { as: "section", className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""), tone: "featured",
         "aria-label": "Today's game plan", children: [
         _jsxs("h2", { className: "wpb-game-plan-heading", children: [_jsx(TrendingUp, { size: 19 }),
             _jsx("strong", { children: "Today's game plan" }),
@@ -126,7 +127,7 @@ export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose })
                         _jsx(ChevronRight, { size: 15, "aria-label": "to" }),
                         _jsx("strong", { children: sessionLoadText(change.undone ? change.undoTargets[i] : set, review.unit) })
                     ] }, i)) });
-                return _jsxs("section", { className: "wpb-plan-change-card", "data-plan-change": row.id,
+                return _jsxs(UiCard, { as: "section", className: "wpb-plan-change-card", "data-plan-change": row.id,
                     "data-kind": change.kind, "data-undone": change.undone, children: [
                     _jsxs("div", { className: "wpb-plan-change-title", children: [
                         _jsx("h3", { children: row.name }),
@@ -142,7 +143,7 @@ export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose })
                         change.setDelta && _jsx("p", { className: "wpb-plan-review-basis", children:
                             "Planned sets are compared with the most recent saved program revision, not completed sets." }),
                         !singleSet && targetDetails] }),
-                    change.canUndo ? _jsx("button", { type: "button", className: "wpb-plan-undo pressable", disabled: busy,
+                    change.canUndo ? _jsx(UiAction, { variant: "tonal", className: "wpb-plan-undo", disabled: busy,
                         "aria-label": `${change.undone ? 'Use recommended load for' : 'Keep previous load for'} ${row.name}`,
                         onClick: () => onChoice(review.programId, review.dayId, review.weekIndex, row.id,
                             !change.undone, review.sessionLengthPlan, row.slot),

@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { Check } from 'lucide-react';
 import { weeksOf, editableProgramWeeks, MAX_EDITABLE_PROGRAM_WEEKS, customProgramSettingsIssues } from './engine-api.js';
-import { UiAction, UiChoice, UiSheetClose } from './ui-primitives.js';
+import { UiAction, UiChoice, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const TARGET_OPTIONS = [
@@ -90,7 +90,7 @@ export function ProgramSettingsSheet({ program, draft: cfgDraft, setDraft: setCf
         children: _jsxs("div", {
             ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, onClick: e => e.stopPropagation(), className: "wpb-ui-sheet-panel wpb-program-settings-panel",
             children: [
-                _jsxs("div", { className: "wpb-ui-sheet-heading wpb-program-settings-heading", children: [
+                _jsxs(UiSheetHeading, { className: "wpb-ui-sheet-heading wpb-program-settings-heading", children: [
                     _jsx("h2", { id: "program-settings-title", className: "wpb-ui-sheet-title wpb-program-settings-title", children: "Program settings" }),
                     _jsx(UiSheetClose, { className: "wpb-program-settings-close", onClick: onClose })] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-program-settings-body wpb-ui-sheet-scroll', children: [

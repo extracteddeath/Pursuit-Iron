@@ -22,6 +22,7 @@ jobs:
           node android-native/engine-bridge/protocol-test.mjs
           node android-native/engine-bridge/workout-store-protocol-test.mjs
           node android-native/engine-bridge/native-onboarding-test.mjs
+          node android-native/engine-bridge/native-workout-test.mjs
           node android-native/engine-bridge/backup-schema-check-test.mjs
           node android-native/engine-bridge/sandbox-compat-test.mjs
       - name: Verify fixed language-neutral progression fixtures and Kotlin routing contracts

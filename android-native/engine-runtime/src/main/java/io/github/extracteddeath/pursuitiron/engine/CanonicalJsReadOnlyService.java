@@ -250,6 +250,7 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
             long timeoutSeconds) throws Exception {
         String method = request.getString("method");
         boolean store = "validateOwnedStore".equals(method) || "prepareWorkoutHistory".equals(method)
+                || "prepareNativeWorkout".equals(method) || "prepareIssuedWorkoutHistory".equals(method)
                 || "nativeProgramOptions".equals(method) || "prepareNativeProgram".equals(method)
                 || "inspectNativeProgram".equals(method);
         String entry = store ? "PursuitIronBridge.dispatchWorkoutStoreJson"
@@ -415,6 +416,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                             if ("validateOwnedStore".equals(validated.getString("method"))) {
                                 WorkoutStoreRuntimeCodec.INSTANCE.decodeValidation(response.toString(),
                                     validated.getString("id"), p.getString("rawSnapshot"));
+                            } else if ("prepareNativeWorkout".equals(validated.getString("method"))) {
+                                io.github.extracteddeath.pursuitiron.domain.NativeWorkoutCodec.INSTANCE.decodeWorkout(response.toString(),
+                                    validated.getString("id"),p.getString("rawSnapshot"),p.getString("startJson"));
                             } else if ("nativeProgramOptions".equals(validated.getString("method"))) {
                                 NativeProgramSetupCodec.INSTANCE.decodeOptions(response.toString(),validated.getString("id"));
                             } else if ("prepareNativeProgram".equals(validated.getString("method"))) {

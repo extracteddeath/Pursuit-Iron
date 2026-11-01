@@ -55,6 +55,9 @@ import io.github.extracteddeath.pursuitiron.domain.UnconnectedCurrentReadOnlyPla
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
+import io.github.extracteddeath.pursuitiron.domain.JournalSetSlot
+import io.github.extracteddeath.pursuitiron.domain.JournalSetDisposition
+import io.github.extracteddeath.pursuitiron.domain.JournalSetValues
 import androidx.compose.runtime.remember
 
 /** Navigation follows training tasks instead of mirroring React screens. */
@@ -78,7 +81,10 @@ internal fun NativePreviewApp(
     onboarding: NativeRuntimeState? = null,
     onReviewProgram: (NativeProgramProfile)->Unit = {},
     onSaveProgram: ()->Unit = {},
-    onEditProgram: ()->Unit = {}
+    onEditProgram: ()->Unit = {},
+    onStartWorkout: ()->Unit = {},
+    onRecordSet: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit = {_,_,_->},
+    onFinishWorkout: ()->Unit = {}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -180,7 +186,7 @@ internal fun NativePreviewApp(
                         Box(Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 760.dp)
-                                .fillMaxWidth().verticalScroll(rememberScrollState())
+                                .fillMaxWidth().imePadding().verticalScroll(rememberScrollState())
                                 .padding(horizontal = 16.dp, vertical = 18.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
@@ -191,8 +197,12 @@ internal fun NativePreviewApp(
                                     openPlan = { selectedTrainingDay = null; section = 2 },
                                     adjustSession = { sheet = 1 },
                                     savedProgram=onboarding?.saved,
+                                    workoutState=onboarding,
+                                    startWorkout=onStartWorkout,
                                     setupProgram={exploreDemo=false})
-                                NativeDestination.TRAIN -> TrainScreen(
+                                NativeDestination.TRAIN -> if(onboarding?.saved!=null && selectedTrainingDay==null)
+                                    NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout)
+                                else TrainScreen(
                                     openTools = { sheet = 3 },
                                     syntheticOutlineReader = syntheticOutlineReader,
                                     selectedDay = selectedTrainingDay,
@@ -211,7 +221,7 @@ internal fun NativePreviewApp(
                                 )
                                 NativeDestination.INSIGHTS -> InsightsScreen()
                             }
-                            ConnectionNotice(status,onboarding?.saved!=null)
+                            if(onboarding?.saved==null)ConnectionNotice(status,false)
                         }
                     }
                     }

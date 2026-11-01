@@ -15,7 +15,9 @@ Unblock APK production only in a deliberate later change, after the same
 native revision has end-to-end evidence for: onboarding -> program creation ->
 verified personal workout -> set logging -> interruption/resume -> workout
 completion -> saved history and correct next-workout/progression decisions.
-No current native implementation meets those conditions.
+The source implementation now covers the first standard working-set journey.
+Device acceptance and the remaining advanced-session behavior are still pending;
+the build freeze remains active.
 
 The instructions below describe how **older previously produced** artifacts
 could be installed. They do not authorize new builds before the release gate.
@@ -38,8 +40,33 @@ Alternatively, open `android-native/` in Android Studio, provision JDK 17, Andro
 - Phones use bottom navigation; wider screens use a navigation rail. Cards and motion are shared Compose primitives, not CSS.
 
 Native onboarding can prepare and explicitly save a new program through the
-packaged canonical engine. Other interactive examples remain local UI-only
-state; they do not log completed sets, modify web history or import backups.
+packaged canonical engine. Its saved program can start a real next workout,
+record working sets, resume and publish native training history. Other
+interactive examples remain local UI-only state. Web history and backup import
+are separate from this native store.
+
+## Engine-issued native working-set journey
+
+Today and Train now open the saved program's actual next day/week through
+`nextSessionCursor`, then use the web logger's `buildLifterModel`,
+`calibratedAnchorPerf`, `sessionSuggestion` and `prescribeSets` path. Exact
+issued rows, including decision traces, are atomically pinned with their source
+snapshot before the journal opens. Restart restores those bytes and committed
+observations; it never calculates replacement targets for the pending workout.
+
+Complete and Skip acknowledge journal writes. Blank load cannot become zero,
+and optional actual RIR starts empty rather than inheriting target RIR. Finish
+requires every working slot to be resolved, publishes canonical history before
+recovery cleanup, and preserves the targets actually issued alongside manual
+observations. A durably finished workout can retry after restart without a
+duplicate history entry; the next session uses the advanced canonical cursor.
+
+Warm-up targets are displayed as references. Advanced myo/drop sub-sets and
+one-shot deload consumption reject session creation instead of silently dropping
+engine instructions. These features, richer logging tools and device acceptance
+remain incomplete. The full-loop proof is currently actual-bundle Node/JVM
+integration plus Compose/source compilation. It does not certify an Android
+device, and no APK build is enabled by this change.
 
 ## Implementation boundaries
 
@@ -170,9 +197,8 @@ JS golden history result shared with Kotlin, including simultaneous finish
 attempts and crashes during cleanup. App-private Android writes explicitly
 sync and verify their committed bytes.
 
-The process runtime now instantiates this owner for native first-program
-creation. Authenticated session creation, live logging UI and device acceptance
-are still required before workout logging. APK generation remains frozen.
+The process runtime instantiates this owner for native first-program creation
+and engine-issued working-set sessions. APK generation remains frozen.
 
 ### Packaged canonical completion runtime
 
@@ -192,8 +218,8 @@ The source-only runtime workflow builds the actual pinned IIFE, runs Kotlin
 store/journal integration through that bundle in a restricted Node VM, and
 compiles the Android sandbox and instrumentation sources without an APK. That
 host proof covers lost commit acknowledgements, canonical history, retry and
-cancellation; it is not Android device certification. Workout logging remains
-disabled until the complete user flow and acceptance are finished.
+cancellation; it is not Android device certification. Native session execution
+is limited to the issued working-set flow described above.
 
 ### Native onboarding and first-program save
 
@@ -207,5 +233,5 @@ creation. Existing, corrupt or incompatible data is never replaced as fresh setu
 One Application-owned runtime survives Activity recreation and owns the pinned
 worker and store. Saved first-program identity is restored through canonical
 inspection; Plan reads current structure off the main thread. Late/cancelled
-generation results cannot replace a newer action. Workout session creation and
-logging are still disabled, and no new APK has been generated for this work.
+generation results cannot replace a newer action. The issued-session flow now
+adds working-set logging and completion; no new APK has been generated.

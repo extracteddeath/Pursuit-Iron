@@ -2,6 +2,22 @@
 
 This is a **transport boundary**, not an alternate engine. The browser and native shell must not implement progression formulas independently. The only authoritative calculation owner is `modules/engine-api.js`.
 
+## Current native store channel
+
+`dispatchWorkoutStoreJson` is separate from the older read-only diagnostics and
+backup metadata channels documented below. It supports owned-store validation,
+native program options/preparation/inspection, `prepareNativeWorkout` and
+canonical completion preparation. The new workout command accepts exact owned
+snapshot bytes plus an explicit program/workout/start identity, uses the
+canonical next-session cursor and web prescription path, and returns issued
+targets without writes. The native store must pin the returned issue before
+opening a journal. `prepareIssuedWorkoutHistory` accepts that retained issue
+alongside the origin/current snapshots and finished journal, preserving the
+original decision traces in canonical history. The legacy completion command
+still omits traces that were never issued. Neither channel writes storage or
+accepts executable code. Source snapshots are capped at 1 MiB and retained
+workout issues at 512 KiB. APK generation and device certification remain gated.
+
 The pure-JavaScript dispatcher in `protocol.mjs` supports an allowlisted handshake, canonical catalog identity probe and a read-only double-progression diagnostic proof. It does not open Android WebView, expose arbitrary module exports, read local storage, or issue workout prescriptions. It can be exercised in Node before implementing an Android JavaScript runtime.
 
 ## Transport

@@ -11,6 +11,7 @@ import {
   EX_BY_ID, mergeStores, weeksOf
 } from '../../modules/engine-api.js';
 import { matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
+import { issuedNativeWorkoutFrom } from './native-workout.mjs';
 
 const MAX_BYTES = 50 * 1024 * 1024;
 const MAX_REV = Number.MAX_SAFE_INTEGER;
@@ -85,7 +86,7 @@ function finishedJournal(raw) {
   return j;
 }
 
-function canonicalEntry(origin, journal, handoffSha256) {
+function canonicalEntry(origin, journal, handoffSha256, issued = null) {
   const s = journal.session, f = journal.finish;
   const program = origin.saved.find(p => p.id === s.reference.programId);
   ensure(program && integer(weeksOf(program), 1, 104) && s.weekIndex <= weeksOf(program));
@@ -94,12 +95,14 @@ function canonicalEntry(origin, journal, handoffSha256) {
   const day = days[0], slots = [];
   // Reuse the actual canonical runtime rows, including percentage-owned counts.
   // No Kotlin prescription, progression, summary or equipment formula lives here.
-  const rows = day.exercises.map((_, exerciseIndex) => {
+  const sources = issued?.rows || day.exercises.map((_, slot) => ({slot}));
+  const rows = sources.map(source => {
+    const exerciseIndex=source.slot;
     const currentId = exerciseAt(program, day, exerciseIndex, s.weekIndex);
     const ex = own(EX_BY_ID, currentId) ? EX_BY_ID[currentId] : null;
     ensure(ex); // Custom catalog installation is a separate, unverified feature.
-    const prescribed = prescribeSets(program, day, ex, exerciseIndex, s.weekIndex,
-      s.unit, null, {}, origin.perf, origin.history, false).filter(row => !row.warm && !row.sub);
+    const prescribed = (issued ? source.sets : prescribeSets(program, day, ex, exerciseIndex, s.weekIndex,
+      s.unit, null, {}, origin.perf, origin.history, false)).filter(row => !row.warm && !row.sub);
     ensure(prescribed.length >= 1 && prescribed.length <= 20);
     const sets = prescribed.map((target, setIndex) => {
       const slot = {exerciseIndex, setIndex, exerciseId: currentId};
@@ -116,7 +119,8 @@ function canonicalEntry(origin, journal, handoffSha256) {
       // Only the base bounds/count are re-resolved here. A retrospective
       // target calculation is NOT evidence of a suggestion actually shown
       // at workout start; never fabricate a historical decision trace.
-      const {decisionTrace: _unissuedTrace, ...targetMetadata} = target.target;
+      const {decisionTrace: _unissuedTrace, ...baseTarget} = target.target;
+      const targetMetadata = issued ? target.target : baseTarget;
       return {...target, target:targetMetadata,
         weight:values.load, reps:String(values.reps), done:true,
         auto:false, valueOwner:'user', actualRIR:values.rir};
@@ -150,17 +154,20 @@ function canonicalEntry(origin, journal, handoffSha256) {
  * An identical already-published record is acknowledged without another merge.
  * Deleted/corrected/conflicting identities are NEVER overwritten or resurrected.
  */
-export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw) {
+export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw, issuedRaw = null) {
   try {
     const journal = finishedJournal(handoffRaw);
     ensure(matchesCurrentReadOnlyProgram(originRaw, journal.session.reference));
     const origin = storeFrom(originRaw), current = storeFrom(currentRaw);
+    const issued = issuedRaw===null ? null : issuedNativeWorkoutFrom(originRaw,issuedRaw);
+    if(issued) ensure(equalJson(issued.plan.session,journal.session) && equalJson(issued.slots,journal.slots));
     // JSON whitespace/property order must not change idempotency identity.
-    const semanticHandoff = JSON.stringify(journal, (_key, value) => object(value)
+    const identity=issued ? {journal,issuedWorkoutSha256:sha(issuedRaw)} : journal;
+    const semanticHandoff = JSON.stringify(identity, (_key, value) => object(value)
       ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value);
     // Canonical helpers use optional undefined fields. Compare exactly what
     // survives a real JSON store round-trip, rather than in-memory optionals.
-    const entry = JSON.parse(JSON.stringify(canonicalEntry(origin, journal, sha(semanticHandoff))));
+    const entry = JSON.parse(JSON.stringify(canonicalEntry(origin, journal, sha(semanticHandoff),issued?.plan)));
     const existing = current.history.filter(h => h.id === entry.id);
     ensure(!own(current.tombs, entry.id));
     let candidateRaw;

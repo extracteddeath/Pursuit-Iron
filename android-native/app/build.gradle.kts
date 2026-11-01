@@ -26,7 +26,7 @@ android {
 }
 dependencies {
     implementation(project(":domain-contract"))
-    // Read-only metadata gateway only; training UI still uses UnconnectedEngineGateway.
+    // Verified pure canonical runtime; NativeRuntimeHost owns session persistence.
     implementation(project(":engine-runtime"))
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.activity:activity-compose:1.11.0")

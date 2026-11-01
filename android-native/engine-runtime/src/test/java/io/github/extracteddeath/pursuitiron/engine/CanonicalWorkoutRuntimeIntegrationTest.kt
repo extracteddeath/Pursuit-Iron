@@ -133,6 +133,85 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun realNativeJourneyPinsTargetsResumesLoggedSetsAndCompletesExactlyOnce() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="End to end native",unit="kg"),"create-journey","program-journey",1000,223)))
+            val drive=Drive();val recovery=Drive()
+            var store=CanonicalWorkoutStorePersistence(drive,engine)
+            var journal=WorkoutJournalPersistence(recovery)
+            assertTrue(store.initialize(proposal.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(proposal.snapshot,
+                NativeWorkoutCodec.startJson("program-journey","workout-journey",2000)))
+            assertEquals("kg",plan.session.unit);assertEquals(1,plan.session.weekIndex)
+            // Crash between pinning the issued targets and creating the journal.
+            drive.failAfterWrite=true
+            assertTrue(runCatching { store.beginIssuedSession(plan,journal) }.isFailure)
+            assertNull(journal.recover());drive.failAfterWrite=false
+            store=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            var progress=checkNotNull(store.recoverIssuedSession(journal))
+            assertEquals(plan.issuedJson,progress.plan.issuedJson)
+            assertEquals(plan.slots,progress.journal.slots)
+            val competing=checkNotNull(engine.prepareWorkout(proposal.snapshot,
+                NativeWorkoutCodec.startJson("program-journey","workout-competitor",3000)))
+            assertNull(store.beginIssuedSession(competing,journal))
+            for((index,slot) in plan.slots.withIndex()) {
+                val skipped=index==1
+                val values=if(skipped)null else JournalSetValues("40",plan.session.unit,6,if(index%2==0)2 else null)
+                val intent=JournalSetIntent("journey-set-$index",slot,
+                    if(skipped)JournalSetDisposition.SKIPPED else JournalSetDisposition.COMPLETED,values)
+                // Lost acknowledgement must recover one saved observation, not
+                // invent a second set or change an engine-issued target.
+                if(index==0) {
+                    recovery.failAfterWrite=true
+                    assertTrue(runCatching { journal.recordSet(plan.session,progress.journal.revision,intent) }.isFailure)
+                    recovery.failAfterWrite=false
+                    store=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+                    progress=checkNotNull(store.recoverIssuedSession(journal))
+                } else progress=NativeWorkoutProgress(progress.plan,checkNotNull(journal.recordSet(
+                    plan.session,progress.journal.revision,intent)))
+                assertEquals(index+1,progress.journal.completed.size)
+                assertEquals(plan.issuedJson,progress.plan.issuedJson)
+            }
+            assertEquals(0,progress.journal.unresolvedCount)
+            assertEquals(proposal.snapshot,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("journey-finish",62000,60000)))
+            // Canonical history lands before journal removal, even if its ack is lost.
+            drive.failAfterWrite=true
+            assertTrue(runCatching { store.complete(plan.session,finished.revision,journal) }.isFailure)
+            assertTrue(checkNotNull(journal.recover()).isFinished);drive.failAfterWrite=false
+            store=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            assertTrue(checkNotNull(store.recoverIssuedSession(journal)).journal.isFinished)
+            assertTrue(checkNotNull(store.complete(plan.session,finished.revision,journal)).recoveryCleared)
+            assertNull(store.recoverIssuedSession(journal));assertNull(journal.recover())
+            val snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val history=JSONObject(snapshot).getJSONArray("history");assertEquals(1,history.length())
+            val recorded=history.getJSONObject(0).getJSONObject("perf").getJSONObject(plan.exercises.first().id).getJSONArray("sets")
+            assertEquals(0,recorded.getJSONObject(0).getInt("workingSetIndex"))
+            if(recorded.length()>1)assertEquals(2,recorded.getJSONObject(1).getInt("workingSetIndex"))
+            val trace=recorded.getJSONObject(0).getJSONObject("decisionTrace")
+            assertEquals("user",trace.getJSONObject("applied").getString("owner"))
+            assertEquals(40,trace.getJSONObject("applied").getInt("load"))
+            val issued=JSONObject(plan.issuedJson).getJSONArray("rows").getJSONObject(0).getJSONArray("sets")
+            val original=(0 until issued.length()).map { issued.getJSONObject(it) }.first { !it.getBoolean("warm") }
+                .getJSONObject("target").getJSONObject("decisionTrace")
+            assertEquals(original.getJSONObject("evaluation").toString(),trace.getJSONObject("evaluation").toString())
+            assertEquals(original.getJSONObject("target").toString(),trace.getJSONObject("target").toString())
+            val writes=drive.writes
+            assertNotNull(store.complete(plan.session,finished.revision,journal));assertEquals(writes,drive.writes)
+            val next=checkNotNull(engine.prepareWorkout(snapshot,
+                NativeWorkoutCodec.startJson("program-journey","workout-next",63000)))
+            assertNotEquals(plan.session.dayId,next.session.dayId)
+            assertEquals(1,next.session.weekIndex)
+            assertNotEquals(plan.session.programRevision.snapshotSha256,next.session.programRevision.snapshotSha256)
+            assertNotNull(store.beginIssuedSession(next,journal))
+            assertEquals("workout-next",checkNotNull(store.recoverIssuedSession(journal)).plan.session.workoutId)
+            assertEquals("program-journey",checkNotNull(engine.inspectProgram(snapshot)).program.id)
+        } }
+    }
+
     @Test(timeout=60000) fun cancelledRuntimeResponseCannotPublishHistoryAndExactRetryStillWorks() {
         NodeTransport().use { node -> runBlocking {
             val delayed=CompletableDeferred<String>()

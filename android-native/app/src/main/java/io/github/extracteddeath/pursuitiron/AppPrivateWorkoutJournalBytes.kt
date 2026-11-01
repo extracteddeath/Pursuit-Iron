@@ -13,7 +13,7 @@ import java.io.IOException
  * App-owned, no-backup crash recovery staging area. Do NOT treat this as
  * canonical v13 history or use it as a source for saved program projection.
  * A SINGLE owner per app process must serialize operations through its
- * WorkoutJournalPersistence instance. Not wired to live Train until parity.
+ * WorkoutJournalPersistence instance. NativeRuntimeHost owns that instance.
  */
 internal class AppPrivateWorkoutJournalBytes(context: Context) : WorkoutJournalBytes {
     // Keep the same path: an unsupported old journal is preserved and rejected,

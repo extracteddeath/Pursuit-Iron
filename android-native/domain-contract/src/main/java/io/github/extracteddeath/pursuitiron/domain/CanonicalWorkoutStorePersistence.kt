@@ -39,8 +39,8 @@ data class CanonicalWorkoutCompletionOutcome(
  * Atomic canonical snapshot + pinned workout origin + history acknowledgement.
  * Canonical JS owns validation, prescriptions, history and merge policy. This
  * owner only binds exact inputs, serializes writes and orders crash recovery.
- * All I/O must run off the UI thread, with ONE owner per process. Not wired to
- * backup selection or real workout logging before runtime certification.
+ * All I/O runs off the UI thread, with ONE owner per process. Native execution
+ * uses pinned issued targets; backup selection never acquires this owner.
  */
 class CanonicalWorkoutStorePersistence(
     private val bytes: CanonicalWorkoutStoreBytes,
@@ -51,7 +51,7 @@ class CanonicalWorkoutStorePersistence(
         private const val MAX_SNAPSHOT_BYTES = ReadOnlyBackupLimits.MAX_SOURCE_BYTES
     }
     private data class Pending(val session: JournalSessionKey, val origin: String,
-        val startRevision: Long, val slots: List<JournalSetSlot>)
+        val startRevision: Long, val slots: List<JournalSetSlot>,val issuedWorkout: String?=null)
     private data class State(val snapshot: String, val pending: Pending?,
         val receipt: CanonicalWorkoutHistoryReceipt?)
     private val guard=Any()
@@ -128,7 +128,8 @@ class CanonicalWorkoutStorePersistence(
         val pending=state.pending?.let { p -> JSONObject().put("session",sessionJson(p.session))
             .put("origin",p.origin).put("startRevision",p.startRevision)
             .put("slots",JSONArray().apply { p.slots.forEach { s -> put(JSONObject()
-                .put("exerciseIndex",s.exerciseIndex).put("setIndex",s.setIndex).put("exerciseId",s.exerciseId)) } }) }
+                .put("exerciseIndex",s.exerciseIndex).put("setIndex",s.setIndex).put("exerciseId",s.exerciseId)) } })
+            .apply { if(p.issuedWorkout!=null)put("issuedWorkout",p.issuedWorkout) } }
             ?: JSONObject.NULL
         val payload=JSONObject().put("snapshot",state.snapshot).put("pending",pending)
             .put("receipt",receiptJson(state.receipt)).toString()
@@ -156,7 +157,9 @@ class CanonicalWorkoutStorePersistence(
             val receipt=if (data.isNull("receipt")) null else readReceipt(data.getJSONObject("receipt"))
             require(receipt==null || receipt.savedSnapshotSha256==sha(snapshot))
             val pending=if (data.isNull("pending")) null else {
-                val p=data.getJSONObject("pending"); exact(p,"session","origin","startRevision","slots")
+                val p=data.getJSONObject("pending")
+                if(p.has("issuedWorkout"))exact(p,"session","origin","startRevision","slots","issuedWorkout")
+                else exact(p,"session","origin","startRevision","slots")
                 val s=readSession(p.getJSONObject("session"))
                 val origin=boundedSnapshot(text(p,"origin"))
                 require(sha(origin)==s.programRevision.snapshotSha256)
@@ -170,7 +173,12 @@ class CanonicalWorkoutStorePersistence(
                 val revision=number(p,"startRevision")
                 requireNotNull(WorkoutJournalPolicy.open(s,slots,revision))
                 require(receipt?.session==s || snapshot==origin)
-                Pending(s,origin,revision,slots)
+                val issued=if(p.has("issuedWorkout"))text(p,"issuedWorkout") else null
+                if(issued!=null) {
+                    val plan=NativeWorkoutCodec.readIssued(issued)
+                    require(plan.session==s && plan.slots==slots)
+                }
+                Pending(s,origin,revision,slots,issued)
             }
             return State(snapshot,pending,receipt)
         } finally { raw.fill(0) }
@@ -200,20 +208,50 @@ class CanonicalWorkoutStorePersistence(
 
     /** Pin origin before starting the journal; retries cannot replace another workout. */
     fun beginSession(session: JournalSessionKey, slots: List<JournalSetSlot>, revision: Long,
-        journal: WorkoutJournalPersistence): WorkoutJournalState? {
+        journal: WorkoutJournalPersistence): WorkoutJournalState? = beginPinned(session,slots,revision,journal,null)
+
+    /** Pin the exact issued targets alongside their origin BEFORE opening logging. */
+    fun beginIssuedSession(plan: NativeWorkoutPlan,journal: WorkoutJournalPersistence): NativeWorkoutProgress? =
+        beginPinned(plan.session,plan.slots,0,journal,plan.issuedJson)?.let { NativeWorkoutProgress(plan,it) }
+
+    private fun beginPinned(session: JournalSessionKey, slots: List<JournalSetSlot>, revision: Long,
+        journal: WorkoutJournalPersistence,issued: String?): WorkoutJournalState? {
         val proposed=WorkoutJournalPolicy.open(session,slots,revision) ?: return null
         val pinned=synchronized(guard) {
             val current=read() ?: return@synchronized false
             val old=current.pending
             if (old!=null) return@synchronized old.session==session && old.slots==proposed.slots &&
-                old.startRevision==revision
+                old.startRevision==revision && old.issuedWorkout==issued
             if (sha(current.snapshot)!=session.programRevision.snapshotSha256 ||
                 journal.recover()!=null || current.receipt?.session?.workoutId==session.workoutId)
                 return@synchronized false
-            save(current.copy(pending=Pending(session,current.snapshot,revision,proposed.slots))); true
+            save(current.copy(pending=Pending(session,current.snapshot,revision,proposed.slots,issued))); true
         }
         return if (pinned) journal.begin(session,proposed.slots,revision) else null
     }
+
+    /** Restores issued bytes, never fresh prescriptions, including an interrupted begin. */
+    fun recoverIssuedSession(journal: WorkoutJournalPersistence): NativeWorkoutProgress? = synchronized(guard) {
+        val current=read()
+        val pending=current?.pending
+        if(pending==null) {
+            require(journal.recover()==null) { "Unattached workout journal preserved" }
+            return@synchronized null
+        }
+        val plan=NativeWorkoutCodec.readIssued(requireNotNull(pending.issuedWorkout))
+        require(plan.session==pending.session && plan.slots==pending.slots)
+        val existing=journal.recover()
+        val receipt=checkNotNull(current).receipt
+        if(existing==null && receipt?.session==pending.session) {
+            checkNotNull(retire(receipt,journal))
+            return@synchronized null
+        }
+        val restored=checkNotNull(journal.begin(pending.session,pending.slots,pending.startRevision))
+        require(restored.session==plan.session && restored.slots==plan.slots)
+        NativeWorkoutProgress(plan,restored)
+    }
+
+    fun lastCompletionReceipt(): CanonicalWorkoutHistoryReceipt? = synchronized(guard) { read()?.receipt }
 
     private fun equivalent(a: Any, b: Any, depth: Int=0): Boolean {
         require(depth<=64)
@@ -292,7 +330,9 @@ class CanonicalWorkoutStorePersistence(
         if (pending.session!=session || recovered.session!=session || recovered.revision!=revision ||
             !recovered.isFinished || recovered.slots!=pending.slots) return null
         val handoff=journal.finishedHandoff(session,revision) ?: return null
-        val raw=engine.prepareCompletion(pending.origin,initial.snapshot,handoff) ?: return null
+        val raw=if(pending.issuedWorkout==null)engine.prepareCompletion(pending.origin,initial.snapshot,handoff)
+            else (engine as? NativeWorkoutEngine)?.prepareIssuedCompletion(pending.origin,initial.snapshot,handoff,pending.issuedWorkout)
+        if(raw==null)return null
         val (candidate,proposed)=checkPreparation(raw,initial,recovered,handoff)
         var canonicalChanged=false
         val receipt=try { synchronized(guard) {

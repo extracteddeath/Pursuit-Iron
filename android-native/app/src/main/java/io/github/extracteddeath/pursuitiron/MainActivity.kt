@@ -42,7 +42,10 @@ class MainActivity : ComponentActivity() {
                     onboarding=state,
                     onReviewProgram=runtime::review,
                     onSaveProgram=runtime::save,
-                    onEditProgram=runtime::edit
+                    onEditProgram=runtime::edit,
+                    onStartWorkout=runtime::startWorkout,
+                    onRecordSet=runtime::recordSet,
+                    onFinishWorkout=runtime::finishWorkout
                 )
             }
         }

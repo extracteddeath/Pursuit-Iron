@@ -45,15 +45,23 @@ internal fun TodayScreen(
     openPlan: () -> Unit,
     adjustSession: () -> Unit,
     savedProgram: NativeSavedProgram? = null,
+    workoutState: NativeRuntimeState? = null,
+    startWorkout: () -> Unit = {},
     setupProgram: () -> Unit = {}
 ) {
     if(savedProgram!=null) {
-        PageHeading("YOUR TRAINING","Your program is ready",savedProgram.program.name)
+        PageHeading("YOUR TRAINING",if(workoutState?.workout!=null)"Your workout is waiting" else "Your program is ready",savedProgram.program.name)
         PursuitCard(highlighted=true) {
             Text("${savedProgram.program.days.size} days per week",style=MaterialTheme.typography.headlineSmall)
             Text("${savedProgram.program.weeks}-week starting block · ${savedProgram.profile.unit}")
             Button(onClick=openPlan,modifier=Modifier.fillMaxWidth()){Text("View your program")}
-            Text("Workout logging is unavailable in this preview.",style=MaterialTheme.typography.bodySmall)
+            if(workoutState?.completion!=null)Text("Your last workout is saved in your training history.")
+            Button(onClick={if(workoutState?.workout==null)startWorkout();openTrain()},
+                enabled=workoutState?.ready==true && !workoutState.workoutBusy && !workoutState.workoutBlocked,
+                modifier=Modifier.fillMaxWidth()) {
+                Text(if(workoutState?.workoutBusy==true)"Opening workout…" else if(workoutState?.workout!=null)"Resume workout" else "Start next workout")
+            }
+            workoutState?.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         }
         return
     }

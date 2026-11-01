@@ -3,6 +3,7 @@ import { canonicalBackupSchemaCheck } from './backup-schema-check.mjs';
 import { prepareCanonicalWorkoutHistory } from './workout-history-completion.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
+import { prepareNativeWorkout,MAX_ISSUED_WORKOUT_BYTES } from './native-workout.mjs';
 
 export const WORKOUT_STORE_LIMITS=Object.freeze({
   snapshotBytes:1024*1024,journalBytes:256*1024,
@@ -28,7 +29,11 @@ export function dispatchWorkoutStoreJson(json) {
     if (request.protocolVersion!==1) return error(id,'UNSUPPORTED_VERSION');
     const p=request.params;
     let result;
-    if (request.method==='nativeProgramOptions') {
+    if (request.method==='prepareNativeWorkout') {
+      if(!exact(p,['rawSnapshot','startJson']) || !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+        !bounded(p.startJson,16384))return error(id,'INVALID_REQUEST');
+      result=prepareNativeWorkout(p.rawSnapshot,p.startJson);
+    } else if (request.method==='nativeProgramOptions') {
       if (!exact(p,[])) return error(id,'INVALID_REQUEST');
       result=nativeProgramOptions();
     } else if (request.method==='prepareNativeProgram') {
@@ -44,13 +49,15 @@ export function dispatchWorkoutStoreJson(json) {
       canonicalBackupSchemaCheck(p); // canonical v13 parser; no Kotlin schema replica
       result={source:'modules/engine-api.js:parseStoredData',validated:true,
         storeVersion:13,snapshotSha256:sha256Utf8(p.rawSnapshot),approvedForWorkoutExecution:false};
-    } else if (request.method==='prepareWorkoutHistory') {
-      if (!exact(p,['originSnapshot','currentSnapshot','finishedJournal']) ||
+    } else if (request.method==='prepareWorkoutHistory' || request.method==='prepareIssuedWorkoutHistory') {
+      const issued=request.method==='prepareIssuedWorkoutHistory';
+      if (!exact(p,['originSnapshot','currentSnapshot','finishedJournal',...(issued?['issuedWorkout']:[])]) ||
           !bounded(p.originSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
           !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
-          !bounded(p.finishedJournal,WORKOUT_STORE_LIMITS.journalBytes))
+          !bounded(p.finishedJournal,WORKOUT_STORE_LIMITS.journalBytes) ||
+          issued && !bounded(p.issuedWorkout,MAX_ISSUED_WORKOUT_BYTES))
         return error(id,'INVALID_REQUEST');
-      result=prepareCanonicalWorkoutHistory(p.originSnapshot,p.currentSnapshot,p.finishedJournal);
+      result=prepareCanonicalWorkoutHistory(p.originSnapshot,p.currentSnapshot,p.finishedJournal,issued?p.issuedWorkout:null);
       if (!bounded(result.candidateSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes))
         return error(id,'PREPARATION_REJECTED');
     } else return error(id,'UNKNOWN_METHOD');

@@ -156,6 +156,17 @@ assert.equal(created.result.program.program.id,'bundle-program');
 assert.equal(created.result.setupSha256,crypto.createHash('sha256').update(setupJson).digest('hex'));
 assert.equal(JSON.parse(bridge.dispatchBackupSchemaJson(creationRequest)).ok,false);
 
+const startJson=JSON.stringify({programId:'bundle-program',workoutId:'bundle-workout',startedAt:2000});
+const startRequest=JSON.stringify({protocolVersion:1,id:'bundle-workout-start',method:'prepareNativeWorkout',
+  params:{rawSnapshot:created.result.snapshot,startJson}});
+const issued=JSON.parse(bridge.dispatchWorkoutStoreJson(startRequest));
+assert.equal(issued.ok,true,'Packaged IIFE must issue a real next workout');
+assert.equal(issued.result.session.reference.snapshotSha256,created.result.snapshotSha256);
+assert.equal(issued.result.session.weekIndex,1);
+assert.ok(issued.result.rows.length>0 && issued.result.rows.every(row=>row.sets.some(set=>!set.warm)));
+assert.equal(JSON.parse(bridge.dispatchBackupSchemaJson(startRequest)).ok,false);
+assert.equal(JSON.parse(bridge.dispatchEngineJson(startRequest)).ok,false);
+
 const sha256 = crypto.createHash('sha256').update(raw).digest('hex');
 console.log(JSON.stringify({
   bundleVerified: true,

@@ -60,14 +60,18 @@ object WorkoutStoreRuntimeCodec {
         require(integer(request,"protocolVersion")==1L && identifier.matches(text(request,"id")))
         val p=request.getJSONObject("params")
         when (text(request,"method")) {
+            "prepareNativeWorkout" -> { exact(p,"rawSnapshot","startJson");bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES);bounded(text(p,"startJson"),16384) }
             "nativeProgramOptions" -> exact(p)
             "prepareNativeProgram" -> { exact(p,"setupJson");bounded(text(p,"setupJson"),16384) }
             "inspectNativeProgram" -> { exact(p,"rawSnapshot");bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES) }
             "validateOwnedStore" -> {
                 exact(p,"rawSnapshot");bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES)
             }
-            "prepareWorkoutHistory" -> {
-                exact(p,"originSnapshot","currentSnapshot","finishedJournal")
+            "prepareWorkoutHistory", "prepareIssuedWorkoutHistory" -> {
+                if(text(request,"method")=="prepareIssuedWorkoutHistory") {
+                    exact(p,"originSnapshot","currentSnapshot","finishedJournal","issuedWorkout")
+                    bounded(text(p,"issuedWorkout"),NativeWorkoutCodec.MAX_ISSUED_BYTES)
+                } else exact(p,"originSnapshot","currentSnapshot","finishedJournal")
                 bounded(text(p,"originSnapshot"),MAX_SNAPSHOT_BYTES)
                 bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES)
                 bounded(text(p,"finishedJournal"),MAX_JOURNAL_BYTES)

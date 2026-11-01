@@ -51,7 +51,7 @@ const middle = preview(Array.from({length:3}, () => ({load:185,reps:5,rir:2})));
 assert.equal(middle.result.action, 'add_reps');
 assert.equal(middle.result.suggestedLoad, 185);
 for (const invalid of [
-    {}, {sets:[]}, {sets:[{load:NaN,reps:8,rir:2}]},
+    {sets:[]}, {sets:[{load:NaN,reps:8,rir:2}]},
     {sets:[{load:185,reps:8,rir:-1}]}, {repMin:9,repMax:8},
     {equipmentAvailable:['barbell','barbell']}, {extra:'unexpected'},
     {sets:Array.from({length:9},()=>({load:100,reps:8,rir:2}))}

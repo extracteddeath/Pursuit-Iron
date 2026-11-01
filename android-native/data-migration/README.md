@@ -87,3 +87,18 @@ authorize the program presentation gate or any workout action. Future work
 must certify a read-only canonical parser on device, consent, safe source
 lifetimes and current revision/tombstone verification before showing user
 programs; do not implement an independent Kotlin merge.
+
+## Future raw byte provenance gate (unconnected)
+
+`ReadOnlyBackupSourceGate.exactText` is a pure Kotlin helper that can
+compare a second in-memory copy against the *original* user-selected
+`UnverifiedBackupFingerprint` before submitting it to the canonical JS
+schema probe. It checks exact byte count and SHA-256, enforces a 128-KiB
+small-source proof cap and 65,536-character transport cap, rejects
+malformed UTF-8 instead of silently replacing bytes, and refuses UTF-8 BOM.
+No backup is opened by this helper, and there is no app call site yet.
+
+A matching fingerprint is only evidence that two copies agree; it is
+not source authentication or user consent for data import. The file picker
+still closes the original copy after fingerprinting, so later integration
+must explicitly design a safe source lifetime and clear user intent.

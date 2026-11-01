@@ -23,8 +23,11 @@ jobs:
         run: node android-native/data-migration/inspect-backup-test.mjs
       - name: Validate canonical backup parser without writing data
         run: node android-native/data-migration/validate-canonical-backup-test.mjs
-      - name: Verify native scaffold does not alter canonical engine
+      - name: Ensure feature-first contract preserves all capabilities and gates
+        run: node android-native/verification/feature-contract-test.mjs
+      - name: Verify native preview cannot run without canonical engine
         run: |
           test -f modules/engine-api.js
           test -f android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/EngineGateway.kt
           grep -q 'UnconnectedEngineGateway' android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativePreviewApp.kt
+          grep -q 'Complete set · engine not connected' android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeScreens.kt

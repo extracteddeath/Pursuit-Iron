@@ -3,272 +3,249 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.EngineStatus
+import io.github.extracteddeath.pursuitiron.domain.FeatureArea
+import io.github.extracteddeath.pursuitiron.domain.FeatureCatalog
 import io.github.extracteddeath.pursuitiron.domain.UnconnectedEngineGateway
 
-private enum class PreviewTab(val title: String, val icon: ImageVector) {
-    Home("Today", Icons.Outlined.Home),
-    Plan("Plan", Icons.Outlined.EventNote),
-    Workout("Workout", Icons.Outlined.FitnessCenter),
-    Progress("Progress", Icons.Outlined.BarChart)
+/** Navigation follows training tasks instead of mirroring React screens. */
+private enum class NativeDestination(val title: String, val icon: ImageVector) {
+    TODAY("Today", Icons.Outlined.Home),
+    TRAIN("Train", Icons.Outlined.FitnessCenter),
+    PLAN("Plan", Icons.Outlined.EventNote),
+    INSIGHTS("Insights", Icons.Outlined.BarChart)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NativePreviewApp() {
-    var tabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var section by rememberSaveable { mutableIntStateOf(0) }
+    var sheet by rememberSaveable { mutableIntStateOf(0) }
+    var readiness by rememberSaveable { mutableStateOf("Normal") }
+    var length by rememberSaveable { mutableIntStateOf(0) }
+    var injuryFlag by rememberSaveable { mutableStateOf(false) }
     val status = UnconnectedEngineGateway().status
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                        Text("Pursuit Iron", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("NATIVE DESIGN PREVIEW", style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    BoxWithConstraints {
+        val expanded = maxWidth >= 840.dp
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Pursuit Iron", style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold)
+                            Text("NATIVE EXPERIENCE PREVIEW",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { sheet = 2 }) {
+                            Icon(Icons.Outlined.Apps, contentDescription = "Explore retained features")
+                        }
+                    }
+                )
+            },
+            bottomBar = {
+                if (!expanded) NavigationBar {
+                    NativeDestination.entries.forEachIndexed { index, destination ->
+                        NavigationBarItem(
+                            selected = section == index,
+                            onClick = { section = index },
+                            icon = { Icon(destination.icon, contentDescription = null) },
+                            label = { Text(destination.title) },
+                            alwaysShowLabel = true
+                        )
                     }
                 }
-            )
-        },
-        bottomBar = {
-            NavigationBar {
-                PreviewTab.entries.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = tabIndex == index,
-                        onClick = { tabIndex = index },
-                        icon = { Icon(tab.icon, contentDescription = null) },
-                        label = { Text(tab.title) },
-                        alwaysShowLabel = true
-                    )
+            }
+        ) { padding ->
+            Row(Modifier.fillMaxSize().padding(padding)) {
+                if (expanded) NavigationRail {
+                    NativeDestination.entries.forEachIndexed { index, destination ->
+                        NavigationRailItem(
+                            selected = section == index,
+                            onClick = { section = index },
+                            icon = { Icon(destination.icon, contentDescription = null) },
+                            label = { Text(destination.title) },
+                            alwaysShowLabel = true
+                        )
+                    }
+                }
+                Crossfade(
+                    targetState = section, animationSpec = tween(220),
+                    modifier = Modifier.weight(1f), label = "training destination"
+                ) { current ->
+                    Box(Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 760.dp)
+                                .fillMaxWidth().verticalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 18.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            when (NativeDestination.entries[current]) {
+                                NativeDestination.TODAY -> TodayScreen(
+                                    readiness, length, injuryFlag,
+                                    openTrain = { section = 1 }, openPlan = { section = 2 },
+                                    adjustSession = { sheet = 1 })
+                                NativeDestination.TRAIN -> TrainScreen(openTools = { sheet = 3 })
+                                NativeDestination.PLAN -> PlanScreen()
+                                NativeDestination.INSIGHTS -> InsightsScreen()
+                            }
+                            ConnectionNotice(status)
+                        }
+                    }
                 }
             }
         }
-    ) { contentPadding ->
-        Crossfade(targetState = tabIndex, animationSpec = tween(240), label = "preview navigation") { index ->
+        if (sheet != 0) ModalBottomSheet(onDismissRequest = { sheet = 0 }) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(contentPadding)
-                    .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                when (PreviewTab.entries[index]) {
-                    PreviewTab.Home -> HomePreview(onPlan = { tabIndex = 1 }, onWorkout = { tabIndex = 2 })
-                    PreviewTab.Plan -> PlanPreview()
-                    PreviewTab.Workout -> WorkoutPreview()
-                    PreviewTab.Progress -> ProgressPreview()
+                when (sheet) {
+                    1 -> SessionAdjustmentSheet(
+                        readiness, length, injuryFlag,
+                        chooseReadiness = { readiness = it },
+                        chooseLength = { length = it },
+                        toggleInjury = { injuryFlag = it })
+                    2 -> FeatureOverviewSheet()
+                    3 -> ExerciseActionsSheet()
                 }
-                BridgeStatus(status)
-                Spacer(Modifier.height(12.dp))
+                FilledTonalButton(onClick = { sheet = 0 }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Done")
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PreviewBadge(label: String) {
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-    ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelSmall
-        )
-    }
-}
-
-@Composable
-private fun PreviewHeading(eyebrow: String, title: String, subtitle: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary)
-        Text(title, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium,
+private fun ConnectionNotice(status: EngineStatus) {
+    PursuitCard {
+        Text("Preview safety", style = MaterialTheme.typography.titleSmall)
+        Text(if (status is EngineStatus.NotConnected)
+            "Canonical training engine not connected. No program is generated and no workout data is saved."
+            else "Training engine unavailable. Real workout actions remain disabled.",
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun HomePreview(onPlan: () -> Unit, onWorkout: () -> Unit) {
-    PreviewHeading("Today · design preview", "Your training, reimagined",
-        "Explore a native Material 3 layout. No live program or history is connected.")
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PreviewBadge("DESIGN PREVIEW")
-            Text("Today's workout", style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text("Your existing workouts will appear here once the engine and backup bridge are verified.",
-                color = MaterialTheme.colorScheme.onPrimaryContainer)
-            Button(onClick = onWorkout, modifier = Modifier.fillMaxWidth()) {
-                Text("Explore workout layout")
-            }
+private fun SessionAdjustmentSheet(
+    readiness: String, length: Int, injuryFlag: Boolean,
+    chooseReadiness: (String) -> Unit,
+    chooseLength: (Int) -> Unit,
+    toggleInjury: (Boolean) -> Unit
+) {
+    PageHeading("TODAY'S TRAINING", "Adjust your session",
+        "These are temporary design selections—not applied training modifications.")
+    Text("How are you feeling?", style = MaterialTheme.typography.titleMedium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("Low", "Normal", "Strong").forEach { option ->
+            PreviewChoice(option, readiness == option) { chooseReadiness(option) }
         }
     }
-    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Your training plan", style = MaterialTheme.typography.titleLarge)
-            Text("Program structure, session priorities and phase context will share one consistent design system.")
-            FilledTonalButton(onClick = onPlan) { Text("View plan preview") }
+    Text("Available time", style = MaterialTheme.typography.titleMedium)
+    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(0, 45, 30, 20).forEach { duration ->
+            PreviewChoice(if (duration == 0) "Full" else duration.toString() + " min",
+                length == duration) { chooseLength(duration) }
         }
     }
+    Text("Training limitations", style = MaterialTheme.typography.titleMedium)
+    PreviewChoice("Show limitation reminder (demo)", injuryFlag) { toggleInjury(!injuryFlag) }
+    Text("In the real app, readiness, injury restrictions and time trimming will call canonical engine policies and preserve user-owned loads.",
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
-private fun PlanPreview() {
-    PreviewHeading("Training architecture", "Your plan",
-        "This is a navigation and component preview, not an imported or generated program.")
-    PreviewPanel("Foundation", "Canonical engine boundary", "Read-only handshake and catalog checks implemented.")
-    PreviewPanel("Next milestone", "Training parity", "Double progression, available weight increments, RIR and cycles must match the web engine.")
-    PreviewPanel("Data transfer", "Versioned backup import", "The canonical v13 parser is available; native import remains disabled.")
-    OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-        Text("Open full program · not connected")
-    }
-}
-
-@Composable
-private fun PreviewPanel(eyebrow: String, title: String, description: String) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(eyebrow.uppercase(), color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.labelLarge)
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            Text(description, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-private fun WorkoutPreview() {
-    PreviewHeading("Interactive design sample", "Workout",
-        "The controls below use temporary sample values only. They never save sets or modify your training data.")
-    PreviewSetControls()
-    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Workout session", style = MaterialTheme.typography.titleLarge)
-            Text("Actual exercise selection, prescriptions, progression and logging require the verified canonical engine.")
-            Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                Text("Start real session · engine not connected")
+private fun FeatureOverviewSheet() {
+    PageHeading("CAPABILITY CONTRACT", "Features, not screens",
+        "These features must survive the rebuild. Listing them does not mean they are implemented.")
+    FeatureArea.entries.forEach { area ->
+        Text(area.label, style = MaterialTheme.typography.titleLarge)
+        FeatureCatalog.capabilities.filter { it.area == area }.forEach { feature ->
+            PursuitCard {
+                Text(feature.title, style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
+                Text(feature.outcome, style = MaterialTheme.typography.bodyMedium)
+                Text("Awaiting: " + feature.gates.joinToString(" · ") {
+                    when (it) {
+                        io.github.extracteddeath.pursuitiron.domain.FeatureGate.CANONICAL_ENGINE -> "Engine parity"
+                        io.github.extracteddeath.pursuitiron.domain.FeatureGate.VERIFIED_STORAGE -> "Data safety"
+                        io.github.extracteddeath.pursuitiron.domain.FeatureGate.ANDROID_DEVICE -> "Device QA"
+                    }
+                }, style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
 
 @Composable
-private fun PreviewSetControls() {
-    var weight by rememberSaveable { mutableIntStateOf(185) }
-    var reps by rememberSaveable { mutableIntStateOf(8) }
-    var rir by rememberSaveable { mutableIntStateOf(2) }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            PreviewBadge("DEMO · NOT A PRESCRIPTION")
-            Text("Barbell bench press", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Text("Set 1 of 4 · sample exercise", style = MaterialTheme.typography.bodyMedium)
-            HorizontalDivider()
-            SampleStepper("Weight", "$weight lb", onMinus = { weight = (weight - 5).coerceAtLeast(0) },
-                onPlus = { weight += 5 })
-            SampleStepper("Reps", reps.toString(), onMinus = { reps = (reps - 1).coerceAtLeast(0) },
-                onPlus = { reps += 1 })
-            SampleStepper("RIR", rir.toString(), onMinus = { rir = (rir - 1).coerceAtLeast(0) },
-                onPlus = { rir = (rir + 1).coerceAtMost(10) })
-            Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                Text("Complete set · disabled in preview")
-            }
-        }
-    }
-}
-
-@Composable
-private fun SampleStepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        }
-        FilledTonalButton(onClick = onMinus, modifier = Modifier.widthIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp)) { Text("−") }
-        FilledTonalButton(onClick = onPlus, modifier = Modifier.widthIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp)) { Text("+") }
-    }
-}
-
-@Composable
-private fun ProgressPreview() {
-    PreviewHeading("Progress", "Built around your history",
-        "Personal bests, consistency, volume and strength trends will appear after safe import.")
-    PreviewPanel("Your lifetime records", "No data imported", "The current web records remain unchanged and are not available in this native preview.")
-    PreviewPanel("Native progress", "Charts and milestones", "The UI will use the canonical revision-aware history view, not duplicates of old records.")
-}
-
-@Composable
-private fun BridgeStatus(status: EngineStatus) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Engine connection", style = MaterialTheme.typography.titleSmall)
-            Text(if (status is EngineStatus.NotConnected) "Not connected · training features disabled"
-                else "Engine unavailable · training features disabled",
-                style = MaterialTheme.typography.bodySmall)
-            Text("No workout history is read, written, or synced by this preview.",
-                style = MaterialTheme.typography.bodySmall,
+private fun ExerciseActionsSheet() {
+    PageHeading("CONTEXTUAL TOOLS", "Everything for this exercise",
+        "One contextual entry point instead of scattering controls across the workout screen.")
+    listOf(
+        "Previous sets and history" to "Read canonical history after verification",
+        "Swap exercise" to "Equipment-aware alternatives and stable movement IDs",
+        "Plates and bar weight" to "Available increments, machine settings and loading",
+        "Warm-ups, supersets, amplifiers" to "Session controls with canonical rest policies",
+        "Notes and technique" to "Session and pinned notes; variants and attachments"
+    ).forEach { (title, detail) ->
+        PursuitCard {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(detail, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+    Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
+        Text("Use real exercise tools · engine not connected")
     }
 }

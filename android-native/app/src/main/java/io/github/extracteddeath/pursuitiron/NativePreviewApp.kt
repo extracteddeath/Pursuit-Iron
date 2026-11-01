@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -89,7 +90,7 @@ internal fun NativePreviewApp(
     var exploreDemo by rememberSaveable { mutableStateOf(false) }
     if (onboarding!=null && onboarding.saved==null && !exploreDemo) {
         Scaffold { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
+            Column(Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState())
                 .padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 destinationStates.SaveableStateProvider("onboarding") {
                     NativeOnboardingScreen(onboarding,onReviewProgram,onSaveProgram,onEditProgram,

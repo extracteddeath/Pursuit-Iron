@@ -32,6 +32,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
-      - name: Compile and test isolated JS runtime module (no APK)
+      - name: Compile sandbox unit tests and instrumented test APK (no preview build)
         working-directory: android-native
-        run: gradle :engine-runtime:testDebugUnitTest --no-daemon --stacktrace
+        run: gradle :engine-runtime:testDebugUnitTest :engine-runtime:assembleDebugAndroidTest --no-daemon --stacktrace

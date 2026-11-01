@@ -50,4 +50,11 @@ The installable preview uses pinned **AGP 9.1.1**, **Gradle 9.3.1**, **Android S
 
 Milestone six's isolated AndroidX runtime can execute the canonical generator on a fixed synthetic profile, project audited exercise order/sets/rep bounds/RIR/rest/duration, and decode through Kotlin. The native **Plan** view now has an accessible, expandable read-only layout example. It is intentionally illustrative: `WorkoutOutlinePanel(outline = null)` means the installable UI does not access private workouts or claim to show the user's real program. `OutlinePresentationPolicy` independently requires correct canonical source, synthetic-only/read-only provenance and finite bounded values for any future test output.
 
+The separate data-migration contract can now derive a bounded saved-program
+structure envelope from an exact canonical v13 snapshot and active reference.
+Its strict Kotlin decoder and shared synthetic fixture establish the
+language-neutral wire shape, not a native importer or trusted personal plan.
+The installable Plan view still passes `outline = null`, and no user backup is
+read or logged.
+
 The `Native Compose UI compile (no APK)` workflow compiles source edits without making a distributable build. A new installable APK is still produced only by the existing explicit `PREVIEW_MILESTONE.md` gate. Next milestones must implement a schema-validated, revision-aware **read-only user program reference** and safe data import before promoting any personalized workout outline; workout logging remains disabled.

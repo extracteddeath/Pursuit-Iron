@@ -12,6 +12,8 @@ import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutPlan
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeShortSessionPreview
 import io.github.extracteddeath.pursuitiron.domain.NativeShortSessionPreviewCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutMuscleReview
+import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutMuscleReviewCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutHistory
@@ -68,6 +70,13 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         val raw=transport.request(NativeHistoryCodec.encodeCorrection(id,snapshot,correctionJson))
         currentCoroutineContext().ensureActive()
         return NativeHistoryCodec.decodeCorrection(raw,id,snapshot,correctionJson)
+    }
+
+    override suspend fun inspectWorkoutMuscles(snapshot: String,issuedWorkout: String): NativeWorkoutMuscleReview? {
+        val id="native-muscle-review-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeWorkoutMuscleReviewCodec.encode(id,snapshot,issuedWorkout))
+        currentCoroutineContext().ensureActive()
+        return NativeWorkoutMuscleReviewCodec.decode(raw,id,snapshot,issuedWorkout)
     }
 
     override suspend fun previewShorterSession(snapshot: String,programId: String,minutes: Int): NativeShortSessionPreview? {

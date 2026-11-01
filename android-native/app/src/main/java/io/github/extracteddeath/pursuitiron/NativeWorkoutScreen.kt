@@ -18,7 +18,8 @@ internal fun NativeWorkoutScreen(
     state: NativeRuntimeState,onStart: ()->Unit,
     onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,onFinish: ()->Unit,
     onCorrect: (JournalSetIntent)->Unit = {},
-    onSkipExercise: (Int)->Unit = {}
+    onSkipExercise: (Int)->Unit = {},
+    onInspectMuscles: ()->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -62,6 +63,41 @@ internal fun NativeWorkoutScreen(
     // replace the visible composition. Drafts are not confirmed journal events.
     val setDraftStates=rememberSaveableStateHolder()
     PageHeading("WEEK ${plan.session.weekIndex}",plan.dayLabel,plan.programName)
+    var affectedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
+    PursuitCard {
+        Text("Affected muscle review",style=MaterialTheme.typography.titleMedium)
+        Text("Shows muscles involved in this workout, including secondary work. Review potentially affected lifts; nothing is skipped automatically.",
+            style=MaterialTheme.typography.bodySmall)
+        if(state.muscleReview==null) {
+            OutlinedButton(onClick=onInspectMuscles,
+                enabled=!state.muscleReviewBusy && !state.workoutBusy && !state.historyBusy) {
+                Text(if(state.muscleReviewBusy)"Checking exercises…" else "Review muscle involvement")
+            }
+        }
+        state.muscleReviewError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
+        state.muscleReview?.takeIf { it.workoutId==plan.session.workoutId }?.let { review ->
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                review.parts.forEach { part ->
+                    FilterChip(selected=affectedPart==part,onClick={affectedPart=part},
+                        label={Text(part.replace('_',' ').replaceFirstChar { it.uppercase() })})
+                }
+            }
+            if(affectedPart.isNotBlank()) {
+                val related=review.rows.filter { affectedPart in it.involvedParts }
+                Text("${related.size} potentially related exercise(s)",style=MaterialTheme.typography.labelLarge)
+                related.forEach { match ->
+                    Text(match.name,style=MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick={
+                        val index=plan.exercises.indexOfFirst { it.index==match.exerciseIndex }
+                        if(index>=0)exerciseIndex=index
+                    },enabled=!state.workoutBusy) { Text("Open exercise to review or skip") }
+                }
+            }
+            Text("Muscle involvement is not medical guidance. Avoid movements that cause pain.",
+                style=MaterialTheme.typography.bodySmall)
+        }
+    }
     if(plan.shortenedMinutes!=null) {
         Text("Shortened workout · ${plan.shortenedMinutes} min selected · ${plan.shortenedEstimatedMinutes} min estimated",
             style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)

@@ -3,7 +3,7 @@ import {
   parseStoredData, nextSessionCursor, exerciseAt, computeCell, EX_BY_ID,
   buildLifterModel, calibratedAnchorPerf, sessionSuggestion, prescribeSets,
   lastDayPerf, effectiveRest, goalForDay, weeksOf, techniqueProtocolFromCell, oneShotDeloadFactor,
-  planShorterSession
+  planShorterSession,secondaryOf
 } from '../../modules/engine-api.js';
 import { inspectNativeProgram } from './native-onboarding.mjs';
 import { deriveReadOnlyProgramReference, matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
@@ -102,6 +102,30 @@ export function previewNativeShorterSession(rawSnapshot,programId,minutes) {
     cuts:preview.cuts.map(c=>({slot:c.slot,name:c.name,fromSets:c.fromSets,
       toSets:c.toSets,amplifierRemoved:c.amplifierRemoved})),
     readOnly:true,applied:false};
+}
+
+/**
+ * Canonical muscle involvement from an immutable issued workout.
+ * No medical judgment, diagnosis, prescription change or journal write.
+ */
+export function inspectNativeWorkoutMuscles(rawSnapshot,issuedJson) {
+  ensure(bounded(rawSnapshot,1024*1024) && bounded(issuedJson,MAX_ISSUED_WORKOUT_BYTES));
+  const {plan}=issuedNativeWorkoutFrom(rawSnapshot,issuedJson);
+  const program=parseStoredData(rawSnapshot).saved.find(p=>p.id===plan.session.reference.programId);
+  ensure(program && validDeloads(program));
+  const rows=plan.rows.map(row=>{
+    const ex=EX_BY_ID[row.id];
+    ensure(ex && typeof ex.part==='string');
+    const parts=[...new Set([ex.part,...secondaryOf(ex,program.engineV).map(([part])=>part)])].sort();
+    ensure(parts.length>=1 && parts.length<=20 && parts.every(part=>/^[a-z][a-z_]{0,39}$/.test(part)));
+    return {exerciseIndex:row.slot,exerciseId:row.id,name:row.name,
+      primaryPart:ex.part,involvedParts:parts};
+  });
+  const parts=[...new Set(rows.flatMap(row=>row.involvedParts))].sort();
+  ensure(parts.length>0 && parts.length<=48);
+  return {source:'modules/engine-api.js:EX_BY_ID+secondaryOf',
+    snapshotSha256:sha256Utf8(rawSnapshot),issuedWorkoutSha256:sha256Utf8(issuedJson),
+    workoutId:plan.session.workoutId,parts,rows,readOnly:true,applied:false};
 }
 
 /** Validate retained issued targets without calculating a replacement on resume. */

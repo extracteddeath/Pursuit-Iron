@@ -20,7 +20,9 @@ internal data class NativeRuntimeState(
     val historyBusy: Boolean=false,val historyError: String?=null,
     val historyFilter: NativeHistoryFilter=NativeHistoryFilter(),
     val shortPreview: NativeShortSessionPreview?=null,
-    val shortPreviewBusy: Boolean=false,val shortPreviewError: String?=null
+    val shortPreviewBusy: Boolean=false,val shortPreviewError: String?=null,
+    val muscleReview: NativeWorkoutMuscleReview?=null,
+    val muscleReviewBusy: Boolean=false,val muscleReviewError: String?=null
 )
 
 /** One process-scoped engine, canonical writer and workout journal. No backup import. */
@@ -58,7 +60,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 store=owner
                 historyReader=NativeHistoryReadPort(owner,engine)
                 val watching=owner.subscribeCommittedChanges {
-                    mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null) }
+                    mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null,muscleReview=null) }
                 }
                 synchronized(lifetime) {
                     if(closed) { watching.close();throw CancellationException("Runtime closed") }
@@ -267,7 +269,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             it.minutes==minutes && it.fits && it.changed && !current.shortPreviewBusy
         } ?: return else null
         val owner=store ?: return;val recovery=journal ?: return;val loaded=current.verifier ?: return
-        mutable.update { it.copy(workoutBusy=true,workoutError=null,shortPreview=null,shortPreviewError=null) }
+        mutable.update { it.copy(workoutBusy=true,workoutError=null,shortPreview=null,shortPreviewError=null,muscleReview=null,muscleReviewError=null) }
         scope.launch {
             try {
                 val existing=owner.recoverIssuedSession(recovery)
@@ -306,6 +308,41 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
      * A crash between receipts retains already-saved skips. Reopening the
      * same session finds only unresolved slots and can safely retry.
      */
+    /**
+     * Read the exact engine-issued workout's primary and secondary muscles.
+     * This has no permission to change exercises or saved training records.
+     */
+    fun inspectWorkoutMuscles() {
+        val current=mutable.value
+        val plan=current.workout?.plan ?: return
+        if(!current.ready || current.workoutBusy || current.historyBusy ||
+            current.muscleReviewBusy || current.muscleReview?.workoutId==plan.session.workoutId)return
+        val owner=store ?: return;val engine=current.verifier?.programEngine ?: return
+        mutable.update { it.copy(muscleReviewBusy=true,muscleReviewError=null) }
+        scope.launch {
+            try {
+                val bytes=checkNotNull(owner.readOwnedCurrentStoreBytes())
+                val view=try {
+                    val source=String(bytes,Charsets.UTF_8)
+                    check(NativeWorkoutMuscleReviewCodec.matchesOrigin(source,plan))
+                    checkNotNull(engine.inspectWorkoutMuscles(source,plan.issuedJson))
+                } finally { bytes.fill(0) }
+                ensureActive()
+                mutable.update { latest ->
+                    if(latest.workout?.plan?.issuedJson==plan.issuedJson &&
+                        latest.storeChangeKey==current.storeChangeKey)
+                        latest.copy(muscleReview=view,muscleReviewBusy=false,muscleReviewError=null)
+                    else latest.copy(muscleReview=null,muscleReviewBusy=false,
+                        muscleReviewError="Workout changed. Reopen the exercise review.")
+                }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) {
+                mutable.update { it.copy(muscleReviewBusy=false,
+                    muscleReviewError="Muscle involvement could not be checked. Your workout is unchanged.") }
+            }
+        }
+    }
+
     fun skipRemainingExercise(exerciseIndex: Int) {
         val current=mutable.value;val progress=current.workout ?: return
         if(current.workoutBusy || current.historyBusy || current.workoutBlocked || progress.journal.isFinished)return
@@ -392,7 +429,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val history=runCatching { readHistory(outcome.receipt) }.getOrNull()
                 val page=optionalHistoryPage(filter=current.historyFilter)
                 ensureActive()
-                mutable.update { it.copy(workout=null,workoutBusy=false,workoutError=null,completion=outcome.receipt,saved=saved,
+                mutable.update { it.copy(workout=null,workoutBusy=false,workoutError=null,completion=outcome.receipt,saved=saved,muscleReview=null,
                     history=history,historyPage=page,historyError=null) }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {

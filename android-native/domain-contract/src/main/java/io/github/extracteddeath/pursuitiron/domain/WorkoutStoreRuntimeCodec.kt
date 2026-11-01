@@ -70,6 +70,9 @@ object WorkoutStoreRuntimeCodec {
                 bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES)
                 require(text(p,"programId").matches(identifier) &&
                     integer(p,"minutes") in listOf(20L,30L,45L)) }
+            "inspectNativeWorkoutMuscles" -> { exact(p,"rawSnapshot","issuedWorkout")
+                bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES)
+                bounded(text(p,"issuedWorkout"),NativeWorkoutCodec.MAX_ISSUED_BYTES) }
             "prepareNativeWorkout" -> { exact(p,"rawSnapshot","startJson");bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES);bounded(text(p,"startJson"),16384) }
             "nativeProgramOptions" -> exact(p)
             "prepareNativeProgram" -> { exact(p,"setupJson");bounded(text(p,"setupJson"),16384) }

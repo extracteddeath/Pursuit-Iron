@@ -189,6 +189,20 @@ time and provenance. No UI-side set calculations or source web changes.
 The packaged integration suite also exercises shorten → journal → Finish →
 canonical history and retry; device certification remains required. No APK built.
 
+## Follow-up: non-mutating affected-muscle review
+
+Train now offers an explicit "Review muscle involvement" action for the active
+engine-issued workout. The canonical JS worker resolves each exercise's primary
+and secondary muscle involvement using `EX_BY_ID` and `secondaryOf`, bound to
+the exact retained issued plan and owned source SHA. The verified transport and
+Kotlin decoder reject altered workout IDs, slot rosters, muscle lists and
+unexpected write instructions. Compose shows selectable muscle chips and
+potentially related exercises. Selecting an exercise only navigates to its
+existing, explicitly confirmed skip action; the review never skips sets,
+changes targets, asserts an injury diagnosis or changes the saved program.
+This is a safe initial native injury-awareness layer, not an automatic injury
+adaptation engine.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of

@@ -24,6 +24,14 @@ assert.ok(activity.includes('onReviewProgram=runtime::review') && activity.inclu
   activity.includes('activeProgramId=state.saved?.program?.id') && shell.includes('onboarding.saved==null'));
 assert.ok(shell.includes('UnconnectedEngineGateway().status'),
   'First-program persistence must not authorize workout logging');
+// Injury-area review uses source-backed muscle involvement and never mutates
+// a prescription. Navigation to the already-confirmed skip action is explicit.
+assert.ok(host.includes('fun inspectWorkoutMuscles()') &&
+  host.includes('engine.inspectWorkoutMuscles(source,plan.issuedJson)') &&
+  host.includes('NativeWorkoutMuscleReviewCodec.matchesOrigin(source,plan)') &&
+  activity.includes('onInspectMuscles=runtime::inspectWorkoutMuscles') &&
+  shell.includes('onCorrectSet,onSkipExercise,onInspectMuscles'),
+  'Muscle review must come from pinned canonical issue, not screen-side training guesses');
 // Short-session previews come only from the canonical engine and cannot
 // masquerade as an applied session or a UI-computed training prescription.
 assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine preview")') &&

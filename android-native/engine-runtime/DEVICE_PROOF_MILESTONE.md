@@ -45,3 +45,19 @@ in one sandbox, decode with the typed Kotlin codec, close, release the process
 sandbox lease, and refuse future requests after close. The seven-case full
 parity suite still runs. No app preview APK, history write, production data,
 or permission to surface recommendations in Compose.
+
+## Milestone 5 — canonical exercise metadata via the reusable Android sandbox
+
+- Verify the entire canonical EXERCISES catalog in bounded Node/CI batches.
+- Build the **read-only** Android bridge using the verified source-closure snapshot.
+- In the API 36 emulator, fetch a fixed list of canonical exercise IDs through
+  the existing serial JavaScript sandbox worker, preserving requested order,
+  equipment and rep-range facts.
+- Decode the result through the strict Kotlin ExerciseCatalogCodec, including
+  explicit missing exercise IDs. Reject any attempt to invoke deleteHistory.
+- Re-run the seven existing full-field double progression cases and lifecycle tests.
+- Close the isolate and refuse subsequent requests; keep data writes disabled.
+- Fail on a mismatch or untrusted response. No production APK is created or uploaded.
+
+This is a **native read-only compatibility milestone**, not a training launch
+or permission to import user workouts, change programs or enable prescription UI.

@@ -10,6 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Objects;
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupLimits;
 import java.util.concurrent.CompletableFuture;
@@ -187,6 +188,52 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return request;
     }
 
+    /**
+     * Bounded, SHA-bound, read-only current-store projection. The caller STILL
+     * must be an authenticated CURRENT store owner through the Kotlin port.
+     * This API has no document/URI access and never authorizes workouts.
+     */
+    static JSONObject checkedCurrentProgramProjectionRequest(
+            @NonNull String json) throws Exception {
+        Objects.requireNonNull(json);
+        if (json.getBytes(StandardCharsets.UTF_8).length > ReadOnlyBackupLimits.MAX_WIRE_BYTES)
+            throw new IllegalArgumentException("Oversized current-program request");
+        JSONObject request = new JSONObject(json);
+        if (request.length() != 4 || request.getInt("protocolVersion") != 1 ||
+                !"currentProgramProjection".equals(request.get("method")) ||
+                !(request.get("id") instanceof String) ||
+                request.getString("id").isEmpty() ||
+                request.getString("id").length() > 128)
+            throw new IllegalArgumentException("Read-only current-program projection required");
+        JSONObject params = request.getJSONObject("params");
+        if (params.length() != 3 ||
+                !(params.get("rawSnapshot") instanceof String) ||
+                !(params.get("programId") instanceof String) ||
+                !(params.get("snapshotSha256") instanceof String))
+            throw new IllegalArgumentException("Exactly one bounded source and revision required");
+        String raw = params.getString("rawSnapshot");
+        String programId = params.getString("programId");
+        String sha = params.getString("snapshotSha256");
+        byte[] bytes = raw.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length == 0 || bytes.length > ReadOnlyBackupLimits.MAX_SOURCE_BYTES ||
+                raw.length() > ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS ||
+                !programId.matches("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$") ||
+                !sha.matches("^[0-9a-f]{64}$"))
+            throw new IllegalArgumentException("Invalid current-program source bounds");
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+        final char[] alphabet = "0123456789abcdef".toCharArray();
+        StringBuilder actual = new StringBuilder(64);
+        for (byte b : digest) {
+            int v = b & 0xff;
+            actual.append(alphabet[v >>> 4]).append(alphabet[v & 0x0f]);
+        }
+        if (!MessageDigest.isEqual(
+                actual.toString().getBytes(StandardCharsets.US_ASCII),
+                sha.getBytes(StandardCharsets.US_ASCII)))
+            throw new SecurityException("Snapshot SHA does not match current-program source");
+        return request;
+    }
+
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request) throws Exception {
         return call(isolate, request, 5);
     }
@@ -195,7 +242,8 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
             long timeoutSeconds) throws Exception {
         String method = request.getString("method");
         String entry = ("backupSchemaCheck".equals(method) ||
-                "backupProgramInventory".equals(method))
+                "backupProgramInventory".equals(method) ||
+                "currentProgramProjection".equals(method))
                 ? "PursuitIronBridge.dispatchBackupSchemaJson"
                 : "PursuitIronBridge.dispatchEngineJson";
         String script = entry + "(" + JSONObject.quote(request.toString()) + ")";
@@ -225,15 +273,16 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 result.getBoolean("engineCertified"))
             throw new SecurityException("Incompatible canonical engine identity");
         JSONArray methods = result.getJSONArray("capabilities");
-        boolean hasPreview = false, hasLookup = false, hasOutline = false, hasSchemaCheck = false, hasInventory = false;
+        boolean hasPreview = false, hasLookup = false, hasOutline = false, hasSchemaCheck = false, hasInventory = false, hasCurrent = false;
         for (int i = 0; i < methods.length(); i++) {
             if ("progressionPreview".equals(methods.getString(i))) hasPreview = true;
             if ("exerciseLookup".equals(methods.getString(i))) hasLookup = true;
             if ("workoutOutline".equals(methods.getString(i))) hasOutline = true;
             if ("backupSchemaCheck".equals(methods.getString(i))) hasSchemaCheck = true;
             if ("backupProgramInventory".equals(methods.getString(i))) hasInventory = true;
+            if ("currentProgramProjection".equals(methods.getString(i))) hasCurrent = true;
         }
-        if (!hasPreview || !hasLookup || !hasOutline || !hasSchemaCheck || !hasInventory)
+        if (!hasPreview || !hasLookup || !hasOutline || !hasSchemaCheck || !hasInventory || !hasCurrent)
             throw new SecurityException("Canonical read-only bridge capabilities unavailable");
     }
 
@@ -287,12 +336,18 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return submitReadOnly(requestJson, 4);
     }
 
+    /** Source-only projection; no personal store is opened by this worker. */
+    public CompletableFuture<String> currentProgramProjectionAsync(
+            @NonNull String requestJson) {
+        return submitReadOnly(requestJson, 5);
+    }
+
     private CompletableFuture<String> submitReadOnly(
             @NonNull String requestJson, boolean catalog) {
         return submitReadOnly(requestJson, catalog ? 1 : 0);
     }
 
-    /** Request mode: progression 0, catalog 1, synthetic outline 2, schema probe 3. */
+    /** Modes: progression 0, catalog 1, outline 2, schema 3, inventory 4, current read-only 5. */
     private CompletableFuture<String> submitReadOnly(
             @NonNull String requestJson, int mode) {
         final CompletableFuture<String> outcome = new CompletableFuture<>();
@@ -304,7 +359,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         // A bad caller cannot poison an otherwise healthy canonical sandbox.
         final JSONObject validated;
         try {
-            validated = mode == 4
+            validated = mode == 5
+                    ? checkedCurrentProgramProjectionRequest(requestJson)
+                    : mode == 4
                     ? checkedBackupInventoryRequest(requestJson)
                     : mode == 3
                     ? checkedBackupSchemaRequest(requestJson)
@@ -325,10 +382,22 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 }
                 try {
                     initialize();
-                    JSONObject response = call(isolate, validated, mode == 2 ? 30 : mode == 3 || mode == 4 ? 12 : 5);
+                    JSONObject response = call(isolate, validated, mode == 2 ? 30 : mode == 3 || mode == 4 || mode == 5 ? 12 : 5);
                     if (response.getBoolean("ok")) {
                         JSONObject value = response.getJSONObject("result");
-                        if (mode == 4) {
+                        if (mode == 5) {
+                            JSONObject reference = value.getJSONObject("reference");
+                            JSONObject params = validated.getJSONObject("params");
+                            if (!value.getBoolean("readOnly") ||
+                                    !"modules/engine-api.js:parseStoredData".equals(
+                                        value.getString("source")) ||
+                                    !params.getString("programId").equals(
+                                        reference.getString("programId")) ||
+                                    !params.getString("snapshotSha256").equals(
+                                        reference.getString("snapshotSha256")) ||
+                                    reference.getInt("storeVersion") != 13)
+                                throw new SecurityException("Unexpected current-program provenance");
+                        } else if (mode == 4) {
                             if (!value.getBoolean("readOnly") ||
                                     !value.getBoolean("snapshotOnly") ||
                                     value.getBoolean("imported") ||

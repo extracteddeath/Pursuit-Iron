@@ -284,3 +284,22 @@ an offline backup the current store. Both interfaces are unimplemented in
 the preview. Synthetic contract tests verify success, tampered source bytes,
 size/encoding rejection, cancellation cleanup and subscription teardown.
 The result remains read-only structure, never prescriptions or log permissions.
+
+
+### Shared browser-safe current saved-program projection (not connected)
+
+The exact canonical saved-program structure mapping is now owned by
+android-native/engine-bridge/current-program-projection.mjs. Node's
+read-only-program-transport.mjs authenticates its SHA-256 reference using the
+Node inspector and delegates to the SAME projection function. The bounded
+Android bridge receives the exact current snapshot and requested stable ID,
+and returns an envelope for the strict Kotlin codec. Kotlin and Java both
+recompute SHA-256 of the supplied UTF-8 source. The existing
+ExactCurrentSnapshotProjectionPort independently checks the authoritative
+store owner's bytes against the returned reference; CurrentReadOnlyPlanGateway
+then checks before/after evidence and deletion state.
+
+The Android current store owner remains UNIMPLEMENTED and the source/projector
+are NOT connected to MainActivity. The backup picker cannot supply this path.
+No real Plan view, workout prescription, history writes, or release readiness
+is implied by these wire tests.

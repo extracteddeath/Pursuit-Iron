@@ -247,6 +247,25 @@ const canonicalAdapter = fs.readFileSync(
 const bytePort = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ExactCurrentSnapshotProjectionPort.kt', 'utf8'
 );
+const currentCodec = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/CurrentProgramProjectionCodec.kt','utf8'
+);
+const currentSandbox = fs.readFileSync(
+  'android-native/engine-runtime/src/main/java/io/github/extracteddeath/pursuitiron/engine/SandboxCanonicalCurrentPlanProjector.kt','utf8'
+);
+const currentWorker = fs.readFileSync(
+  'android-native/engine-runtime/src/main/java/io/github/extracteddeath/pursuitiron/engine/CanonicalJsReadOnlyService.java','utf8'
+);
+assert.ok(currentCodec.includes('ReadOnlyProgramTransportCodec.decode(json, reference)') &&
+  currentCodec.includes('reference.snapshotSha256 == sha256(original)') &&
+  currentSandbox.includes('PinnedCanonicalPlanProjector') &&
+  currentSandbox.includes('worker.currentProgramProjectionAsync(wire)') &&
+  currentWorker.includes('checkedCurrentProgramProjectionRequest(') &&
+  currentWorker.includes('MessageDigest.isEqual(') &&
+  currentWorker.includes('currentProgramProjectionAsync(') &&
+  !shell.includes('SandboxCanonicalCurrentPlanProjector(') &&
+  !activity.includes('SandboxCanonicalCurrentPlanProjector('),
+  'Canonical current-store projection must be source SHA checked and never bound to offline backups or workout execution');
 assert.ok(bytePort.includes('MessageDigest.getInstance("SHA-256")') &&
   bytePort.includes('CodingErrorAction.REPORT') &&
   bytePort.includes('ReadOnlyBackupLimits.MAX_SOURCE_BYTES') &&

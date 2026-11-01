@@ -81,6 +81,16 @@ assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, exercise.restS
   rest.includes('enabled = enabled') &&
   !rest.includes('onRecord(') && !rest.includes('store.') && !rest.includes('journal.'),
   'The rest countdown must be a session-scoped manual M3 control, not an unacknowledged set write or engine re-prescription');
+assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId)') &&
+  rest.includes('var startedWall by rememberSaveable(workoutId)') &&
+  rest.includes('var activeSeconds by rememberSaveable(workoutId)') &&
+  rest.includes('elapsed < startedElapsed || wall < startedWall') &&
+  rest.includes('abs(wallAge - monotonicAge) <= 60_000L') &&
+  rest.includes('Current rest: $activeSeconds s') &&
+  rest.includes('activeSeconds = prescribedSeconds') &&
+  rest.includes('activeSeconds = 0'),
+  'Recovered rest deadlines must reject reboot/time drift and preserve the active interval when selecting another exercise');
+
 assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCount),effort)') &&
   train.includes('var rir by rememberSaveable { mutableStateOf("") }') &&
   train.includes('if(journal.isFinished)onFinish() else showFinishReview=true'),

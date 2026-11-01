@@ -8,7 +8,7 @@ Open the most recent successful **Native Android preview APK** run at
 https://github.com/extracteddeath/Pursuit-Iron/actions/workflows/android-native-preview.yml
 and download the artifact `pursuit-iron-native-preview`. Extract the ZIP and install `app-debug.apk` on Android. It's debug signed with a different certificate on each CI run; to replace an old native preview, uninstall the old **Pursuit Iron Native Preview** first. The package has a separate `.preview` suffix, not the future production identity.
 
-Alternatively, open `android-native/` in Android Studio, provision JDK 17, Android SDK 36 and Gradle 8.13, and run the debug `app` module.
+Alternatively, open `android-native/` in Android Studio, provision JDK 17, Android SDK 37 and Gradle 9.3.1, and run the debug `app` module.
 
 ## New app UX direction
 
@@ -32,10 +32,14 @@ All interactive examples are **local UI-only state**. They do not generate train
 - `engine-bridge/`: read-only protocol; it has not yet been executed inside an Android JS runtime.
 - `data-migration/`: read-only canonical backup validation, not native import.
 
+## Android preview build cadence
+
+Normal Android commits run the fast foundation and canonical-engine checks, **not** a new APK build. An installable preview is built only when `android-native/PREVIEW_MILESTONE.md` is updated, the APK workflow changes, or a maintainer manually runs the workflow. This keeps experimental UI/engine work from filling Actions with redundant APKs. The most recent successful artifact remains available for 14 days.
+
 ## Verification gates
 
 GitHub Actions must pass the native APK build and JS protocol, backup and feature-contract tests. A successful APK build is not evidence of real-device visual, interaction, accessibility or interruption testing. Full training functionality remains disabled until canonical engine parity, storage round-trip, revision identity, and Android device certification are complete.
 
 ## Toolchain
 
-The installable preview uses pinned **AGP 8.13.2**, **Gradle 8.13**, **Android SDK 36**, **Kotlin 2.2.21**, **Compose BOM 2026.09.00**, **Material 3 1.5.0-beta02 (native preview only)**, **Activity Compose 1.11.0**. The preview explicitly opts into the published expressive MotionScheme and theme-aware navigation motion. This beta dependency is isolated from web production. Any API requiring Android SDK 37 or AGP 9.x remains deferred until compatible tooling and CI pass. Native compile, real-device motion and accessibility acceptance are separate requirements.
+The installable preview uses pinned **AGP 9.1.1**, **Gradle 9.3.1**, **Android SDK 37**, **Compose compiler plugin 2.4.21**, **Compose BOM 2026.09.00**, **Material 3 1.5.0-beta02 (native preview only)**, **Activity Compose 1.11.0**. The preview explicitly opts into the published expressive MotionScheme and theme-aware navigation motion. This beta dependency is isolated from web production. The required SDK 37 / AGP 9.1 migration is in this branch and must compile successfully before a native milestone is considered ready. Native compile, real-device motion and accessibility acceptance are separate requirements.

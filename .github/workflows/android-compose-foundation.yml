@@ -27,4 +27,4 @@ jobs:
         run: |
           test -f modules/engine-api.js
           test -f android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/EngineGateway.kt
-          grep -q 'UnconnectedEngineGateway' android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt
+          grep -q 'UnconnectedEngineGateway' android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativePreviewApp.kt

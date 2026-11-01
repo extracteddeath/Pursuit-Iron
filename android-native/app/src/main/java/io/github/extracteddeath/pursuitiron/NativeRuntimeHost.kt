@@ -146,7 +146,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                     checkNotNull(owner.beginIssuedSession(plan,recovery))
                 }
                 ensureActive()
-                mutable.update { it.copy(workout=progress,workoutBusy=false,workoutError=null,completion=null) }
+                // Starting another workout cannot erase the last durable completion receipt.
+                mutable.update { it.copy(workout=progress,workoutBusy=false,workoutError=null) }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 // A begin may have landed before its ack was lost. Recover the

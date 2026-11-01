@@ -31,6 +31,7 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDayJourney
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
 import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
+import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
 
 /**
  * These are independently designed NATIVE journeys, not ports of React screens.
@@ -358,9 +359,10 @@ internal fun PlanScreen(
 
 @Composable
 internal fun InsightsScreen(state: NativeRuntimeState?,onCorrectHistory: (String)->Unit = {},onReloadHistory: ()->Unit = {},
-    onOpenHistory: (String)->Unit = {},onHistoryPage: (Int)->Unit = {},onHistoryList: ()->Unit = {}) {
+    onOpenHistory: (String)->Unit = {},onHistoryPage: (Int)->Unit = {},onHistoryList: ()->Unit = {},
+    onFilterHistory: (NativeHistoryFilter)->Unit = {}) {
     PageHeading("YOUR RECORD", "Training history.","Review completed workouts and correct saved sets.")
-    if(state?.saved!=null)NativeHistoryPanel(state,onCorrectHistory,onReloadHistory,onOpenHistory,onHistoryPage,onHistoryList)
+    if(state?.saved!=null)NativeHistoryPanel(state,onCorrectHistory,onReloadHistory,onOpenHistory,onHistoryPage,onHistoryList,onFilterHistory)
     else {
         PursuitCard {
             PreviewLabel("NO SAVED WORKOUTS")

@@ -22,10 +22,11 @@ private fun historySetLabel(exercise: NativeHistoryExercise,set: NativeHistorySe
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->Unit,onReload: ()->Unit,
-    onOpen: (String)->Unit,onPage: (Int)->Unit,onList: ()->Unit) {
+    onOpen: (String)->Unit,onPage: (Int)->Unit,onList: ()->Unit,onFilter: (NativeHistoryFilter)->Unit) {
     val history=state.history
     if(history==null) {
         val page=state.historyPage
+        NativeHistoryFilters(state.historyFilter,!state.historyBusy && !state.workoutBusy,onFilter)
         if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
         if(page==null) {
             PursuitCard {
@@ -38,12 +39,18 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
             }
         } else if(page.total==0) {
             PursuitCard {
-                PreviewLabel("NO SAVED WORKOUTS")
-                Text("Your completed workouts will appear here.",style=MaterialTheme.typography.titleMedium)
-                Text("Finish a workout to review its sets and track your results.")
+                if(page.filter.isActive) {
+                    PreviewLabel("NO MATCHING WORKOUTS")
+                    Text("Try another name or date range.",style=MaterialTheme.typography.titleMedium)
+                    Text("${page.unfilteredTotal} saved workouts on this device.")
+                } else {
+                    PreviewLabel("NO SAVED WORKOUTS")
+                    Text("Your completed workouts will appear here.",style=MaterialTheme.typography.titleMedium)
+                    Text("Finish a workout to review its sets and track your results.")
+                }
             }
         } else {
-            SectionLabel("${page.total} saved workouts")
+            SectionLabel(if(page.filter.isActive)"${page.total} of ${page.unfilteredTotal} workouts" else "${page.total} saved workouts")
             page.entries.forEach { summary ->
                 PursuitCard {
                     Text(summary.dayLabel,style=MaterialTheme.typography.titleMedium)
@@ -71,7 +78,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     var selectedExercise by rememberSaveable(history.entrySha256) { mutableStateOf<String?>(null) }
     var selectedSet by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy
-    TextButton(onClick=onList,enabled=!state.historyBusy) { Text("All saved workouts") }
+    TextButton(onClick=onList,enabled=!state.historyBusy) { Text("Back to workouts") }
     Text(history.dayLabel,style=MaterialTheme.typography.headlineSmall)
     Text("${historyDateLabel(history.date)} · Week ${history.weekIndex}",style=MaterialTheme.typography.bodyMedium)
     if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())

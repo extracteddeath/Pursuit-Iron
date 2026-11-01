@@ -14,6 +14,15 @@ const clone=v=>JSON.parse(JSON.stringify(v));
 const semanticSha=v=>sha(JSON.stringify(v,(_k,value)=>object(value)
   ? Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]])):value));
 export const NATIVE_HISTORY_PAGE_SIZE=12;
+const emptyFilter=()=>({search:'',fromInclusive:null,untilExclusive:null});
+function historyFilter(value) {
+  ensure(exact(value,['search','fromInclusive','untilExclusive']) && typeof value.search==='string' &&
+    value.search.length<=80 && !/[\u0000-\u001f\u007f-\u009f]/.test(value.search) &&
+    (value.fromInclusive===null || integer(value.fromInclusive,-8640000000000000,8640000000000000)) &&
+    (value.untilExclusive===null || integer(value.untilExclusive,-8640000000000000,8640000000000001)) &&
+    (value.fromInclusive===null || value.untilExclusive===null || value.fromInclusive<value.untilExclusive));
+  return value;
+}
 function storeFrom(raw) {
   ensure(typeof raw==='string' && utf8ByteLength(raw)<=1024*1024);
   const source=JSON.parse(raw);
@@ -73,9 +82,11 @@ export function inspectNativeHistoryPage(rawSnapshot,queryJson) {
   try {
     ensure(typeof queryJson==='string' && utf8ByteLength(queryJson)<=1024);
     const query=JSON.parse(queryJson),snapshotSha256=sha(rawSnapshot);
-    ensure(exact(query,['offset','snapshotSha256']) && integer(query.offset,0,1992) &&
+    ensure(exact(query,own(query,'filter')?['offset','snapshotSha256','filter']:['offset','snapshotSha256']) && integer(query.offset,0,1992) &&
       query.offset%NATIVE_HISTORY_PAGE_SIZE===0 &&
       (query.snapshotSha256===null ? query.offset===0 : hash(query.snapshotSha256) && query.snapshotSha256===snapshotSha256));
+    const filter=historyFilter(own(query,'filter')?query.filter:emptyFilter());
+    const terms=filter.search.toLowerCase().trim().split(/\s+/u).filter(Boolean);
     const store=storeFrom(rawSnapshot);ensure(store.history.length<=2000);
     const native=store.history.filter(entry=>entry.nativeCompletion?.format===2);
     const ids=new Set();
@@ -90,9 +101,13 @@ export function inspectNativeHistoryPage(rawSnapshot,queryJson) {
         integer(entry.setsDone,0,entry.totalSets) && integer(entry.volume,0,Number.MAX_SAFE_INTEGER));
       return entry;
     }).sort((a,b)=>b.date-a.date || (a.id<b.id?-1:a.id>b.id?1:0));
-    const offset=query.offset,total=entries.length;
+    const unfilteredTotal=entries.length;
+    const matches=entries.filter(entry=>(filter.fromInclusive===null || entry.date>=filter.fromInclusive) &&
+      (filter.untilExclusive===null || entry.date<filter.untilExclusive) &&
+      terms.every(term=>(entry.programName+' '+entry.dayLabel).toLowerCase().includes(term)));
+    const offset=query.offset,total=matches.length;
     ensure(offset===0 || offset<total);
-    const page=entries.slice(offset,offset+NATIVE_HISTORY_PAGE_SIZE).map(entry=>{
+    const page=matches.slice(offset,offset+NATIVE_HISTORY_PAGE_SIZE).map(entry=>{
       let detailsAvailable=false;
       try { mappedSets(entryFrom(store,entry.id));detailsAvailable=true; } catch { /* Summary only. */ }
       return {historyId:entry.id,programName:entry.programName,dayLabel:entry.dayLabel,
@@ -100,7 +115,7 @@ export function inspectNativeHistoryPage(rawSnapshot,queryJson) {
         totalSets:entry.totalSets,volume:entry.volume,detailsAvailable};
     });
     return {source:'modules/engine-api.js:parseStoredData',snapshotSha256,offset,total,
-      nextOffset:offset+page.length<total?offset+page.length:null,entries:page};
+      nextOffset:offset+page.length<total?offset+page.length:null,entries:page,filter,unfilteredTotal};
   } catch {throw new TypeError('Native history page unavailable');}
 }
 export function inspectNativeHistory(rawSnapshot,historyId) {

@@ -5,8 +5,8 @@ Branch: `architecture/android-compose-foundation`. APK production stays frozen.
 The source journey covers onboarding, generated review and explicit program
 save, engine-issued working sets and myo/drop extensions, durable logging,
 interruption recovery, active-set correction, canonical completion, one-shot
-deload consumption and saved-history corrections. This pass adds paged history
-browsing and older-workout correction. This is source verification, not device
+deload consumption and saved-history corrections. This pass adds name and date
+filters to paged history browsing. This is source verification, not device
 acceptance.
 
 ## History browsing
@@ -39,6 +39,26 @@ opens at the correct heading while rotating within the same context preserves
 its saved scroll state. Insights now presents real history instead of repeating
 unconnected feature-description cards.
 
+## Find saved workouts
+
+The history browser searches program and day names with bounded, case-insensitive
+literal terms. Date ranges include both selected local calendar days. The native
+date picker uses UTC day labels, which are converted into device-local start and
+exclusive end instants; a day can therefore cover 23 or 25 hours. Search and date
+criteria are applied together by the canonical JS reader before pagination.
+
+Every page echoes the exact filter, filtered count and total saved count. Kotlin
+checks the requested filter and date bounds in addition to the source snapshot,
+page identity, order and continuation. The read port also rejects a typed result
+with a different filter. Empty search results expose the saved count without
+claiming the device has no history.
+
+Search/date drafts survive rotation. Apply, Use dates and Clear filters issue
+reads; typing does not issue requests. Applied filters persist through paging,
+detail review, reload, correction and the next workout's completion. A new query
+starts on the first page with its own scroll context. This is read-only query
+state; it does not change training data, progression or the latest receipt.
+
 ## Active and saved-set correction owners
 
 Active corrections append receipts naming the exact prior operation. The
@@ -59,19 +79,21 @@ dismissal protection while awaiting a save. No training formulas moved to Kotlin
 
 ## Verified locally for this pass
 
-- 106 domain JVM tests and 21 packaged-runtime JVM tests passed, with no skips.
+- 110 domain JVM tests and 21 packaged-runtime JVM tests passed, with no skips.
 - Compose Kotlin and instrumentation Java source compilation passed.
-- Native history-page/correction, active-edit, workout, extension, deload,
-  protocol, completion, history edit/volume/merge and UI source gates passed.
+- Native filtered history-page/correction, active-edit, protocol, canonical
+  fixture parity, sandbox isolation and UI source gates passed.
 - Canonical export, independent source parity, snapshot identity and the actual
   packaged IIFE proof passed. Canonical training modules and the web release
   package remain unchanged (source candidate 1010).
 - APK-freeze checks passed; no APK was produced.
 
-The new JVM journey exercises four real native completions, multiple history
-pages, legacy summaries, read-only access during a pending workout, correction
-of an older false high, retained newer Last/receipt/cursor state, a delayed page
-response overlapping completion, cancelled reads and reopening the saved store.
+The JVM journey exercises four real native completions, filtered multi-page
+history, empty results, legacy summaries, forged filter rejection, read-only
+access during a pending workout, correction of an older false high, retained
+newer Last/receipt/cursor state, a delayed filtered page overlapping completion,
+cancelled reads and reopening the saved store. Date tests cover spring/fall
+daylight-saving changes, leap day, opposite time-zone offsets and local midnight.
 
 Required commands include
 `node android-native/engine-bridge/native-history-page-test.mjs`, the existing
@@ -94,7 +116,7 @@ GitHub CI results must be checked independently for the pushed revision.
 
 ## Next work
 
-Calendar/search and richer training analytics, saved-history correction of
+Calendar views and richer training analytics, saved-history correction of
 skipped/omitted rows or failed attempts, duplicate exercise-slot history editing,
 native session-adjustment controls and imported web history remain separate
 milestones. Physical-device interaction, interruption and accessibility

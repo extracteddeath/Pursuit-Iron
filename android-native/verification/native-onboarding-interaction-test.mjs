@@ -106,6 +106,7 @@ assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCou
   'The review must not synthesize actual RIR or block an exact retry of a durably finished session');
 // History navigation comes only from the owned, revision-bound page reader.
 const historyUi=fs.readFileSync(root+'NativeHistoryPanel.kt','utf8');
+const historyFilters=fs.readFileSync(root+'NativeHistoryFilters.kt','utf8');
 assert.ok(shell.includes('NativeDestination.INSIGHTS -> InsightsScreen(onboarding,onCorrectHistory,onReloadHistory,') &&
   screens.includes('internal fun InsightsScreen(state: NativeRuntimeState?,') &&
   screens.includes('if(state?.saved!=null)NativeHistoryPanel(') && screens.includes('NO SAVED WORKOUTS') &&
@@ -116,6 +117,18 @@ assert.ok(shell.includes('NativeDestination.INSIGHTS -> InsightsScreen(onboardin
   host.includes('if(it.storeChangeKey==current.storeChangeKey)') &&
   shell.includes('val pageScroll=key(scrollContext) { rememberScrollState() }'),
   'Insights must browse owned saved history, keep completion separate and reject late stale reads');
+assert.ok(historyUi.includes('NativeHistoryFilters(state.historyFilter,') &&
+  historyUi.includes('NO MATCHING WORKOUTS') && historyUi.includes('page.unfilteredTotal') &&
+  historyFilters.includes('rememberSaveable(applied.search)') &&
+  historyFilters.includes('NativeHistoryDates.range(search.trim(),') &&
+  historyFilters.includes('DateRangePicker(state=picker,') &&
+  historyFilters.includes('selectableDates=dates') &&
+  historyFilters.includes('DialogProperties(usePlatformDefaultWidth=false)') &&
+  historyFilters.includes('ImeAction.Search') && historyFilters.includes('Clear filters') &&
+  activity.includes('onFilterHistory=runtime::filterHistory') &&
+  host.includes('optionalHistoryPage(current.historyPage?.offset ?: 0,history.snapshotSha256,current.historyFilter)') &&
+  host.includes('prior.filter!=filter') && shell.includes('onboarding?.historyFilter}'),
+  'Search/date drafts use native controls; applied filters persist through paging, corrections and scroll contexts');
 assert.ok(host.includes('val completion=owner.lastCompletionReceipt()') &&
   host.includes('Starting another workout cannot erase the last durable completion receipt.') &&
   !host.includes('workoutError=null,completion=null'),

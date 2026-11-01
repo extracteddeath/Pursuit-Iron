@@ -75,4 +75,54 @@ const tied=JSON.parse(source);for(const e of tied.history)if(e.id.startsWith('le
 const tiedPage=inspectNativeHistoryPage(JSON.stringify(tied),query());
 const tiedIds=tiedPage.entries.filter(e=>e.historyId.startsWith('legacy')).map(e=>e.historyId);
 assert.deepEqual(tiedIds,[...tiedIds].sort());
-console.log('PASS native history pages: real completed workouts, full bounded pagination, stable chronology, summary-only legacy rows, tombstones, isolated channels, stale-page refusal and older-correction record/Last/cursor integrity');
+// Filters apply before pagination and preserve exact request identity, not a
+// client-side slice of whichever twelve entries happened to be visible.
+const filteredStore=JSON.parse(source);
+for(const e of filteredStore.history) {
+  if(e.id.startsWith('legacy')) { e.programName='Legacy Progress';e.dayLabel='Full Body'; }
+  if(e.id.startsWith('native-')) { e.programName='Strength [A].*';e.dayLabel=['Upper Body','Lower Body'][Number(e.id.at(-1))%2]; }
+}
+const filteredSource=JSON.stringify(filteredStore);
+const filter=(search='',fromInclusive=null,untilExclusive=null)=>({search,fromInclusive,untilExclusive});
+const filteredQuery=(f,offset=0,snapshotSha256=null)=>JSON.stringify({offset,snapshotSha256,filter:f});
+const full=inspectNativeHistoryPage(filteredSource,filteredQuery(filter('  PrOgReSs   BODY  ')));
+assert.equal(full.total,25);assert.equal(full.unfilteredTotal,29);
+assert.deepEqual(full.filter,filter('  PrOgReSs   BODY  '));
+const filteredIds=[];page=full;
+for(;;) {
+  filteredIds.push(...page.entries.map(e=>e.historyId));
+  if(page.nextOffset===null)break;
+  page=inspectNativeHistoryPage(filteredSource,filteredQuery(page.filter,page.nextOffset,page.snapshotSha256));
+}
+assert.equal(filteredIds.length,25);assert.equal(new Set(filteredIds).size,25);
+assert.ok(filteredIds.every(id=>id.startsWith('legacy')));assert.equal(page.entries.length,1);
+const literal=inspectNativeHistoryPage(filteredSource,filteredQuery(filter('[a].* upper')));
+assert.deepEqual(literal.entries.map(e=>e.historyId),['native-2','native-0']);
+const window=inspectNativeHistoryPage(filteredSource,filteredQuery(filter('legacy',100000,400000)));
+assert.equal(window.total,10);assert.equal(window.entries.at(-1).date,100000);
+assert.ok(window.entries.every(e=>e.date>=100000 && e.date<400000));
+assert.equal(inspectNativeHistoryPage(filteredSource,filteredQuery(filter('',62000,62001))).entries[0].historyId,'native-0');
+assert.equal(inspectNativeHistoryPage(filteredSource,filteredQuery(filter('',null,62000))).total,0);
+const none=inspectNativeHistoryPage(filteredSource,filteredQuery(filter('not a saved program')));
+assert.equal(none.total,0);assert.equal(none.unfilteredTotal,29);assert.equal(none.nextOffset,null);assert.deepEqual(none.entries,[]);
+assert.equal(inspectNativeHistoryPage(filteredSource,filteredQuery(filter('   '))).total,29);
+const unicode=JSON.parse(filteredSource);unicode.history.find(e=>e.id==='native-0').programName='Fuerza Ágil';
+assert.equal(inspectNativeHistoryPage(JSON.stringify(unicode),filteredQuery(filter('FUERZA ágil'))).total,1);
+const filterView=inspectNativeHistory(filteredSource,'native-0'),filterLift=filterView.exercises[0];
+const filteredEdit=prepareNativeHistoryCorrection(filteredSource,JSON.stringify({operationId:'filter-correction',
+  snapshotSha256:filterView.snapshotSha256,historyId:filterView.historyId,entrySha256:filterView.entrySha256,correctedAt:5100000,
+  changes:[changeForFilter(filterLift)]}));
+function changeForFilter(lift) { const s=lift.sets[0];return {exerciseId:lift.id,setIndex:s.setIndex,load:'55',reps:s.reps,rir:s.rir}; }
+const afterFilteredEdit=inspectNativeHistoryPage(filteredEdit.candidateSnapshot,filteredQuery(literal.filter));
+assert.deepEqual(afterFilteredEdit.entries.map(e=>e.historyId),literal.entries.map(e=>e.historyId));
+assert.deepEqual(afterFilteredEdit.filter,literal.filter);
+assert.throws(()=>inspectNativeHistoryPage(filteredEdit.candidateSnapshot,filteredQuery(full.filter,12,full.snapshotSha256)));
+for(const bad of [filter('x'.repeat(81)),filter('bad\nquery'),filter('bad\u0085query'),filter(17),
+  filter('',1.5),filter('',0,0),filter('',20,10),filter('',null,8640000000000002),
+  {...filter(),includeDeleted:true},{search:''},null])
+  assert.throws(()=>inspectNativeHistoryPage(filteredSource,filteredQuery(bad)));
+const filteredWire=JSON.stringify({protocolVersion:1,id:'filtered-history',method:'inspectNativeHistoryPage',
+  params:{rawSnapshot:filteredSource,queryJson:filteredQuery(filter('legacy',100000,400000))}});
+assert.equal(JSON.parse(dispatchWorkoutStoreJson(filteredWire)).result.total,10);
+assert.equal(JSON.parse(dispatchEngineJson(filteredWire)).ok,false);assert.equal(JSON.parse(dispatchBackupSchemaJson(filteredWire)).ok,false);
+console.log('PASS native history pages: real completions, stable filtered pagination, literal multi-term/Unicode search, date boundaries, summary-only rows, tombstones, isolated channels, stale-page refusal and older-correction record/Last/cursor integrity');

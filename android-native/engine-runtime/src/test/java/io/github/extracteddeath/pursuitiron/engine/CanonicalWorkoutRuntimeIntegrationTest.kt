@@ -354,9 +354,13 @@ class CanonicalWorkoutRuntimeIntegrationTest {
 
     @Test(timeout=60000) fun historyBrowserPagesOlderWorkoutsAndRejectsReadsOverlappingCompletionOrCancellation() {
         NodeTransport().use { node -> runBlocking {
-            var block=false;var reached=CompletableDeferred<Unit>();var release=CompletableDeferred<Unit>()
+            var block=false;var forgeFilter=false
+            var reached=CompletableDeferred<Unit>();var release=CompletableDeferred<Unit>()
             val transport=CanonicalWorkoutStoreTransport { wire ->
-                val response=node.request(wire)
+                var response=node.request(wire)
+                if(forgeFilter && JSONObject(wire).getString("method")=="inspectNativeHistoryPage")
+                    response=JSONObject(response).apply { getJSONObject("result").getJSONObject("filter")
+                        .put("search","unrequested filter") }.toString()
                 if(block && JSONObject(wire).getString("method")=="inspectNativeHistoryPage") {
                     reached.complete(Unit);release.await()
                 }
@@ -386,6 +390,22 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             }
             val reader=NativeHistoryReadPort(owner,engine);val writes=drive.writes
             val first=checkNotNull(reader.page());assertEquals(29,first.total);assertEquals("browser-3",first.entries[0].historyId)
+            val filter=NativeHistoryFilter(legacy.getString("programName"),100000,900000)
+            val filteredFirst=checkNotNull(reader.page(filter=filter))
+            assertEquals(25,filteredFirst.total);assertEquals(29,filteredFirst.unfilteredTotal);assertEquals(filter,filteredFirst.filter)
+            val filteredSecond=checkNotNull(reader.page(checkNotNull(filteredFirst.nextOffset),filteredFirst.snapshotSha256,filter))
+            val filteredLast=checkNotNull(reader.page(checkNotNull(filteredSecond.nextOffset),filteredFirst.snapshotSha256,filter))
+            val filteredRows=filteredFirst.entries+filteredSecond.entries+filteredLast.entries
+            assertEquals(25,filteredRows.size);assertEquals(25,filteredRows.map { it.historyId }.toSet().size)
+            assertTrue(filteredRows.all { it.historyId.startsWith("legacy-") });assertEquals(1,filteredLast.entries.size)
+            val olderFilter=NativeHistoryFilter(seed.getJSONArray("saved").getJSONObject(0).getString("name"),62000,62001)
+            val olderPage=checkNotNull(reader.page(filter=olderFilter))
+            assertEquals("browser-0",olderPage.entries.single().historyId)
+            val empty=checkNotNull(reader.page(filter=NativeHistoryFilter("no matching program")))
+            assertEquals(0,empty.total);assertEquals(29,empty.unfilteredTotal);assertNull(empty.nextOffset)
+            forgeFilter=true
+            assertTrue(runCatching { reader.page(filter=filter) }.isFailure)
+            forgeFilter=false
             val second=checkNotNull(reader.page(checkNotNull(first.nextOffset),first.snapshotSha256))
             val last=checkNotNull(reader.page(checkNotNull(second.nextOffset),first.snapshotSha256))
             assertEquals(5,last.entries.size);assertEquals("browser-0",last.entries.last().historyId)
@@ -405,6 +425,11 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 JSONObject(after).getJSONObject("perf").getJSONObject(lift.id).toString())
             assertEquals(90.0,checkNotNull(corrected.exercises.single { it.id==lift.id }.record).load,0.0)
             assertNull(reader.page(12,first.snapshotSha256))
+            assertNull(reader.page(12,filteredFirst.snapshotSha256,filter))
+            val correctedFiltered=checkNotNull(reader.page(filter=olderFilter))
+            assertEquals(olderFilter,correctedFiltered.filter)
+            assertEquals(olderPage.entries.map { it.historyId to it.date },correctedFiltered.entries.map { it.historyId to it.date })
+            assertTrue(correctedFiltered.entries.single().volume<olderPage.entries.single().volume)
             val refreshed=checkNotNull(reader.page());assertEquals(first.entries.map { it.historyId },refreshed.entries.map { it.historyId })
             val refreshedLast=checkNotNull(reader.page(24,refreshed.snapshotSha256))
             assertEquals(last.entries.map { it.historyId },refreshedLast.entries.map { it.historyId })
@@ -416,7 +441,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertNull(owner.correctHistory(NativeHistoryCodec.correctionJson(corrected,"blocked-active-edit",5100000,
                 listOf(NativeHistoryChange(lift.id,lift.sets[0].setIndex,"55",6,null)))))
             block=true
-            val stale=async { reader.page() };reached.await()
+            val stale=async { reader.page(filter=filter) };reached.await()
             for((i,slot) in next.slots.withIndex())progress=NativeWorkoutProgress(next,checkNotNull(journal.recordSet(
                 next.session,progress.journal.revision,JournalSetIntent("skip-next-$i",slot,JournalSetDisposition.SKIPPED,null))))
             val finished=checkNotNull(journal.finish(next.session,progress.journal.revision,JournalFinishIntent("finish-next",6060000,60000)))
@@ -425,12 +450,15 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             block=false;assertEquals(30,checkNotNull(reader.page()).total)
             reached=CompletableDeferred();release=CompletableDeferred();block=true
             val beforeCancel=drive.writes
-            val cancelled=async { reader.page() };reached.await();cancelled.cancelAndJoin();release.complete(Unit)
+            val cancelled=async { reader.page(filter=filter) };reached.await();cancelled.cancelAndJoin();release.complete(Unit)
             assertEquals(beforeCancel,drive.writes)
             assertEquals("browser-next",checkNotNull(owner.lastCompletionReceipt()).session.workoutId)
             block=false
             val reopened=NativeHistoryReadPort(CanonicalWorkoutStorePersistence(drive,engine),engine)
             assertEquals(30,checkNotNull(reopened.page()).total)
+            val restoredFilter=checkNotNull(reopened.page(filter=filter))
+            assertEquals(25,restoredFilter.total);assertEquals(30,restoredFilter.unfilteredTotal)
+            assertEquals(filteredFirst.entries,restoredFilter.entries)
             assertEquals("browser-0",checkNotNull(reopened.workout("browser-0")).historyId)
         } }
     }

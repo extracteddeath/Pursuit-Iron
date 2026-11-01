@@ -19,7 +19,8 @@ The source implementation now covers the standard working-set journey and
 engine-issued myo/drop extension recording and one-shot deload consumption.
 Durable in-workout corrections and corrections to retained sets in saved
 native workouts are connected through the journal and canonical history.
-Insights can browse older native completions in revision-bound pages. Real-device acceptance remains pending; the build
+Insights can browse older native completions in revision-bound pages, with
+program/day search and local calendar date filters. Real-device acceptance remains pending; the build
 freeze remains active.
 
 The instructions below describe how **older previously produced** artifacts
@@ -358,3 +359,16 @@ older-set correction, a page response delayed across completion, cancellation,
 restart and preservation of newer Last/receipt/cursor decisions. Source-only
 compile and tests remain separate from device acceptance; APK generation stays
 disabled.
+
+History filters match literal, case-insensitive terms across program/day names
+before paging. The native date-range picker includes both selected device-local
+days, using their actual start/end instants across daylight-saving changes.
+Each response binds the exact filter, source snapshot, page and counts; a result
+for another query or store revision cannot be installed. Filters remain applied
+when opening/correcting a workout, moving between pages, reloading or finishing
+the next workout. Drafts survive rotation, and typing does not run a query.
+Empty results retain the total saved count and a Clear filters action.
+
+The current source-only checks include 110 domain JVM tests, 21 packaged-runtime
+JVM tests, Compose and instrumentation source compilation, the updated history
+page/protocol/UI gates and a newly verified IIFE. No APK is produced.

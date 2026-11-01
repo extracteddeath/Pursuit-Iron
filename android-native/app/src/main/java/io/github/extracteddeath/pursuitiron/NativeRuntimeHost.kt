@@ -17,7 +17,8 @@ internal data class NativeRuntimeState(
     val workout: NativeWorkoutProgress?=null,val workoutBusy: Boolean=false,val workoutError: String?=null,
     val workoutBlocked: Boolean=false,val completion: CanonicalWorkoutHistoryReceipt?=null,
     val history: NativeWorkoutHistory?=null,val historyPage: NativeHistoryPage?=null,
-    val historyBusy: Boolean=false,val historyError: String?=null
+    val historyBusy: Boolean=false,val historyError: String?=null,
+    val historyFilter: NativeHistoryFilter=NativeHistoryFilter()
 )
 
 /** One process-scoped engine, canonical writer and workout journal. No backup import. */
@@ -94,8 +95,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         val id=receipt?.session?.workoutId ?: return null
         return historyReader?.workout(id)
     }
-    private suspend fun optionalHistoryPage(offset: Int=0,expected: String?=null): NativeHistoryPage? = try {
-        historyReader?.page(offset,expected)
+    private suspend fun optionalHistoryPage(offset: Int=0,expected: String?=null,
+        filter: NativeHistoryFilter=NativeHistoryFilter()): NativeHistoryPage? = try {
+        historyReader?.page(offset,expected,filter)
     } catch(cancelled: CancellationException) { throw cancelled }
       catch(_: Exception) { null }
 
@@ -108,20 +110,23 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         if(mutable.value.historyBusy)return
         mutable.update { it.copy(history=null,historyError=null) }
     }
-    fun loadHistoryPage(offset: Int) {
+    fun filterHistory(filter: NativeHistoryFilter)=loadHistoryPage(0,filter)
+    fun loadHistoryPage(offset: Int)=loadHistoryPage(offset,mutable.value.historyFilter)
+    private fun loadHistoryPage(offset: Int,filter: NativeHistoryFilter) {
         val current=mutable.value
         if(!current.ready || current.busy || current.saved==null || current.historyBusy || current.workoutBusy)return
         val prior=current.historyPage
-        if(offset!=0 && (prior==null || offset!=prior.nextOffset && offset!=(prior.offset-NativeHistoryPageCodec.PAGE_SIZE).coerceAtLeast(0)))return
+        if(offset!=0 && (prior==null || prior.filter!=filter ||
+            offset!=prior.nextOffset && offset!=(prior.offset-NativeHistoryPageCodec.PAGE_SIZE).coerceAtLeast(0)))return
         val reader=historyReader ?: return
         val expected=if(offset==0)null else prior?.snapshotSha256
         mutable.update { it.copy(historyBusy=true,historyError=null) }
         scope.launch {
             try {
-                val page=checkNotNull(reader.page(offset,expected))
+                val page=checkNotNull(reader.page(offset,expected,filter))
                 ensureActive()
                 mutable.update { if(it.storeChangeKey==current.storeChangeKey)
-                    it.copy(history=null,historyPage=page,historyBusy=false,historyError=null)
+                    it.copy(history=null,historyPage=page,historyFilter=page.filter,historyBusy=false,historyError=null)
                     else it.copy(historyBusy=false,historyError="History changed while loading. Reload workouts to continue.") }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) { mutable.update { it.copy(historyBusy=false,
@@ -141,8 +146,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         scope.launch {
             try {
                 val history=checkNotNull(reader.workout(historyId,expected))
-                val page=current.historyPage?.takeIf { it.snapshotSha256==history.snapshotSha256 }
-                    ?: optionalHistoryPage(current.historyPage?.offset ?: 0,history.snapshotSha256)
+                val page=current.historyPage?.takeIf { it.snapshotSha256==history.snapshotSha256 && it.filter==current.historyFilter }
+                    ?: optionalHistoryPage(current.historyPage?.offset ?: 0,history.snapshotSha256,current.historyFilter)
                 ensureActive()
                 // Browsing an older workout never replaces the latest completion receipt.
                 mutable.update { if(it.storeChangeKey==current.storeChangeKey)
@@ -162,7 +167,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             try {
                 val history=checkNotNull(owner.correctHistory(correctionJson))
                 val receipt=owner.lastCompletionReceipt()
-                val page=optionalHistoryPage(current.historyPage?.offset ?: 0,history.snapshotSha256)
+                val page=optionalHistoryPage(current.historyPage?.offset ?: 0,history.snapshotSha256,current.historyFilter)
                 ensureActive()
                 mutable.update { it.copy(history=history,historyPage=page,completion=receipt,historyBusy=false,
                     historyError=if(page==null)"Correction saved. Reload workouts to refresh the list." else null) }
@@ -295,7 +300,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 check(outcome.recoveryCleared)
                 val saved=checkNotNull(readSaved(owner,loaded))
                 val history=runCatching { readHistory(outcome.receipt) }.getOrNull()
-                val page=optionalHistoryPage()
+                val page=optionalHistoryPage(filter=current.historyFilter)
                 ensureActive()
                 mutable.update { it.copy(workout=null,workoutBusy=false,workoutError=null,completion=outcome.receipt,saved=saved,
                     history=history,historyPage=page,historyError=null) }
@@ -308,7 +313,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val done=restored.isSuccess && restored.getOrNull()==null && receipt?.session==progress.plan.session
                 val saved=if(done)runCatching { readSaved(owner,loaded) }.getOrNull() else null
                 val history=if(done)runCatching { readHistory(receipt) }.getOrNull() else null
-                val page=if(done)optionalHistoryPage() else null
+                val page=if(done)optionalHistoryPage(filter=current.historyFilter) else null
                 mutable.update { it.copy(workout=if(done)null else restored.getOrNull() ?: it.workout,workoutBusy=false,
                     completion=if(done)receipt else it.completion,saved=saved ?: it.saved,history=if(done)history else it.history,
                     historyPage=if(done)page else it.historyPage,

@@ -1,11 +1,10 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 android {
     namespace = "io.github.extracteddeath.pursuitiron"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "io.github.extracteddeath.pursuitiron"
         minSdk = 26
@@ -24,7 +23,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
 }
 dependencies {
     implementation(project(":domain-contract"))

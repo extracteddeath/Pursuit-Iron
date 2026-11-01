@@ -12,7 +12,7 @@ This is an **isolated native Android design preview**, not a replacement for the
 
 Debug APKs use CI-generated test signing keys. A newer preview may fail to install over an older one; uninstall the old **Native Preview** first and then install the new APK. It uses a separate `.preview` package ID and must not replace a future Play Store version.
 
-**If no successful run or artifact is present, there is no installable APK yet.** The branch alone is source code, not a runnable app. You can also open `android-native/` in Android Studio with JDK 17 / Android SDK 36, provision Gradle 8.13 and run the `app` debug configuration.
+**If no successful run or artifact is present, there is no installable APK yet.** The branch alone is source code, not a runnable app. You can also open `android-native/` in Android Studio with JDK 17 / Android SDK 37, provision Gradle 9.5 and run the `app` debug configuration.
 
 ## Architecture
 
@@ -28,4 +28,4 @@ Actual Android runtime engine execution; fixture equivalence for load rounding, 
 
 ## Verified dependency direction (October 2026)
 
-The preview targets the **stable** Compose BOM `2026.09.00`, Material 3 `1.4.0`, and Activity Compose `1.13.0`. The newer Material 3 `1.5.0-beta02` is available for later expressive-component experiments, but remains a beta and is not yet promoted into this installable baseline. The shared `PursuitShapes` shape scale is a native Compose theme token, not copied web CSS.
+The preview uses Android Gradle Plugin **9.3.0** with built-in Kotlin, Kotlin Compose compiler **2.4.21**, Android API **37** for compilation (while keeping target SDK 36), and the **stable** Compose BOM `2026.09.00`, Material 3 `1.4.0`, and Activity Compose `1.13.0`. The newer Material 3 `1.5.0-beta02` is available for later expressive-component experiments, but remains a beta and is not yet promoted into this installable baseline. The shared `PursuitShapes` shape scale is a native Compose theme token, not copied web CSS.

@@ -160,8 +160,11 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                                         .equals(value.getString("source")))
                             throw new SecurityException("Unexpected read-only provenance");
                     }
-                    outcome.complete(response.toString());
-                } catch (Exception failure) {
+                    if (closed.get())
+                        outcome.completeExceptionally(new IllegalStateException("Canonical service closed while evaluating"));
+                    else
+                        outcome.complete(response.toString());
+                } catch (Throwable failure) {
                     state = State.UNAVAILABLE;
                     releaseOnWorker();
                     outcome.completeExceptionally(failure);
@@ -175,15 +178,23 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
 
     /** Close on the serial worker, release the sandbox lease and never replay. */
     private void releaseOnWorker() {
-        if (isolate != null) {
-            try { isolate.close(); } finally { isolate = null; }
-        }
-        if (sandbox != null) {
-            try { sandbox.close(); } finally { sandbox = null; }
-        }
-        if (ownsLease) {
-            ownsLease = false;
-            SANDBOX_LEASE.set(false);
+        try {
+            if (isolate != null) {
+                try { isolate.close(); } catch (RuntimeException ignored) { /* already dead */ }
+                finally { isolate = null; }
+            }
+        } finally {
+            try {
+                if (sandbox != null) {
+                    try { sandbox.close(); } catch (RuntimeException ignored) { /* already dead */ }
+                    finally { sandbox = null; }
+                }
+            } finally {
+                if (ownsLease) {
+                    ownsLease = false;
+                    SANDBOX_LEASE.set(false);
+                }
+            }
         }
     }
 

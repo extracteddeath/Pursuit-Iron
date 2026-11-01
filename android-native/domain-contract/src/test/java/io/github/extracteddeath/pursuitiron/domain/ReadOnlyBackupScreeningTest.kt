@@ -54,4 +54,18 @@ class ReadOnlyBackupScreeningTest {
         assertTrue(runCatching { ReadOnlyBackupScreening.fingerprint(broken) }.isFailure)
         assertTrue(broken.closed)
     }
+    @Test fun cancellationStopsFingerprintingAndClosesProviderStream() {
+        val source = ObservedStream(ByteArrayInputStream(ByteArray(96 * 1024)))
+        val cancelled = IllegalStateException("synthetic cancellation")
+        var checkpoints = 0
+        val failure = runCatching {
+            ReadOnlyBackupScreening.fingerprint(source, checkActive = {
+                if (++checkpoints == 4) throw cancelled
+            })
+        }.exceptionOrNull()
+        assertSame(cancelled, failure)
+        assertTrue("Provider stream must close on cancellation", source.closed)
+        assertEquals(4, checkpoints)
+    }
+
 }

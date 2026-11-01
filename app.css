@@ -222,8 +222,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 #root [role="dialog"]:focus-visible,#root dialog:focus-visible{outline:none}
 #root [role="tablist"]{isolation:isolate}
 #root [role="tab"]{transition:background-color var(--pi-motion-fast) ease,color var(--pi-motion-fast) ease,opacity var(--pi-motion-fast) ease,transform var(--pi-motion-fast) var(--pi-ease)}
-#root [role="tab"][aria-selected="true"]{font-weight:700}
-#root [aria-current="page"]{font-weight:700}
+#root [role="tab"][aria-selected="true"],#root [aria-current="page"]{font-weight:700}
 #root details>summary{cursor:pointer;touch-action:manipulation}
 #root details>summary::marker{font-size:.8em}
 #root progress,#root [role="progressbar"]{overflow:hidden;border-radius:999px}
@@ -3209,9 +3208,7 @@ display:block!important;
   padding-left:max(6px,env(safe-area-inset-left))!important;
   padding-right:max(6px,env(safe-area-inset-right))!important;
 }
-#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span{
-  min-width:0;
-}
+#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span,
 #root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-action-tile,.wpb-plan-up-next,.wpb-plan-glance-tile,.wpb-progress-glance-item,.wpb-profile-hero,.wpb-profile-stat,.wpb-profile-strength-cell,.wpb-settings-card,.wpb-settings-row){
   min-width:0;
 }

@@ -45,4 +45,15 @@ assert.equal(css.split(sharedTransition).length-1,1,'Specific Progress idle tab 
 assert.ok(css.split(sharedTransition)[1]?.split('}')[0].includes('transition:color var(--pi-r73-state-duration)'),
  'Shared idle tab transition preserves the original timing and token');
 
-console.log('PASS CSS retirement: three adjacent same-selector roles merged without changing priority or conditions.');
+
+// B1022: Adjacent identical declarations share one source rule, without
+// widening any selector's specificity, media condition or state predicate.
+assert.ok(css.includes('#root [role="tab"][aria-selected="true"],#root [aria-current="page"]{font-weight:700}'),
+    'Active tabs and page links retain their original bold state with one paint owner');
+const nowrap='#root[data-pi-motion="expressive"] .wpb .wpb-tabbar .wpb-tab>span,\\n'
+    +'#root[data-pi-motion="expressive"] .wpb :is(.wpb-home-hero,.wpb-action-tile,.wpb-plan-up-next,';
+assert.ok(css.includes(nowrap),'Nav labels and responsive cards share one min-width owner');
+assert.equal((css.match(/!important/g)||[]).length, uiStyleBudget.cssPriorityDeclarations,
+    'The adjacent-rule consolidation must not introduce priority overrides');
+
+console.log('PASS CSS retirement: five adjacent roles merged without changing priority or conditions.');

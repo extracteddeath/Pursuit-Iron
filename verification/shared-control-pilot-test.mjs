@@ -52,7 +52,12 @@ assert.ok(settings.includes('value: minInc.v && minInc.unit !== unit ? null : (m
  'Smallest jump selected state remains scoped to selected weight unit');
 
 // Staged Program settings keep original writers/validation with shared footer actions.
-assert.ok(program.includes("import { UiAction, UiChoice, UiSheetClose }"));
+// Check actual symbols, not a frozen import-order snapshot: new shared owners
+// may join this import without changing any Settings callback or selection behavior.
+const primitiveImport=program.match(/import \\{([^}]+)\\} from '\\.\\/ui-primitives\\.js';/);
+const imported=new Set((primitiveImport?.[1]||'').split(',').map(symbol=>symbol.trim()));
+for(const symbol of ['UiAction','UiChoice','UiSheetClose','UiSheetHeading'])
+    assert.ok(imported.has(symbol),'Program settings retains required shared UI primitive '+symbol);
 assert.ok(program.includes('_jsx(UiAction, { variant: "tonal", onClick: onClose, className: "wpb-program-settings-cancel"'));
 assert.ok(program.includes('_jsx(UiAction, { variant: "primary", "aria-label": "Save program settings"'));
 assert.ok(program.includes('onClick: applyCfgDraft, disabled: !canApply'));

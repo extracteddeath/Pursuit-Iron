@@ -33,11 +33,15 @@ for(const [path,expected,roles] of sheets){
 }
 const share=fs.readFileSync('modules/program-share-sheet.js','utf8');
 const reference=fs.readFileSync('modules/program-reference-surfaces.js','utf8');
+const exercise=fs.readFileSync('modules/program-exercise-options.js','utf8');
+const maxes=fs.readFileSync('modules/program-training-maxes.js','utf8');
 assert.ok(share.includes("_jsxs(UiSheetHeading, { as: 'header'") &&
-    reference.includes("_jsxs(UiSheetHeading, { as: 'header'"),
+    reference.includes("_jsxs(UiSheetHeading, { as: 'header'") &&
+    exercise.includes("_jsxs(UiSheetHeading, { as: 'header'") &&
+    maxes.includes("_jsxs(UiSheetHeading, { as: 'header'"),
     'Original semantic header elements stay headers');
 for(const path of ['modules/program-settings-sheet.js','modules/program-schedule-sheet.js','modules/program-review-surfaces.js'])
     assert.ok(fs.readFileSync(path,'utf8').includes('_jsxs(UiSheetHeading, { className:'),
         path+' preserves its original div header');
 assert.equal(count,8,'Eight distinct Program-sheet headings share one DOM owner');
-console.log('PASS shared sheet heading: six Program headings retain titles, labels and native DOM.');
+console.log('PASS shared sheet heading: eight Program headings retain titles, labels and native DOM.');

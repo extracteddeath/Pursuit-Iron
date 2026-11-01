@@ -192,6 +192,16 @@ const sourceContract = fs.readFileSync(
 const canonicalAdapter = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/CanonicalCurrentPlanSourceAdapter.kt', 'utf8'
 );
+const bytePort = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ExactCurrentSnapshotProjectionPort.kt', 'utf8'
+);
+assert.ok(bytePort.includes('MessageDigest.getInstance("SHA-256")') &&
+  bytePort.includes('CodingErrorAction.REPORT') &&
+  bytePort.includes('ReadOnlyBackupLimits.MAX_SOURCE_BYTES') &&
+  bytePort.includes('candidate?.fill(0)') &&
+  bytePort.includes('source.fill(0)') &&
+  !shell.includes('ExactCurrentSnapshotProjectionPort('),
+  'Current snapshot SHA gate must be bounded, strict UTF-8, wiping, and remain unconnected');
 assert.ok(canonicalAdapter.includes('ReadOnlyProgramTransportCodec.decode(') &&
   canonicalAdapter.includes('ReadOnlyProgramPresentationPolicy.inspect(') &&
   canonicalAdapter.includes('readCurrentProjection(') &&

@@ -266,3 +266,21 @@ source-byte trust, current revision, and all change notifications.
 Kotlin tests use the same wholly synthetic v13 wire fixture as canonical JS,
 including deletions, revision drift, malformed/writable payloads, missing
 records, subscription release, failures and cancellation.
+
+
+## Exact-byte SHA gate for a future current-store owner (not connected)
+
+ExactCurrentSnapshotProjectionPort accepts a future authoritative owner that
+transfers ownership of a complete current v13 store byte copy, and a
+device-certified pinned canonical JavaScript projector. It makes a bounded,
+private in-memory copy, rejects empty, over-1 MiB, BOM and malformed UTF-8,
+hashes the exact bytes, requires the projector's reference SHA-256 to match,
+then clears both byte buffers on every return, error or cancellation.
+The projector must be the real canonical JS source, not a Kotlin schema fork.
+
+This closes a digest-provenance gap at the transport boundary but does NOT
+authenticate the source owner, certify Android JavaScript execution or make
+an offline backup the current store. Both interfaces are unimplemented in
+the preview. Synthetic contract tests verify success, tampered source bytes,
+size/encoding rejection, cancellation cleanup and subscription teardown.
+The result remains read-only structure, never prescriptions or log permissions.

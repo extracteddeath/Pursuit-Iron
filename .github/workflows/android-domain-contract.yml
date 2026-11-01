@@ -1,0 +1,41 @@
+name: Kotlin engine contract compile
+
+on:
+  push:
+    branches:
+      - architecture/android-compose-foundation
+    paths:
+      - 'android-native/domain-contract/**'
+      - '.github/workflows/android-domain-contract.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: android-domain-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compile-domain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Install Android API 37.0
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Compile Kotlin engine interface without producing an APK
+        working-directory: android-native
+        run: gradle :domain-contract:compileDebugKotlin --no-daemon --stacktrace

@@ -52,8 +52,12 @@ if the Activity's saveable state cannot be restored. The session-wide native
 rest timer uses the engine-issued exercise rest target, runs on Android elapsed
 time across backgrounding, and supports tap-to-start/restart and long-press
 reset. The timer is a manual, presentation-only tool: it does not imply a
-completed set, auto-log data, or change workout prescriptions. These controls
-do not calculate loads or mutate the canonical training engine. Other
+completed set, auto-log data, or change workout prescriptions. Insights now
+shows the latest confirmed native completion receipt and its matching saved
+program day label, including after starting the next workout or reopening the
+app. It intentionally does not synthesize detailed history, edited PRs or
+training charts until a certified canonical history reader exists. These
+controls do not calculate loads or mutate the canonical training engine. Other
 interactive examples remain local UI-only state.
 Web history and backup import are separate from this native store.
 

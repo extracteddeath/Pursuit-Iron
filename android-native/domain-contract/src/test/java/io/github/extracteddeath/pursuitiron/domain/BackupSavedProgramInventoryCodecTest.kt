@@ -11,7 +11,9 @@ class BackupSavedProgramInventoryCodecTest {
       "snapshotOnly":true,"imported":false,"approvedForWorkoutExecution":false,
       "storeVersion":13,"storeSavedAt":100,
       "programs":[{"id":"synthetic","name":"Back-up plan","updatedAt":42,
-      "trainingDays":4,"exerciseSlots":19}]}}"""
+      "trainingDays":2,"exerciseSlots":19,
+      "days":[{"label":"Push","exerciseSlots":10},
+              {"label":null,"exerciseSlots":9}]}]}}"""
     @Test fun inventoryRequestKeepsSingleBoundedRawSnapshot() {
         val request = JSONObject(BackupSavedProgramInventoryCodec.encode(
             "test-inventory","{\"v\":13}"))
@@ -25,7 +27,10 @@ class BackupSavedProgramInventoryCodecTest {
         assertTrue(good is EngineResponse.Success)
         val values=(good as EngineResponse.Success).result
         assertEquals(100L,values.storeSavedAt)
-        assertEquals(4,values.entries.single().trainingDays)
+        assertEquals(2,values.entries.single().trainingDays)
+        assertEquals("Push",values.entries.single().days.first().label)
+        assertNull(values.entries.single().days.last().label)
+        assertEquals(19,values.entries.single().days.sumOf { it.exerciseSlots })
         assertEquals(19,values.entries.single().exerciseSlots)
         fun bad(wire:String)=assertTrue(runCatching {
             BackupSavedProgramInventoryCodec.decode(wire,"test-inventory")
@@ -39,6 +44,11 @@ class BackupSavedProgramInventoryCodecTest {
         bad(ok.replace("\"trainingDays\":4","\"trainingDays\":0"))
         bad(ok.replace("\"name\":\"Back-up plan\"","\"name\":\"\\u0000\""))
         bad(ok.replace("\"exerciseSlots\":19","\"exerciseSlots\":220"))
+        bad(ok.replace("\"exerciseSlots\":10","\"exerciseSlots\":11"))
+        bad(ok.replace("\"trainingDays\":2","\"trainingDays\":3"))
+        bad(ok.replace("\"label\":null","\"label\":\"\\\\u0000\""))
+        bad(ok.replace("\"days\":[","\"prescription\":{},\"days\":["))
+        bad(ok.replace("\"exerciseSlots\":9","\"exerciseSlots\":31"))
         bad(ok.replace("\"programs\":[","\"history\":[],\"programs\":["))
         bad(ok.replace("\"programs\":[{","\"programs\":[{"
             .replace("{","{\"weight\":150,")))

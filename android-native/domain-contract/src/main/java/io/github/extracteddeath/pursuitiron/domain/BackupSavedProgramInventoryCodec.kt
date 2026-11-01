@@ -3,12 +3,18 @@ package io.github.extracteddeath.pursuitiron.domain
 import org.json.JSONObject
 
 /** Backup-only view; never a live Plan or an active-revision certificate. */
+data class BackupProgramDay(
+    val label: String?,
+    val exerciseSlots: Int
+)
+
 data class BackupSavedProgramEntry(
     val id: String,
     val name: String,
     val updatedAt: Long,
     val trainingDays: Int,
-    val exerciseSlots: Int
+    val exerciseSlots: Int,
+    val days: List<BackupProgramDay>
 )
 
 data class BackupSavedProgramInventory(
@@ -74,7 +80,7 @@ object BackupSavedProgramInventoryCodec {
         val seen=mutableSetOf<String>()
         val entries=(0 until programs.length()).map { idx ->
             val row=programs.getJSONObject(idx)
-            exact(row,"id","name","updatedAt","trainingDays","exerciseSlots")
+            exact(row,"id","name","updatedAt","trainingDays","exerciseSlots","days")
             val id=row.get("id")
             val name=row.get("name")
             require(id is String && validId.matches(id) && seen.add(id))
@@ -82,11 +88,30 @@ object BackupSavedProgramInventoryCodec {
                 name.none { it.isISOControl() })
             val days=number(row,"trainingDays",7).toInt()
             require(days in 1..7)
+            val dayRows=row.getJSONArray("days")
+            require(dayRows.length() == days)
+            val daySummaries=(0 until dayRows.length()).map { dayIndex ->
+                val day=dayRows.getJSONObject(dayIndex)
+                exact(day,"label","exerciseSlots")
+                val label=day.get("label")
+                require(label == JSONObject.NULL || label is String)
+                if (label is String) {
+                    require(label.isNotBlank() && label.length <= 120 &&
+                        label.none { it.isISOControl() })
+                }
+                BackupProgramDay(
+                    label=label as? String,
+                    exerciseSlots=number(day,"exerciseSlots",30).toInt()
+                )
+            }
+            val total=number(row,"exerciseSlots",210).toInt()
+            require(daySummaries.sumOf { it.exerciseSlots } == total)
             BackupSavedProgramEntry(
                 id=id,name=name,
                 updatedAt=number(row,"updatedAt",MAX_SAFE_CLOCK),
                 trainingDays=days,
-                exerciseSlots=number(row,"exerciseSlots",210).toInt()
+                exerciseSlots=total,
+                days=daySummaries
             )
         }
         return EngineResponse.Success(expectedId,BackupSavedProgramInventory(savedAt,entries))

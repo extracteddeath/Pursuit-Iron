@@ -63,7 +63,8 @@ assert.equal(listed.result.imported,false);
 assert.equal(listed.result.approvedForWorkoutExecution,false);
 assert.equal(listed.result.storeSavedAt,100);
 assert.deepEqual(listed.result.programs,[{
-  id:'synthetic',name:'synthetic-sensitive-name',updatedAt:42,trainingDays:1,exerciseSlots:0
+  id:'synthetic',name:'synthetic-sensitive-name',updatedAt:42,trainingDays:1,exerciseSlots:0,
+  days:[{label:'Demo',exerciseSlots:0}]
 }]);
 assert.ok(!JSON.stringify(listed).includes('private-synthetic-history'),
   'Inventory cannot project historical athlete records');
@@ -90,3 +91,28 @@ assert.equal(inventory(JSON.stringify({...JSON.parse(snapshot),
   }))})).error.code,'SCHEMA_REJECTED','cannot silently truncate program list');
 assert.equal(JSON.parse(call(snapshot,'deleteHistory')).ok,false);
 console.log('PASS canonical v13 backup-only saved-program inventory, tombstones, duplicate revisions and redaction');
+
+const daySnapshot = JSON.stringify({
+  ...JSON.parse(snapshot),
+  saved:[{...JSON.parse(snapshot).saved[0],
+    days:[{id:'day-a',label:'Push',exercises:['bb-bench','db-press']},
+          {id:'day-b',exercises:[]}]
+  }]
+});
+assert.deepEqual(inventory(daySnapshot).result.programs[0].days,[
+  {label:'Push',exerciseSlots:2},{label:null,exerciseSlots:0}
+]);
+assert.equal(inventory(daySnapshot).result.programs[0].exerciseSlots,2);
+assert.ok(!JSON.stringify(inventory(daySnapshot)).includes('bb-bench'));
+assert.ok(!JSON.stringify(inventory(daySnapshot)).includes('db-press'));
+const invalidLabel = JSON.stringify({...JSON.parse(daySnapshot),saved:[{
+  ...JSON.parse(daySnapshot).saved[0],
+  days:[{id:'day-a',label:'Bad\\u0000Label',exercises:[]}]
+}]});
+assert.equal(inventory(invalidLabel).error.code,'SCHEMA_REJECTED');
+assert.equal(inventory(JSON.stringify({...JSON.parse(daySnapshot),saved:[{
+  ...JSON.parse(daySnapshot).saved[0],days:[{
+    id:'day-a',label:'Z'.repeat(121),exercises:[]
+  }]
+}]})).error.code,'SCHEMA_REJECTED');
+console.log('PASS backup-only day labels/counts without exposing exercise identities');

@@ -6,9 +6,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -27,6 +32,8 @@ internal fun BackupSavedProgramInventoryPanel(inventory: BackupSavedProgramInven
     Text("Saved programs in selected copy",
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold)
+    // Non-saveable detail selection resets with each newly chosen backup.
+    var expandedProgramId by remember(inventory) { mutableStateOf<String?>(null) }
     if (inventory.entries.isEmpty()) {
         Text("No active saved programs in this copy.",
             style = MaterialTheme.typography.bodyMedium,
@@ -61,6 +68,38 @@ internal fun BackupSavedProgramInventoryPanel(inventory: BackupSavedProgramInven
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    TextButton(
+                        onClick = {
+                            expandedProgramId = if (expandedProgramId == entry.id)
+                                null else entry.id
+                        }
+                    ) {
+                        Text(if (expandedProgramId == entry.id)
+                            "Hide backup days" else "View backup days")
+                    }
+                    if (expandedProgramId == entry.id) {
+                        entry.days.forEachIndexed { dayIndex, day ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    day.label ?: "Day ${dayIndex + 1}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    "${day.exerciseSlots} exercises",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

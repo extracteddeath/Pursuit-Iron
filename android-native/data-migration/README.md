@@ -138,3 +138,13 @@ This is intentionally distinct from the inactive *current-reference* saved
 program gate. A snapshot fingerprint cannot establish a currently active
 program. No snapshot rows are adopted, no native workout targets generated,
 and the web store is unchanged.
+
+### Expandable backup-only day outline
+
+The read-only backup inventory can now expand a saved program into its
+**source-backed day labels and exercise-slot counts**. Each day is bounded,
+the Kotlin codec verifies that all per-day counts sum exactly to the program
+total, and no exercise IDs, set counts, loads, RIR, history or target
+prescriptions cross the wire. Missing optional labels are displayed simply
+as `Day N`, never presented as inferred workout names. M3 cards use a
+single disclosure action; no activation, set logging or native writes.

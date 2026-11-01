@@ -251,6 +251,10 @@ public final class CanonicalJsSandboxInstrumentedTest {
             assertEquals("synthetic-kept",programs.getJSONObject(0).getString("id"));
             assertEquals(1,programs.getJSONObject(0).getInt("trainingDays"));
             assertEquals(1,programs.getJSONObject(0).getInt("exerciseSlots"));
+            org.json.JSONArray dayRows=programs.getJSONObject(0).getJSONArray("days");
+            assertEquals(1,dayRows.length());
+            assertTrue(dayRows.getJSONObject(0).isNull("label"));
+            assertEquals(1,dayRows.getJSONObject(0).getInt("exerciseSlots"));
             assertFalse(raw.contains("private-history-marker"));
             assertFalse(raw.contains("synthetic-deleted"));
             assertFalse(raw.contains("strength"));

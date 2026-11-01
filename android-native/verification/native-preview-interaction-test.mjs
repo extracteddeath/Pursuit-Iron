@@ -71,10 +71,14 @@ const backupInventoryUi = fs.readFileSync(root + 'BackupSavedProgramInventoryPan
 assert.ok(backupInventoryUi.includes('BACKUP COPY · NOT YOUR ACTIVE PLAN') &&
   backupInventoryUi.includes('MaterialTheme.shapes.large') &&
   backupInventoryUi.includes('surfaceContainerHigh') &&
+  backupInventoryUi.includes('remember(inventory) { mutableStateOf<String?>(null) }') &&
+  backupInventoryUi.includes('TextButton(') &&
+  backupInventoryUi.includes('View backup days') &&
+  backupInventoryUi.includes('entry.days.forEachIndexed') &&
   !backupInventoryUi.includes('SavedProgramOverviewPanel(') &&
-  !backupInventoryUi.includes('onClick') &&
-  !backupInventoryUi.includes('deleteHistory('),
-  'M3E backup list must look native while remaining visually distinct and non-actionable');
+  !backupInventoryUi.includes('deleteHistory(') &&
+  !backupInventoryUi.includes('openTrain('),
+  'M3E backup list must look native and only expand read-only source metadata');
 const screening = fs.readFileSync(root + 'BackupCopyScreeningPanel.kt', 'utf8');
 const fingerprint = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupScreening.kt',

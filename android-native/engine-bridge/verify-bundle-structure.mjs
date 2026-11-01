@@ -106,6 +106,9 @@ assert.equal(inventory.result.programs.length,1);
 assert.equal(inventory.result.programs[0].id,'backup-active');
 assert.equal(inventory.result.programs[0].trainingDays,1);
 assert.equal(inventory.result.programs[0].exerciseSlots,1);
+assert.deepEqual(JSON.parse(JSON.stringify(inventory.result.programs[0].days)),[
+  {label:null,exerciseSlots:1}
+]);
 assert.ok(!JSON.stringify(inventory).includes('synthetic-private-history'));
 assert.ok(!JSON.stringify(inventory).includes('Deleted backup entry'));
 const inventoryWrite = JSON.parse(bridge.dispatchBackupSchemaJson(JSON.stringify({

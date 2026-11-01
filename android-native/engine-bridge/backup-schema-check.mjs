@@ -53,7 +53,7 @@ export function canonicalBackupSchemaCheck(params) {
 
 /**
  * Explicit backup-only PROGRAM INVENTORY, never a live program projection.
- * Returns bounded display metadata; no exercises, history, load, RIR,
+ * Returns bounded day labels/counts; no exercise IDs, history, load, RIR,
  * storage writes, or permission to activate a program.
  */
 const programId = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
@@ -81,18 +81,26 @@ export function canonicalBackupProgramInventory(params) {
         program.days.length < 1 || program.days.length > 7)
       throw new TypeError('Invalid active backup program');
     let exerciseSlots = 0;
-    for (const day of program.days) {
+    // Project only labels and exercise counts. No exercise IDs, weights,
+    // targets, sets or history may travel through the backup inventory.
+    const days = program.days.map(day => {
       if (!plain(day) || !Array.isArray(day.exercises) ||
-          day.exercises.length > 30)
+          day.exercises.length > 30 ||
+          (day.label != null && !safeName(day.label)))
         throw new TypeError('Invalid saved-program day');
       exerciseSlots += day.exercises.length;
-    }
+      return {
+        label: day.label == null ? null : day.label,
+        exerciseSlots: day.exercises.length
+      };
+    });
     programs.push({
       id: program.id,
       name: program.name,
       updatedAt: program.updatedAt,
-      trainingDays: program.days.length,
-      exerciseSlots
+      trainingDays: days.length,
+      exerciseSlots,
+      days
     });
   }
   return Object.freeze({

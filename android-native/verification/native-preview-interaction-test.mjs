@@ -53,6 +53,26 @@ const nativeUiWorkflow = fs.readFileSync(
 );
 assert.match(screens, /WorkoutOutlinePanel\(outline = null\)/,
   'Native Plan must default to unconnected read-only outline');
+const savedPlan = fs.readFileSync(root + 'SavedProgramOverviewPanel.kt', 'utf8');
+const planGate = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyProgramPresentation.kt',
+  'utf8'
+);
+assert.ok(screens.includes('programSummary: ReadOnlyProgramSummary? = null') &&
+  screens.includes('currentProgramReference: ReadOnlyProgramReference? = null'),
+  'The native preview may not inject guessed personal program data');
+assert.ok(screens.includes('ReadOnlyProgramPresentationPolicy.inspect(') &&
+  screens.includes('programPresentation is ReadOnlyProgramPresentation.Structure'),
+  'Saved-program UI must be behind the independent current-revision gate');
+assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen()'),
+  'The installable preview must not supply an unverified personal backup');
+assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structure'),
+  'Shared saved-program composable must accept only policy-approved structure');
+assert.ok(planGate.includes('ReadOnlyProgramReferenceGate.sameActiveRevision('),
+  'Saved-program display must reject stale revisions and active tombstones');
+assert.ok(!savedPlan.includes('generateNextProgramForShell(') &&
+  !savedPlan.includes('prescribeSets(') && !savedPlan.includes('deleteHistory('),
+  'Read-only summary UI may not invoke training or storage methods');
 assert.ok(outline.includes('OutlinePresentationPolicy.inspect(outline)'),
   'Native outline must pass through the presentation gate');
 assert.ok(outline.includes('ILLUSTRATIVE UI ONLY · NOT GENERATED OR SAVED'),

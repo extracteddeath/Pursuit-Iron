@@ -41,9 +41,14 @@ Alternatively, open `android-native/` in Android Studio, provision JDK 17, Andro
 
 Native onboarding can prepare and explicitly save a new program through the
 packaged canonical engine. Its saved program can start a real next workout,
-record working sets, resume and publish native training history. Other
-interactive examples remain local UI-only state. Web history and backup import
-are separate from this native store.
+record working sets, resume and publish native training history. The connected
+Train workspace now counts only acknowledged set receipts, offers navigation
+to unfinished exercises, keeps a session-wide Last/Target display choice, and
+reviews completed/skipped totals before publishing history. Skipping requires
+confirmation; a finished, unacknowledged publication can be retried without a
+second review. These controls do not calculate loads or mutate the canonical
+training engine. Other interactive examples remain local UI-only state.
+Web history and backup import are separate from this native store.
 
 ## Engine-issued native working-set journey
 
@@ -90,7 +95,7 @@ Normal Android commits run the fast foundation and canonical-engine checks, **no
 
 ## Verification gates
 
-GitHub Actions must pass the native APK build and JS protocol, backup and feature-contract tests. A successful APK build is not evidence of real-device visual, interaction, accessibility or interruption testing. Full training functionality remains disabled until canonical engine parity, storage round-trip, revision identity, and Android device certification are complete.
+During the APK freeze, GitHub Actions must pass native Kotlin/Compose source compilation, domain JVM tests, canonical JS protocol, backup and feature-contract regression suites. None of these builds an APK or certifies an Android device. When the full end-to-end source journey meets its gate, a separate deliberate decision can re-enable device builds for real-device visual, interaction, accessibility and interruption testing. Advanced features and imported web history must not be represented as supported until separately certified.
 
 ## Toolchain
 

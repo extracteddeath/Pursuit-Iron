@@ -158,6 +158,9 @@ Cut rows and any fit warning are displayed with an explicit **preview
 only, not applied** statement. Starting Train still issues the full session;
 history and progression are unchanged. Real application requires separately
 certified pinned issued targets and time-limited progression provenance.
+The packaged-runtime JVM test also checks all three preview choices through
+the actual worker and rejects a different program; a stale response cannot
+appear while the next full workout is opening.
 No APK or production web code is changed.
 
 ## Next work

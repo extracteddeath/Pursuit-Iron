@@ -86,6 +86,16 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertEquals("Native first program",proposal.program.name)
             assertEquals(3,proposal.program.days.size)
             assertEquals("kg",proposal.profile.unit)
+            // Exercise the real pinned JS worker through the Kotlin transport.
+            // A preview cannot persist data or become a workout authorization.
+            for(minutes in listOf(45,30,20)) {
+                val preview=checkNotNull(engine.previewShorterSession(proposal.snapshot,proposal.program.id,minutes))
+                assertEquals("program-new",preview.programId)
+                assertEquals(minutes,preview.minutes)
+                assertTrue(preview.estimatedMinutes<=preview.originalMinutes)
+                assertEquals(preview.changed,preview.cuts.isNotEmpty())
+            }
+            assertNull(engine.previewShorterSession(proposal.snapshot,"another-program",30))
             val drive=Drive();var store=CanonicalWorkoutStorePersistence(drive,engine)
             assertNull(store.readOwnedCurrentStoreBytes()) // review has not written anything
             assertTrue(store.initialize(proposal.snapshot))

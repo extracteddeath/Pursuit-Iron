@@ -244,7 +244,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 ensureActive()
                 mutable.update { latest ->
                     if(latest.storeChangeKey==current.storeChangeKey &&
-                        latest.workout==null && latest.saved?.program?.id==programId)
+                        latest.workout==null && !latest.workoutBusy &&
+                        latest.saved?.program?.id==programId)
                         latest.copy(shortPreviewBusy=false,shortPreview=preview,shortPreviewError=null)
                     else latest.copy(shortPreviewBusy=false,shortPreview=null,
                         shortPreviewError="Training data changed. Preview the next session again.")

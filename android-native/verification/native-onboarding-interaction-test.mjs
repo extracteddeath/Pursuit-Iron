@@ -33,6 +33,7 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
   host.includes('engine.previewShorterSession(snapshot,programId,minutes)') &&
   host.includes('shortPreviewBusy=true,shortPreview=null') &&
   host.includes('latest.storeChangeKey==current.storeChangeKey') &&
+  host.includes('!latest.workoutBusy') &&
   !screens.includes('planShorterSession('),
   'Shorter session UI must show a revision-checked canonical preview without changing the workout');
 // Real Train controls are journal-driven; UI must never manufacture a persisted

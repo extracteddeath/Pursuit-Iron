@@ -68,6 +68,59 @@ class NativeSessionSkipPolicyTest {
         assertTrue(NativeSessionSkipPolicy.remaining(third,0).isEmpty())
     }
 
+    private val review=NativeWorkoutMuscleReview("workout-1",
+        listOf("chest","shoulders","triceps"),
+        listOf(
+            NativeWorkoutMuscleRow(0,"bb-bench","Barbell Bench","chest",listOf("chest","shoulders","triceps")),
+            NativeWorkoutMuscleRow(1,"cable-row","Cable Row","shoulders",listOf("shoulders"))
+        ))
+
+    @Test fun relatedMuscleSkipsPreserveCompletedSetsAndUnrelatedExercises() {
+        val disk=MemoryBytes()
+        var journal=WorkoutJournalPersistence(disk)
+        var current=checkNotNull(journal.begin(session,slots,0))
+        current=checkNotNull(journal.recordSet(session,current.revision,
+            JournalSetIntent("completed",a,JournalSetDisposition.COMPLETED,value)))
+        assertEquals(listOf(b,extension),NativeSessionSkipPolicy.remainingAffected(current,review,"triceps"))
+        assertEquals(listOf(b,extension,other),NativeSessionSkipPolicy.remainingAffected(current,review,"shoulders"))
+        assertEquals(listOf(other),NativeSessionSkipPolicy.remainingAffected(current,review,"shoulders")
+            .filter { it.exerciseIndex==1 })
+        disk.failAfterCommit=true
+        assertThrows(IllegalStateException::class.java) {
+            journal.recordSet(session,current.revision,intent(b,"related-b"))
+        }
+        disk.failAfterCommit=false
+        journal=WorkoutJournalPersistence(disk)
+        current=checkNotNull(journal.recover())
+        assertEquals(listOf(extension),NativeSessionSkipPolicy.remainingAffected(current,review,"triceps"))
+        current=checkNotNull(journal.recordSet(session,current.revision,intent(extension,"related-extension")))
+        assertTrue(NativeSessionSkipPolicy.remainingAffected(current,review,"triceps").isEmpty())
+        assertEquals(listOf(other),NativeSessionSkipPolicy.remainingAffected(current,review,"shoulders"))
+        assertEquals(JournalSetDisposition.COMPLETED,
+            current.completed.single { it.intent.slot==a }.intent.disposition)
+        assertEquals(value,current.completed.single { it.intent.slot==a }.receipt.storedValues)
+        assertEquals(3,current.revision)
+        assertEquals(1,current.unresolvedCount)
+    }
+
+    @Test fun forgedReviewOrUnknownMuscleCannotSelectJournalSlots() {
+        val open=checkNotNull(WorkoutJournalPolicy.open(session,slots,0))
+        val invalid=listOf(
+            review.copy(workoutId="wrong"),
+            review.copy(rows=review.rows.drop(1)),
+            review.copy(rows=review.rows+review.rows[0]),
+            review.copy(rows=review.rows.mapIndexed { i,r -> if(i==0)r.copy(exerciseId="other") else r }),
+            review.copy(parts=listOf("chest")),
+            review.copy(rows=review.rows.mapIndexed { i,r -> if(i==0)r.copy(primaryPart="unknown") else r })
+        )
+        for(row in invalid)assertThrows(IllegalArgumentException::class.java) {
+            NativeSessionSkipPolicy.remainingAffected(open,row,"triceps")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeSessionSkipPolicy.remainingAffected(open,review,"unknown")
+        }
+    }
+
     @Test fun invalidAndFinishedExerciseRequestsFailClosed() {
         val open=checkNotNull(WorkoutJournalPolicy.open(session,slots,0))
         for(index in listOf(-1,2,48))assertThrows(IllegalArgumentException::class.java) {

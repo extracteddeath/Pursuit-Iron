@@ -203,6 +203,21 @@ changes targets, asserts an injury diagnosis or changes the saved program.
 This is a safe initial native injury-awareness layer, not an automatic injury
 adaptation engine.
 
+## Follow-up: confirmed related-muscle skips
+
+After reviewing primary/secondary involvement, Train can now explicitly
+confirm skipping all remaining sets related to one selected muscle. The
+confirmation names affected exercises and the exact outstanding set count.
+One shared runtime writer services both single-exercise and muscle-wide
+skips using journal CAS receipts; completed and corrected work is preserved.
+For muscle-wide selection the Kotlin boundary checks the canonical review's
+workout ID, reviewed exercise IDs/indices, and every pinned journal slot.
+An interruption can persist only a subset of skips; recovery and retry
+select only unresolved slots. Every saved skip remains SKIPPED in canonical
+history, not a completed working set or an invented failure.
+No injury diagnosis, persistent injury-report reason, automatic session
+reshaping or future-plan change is claimed in this pass.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of

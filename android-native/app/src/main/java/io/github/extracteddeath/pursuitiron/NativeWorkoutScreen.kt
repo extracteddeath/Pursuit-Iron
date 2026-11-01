@@ -19,7 +19,8 @@ internal fun NativeWorkoutScreen(
     onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,onFinish: ()->Unit,
     onCorrect: (JournalSetIntent)->Unit = {},
     onSkipExercise: (Int)->Unit = {},
-    onInspectMuscles: ()->Unit = {}
+    onInspectMuscles: ()->Unit = {},
+    onSkipAffectedMuscle: (String)->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -64,6 +65,7 @@ internal fun NativeWorkoutScreen(
     val setDraftStates=rememberSaveableStateHolder()
     PageHeading("WEEK ${plan.session.weekIndex}",plan.dayLabel,plan.programName)
     var affectedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
+    var confirmAffectedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
     PursuitCard {
         Text("Affected muscle review",style=MaterialTheme.typography.titleMedium)
         Text("Shows muscles involved in this workout, including secondary work. Review potentially affected lifts; nothing is skipped automatically.",
@@ -93,10 +95,39 @@ internal fun NativeWorkoutScreen(
                         if(index>=0)exerciseIndex=index
                     },enabled=!state.workoutBusy) { Text("Open exercise to review or skip") }
                 }
+                val relatedIndices=related.map { it.exerciseIndex }.toSet()
+                val pendingRelated=journal.slots.count {
+                    it.exerciseIndex in relatedIndices && it !in committedSlots
+                }
+                if(pendingRelated>0 && !journal.isFinished) {
+                    FilledTonalButton(onClick={confirmAffectedPart=affectedPart},
+                        enabled=!state.workoutBusy && !state.historyBusy,
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Skip $pendingRelated unfinished related sets")
+                    }
+                } else {
+                    Text("No unfinished related sets remain.")
+                }
             }
             Text("Muscle involvement is not medical guidance. Avoid movements that cause pain.",
                 style=MaterialTheme.typography.bodySmall)
         }
+    }
+    if(confirmAffectedPart.isNotEmpty()) {
+        val selected=state.muscleReview?.rows?.filter { confirmAffectedPart in it.involvedParts }.orEmpty()
+        val named=selected.map { it.name }.distinct()
+        val indices=selected.map { it.exerciseIndex }.toSet()
+        val pendingCount=journal.slots.count { it.exerciseIndex in indices && it !in committedSlots }
+        AlertDialog(onDismissRequest={confirmAffectedPart=""},
+            title={Text("Skip unfinished sets for $confirmAffectedPart?")},
+            text={Text("$pendingCount unfinished sets across ${named.joinToString(", ")} will be saved as skipped. Completed work is preserved. This does not record a medical diagnosis or alter future workouts.")},
+            confirmButton={Button(onClick={
+                val confirmedPart=confirmAffectedPart
+                confirmAffectedPart=""
+                onSkipAffectedMuscle(confirmedPart)
+            },enabled=pendingCount>0 && !state.workoutBusy && !state.historyBusy &&
+                !journal.isFinished) { Text("Confirm related skips") }},
+            dismissButton={TextButton(onClick={confirmAffectedPart=""}) { Text("Keep training") }})
     }
     if(plan.shortenedMinutes!=null) {
         Text("Shortened workout · ${plan.shortenedMinutes} min selected · ${plan.shortenedEstimatedMinutes} min estimated",

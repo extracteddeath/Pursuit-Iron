@@ -343,13 +343,30 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
-    fun skipRemainingExercise(exerciseIndex: Int) {
+    fun skipRemainingExercise(exerciseIndex: Int) = skipSelectedIssuedSlots {
+        NativeSessionSkipPolicy.remaining(it,exerciseIndex)
+    }
+
+    /** Explicit confirmation only; the muscle review must match the pinned issue. */
+    fun skipAffectedMuscle(part: String) {
+        val current=mutable.value
+        val plan=current.workout?.plan ?: return
+        val review=current.muscleReview?.takeIf { it.workoutId==plan.session.workoutId } ?: return
+        skipSelectedIssuedSlots {
+            NativeSessionSkipPolicy.remainingAffected(it,review,part)
+        }
+    }
+
+    /**
+     * Both single-exercise and muscle-wide skips use the same durable receipts.
+     * After an interrupted write the new invocation chooses only pending slots.
+     * No injury diagnosis or reason is inferred from a generic SKIPPED receipt.
+     */
+    private fun skipSelectedIssuedSlots(select: (WorkoutJournalState)->List<JournalSetSlot>) {
         val current=mutable.value;val progress=current.workout ?: return
-        if(current.workoutBusy || current.historyBusy || current.workoutBlocked || progress.journal.isFinished)return
-        if(progress.plan.slots!=progress.journal.slots)return
-        val pending=runCatching {
-            NativeSessionSkipPolicy.remaining(progress.journal,exerciseIndex)
-        }.getOrNull() ?: return
+        if(current.workoutBusy || current.historyBusy || current.workoutBlocked ||
+            progress.journal.isFinished || progress.plan.slots!=progress.journal.slots)return
+        val pending=runCatching { select(progress.journal) }.getOrNull() ?: return
         if(pending.isEmpty())return
         val owner=store ?: return;val recovery=journal ?: return
         mutable.update { it.copy(workoutBusy=true,workoutError=null) }
@@ -359,13 +376,13 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 check(active.plan.issuedJson==progress.plan.issuedJson &&
                     active.plan.session==progress.plan.session &&
                     active.plan.slots==progress.plan.slots)
-                for(slot in NativeSessionSkipPolicy.remaining(active.journal,exerciseIndex)) {
+                for(slot in select(active.journal)) {
                     ensureActive()
                     val intent=JournalSetIntent("skip-"+UUID.randomUUID(),slot,
                         JournalSetDisposition.SKIPPED,null)
                     val saved=checkNotNull(recovery.recordSet(active.plan.session,active.journal.revision,intent))
                     active=NativeWorkoutProgress(active.plan,saved)
-                    // Report only the receipts already confirmed on disk.
+                    // Report only receipts confirmed on disk, never optimistic taps.
                     mutable.update { it.copy(workout=active,workoutBusy=true) }
                 }
                 mutable.update { it.copy(workout=active,workoutBusy=false,workoutError=null) }

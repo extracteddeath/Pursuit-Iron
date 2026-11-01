@@ -32,6 +32,20 @@ assert.ok(host.includes('fun inspectWorkoutMuscles()') &&
   activity.includes('onInspectMuscles=runtime::inspectWorkoutMuscles') &&
   shell.includes('onCorrectSet,onSkipExercise,onInspectMuscles'),
   'Muscle review must come from pinned canonical issue, not screen-side training guesses');
+// Related-muscle bulk skips share the exact journal receipts with exercise
+// skips. The user must confirm the selected muscle and count first.
+assert.ok(host.includes('fun skipAffectedMuscle(part: String)') &&
+  host.includes('NativeSessionSkipPolicy.remainingAffected(it,review,part)') &&
+  host.includes('private fun skipSelectedIssuedSlots(') &&
+  host.includes('for(slot in select(active.journal))') &&
+  activity.includes('onSkipAffectedMuscle=runtime::skipAffectedMuscle') &&
+  shell.includes('onSkipExercise,onInspectMuscles,onSkipAffectedMuscle') &&
+  train.includes('confirmAffectedPart') &&
+  train.includes('Confirm related skips') &&
+  train.includes('onSkipAffectedMuscle(confirmedPart)') &&
+  train.includes('Completed work is preserved.') &&
+  train.includes('it.exerciseIndex in relatedIndices && it !in committedSlots'),
+  'Muscle-wide skipping must be explicitly confirmed and only save unresolved issued slots');
 // Short-session previews come only from the canonical engine and cannot
 // masquerade as an applied session or a UI-computed training prescription.
 assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine preview")') &&

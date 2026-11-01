@@ -74,10 +74,10 @@ const rest=fs.readFileSync(root+'NativeRestTimer.kt','utf8');
 assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, exercise.restSeconds,') &&
   rest.includes('rememberSaveable(workoutId)') &&
   rest.includes('SystemClock.elapsedRealtime()') &&
-  rest.includes('LaunchedEffect(deadline)') &&
+  rest.includes('LaunchedEffect(deadline, startedElapsed, startedWall)') &&
   rest.includes('delay(250L)') &&
   rest.includes('onLongClickLabel = "Reset rest timer"') &&
-  rest.includes('onLongClick = { deadline = 0L }') &&
+  rest.includes('onLongClick = {') && rest.includes('deadline = 0L') &&
   rest.includes('enabled = enabled') &&
   !rest.includes('onRecord(') && !rest.includes('store.') && !rest.includes('journal.'),
   'The rest countdown must be a session-scoped manual M3 control, not an unacknowledged set write or engine re-prescription');

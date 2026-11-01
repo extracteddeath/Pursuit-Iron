@@ -4341,7 +4341,14 @@ display:block!important;
   --pi-shape-action:18px;
   --pi-shape-pill:999px;
   --pi-shape-identity:32px 16px 32px 32px;
-  --pi-motion-paint:160ms;
+  /* Material 3 Expressive: effect/color and spatial motion are separate roles.
+     Spring-driven spatial choreography remains in ui-motion.js; CSS handles
+     interruptible state-layer effects without animating layout or text inputs. */
+  --pi-m3e-effects-fast:120ms;
+  --pi-m3e-effects-default:160ms;
+  --pi-m3e-spatial-default:380ms;
+  --pi-m3e-ease-effects:cubic-bezier(.2,0,0,1);
+  --pi-motion-paint:var(--pi-m3e-effects-default);
   --pi-control-touch:48px;
   
   /* Older component families share the same live tinted surface roles. */
@@ -5018,6 +5025,11 @@ background:var(--pi-color-card)!important;
   color:var(--pi-color-on-control,var(--wpb-theme-text));
   box-shadow:var(--pi-shadow-card);
 }
+.wpb .wpb-ui-card[data-surface="featured"]{
+  border-color:color-mix(in srgb,var(--pi-color-active) 24%,var(--pi-color-divider));
+  border-radius:var(--pi-shape-identity,32px 16px 32px 32px);
+  background:var(--pi-color-feature);color:var(--pi-color-on-feature);
+}
 .wpb .wpb-ui-field{
   display:grid;min-width:0;gap:var(--pi-field-label-gap);
   font-size:var(--pi-type-support);font-weight:650;
@@ -5165,6 +5177,26 @@ background:var(--pi-color-card)!important;
   line-height:1.4!important;
   font-weight:700;
   box-shadow:none!important;
+}
+/* M3E state layer: one owner for shared native buttons/choices. No
+   synthetic click, drag transform or compulsory bounce on repeated logging. */
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice){
+  position:relative;isolation:isolate;
+}
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice)::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  border-radius:inherit;background:currentColor;opacity:0;
+  transition:opacity var(--pi-m3e-effects-fast,120ms) var(--pi-m3e-ease-effects,ease-out);
+}
+@media(hover:hover) and (pointer:fine){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice):hover:not(:disabled)::after{opacity:.07}
+}
+#root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice):active:not(:disabled)::after{opacity:.12}
+@media(prefers-reduced-motion:reduce){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice)::after{transition:none}
+}
+@media(forced-colors:active){
+  #root[data-pi-motion="expressive"] .wpb :is(.wpb-ui-action,.wpb-ui-choice)::after{display:none}
 }
 /* Cohesion 13 — one two-line choice variant for Plan, Program and cycle blocks. */
 #root .wpb .wpb-ui-choice[data-choice-kind="summary"]{

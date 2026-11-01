@@ -111,6 +111,7 @@ export const contractGroups = Object.freeze({
         'ui-element-coverage-test.mjs',
         'shared-plan-disclosure-owners-test.mjs',
         'shared-review-surface-owners-test.mjs',
+        'm3e-expressive-components-test.mjs',
         'settings-service-surface-test.mjs',
         'shared-control-pilot-test.mjs',
         'settings-segmented-owner-test.mjs',

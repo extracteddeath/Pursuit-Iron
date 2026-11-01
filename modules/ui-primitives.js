@@ -18,8 +18,11 @@ export function UiRootHeader({ title, titleClassName = "", actions, actionsClass
     ] });
 }
 // Canonical surface owner: preserve each caller's existing DOM tag, aria state, and feature classes.
-export function UiCard({ as: Element = "div", className = "", ...props }) {
-    return _jsx(Element, { ...props, className: `wpb-ui-card ${className}`.trim() });
+export function UiCard({ as: Element = "div", className = "", tone, ...props }) {
+    // Tone is a design-system surface role, not an arbitrary screen-specific style.
+    // Keep the same native tag, props and caller class for existing card consumers.
+    return _jsx(Element, { ...props, ...(tone ? { "data-surface": tone } : {}),
+        className: `wpb-ui-card ${className}`.trim() });
 }
 // Metric anatomy is shared across destinations; each caller retains its existing
 // class names, visible value/label order, formatting, and optional context.
@@ -42,6 +45,10 @@ export function UiMetric({
 export function UiAction({ variant = "secondary", className = "", ...props }) {
     // Components own static visual properties; only runtime-measured styles are forwarded.
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant });
+}
+// One accessible 48px icon target for sheets, toolbars and standalone actions.
+export function UiIconAction({ "aria-label": label, variant = "icon", ...props }) {
+    return _jsx(UiAction, { variant, "aria-label": label, "data-icon-only": true, ...props });
 }
 export function UiChoice({ selected, kind = "chip", className = "", label, caption, children, ...props }) {
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-choice ${className}`, "data-choice-kind": kind, "aria-pressed": !!selected,
@@ -75,7 +82,7 @@ export function UiSheetHeading({ as: Element = "div", className = "", ...props }
 export function UiSheetClose({ className = "", "aria-label": label = "Close",
     variant, chrome = "sheet", iconSize = 18, ...props }) {
     const children = _jsx(X, { size: iconSize, "aria-hidden": true });
-    if (variant) return _jsx(UiAction, { variant, "data-icon-only": true, ...props,
+    if (variant) return _jsx(UiIconAction, { variant, ...props,
         "aria-label": label, className: `hit wpb-sheet-close ${className}`, children });
     return _jsx("button", { type: "button", ...props, "aria-label": label,
         className: `pressable hit ${chrome === "dialog" ? "" : "wpb-sheet-close "}wpb-ui-sheet-close ${className}`,

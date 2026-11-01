@@ -57,7 +57,7 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
             + (row.protocol.type !== 'straight' ? 2 : 0) + (row.change.changed ? 1 : 0);
         return score(b) - score(a);
     }).slice(0, 3);
-    return _jsxs(UiCard, { as: "section", className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""),
+    return _jsxs(UiCard, { as: "section", className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""), tone: "featured",
         "aria-label": "Today's game plan", children: [
         _jsxs("h2", { className: "wpb-game-plan-heading", children: [_jsx(TrendingUp, { size: 19 }),
             _jsx("strong", { children: "Today's game plan" }),

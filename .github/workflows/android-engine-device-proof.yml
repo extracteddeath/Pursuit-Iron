@@ -1,7 +1,12 @@
-name: Android sandbox on-device engine proof (manual)
+name: Android sandbox on-device engine proof (milestone)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - architecture/android-compose-foundation
+    paths:
+      - 'android-native/engine-runtime/DEVICE_PROOF_MILESTONE.md'
 
 permissions:
   contents: read

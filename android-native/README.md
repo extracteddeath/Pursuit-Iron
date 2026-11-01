@@ -16,8 +16,8 @@ native revision has end-to-end evidence for: onboarding -> program creation ->
 verified personal workout -> set logging -> interruption/resume -> workout
 completion -> saved history and correct next-workout/progression decisions.
 The source implementation now covers the standard working-set journey and
-engine-issued myo/drop extension recording. One-shot deload consumption,
-verified editing of completed sets, and real-device acceptance remain pending;
+engine-issued myo/drop extension recording and one-shot deload consumption.
+Verified editing of completed sets and real-device acceptance remain pending;
 the build freeze remains active.
 
 The instructions below describe how **older previously produced** artifacts
@@ -97,9 +97,12 @@ regular working sets but do not become extra working-set ordinals in the
 canonical progression history. Both zero-load and skipped extensions retain
 their original observations; the web summarizer's existing mixed-zero-load
 policy is unchanged. The bridge rejects incomplete or reordered extension
-instructions instead of silently omitting them. One-shot deload consumption
-still rejects session creation rather than leaving its flag armed after a
-completed workout. Corrected-set editing and real-device acceptance remain
+instructions instead of silently omitting them. Valid one-shot deload choices
+use the shared canonical prescription/equipment boundary. Completion consumes
+only exercises present in canonical performance, in the same atomic snapshot
+as history; skipped exercises retain their choice. Restart keeps the exact
+issued targets, and retry cannot consume a later rearmed choice. Malformed
+choices and assistance-load deloads remain unsupported. Corrected-set editing and real-device acceptance remain
 incomplete. Source tests and Compose compilation do not certify a physical
 Android device, and no APK build is enabled by this change.
 

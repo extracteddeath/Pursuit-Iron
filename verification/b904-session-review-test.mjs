@@ -55,6 +55,9 @@ assert.deepEqual(heldDD.effective.map(s=>Number(s.weight)),[90,90,87.5],'positio
 assert.deepEqual(heldDD.effective.map(s=>Number(s.reps)),dd.proposed.map(s=>Number(s.reps)),'current per-set reps remain prescribed');
 const percentage={...program,config:{...program.config,percentScheme:'531'},tm:{'bb-bench':100}};
 const percentReview=buildSessionReview(percentage,day,2,'kg',history);
+const oneShotReview=buildSessionReview({...program,deloadNext:{'bb-bench':.9}},day,2,'kg',history);
+assert.equal(oneShotReview.exercises[0].change.canUndo,false,'an explicitly armed deload is not an automatic progression change');
+assert.ok(oneShotReview.exercises[0].effective.every(row=>row.target.nextAction==='deload'));
 assert.equal(percentReview.exercises[0].change.canUndo,false,'authored percentage lift remains owned');
 assert.equal(percentReview.exercises[1].change.canUndo,percentReview.exercises[1].change.loadChanged,'accessories can decline material load adjustments, not rep-only gains');
 const deload={...program,weeks:1};assert.ok(buildSessionReview(deload,day,2,'kg',history).exercises.every(row=>!row.change.canUndo));

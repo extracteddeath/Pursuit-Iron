@@ -6,3 +6,4 @@ export * from './training-domain/analytics.js';
 export * from './training-domain/history-import.js';
 export * from './training-domain/starting-load.js';
 export * from './training-domain/loading-tools.js';
+export * from './training-domain/one-shot-deload.js';

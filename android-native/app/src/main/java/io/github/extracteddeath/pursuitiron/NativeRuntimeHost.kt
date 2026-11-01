@@ -154,7 +154,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 // pinned session rather than generating a second workout.
                 val restored=runCatching { owner.recoverIssuedSession(recovery) }.getOrNull()
                 mutable.update { it.copy(workout=restored ?: it.workout,workoutBusy=false,
-                    workoutError=if(restored!=null)null else "This workout could not be opened. Advanced sub-sets and one-shot deloads are not available yet. Saved training data has been kept.") }
+                    workoutError=if(restored!=null)null else "This workout could not be opened. Saved training data has been kept. Try again.") }
             }
         }
     }

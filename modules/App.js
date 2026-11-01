@@ -33,7 +33,7 @@ import {
     blockChangeSummary, blockPlanFor, blockRetro, blockReview, buildLifterModel, buildUserAddedSlotPrescriptions,
     buildWeekPlan, BW_LOG_CAP, calibratedAnchorPerf, canUndoProgramSave, capHistory, clamp,
     clearUserPrescriptionOverride, cloneNextDayPrescriptions, coachFacts, completionRate, COMPOSITE_HEADS,
-    compositeMrv, computeCell, computeLevel, computeMilestones, convertHistoryLoad, coverageGaps, coverageRelief,
+    compositeMrv, computeCell, computeLevel, computeMilestones, consumeOneShotDeload, convertHistoryLoad, coverageGaps, coverageRelief,
     cuesFor, CUSTOM_CYCLE_PHASES, customFutureCycleSpecs, cycleConfigForStandaloneProgram, cycleProgress,
     dayMuscleBreakdown, dayMuscleVolume, decodeGallery, deloadAdvice, deriveArmCoverage,
     deriveFunctionalCoverage, describeRegionalWorkingWeekChange, detectWorkoutCsv, displayDayName,
@@ -81,7 +81,7 @@ import { readCycleSetupDraft, writeCycleSetupDraft, clearCycleSetupDraft, CYCLE_
 import { INJURY_AREAS, INJURY_IMPACTS, INJURY_LEVELS, injuryLevel, injuryPlan, injuryTitle, injuryMatchesExercise, normalizeInjuryLog, mergeInjuryReports } from './injury-tools.js';
 import { withProgressionChoices, workoutProgressionOrigin, withWorkoutProgramReview, repeatedNote, refreshProgressionSets, exerciseSessionTags, workoutProgramChanges, buildSessionReview, workoutRowMatchesPrescription, beginWorkoutProgramSwap, undoWorkoutProgramSwap } from './session-tools.js';
 import { reviewProgramChanges, programReviewKey, withProgramRevision } from './program-review.js';
-const __APP_VERSION__='4.0.0'; const __BUILD__='1008';
+const __APP_VERSION__='4.0.0'; const __BUILD__='1009';
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { createElement, useState, useEffect, useLayoutEffect, useMemo, useRef, Component } from "react";
 import { createPortal } from "../vendor/react-dom.js";
@@ -21188,17 +21188,8 @@ function App() {
         const keptIds = new Set(nextHistory.map(h => h.id));
         history.forEach(h => { if (!keptIds.has(h.id)) nextTombs[h.id] = now; });
         const nextInjuryLog = mergeInjuryReports(injuryLog, log.injuryReports, log.id);
-        let clearedProgram = program;
-        let nextSaved = saved;
-        if (program?.deloadNext && log.perf) {
-            const trained = Object.keys(log.perf).filter(id => program.deloadNext[id] != null);
-            if (trained.length) {
-                const nd = { ...program.deloadNext };
-                trained.forEach(id => delete nd[id]);
-                clearedProgram = { ...program, deloadNext: Object.keys(nd).length ? nd : undefined, updatedAt: now };
-                nextSaved = saved.map(p => p.id === clearedProgram.id ? clearedProgram : p);
-            }
-        }
+        const clearedProgram = consumeOneShotDeload(program, log.perf, now);
+        const nextSaved = clearedProgram === program ? saved : saved.map(p => p.id === clearedProgram.id ? clearedProgram : p);
         // A full/quota-blocked store must leave the live recovery copy and workout screen intact.
         // Persist history, performance and consumed deload together before updating React state.
         if (!(await persistAppStore({ history: nextHistory, perf: nextPerf, saved: nextSaved, injuryLog: nextInjuryLog, tombs: nextTombs })))

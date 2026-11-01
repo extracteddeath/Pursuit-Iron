@@ -2,7 +2,7 @@
 import {
   parseStoredData, nextSessionCursor, exerciseAt, computeCell, EX_BY_ID,
   buildLifterModel, calibratedAnchorPerf, sessionSuggestion, prescribeSets,
-  lastDayPerf, effectiveRest, goalForDay, weeksOf, techniqueProtocolFromCell
+  lastDayPerf, effectiveRest, goalForDay, weeksOf, techniqueProtocolFromCell, oneShotDeloadFactor
 } from '../../modules/engine-api.js';
 import { inspectNativeProgram } from './native-onboarding.mjs';
 import { deriveReadOnlyProgramReference, matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
@@ -16,6 +16,9 @@ const id=v=>typeof v==='string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(v);
 const integer=(v,min,max)=>Number.isSafeInteger(v) && v>=min && v<=max;
 const ensure=v=>{if(!v)throw new TypeError('Native workout preparation rejected');};
 const bounded=(v,max)=>typeof v==='string' && v.length>0 && utf8ByteLength(v)<=max;
+const validDeloads=program=>program.deloadNext==null || object(program.deloadNext) &&
+  Object.entries(program.deloadNext).every(([id,factor])=>typeof factor==='number' && Object.hasOwn(EX_BY_ID,id) &&
+    oneShotDeloadFactor(program,id)===factor);
 const slotsFor=rows=>rows.flatMap(row=>row.sets.filter(set=>!set.warm).map((_,setIndex)=>
   ({exerciseIndex:row.slot,setIndex,exerciseId:row.id})));
 
@@ -33,7 +36,7 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
   ensure(reference && start.startedAt>=program.createdAt &&
     !Object.hasOwn(store.tombs,start.workoutId) &&
     ['saved','history','cycles','custom','gyms'].every(key=>!store[key].some(row=>row.id===start.workoutId)) &&
-    !Object.keys(program.deloadNext || {}).length);
+    validDeloads(program));
   const cursor=nextSessionCursor(program,store.history),weekIndex=cursor.weekIndex;
   ensure(integer(weekIndex,1,weeksOf(program)) && integer(cursor.dayIndex,0,program.days.length-1));
   const day=program.days[cursor.dayIndex],unit=program.config.unit;
@@ -75,6 +78,7 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
     matchesCurrentReadOnlyProgram(originRaw,s.reference) && id(s.workoutId) && id(s.dayId) &&
     integer(s.weekIndex,1,104) && ['lb','kg'].includes(s.unit) && integer(s.startedAt,1,8_640_000_000_000_000));
   const store=parseStoredData(originRaw),program=store.saved.find(row=>row.id===s.reference.programId);
+  ensure(validDeloads(program));
   const day=program.days.find(row=>row.id===s.dayId);
   ensure(day && p.programName===program.name && p.dayLabel===day.label &&
     s.unit===program.config.unit && s.weekIndex<=weeksOf(program) &&

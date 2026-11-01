@@ -23,6 +23,7 @@ jobs:
           node android-native/engine-bridge/workout-store-protocol-test.mjs
           node android-native/engine-bridge/native-onboarding-test.mjs
           node android-native/engine-bridge/native-workout-test.mjs
+          node android-native/engine-bridge/native-workout-deload-test.mjs
           node android-native/engine-bridge/backup-schema-check-test.mjs
           node android-native/engine-bridge/sandbox-compat-test.mjs
       - name: Verify fixed language-neutral progression fixtures and Kotlin routing contracts
@@ -60,6 +61,7 @@ jobs:
       - name: Protect existing feature behavior with canonical regression fixtures
         run: |
           node verification/progression-safety-test.mjs
+          node verification/one-shot-deload-test.mjs
           node verification/m183-progression-safeguards-test.mjs
           node verification/b945-plate-calculator-test.mjs
           node verification/m177-history-merge-integrity-test.mjs

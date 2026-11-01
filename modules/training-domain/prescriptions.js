@@ -13,6 +13,7 @@ import { blockPhase, exerciseAt, cellRepRange, clamp, computeCell, effortBounds,
 import { EXERCISES, EX_BY_ID } from './catalog.js';
 import { PART_ORDER, e1rmRIR } from './programs.js';
 import { startingEstimate, startingWorkLoad } from './starting-load.js';
+import { oneShotDeloadFactor, oneShotDeloadLoad } from './one-shot-deload.js';
 
 const PART_LABEL = {
     chest: "Chest", lats: "Lats", upper_back: "Upper Back", shoulders: "Shoulders", biceps: "Biceps",
@@ -799,7 +800,7 @@ export function retainDoubleProgressionSetLoads(suggestion, previousLoads) {
 
 // Review and Workout consume this same boundary. A user can decline one upcoming
 // load/rep recommendation without changing the progression method or stored history.
-function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
+function baseSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
     let suggestion = engineSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history);
     // Double progression advances REPS while load stays at its prior value.
     // With mixed-load history, preserve each position's actual working load:
@@ -853,6 +854,20 @@ function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history
         target: change.undoTargets[0]?.reps ?? suggestion.target, setTargets: change.undoTargets,
         action: 'user_hold', dir: 'hold',
         reason: 'You kept the previous load and reps on matching sets for this exposure. The current set count, target effort and technique still apply.' };
+}
+
+function sessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice = true) {
+    const suggestion = baseSessionSuggestion(program, day, slot, dayPerf, unit, weekIndex, history, applyReviewChoice);
+    const id = exerciseAt(program, day, slot, weekIndex), ex = EX_BY_ID[id];
+    const factor = oneShotDeloadFactor(program, id);
+    if (!suggestion || !ex || factor === null) return suggestion;
+    const lower = load => oneShotDeloadLoad(load, factor, value => loadableAtOrBelow(ex, value, unit));
+    return { ...suggestion, weight: lower(suggestion.weight),
+        setTargets: suggestion.setTargets?.map(target => ({ ...target,
+            weight: lower(target.weight), earnedLoadIncrease: false })),
+        oneShotDeloadFactor: factor, action: 'deload', dir: 'down', optionalLowerLoad: undefined,
+        reasonCode: 'user_one_shot_deload',
+        reason: `Your one-session deload is applied to this exercise's available loads.` };
 }
 
 /** Nudge through the gym's actual load inventory when known. With a coarse
@@ -1223,6 +1238,25 @@ function prescribeSets(program, day, ex, slot, weekIndex, unit, sug, dayPerf, pe
                 nextAction: 'percentage', confidence: null, prefillReps: String(t.reps).replace('+', ''),
                 decisionTrace: decisionTraceFor(percentage.sets.indexOf(t), t.weight, String(t.reps).replace('+', ''), 'percentage') }
         }))];
+    }
+    const deloadFactor = oneShotDeloadFactor(program, ex.id);
+    if (deloadFactor !== null) {
+        // Suggestions may already carry the reduction. Percentage-owned rows,
+        // first-use estimates and callers without a suggestion still pass the
+        // same equipment boundary exactly once, before extensions are derived.
+        const alreadyReduced = !percentage && !estimate && sug?.oneShotDeloadFactor === deloadFactor;
+        rows = rows.map(row => {
+            const weight = alreadyReduced ? row.weight : oneShotDeloadLoad(row.weight, deloadFactor,
+                value => loadableAtOrBelow(ex, value, unit));
+            const target = { ...row.target, w: weight === '' ? '—' : String(weight) };
+            if (!row.warm) {
+                target.nextAction = 'deload';
+                target.decisionTrace = { ...target.decisionTrace,
+                    evaluation: { ...target.decisionTrace.evaluation, action: 'deload', reasonCode: 'user_one_shot_deload' },
+                    target: { ...target.decisionTrace.target, load: weight === '' ? null : Number(weight) } };
+            }
+            return { ...row, weight: String(weight), target };
+        });
     }
     // Advanced-technique selection is engine-owned; this shell helper only realizes the engine's cue
     // as loggable rows. The protocol itself is now defined in next-engine/workout-runtime.ts.

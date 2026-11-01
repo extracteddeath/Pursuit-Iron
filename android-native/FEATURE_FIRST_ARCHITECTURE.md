@@ -229,8 +229,8 @@ Android-compatible implementation. The native owner retains the exact origin
 until history is acknowledged, authenticates the pinned response, and compares
 the expected current snapshot before saving. It acknowledges history before
 clearing the journal. Custom catalog
-installation, session adjustments, assistance loads, and one-shot deload
-consumption still need their canonical owners; unsupported cases cannot silently
+installation, session adjustments and assistance loads
+still need their canonical owners; unsupported cases cannot silently
 drop observations. Onboarding, native program creation, the authenticated live
 session and the full persistence/resume/completion journey remain unfinished.
 The preview and all APK generation stay disabled.

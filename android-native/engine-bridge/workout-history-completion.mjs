@@ -8,7 +8,7 @@
 import { sha256Utf8, utf8ByteLength, equalJson } from './json-identity.mjs';
 import {
   parseStoredData, exerciseAt, prescribeSets, loggedWorkoutPerformance,
-  EX_BY_ID, mergeStores, weeksOf
+  EX_BY_ID, mergeStores, weeksOf, consumeOneShotDeload
 } from '../../modules/engine-api.js';
 import { matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
 import { issuedNativeWorkoutFrom } from './native-workout.mjs';
@@ -219,11 +219,15 @@ export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw
         !current.cycles.some(c => c.id === entry.id) &&
         !current.custom.some(c => c.id === entry.id) &&
         !current.gyms.some(g => g.id === entry.id));
-      // One-shot deload consumption is app-owned today. Do not publish a
-      // partial transaction that silently leaves it armed for the next workout.
-      ensure(!Object.keys(origin.saved.find(p => p.id === entry.programId).deloadNext || {}).length);
+      const program=origin.saved.find(p => p.id === entry.programId);
+      // The legacy journal-only handoff cannot prove deload targets were issued.
+      ensure(issued || !Object.keys(program.deloadNext || {}).length);
+      const completedProgram=consumeOneShotDeload(program,entry.perf,entry.updatedAt);
+      const saved=current.saved.map(p=>p.id===program.id ? completedProgram : p);
       const next = mergeStores(current, {...current,
-        savedAt:Math.max(current.savedAt, entry.updatedAt), history:[entry]}).data;
+        savedAt:Math.max(current.savedAt, entry.updatedAt,completedProgram.updatedAt || 0),
+        saved,history:[entry]}).data;
+      ensure(equalJson(next.saved,JSON.parse(JSON.stringify(saved))));
       // Canonical history limits must not silently discard old workouts here.
       ensure(next.history.length === current.history.length + 1 &&
         next.history.some(h => equalJson(h, entry)) &&

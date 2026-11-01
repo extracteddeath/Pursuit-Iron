@@ -66,7 +66,7 @@ export function sessionPlanChange({ program, day, ex, slot, weekIndex, unit, cel
         return Number.isFinite(weight) && Math.abs(weight - prior.weight) < .001
             ? { ...target, weight: prior.weight } : target;
     });
-    const eligible = !!source && exerciseAt(program, day, slot, weekIndex) === ex.id && !program.quick && !suggestion?.referenceOnly && suggestion?.action !== 'initial'
+    const eligible = !!source && exerciseAt(program, day, slot, weekIndex) === ex.id && !program.quick && !suggestion?.referenceOnly && !['initial','deload'].includes(suggestion?.action)
         && !(program.config?.percentScheme && (slot === day.primaryIndex || slot === day.t2Index)) && !/deload/i.test(String(cell.note || ''))
         && !(weekIndex > Number(program.weeks ?? program.config?.weeks ?? Infinity));
     const setDelta = plannedSetRevision(program, day, ex, slot, weekIndex, cell);

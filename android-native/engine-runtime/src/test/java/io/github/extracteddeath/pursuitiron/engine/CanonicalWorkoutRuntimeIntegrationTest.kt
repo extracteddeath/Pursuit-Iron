@@ -13,8 +13,10 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         var raw: ByteArray?=null
         var writes=0
         var failAfterWrite=false
+        var failBeforeWrite=false
         override fun read()=raw?.copyOf()
         override fun commitAtomically(bytes: ByteArray) {
+            if (failBeforeWrite) throw java.io.IOException("Synthetic disk-full before commit")
             writes++;raw=bytes.copyOf()
             if (failAfterWrite) throw java.io.IOException("Synthetic post-commit crash")
         }
@@ -263,6 +265,90 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 assertEquals(List(count){kind},loggedKinds)
                 assertNull(journal.recover())
             }
+        } }
+    }
+
+    @Test(timeout=60000) fun deloadConsumptionCommitsWithHistoryAndSurvivesBothCommitFailureWindows() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="One-shot deload",unit="kg"),
+                "create-deload","program-deload",1000,223)))
+            val start=NativeWorkoutCodec.startJson("program-deload","workout-deload",2000)
+            val seeded=JSONObject(proposal.snapshot)
+            val days=seeded.getJSONArray("saved").getJSONObject(0).getJSONArray("days")
+            val prior=org.json.JSONArray()
+            for(index in 0 until days.length()) {
+                val day=days.getJSONObject(index);val ids=day.getJSONArray("exercises");val perf=JSONObject()
+                for(slot in 0 until ids.length()) perf.put(ids.getString(slot),JSONObject()
+                    .put("weight",100).put("reps",6).put("sets",org.json.JSONArray().put(JSONObject()
+                        .put("w",100).put("r",6).put("rir",2).put("rirReported",true).put("workingSetIndex",0))))
+                prior.put(JSONObject().put("id","prior-$index").put("programId","program-deload")
+                    .put("dayId",day.getString("id")).put("dayLabel",day.getString("label"))
+                    .put("date",1100+index).put("updatedAt",1100+index).put("weekIndex",1)
+                    .put("unit","kg").put("perf",perf))
+            }
+            seeded.put("history",prior)
+            val baseline=checkNotNull(engine.prepareWorkout(seeded.toString(),start))
+            val trained=baseline.exercises[0];val skipped=baseline.exercises[1]
+            assertTrue(trained.sets[0].load.toDouble()>0)
+            val original=seeded
+            original.getJSONArray("saved").getJSONObject(0)
+                .put("deloadNext",JSONObject().put(trained.id,0.9).put(skipped.id,0.9))
+                .put("updatedAt",62000)
+            val origin=original.toString()
+            val plan=checkNotNull(engine.prepareWorkout(origin,start))
+            val firstWork=plan.exercises[0].sets[0]
+            val trace=JSONObject(plan.issuedJson).getJSONArray("rows").getJSONObject(0).getJSONArray("sets")
+            val traced=(0 until trace.length()).map { trace.getJSONObject(it) }.first { !it.getBoolean("warm") }
+            assertEquals("user_one_shot_deload",traced.getJSONObject("target")
+                .getJSONObject("decisionTrace").getJSONObject("evaluation").getString("reasonCode"))
+            assertEquals(firstWork.load,traced.getString("weight"))
+            assertTrue(firstWork.load.toDouble()<trained.sets[0].load.toDouble())
+            val drive=Drive();val recovery=Drive()
+            var store=CanonicalWorkoutStorePersistence(drive,engine)
+            var journal=WorkoutJournalPersistence(recovery)
+            assertTrue(store.initialize(origin))
+            var progress=checkNotNull(store.beginIssuedSession(plan,journal))
+            for((index,slot) in plan.slots.withIndex()) {
+                val isSkipped=slot.exerciseId==skipped.id
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,
+                    progress.journal.revision,JournalSetIntent("deload-set-$index",slot,
+                        if(isSkipped)JournalSetDisposition.SKIPPED else JournalSetDisposition.COMPLETED,
+                        if(isSkipped)null else JournalSetValues("40","kg",6,null)))))
+                if(index==0) {
+                    store=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+                    progress=checkNotNull(store.recoverIssuedSession(journal))
+                    assertEquals(plan.issuedJson,progress.plan.issuedJson)
+                }
+            }
+            val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("deload-finish",62000,60000)))
+            drive.failBeforeWrite=true
+            assertTrue(runCatching { store.complete(plan.session,finished.revision,journal) }.isFailure)
+            assertEquals(origin,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            assertTrue(checkNotNull(journal.recover()).isFinished)
+            drive.failBeforeWrite=false;drive.failAfterWrite=true
+            assertTrue(runCatching { store.complete(plan.session,finished.revision,journal) }.isFailure)
+            drive.failAfterWrite=false
+            val committed=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val stored=JSONObject(committed);val program=stored.getJSONArray("saved").getJSONObject(0)
+            assertFalse(program.getJSONObject("deloadNext").has(trained.id))
+            assertEquals(0.9,program.getJSONObject("deloadNext").getDouble(skipped.id),0.00001)
+            assertEquals(62001,program.getInt("updatedAt"))
+            assertEquals(prior.length()+1,stored.getJSONArray("history").length())
+            assertTrue(checkNotNull(journal.recover()).isFinished)
+            store=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            assertEquals(plan.issuedJson,checkNotNull(store.recoverIssuedSession(journal)).plan.issuedJson)
+            assertTrue(checkNotNull(store.complete(plan.session,finished.revision,journal)).recoveryCleared)
+            assertEquals(committed,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            assertNull(journal.recover())
+            val writes=drive.writes
+            assertNotNull(store.complete(plan.session,finished.revision,journal));assertEquals(writes,drive.writes)
+            val next=checkNotNull(engine.prepareWorkout(committed,
+                NativeWorkoutCodec.startJson("program-deload","workout-after-deload",63000)))
+            assertNotEquals(plan.session.dayId,next.session.dayId)
+            assertNotNull(store.beginIssuedSession(next,journal))
         } }
     }
 

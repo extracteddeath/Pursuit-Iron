@@ -25,6 +25,7 @@ export const contractGroups = Object.freeze({
         'm324-session-summary-test.mjs'
     ]),
     adaptation: Object.freeze([
+        'one-shot-deload-test.mjs',
         'm235-engine-verification-test.mjs',
         'm234-candidate-optimization-test.mjs',
         'm233-semantic-exercise-graph-test.mjs',

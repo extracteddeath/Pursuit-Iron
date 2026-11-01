@@ -200,24 +200,5 @@ public final class CanonicalJsSandboxProbe {
             return cases.length();
         }
     }
-    /** Dedicated instrumentation-only diagnostic, not accessible from the app. */
-    public String inspectSyntheticFailure(@NonNull byte[] bundle, @NonNull String expectedSha256,
-            @NonNull JSONObject params) throws Exception {
-        requireSandbox(bundle, expectedSha256);
-        String input = params.toString();
-        if (input.getBytes(StandardCharsets.UTF_8).length > MAX_REQUEST_BYTES)
-            throw new IllegalArgumentException("Synthetic diagnostic exceeds limit");
-        try (JavaScriptSandbox sandbox =
-                    JavaScriptSandbox.createConnectedInstanceAsync(context).get(10, TimeUnit.SECONDS);
-             JavaScriptIsolate isolate = sandbox.createIsolate()) {
-            isolate.evaluateJavaScriptAsync(new String(bundle, StandardCharsets.UTF_8))
-                    .get(15, TimeUnit.SECONDS);
-            String script = "PursuitIronDiagnostic.diagnoseProgressionJson(" +
-                    JSONObject.quote(input) + ")";
-            String output = isolate.evaluateJavaScriptAsync(script).get(5, TimeUnit.SECONDS);
-            JSONObject result = new JSONObject(output);
-            return result.toString();
-        }
-    }
 
 }

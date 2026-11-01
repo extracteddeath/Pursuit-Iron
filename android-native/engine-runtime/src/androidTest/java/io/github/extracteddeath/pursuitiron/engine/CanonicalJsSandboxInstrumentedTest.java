@@ -61,11 +61,34 @@ public final class CanonicalJsSandboxInstrumentedTest {
             byte[] diagnostic = asset(test, "sandbox-diagnostic.js");
             String pin = new String(asset(test, "sandbox-diagnostic.sha256"),
                     StandardCharsets.UTF_8).trim();
-            String details = new CanonicalJsSandboxProbe(app)
-                    .inspectSyntheticFailure(diagnostic,pin,
-                            fixtures.getJSONArray("cases").getJSONObject(0).getJSONObject("params"));
+            String details = diagnoseSyntheticFixture(app, diagnostic, pin,
+                    fixtures.getJSONArray("cases").getJSONObject(0).getJSONObject("params"));
             throw new AssertionError("Canonical synthetic fixture error: " + details, error);
         }
 
     }
+    /**
+     * Exists only in the Android instrumentation APK: debug diagnostics are
+     * intentionally absent from the production engine-runtime library.
+     */
+    private static String diagnoseSyntheticFixture(Context context, byte[] script, String pin,
+            JSONObject params) throws Exception {
+        assertTrue(CanonicalJsSandboxProbe.verifyBundleBytes(script,pin));
+        assertTrue(JavaScriptSandbox.isSupported());
+        String input = params.toString();
+        assertTrue(input.getBytes(StandardCharsets.UTF_8).length <= 16384);
+        try (JavaScriptSandbox sandbox =
+                    JavaScriptSandbox.createConnectedInstanceAsync(context)
+                            .get(10, java.util.concurrent.TimeUnit.SECONDS);
+             androidx.javascriptengine.JavaScriptIsolate isolate = sandbox.createIsolate()) {
+            isolate.evaluateJavaScriptAsync(new String(script,StandardCharsets.UTF_8))
+                    .get(15,java.util.concurrent.TimeUnit.SECONDS);
+            String expression = "PursuitIronDiagnostic.diagnoseProgressionJson(" +
+                    JSONObject.quote(input) + ")";
+            String result = isolate.evaluateJavaScriptAsync(expression)
+                    .get(5,java.util.concurrent.TimeUnit.SECONDS);
+            return new JSONObject(result).toString();
+        }
+    }
+
 }

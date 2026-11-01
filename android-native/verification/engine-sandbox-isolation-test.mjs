@@ -22,6 +22,8 @@ for (const guard of [
   'getJSONObject("result")','engineCertified', 'Looper.getMainLooper()',
   'isolate.evaluateJavaScriptAsync'
 ]) assert.ok(core.includes(guard), 'Android runtime missing guard: '+guard);
+assert.ok(!core.includes('inspectSyntheticFailure'),
+  'Test diagnostic access must never be packaged in the production runtime library');
 assert.doesNotMatch(core, /\bSharedPreferences\b|\bContentResolver\b|\bWebView\b|\bsetJavaScriptEnabled\b/,
   'Read-only engine probe must not access persistence, web surfaces or arbitrary Android storage');
 assert.match(device, /on:\s*\n  workflow_dispatch:/);

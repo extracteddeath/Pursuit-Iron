@@ -110,6 +110,175 @@
         "action": "add_reps",
         "suggestedLoad": 185
       }
+    },
+    {
+      "id": "missing-effort-below-rep-floor",
+      "params": {
+        "exerciseId": "back_squat",
+        "repMin": 5,
+        "repMax": 8,
+        "targetRir": 2,
+        "sets": [
+          {
+            "load": 200,
+            "reps": 3,
+            "rir": null
+          },
+          {
+            "load": 205,
+            "reps": 3,
+            "rir": null
+          },
+          {
+            "load": 210,
+            "reps": 2,
+            "rir": null
+          },
+          {
+            "load": 215,
+            "reps": 2,
+            "rir": null
+          }
+        ],
+        "equipmentAvailable": [
+          "barbell",
+          "rack"
+        ]
+      },
+      "expected": {
+        "action": "decrease_load",
+        "suggestedLoad": 185
+      }
+    },
+    {
+      "id": "easy-early-stop-does-not-force-downweight",
+      "params": {
+        "exerciseId": "back_squat",
+        "repMin": 5,
+        "repMax": 8,
+        "targetRir": 2,
+        "sets": [
+          {
+            "load": 185,
+            "reps": 4,
+            "rir": 5
+          },
+          {
+            "load": 185,
+            "reps": 4,
+            "rir": 5
+          },
+          {
+            "load": 185,
+            "reps": 4,
+            "rir": 5
+          }
+        ],
+        "equipmentAvailable": [
+          "barbell",
+          "rack"
+        ]
+      },
+      "expected": {
+        "action": "hold",
+        "suggestedLoad": 185
+      }
+    },
+    {
+      "id": "mixed-load-ramp-must-not-promote-heaviest",
+      "params": {
+        "exerciseId": "low-inc-bb-bench",
+        "repMin": 6,
+        "repMax": 8,
+        "targetRir": 2,
+        "sets": [
+          {
+            "load": 195,
+            "reps": 10,
+            "rir": null
+          },
+          {
+            "load": 200,
+            "reps": 8,
+            "rir": null
+          },
+          {
+            "load": 205,
+            "reps": 6,
+            "rir": null
+          },
+          {
+            "load": 210,
+            "reps": 5,
+            "rir": null
+          }
+        ],
+        "equipmentAvailable": [
+          "barbell",
+          "rack"
+        ]
+      },
+      "expected": {
+        "action": "decrease_load",
+        "suggestedLoad": 190,
+        "reasonCode": "straight_set_calibration",
+        "setTargets": [
+          {
+            "weight": 190,
+            "reps": 6
+          },
+          {
+            "weight": 190,
+            "reps": 6
+          },
+          {
+            "weight": 190,
+            "reps": 6
+          },
+          {
+            "weight": 190,
+            "reps": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "known-rir-adjusts-straight-set-calibration",
+      "params": {
+        "exerciseId": "low-inc-bb-bench",
+        "repMin": 6,
+        "repMax": 8,
+        "targetRir": 2,
+        "sets": [
+          {
+            "load": 195,
+            "reps": 10,
+            "rir": 2
+          },
+          {
+            "load": 200,
+            "reps": 8,
+            "rir": 2
+          },
+          {
+            "load": 205,
+            "reps": 6,
+            "rir": 2
+          },
+          {
+            "load": 210,
+            "reps": 5,
+            "rir": 2
+          }
+        ],
+        "equipmentAvailable": [
+          "barbell",
+          "rack"
+        ]
+      },
+      "expected": {
+        "suggestedLoad": 200
+      }
     }
   ]
 }

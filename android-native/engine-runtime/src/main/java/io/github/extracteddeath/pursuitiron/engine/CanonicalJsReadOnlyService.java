@@ -14,6 +14,7 @@ import java.security.MessageDigest;
 import java.util.Objects;
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupLimits;
 import io.github.extracteddeath.pursuitiron.domain.WorkoutStoreRuntimeCodec;
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramSetupCodec;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -248,7 +249,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request,
             long timeoutSeconds) throws Exception {
         String method = request.getString("method");
-        boolean store = "validateOwnedStore".equals(method) || "prepareWorkoutHistory".equals(method);
+        boolean store = "validateOwnedStore".equals(method) || "prepareWorkoutHistory".equals(method)
+                || "nativeProgramOptions".equals(method) || "prepareNativeProgram".equals(method)
+                || "inspectNativeProgram".equals(method);
         String entry = store ? "PursuitIronBridge.dispatchWorkoutStoreJson"
                 : ("backupSchemaCheck".equals(method) ||
                 "backupProgramInventory".equals(method) ||
@@ -412,6 +415,12 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                             if ("validateOwnedStore".equals(validated.getString("method"))) {
                                 WorkoutStoreRuntimeCodec.INSTANCE.decodeValidation(response.toString(),
                                     validated.getString("id"), p.getString("rawSnapshot"));
+                            } else if ("nativeProgramOptions".equals(validated.getString("method"))) {
+                                NativeProgramSetupCodec.INSTANCE.decodeOptions(response.toString(),validated.getString("id"));
+                            } else if ("prepareNativeProgram".equals(validated.getString("method"))) {
+                                NativeProgramSetupCodec.INSTANCE.decodeProposal(response.toString(),validated.getString("id"),p.getString("setupJson"));
+                            } else if ("inspectNativeProgram".equals(validated.getString("method"))) {
+                                NativeProgramSetupCodec.INSTANCE.decodeSaved(response.toString(),validated.getString("id"),p.getString("rawSnapshot"));
                             } else {
                                 WorkoutStoreRuntimeCodec.INSTANCE.decodePreparation(response.toString(),
                                     validated.getString("id"), p.getString("originSnapshot"),

@@ -113,6 +113,7 @@ internal fun SectionLabel(title: String, detail: String? = null) {
 @Composable
 internal fun PreviewSettingSwitch(
     title: String, description: String, checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Surface(
@@ -124,6 +125,7 @@ internal fun PreviewSettingSwitch(
         Row(
             modifier = Modifier.fillMaxWidth()
                 .toggleable(value = checked, role = Role.Switch,
+                    enabled = enabled,
                     onValueChange = onCheckedChange)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -136,14 +138,14 @@ internal fun PreviewSettingSwitch(
                 Text(description, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(checked = checked, onCheckedChange = null)
+            Switch(checked = checked, onCheckedChange = null, enabled = enabled)
         }
     }
 }
 
 @Composable
-internal fun PreviewChoice(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
+internal fun PreviewChoice(label: String, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
+    FilterChip(selected = selected, enabled = enabled, onClick = onClick, label = { Text(label) })
 }
 
 @Composable

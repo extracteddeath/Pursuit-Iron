@@ -37,7 +37,9 @@ Alternatively, open `android-native/` in Android Studio, provision JDK 17, Andro
 - The top-right feature map displays the **capability contract**, not a checklist of completed features.
 - Phones use bottom navigation; wider screens use a navigation rail. Cards and motion are shared Compose primitives, not CSS.
 
-All interactive examples are **local UI-only state**. They do not generate training targets, log completed sets, modify web history or import user backups.
+Native onboarding can prepare and explicitly save a new program through the
+packaged canonical engine. Other interactive examples remain local UI-only
+state; they do not log completed sets, modify web history or import backups.
 
 ## Implementation boundaries
 
@@ -168,10 +170,9 @@ JS golden history result shared with Kotlin, including simultaneous finish
 attempts and crashes during cleanup. App-private Android writes explicitly
 sync and verify their committed bytes.
 
-The preview does not instantiate this owner. The pinned completion transport is
-implemented, while native onboarding/program creation, authenticated session
-creation and device acceptance are still required before live workout logging.
-APK generation remains frozen.
+The process runtime now instantiates this owner for native first-program
+creation. Authenticated session creation, live logging UI and device acceptance
+are still required before workout logging. APK generation remains frozen.
 
 ### Packaged canonical completion runtime
 
@@ -191,5 +192,20 @@ The source-only runtime workflow builds the actual pinned IIFE, runs Kotlin
 store/journal integration through that bundle in a restricted Node VM, and
 compiles the Android sandbox and instrumentation sources without an APK. That
 host proof covers lost commit acknowledgements, canonical history, retry and
-cancellation; it is not Android device certification. The preview remains
-unconnected until the complete user flow and device acceptance are finished.
+cancellation; it is not Android device certification. Workout logging remains
+disabled until the complete user flow and acceptance are finished.
+
+### Native onboarding and first-program save
+
+The app now opens a three-step setup, equipment and generated-program review
+flow. Goals, experience, units, split, days, session range, equipment, bodyweight,
+supersets and barbell-per-day limits are carried to the real canonical generator.
+Split/day choices come from its compatibility authority. Review has no writes;
+Save initializes a new private store and exact retries acknowledge the same
+creation. Existing, corrupt or incompatible data is never replaced as fresh setup.
+
+One Application-owned runtime survives Activity recreation and owns the pinned
+worker and store. Saved first-program identity is restored through canonical
+inspection; Plan reads current structure off the main thread. Late/cancelled
+generation results cannot replace a newer action. Workout session creation and
+logging are still disabled, and no new APK has been generated for this work.

@@ -15,8 +15,8 @@ interface CanonicalWorkoutStoreBytes {
 
 /**
  * MUST be implemented by the pinned canonical JS runtime, never a Kotlin schema
- * replica or document-picker metadata adapter. No implementation is connected
- * to the app yet. Boolean/JSON results do not certify live workout execution.
+ * replica or document-picker metadata adapter. Native first-program creation
+ * uses the pinned implementation; live workout execution is a separate gate.
  */
 interface PinnedCanonicalWorkoutStoreEngine {
     suspend fun validateInitialSnapshot(exactSnapshot: String): Boolean
@@ -40,7 +40,7 @@ data class CanonicalWorkoutCompletionOutcome(
  * Canonical JS owns validation, prescriptions, history and merge policy. This
  * owner only binds exact inputs, serializes writes and orders crash recovery.
  * All I/O must run off the UI thread, with ONE owner per process. Not wired to
- * MainActivity, backup selection or real training before runtime certification.
+ * backup selection or real workout logging before runtime certification.
  */
 class CanonicalWorkoutStorePersistence(
     private val bytes: CanonicalWorkoutStoreBytes,

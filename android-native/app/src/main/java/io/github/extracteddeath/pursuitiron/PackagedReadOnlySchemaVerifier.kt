@@ -8,6 +8,8 @@ import io.github.extracteddeath.pursuitiron.engine.CanonicalJsReadOnlyService
 import io.github.extracteddeath.pursuitiron.engine.CanonicalJsSandboxProbe
 import io.github.extracteddeath.pursuitiron.engine.SandboxBackupSchemaInspector
 import io.github.extracteddeath.pursuitiron.engine.SandboxWorkoutOutline
+import io.github.extracteddeath.pursuitiron.engine.SandboxCanonicalWorkoutStoreEngine
+import io.github.extracteddeath.pursuitiron.engine.SandboxCanonicalCurrentPlanProjector
 import io.github.extracteddeath.pursuitiron.domain.WorkoutOutline
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -19,8 +21,9 @@ import java.io.InputStream
  * verified canonical source snapshot. No URL or user-supplied script/manifest.
  *
  * The default source checkout intentionally contains no such bundled asset,
- * so its Compose preview stays disconnected. This class exposes metadata probes and synthetic-only engine outlines;
- * never personal workout prescriptions or writes.
+ * so creation stays unavailable without verified assets. Backup consumers see
+ * metadata probes only; process-owned onboarding can prepare a first program.
+ * This worker never receives file handles or enables workout logging.
  */
 internal class PackagedReadOnlySchemaVerifier private constructor(
     private val worker: CanonicalJsReadOnlyService
@@ -28,6 +31,10 @@ internal class PackagedReadOnlySchemaVerifier private constructor(
     private val schema = SandboxBackupSchemaInspector(worker)
 
     private val outlines = SandboxWorkoutOutline(worker)
+    // The backup interface never exposes these capabilities. The process-owned
+    // onboarding flow uses the same verified worker, without another sandbox.
+    internal val programEngine by lazy { SandboxCanonicalWorkoutStoreEngine(worker) }
+    internal val currentPlanProjector by lazy { SandboxCanonicalCurrentPlanProjector(worker) }
 
     override suspend fun inspectSyntheticOutline(split: String, dayIndex: Int): Result<WorkoutOutline> =
         outlines.inspect(split, dayIndex)

@@ -21,7 +21,7 @@ const packaged = read('app/src/main/java/io/github/extracteddeath/pursuitiron/Pa
 assert.match(shell, /UnconnectedEngineGateway\(\)\.status/,
   'Training navigation must stay disconnected from the read-only metadata service');
 assert.match(packaged, /CanonicalJsSandboxProbe.verifyBundleBytes\(binary, expected\)/);
-assert.match(activity, /readOnlyVerifier\?\.close\(\)/);
+assert.match(fs.readFileSync('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitIronApplication.kt','utf8'),/nativeRuntime\.close\(\)/);
 assert.ok(!packaged.includes('generateNextProgramForShell') &&
   !packaged.includes('updateHistory') &&
   !packaged.includes('deleteHistory') &&

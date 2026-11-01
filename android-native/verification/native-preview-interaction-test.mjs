@@ -49,7 +49,7 @@ assert.equal(screens.split('PreviewSettingSwitch(').length - 1, 2,
   'Plan adaptation switches must be composed from one shared native control');
 assert.ok(components.includes('toggleable(value = checked, role = Role.Switch'),
   'The entire row, not only the switch thumb, owns the accessible action');
-assert.ok(components.includes('Switch(checked = checked, onCheckedChange = null)'),
+assert.ok(components.includes('Switch(checked = checked, onCheckedChange = null, enabled = enabled)'),
   'Avoid a second nested switch click owner');
 assert.ok(components.includes('modifier = Modifier.weight(1f)'),
   'Section headings must yield room for narrow-screen trailing labels');
@@ -63,6 +63,8 @@ const outlinePolicy = fs.readFileSync(
 );
 const packaged = fs.readFileSync(root + 'PackagedReadOnlySchemaVerifier.kt', 'utf8');
 const activity = fs.readFileSync(root + 'MainActivity.kt', 'utf8');
+const runtimeHost = fs.readFileSync(root + 'NativeRuntimeHost.kt', 'utf8');
+const application = fs.readFileSync(root + 'PursuitIronApplication.kt', 'utf8');
 const currentPlanHost = fs.readFileSync(root + 'NativePlanPresentationHost.kt', 'utf8');
 assert.ok(currentPlanHost.includes('LocalLifecycleOwner.current') &&
   currentPlanHost.includes('Lifecycle.Event.ON_STOP') &&
@@ -119,14 +121,15 @@ assert.ok(!packaged.includes('previewAsync(') &&
   !packaged.includes('openOutputStream(') &&
   !packaged.includes('takePersistableUriPermission('),
   'Read-only UI path must expose no prescriptions, writes or persistent grants');
-assert.ok(activity.includes('readOnlyVerifier?.close()') &&
-  activity.includes('PackagedReadOnlySchemaVerifier.openIfPackaged(') &&
-  activity.includes('assetScope.launch') &&
-  activity.includes('CoroutineScope(SupervisorJob() + Dispatchers.IO)') &&
-  activity.includes('withContext(NonCancellable + Dispatchers.Main.immediate)') &&
-  activity.indexOf('setContent {') < activity.indexOf('assetScope.launch') &&
-  activity.includes('if (released) loaded?.close()'),
-  'Read-only bundle must load off the first frame, close on destruction, and never leak cancelled results');
+assert.ok(application.includes('nativeRuntime by lazy') && application.includes('nativeRuntime.close()') &&
+  runtimeHost.includes('PackagedReadOnlySchemaVerifier.openIfPackaged(context)') &&
+  runtimeHost.includes('CoroutineScope(SupervisorJob()+Dispatchers.IO)') &&
+  runtimeHost.includes('if (closed || !isActive) { loaded?.close();return@launch }') &&
+  runtimeHost.includes('actionVersion.incrementAndGet()') &&
+  activity.includes('runtime.state.collectAsStateWithLifecycle()') &&
+  activity.indexOf('setContent {') < activity.indexOf('runtime.start()') &&
+  !activity.includes('readOnlyVerifier?.close()'),
+  'One process runtime must load off the first frame, survive rotation, and discard cancelled actions');
 
 const backupInventoryUi = fs.readFileSync(root + 'BackupSavedProgramInventoryPanel.kt','utf8');
 const approvedProgramUi = fs.readFileSync(root + 'SavedProgramOverviewPanel.kt','utf8');

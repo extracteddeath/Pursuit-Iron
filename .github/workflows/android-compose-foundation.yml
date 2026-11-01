@@ -21,6 +21,7 @@ jobs:
         run: |
           node android-native/engine-bridge/protocol-test.mjs
           node android-native/engine-bridge/workout-store-protocol-test.mjs
+          node android-native/engine-bridge/native-onboarding-test.mjs
           node android-native/engine-bridge/backup-schema-check-test.mjs
           node android-native/engine-bridge/sandbox-compat-test.mjs
       - name: Verify fixed language-neutral progression fixtures and Kotlin routing contracts
@@ -50,7 +51,9 @@ jobs:
       - name: Ensure feature-first contract preserves all capabilities and gates
         run: node android-native/verification/feature-contract-test.mjs
       - name: Verify native preview draft, focus and shared controls
-        run: node android-native/verification/native-preview-interaction-test.mjs
+        run: |
+          node android-native/verification/native-preview-interaction-test.mjs
+          node android-native/verification/native-onboarding-interaction-test.mjs
       - name: Verify preview Material 3 Expressive dependency and motion contract
         run: node android-native/verification/m3e-version-test.mjs
       - name: Protect existing feature behavior with canonical regression fixtures

@@ -53,6 +53,7 @@ import io.github.extracteddeath.pursuitiron.domain.CurrentReadOnlyPlanSource
 import io.github.extracteddeath.pursuitiron.domain.UnconnectedCurrentReadOnlyPlanSource
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
 import androidx.compose.runtime.remember
 
 /** Navigation follows training tasks instead of mirroring React screens. */
@@ -72,7 +73,11 @@ internal fun NativePreviewApp(
     // Neither an active program nor the current canonical store is connected.
     activeProgramId: String? = null,
     currentPlanSource: CurrentReadOnlyPlanSource = UnconnectedCurrentReadOnlyPlanSource,
-    canonicalStoreChangeKey: Long = 0L
+    canonicalStoreChangeKey: Long = 0L,
+    onboarding: NativeRuntimeState? = null,
+    onReviewProgram: (NativeProgramProfile)->Unit = {},
+    onSaveProgram: ()->Unit = {},
+    onEditProgram: ()->Unit = {}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -81,6 +86,19 @@ internal fun NativePreviewApp(
     var injuryFlag by rememberSaveable { mutableStateOf(false) }
     val status = UnconnectedEngineGateway().status
     val destinationStates = rememberSaveableStateHolder()
+    var exploreDemo by rememberSaveable { mutableStateOf(false) }
+    if (onboarding!=null && onboarding.saved==null && !exploreDemo) {
+        Scaffold { padding ->
+            Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
+                .padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                destinationStates.SaveableStateProvider("onboarding") {
+                    NativeOnboardingScreen(onboarding,onReviewProgram,onSaveProgram,onEditProgram,
+                        onExplore={exploreDemo=true})
+                }
+            }
+        }
+        return
+    }
     // Program/day navigation intent is transient, never saved or interpreted
     // as a workout session, set log or persistence permission.
     var selectedTrainingDay by remember { mutableStateOf<ReadOnlyTrainingDaySelection?>(null) }
@@ -170,7 +188,9 @@ internal fun NativePreviewApp(
                                     readiness, length, injuryFlag,
                                     openTrain = { selectedTrainingDay = null; section = 1 },
                                     openPlan = { selectedTrainingDay = null; section = 2 },
-                                    adjustSession = { sheet = 1 })
+                                    adjustSession = { sheet = 1 },
+                                    savedProgram=onboarding?.saved,
+                                    setupProgram={exploreDemo=false})
                                 NativeDestination.TRAIN -> TrainScreen(
                                     openTools = { sheet = 3 },
                                     syntheticOutlineReader = syntheticOutlineReader,
@@ -180,6 +200,7 @@ internal fun NativePreviewApp(
                                 )
                                 NativeDestination.PLAN -> PlanScreen(
                                     currentPlan = visiblePlan,
+                                    hasSavedProgram=onboarding?.saved!=null,
                                     schemaVerifier = schemaVerifier,
                                     schemaVerifierLoading = schemaVerifierLoading,
                                     onPreviewDay = { day ->
@@ -189,7 +210,7 @@ internal fun NativePreviewApp(
                                 )
                                 NativeDestination.INSIGHTS -> InsightsScreen()
                             }
-                            ConnectionNotice(status)
+                            ConnectionNotice(status,onboarding?.saved!=null)
                         }
                     }
                     }
@@ -220,10 +241,11 @@ internal fun NativePreviewApp(
 }
 
 @Composable
-private fun ConnectionNotice(status: EngineStatus) {
+private fun ConnectionNotice(status: EngineStatus,hasProgram: Boolean=false) {
     PursuitCard {
-        Text("Preview safety", style = MaterialTheme.typography.titleSmall)
-        Text(if (status is EngineStatus.NotConnected)
+        Text("Preview status", style = MaterialTheme.typography.titleSmall)
+        Text(if(hasProgram) "Your program is saved on this device. Workout logging is unavailable in this preview."
+            else if (status is EngineStatus.NotConnected)
             "Canonical training engine not connected. No program is generated and no workout data is saved."
             else "Training engine unavailable. Real workout actions remain disabled.",
             style = MaterialTheme.typography.bodySmall,

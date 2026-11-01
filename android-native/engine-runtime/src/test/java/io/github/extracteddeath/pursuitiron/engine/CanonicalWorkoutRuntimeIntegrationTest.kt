@@ -73,6 +73,35 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             f.getLong("completedAt"),f.getLong("durationMs"))))
     }
 
+    @Test(timeout=60000) fun realOnboardingCreatesSavesAndRestoresWithoutReplacingAnotherProgram() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val options=checkNotNull(engine.programOptions())
+            assertEquals(listOf(4,6),options.splits.single { it.id=="upper_lower" }.days)
+            val profile=NativeProgramProfile(name="Native first program",unit="kg",equipment=options.equipment)
+            val setup=NativeProgramSetupCodec.setupJson(profile,"create-new","program-new",1000,223)
+            val proposal=checkNotNull(engine.prepareProgram(setup))
+            assertEquals("Native first program",proposal.program.name)
+            assertEquals(3,proposal.program.days.size)
+            assertEquals("kg",proposal.profile.unit)
+            val drive=Drive();var store=CanonicalWorkoutStorePersistence(drive,engine)
+            assertNull(store.readOwnedCurrentStoreBytes()) // review has not written anything
+            assertTrue(store.initialize(proposal.snapshot))
+            val writes=drive.writes
+            assertTrue(store.initialize(proposal.snapshot));assertEquals(writes,drive.writes)
+            store=CanonicalWorkoutStorePersistence(drive,engine)
+            val bytes=checkNotNull(store.readOwnedCurrentStoreBytes())
+            val restored=checkNotNull(engine.inspectProgram(String(bytes,Charsets.UTF_8)));bytes.fill(0)
+            assertEquals("program-new",restored.program.id)
+            assertEquals("create-new",restored.creationId)
+            assertEquals("kg",restored.profile.unit)
+            val other=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(profile,
+                "create-other","program-other",2000,223)))
+            assertFalse(store.initialize(other.snapshot))
+            assertEquals(writes,drive.writes)
+        } }
+    }
+
     @Test(timeout=60000) fun actualPackagedEnginePublishesHistoryAndRecoversLostCommitAcknowledgement() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

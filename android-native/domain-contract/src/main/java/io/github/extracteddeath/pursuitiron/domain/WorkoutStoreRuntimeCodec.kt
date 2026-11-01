@@ -12,25 +12,25 @@ object WorkoutStoreRuntimeCodec {
     const val MAX_REQUEST_BYTES=12*1024*1024
     const val MAX_RESPONSE_BYTES=8*1024*1024
     private val identifier=Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
-    private fun exact(v: JSONObject,vararg keys: String) {
+    internal fun exact(v: JSONObject,vararg keys: String) {
         require(v.keys().asSequence().toSet()==keys.toSet())
     }
-    private fun bounded(raw: String,max: Int) {
+    internal fun bounded(raw: String,max: Int) {
         require(raw.isNotEmpty() && raw.length<=max && !raw.startsWith('\uFEFF'))
         val bytes=Charsets.UTF_8.newEncoder().onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT).encode(CharBuffer.wrap(raw))
         try { require(bytes.remaining()<=max) }
         finally { if (bytes.hasArray()) bytes.array().fill(0) }
     }
-    private fun text(v: JSONObject,key: String): String {
+    internal fun text(v: JSONObject,key: String): String {
         val raw=v.get(key); require(raw is String);return raw
     }
-    private fun integer(v: JSONObject,key: String): Long {
+    internal fun integer(v: JSONObject,key: String): Long {
         val n=v.get(key)
         require(n is Number && n.toString().matches(Regex("^(0|[1-9][0-9]*)$")))
         return requireNotNull(n.toString().toLongOrNull())
     }
-    private fun sha(raw: String): String {
+    internal fun sha(raw: String): String {
         val bytes=raw.toByteArray(Charsets.UTF_8)
         try {
             val alphabet="0123456789abcdef"
@@ -39,7 +39,7 @@ object WorkoutStoreRuntimeCodec {
             } }
         } finally { bytes.fill(0) }
     }
-    private fun encode(id: String,method: String,params: JSONObject): String {
+    internal fun encode(id: String,method: String,params: JSONObject): String {
         require(identifier.matches(id))
         val wire=JSONObject().put("protocolVersion",1).put("id",id)
             .put("method",method).put("params",params).toString()
@@ -60,6 +60,9 @@ object WorkoutStoreRuntimeCodec {
         require(integer(request,"protocolVersion")==1L && identifier.matches(text(request,"id")))
         val p=request.getJSONObject("params")
         when (text(request,"method")) {
+            "nativeProgramOptions" -> exact(p)
+            "prepareNativeProgram" -> { exact(p,"setupJson");bounded(text(p,"setupJson"),16384) }
+            "inspectNativeProgram" -> { exact(p,"rawSnapshot");bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES) }
             "validateOwnedStore" -> {
                 exact(p,"rawSnapshot");bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES)
             }
@@ -73,7 +76,7 @@ object WorkoutStoreRuntimeCodec {
         }
         return request
     }
-    private fun result(raw: String,expectedId: String): JSONObject? {
+    internal fun result(raw: String,expectedId: String): JSONObject? {
         require(identifier.matches(expectedId));bounded(raw,MAX_RESPONSE_BYTES)
         val response=JSONObject(raw)
         val ok=response.get("ok");require(ok is Boolean)

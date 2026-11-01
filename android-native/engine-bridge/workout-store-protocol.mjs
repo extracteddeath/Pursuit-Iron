@@ -2,6 +2,7 @@
 import { canonicalBackupSchemaCheck } from './backup-schema-check.mjs';
 import { prepareCanonicalWorkoutHistory } from './workout-history-completion.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
+import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
 
 export const WORKOUT_STORE_LIMITS=Object.freeze({
   snapshotBytes:1024*1024,journalBytes:256*1024,
@@ -27,7 +28,17 @@ export function dispatchWorkoutStoreJson(json) {
     if (request.protocolVersion!==1) return error(id,'UNSUPPORTED_VERSION');
     const p=request.params;
     let result;
-    if (request.method==='validateOwnedStore') {
+    if (request.method==='nativeProgramOptions') {
+      if (!exact(p,[])) return error(id,'INVALID_REQUEST');
+      result=nativeProgramOptions();
+    } else if (request.method==='prepareNativeProgram') {
+      if (!exact(p,['setupJson']) || !bounded(p.setupJson,16384)) return error(id,'INVALID_REQUEST');
+      result=prepareNativeProgram(p.setupJson);
+    } else if (request.method==='inspectNativeProgram') {
+      if (!exact(p,['rawSnapshot']) || !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes))
+        return error(id,'INVALID_REQUEST');
+      result=inspectNativeProgram(p.rawSnapshot);
+    } else if (request.method==='validateOwnedStore') {
       if (!exact(p,['rawSnapshot']) || !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes))
         return error(id,'INVALID_REQUEST');
       canonicalBackupSchemaCheck(p); // canonical v13 parser; no Kotlin schema replica

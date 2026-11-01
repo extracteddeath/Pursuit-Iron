@@ -141,6 +141,21 @@ assert.deepEqual(completed.result,completionFixture.preparation);
 assert.equal(JSON.parse(bridge.dispatchBackupSchemaJson(completeWire)).ok,false);
 assert.equal(JSON.parse(bridge.dispatchEngineJson(completeWire)).ok,false);
 
+const optionsRequest=JSON.stringify({protocolVersion:1,id:'bundle-onboarding-options',method:'nativeProgramOptions',params:{}});
+const setupOptions=JSON.parse(bridge.dispatchWorkoutStoreJson(optionsRequest));
+assert.equal(setupOptions.ok,true);
+assert.equal(setupOptions.result.splits.length,4);
+const setupJson=JSON.stringify({creationId:'bundle-creation',programId:'bundle-program',createdAt:1000,seed:223,
+  profile:{name:'Bundle onboarding proof',goal:'both',experience:'intermediate',unit:'lb',split:'full_body',
+    days:3,session:'s60',equipment:setupOptions.result.equipment,allowBodyweight:true,allowSupersets:false,barbellCap:3}});
+const creationRequest=JSON.stringify({protocolVersion:1,id:'bundle-onboarding-create',method:'prepareNativeProgram',params:{setupJson}});
+const created=JSON.parse(bridge.dispatchWorkoutStoreJson(creationRequest));
+assert.equal(created.ok,true);
+assert.equal(created.result.program.program.days.length,3);
+assert.equal(created.result.program.program.id,'bundle-program');
+assert.equal(created.result.setupSha256,crypto.createHash('sha256').update(setupJson).digest('hex'));
+assert.equal(JSON.parse(bridge.dispatchBackupSchemaJson(creationRequest)).ok,false);
+
 const sha256 = crypto.createHash('sha256').update(raw).digest('hex');
 console.log(JSON.stringify({
   bundleVerified: true,

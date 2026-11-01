@@ -2,6 +2,11 @@ package io.github.extracteddeath.pursuitiron.engine
 
 import io.github.extracteddeath.pursuitiron.domain.PinnedCanonicalWorkoutStoreEngine
 import io.github.extracteddeath.pursuitiron.domain.WorkoutStoreRuntimeCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramCreationEngine
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramSetupCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramOptions
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramProposal
+import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -22,7 +27,7 @@ internal fun interface CanonicalWorkoutStoreTransport {
  */
 class SandboxCanonicalWorkoutStoreEngine internal constructor(
     private val transport: CanonicalWorkoutStoreTransport
-) : PinnedCanonicalWorkoutStoreEngine {
+) : PinnedCanonicalWorkoutStoreEngine, NativeProgramCreationEngine {
     constructor(worker: CanonicalJsReadOnlyService) : this(CanonicalWorkoutStoreTransport { wire ->
         suspendCancellableCoroutine { continuation ->
             val future=worker.prepareWorkoutStoreAsync(wire)
@@ -34,6 +39,25 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         }
     })
     private val sequence=AtomicLong(0)
+
+    override suspend fun programOptions(): NativeProgramOptions? {
+        val id="native-program-options-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeProgramSetupCodec.encodeOptions(id))
+        currentCoroutineContext().ensureActive()
+        return NativeProgramSetupCodec.decodeOptions(raw,id)
+    }
+    override suspend fun prepareProgram(setupJson: String): NativeProgramProposal? {
+        val id="native-program-create-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeProgramSetupCodec.encodeProgram(id,setupJson))
+        currentCoroutineContext().ensureActive()
+        return NativeProgramSetupCodec.decodeProposal(raw,id,setupJson)
+    }
+    override suspend fun inspectProgram(exactSnapshot: String): NativeSavedProgram? {
+        val id="native-program-restore-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeProgramSetupCodec.encodeInspect(id,exactSnapshot))
+        currentCoroutineContext().ensureActive()
+        return NativeProgramSetupCodec.decodeSaved(raw,id,exactSnapshot)
+    }
 
     override suspend fun validateInitialSnapshot(exactSnapshot: String): Boolean {
         val id="native-store-validation-${sequence.incrementAndGet()}"

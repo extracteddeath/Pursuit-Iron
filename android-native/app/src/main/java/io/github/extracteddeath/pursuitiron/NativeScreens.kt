@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDayJourney
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
+import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
 
 /**
  * These are independently designed NATIVE journeys, not ports of React screens.
@@ -42,8 +43,20 @@ internal fun TodayScreen(
     injuryFlag: Boolean,
     openTrain: () -> Unit,
     openPlan: () -> Unit,
-    adjustSession: () -> Unit
+    adjustSession: () -> Unit,
+    savedProgram: NativeSavedProgram? = null,
+    setupProgram: () -> Unit = {}
 ) {
+    if(savedProgram!=null) {
+        PageHeading("YOUR TRAINING","Your program is ready",savedProgram.program.name)
+        PursuitCard(highlighted=true) {
+            Text("${savedProgram.program.days.size} days per week",style=MaterialTheme.typography.headlineSmall)
+            Text("${savedProgram.program.weeks}-week starting block · ${savedProgram.profile.unit}")
+            Button(onClick=openPlan,modifier=Modifier.fillMaxWidth()){Text("View your program")}
+            Text("Workout logging is unavailable in this preview.",style=MaterialTheme.typography.bodySmall)
+        }
+        return
+    }
     PageHeading("YOUR TRAINING", "Make today count.",
         "A clear decision point for training, not another dashboard full of banners.")
     PursuitCard(highlighted = true) {
@@ -51,6 +64,7 @@ internal fun TodayScreen(
         Text("A better start to every session", style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold)
         Text("Your next workout, priorities and available time will come from your verified program. Explore the training interaction design now.")
+        OutlinedButton(onClick=setupProgram,modifier=Modifier.fillMaxWidth()){Text("Set up your training")}
         Button(onClick = openTrain, modifier = Modifier.fillMaxWidth()) {
             Text("Explore the training experience")
         }
@@ -254,15 +268,22 @@ internal fun TrainScreen(
 internal fun PlanScreen(
     // Only independently approved read-only structure may enter Compose.
     currentPlan: ReadOnlyProgramPresentation = ReadOnlyProgramPresentation.Unavailable,
+    hasSavedProgram: Boolean = false,
     schemaVerifier: CanonicalBackupSchemaVerifier? = null,
     schemaVerifierLoading: Boolean = false,
     onPreviewDay: (ReadOnlyTrainingDaySelection) -> Unit = {}
 ) {
+    if(hasSavedProgram && currentPlan !is ReadOnlyProgramPresentation.Structure) {
+        PageHeading("YOUR PROGRAM","Loading your program","Your saved plan is being loaded.")
+        androidx.compose.material3.LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+        return
+    }
     var goal by rememberSaveable { mutableStateOf("Hypertrophy") }
     var days by rememberSaveable { mutableIntStateOf(4) }
     var adaptiveSplit by rememberSaveable { mutableStateOf(true) }
     var adaptiveExercises by rememberSaveable { mutableStateOf(true) }
 
+    if (currentPlan !is ReadOnlyProgramPresentation.Structure) {
     PageHeading("PROGRAM DESIGN", "Built around your goals.",
         "A native planning journey can replace several old editing screens without losing their controls.")
     PursuitCard(highlighted = true) {
@@ -299,6 +320,7 @@ internal fun PlanScreen(
         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
             Text("Generate real program · unavailable")
         }
+    }
     }
     // Plan cannot authorize a raw backup or unchecked current program.
     if (currentPlan is ReadOnlyProgramPresentation.Structure) {

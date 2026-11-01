@@ -264,9 +264,8 @@ wiped; change listeners track committed canonical snapshots. The initial native
 snapshot window remains 1 MiB, with a separately bounded 16 MiB private envelope.
 Oversized and corrupt stores are preserved and rejected, never treated as empty.
 
-The preview instantiates neither private store nor training writer. The pinned
-workout-store engine implementation is available for source integration. Native onboarding/program creation,
-runtime session authentication, Android interruption acceptance and the complete
+The app instantiates the private owner for first-program creation. The training
+writer remains disconnected. Runtime session authentication, Android interruption acceptance and the complete
 user journey remain pending. No APK generation or real workout logging is enabled.
 
 ## Packaged runtime to native storage integration
@@ -291,4 +290,31 @@ The test includes a post-commit crash, exact retry, skipped-set positions,
 unreported RIR and cancellation. This replaces canned engine responses in the
 integration proof. A shared bundle source manifest prevents packaging drift.
 Android compilation and instrumentation-source compilation remain APK-free;
-actual Android execution, onboarding and live training acceptance are pending.
+actual Android execution and live training acceptance are pending.
+
+## Native onboarding and explicit first-program creation
+
+`NativeOnboardingScreen` now implements setup -> equipment -> generated review
+-> explicit save. Its draft fields are saveable and a retained proposal restores
+their initial values after Activity recreation. Compatibility choices are
+returned by canonical `splitSupportsTrainingDays`; the form has no topology or
+training formulas. Profile choices, a one-time creation/program identity, seed
+and clock enter `prepareNativeProgram` on the dedicated runtime channel.
+
+Canonical generation must pass its audit. The result contains an exact bounded
+v13 store, source-bound program structure and first-party onboarding identity.
+The native codec checks request/candidate identity and hands the proposal to a
+review-only screen. Only Save calls the atomic owner. Exact retries never
+duplicate initialization, and another existing program cannot be overwritten.
+Cold start inspects the stored identity and current program through canonical JS.
+
+`PursuitIronApplication` owns one `NativeRuntimeHost`, worker and writer across
+Activity recreation. Asset work starts off-main after the first composition;
+late results and cancelled form actions are discarded. Plan refresh now runs
+on IO and remains revision-checked. Backup selection cannot supply active data.
+
+Node and actual-bundle JVM tests cover four audited splits, preserved settings,
+generation determinism, read-only review, save/retry, cold restore, tombstones
+and refusal to replace another program. Live session authentication, workout
+logging controls and Android device acceptance remain next. All APK jobs stay
+disabled; this pass does not claim the entire onboarding-to-completion milestone.

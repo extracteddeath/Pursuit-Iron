@@ -17,63 +17,36 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
-    // These Compose state holders are updated on Main only; no engine status
-    // is represented as a workout capability.
-    private var readOnlyVerifier by mutableStateOf<PackagedReadOnlySchemaVerifier?>(null)
-    private var verifierLoading by mutableStateOf(true)
-    private val assetScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var released = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Draw the native UI immediately. Asset I/O, manifest verification,
-        // SHA-256 and worker construction MUST NOT block the first frame.
+        val runtime=(application as PursuitIronApplication).nativeRuntime
+        // Render before any asset I/O. The Application owns the worker/writer
+        // so rotation cannot create competing file owners or sandbox leases.
         setContent {
+            val state by runtime.state.collectAsStateWithLifecycle()
+            val readOnlyVerifier=state.verifier
             PursuitIronTheme {
                 NativePreviewApp(
-                    schemaVerifier = readOnlyVerifier,
-                    schemaVerifierLoading = verifierLoading,
-                    syntheticOutlineReader = readOnlyVerifier
+                    schemaVerifier=readOnlyVerifier,
+                    schemaVerifierLoading=state.loading,
+                    syntheticOutlineReader = readOnlyVerifier,
+                    activeProgramId=state.saved?.program?.id,
+                    currentPlanSource=state.planSource,
+                    canonicalStoreChangeKey=state.storeChangeKey,
+                    onboarding=state,
+                    onReviewProgram=runtime::review,
+                    onSaveProgram=runtime::save,
+                    onEditProgram=runtime::edit
                 )
             }
         }
-        assetScope.launch {
-            val loaded = PackagedReadOnlySchemaVerifier.openIfPackaged(
-                this@MainActivity.applicationContext
-            )
-            // A cancelled Activity must still close a verifier created just
-            // before disposal. The bounded local-read job has no network I/O.
-            withContext(NonCancellable + Dispatchers.Main.immediate) {
-                if (released) loaded?.close()
-                else {
-                    readOnlyVerifier = loaded
-                    verifierLoading = false
-                }
-            }
-        }
-    }
-
-    override fun onDestroy() {
-        released = true
-        assetScope.cancel()
-        // Close asynchronously; never block the Android UI thread.
-        readOnlyVerifier?.close()
-        readOnlyVerifier = null
-        super.onDestroy()
+        runtime.start()
     }
 }
 

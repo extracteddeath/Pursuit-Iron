@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import * as canonical from '../../modules/engine-api.js';
-import { dispatchEngineRequest, dispatchEngineJson } from './protocol.mjs';
+import { dispatchEngineRequest, dispatchEngineJson, dispatchBackupSchemaJson } from './protocol.mjs';
 const call = (method, params = {}) => dispatchEngineRequest({
     protocolVersion: 1, id: 'test-1', method, params
 });
 const handshake = call('handshake');
 assert.equal(handshake.ok, true);
 assert.equal(handshake.result.engineCertified, false);
-assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup','workoutOutline','backupSchemaCheck','backupProgramInventory']);
+assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup','workoutOutline','backupSchemaCheck','backupProgramInventory','currentProgramProjection']);
 const catalog = call('catalogSummary');
 assert.equal(catalog.ok, true);
 assert.equal(catalog.result.exercises, canonical.EXERCISES.length);
@@ -165,3 +165,54 @@ for(const params of [
 }
 
 console.log('PASS canonical JS bridge v1 handshake, read-only progression fixtures, strict bounds and fail-closed methods');
+
+
+// Same synthetic canonical v13 fixture as Kotlin's exact-UTF8 snapshot tests.
+import fs from 'node:fs';
+import { projectReadOnlySavedProgram } from '../data-migration/read-only-program-transport.mjs';
+const currentFixture=JSON.parse(fs.readFileSync(
+  'android-native/domain-contract/src/test/resources/read-only-transport-golden.json','utf8'
+));
+const currentParams={
+  rawSnapshot:currentFixture.rawSnapshot,
+  programId:currentFixture.selectedProgramId,
+  snapshotSha256:currentFixture.wire.reference.snapshotSha256
+};
+const currentProjection=call('currentProgramProjection',currentParams);
+assert.equal(currentProjection.ok,true);
+assert.deepEqual(currentProjection.result,currentFixture.wire);
+assert.deepEqual(currentProjection.result,
+  projectReadOnlySavedProgram(currentFixture.rawSnapshot,currentFixture.wire.reference));
+assert.equal(JSON.stringify(currentProjection).includes('"history"'),false);
+assert.equal(JSON.stringify(currentProjection).includes('"weight"'),false);
+assert.equal(JSON.parse(dispatchEngineJson(JSON.stringify({
+  protocolVersion:1,id:'current-small',method:'currentProgramProjection',params:currentParams
+}))).ok,true);
+const currentRaw=JSON.parse(dispatchBackupSchemaJson(JSON.stringify({
+  protocolVersion:1,id:'current-v13-proof',method:'currentProgramProjection',params:currentParams
+})));
+assert.equal(currentRaw.ok,true);
+assert.deepEqual(currentRaw.result,currentFixture.wire);
+const mutateCurrent=fn => {
+  const snapshot=JSON.parse(currentFixture.rawSnapshot);
+  fn(snapshot);
+  return JSON.stringify(snapshot);
+};
+const unusable=[
+  {...currentParams,extra:'not allowed'},
+  {...currentParams,programId:'invalid id'},
+  {...currentParams,snapshotSha256:'wrong'},
+  {...currentParams,rawSnapshot:mutateCurrent(s=>{s.tombs['synthetic-program']=42;})},
+  {...currentParams,rawSnapshot:mutateCurrent(s=>{s.saved[0].weeks=0;})},
+  {...currentParams,rawSnapshot:mutateCurrent(s=>{s.saved[0].days[0].exercises=[{weight:999}];})},
+  {...currentParams,rawSnapshot:mutateCurrent(s=>{s.v=12;})},
+  {...currentParams,rawSnapshot:mutateCurrent(s=>{s.saved.push({...s.saved[0]});})}
+];
+for (const params of unusable)
+  assert.equal(call('currentProgramProjection',params).ok,false,'unsafe program not projected');
+for (const method of ['deleteHistory','restoreBackup','generateProgram'])
+  assert.equal(JSON.parse(dispatchBackupSchemaJson(JSON.stringify({
+    protocolVersion:1,id:'write-rejected',method,params:currentParams
+  }))).ok,false,'wider wire must not permit storage writes');
+assert.equal(typeof currentProjection.result.program.days[0].exerciseIds[0],'string');
+console.log('PASS browser-safe current saved-program projection matches Node and Kotlin golden wire');

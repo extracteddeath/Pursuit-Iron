@@ -4,6 +4,7 @@ import { canonicalProgressionPreview, validProgressionPreviewParams } from './pr
 import { canonicalExerciseLookup, validExerciseLookupParams } from './exercise-lookup.mjs';
 import { canonicalWorkoutOutline, validWorkoutOutlineParams } from './workout-outline.mjs';
 import { canonicalBackupSchemaCheck, canonicalBackupProgramInventory, validBackupSchemaParams } from './backup-schema-check.mjs';
+import { projectCanonicalSavedProgram, validCurrentProjectionParams } from './current-program-projection.mjs';
 
 export const PROTOCOL_VERSION = 1;
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
@@ -69,6 +70,19 @@ export function dispatchEngineRequest(request) {
             return error(id, 'SCHEMA_REJECTED', 'Backup program inventory unavailable');
         }
     }
+    if (request.method === 'currentProgramProjection') {
+        if (!validCurrentProjectionParams(request.params))
+            return error(id,'INVALID_REQUEST','Invalid current-program projection parameters');
+        try {
+            return success(id,projectCanonicalSavedProgram(
+                request.params.rawSnapshot,
+                request.params.programId,
+                request.params.snapshotSha256
+            ));
+        } catch {
+            return error(id,'SCHEMA_REJECTED','Canonical current-program projection unavailable');
+        }
+    }
     if (Object.keys(request.params).length !== 0)
         return error(id, 'INVALID_REQUEST', 'Unexpected method parameters');
     switch (request.method) {
@@ -77,7 +91,7 @@ export function dispatchEngineRequest(request) {
                 protocolVersion: PROTOCOL_VERSION,
                 engineSource: 'modules/engine-api.js',
                 engineCertified: false,
-                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup', 'workoutOutline', 'backupSchemaCheck', 'backupProgramInventory']
+                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup', 'workoutOutline', 'backupSchemaCheck', 'backupProgramInventory', 'currentProgramProjection']
             });
         case 'catalogSummary': {
             if (!Array.isArray(canonical.EXERCISES) || !Array.isArray(canonical.TEMPLATES))
@@ -113,7 +127,7 @@ export function dispatchBackupSchemaJson(json) {
         return JSON.stringify(error(null, 'INVALID_JSON', 'Oversized read-only schema probe'));
     try {
         const request = JSON.parse(json);
-        if (!plain(request) || !['backupSchemaCheck', 'backupProgramInventory'].includes(request.method))
+        if (!plain(request) || !['backupSchemaCheck', 'backupProgramInventory', 'currentProgramProjection'].includes(request.method))
             return JSON.stringify(error(null, 'INVALID_REQUEST', 'Schema probe method required'));
         return JSON.stringify(dispatchEngineRequest(request));
     } catch {

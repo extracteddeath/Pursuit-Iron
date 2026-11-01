@@ -48,6 +48,7 @@ jobs:
           cp android-native/engine-bridge/exercise-lookup.mjs "$temp/android-native/engine-bridge/exercise-lookup.mjs"
           cp android-native/engine-bridge/workout-outline.mjs "$temp/android-native/engine-bridge/"
           cp android-native/engine-bridge/backup-schema-check.mjs "$temp/android-native/engine-bridge/"
+          cp android-native/engine-bridge/current-program-projection.mjs "$temp/android-native/engine-bridge/"
           cp android-native/engine-bridge/android-entry.mjs "$temp/android-native/engine-bridge/android-entry.mjs"
           cp android-native/engine-bridge/sandbox-compat.mjs "$temp/android-native/engine-bridge/sandbox-compat.mjs"
       - name: Produce disposable IIFE from the verified snapshot (pinned esbuild)

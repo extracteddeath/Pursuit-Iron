@@ -23,6 +23,7 @@ const allowedBridge = new Set([
   'android-native/engine-bridge/exercise-lookup.mjs',
   'android-native/engine-bridge/workout-outline.mjs',
   'android-native/engine-bridge/backup-schema-check.mjs',
+  'android-native/engine-bridge/current-program-projection.mjs',
   'android-native/engine-bridge/android-entry.mjs',
   'android-native/engine-bridge/sandbox-compat.mjs'
 ]);
@@ -116,6 +117,23 @@ const inventoryWrite = JSON.parse(bridge.dispatchBackupSchemaJson(JSON.stringify
   params:{rawSnapshot:backupSnapshot}
 })));
 assert.equal(inventoryWrite.ok,false,'Inventory channel must not expose write operations');
+
+const currentFixture = JSON.parse(fs.readFileSync(
+  'android-native/domain-contract/src/test/resources/read-only-transport-golden.json','utf8'
+));
+const currentWire = JSON.stringify({
+  protocolVersion:1,id:'bundle-current-program',
+  method:'currentProgramProjection',
+  params:{
+    rawSnapshot:currentFixture.rawSnapshot,
+    programId:currentFixture.selectedProgramId,
+    snapshotSha256:currentFixture.wire.reference.snapshotSha256
+  }
+});
+const currentRes = JSON.parse(bridge.dispatchBackupSchemaJson(currentWire));
+assert.equal(currentRes.ok,true,'Android IIFE must project canonical current program');
+assert.deepEqual(JSON.parse(JSON.stringify(currentRes.result)),currentFixture.wire);
+assert.equal(JSON.stringify(currentRes).includes('"history"'),false);
 
 const sha256 = crypto.createHash('sha256').update(raw).digest('hex');
 console.log(JSON.stringify({

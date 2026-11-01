@@ -53,6 +53,7 @@ jobs:
           cp android-native/engine-bridge/exercise-lookup.mjs "$snapshot/android-native/engine-bridge/"
           cp android-native/engine-bridge/workout-outline.mjs "$snapshot/android-native/engine-bridge/"
           cp android-native/engine-bridge/backup-schema-check.mjs "$snapshot/android-native/engine-bridge/"
+          cp android-native/engine-bridge/current-program-projection.mjs "$snapshot/android-native/engine-bridge/"
           cp android-native/engine-bridge/android-entry.mjs "$snapshot/android-native/engine-bridge/"
           cp android-native/engine-bridge/sandbox-compat.mjs "$snapshot/android-native/engine-bridge/"
           mkdir -p android-native/engine-runtime/src/androidTest/assets

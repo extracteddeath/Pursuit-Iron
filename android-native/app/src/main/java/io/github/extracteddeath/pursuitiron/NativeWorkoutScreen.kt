@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -45,6 +46,9 @@ internal fun NativeWorkoutScreen(
     }
     var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showLast by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
+    // Each working set has its own saveable draft even while other exercises
+    // replace the visible composition. Drafts are not confirmed journal events.
+    val setDraftStates=rememberSaveableStateHolder()
     PageHeading("WEEK ${plan.session.weekIndex}",plan.dayLabel,plan.programName)
     Text("${journal.completed.size} of ${plan.slots.size} working sets saved · ${plan.session.unit}",
         style=MaterialTheme.typography.titleMedium)
@@ -74,7 +78,11 @@ internal fun NativeWorkoutScreen(
     exercise.sets.forEach { set->
         val commit=journal.completed.find { it.intent.slot==set.slot }
         key(plan.session.workoutId,set.slot.exerciseIndex,set.slot.setIndex) {
-            NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord)
+            setDraftStates.SaveableStateProvider(
+                "${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}"
+            ) {
+                NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord)
+            }
         }
     }
     if(nextUnfinished!=null)FilledTonalButton(onClick={exerciseIndex=nextUnfinished},
@@ -137,14 +145,20 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
             }
         } else {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(value=load,onValueChange={load=it},label={Text("Load (${session.unit})")},
+                OutlinedTextField(value=load,onValueChange={input->
+                    if(input.length<=10 && input.all { ch->ch.isDigit() || ch=='.' })load=input
+                },label={Text("Load (${session.unit})")},
                     modifier=Modifier.weight(1f),singleLine=true,enabled=!busy,
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
-                OutlinedTextField(value=reps,onValueChange={reps=it},label={Text("Reps")},
+                OutlinedTextField(value=reps,onValueChange={input->
+                    if(input.length<=3 && input.all(Char::isDigit))reps=input
+                },label={Text("Reps")},
                     modifier=Modifier.weight(1f),singleLine=true,enabled=!busy,
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
             }
-            OutlinedTextField(value=rir,onValueChange={rir=it},label={Text("Actual RIR · optional")},
+            OutlinedTextField(value=rir,onValueChange={input->
+                if(input.length<=2 && input.all(Char::isDigit))rir=input
+            },label={Text("Actual RIR · optional")},
                 supportingText={Text("Reps you could still have done. Use 0 load for bodyweight.")},
                 modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=!busy,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))

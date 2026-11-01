@@ -129,3 +129,12 @@ characters (−280) and important declarations 2,019 → 2,016 (−3) with no JS
 React, palette token, or engine changes. The new source contract verifies
 ownership and preserved properties. Verify browser computed states across
 the selected wizard and Exercise Detail views before promoting this pass.
+
+B1020 draft browser-fixture rollover repair: the R65 responsive shell integration
+fixture used `Date.now()-86400000` while requiring its single workout to show
+in the current default calendar month. This source check was time-dependent on
+November 1 UTC and at any first-of-month boundary. The layout fixture now seeds
+`Date.now()` so its record is guaranteed to be in the displayed current month.
+The separate R79 date-only import contract still validates correct historical
+local-day interpretation. No application, CSS or training engine code changed in
+this test reconciliation. Re-run the full draft browser matrix before promotion.

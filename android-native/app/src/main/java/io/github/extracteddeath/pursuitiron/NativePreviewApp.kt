@@ -219,7 +219,7 @@ internal fun NativePreviewApp(
                                         section = NativeDestination.TRAIN.ordinal
                                     }
                                 )
-                                NativeDestination.INSIGHTS -> InsightsScreen()
+                                NativeDestination.INSIGHTS -> InsightsScreen(onboarding)
                             }
                             if(onboarding?.saved==null)ConnectionNotice(status,false)
                         }

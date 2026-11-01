@@ -2,8 +2,7 @@
 import {
   parseStoredData, nextSessionCursor, exerciseAt, computeCell, EX_BY_ID,
   buildLifterModel, calibratedAnchorPerf, sessionSuggestion, prescribeSets,
-  lastDayPerf, effectiveRest, goalForDay, weeksOf, computeCell as cellForProtocol,
-  techniqueProtocolFromCell
+  lastDayPerf, effectiveRest, goalForDay, weeksOf, techniqueProtocolFromCell
 } from '../../modules/engine-api.js';
 import { inspectNativeProgram } from './native-onboarding.mjs';
 import { deriveReadOnlyProgramReference, matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
@@ -91,7 +90,7 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
       typeof row.superset==='boolean' && Array.isArray(row.previous) && row.previous.length<=20 &&
       Array.isArray(row.sets) && row.sets.length>=1 && row.sets.length<=40);
     let working=0, extension=0, extensionKind=null, reachedExtension=false;
-    const protocol=techniqueProtocolFromCell(cellForProtocol(program,day,row.id,row.slot,s.weekIndex));
+    const protocol=techniqueProtocolFromCell(computeCell(program,day,row.id,row.slot,s.weekIndex));
     for(const set of row.sets) {
       ensure(object(set) && set.done===false && set.auto===true && typeof set.warm==='boolean' &&
         typeof set.weight==='string' && typeof set.reps==='string' &&
@@ -101,7 +100,7 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
       } else if(set.sub===true) {
         reachedExtension=true;extension++;
         ensure(set.prescribed===true && ['myo','drop'].includes(set.kind) &&
-          !own(set.target,'decisionTrace') && !set.warm &&
+          !Object.hasOwn(set.target,'decisionTrace') && !set.warm &&
           (set.kind==='myo' && set.myo===true || set.kind==='drop' && typeof set.dropF==='number') &&
           integer(set.target.rest,1,60) &&
           (extensionKind===null || extensionKind===set.kind));

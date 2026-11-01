@@ -16,6 +16,16 @@ class ReadOnlyBackupSourceGateTest {
         assertEquals(raw,ReadOnlyBackupSourceGate.exactText(bytes,screened))
     }
 
+    @Test fun exactLargerThanLegacy128KisStillBoundedAndVerifiable() {
+        val raw = ByteArray(256 * 1024) { 'x'.code.toByte() }
+        val proof = fingerprint(raw)
+        val text = ReadOnlyBackupSourceGate.exactText(raw, proof)
+        assertEquals(raw.size, text.length)
+        assertTrue(runCatching { ReadOnlyBackupSourceGate.exactText(
+            raw, proof.copy(sha256Hex = "0".repeat(64))
+        ) }.isFailure)
+    }
+
     @Test fun rejectsStaleEqualLengthCopyAndForgedOrMalformedIdentity() {
         val first="""{"v":13,"label":"synthetic-A"}""".toByteArray()
         val second="""{"v":13,"label":"synthetic-B"}""".toByteArray()
@@ -38,7 +48,7 @@ class ReadOnlyBackupSourceGateTest {
         val bom = byteArrayOf(0xef.toByte(),0xbb.toByte(),0xbf.toByte()) +
             """{"v":13}""".toByteArray()
         assertTrue(runCatching { ReadOnlyBackupSourceGate.exactText(bom,fingerprint(bom)) }.isFailure)
-        val chars = ByteArray(65537) { 'x'.code.toByte() }
+        val chars = ByteArray(ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS+1) { 'x'.code.toByte() }
         assertTrue(runCatching {
             ReadOnlyBackupSourceGate.exactText(chars,fingerprint(chars))
         }.isFailure)
@@ -46,7 +56,7 @@ class ReadOnlyBackupSourceGateTest {
             ReadOnlyBackupSourceGate.exactText(byteArrayOf(),UnverifiedBackupFingerprint(
                 0,"0".repeat(64)))
         }.isFailure)
-        val large = ByteArray(128*1024+1) { 0x31 }
+        val large = ByteArray(ReadOnlyBackupLimits.MAX_SOURCE_BYTES+1) { 0x31 }
         assertTrue(runCatching {
             ReadOnlyBackupSourceGate.exactText(large,UnverifiedBackupFingerprint(
                 large.size.toLong(),"0".repeat(64)))

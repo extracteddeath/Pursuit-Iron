@@ -73,7 +73,7 @@ internal fun BackupCopyScreeningPanel(
                             }
                             BackupScreeningStage.Screened(screened)
                         } else {
-                            // A single pass hashes ALL bytes; only a complete small
+                            // A single pass hashes ALL bytes; only a complete bounded
                             // file can be handed to the canonical, read-only checker.
                             val outcome = withContext(Dispatchers.IO) {
                                 val source = context.contentResolver.openInputStream(selectedUri)
@@ -162,7 +162,7 @@ internal fun BackupCopyScreeningPanel(
             is BackupScreeningStage.TooLargeForSchema -> {
                 BackupFingerprintText(current.fingerprint)
                 Text("The complete file was fingerprinted. It exceeds the current " +
-                    "128 KiB read-only schema-check limit; nothing was validated or imported.",
+                    "1 MiB read-only schema-check limit; nothing was validated or imported.",
                     style = MaterialTheme.typography.bodySmall)
             }
             is BackupScreeningStage.SchemaChecked -> {

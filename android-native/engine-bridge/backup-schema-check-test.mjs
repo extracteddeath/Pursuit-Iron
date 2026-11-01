@@ -38,8 +38,8 @@ assert.equal(JSON.parse(call(snapshot.replace('"v":13','"v":14'))).error.code,'S
 assert.equal(JSON.parse(call(snapshot.replace('"history":[','"history":"not an array", "unused":['))).error.code,'SCHEMA_REJECTED');
 assert.equal(JSON.parse(call('not-json')).error.code,'SCHEMA_REJECTED');
 assert.equal(JSON.parse(call('{"v":13}')).error.code,'SCHEMA_REJECTED');
-assert.equal(JSON.parse(call('x'.repeat(65537))).error.code,'INVALID_REQUEST');
-assert.equal(JSON.parse(dispatchBackupSchemaJson('x'.repeat(196609))).error.code,'INVALID_JSON');
+assert.equal(JSON.parse(call('x'.repeat(1048577))).error.code,'INVALID_REQUEST');
+assert.equal(JSON.parse(dispatchBackupSchemaJson('x'.repeat(4194305))).error.code,'INVALID_JSON');
 assert.equal(JSON.parse(dispatchBackupSchemaJson('{')).error.code,'INVALID_JSON');
 assert.equal(JSON.parse(dispatchEngineJson(JSON.stringify({
   protocolVersion:1,id:'x',method:'backupSchemaCheck',params:{rawSnapshot:'x'.repeat(16385)}
@@ -116,3 +116,19 @@ assert.equal(inventory(JSON.stringify({...JSON.parse(daySnapshot),saved:[{
   }]
 }]})).error.code,'SCHEMA_REJECTED');
 console.log('PASS backup-only day labels/counts without exposing exercise identities');
+
+const largerThanLegacy = JSON.stringify({
+  ...JSON.parse(snapshot),
+  history: Array.from({length:120}, (_,i) => ({
+    id:'synthetic-history-'+i,
+    note:'x'.repeat(1800)
+  }))
+});
+assert.ok(largerThanLegacy.length > 128*1024 && largerThanLegacy.length < 1024*1024);
+assert.equal(inventory(largerThanLegacy).ok,true,
+  'Complete v13 JSON >128 KiB should use the canonical read-only inventory');
+assert.equal(JSON.parse(call(largerThanLegacy)).ok,true,
+  'Larger source may be counted without exposing history records');
+assert.ok(!JSON.stringify(inventory(largerThanLegacy)).includes('synthetic-history-'),
+  'Program inventory must remain redacted after widening source bounds');
+console.log('PASS 1 MiB bounded source window and 4 MiB metadata channel');

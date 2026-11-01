@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron.engine
 
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupLimits
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupScreening
 import io.github.extracteddeath.pursuitiron.domain.UnverifiedBackupFingerprint
 import org.json.JSONObject
@@ -45,7 +46,7 @@ class SandboxBackupSchemaInspectorTest {
     }
 
     @Test fun cannotEncodeOversizedOrMalformedUtf8() {
-        val over = ByteArray(65537) { 'x'.code.toByte() }
+        val over = ByteArray(ReadOnlyBackupLimits.MAX_SOURCE_BYTES + 1) { 'x'.code.toByte() }
         assertTrue(runCatching { checkedBackupSchemaWire(over,proof(over),"probe") }.isFailure)
         val malformed = byteArrayOf(0x7b,0xff.toByte(),0x7d)
         assertTrue(runCatching { checkedBackupSchemaWire(

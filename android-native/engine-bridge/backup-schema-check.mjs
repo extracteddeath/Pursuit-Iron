@@ -10,7 +10,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
 const clock = v => Number.isSafeInteger(v) && v >= 0;
 const allowed = ['rawSnapshot'];
 export const BACKUP_PROBE_SOURCE = 'modules/engine-api.js:parseStoredData';
-export const MAX_BACKUP_PROBE_CHARS = 65536;
+export const MAX_BACKUP_PROBE_CHARS = 1024 * 1024;
 
 export function validBackupSchemaParams(params) {
   return plain(params) && Object.keys(params).length === allowed.length &&

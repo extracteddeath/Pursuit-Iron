@@ -27,14 +27,17 @@ object ReadOnlyBackupSchemaCodec {
     }
     fun encode(id: String, rawSnapshot: String): String {
         require(id.isNotBlank() && id.length <= 128)
-        require(rawSnapshot.isNotEmpty() && rawSnapshot.length <= 65536)
+        require(rawSnapshot.isNotEmpty() &&
+            rawSnapshot.length <= ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS &&
+            rawSnapshot.toByteArray(StandardCharsets.UTF_8).size <=
+                ReadOnlyBackupLimits.MAX_SOURCE_BYTES)
         val wire = JSONObject()
             .put("protocolVersion", EngineProtocol.VERSION)
             .put("id", id)
             .put("method", EngineProtocol.METHOD_BACKUP_SCHEMA_CHECK)
             .put("params", JSONObject().put("rawSnapshot",rawSnapshot))
             .toString()
-        require(wire.toByteArray(StandardCharsets.UTF_8).size <= 196608)
+        require(wire.toByteArray(StandardCharsets.UTF_8).size <= ReadOnlyBackupLimits.MAX_WIRE_BYTES)
         return wire
     }
 

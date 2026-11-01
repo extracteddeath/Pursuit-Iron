@@ -105,6 +105,8 @@ assert.ok(screening.includes('if (verifier != null)') &&
   screening.includes('Checking local read-only engine compatibility') &&
   screening.includes('Canonical file validation is not connected in this preview'),
   'Disconnected Compose preview cannot offer a fake schema validation');
+assert.ok(screening.includes('1 MiB read-only schema-check limit'),
+  'Oversized file copy text must match transport limits');
 assert.ok(screening.includes('is ReadOnlyDocumentScreening.FingerprintOnly') &&
   screening.includes('TooLargeForSchema'),
   'Oversized copies must never be silently truncated before canonical parsing');

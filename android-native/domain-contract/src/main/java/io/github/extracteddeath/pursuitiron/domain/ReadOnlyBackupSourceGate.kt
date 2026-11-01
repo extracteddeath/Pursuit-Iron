@@ -13,8 +13,8 @@ import java.nio.charset.StandardCharsets
  * integration. The native preview still only screens a source and closes it.
  */
 object ReadOnlyBackupSourceGate {
-    private const val MAX_PROBE_BYTES = 128 * 1024
-    private const val MAX_PROBE_CHARACTERS = 65536
+    private const val MAX_PROBE_BYTES = ReadOnlyBackupLimits.MAX_SOURCE_BYTES
+    private const val MAX_PROBE_CHARACTERS = ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS
     private val shaPattern = Regex("^[0-9a-f]{64}$")
 
     /**

@@ -148,3 +148,21 @@ total, and no exercise IDs, set counts, loads, RIR, history or target
 prescriptions cross the wire. Missing optional labels are displayed simply
 as `Day N`, never presented as inferred workout names. M3 cards use a
 single disclosure action; no activation, set logging or native writes.
+
+## Larger bounded snapshot intake — 1 MiB, not full import
+
+The strictly read-only JSON inspection path now accepts **complete selected
+copies up to 1 MiB**, a significant increase from the former 128 KiB proof.
+Kotlin source consistency requires the same exact bytes and SHA-256 digest,
+rejects malformed UTF-8, BOM and limits content to 1 MiB decoded
+characters. Both schema and inventory RPC requests are capped at **4 MiB
+encoded JSON**, with independent Java and JavaScript guards. The ordinary
+fingerprint-only path continues streaming files up to 50 MiB; anything above
+1 MiB is fingerprinted but **never** truncated and passed to the canonical
+parser. The 4 MiB wire limit can also reject a source smaller than 1 MiB
+when JSON escaping expands it — this fails closed, not a silent reduction.
+
+This is a deliberate memory and time bound; it does not certify typical
+large backups, enable a local data store, or import training histories.
+On-device larger-source acceptance must be separately measured before
+widening the limit again.

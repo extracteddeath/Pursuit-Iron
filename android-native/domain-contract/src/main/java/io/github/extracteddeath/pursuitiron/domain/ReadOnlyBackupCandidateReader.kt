@@ -7,7 +7,7 @@ import java.security.MessageDigest
 /**
  * Single-pass source intake for explicitly user-selected documents.
  *
- * Always hashes the complete source up to 50 MiB. A copy of at most 128 KiB
+ * Always hashes the complete source up to 50 MiB. A copy of at most 1 MiB
  * is held transiently for the small-source canonical parser only. Larger
  * sources are FINGERPRINT ONLY: never silently parse partial data.
  *
@@ -28,7 +28,7 @@ sealed interface ReadOnlyDocumentScreening {
 }
 
 object ReadOnlyBackupCandidateReader {
-    const val MAX_CANDIDATE_BYTES = 128 * 1024
+    const val MAX_CANDIDATE_BYTES = ReadOnlyBackupLimits.MAX_SOURCE_BYTES
     private val hexDigits = "0123456789abcdef".toCharArray()
 
     fun screen(

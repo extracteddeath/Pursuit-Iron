@@ -109,7 +109,7 @@ export function dispatchEngineJson(json) {
  * also independently cap the byte count before entering an isolate.
  */
 export function dispatchBackupSchemaJson(json) {
-    if (typeof json !== 'string' || json.length > 196608)
+    if (typeof json !== 'string' || json.length > 4 * 1024 * 1024)
         return JSON.stringify(error(null, 'INVALID_JSON', 'Oversized read-only schema probe'));
     try {
         const request = JSON.parse(json);

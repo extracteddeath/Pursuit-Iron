@@ -11,6 +11,7 @@ import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupLimits;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -141,7 +142,7 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
      */
     static JSONObject checkedBackupSchemaRequest(@NonNull String json) throws Exception {
         Objects.requireNonNull(json);
-        if (json.getBytes(StandardCharsets.UTF_8).length > 196608)
+        if (json.getBytes(StandardCharsets.UTF_8).length > ReadOnlyBackupLimits.MAX_WIRE_BYTES)
             throw new IllegalArgumentException("Oversized canonical backup schema probe");
         JSONObject request = new JSONObject(json);
         if (request.length() != 4 || request.getInt("protocolVersion") != 1 ||
@@ -153,7 +154,8 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         if (params.length() != 1 || !(params.get("rawSnapshot") instanceof String))
             throw new IllegalArgumentException("Backup schema probe accepts only rawSnapshot");
         String raw = params.getString("rawSnapshot");
-        if (raw.isEmpty() || raw.length() > 65536)
+        if (raw.isEmpty() || raw.length() > ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS ||
+                raw.getBytes(StandardCharsets.UTF_8).length > ReadOnlyBackupLimits.MAX_SOURCE_BYTES)
             throw new IllegalArgumentException("Bounded canonical JSON source required");
         return request;
     }
@@ -167,7 +169,7 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
     private static JSONObject checkedBoundedBackupRequest(
             @NonNull String json, @NonNull String method) throws Exception {
         Objects.requireNonNull(json);
-        if (json.getBytes(StandardCharsets.UTF_8).length > 196608)
+        if (json.getBytes(StandardCharsets.UTF_8).length > ReadOnlyBackupLimits.MAX_WIRE_BYTES)
             throw new IllegalArgumentException("Oversized backup metadata request");
         JSONObject request = new JSONObject(json);
         if (request.length() != 4 || request.getInt("protocolVersion") != 1 ||
@@ -179,7 +181,8 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         if (params.length() != 1 || !(params.get("rawSnapshot") instanceof String))
             throw new IllegalArgumentException("Exactly one source field required");
         String raw = params.getString("rawSnapshot");
-        if (raw.isEmpty() || raw.length() > 65536)
+        if (raw.isEmpty() || raw.length() > ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS ||
+                raw.getBytes(StandardCharsets.UTF_8).length > ReadOnlyBackupLimits.MAX_SOURCE_BYTES)
             throw new IllegalArgumentException("Unbounded source copy");
         return request;
     }

@@ -49,9 +49,23 @@ public final class CanonicalJsSandboxInstrumentedTest {
         assertTrue(answer.getJSONArray("capabilities").length() >= 3);
         JSONObject fixtures = new JSONObject(new String(asset(test,
                 "progression-golden.json"), StandardCharsets.UTF_8));
-        int verified = new CanonicalJsSandboxProbe(app)
-                .verifyGoldenProgression(bundle,pinnedHash,fixtures);
-        assertEquals("All synthetic canonical fixtures must execute on Android",
-                fixtures.getJSONArray("cases").length(),verified);
+        try {
+            int verified = new CanonicalJsSandboxProbe(app)
+                    .verifyGoldenProgression(bundle,pinnedHash,fixtures);
+            assertEquals("All synthetic canonical fixtures must execute on Android",
+                    fixtures.getJSONArray("cases").length(),verified);
+        } catch (AssertionError error) {
+            if (error.getMessage() == null ||
+                    !error.getMessage().contains("ENGINE_UNAVAILABLE")) throw error;
+            // Test-only synthetic diagnostic; never send user records to this bundle.
+            byte[] diagnostic = asset(test, "sandbox-diagnostic.js");
+            String pin = new String(asset(test, "sandbox-diagnostic.sha256"),
+                    StandardCharsets.UTF_8).trim();
+            String details = new CanonicalJsSandboxProbe(app)
+                    .inspectSyntheticFailure(diagnostic,pin,
+                            fixtures.getJSONArray("cases").getJSONObject(0).getJSONObject("params"));
+            throw new AssertionError("Canonical synthetic fixture error: " + details, error);
+        }
+
     }
 }

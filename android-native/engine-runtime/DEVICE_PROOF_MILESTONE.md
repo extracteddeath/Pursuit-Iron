@@ -16,3 +16,11 @@ verification milestone is due. Its changes trigger the expensive device test.
 No app preview APK is uploaded. No production or user data is modified.
 Passing a synthetic subset does not authorize live training, logging or
 native engine replacement. Manual workflow dispatch remains available.
+
+## Milestone 2 — diagnose browser-sandbox progression mismatch
+
+The first emulator check booted and accepted the handshake but the first
+progression result failed. This milestone reruns the seven real-device cases
+and, only upon a synthetic `ENGINE_UNAVAILABLE` failure, invokes a separate
+diagnostic-only JS bundle to report the exception name/message. This bundle is
+limited to synthetic test fixtures and never installed into a product APK.

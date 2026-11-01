@@ -172,8 +172,12 @@ public final class CanonicalJsSandboxProbe {
                     throw new IllegalArgumentException("Bad golden fixture identifier");
                 JSONObject response = dispatch(isolate, request(id, "progressionPreview",
                         fixture.getJSONObject("params")));
-                if (!response.optBoolean("ok"))
-                    throw new AssertionError("Canonical progression failed: " + id);
+                if (!response.optBoolean("ok")) {
+                    JSONObject error = response.optJSONObject("error");
+                    throw new AssertionError("Canonical progression rejected: " + id +
+                            " protocolCode=" +
+                            (error == null ? "MISSING_ERROR" : error.optString("code")));
+                }
                 JSONObject result = response.getJSONObject("result");
                 if (!result.optBoolean("previewOnly") ||
                         !"modules/engine-api.js:evaluateWorkoutProgression".equals(
@@ -196,4 +200,24 @@ public final class CanonicalJsSandboxProbe {
             return cases.length();
         }
     }
+    /** Dedicated instrumentation-only diagnostic, not accessible from the app. */
+    public String inspectSyntheticFailure(@NonNull byte[] bundle, @NonNull String expectedSha256,
+            @NonNull JSONObject params) throws Exception {
+        requireSandbox(bundle, expectedSha256);
+        String input = params.toString();
+        if (input.getBytes(StandardCharsets.UTF_8).length > MAX_REQUEST_BYTES)
+            throw new IllegalArgumentException("Synthetic diagnostic exceeds limit");
+        try (JavaScriptSandbox sandbox =
+                    JavaScriptSandbox.createConnectedInstanceAsync(context).get(10, TimeUnit.SECONDS);
+             JavaScriptIsolate isolate = sandbox.createIsolate()) {
+            isolate.evaluateJavaScriptAsync(new String(bundle, StandardCharsets.UTF_8))
+                    .get(15, TimeUnit.SECONDS);
+            String script = "PursuitIronDiagnostic.diagnoseProgressionJson(" +
+                    JSONObject.quote(input) + ")";
+            String output = isolate.evaluateJavaScriptAsync(script).get(5, TimeUnit.SECONDS);
+            JSONObject result = new JSONObject(output);
+            return result.toString();
+        }
+    }
+
 }

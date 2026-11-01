@@ -4,6 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 interface NativeHistoryEngine {
+    suspend fun inspectHistoryPage(snapshot: String,queryJson: String): NativeHistoryPage?
     suspend fun inspectHistory(snapshot: String,historyId: String): NativeWorkoutHistory?
     suspend fun prepareHistoryCorrection(snapshot: String,correctionJson: String): String?
 }
@@ -27,7 +28,7 @@ object NativeHistoryCodec {
     private val load=Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")
     private fun number(v: JSONObject,key: String,min: Long,max: Long): Long =
         WorkoutStoreRuntimeCodec.integer(v,key).also { require(it in min..max) }
-    private fun text(v: JSONObject,key: String,max: Int=160)=WorkoutStoreRuntimeCodec.text(v,key)
+    private fun text(v: JSONObject,key: String,max: Int=200)=WorkoutStoreRuntimeCodec.text(v,key)
         .also { require(it.length in 1..max) }
     private fun sha(v: JSONObject,key: String)=text(v,key,64).also { require(hash.matches(it)) }
     private fun optionalRir(v: JSONObject): Int?=if(v.isNull("rir"))null else number(v,"rir",0,10).toInt()

@@ -13,6 +13,8 @@ import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutHistory
+import io.github.extracteddeath.pursuitiron.domain.NativeHistoryPage
+import io.github.extracteddeath.pursuitiron.domain.NativeHistoryPageCodec
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -45,6 +47,13 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         }
     })
     private val sequence=AtomicLong(0)
+
+    override suspend fun inspectHistoryPage(snapshot: String,queryJson: String): NativeHistoryPage? {
+        val id="native-history-page-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeHistoryPageCodec.encodePage(id,snapshot,queryJson))
+        currentCoroutineContext().ensureActive()
+        return NativeHistoryPageCodec.decodePage(raw,id,snapshot,queryJson)
+    }
 
     override suspend fun inspectHistory(snapshot: String,historyId: String): NativeWorkoutHistory? {
         val id="native-history-read-${sequence.incrementAndGet()}"

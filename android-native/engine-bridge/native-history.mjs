@@ -13,6 +13,7 @@ const ensure=v=>{if(!v)throw new TypeError('Native history unavailable');};
 const clone=v=>JSON.parse(JSON.stringify(v));
 const semanticSha=v=>sha(JSON.stringify(v,(_k,value)=>object(value)
   ? Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]])):value));
+export const NATIVE_HISTORY_PAGE_SIZE=12;
 function storeFrom(raw) {
   ensure(typeof raw==='string' && utf8ByteLength(raw)<=1024*1024);
   const source=JSON.parse(raw);
@@ -66,6 +67,41 @@ function mappedSets(entry) {
   }
   ensure(out.length<=480);
   return out;
+}
+/** Snapshot-bound pages of owned native completions; never a backup/import reader. */
+export function inspectNativeHistoryPage(rawSnapshot,queryJson) {
+  try {
+    ensure(typeof queryJson==='string' && utf8ByteLength(queryJson)<=1024);
+    const query=JSON.parse(queryJson),snapshotSha256=sha(rawSnapshot);
+    ensure(exact(query,['offset','snapshotSha256']) && integer(query.offset,0,1992) &&
+      query.offset%NATIVE_HISTORY_PAGE_SIZE===0 &&
+      (query.snapshotSha256===null ? query.offset===0 : hash(query.snapshotSha256) && query.snapshotSha256===snapshotSha256));
+    const store=storeFrom(rawSnapshot);ensure(store.history.length<=2000);
+    const native=store.history.filter(entry=>entry.nativeCompletion?.format===2);
+    const ids=new Set();
+    for(const entry of native) {
+      ensure(identifier(entry.id) && !ids.has(entry.id));ids.add(entry.id);
+    }
+    const entries=native.filter(entry=>!own(store.tombs,entry.id)).map(entry=>{
+      ensure(typeof entry.programName==='string' && entry.programName.length>=1 && entry.programName.length<=200 &&
+        typeof entry.dayLabel==='string' && entry.dayLabel.length>=1 && entry.dayLabel.length<=200 &&
+        integer(entry.weekIndex,1,104) && ['lb','kg'].includes(entry.unit) &&
+        integer(entry.date,1,8640000000000000) && integer(entry.totalSets,1,480) &&
+        integer(entry.setsDone,0,entry.totalSets) && integer(entry.volume,0,Number.MAX_SAFE_INTEGER));
+      return entry;
+    }).sort((a,b)=>b.date-a.date || (a.id<b.id?-1:a.id>b.id?1:0));
+    const offset=query.offset,total=entries.length;
+    ensure(offset===0 || offset<total);
+    const page=entries.slice(offset,offset+NATIVE_HISTORY_PAGE_SIZE).map(entry=>{
+      let detailsAvailable=false;
+      try { mappedSets(entryFrom(store,entry.id));detailsAvailable=true; } catch { /* Summary only. */ }
+      return {historyId:entry.id,programName:entry.programName,dayLabel:entry.dayLabel,
+        weekIndex:entry.weekIndex,unit:entry.unit,date:entry.date,setsDone:entry.setsDone,
+        totalSets:entry.totalSets,volume:entry.volume,detailsAvailable};
+    });
+    return {source:'modules/engine-api.js:parseStoredData',snapshotSha256,offset,total,
+      nextOffset:offset+page.length<total?offset+page.length:null,entries:page};
+  } catch {throw new TypeError('Native history page unavailable');}
 }
 export function inspectNativeHistory(rawSnapshot,historyId) {
   try {

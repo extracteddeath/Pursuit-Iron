@@ -48,7 +48,10 @@ class MainActivity : ComponentActivity() {
                     onCorrectSet=runtime::correctSet,
                     onFinishWorkout=runtime::finishWorkout,
                     onCorrectHistory=runtime::correctHistory,
-                    onReloadHistory=runtime::reloadHistory
+                    onReloadHistory=runtime::reloadHistory,
+                    onOpenHistory=runtime::openHistory,
+                    onHistoryPage=runtime::loadHistoryPage,
+                    onHistoryList=runtime::showHistoryList
                 )
             }
         }

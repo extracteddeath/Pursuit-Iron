@@ -17,7 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.EventNote
+import androidx.compose.material.icons.automirrored.outlined.EventNote
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Button
@@ -60,12 +60,13 @@ import io.github.extracteddeath.pursuitiron.domain.JournalSetDisposition
 import io.github.extracteddeath.pursuitiron.domain.JournalSetValues
 import io.github.extracteddeath.pursuitiron.domain.JournalSetIntent
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 
 /** Navigation follows training tasks instead of mirroring React screens. */
 private enum class NativeDestination(val title: String, val icon: ImageVector) {
     TODAY("Today", Icons.Outlined.Home),
     TRAIN("Train", Icons.Outlined.FitnessCenter),
-    PLAN("Plan", Icons.Outlined.EventNote),
+    PLAN("Plan", Icons.AutoMirrored.Outlined.EventNote),
     INSIGHTS("Insights", Icons.Outlined.BarChart)
 }
 
@@ -88,7 +89,10 @@ internal fun NativePreviewApp(
     onCorrectSet: (JournalSetIntent)->Unit = {},
     onFinishWorkout: ()->Unit = {},
     onCorrectHistory: (String)->Unit = {},
-    onReloadHistory: ()->Unit = {}
+    onReloadHistory: ()->Unit = {},
+    onOpenHistory: (String)->Unit = {},
+    onHistoryPage: (Int)->Unit = {},
+    onHistoryList: ()->Unit = {}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -187,10 +191,13 @@ internal fun NativePreviewApp(
                     modifier = Modifier.weight(1f), label = "training destination"
                 ) { current ->
                     destinationStates.SaveableStateProvider(current) {
+                        val scrollContext=if(current==NativeDestination.INSIGHTS.ordinal)
+                            onboarding?.history?.historyId?.let { "workout:$it" } ?: "history-page-${onboarding?.historyPage?.offset ?: 0}" else "destination"
+                        val pageScroll=key(scrollContext) { rememberScrollState() }
                         Box(Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 760.dp)
-                                .fillMaxWidth().imePadding().verticalScroll(rememberScrollState())
+                                .fillMaxWidth().imePadding().verticalScroll(pageScroll)
                                 .padding(horizontal = 16.dp, vertical = 18.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
@@ -223,7 +230,8 @@ internal fun NativePreviewApp(
                                         section = NativeDestination.TRAIN.ordinal
                                     }
                                 )
-                                NativeDestination.INSIGHTS -> InsightsScreen(onboarding,onCorrectHistory,onReloadHistory)
+                                NativeDestination.INSIGHTS -> InsightsScreen(onboarding,onCorrectHistory,onReloadHistory,
+                                    onOpenHistory,onHistoryPage,onHistoryList)
                             }
                             if(onboarding?.saved==null)ConnectionNotice(status,false)
                         }

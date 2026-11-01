@@ -118,9 +118,9 @@ internal fun NativeWorkoutScreen(
         if(journal.unresolvedCount>0)Text("Complete or skip ${journal.unresolvedCount} remaining sets to finish.")
         else Text(if(journal.isFinished)"All sets are saved. Finishing your training history…" else "Every working set is saved. Ready to finish.")
         Button(onClick={if(journal.isFinished)onFinish() else showFinishReview=true},
-            enabled=journal.unresolvedCount==0 && !state.workoutBusy,
+            enabled=journal.unresolvedCount==0 && !state.workoutBusy && !state.historyBusy,
             modifier=Modifier.fillMaxWidth()) {
-            Text(if(state.workoutBusy)"Saving…" else if(journal.isFinished)"Retry finishing workout" else "Review and finish")
+            Text(if(state.historyBusy)"Loading history…" else if(state.workoutBusy)"Saving…" else if(journal.isFinished)"Retry finishing workout" else "Review and finish")
         }
     }
     if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0) {
@@ -130,7 +130,7 @@ internal fun NativeWorkoutScreen(
             title={Text("Finish this workout?")},
             text={Text("${journal.completed.size-skipped} completed · $skipped skipped · ${journal.completed.size} of ${plan.slots.size} sets saved. Finishing publishes these observations to training history.")},
             confirmButton={Button(onClick={showFinishReview=false;onFinish()},
-                enabled=!state.workoutBusy) { Text("Finish workout") }},
+                enabled=!state.workoutBusy && !state.historyBusy) { Text("Finish workout") }},
             dismissButton={TextButton(onClick={showFinishReview=false}) { Text("Keep training") }}
         )
     }

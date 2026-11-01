@@ -17,8 +17,9 @@ verified personal workout -> set logging -> interruption/resume -> workout
 completion -> saved history and correct next-workout/progression decisions.
 The source implementation now covers the standard working-set journey and
 engine-issued myo/drop extension recording and one-shot deload consumption.
-Durable in-workout corrections and corrections to retained sets in the latest
-saved native workout are connected through the journal and canonical history. Real-device acceptance remains pending; the build
+Durable in-workout corrections and corrections to retained sets in saved
+native workouts are connected through the journal and canonical history.
+Insights can browse older native completions in revision-bound pages. Real-device acceptance remains pending; the build
 freeze remains active.
 
 The instructions below describe how **older previously produced** artifacts
@@ -63,8 +64,9 @@ existing countdown. On restoration, inconsistent wall/elapsed clock changes,
 including a device reboot, invalidate a stale countdown instead of showing
 phantom remaining time. The timer is a manual, presentation-only tool: it does
 not imply a completed set, auto-log data, or change workout prescriptions. Insights now
-shows the latest confirmed native completion and its retained canonical sets,
-including after starting the next workout or reopening the app. Its correction
+browses saved native completions and their retained canonical sets, including
+older workouts and after reopening the app. The latest completion receipt is
+kept independently from the workout selected for review. Its correction
 sheet shares the workout logger's numeric controls. Canonical JS recalculates
 summaries, performance mirrors and heaviest working-set records after an edit.
 Corrections wait until the active workout is finished. These controls do not
@@ -333,3 +335,26 @@ workouts through interrupted correction writes, restart, skipped-set restoration
 zero loads, extension edits, interrupted completion, saved-history correction
 and next-session selection. Physical-device acceptance and APK builds remain
 separate and frozen.
+
+### Browse older saved workouts
+
+Insights displays twelve owned native completions per page with stable newest-
+first chronology, actual dates, program/day labels and canonical summaries.
+Earlier native entries without verified set observations retain a summary-only
+row. Native tombstones are hidden and duplicate identities are rejected. The
+browser does not import web history or populate itself from a selected backup.
+
+The cursor names the exact source snapshot. Kotlin independently validates
+bounds, identity, row order and continuation, and a read-only port rechecks the
+owned bytes after engine execution. The runtime drops results from an older
+store-change version. Opening an older workout cannot change the latest
+completion receipt; correcting it refreshes canonical records and Last mirrors
+without changing workout chronology or rotation. Read-only review remains
+available during an active workout, while corrections to saved history wait
+until Finish.
+
+The packaged-runtime proof covers actual native completion, multiple pages,
+older-set correction, a page response delayed across completion, cancellation,
+restart and preservation of newer Last/receipt/cursor decisions. Source-only
+compile and tests remain separate from device acceptance; APK generation stays
+disabled.

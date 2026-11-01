@@ -352,6 +352,89 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun historyBrowserPagesOlderWorkoutsAndRejectsReadsOverlappingCompletionOrCancellation() {
+        NodeTransport().use { node -> runBlocking {
+            var block=false;var reached=CompletableDeferred<Unit>();var release=CompletableDeferred<Unit>()
+            val transport=CanonicalWorkoutStoreTransport { wire ->
+                val response=node.request(wire)
+                if(block && JSONObject(wire).getString("method")=="inspectNativeHistoryPage") {
+                    reached.complete(Unit);release.await()
+                }
+                response
+            }
+            val engine=SandboxCanonicalWorkoutStoreEngine(transport)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(unit="kg"),"create-browser","program-browser",1000,223)))
+            val seed=JSONObject(proposal.snapshot);val history=seed.getJSONArray("history")
+            val legacy=fixture.getJSONObject("preparation").getJSONObject("historyEntry")
+            for(n in 0 until 25)history.put(JSONObject(legacy.toString()).put("id","legacy-$n")
+                .put("date",100000+n*30000).put("updatedAt",100000+n*30000))
+            val drive=Drive();val recovery=Drive();val owner=CanonicalWorkoutStorePersistence(drive,engine)
+            val journal=WorkoutJournalPersistence(recovery)
+            assertTrue(owner.initialize(seed.toString()))
+            for(n in 0 until 4) {
+                val source=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+                val started=2000L+n*1000000L
+                val plan=checkNotNull(engine.prepareWorkout(source,NativeWorkoutCodec.startJson("program-browser","browser-$n",started)))
+                var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+                for((i,slot) in plan.slots.withIndex())progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(
+                    plan.session,progress.journal.revision,JournalSetIntent("browser-$n-$i",slot,JournalSetDisposition.COMPLETED,
+                        JournalSetValues(if(n==0)"200" else "90","kg",6,null)))))
+                val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                    JournalFinishIntent("finish-browser-$n",started+60000,60000)))
+                assertTrue(checkNotNull(owner.complete(plan.session,finished.revision,journal)).recoveryCleared)
+            }
+            val reader=NativeHistoryReadPort(owner,engine);val writes=drive.writes
+            val first=checkNotNull(reader.page());assertEquals(29,first.total);assertEquals("browser-3",first.entries[0].historyId)
+            val second=checkNotNull(reader.page(checkNotNull(first.nextOffset),first.snapshotSha256))
+            val last=checkNotNull(reader.page(checkNotNull(second.nextOffset),first.snapshotSha256))
+            assertEquals(5,last.entries.size);assertEquals("browser-0",last.entries.last().historyId)
+            assertFalse(first.entries.first { it.historyId.startsWith("legacy-") }.detailsAvailable)
+            val older=checkNotNull(reader.workout("browser-0",last.snapshotSha256))
+            val before=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val latest=JSONObject(before).getJSONArray("history").let { rows->
+                (0 until rows.length()).map { rows.getJSONObject(it) }.single { it.getString("id")=="browser-3" }
+            }
+            val lift=older.exercises.first { latest.getJSONObject("perf").has(it.id) }
+            assertEquals(writes,drive.writes)
+            val corrected=checkNotNull(owner.correctHistory(NativeHistoryCodec.correctionJson(older,"correct-older",5000000,
+                lift.sets.map { NativeHistoryChange(lift.id,it.setIndex,"50",it.reps,it.rir) })))
+            assertEquals("browser-3",checkNotNull(owner.lastCompletionReceipt()).session.workoutId)
+            val after=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            assertEquals(JSONObject(before).getJSONObject("perf").getJSONObject(lift.id).toString(),
+                JSONObject(after).getJSONObject("perf").getJSONObject(lift.id).toString())
+            assertEquals(90.0,checkNotNull(corrected.exercises.single { it.id==lift.id }.record).load,0.0)
+            assertNull(reader.page(12,first.snapshotSha256))
+            val refreshed=checkNotNull(reader.page());assertEquals(first.entries.map { it.historyId },refreshed.entries.map { it.historyId })
+            val refreshedLast=checkNotNull(reader.page(24,refreshed.snapshotSha256))
+            assertEquals(last.entries.map { it.historyId },refreshedLast.entries.map { it.historyId })
+            val request=NativeWorkoutCodec.startJson("program-browser","browser-next",6000000)
+            val nextBefore=checkNotNull(engine.prepareWorkout(before,request));val next=checkNotNull(engine.prepareWorkout(after,request))
+            assertEquals(nextBefore.session.dayId,next.session.dayId);assertEquals(nextBefore.session.weekIndex,next.session.weekIndex)
+            var progress=checkNotNull(owner.beginIssuedSession(next,journal))
+            assertNotNull(reader.workout("browser-0",refreshed.snapshotSha256)) // Read-only browsing during an active workout.
+            assertNull(owner.correctHistory(NativeHistoryCodec.correctionJson(corrected,"blocked-active-edit",5100000,
+                listOf(NativeHistoryChange(lift.id,lift.sets[0].setIndex,"55",6,null)))))
+            block=true
+            val stale=async { reader.page() };reached.await()
+            for((i,slot) in next.slots.withIndex())progress=NativeWorkoutProgress(next,checkNotNull(journal.recordSet(
+                next.session,progress.journal.revision,JournalSetIntent("skip-next-$i",slot,JournalSetDisposition.SKIPPED,null))))
+            val finished=checkNotNull(journal.finish(next.session,progress.journal.revision,JournalFinishIntent("finish-next",6060000,60000)))
+            assertNotNull(owner.complete(next.session,finished.revision,journal))
+            release.complete(Unit);assertNull(stale.await())
+            block=false;assertEquals(30,checkNotNull(reader.page()).total)
+            reached=CompletableDeferred();release=CompletableDeferred();block=true
+            val beforeCancel=drive.writes
+            val cancelled=async { reader.page() };reached.await();cancelled.cancelAndJoin();release.complete(Unit)
+            assertEquals(beforeCancel,drive.writes)
+            assertEquals("browser-next",checkNotNull(owner.lastCompletionReceipt()).session.workoutId)
+            block=false
+            val reopened=NativeHistoryReadPort(CanonicalWorkoutStorePersistence(drive,engine),engine)
+            assertEquals(30,checkNotNull(reopened.page()).total)
+            assertEquals("browser-0",checkNotNull(reopened.workout("browser-0")).historyId)
+        } }
+    }
+
     @Test(timeout=60000) fun activeEditsSurviveRecoveryAndPublishLatestValuesWithOriginalAudit() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

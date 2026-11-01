@@ -7,6 +7,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import io.github.extracteddeath.pursuitiron.domain.*
 import java.util.UUID
+import java.util.Date
+import java.text.DateFormat
+
+private fun historyDateLabel(date: Long)=DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT).format(Date(date))
 
 private fun historySetLabel(exercise: NativeHistoryExercise,set: NativeHistorySet): String {
     if(set.kind=="working")return "Set ${set.ordinal}"
@@ -14,25 +18,63 @@ private fun historySetLabel(exercise: NativeHistoryExercise,set: NativeHistorySe
     return if(set.kind=="myo")"Myo-rep mini $number" else "Drop set $number"
 }
 
-/** Latest acknowledged workout. Records are read afresh from canonical history. */
+/** Revision-bound saved workouts. Records are read afresh from canonical history. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->Unit,onReload: ()->Unit) {
+internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->Unit,onReload: ()->Unit,
+    onOpen: (String)->Unit,onPage: (Int)->Unit,onList: ()->Unit) {
     val history=state.history
     if(history==null) {
-        PursuitCard {
-            Text("Saved sets",style=MaterialTheme.typography.titleMedium)
-            Text(state.historyError ?: "Open your latest saved workout to review its sets.")
-            TextButton(onClick=onReload,enabled=!state.historyBusy && !state.workoutBusy && state.workout==null) {
-                Text(if(state.historyBusy)"Loading…" else "Load saved sets")
+        val page=state.historyPage
+        if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+        if(page==null) {
+            PursuitCard {
+                Text("Saved workouts",style=MaterialTheme.typography.titleMedium)
+                Text(if(state.completion!=null)"Your latest workout is saved. Load your history to review it."
+                    else "Load the workouts saved on this device.")
+                TextButton(onClick={onPage(0)},enabled=!state.historyBusy && !state.workoutBusy) {
+                    Text(if(state.historyBusy)"Loading…" else "Load workouts")
+                }
+            }
+        } else if(page.total==0) {
+            PursuitCard {
+                PreviewLabel("NO SAVED WORKOUTS")
+                Text("Your completed workouts will appear here.",style=MaterialTheme.typography.titleMedium)
+                Text("Finish a workout to review its sets and track your results.")
+            }
+        } else {
+            SectionLabel("${page.total} saved workouts")
+            page.entries.forEach { summary ->
+                PursuitCard {
+                    Text(summary.dayLabel,style=MaterialTheme.typography.titleMedium)
+                    Text(historyDateLabel(summary.date),style=MaterialTheme.typography.bodyMedium)
+                    Text("${summary.programName} · Week ${summary.weekIndex}",style=MaterialTheme.typography.bodySmall)
+                    Text("${summary.setsDone} completed · ${summary.totalSets-summary.setsDone} skipped · ${summary.volume} ${summary.unit} volume",
+                        style=MaterialTheme.typography.bodySmall)
+                    if(summary.detailsAvailable)FilledTonalButton(onClick={onOpen(summary.historyId)},
+                        enabled=!state.historyBusy && !state.workoutBusy,modifier=Modifier.fillMaxWidth()) { Text("Review workout") }
+                    else Text("Summary only · set details are unavailable",style=MaterialTheme.typography.bodySmall)
+                }
+            }
+            Text("${page.offset+1}–${page.offset+page.entries.size} of ${page.total}",style=MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                OutlinedButton(onClick={onPage((page.offset-NativeHistoryPageCodec.PAGE_SIZE).coerceAtLeast(0))},
+                    enabled=page.offset>0 && !state.historyBusy && !state.workoutBusy) { Text("Newer workouts") }
+                OutlinedButton(onClick={page.nextOffset?.let(onPage)},
+                    enabled=page.nextOffset!=null && !state.historyBusy && !state.workoutBusy) { Text("Older workouts") }
             }
         }
+        state.historyError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
+        TextButton(onClick={onPage(0)},enabled=!state.historyBusy && !state.workoutBusy) { Text("Reload workouts") }
         return
     }
     var selectedExercise by rememberSaveable(history.entrySha256) { mutableStateOf<String?>(null) }
     var selectedSet by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy
-    SectionLabel("Latest saved workout")
+    TextButton(onClick=onList,enabled=!state.historyBusy) { Text("All saved workouts") }
+    Text(history.dayLabel,style=MaterialTheme.typography.headlineSmall)
+    Text("${historyDateLabel(history.date)} · Week ${history.weekIndex}",style=MaterialTheme.typography.bodyMedium)
+    if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
     Text("${history.setsDone} completed · ${history.totalSets-history.setsDone} skipped · ${history.volume} ${history.unit} volume",
         style=MaterialTheme.typography.bodyMedium)
     if(state.workout!=null)Text("Finish your active workout before correcting saved history.",
@@ -43,7 +85,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
             Text(exercise.name,style=MaterialTheme.typography.titleMedium)
             exercise.record?.let { record ->
                 val weight=java.math.BigDecimal.valueOf(record.load).stripTrailingZeros().toPlainString()
-                Text("Heaviest working set: $weight ${record.unit} × ${record.reps}",
+                Text("Overall heaviest working set: $weight ${record.unit} × ${record.reps}",
                     style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)
             }
             exercise.sets.forEach { set ->
@@ -58,7 +100,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     }
     state.historyError?.let { error ->
         Text(error,color=MaterialTheme.colorScheme.error)
-        TextButton(onClick=onReload,enabled=canEdit) { Text("Reload saved sets") }
+        TextButton(onClick=onReload,enabled=!state.historyBusy && !state.workoutBusy) { Text("Reload saved sets") }
     }
     val exercise=history.exercises.firstOrNull { it.id==selectedExercise }
     val set=exercise?.sets?.firstOrNull { it.setIndex==selectedSet }

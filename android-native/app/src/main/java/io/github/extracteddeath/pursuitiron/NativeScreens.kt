@@ -357,42 +357,15 @@ internal fun PlanScreen(
 }
 
 @Composable
-internal fun InsightsScreen(state: NativeRuntimeState?,onCorrectHistory: (String)->Unit = {},onReloadHistory: ()->Unit = {}) {
-    val receipt=state?.completion
-    val saved=state?.saved
-    val dayName=receipt?.session?.dayId?.let { id->
-        saved?.program?.days?.firstOrNull { it.id==id }?.label
-    } ?: "Training day"
-    PageHeading("YOUR RECORD", "Progress with context.",
-        if(receipt!=null)"Your latest native workout has a confirmed canonical history receipt."
-        else "No estimated personal records. Imported web history is not connected yet.")
-    PursuitCard(highlighted = true) {
-        if(receipt!=null) {
-            PreviewLabel("SAVED NATIVE WORKOUT", emphasis = true)
-            Text(dayName, style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold)
-            Text("Week ${receipt.session.weekIndex} · Training history committed on this device")
-            Text("Review the saved sets below. Charts and imported web history are still being connected.",
-                style = MaterialTheme.typography.bodySmall)
-        } else {
-            PreviewLabel("NO VERIFIED NATIVE COMPLETION", emphasis = true)
-            Text("Your work deserves accurate credit.", style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold)
-            Text("Complete a saved native workout to receive confirmation here. Web history import is separate.")
+internal fun InsightsScreen(state: NativeRuntimeState?,onCorrectHistory: (String)->Unit = {},onReloadHistory: ()->Unit = {},
+    onOpenHistory: (String)->Unit = {},onHistoryPage: (Int)->Unit = {},onHistoryList: ()->Unit = {}) {
+    PageHeading("YOUR RECORD", "Training history.","Review completed workouts and correct saved sets.")
+    if(state?.saved!=null)NativeHistoryPanel(state,onCorrectHistory,onReloadHistory,onOpenHistory,onHistoryPage,onHistoryList)
+    else {
+        PursuitCard {
+            PreviewLabel("NO SAVED WORKOUTS")
+            Text("Your completed workouts will appear here.",style=MaterialTheme.typography.titleMedium)
+            Text("Create a program and finish a workout to start your training history.")
         }
-    }
-    if(state!=null && receipt!=null)NativeHistoryPanel(state,onCorrectHistory,onReloadHistory)
-    SectionLabel("Training intelligence")
-    PursuitCard {
-        Text("Strength and personal records", style = MaterialTheme.typography.titleMedium)
-        Text("PR confirmation, last session comparisons, lift trends, strength standards and milestone cards.")
-    }
-    PursuitCard {
-        Text("Volume and consistency", style = MaterialTheme.typography.titleMedium)
-        Text("Week-to-week training, per-muscle volume, biceps/brachialis and separate forearm flexion/extension accounting.")
-    }
-    PursuitCard {
-        Text("History you can trust", style = MaterialTheme.typography.titleMedium)
-        Text("Calendar, corrections, revision-aware analytics, bodyweight history and validated backup/export.")
     }
 }

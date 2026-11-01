@@ -56,6 +56,17 @@ assert.ok(train.includes('input.length<=10 && input.all { ch->ch.isDigit() || ch
   train.includes('input.length<=2 && input.all(Char::isDigit)') &&
   train.includes('validLoad && repCount!=null'),
   'Native set edits remain bounded and cannot be committed with invalid load or reps');
+const rest=fs.readFileSync(root+'NativeRestTimer.kt','utf8');
+assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, exercise.restSeconds,') &&
+  rest.includes('rememberSaveable(workoutId)') &&
+  rest.includes('SystemClock.elapsedRealtime()') &&
+  rest.includes('LaunchedEffect(deadline)') &&
+  rest.includes('delay(250L)') &&
+  rest.includes('onLongClickLabel = "Reset rest timer"') &&
+  rest.includes('onLongClick = { deadline = 0L }') &&
+  rest.includes('enabled = enabled') &&
+  !rest.includes('onRecord(') && !rest.includes('store.') && !rest.includes('journal.'),
+  'The rest countdown must be a session-scoped manual M3 control, not an unacknowledged set write or engine re-prescription');
 assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCount),effort)') &&
   train.includes('var rir by rememberSaveable { mutableStateOf("") }') &&
   train.includes('if(journal.isFinished)onFinish() else showFinishReview=true'),

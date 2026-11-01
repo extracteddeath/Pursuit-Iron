@@ -50,3 +50,7 @@ Kotlin domain-level unit tests run with `:domain-contract:testDebugUnitTest` in 
 The Kotlin gate now requires explicit `EngineFeature.PROGRESSION_PREVIEW`, the exact supported protocol version, and two complete lower-case SHA-256 digests. A blank or merely descriptive digest cannot activate an implementation. Identity equality still does not itself certify runtime execution: an independent trusted verifier must supply approved source/fixture identities before promotion.
 
 The `:engine-runtime` Android library is intentionally disconnected from UI and performs only a guarded canonical JavaScript sandbox handshake. Its byte digest covers the **packaged bundle**, whereas the canonical dependency-closure digest and golden fixture digest measure different inputs. All three must be pinned and compared before Kotlin/JS engine certification.
+
+## Native sandbox packaging manifest
+
+The packaging workflow now generates a **three-part, ephemeral provenance manifest** containing the canonical dependency-closure SHA-256, golden-fixture SHA-256 and exact bundled IIFE byte SHA-256. The manifest also records source count, fixture count, bundler identity and explicit `approvedForWorkoutExecution: false` / `androidSandboxParityVerified: false` flags. Tests reject corrupted bundles and altered certifications. The manifest is not user-editable approval and is not promoted to the native app without an independent device test and trusted pinning step.

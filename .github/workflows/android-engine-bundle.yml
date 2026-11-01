@@ -50,8 +50,12 @@ jobs:
             --bundle --format=iife --platform=browser --target=es2020 \
             --global-name=PursuitIronBridge --legal-comments=none \
             --metafile="$BUNDLE_PROOF_DIR/metafile.json" --outfile="$BUNDLE_PROOF_DIR/engine.js"
+      - name: Check manifest tampering and fail-closed certification fields
+        run: node android-native/engine-contract/bundle-manifest-test.mjs
       - name: Check offline bundle, canonical source closure, syntax and digest
         run: |
           node --check "$BUNDLE_PROOF_DIR/engine.js"
           node android-native/engine-bridge/verify-bundle-structure.mjs \
             "$BUNDLE_PROOF_DIR/engine.js" "$BUNDLE_PROOF_DIR/metafile.json" "$BUNDLE_PROOF_DIR"
+          node android-native/engine-contract/create-bundle-manifest.mjs \
+            "$BUNDLE_PROOF_DIR" "$BUNDLE_PROOF_DIR/engine.js" "$BUNDLE_PROOF_DIR/bundle-manifest.json"

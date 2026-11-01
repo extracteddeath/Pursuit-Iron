@@ -357,14 +357,29 @@ internal fun PlanScreen(
 }
 
 @Composable
-internal fun InsightsScreen() {
+internal fun InsightsScreen(state: NativeRuntimeState?) {
+    val receipt=state?.completion
+    val saved=state?.saved
+    val dayName=receipt?.session?.dayId?.let { id->
+        saved?.program?.days?.firstOrNull { it.id==id }?.label
+    } ?: "Training day"
     PageHeading("YOUR RECORD", "Progress with context.",
-        "No fabricated personal bests or charts. Your history will appear after safe import and revision verification.")
+        if(receipt!=null)"Your latest native workout has a confirmed canonical history receipt."
+        else "No estimated personal records. Imported web history is not connected yet.")
     PursuitCard(highlighted = true) {
-        PreviewLabel("EMPTY STATE · LIVE DATA NOT CONNECTED", emphasis = true)
-        Text("Your work deserves accurate credit.", style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold)
-        Text("The native app will use edited, canonical history rather than duplicate records or estimated PRs.")
+        if(receipt!=null) {
+            PreviewLabel("SAVED NATIVE WORKOUT", emphasis = true)
+            Text(dayName, style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold)
+            Text("Week ${receipt.session.weekIndex} · Training history committed on this device")
+            Text("Detailed session history, corrections and verified PR trends are not connected to this screen yet.",
+                style = MaterialTheme.typography.bodySmall)
+        } else {
+            PreviewLabel("NO VERIFIED NATIVE COMPLETION", emphasis = true)
+            Text("Your work deserves accurate credit.", style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold)
+            Text("Complete a saved native workout to receive confirmation here. Web history import is separate.")
+        }
     }
     SectionLabel("Training intelligence")
     PursuitCard {

@@ -1,14 +1,23 @@
 package io.github.extracteddeath.pursuitiron.domain
 
-/**
- * Presentation authorization remains separate from JSON decoding. A caller
- * must independently verify current canonical store bytes and tombstones;
- * matching synthetic or cached DTOs alone never proves a live user program.
- * The shipping preview supplies null and cannot activate this gate.
- */
+/** Distinguish an explicitly checked empty tombstone from missing evidence. */
+sealed interface CurrentProgramDeletionEvidence {
+    data object CheckedAbsent : CurrentProgramDeletionEvidence
+    data class CheckedAt(val deletedAt: Long) : CurrentProgramDeletionEvidence
+}
+
+/** Independent current canonical-store facts; never infer from an offline backup. */
+data class CurrentProgramEvidence(
+    val reference: ReadOnlyProgramReference,
+    val deletion: CurrentProgramDeletionEvidence
+)
+
+/** Approved structure only. No prescriptions, logging or writes. */
 sealed interface ReadOnlyProgramPresentation {
     data object Unavailable : ReadOnlyProgramPresentation
-    data class Structure(val program: ReadOnlyProgramSummary) : ReadOnlyProgramPresentation
+    data class Structure internal constructor(
+        val program: ReadOnlyProgramSummary
+    ) : ReadOnlyProgramPresentation
 }
 
 object ReadOnlyProgramPresentationPolicy {
@@ -18,12 +27,15 @@ object ReadOnlyProgramPresentationPolicy {
 
     fun inspect(
         summary: ReadOnlyProgramSummary?,
-        currentReference: ReadOnlyProgramReference?,
-        currentTombstoneAt: Long?
+        evidence: CurrentProgramEvidence?
     ): ReadOnlyProgramPresentation {
-        if (summary == null || currentReference == null ||
-            !ReadOnlyProgramReferenceGate.sameActiveRevision(
-                summary.reference, currentReference, currentTombstoneAt
+        if (summary == null || evidence == null) return ReadOnlyProgramPresentation.Unavailable
+        val deletedAt = when (val deletion = evidence.deletion) {
+            CurrentProgramDeletionEvidence.CheckedAbsent -> null
+            is CurrentProgramDeletionEvidence.CheckedAt -> deletion.deletedAt
+        }
+        if (!ReadOnlyProgramReferenceGate.sameActiveRevision(
+                summary.reference, evidence.reference, deletedAt
             ) ||
             summary.id != summary.reference.programId ||
             !validText(summary.name, 120) || !validText(summary.goal, 40) ||

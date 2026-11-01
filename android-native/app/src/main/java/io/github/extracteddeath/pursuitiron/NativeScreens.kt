@@ -28,9 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
-import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentationPolicy
-import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
-import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramSummary
 
 /**
  * These are independently designed NATIVE journeys, not ports of React screens.
@@ -181,9 +178,8 @@ internal fun TrainScreen(openTools: () -> Unit) {
 
 @Composable
 internal fun PlanScreen(
-    programSummary: ReadOnlyProgramSummary? = null,
-    currentProgramReference: ReadOnlyProgramReference? = null,
-    currentProgramTombstoneAt: Long? = null,
+    // Only independently approved read-only structure may enter Compose.
+    currentPlan: ReadOnlyProgramPresentation = ReadOnlyProgramPresentation.Unavailable,
     schemaVerifier: CanonicalBackupSchemaVerifier? = null,
     schemaVerifierLoading: Boolean = false
 ) {
@@ -229,13 +225,9 @@ internal fun PlanScreen(
             Text("Generate real program · unavailable")
         }
     }
-    // Never present even a decoded saved plan without independent current-store
-    // revision/tombstone evidence. This installable preview supplies all nulls.
-    val programPresentation = ReadOnlyProgramPresentationPolicy.inspect(
-        programSummary, currentProgramReference, currentProgramTombstoneAt
-    )
-    if (programPresentation is ReadOnlyProgramPresentation.Structure) {
-        SavedProgramOverviewPanel(programPresentation)
+    // Plan cannot authorize a raw backup or unchecked current program.
+    if (currentPlan is ReadOnlyProgramPresentation.Structure) {
+        SavedProgramOverviewPanel(currentPlan)
     } else {
         // Unconnected Plan remains illustrative and cannot prescribe a workout.
         WorkoutOutlinePanel(outline = null)

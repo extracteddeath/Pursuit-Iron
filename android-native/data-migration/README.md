@@ -166,3 +166,24 @@ This is a deliberate memory and time bound; it does not certify typical
 large backups, enable a local data store, or import training histories.
 On-device larger-source acceptance must be separately measured before
 widening the limit again.
+
+
+## Explicit checked-deletion and coherent current-Plan gate (not connected)
+
+The native Plan presentation no longer interprets a null tombstone clock as a
+verified absence. It requires current-store evidence explicitly marked either
+CheckedAbsent or CheckedAt(clock), independently of the decoded program DTO.
+Only the policy can construct the approved read-only presentation within the
+domain module; Compose cannot self-authorize arbitrary program summaries.
+
+A future authoritative current-store adapter must read reference and deletion
+evidence, project only read-only program structure, and fetch evidence again.
+The CurrentReadOnlyPlanGateway rejects changed revisions, changed tombstones,
+missing records, failures and invalid IDs; cancellations propagate. Presentation
+must refresh on resume and canonical store changes. Any later workout mutation
+requires its own independent current-revision check.
+
+The installable native preview still supplies no current-store adapter. Its Plan
+remains illustrative; offline backup fingerprints and inventories are NOT active
+training programs. No backup import, history writing, merge algorithm, workout
+execution or web production change is introduced by this contract.

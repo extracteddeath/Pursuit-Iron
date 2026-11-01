@@ -1,6 +1,5 @@
 package io.github.extracteddeath.pursuitiron.domain
 
-import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -13,32 +12,42 @@ class ReadOnlyProgramPresentationPolicyTest {
         days = listOf(ReadOnlyProgramDay("day-1","Upper",
             listOf("bb-bench","cable-fly")))
     )
-    private fun available(summary: ReadOnlyProgramSummary?, current: ReadOnlyProgramReference?,
-        tombstone: Long? = null) =
-        ReadOnlyProgramPresentationPolicy.inspect(summary,current,tombstone) is
-            ReadOnlyProgramPresentation.Structure
+    private fun checked(
+        reference: ReadOnlyProgramReference = ref,
+        deletion: CurrentProgramDeletionEvidence =
+            CurrentProgramDeletionEvidence.CheckedAbsent
+    ) = CurrentProgramEvidence(reference, deletion)
 
-    @Test fun readOnlyMetadataMustBeProvenCurrentWithoutConflictingDeletion() {
-        assertTrue(available(good,ref))
-        assertTrue(available(good,ref,41))
-        assertFalse(available(good,ref,42))
-        assertFalse(available(good,ref,43))
-        assertFalse(available(good,null))
-        assertFalse(available(null,ref))
-        assertFalse(available(good,ref.copy(programUpdatedAt=43)))
-        assertFalse(available(good,ref.copy(snapshotSha256="b".repeat(64))))
-        assertFalse(available(good,ref,-1))
+    private fun available(
+        summary: ReadOnlyProgramSummary? = good,
+        evidence: CurrentProgramEvidence? = checked()
+    ) = ReadOnlyProgramPresentationPolicy.inspect(summary,evidence) is
+        ReadOnlyProgramPresentation.Structure
+
+    @Test fun uncheckedDeletionStateIsNotProofOfAbsence() {
+        assertFalse(available(evidence = null))
+        assertFalse(available(summary = null))
+        assertTrue(available(evidence = checked()))
+        assertTrue(available(evidence = checked(
+            deletion = CurrentProgramDeletionEvidence.CheckedAt(41))))
+        for (clock in listOf(42L,43L,-1L,9_007_199_254_740_992L)) {
+            assertFalse(available(evidence = checked(
+                deletion = CurrentProgramDeletionEvidence.CheckedAt(clock))))
+        }
     }
 
-    @Test fun presentationCannotSkipDecoderOrAcceptMalformedProgram() {
-        assertFalse(available(good.copy(id="other"),ref))
-        assertFalse(available(good.copy(name=""),ref))
-        assertFalse(available(good.copy(weeks=0),ref))
-        assertFalse(available(good.copy(days=emptyList()),ref))
-        assertFalse(available(good.copy(days=listOf(
-            good.days[0],good.days[0])),ref))
-        assertFalse(available(good.copy(days=listOf(
-            good.days[0].copy(exerciseIds=listOf("invalid id")))),ref))
-        assertFalse(available(good.copy(reference=ref.copy(storeSavedAt=101)),ref))
+    @Test fun staleOrMalformedProgramsNeverEnterCompose() {
+        assertFalse(available(evidence = checked(ref.copy(programUpdatedAt = 43))))
+        assertFalse(available(evidence = checked(ref.copy(snapshotSha256 = "b".repeat(64)))))
+        assertFalse(available(summary = good.copy(id = "other")))
+        assertFalse(available(summary = good.copy(name = "")))
+        assertFalse(available(summary = good.copy(weeks = 0)))
+        assertFalse(available(summary = good.copy(days = emptyList())))
+        assertFalse(available(summary = good.copy(days = listOf(
+            good.days[0],good.days[0]))))
+        assertFalse(available(summary = good.copy(days = listOf(
+            good.days[0].copy(exerciseIds = listOf("invalid id"))))))
+        assertFalse(available(summary = good.copy(
+            reference = ref.copy(storeSavedAt = 101))))
     }
 }

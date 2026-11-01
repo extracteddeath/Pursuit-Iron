@@ -142,19 +142,22 @@ const planGate = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyProgramPresentation.kt',
   'utf8'
 );
-assert.ok(screens.includes('programSummary: ReadOnlyProgramSummary? = null') &&
-  screens.includes('currentProgramReference: ReadOnlyProgramReference? = null'),
-  'The native preview may not inject guessed personal program data');
-assert.ok(screens.includes('ReadOnlyProgramPresentationPolicy.inspect(') &&
-  screens.includes('programPresentation is ReadOnlyProgramPresentation.Structure'),
-  'Saved-program UI must be behind the independent current-revision gate');
+assert.ok(screens.includes('currentPlan: ReadOnlyProgramPresentation = ReadOnlyProgramPresentation.Unavailable') &&
+  !screens.includes('ReadOnlyProgramPresentationPolicy.inspect(') &&
+  !screens.includes('currentProgramReference:'),
+  'The native preview cannot self-authorize guessed program data');
+assert.ok(screens.includes('currentPlan is ReadOnlyProgramPresentation.Structure') &&
+  screens.includes('SavedProgramOverviewPanel(currentPlan)'),
+  'Native Plan accepts only approved read-only structure');
 assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen(') &&
   shell.includes('schemaVerifierLoading = schemaVerifierLoading'),
   'The installable preview must not supply an unverified personal backup');
 assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structure'),
   'Shared saved-program composable must accept only policy-approved structure');
-assert.ok(planGate.includes('ReadOnlyProgramReferenceGate.sameActiveRevision('),
-  'Saved-program display must reject stale revisions and active tombstones');
+assert.ok(planGate.includes('ReadOnlyProgramReferenceGate.sameActiveRevision(') &&
+  planGate.includes('CurrentProgramDeletionEvidence.CheckedAbsent') &&
+  planGate.includes('Structure internal constructor('),
+  'Plan structure requires explicit deletion evidence and restricted constructor');
 assert.ok(!savedPlan.includes('generateNextProgramForShell(') &&
   !savedPlan.includes('prescribeSets(') && !savedPlan.includes('deleteHistory('),
   'Read-only summary UI may not invoke training or storage methods');

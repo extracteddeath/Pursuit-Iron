@@ -55,13 +55,15 @@ assert.ok(currentPlanHost.includes('LocalLifecycleOwner.current') &&
   currentPlanHost.includes('Lifecycle.Event.ON_STOP') &&
   currentPlanHost.includes('session.onBackground()') &&
   currentPlanHost.includes('LaunchedEffect(session, requestVersion)') &&
+  currentPlanHost.includes('remember(session, selectedProgramId, storeChangeKey)') &&
   !currentPlanHost.includes('rememberSaveable') &&
   !currentPlanHost.includes('BackupSavedProgramInventory'),
   'Personal Plan structure must be ephemeral and cleared after lifecycle changes');
 assert.ok(shell.includes('UnconnectedCurrentReadOnlyPlanSource') &&
   shell.includes('selectedProgramId = if (section == NativeDestination.PLAN.ordinal)') &&
   shell.includes('storeChangeKey = canonicalStoreChangeKey') &&
-  shell.includes('currentPlan = currentPlan'),
+  shell.includes('currentPlan = visiblePlan') &&
+  shell.includes('else ReadOnlyProgramPresentation.Unavailable'),
   'Plan navigation must invalidate old content without giving backups authority');
 
 assert.ok(packaged.includes('CanonicalJsSandboxProbe.verifyBundleBytes(binary, expected)') &&

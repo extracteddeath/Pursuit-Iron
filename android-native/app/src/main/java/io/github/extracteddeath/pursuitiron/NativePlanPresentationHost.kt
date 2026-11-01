@@ -33,10 +33,14 @@ internal fun rememberNativeCurrentPlanPresentation(
     val session = remember(source) {
         ReadOnlyPlanPresentationSession(CurrentReadOnlyPlanGateway(source))
     }
-    var presentation by remember(session) {
+    // Drop old data during recomposition itself, before lifecycle effects run.
+    // This also handles navigation Crossfade retaining an outgoing screen.
+    var presentation by remember(session, selectedProgramId, storeChangeKey) {
         mutableStateOf<ReadOnlyProgramPresentation>(ReadOnlyProgramPresentation.Unavailable)
     }
-    var requestVersion by remember(session) { mutableIntStateOf(0) }
+    var requestVersion by remember(session, selectedProgramId, storeChangeKey) {
+        mutableIntStateOf(0)
+    }
 
     DisposableEffect(lifecycleOwner, session, selectedProgramId, storeChangeKey) {
         fun clear() {

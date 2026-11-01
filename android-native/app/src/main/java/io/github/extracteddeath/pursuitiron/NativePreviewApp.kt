@@ -51,6 +51,7 @@ import io.github.extracteddeath.pursuitiron.domain.FeatureCatalog
 import io.github.extracteddeath.pursuitiron.domain.UnconnectedEngineGateway
 import io.github.extracteddeath.pursuitiron.domain.CurrentReadOnlyPlanSource
 import io.github.extracteddeath.pursuitiron.domain.UnconnectedCurrentReadOnlyPlanSource
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 
 /** Navigation follows training tasks instead of mirroring React screens. */
 private enum class NativeDestination(val title: String, val icon: ImageVector) {
@@ -84,6 +85,10 @@ internal fun NativePreviewApp(
         source = currentPlanSource,
         storeChangeKey = canonicalStoreChangeKey
     )
+    // Crossfade retains the outgoing destination temporarily. Never carry its
+    // personal Plan structure beyond the selected destination.
+    val visiblePlan = if (section == NativeDestination.PLAN.ordinal)
+        currentPlan else ReadOnlyProgramPresentation.Unavailable
 
     BoxWithConstraints {
         val expanded = maxWidth >= 840.dp
@@ -151,7 +156,7 @@ internal fun NativePreviewApp(
                                     adjustSession = { sheet = 1 })
                                 NativeDestination.TRAIN -> TrainScreen(openTools = { sheet = 3 })
                                 NativeDestination.PLAN -> PlanScreen(
-                                    currentPlan = currentPlan,
+                                    currentPlan = visiblePlan,
                                     schemaVerifier = schemaVerifier,
                                     schemaVerifierLoading = schemaVerifierLoading
                                 )

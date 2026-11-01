@@ -308,6 +308,72 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=120000) fun canonicalReducedAffectedWorkStaysStableAfterLostAcknowledgementAndFinish() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Stable reduced work",goal="hypertrophy",unit="kg"),
+                "reduce-create","reduce-program",1000,223)))
+            val drive=Drive();val recovery=Drive()
+            var owner=CanonicalWorkoutStorePersistence(drive,engine)
+            var journal=WorkoutJournalPersistence(recovery)
+            assertTrue(owner.initialize(proposal.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(proposal.snapshot,
+                NativeWorkoutCodec.startJson("reduce-program","reduce-workout",2000)))
+            val review=checkNotNull(engine.inspectWorkoutMuscles(proposal.snapshot,plan.issuedJson))
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            val part=checkNotNull(review.parts.firstOrNull {
+                muscle->NativeSessionSkipPolicy.reduceAffected(progress.journal,review,muscle).size>=2
+            })
+            val initial=NativeSessionSkipPolicy.reduceAffected(progress.journal,review,part)
+            assertTrue(initial.size>=2)
+            val kept=checkNotNull(plan.slots.firstOrNull { it !in initial })
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,
+                progress.journal.revision,JournalSetIntent("reduce-kept",kept,
+                    JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",6,2)))))
+            // One confirmed skip was committed but its acknowledgement was lost.
+            recovery.failAfterWrite=true
+            assertTrue(runCatching { journal.recordSet(plan.session,progress.journal.revision,
+                JournalSetIntent("reduce-first",initial.first(),JournalSetDisposition.SKIPPED,null)) }.isFailure)
+            recovery.failAfterWrite=false
+            journal=WorkoutJournalPersistence(recovery)
+            owner=CanonicalWorkoutStorePersistence(drive,engine)
+            progress=checkNotNull(owner.recoverIssuedSession(journal))
+            assertEquals(plan.issuedJson,progress.plan.issuedJson)
+            assertEquals(initial.drop(1),NativeSessionSkipPolicy.reduceAffected(progress.journal,review,part))
+            for((i,slot) in NativeSessionSkipPolicy.reduceAffected(progress.journal,review,part).withIndex()) {
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,
+                    JournalSetIntent("reduce-other-$i",slot,JournalSetDisposition.SKIPPED,null))))
+            }
+            assertTrue(NativeSessionSkipPolicy.reduceAffected(progress.journal,review,part).isEmpty())
+            val acknowledged=progress.journal.completed.map { it.intent.slot }.toSet()
+            for((i,slot) in plan.slots.filterNot { it in acknowledged }.withIndex()) {
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,
+                    progress.journal.revision,JournalSetIntent("reduce-complete-$i",slot,
+                        JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",6,null)))))
+            }
+            assertEquals(0,progress.journal.unresolvedCount)
+            assertEquals(JournalSetDisposition.COMPLETED,
+                progress.journal.completed.single { it.intent.slot==kept }.intent.disposition)
+            assertEquals(initial.size,
+                progress.journal.completed.count { it.intent.disposition==JournalSetDisposition.SKIPPED })
+            val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("reduce-finish",62000,60000)))
+            assertTrue(checkNotNull(owner.complete(plan.session,finished.revision,journal)).recoveryCleared)
+            val snapshot=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val history=JSONObject(snapshot).getJSONArray("history").getJSONObject(0)
+            assertEquals(plan.slots.size,history.getInt("totalSets"))
+            assertEquals(plan.slots.size-initial.size,history.getInt("setsDone"))
+            val events=history.getJSONObject("nativeSetObservations").getJSONArray("events")
+            assertEquals(initial.size,(0 until events.length()).count {
+                events.getJSONObject(it).getString("disposition")=="SKIPPED"
+            })
+            val saved=drive.writes
+            assertNotNull(owner.complete(plan.session,finished.revision,journal))
+            assertEquals(saved,drive.writes)
+        } }
+    }
+
     @Test(timeout=120000) fun realShortenedWorkoutRetainsPinnedDoseAndHistoryAcrossRecovery() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

@@ -17,8 +17,9 @@ verified personal workout -> set logging -> interruption/resume -> workout
 completion -> saved history and correct next-workout/progression decisions.
 The source implementation now covers the standard working-set journey and
 engine-issued myo/drop extension recording and one-shot deload consumption.
-Verified editing of completed sets and real-device acceptance remain pending;
-the build freeze remains active.
+Corrections to retained sets in the latest saved native workout are connected
+through canonical history. Real-device acceptance remains pending; the build
+freeze remains active.
 
 The instructions below describe how **older previously produced** artifacts
 could be installed. They do not authorize new builds before the release gate.
@@ -62,11 +63,12 @@ existing countdown. On restoration, inconsistent wall/elapsed clock changes,
 including a device reboot, invalidate a stale countdown instead of showing
 phantom remaining time. The timer is a manual, presentation-only tool: it does
 not imply a completed set, auto-log data, or change workout prescriptions. Insights now
-shows the latest confirmed native completion receipt and its matching saved
-program day label, including after starting the next workout or reopening the
-app. It intentionally does not synthesize detailed history, edited PRs or
-training charts until a certified canonical history reader exists. These
-controls do not calculate loads or mutate the canonical training engine. Other
+shows the latest confirmed native completion and its retained canonical sets,
+including after starting the next workout or reopening the app. Its correction
+sheet shares the workout logger's numeric controls. Canonical JS recalculates
+summaries, performance mirrors and heaviest working-set records after an edit.
+Corrections wait until the active workout is finished. These controls do not
+calculate loads or duplicate canonical training formulas. Other
 interactive examples remain local UI-only state.
 Web history and backup import are separate from this native store.
 
@@ -102,7 +104,9 @@ use the shared canonical prescription/equipment boundary. Completion consumes
 only exercises present in canonical performance, in the same atomic snapshot
 as history; skipped exercises retain their choice. Restart keeps the exact
 issued targets, and retry cannot consume a later rearmed choice. Malformed
-choices and assistance-load deloads remain unsupported. Corrected-set editing and real-device acceptance remain
+choices and assistance-load deloads remain unsupported. The latest saved native workout supports corrections to retained working and
+myo/drop set values; skipped or omitted rows, structural edits and imported
+web history remain outside that editor. Real-device acceptance remains
 incomplete. Source tests and Compose compilation do not certify a physical
 Android device, and no APK build is enabled by this change.
 
@@ -273,3 +277,32 @@ worker and store. Saved first-program identity is restored through canonical
 inspection; Plan reads current structure off the main thread. Late/cancelled
 generation results cannot replace a newer action. The issued-session flow now
 adds working-set logging and completion; no new APK has been generated.
+
+### Canonical saved-set corrections
+
+`engine-bridge/native-history.mjs` projects the latest confirmed native history
+entry through a dedicated owned-store channel. Each editable canonical row is
+matched back to its original raw native observation, including logging out of
+order. Ambiguous duplicate-exercise slots, legacy entries and unsupported failed
+attempts fail closed. Skipped and omitted mixed-zero rows are retained without
+being offered as fabricated editable rows.
+
+The native sheet submits only load, reps and optional actual RIR for an existing
+row. Issued targets, set kind/position, completion identity, workout date and
+program ownership survive. `normalizeEditedHistoryEntry`,
+`perfAfterHistoryReplace` and `exRecords` own the resulting summaries, mirrors
+and working-set records. Extension tonnage is retained when an ordinary set is
+corrected; extensions do not earn working-set strength records.
+
+The atomic store rechecks its current snapshot and absence of a pending workout
+after engine execution. It publishes corrected history and the completion
+receipt's new snapshot hash together. A correction has an exact operation ID,
+prior-entry hash and request identity: lost-acknowledgement retries cannot
+repeat a write, accept a changed request or overwrite another correction.
+The editor retains an exact retry command until its inputs change; reload lets
+the user discard a stale view and inspect the current saved values.
+
+Packaged-runtime JVM tests cover write failure before publication, lost
+acknowledgement after publication, restart, exact retry, response tampering
+and a workout starting while a correction is being prepared. These source
+checks do not constitute physical-device or APK acceptance.

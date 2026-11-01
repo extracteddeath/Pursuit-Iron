@@ -9,8 +9,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.*
 
@@ -35,7 +33,7 @@ internal fun NativeWorkoutScreen(
         PursuitCard(highlighted=true) {
             if(state.completion!=null)Text("Your workout is in your training history. The next session will use your logged performance.")
             else Text("Open your next scheduled workout with targets from your saved program.")
-            Button(onClick=onStart,enabled=state.ready && !state.workoutBusy && !state.workoutBlocked,
+            Button(onClick=onStart,enabled=state.ready && !state.workoutBusy && !state.historyBusy && !state.workoutBlocked,
                 modifier=Modifier.fillMaxWidth()) {
                 Text(if(state.workoutBusy)"Opening workout…" else "Start next workout")
             }
@@ -173,24 +171,7 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
                 Text(value.rir?.let { "$it RIR reported" } ?: "RIR not reported",style=MaterialTheme.typography.bodySmall)
             }
         } else {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(value=load,onValueChange={input->
-                    if(input.length<=10 && input.all { ch->ch.isDigit() || ch=='.' })load=input
-                },label={Text("Load (${session.unit})")},
-                    modifier=Modifier.weight(1f),singleLine=true,enabled=!busy,
-                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
-                OutlinedTextField(value=reps,onValueChange={input->
-                    if(input.length<=3 && input.all(Char::isDigit))reps=input
-                },label={Text("Reps")},
-                    modifier=Modifier.weight(1f),singleLine=true,enabled=!busy,
-                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
-            }
-            OutlinedTextField(value=rir,onValueChange={input->
-                if(input.length<=2 && input.all(Char::isDigit))rir=input
-            },label={Text("Actual RIR · optional")},
-                supportingText={Text("Reps you could still have done. Use 0 load for bodyweight.")},
-                modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=!busy,
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
+            NativeSetValueFields(session.unit,load,reps,rir,!busy,{load=it},{reps=it},{rir=it})
             val validLoad=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$"))
             val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
             Button(onClick={onRecord(set.slot,JournalSetDisposition.COMPLETED,

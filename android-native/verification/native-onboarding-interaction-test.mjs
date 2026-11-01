@@ -26,6 +26,7 @@ assert.ok(shell.includes('UnconnectedEngineGateway().status'),
 // Real Train controls are journal-driven; UI must never manufacture a persisted
 // set or publish a workout directly from an unconfirmed tap.
 const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
+const controls=fs.readFileSync(root+'NativeComponents.kt','utf8');
 assert.ok(train.includes('val committedSlots=journal.completed.map { it.intent.slot }.toSet()') &&
   train.includes('plan.exercises[index].sets.any { it.slot !in committedSlots }') &&
   train.includes('Go to next unfinished exercise'),
@@ -52,9 +53,10 @@ assert.ok(train.includes('val setDraftStates=rememberSaveableStateHolder()') &&
   train.includes('${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}') &&
   train.includes('NativeWorkingSet(plan.session,set,commit'),
   'Exercise navigation must not destroy another set’s unsaved load/reps/RIR draft');
-assert.ok(train.includes('input.length<=10 && input.all { ch->ch.isDigit() || ch==\'.\' }') &&
-  train.includes('input.length<=3 && input.all(Char::isDigit)') &&
-  train.includes('input.length<=2 && input.all(Char::isDigit)') &&
+assert.ok(train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy') &&
+  controls.includes('input.length<=10 && input.all { it.isDigit() || it==\'.\' }') &&
+  controls.includes('input.length<=3 && input.all(Char::isDigit)') &&
+  controls.includes('input.length<=2 && input.all(Char::isDigit)') &&
   train.includes('validLoad && repCount!=null'),
   'Native set edits remain bounded and cannot be committed with invalid load or reps');
 assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId)') &&
@@ -103,8 +105,8 @@ assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCou
   'The review must not synthesize actual RIR or block an exact retry of a durably finished session');
 // Insights may only display a previously committed canonical receipt, not
 // estimate achievements from demo controls or from an unfinished workout.
-assert.ok(shell.includes('NativeDestination.INSIGHTS -> InsightsScreen(onboarding)') &&
-  screens.includes('internal fun InsightsScreen(state: NativeRuntimeState?)') &&
+assert.ok(shell.includes('NativeDestination.INSIGHTS -> InsightsScreen(onboarding,onCorrectHistory,onReloadHistory)') &&
+  screens.includes('internal fun InsightsScreen(state: NativeRuntimeState?,') &&
   screens.includes('val receipt=state?.completion') &&
   screens.includes('saved?.program?.days?.firstOrNull { it.id==id }?.label') &&
   screens.includes('if(receipt!=null)') &&
@@ -115,4 +117,12 @@ assert.ok(host.includes('val completion=owner.lastCompletionReceipt()') &&
   host.includes('Starting another workout cannot erase the last durable completion receipt.') &&
   !host.includes('workoutError=null,completion=null'),
   'Starting the next workout must not hide the previous confirmed history receipt');
+const historyUi=fs.readFileSync(root+'NativeHistoryPanel.kt','utf8');
+assert.ok(historyUi.includes('NativeSetValueFields(history.unit,load,reps,rir,!busy') &&
+  historyUi.includes('val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy') &&
+  historyUi.includes('val exact=command ?: NativeHistoryCodec.correctionJson(') &&
+  historyUi.includes('System.currentTimeMillis(),listOf(NativeHistoryChange(') &&
+  historyUi.includes('onCorrect(exact)') && activity.includes('onCorrectHistory=runtime::correctHistory') &&
+  host.includes('owner.correctHistory(correctionJson)') && !historyUi.includes('commitAtomically'),
+  'History edits share input controls, retry exact operations and go through the owned canonical transaction');
 console.log('PASS native onboarding draft retention, canonical options, review/save separation, single-owner restore and logging gate, plus real-workout safe navigation, timer and confirmed history');

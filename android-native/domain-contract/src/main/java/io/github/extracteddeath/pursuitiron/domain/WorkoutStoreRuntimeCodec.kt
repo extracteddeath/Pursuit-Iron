@@ -60,6 +60,10 @@ object WorkoutStoreRuntimeCodec {
         require(integer(request,"protocolVersion")==1L && identifier.matches(text(request,"id")))
         val p=request.getJSONObject("params")
         when (text(request,"method")) {
+            "inspectNativeHistory" -> { exact(p,"rawSnapshot","historyId");bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES)
+                require(identifier.matches(text(p,"historyId"))) }
+            "prepareNativeHistoryCorrection" -> { exact(p,"currentSnapshot","correctionJson")
+                bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES);bounded(text(p,"correctionJson"),16384) }
             "prepareNativeWorkout" -> { exact(p,"rawSnapshot","startJson");bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES);bounded(text(p,"startJson"),16384) }
             "nativeProgramOptions" -> exact(p)
             "prepareNativeProgram" -> { exact(p,"setupJson");bounded(text(p,"setupJson"),16384) }

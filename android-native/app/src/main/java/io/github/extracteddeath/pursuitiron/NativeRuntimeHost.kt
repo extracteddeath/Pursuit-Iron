@@ -15,7 +15,8 @@ internal data class NativeRuntimeState(
     val proposal: NativeProgramProposal?=null,val saved: NativeSavedProgram?=null,val error: String?=null,
     val planSource: CurrentReadOnlyPlanSource=UnconnectedCurrentReadOnlyPlanSource,val storeChangeKey: Long=0,
     val workout: NativeWorkoutProgress?=null,val workoutBusy: Boolean=false,val workoutError: String?=null,
-    val workoutBlocked: Boolean=false,val completion: CanonicalWorkoutHistoryReceipt?=null
+    val workoutBlocked: Boolean=false,val completion: CanonicalWorkoutHistoryReceipt?=null,
+    val history: NativeWorkoutHistory?=null,val historyBusy: Boolean=false,val historyError: String?=null
 )
 
 /** One process-scoped engine, canonical writer and workout journal. No backup import. */
@@ -64,9 +65,10 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 journal=recovery
                 val workout=owner.recoverIssuedSession(recovery)
                 val completion=owner.lastCompletionReceipt()
+                val history=runCatching { readHistory(owner,loaded,completion) }.getOrNull()
                 ensureActive()
                 mutable.update { it.copy(loading=false,ready=true,options=options,saved=saved,
-                    planSource=source,error=null,workout=workout,completion=completion) }
+                    planSource=source,error=null,workout=workout,completion=completion,history=history) }
                 // A durable Finish remains authorized after process death. An
                 // unfinished workout only resumes; it is never auto-completed.
                 if(workout?.journal?.isFinished==true)finishWorkout()
@@ -84,6 +86,45 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         return try {
             checkNotNull(loaded.programEngine.inspectProgram(String(bytes,Charsets.UTF_8)))
         } finally { bytes.fill(0) }
+    }
+    private suspend fun readHistory(owner: CanonicalWorkoutStorePersistence,loaded: PackagedReadOnlySchemaVerifier,
+        receipt: CanonicalWorkoutHistoryReceipt?): NativeWorkoutHistory? {
+        val id=receipt?.session?.workoutId ?: return null
+        val bytes=owner.readOwnedCurrentStoreBytes() ?: return null
+        return try { loaded.programEngine.inspectHistory(String(bytes,Charsets.UTF_8),id) }
+        finally { bytes.fill(0) }
+    }
+    fun reloadHistory() {
+        val current=mutable.value
+        if(!current.ready || current.historyBusy || current.workoutBusy)return
+        val owner=store ?: return;val loaded=current.verifier ?: return
+        mutable.update { it.copy(historyBusy=true,historyError=null) }
+        scope.launch {
+            try {
+                val receipt=owner.lastCompletionReceipt()
+                val history=readHistory(owner,loaded,receipt)
+                ensureActive()
+                mutable.update { it.copy(history=history,completion=receipt,historyBusy=false,
+                    historyError=if(receipt!=null && history==null)"Saved sets could not be opened for correction." else null) }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) { mutable.update { it.copy(historyBusy=false,historyError="Saved sets could not be loaded. Try again.") } }
+        }
+    }
+    fun correctHistory(correctionJson: String) {
+        val current=mutable.value
+        if(!current.ready || current.historyBusy || current.workoutBusy || current.workout!=null)return
+        val owner=store ?: return
+        mutable.update { it.copy(historyBusy=true,historyError=null) }
+        scope.launch {
+            try {
+                val history=checkNotNull(owner.correctHistory(correctionJson))
+                val receipt=owner.lastCompletionReceipt()
+                ensureActive()
+                mutable.update { it.copy(history=history,completion=receipt,historyBusy=false,historyError=null) }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) { mutable.update { it.copy(historyBusy=false,
+                historyError="The correction could not be confirmed. Retry saving, or reload saved sets to check the current values.") } }
+        }
     }
     fun review(profile: NativeProgramProfile) {
         val current=mutable.value
@@ -130,7 +171,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     fun startWorkout() {
         val current=mutable.value
-        if(!current.ready || current.workoutBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
+        if(!current.ready || current.workoutBusy || current.historyBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
         val owner=store ?: return;val recovery=journal ?: return;val loaded=current.verifier ?: return
         mutable.update { it.copy(workoutBusy=true,workoutError=null) }
         scope.launch {
@@ -197,7 +238,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val outcome=checkNotNull(owner.complete(progress.plan.session,finished.revision,recovery))
                 check(outcome.recoveryCleared)
                 val saved=checkNotNull(readSaved(owner,loaded))
-                mutable.update { it.copy(workout=null,workoutBusy=false,workoutError=null,completion=outcome.receipt,saved=saved) }
+                val history=runCatching { readHistory(owner,loaded,outcome.receipt) }.getOrNull()
+                mutable.update { it.copy(workout=null,workoutBusy=false,workoutError=null,completion=outcome.receipt,saved=saved,
+                    history=history,historyError=null) }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 // This also recovers history committed immediately before an
@@ -206,8 +249,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val receipt=runCatching { owner.lastCompletionReceipt() }.getOrNull()
                 val done=restored.isSuccess && restored.getOrNull()==null && receipt?.session==progress.plan.session
                 val saved=if(done)runCatching { readSaved(owner,loaded) }.getOrNull() else null
+                val history=if(done)runCatching { readHistory(owner,loaded,receipt) }.getOrNull() else null
                 mutable.update { it.copy(workout=if(done)null else restored.getOrNull() ?: it.workout,workoutBusy=false,
-                    completion=if(done)receipt else it.completion,saved=saved ?: it.saved,
+                    completion=if(done)receipt else it.completion,saved=saved ?: it.saved,history=if(done)history else it.history,
                     workoutError=if(done)null else "Workout completion could not be confirmed. Your saved sets are kept here. Retry finishing.") }
             }
         }

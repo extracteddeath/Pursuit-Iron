@@ -10,6 +10,9 @@ import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutPlan
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeHistoryEngine
+import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutHistory
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -30,7 +33,7 @@ internal fun interface CanonicalWorkoutStoreTransport {
  */
 class SandboxCanonicalWorkoutStoreEngine internal constructor(
     private val transport: CanonicalWorkoutStoreTransport
-) : PinnedCanonicalWorkoutStoreEngine, NativeProgramCreationEngine, NativeWorkoutEngine {
+) : PinnedCanonicalWorkoutStoreEngine, NativeProgramCreationEngine, NativeWorkoutEngine, NativeHistoryEngine {
     constructor(worker: CanonicalJsReadOnlyService) : this(CanonicalWorkoutStoreTransport { wire ->
         suspendCancellableCoroutine { continuation ->
             val future=worker.prepareWorkoutStoreAsync(wire)
@@ -42,6 +45,19 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         }
     })
     private val sequence=AtomicLong(0)
+
+    override suspend fun inspectHistory(snapshot: String,historyId: String): NativeWorkoutHistory? {
+        val id="native-history-read-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeHistoryCodec.encodeInspect(id,snapshot,historyId))
+        currentCoroutineContext().ensureActive()
+        return NativeHistoryCodec.decodeInspect(raw,id,snapshot,historyId)
+    }
+    override suspend fun prepareHistoryCorrection(snapshot: String,correctionJson: String): String? {
+        val id="native-history-correct-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeHistoryCodec.encodeCorrection(id,snapshot,correctionJson))
+        currentCoroutineContext().ensureActive()
+        return NativeHistoryCodec.decodeCorrection(raw,id,snapshot,correctionJson)
+    }
 
     override suspend fun prepareWorkout(snapshot: String,startJson: String): NativeWorkoutPlan? {
         val id="native-workout-start-${sequence.incrementAndGet()}"

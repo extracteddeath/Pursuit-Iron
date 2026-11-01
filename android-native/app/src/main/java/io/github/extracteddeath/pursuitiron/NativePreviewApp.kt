@@ -84,7 +84,9 @@ internal fun NativePreviewApp(
     onEditProgram: ()->Unit = {},
     onStartWorkout: ()->Unit = {},
     onRecordSet: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit = {_,_,_->},
-    onFinishWorkout: ()->Unit = {}
+    onFinishWorkout: ()->Unit = {},
+    onCorrectHistory: (String)->Unit = {},
+    onReloadHistory: ()->Unit = {}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -219,7 +221,7 @@ internal fun NativePreviewApp(
                                         section = NativeDestination.TRAIN.ordinal
                                     }
                                 )
-                                NativeDestination.INSIGHTS -> InsightsScreen(onboarding)
+                                NativeDestination.INSIGHTS -> InsightsScreen(onboarding,onCorrectHistory,onReloadHistory)
                             }
                             if(onboarding?.saved==null)ConnectionNotice(status,false)
                         }

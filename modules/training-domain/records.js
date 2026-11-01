@@ -1153,14 +1153,19 @@ function normalizeEditedHistoryEntry(original, draft) {
     let volume = 0, setsDone = 0;
     for (const p of Object.values(perf)) {
         for (const st of (p.sets || [])) {
-            if (!st.sub) {
+            if (!st.warm) {
                 volume += (Number(st.w) || 0) * (Number(st.r) || 0);
-                setsDone++;
+                if (!st.sub) setsDone++;
             }
         }
     }
     out.volume = Math.round(volume);
-    out.setsDone = setsDone;
+    // Native completion counts each resolved observation, including extensions
+    // and zero-load rows that the canonical performance summary can omit.
+    out.setsDone = original.nativeSetObservations?.format === 1
+        && Array.isArray(original.nativeSetObservations.events)
+        ? original.nativeSetObservations.events.filter(e => e.disposition === 'COMPLETED').length
+        : setsDone;
     return out;
 }
 

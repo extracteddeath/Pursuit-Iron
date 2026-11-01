@@ -44,6 +44,27 @@ import androidx.compose.ui.unit.dp
  * No React styling, CSS, or training formulas should be added here.
  */
 @Composable
+internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: String,enabled: Boolean,
+    onLoad: (String)->Unit,onReps: (String)->Unit,onRir: (String)->Unit) {
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+        OutlinedTextField(value=load,onValueChange={ input ->
+            if(input.length<=10 && input.all { it.isDigit() || it=='.' })onLoad(input)
+        },label={Text("Load ($unit)")},modifier=Modifier.weight(1f),singleLine=true,enabled=enabled,
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
+        OutlinedTextField(value=reps,onValueChange={ input ->
+            if(input.length<=3 && input.all(Char::isDigit))onReps(input)
+        },label={Text("Reps")},modifier=Modifier.weight(1f),singleLine=true,enabled=enabled,
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
+    }
+    OutlinedTextField(value=rir,onValueChange={ input ->
+        if(input.length<=2 && input.all(Char::isDigit))onRir(input)
+    },label={Text("Actual RIR · optional")},
+        supportingText={Text("Reps you could still have done. Use 0 load for bodyweight.")},
+        modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=enabled,
+        keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
+}
+
+@Composable
 internal fun PreviewLabel(label: String, emphasis: Boolean = false) {
     Surface(
         shape = MaterialTheme.shapes.small,

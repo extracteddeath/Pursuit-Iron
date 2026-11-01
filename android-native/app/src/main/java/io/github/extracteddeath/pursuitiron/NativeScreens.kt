@@ -357,7 +357,7 @@ internal fun PlanScreen(
 }
 
 @Composable
-internal fun InsightsScreen(state: NativeRuntimeState?) {
+internal fun InsightsScreen(state: NativeRuntimeState?,onCorrectHistory: (String)->Unit = {},onReloadHistory: ()->Unit = {}) {
     val receipt=state?.completion
     val saved=state?.saved
     val dayName=receipt?.session?.dayId?.let { id->
@@ -372,7 +372,7 @@ internal fun InsightsScreen(state: NativeRuntimeState?) {
             Text(dayName, style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold)
             Text("Week ${receipt.session.weekIndex} · Training history committed on this device")
-            Text("Detailed session history, corrections and verified PR trends are not connected to this screen yet.",
+            Text("Review the saved sets below. Charts and imported web history are still being connected.",
                 style = MaterialTheme.typography.bodySmall)
         } else {
             PreviewLabel("NO VERIFIED NATIVE COMPLETION", emphasis = true)
@@ -381,6 +381,7 @@ internal fun InsightsScreen(state: NativeRuntimeState?) {
             Text("Complete a saved native workout to receive confirmation here. Web history import is separate.")
         }
     }
+    if(state!=null && receipt!=null)NativeHistoryPanel(state,onCorrectHistory,onReloadHistory)
     SectionLabel("Training intelligence")
     PursuitCard {
         Text("Strength and personal records", style = MaterialTheme.typography.titleMedium)

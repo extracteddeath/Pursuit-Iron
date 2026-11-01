@@ -4,6 +4,7 @@ import { prepareCanonicalWorkoutHistory } from './workout-history-completion.mjs
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
 import { prepareNativeWorkout,MAX_ISSUED_WORKOUT_BYTES } from './native-workout.mjs';
+import { inspectNativeHistory,prepareNativeHistoryCorrection } from './native-history.mjs';
 
 export const WORKOUT_STORE_LIMITS=Object.freeze({
   snapshotBytes:1024*1024,journalBytes:256*1024,
@@ -29,7 +30,15 @@ export function dispatchWorkoutStoreJson(json) {
     if (request.protocolVersion!==1) return error(id,'UNSUPPORTED_VERSION');
     const p=request.params;
     let result;
-    if (request.method==='prepareNativeWorkout') {
+    if (request.method==='inspectNativeHistory') {
+      if(!exact(p,['rawSnapshot','historyId']) || !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+        !bounded(p.historyId,128))return error(id,'INVALID_REQUEST');
+      result=inspectNativeHistory(p.rawSnapshot,p.historyId);
+    } else if (request.method==='prepareNativeHistoryCorrection') {
+      if(!exact(p,['currentSnapshot','correctionJson']) || !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+        !bounded(p.correctionJson,16384))return error(id,'INVALID_REQUEST');
+      result=prepareNativeHistoryCorrection(p.currentSnapshot,p.correctionJson);
+    } else if (request.method==='prepareNativeWorkout') {
       if(!exact(p,['rawSnapshot','startJson']) || !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
         !bounded(p.startJson,16384))return error(id,'INVALID_REQUEST');
       result=prepareNativeWorkout(p.rawSnapshot,p.startJson);

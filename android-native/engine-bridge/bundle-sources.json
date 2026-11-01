@@ -11,6 +11,7 @@
   "workout-store-protocol.mjs",
   "native-onboarding.mjs",
   "native-workout.mjs",
+  "native-history.mjs",
   "android-entry.mjs",
   "sandbox-compat.mjs"
 ]

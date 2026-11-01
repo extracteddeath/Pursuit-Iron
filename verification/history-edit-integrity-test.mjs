@@ -26,6 +26,12 @@ assert.equal(corrected.perf['back-squat'].sets[3].r,5);
 assert.equal(corrected.perf['back-squat'].sets[3].rir,2);
 assert.equal(corrected.perf['back-squat'].sets[3].tr,2);
 assert.equal(corrected.setsDone,4);
+const extended=structuredClone(original);
+extended.perf['back-squat'].sets.push({w:50,r:5,sub:true,kind:'drop'});
+const normalizedExtended=normalizeEditedHistoryEntry(extended,extended);
+assert.equal(normalizedExtended.volume,normalizeEditedHistoryEntry(original,original).volume+250,
+ 'correcting an ordinary set cannot erase performed extension tonnage');
+assert.equal(normalizedExtended.setsDone,4,'extensions retain their separate working-set accounting');
 
 const mirror=perfAfterHistoryReplace([original],{'back-squat':original.perf['back-squat']},'h1',corrected);
 assert.deepEqual(mirror['back-squat'].sets,corrected.perf['back-squat'].sets);

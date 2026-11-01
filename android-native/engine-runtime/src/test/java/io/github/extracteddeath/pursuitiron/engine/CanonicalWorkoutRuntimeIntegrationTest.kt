@@ -352,6 +352,135 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun canonicalHistoryCorrectionSurvivesDiskFullLostAcknowledgementRestartAndExactRetry() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Correction journey",unit="kg"),"create-correction","program-correction",1000,223)))
+            val source=JSONObject(proposal.snapshot)
+            val firstDay=source.getJSONArray("saved").getJSONObject(0).getJSONArray("days").getJSONObject(0)
+            source.getJSONArray("saved").getJSONObject(0).getJSONObject("nextWeekPrescriptions")
+                .getJSONObject(firstDay.getString("id")+":0").getJSONObject("1").put("tech","drop set")
+            val plan=checkNotNull(engine.prepareWorkout(source.toString(),NativeWorkoutCodec.startJson(
+                "program-correction","workout-correction",2000)))
+            assertTrue(plan.exercises[0].sets.any { it.isExtension })
+            val drive=Drive();val recovery=Drive()
+            var store=CanonicalWorkoutStorePersistence(drive,engine)
+            var journal=WorkoutJournalPersistence(recovery)
+            assertTrue(store.initialize(source.toString()))
+            var progress=checkNotNull(store.beginIssuedSession(plan,journal))
+            for((index,slot) in plan.slots.withIndex()) {
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,
+                    JournalSetIntent("correct-set-$index",slot,
+                        if(index==1)JournalSetDisposition.SKIPPED else JournalSetDisposition.COMPLETED,
+                        if(index==1)null else JournalSetValues("200","kg",6,null)))))
+            }
+            val finish=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("finish-correction",62000,60000)))
+            assertTrue(checkNotNull(store.complete(plan.session,finish.revision,journal)).recoveryCleared)
+            val before=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val view=checkNotNull(engine.inspectHistory(before,"workout-correction"))
+            val lift=view.exercises[0]
+            assertTrue(lift.sets.any { it.kind=="drop" })
+            val changes=lift.sets.filter { it.kind=="working" }.map {
+                NativeHistoryChange(lift.id,it.setIndex,"50",8,4)
+            }
+            val command=NativeHistoryCodec.correctionJson(view,"correct-once",70000,changes)
+            var notifications=0
+            store.subscribeCommittedChanges { notifications++ }
+            drive.failBeforeWrite=true
+            assertTrue(runCatching { store.correctHistory(command) }.isFailure)
+            assertEquals(before,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            assertEquals(0,notifications)
+            drive.failBeforeWrite=false;drive.failAfterWrite=true
+            assertTrue(runCatching { store.correctHistory(command) }.isFailure)
+            drive.failAfterWrite=false
+            assertEquals(1,notifications)
+            val committed=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            assertNotEquals(before,committed)
+            val oldEntry=JSONObject(before).getJSONArray("history").getJSONObject(0)
+            val entry=JSONObject(committed).getJSONArray("history").getJSONObject(0)
+            assertEquals(oldEntry.getInt("volume")-changes.size*200*6+changes.size*50*8,entry.getInt("volume"))
+            assertEquals(oldEntry.getInt("setsDone"),entry.getInt("setsDone"))
+            assertEquals(oldEntry.getJSONObject("nativeCompletion").toString(),entry.getJSONObject("nativeCompletion").toString())
+            store=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            val writes=drive.writes
+            val corrected=checkNotNull(store.correctHistory(command))
+            assertEquals(writes,drive.writes)
+            assertEquals(50.0,checkNotNull(corrected.exercises[0].record).load,0.0)
+            assertTrue(corrected.exercises[0].sets.filter { it.kind=="working" }.all { it.rir==4 && it.reps==8 })
+            assertTrue(corrected.exercises[0].sets.filter { it.kind=="drop" }.all { it.load=="200" && it.rir==null })
+            assertEquals(committed,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            assertNotNull(store.complete(plan.session,finish.revision,journal))
+            assertEquals(writes,drive.writes)
+            assertNull(journal.recover())
+            val stale=NativeHistoryCodec.correctionJson(view,"different-stale-operation",70001,changes)
+            assertNull(store.correctHistory(stale))
+            val next=checkNotNull(engine.prepareWorkout(committed,NativeWorkoutCodec.startJson(
+                "program-correction","workout-after-correction",71000)))
+            assertNotEquals(plan.session.dayId,next.session.dayId)
+            assertNotNull(store.beginIssuedSession(next,journal))
+            val pendingWrites=drive.writes
+            assertNull(store.correctHistory(NativeHistoryCodec.correctionJson(corrected,"during-workout",72000,
+                listOf(changes[0].copy(load="55")))))
+            assertEquals(pendingWrites,drive.writes)
+            assertNotNull(store.complete(plan.session,finish.revision,journal))
+            assertEquals(next.session,checkNotNull(journal.recover()).session)
+            assertEquals(next.issuedJson,checkNotNull(store.recoverIssuedSession(journal)).plan.issuedJson)
+        } }
+    }
+
+    @Test(timeout=60000) fun historyCorrectionRejectsChangedResponseAndConcurrentWorkoutWithoutPublishing() {
+        NodeTransport().use { node -> runBlocking {
+            val actual=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(actual.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(unit="kg"),"create-conflict","program-conflict",1000,223)))
+            val drive=Drive();val recovery=Drive()
+            val reached=CompletableDeferred<Unit>();val release=CompletableDeferred<Unit>()
+            var delayCorrection=false;var corrupt=false
+            val transport=CanonicalWorkoutStoreTransport { wire ->
+                val response=node.request(wire)
+                if(JSONObject(wire).getString("method")=="prepareNativeHistoryCorrection") {
+                    if(delayCorrection) { reached.complete(Unit);release.await() }
+                    if(corrupt)JSONObject(response).apply {
+                        getJSONObject("result").put("inputCorrectionSha256","f".repeat(64))
+                    }.toString() else response
+                } else response
+            }
+            val engine=SandboxCanonicalWorkoutStoreEngine(transport)
+            val store=CanonicalWorkoutStorePersistence(drive,engine);val journal=WorkoutJournalPersistence(recovery)
+            assertTrue(store.initialize(proposal.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(proposal.snapshot,
+                NativeWorkoutCodec.startJson("program-conflict","workout-conflict",2000)))
+            var progress=checkNotNull(store.beginIssuedSession(plan,journal))
+            for((index,slot) in plan.slots.withIndex())progress=NativeWorkoutProgress(plan,
+                checkNotNull(journal.recordSet(plan.session,progress.journal.revision,JournalSetIntent("conflict-$index",slot,
+                    JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",6,null)))))
+            val finish=checkNotNull(journal.finish(plan.session,progress.journal.revision,JournalFinishIntent("conflict-finish",62000,60000)))
+            assertNotNull(store.complete(plan.session,finish.revision,journal))
+            val snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val view=checkNotNull(engine.inspectHistory(snapshot,"workout-conflict"))
+            val ex=view.exercises[0];val set=ex.sets[0]
+            val command=NativeHistoryCodec.correctionJson(view,"correct-conflict",70000,
+                listOf(NativeHistoryChange(ex.id,set.setIndex,"45",7,null)))
+            val writes=drive.writes;corrupt=true
+            assertTrue(runCatching { store.correctHistory(command) }.isFailure)
+            assertEquals(writes,drive.writes)
+            corrupt=false;delayCorrection=true
+            val next=checkNotNull(engine.prepareWorkout(snapshot,
+                NativeWorkoutCodec.startJson("program-conflict","workout-concurrent",71000)))
+            val correction=async { store.correctHistory(command) }
+            reached.await()
+            assertNotNull(store.beginIssuedSession(next,journal))
+            val pendingWrites=drive.writes
+            release.complete(Unit)
+            assertNull(correction.await())
+            assertEquals(pendingWrites,drive.writes)
+            assertEquals(snapshot,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            assertEquals(next.session,checkNotNull(journal.recover()).session)
+        } }
+    }
+
     @Test(timeout=60000) fun cancelledRuntimeResponseCannotPublishHistoryAndExactRetryStillWorks() {
         NodeTransport().use { node -> runBlocking {
             val delayed=CompletableDeferred<String>()

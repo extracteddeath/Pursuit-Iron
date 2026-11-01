@@ -253,6 +253,36 @@ class CanonicalWorkoutStorePersistence(
 
     fun lastCompletionReceipt(): CanonicalWorkoutHistoryReceipt? = synchronized(guard) { read()?.receipt }
 
+    /** Exact revision correction. A pending workout pins its original store until completion. */
+    suspend fun correctHistory(correctionJson: String): NativeWorkoutHistory? {
+        val initial=synchronized(guard) { read() } ?: return null
+        if(initial.pending!=null)return null
+        val historyEngine=engine as? NativeHistoryEngine ?: return null
+        val raw=historyEngine.prepareHistoryCorrection(initial.snapshot,correctionJson) ?: return null
+        val preparation=NativeHistoryCodec.readPreparation(raw,initial.snapshot,correctionJson)
+        var wrote=false
+        val result=try { synchronized(guard) {
+            val current=read() ?: return@synchronized null
+            val sameCompletion=initial.receipt?.let { sameReceipt(current.receipt,it) } ?: (current.receipt==null)
+            if(current.pending!=null || current.snapshot!=initial.snapshot || !sameCompletion)
+                return@synchronized null
+            if(preparation.alreadyPresent)return@synchronized preparation.history
+            val receipt=current.receipt?.let { CanonicalWorkoutHistoryReceipt(it.session,it.journalRevision,
+                it.handoffSha256,sha(preparation.candidate)) }
+            save(State(preparation.candidate,null,receipt))
+            val confirmed=read() ?: return@synchronized null
+            require(confirmed.snapshot==preparation.candidate)
+            wrote=true
+            preparation.history
+        } } catch(failure: Exception) {
+            val advanced=runCatching { synchronized(guard) { read()?.snapshot!=initial.snapshot } }.getOrDefault(false)
+            if(advanced)changed()
+            throw failure
+        }
+        if(wrote)changed()
+        return result
+    }
+
     private fun equivalent(a: Any, b: Any, depth: Int=0): Boolean {
         require(depth<=64)
         return when {

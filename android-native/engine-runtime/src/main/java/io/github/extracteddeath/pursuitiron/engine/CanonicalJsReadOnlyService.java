@@ -252,6 +252,7 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         boolean store = "validateOwnedStore".equals(method) || "prepareWorkoutHistory".equals(method)
                 || "prepareNativeWorkout".equals(method) || "prepareIssuedWorkoutHistory".equals(method)
                 || "nativeProgramOptions".equals(method) || "prepareNativeProgram".equals(method)
+                || "inspectNativeHistory".equals(method) || "prepareNativeHistoryCorrection".equals(method)
                 || "inspectNativeProgram".equals(method);
         String entry = store ? "PursuitIronBridge.dispatchWorkoutStoreJson"
                 : ("backupSchemaCheck".equals(method) ||
@@ -425,6 +426,12 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                                 NativeProgramSetupCodec.INSTANCE.decodeProposal(response.toString(),validated.getString("id"),p.getString("setupJson"));
                             } else if ("inspectNativeProgram".equals(validated.getString("method"))) {
                                 NativeProgramSetupCodec.INSTANCE.decodeSaved(response.toString(),validated.getString("id"),p.getString("rawSnapshot"));
+                            } else if ("inspectNativeHistory".equals(validated.getString("method"))) {
+                                io.github.extracteddeath.pursuitiron.domain.NativeHistoryCodec.INSTANCE.decodeInspect(response.toString(),
+                                    validated.getString("id"),p.getString("rawSnapshot"),p.getString("historyId"));
+                            } else if ("prepareNativeHistoryCorrection".equals(validated.getString("method"))) {
+                                io.github.extracteddeath.pursuitiron.domain.NativeHistoryCodec.INSTANCE.decodeCorrection(response.toString(),
+                                    validated.getString("id"),p.getString("currentSnapshot"),p.getString("correctionJson"));
                             } else {
                                 WorkoutStoreRuntimeCodec.INSTANCE.decodePreparation(response.toString(),
                                     validated.getString("id"), p.getString("originSnapshot"),

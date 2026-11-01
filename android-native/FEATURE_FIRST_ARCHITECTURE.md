@@ -97,3 +97,20 @@ Before any native screen displays a **real** program:
 `ReadOnlyProgramReferenceGate` alone cannot authenticate the snapshot digest,
 parse a backup, recover stale data or authorize writes. Only a future trusted
 source adapter and device/interruption test can do that.
+
+
+## Current-program day browsing: first read-only Plan to Train vertical slice
+
+A program inspected through the existing canonical current-Plan gateway can
+now select a specific training day and navigate to Train. The transient
+ReadOnlyTrainingDaySelection holds only the exact revision reference and
+stable day ID, not the program, workout or history. Train re-resolves the
+selection against the still-approved current Plan presentation, rejects
+changed source SHA/revision, missing or deleted days and detached navigation,
+and shows only the canonical day name and exercise IDs. It does NOT invent
+exercise names, weights, sets, RIR, warm-up or progression suggestions.
+
+This is intentionally an end-to-end read-only navigation path, NOT a working
+logger; the old explicitly labeled demo remains separate for users with
+no verified current program. No active store is connected in the installable
+preview, so synthetic demo UI is unaffected and no program is saved.

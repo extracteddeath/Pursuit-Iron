@@ -52,6 +52,8 @@ import io.github.extracteddeath.pursuitiron.domain.UnconnectedEngineGateway
 import io.github.extracteddeath.pursuitiron.domain.CurrentReadOnlyPlanSource
 import io.github.extracteddeath.pursuitiron.domain.UnconnectedCurrentReadOnlyPlanSource
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
+import androidx.compose.runtime.remember
 
 /** Navigation follows training tasks instead of mirroring React screens. */
 private enum class NativeDestination(val title: String, val icon: ImageVector) {
@@ -78,16 +80,23 @@ internal fun NativePreviewApp(
     var injuryFlag by rememberSaveable { mutableStateOf(false) }
     val status = UnconnectedEngineGateway().status
     val destinationStates = rememberSaveableStateHolder()
+    // Program/day navigation intent is transient, never saved or interpreted
+    // as a workout session, set log or persistence permission.
+    var selectedTrainingDay by remember { mutableStateOf<ReadOnlyTrainingDaySelection?>(null) }
     // Changing destinations clears any previously approved personal Plan view.
     val currentPlan = rememberNativeCurrentPlanPresentation(
         selectedProgramId = if (section == NativeDestination.PLAN.ordinal)
+            activeProgramId
+        else if (section == NativeDestination.TRAIN.ordinal &&
+            selectedTrainingDay?.reference?.programId == activeProgramId)
             activeProgramId else null,
         source = currentPlanSource,
         storeChangeKey = canonicalStoreChangeKey
     )
     // Crossfade retains the outgoing destination temporarily. Never carry its
     // personal Plan structure beyond the selected destination.
-    val visiblePlan = if (section == NativeDestination.PLAN.ordinal)
+    val visiblePlan = if (section == NativeDestination.PLAN.ordinal ||
+        (section == NativeDestination.TRAIN.ordinal && selectedTrainingDay != null))
         currentPlan else ReadOnlyProgramPresentation.Unavailable
 
     BoxWithConstraints {
@@ -116,7 +125,10 @@ internal fun NativePreviewApp(
                     NativeDestination.entries.forEachIndexed { index, destination ->
                         NavigationBarItem(
                             selected = section == index,
-                            onClick = { section = index },
+                            onClick = {
+                                selectedTrainingDay = null
+                                section = index
+                            },
                             icon = { Icon(destination.icon, contentDescription = null) },
                             label = { Text(destination.title) },
                             alwaysShowLabel = true
@@ -130,7 +142,10 @@ internal fun NativePreviewApp(
                     NativeDestination.entries.forEachIndexed { index, destination ->
                         NavigationRailItem(
                             selected = section == index,
-                            onClick = { section = index },
+                            onClick = {
+                                selectedTrainingDay = null
+                                section = index
+                            },
                             icon = { Icon(destination.icon, contentDescription = null) },
                             label = { Text(destination.title) },
                             alwaysShowLabel = true
@@ -152,13 +167,23 @@ internal fun NativePreviewApp(
                             when (NativeDestination.entries[current]) {
                                 NativeDestination.TODAY -> TodayScreen(
                                     readiness, length, injuryFlag,
-                                    openTrain = { section = 1 }, openPlan = { section = 2 },
+                                    openTrain = { selectedTrainingDay = null; section = 1 },
+                                    openPlan = { selectedTrainingDay = null; section = 2 },
                                     adjustSession = { sheet = 1 })
-                                NativeDestination.TRAIN -> TrainScreen(openTools = { sheet = 3 })
+                                NativeDestination.TRAIN -> TrainScreen(
+                                    openTools = { sheet = 3 },
+                                    selectedDay = selectedTrainingDay,
+                                    currentPlan = visiblePlan,
+                                    returnToPlan = { selectedTrainingDay = null; section = 2 }
+                                )
                                 NativeDestination.PLAN -> PlanScreen(
                                     currentPlan = visiblePlan,
                                     schemaVerifier = schemaVerifier,
-                                    schemaVerifierLoading = schemaVerifierLoading
+                                    schemaVerifierLoading = schemaVerifierLoading,
+                                    onPreviewDay = { day ->
+                                        selectedTrainingDay = day
+                                        section = NativeDestination.TRAIN.ordinal
+                                    }
                                 )
                                 NativeDestination.INSIGHTS -> InsightsScreen()
                             }

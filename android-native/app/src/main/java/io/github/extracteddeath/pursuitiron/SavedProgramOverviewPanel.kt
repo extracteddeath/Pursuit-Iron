@@ -12,7 +12,10 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
  * It does not show inferred working sets or allow any program/history mutation.
  */
 @Composable
-internal fun SavedProgramOverviewPanel(presentation: ReadOnlyProgramPresentation.Structure) {
+internal fun SavedProgramOverviewPanel(
+    presentation: ReadOnlyProgramPresentation.Structure,
+    onPreviewDay: (String) -> Unit
+) {
     val program = presentation.program
     SectionLabel("Saved program", "Read-only structure")
     PursuitCard(highlighted = true) {
@@ -39,6 +42,9 @@ internal fun SavedProgramOverviewPanel(presentation: ReadOnlyProgramPresentation
                 title = day.label,
                 exerciseCount = day.exerciseIds.size
             )
+            androidx.compose.material3.TextButton(onClick = { onPreviewDay(day.id) }) {
+                Text("View day in Train")
+            }
         }
     }
 }

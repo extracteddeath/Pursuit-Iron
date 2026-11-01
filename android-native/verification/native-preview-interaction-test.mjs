@@ -68,6 +68,7 @@ assert.ok(currentPlanHost.includes('LocalLifecycleOwner.current') &&
   'Personal Plan structure must be ephemeral and cleared after lifecycle changes');
 assert.ok(shell.includes('UnconnectedCurrentReadOnlyPlanSource') &&
   shell.includes('selectedProgramId = if (section == NativeDestination.PLAN.ordinal)') &&
+  shell.includes('selectedTrainingDay?.reference?.programId == activeProgramId') &&
   shell.includes('storeChangeKey = canonicalStoreChangeKey') &&
   shell.includes('currentPlan = visiblePlan') &&
   shell.includes('else ReadOnlyProgramPresentation.Unavailable'),
@@ -179,11 +180,27 @@ assert.ok(screens.includes('currentPlan: ReadOnlyProgramPresentation = ReadOnlyP
   !screens.includes('currentProgramReference:'),
   'The native preview cannot self-authorize guessed program data');
 assert.ok(screens.includes('currentPlan is ReadOnlyProgramPresentation.Structure') &&
-  screens.includes('SavedProgramOverviewPanel(currentPlan)'),
+  screens.includes('SavedProgramOverviewPanel(currentPlan) { dayId ->'),
   'Native Plan accepts only approved read-only structure');
 assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen(') &&
   shell.includes('schemaVerifierLoading = schemaVerifierLoading'),
   'The installable preview must not supply an unverified personal backup');
+const dayJourney = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyTrainingDayJourney.kt', 'utf8'
+);
+const selectedDayUi = fs.readFileSync(root + 'ReadOnlyTrainingDayPanel.kt','utf8');
+assert.ok(dayJourney.includes('selection.reference != program.reference') &&
+  dayJourney.includes('ReadOnlyProgramPresentation.Structure') &&
+  dayJourney.includes('ReadOnlyTrainingDayView.Unavailable') &&
+  screens.includes('ReadOnlyTrainingDayJourney.select(currentPlan, dayId)') &&
+  screens.includes('ReadOnlyTrainingDayJourney.inspect(currentPlan, selectedDay)') &&
+  shell.includes('var selectedTrainingDay by remember {') &&
+  !shell.includes('rememberSaveable { mutableStateOf<ReadOnlyTrainingDaySelection') &&
+  selectedDayUi.includes('ReadOnlyTrainingDayView.Structure') &&
+  selectedDayUi.includes('Workout execution is not connected') &&
+  !selectedDayUi.includes('onCompleteSet') &&
+  !selectedDayUi.includes('logSet('),
+  'Read-only Plan to Train journey must require the same approved revision and disable workout logging');
 assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structure'),
   'Shared saved-program composable must accept only policy-approved structure');
 const sourceContract = fs.readFileSync(

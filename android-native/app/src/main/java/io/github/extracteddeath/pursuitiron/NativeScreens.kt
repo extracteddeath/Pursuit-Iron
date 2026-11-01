@@ -76,13 +76,21 @@ internal fun TodayScreen(
 }
 
 private val demoExercises = listOf("BB bench press", "Chest-supported row", "Romanian deadlift")
+private val sampleLastWeights = intArrayOf(185, 120, 185)
+
+// UI-only draft values. Allocate a fresh array for each change so Compose observes it.
+private fun editPreviewValue(values: IntArray, index: Int, value: Int): IntArray =
+    values.copyOf().also { it[index] = value }
 
 @Composable
 internal fun TrainScreen(openTools: () -> Unit) {
     var exerciseIndex by rememberSaveable { mutableIntStateOf(0) }
-    var weight by rememberSaveable { mutableIntStateOf(185) }
-    var reps by rememberSaveable { mutableIntStateOf(8) }
-    var rir by rememberSaveable { mutableIntStateOf(2) }
+    var sampleWeights by rememberSaveable { mutableStateOf(intArrayOf(185, 120, 185)) }
+    var sampleReps by rememberSaveable { mutableStateOf(intArrayOf(8, 8, 8)) }
+    var sampleRirs by rememberSaveable { mutableStateOf(intArrayOf(2, 2, 2)) }
+    val weight = sampleWeights[exerciseIndex]
+    val reps = sampleReps[exerciseIndex]
+    val rir = sampleRirs[exerciseIndex]
     var focus by rememberSaveable { mutableStateOf(false) }
     var reference by rememberSaveable { mutableStateOf("Last") }
     var rest by rememberSaveable { mutableIntStateOf(90) }
@@ -106,9 +114,6 @@ internal fun TrainScreen(openTools: () -> Unit) {
             demoExercises.forEachIndexed { index, label ->
                 PreviewChoice(label, exerciseIndex == index) {
                     exerciseIndex = index
-                    weight = listOf(185, 120, 185)[index]
-                    reps = 8
-                    rir = 2
                 }
             }
         }
@@ -124,20 +129,24 @@ internal fun TrainScreen(openTools: () -> Unit) {
             }
         }
         Text(
-            if (reference == "Last") "Sample last: 185 lb × 8 · 2 RIR"
+            if (reference == "Last") "Sample last: ${sampleLastWeights[exerciseIndex]} lb × 8 · 2 RIR"
             else "Sample target: 6–10 reps · 2 RIR",
             style = MaterialTheme.typography.bodyMedium
         )
         HorizontalDivider()
         PreviewStepper("Weight", weight.toString() + " lb",
-            subtract = { weight = (weight - 5).coerceAtLeast(0) },
-            add = { weight += 5 })
+            subtract = { sampleWeights = editPreviewValue(sampleWeights, exerciseIndex, (weight - 5).coerceAtLeast(0)) },
+            add = { sampleWeights = editPreviewValue(sampleWeights, exerciseIndex, weight + 5) },
+            canSubtract = weight > 0)
         PreviewStepper("Reps", reps.toString(),
-            subtract = { reps = (reps - 1).coerceAtLeast(0) },
-            add = { reps += 1 })
+            subtract = { sampleReps = editPreviewValue(sampleReps, exerciseIndex, (reps - 1).coerceAtLeast(1)) },
+            add = { sampleReps = editPreviewValue(sampleReps, exerciseIndex, reps + 1) },
+            canSubtract = reps > 1)
         PreviewStepper("RIR", rir.toString(),
-            subtract = { rir = (rir - 1).coerceAtLeast(0) },
-            add = { rir = (rir + 1).coerceAtMost(10) })
+            subtract = { sampleRirs = editPreviewValue(sampleRirs, exerciseIndex, (rir - 1).coerceAtLeast(0)) },
+            add = { sampleRirs = editPreviewValue(sampleRirs, exerciseIndex, (rir + 1).coerceAtMost(10)) },
+            canSubtract = rir > 0,
+            canAdd = rir < 10)
         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
             Text("Complete set · engine not connected")
         }
@@ -157,14 +166,13 @@ internal fun TrainScreen(openTools: () -> Unit) {
             Text("Exercise actions and tools")
         }
     }
-    if (!focus) {
-        OutlinedTextField(value = note, onValueChange = { note = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Session note · temporary demo") },
-            supportingText = { Text("This note exists only in the preview UI; it is not workout history.") },
-            maxLines = 3)
-        Spacer(Modifier.height(4.dp))
-    }
+    // Focus changes only the presentation; the session note remains available.
+    OutlinedTextField(value = note, onValueChange = { note = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Session note · temporary demo") },
+        supportingText = { Text("This note exists only in the preview UI; it is not workout history.") },
+        maxLines = 3)
+    if (!focus) Spacer(Modifier.height(4.dp))
 }
 
 @Composable
@@ -172,6 +180,7 @@ internal fun PlanScreen() {
     var goal by rememberSaveable { mutableStateOf("Hypertrophy") }
     var days by rememberSaveable { mutableIntStateOf(4) }
     var adaptiveSplit by rememberSaveable { mutableStateOf(true) }
+    var adaptiveExercises by rememberSaveable { mutableStateOf(true) }
 
     PageHeading("PROGRAM DESIGN", "Built around your goals.",
         "A native planning journey can replace several old editing screens without losing their controls.")
@@ -191,7 +200,9 @@ internal fun PlanScreen() {
         Text("Days per week", style = MaterialTheme.typography.titleMedium)
         PreviewStepper("Training frequency", days.toString() + " days",
             subtract = { days = (days - 1).coerceAtLeast(3) },
-            add = { days = (days + 1).coerceAtMost(6) })
+            add = { days = (days + 1).coerceAtMost(6) },
+            canSubtract = days > 3,
+            canAdd = days < 6)
         Row(modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
@@ -201,6 +212,16 @@ internal fun PlanScreen() {
                     style = MaterialTheme.typography.bodySmall)
             }
             Switch(checked = adaptiveSplit, onCheckedChange = { adaptiveSplit = it })
+        }
+        Row(modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.weight(1f)) {
+                Text("Adapt exercises between blocks", style = MaterialTheme.typography.titleSmall)
+                Text("Allow equipment-compatible movement changes when authorized.",
+                    style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(checked = adaptiveExercises, onCheckedChange = { adaptiveExercises = it })
         }
         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
             Text("Generate real program · unavailable")

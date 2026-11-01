@@ -17,7 +17,8 @@ import io.github.extracteddeath.pursuitiron.domain.*
 internal fun NativeWorkoutScreen(
     state: NativeRuntimeState,onStart: ()->Unit,
     onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,onFinish: ()->Unit,
-    onCorrect: (JournalSetIntent)->Unit = {}
+    onCorrect: (JournalSetIntent)->Unit = {},
+    onSkipExercise: (Int)->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -47,12 +48,14 @@ internal fun NativeWorkoutScreen(
     var exerciseIndex by rememberSaveable(plan.session.workoutId) { mutableIntStateOf(initial) }
     val exercise=plan.exercises[exerciseIndex.coerceIn(plan.exercises.indices)]
     val committedSlots=journal.completed.map { it.intent.slot }.toSet()
+    val exercisePending=exercise.sets.count { it.slot !in committedSlots }
     val nextUnfinished=plan.exercises.indices.firstOrNull { index->
         index>exerciseIndex && plan.exercises[index].sets.any { it.slot !in committedSlots }
     } ?: plan.exercises.indices.firstOrNull { index->
         index<exerciseIndex && plan.exercises[index].sets.any { it.slot !in committedSlots }
     }
     var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
+    var showSkipExercise by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showLast by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     // Each working set has its own saveable draft even while other exercises
@@ -83,6 +86,25 @@ internal fun NativeWorkoutScreen(
             Text("Warm-up targets",style=MaterialTheme.typography.titleSmall)
             exercise.warmups.forEach { Text(it,style=MaterialTheme.typography.bodyMedium) }
         }
+        if(exercisePending>0 && !journal.isFinished) {
+            OutlinedButton(onClick={showSkipExercise=true},
+                enabled=!state.workoutBusy && !state.historyBusy,
+                modifier=Modifier.fillMaxWidth()) {
+                Text("Skip remaining exercise · $exercisePending sets")
+            }
+        }
+    }
+    if(showSkipExercise) {
+        AlertDialog(
+            onDismissRequest={showSkipExercise=false},
+            title={Text("Skip the rest of ${exercise.name}?")},
+            text={Text("$exercisePending unfinished sets will each be saved as skipped. Completed sets stay unchanged. This does not automatically modify other exercises or your future program.")},
+            confirmButton={Button(onClick={showSkipExercise=false;onSkipExercise(exercise.index)},
+                enabled=exercisePending>0 && !state.workoutBusy && !state.historyBusy && !journal.isFinished) {
+                Text("Skip remaining sets")
+            }},
+            dismissButton={TextButton(onClick={showSkipExercise=false}) { Text("Keep training") }}
+        )
     }
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})

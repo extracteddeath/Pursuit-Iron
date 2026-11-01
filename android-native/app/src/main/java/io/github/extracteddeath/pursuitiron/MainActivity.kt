@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
                     onStartWorkout=runtime::startWorkout,
                     onRecordSet=runtime::recordSet,
                     onCorrectSet=runtime::correctSet,
+                    onSkipExercise=runtime::skipRemainingExercise,
                     onFinishWorkout=runtime::finishWorkout,
                     onCorrectHistory=runtime::correctHistory,
                     onReloadHistory=runtime::reloadHistory,

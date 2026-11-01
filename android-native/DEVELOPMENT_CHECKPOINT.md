@@ -126,6 +126,25 @@ history, workouts or training progression. Added JVM regression coverage for
 both DST changes, a leap month and a skipped date-line calendar day. This
 follow-up requires fresh CI source-only verification; the APK freeze remains.
 
+## Follow-up: confirmed skip of remaining exercise sets
+
+The real native Train workspace now exposes one explicitly confirmed action
+to skip the unfinished sets of the selected exercise. It does not overwrite
+already logged or corrected sets, issue replacement targets, alter the
+exercise roster, or change the next workout. It uses the current canonical
+session journal and appends one acknowledged SKIPPED receipt per unresolved
+slot, including engine-issued myo/drop extension slots. The UI reports only
+persisted receipts, blocks competing actions while writing, and recovers
+partial progress after restart or a failed write. A second invocation skips
+only still-unresolved slots. The existing canonical completion path interprets
+each skip as a skip, not as performed repetitions.
+
+This is a manual interruption workflow, not automatic time trimming or
+injury-aware engine adaptation. The separate session-adjustment controls
+remain demonstrative until canonical policy integration is certified.
+JVM and interaction regression cases were added; verification depends on
+the new commit's CI run. No APK, web, or other native branch changes.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of

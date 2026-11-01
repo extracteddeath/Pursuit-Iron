@@ -104,6 +104,26 @@ assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCou
   train.includes('var rir by rememberSaveable { mutableStateOf("") }') &&
   train.includes('if(journal.isFinished)onFinish() else showFinishReview=true'),
   'The review must not synthesize actual RIR or block an exact retry of a durably finished session');
+// Exercise-level bulk skip is an explicit confirmation and serialized durable
+// journal loop, not multiple optimistic UI taps or a training re-prescription.
+const skipPolicy=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeSessionSkipPolicy.kt','utf8');
+assert.ok(train.includes('var showSkipExercise by rememberSaveable(plan.session.workoutId)') &&
+  train.includes('Text("Skip remaining exercise · $exercisePending sets")') &&
+  train.includes('onSkipExercise(exercise.index)') &&
+  train.includes('Completed sets stay unchanged') &&
+  train.includes('Skip remaining sets') &&
+  activity.includes('onSkipExercise=runtime::skipRemainingExercise') &&
+  shell.includes('onSkipExercise: (Int)->Unit = {}') &&
+  shell.includes('onCorrectSet,onSkipExercise') &&
+  host.includes('fun skipRemainingExercise(exerciseIndex: Int)') &&
+  host.includes('owner.recoverIssuedSession(recovery)') &&
+  host.includes('NativeSessionSkipPolicy.remaining(active.journal,exerciseIndex)') &&
+  host.includes('recovery.recordSet(active.plan.session,active.journal.revision,intent)') &&
+  host.includes('JournalSetDisposition.SKIPPED,null') &&
+  host.includes('it.copy(workout=active,workoutBusy=true)') &&
+  skipPolicy.includes('journal.completed.map { it.intent.slot }.toSet()') &&
+  skipPolicy.includes('journal.slots.filter { it.exerciseIndex==exerciseIndex }'),
+  'Confirmed per-exercise skip saves only unresolved canonical journal slots, one acknowledgement at a time');
 // History navigation comes only from the owned, revision-bound page reader.
 const historyUi=fs.readFileSync(root+'NativeHistoryPanel.kt','utf8');
 const historyFilters=fs.readFileSync(root+'NativeHistoryFilters.kt','utf8');

@@ -251,6 +251,49 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
+    /**
+     * Explicitly confirmed exercise-level skip. This only writes individual
+     * SKIPPED receipts to the existing journal. It cannot re-prescribe a set,
+     * convert a skip into performance or silently change a future workout.
+     *
+     * A crash between receipts retains already-saved skips. Reopening the
+     * same session finds only unresolved slots and can safely retry.
+     */
+    fun skipRemainingExercise(exerciseIndex: Int) {
+        val current=mutable.value;val progress=current.workout ?: return
+        if(current.workoutBusy || current.historyBusy || current.workoutBlocked || progress.journal.isFinished)return
+        if(progress.plan.slots!=progress.journal.slots)return
+        val pending=runCatching {
+            NativeSessionSkipPolicy.remaining(progress.journal,exerciseIndex)
+        }.getOrNull() ?: return
+        if(pending.isEmpty())return
+        val owner=store ?: return;val recovery=journal ?: return
+        mutable.update { it.copy(workoutBusy=true,workoutError=null) }
+        scope.launch {
+            try {
+                var active=checkNotNull(owner.recoverIssuedSession(recovery))
+                check(active.plan.issuedJson==progress.plan.issuedJson &&
+                    active.plan.session==progress.plan.session &&
+                    active.plan.slots==progress.plan.slots)
+                for(slot in NativeSessionSkipPolicy.remaining(active.journal,exerciseIndex)) {
+                    ensureActive()
+                    val intent=JournalSetIntent("skip-"+UUID.randomUUID(),slot,
+                        JournalSetDisposition.SKIPPED,null)
+                    val saved=checkNotNull(recovery.recordSet(active.plan.session,active.journal.revision,intent))
+                    active=NativeWorkoutProgress(active.plan,saved)
+                    // Report only the receipts already confirmed on disk.
+                    mutable.update { it.copy(workout=active,workoutBusy=true) }
+                }
+                mutable.update { it.copy(workout=active,workoutBusy=false,workoutError=null) }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) {
+                val restored=runCatching { owner.recoverIssuedSession(recovery) }.getOrNull()
+                mutable.update { it.copy(workout=restored ?: it.workout,workoutBusy=false,
+                    workoutError="Some skips may have been saved. Check the remaining sets before trying again.") }
+            }
+        }
+    }
+
     fun recordSet(slot: JournalSetSlot,disposition: JournalSetDisposition,values: JournalSetValues?) {
         persistSet(JournalSetIntent("set-"+UUID.randomUUID(),slot,disposition,values))
     }

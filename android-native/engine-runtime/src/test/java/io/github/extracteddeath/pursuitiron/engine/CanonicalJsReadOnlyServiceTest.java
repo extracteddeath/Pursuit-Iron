@@ -61,6 +61,26 @@ public final class CanonicalJsReadOnlyServiceTest {
         }
     }
 
+    @Test public void nativeSchemaRequestCannotHideWritesOrOversizedInput() throws Exception {
+        final String valid = "{\\"protocolVersion\\":1,\\"id\\":\\"schema-1\\"," +
+                "\\"method\\":\\"backupSchemaCheck\\",\\"params\\":{" +
+                "\\"rawSnapshot\\":\\"{\\\\\\"v\\\\\\":13}\\"}}";
+        JSONObject request = CanonicalJsReadOnlyService.checkedBackupSchemaRequest(valid);
+        assertEquals("backupSchemaCheck", request.getString("method"));
+        for (String bad : new String[] {
+                valid.replace("backupSchemaCheck", "deleteHistory"),
+                valid.replace("\\"protocolVersion\\":1","\\"protocolVersion\\":2"),
+                valid.replace("\\"id\\":\\"schema-1\\"","\\"id\\":\\"\\""),
+                valid.replace("\\"rawSnapshot\\":", "\\"history\\":[],\\"rawSnapshot\\":"),
+                valid.replace("\\"params\\":{","\\"params\\":["),
+                valid + "x"
+        }) assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(bad));
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(
+                        valid.replace("{\\\\\\"v\\\\\\":13}", "x".repeat(65537))));
+    }
+
     @Test public void progressionOnlyAndBoundedTransport() throws Exception {
         JSONObject request = CanonicalJsReadOnlyService.checkedPreviewRequest(VALID);
         assertEquals("progressionPreview", request.getString("method"));

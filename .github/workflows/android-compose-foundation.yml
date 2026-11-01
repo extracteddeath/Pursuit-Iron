@@ -20,6 +20,7 @@ jobs:
       - name: Validate canonical engine bridge contract
         run: |
           node android-native/engine-bridge/protocol-test.mjs
+          node android-native/engine-bridge/backup-schema-check-test.mjs
           node android-native/engine-bridge/sandbox-compat-test.mjs
       - name: Verify fixed language-neutral progression fixtures and Kotlin routing contracts
         run: node android-native/engine-contract/contract-parity-test.mjs

@@ -41,3 +41,22 @@ Catalog lookup is next verified in an Android emulator through the existing seri
 The `workoutOutline` diagnostic accepts only `{split,dayIndex}`, with split one of `full_body` (3 days), `upper_lower` (4 days), or `ulppl` (5 days) and a bounded day index. It calls the **canonical** `generateNextProgramForShell` with the fixed, non-user 60-minute configuration already used in standalone parity tests, requires an audited passing engine program and projects exercise order, role, sets, rep bounds, RIR bounds, rest seconds and source duration. It does not include user history, actual plans or weekly load prescriptions. `readOnly` and `syntheticOnly` are both enforced, and the feature remains disconnected from Compose. It is not suitable for suggesting a personal session.
 
 The Kotlin `WorkoutOutlineCodec` and `SandboxWorkoutOutline` adapter preserve generated exercise order, roles, rep bounds, RIR and rest while enforcing `syntheticOnly` and source identity. An emulator test verifies the end-to-end wire and that write-method attempts are blocked. No UI or persistent storage integration has been authorized.
+
+## Canonical backup schema probe (not native import)
+
+A dedicated `backupSchemaCheck` method uses the same canonical
+`parseStoredData` export as the browser, constrained to an explicitly
+version-13, fully shaped source and a **65,536-character input**. The normal
+engine JSON channel retains its 16-KiB limit; the separate schema-only
+channel is capped at 192 KiB. It returns only five collection counts plus
+`readOnly`, `imported:false`, `approvedForWorkoutExecution:false`
+and source/version provenance. It never returns personal records or even
+names. Unknown/write methods cannot enter the larger channel. Both the native
+Java worker and Kotlin decoder independently validate the method, shape,
+bounds and response.
+
+**This is a small-source interoperability proof, not full backup support.**
+Larger backed-up stores and alternative schema versions fail closed.
+The Compose app does not depend on the sandbox module and cannot send a
+selected file to this endpoint. Exact snapshot digest, revision/tombstone
+checks and device lifecycle certification remain separate gates.

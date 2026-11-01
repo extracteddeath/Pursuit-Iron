@@ -133,14 +133,42 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return request;
     }
 
+
+    /**
+     * Canonical v13 schema PROBE only. The incoming bytes must have come from
+     * a deliberately selected, bounded source; this service has no URI access.
+     * Not an importer, persisted revision or permission to display a program.
+     */
+    static JSONObject checkedBackupSchemaRequest(@NonNull String json) throws Exception {
+        Objects.requireNonNull(json);
+        if (json.getBytes(StandardCharsets.UTF_8).length > 196608)
+            throw new IllegalArgumentException("Oversized canonical backup schema probe");
+        JSONObject request = new JSONObject(json);
+        if (request.length() != 4 || request.getInt("protocolVersion") != 1 ||
+                !"backupSchemaCheck".equals(request.get("method")) ||
+                !(request.get("id") instanceof String) ||
+                request.getString("id").isEmpty() || request.getString("id").length() > 128)
+            throw new IllegalArgumentException("Only read-only schema probes are permitted");
+        JSONObject params = request.getJSONObject("params");
+        if (params.length() != 1 || !(params.get("rawSnapshot") instanceof String))
+            throw new IllegalArgumentException("Backup schema probe accepts only rawSnapshot");
+        String raw = params.getString("rawSnapshot");
+        if (raw.isEmpty() || raw.length() > 65536)
+            throw new IllegalArgumentException("Bounded canonical JSON source required");
+        return request;
+    }
+
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request) throws Exception {
         return call(isolate, request, 5);
     }
 
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request,
             long timeoutSeconds) throws Exception {
-        String script = "PursuitIronBridge.dispatchEngineJson(" +
-                JSONObject.quote(request.toString()) + ")";
+        String method = request.getString("method");
+        String entry = "backupSchemaCheck".equals(method)
+                ? "PursuitIronBridge.dispatchBackupSchemaJson"
+                : "PursuitIronBridge.dispatchEngineJson";
+        String script = entry + "(" + JSONObject.quote(request.toString()) + ")";
         String raw = isolate.evaluateJavaScriptAsync(script).get(timeoutSeconds, TimeUnit.SECONDS);
         if (raw.getBytes(StandardCharsets.UTF_8).length > 65536)
             throw new SecurityException("Oversized canonical engine response");
@@ -167,13 +195,14 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 result.getBoolean("engineCertified"))
             throw new SecurityException("Incompatible canonical engine identity");
         JSONArray methods = result.getJSONArray("capabilities");
-        boolean hasPreview = false, hasLookup = false, hasOutline = false;
+        boolean hasPreview = false, hasLookup = false, hasOutline = false, hasSchemaCheck = false;
         for (int i = 0; i < methods.length(); i++) {
             if ("progressionPreview".equals(methods.getString(i))) hasPreview = true;
             if ("exerciseLookup".equals(methods.getString(i))) hasLookup = true;
             if ("workoutOutline".equals(methods.getString(i))) hasOutline = true;
+            if ("backupSchemaCheck".equals(methods.getString(i))) hasSchemaCheck = true;
         }
-        if (!hasPreview || !hasLookup || !hasOutline)
+        if (!hasPreview || !hasLookup || !hasOutline || !hasSchemaCheck)
             throw new SecurityException("Canonical read-only bridge capabilities unavailable");
     }
 
@@ -217,12 +246,17 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return submitReadOnly(requestJson, 2);
     }
 
+    /** Read-only v13 structural probe. No personal backup storage or UI access. */
+    public CompletableFuture<String> checkBackupSchemaAsync(@NonNull String requestJson) {
+        return submitReadOnly(requestJson, 3);
+    }
+
     private CompletableFuture<String> submitReadOnly(
             @NonNull String requestJson, boolean catalog) {
         return submitReadOnly(requestJson, catalog ? 1 : 0);
     }
 
-    /** Request type is local to the service: progression 0, catalog 1, synthetic outline 2. */
+    /** Request mode: progression 0, catalog 1, synthetic outline 2, schema probe 3. */
     private CompletableFuture<String> submitReadOnly(
             @NonNull String requestJson, int mode) {
         final CompletableFuture<String> outcome = new CompletableFuture<>();
@@ -234,7 +268,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         // A bad caller cannot poison an otherwise healthy canonical sandbox.
         final JSONObject validated;
         try {
-            validated = mode == 2
+            validated = mode == 3
+                    ? checkedBackupSchemaRequest(requestJson)
+                    : mode == 2
                     ? checkedSyntheticOutlineRequest(requestJson)
                     : mode == 1
                         ? checkedExerciseLookupRequest(requestJson)
@@ -251,10 +287,19 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 }
                 try {
                     initialize();
-                    JSONObject response = call(isolate, validated, mode == 2 ? 30 : 5);
+                    JSONObject response = call(isolate, validated, mode == 2 ? 30 : mode == 3 ? 12 : 5);
                     if (response.getBoolean("ok")) {
                         JSONObject value = response.getJSONObject("result");
-                        if (mode == 2) {
+                        if (mode == 3) {
+                            if (!value.getBoolean("readOnly") ||
+                                    value.getBoolean("imported") ||
+                                    value.getBoolean("approvedForWorkoutExecution") ||
+                                    value.getInt("storeVersion") != 13 ||
+                                    !"canonical-v13-structure-only".equals(value.getString("validation")) ||
+                                    !"modules/engine-api.js:parseStoredData".equals(
+                                            value.getString("source")))
+                                throw new SecurityException("Canonical schema response cannot grant import");
+                        } else if (mode == 2) {
                             if (!value.getBoolean("readOnly") || !value.getBoolean("syntheticOnly") ||
                                     !"modules/engine-api.js:generateNextProgramForShell".equals(
                                             value.getString("source")))

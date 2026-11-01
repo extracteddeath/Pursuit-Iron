@@ -56,3 +56,16 @@ Invalid read-only requests are rejected on the calling thread **before** startin
 A third method, `syntheticOutlineAsync`, accepts only one of three fixed split choices and a bounded day index. It generates an audited canonical base-workout outline with no athlete data, on the same serial worker. Native-side schema and response provenance are checked independently; the longer 30-second execution timeout applies only to this fixed synthetic operation. This method is not permitted to show personalized prescriptions or update a program.
 
 A dedicated Android instrumentation test exercises `workoutOutline` on the real isolated JavaScriptEngine with the fixed full-body/three-day synthetic profile, verifies audited source provenance, checks the Kotlin typed decoder and read-only flags, and rejects a write-method attempt without poisoning the worker. This check is reserved for explicit emulator milestones; live user programs remain unconnected.
+
+## Isolated canonical v13 schema read (still disconnected)
+
+The serial JavaScript sandbox now has an allowlisted `checkBackupSchemaAsync`
+operation. It is not connected to document-picker results or Compose. The
+Java request gate caps byte size and requires exactly one bounded rawSnapshot
+parameter; the sandbox parses through the canonical JS owner. Only sanitized
+collection counts return, checked again through Kotlin
+`ReadOnlyBackupSchemaCodec`. No filesystem/URI access, source persistence,
+revision reference, history edit or write capability is introduced. Before a
+user backup can be presented, certify actual emulator execution, byte digest
+binding, source lifetime and complete dataset support without arbitrary
+size expansion.

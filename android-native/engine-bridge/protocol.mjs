@@ -3,6 +3,7 @@ import * as canonical from '../../modules/engine-api.js';
 import { canonicalProgressionPreview, validProgressionPreviewParams } from './progression-preview.mjs';
 import { canonicalExerciseLookup, validExerciseLookupParams } from './exercise-lookup.mjs';
 import { canonicalWorkoutOutline, validWorkoutOutlineParams } from './workout-outline.mjs';
+import { canonicalBackupSchemaCheck, validBackupSchemaParams } from './backup-schema-check.mjs';
 
 export const PROTOCOL_VERSION = 1;
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
@@ -50,6 +51,15 @@ export function dispatchEngineRequest(request) {
             return error(id, 'ENGINE_UNAVAILABLE', 'Canonical workout outline unavailable');
         }
     }
+    if (request.method === 'backupSchemaCheck') {
+        if (!validBackupSchemaParams(request.params))
+            return error(id, 'INVALID_REQUEST', 'Invalid bounded canonical backup input');
+        try {
+            return success(id, canonicalBackupSchemaCheck(request.params));
+        } catch {
+            return error(id, 'SCHEMA_REJECTED', 'Canonical v13 backup structure rejected');
+        }
+    }
     if (Object.keys(request.params).length !== 0)
         return error(id, 'INVALID_REQUEST', 'Unexpected method parameters');
     switch (request.method) {
@@ -58,7 +68,7 @@ export function dispatchEngineRequest(request) {
                 protocolVersion: PROTOCOL_VERSION,
                 engineSource: 'modules/engine-api.js',
                 engineCertified: false,
-                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup', 'workoutOutline']
+                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup', 'workoutOutline', 'backupSchemaCheck']
             });
         case 'catalogSummary': {
             if (!Array.isArray(canonical.EXERCISES) || !Array.isArray(canonical.TEMPLATES))
@@ -81,5 +91,23 @@ export function dispatchEngineJson(json) {
         return JSON.stringify(response);
     } catch {
         return JSON.stringify(error(null, 'INVALID_JSON', 'Malformed JSON request'));
+    }
+}
+
+/**
+ * Separate bounded channel because normal engine JSON requests remain 16KiB.
+ * This path has no non-schema actions and returns no source data. Java/Kotlin
+ * also independently cap the byte count before entering an isolate.
+ */
+export function dispatchBackupSchemaJson(json) {
+    if (typeof json !== 'string' || json.length > 196608)
+        return JSON.stringify(error(null, 'INVALID_JSON', 'Oversized read-only schema probe'));
+    try {
+        const request = JSON.parse(json);
+        if (!plain(request) || request.method !== 'backupSchemaCheck')
+            return JSON.stringify(error(null, 'INVALID_REQUEST', 'Schema probe method required'));
+        return JSON.stringify(dispatchEngineRequest(request));
+    } catch {
+        return JSON.stringify(error(null, 'INVALID_JSON', 'Malformed schema probe request'));
     }
 }

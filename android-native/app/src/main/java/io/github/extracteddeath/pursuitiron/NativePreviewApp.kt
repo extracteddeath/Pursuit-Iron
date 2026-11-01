@@ -60,7 +60,7 @@ private enum class NativeDestination(val title: String, val icon: ImageVector) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NativePreviewApp(schemaVerifier: CanonicalBackupSchemaVerifier? = null) {
+internal fun NativePreviewApp(schemaVerifier: CanonicalBackupSchemaVerifier? = null) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
     var readiness by rememberSaveable { mutableStateOf("Normal") }

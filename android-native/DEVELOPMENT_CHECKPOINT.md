@@ -60,11 +60,17 @@ active workout. Row buttons and the correction sheet use the same distinct
 working-set or numbered myo/drop label. Canonical correction decoding also
 checks the requested operation and prior-entry identity before publication.
 
-The correction pass is committed locally. GitHub publication remains pending:
-automatic approval review rejected the source push because direct user
-authorization for `extracteddeath/Pursuit-Iron`, branch
-`architecture/android-compose-foundation`, could not be verified. The remote
-has not received this correction pass; no CI result for it is claimed.
+## Publication boundary
+
+The user explicitly approved publishing the correction commits to
+`extracteddeath/Pursuit-Iron`, branch `architecture/android-compose-foundation`,
+on the condition that the other programmer's native app and the web app stay
+unchanged. Publication is limited to this development branch. Preserve every
+other branch, including `main`, `native-app` and `native-smoke`; do not merge,
+deploy or produce an APK. The live GitHub Pages deployment is sourced from
+`main`. Branch heads and live index/service-worker/app/records bytes are checked
+before and after publication. The verification results above are local results;
+GitHub CI results must be checked independently for the pushed revision.
 
 ## Next work
 

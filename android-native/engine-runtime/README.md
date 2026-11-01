@@ -30,3 +30,7 @@ sandbox support and parity remain **unverified**.
 The independent `Canonical Android engine JS bundle proof` workflow produces a disposable, version-pinned IIFE from `engine-bridge/protocol.mjs`. A verified bundle SHA-256 is only a packaging identity, not engine approval. The Android module still requires actual on-device handshake and all golden progression cases before the gateway can become eligible.
 
 The APK-free module workflow now also runs local Java unit tests for bundle byte integrity, malformed hashes, zero-length payloads and non-ASCII input. The tests cannot establish real Android sandbox support or on-device execution; those are explicit future gates.
+
+## On-device proof (manual milestone)
+
+Run `Android sandbox on-device engine proof (manual)` only when testing a real runtime milestone. The workflow exports and parity-verifies the canonical engine closure, produces an esbuild IIFE, packages the exact script with its SHA-256 as **temporary instrumentation-test assets**, then boots a disposable Android emulator and runs `:engine-runtime:connectedDebugAndroidTest`. The test checks actual sandbox support and an actual read-only `handshake`. If unsupported on an emulator, the test **fails** rather than pretending native execution has succeeded. No production APK artifact or user data is involved. Passing does not yet certify progression-output parity or reliable interruption recovery.

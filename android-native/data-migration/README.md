@@ -59,3 +59,15 @@ lifecycle refresh, access controls, privacy review and full device acceptance.
 The app does not call this code, show personal data, store the snapshot or
 unlock workout execution. Do not use this diagnostic payload to drive
 prescriptions or analytics.
+
+## Read-only native Plan presentation gate
+
+A separate Kotlin `ReadOnlyProgramPresentationPolicy` checks the DTO against
+an independently provided current reference and tombstone clock. Only its
+`Structure` result may reach the shared `SavedProgramOverviewPanel` Compose
+component, which shows the saved plan name, goal, weeks and day/exercise counts
+without guessing exercise labels or training prescriptions. The installed
+preview supplies no source or current-reference evidence, so `PlanScreen`
+continues to show the explicitly illustrative `WorkoutOutlinePanel(null)`.
+This is **not** device data-import certification. The future authoritative
+data-source adapter must verify the current store on each display/resume.

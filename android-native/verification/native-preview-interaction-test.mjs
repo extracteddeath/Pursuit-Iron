@@ -94,9 +94,11 @@ assert.ok(screens.includes('BackupCopyScreeningPanel(verifier = schemaVerifier, 
 assert.ok(screening.includes('ActivityResultContracts.OpenDocument()'),
   'Android document picker requires user selection');
 assert.ok(screening.includes('withContext(Dispatchers.IO)') &&
-  screening.includes('ReadOnlyBackupScreening.fingerprint(source)'),
-  'Fingerprint-only selection must remain available with no backend');
-assert.ok(screening.includes('ReadOnlyBackupCandidateReader.screen(source)') &&
+  screening.includes('ReadOnlyBackupScreening.fingerprint(') &&
+  screening.includes('checkActive = { job.ensureActive() }'),
+  'Fingerprint-only selection must remain available and cancellable with no backend');
+assert.ok(screening.includes('ReadOnlyBackupCandidateReader.screen(') &&
+  (screening.match(/checkActive = \\{ job\\.ensureActive\\(\\) \\}/g) || []).length === 2 &&
   screening.includes('screening.bytes.fill(0)') &&
   screening.includes('verifier!!.inspect('),
   'Explicit small-source schema selection must use bounded intake, no persistent bytes');

@@ -39,6 +39,7 @@ const cases=[
   p=>{p.days=[...Array(8)].map((_,i)=>({id:'day-'+i,label:'Day',exercises:[]}))},
   p=>{p.weeks=105},
   p=>{p.days[0].label=''},
+  p=>{p.name='Control\u0085inside'},
   p=>{p.custom='true'}
 ];
 for(const alter of cases) {

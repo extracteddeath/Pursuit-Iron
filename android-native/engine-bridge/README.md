@@ -23,3 +23,5 @@ An experimental unconnected Android library lives in `android-native/engine-runt
 ## CI-only offline single-file bundle
 
 `.github/workflows/android-engine-bundle.yml` now bundles the real read-only canonical bridge with **esbuild 0.28.2**. The output is a single IIFE named `PursuitIronBridge`; CI checks its syntax, source module dependencies, import closure, maximum byte size and SHA-256. The ephemeral bundle is not committed, not connected to Android UI and is not an APK. Bundling success is a prerequisite for actual AndroidX JS sandbox execution; it is **not** proof of on-device parity.
+
+**Source ownership tightened:** the bundle workflow now first exports the exact canonical engine dependency snapshot, verifies its file hashes and standalone parity, and copies only the two read-only bridge entry files into that temporary tree. esbuild reads exclusively from this verified snapshot; its input metadata is checked against the canonical manifest. This avoids accidentally bundling unreviewed production-web files from the working checkout. The result remains a disposable, unconnected test artifact.

@@ -33,16 +33,25 @@ jobs:
         run: |
           node android-native/engine-bridge/protocol-test.mjs
           node android-native/engine-contract/contract-parity-test.mjs
-      - name: Produce disposable offline JavaScript IIFE with pinned esbuild
+      - name: Export and verify exact canonical JS runtime closure
         run: |
           temp="$(mktemp -d)"
           echo "BUNDLE_PROOF_DIR=$temp" >> "$GITHUB_ENV"
-          npx --yes esbuild@0.28.2 android-native/engine-bridge/protocol.mjs \
+          node engine-lab/canonical-export.mjs "$temp"
+          node "$temp/scripts/verify-snapshot.mjs"
+          node engine-lab/verify-parity.mjs "$temp"
+          node android-native/engine-contract/snapshot-identity.mjs "$temp"
+          mkdir -p "$temp/android-native/engine-bridge"
+          cp android-native/engine-bridge/protocol.mjs "$temp/android-native/engine-bridge/protocol.mjs"
+          cp android-native/engine-bridge/progression-preview.mjs "$temp/android-native/engine-bridge/progression-preview.mjs"
+      - name: Produce disposable IIFE from the verified snapshot (pinned esbuild)
+        run: |
+          npx --yes esbuild@0.28.2 "$BUNDLE_PROOF_DIR/android-native/engine-bridge/protocol.mjs" \
             --bundle --format=iife --platform=browser --target=es2020 \
             --global-name=PursuitIronBridge --legal-comments=none \
-            --metafile="$temp/metafile.json" --outfile="$temp/engine.js"
-      - name: Check offline bundle, source imports, syntax and digest
+            --metafile="$BUNDLE_PROOF_DIR/metafile.json" --outfile="$BUNDLE_PROOF_DIR/engine.js"
+      - name: Check offline bundle, canonical source closure, syntax and digest
         run: |
           node --check "$BUNDLE_PROOF_DIR/engine.js"
           node android-native/engine-bridge/verify-bundle-structure.mjs \
-            "$BUNDLE_PROOF_DIR/engine.js" "$BUNDLE_PROOF_DIR/metafile.json"
+            "$BUNDLE_PROOF_DIR/engine.js" "$BUNDLE_PROOF_DIR/metafile.json" "$BUNDLE_PROOF_DIR"

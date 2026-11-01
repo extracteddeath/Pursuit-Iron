@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const [bundleFile, metaFile] = process.argv.slice(2);
-assert.ok(bundleFile && metaFile && process.argv.length === 4,
-  'Usage: node verify-bundle-structure.mjs <bundle-file> <esbuild-metafile>');
+const [bundleFile, metaFile, snapshotRoot] = process.argv.slice(2);
+assert.ok(bundleFile && metaFile && snapshotRoot && process.argv.length === 5,
+  'Usage: node verify-bundle-structure.mjs <bundle-file> <esbuild-metafile> <verified-snapshot>');
 const raw = fs.readFileSync(bundleFile);
 assert.ok(raw.length >= 1000 && raw.length <= 12 * 1024 * 1024,
   'Canonical offline bundle exceeds expected byte limits');
@@ -13,6 +13,21 @@ const bundle = raw.toString('utf8');
 const metadata = JSON.parse(fs.readFileSync(metaFile,'utf8'));
 assert.ok(typeof metadata.inputs === 'object' && typeof metadata.outputs === 'object');
 const sources = Object.keys(metadata.inputs).map(p => p.replaceAll('\\','/'));
+const coverage = JSON.parse(fs.readFileSync(path.join(snapshotRoot, 'coverage.json'),'utf8'));
+assert.equal(coverage.entryRoot, 'modules/engine-api.js');
+const allowedCanonical = new Set(coverage.canonicalRuntimeFiles);
+const allowedBridge = new Set([
+  'android-native/engine-bridge/protocol.mjs',
+  'android-native/engine-bridge/progression-preview.mjs'
+]);
+for (const source of sources) {
+  const modulePos = source.lastIndexOf('/modules/');
+  const bridgePos = source.lastIndexOf('/android-native/engine-bridge/');
+  const normalized = modulePos >= 0 ? source.slice(modulePos + 1)
+    : bridgePos >= 0 ? source.slice(bridgePos + 1) : source;
+  assert.ok(allowedCanonical.has(normalized) || allowedBridge.has(normalized),
+    'Bundler imported a source outside the verified canonical runtime: ' + normalized);
+}
 assert.ok(sources.some(p => p.endsWith('/modules/engine-api.js') ||
   p === 'modules/engine-api.js'), 'Canonical engine entry not in bundled imports');
 assert.ok(sources.some(p => p.endsWith('/modules/next-engine/performance.js') ||

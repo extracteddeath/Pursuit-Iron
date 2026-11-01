@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.o
 import com.pursuitiron.app.ui.common.has
@@ -151,7 +152,7 @@ fun LibraryScreen(vm: AppViewModel) {
             val tileShape = listOf(CircleShape, RoundedCornerShape(14.dp), RoundedCornerShape(14.dp, 14.dp, 14.dp, 4.dp))[g]
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(40.dp).clip(tileShape).background(tileBg), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(40.dp).clip(tileShape).background(tileBg).clearAndSetSemantics { }, contentAlignment = Alignment.Center) { // decoration: the row reads its name
                     Text(x.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleSmall, color = tileFg)
                 }
                 Column(Modifier.weight(1f)) {
@@ -189,7 +190,7 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             val g = (listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core").indexOf(e.s("group")).coerceAtLeast(0)) % 3
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Box(Modifier.size(56.dp).clip(listOf(CircleShape, RoundedCornerShape(16.dp), RoundedCornerShape(16.dp, 16.dp, 16.dp, 5.dp))[g])
-                    .background(listOf(cs.tertiaryContainer, cs.primaryContainer, cs.secondaryContainer)[g]), contentAlignment = Alignment.Center) {
+                    .background(listOf(cs.tertiaryContainer, cs.primaryContainer, cs.secondaryContainer)[g]).clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
                     Text(e.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                         color = listOf(cs.onTertiaryContainer, cs.onPrimaryContainer, cs.onSecondaryContainer)[g])
                 }

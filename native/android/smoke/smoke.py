@@ -1224,7 +1224,12 @@ def a11y_pass():
         seen = {}
         for k in range(3):
             shot(f"a11y-{nm}-{k}")
-            for n in nodes():
+            ns = list(nodes())
+            # The workout bar and the tab bar cover the list's bottom: rows reaching them are cut off, not small.
+            floor = min([int(re.findall(r"\d+", m.get("bounds", "0,0,0,0"))[1]) for m in ns
+                         if re.match(r"^(WORKOUT IN PROGRESS|Today|Plan|Progress|Exercises|You)$", m.get("text") or "")
+                         and len(re.findall(r"\d+", m.get("bounds", ""))) == 4 and int(re.findall(r"\d+", m.get("bounds"))[1]) > screen_h // 2] or [screen_h])
+            for n in ns:
                 if n.get("clickable") != "true" or n.get("package") != PKG:
                     continue
                 b = re.findall(r"\d+", n.get("bounds", ""))
@@ -1234,7 +1239,7 @@ def a11y_pass():
                 w, h = (x2 - x1) / dpx, (y2 - y1) / dpx
                 lab = label_of(n)
                 # Touching an edge of the screen or the bars: not the control's real size or label.
-                if y1 <= 40 * dpx or y2 >= screen_h - 100 * dpx or x1 <= 0 or x2 >= sw - 1:
+                if y1 <= 40 * dpx or y2 >= min(screen_h - 100 * dpx, floor - 8 * dpx) or x1 <= 0 or x2 >= sw - 1:
                     continue
                 if not lab:
                     issues.append(f"{nm}: unlabelled control {int(w)}x{int(h)}dp at {x1},{y1}")

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const root='android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/';
 const ui=fs.readFileSync(root+'NativeOnboardingScreen.kt','utf8');
+const screens=fs.readFileSync(root+'NativeScreens.kt','utf8');
 const host=fs.readFileSync(root+'NativeRuntimeHost.kt','utf8');
 const activity=fs.readFileSync(root+'MainActivity.kt','utf8');
 const shell=fs.readFileSync(root+'NativePreviewApp.kt','utf8');

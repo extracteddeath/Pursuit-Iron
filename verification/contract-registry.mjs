@@ -80,6 +80,7 @@ export const contractGroups = Object.freeze({
         'plan-fixed-utility-owner-test.mjs',
         'css-cascade-owner-inventory-test.mjs',
         'css-adjacent-owner-merge-test.mjs',
+        'css-superseded-priority-retirement-test.mjs',
         'plan-choice-ownership-test.mjs',
         'ui-ownership-test.mjs',
         'b960-static-presentation-test.mjs',

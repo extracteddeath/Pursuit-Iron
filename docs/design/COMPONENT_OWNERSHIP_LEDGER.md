@@ -119,3 +119,13 @@ adoption, not visual unification yet: these metrics intentionally keep their
 current surface selectors pending later theme and responsive parity audit.
 The shared ownership source report now tracks metric calls by screen. Browser
 parity and Android acceptance remain required before merge or release.
+
+B1019 proven CSS ownership retirement: removed superseded same-specificity
+important borders from the selected wizard option (R5), a duplicated exercise
+detail selector in the early Library/Exercise shared surface rule, and the
+old R20 exercise-detail header paint superseded by R11. All later priority
+owners and existing media scopes are retained. CSS fell 656,982 → 656,702
+characters (−280) and important declarations 2,019 → 2,016 (−3) with no JSX,
+React, palette token, or engine changes. The new source contract verifies
+ownership and preserved properties. Verify browser computed states across
+the selected wizard and Exercise Detail views before promoting this pass.

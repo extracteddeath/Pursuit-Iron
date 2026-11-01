@@ -1765,8 +1765,6 @@ display:block!important;
     border-color 170ms var(--pi-ease),transform 180ms var(--pi-r4-spring-ease)!important;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option[aria-pressed="true"]{
-  border-radius:14px 29px 29px 29px!important;
-  border-color:var(--pi-r5-stroke)!important;
   background-image:none!important;
 }
 #root[data-pi-motion="expressive"] .wpb-wizard.wpb-wizard.wpb-wizard .wpb-wizard-option:active{
@@ -2057,8 +2055,7 @@ display:block!important;
 }
 /* The primary page headers are solid tonal containers that become quieter
    with the existing real scroll state, without adding screen height. */
-#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header,
-#root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail .wpb-exercise-detail-header{
+#root[data-pi-motion="expressive"] .wpb-library.wpb-library.wpb-library .wpb-library-header{
   background-image:none!important;
   background-color:var(--pi-m3e-surface-container)!important;
 }
@@ -2743,11 +2740,6 @@ display:block!important;
   gap:10px!important;
   padding-top:calc(env(safe-area-inset-top) + 9px)!important;
   padding-bottom:10px!important;
-
-
-  background-color:var(--wpb-focus-bg,#110c15)!important;
-
-
 }
 #root[data-pi-motion="expressive"] .wpb-exercise-detail.wpb-exercise-detail.wpb-exercise-detail
   .wpb-exercise-detail-header>div:last-child{

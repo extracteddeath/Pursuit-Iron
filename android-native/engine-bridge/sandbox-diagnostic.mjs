@@ -1,7 +1,9 @@
+import {installCanonicalSandboxCompat} from './sandbox-compat.mjs';
 // DEBUG-ONLY Android instrumentation helper. Never ship in native app assets.
 // Accepts only the local synthetic fixed fixture input, no data writes.
 import { canonicalProgressionPreview, validProgressionPreviewParams } from './progression-preview.mjs';
 export function diagnoseProgressionJson(json) {
+  installCanonicalSandboxCompat();
   try {
     if (typeof json !== 'string' || json.length > 16384)
       return JSON.stringify({state:'INVALID_DIAGNOSTIC_INPUT'});

@@ -18,7 +18,9 @@ assert.equal(coverage.entryRoot, 'modules/engine-api.js');
 const allowedCanonical = new Set(coverage.canonicalRuntimeFiles);
 const allowedBridge = new Set([
   'android-native/engine-bridge/protocol.mjs',
-  'android-native/engine-bridge/progression-preview.mjs'
+  'android-native/engine-bridge/progression-preview.mjs',
+  'android-native/engine-bridge/android-entry.mjs',
+  'android-native/engine-bridge/sandbox-compat.mjs'
 ]);
 for (const source of sources) {
   const modulePos = source.lastIndexOf('/modules/');
@@ -39,7 +41,7 @@ assert.equal(artifacts.length,1,'Unexpected output artifacts');
 const [,entry] = artifacts[0];
 assert.ok(Array.isArray(entry.entryPoint) === false &&
   typeof entry.entryPoint === 'string' &&
-  entry.entryPoint.endsWith('protocol.mjs'), 'Incorrect JS bundle entry');
+  entry.entryPoint.endsWith('android-entry.mjs'), 'Incorrect JS bundle entry');
 assert.ok(Object.keys(entry.imports ?? {}).length === 0,
   'Bundle may not import unbundled code');
 assert.ok(bundle.includes('PursuitIronBridge'),
@@ -53,7 +55,7 @@ console.log(JSON.stringify({
   bundleVerified: true,
   apkBuilt: false,
   androidExecutionCertified: false,
-  entry: 'android-native/engine-bridge/protocol.mjs',
+  entry: 'android-native/engine-bridge/android-entry.mjs',
   bytes: raw.length,
   inputModules: sources.length,
   bundleSha256: sha256

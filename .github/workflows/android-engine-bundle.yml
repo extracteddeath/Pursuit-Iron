@@ -32,6 +32,7 @@ jobs:
       - name: Confirm existing canonical protocol and fixture behavior
         run: |
           node android-native/engine-bridge/protocol-test.mjs
+          node android-native/engine-bridge/sandbox-compat-test.mjs
           node android-native/engine-contract/contract-parity-test.mjs
       - name: Export and verify exact canonical JS runtime closure
         run: |
@@ -44,9 +45,11 @@ jobs:
           mkdir -p "$temp/android-native/engine-bridge"
           cp android-native/engine-bridge/protocol.mjs "$temp/android-native/engine-bridge/protocol.mjs"
           cp android-native/engine-bridge/progression-preview.mjs "$temp/android-native/engine-bridge/progression-preview.mjs"
+          cp android-native/engine-bridge/android-entry.mjs "$temp/android-native/engine-bridge/android-entry.mjs"
+          cp android-native/engine-bridge/sandbox-compat.mjs "$temp/android-native/engine-bridge/sandbox-compat.mjs"
       - name: Produce disposable IIFE from the verified snapshot (pinned esbuild)
         run: |
-          npx --yes esbuild@0.28.2 "$BUNDLE_PROOF_DIR/android-native/engine-bridge/protocol.mjs" \
+          npx --yes esbuild@0.28.2 "$BUNDLE_PROOF_DIR/android-native/engine-bridge/android-entry.mjs" \
             --bundle --format=iife --platform=browser --target=es2020 \
             --global-name=PursuitIronBridge --legal-comments=none \
             --metafile="$BUNDLE_PROOF_DIR/metafile.json" --outfile="$BUNDLE_PROOF_DIR/engine.js"

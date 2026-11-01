@@ -18,7 +18,9 @@ jobs:
         with:
           node-version: '22'
       - name: Validate canonical engine bridge contract
-        run: node android-native/engine-bridge/protocol-test.mjs
+        run: |
+          node android-native/engine-bridge/protocol-test.mjs
+          node android-native/engine-bridge/sandbox-compat-test.mjs
       - name: Verify fixed language-neutral progression fixtures and Kotlin routing contracts
         run: node android-native/engine-contract/contract-parity-test.mjs
       - name: Reject drifted or untrusted canonical engine snapshots

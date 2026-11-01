@@ -50,8 +50,10 @@ jobs:
           mkdir -p "$snapshot/android-native/engine-bridge"
           cp android-native/engine-bridge/protocol.mjs "$snapshot/android-native/engine-bridge/"
           cp android-native/engine-bridge/progression-preview.mjs "$snapshot/android-native/engine-bridge/"
+          cp android-native/engine-bridge/android-entry.mjs "$snapshot/android-native/engine-bridge/"
+          cp android-native/engine-bridge/sandbox-compat.mjs "$snapshot/android-native/engine-bridge/"
           mkdir -p android-native/engine-runtime/src/androidTest/assets
-          npx --yes esbuild@0.28.2 "$snapshot/android-native/engine-bridge/protocol.mjs" \
+          npx --yes esbuild@0.28.2 "$snapshot/android-native/engine-bridge/android-entry.mjs" \
             --bundle --format=iife --platform=browser --target=es2020 \
             --global-name=PursuitIronBridge --legal-comments=none \
             --outfile=android-native/engine-runtime/src/androidTest/assets/canonical-engine.js
@@ -68,6 +70,7 @@ jobs:
           sha256sum android-native/engine-runtime/src/androidTest/assets/sandbox-diagnostic.js \
             | cut -d' ' -f1 > android-native/engine-runtime/src/androidTest/assets/sandbox-diagnostic.sha256
           node android-native/engine-contract/contract-parity-test.mjs
+          node android-native/engine-bridge/sandbox-compat-test.mjs
       - name: Allow Linux Android emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \

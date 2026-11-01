@@ -203,26 +203,18 @@ internal fun PlanScreen() {
             add = { days = (days + 1).coerceAtMost(6) },
             canSubtract = days > 3,
             canAdd = days < 6)
-        Row(modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) {
-                Text("Adapt the training split", style = MaterialTheme.typography.titleSmall)
-                Text("Future cycles may change frequency when authorized.",
-                    style = MaterialTheme.typography.bodySmall)
-            }
-            Switch(checked = adaptiveSplit, onCheckedChange = { adaptiveSplit = it })
-        }
-        Row(modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) {
-                Text("Adapt exercises between blocks", style = MaterialTheme.typography.titleSmall)
-                Text("Allow equipment-compatible movement changes when authorized.",
-                    style = MaterialTheme.typography.bodySmall)
-            }
-            Switch(checked = adaptiveExercises, onCheckedChange = { adaptiveExercises = it })
-        }
+        PreviewSettingSwitch(
+            title = "Adapt the training split",
+            description = "Future cycles may change frequency when authorized.",
+            checked = adaptiveSplit,
+            onCheckedChange = { adaptiveSplit = it }
+        )
+        PreviewSettingSwitch(
+            title = "Adapt exercises between blocks",
+            description = "Allow equipment-compatible movement changes when authorized.",
+            checked = adaptiveExercises,
+            onCheckedChange = { adaptiveExercises = it }
+        )
         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
             Text("Generate real program · unavailable")
         }

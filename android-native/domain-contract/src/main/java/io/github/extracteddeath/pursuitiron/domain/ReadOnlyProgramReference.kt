@@ -20,12 +20,14 @@ data class ReadOnlyProgramReference(
 /** Refuse rather than silently resolve a different revision or deleted program. */
 object ReadOnlyProgramReferenceGate {
     const val SUPPORTED_STORE_VERSION = 13
+    private const val MAX_EXACT_JS_INTEGER = 9_007_199_254_740_991L
+    private val programIdPattern = Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
     private val digestPattern = Regex("^[0-9a-f]{64}$")
+    private fun validClock(value: Long): Boolean = value in 0..MAX_EXACT_JS_INTEGER
 
     private fun wellFormed(ref: ReadOnlyProgramReference): Boolean =
-        ref.programId.isNotBlank() && ref.programId.length <= 128 &&
-            ref.programId.none { it.isISOControl() } &&
-            ref.programUpdatedAt >= 0 && ref.storeSavedAt >= 0 &&
+        programIdPattern.matches(ref.programId) &&
+            validClock(ref.programUpdatedAt) && validClock(ref.storeSavedAt) &&
             ref.storeVersion == SUPPORTED_STORE_VERSION &&
             digestPattern.matches(ref.snapshotSha256)
 
@@ -40,7 +42,7 @@ object ReadOnlyProgramReferenceGate {
     ): Boolean {
         if (!wellFormed(requested) || !wellFormed(current)) return false
         if (currentTombstoneAt != null &&
-            (currentTombstoneAt < 0 ||
+            (!validClock(currentTombstoneAt) ||
                 currentTombstoneAt >= current.programUpdatedAt)) return false
         return requested == current
     }

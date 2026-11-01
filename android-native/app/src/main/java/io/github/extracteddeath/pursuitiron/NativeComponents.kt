@@ -7,11 +7,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -91,24 +95,39 @@ internal fun PreviewChoice(label: String, selected: Boolean, onClick: () -> Unit
 
 @Composable
 internal fun PreviewStepper(
-    title: String, value: String, subtract: () -> Unit, add: () -> Unit
+    title: String,
+    value: String,
+    subtract: () -> Unit,
+    add: () -> Unit,
+    canSubtract: Boolean = true,
+    canAdd: Boolean = true
 ) {
-    Row(modifier = Modifier.fillMaxWidth(),
+    Row(
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold)
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         }
-        FilledTonalButton(
-            onClick = subtract, modifier = Modifier.widthIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp)
-        ) { Text("−", style = MaterialTheme.typography.titleMedium) }
-        FilledTonalButton(
-            onClick = add, modifier = Modifier.widthIn(min = 48.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp)
-        ) { Text("+", style = MaterialTheme.typography.titleMedium) }
+        FilledTonalIconButton(
+            onClick = subtract,
+            enabled = canSubtract,
+            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+        ) {
+            Icon(Icons.Outlined.Remove, contentDescription = "Decrease $title")
+        }
+        FilledTonalIconButton(
+            onClick = add,
+            enabled = canAdd,
+            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+        ) {
+            Icon(Icons.Outlined.Add, contentDescription = "Increase $title")
+        }
     }
 }

@@ -44,9 +44,12 @@ internal fun NativeWorkoutScreen(
         index<exerciseIndex && plan.exercises[index].sets.any { it.slot !in committedSlots }
     }
     var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
+    var showLast by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     PageHeading("WEEK ${plan.session.weekIndex}",plan.dayLabel,plan.programName)
     Text("${journal.completed.size} of ${plan.slots.size} working sets saved · ${plan.session.unit}",
         style=MaterialTheme.typography.titleMedium)
+    LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size},
+        modifier=Modifier.fillMaxWidth())
     Text("Completed and skipped sets are saved on this device. You can leave and resume this workout.",
         style=MaterialTheme.typography.bodySmall)
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -64,10 +67,14 @@ internal fun NativeWorkoutScreen(
             exercise.warmups.forEach { Text(it,style=MaterialTheme.typography.bodyMedium) }
         }
     }
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})
+        FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
+    }
     exercise.sets.forEach { set->
         val commit=journal.completed.find { it.intent.slot==set.slot }
         key(plan.session.workoutId,set.slot.exerciseIndex,set.slot.setIndex) {
-            NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,onRecord)
+            NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord)
         }
     }
     if(nextUnfinished!=null)FilledTonalButton(onClick={exerciseIndex=nextUnfinished},
@@ -99,7 +106,7 @@ internal fun NativeWorkoutScreen(
 
 @Composable
 private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,commit: JournalSetCommit?,busy: Boolean,
-    onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit) {
+    showLast: Boolean,onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit) {
     var load by rememberSaveable { mutableStateOf(set.load) }
     var reps by rememberSaveable { mutableStateOf(set.reps) }
     // Optional actual effort starts empty, independently of the prescribed RIR.
@@ -119,8 +126,9 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
     }
     PursuitCard {
         Text("Set ${set.slot.setIndex+1}",style=MaterialTheme.typography.titleMedium)
-        Text("Target: ${set.targetReps} reps" + (set.targetRir?.let { " · $it RIR" } ?: ""))
-        set.last?.let { Text("Last time: $it",style=MaterialTheme.typography.bodySmall) }
+        if(showLast)Text(set.last?.let { "Last time: $it" } ?: "No previous result for this set",
+            style=MaterialTheme.typography.bodySmall)
+        else Text("Target: ${set.targetReps} reps" + (set.targetRir?.let { " · $it RIR" } ?: ""))
         if(commit!=null) {
             if(commit.intent.disposition==JournalSetDisposition.SKIPPED)Text("Skipped · saved")
             else commit.intent.values?.let { value->

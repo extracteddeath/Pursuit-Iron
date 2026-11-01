@@ -87,7 +87,7 @@ public final class CanonicalJsReadOnlyServiceTest {
         assertThrows(Exception.class,
                 () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(hiddenWrite.toString()));
         JSONObject oversized = new JSONObject(good.toString());
-        oversized.getJSONObject("params").put("rawSnapshot", "x".repeat(65537));
+        oversized.getJSONObject("params").put("rawSnapshot", "x".repeat(io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupLimits.MAX_SOURCE_BYTES + 1));
         assertThrows(Exception.class,
                 () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(oversized.toString()));
     }

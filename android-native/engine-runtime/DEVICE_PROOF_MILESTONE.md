@@ -120,3 +120,14 @@ A passing test does **not** establish that an offline backup is the user's
 current Plan, and does not authorize import, history restoration or native
 training. Device proof builds only disposable instrumentation APKs in CI,
 not a distributable UI APK.
+
+## Milestone 9 — complete, bounded 1 MiB source path on API 36
+
+The read-only schema and saved-program inventory channels now accept exact
+user-selected source copies up to **1 MiB** (previously 128 KiB), with
+independent 4 MiB encoded request caps, strict UTF-8 source validation and
+a 50 MiB fingerprint-only fallback. Verify in real AndroidX isolated V8
+with an invented canonical v13 snapshot containing over 200 KiB of synthetic
+private history, invoke both allowlisted methods, validate through the
+strict Kotlin codecs, prove that private history never escapes, and close
+the sandbox. No live files, imports, workouts or distributable APK.

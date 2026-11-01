@@ -202,6 +202,73 @@ public final class CanonicalJsSandboxInstrumentedTest {
     }
 
 
+    @Test public void enlargedReadOnlyBackupWindowAcceptsWholeSyntheticSource()
+            throws Exception {
+        Context context = InstrumentationRegistry.getInstrumentation().getContext();
+        Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        byte[] bundle = asset(context, "canonical-engine.js");
+        String pin = new String(asset(context, "canonical-engine.sha256"),
+                StandardCharsets.UTF_8).trim();
+        CanonicalJsReadOnlyService worker = new CanonicalJsReadOnlyService(app, bundle, pin);
+        try {
+            // Larger than the former 128-KiB ceiling, but deliberately not a
+            // real backup. The private marker must never enter either result.
+            String largePrivateNote = "synthetic-private-" + "x".repeat(200 * 1024);
+            JSONObject snapshot = new JSONObject()
+                    .put("v",13).put("savedAt",100)
+                    .put("saved",new org.json.JSONArray().put(new JSONObject()
+                            .put("id","synthetic-program")
+                            .put("name","Invented test program")
+                            .put("updatedAt",42)
+                            .put("days",new org.json.JSONArray().put(new JSONObject()
+                                    .put("id","day-1").put("label","Upper")
+                                    .put("exercises",new org.json.JSONArray())))))
+                    .put("history",new org.json.JSONArray().put(
+                            new JSONObject().put("id","synthetic-history")
+                                    .put("note",largePrivateNote)))
+                    .put("cycles",new org.json.JSONArray())
+                    .put("custom",new org.json.JSONArray())
+                    .put("gyms",new org.json.JSONArray())
+                    .put("tombs",new JSONObject())
+                    .put("perf",new JSONObject());
+            String source = snapshot.toString();
+            assertTrue(source.getBytes(StandardCharsets.UTF_8).length > 128 * 1024);
+            assertTrue(source.getBytes(StandardCharsets.UTF_8).length <
+                    io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupLimits.MAX_SOURCE_BYTES);
+
+            for (String method : new String[] {"backupSchemaCheck","backupProgramInventory"}) {
+                String requestId = "large-backup-" + method;
+                JSONObject request = new JSONObject()
+                        .put("protocolVersion",1).put("id",requestId)
+                        .put("method",method)
+                        .put("params",new JSONObject().put("rawSnapshot",source));
+                String wire = "backupSchemaCheck".equals(method)
+                        ? worker.checkBackupSchemaAsync(request.toString())
+                            .get(30,java.util.concurrent.TimeUnit.SECONDS)
+                        : worker.backupProgramInventoryAsync(request.toString())
+                            .get(30,java.util.concurrent.TimeUnit.SECONDS);
+                JSONObject response = new JSONObject(wire);
+                assertTrue("Large synthetic canonical source rejected",response.getBoolean("ok"));
+                assertFalse(wire.contains("synthetic-private-"));
+                assertFalse(wire.contains("synthetic-history"));
+                if ("backupSchemaCheck".equals(method)) {
+                    assertTrue(io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupSchemaCodec
+                            .INSTANCE.decode(wire,requestId)
+                            instanceof io.github.extracteddeath.pursuitiron.domain.EngineResponse.Success);
+                } else {
+                    assertEquals(1,response.getJSONObject("result")
+                            .getJSONArray("programs").length());
+                    assertTrue(io.github.extracteddeath.pursuitiron.domain.BackupSavedProgramInventoryCodec
+                            .INSTANCE.decode(wire,requestId)
+                            instanceof io.github.extracteddeath.pursuitiron.domain.EngineResponse.Success);
+                }
+            }
+        } finally {
+            worker.close();
+            worker.whenClosed().get(10,java.util.concurrent.TimeUnit.SECONDS);
+        }
+    }
+
     @Test public void backupOnlyProgramInventoryHonorsDeletionsAndRejectsWrites()
             throws Exception {
         Context test = InstrumentationRegistry.getInstrumentation().getContext();

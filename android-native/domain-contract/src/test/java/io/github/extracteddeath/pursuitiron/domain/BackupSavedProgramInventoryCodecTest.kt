@@ -20,7 +20,7 @@ class BackupSavedProgramInventoryCodecTest {
         assertEquals("backupProgramInventory", request.getString("method"))
         assertEquals(1,request.getJSONObject("params").length())
         assertTrue(runCatching { BackupSavedProgramInventoryCodec.encode(
-            "test-inventory","x".repeat(65537)) }.isFailure)
+            "test-inventory","x".repeat(ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS + 1)) }.isFailure)
     }
     @Test fun strictBackupOnlyContractBlocksLiveOrWritePrivileges() {
         val good = BackupSavedProgramInventoryCodec.decode(ok,"test-inventory")

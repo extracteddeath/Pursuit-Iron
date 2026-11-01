@@ -16,7 +16,7 @@ class ReadOnlyBackupSchemaCodecTest {
         val parsed=JSONObject(input)
         assertEquals("backupSchemaCheck", parsed.getString("method"))
         assertEquals("{\"v\":13}",parsed.getJSONObject("params").getString("rawSnapshot"))
-        assertTrue(runCatching { ReadOnlyBackupSchemaCodec.encode(id,"x".repeat(65537)) }.isFailure)
+        assertTrue(runCatching { ReadOnlyBackupSchemaCodec.encode(id,"x".repeat(ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS + 1)) }.isFailure)
     }
     @Test fun decodesMetadataOnlyAndRefusesAnyWriteAuthorization() {
         val value=ReadOnlyBackupSchemaCodec.decode(result,id)

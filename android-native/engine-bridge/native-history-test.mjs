@@ -102,4 +102,26 @@ const raw=JSON.stringify(store),view=inspectNativeHistory(raw,entry.id),lift=vie
 const lowered=prepareNativeHistoryCorrection(raw,command(view,lift.sets.map(s=>change(lift.id,s,{load:'50'}))));
 assert.equal(lowered.history.exercises[0].record.w,100);
 assert.deepEqual(lowered.history.exercises[0].record,exRecords(parseStoredData(lowered.candidateSnapshot).history,lift.id,'kg').maxWeight);
+// Editing an older workout must not replace a newer Last result in the mirror.
+const withNewer=JSON.parse(snapshot),later={id:'newer-result',date:63000,updatedAt:63000,unit:'kg',
+  programId:entry.programId,dayId:entry.dayId,weekIndex:1,
+  perf:{[lift.id]:{weight:90,reps:7,date:63000,sets:[{w:90,r:7,workingSetIndex:0}]}}};
+withNewer.history.push(later);withNewer.perf[lift.id]=later.perf[lift.id];
+const newerRaw=JSON.stringify(withNewer),olderView=inspectNativeHistory(newerRaw,entry.id);
+const olderEdit=prepareNativeHistoryCorrection(newerRaw,command(olderView,
+  olderView.exercises[0].sets.map(s=>change(lift.id,s,{load:'50'}))));
+assert.deepEqual(JSON.parse(olderEdit.candidateSnapshot).perf[lift.id],later.perf[lift.id]);
+assert.equal(olderEdit.history.exercises[0].record.w,90);
+// Reporting the same RIR as a former target is still a new actual observation.
+const effortView=inspectNativeHistory(snapshot,entry.id);
+const effortLift=effortView.exercises.find(ex=>ex.sets.some(s=>s.rir===null));
+const effortSet=effortLift.sets.find(s=>s.rir===null);
+const effortResult=prepareNativeHistoryCorrection(snapshot,command(effortView,
+  [change(effortLift.id,effortSet,{rir:2})],'report-actual-rir'));
+assert.equal(JSON.parse(effortResult.candidateSnapshot).history[0].perf[effortLift.id].sets[effortSet.setIndex].rirReported,true);
+const clearEffort=prepareNativeHistoryCorrection(effortResult.candidateSnapshot,command(effortResult.history,
+  [change(effortLift.id,effortSet,{rir:null})],'clear-actual-rir'));
+assert.equal(clearEffort.history.exercises.find(ex=>ex.id===effortLift.id).sets
+  .find(s=>s.setIndex===effortSet.setIndex).rir,null);
+assert.equal(JSON.parse(clearEffort.candidateSnapshot).history[0].perf[effortLift.id].sets[effortSet.setIndex].rirReported,undefined);
 console.log('PASS native history corrections: exact observation mapping, retained targets/extensions/skips, canonical mirrors/cache/records, stale conflicts and exact retries');

@@ -44,6 +44,28 @@ Shared engine edits require `node scripts/finalize-release.mjs --next-build`
 before export. This refreshes source hashes/inventory without deploying the
 web app.
 
+## Verified locally for this pass
+
+- 99 domain JVM tests and 19 packaged-runtime JVM tests passed, with no skips.
+- Compose Kotlin and instrumentation Java source compilation passed. The last
+  UI-only label refinement was compiled again successfully.
+- Native history, workout, extension, deload, protocol, onboarding, backup,
+  progression and history edit/volume/merge regression checks passed.
+- Canonical source export, independent parity, snapshot identity, actual IIFE
+  bundle verification and release integrity passed (source candidate 1010).
+- APK-freeze checks passed; zero APK files were produced under `android-native`.
+
+History reload and correction are serialized against starting/finishing an
+active workout. Row buttons and the correction sheet use the same distinct
+working-set or numbered myo/drop label. Canonical correction decoding also
+checks the requested operation and prior-entry identity before publication.
+
+The correction pass is committed locally. GitHub publication remains pending:
+automatic approval review rejected the source push because direct user
+authorization for `extracteddeath/Pursuit-Iron`, branch
+`architecture/android-compose-foundation`, could not be verified. The remote
+has not received this correction pass; no CI result for it is claimed.
+
 ## Next work
 
 Broader history browsing, corrections to skipped/omitted rows or failed attempts,

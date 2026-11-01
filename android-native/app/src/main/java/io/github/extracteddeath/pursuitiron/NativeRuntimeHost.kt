@@ -96,7 +96,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     }
     fun reloadHistory() {
         val current=mutable.value
-        if(!current.ready || current.historyBusy || current.workoutBusy)return
+        if(!current.ready || current.historyBusy || current.workoutBusy || current.workout!=null)return
         val owner=store ?: return;val loaded=current.verifier ?: return
         mutable.update { it.copy(historyBusy=true,historyError=null) }
         scope.launch {

@@ -102,6 +102,18 @@ object NativeHistoryCodec {
         val already=v.getBoolean("alreadyPresent");if(already)require(candidate==snapshot)
         val request=JSONObject(correctionJson)
         val result=history(v.getJSONObject("history"),candidate,text(request,"historyId"))
+        // Bind publication to the requested edit as well as its transport bytes.
+        // This checks transaction identity, not canonical summaries or merge policy.
+        val entries=JSONObject(candidate).getJSONArray("history")
+        val matches=(0 until entries.length()).map { entries.getJSONObject(it) }
+            .filter { it.opt("id")==result.historyId }
+        require(matches.size==1)
+        val correction=matches.single().getJSONObject("nativeCorrection")
+        WorkoutStoreRuntimeCodec.exact(correction,"format","operationId","requestSha256","priorEntrySha256","correctedAt")
+        require(number(correction,"format",1,1)==1L &&
+            text(correction,"operationId")==text(request,"operationId") &&
+            sha(correction,"priorEntrySha256")==sha(request,"entrySha256"))
+        sha(correction,"requestSha256")
         return NativeHistoryPreparation(candidate,already,result)
     }
     fun decodeCorrection(raw: String,id: String,snapshot: String,correctionJson: String): String? {

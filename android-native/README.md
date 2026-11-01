@@ -15,8 +15,9 @@ Unblock APK production only in a deliberate later change, after the same
 native revision has end-to-end evidence for: onboarding -> program creation ->
 verified personal workout -> set logging -> interruption/resume -> workout
 completion -> saved history and correct next-workout/progression decisions.
-The source implementation now covers the first standard working-set journey.
-Device acceptance and the remaining advanced-session behavior are still pending;
+The source implementation now covers the standard working-set journey and
+engine-issued myo/drop extension recording. One-shot deload consumption,
+verified editing of completed sets, and real-device acceptance remain pending;
 the build freeze remains active.
 
 The instructions below describe how **older previously produced** artifacts
@@ -80,7 +81,7 @@ observations; it never calculates replacement targets for the pending workout.
 
 Complete and Skip acknowledge journal writes. Blank load cannot become zero,
 and optional actual RIR starts empty rather than inheriting target RIR. Finish
-requires every working slot to be resolved, publishes canonical history before
+requires every issued non-warm set/extension slot to be resolved, publishes canonical history before
 recovery cleanup, and preserves the targets actually issued alongside manual
 observations. A durably finished workout can retry after restart without a
 duplicate history entry; the next session uses the advanced canonical cursor.
@@ -88,12 +89,19 @@ The history record also retains every native observation and skip. If the
 canonical summarizer omits a zero-load row from a mixed-load exercise, its
 original values remain in this metadata without changing progression formulas.
 
-Warm-up targets are displayed as references. Advanced myo/drop sub-sets and
-one-shot deload consumption reject session creation instead of silently dropping
-engine instructions. These features, richer logging tools and device acceptance
-remain incomplete. The full-loop proof is currently actual-bundle Node/JVM
-integration plus Compose/source compilation. It does not certify an Android
-device, and no APK build is enabled by this change.
+Warm-up targets remain references rather than individually logged rows.
+Canonical myo-rep and drop-set extensions now retain their own typed set slots,
+engine-issued load/reps/rest targets, durable Complete/Skip receipts and
+raw native observations. They are logged by the same screen and journal as
+regular working sets but do not become extra working-set ordinals in the
+canonical progression history. Both zero-load and skipped extensions retain
+their original observations; the web summarizer's existing mixed-zero-load
+policy is unchanged. The bridge rejects incomplete or reordered extension
+instructions instead of silently omitting them. One-shot deload consumption
+still rejects session creation rather than leaving its flag armed after a
+completed workout. Corrected-set editing and real-device acceptance remain
+incomplete. Source tests and Compose compilation do not certify a physical
+Android device, and no APK build is enabled by this change.
 
 ## Implementation boundaries
 

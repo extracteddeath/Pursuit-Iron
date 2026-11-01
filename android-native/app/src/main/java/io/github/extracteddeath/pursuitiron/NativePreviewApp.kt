@@ -20,7 +20,6 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -110,6 +109,21 @@ fun NativePreviewApp() {
 }
 
 @Composable
+private fun PreviewBadge(label: String) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+@Composable
 private fun PreviewHeading(eyebrow: String, title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelLarge,
@@ -122,7 +136,7 @@ private fun PreviewHeading(eyebrow: String, title: String, subtitle: String) {
 
 @Composable
 private fun HomePreview(onPlan: () -> Unit, onWorkout: () -> Unit) {
-    PreviewHeading("Saturday · design preview", "Your training, reimagined",
+    PreviewHeading("Today · design preview", "Your training, reimagined",
         "Explore a native Material 3 layout. No live program or history is connected.")
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -130,7 +144,7 @@ private fun HomePreview(onPlan: () -> Unit, onWorkout: () -> Unit) {
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            AssistChip(onClick = {}, label = { Text("Preview only") })
+            PreviewBadge("DESIGN PREVIEW")
             Text("Today's workout", style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer)
             Text("Your existing workouts will appear here once the engine and backup bridge are verified.",
@@ -200,7 +214,7 @@ private fun PreviewSetControls() {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            AssistChip(onClick = {}, label = { Text("DEMO · not a training suggestion") })
+            PreviewBadge("DEMO · NOT A PRESCRIPTION")
             Text("Barbell bench press", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text("Set 1 of 4 · sample exercise", style = MaterialTheme.typography.bodyMedium)
             HorizontalDivider()

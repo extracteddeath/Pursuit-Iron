@@ -25,3 +25,7 @@ Debug APKs use CI-generated test signing keys. A newer preview may fail to insta
 ## Release gates not met
 
 Actual Android runtime engine execution; fixture equivalence for load rounding, double progression, RIR and cycles; native backup import/round-trip; real-device accessibility, IME, text scaling and interruption certification. Debug APK is **not** a production Play Store release.
+
+## Verified dependency direction (October 2026)
+
+The preview targets the **stable** Compose BOM `2026.09.00`, Material 3 `1.4.0`, and Activity Compose `1.13.0`. The newer Material 3 `1.5.0-beta02` is available for later expressive-component experiments, but remains a beta and is not yet promoted into this installable baseline. The shared `PursuitShapes` shape scale is a native Compose theme token, not copied web CSS.

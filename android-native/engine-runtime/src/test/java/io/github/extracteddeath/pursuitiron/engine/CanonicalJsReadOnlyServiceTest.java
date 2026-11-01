@@ -62,23 +62,34 @@ public final class CanonicalJsReadOnlyServiceTest {
     }
 
     @Test public void nativeSchemaRequestCannotHideWritesOrOversizedInput() throws Exception {
-        final String valid = "{\\"protocolVersion\\":1,\\"id\\":\\"schema-1\\"," +
-                "\\"method\\":\\"backupSchemaCheck\\",\\"params\\":{" +
-                "\\"rawSnapshot\\":\\"{\\\\\\"v\\\\\\":13}\\"}}";
-        JSONObject request = CanonicalJsReadOnlyService.checkedBackupSchemaRequest(valid);
-        assertEquals("backupSchemaCheck", request.getString("method"));
-        for (String bad : new String[] {
-                valid.replace("backupSchemaCheck", "deleteHistory"),
-                valid.replace("\\"protocolVersion\\":1","\\"protocolVersion\\":2"),
-                valid.replace("\\"id\\":\\"schema-1\\"","\\"id\\":\\"\\""),
-                valid.replace("\\"rawSnapshot\\":", "\\"history\\":[],\\"rawSnapshot\\":"),
-                valid.replace("\\"params\\":{","\\"params\\":["),
-                valid + "x"
-        }) assertThrows(Exception.class,
-                () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(bad));
+        JSONObject good = new JSONObject()
+                .put("protocolVersion", 1)
+                .put("id", "schema-1")
+                .put("method", "backupSchemaCheck")
+                .put("params", new JSONObject().put("rawSnapshot", new JSONObject()
+                        .put("v", 13).toString()));
+        assertEquals("backupSchemaCheck",
+                CanonicalJsReadOnlyService.checkedBackupSchemaRequest(
+                        good.toString()).getString("method"));
+        for (String invalidMethod : new String[] {"deleteHistory", "generateProgram"}) {
+            JSONObject wrong = new JSONObject(good.toString()).put("method", invalidMethod);
+            assertThrows(Exception.class,
+                    () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(wrong.toString()));
+        }
+        JSONObject badVersion = new JSONObject(good.toString()).put("protocolVersion", 2);
         assertThrows(Exception.class,
-                () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(
-                        valid.replace("{\\\\\\"v\\\\\\":13}", "x".repeat(65537))));
+                () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(badVersion.toString()));
+        JSONObject badId = new JSONObject(good.toString()).put("id", "");
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(badId.toString()));
+        JSONObject hiddenWrite = new JSONObject(good.toString());
+        hiddenWrite.getJSONObject("params").put("deleteHistory", true);
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(hiddenWrite.toString()));
+        JSONObject oversized = new JSONObject(good.toString());
+        oversized.getJSONObject("params").put("rawSnapshot", "x".repeat(65537));
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(oversized.toString()));
     }
 
     @Test public void progressionOnlyAndBoundedTransport() throws Exception {

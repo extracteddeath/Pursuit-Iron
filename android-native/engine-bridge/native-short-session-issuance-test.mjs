@@ -5,6 +5,7 @@ import { prepareCanonicalWorkoutHistory } from './workout-history-completion.mjs
 import { dispatchWorkoutStoreJson } from './workout-store-protocol.mjs';
 import { parseStoredData,nextSessionCursor,planShorterSession,computeCell } from '../../modules/engine-api.js';
 import { finishedIssuedJournal } from './native-workout-test.mjs';
+import { inspectNativeHistory,prepareNativeHistoryCorrection } from './native-history.mjs';
 
 const settings={creationId:'short-creation',programId:'short-program',createdAt:1000,seed:223,
   profile:{name:'Short issued training',goal:'hypertrophy',experience:'beginner',unit:'lb',
@@ -41,6 +42,23 @@ for(const seed of [21,223,782,947]) {
     assert.equal(prepared.historyEntry.prescriptionEdited,expected.changed);
     assert.equal(prepareCanonicalWorkoutHistory(snapshot,prepared.candidateSnapshot,
       finished,JSON.stringify(issued)).alreadyPresent,true);
+    // A later native history correction changes an observed load, never the
+    // original shortened dose, its one-shot-progression classification, or
+    // the pinned engine-issued provenance.
+    const view=inspectNativeHistory(prepared.candidateSnapshot,issued.session.workoutId);
+    const exercise=view.exercises.find(ex=>ex.sets.length>0);
+    const observed=exercise.sets[0];
+    const edit=JSON.stringify({operationId:`short-correct-${seed}-${minutes}`,
+      snapshotSha256:view.snapshotSha256,historyId:view.historyId,entrySha256:view.entrySha256,
+      correctedAt:70000,changes:[{exerciseId:exercise.id,setIndex:observed.setIndex,
+        load:'55',reps:observed.reps,rir:observed.rir}]});
+    const revised=prepareNativeHistoryCorrection(prepared.candidateSnapshot,edit);
+    const revisedEntry=JSON.parse(revised.candidateSnapshot).history.find(h=>h.id===issued.session.workoutId);
+    assert.equal(revisedEntry.timeLimited,expected.changed);
+    assert.equal(revisedEntry.prescriptionEdited,expected.changed);
+    assert.deepEqual(revisedEntry.sessionLengthPlan,expected);
+    assert.deepEqual(revisedEntry.nativeCompletion,prepared.historyEntry.nativeCompletion);
+    assert.equal(prepareNativeHistoryCorrection(revised.candidateSnapshot,edit).alreadyPresent,true);
     const forged=structuredClone(issued);
     forged.sessionLengthPlan.slots[Object.keys(forged.sessionLengthPlan.slots)[0]].sets=0;
     assert.throws(()=>issuedNativeWorkoutFrom(snapshot,JSON.stringify(forged)));

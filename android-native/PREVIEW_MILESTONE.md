@@ -26,3 +26,30 @@ Edit this file **only when the native preview has a significant user-facing chan
 
 **No engine-runtime dependency in the app**, no live user data, no set
 completion, no program mutation and no change to the web app or `main`.
+
+## M3 — explicit canonical read-only backup schema check in native Plan
+
+This is a significant, user-visible **debug preview** milestone. The earlier
+workflow-triggered build from commit `6605dc6` failed because a public
+Compose signature exposed an internal-only schema verifier type. The code
+change at `aef52c6` fixes that Kotlin visibility mismatch; this milestone
+build intentionally targets the corrected branch.
+
+- The same explicit file picker now distinguishes a plain SHA-256 fingerprint
+  from a *user-initiated* small-source canonical schema check.
+- Files up to 50 MiB can be fingerprinted. Only whole copies at or under
+  128 KiB, and subject to the canonical protocol character/byte limits,
+  are eligible for read-only parsing. Nothing is imported or saved.
+- The preview build process exports the immutable canonical JS dependency
+  closure, verifies its checksum and standalone parity, bundles a read-only
+  IIFE, invokes its actual schema API, and embeds the matching manifest and
+  code as **debug-only APK assets**.
+- Android independently verifies the packaged SHA-256 and disabled
+  workout-certification flags before constructing the sandbox worker.
+- The verifier sends no writes; only canonical collection counts are shown.
+  All training screens remain preview-only and the JS engine remains the
+  sole owner of stored-data schema decisions.
+
+No native workout prescriptions, history restoration, program adoption,
+live data synchronization or production web changes. Future normal source
+commits should not trigger another preview APK.

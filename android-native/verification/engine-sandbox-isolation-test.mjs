@@ -25,7 +25,10 @@ for (const guard of [
 assert.doesNotMatch(core, /\bSharedPreferences\b|\bContentResolver\b|\bWebView\b|\bsetJavaScriptEnabled\b/,
   'Read-only engine probe must not access persistence, web surfaces or arbitrary Android storage');
 assert.match(device, /on:\s*\n  workflow_dispatch:/);
-assert.doesNotMatch(device, /\n\s+push:/, 'Emulator workflow must stay manual-only');
+assert.match(device, /'android-native\\/engine-runtime\\/DEVICE_PROOF_MILESTONE\\.md'/,
+  'Emulator automation must run only when the explicit milestone file changes');
+assert.doesNotMatch(device, /'android-native\\/engine-runtime\\/\\*\\*'/,
+  'Routine sandbox source commits cannot trigger an emulator');
 assert.match(apk, /android-native\/PREVIEW_MILESTONE\.md/);
 assert.doesNotMatch(apk, /'android-native\/\*\*'/, 'Routine native commits must not generate APKs');
 assert.match(bundle, /canonical-export\.mjs/);
@@ -33,4 +36,4 @@ assert.match(bundle, /verify-snapshot\.mjs/);
 assert.match(bundle, /verify-parity\.mjs/);
 assert.match(manifest, /approvedForWorkoutExecution: false/);
 assert.match(manifest, /androidSandboxParityVerified: false/);
-console.log('PASS Android sandbox is separate, read-only, digest-guarded; manual emulator and milestone-only APK pipelines');
+console.log('PASS Android sandbox is separate, read-only, digest-guarded; milestone emulator and preview-APK pipelines');

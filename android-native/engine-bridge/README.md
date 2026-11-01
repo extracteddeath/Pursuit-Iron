@@ -17,3 +17,5 @@ The `catalogSummary` method reads only the canonical engine's `EXERCISES` and `T
 - Every prescription/history mutation must pass independent fixture parity tests against the web engine before adding a method to the allowlist.
 - Marshal only JSON-safe values; preserve IDs and revision ordinals exactly; never convert load/rep precision or substitute defaults in Kotlin.
 - No backup import/write until a separate versioned schema validator and round-trip tests are approved.
+
+An experimental unconnected Android library lives in `android-native/engine-runtime/`. Its worker-thread-only `CanonicalJsSandboxProbe` verifies an externally pinned bundle SHA-256, checks AndroidX sandbox availability and performs a read-only canonical handshake in an out-of-process isolate. The native Compose app does not depend on it yet, and a handshake is **not** runtime parity certification.

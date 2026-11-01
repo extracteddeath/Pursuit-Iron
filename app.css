@@ -8042,7 +8042,7 @@ background:var(--pi-color-card)!important;
 #root .wpb-plan-change-banner{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;margin:12px 0 18px;text-align:left;justify-content:flex-start}
 .wpb-plan-change-banner>span:nth-child(2){flex:1;min-width:0}.wpb-plan-change-banner strong{display:block;font-size:.875rem;line-height:1.4}.wpb-plan-change-banner>span:nth-child(2)>span{display:block;font-size:.75rem;line-height:1.5;color:var(--wpb-theme-muted);margin-top:4px}.wpb-plan-change-banner>svg{flex-shrink:0}
 .wpb-session-plan-icon{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:13px;background:var(--wpb-theme-card);color:var(--wpb-theme-accent-ink)}
-#root .wpb-session-game-plan{padding:14px;margin-top:14px;border:1px solid var(--wpb-theme-border);border-radius:21px;background:var(--wpb-theme-card);color:var(--wpb-theme-text)}
+#root .wpb-session-game-plan{padding:14px;margin-top:14px}
 
 
 .wpb-game-plan-heading{display:flex;align-items:center;gap:9px;width:100%;min-height:48px;padding:0;margin:0;border:0;background:transparent;color:var(--wpb-theme-text);text-align:left;font:inherit;font-size:1rem;line-height:1.4}.wpb-game-plan-heading>strong{flex:1}.wpb-game-plan-heading>svg{flex-shrink:0;color:var(--wpb-theme-accent-ink)}button.wpb-game-plan-heading{cursor:pointer}
@@ -8051,7 +8051,7 @@ background:var(--pi-color-card)!important;
 .wpb-game-plan-exercise p,.wpb-plan-change-card p{font-size:13px;line-height:1.55;color:var(--wpb-theme-muted);margin:7px 0 0;overflow-wrap:anywhere}
 
 .wpb-plan-review-intro{font-size:13px;line-height:1.6;color:var(--wpb-theme-muted)}#root .wpb .wpb-plan-review-basis{font-size:.75rem;color:var(--wpb-theme-muted);line-height:1.5}
-.wpb-plan-change-card{margin:14px 0;padding:15px;border:1px solid var(--wpb-theme-border);border-radius:20px;background:var(--wpb-theme-card)}.wpb-plan-change-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}.wpb-plan-change-title h3{margin:0;font-size:16px;line-height:1.4;overflow-wrap:anywhere;flex:1 1 140px}.wpb-plan-change-title>span{font-size:10px;letter-spacing:.3px;text-transform:uppercase;color:var(--wpb-theme-accent-ink);font-weight:750;background:var(--wpb-theme-accent-dim);padding:4px 8px;border-radius:7px}
+.wpb .wpb-plan-change-card.wpb-ui-card{margin:14px 0;padding:15px}.wpb-plan-change-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}.wpb-plan-change-title h3{margin:0;font-size:16px;line-height:1.4;overflow-wrap:anywhere;flex:1 1 140px}.wpb-plan-change-title>span{font-size:10px;letter-spacing:.3px;text-transform:uppercase;color:var(--wpb-theme-accent-ink);font-weight:750;background:var(--wpb-theme-accent-dim);padding:4px 8px;border-radius:7px}
 .wpb-plan-target-diff{list-style:none;padding:0;margin:12px 0}.wpb-plan-target-diff li{display:grid;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--wpb-theme-border);font-size:13px;line-height:1.5}.wpb-plan-target-diff li>span:first-child{grid-column:1 / -1;font-size:11px;color:var(--wpb-theme-muted)}.wpb-plan-target-diff strong{color:var(--wpb-theme-accent-ink);overflow-wrap:anywhere}.wpb-plan-before{color:var(--wpb-theme-muted);text-decoration:line-through;overflow-wrap:anywhere}
 .wpb-plan-undo{margin-top:12px}
 
@@ -8080,10 +8080,8 @@ background:var(--pi-color-card)!important;
 #root .wpb .wpb-save-review-alert{padding:12px;margin:8px 0;border-radius:12px;background:var(--wpb-theme-card);color:var(--wpb-theme-text);font-size:0.8125rem;line-height:1.5}
 #root .wpb .wpb-save-review-undo{font-size:0.75rem;color:var(--wpb-theme-muted);margin:10px 0 14px;line-height:1.5}
 #root .wpb .wpb-save-review-footer{flex-shrink:0;padding-top:10px;border-top:1px solid var(--wpb-theme-border)}
-#root .wpb :is(.wpb-save-review-confirm,.wpb-save-review-cancel){width:100%;min-height:48px;font-size:.9375rem;line-height:1.4;padding:13px;border-radius:12px;cursor:pointer}
-#root .wpb .wpb-save-review-confirm{border:0;background:var(--wpb-theme-accent);color:var(--wpb-theme-on-accent);font-weight:700;opacity:1}
-#root .wpb .wpb-save-review-confirm:disabled{opacity:.45}
-#root .wpb .wpb-save-review-cancel{margin-top:8px;border:1px solid var(--wpb-theme-border);background:none;color:var(--wpb-theme-text);font-weight:600}
+#root .wpb :is(.wpb-save-review-confirm,.wpb-save-review-cancel){width:100%}
+#root .wpb .wpb-save-review-cancel{margin-top:8px}
 @media(forced-colors:active){#root .wpb .wpb-save-review-panel,#root .wpb .wpb-save-review-scope,#root .wpb .wpb-save-review-close,#root .wpb .wpb-save-review-cancel{border-color:CanvasText;background:Canvas;color:CanvasText}}
 
 /* Build 905 — review transactions in the existing themed dialog. */

@@ -1,7 +1,7 @@
 // Program revision/restore/save presentation. Program state and persistence remain in App; training calculations remain in the canonical domain API.
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useMemo } from 'react';
-import { UiSheetClose, UiSheetHeading } from './ui-primitives.js';
+import { UiAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
 import { fmtSets, programChangeLabels } from './engine-api.js';
 import { reviewProgramChanges } from './program-review.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
@@ -67,5 +67,5 @@ export function ProgramSaveReview({ program, changes, scope, onScope, conflicts,
             _jsxs('details', { className: 'wpb-save-review-details', children: [
                 _jsx('summary', { children: 'View before and after' }),
                 _jsx(ProgramChangeDetails, { changes: details, emptyText: 'The displayed exercise targets match; the saved details listed above will change.' })
-            ] })] }, after.id)), !!conflicts.length && _jsxs("div", { role: "alert", className: "wpb-save-review-alert", children: ["Another affected block has draft changes: ", conflicts.map(x => x.after.name).join(", "), ". Save or discard that draft first, or choose This block only."] }), _jsx("div", { className: "wpb-save-review-undo", children: "You can undo this save from the program screen until the next save or app reload. Later edits can prevent undo." })] }), _jsxs("div", { className: "wpb-save-review-footer", children: [_jsx("button", { disabled: !changes.length || !!conflicts.length, onClick: onConfirm, className: "pressable wpb-save-review-confirm", children: "Save reviewed changes" }), _jsx("button", { onClick: onClose, className: "pressable wpb-save-review-cancel", children: "Keep editing" })] })] }) });
+            ] })] }, after.id)), !!conflicts.length && _jsxs("div", { role: "alert", className: "wpb-save-review-alert", children: ["Another affected block has draft changes: ", conflicts.map(x => x.after.name).join(", "), ". Save or discard that draft first, or choose This block only."] }), _jsx("div", { className: "wpb-save-review-undo", children: "You can undo this save from the program screen until the next save or app reload. Later edits can prevent undo." })] }), _jsxs("div", { className: "wpb-save-review-footer", children: [_jsx(UiAction, { variant: "primary", disabled: !changes.length || !!conflicts.length, onClick: onConfirm, className: "wpb-save-review-confirm", children: "Save reviewed changes" }), _jsx(UiAction, { variant: "tonal", onClick: onClose, className: "wpb-save-review-cancel", children: "Keep editing" })] })] }) });
 }

@@ -4,7 +4,7 @@ import { History, ChevronRight, ChevronDown, TrendingUp, Trophy, Zap } from 'luc
 import { useId } from 'react';
 import { workoutTechniqueRest } from './workout-context.js';
 import { SessionChoiceDialog } from './session-choice-dialog.js';
-import { UiAction } from './ui-primitives.js';
+import { UiAction, UiCard } from './ui-primitives.js';
 
 export function sessionLoadText(set, unit) {
     const w = set?.weight === "" || set?.weight == null ? null : Number(set.weight), reps = Number(set?.reps);
@@ -57,7 +57,7 @@ export function SessionGamePlan({ review, restScale = 1, home = false }) {
             + (row.protocol.type !== 'straight' ? 2 : 0) + (row.change.changed ? 1 : 0);
         return score(b) - score(a);
     }).slice(0, 3);
-    return _jsxs("section", { className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""),
+    return _jsxs(UiCard, { as: "section", className: "wpb-session-game-plan" + (home ? " wpb-home-game-plan" : ""),
         "aria-label": "Today's game plan", children: [
         _jsxs("h2", { className: "wpb-game-plan-heading", children: [_jsx(TrendingUp, { size: 19 }),
             _jsx("strong", { children: "Today's game plan" }),
@@ -127,7 +127,7 @@ export function PlanChangesDialog({ review, dayLabel, busy, onChoice, onClose })
                         _jsx(ChevronRight, { size: 15, "aria-label": "to" }),
                         _jsx("strong", { children: sessionLoadText(change.undone ? change.undoTargets[i] : set, review.unit) })
                     ] }, i)) });
-                return _jsxs("section", { className: "wpb-plan-change-card", "data-plan-change": row.id,
+                return _jsxs(UiCard, { as: "section", className: "wpb-plan-change-card", "data-plan-change": row.id,
                     "data-kind": change.kind, "data-undone": change.undone, children: [
                     _jsxs("div", { className: "wpb-plan-change-title", children: [
                         _jsx("h3", { children: row.name }),

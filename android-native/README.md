@@ -46,8 +46,15 @@ Train workspace now counts only acknowledged set receipts, offers navigation
 to unfinished exercises, keeps a session-wide Last/Target display choice, and
 reviews completed/skipped totals before publishing history. Skipping requires
 confirmation; a finished, unacknowledged publication can be retried without a
-second review. These controls do not calculate loads or mutate the canonical
-training engine. Other interactive examples remain local UI-only state.
+second review. Each uncommitted set entry keeps its own bounded UI draft while
+switching exercises; these drafts are **not** durable history and are discarded
+if the Activity's saveable state cannot be restored. The session-wide native
+rest timer uses the engine-issued exercise rest target, runs on Android elapsed
+time across backgrounding, and supports tap-to-start/restart and long-press
+reset. The timer is a manual, presentation-only tool: it does not imply a
+completed set, auto-log data, or change workout prescriptions. These controls
+do not calculate loads or mutate the canonical training engine. Other
+interactive examples remain local UI-only state.
 Web history and backup import are separate from this native store.
 
 ## Engine-issued native working-set journey

@@ -26,10 +26,11 @@ const screens=Object.fromEntries(blocks.map(([name,from,to])=>{
   .flatMap(m=>m[1].split(/\s+/)).filter(Boolean));
  return [name,{present:!!s,sourceCharacters:s.length,staticClassTokens:literalClasses.size,
   inlineStyleObjects:count(s,/style:\s*\{/g),sharedCardCalls:count(s,/_jsx(?:s)?\(UiCard,/g),
-  sharedActionCalls:count(s,/_jsx(?:s)?\(UiAction,/g)}];
+  sharedActionCalls:count(s,/_jsx(?:s)?\(UiAction,/g),
+  sharedMetricCalls:count(s,/_jsx(?:s)?\(UiMetric,/g)}];
 }));
 const families=[
- ['Card','UiCard','wpb-ui-card'],['Action','UiAction','wpb-ui-action'],
+ ['Card','UiCard','wpb-ui-card'],['Metric','UiMetric','wpb-ui-metric'],['Action','UiAction','wpb-ui-action'],
  ['Choice','UiChoice','wpb-ui-choice'],['Segmented','UiSegmented','wpb-segmented'],
  ['Root header','UiRootHeader','wpb-root-header'],['Section','UiSection','wpb-ui-section'],
  ['Status','UiStatus','wpb-ui-status']

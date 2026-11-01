@@ -6,7 +6,7 @@ import { appStorageOwnership } from './app-storage-ownership.js';
 import { InfoCard, MotionReveal } from './ui-disclosure.js';
 import { SetupCard, ProgressionCard, ProgramReferenceSheet, ProgressionChoiceSheet } from './program-reference-surfaces.js';
 import { CHANGELOG } from './release-notes.js';
-import { UiHeader, UiRootHeader, UiCard, UiAction, UiChoice, UiSegmented, UiStatus, UiSection } from './ui-primitives.js';
+import { UiHeader, UiRootHeader, UiCard, UiMetric, UiAction, UiChoice, UiSegmented, UiStatus, UiSection } from './ui-primitives.js';
 import { ProgramSettingsSheet } from './program-settings-sheet.js';
 import { ProgramManualTargets } from './program-manual-targets.js';
 import { LoadWaveCard } from './program-load-wave.js';
@@ -6607,10 +6607,11 @@ function PlanView({ program, plan, blockNavigation = null, readOnly = false, nav
     };
     const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}m` : `${m}m`);
     const upNext = pane === "schedule" && plan.upNext && (_jsxs(UiAction, { onClick: () => onOpenDay && onOpenDay(plan.upNext.dayId, plan.upNext.week), className: "pressable wpb-plan-up-next", style: { width: "100%", display: "flex", alignItems: "center", gap: 12, background: C.accentDim, border: `1px solid ${C.accent}33`, borderRadius: 12, padding: "12px 14px", marginBottom: 14, cursor: "pointer", textAlign: "left", color: C.text }, children: [_jsxs("div", { className: "wpb-s956-flex-1 wpb-s956-minwidth-0", children: [_jsx("div", { style: { fontSize: 11, fontWeight: 700, letterSpacing: .7, color: C.accentInk }, children: "UP NEXT" }), _jsx("div", { className: "wpb-s956-fontsize-15 wpb-s956-fontweight-700 wpb-s956-margintop-2 wpb-s956-overflow-hidden wpb-s956-textoverflow-ellipsis wpb-s956-whitespace-nowrap", children: plan.upNext.label }), _jsxs("div", { className: "mono pi-t-faint-mt2", children: ["Week ", plan.upNext.week, " \u00B7 ", plan.upNext.sets, " sets \u00B7 ", plan.upNext.minutes, " min"] })] }), _jsx("span", { style: { fontSize: 13, fontWeight: 700, color: C.accentInk, flexShrink: 0 }, children: "Open" }), _jsx(ChevronRight, { size: 16, color: C.accentInk, className: "wpb-icon-no-shrink" })] }));
-    const tile = (label, value, accent) => _jsxs("div", { className: "wpb-plan-glance-tile", "data-featured": accent ? "true" : undefined, children: [
-        _jsx("div", { className: "wpb-plan-glance-label", children: label }),
-        _jsx("div", { className: "mono wpb-plan-glance-value", children: value })
-    ] });
+    const tile = (label, value, accent) => _jsx(UiMetric, {
+        className: "wpb-plan-glance-tile", "data-featured": accent ? "true" : undefined,
+        labelFirst: true, label, value,
+        labelClassName: "wpb-plan-glance-label", valueClassName: "mono wpb-plan-glance-value"
+    });
     const featuredWeek = plan.weeks.find(w => w.week === (openWeek || plan.currentWeek)) || plan.weeks[0];
     // One week-card renderer serves both the featured selection and chronological archive.
     const renderWeekCard = w => {
@@ -15425,7 +15426,13 @@ function HistoryView({ history, onBack, onClear, onDeleteEntry, onEditEntry, emb
                             ["Sessions", progressGlance.sessions7, "last 7 days"],
                             ["Sets", progressGlance.sets7, "last 7 days"],
                             ["Recent PRs", progressGlance.recentPrs, "last 3 weeks"],
-                        ].map(([label, value, sub]) => (_jsxs("div", { className: "wpb-progress-glance-item",  children: [_jsx("div", { className: "mono wpb-progress-glance-value", "data-has-value": Boolean(value), children: value }), _jsx("div", { className: "wpb-progress-glance-label",  children: label }), _jsx("div", { className: "wpb-progress-glance-context", children: sub })] }, label))) })), tab === "strength" ? (() => { const tr = trends; return _jsxs(ErrorBoundary, { label: "Strength standards", children: [_jsx("div", { ref: strengthRef, className: "wpb-progress-strength-anchor", children: _jsx(StrengthComparisonCard, { C: C, trends: tr, history: history, unit: unit, bodyweight: bodyweight, sex: sex, age: age, birth: birth, onSetProfile: (patch) => onSetProfile?.(patch) }) }), _jsx(ThousandClubCard, { trends: tr, unit: unit })] }); })() : tab === "body" ? (() => {
+                        ].map(([label, value, sub]) => (_jsx(UiMetric, {
+                            className: "wpb-progress-glance-item", label, value, context: sub,
+                            valueClassName: "mono wpb-progress-glance-value",
+                            valueProps: { "data-has-value": Boolean(value) },
+                            labelClassName: "wpb-progress-glance-label",
+                            contextClassName: "wpb-progress-glance-context"
+                        }, label))) })), tab === "strength" ? (() => { const tr = trends; return _jsxs(ErrorBoundary, { label: "Strength standards", children: [_jsx("div", { ref: strengthRef, className: "wpb-progress-strength-anchor", children: _jsx(StrengthComparisonCard, { C: C, trends: tr, history: history, unit: unit, bodyweight: bodyweight, sex: sex, age: age, birth: birth, onSetProfile: (patch) => onSetProfile?.(patch) }) }), _jsx(ThousandClubCard, { trends: tr, unit: unit })] }); })() : tab === "body" ? (() => {
                         const sorted = normalizeBwLog(bwLog, unit); // one unit, oldest→newest, before anything is compared
                         const cur = sorted.length ? sorted[sorted.length - 1] : null;
                         const first = sorted.length ? sorted[0] : null;
@@ -17139,26 +17146,16 @@ function ProfileView({ history, bodyweight, sex, age, unit, onSettings, onStreng
                 ["Best streak", bestStreak, bestStreak === 1 ? "week" : "weeks"],
                 ["Volume", fmtVol(totalVol), unit]
             ].map(([label, val, sub]) =>
-                _jsxs(
-                    "div",
-                    {
-                        className: "wpb-profile-stat",
-                        children: [
-                            _jsxs("div", {
-                                "data-has-unit": !!sub,
-                                className: "mono wpb-profile-stat-value",
-                                children: [
-                                    _jsx("span", { className: "wpb-profile-stat-number", children: val }),
-                                    sub
-                                        ? _jsx("span", { className: "wpb-profile-stat-unit", children: sub })
-                                        : null
-                                ]
-                            }),
-                            _jsx("div", { className: "wpb-profile-stat-label", children: label })
-                        ]
-                    },
-                    label
-                )
+                _jsx(UiMetric, {
+                    className: "wpb-profile-stat",
+                    label, labelClassName: "wpb-profile-stat-label",
+                    valueClassName: "mono wpb-profile-stat-value",
+                    valueProps: { "data-has-unit": !!sub },
+                    value: _jsxs(_Fragment, { children: [
+                        _jsx("span", { className: "wpb-profile-stat-number", children: val }),
+                        sub ? _jsx("span", { className: "wpb-profile-stat-unit", children: sub }) : null
+                    ] })
+                }, label)
             )
         }),
         strength: sscore

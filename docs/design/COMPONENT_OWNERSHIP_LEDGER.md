@@ -105,3 +105,17 @@ width, and the shared idle-tab transition. Stylesheet size 657,201 → 656,982
 This is actual CSS debt retirement, not merely moving inline styles. The
 shared priority and stylesheet ceilings were ratcheted down. Browser parity
 and final CI are required before merging into production.
+
+B1018 shared metric anatomy: `UiMetric` is a stateless component in
+`modules/ui-primitives.js`, consumed by Plan glance tiles, Progress recent
+activity metrics and Profile lifetime statistics. It owns metric markup
+(value/label/context order) and passes screen-supplied classes and data
+attributes through unchanged. Plan keeps label→value; Progress and Profile
+keep value→label. Profile units remain nested spans, and Progress retains
+its zero-value marker and contextual captions. No new CSS or inline styles
+were added; `app.css` stays at 656,982 characters with 2,019 priority rules,
+while App.js stays at 801 inline objects. This is *structural* design-system
+adoption, not visual unification yet: these metrics intentionally keep their
+current surface selectors pending later theme and responsive parity audit.
+The shared ownership source report now tracks metric calls by screen. Browser
+parity and Android acceptance remain required before merge or release.

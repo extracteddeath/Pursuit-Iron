@@ -21,6 +21,24 @@ export function UiRootHeader({ title, titleClassName = "", actions, actionsClass
 export function UiCard({ as: Element = "div", className = "", ...props }) {
     return _jsx(Element, { ...props, className: `wpb-ui-card ${className}`.trim() });
 }
+// Metric anatomy is shared across destinations; each caller retains its existing
+// class names, visible value/label order, formatting, and optional context.
+// This component introduces no CSS owner or data dependency, and never changes
+// number formatting or layout geometry. The screen owns the metric data.
+export function UiMetric({
+    as: Element = "div", className = "", label, value, context = null,
+    labelFirst = false, labelClassName = "", valueClassName = "",
+    contextClassName = "", labelProps = {}, valueProps = {}, contextProps = {},
+    ...props
+}) {
+    const valueNode = _jsx("div", { ...valueProps, className: valueClassName, children: value });
+    const labelNode = _jsx("div", { ...labelProps, className: labelClassName, children: label });
+    const children = labelFirst ? [labelNode, valueNode] : [valueNode, labelNode];
+    if (context != null)
+        children.push(_jsx("div", { ...contextProps, className: contextClassName, children: context }));
+    return _jsxs(Element, { ...props, className: `wpb-ui-metric ${className}`.trim(), children });
+}
+
 export function UiAction({ variant = "secondary", className = "", ...props }) {
     // Components own static visual properties; only runtime-measured styles are forwarded.
     return _jsx("button", { type: "button", ...props, className: `pressable wpb-ui-action ${className}`, "data-action": variant });

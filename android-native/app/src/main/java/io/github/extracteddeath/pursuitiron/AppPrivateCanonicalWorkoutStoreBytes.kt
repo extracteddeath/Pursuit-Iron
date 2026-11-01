@@ -15,11 +15,14 @@ import java.io.IOException
  * One process-scoped persistence owner must serialize all writes off Main.
  */
 internal class AppPrivateCanonicalWorkoutStoreBytes(context: Context) : CanonicalWorkoutStoreBytes {
-    private val file=AtomicFile(File(context.noBackupFilesDir,"canonical-workout-store-v1.json"))
+    private val base=File(context.noBackupFilesDir,"canonical-workout-store-v1.json")
+    private val file=AtomicFile(base)
+    private fun hasStoredBytes()=base.exists() || File(base.path+".bak").exists() ||
+        File(base.path+".new").exists()
 
     override fun read(): ByteArray? {
         val stream=try { file.openRead() } catch (failure: FileNotFoundException) {
-            if (file.exists()) throw IOException("Existing canonical store is unreadable",failure)
+            if (hasStoredBytes()) throw IOException("Existing canonical store is unreadable",failure)
             return null
         }
         stream.use { input ->

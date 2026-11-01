@@ -146,6 +146,10 @@ class CanonicalWorkoutStorePersistenceTest {
         val next=session.copy(programRevision=nextRef,workoutId="next-workout",startedAt=62000)
         assertNotNull(s.store.beginSession(next,slots,0,s.journal))
         assertNull(s.store.beginSession(session,slots,7,s.journal))
+        val nextBytes=checkNotNull(s.journalDrive.raw).copyOf()
+        assertTrue(checkNotNull(s.complete()).recoveryCleared)
+        assertEquals(next,checkNotNull(s.journal.recover()).session)
+        assertArrayEquals(nextBytes,s.journalDrive.raw)
     }
 
     @Test fun unfinishedForeignOrStaleSessionsNeverReachCompletionEngine() {
@@ -261,11 +265,17 @@ class CanonicalWorkoutStorePersistenceTest {
         val two=Call { s.store.complete(session,12,s.journal) }
         assertNull(one.result); assertNull(two.result)
         assertEquals(source,s.snapshot()) // no store lock held while engine awaits
-        paused[0].resume(Unit); paused[1].resume(Unit)
+        paused[0].resume(Unit)
+        val next=session.copy(programRevision=session.programRevision.copy(
+            snapshotSha256=sha(s.snapshot()),storeSavedAt=61000),
+            workoutId="new-workout-between-finish-acks",startedAt=62000)
+        assertNotNull(s.store.beginSession(next,slots,0,s.journal))
+        paused[1].resume(Unit)
         assertTrue(checkNotNull(one.value()).recoveryCleared)
         assertTrue(checkNotNull(two.value()).recoveryCleared)
         assertEquals(1,JSONObject(s.snapshot()).getJSONArray("history").length())
         assertEquals(1,s.journalDrive.clears)
+        assertEquals(next,checkNotNull(s.journal.recover()).session)
     }
 
     @Test fun corruptOversizedAndInvalidUtf8StoresArePreservedWithoutBootstrap() {

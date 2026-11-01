@@ -18,13 +18,18 @@ import java.io.IOException
 internal class AppPrivateWorkoutJournalBytes(context: Context) : WorkoutJournalBytes {
     // Keep the same path: an unsupported old journal is preserved and rejected,
     // never bypassed by creating a second apparently empty recovery file.
-    private val file = AtomicFile(File(context.noBackupFilesDir, "workout-pending-v1.json"))
+    private val base=File(context.noBackupFilesDir,"workout-pending-v1.json")
+    private val file=AtomicFile(base)
+    // android.util.AtomicFile has no exists API. Preserve unreadable base,
+    // legacy backup and unfinished replacement files instead of assuming empty.
+    private fun hasStoredBytes()=base.exists() || File(base.path+".bak").exists() ||
+        File(base.path+".new").exists()
 
     override fun read(): ByteArray? {
         val stream = try {
             file.openRead()
         } catch (failure: FileNotFoundException) {
-            if (file.exists()) throw IOException("Existing workout journal is unreadable",failure)
+            if (hasStoredBytes()) throw IOException("Existing workout journal is unreadable",failure)
             return null
         }
         stream.use { input ->
@@ -60,6 +65,6 @@ internal class AppPrivateWorkoutJournalBytes(context: Context) : WorkoutJournalB
 
     override fun clearAtomically() {
         file.delete()
-        if (file.exists()) throw IOException("Workout recovery could not be retired")
+        if (hasStoredBytes()) throw IOException("Workout recovery could not be retired")
     }
 }

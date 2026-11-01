@@ -279,6 +279,11 @@ class CanonicalWorkoutStorePersistence(
         val initial=synchronized(guard) { read() } ?: return null
         val prior=initial.receipt
         val recovered=journal.recover()
+        // The previous completion can be acknowledged after the next workout
+        // has begun. It must never clear or replace that newer journal.
+        if (prior?.session==session && prior.journalRevision==revision &&
+            initial.pending!=null && initial.pending.session!=session)
+            return CanonicalWorkoutCompletionOutcome(prior,true)
         if (recovered==null) {
             if (prior?.session!=session || prior.journalRevision!=revision) return null
             return retire(prior,journal)
@@ -325,7 +330,8 @@ class CanonicalWorkoutStorePersistence(
         val current=read() ?: return@synchronized null
         if (!sameReceipt(current.receipt,receipt)) return@synchronized null
         if (current.pending==null) return@synchronized CanonicalWorkoutCompletionOutcome(receipt,true)
-        if (current.pending.session!=receipt.session) return@synchronized null
+        if (current.pending.session!=receipt.session)
+            return@synchronized CanonicalWorkoutCompletionOutcome(receipt,true)
         if (!journal.retireAfterHistory(receipt))
             return@synchronized CanonicalWorkoutCompletionOutcome(receipt,false)
         save(current.copy(pending=null))

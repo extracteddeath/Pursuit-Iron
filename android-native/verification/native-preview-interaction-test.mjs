@@ -282,6 +282,12 @@ assert.ok(outline.includes('ILLUSTRATIVE UI ONLY · NOT GENERATED OR SAVED'),
 const setReviewNav = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/SyntheticSetReviewNavigation.kt', 'utf8'
 );
+assert.ok(components.includes('internal fun TrainingSetHeader(') &&
+  screens.includes('TrainingSetHeader(') &&
+  outline.includes('TrainingSetHeader(') &&
+  components.includes('LinearProgressIndicator(') &&
+  components.includes('numerator.toFloat() / denominator'),
+  'The demo and canonical workout preview must share one Material 3 set header');
 assert.ok(setReviewNav.includes('approved.outline.exercises') &&
   setReviewNav.includes('fun next(') &&
   setReviewNav.includes('fun previous(') &&

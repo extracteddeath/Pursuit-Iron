@@ -156,3 +156,12 @@ lists before presentation to prevent a mutable source alias changing the UI
 after approval. All workout completion remains disabled; no data writes or
 program activation occur. This improves the native journey without inventing
 Kotlin progression rules or more engine adapters.
+
+
+### Shared native workout set header
+
+The editable Train demo and the canonical read-only set reviewer now reuse
+a single TrainingSetHeader. M3 typography, position, ordinals and progress
+are consistent across both screens, with no training calculations or storage
+access in the shared component. This prevents a third divergent set header
+when certified personal training is connected.

@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -363,5 +364,41 @@ internal fun PreviewNumericStepper(
             enabled = value + step <= max,
             modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
         ) { Icon(Icons.Outlined.Add, contentDescription = "Increase $title") }
+    }
+}
+
+
+/**
+ * Shared native Material 3 set heading for illustrative edits and canonical
+ * read-only reviews. All engine decisions and writable state remain external.
+ */
+@Composable
+internal fun TrainingSetHeader(
+    label: String,
+    exerciseName: String,
+    exerciseNumber: Int,
+    exerciseCount: Int,
+    setNumber: Int,
+    setCount: Int,
+    overallSetNumber: Int? = null,
+    totalWorkoutSets: Int? = null
+) {
+    val denominator = (totalWorkoutSets ?: setCount).coerceAtLeast(1)
+    val numerator = (overallSetNumber ?: setNumber).coerceIn(0, denominator)
+    PreviewLabel(label, emphasis = true)
+    Text(exerciseName, style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold)
+    Text(
+        "Exercise " + exerciseNumber + " of " + exerciseCount +
+            " · Set " + setNumber + " of " + setCount,
+        style = MaterialTheme.typography.titleSmall
+    )
+    LinearProgressIndicator(
+        progress = { numerator.toFloat() / denominator },
+        modifier = Modifier.fillMaxWidth()
+    )
+    if (overallSetNumber != null && totalWorkoutSets != null) {
+        Text("Workout set " + overallSetNumber + " of " + totalWorkoutSets,
+            style = MaterialTheme.typography.labelMedium)
     }
 }

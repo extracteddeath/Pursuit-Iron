@@ -198,21 +198,16 @@ private fun SyntheticSetReviewPanel(
     onNext: (() -> Unit)?
 ) {
     PursuitCard(highlighted = true) {
-        PreviewLabel("CANONICAL SYNTHETIC SET · READ ONLY", emphasis = true)
-        Text(point.exercise.name,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold)
-        Text(
-            "Exercise " + point.exerciseNumber + " of " + point.exerciseCount +
-                " · Set " + point.setNumber + " of " + point.totalExerciseSets,
-            style = MaterialTheme.typography.titleSmall
+        TrainingSetHeader(
+            label = "CANONICAL SYNTHETIC SET · READ ONLY",
+            exerciseName = point.exercise.name,
+            exerciseNumber = point.exerciseNumber,
+            exerciseCount = point.exerciseCount,
+            setNumber = point.setNumber,
+            setCount = point.totalExerciseSets,
+            overallSetNumber = point.overallSetNumber,
+            totalWorkoutSets = point.totalWorkoutSets
         )
-        LinearProgressIndicator(
-            progress = { point.overallSetNumber.toFloat() / point.totalWorkoutSets },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text("Workout set " + point.overallSetNumber + " of " + point.totalWorkoutSets,
-            style = MaterialTheme.typography.labelMedium)
         Text("Target reps: " + point.exercise.repMin + "–" + point.exercise.repMax,
             style = MaterialTheme.typography.titleMedium)
         Text("Target RIR: " + point.exercise.rirMin + "–" + point.exercise.rirMax,

@@ -162,14 +162,13 @@ internal fun TrainScreen(
         }
     }
     PursuitCard(highlighted = true) {
-        PreviewLabel("EDITABLE SET · SAMPLE ONLY")
-        Text(demoExercises[exerciseIndex], style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold)
-        Text("Set ${setIndex + 1} of 4 · Exercise ${exerciseIndex + 1} of 3",
-            style = MaterialTheme.typography.titleSmall)
-        androidx.compose.material3.LinearProgressIndicator(
-            progress = { (setIndex + 1) / 4f },
-            modifier = Modifier.fillMaxWidth()
+        TrainingSetHeader(
+            label = "EDITABLE SET · SAMPLE ONLY",
+            exerciseName = demoExercises[exerciseIndex],
+            exerciseNumber = exerciseIndex + 1,
+            exerciseCount = demoExercises.size,
+            setNumber = setIndex + 1,
+            setCount = 4
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Last", "Target").forEach { choice ->

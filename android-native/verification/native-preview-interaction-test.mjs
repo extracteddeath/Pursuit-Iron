@@ -11,7 +11,7 @@ assert.match(shell, /rememberSaveableStateHolder\(\)/);
 assert.match(shell, /destinationStates\.SaveableStateProvider\(current\)/);
 for (const name of ['sampleWeights', 'sampleReps', 'sampleRirs']) {
   assert.match(screens, new RegExp('var ' + name + ' by rememberSaveable'));
-  assert.match(screens, new RegExp(name + '\\[exerciseIndex\\]'));
+  assert.match(screens, new RegExp(name + '\\[valueIndex\\]'));
 }
 assert.match(screens, /values\.copyOf\(\)\.also/);
 assert.doesNotMatch(screens, /weight = listOf\(185, 120, 185\)\[index\]/);
@@ -28,7 +28,17 @@ assert.match(components, /contentDescription = "Increase \$title"/);
 assert.match(components, /minWidth = 48\.dp, minHeight = 48\.dp/);
 assert.match(components, /enabled = canSubtract/);
 assert.match(components, /enabled = canAdd/);
-assert.match(screens, /canSubtract = reps > 1/);
+assert.match(screens, /title = "Reps", value = reps, min = 1, max = 50, step = 1/);
+assert.match(screens, /var setIndex by rememberSaveable/);
+assert.match(screens, /val valueIndex = exerciseIndex \* 4 \+ setIndex/);
+assert.match(screens, /Text\("Next sample"\)/);
+assert.match(screens, /Text\("Previous sample"\)/);
+assert.ok(components.includes('internal fun PreviewNumericStepper(') &&
+  components.includes('OutlinedTextField(') &&
+  components.includes('keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)') &&
+  components.includes('it in min..max && (it - min) % step == 0') &&
+  components.includes('enabled = validInput'),
+  'Reusable direct numeric set editor must reject invalid or unaligned sample values');
 assert.match(screens, /canSubtract = days > 3/);
 assert.match(screens, /canAdd = days < 6/);
 assert.match(screens, /Adapt exercises between blocks/);

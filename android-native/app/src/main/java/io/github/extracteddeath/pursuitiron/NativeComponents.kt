@@ -9,6 +9,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -263,5 +272,96 @@ internal fun ReadOnlyMovementIdentityRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+
+/**
+ * Shared native numeric set editor. Every interaction is a UI-only preview
+ * unless a future certified workout state owner explicitly supplies callbacks.
+ * Use the same bounds for the stepper and type-to-replace dialog.
+ */
+@Composable
+internal fun PreviewNumericStepper(
+    title: String,
+    value: Int,
+    min: Int,
+    max: Int,
+    step: Int,
+    onValueChange: (Int) -> Unit,
+    suffix: String = ""
+) {
+    require(min <= max && step > 0)
+    var editing by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
+    val validInput = draft.toIntOrNull()?.let {
+        it in min..max && (it - min) % step == 0
+    } == true
+    if (editing) {
+        AlertDialog(
+            onDismissRequest = { editing = false },
+            title = { Text("Edit $title") },
+            text = {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { input ->
+                        if (input.length <= 6 && input.all(Char::isDigit)) draft = input
+                    },
+                    singleLine = true,
+                    isError = draft.isNotEmpty() && !validInput,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText = { Text("From $min to $max in steps of $step") }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = validInput,
+                    onClick = {
+                        draft.toIntOrNull()?.let(onValueChange)
+                        editing = false
+                    }
+                ) { Text("Apply") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editing = false }) { Text("Cancel") }
+            }
+        )
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        TextButton(
+            modifier = Modifier.weight(1f),
+            onClick = {
+                draft = value.toString()
+                editing = true
+            }
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(title, style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    value.toString() + if (suffix.isEmpty()) "" else " $suffix",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text("Tap to edit", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        FilledTonalIconButton(
+            onClick = { if (value - step >= min) onValueChange(value - step) },
+            enabled = value - step >= min,
+            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+        ) { Icon(Icons.Outlined.Remove, contentDescription = "Decrease $title") }
+        FilledTonalIconButton(
+            onClick = { if (value + step <= max) onValueChange(value + step) },
+            enabled = value + step <= max,
+            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+        ) { Icon(Icons.Outlined.Add, contentDescription = "Increase $title") }
     }
 }

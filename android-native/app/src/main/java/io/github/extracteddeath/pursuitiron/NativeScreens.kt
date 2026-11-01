@@ -100,12 +100,22 @@ internal fun TrainScreen(
         return
     }
     var exerciseIndex by rememberSaveable { mutableIntStateOf(0) }
-    var sampleWeights by rememberSaveable { mutableStateOf(intArrayOf(185, 120, 185)) }
-    var sampleReps by rememberSaveable { mutableStateOf(intArrayOf(8, 8, 8)) }
-    var sampleRirs by rememberSaveable { mutableStateOf(intArrayOf(2, 2, 2)) }
-    val weight = sampleWeights[exerciseIndex]
-    val reps = sampleReps[exerciseIndex]
-    val rir = sampleRirs[exerciseIndex]
+    // 3 demonstrator exercises x 4 independent, editable example sets.
+    // No draft is a prescription or an actual completed/logged set.
+    var setIndex by rememberSaveable { mutableIntStateOf(0) }
+    var sampleWeights by rememberSaveable {
+        mutableStateOf(intArrayOf(185, 185, 185, 185, 120, 120, 120, 120, 185, 185, 185, 185))
+    }
+    var sampleReps by rememberSaveable {
+        mutableStateOf(intArrayOf(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
+    }
+    var sampleRirs by rememberSaveable {
+        mutableStateOf(intArrayOf(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
+    }
+    val valueIndex = exerciseIndex * 4 + setIndex
+    val weight = sampleWeights[valueIndex]
+    val reps = sampleReps[valueIndex]
+    val rir = sampleRirs[valueIndex]
     var focus by rememberSaveable { mutableStateOf(false) }
     var reference by rememberSaveable { mutableStateOf("Last") }
     var rest by rememberSaveable { mutableIntStateOf(90) }
@@ -129,39 +139,72 @@ internal fun TrainScreen(
             demoExercises.forEachIndexed { index, label ->
                 PreviewChoice(label, exerciseIndex == index) {
                     exerciseIndex = index
+                    setIndex = 0
                 }
             }
         }
     }
     PursuitCard(highlighted = true) {
-        PreviewLabel("WORKING SET · SAMPLE")
+        PreviewLabel("EDITABLE SET · SAMPLE ONLY")
         Text(demoExercises[exerciseIndex], style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold)
-        Text("Set 1 of 4", style = MaterialTheme.typography.titleSmall)
+        Text("Set ${setIndex + 1} of 4 · Exercise ${exerciseIndex + 1} of 3",
+            style = MaterialTheme.typography.titleSmall)
+        androidx.compose.material3.LinearProgressIndicator(
+            progress = { (setIndex + 1) / 4f },
+            modifier = Modifier.fillMaxWidth()
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Last", "Target").forEach { choice ->
                 PreviewChoice(choice, reference == choice) { reference = choice }
             }
         }
         Text(
-            if (reference == "Last") "Sample last: ${sampleLastWeights[exerciseIndex]} lb × 8 · 2 RIR"
+            if (reference == "Last") "Illustrative last: ${sampleLastWeights[exerciseIndex]} lb × 8 · 2 RIR"
             else "Sample target: 6–10 reps · 2 RIR",
             style = MaterialTheme.typography.bodyMedium
         )
         HorizontalDivider()
-        PreviewStepper("Weight", weight.toString() + " lb",
-            subtract = { sampleWeights = editPreviewValue(sampleWeights, exerciseIndex, (weight - 5).coerceAtLeast(0)) },
-            add = { sampleWeights = editPreviewValue(sampleWeights, exerciseIndex, weight + 5) },
-            canSubtract = weight > 0)
-        PreviewStepper("Reps", reps.toString(),
-            subtract = { sampleReps = editPreviewValue(sampleReps, exerciseIndex, (reps - 1).coerceAtLeast(1)) },
-            add = { sampleReps = editPreviewValue(sampleReps, exerciseIndex, reps + 1) },
-            canSubtract = reps > 1)
-        PreviewStepper("RIR", rir.toString(),
-            subtract = { sampleRirs = editPreviewValue(sampleRirs, exerciseIndex, (rir - 1).coerceAtLeast(0)) },
-            add = { sampleRirs = editPreviewValue(sampleRirs, exerciseIndex, (rir + 1).coerceAtMost(10)) },
-            canSubtract = rir > 0,
-            canAdd = rir < 10)
+        PreviewNumericStepper(
+            title = "Weight", value = weight, suffix = "lb", min = 0, max = 2000, step = 5,
+            onValueChange = { sampleWeights = editPreviewValue(sampleWeights, valueIndex, it) }
+        )
+        PreviewNumericStepper(
+            title = "Reps", value = reps, min = 1, max = 50, step = 1,
+            onValueChange = { sampleReps = editPreviewValue(sampleReps, valueIndex, it) }
+        )
+        PreviewNumericStepper(
+            title = "RIR", value = rir, min = 0, max = 10, step = 1,
+            onValueChange = { sampleRirs = editPreviewValue(sampleRirs, valueIndex, it) }
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    if (setIndex > 0) setIndex--
+                    else if (exerciseIndex > 0) { exerciseIndex--; setIndex = 3 }
+                },
+                enabled = exerciseIndex > 0 || setIndex > 0,
+                modifier = Modifier.weight(1f)
+            ) { Text("Previous sample") }
+            FilledTonalButton(
+                onClick = {
+                    if (setIndex < 3) setIndex++
+                    else if (exerciseIndex < demoExercises.lastIndex) {
+                        exerciseIndex++; setIndex = 0
+                    }
+                },
+                enabled = exerciseIndex < demoExercises.lastIndex || setIndex < 3,
+                modifier = Modifier.weight(1f)
+            ) { Text("Next sample") }
+        }
+        Text(
+            "These controls only rehearse set navigation. No values are saved to workout history.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
             Text("Complete set · engine not connected")
         }

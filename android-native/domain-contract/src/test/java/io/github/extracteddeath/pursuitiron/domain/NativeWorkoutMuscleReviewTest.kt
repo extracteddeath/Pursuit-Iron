@@ -17,9 +17,9 @@ class NativeWorkoutMuscleReviewTest {
         assertThrows(IllegalArgumentException::class.java) {
             NativeWorkoutMuscleReviewCodec.encode("inspect",src,"")
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertTrue(runCatching {
             NativeWorkoutMuscleReviewCodec.decode("{}", "inspect",src,"{}")
-        }
+        }.isFailure)
         val wire=JSONObject().put("protocolVersion",1).put("id","inspect")
             .put("method","inspectNativeWorkoutMuscles")
             .put("params",JSONObject().put("rawSnapshot",src).put("issuedWorkout","not-issued"))

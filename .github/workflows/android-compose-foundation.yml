@@ -19,6 +19,13 @@ jobs:
           node-version: '22'
       - name: Validate canonical engine bridge contract
         run: node android-native/engine-bridge/protocol-test.mjs
+      - name: Verify canonical JS engine snapshot identity and independent parity
+        run: |
+          snapshot="$(mktemp -d)"
+          trap 'rm -rf "$snapshot"' EXIT
+          node engine-lab/canonical-export.mjs "$snapshot"
+          node "$snapshot/scripts/verify-snapshot.mjs"
+          node engine-lab/verify-parity.mjs "$snapshot"
       - name: Validate read-only backup inspector
         run: node android-native/data-migration/inspect-backup-test.mjs
       - name: Validate canonical backup parser without writing data

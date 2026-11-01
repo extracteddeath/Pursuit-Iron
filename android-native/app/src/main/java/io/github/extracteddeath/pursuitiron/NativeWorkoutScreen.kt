@@ -60,7 +60,7 @@ internal fun NativeWorkoutScreen(
     // replace the visible composition. Drafts are not confirmed journal events.
     val setDraftStates=rememberSaveableStateHolder()
     PageHeading("WEEK ${plan.session.weekIndex}",plan.dayLabel,plan.programName)
-    Text("${journal.completed.size} of ${plan.slots.size} working sets saved · ${plan.session.unit}",
+    Text("${journal.completed.size} of ${plan.slots.size} set steps saved · ${plan.session.unit}",
         style=MaterialTheme.typography.titleMedium)
     LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size},
         modifier=Modifier.fillMaxWidth())
@@ -76,7 +76,9 @@ internal fun NativeWorkoutScreen(
     PursuitCard {
         Text(exercise.name,style=MaterialTheme.typography.headlineSmall)
         if(exercise.superset)Text("Superset pairing",style=MaterialTheme.typography.labelMedium)
-        NativeRestTimer(plan.session.workoutId, exercise.restSeconds,
+        val activeExtension=if(focusMode)exercise.sets.firstOrNull { it.slot !in committedSlots }
+            ?.extensionRestSeconds else null
+        NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
             enabled=!state.workoutBusy && !journal.isFinished)
         if(exercise.warmups.isNotEmpty()) {
             Text("Warm-up targets",style=MaterialTheme.typography.titleSmall)
@@ -145,7 +147,7 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
     if(showSkipConfirmation && commit==null) {
         AlertDialog(
             onDismissRequest={showSkipConfirmation=false},
-            title={Text("Skip set ${set.slot.setIndex+1}?")},
+            title={Text(if(set.isExtension)"Skip extension?" else "Skip set ${set.slot.setIndex+1}?")},
             text={Text("Skipping is saved to your workout log. It will not be treated as a completed training set.")},
             confirmButton={Button(onClick={
                 showSkipConfirmation=false
@@ -155,7 +157,12 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
         )
     }
     PursuitCard {
-        Text("Set ${set.slot.setIndex+1}",style=MaterialTheme.typography.titleMedium)
+        Text(if(set.isExtension)"${if(set.kind=="myo")"Myo-rep mini" else "Drop"} set"
+            else "Set ${set.slot.setIndex+1}",style=MaterialTheme.typography.titleMedium)
+        set.extensionRestSeconds?.let { seconds->
+            Text("Extension of the last working set · $seconds-second rest target",
+                style=MaterialTheme.typography.labelMedium)
+        }
         if(showLast)Text(set.last?.let { "Last time: $it" } ?: "No previous result for this set",
             style=MaterialTheme.typography.bodySmall)
         else Text("Target: ${set.targetReps} reps" + (set.targetRir?.let { " · $it RIR" } ?: ""))
@@ -190,9 +197,9 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
                 JournalSetValues(load,session.unit,checkNotNull(repCount),effort))},
                 enabled=!busy && validLoad && repCount!=null && repCount in 1..100 &&
                     (rir.isEmpty() || effort!=null && effort in 0..10),modifier=Modifier.fillMaxWidth()) {
-                Text("Complete set")
+                Text(if(set.isExtension)"Complete extension" else "Complete set")
             }
-            TextButton(onClick={showSkipConfirmation=true},enabled=!busy) { Text("Skip set") }
+            TextButton(onClick={showSkipConfirmation=true},enabled=!busy) { Text(if(set.isExtension)"Skip extension" else "Skip set") }
         }
     }
 }

@@ -13,7 +13,7 @@ export function finishedIssuedJournal(plan,{skipSecond=true}={}) {
   const events=slots.map((slot,index)=>({operationId:`set-${index}`,slot,
     disposition:skipSecond && index===1?'SKIPPED':'COMPLETED',
     values:skipSecond && index===1?null:{load:String(40+slot.exerciseIndex*5),unit:plan.session.unit,
-      reps:Number(plan.rows.find(r=>r.slot===slot.exerciseIndex).sets.filter(s=>!s.warm)[slot.setIndex].reps),
+      reps:Math.max(1,Number(plan.rows.find(r=>r.slot===slot.exerciseIndex).sets.filter(s=>!s.warm)[slot.setIndex].reps)||6),
       rir:index%2===0?2:null},fromRevision:index,toRevision:index+1}));
   return {format:2,session:plan.session,slots,startRevision:0,events,finish:{operationId:'finish-workout',
     fromRevision:slots.length,toRevision:slots.length+1,completedAt:plan.session.startedAt+60000,durationMs:60000}};
@@ -90,4 +90,37 @@ assert.ok(!mixedSaved.perf[fixture.plan.rows[0].id].sets.some(set=>set.workingSe
   'canonical loaded-set summarization must remain unchanged');
 assert.equal(mixedSaved.nativeSetObservations.events.length,mixed.events.length);
 assert.equal(prepareCanonicalWorkoutHistory(fixture.snapshot,mixedResult.candidateSnapshot,JSON.stringify(mixed),fixture.issued).alreadyPresent,true);
-console.log('PASS native workouts: four real generated splits, web-path targets, rotation/week advance, retained traces and observations (including mixed zero loads), actual RIR, skipped ordinals, exact retry and isolated channels');
+// Real engine-issued advanced-technique extensions must survive the entire
+// native session, stay distinct from working-set ordinals and round-trip to
+// canonical history. This is not a synthetic hand-authored row.
+for (const [tech,kind,count] of [['myo-reps','myo',3],['drop set','drop',2]]) {
+  const store=JSON.parse(fixture.snapshot);
+  const first=fixture.plan.rows[0];
+  const key=`${fixture.plan.session.dayId}:${first.slot}`;
+  const week=fixture.plan.session.weekIndex;
+  assert.ok(store.saved[0].nextWeekPrescriptions[key]?.[week],
+    'test needs an actual canonical weekly prescription');
+  store.saved[0].nextWeekPrescriptions[key][week].tech=tech;
+  const snapshot=JSON.stringify(store);
+  const plan=prepareNativeWorkout(snapshot,fixture.startJson);
+  const extensions=plan.rows[0].sets.filter(row=>row.sub);
+  assert.equal(extensions.length,count);
+  assert.ok(extensions.every(row=>row.kind===kind && row.target.rest===15));
+  assert.equal(issuedNativeWorkoutFrom(snapshot,JSON.stringify(plan)).slots.length,
+    plan.rows.reduce((sum,row)=>sum+row.sets.filter(set=>!set.warm).length,0));
+  const journal=JSON.stringify(finishedIssuedJournal(plan,{skipSecond:false}));
+  const prepared=prepareCanonicalWorkoutHistory(snapshot,snapshot,journal,JSON.stringify(plan));
+  const history=prepared.historyEntry;
+  assert.equal(history.nativeSetObservations.events.length,JSON.parse(journal).slots.length);
+  const persisted=history.perf[first.id].sets.filter(set=>set.sub);
+  assert.equal(persisted.length,count);
+  assert.ok(persisted.every(set=>set.kind===kind));
+  assert.ok(persisted.every(set=>!Object.hasOwn(set,'workingSetIndex')),
+    'extensions must not count as ordinary working-set ordinals');
+  assert.equal(prepareCanonicalWorkoutHistory(snapshot,prepared.candidateSnapshot,journal,JSON.stringify(plan)).alreadyPresent,true);
+  const truncated=structuredClone(plan);
+  truncated.rows[0].sets.pop();
+  assert.throws(()=>issuedNativeWorkoutFrom(snapshot,JSON.stringify(truncated)),
+    'extension omission must fail before the native journal opens');
+}
+console.log('PASS native workouts: four real generated splits, web-path targets, rotation/week advance, retained traces and observations, engine-issued myo/drop extensions (including mixed zero loads), actual RIR, skipped ordinals, exact retry and isolated channels');

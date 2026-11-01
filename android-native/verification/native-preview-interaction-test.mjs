@@ -98,7 +98,7 @@ assert.ok(screening.includes('withContext(Dispatchers.IO)') &&
   screening.includes('checkActive = { job.ensureActive() }'),
   'Fingerprint-only selection must remain available and cancellable with no backend');
 assert.ok(screening.includes('ReadOnlyBackupCandidateReader.screen(') &&
-  (screening.match(/checkActive = \\{ job\\.ensureActive\\(\\) \\}/g) || []).length === 2 &&
+  screening.split('checkActive = { job.ensureActive() }').length === 3 &&
   screening.includes('screening.bytes.fill(0)') &&
   screening.includes('verifier!!.inspect('),
   'Explicit small-source schema selection must use bounded intake, no persistent bytes');

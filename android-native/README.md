@@ -100,3 +100,19 @@ No full-backup import or private workout history access is enabled. Large
 backups are fingerprint-only, and no current-snapshot program reference
 is obtained from this metadata-only source. A device-tested preview APK is
 still a future milestone; no APK is built by ordinary source commits.
+
+### Canonical saved-program inventory in a backup copy
+
+The same optional, checksum-pinned debug-only verifier now provides a second
+explicitly chosen document action, **View saved programs in backup**. For
+whole sources within the small-copy bound, the Android JavaScript sandbox
+uses the canonical v13 parser to enumerate at most 24 active saved entries,
+honors equal/newer deletion clocks, rejects duplicate program IDs, and
+returns only names, training-day counts and exercise-slot counts. Those
+programs are clearly identified as **contents of the selected backup**, not
+as active or current Plan data. No exercises, workout weights, RIR,
+history, editing, import, or persistence are exposed.
+
+Unlike the live `SavedProgramOverviewPanel` path, this backup catalog
+does not assert that the copy is the most recent store revision. It is
+separately typed and must never be forwarded to active Plan presentation.

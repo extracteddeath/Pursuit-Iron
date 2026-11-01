@@ -89,6 +89,12 @@ assert.ok(screening.includes('if (verifier != null)') &&
 assert.ok(screening.includes('is ReadOnlyDocumentScreening.FingerprintOnly') &&
   screening.includes('TooLargeForSchema'),
   'Oversized copies must never be silently truncated before canonical parsing');
+assert.ok(screening.includes('var wantsPrograms by remember') &&
+  screening.includes('verifier!!.inspectPrograms(') &&
+  screening.includes('BackupScreeningStage.ProgramInventory(') &&
+  screening.includes('View saved programs in backup') &&
+  screening.includes('NOT YOUR ACTIVE PLAN'),
+  'Program inventory must require explicit selection and be clearly backup-only');
 assert.ok(screening.includes('var wantsSchema by remember') &&
   screening.includes('picker.launch(arrayOf("application/json", "text/plain"))'),
   'Canonical validation must require a separate explicit user picker action');

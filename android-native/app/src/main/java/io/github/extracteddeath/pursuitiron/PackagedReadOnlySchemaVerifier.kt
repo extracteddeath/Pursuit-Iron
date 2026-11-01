@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
 import android.content.Context
+import io.github.extracteddeath.pursuitiron.domain.BackupSavedProgramInventory
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupSchemaResult
 import io.github.extracteddeath.pursuitiron.domain.UnverifiedBackupFingerprint
 import io.github.extracteddeath.pursuitiron.engine.CanonicalJsReadOnlyService
@@ -28,6 +29,12 @@ internal class PackagedReadOnlySchemaVerifier private constructor(
         exactSmallCopy: ByteArray,
         fingerprint: UnverifiedBackupFingerprint
     ): Result<ReadOnlyBackupSchemaResult> = schema.inspect(exactSmallCopy, fingerprint)
+
+    override suspend fun inspectPrograms(
+        exactSmallCopy: ByteArray,
+        fingerprint: UnverifiedBackupFingerprint
+    ): Result<BackupSavedProgramInventory> =
+        schema.inspectPrograms(exactSmallCopy, fingerprint)
 
     override fun close() { worker.close() }
 

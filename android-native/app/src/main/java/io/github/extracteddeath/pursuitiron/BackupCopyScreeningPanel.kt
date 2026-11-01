@@ -15,6 +15,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import io.github.extracteddeath.pursuitiron.domain.BackupSavedProgramInventory
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupCandidateReader
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupScreening
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyDocumentScreening
@@ -35,6 +36,10 @@ private sealed interface BackupScreeningStage {
         val fingerprint: UnverifiedBackupFingerprint,
         val result: ReadOnlyBackupSchemaResult
     ) : BackupScreeningStage
+    data class ProgramInventory(
+        val fingerprint: UnverifiedBackupFingerprint,
+        val inventory: BackupSavedProgramInventory
+    ) : BackupScreeningStage
     data class TooLargeForSchema(val fingerprint: UnverifiedBackupFingerprint) : BackupScreeningStage
     data object Rejected : BackupScreeningStage
 }
@@ -48,16 +53,18 @@ internal fun BackupCopyScreeningPanel(
     // Neither selected URI nor raw bytes are saveable or held in Compose state.
     var stage by remember { mutableStateOf<BackupScreeningStage>(BackupScreeningStage.NoSelection) }
     var wantsSchema by remember { mutableStateOf(false) }
+    var wantsPrograms by remember { mutableStateOf(false) }
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { selectedUri ->
             if (selectedUri != null) {
+                val inspectPrograms = wantsPrograms && verifier != null
                 val inspectSchema = wantsSchema && verifier != null
                 stage = BackupScreeningStage.Reading
                 scope.launch {
                     stage = try {
-                        if (!inspectSchema) {
+                        if (!inspectSchema && !inspectPrograms) {
                             val screened = withContext(Dispatchers.IO) {
                                 val source = context.contentResolver.openInputStream(selectedUri)
                                     ?: throw IOException("Selected source unavailable")
@@ -74,10 +81,17 @@ internal fun BackupCopyScreeningPanel(
                                     is ReadOnlyDocumentScreening.FingerprintOnly ->
                                         BackupScreeningStage.TooLargeForSchema(screening.fingerprint)
                                     is ReadOnlyDocumentScreening.SmallCandidate -> try {
-                                        val valid = verifier!!.inspect(
-                                            screening.bytes, screening.fingerprint
-                                        ).getOrThrow()
-                                        BackupScreeningStage.SchemaChecked(screening.fingerprint, valid)
+                                        if (inspectPrograms) {
+                                            val saved = verifier!!.inspectPrograms(
+                                                screening.bytes, screening.fingerprint
+                                            ).getOrThrow()
+                                            BackupScreeningStage.ProgramInventory(screening.fingerprint, saved)
+                                        } else {
+                                            val valid = verifier!!.inspect(
+                                                screening.bytes, screening.fingerprint
+                                            ).getOrThrow()
+                                            BackupScreeningStage.SchemaChecked(screening.fingerprint, valid)
+                                        }
                                     } finally {
                                         screening.bytes.fill(0)
                                     }
@@ -108,6 +122,7 @@ internal fun BackupCopyScreeningPanel(
         FilledTonalButton(
             onClick = {
                 wantsSchema = false
+                wantsPrograms = false
                 stage = BackupScreeningStage.NoSelection
                 picker.launch(arrayOf("*/*"))
             },
@@ -118,12 +133,23 @@ internal fun BackupCopyScreeningPanel(
             OutlinedButton(
                 onClick = {
                     wantsSchema = true
+                    wantsPrograms = false
                     stage = BackupScreeningStage.NoSelection
                     picker.launch(arrayOf("application/json", "text/plain"))
                 },
                 enabled = stage !is BackupScreeningStage.Reading,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Validate small backup structure") }
+            OutlinedButton(
+                onClick = {
+                    wantsSchema = false
+                    wantsPrograms = true
+                    stage = BackupScreeningStage.NoSelection
+                    picker.launch(arrayOf("application/json", "text/plain"))
+                },
+                enabled = stage !is BackupScreeningStage.Reading,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("View saved programs in backup") }
         }
         when (val current = stage) {
             BackupScreeningStage.NoSelection ->
@@ -150,6 +176,32 @@ internal fun BackupCopyScreeningPanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            is BackupScreeningStage.ProgramInventory -> {
+                BackupFingerprintText(current.fingerprint)
+                Text(
+                    "Saved programs in this backup · NOT YOUR ACTIVE PLAN",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                if (current.inventory.entries.isEmpty()) {
+                    Text("No active saved programs in this copy.",
+                        style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    current.inventory.entries.forEach { entry ->
+                        Text(entry.name, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "${entry.trainingDays} training days · ${entry.exerciseSlots} exercise slots",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Text(
+                    "Backup snapshot only. Deletions within the copy are honored; " +
+                        "nothing is restored, activated or used for training.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             BackupScreeningStage.Rejected ->
                 Text("The selected copy could not be checked. Nothing was imported or retained.",
                     style = MaterialTheme.typography.bodySmall,
@@ -157,6 +209,7 @@ internal fun BackupCopyScreeningPanel(
         }
         if (stage is BackupScreeningStage.Screened ||
             stage is BackupScreeningStage.SchemaChecked ||
+            stage is BackupScreeningStage.ProgramInventory ||
             stage is BackupScreeningStage.TooLargeForSchema) {
             OutlinedButton(onClick = { stage = BackupScreeningStage.NoSelection }) {
                 Text("Clear result")

@@ -123,3 +123,18 @@ The shipping preview intentionally supplies `verifier=null`. Next
 milestone: package a verified/pinned canonical JS bundle and attach an
 app-scoped read-only inspector; ensure failures, interrupted sessions and
 config changes never introduce write access or source retention.
+
+## Explicit saved-program backup inventory (not current Plan)
+
+The isolated `backupProgramInventory` method lists only **active saved
+entries inside the selected v13 backup copy**. It validates all program IDs
+and edit clocks, checks source tombstones, and returns bounded names, day
+counts and exercise-slot totals. An equal/newer deletion clock removes the
+entry; duplicate IDs, malformed metadata or over-24-program collections
+reject the whole read. The metadata remains an ephemeral Compose selection
+until cleared; raw backup bytes are zeroed after use.
+
+This is intentionally distinct from the inactive *current-reference* saved
+program gate. A snapshot fingerprint cannot establish a currently active
+program. No snapshot rows are adopted, no native workout targets generated,
+and the web store is unchanged.

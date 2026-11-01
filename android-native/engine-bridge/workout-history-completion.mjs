@@ -153,17 +153,23 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
       ensure(Number(event.values.load)===0 && completed.some(other=>
         other.slot.exerciseId===event.slot.exerciseId && Number(other.values.load)>0));
     }
-    // Extension kind, actual load and reps must survive the real canonical
-    // logger exactly; never allow a silent omission masquerading as success.
-    const signature=(kind,weight,reps)=>`${kind}:${Number(weight)}:${Number(reps)}`;
-    const expected=completedExtensions.map(event=>{
+    // Tie every extension to its exercise and exact observed load/reps.
+    // Mixed zero/positive loads follow the web logger's known zero-omission
+    // policy, but ALL original values remain in nativeSetObservations.
+    const signature=(exerciseId,kind,weight,reps)=>
+      `${exerciseId}:${kind}:${Number(weight)}:${Number(reps)}`;
+    const remaining=Object.entries(performance).flatMap(([exerciseId,perf])=>
+      perf.sets.filter(set=>set.sub).map(set=>signature(exerciseId,set.kind,set.w,set.r)));
+    for(const event of completedExtensions) {
       const row=issued.rows.find(row=>row.slot===event.slot.exerciseIndex);
       const target=row.sets.filter(set=>!set.warm)[event.slot.setIndex];
-      return signature(target.kind,event.values.load,event.values.reps);
-    }).sort();
-    const persisted=observations.filter(set=>set.sub).map(set=>
-      signature(set.kind,set.w,set.r)).sort();
-    ensure(equalJson(persisted,expected));
+      const key=signature(row.id,target.kind,event.values.load,event.values.reps);
+      const match=remaining.indexOf(key);
+      if(match>=0)remaining.splice(match,1);
+      else ensure(Number(event.values.load)===0 && completed.some(other=>
+        other.slot.exerciseId===event.slot.exerciseId && Number(other.values.load)>0));
+    }
+    ensure(remaining.length===0);
   } else ensure(observations.length === completed.length);
   const volume = Math.round(observations.reduce((sum, row) => sum + row.w * row.r, 0));
   return {

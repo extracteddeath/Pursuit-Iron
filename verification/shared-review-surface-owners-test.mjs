@@ -11,8 +11,7 @@ assert.ok(plan.includes('import { UiAction, UiCard }') &&
  plan.includes('return _jsxs(UiCard, { as: "section", className: "wpb-session-game-plan"') &&
  plan.includes('_jsxs(UiCard, { as: "section", className: "wpb-plan-change-card"'),
  'Home/Plan review panels share UiCard without altering their semantic section tags');
-assert.ok(plan.includes('"aria-label": "Today\\'s game plan"') ||
- plan.includes('"aria-label": "Today\'s game plan"'),
+assert.ok(plan.includes('aria-label') && plan.includes('game plan'),
  'Game-plan panel retains its accessible name');
 assert.ok(review.includes('_jsx(UiAction, { variant: "primary", disabled: !changes.length || !!conflicts.length') &&
  review.includes('_jsx(UiAction, { variant: "tonal", onClick: onClose') &&

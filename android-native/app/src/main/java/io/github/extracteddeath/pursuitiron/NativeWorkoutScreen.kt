@@ -37,6 +37,13 @@ internal fun NativeWorkoutScreen(
     val initial=plan.exercises.indexOfFirst { ex->ex.sets.any { set->journal.completed.none { it.intent.slot==set.slot } } }.coerceAtLeast(0)
     var exerciseIndex by rememberSaveable(plan.session.workoutId) { mutableIntStateOf(initial) }
     val exercise=plan.exercises[exerciseIndex.coerceIn(plan.exercises.indices)]
+    val committedSlots=journal.completed.map { it.intent.slot }.toSet()
+    val nextUnfinished=plan.exercises.indices.firstOrNull { index->
+        index>exerciseIndex && plan.exercises[index].sets.any { it.slot !in committedSlots }
+    } ?: plan.exercises.indices.firstOrNull { index->
+        index<exerciseIndex && plan.exercises[index].sets.any { it.slot !in committedSlots }
+    }
+    var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     PageHeading("WEEK ${plan.session.weekIndex}",plan.dayLabel,plan.programName)
     Text("${journal.completed.size} of ${plan.slots.size} working sets saved · ${plan.session.unit}",
         style=MaterialTheme.typography.titleMedium)
@@ -44,7 +51,9 @@ internal fun NativeWorkoutScreen(
         style=MaterialTheme.typography.bodySmall)
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         plan.exercises.forEachIndexed { index,ex->
-            FilterChip(selected=index==exerciseIndex,onClick={exerciseIndex=index},label={Text("${index+1}. ${ex.name}")})
+            val completed=ex.sets.count { it.slot in committedSlots }
+            FilterChip(selected=index==exerciseIndex,onClick={exerciseIndex=index},
+                label={Text("${index+1}. ${ex.name} · $completed/${ex.sets.size}")})
         }
     }
     PursuitCard {
@@ -61,17 +70,30 @@ internal fun NativeWorkoutScreen(
             NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,onRecord)
         }
     }
-    if(exerciseIndex<plan.exercises.lastIndex)OutlinedButton(onClick={exerciseIndex++},modifier=Modifier.fillMaxWidth()) {
-        Text("Next exercise")
+    if(nextUnfinished!=null)FilledTonalButton(onClick={exerciseIndex=nextUnfinished},
+        modifier=Modifier.fillMaxWidth()) {
+        Text("Go to next unfinished exercise")
     }
     state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
     PursuitCard(highlighted=journal.unresolvedCount==0) {
         if(journal.unresolvedCount>0)Text("Complete or skip ${journal.unresolvedCount} remaining sets to finish.")
         else Text(if(journal.isFinished)"All sets are saved. Finishing your training history…" else "Every working set is saved. Ready to finish.")
-        Button(onClick=onFinish,enabled=journal.unresolvedCount==0 && !state.workoutBusy,
+        Button(onClick={if(journal.isFinished)onFinish() else showFinishReview=true},
+            enabled=journal.unresolvedCount==0 && !state.workoutBusy,
             modifier=Modifier.fillMaxWidth()) {
-            Text(if(state.workoutBusy)"Saving…" else if(journal.isFinished)"Retry finishing workout" else "Finish workout")
+            Text(if(state.workoutBusy)"Saving…" else if(journal.isFinished)"Retry finishing workout" else "Review and finish")
         }
+    }
+    if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0) {
+        val skipped=journal.completed.count { it.intent.disposition==JournalSetDisposition.SKIPPED }
+        AlertDialog(
+            onDismissRequest={showFinishReview=false},
+            title={Text("Finish this workout?")},
+            text={Text("${journal.completed.size-skipped} completed · $skipped skipped · ${journal.completed.size} of ${plan.slots.size} sets saved. Finishing publishes these observations to training history.")},
+            confirmButton={Button(onClick={showFinishReview=false;onFinish()},
+                enabled=!state.workoutBusy) { Text("Finish workout") }},
+            dismissButton={TextButton(onClick={showFinishReview=false}) { Text("Keep training") }}
+        )
     }
 }
 
@@ -82,6 +104,19 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
     var reps by rememberSaveable { mutableStateOf(set.reps) }
     // Optional actual effort starts empty, independently of the prescribed RIR.
     var rir by rememberSaveable { mutableStateOf("") }
+    var showSkipConfirmation by rememberSaveable { mutableStateOf(false) }
+    if(showSkipConfirmation && commit==null) {
+        AlertDialog(
+            onDismissRequest={showSkipConfirmation=false},
+            title={Text("Skip set ${set.slot.setIndex+1}?")},
+            text={Text("Skipping is saved to your workout log. It will not be treated as a completed training set.")},
+            confirmButton={Button(onClick={
+                showSkipConfirmation=false
+                onRecord(set.slot,JournalSetDisposition.SKIPPED,null)
+            },enabled=!busy) { Text("Skip set") }},
+            dismissButton={TextButton(onClick={showSkipConfirmation=false}) { Text("Keep set") }}
+        )
+    }
     PursuitCard {
         Text("Set ${set.slot.setIndex+1}",style=MaterialTheme.typography.titleMedium)
         Text("Target: ${set.targetReps} reps" + (set.targetRir?.let { " · $it RIR" } ?: ""))
@@ -113,7 +148,7 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
                     (rir.isEmpty() || effort!=null && effort in 0..10),modifier=Modifier.fillMaxWidth()) {
                 Text("Complete set")
             }
-            TextButton(onClick={onRecord(set.slot,JournalSetDisposition.SKIPPED,null)},enabled=!busy) { Text("Skip set") }
+            TextButton(onClick={showSkipConfirmation=true},enabled=!busy) { Text("Skip set") }
         }
     }
 }

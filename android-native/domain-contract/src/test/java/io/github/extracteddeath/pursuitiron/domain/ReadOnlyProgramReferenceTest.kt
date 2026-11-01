@@ -37,6 +37,26 @@ class ReadOnlyProgramReferenceTest {
         assertFalse(ReadOnlyProgramReferenceGate.sameActiveRevision(ref,ref,-1))
     }
 
+    @Test fun nodeAndKotlinRejectTheSameUnsafeIdentityAndClockShapes() {
+        for (badId in listOf("", " ", "__proto__", "-invalid",
+            "contains space", "contains\\nnewline", "x".repeat(129))) {
+            assertFalse(ReadOnlyProgramReferenceGate.sameActiveRevision(
+                ref.copy(programId = badId), ref.copy(programId = badId), null))
+        }
+        val beyondExactJs = 9_007_199_254_740_992L
+        assertFalse(ReadOnlyProgramReferenceGate.sameActiveRevision(
+            ref.copy(programUpdatedAt = beyondExactJs),
+            ref.copy(programUpdatedAt = beyondExactJs), null))
+        assertFalse(ReadOnlyProgramReferenceGate.sameActiveRevision(
+            ref.copy(storeSavedAt = beyondExactJs),
+            ref.copy(storeSavedAt = beyondExactJs), null))
+        assertFalse(ReadOnlyProgramReferenceGate.sameActiveRevision(
+            ref, ref, beyondExactJs))
+        assertFalse(ReadOnlyProgramReferenceGate.sameActiveRevision(
+            ref.copy(snapshotSha256 = "A".repeat(64)),
+            ref.copy(snapshotSha256 = "A".repeat(64)), null))
+    }
+
     @Test fun referenceDoesNotContainOrReconstructTrainingData() {
         assertEquals(listOf("programId","programUpdatedAt","storeSavedAt",
             "storeVersion","snapshotSha256"),

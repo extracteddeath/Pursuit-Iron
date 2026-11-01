@@ -42,7 +42,24 @@ assert.deepEqual(result.historyEntry.nativeSetAdjustments,{format:1,events:[
 assert.equal(result.historyEntry.nativeSetRevisions.events.length,events.length);
 assert.equal(result.historyEntry.nativeSetObservations.events.filter(e=>e.disposition==='SKIPPED').length,1);
 assert.equal(prepareCanonicalWorkoutHistory(snapshot,result.candidateSnapshot,handoff,issuedRaw).alreadyPresent,true);
-assert.equal(inspectNativeHistory(result.candidateSnapshot,issued.session.workoutId).historyId,issued.session.workoutId);
+const before=inspectNativeHistory(result.candidateSnapshot,issued.session.workoutId);
+assert.equal(before.historyId,issued.session.workoutId);
+// A later user correction of a COMPLETED set must retain the user-selected
+// reason on the different skipped slot and must not fabricate a new reason.
+const correctedSet=before.exercises.flatMap(ex=>ex.sets.map(set=>({ex,set})))
+  .find(row=>row.set.load!=='0');
+assert.ok(correctedSet);
+const correction=JSON.stringify({operationId:'adjust-history-correct',
+  snapshotSha256:before.snapshotSha256,historyId:before.historyId,
+  entrySha256:before.entrySha256,correctedAt:70000,changes:[{
+    exerciseId:correctedSet.ex.id,setIndex:correctedSet.set.setIndex,
+    load:'45',reps:correctedSet.set.reps,rir:correctedSet.set.rir
+  }]});
+const revised=prepareNativeHistoryCorrection(result.candidateSnapshot,correction);
+const revisedEntry=JSON.parse(revised.candidateSnapshot).history.find(h=>h.id===issued.session.workoutId);
+assert.deepEqual(revisedEntry.nativeSetAdjustments,result.historyEntry.nativeSetAdjustments);
+assert.deepEqual(revisedEntry.nativeSetRevisions,result.historyEntry.nativeSetRevisions);
+assert.equal(prepareNativeHistoryCorrection(revised.candidateSnapshot,correction).alreadyPresent,true);
 const badAction=structuredClone(finished);badAction.events.find(e=>e.adjustment).adjustment.action='diagnosed';
 assert.throws(()=>prepareCanonicalWorkoutHistory(snapshot,snapshot,JSON.stringify(badAction),issuedRaw));
 const badPart=structuredClone(finished);badPart.events.find(e=>e.adjustment).adjustment.part='unrelated_fake';

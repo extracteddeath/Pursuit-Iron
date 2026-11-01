@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron.domain
 
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -29,6 +30,15 @@ class WorkoutJournalHandoffTest {
     private fun slot(v: JSONObject)=JournalSetSlot(
         v.getInt("exerciseIndex"),v.getInt("setIndex"),v.getString("exerciseId"))
 
+    // Compile against Android's JSONObject API as well as the JVM test JSON
+    // implementation. JSONObject.similar is absent from the platform API.
+    private fun jsonValue(value: Any): Any? = when (value) {
+        JSONObject.NULL -> null
+        is JSONObject -> value.keys().asSequence().associateWith { jsonValue(value.get(it)) }
+        is JSONArray -> (0 until value.length()).map { jsonValue(value.get(it)) }
+        else -> value
+    }
+
     @Test fun durableCrossLanguageHandoffPreservesContextSkippedPositionsAndFinishTime() {
         val bytes=Memory()
         var owner=WorkoutJournalPersistence(bytes)
@@ -57,7 +67,7 @@ class WorkoutJournalHandoffTest {
         state=checkNotNull(owner.finish(s,state.revision,intent))
         val restarted=WorkoutJournalPersistence(bytes)
         val exported=checkNotNull(restarted.finishedHandoff(s,state.revision))
-        assertTrue(handoff.similar(JSONObject(exported)))
+        assertEquals(jsonValue(handoff),jsonValue(JSONObject(exported)))
         assertNull(restarted.finishedHandoff(s,state.revision-1))
         assertNull(restarted.finishedHandoff(s.copy(weekIndex=2),state.revision))
         assertNull(restarted.finish(s,f.getLong("fromRevision"),intent.copy(completedAt=62000)))

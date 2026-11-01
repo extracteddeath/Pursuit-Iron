@@ -47,12 +47,20 @@ to unfinished exercises, keeps a session-wide Last/Target display choice, and
 reviews completed/skipped totals before publishing history. Skipping requires
 confirmation; a finished, unacknowledged publication can be retried without a
 second review. Each uncommitted set entry keeps its own bounded UI draft while
-switching exercises; these drafts are **not** durable history and are discarded
-if the Activity's saveable state cannot be restored. The session-wide native
-rest timer uses the engine-issued exercise rest target, runs on Android elapsed
-time across backgrounding, and supports tap-to-start/restart and long-press
-reset. The timer is a manual, presentation-only tool: it does not imply a
-completed set, auto-log data, or change workout prescriptions. Insights now
+switching exercises or toggling **Focus**; these drafts are **not** durable
+history and are discarded if the Activity's saveable state cannot be restored.
+Focus shows the first unresolved working set (or the last saved set when the
+exercise is complete). It uses the exact same set controls and journal; moving
+to the next set requires a confirmed persistence receipt. Train keeps the
+screen awake while an actual workout is visible and restores the prior view
+flag when leaving. The session-wide native rest timer uses the engine-issued
+exercise rest target, runs on Android elapsed time across backgrounding, and
+supports tap-to-start/restart and long-press reset. It captures its active
+interval when started so a mid-rest exercise switch does not change the
+existing countdown. On restoration, inconsistent wall/elapsed clock changes,
+including a device reboot, invalidate a stale countdown instead of showing
+phantom remaining time. The timer is a manual, presentation-only tool: it does
+not imply a completed set, auto-log data, or change workout prescriptions. Insights now
 shows the latest confirmed native completion receipt and its matching saved
 program day label, including after starting the next workout or reopening the
 app. It intentionally does not synthesize detailed history, edited PRs or

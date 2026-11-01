@@ -1198,7 +1198,10 @@ def a11y_pass():
     time.sleep(1)
     launch()
     time.sleep(3)
-    issues = []
+    tap(r"^\|Skip$", required=False)            # a workout in progress reopens with its check-in
+    tap(r"Minimise workout", required=False)    # the tabs sit under an open workout
+    time.sleep(1.5)
+    issues, scanned = [], 0
     def label_of(n):
         own = (n.get("content-desc") or "") + (n.get("text") or "")
         if own.strip():
@@ -1212,6 +1215,7 @@ def a11y_pass():
                     (r"^\|Exercises$|^Exercises\|", "exercises"), (r"^\|You$|^You\|", "you")]:
         if not tap(pat, required=False):
             continue
+        scanned += 1
         time.sleep(1.2)
         for k in range(3):
             shot(f"a11y-{nm}-{k}")
@@ -1236,7 +1240,9 @@ def a11y_pass():
     adb("shell", "settings", "put", "system", "font_scale", "1.0")
     uniq = list(dict.fromkeys(issues))
     with open(os.path.join(OUT, "a11y.txt"), "w") as f:
-        f.write("\n".join(uniq) if uniq else "no small or unlabelled targets")
+        f.write("\n".join(uniq) if uniq else ("no small or unlabelled targets on %d tabs" % scanned if scanned else "no tabs reached; nothing checked"))
+    if not scanned:
+        FAILS.append("large-text pass reached no tabs")
     print("a11y issues:", len(uniq), flush=True)
 try:
     a11y_pass()

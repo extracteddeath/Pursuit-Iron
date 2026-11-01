@@ -50,6 +50,20 @@ const outlinePolicy = fs.readFileSync(
 );
 const packaged = fs.readFileSync(root + 'PackagedReadOnlySchemaVerifier.kt', 'utf8');
 const activity = fs.readFileSync(root + 'MainActivity.kt', 'utf8');
+const currentPlanHost = fs.readFileSync(root + 'NativePlanPresentationHost.kt', 'utf8');
+assert.ok(currentPlanHost.includes('LocalLifecycleOwner.current') &&
+  currentPlanHost.includes('Lifecycle.Event.ON_STOP') &&
+  currentPlanHost.includes('session.onBackground()') &&
+  currentPlanHost.includes('LaunchedEffect(session, requestVersion)') &&
+  !currentPlanHost.includes('rememberSaveable') &&
+  !currentPlanHost.includes('BackupSavedProgramInventory'),
+  'Personal Plan structure must be ephemeral and cleared after lifecycle changes');
+assert.ok(shell.includes('UnconnectedCurrentReadOnlyPlanSource') &&
+  shell.includes('selectedProgramId = if (section == NativeDestination.PLAN.ordinal)') &&
+  shell.includes('storeChangeKey = canonicalStoreChangeKey') &&
+  shell.includes('currentPlan = currentPlan'),
+  'Plan navigation must invalidate old content without giving backups authority');
+
 assert.ok(packaged.includes('CanonicalJsSandboxProbe.verifyBundleBytes(binary, expected)') &&
   packaged.includes('SandboxBackupSchemaInspector(worker)') &&
   packaged.includes('openIfPackaged(context: Context)'),

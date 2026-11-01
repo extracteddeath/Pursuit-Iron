@@ -49,6 +49,8 @@ import io.github.extracteddeath.pursuitiron.domain.EngineStatus
 import io.github.extracteddeath.pursuitiron.domain.FeatureArea
 import io.github.extracteddeath.pursuitiron.domain.FeatureCatalog
 import io.github.extracteddeath.pursuitiron.domain.UnconnectedEngineGateway
+import io.github.extracteddeath.pursuitiron.domain.CurrentReadOnlyPlanSource
+import io.github.extracteddeath.pursuitiron.domain.UnconnectedCurrentReadOnlyPlanSource
 
 /** Navigation follows training tasks instead of mirroring React screens. */
 private enum class NativeDestination(val title: String, val icon: ImageVector) {
@@ -62,7 +64,11 @@ private enum class NativeDestination(val title: String, val icon: ImageVector) {
 @Composable
 internal fun NativePreviewApp(
     schemaVerifier: CanonicalBackupSchemaVerifier? = null,
-    schemaVerifierLoading: Boolean = false
+    schemaVerifierLoading: Boolean = false,
+    // Neither an active program nor the current canonical store is connected.
+    activeProgramId: String? = null,
+    currentPlanSource: CurrentReadOnlyPlanSource = UnconnectedCurrentReadOnlyPlanSource,
+    canonicalStoreChangeKey: Long = 0L
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -71,6 +77,13 @@ internal fun NativePreviewApp(
     var injuryFlag by rememberSaveable { mutableStateOf(false) }
     val status = UnconnectedEngineGateway().status
     val destinationStates = rememberSaveableStateHolder()
+    // Changing destinations clears any previously approved personal Plan view.
+    val currentPlan = rememberNativeCurrentPlanPresentation(
+        selectedProgramId = if (section == NativeDestination.PLAN.ordinal)
+            activeProgramId else null,
+        source = currentPlanSource,
+        storeChangeKey = canonicalStoreChangeKey
+    )
 
     BoxWithConstraints {
         val expanded = maxWidth >= 840.dp
@@ -138,6 +151,7 @@ internal fun NativePreviewApp(
                                     adjustSession = { sheet = 1 })
                                 NativeDestination.TRAIN -> TrainScreen(openTools = { sheet = 3 })
                                 NativeDestination.PLAN -> PlanScreen(
+                                    currentPlan = currentPlan,
                                     schemaVerifier = schemaVerifier,
                                     schemaVerifierLoading = schemaVerifierLoading
                                 )

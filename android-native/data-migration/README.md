@@ -187,3 +187,24 @@ The installable native preview still supplies no current-store adapter. Its Plan
 remains illustrative; offline backup fingerprints and inventories are NOT active
 training programs. No backup import, history writing, merge algorithm, workout
 execution or web production change is introduced by this contract.
+
+
+## Ephemeral native Plan lifecycle gate (no personal store attached)
+
+ReadOnlyPlanPresentationSession immediately clears previously approved Plan
+structure on background, navigation away, switching IDs, canonical store change
+notifications and new refreshes. A generation ticket rejects delayed or
+out-of-order results. Synthetic tests suspend source projection and then
+resume after an invalidation, ensuring old results cannot reappear.
+
+The Compose host listens for ON_START, ON_STOP and ON_DESTROY. Its transient
+presentation does not use rememberSaveable or persistence. Leaving the Plan
+destination drops the current program ID; a new storeChangeKey recreates
+evidence. The preview supplies only UnconnectedCurrentReadOnlyPlanSource
+and a null activeProgramId, so this does not display a real athlete's plan.
+
+An eventual authoritative adapter MUST emit all canonical store revisions
+and independently verify the current record and deletion clock. This host
+cannot detect changes the source fails to report; training actions will
+still require independent current-revision checks. No import, storage write,
+personal workout activation or distributable Android build is introduced.

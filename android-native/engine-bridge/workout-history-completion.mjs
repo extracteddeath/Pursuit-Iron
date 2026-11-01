@@ -8,7 +8,7 @@
 import { sha256Utf8, utf8ByteLength, equalJson } from './json-identity.mjs';
 import {
   parseStoredData, exerciseAt, prescribeSets, loggedWorkoutPerformance,
-  EX_BY_ID, mergeStores, weeksOf, consumeOneShotDeload
+  EX_BY_ID, secondaryOf, mergeStores, weeksOf, consumeOneShotDeload
 } from '../../modules/engine-api.js';
 import { matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
 import { issuedNativeWorkoutFrom } from './native-workout.mjs';
@@ -46,7 +46,7 @@ function finishedJournal(raw) {
   ensure(typeof raw === 'string' && utf8ByteLength(raw) <= 256 * 1024);
   const j = JSON.parse(raw);
   ensure(exact(j, ['format','session','slots','startRevision','events','finish']) &&
-    [2,3].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
+    [2,3,4].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
   const s = j.session;
   ensure(exact(s, ['reference','workoutId','dayId','weekIndex','unit','startedAt']) &&
     validId(s.workoutId) && validId(s.dayId) && integer(s.weekIndex, 1, 104) &&
@@ -60,14 +60,21 @@ function finishedJournal(raw) {
   let corrections=0;
   for (const [i, event] of j.events.entries()) {
     ensure(exact(event, ['operationId','slot','disposition','values','fromRevision','toRevision',
-      ...(j.format===3?['replacesOperationId']:[])]) &&
+      ...(j.format>=3?['replacesOperationId']:[]),
+      ...(j.format===4?['adjustment']:[])]) &&
       validId(event.operationId) && !operations.has(event.operationId) &&
       validSlot(event.slot) &&
       integer(event.fromRevision, 0, MAX_REV - 1) &&
       event.fromRevision === j.startRevision + i && event.toRevision === event.fromRevision + 1 &&
       j.slots.some(slot => equalJson(slot, event.slot)));
     const position = `${event.slot.exerciseIndex}:${event.slot.setIndex}`;
-    const replaces=j.format===3?event.replacesOperationId:null,prior=positions.get(position);
+    const replaces=j.format>=3?event.replacesOperationId:null,prior=positions.get(position);
+    if(j.format===4 && event.adjustment!==null) {
+      const a=event.adjustment;
+      ensure(exact(a,['action','part']) && ['reduce','skip'].includes(a.action) &&
+        typeof a.part==='string' && /^[a-z][a-z_]{0,39}$/.test(a.part) &&
+        event.disposition==='SKIPPED');
+    }
     ensure(prior ? validId(replaces) && replaces===prior.operationId : replaces===null);
     if(prior)corrections++;
     operations.add(event.operationId);
@@ -81,7 +88,9 @@ function finishedJournal(raw) {
           (typeof v.load === 'string' && load.test(v.load) && v.unit === s.unit)));
     }
   }
-  ensure(positions.size===j.slots.length && (j.format===2 || corrections>0));
+  ensure(positions.size===j.slots.length &&
+    (j.format===2 || j.format===3 && corrections>0 ||
+      j.format===4 && j.events.some(e=>e.adjustment!==null)));
   const f = j.finish;
   ensure(exact(f, ['operationId','fromRevision','toRevision','completedAt','durationMs']) &&
     validId(f.operationId) && !operations.has(f.operationId) &&
@@ -99,6 +108,14 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
   const days = program.days.filter(d => d.id === s.dayId);
   ensure(days.length === 1 && days[0].exercises.length >= 1 && days[0].exercises.length <= 48);
   const day = days[0], slots = [];
+  // Validate a user-selected adjustment against the ORIGINAL issued exercise
+  // primary/secondary involvement. A forged muscle part must never enter history.
+  for(const event of journal.events)if(event.adjustment!==undefined && event.adjustment!==null) {
+    ensure(issued && event.disposition==='SKIPPED');
+    const ex=EX_BY_ID[event.slot.exerciseId];
+    ensure(ex && [ex.part,...secondaryOf(ex,program.engineV).map(([part])=>part)]
+      .includes(event.adjustment.part));
+  }
   const issuedDay=issued?.format===2 ? {...day,sessionLengthPlan:issued.sessionLengthPlan}:day;
   // Reuse the actual canonical runtime rows, including percentage-owned counts.
   // No Kotlin prescription, progression, summary or equipment formula lives here.
@@ -190,7 +207,10 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
       timeLimited:issued.sessionLengthPlan.changed}:{}),
     ...(issued ? {nativeSetObservations:{format:1,events:events.map(event=>({
       slot:event.slot,disposition:event.disposition,values:event.values}))}} : {}),
-    ...(journal.format===3 ? {nativeSetRevisions:{format:1,startRevision:journal.startRevision,
+    ...(journal.format===4 ? {nativeSetAdjustments:{format:1,events:events
+      .filter(event=>event.adjustment!==null)
+      .map(event=>({slot:event.slot,action:event.adjustment.action,part:event.adjustment.part}))}} : {}),
+    ...(journal.format>=3 ? {nativeSetRevisions:{format:1,startRevision:journal.startRevision,
       events:journal.events,finish:journal.finish}} : {}),
     nativeCompletion:{format:2, handoffSha256,
       sourceSnapshotSha256:s.reference.snapshotSha256, journalRevision:f.toRevision}

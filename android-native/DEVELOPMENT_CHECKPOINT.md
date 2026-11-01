@@ -236,6 +236,25 @@ or mark the original canonical prescription as modified. Such metadata
 needs a versioned, recovery-safe journal/history protocol instead of
 silently inventing annotations in Kotlin.
 
+## Follow-up: versioned, durable adjustment provenance
+
+The native journal now supports **format 4** alongside the unchanged format-2
+and format-3 representations. A user-confirmed muscle-wide skip or reduced
+workout records a bounded `{action,part}` adjustment on each SKIPPED receipt.
+Plain exercise skips and user-completed sets remain unannotated. The private
+journal's SHA/revision CAS, lost-ack retry and correction chain preserve these
+annotations without inventing diagnoses or changing the program.
+
+The dedicated canonical completion bridge independently verifies every
+annotation against the originally issued exercise's primary/secondary muscle
+involvement, and publishes `nativeSetAdjustments` for effective tagged skips
+and a `nativeSetRevisions` audit record. The transactional Kotlin owner
+validates BOTH the canonical annotation list and audit against its own
+durably recovered journal before allowing history to be committed.
+Older journal formats and nativeSetObservations remain unchanged.
+It is session-scoped user-selected context, not a longitudinal medical log.
+The web app and global engine stay untouched.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of

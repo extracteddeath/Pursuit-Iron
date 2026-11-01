@@ -352,7 +352,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         val current=mutable.value
         val plan=current.workout?.plan ?: return
         val review=current.muscleReview?.takeIf { it.workoutId==plan.session.workoutId } ?: return
-        skipSelectedIssuedSlots {
+        skipSelectedIssuedSlots(JournalSetAdjustment("skip",part)) {
             NativeSessionSkipPolicy.remainingAffected(it,review,part)
         }
     }
@@ -366,7 +366,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         val current=mutable.value
         val plan=current.workout?.plan ?: return
         val review=current.muscleReview?.takeIf { it.workoutId==plan.session.workoutId } ?: return
-        skipSelectedIssuedSlots {
+        skipSelectedIssuedSlots(JournalSetAdjustment("reduce",part)) {
             NativeSessionSkipPolicy.reduceAffected(it,review,part)
         }
     }
@@ -376,7 +376,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
      * After an interrupted write the new invocation chooses only pending slots.
      * No injury diagnosis or reason is inferred from a generic SKIPPED receipt.
      */
-    private fun skipSelectedIssuedSlots(select: (WorkoutJournalState)->List<JournalSetSlot>) {
+    private fun skipSelectedIssuedSlots(adjustment: JournalSetAdjustment?=null,
+        select: (WorkoutJournalState)->List<JournalSetSlot>) {
         val current=mutable.value;val progress=current.workout ?: return
         if(current.workoutBusy || current.historyBusy || current.workoutBlocked ||
             progress.journal.isFinished || progress.plan.slots!=progress.journal.slots)return
@@ -393,7 +394,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 for(slot in select(active.journal)) {
                     ensureActive()
                     val intent=JournalSetIntent("skip-"+UUID.randomUUID(),slot,
-                        JournalSetDisposition.SKIPPED,null)
+                        JournalSetDisposition.SKIPPED,null,adjustment=adjustment)
                     val saved=checkNotNull(recovery.recordSet(active.plan.session,active.journal.revision,intent))
                     active=NativeWorkoutProgress(active.plan,saved)
                     // Report only receipts confirmed on disk, never optimistic taps.

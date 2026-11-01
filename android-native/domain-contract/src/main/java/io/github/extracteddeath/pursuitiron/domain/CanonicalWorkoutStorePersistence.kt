@@ -336,7 +336,23 @@ class CanonicalWorkoutStorePersistence(
             } }
             require(equivalent(observations.getJSONArray("events"),expected))
         }
-        if(journal.events.size!=journal.completed.size) {
+        val annotated=journal.events.any { it.intent.adjustment!=null }
+        if(annotated) {
+            val data=entry.getJSONObject("nativeSetAdjustments")
+            exact(data,"format","events");require(number(data,"format")==1L)
+            val expected=JSONArray().apply {
+                journal.completed.forEach { commit ->
+                    val a=commit.intent.adjustment
+                    if(a!=null)put(JSONObject()
+                        .put("slot",JSONObject().put("exerciseIndex",commit.intent.slot.exerciseIndex)
+                            .put("setIndex",commit.intent.slot.setIndex)
+                            .put("exerciseId",commit.intent.slot.exerciseId))
+                        .put("action",a.action).put("part",a.part))
+                }
+            }
+            require(equivalent(data.getJSONArray("events"),expected))
+        } else require(!entry.has("nativeSetAdjustments"))
+        if(journal.events.size!=journal.completed.size || annotated) {
             val audit=entry.getJSONObject("nativeSetRevisions");val input=JSONObject(handoff)
             exact(audit,"format","startRevision","events","finish")
             require(number(audit,"format")==1L && number(audit,"startRevision")==number(input,"startRevision") &&

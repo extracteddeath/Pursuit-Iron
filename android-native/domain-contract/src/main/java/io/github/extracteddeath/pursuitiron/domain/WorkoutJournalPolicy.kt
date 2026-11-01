@@ -19,6 +19,8 @@ data class JournalSessionKey(
 
 data class JournalSetSlot(val exerciseIndex: Int, val setIndex: Int, val exerciseId: String)
 data class JournalSetValues(val load: String?, val unit: String?, val reps: Int, val rir: Int?)
+/** Session-only user selected adjustment, not an injury diagnosis. */
+data class JournalSetAdjustment(val action: String,val part: String)
 enum class JournalSetDisposition { COMPLETED, SKIPPED }
 
 data class JournalSetIntent(
@@ -26,7 +28,8 @@ data class JournalSetIntent(
     val slot: JournalSetSlot,
     val disposition: JournalSetDisposition,
     val values: JournalSetValues?,
-    val replacesOperationId: String? = null
+    val replacesOperationId: String? = null,
+    val adjustment: JournalSetAdjustment? = null
 )
 
 data class JournalSetReceipt(
@@ -37,7 +40,8 @@ data class JournalSetReceipt(
     val storedValues: JournalSetValues?,
     val fromRevision: Long,
     val toRevision: Long,
-    val replacesOperationId: String? = null
+    val replacesOperationId: String? = null,
+    val adjustment: JournalSetAdjustment? = null
 )
 
 data class JournalSetCommit(val intent: JournalSetIntent, val receipt: JournalSetReceipt)
@@ -75,6 +79,7 @@ object WorkoutJournalPolicy {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
     private val exerciseId = Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
     private val load = Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")
+    private val muscle = Regex("^[a-z][a-z_]{0,39}$")
 
     private fun validObservation(value: JournalSetValues?): Boolean =
         value != null && value.reps in 0..100 &&
@@ -87,8 +92,12 @@ object WorkoutJournalPolicy {
         id.matches(intent.operationId) &&
             (intent.replacesOperationId == null || id.matches(intent.replacesOperationId)) &&
             when (intent.disposition) {
-                JournalSetDisposition.SKIPPED -> intent.values == null
-                JournalSetDisposition.COMPLETED -> validObservation(intent.values)
+                JournalSetDisposition.SKIPPED -> intent.values == null &&
+                    (intent.adjustment==null ||
+                        intent.adjustment.action in setOf("skip","reduce") &&
+                        muscle.matches(intent.adjustment.part))
+                JournalSetDisposition.COMPLETED -> intent.adjustment==null &&
+                    validObservation(intent.values)
             }
 
     private fun increment(from: Long, to: Long): Boolean =
@@ -124,7 +133,8 @@ object WorkoutJournalPolicy {
             (intent.values?.unit != null && intent.values.unit != state.session.unit) ||
             ack.operationId != intent.operationId || ack.slot != intent.slot ||
             ack.disposition != intent.disposition ||
-            ack.storedValues != intent.values || ack.replacesOperationId != intent.replacesOperationId) return null
+            ack.storedValues != intent.values || ack.replacesOperationId != intent.replacesOperationId ||
+            ack.adjustment != intent.adjustment) return null
         val replay = state.events.find { it.intent.operationId == intent.operationId }
         if (replay != null)
             return if (replay.intent == intent && replay.receipt == ack) state else null

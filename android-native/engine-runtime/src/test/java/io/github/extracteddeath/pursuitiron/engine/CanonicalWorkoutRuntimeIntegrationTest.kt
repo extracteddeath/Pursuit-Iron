@@ -227,6 +227,64 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=120000) fun realShortenedWorkoutRetainsPinnedDoseAndHistoryAcrossRecovery() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val profile=NativeProgramProfile(name="Native short session",goal="hypertrophy",
+                experience="beginner",unit="lb",session="s60",
+                equipment=checkNotNull(engine.programOptions()).equipment)
+            var chosen: Pair<NativeProgramProposal,NativeShortSessionPreview>?=null
+            for(seed in listOf(21,223,782,947)) {
+                val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                    profile,"short-create","short-program",1000,seed)))
+                for(minutes in listOf(45,30,20)) {
+                    val preview=checkNotNull(engine.previewShorterSession(proposal.snapshot,"short-program",minutes))
+                    if(preview.fits && preview.changed) {
+                        chosen=proposal to preview
+                        break
+                    }
+                }
+                if(chosen!=null)break
+            }
+            val (proposal,preview)=checkNotNull(chosen)
+            val drive=Drive();val recovery=Drive()
+            var owner=CanonicalWorkoutStorePersistence(drive,engine)
+            var journal=WorkoutJournalPersistence(recovery)
+            assertTrue(owner.initialize(proposal.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(proposal.snapshot,
+                NativeWorkoutCodec.startJson("short-program","short-workout",2000,preview.minutes)))
+            assertEquals(preview.minutes,plan.shortenedMinutes)
+            assertEquals(preview.estimatedMinutes,plan.shortenedEstimatedMinutes)
+            assertTrue(plan.slots.isNotEmpty())
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            owner=CanonicalWorkoutStorePersistence(drive,engine)
+            journal=WorkoutJournalPersistence(recovery)
+            progress=checkNotNull(owner.recoverIssuedSession(journal))
+            assertEquals(plan.issuedJson,progress.plan.issuedJson)
+            for((index,slot) in plan.slots.withIndex()) {
+                val intent=JournalSetIntent("short-set-$index",slot,
+                    JournalSetDisposition.COMPLETED,JournalSetValues("40","lb",6,2))
+                progress=NativeWorkoutProgress(progress.plan,checkNotNull(journal.recordSet(
+                    plan.session,progress.journal.revision,intent)))
+            }
+            val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("short-finish",62000,60000)))
+            assertTrue(checkNotNull(owner.complete(plan.session,finished.revision,journal)).recoveryCleared)
+            val snapshot=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val history=JSONObject(snapshot).getJSONArray("history").getJSONObject(0)
+            assertEquals("short-workout",history.getString("id"))
+            assertEquals(true,history.getBoolean("timeLimited"))
+            assertEquals(true,history.getBoolean("prescriptionEdited"))
+            assertEquals(preview.minutes,history.getJSONObject("sessionLengthPlan").getInt("minutes"))
+            assertEquals(plan.slots.size,history.getInt("totalSets"))
+            assertEquals(plan.slots.size,
+                history.getJSONObject("nativeSetObservations").getJSONArray("events").length())
+            val writes=drive.writes
+            assertNotNull(owner.complete(plan.session,finished.revision,journal))
+            assertEquals(writes,drive.writes)
+        } }
+    }
+
     @Test(timeout=120000) fun canonicalMyoAndDropExtensionsSurviveNativeJournalAndHistory() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

@@ -15,6 +15,12 @@ data class NativeShortSessionPreview(
 object NativeShortSessionPreviewCodec {
     private val wire=WorkoutStoreRuntimeCodec
     private val identifier=Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+    /** Optimistic UI is never a start authorization; recheck owned current bytes. */
+    fun matchesSource(preview: NativeShortSessionPreview,snapshot: String,
+        programId: String,minutes: Int): Boolean =
+        preview.programId==programId && preview.minutes==minutes && preview.fits &&
+            preview.changed && preview.snapshotSha256==wire.sha(snapshot)
+
     fun encode(id: String,snapshot: String,programId: String,minutes: Int): String {
         require(identifier.matches(programId) && minutes in listOf(20,30,45))
         return wire.encode(id,"previewNativeShorterSession",

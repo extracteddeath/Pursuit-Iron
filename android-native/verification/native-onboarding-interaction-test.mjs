@@ -30,6 +30,12 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
   screens.includes('Preview only — not applied.') &&
   activity.includes('onPreviewShortSession=runtime::previewShorterSession') &&
   shell.includes('previewShorterSession=onPreviewShortSession') &&
+  shell.includes('startShortWorkout=onStartShortWorkout') &&
+  activity.includes('onStartShortWorkout={runtime.startWorkout(it)}') &&
+  screens.includes('startShortWorkout(preview.minutes)') &&
+  screens.includes('if(preview.fits && preview.changed)') &&
+  host.includes('NativeShortSessionPreviewCodec.matchesSource(') &&
+  train.includes('Your logged dose will be marked time-limited') &&
   host.includes('engine.previewShorterSession(snapshot,programId,minutes)') &&
   host.includes('shortPreviewBusy=true,shortPreview=null') &&
   host.includes('latest.storeChangeKey==current.storeChangeKey') &&

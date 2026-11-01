@@ -21,8 +21,13 @@ class NativeShortSessionPreviewTest {
     @Test fun exactRequestAndResultAreBoundToSourceAndReadOnlyFlag() {
         val wire=NativeShortSessionPreviewCodec.encode("preview-1",source,"program-1",30)
         assertEquals("previewNativeShorterSession",WorkoutStoreRuntimeCodec.checkedRequest(wire).getString("method"))
-        assertEquals(27,checkNotNull(NativeShortSessionPreviewCodec.decode(response().toString(),
-            "preview-1",source,"program-1",30)).estimatedMinutes)
+        val preview=checkNotNull(NativeShortSessionPreviewCodec.decode(response().toString(),
+            "preview-1",source,"program-1",30))
+        assertEquals(27,preview.estimatedMinutes)
+        assertTrue(NativeShortSessionPreviewCodec.matchesSource(preview,source,"program-1",30))
+        assertFalse(NativeShortSessionPreviewCodec.matchesSource(preview,source+" ","program-1",30))
+        assertFalse(NativeShortSessionPreviewCodec.matchesSource(preview,source,"other",30))
+        assertFalse(NativeShortSessionPreviewCodec.matchesSource(preview,source,"program-1",20))
         for (edit in listOf<(JSONObject)->Unit>(
             {it.put("id","wrong")},
             {it.getJSONObject("result").put("snapshotSha256","f".repeat(64))},

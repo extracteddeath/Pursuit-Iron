@@ -181,7 +181,13 @@ day's dose and publishes `sessionLengthPlan`, `prescriptionEdited` and
 `timeLimited` from that approved plan. The source web engine and existing
 history are not modified. This prepares execution without yet exposing
 shortened-session starting in native UI until integration tests are green.
-Actual end-to-end and device certification remain required; no APK built.
+The actual Today flow now offers a separate Start shortened workout action
+only for a feasible preview with real reductions. The runtime rejects starts
+from an expired preview by rechecking the current owned snapshot hash and
+saved program before issuing the format-2 plan. Train displays its selected
+time and provenance. No UI-side set calculations or source web changes.
+The packaged integration suite also exercises shorten → journal → Finish →
+canonical history and retry; device certification remains required. No APK built.
 
 ## Next work
 

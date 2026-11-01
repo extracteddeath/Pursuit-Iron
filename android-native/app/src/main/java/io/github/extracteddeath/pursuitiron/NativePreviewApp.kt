@@ -87,6 +87,7 @@ internal fun NativePreviewApp(
     onEditProgram: ()->Unit = {},
     onStartWorkout: ()->Unit = {},
     onPreviewShortSession: (Int)->Unit = {},
+    onStartShortWorkout: (Int)->Unit = {},
     onRecordSet: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit = {_,_,_->},
     onCorrectSet: (JournalSetIntent)->Unit = {},
     onSkipExercise: (Int)->Unit = {},
@@ -216,7 +217,8 @@ internal fun NativePreviewApp(
                                     workoutState=onboarding,
                                     startWorkout=onStartWorkout,
                                     setupProgram={exploreDemo=false},
-                                    previewShorterSession=onPreviewShortSession)
+                                    previewShorterSession=onPreviewShortSession,
+                                    startShortWorkout=onStartShortWorkout)
                                 NativeDestination.TRAIN -> if(onboarding?.saved!=null && selectedTrainingDay==null)
                                     NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet,onSkipExercise)
                                 else TrainScreen(

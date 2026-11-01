@@ -49,7 +49,8 @@ internal fun TodayScreen(
     workoutState: NativeRuntimeState? = null,
     startWorkout: () -> Unit = {},
     setupProgram: () -> Unit = {},
-    previewShorterSession: (Int) -> Unit = {}
+    previewShorterSession: (Int) -> Unit = {},
+    startShortWorkout: (Int) -> Unit = {}
 ) {
     if(savedProgram!=null) {
         PageHeading("YOUR TRAINING",if(workoutState?.workout!=null)"Your workout is waiting" else "Your program is ready",savedProgram.program.name)
@@ -97,8 +98,20 @@ internal fun TodayScreen(
                             if(cut.amplifierRemoved)" · amplifier removed" else "",
                             style=MaterialTheme.typography.bodyMedium)
                     }
+                    if(preview.fits && preview.changed) {
+                        FilledTonalButton(onClick={
+                            startShortWorkout(preview.minutes)
+                            openTrain()
+                        },enabled=workoutState?.ready==true && !workoutState.workoutBusy &&
+                            !workoutState.historyBusy && !workoutState.workoutBlocked,
+                            modifier=Modifier.fillMaxWidth()) {
+                            Text("Start ${preview.minutes}-minute workout")
+                        }
+                    } else if(preview.fits) {
+                        Text("Your full workout already fits; use Start next workout.")
+                    }
                 }
-                Text("Preview only — not applied. Starting a workout still opens the full prescribed session.",
+                Text("Preview only — not applied. Starting a shortened workout requires a separate confirmation above.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }

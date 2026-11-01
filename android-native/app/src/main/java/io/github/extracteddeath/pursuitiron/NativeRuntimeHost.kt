@@ -258,9 +258,14 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
-    fun startWorkout() {
+    fun startWorkout(minutes: Int?=null) {
         val current=mutable.value
         if(!current.ready || current.workoutBusy || current.historyBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
+        // A shortened start is permitted only for the preview actually shown.
+        // The owned snapshot is verified AGAIN immediately before issuing.
+        val approvedPreview=if(minutes!=null) current.shortPreview?.takeIf {
+            it.minutes==minutes && it.fits && it.changed && !current.shortPreviewBusy
+        } ?: return else null
         val owner=store ?: return;val recovery=journal ?: return;val loaded=current.verifier ?: return
         mutable.update { it.copy(workoutBusy=true,workoutError=null,shortPreview=null,shortPreviewError=null) }
         scope.launch {
@@ -269,8 +274,12 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val progress=existing ?: run {
                     val bytes=checkNotNull(owner.readOwnedCurrentStoreBytes())
                     val plan=try {
-                        checkNotNull(loaded.programEngine.prepareWorkout(String(bytes,Charsets.UTF_8),
-                            NativeWorkoutCodec.startJson(current.saved.program.id,"workout-"+UUID.randomUUID(),System.currentTimeMillis())))
+                        val snapshot=String(bytes,Charsets.UTF_8)
+                        if(minutes!=null)check(NativeShortSessionPreviewCodec.matchesSource(
+                            checkNotNull(approvedPreview),snapshot,current.saved.program.id,minutes))
+                        checkNotNull(loaded.programEngine.prepareWorkout(snapshot,
+                            NativeWorkoutCodec.startJson(current.saved.program.id,"workout-"+UUID.randomUUID(),
+                                System.currentTimeMillis(),minutes)))
                     } finally { bytes.fill(0) }
                     ensureActive()
                     checkNotNull(owner.beginIssuedSession(plan,recovery))

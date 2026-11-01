@@ -62,6 +62,12 @@ internal fun NativeWorkoutScreen(
     // replace the visible composition. Drafts are not confirmed journal events.
     val setDraftStates=rememberSaveableStateHolder()
     PageHeading("WEEK ${plan.session.weekIndex}",plan.dayLabel,plan.programName)
+    if(plan.shortenedMinutes!=null) {
+        Text("Shortened workout · ${plan.shortenedMinutes} min selected · ${plan.shortenedEstimatedMinutes} min estimated",
+            style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)
+        Text("Your logged dose will be marked time-limited; reductions are not failed sets.",
+            style=MaterialTheme.typography.bodySmall)
+    }
     Text("${journal.completed.size} of ${plan.slots.size} set steps saved · ${plan.session.unit}",
         style=MaterialTheme.typography.titleMedium)
     LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size},

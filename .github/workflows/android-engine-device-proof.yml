@@ -50,6 +50,7 @@ jobs:
           mkdir -p "$snapshot/android-native/engine-bridge"
           cp android-native/engine-bridge/protocol.mjs "$snapshot/android-native/engine-bridge/"
           cp android-native/engine-bridge/progression-preview.mjs "$snapshot/android-native/engine-bridge/"
+          cp android-native/engine-bridge/exercise-lookup.mjs "$snapshot/android-native/engine-bridge/"
           cp android-native/engine-bridge/android-entry.mjs "$snapshot/android-native/engine-bridge/"
           cp android-native/engine-bridge/sandbox-compat.mjs "$snapshot/android-native/engine-bridge/"
           mkdir -p android-native/engine-runtime/src/androidTest/assets

@@ -19,6 +19,7 @@ const allowedCanonical = new Set(coverage.canonicalRuntimeFiles);
 const allowedBridge = new Set([
   'android-native/engine-bridge/protocol.mjs',
   'android-native/engine-bridge/progression-preview.mjs',
+  'android-native/engine-bridge/exercise-lookup.mjs',
   'android-native/engine-bridge/android-entry.mjs',
   'android-native/engine-bridge/sandbox-compat.mjs'
 ]);

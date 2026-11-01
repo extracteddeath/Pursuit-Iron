@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,14 @@ internal fun NativeWorkoutScreen(
     onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,onFinish: ()->Unit
 ) {
     val progress=state.workout
+    // Native sessions keep the screen awake while Train is visible. The
+    // setting is scoped to this composable and restored on navigation away.
+    val view=LocalView.current
+    DisposableEffect(view,progress?.plan?.session?.workoutId) {
+        val prior=view.keepScreenOn
+        if(progress!=null)view.keepScreenOn=true
+        onDispose { view.keepScreenOn=prior }
+    }
     if(progress==null) {
         PageHeading("TRAIN",if(state.completion!=null)"Workout saved" else "Ready when you are",
             state.saved?.program?.name ?: "Your training")
@@ -46,6 +55,7 @@ internal fun NativeWorkoutScreen(
     }
     var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showLast by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
+    var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     // Each working set has its own saveable draft even while other exercises
     // replace the visible composition. Drafts are not confirmed journal events.
     val setDraftStates=rememberSaveableStateHolder()
@@ -76,8 +86,18 @@ internal fun NativeWorkoutScreen(
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})
         FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
+        Spacer(Modifier.weight(1f))
+        FilterChip(selected=focusMode,onClick={focusMode=!focusMode},
+            label={Text(if(focusMode)"Show all" else "Focus")})
     }
-    exercise.sets.forEach { set->
+    // Focus is a projection of the same durable set journal, never a
+    // different logger. It advances only after an acknowledged set receipt.
+    val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull {
+        it.slot !in committedSlots
+    } ?: exercise.sets.last()) else exercise.sets
+    if(focusMode)Text("One set at a time · full controls remain available",
+        style=MaterialTheme.typography.bodySmall)
+    visibleSets.forEach { set->
         val commit=journal.completed.find { it.intent.slot==set.slot }
         key(plan.session.workoutId,set.slot.exerciseIndex,set.slot.setIndex) {
             setDraftStates.SaveableStateProvider(

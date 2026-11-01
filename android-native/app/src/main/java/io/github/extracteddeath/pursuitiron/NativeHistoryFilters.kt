@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -14,7 +16,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryDates
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
+import io.github.extracteddeath.pursuitiron.domain.NativeHistoryPeriod
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -46,6 +50,29 @@ internal fun NativeHistoryFilters(applied: NativeHistoryFilter,enabled: Boolean,
             enabled=enabled,singleLine=true,modifier=Modifier.fillMaxWidth(),
             keyboardOptions=KeyboardOptions(imeAction=ImeAction.Search),
             keyboardActions=KeyboardActions(onSearch={if(enabled && draft!=applied)apply(draft)}))
+        Text("Quick dates",style=MaterialTheme.typography.labelMedium)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            listOf(
+                NativeHistoryPeriod.TODAY to "Today",
+                NativeHistoryPeriod.SEVEN_DAYS to "7 days",
+                NativeHistoryPeriod.THIRTY_DAYS to "30 days",
+                NativeHistoryPeriod.THIS_MONTH to "This month"
+            ).forEach { (period,label) ->
+                val quick=NativeHistoryDates.period(search.trim(),period,LocalDate.now(zone),zone)
+                FilterChip(
+                    selected=applied.fromInclusive==quick.fromInclusive &&
+                        applied.untilExclusive==quick.untilExclusive,
+                    enabled=enabled,
+                    onClick={
+                        start=quick.fromInclusive?.let { NativeHistoryDates.pickerDay(it,zone) }
+                        end=quick.untilExclusive?.let { NativeHistoryDates.pickerDay(it-1,zone) }
+                        apply(quick)
+                    },
+                    label={Text(label)}
+                )
+            }
+        }
         OutlinedButton(onClick={keyboard?.hide();showDates=true},enabled=enabled,modifier=Modifier.fillMaxWidth()) {
             Text(if(start!=null && end!=null)"${calendarLabel(checkNotNull(start))} – ${calendarLabel(checkNotNull(end))}"
                 else "Choose date range")

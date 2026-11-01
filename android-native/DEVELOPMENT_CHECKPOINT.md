@@ -6,7 +6,8 @@ The source journey covers onboarding, generated review and explicit program
 save, engine-issued working sets and myo/drop extensions, durable logging,
 interruption recovery, active-set correction, canonical completion, one-shot
 deload consumption and saved-history corrections. This pass adds name and date
-filters to paged history browsing. This is source verification, not device
+filters to paged history browsing. A follow-up adds Today, 7 days, 30 days
+and This month shortcuts using local calendar boundaries. This is source verification, not device
 acceptance.
 
 ## History browsing
@@ -53,7 +54,9 @@ page identity, order and continuation. The read port also rejects a typed result
 with a different filter. Empty search results expose the saved count without
 claiming the device has no history.
 
-Search/date drafts survive rotation. Apply, Use dates and Clear filters issue
+Quick date chips apply a read-only, name-combinable filter immediately. Their
+local calendar windows include 23- and 25-hour daylight-saving days, and
+This month includes its whole final day. Search/date drafts survive rotation. Apply, Use dates and Clear filters issue
 reads; typing does not issue requests. Applied filters persist through paging,
 detail review, reload, correction and the next workout's completion. A new query
 starts on the first page with its own scroll context. This is read-only query
@@ -113,6 +116,15 @@ deploy or produce an APK. The live GitHub Pages deployment is sourced from
 `main`. Branch heads and live index/service-worker/app/records bytes are checked
 before and after publication. The verification results above are local results;
 GitHub CI results must be checked independently for the pushed revision.
+
+## Follow-up: calendar-day shortcuts
+
+Four Material 3 filter chips now use local calendar periods, converted through
+the existing exclusive-end canonical history query. The canonical reader still
+owns matching, pagination and source-revision checks; there are no changes to
+history, workouts or training progression. Added JVM regression coverage for
+both DST changes, a leap month and a skipped date-line calendar day. This
+follow-up requires fresh CI source-only verification; the APK freeze remains.
 
 ## Next work
 

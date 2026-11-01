@@ -30,6 +30,8 @@ jobs:
         run: node android-native/data-migration/inspect-backup-test.mjs
       - name: Validate canonical backup parser without writing data
         run: node android-native/data-migration/validate-canonical-backup-test.mjs
+      - name: Verify synthetic canonical v13 round-trip and revision-conflict policy
+        run: node android-native/data-migration/roundtrip-revisions-test.mjs
       - name: Ensure feature-first contract preserves all capabilities and gates
         run: node android-native/verification/feature-contract-test.mjs
       - name: Verify native preview draft, focus and shared controls

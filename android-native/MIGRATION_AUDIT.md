@@ -22,3 +22,7 @@ Do not modify web engine, web storage, `app.css`, manifest, release or service-w
 3. Add independent golden fixtures for weight increments, DP, RIR, cycles, workout history and revision identity.
 4. Build the first real Workout vertical slice after bridge certification.
 5. Add Android compile and instrumentation CI, then verify on a physical Android device.
+
+## Additional contract coverage
+
+The separate native foundation now runs synthetic canonical v13 round-trip, correction/tombstone and chronology regressions. The read-only progression bridge also exercises actual JS decisions through deny-by-default input validation. Neither is equivalent to an embedded Android JS runtime, transactional native persistence or an approved backup importer. Keep all native writes disabled until those gates pass.

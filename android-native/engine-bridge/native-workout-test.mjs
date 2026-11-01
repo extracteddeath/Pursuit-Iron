@@ -44,6 +44,8 @@ for(const [split,days] of [['full_body',3],['upper_lower',4],['ppl',3],['ulppl',
     }
     const handoff=JSON.stringify(finishedIssuedJournal(plan));
     const result=prepareCanonicalWorkoutHistory(snapshot,snapshot,handoff,issued),entry=result.historyEntry;
+    assert.deepEqual(entry.nativeSetObservations.events,JSON.parse(handoff).events.map(({slot,disposition,values})=>({slot,disposition,values})),
+      'all native observations and skips must be durable before the journal is retired');
     for(const row of plan.rows) {
       const saved=entry.perf[row.id]?.sets || [];
       for(const set of saved) {
@@ -79,4 +81,13 @@ const other=structuredClone(fixture.plan);other.session.workoutId='another-worko
 assert.throws(()=>prepareCanonicalWorkoutHistory(fixture.snapshot,fixture.snapshot,fixture.handoff,JSON.stringify(other)));
 const deload=JSON.parse(fixture.snapshot);deload.saved[0].deloadNext={main:true};
 assert.throws(()=>prepareNativeWorkout(JSON.stringify(deload),fixture.startJson));
-console.log('PASS native workouts: four real generated splits, web-path targets, full rotation/week advance, retained decision traces, actual RIR, skipped ordinals, exact completion retry and isolated channels');
+const mixed=JSON.parse(fixture.handoff);
+mixed.events[0].values.load='0';
+const mixedResult=prepareCanonicalWorkoutHistory(fixture.snapshot,fixture.snapshot,JSON.stringify(mixed),fixture.issued);
+const mixedSaved=parseStoredData(mixedResult.candidateSnapshot).history[0];
+assert.equal(mixedSaved.nativeSetObservations.events[0].values.load,'0');
+assert.ok(!mixedSaved.perf[fixture.plan.rows[0].id].sets.some(set=>set.workingSetIndex===0),
+  'canonical loaded-set summarization must remain unchanged');
+assert.equal(mixedSaved.nativeSetObservations.events.length,mixed.events.length);
+assert.equal(prepareCanonicalWorkoutHistory(fixture.snapshot,mixedResult.candidateSnapshot,JSON.stringify(mixed),fixture.issued).alreadyPresent,true);
+console.log('PASS native workouts: four real generated splits, web-path targets, rotation/week advance, retained traces and observations (including mixed zero loads), actual RIR, skipped ordinals, exact retry and isolated channels');

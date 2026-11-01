@@ -60,6 +60,9 @@ requires every working slot to be resolved, publishes canonical history before
 recovery cleanup, and preserves the targets actually issued alongside manual
 observations. A durably finished workout can retry after restart without a
 duplicate history entry; the next session uses the advanced canonical cursor.
+The history record also retains every native observation and skip. If the
+canonical summarizer omits a zero-load row from a mixed-load exercise, its
+original values remain in this metadata without changing progression formulas.
 
 Warm-up targets are displayed as references. Advanced myo/drop sub-sets and
 one-shot deload consumption reject session creation instead of silently dropping

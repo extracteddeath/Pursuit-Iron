@@ -158,7 +158,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertNull(store.beginIssuedSession(competing,journal))
             for((index,slot) in plan.slots.withIndex()) {
                 val skipped=index==1
-                val values=if(skipped)null else JournalSetValues("40",plan.session.unit,6,if(index%2==0)2 else null)
+                val values=if(skipped)null else JournalSetValues(if(index==0)"0" else "40",plan.session.unit,6,if(index%2==0)2 else null)
                 val intent=JournalSetIntent("journey-set-$index",slot,
                     if(skipped)JournalSetDisposition.SKIPPED else JournalSetDisposition.COMPLETED,values)
                 // Lost acknowledgement must recover one saved observation, not
@@ -189,13 +189,16 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             val snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
             val history=JSONObject(snapshot).getJSONArray("history");assertEquals(1,history.length())
             val recorded=history.getJSONObject(0).getJSONObject("perf").getJSONObject(plan.exercises.first().id).getJSONArray("sets")
-            assertEquals(0,recorded.getJSONObject(0).getInt("workingSetIndex"))
-            if(recorded.length()>1)assertEquals(2,recorded.getJSONObject(1).getInt("workingSetIndex"))
+            assertEquals(2,recorded.getJSONObject(0).getInt("workingSetIndex"))
+            val nativeEvents=history.getJSONObject(0).getJSONObject("nativeSetObservations").getJSONArray("events")
+            assertEquals(plan.slots.size,nativeEvents.length())
+            assertEquals("0",nativeEvents.getJSONObject(0).getJSONObject("values").getString("load"))
+            assertEquals("SKIPPED",nativeEvents.getJSONObject(1).getString("disposition"))
             val trace=recorded.getJSONObject(0).getJSONObject("decisionTrace")
             assertEquals("user",trace.getJSONObject("applied").getString("owner"))
             assertEquals(40,trace.getJSONObject("applied").getInt("load"))
             val issued=JSONObject(plan.issuedJson).getJSONArray("rows").getJSONObject(0).getJSONArray("sets")
-            val original=(0 until issued.length()).map { issued.getJSONObject(it) }.first { !it.getBoolean("warm") }
+            val original=(0 until issued.length()).map { issued.getJSONObject(it) }.filter { !it.getBoolean("warm") }[2]
                 .getJSONObject("target").getJSONObject("decisionTrace")
             assertEquals(original.getJSONObject("evaluation").toString(),trace.getJSONObject("evaluation").toString())
             assertEquals(original.getJSONObject("target").toString(),trace.getJSONObject("target").toString())

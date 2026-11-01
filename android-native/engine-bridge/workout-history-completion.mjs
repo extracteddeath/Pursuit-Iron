@@ -135,7 +135,19 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
   for (const perf of Object.values(performance)) perf.date = f.completedAt;
   const observations = Object.values(performance).flatMap(p => p.sets);
   const completed = journal.events.filter(e => e.disposition === 'COMPLETED');
-  ensure(observations.length === completed.length);
+  if(issued) {
+    // The web logger deliberately summarizes loaded sets when an exercise
+    // mixes positive and zero loads. Keep that canonical result unchanged,
+    // while retaining EVERY native observation before retiring its journal.
+    // Only that known canonical omission is allowed; any other loss rejects.
+    const recorded=new Set(observations.map(set=>`${set.decisionTrace?.slot}:${set.workingSetIndex}`));
+    ensure(recorded.size===observations.length && observations.length<=completed.length);
+    for(const event of completed) {
+      if(recorded.has(`${event.slot.exerciseIndex}:${event.slot.setIndex}`))continue;
+      ensure(Number(event.values.load)===0 && completed.some(other=>
+        other.slot.exerciseId===event.slot.exerciseId && Number(other.values.load)>0));
+    }
+  } else ensure(observations.length === completed.length);
   const volume = Math.round(observations.reduce((sum, row) => sum + row.w * row.r, 0));
   return {
     id:s.workoutId, date:f.completedAt, updatedAt:f.completedAt,
@@ -143,6 +155,8 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
     engineV:program.engineV || 1, weekIndex:s.weekIndex, unit:s.unit,
     setsDone:completed.length, totalSets:slots.length, volume,
     durationMin:Math.max(1, Math.round(f.durationMs / 60000)), perf:performance,
+    ...(issued ? {nativeSetObservations:{format:1,events:journal.events.map(event=>({
+      slot:event.slot,disposition:event.disposition,values:event.values}))}} : {}),
     nativeCompletion:{format:2, handoffSha256,
       sourceSnapshotSha256:s.reference.snapshotSha256, journalRevision:f.toRevision}
   };

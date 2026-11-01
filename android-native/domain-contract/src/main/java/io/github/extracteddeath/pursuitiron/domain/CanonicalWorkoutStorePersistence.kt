@@ -292,6 +292,17 @@ class CanonicalWorkoutStorePersistence(
             entry.get("dayId")==s.dayId && number(entry,"weekIndex")==s.weekIndex.toLong() &&
             entry.get("unit")==s.unit && number(entry,"date")==finish.intent.completedAt &&
             number(entry,"updatedAt")==finish.intent.completedAt)
+        if(pending.issuedWorkout!=null) {
+            val observations=entry.getJSONObject("nativeSetObservations")
+            exact(observations,"format","events");require(number(observations,"format")==1L)
+            val events=JSONObject(handoff).getJSONArray("events")
+            val expected=JSONArray().apply { for(i in 0 until events.length()) {
+                val event=events.getJSONObject(i)
+                put(JSONObject().put("slot",event.getJSONObject("slot"))
+                    .put("disposition",event.get("disposition")).put("values",event.get("values")))
+            } }
+            require(equivalent(observations.getJSONArray("events"),expected))
+        }
         val identity=entry.getJSONObject("nativeCompletion")
         exact(identity,"format","handoffSha256","sourceSnapshotSha256","journalRevision")
         require(number(identity,"format")==2L && number(identity,"journalRevision")==journal.revision &&

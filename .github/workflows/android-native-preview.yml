@@ -26,12 +26,12 @@ jobs:
           java-version: '17'
       - name: Android SDK
         uses: android-actions/setup-android@v4
-      - name: Install Android API 37
-        run: sdkmanager --install "platforms;android-37" "build-tools;36.0.0"
-      - name: Gradle 9.5
+      - name: Install Android API 36
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+      - name: Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.5.0'
+          gradle-version: '8.13'
       - name: Compile preview APK
         working-directory: android-native
         run: gradle :app:assembleDebug --no-daemon --stacktrace

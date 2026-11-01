@@ -57,6 +57,19 @@ assert.ok(train.includes('input.length<=10 && input.all { ch->ch.isDigit() || ch
   train.includes('input.length<=2 && input.all(Char::isDigit)') &&
   train.includes('validLoad && repCount!=null'),
   'Native set edits remain bounded and cannot be committed with invalid load or reps');
+assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId)') &&
+  train.includes('val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull') &&
+  train.includes('it.slot !in committedSlots') &&
+  train.includes('visibleSets.forEach { set->') &&
+  train.includes('NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord)') &&
+  train.includes('FilterChip(selected=focusMode,onClick={focusMode=!focusMode}') &&
+  train.includes('val setDraftStates=rememberSaveableStateHolder()'),
+  'Focus mode must project the identical receipt-based set logger and preserve unsent drafts');
+assert.ok(train.includes('val view=LocalView.current') &&
+  train.includes('DisposableEffect(view,progress?.plan?.session?.workoutId)') &&
+  train.includes('if(progress!=null)view.keepScreenOn=true') &&
+  train.includes('onDispose { view.keepScreenOn=prior }'),
+  'Keep screen awake only while a real workout is rendered and restore the original view setting');
 const rest=fs.readFileSync(root+'NativeRestTimer.kt','utf8');
 assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, exercise.restSeconds,') &&
   rest.includes('rememberSaveable(workoutId)') &&

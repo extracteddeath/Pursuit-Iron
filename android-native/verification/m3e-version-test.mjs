@@ -15,7 +15,9 @@ assert.match(gradle, /compileSdk = 37/);
 assert.match(domainGradle, /compileSdk = 37/);
 assert.match(buildWorkflow, /gradle-version: '9\.3\.1'/);
 assert.ok(buildWorkflow.includes('platforms;android-37.0'), 'SDK manager must use the published 37.0 package identifier');
-assert.match(buildWorkflow, /android-native\/PREVIEW_MILESTONE\.md/);
+assert.ok(buildWorkflow.includes('if: ${{ false }}') &&
+  !buildWorkflow.includes('  push:'),
+  'The native preview APK workflow remains frozen until the complete workout journey');
 assert.match(gradle, /compose-bom:2026\.09\.00/);
 assert.match(gradle, /androidx\.compose\.material3:material3:1\.5\.0-beta02/);
 assert.match(theme, /motionScheme = MotionScheme\.expressive\(\)/);

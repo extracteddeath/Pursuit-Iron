@@ -8,6 +8,9 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -169,38 +172,56 @@ fun CustomExercisesCard(vm: AppViewModel) {
     if (creating) CreateExerciseSheet(vm, null) { creating = false }
 }
 
+/* The design's New exercise (Main.dc.html newEx): name (a library name is refused), main muscle, equipment, rep range,
+   a preview line, Save exercise. Type stays because the engine needs it (compound lifts progress and rest differently).
+   onCreated gets the new id, so Add a lift can put it straight into the workout. */
 @Composable
-fun CreateExerciseSheet(vm: AppViewModel, dayId: String?, onClose: () -> Unit) {
+fun CreateExerciseSheet(vm: AppViewModel, dayId: String?, onCreated: (String) -> Unit = {}, onClose: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val opts = vm.setup
     val parts = opts.list("parts").map { it.s("id") to it.s("label") }.ifEmpty { listOf("chest" to "Chest") }
     var name by remember { mutableStateOf("") }
     var part by remember { mutableStateOf(parts.first().first) }
     var type by remember { mutableStateOf("compound") }
-    var equip by remember { mutableStateOf(setOf("dumbbell")) }
-    var lo by remember { mutableStateOf("8") }
-    var hi by remember { mutableStateOf("12") }
-    val valid = name.isNotBlank() && (lo.toIntOrNull() ?: 0) > 0 && (hi.toIntOrNull() ?: 0) >= (lo.toIntOrNull() ?: 99)
+    val equips = listOf("barbell" to "Barbell", "dumbbell" to "Dumbbell", "cable" to "Cable", "machine" to "Machine", "" to "Bodyweight")
+    var equip by remember { mutableStateOf("dumbbell") }
+    val reps = listOf(4 to 6, 6 to 10, 8 to 12, 12 to 20)
+    var rep by remember { mutableStateOf(8 to 12) }
+    var taken by remember { mutableStateOf(false) }
+    LaunchedEffect(name) { taken = vm.exerciseNameTaken(name) }
+    val valid = name.trim().length >= 3 && !taken
+    val cap = @Composable { t: String -> Text(t, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant) }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Create exercise", style = MaterialTheme.typography.headlineSmall)
-            OutlinedTextField(name, { name = it.take(60) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Exercise name") })
-            Kicker("Muscle")
+        Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("New exercise", style = MaterialTheme.typography.headlineSmall)
+            Text("Yours to use anywhere: swaps, quick workouts, the program editor. The engine progresses it like any other lift.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant)
+            cap("NAME")
+            androidx.compose.material3.TextField(name, { name = it.take(60) }, singleLine = true, placeholder = { Text("e.g. Kneeling cable chop") },
+                shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh,
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent),
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Exercise name" })
+            if (taken) Text("That name is already in the library.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onTertiaryContainer,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.tertiaryContainer).padding(horizontal = 12.dp, vertical = 10.dp))
+            cap("MAIN MUSCLE")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                parts.forEach { (id, l) -> MorphChip(l, part == id, { part = id }, height = 36.dp) }
+                parts.forEach { (id, l) -> MorphChip(l, part == id, { part = id }, height = 40.dp) }
             }
-            Kicker("Type")
+            cap("EQUIPMENT")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                equips.forEach { (id, l) -> MorphChip(l, equip == id, { equip = id }, height = 40.dp) }
+            }
+            cap("TYPE")
             Segmented(listOf("compound" to "Compound", "isolation" to "Isolation"), type, { type = it })
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(lo, { lo = it.filter(Char::isDigit).take(2) }, Modifier.weight(1f), singleLine = true, label = { Text("Fewest reps") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                OutlinedTextField(hi, { hi = it.filter(Char::isDigit).take(2) }, Modifier.weight(1f), singleLine = true, label = { Text("Most reps") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            }
-            Kicker("Equipment (none for bodyweight)")
+            cap("REP RANGE")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                opts.list("equipment").forEach { e -> val id = e.s("id"); val on = id in equip
-                    MorphChip(e.s("label"), on, { equip = if (on) equip - id else equip + id }, height = 36.dp) }
+                reps.forEach { r -> MorphChip("${r.first}–${r.second}", rep == r, { rep = r }, height = 40.dp) }
             }
-            Button(onClick = { vm.createCustom(name.trim(), part, type, equip.toList(), lo.toInt(), hi.toInt(), dayId); onClose() }, enabled = valid, modifier = Modifier.fillMaxWidth()) {
-                Text(if (dayId != null) "Create and add" else "Create")
+            Text("${name.trim().ifBlank { "Your exercise" }} · ${parts.firstOrNull { it.first == part }?.second ?: part} · ${equips.first { it.first == equip }.second} · ${rep.first}–${rep.second} reps",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp))
+            Button(onClick = { vm.createCustom(name.trim().replaceFirstChar { it.uppercase() }, part, type, if (equip.isEmpty()) emptyList() else listOf(equip), rep.first, rep.second, dayId) { id -> onCreated(id) }; onClose() },
+                enabled = valid, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                Text(if (dayId != null) "Save and add" else "Save exercise", style = MaterialTheme.typography.titleSmall)
             }
         }
     }

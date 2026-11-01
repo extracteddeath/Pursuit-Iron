@@ -53,6 +53,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -219,9 +221,16 @@ fun AddLiftSheet(vm: AppViewModel, onClose: () -> Unit) {
     LaunchedEffect(q) { results = vm.searchExercises(q).take(40) }
     val cs = MaterialTheme.colorScheme
     val have = vm.session?.list("exercises")?.map { it.s("id") }?.toSet().orEmpty()
+    var creating by remember { mutableStateOf(false) }
+    if (creating) { CreateExerciseSheet(vm, null, onCreated = { id -> vm.act("addExercise", "id" to id) }) { creating = false; onClose() }; return }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Add a lift", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Add a lift", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp).weight(1f))
+                Surface(onClick = { creating = true }, color = cs.surfaceContainerHigh, shape = androidx.compose.foundation.shape.CircleShape, modifier = Modifier.height(40.dp)) {
+                    Box(Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) { Text("New exercise", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold)) }
+                }
+            }
             OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search exercises") })
             androidx.compose.foundation.lazy.LazyColumn(Modifier.height(420.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(results.size) { k ->
@@ -347,31 +356,54 @@ fun LiftSettingsSheet(vm: AppViewModel, s: JSONObject, ex: JSONObject, onPin: ()
     }
 }
 
-/* App.js suggested supersets: pair this lift with one that doesn't compete for the same muscles. */
+/* The design's superset picker (Main.dc.html ssPick): partners from today's session, best first, tagged; the main lift
+   is protected with a note; a paired lift shows its partner and Remove superset. Rest comes once after both. */
 @Composable
 fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val ei = s.i("exIdx")
-    val ex = s.list("exercises").getOrNull(ei) ?: run { onClose(); return }
+    val exs = s.list("exercises")
+    val ex = exs.getOrNull(ei) ?: run { onClose(); return }
+    // Pairs are runs of `superset` flags: this lift pairs with the next, or the one before pairs with it.
+    val partner = if (ex.b("superset")) exs.getOrNull(ei + 1) else exs.getOrNull(ei - 1)?.takeIf { it.b("superset") }
+    val pairOwner = if (ex.b("superset")) ei else ei - 1
     ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Kicker(ex.s("name"))
-            Text(if (ex.b("superset")) "In a superset" else "Superset with…", style = MaterialTheme.typography.headlineSmall)
-            if (ex.b("superset")) {
-                Text("Sets alternate between the paired lifts, resting after each round.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                OutlinedButton(onClick = { vm.act("superset", "ei" to ei); onClose() }, modifier = Modifier.fillMaxWidth()) { Text("Unpair") }
-                return@Column
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.padding(horizontal = 4.dp)) {
+                Text("Superset ${ex.s("name")}", style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 28.sp))
+                Text(if (partner != null) "Paired with ${partner.s("name")}. You alternate sets and rest once after both."
+                    else "Partners from today’s session, best first. You alternate sets and rest once after both.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
             }
-            val sug = s.list("supersetSuggestions")
-            if (sug.isEmpty()) Text("No good partner among the remaining lifts.", color = cs.onSurfaceVariant)
-            sug.forEach { x ->
-                Surface(onClick = { vm.act("pairWith", "ei" to ei, "partner" to x.i("ei")); vm.toast("Paired with ${x.s("name")}"); onClose() },
-                    color = cs.surfaceContainerHigh, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
-                        if (x.s("reason").isNotBlank()) Text(x.s("reason"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            val guard = s.o("supersetGuard")
+            if (partner == null && guard != null) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(horizontal = 14.dp, vertical = 12.dp)
+                .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(PiIcons.Shield, null, Modifier.size(18.dp), tint = cs.onTertiaryContainer)
+                Text("${guard.s("name")} is today’s ${if (guard.b("main")) "main" else "second"} lift. Alternating it with anything costs top-set strength, so the engine won’t suggest a partner. Pair two accessories instead.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer)
+            }
+            val sug = if (partner == null && guard == null) s.list("supersetSuggestions") else emptyList()
+            if (partner == null && guard == null && sug.isEmpty()) Text("No good partner among the lifts still to do today.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+            if (sug.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                sug.forEachIndexed { k, x ->
+                    val good = x.i("score") >= 90
+                    Surface(onClick = { vm.act("pairWith", "ei" to ei, "partner" to x.i("ei")); vm.toast("Superset: ${ex.s("name")} + ${x.s("name")} · rest after the pair"); onClose() },
+                        color = cs.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).semantics { contentDescription = "Superset with ${x.s("name")}. ${x.s("reason")}" + if (k == 0) ". Best pick" else "" }) {
+                        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(x.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp))
+                                Text(x.s("reason") + " · ${x.i("sets")} sets. Rest after both.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+                            }
+                            Text(if (good) "GOOD PAIR" else "OKAY", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp),
+                                color = if (good) cs.onPrimaryContainer else cs.onSurfaceVariant,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (good) cs.primaryContainer else cs.surfaceContainerHighest).padding(horizontal = 8.dp, vertical = 3.dp))
+                        }
                     }
                 }
+            }
+            if (partner != null) Surface(onClick = { vm.act("superset", "ei" to pairOwner); vm.toast("Superset removed"); onClose() }, color = androidx.compose.ui.graphics.Color.Transparent,
+                contentColor = cs.onSurface, shape = androidx.compose.foundation.shape.CircleShape, border = androidx.compose.foundation.BorderStroke(1.5.dp, cs.outlineVariant), modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Box(contentAlignment = Alignment.Center) { Text("Remove superset", style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold)) }
             }
         }
     }

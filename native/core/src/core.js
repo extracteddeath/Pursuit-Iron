@@ -754,15 +754,16 @@ function progressionOptions(ctx, e, ex, u) {
         auto = (E.PROG_STYLES?.[id] || 'double progression');
     } catch { auto = 'double progression'; }
     let inc = ''; try { inc = E.linearInc(ex, u) + u; } catch { inc = ''; }
+    // The design's order and wording (Main.dc.html progStyles); Linear names this lift's jump.
     return { auto, options: [
-        { id: 'auto', label: 'Auto (recommended)', detail: 'Picks the best style for this lift — currently ' + auto.toLowerCase() + '.' },
-        { id: 'dynamic', label: 'Dynamic double', detail: 'True per-set DDP — each set advances independently. Top the rep ceiling on set 1 and its weight goes up next session even if set 2 didn\'t. Fastest per-set progression.' },
-        { id: 'double', label: 'Double progression', detail: 'Build reps anywhere in the range, then add load when you top it. Simple and effective for most lifts.' },
-        { id: 'ladder', label: 'Rep ladder', detail: 'One shared rep target that climbs each session (e.g. 10 → 12 → 15), then the load jumps and the target resets. A structured double-progression hybrid with a crisp weekly goal.' },
-        { id: 'wave', label: 'Wave loading', detail: 'Rotates heavy / medium / light sessions (lo→mid→hi reps) within the range, then the load jumps. Classic strength periodization.' },
-        { id: 'linear', label: 'Linear LP', detail: 'Add a fixed ' + (inc || 'jump') + ' every session you hit the bottom of the range. Best for beginners on big compounds.' },
-        { id: 'e1rm', label: 'e1RM autoregulation', detail: 'Sets load each session from your estimated 1RM to land at the target RIR. Smoothest day-to-day adjustment.' },
-        { id: 'top', label: 'Top set + back-offs', detail: 'One heavy top set, then the rest at about 90% of it. The top set earns the next load; back-offs re-aim the moment you log it.' },
+        { id: 'auto', label: 'Auto (recommended)', detail: 'Now ' + auto.toLowerCase() + '. Picks per lift from the exercise, your experience and the block, and re-checks as you train.' },
+        { id: 'double', label: 'Double progression', detail: 'Build reps anywhere in the range, then add load once every set tops it.' },
+        { id: 'dynamic', label: 'Dynamic double', detail: 'Each set progresses on its own: a set that tops the range gets the next weight even if the others didn’t.' },
+        { id: 'ladder', label: 'Rep ladder', detail: 'One shared rep target climbs each session (8 → 10 → 12), then the load jumps and the target resets.' },
+        { id: 'linear', label: 'Linear', detail: 'A fixed ' + (inc ? inc + ' ' : '') + 'jump every session you hold the bottom of the range. Best early on, on big lifts.' },
+        { id: 'wave', label: 'Wave loading', detail: 'Light, medium and heavy sessions (high → mid → low reps), then the whole wave moves up.' },
+        { id: 'e1rm', label: 'e1RM autoregulation', detail: 'Each set’s load is aimed from your estimated 1RM to land on the target RIR, and re-aims after every set.' },
+        { id: 'top', label: 'Top set + back-offs', detail: 'One heavy top set, then back-offs at 90% of what the top set actually was.' },
     ].filter((o) => E.PROG_STYLES ? o.id in E.PROG_STYLES : true) };
 }
 function sessionContext(l) {
@@ -1093,6 +1094,10 @@ return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workId
         sessionNote: l.sessionNote || '', sessionNoteRepeat: l.sessionNoteRepeat || 'none',
         progressionStyles: Object.entries(E.PROG_STYLES || {}).map(([id, label]) => ({ id, label })),
         supersetSuggestions: supersetSuggestions(ctx, data, Math.max(0, Math.min(data.length - 1, l.exIdx || 0))),
+        // The design's superset picker: the main lift (and a T2) are never paired; say so instead of an empty list.
+        supersetGuard: (() => { const i = Math.max(0, Math.min(data.length - 1, l.exIdx || 0)), row = data[i]; if (!row) return null;
+            const protectedTo = Math.max(ctx.day.primaryIndex ?? -1, ctx.day.t2Index != null ? ctx.day.t2Index : -1);
+            return row.slot <= protectedTo ? { name: exName(row.id), main: row.slot === ctx.day.primaryIndex } : null; })(),
         rest: l.rest || null,
         openSwap: l.openSwap ?? null,
         injuries: injuries().filter((i) => !i.resolvedAt).map((i) => ({ id: i.id, title: injuryTitle(i, E.PART_LABEL), impact: i.impact,
@@ -3002,12 +3007,19 @@ export function duplicateProgram({ id }) {
 export function createCustomExercise({ name, part, type = 'compound', equip = [], lo = 8, hi = 12, programId = null, dayId = null } = {}) {
     const n = String(name || '').trim().slice(0, 60), L = Math.round(Number(lo)), H = Math.round(Number(hi));
     if (!n || !(L > 0) || !(H >= L) || !E.PART_LABEL?.[part]) return { ok: false, error: 'Give it a name, a muscle and a rep range.' };
+    if (exerciseNameTaken({ name: n }).taken) return { ok: false, error: 'That name is already in the library.' };
     if (!['compound', 'isolation'].includes(type)) type = 'compound';
     const ex = { id: `custom-${E.uid()}`, pri: 9000, custom: true, name: n, part, type, equip: (Array.isArray(equip) ? equip : []).filter((e) => E.ALL_EQUIP_IDS.includes(e)), rep: [L, H] };
     setList('custom', [...(Array.isArray(S.store.custom) ? S.store.custom : []), ex]);
     syncCustomRegistry();
     if (programId && dayId) editAct({ programId, type: 'add', dayId, exId: ex.id });
     return { ok: true, id: ex.id, name: ex.name };
+}
+/* The design's New exercise: a name already in the library (built-in or yours) is refused, case-insensitively. */
+export function exerciseNameTaken({ name } = {}) {
+    const n = String(name || '').trim().toLowerCase(); if (!n) return { taken: false };
+    const all = [...EXERCISES, ...(Array.isArray(S.store.custom) ? S.store.custom : [])];
+    return { taken: all.some((x) => String(x?.name || '').trim().toLowerCase() === n) };
 }
 export function customExercises() {
     const used = new Set(saved().flatMap((p) => p.days.flatMap((d) => d.exercises)));
@@ -3592,7 +3604,7 @@ export function whyLift({ programId, dayId, slot, weekIndex }) {
    .progressionPlan — read, never re-derived), and a lock when the lifter chose it. Choosing a style
    writes progStyle + progStyleLifter, the same record "keep in program" writes after a workout;
    choosing Auto hands the lift back to the engine. */
-const STYLE_LABEL = { double: 'Double progression', dynamic: 'Dynamic double progression', ladder: 'Rep ladder', linear: 'Linear progression', wave: 'Wave loading', e1rm: 'e1RM autoregulation', top: 'Top set + back-offs', auto: 'Auto' };
+const STYLE_LABEL = { double: 'Double progression', dynamic: 'Dynamic double', ladder: 'Rep ladder', linear: 'Linear', wave: 'Wave loading', e1rm: 'e1RM autoregulation', top: 'Top set + back-offs', auto: 'Auto' };
 export function liftProgression({ programId }) {
     const p = programById(programId); if (!p) return null;
     const plan = Array.isArray(p.nextEngine?.progressionPlan) ? p.nextEngine.progressionPlan : [];

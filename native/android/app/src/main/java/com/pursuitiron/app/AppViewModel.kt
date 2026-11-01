@@ -731,13 +731,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun exportCsv(kind: String): String? = call("exportCsv", jsonOf("kind" to kind)) as? String
     var customs by mutableStateOf<List<JSONObject>>(emptyList()); private set
     fun loadCustoms() = launchCore { customs = arr(call("customExercises")) }
-    fun createCustom(name: String, part: String, type: String, equip: List<String>, lo: Int, hi: Int, dayId: String?) = launchCore {
+    suspend fun exerciseNameTaken(name: String): Boolean = obj("exerciseNameTaken", jsonOf("name" to name))?.b("taken") == true
+    fun createCustom(name: String, part: String, type: String, equip: List<String>, lo: Int, hi: Int, dayId: String?, onCreated: (String) -> Unit = {}) = launchCore {
         val r = obj("createCustomExercise", jsonOf("name" to name, "part" to part, "type" to type, "equip" to JSONArray(equip), "lo" to lo, "hi" to hi,
             "programId" to (if (dayId != null) editor?.s("programId") else null), "dayId" to dayId)) ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "Couldn't create that")); return@launchCore }
         hap(Hap.Done); customs = arr(call("customExercises")); library = arr(call("library", jsonOf("q" to libQuery, "part" to libPart, "equip" to libEquip)))
         if (dayId != null) reloadEditor()
-        toast(if (dayId != null) "Created and added ${r.s("name")}" else "Created ${r.s("name")}")
+        toast(if (dayId != null) "Created and added ${r.s("name")}" else "${r.s("name")} added · it can appear in swaps and quick workouts")
+        onCreated(r.s("id"))
     }
     fun deleteCustom(id: String) = launchCore {
         val r = obj("deleteCustomExercise", jsonOf("id" to id)) ?: return@launchCore

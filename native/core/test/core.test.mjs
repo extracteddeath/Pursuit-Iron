@@ -626,7 +626,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
     equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 11 });
   const ss = C.startSession({}), o = ss.exercises[0].progression.options;
   ok(o.length === Object.keys(E.PROG_STYLES).length && o.every((x) => x.label && x.detail), 'progression options cover every engine style with a description');
-  ok(/currently [a-z]/.test(o[0].detail) && ss.exercises[0].progression.auto.length > 3, 'Auto names the style it picks now: ' + o[0].detail);
+  ok(/^Now [a-z]/.test(o[0].detail) && ss.exercises[0].progression.auto.length > 3, 'Auto names the style it picks now: ' + o[0].detail);
   ok(/fixed \d+(\.\d+)?kg/.test(o.find((x) => x.id === 'linear').detail), 'Linear names this lift\'s jump');
   C.discardSession(); }
 // Weekly volume per muscle against the landmarks, and the engine's repair
@@ -1052,5 +1052,10 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(dbOnly.full_body.ok && dbOnly.texas && dbOnly.texas.ok === false && dbOnly.texas.kind === 'lifts' && dbOnly.texas.items.includes('back squat'), 'a dumbbell gym: Texas needs the barbell lifts, full body runs');
   const full = C.splitOptions({ config: { goal: 'strength', experience: 'intermediate', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
   ok(Object.values(full).every((v) => v.ok) && full.phul.runsAt && full.phul.runsAt[0] === '40–60 min', 'a full gym runs every 4-day split; PHUL says which lengths it runs at (' + (full.phul.runsAt || []).join(', ') + ')'); }
+
+// The design's New exercise: a name already in the library is refused
+{ C.init({}); const made = C.createCustomExercise({ name: 'Kneeling cable chop press', part: 'shoulders', type: 'compound', equip: ['barbell'], lo: 8, hi: 12 });
+  ok(made.ok && C.exerciseNameTaken({ name: ' kneeling CABLE chop press ' }).taken && C.exerciseNameTaken({ name: 'Barbell Bench Press' }).taken && !C.exerciseNameTaken({ name: 'My new lift' }).taken, 'names in the library are taken, case-insensitively');
+  ok(C.createCustomExercise({ name: 'barbell bench press', part: 'chest', type: 'compound', equip: ['barbell'], lo: 6, hi: 10 }).ok === false, 'a built-in name cannot be reused'); }
 
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

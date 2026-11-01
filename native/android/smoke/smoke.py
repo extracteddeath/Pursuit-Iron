@@ -659,7 +659,8 @@ if scroll_to(r"Fresher today|A deload looks due|Muscle recovery|This week|Streng
     shot("today-insights")
 # The design's weekly recap: the last seven days, four figures and Share recap
 # The insights scroll above can stop below the recap (it sits above This week), so look both ways.
-if scroll_to(r"^\|LAST 7 DAYS · ", tries=6, step=500) or scroll_up_to(r"^\|LAST 7 DAYS · "):
+RECAP = r"^\|LAST 7 DAYS · |^Hide the weekly recap"
+if scroll_to(RECAP, tries=6, step=500) or scroll_up_to(RECAP, tries=12):
     if not find(r"^\|Share recap$", timeout=2) and not scroll_to(r"^\|Share recap$", tries=2, step=300):
         FAILS.append("weekly recap has no Share recap")
     shot("today-recap")
@@ -1202,6 +1203,7 @@ def a11y_pass():
     tap(r"Minimise workout", required=False)    # the tabs sit under an open workout
     time.sleep(1.5)
     issues, scanned = [], 0
+    sw = int(sz.group(1)) if sz else 1080
     def label_of(n):
         own = (n.get("content-desc") or "") + (n.get("text") or "")
         if own.strip():
@@ -1217,6 +1219,9 @@ def a11y_pass():
             continue
         scanned += 1
         time.sleep(1.2)
+        # A control is measured at the size it shows; one half under a bar or past a scroll edge looks small, so a
+        # control only counts as small if it is small every time it appears across the pages.
+        seen = {}
         for k in range(3):
             shot(f"a11y-{nm}-{k}")
             for n in nodes():
@@ -1228,15 +1233,17 @@ def a11y_pass():
                 x1, y1, x2, y2 = map(int, b)
                 w, h = (x2 - x1) / dpx, (y2 - y1) / dpx
                 lab = label_of(n)
-                # Clipped by the screen edge or the bars: not the control's real size.
-                if y1 <= 0 or y2 >= screen_h - 1:
+                # Touching an edge of the screen or the bars: not the control's real size or label.
+                if y1 <= 40 * dpx or y2 >= screen_h - 100 * dpx or x1 <= 0 or x2 >= sw - 1:
                     continue
                 if not lab:
                     issues.append(f"{nm}: unlabelled control {int(w)}x{int(h)}dp at {x1},{y1}")
-                elif w < 44 or h < 44:
-                    issues.append(f"{nm}: small target '{lab[:40]}' {int(w)}x{int(h)}dp")
+                else:
+                    pw, ph = seen.get(lab, (0, 0))
+                    seen[lab] = (max(pw, w), max(ph, h))
             adb("shell", "input", "swipe", "540", "1800", "540", "900", "500")
             time.sleep(0.9)
+        issues.extend(f"{nm}: small target '{lab[:40]}' {int(w)}x{int(h)}dp" for lab, (w, h) in seen.items() if w < 44 or h < 44)
     adb("shell", "settings", "put", "system", "font_scale", "1.0")
     uniq = list(dict.fromkeys(issues))
     with open(os.path.join(OUT, "a11y.txt"), "w") as f:

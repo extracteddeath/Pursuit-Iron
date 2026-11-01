@@ -48,7 +48,8 @@ internal fun TodayScreen(
     savedProgram: NativeSavedProgram? = null,
     workoutState: NativeRuntimeState? = null,
     startWorkout: () -> Unit = {},
-    setupProgram: () -> Unit = {}
+    setupProgram: () -> Unit = {},
+    previewShorterSession: (Int) -> Unit = {}
 ) {
     if(savedProgram!=null) {
         PageHeading("YOUR TRAINING",if(workoutState?.workout!=null)"Your workout is waiting" else "Your program is ready",savedProgram.program.name)
@@ -63,6 +64,44 @@ internal fun TodayScreen(
                 Text(if(workoutState?.workoutBusy==true)"Opening workout…" else if(workoutState?.workout!=null)"Resume workout" else "Start next workout")
             }
             workoutState?.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
+        }
+        if(workoutState?.workout==null) {
+            SectionLabel("Shorter session", "Canonical engine preview")
+            PursuitCard {
+                Text("Available time",style=MaterialTheme.typography.titleMedium)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    listOf(45,30,20).forEach { minutes ->
+                        OutlinedButton(onClick={previewShorterSession(minutes)},
+                            enabled=workoutState?.ready==true && !workoutState.shortPreviewBusy &&
+                                !workoutState.workoutBusy && !workoutState.busy) {
+                            Text("$minutes min")
+                        }
+                    }
+                }
+                if(workoutState?.shortPreviewBusy==true) {
+                    Text("Calculating from your saved plan…")
+                }
+                workoutState?.shortPreviewError?.let {
+                    Text(it,color=MaterialTheme.colorScheme.error)
+                }
+                workoutState?.shortPreview?.let { preview ->
+                    Text("${preview.estimatedMinutes} min estimated · ${preview.originalMinutes} min full session",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text(if(preview.fits)"Within the selected time budget"
+                        else "Cannot safely fit ${preview.minutes} minutes without cutting protected work",
+                        color=if(preview.fits)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                    if(preview.cuts.isEmpty())Text("No sets need to be removed.")
+                    preview.cuts.forEach { cut ->
+                        Text("${cut.name}: ${cut.fromSets} → ${cut.toSets} sets" +
+                            if(cut.amplifierRemoved)" · amplifier removed" else "",
+                            style=MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Text("Preview only — not applied. Starting a workout still opens the full prescribed session.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         return
     }

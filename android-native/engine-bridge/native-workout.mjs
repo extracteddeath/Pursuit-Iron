@@ -2,7 +2,8 @@
 import {
   parseStoredData, nextSessionCursor, exerciseAt, computeCell, EX_BY_ID,
   buildLifterModel, calibratedAnchorPerf, sessionSuggestion, prescribeSets,
-  lastDayPerf, effectiveRest, goalForDay, weeksOf, techniqueProtocolFromCell, oneShotDeloadFactor
+  lastDayPerf, effectiveRest, goalForDay, weeksOf, techniqueProtocolFromCell, oneShotDeloadFactor,
+  planShorterSession
 } from '../../modules/engine-api.js';
 import { inspectNativeProgram } from './native-onboarding.mjs';
 import { deriveReadOnlyProgramReference, matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
@@ -64,6 +65,34 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
       weekIndex,unit,startedAt:start.startedAt},programName:program.name,dayLabel:day.label,rows}));
   issuedNativeWorkoutFrom(rawSnapshot,JSON.stringify(result));
   return result;
+}
+
+/**
+ * Read-only canonical projection for a prospective next workout.
+ * This never enters the native journal and cannot modify pinned prescriptions.
+ */
+export function previewNativeShorterSession(rawSnapshot,programId,minutes) {
+  ensure(bounded(rawSnapshot,1024*1024) && id(programId) && [20,30,45].includes(minutes));
+  const owned=inspectNativeProgram(rawSnapshot),store=parseStoredData(rawSnapshot);
+  ensure(owned.program.program.id===programId && !Object.hasOwn(store.tombs,programId));
+  const program=store.saved.find(p=>p.id===programId);
+  ensure(program && validDeloads(program));
+  const cursor=nextSessionCursor(program,store.history);
+  ensure(integer(cursor.dayIndex,0,program.days.length-1) && integer(cursor.weekIndex,1,weeksOf(program)));
+  const day=program.days[cursor.dayIndex];
+  const preview=planShorterSession(program,day,cursor.weekIndex,minutes);
+  ensure(preview.schemaVersion===1 && preview.programId===program.id &&
+    preview.dayId===day.id && preview.weekIndex===cursor.weekIndex &&
+    preview.minutes===minutes && Array.isArray(preview.cuts) &&
+    preview.cuts.length<=48 && Number.isSafeInteger(preview.originalMinutes) &&
+    Number.isSafeInteger(preview.estimatedMinutes));
+  return {source:'modules/engine-api.js:planShorterSession',snapshotSha256:sha256Utf8(rawSnapshot),
+    programId,dayId:day.id,weekIndex:cursor.weekIndex,minutes,
+    originalMinutes:preview.originalMinutes,estimatedMinutes:preview.estimatedMinutes,
+    fits:preview.fits,changed:preview.changed,
+    cuts:preview.cuts.map(c=>({slot:c.slot,name:c.name,fromSets:c.fromSets,
+      toSets:c.toSets,amplifierRemoved:c.amplifierRemoved})),
+    readOnly:true,applied:false};
 }
 
 /** Validate retained issued targets without calculating a replacement on resume. */

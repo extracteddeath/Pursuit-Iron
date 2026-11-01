@@ -18,7 +18,9 @@ internal data class NativeRuntimeState(
     val workoutBlocked: Boolean=false,val completion: CanonicalWorkoutHistoryReceipt?=null,
     val history: NativeWorkoutHistory?=null,val historyPage: NativeHistoryPage?=null,
     val historyBusy: Boolean=false,val historyError: String?=null,
-    val historyFilter: NativeHistoryFilter=NativeHistoryFilter()
+    val historyFilter: NativeHistoryFilter=NativeHistoryFilter(),
+    val shortPreview: NativeShortSessionPreview?=null,
+    val shortPreviewBusy: Boolean=false,val shortPreviewError: String?=null
 )
 
 /** One process-scoped engine, canonical writer and workout journal. No backup import. */
@@ -56,7 +58,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 store=owner
                 historyReader=NativeHistoryReadPort(owner,engine)
                 val watching=owner.subscribeCommittedChanges {
-                    mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1) }
+                    mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null) }
                 }
                 synchronized(lifetime) {
                     if(closed) { watching.close();throw CancellationException("Runtime closed") }
@@ -220,11 +222,46 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
+    /** Show canonical choices without changing this or any future session. */
+    fun previewShorterSession(minutes: Int) {
+        val current=mutable.value
+        if(minutes !in listOf(20,30,45) || !current.ready ||
+            current.workout!=null || current.workoutBusy || current.busy ||
+            current.shortPreviewBusy || current.saved==null)return
+        val owner=store ?: return;val engine=current.verifier?.programEngine ?: return
+        val programId=current.saved.program.id
+        mutable.update { it.copy(shortPreviewBusy=true,shortPreview=null,shortPreviewError=null) }
+        scope.launch {
+            try {
+                val bytes=checkNotNull(owner.readOwnedCurrentStoreBytes())
+                val preview=try {
+                    val snapshot=Charsets.UTF_8.newDecoder()
+                        .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                        .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                        .decode(java.nio.ByteBuffer.wrap(bytes)).toString()
+                    checkNotNull(engine.previewShorterSession(snapshot,programId,minutes))
+                } finally { bytes.fill(0) }
+                ensureActive()
+                mutable.update { latest ->
+                    if(latest.storeChangeKey==current.storeChangeKey &&
+                        latest.workout==null && latest.saved?.program?.id==programId)
+                        latest.copy(shortPreviewBusy=false,shortPreview=preview,shortPreviewError=null)
+                    else latest.copy(shortPreviewBusy=false,shortPreview=null,
+                        shortPreviewError="Training data changed. Preview the next session again.")
+                }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) {
+                mutable.update { it.copy(shortPreviewBusy=false,shortPreview=null,
+                    shortPreviewError="The shortened workout could not be previewed. Your program was not changed.") }
+            }
+        }
+    }
+
     fun startWorkout() {
         val current=mutable.value
         if(!current.ready || current.workoutBusy || current.historyBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
         val owner=store ?: return;val recovery=journal ?: return;val loaded=current.verifier ?: return
-        mutable.update { it.copy(workoutBusy=true,workoutError=null) }
+        mutable.update { it.copy(workoutBusy=true,workoutError=null,shortPreview=null,shortPreviewError=null) }
         scope.launch {
             try {
                 val existing=owner.recoverIssuedSession(recovery)

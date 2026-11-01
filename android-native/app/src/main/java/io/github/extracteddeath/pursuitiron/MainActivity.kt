@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
                     onSaveProgram=runtime::save,
                     onEditProgram=runtime::edit,
                     onStartWorkout=runtime::startWorkout,
+                    onPreviewShortSession=runtime::previewShorterSession,
                     onRecordSet=runtime::recordSet,
                     onCorrectSet=runtime::correctSet,
                     onSkipExercise=runtime::skipRemainingExercise,

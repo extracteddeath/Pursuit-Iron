@@ -10,6 +10,8 @@ import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutPlan
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeShortSessionPreview
+import io.github.extracteddeath.pursuitiron.domain.NativeShortSessionPreviewCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutHistory
@@ -66,6 +68,14 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         val raw=transport.request(NativeHistoryCodec.encodeCorrection(id,snapshot,correctionJson))
         currentCoroutineContext().ensureActive()
         return NativeHistoryCodec.decodeCorrection(raw,id,snapshot,correctionJson)
+    }
+
+    override suspend fun previewShorterSession(snapshot: String,programId: String,minutes: Int): NativeShortSessionPreview? {
+        val id="native-short-session-${sequence.incrementAndGet()}"
+        val request=NativeShortSessionPreviewCodec.encode(id,snapshot,programId,minutes)
+        val raw=transport.request(request)
+        currentCoroutineContext().ensureActive()
+        return NativeShortSessionPreviewCodec.decode(raw,id,snapshot,programId,minutes)
     }
 
     override suspend fun prepareWorkout(snapshot: String,startJson: String): NativeWorkoutPlan? {

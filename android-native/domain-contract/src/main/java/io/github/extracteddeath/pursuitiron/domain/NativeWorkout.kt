@@ -22,6 +22,7 @@ class NativeWorkoutPlan internal constructor(
 data class NativeWorkoutProgress(val plan: NativeWorkoutPlan,val journal: WorkoutJournalState)
 
 interface NativeWorkoutEngine {
+    suspend fun previewShorterSession(snapshot: String,programId: String,minutes: Int): NativeShortSessionPreview?
     suspend fun prepareWorkout(snapshot: String,startJson: String): NativeWorkoutPlan?
     suspend fun prepareIssuedCompletion(origin: String,current: String,journal: String,issued: String): String?
 }

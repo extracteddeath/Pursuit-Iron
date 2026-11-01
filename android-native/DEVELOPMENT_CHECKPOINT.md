@@ -145,6 +145,21 @@ remain demonstrative until canonical policy integration is certified.
 JVM and interaction regression cases were added; verification depends on
 the new commit's CI run. No APK, web, or other native branch changes.
 
+## Follow-up: canonical shortened-session previews
+
+Native Today now offers read-only 45-, 30- and 20-minute previews for the
+next workout of a genuinely saved native program. The JS bridge calls the
+existing `modules/engine-api.js:planShorterSession` policy, which protects
+strength protocols, preserves set/rest priorities and reports whether the
+requested time budget fits. The worker receives only a checksummed owned
+snapshot. Kotlin decodes a strict result, rejects forged identity/bounds,
+and the process runtime drops results after a store revision change.
+Cut rows and any fit warning are displayed with an explicit **preview
+only, not applied** statement. Starting Train still issues the full session;
+history and progression are unchanged. Real application requires separately
+certified pinned issued targets and time-limited progression provenance.
+No APK or production web code is changed.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of

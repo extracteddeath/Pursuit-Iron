@@ -23,6 +23,18 @@ assert.ok(activity.includes('onReviewProgram=runtime::review') && activity.inclu
   activity.includes('activeProgramId=state.saved?.program?.id') && shell.includes('onboarding.saved==null'));
 assert.ok(shell.includes('UnconnectedEngineGateway().status'),
   'First-program persistence must not authorize workout logging');
+// Short-session previews come only from the canonical engine and cannot
+// masquerade as an applied session or a UI-computed training prescription.
+assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine preview")') &&
+  screens.includes('previewShorterSession(minutes)') &&
+  screens.includes('Preview only — not applied.') &&
+  activity.includes('onPreviewShortSession=runtime::previewShorterSession') &&
+  shell.includes('previewShorterSession=onPreviewShortSession') &&
+  host.includes('engine.previewShorterSession(snapshot,programId,minutes)') &&
+  host.includes('shortPreviewBusy=true,shortPreview=null') &&
+  host.includes('latest.storeChangeKey==current.storeChangeKey') &&
+  !screens.includes('planShorterSession('),
+  'Shorter session UI must show a revision-checked canonical preview without changing the workout');
 // Real Train controls are journal-driven; UI must never manufacture a persisted
 // set or publish a workout directly from an unconfirmed tap.
 const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');

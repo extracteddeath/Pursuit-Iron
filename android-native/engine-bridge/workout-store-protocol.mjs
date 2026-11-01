@@ -3,7 +3,7 @@ import { canonicalBackupSchemaCheck } from './backup-schema-check.mjs';
 import { prepareCanonicalWorkoutHistory } from './workout-history-completion.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
-import { prepareNativeWorkout,MAX_ISSUED_WORKOUT_BYTES } from './native-workout.mjs';
+import { prepareNativeWorkout,previewNativeShorterSession,MAX_ISSUED_WORKOUT_BYTES } from './native-workout.mjs';
 import { inspectNativeHistory,inspectNativeHistoryPage,prepareNativeHistoryCorrection } from './native-history.mjs';
 
 export const WORKOUT_STORE_LIMITS=Object.freeze({
@@ -42,6 +42,12 @@ export function dispatchWorkoutStoreJson(json) {
       if(!exact(p,['currentSnapshot','correctionJson']) || !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
         !bounded(p.correctionJson,16384))return error(id,'INVALID_REQUEST');
       result=prepareNativeHistoryCorrection(p.currentSnapshot,p.correctionJson);
+    } else if (request.method==='previewNativeShorterSession') {
+      if (!exact(p,['rawSnapshot','programId','minutes']) ||
+          !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+          !bounded(p.programId,128) || ![20,30,45].includes(p.minutes))
+        return error(id,'INVALID_REQUEST');
+      result=previewNativeShorterSession(p.rawSnapshot,p.programId,p.minutes);
     } else if (request.method==='prepareNativeWorkout') {
       if(!exact(p,['rawSnapshot','startJson']) || !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
         !bounded(p.startJson,16384))return error(id,'INVALID_REQUEST');

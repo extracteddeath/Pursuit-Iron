@@ -42,3 +42,7 @@ engine. These are typed contracts and read-only JS fixtures only; do not claim
 a usable native training engine, import a personal backup, or enable real logging.
 
 Kotlin domain-level unit tests run with `:domain-contract:testDebugUnitTest` in a separate workflow; this **compiles the Kotlin engine seam without generating or deploying an APK**. The JavaScript golden cases remain the baseline until the platform-specific JSON codec is implemented and validated.
+
+## Runtime and fixture digests
+
+`snapshot-identity.mjs` verifies every runtime file's bytes against the exported canonical snapshot, then derives deterministic SHA-256 digests for the canonical dependency closure and fixed progression fixtures. CI runs this **after** independent standalone-engine parity. The result is an identity candidate for future Android packaging, **not a signed certificate and not proof that an Android JavaScript sandbox has executed**. A runtime must compare exact pinned digests before granting a Kotlin or JS backend permission to return training decisions.

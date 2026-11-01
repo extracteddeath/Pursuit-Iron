@@ -21,6 +21,8 @@ jobs:
         run: node android-native/engine-bridge/protocol-test.mjs
       - name: Verify fixed language-neutral progression fixtures and Kotlin routing contracts
         run: node android-native/engine-contract/contract-parity-test.mjs
+      - name: Reject drifted or untrusted canonical engine snapshots
+        run: node android-native/engine-contract/snapshot-identity-test.mjs
       - name: Verify canonical JS engine snapshot identity and independent parity
         run: |
           snapshot="$(mktemp -d)"
@@ -28,6 +30,7 @@ jobs:
           node engine-lab/canonical-export.mjs "$snapshot"
           node "$snapshot/scripts/verify-snapshot.mjs"
           node engine-lab/verify-parity.mjs "$snapshot"
+          node android-native/engine-contract/snapshot-identity.mjs "$snapshot"
       - name: Validate read-only backup inspector
         run: node android-native/data-migration/inspect-backup-test.mjs
       - name: Validate canonical backup parser without writing data

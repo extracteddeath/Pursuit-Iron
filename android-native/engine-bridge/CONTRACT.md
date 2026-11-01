@@ -7,3 +7,5 @@ The bridge's read-only `progressionPreview` diagnostics are tested against canon
 Run `node android-native/engine-bridge/protocol-test.mjs` from repository root. The dispatcher imports the **current canonical engine**, so it catches accidental export drift but does not independently certify Android execution.
 
 A separate language-neutral contract and immutable golden-case set now live in `android-native/engine-contract/`. The Kotlin DTO is deliberately typed rather than `Map<String, String>` because observed sets and RIR require nested arrays, numbers and nulls. Actual JSON codec, JS runtime, source-digest attestation and real backend certification are future work.
+
+CI now verifies and prints the exact canonical runtime dependency-closure SHA-256 plus golden fixture SHA-256. A successful source identity comparison is a prerequisite, not a replacement for Android runtime execution, independent behavioral parity, or device certification.

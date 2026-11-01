@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,7 @@ fun NativePreviewApp() {
     var length by rememberSaveable { mutableIntStateOf(0) }
     var injuryFlag by rememberSaveable { mutableStateOf(false) }
     val status = UnconnectedEngineGateway().status
+    val destinationStates = rememberSaveableStateHolder()
 
     BoxWithConstraints {
         val expanded = maxWidth >= 840.dp
@@ -119,7 +121,8 @@ fun NativePreviewApp() {
                     targetState = section, animationSpec = tween(220),
                     modifier = Modifier.weight(1f), label = "training destination"
                 ) { current ->
-                    Box(Modifier.fillMaxSize()) {
+                    destinationStates.SaveableStateProvider(current) {
+                        Box(Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 760.dp)
                                 .fillMaxWidth().verticalScroll(rememberScrollState())
@@ -137,6 +140,7 @@ fun NativePreviewApp() {
                             }
                             ConnectionNotice(status)
                         }
+                    }
                     }
                 }
             }

@@ -56,6 +56,9 @@ assert.ok(currentPlanHost.includes('LocalLifecycleOwner.current') &&
   currentPlanHost.includes('session.onBackground()') &&
   currentPlanHost.includes('LaunchedEffect(session, requestVersion, sourceObserved)') &&
   currentPlanHost.includes('source.subscribeCanonicalChanges') &&
+  currentPlanHost.includes('DisposableEffect(source, session, selectedProgramId)') &&
+  currentPlanHost.includes('if (selectedProgramId == null) null else runCatching') &&
+  currentPlanHost.includes('session.current() === presentation') &&
   currentPlanHost.includes('session.onCanonicalStoreChanged()') &&
   currentPlanHost.includes('Channel<Unit>(Channel.CONFLATED)') &&
   currentPlanHost.includes('if (!sourceObserved) return@LaunchedEffect') &&

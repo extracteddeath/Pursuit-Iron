@@ -49,9 +49,10 @@ internal fun rememberNativeCurrentPlanPresentation(
     // A current store with no live change subscription is NOT authorized for
     // display. Callbacks may arrive off-main: invalidate the thread-safe
     // session first, then marshal Compose state changes via a channel.
-    DisposableEffect(source, session) {
+    DisposableEffect(source, session, selectedProgramId) {
         val active = AtomicBoolean(true)
-        val subscription = runCatching {
+        // Never subscribe while Today, Train or Insights is selected.
+        val subscription = if (selectedProgramId == null) null else runCatching {
             source.subscribeCanonicalChanges {
                 if (active.get()) {
                     session.onCanonicalStoreChanged()
@@ -59,8 +60,8 @@ internal fun rememberNativeCurrentPlanPresentation(
                 }
             }
         }.getOrNull()
-        sourceObserved = subscription != null
-        if (subscription == null) {
+        sourceObserved = selectedProgramId != null && subscription != null
+        if (selectedProgramId != null && subscription == null) {
             session.onBackground()
             presentation = ReadOnlyProgramPresentation.Unavailable
         }
@@ -114,5 +115,9 @@ internal fun rememberNativeCurrentPlanPresentation(
             presentation = result
         }
     }
-    return if (sourceObserved) presentation else ReadOnlyProgramPresentation.Unavailable
+    // A canonical revision callback invalidates session.current() before its
+    // UI-channel event is processed, so no subsequent recomposition can reuse
+    // a previously approved but now-stale presentation.
+    return if (sourceObserved && session.current() === presentation)
+        presentation else ReadOnlyProgramPresentation.Unavailable
 }

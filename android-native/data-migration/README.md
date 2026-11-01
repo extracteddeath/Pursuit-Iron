@@ -234,3 +234,13 @@ The subscription is released when its Compose host is disposed. This
 contract does not create a current canonical store, assume a backup is live,
 or enable program edits/workout execution. The existing externally supplied
 `storeChangeKey` remains an additional invalidation path.
+
+## Plan-only observer lifetime and pre-render authority check
+
+The Compose host subscribes to canonical store notifications only while a
+non-null selected Plan ID is active. Navigating to Today, Train or Insights
+disposes the observer and clears private presentation state. Each rendering
+pass also verifies that the transient session still holds the exact same
+approved presentation object; a source update that invalidates the session
+therefore cannot be reused by a subsequent recomposition while the callback
+is being delivered to Compose's main thread.

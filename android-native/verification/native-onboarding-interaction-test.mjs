@@ -6,6 +6,7 @@ const screens=fs.readFileSync(root+'NativeScreens.kt','utf8');
 const host=fs.readFileSync(root+'NativeRuntimeHost.kt','utf8');
 const activity=fs.readFileSync(root+'MainActivity.kt','utf8');
 const shell=fs.readFileSync(root+'NativePreviewApp.kt','utf8');
+const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
 for (const field of ['name','goal','experience','unit','split','days','session','equipment','bodyweight','supersets','barbellCap'])
   assert.match(ui,new RegExp('var '+field+' by rememberSaveable'));
 assert.ok(ui.includes('state.options?.splits') && ui.includes('selected.days.forEach') &&
@@ -44,7 +45,6 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
   'Shorter session UI must show a revision-checked canonical preview without changing the workout');
 // Real Train controls are journal-driven; UI must never manufacture a persisted
 // set or publish a workout directly from an unconfirmed tap.
-const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
 const controls=fs.readFileSync(root+'NativeComponents.kt','utf8');
 assert.ok(train.includes('val committedSlots=journal.completed.map { it.intent.slot }.toSet()') &&
   train.includes('plan.exercises[index].sets.any { it.slot !in committedSlots }') &&

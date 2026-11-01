@@ -12,7 +12,7 @@ This is an **isolated native Android design preview**, not a replacement for the
 
 Debug APKs use CI-generated test signing keys. A newer preview may fail to install over an older one; uninstall the old **Native Preview** first and then install the new APK. It uses a separate `.preview` package ID and must not replace a future Play Store version.
 
-**If no successful run or artifact is present, there is no installable APK yet.** The branch alone is source code, not a runnable app. You can also open `android-native/` in Android Studio with JDK 17 / Android SDK 37, provision Gradle 9.5 and run the `app` debug configuration.
+**If no successful run or artifact is present, there is no installable APK yet.** The branch alone is source code, not a runnable app. You can also open `android-native/` in Android Studio with JDK 17 / Android SDK 36, provision Gradle 8.13 and run the `app` debug configuration.
 
 ## Architecture
 

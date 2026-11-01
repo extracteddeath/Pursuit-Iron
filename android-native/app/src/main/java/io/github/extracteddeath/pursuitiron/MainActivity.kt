@@ -30,7 +30,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
 private val PursuitShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),

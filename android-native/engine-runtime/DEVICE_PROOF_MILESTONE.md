@@ -61,3 +61,20 @@ or permission to surface recommendations in Compose.
 
 This is a **native read-only compatibility milestone**, not a training launch
 or permission to import user workouts, change programs or enable prescription UI.
+
+## Milestone 6 — audited synthetic workout outline parity and lifetime safety
+
+This explicitly triggers one Android API-36 emulator verification of the
+new `workoutOutline` **synthetic-only** contract. The test must:
+
+- Generate a fixed full-body program using the canonical JavaScript engine.
+- Verify a passing engine audit; project exercise order, set counts, rep/RIR
+  bounds, rest and duration without Kotlin-generated prescriptions.
+- Require both `readOnly: true` and `syntheticOnly: true`, with strict source
+  provenance and Kotlin typed response parsing.
+- Reject `deleteHistory` without poisoning the running sandbox.
+- Re-run the previous progression and canonical exercise-catalog checks.
+- Close the service and reject post-close requests.
+
+No production APK build, migration of real workouts, personalized program
+generation, storage write or promotion to the live Compose workout UI.

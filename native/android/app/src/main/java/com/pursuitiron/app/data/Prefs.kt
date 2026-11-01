@@ -84,6 +84,13 @@ class Prefs(context: Context) {
     var reentrySkippedFor by mutableStateOf(sp.getLong("reentrySkippedFor", 0L))
         private set
     fun skipReentry(lastDate: Long) { reentrySkippedFor = lastDate; sp.edit().putLong("reentrySkippedFor", lastDate).apply() }
+    /** The design's deload "Not yet" and fresher-day "Keep … today": hidden until another session is logged (keyed by the last session's id). */
+    var deloadHiddenFor by mutableStateOf(sp.getString("deloadHiddenFor", "") ?: "")
+        private set
+    fun hideDeload(lastId: String) { deloadHiddenFor = lastId; sp.edit().putString("deloadHiddenFor", lastId).apply() }
+    var altKeptFor by mutableStateOf(sp.getString("altKeptFor", "") ?: "")
+        private set
+    fun keepToday(lastId: String) { altKeptFor = lastId; sp.edit().putString("altKeptFor", lastId).apply() }
     /** The design's weekly recap: hidden until a week from when you closed it. */
     var recapHiddenUntil by mutableStateOf(sp.getLong("recapHiddenUntil", 0L))
     fun hideRecap(until: Long) { recapHiddenUntil = until; sp.edit().putLong("recapHiddenUntil", until).apply() }

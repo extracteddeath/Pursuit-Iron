@@ -83,6 +83,7 @@ fun TodayScreen(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
     var readinessOpen by remember { mutableStateOf(false) }
+    var altOpen by remember { mutableStateOf(false) }
     var historyId by remember { mutableStateOf<String?>(null) }
     var review by remember { mutableStateOf<JSONObject?>(null) }
     var changesOpen by remember { mutableStateOf(false) }
@@ -172,7 +173,8 @@ fun TodayScreen(vm: AppViewModel) {
             item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { PlateauCard(vm, next, pl) }
         }
 
-        if (h.o("deload") != null) item { DeloadCard(vm, h) }
+        if (next != null && h.o("alt") != null && h.o("live") == null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { FresherDayCard(vm, h) { altOpen = true } }
+        if (h.o("deload") != null && h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { DeloadDueCard(vm, h) }
 
         if (h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) {
             PiCard(color = cs.surfaceContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.startQuick() }) {
@@ -189,7 +191,8 @@ fun TodayScreen(vm: AppViewModel) {
 
         if (h.o("recap") != null && vm.prefs.recapHiddenUntil < System.currentTimeMillis()) item(span = full) { RecapCard(vm, h) }
         review?.takeIf { next != null && h.o("restDay") == null }?.let { r -> item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { GamePlanCard(r, r.list("changes").size) } }
-        if (next != null) item {
+        if (next != null && readinessOpen) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { ReadinessPanel(vm, h) { readinessOpen = false } }
+        else if (next != null) item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val wk = h.o("week")
                 StatTile("Sessions", "${wk.i("sessions")}", "/ ${wk.i("planned")}", Modifier.weight(1f))
@@ -201,7 +204,7 @@ fun TodayScreen(vm: AppViewModel) {
         if (next != null) item(span = full) { ThisWeekList(vm, h) }
     }
 
-    if (readinessOpen) ModalBottomSheet(onDismissRequest = { readinessOpen = false }) { ReadinessSheet(h) }
+    if (altOpen) FresherDaySheet(vm, h) { altOpen = false }
     historyId?.let { id -> HistorySheet(vm, id) { historyId = null } }
     if (changesOpen) review?.let { r -> PlanChangesSheet(vm, r, onUpdated = { review = it }) { changesOpen = false } }
 }
@@ -249,10 +252,6 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary),
                 ) { Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text(if (live != null) "  Resume workout" else "  Start workout", style = MaterialTheme.typography.titleSmall) }
-                val alt = h.o("alt")
-                if (live == null && alt != null) OutlinedButton(onClick = { vm.startAlt() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Fresher today: ${alt.s("dayLabel")} (${alt.i("score")}%)")
-                }
             }
         }
     }
@@ -281,23 +280,6 @@ fun HistoryRow(r: JSONObject, onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun ReadinessSheet(h: JSONObject) {
-    val cs = MaterialTheme.colorScheme
-    Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Muscle readiness", style = MaterialTheme.typography.headlineSmall)
-        Text("Estimated from when each muscle was last trained and how hard. Under 65% is hatched in the web app; here it's marked \"needs rest\".",
-            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-        h.o("readiness").list("parts").sortedBy { it.i("readiness") }.forEach { p ->
-            val v = p.i("readiness")
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(p.s("label"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(110.dp))
-                ProgressBar(v / 100f, Modifier.weight(1f), height = 12.dp, color = if (v < 65) cs.tertiary else cs.primary)
-                Text("$v%" + if (v < 65) " · needs rest" else "", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(96.dp))
-            }
-        }
-    }
-}
 
 @Composable
 fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {

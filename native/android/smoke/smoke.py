@@ -641,6 +641,16 @@ if scroll_to(r"^\|LAST 7 DAYS · ", tries=6, step=500) or scroll_up_to(r"^\|LAST
     shot("today-recap")
 else:
     FAILS.append("no weekly recap on Today after a logged week")
+# The design's readiness tile opens in place into the muscle map and the per-muscle list
+if scroll_to(r"^\|Readiness$", tries=6, step=500) or scroll_up_to(r"^\|Readiness$"):
+    tap(r"^\|Readiness$", "readiness-open", required=False)
+    if not find(r"^\|Muscle readiness$", timeout=3):
+        FAILS.append("readiness tile does not open the muscle map")
+    else:
+        if not find(r"^Fatigue map\. ", timeout=2):
+            FAILS.append("readiness panel has no body map")
+        shot("today-readiness")
+        tap(r"^Collapse readiness\|", required=False)
 scroll_up_to(r"^\|Today$", tries=10)
 if scroll_to(r"^\|Recent$", tries=6):
     adb("shell", "input", "swipe", "540", "1500", "540", "1000", "300")

@@ -135,51 +135,7 @@ fun WhatsNewCard(vm: AppViewModel) {
     }
 }
 
-/* App.js DeloadAdviceCard. */
-@Composable
-fun DeloadCard(vm: AppViewModel, h: JSONObject) {
-    val d = h.o("deload") ?: return
-    val cs = MaterialTheme.colorScheme
-    PiCard(color = cs.tertiaryContainer, radius = 28.dp, padding = 18.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(PiIcons.Timer, null, tint = cs.onTertiaryContainer)
-            Text("A deload looks due", style = MaterialTheme.typography.titleMedium, color = cs.onTertiaryContainer)
-        }
-        Text("Fatigue is outpacing recovery. A lighter week, roughly half the sets and ~10% less load, will let progress rebound.",
-            style = MaterialTheme.typography.bodyMedium, color = cs.onTertiaryContainer)
-        d.strings("reasons").forEach { Text("•  $it", style = MaterialTheme.typography.bodySmall, color = cs.onTertiaryContainer) }
-        if (h.b("canDeload")) Button(onClick = { vm.startDeload() }, modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = cs.tertiary, contentColor = cs.onTertiary)) { Text("Train this week's deload now") }
-    }
-}
 
-/* App.js MuscleRecoveryCard. */
-@Composable
-fun RecoveryCard(vm: AppViewModel, h: JSONObject) {
-    val r = h.o("recovery") ?: return
-    val parts = r.list("parts"); if (parts.isEmpty()) return
-    val cs = MaterialTheme.colorScheme
-    PiCard(radius = 28.dp, padding = 18.dp) {
-        Text("Muscle recovery", style = MaterialTheme.typography.titleMedium)
-        Text("Estimated freshness from your recent sessions", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-        parts.take(6).forEach { m ->
-            val v = m.i("readiness")
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(m.s("label"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(110.dp))
-                ProgressBar(v / 100f, Modifier.weight(1f), height = 10.dp, color = if (v < 50) cs.error else if (v < 85) cs.tertiary else cs.primary)
-                Text("$v%", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(40.dp))
-            }
-        }
-        if (r.b("restAdvised")) {
-            Text("Most muscles are still fatigued. Rest, or do a light active-recovery session: reduced volume and easy effort to drive blood flow without adding fatigue.",
-                style = MaterialTheme.typography.bodySmall)
-            if (h.b("canLight")) FilledTonalButton(onClick = { vm.startLight() }, modifier = Modifier.fillMaxWidth()) { Text("Do a light session instead") }
-        } else {
-            val ready = r.strings("ready")
-            if (ready.isNotEmpty()) Text("Fresh & ready: ${ready.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = cs.primary)
-        }
-    }
-}
 
 /* App.js WeeklyRecapCard. */
 /* The design's weekly recap: the last seven days against the plan, four figures, the best set and how
@@ -238,24 +194,6 @@ fun RecapCard(vm: AppViewModel, h: JSONObject) {
     }
 }
 
-/* App.js StrengthSnapshotCard: the score, or the prompt that unlocks it. */
-@Composable
-fun StrengthTeaser(vm: AppViewModel, h: JSONObject) {
-    val cs = MaterialTheme.colorScheme
-    val score = vm.profile?.o("score")
-    PiCard(radius = 28.dp, padding = 18.dp, onClick = { vm.goTab(com.pursuitiron.app.Tab.You) }) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(PiIcons.Trophy, null, tint = cs.primary)
-            Text("Strength score", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
-        }
-        if (score != null) {
-            Text("${score.i("overall")}", style = MaterialTheme.typography.displaySmall, color = cs.primary)
-            Text(score.s("level"), style = MaterialTheme.typography.bodyMedium)
-        } else Text(if (h.b("needsBodyweight")) "Add your bodyweight on your profile to unlock your score and strength standards." else "Log a main lift to get scored.",
-            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-    }
-}
 
 /* The design's welcome back: after a break, one easier session (two working sets per lift at 90%)
    before the plan resumes. "Train as planned" hides it until the next break. */

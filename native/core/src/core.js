@@ -398,7 +398,8 @@ export function home() {
                 last: lastTop(id), choice: plateauQueue()[`${nx.program.id}:${nx.day.id}`]?.[id] || null, percent: !!nx.program.config?.percentScheme } : null; }).filter(Boolean).sort((a, b) => b.since - a.since).slice(0, 1)
         } : null,
         week: { sessions: thisWeek.length, planned: nx ? nx.program.days.length : 0, volume: Math.round(thisWeek.reduce((s, h) => s + (Number(h.volume) || 0), 0)) },
-        readiness: { today: todayReady, parts: rd },
+        readiness: { today: todayReady, parts: rd, todayParts: partsToday },
+        lastSessionId: H[0]?.id || null,
         // The design's protection card: what the next session's lifts do about each open injury.
         injuries: injuries().filter((i) => !i.resolvedAt).map((i) => ({ id: i.id, title: injuryTitle(i, E.PART_LABEL), impact: i.impact,
             area: INJURY_AREAS.find((a) => a.id === i.region)?.label || injuryTitle(i, E.PART_LABEL),
@@ -536,6 +537,18 @@ function freshnessFor(program, cursorIdx, lastIdx, H) {
     program.days.forEach((d, i) => { if (i === cursorIdx || i === lastIdx) return; const sc = dayScore(d); if (sc > best) { best = sc; alt = { day: d, dayIndex: i, score: Math.round(sc) }; } });
     return { freshness: Math.round(schedScore), alt, rec };
 }
+/* The main muscles a day trains, in the order its lifts come. */
+function dayParts(day) {
+    return [...new Set(day.exercises.map((id) => EX_BY_ID[id]?.part).filter(Boolean))].map((part) => ({ part, label: E.PART_LABEL[part] || part }));
+}
+/* The design's deload rows: what kind of evidence (k) beside its first sentence (v). */
+function deloadRow(reason) {
+    const r = String(reason);
+    const k = /losing reps/i.test(r) ? 'Lifts' : /reserve|closer to failure/i.test(r) ? 'Effort' : /\bPR\b/.test(r) ? 'Records' : /smashed/i.test(r) ? 'Feedback' : 'Fatigue';
+    const first = r.split('. ')[0].replace(/\.$/, '');
+    return { k, v: first.charAt(0).toUpperCase() + first.slice(1) };
+}
+export const __deloadRowsForTest = (r) => r.map(deloadRow);
 function todayInsights(nx, H) {
     const u = unit();
     let cur = null; if (nx) { try { cur = E.nextSessionCursor(nx.program, H); } catch { cur = null; } }
@@ -555,8 +568,10 @@ function todayInsights(nx, H) {
     const ready = fr.rec.filter((r) => r.readiness >= 85 && MAJOR_PARTS.includes(r.part)).map((r) => E.PART_LABEL[r.part]).slice(0, 4);
     return {
         freshness: fr.freshness,
-        alt: fr.alt ? { dayId: fr.alt.day.id, dayLabel: fr.alt.day.label, score: fr.alt.score } : null,
-        deload: deload ? { reasons: (deload.reasons || []).map(String) } : null,
+        alt: fr.alt ? { dayId: fr.alt.day.id, dayLabel: fr.alt.day.label, score: fr.alt.score, parts: dayParts(fr.alt.day),
+            today: { dayLabel: nx.day.label, score: fr.freshness, parts: dayParts(nx.day),
+                recovering: dayParts(nx.day).filter((x) => (fr.rec.find((r) => r.part === x.part)?.readiness ?? 100) < 85).map((x) => x.label) } } : null,
+        deload: deload ? { reasons: (deload.reasons || []).map(String), rows: (deload.reasons || []).map(deloadRow) } : null,
         canDeload: !!nx && !S.live, canLight: !!nx && !S.live,
         recovery: { restAdvised, ready, parts: fr.rec.filter((r) => r.daysSince != null).sort((a, b) => a.readiness - b.readiness).slice(0, 8)
             .map((r) => ({ part: r.part, label: E.PART_LABEL[r.part] || r.part, readiness: Math.round(r.readiness), status: r.status || null, daysSince: r.daysSince })) },

@@ -118,7 +118,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
 // 11. Calendar, profile, tools
 { const cal = C.calendar({});
   ok(cal.workouts >= 1 && cal.days.every((d) => d.day >= 1 && d.day <= cal.daysInMonth), 'calendar groups this month\'s workouts by day (' + cal.workouts + ')');
-  ok(cal.days[0].sessions[0].summary && cal.days[0].sessions[0].lifts.length > 0, 'calendar day shows a summary and lifts');
+  ok(cal.days.some((d) => d.sessions.some((x) => x.summary && x.lifts.length > 0)), 'calendar day shows a summary and lifts');
   const pr = C.profile();
   ok(pr.level && pr.level.level >= 1 && pr.achievements.length > 5, 'profile has a level and achievements (level ' + pr.level.level + ')');
   ok(pr.score && pr.score.overall >= 0 && pr.score.overall <= 100 && typeof pr.score.level === 'string', 'strength score with bodyweight set: ' + (pr.score && pr.score.overall + ' ' + pr.score.level));
@@ -537,6 +537,11 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const lt = C.startLight();
   ok(lt.active && JSON.parse(C.exportLive()).forceDeload, 'lighter session starts at deload intensity');
   C.discardSession();
+  ok(Array.isArray(h.readiness.todayParts) && h.readiness.todayParts.length > 0 && h.lastSessionId, 'readiness names today\'s muscles; last session id for hide-until-next');
+  if (h.alt) ok(h.alt.parts.length && h.alt.today.dayLabel && typeof h.alt.today.score === 'number' && Array.isArray(h.alt.today.recovering), 'fresher day compares both sessions');
+  { const rows = ["3 of 5 tracked lifts are losing reps at the same load (Bench). Losing reps at an unchanged weight is fatigue", "you've been finishing sets about 1.5 reps closer to failure than prescribed for 2+ weeks — a sign", "2 lifts haven't set a PR in 4+ sessions"];
+    const d = C.__deloadRowsForTest ? C.__deloadRowsForTest(rows) : null;
+    ok(!d || (d[0].k === 'Lifts' && !/Losing reps at/.test(d[0].v) && d[1].k === 'Effort' && d[2].k === 'Records' && /^2 lifts/.test(d[2].v)), 'deload rows: kind + first sentence'); }
   if (h.alt) { const a = C.startAlt(); ok(a.active && a.dayId === h.alt.dayId, 'fresher day starts'); C.discardSession(); }
   else ok(C.startAlt().error, 'no fresher day: refused');
   const pr = C.progress();

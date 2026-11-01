@@ -14,7 +14,7 @@ export const MAX_BACKUP_PROBE_CHARS = 65536;
 
 export function validBackupSchemaParams(params) {
   return plain(params) && Object.keys(params).length === allowed.length &&
-    Object.hasOwn(params, 'rawSnapshot') &&
+    Object.prototype.hasOwnProperty.call(params, 'rawSnapshot') &&
     typeof params.rawSnapshot === 'string' &&
     params.rawSnapshot.length > 0 &&
     params.rawSnapshot.length <= MAX_BACKUP_PROBE_CHARS;

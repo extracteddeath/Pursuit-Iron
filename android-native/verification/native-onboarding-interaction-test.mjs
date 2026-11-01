@@ -71,7 +71,7 @@ assert.ok(train.includes('val view=LocalView.current') &&
   train.includes('onDispose { view.keepScreenOn=prior }'),
   'Keep screen awake only while a real workout is rendered and restore the original view setting');
 const rest=fs.readFileSync(root+'NativeRestTimer.kt','utf8');
-assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, exercise.restSeconds,') &&
+assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,') &&
   rest.includes('rememberSaveable(workoutId)') &&
   rest.includes('SystemClock.elapsedRealtime()') &&
   rest.includes('LaunchedEffect(deadline, startedElapsed, startedWall)') &&
@@ -91,6 +91,12 @@ assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId)') &&
   rest.includes('activeSeconds = 0'),
   'Recovered rest deadlines must reject reboot/time drift and preserve the active interval when selecting another exercise');
 
+assert.ok(train.includes('set.isExtension') &&
+  train.includes('set.extensionRestSeconds?.let') &&
+  train.includes('if(set.isExtension)"Complete extension" else "Complete set"') &&
+  train.includes('if(focusMode)exercise.sets.firstOrNull { it.slot !in committedSlots }') &&
+  train.includes('activeExtension ?: exercise.restSeconds'),
+  'Myo/drop extensions must remain independently visible, loggable and rest-aware');
 assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCount),effort)') &&
   train.includes('var rir by rememberSaveable { mutableStateOf("") }') &&
   train.includes('if(journal.isFinished)onFinish() else showFinishReview=true'),

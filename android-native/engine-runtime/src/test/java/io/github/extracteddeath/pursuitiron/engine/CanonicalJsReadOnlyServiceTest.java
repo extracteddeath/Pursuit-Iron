@@ -40,6 +40,27 @@ public final class CanonicalJsReadOnlyServiceTest {
                         lookup.replace("\"protocolVersion\":1","\"protocolVersion\":2")));
     }
 
+
+    @Test public void syntheticOutlineAcceptsOnlyFixedProfilesWithoutPrivateData() throws Exception {
+        final String valid =
+                "{\"protocolVersion\":1,\"id\":\"outline-1\",\"method\":\"workoutOutline\"," +
+                "\"params\":{\"split\":\"full_body\",\"dayIndex\":0}}";
+        JSONObject request = CanonicalJsReadOnlyService.checkedSyntheticOutlineRequest(valid);
+        assertEquals("full_body",request.getJSONObject("params").getString("split"));
+        for (String invalid : new String[] {
+                valid.replace("workoutOutline","deleteHistory"),
+                valid.replace("\"dayIndex\":0","\"dayIndex\":3"),
+                valid.replace("\"dayIndex\":0","\"dayIndex\":0.5"),
+                valid.replace("full_body","custom"),
+                valid.replace("\"split\":\"full_body\"","\"goal\":\"strength\",\"split\":\"full_body\""),
+                valid.replace("\"protocolVersion\":1","\"protocolVersion\":2"),
+                valid.replace("\"id\":\"outline-1\"","\"id\":\"\"")
+        }) {
+            assertThrows(Exception.class,
+                    () -> CanonicalJsReadOnlyService.checkedSyntheticOutlineRequest(invalid));
+        }
+    }
+
     @Test public void progressionOnlyAndBoundedTransport() throws Exception {
         JSONObject request = CanonicalJsReadOnlyService.checkedPreviewRequest(VALID);
         assertEquals("progressionPreview", request.getString("method"));

@@ -106,10 +106,42 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return request;
     }
 
+    /** No personal context can be supplied to this audited synthetic outline. */
+    static JSONObject checkedSyntheticOutlineRequest(@NonNull String json) throws Exception {
+        Objects.requireNonNull(json);
+        if (json.getBytes(StandardCharsets.UTF_8).length > 16384)
+            throw new IllegalArgumentException("Oversized synthetic outline request");
+        JSONObject request = new JSONObject(json);
+        if (request.length() != 4 || request.getInt("protocolVersion") != 1 ||
+                !"workoutOutline".equals(request.getString("method")) ||
+                !(request.get("id") instanceof String) ||
+                request.getString("id").isEmpty() || request.getString("id").length() > 128)
+            throw new IllegalArgumentException("Synthetic outline transport only");
+        JSONObject params = request.getJSONObject("params");
+        if (params.length() != 2 || !params.has("split") || !params.has("dayIndex") ||
+                !(params.get("split") instanceof String) ||
+                !(params.get("dayIndex") instanceof Number))
+            throw new IllegalArgumentException("Synthetic outline accepts only split and day index");
+        String split = params.getString("split");
+        int days = "full_body".equals(split) ? 3 :
+                "upper_lower".equals(split) ? 4 : "ulppl".equals(split) ? 5 : 0;
+        Number raw = (Number) params.get("dayIndex");
+        double idx = raw.doubleValue();
+        if (days == 0 || !Double.isFinite(idx) || idx != Math.floor(idx) ||
+                idx < 0 || idx >= days)
+            throw new IllegalArgumentException("Unsupported synthetic outline day");
+        return request;
+    }
+
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request) throws Exception {
+        return call(isolate, request, 5);
+    }
+
+    private static JSONObject call(JavaScriptIsolate isolate, JSONObject request,
+            long timeoutSeconds) throws Exception {
         String script = "PursuitIronBridge.dispatchEngineJson(" +
                 JSONObject.quote(request.toString()) + ")";
-        String raw = isolate.evaluateJavaScriptAsync(script).get(5, TimeUnit.SECONDS);
+        String raw = isolate.evaluateJavaScriptAsync(script).get(timeoutSeconds, TimeUnit.SECONDS);
         if (raw.getBytes(StandardCharsets.UTF_8).length > 65536)
             throw new SecurityException("Oversized canonical engine response");
         JSONObject response = new JSONObject(raw);
@@ -135,12 +167,13 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 result.getBoolean("engineCertified"))
             throw new SecurityException("Incompatible canonical engine identity");
         JSONArray methods = result.getJSONArray("capabilities");
-        boolean hasPreview = false, hasLookup = false;
+        boolean hasPreview = false, hasLookup = false, hasOutline = false;
         for (int i = 0; i < methods.length(); i++) {
             if ("progressionPreview".equals(methods.getString(i))) hasPreview = true;
             if ("exerciseLookup".equals(methods.getString(i))) hasLookup = true;
+            if ("workoutOutline".equals(methods.getString(i))) hasOutline = true;
         }
-        if (!hasPreview || !hasLookup)
+        if (!hasPreview || !hasLookup || !hasOutline)
             throw new SecurityException("Canonical read-only bridge capabilities unavailable");
     }
 
@@ -180,8 +213,18 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return submitReadOnly(requestJson, true);
     }
 
+    public CompletableFuture<String> syntheticOutlineAsync(@NonNull String requestJson) {
+        return submitReadOnly(requestJson, 2);
+    }
+
     private CompletableFuture<String> submitReadOnly(
             @NonNull String requestJson, boolean catalog) {
+        return submitReadOnly(requestJson, catalog ? 1 : 0);
+    }
+
+    /** Request type is local to the service: progression 0, catalog 1, synthetic outline 2. */
+    private CompletableFuture<String> submitReadOnly(
+            @NonNull String requestJson, int mode) {
         final CompletableFuture<String> outcome = new CompletableFuture<>();
         if (closed.get()) {
             outcome.completeExceptionally(new IllegalStateException("Canonical service is closed"));
@@ -191,9 +234,11 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         // A bad caller cannot poison an otherwise healthy canonical sandbox.
         final JSONObject validated;
         try {
-            validated = catalog
-                    ? checkedExerciseLookupRequest(requestJson)
-                    : checkedPreviewRequest(requestJson);
+            validated = mode == 2
+                    ? checkedSyntheticOutlineRequest(requestJson)
+                    : mode == 1
+                        ? checkedExerciseLookupRequest(requestJson)
+                        : checkedPreviewRequest(requestJson);
         } catch (Exception invalidRequest) {
             outcome.completeExceptionally(invalidRequest);
             return outcome;
@@ -206,10 +251,15 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 }
                 try {
                     initialize();
-                    JSONObject response = call(isolate, validated);
+                    JSONObject response = call(isolate, validated, mode == 2 ? 30 : 5);
                     if (response.getBoolean("ok")) {
                         JSONObject value = response.getJSONObject("result");
-                        if (catalog) {
+                        if (mode == 2) {
+                            if (!value.getBoolean("readOnly") || !value.getBoolean("syntheticOnly") ||
+                                    !"modules/engine-api.js:generateNextProgramForShell".equals(
+                                            value.getString("source")))
+                                throw new SecurityException("Unexpected canonical synthetic outline provenance");
+                        } else if (mode == 1) {
                             if (!value.getBoolean("readOnly") ||
                                     !"modules/engine-api.js:EXERCISES".equals(
                                             value.getString("source")))

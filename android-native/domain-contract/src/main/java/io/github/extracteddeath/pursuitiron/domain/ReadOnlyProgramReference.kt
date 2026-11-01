@@ -1,8 +1,9 @@
 package io.github.extracteddeath.pursuitiron.domain
 
 /**
- * Inactive, data-only program reference. A future read-only backup inspector
- * will derive this from a canonical v13 parsed store and a trusted digest.
+ * Inactive, data-only program reference. The Node-only canonical v13
+ * inspector derives matching fields from exact source bytes, but the native
+ * app has no verified importer or current-store owner yet.
  * It is NOT a schema parser, renderer, write permit or program snapshot.
  *
  * Canonical records migrate per-program updatedAt, use savedAt for legacy

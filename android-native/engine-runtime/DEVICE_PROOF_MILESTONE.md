@@ -34,3 +34,14 @@ a restricted clone implementation exclusively for plain factory inventory
 records, leaving all canonical policy modules untouched. This run must prove
 all seven cases with **full field-for-field canonical result comparison** and
 a denied `deleteHistory` method. No live workout data or build promotion.
+
+## Milestone 4 — serial read-only engine worker and lifecycle
+
+After the successful Android canonical progression parity milestone, the engine
+runtime now includes a separate **non-UI**, read-only sandbox service. This
+emulator run verifies its actual Android lifecycle: validate the bundled SHA,
+perform a canonical handshake, serve two distinct bounded progression previews
+in one sandbox, decode with the typed Kotlin codec, close, release the process
+sandbox lease, and refuse future requests after close. The seven-case full
+parity suite still runs. No app preview APK, history write, production data,
+or permission to surface recommendations in Compose.

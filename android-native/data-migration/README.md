@@ -219,3 +219,18 @@ new lists in unmodifiable containers. An external mutable source list can
 change later without altering already-approved UI structure. This is a
 display-only defense, not authorization for exercise logging, prescription,
 or backup activation.
+
+## Mandatory canonical source-change observation (inactive native adapter)
+
+Every future `CurrentReadOnlyPlanSource` must now register a disposable
+`subscribeCanonicalChanges` listener. The source must signal each committed
+canonical revision, tombstone, merge, user sign-out or source replacement.
+Compose invalidates the read-only Plan session immediately when a signal
+arrives, forwards the signal to its main-thread state via a conflated channel,
+and reruns current-store evidence checks. If registration fails, Plan remains
+Unavailable rather than displaying unmonitored personal structure.
+
+The subscription is released when its Compose host is disposed. This
+contract does not create a current canonical store, assume a backup is live,
+or enable program edits/workout execution. The existing externally supplied
+`storeChangeKey` remains an additional invalidation path.

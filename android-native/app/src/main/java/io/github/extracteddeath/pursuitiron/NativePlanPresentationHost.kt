@@ -16,6 +16,8 @@ import io.github.extracteddeath.pursuitiron.domain.CurrentReadOnlyPlanGateway
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyPlanPresentationSession
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.channels.Channel
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -40,6 +42,40 @@ internal fun rememberNativeCurrentPlanPresentation(
     }
     var requestVersion by remember(session, selectedProgramId, storeChangeKey) {
         mutableIntStateOf(0)
+    }
+    var sourceObserved by remember(session) { mutableStateOf(false) }
+    val invalidations = remember(session) { Channel<Unit>(Channel.CONFLATED) }
+
+    // A current store with no live change subscription is NOT authorized for
+    // display. Callbacks may arrive off-main: invalidate the thread-safe
+    // session first, then marshal Compose state changes via a channel.
+    DisposableEffect(source, session) {
+        val active = AtomicBoolean(true)
+        val subscription = runCatching {
+            source.subscribeCanonicalChanges {
+                if (active.get()) {
+                    session.onCanonicalStoreChanged()
+                    invalidations.trySend(Unit)
+                }
+            }
+        }.getOrNull()
+        sourceObserved = subscription != null
+        if (subscription == null) {
+            session.onBackground()
+            presentation = ReadOnlyProgramPresentation.Unavailable
+        }
+        onDispose {
+            active.set(false)
+            sourceObserved = false
+            runCatching { subscription?.close() }
+            session.onBackground()
+        }
+    }
+    LaunchedEffect(session, invalidations) {
+        for (ignored in invalidations) {
+            presentation = ReadOnlyProgramPresentation.Unavailable
+            requestVersion++
+        }
     }
 
     DisposableEffect(lifecycleOwner, session, selectedProgramId, storeChangeKey) {
@@ -71,11 +107,12 @@ internal fun rememberNativeCurrentPlanPresentation(
             clear()
         }
     }
-    LaunchedEffect(session, requestVersion) {
+    LaunchedEffect(session, requestVersion, sourceObserved) {
+        if (!sourceObserved) return@LaunchedEffect
         val result = session.refresh()
         if (coroutineContext.isActive && session.current() === result) {
             presentation = result
         }
     }
-    return presentation
+    return if (sourceObserved) presentation else ReadOnlyProgramPresentation.Unavailable
 }

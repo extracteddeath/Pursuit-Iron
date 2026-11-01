@@ -9,12 +9,24 @@ import java.util.concurrent.CancellationException
 interface CurrentReadOnlyPlanSource {
     suspend fun currentEvidence(programId: String): CurrentProgramEvidence?
     suspend fun projectStructure(programId: String): ReadOnlyProgramSummary?
+
+    /**
+     * Register for EVERY committed canonical-store revision, deletion,
+     * history merge, logout or source replacement. Call only AFTER the store
+     * commits a change. The returned handle MUST unsubscribe on close.
+     *
+     * This is required, not optional: an unobserved current store may not
+     * feed a personal Plan presentation. The caller handles any thread.
+     */
+    fun subscribeCanonicalChanges(onChanged: () -> Unit): AutoCloseable
 }
 
 /** Fail closed until Android owns and verifies the canonical current store. */
 object UnconnectedCurrentReadOnlyPlanSource : CurrentReadOnlyPlanSource {
     override suspend fun currentEvidence(programId: String): CurrentProgramEvidence? = null
     override suspend fun projectStructure(programId: String): ReadOnlyProgramSummary? = null
+    override fun subscribeCanonicalChanges(onChanged: () -> Unit): AutoCloseable =
+        AutoCloseable {}
 }
 
 /**

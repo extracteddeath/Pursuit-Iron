@@ -54,7 +54,11 @@ const currentPlanHost = fs.readFileSync(root + 'NativePlanPresentationHost.kt', 
 assert.ok(currentPlanHost.includes('LocalLifecycleOwner.current') &&
   currentPlanHost.includes('Lifecycle.Event.ON_STOP') &&
   currentPlanHost.includes('session.onBackground()') &&
-  currentPlanHost.includes('LaunchedEffect(session, requestVersion)') &&
+  currentPlanHost.includes('LaunchedEffect(session, requestVersion, sourceObserved)') &&
+  currentPlanHost.includes('source.subscribeCanonicalChanges') &&
+  currentPlanHost.includes('session.onCanonicalStoreChanged()') &&
+  currentPlanHost.includes('Channel<Unit>(Channel.CONFLATED)') &&
+  currentPlanHost.includes('if (!sourceObserved) return@LaunchedEffect') &&
   currentPlanHost.includes('remember(session, selectedProgramId, storeChangeKey)') &&
   !currentPlanHost.includes('rememberSaveable') &&
   !currentPlanHost.includes('BackupSavedProgramInventory'),
@@ -179,6 +183,12 @@ assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen(') &&
   'The installable preview must not supply an unverified personal backup');
 assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structure'),
   'Shared saved-program composable must accept only policy-approved structure');
+const sourceContract = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/CurrentReadOnlyPlanGateway.kt', 'utf8'
+);
+assert.ok(sourceContract.includes('fun subscribeCanonicalChanges(onChanged: () -> Unit): AutoCloseable') &&
+  sourceContract.includes('override fun subscribeCanonicalChanges('),
+  'Current store adapter requires explicit, disposable canonical change monitoring');
 assert.ok(planGate.includes('ReadOnlyProgramReferenceGate.sameActiveRevision(') &&
   planGate.includes('CurrentProgramDeletionEvidence.CheckedAbsent') &&
   planGate.includes('class Structure internal constructor(') &&

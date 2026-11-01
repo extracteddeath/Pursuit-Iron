@@ -33,6 +33,8 @@ class CurrentReadOnlyPlanGatewayTest {
         var reads = 0
         var projections = 0
         var failure: Exception? = null
+        override fun subscribeCanonicalChanges(onChanged: () -> Unit): AutoCloseable =
+            AutoCloseable {}
         override suspend fun currentEvidence(programId: String): CurrentProgramEvidence? {
             reads++
             return if (reads == 1) first else second

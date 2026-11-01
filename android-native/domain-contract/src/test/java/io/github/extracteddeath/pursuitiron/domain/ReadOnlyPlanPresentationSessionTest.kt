@@ -21,6 +21,12 @@ class ReadOnlyPlanPresentationSessionTest {
     ) : CurrentReadOnlyPlanSource {
         val pending = mutableListOf<Continuation<ReadOnlyProgramSummary?>>()
         var evidenceReads = 0
+        private val listeners = mutableSetOf<() -> Unit>()
+        override fun subscribeCanonicalChanges(onChanged: () -> Unit): AutoCloseable {
+            listeners.add(onChanged)
+            return AutoCloseable { listeners.remove(onChanged) }
+        }
+        fun signalCanonicalChange() = listeners.toList().forEach { it() }
         override suspend fun currentEvidence(programId: String): CurrentProgramEvidence {
             evidenceReads++
             return proof
@@ -115,5 +121,28 @@ class ReadOnlyPlanPresentationSessionTest {
         source.complete(1)
         assertTrue(restarted.value() is ReadOnlyProgramPresentation.Structure)
         assertEquals(4,source.evidenceReads)
+    }
+
+    @Test fun committedStoreSignalsInvalidateEvenOutstandingReadsAndUnsubscribe() {
+        val (session, source) = fixture()
+        session.onForeground(ref.programId)
+        val subscription = source.subscribeCanonicalChanges {
+            session.onCanonicalStoreChanged()
+        }
+        val pending = Pending<ReadOnlyProgramPresentation>()
+        pending.start { session.refresh() }
+        source.signalCanonicalChange()
+        empty(session)
+        source.complete(0)
+        assertSame(ReadOnlyProgramPresentation.Unavailable,pending.value())
+        empty(session)
+
+        val current=Pending<ReadOnlyProgramPresentation>()
+        current.start { session.refresh() }
+        source.complete(1)
+        assertTrue(current.value() is ReadOnlyProgramPresentation.Structure)
+        subscription.close()
+        source.signalCanonicalChange()
+        assertSame(current.value(),session.current())
     }
 }

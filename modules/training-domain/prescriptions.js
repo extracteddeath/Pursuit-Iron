@@ -318,7 +318,8 @@ function gzPlanFor(program, day, ex, slot, unit, history = []) {
     const sets = [];
     for (let i = 0; i < st.n; i++) {
         const amrap = i === st.n - 1; // last set is AMRAP — it drives the progression
-        sets.push({ weight: replay.weight, reps: amrap ? st.reps + "+" : String(st.reps), amrap, pct: 100 });
+        // pct is a fraction like every other method's (1 = all of the stage's working weight); it read 100 here, which shows as 10000%.
+        sets.push({ weight: replay.weight, reps: amrap ? st.reps + "+" : String(st.reps), amrap, pct: 1 });
     }
     return { label: st.label, sets, tier, stage };
 }

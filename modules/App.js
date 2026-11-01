@@ -48,7 +48,7 @@ import {
     perfAfterDelete, perfAfterHistoryReplace, personalMav, PHASE_ROT, phaseFor, phaseKind, pickActiveProgram,
     pickTopSet, plannedWeek, planOverviewMemo, planShorterSession, plateauOf, plateauOfLift, PLATES,
     platesPerSide, preferenceFloor, prescribedRIRof, prescribeSets, previousWorkoutSet, PROG_STYLES,
-    programChangeLabels, programSavePlan, projectNextTM, PV_PAD_TOP, RACK_PRESETS, rankSwapAlts,
+    programChangeLabels, programSavePlan, projectNextTM, carryTrainingMaxes, PV_PAD_TOP, RACK_PRESETS, rankSwapAlts,
     recommendedSplit, recommendNextSplitForShell, reconcilePendingRepTargets, REFERENCES,
     refreshPendingSetTargets, refusalFixes, RELEASE_DIAG_CAP, RELEASE_DIAG_FIELDS, RELEASE_DIAG_KEY,
     removeNextSlotPrescription, repairShellVolume, repeatCycleOptions, repRange, repsLow, resolveStyle, rirTrend,
@@ -21300,7 +21300,8 @@ function App() {
         if (p?.engineSource === "pursuit-next") {
             try {
                 const built = await runGeneration('next_block', { program: p, history, legacyExercises: EXERCISES, makeId: uid }, 'Preparing your next block');
-                const np = built.program;
+                // A percentage program's maxes move by the last AMRAP into the next cycle (the generator builds the plan, not the maxes).
+                const np = carryTrainingMaxes(p, built.program, history, unit);
                 const m = (p.name || '').match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
                 np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
                 np.folder = p.folder;
@@ -21322,9 +21323,9 @@ function App() {
         // Pursuit Next. We intentionally do NOT clone the old program forward: that would keep v661 in
         // active generation under a different name.
         try {
-            const np = (await runGeneration('program', {
+            const np = carryTrainingMaxes(p, (await runGeneration('program', {
                 config: p.config, banned, legacyExercises: EXERCISES, makeId: uid,
-            })).program;
+            })).program, history, unit);
             np.generationRoute = GENERATION_ROUTE;
             const m = (p.name || "").match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
             np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;

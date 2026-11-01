@@ -1024,12 +1024,16 @@ if tap(r"Edit program", "editor"):
     if seek(r"Add an exercise") and tap(r"Add an exercise"):
         if tap(r"Create a custom exercise", "custom-create"):
             tap(r"Exercise name")
-            adb("shell", "input", "text", "Landmine%sPress")
+            # A name not in the library (a library name is refused, and the sheet says so)
+            adb("shell", "input", "text", "Kneeling%sCable%sChop")
             back()
-            if scroll_to(r"^\|Create and add$"):
-                tap(r"^\|Create and add$")
+            if scroll_to(r"^\|Save and add$"):
+                tap(r"^\|Save and add$")
                 time.sleep(1.5)
                 shot("custom-added")
+            else:
+                FAILS.append("New exercise has no Save and add")
+                back()
     if tap(r"^\|Save$", "editor-scope"):
         tap(r"^\|This block$", "editor-saved", required=False)  # asked only for a block in a cycle
     if seek(r"^\|Settings$") and tap(r"^\|Settings$", "editor-program-settings", required=False):
@@ -1182,6 +1186,63 @@ for pat, nm in [(r"^\|Plan$|^Plan\|", "tablet-plan"), (r"^\|Progress$|^Progress\
         shot(nm)
 adb("shell", "wm", "size", "reset")
 adb("shell", "wm", "density", "reset")
+
+# 12. Large text and targets: every tab at 130% font scale. Tappable controls under 44dp, and tappable controls
+# TalkBack can't name, are written to a11y.txt (with screenshots) for review; they don't fail the run yet.
+def a11y_pass():
+    m = re.search(r"(\d+)\s*$", adb("shell", "wm", "density").strip())
+    dpx = int(m.group(1)) / 160 if m else 2.625
+    sz = re.search(r"(\d+)x(\d+)\s*$", adb("shell", "wm", "size").strip())
+    screen_h = int(sz.group(2)) if sz else 2400
+    adb("shell", "settings", "put", "system", "font_scale", "1.3")
+    time.sleep(1)
+    launch()
+    time.sleep(3)
+    issues = []
+    def label_of(n):
+        own = (n.get("content-desc") or "") + (n.get("text") or "")
+        if own.strip():
+            return own.strip()
+        for c in n.iter("node"):
+            t = (c.get("content-desc") or "") + (c.get("text") or "")
+            if t.strip():
+                return t.strip()
+        return ""
+    for pat, nm in [(r"^\|Today$|^Today\|", "today"), (r"^\|Plan$|^Plan\|", "plan"), (r"^\|Progress$|^Progress\|", "progress"),
+                    (r"^\|Exercises$|^Exercises\|", "exercises"), (r"^\|You$|^You\|", "you")]:
+        if not tap(pat, required=False):
+            continue
+        time.sleep(1.2)
+        for k in range(3):
+            shot(f"a11y-{nm}-{k}")
+            for n in nodes():
+                if n.get("clickable") != "true" or n.get("package") != PKG:
+                    continue
+                b = re.findall(r"\d+", n.get("bounds", ""))
+                if len(b) != 4:
+                    continue
+                x1, y1, x2, y2 = map(int, b)
+                w, h = (x2 - x1) / dpx, (y2 - y1) / dpx
+                lab = label_of(n)
+                # Clipped by the screen edge or the bars: not the control's real size.
+                if y1 <= 0 or y2 >= screen_h - 1:
+                    continue
+                if not lab:
+                    issues.append(f"{nm}: unlabelled control {int(w)}x{int(h)}dp at {x1},{y1}")
+                elif w < 44 or h < 44:
+                    issues.append(f"{nm}: small target '{lab[:40]}' {int(w)}x{int(h)}dp")
+            adb("shell", "input", "swipe", "540", "1800", "540", "900", "500")
+            time.sleep(0.9)
+    adb("shell", "settings", "put", "system", "font_scale", "1.0")
+    uniq = list(dict.fromkeys(issues))
+    with open(os.path.join(OUT, "a11y.txt"), "w") as f:
+        f.write("\n".join(uniq) if uniq else "no small or unlabelled targets")
+    print("a11y issues:", len(uniq), flush=True)
+try:
+    a11y_pass()
+except Exception as e:  # a review aid; never lose the rest of the run to it
+    print("a11y pass failed", e, flush=True)
+    adb("shell", "settings", "put", "system", "font_scale", "1.0")
 
 # Any ANR during the run, whoever it belonged to, with its reason, so ours can never hide behind the launcher's.
 full = adb("logcat", "-d", "-b", "main", "-b", "system", "-b", "crash", timeout=120)

@@ -2399,6 +2399,7 @@ export function nextBlock({ programId }) {
         let np;
         if (p.engineSource === 'pursuit-next') np = E.generateNextBlockFromShellHistory({ program: p, history: history(), legacyExercises: EXERCISES, makeId: E.uid }).program;
         else np = E.generateNextProgramForShell({ config: p.config, banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid }).program;
+        np = E.carryTrainingMaxes(p, np, history(), unit()); // the next cycle keeps working from training maxes, moved by the last AMRAP
         const m = (p.name || '').match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
         np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
         np.folder = p.folder; np.description = p.description; np.generationRoute = E.GENERATION_ROUTE;
@@ -3318,7 +3319,14 @@ export function trainingMaxes({ programId, weekIndex = null }) {
         try { return E.percentagePlanFor(p, day, ex, slot, w, u, history()); } catch { return null; }
     };
     const setTxt = (x) => `${fmtW(x.weight) || '—'}×${x.reps}`;
-    return { programId: p.id, name: p.name, percent, unit: u,
+    // The design's per-lift line (basis · % of your e1RM) and NEXT CYCLE · FROM YOUR AMRAP SETS: the engine's own
+    // projection (projectNextTM / nextTMEvidence), the numbers the next block now carries (E.carryTrainingMaxes).
+    const H = history();
+    let bests = {}; try { bests = E.liftBests(H, u) || {}; } catch { bests = {}; }
+    const tiered = scheme === 'gzclp';
+    let carried = null; try { carried = percent ? E.carryTrainingMaxes(p, { config: p.config }, H, u) : null; } catch { carried = null; }
+    const carriedTm = (id) => { const v = carried?.trainingMax?.[id]; return v > 0 ? E.convertHistoryLoad(v, carried.trainingMaxUnit || u, u) : null; };
+    return { programId: p.id, name: p.name, percent, unit: u, tiered,
         method: S ? { id: scheme, name: S.name, basis: S.basis } : null,
         weekIndex: wk, current, deloadWeek: bw.deloadWeek,
         weeks: percent ? bw.list.map((w) => {
@@ -3328,7 +3336,12 @@ export function trainingMaxes({ programId, weekIndex = null }) {
         lifts: percent ? mainLifts(p).map((id) => {
             const ex = EX_BY_ID[id], tm = E.trainingMaxForUnit(p, id, u) || 0;
             const w1 = tm > 0 ? planOf(id, 1) : null, wn = tm > 0 ? planOf(id, wk) : null;
-            return { id, name: ex.name, tm, step: E.loadStep(ex, u),
+            const e1 = Number(bests[id]?.e1rm) > 0 ? Math.round(bests[id].e1rm * 10) / 10 : null;
+            let ev = null; try { ev = E.nextTMEvidence(p, H, id); } catch { ev = null; }
+            const nextTm = tm > 0 ? carriedTm(id) : null;
+            return { id, name: ex.name, tm, step: E.loadStep(ex, u), e1rm: e1, pctOfE1rm: e1 && tm > 0 ? Math.round(tm / e1 * 100) : null,
+                next: tm > 0 && nextTm != null ? { tm: Math.round(nextTm * 10) / 10, delta: Math.round((nextTm - tm) * 10) / 10,
+                    note: tiered ? (carried?.gzStage?.[id + ':t1'] != null ? `T1 stage ${carried.gzStage[id + ':t1'] + 1} carries over` : 'Carries over') : (ev?.note || '').replace(/^./, (c) => c.toUpperCase()) } : null,
                 week1: w1 ? { label: w1.label, sets: w1.sets.map(setTxt) } : null,
                 week: wn ? { label: wn.label, sets: wn.sets.map((x) => ({ text: setTxt(x), pct: x.pct != null ? Math.round(x.pct * 1000) / 10 : null, amrap: !!x.amrap })) } : null };
         }) : [] };

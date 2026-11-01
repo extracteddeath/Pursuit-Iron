@@ -1058,4 +1058,20 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(made.ok && C.exerciseNameTaken({ name: ' kneeling CABLE chop press ' }).taken && C.exerciseNameTaken({ name: 'Barbell Bench Press' }).taken && !C.exerciseNameTaken({ name: 'My new lift' }).taken, 'names in the library are taken, case-insensitively');
   ok(C.createCustomExercise({ name: 'barbell bench press', part: 'chest', type: 'compound', equip: ['barbell'], lo: 6, hi: 10 }).ok === false, 'a built-in name cannot be reused'); }
 
+// A percentage program's next cycle keeps its training maxes, moved by the last AMRAP (was dropped by the block generators)
+{ const prev = { id: 'pp', config: { unit: 'kg', percentScheme: '531' }, trainingMaxUnit: 'kg', trainingMax: { 'bb-bench': 100, 'bb-squat': 140 }, days: [{ id: 'd1', exercises: ['bb-bench', 'bb-squat'] }] };
+  const H = [{ id: 'h1', programId: 'pp', dayId: 'd1', weekIndex: 1, date: Date.now() - 86400000, unit: 'kg', perf: { 'bb-bench': { sets: [{ w: 85, r: 10, amrap: true }] }, 'bb-squat': { sets: [{ w: 120, r: 0, amrap: true }] } } }];
+  const next = E.carryTrainingMaxes(prev, { id: 'np', config: prev.config }, H, 'kg');
+  ok(next.trainingMax['bb-bench'] > 100 && next.trainingMax['bb-squat'] === 140 && next.trainingMaxUnit === 'kg', 'next cycle: bench TM up after a 10-rep AMRAP (' + next.trainingMax['bb-bench'] + '), squat held after a miss');
+  const plain = { id: 'q' }; ok(E.carryTrainingMaxes({ config: {} }, plain, H, 'kg') === plain, 'a non-percentage program passes through untouched'); }
+
+// Tiered Linear carries where each lift is (T1 load and stage, T2 load), not an AMRAP bump; its set percentages are fractions
+{ C.init({}); C.createFromTemplate({ id: 'gzclp' }); const p0 = JSON.parse(C.exportStore()).saved[0];
+  C.trainingMaxes({ programId: p0.id }).lifts.forEach((l) => C.setTrainingMax({ programId: p0.id, exId: l.id, value: 100 }));
+  const p = JSON.parse(C.exportStore()).saved[0], nx = E.carryTrainingMaxes(p, { id: 'n', config: p.config, days: p.days }, [], 'kg');
+  const ids = Object.keys(p.trainingMax);
+  ok(ids.every((id) => nx.trainingMax[id] === 100) && Object.keys(nx.gzStage).length >= ids.length && Object.values(nx.gzStage).every((v) => v === 0), 'Tiered Linear: next block keeps each T1 load and stage');
+  const w = C.trainingMaxes({ programId: p.id }).lifts[0].week;
+  ok(w && w.sets.every((x) => x.pct === 100), 'Tiered Linear sets read 100% of the stage load (was 10000%)'); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

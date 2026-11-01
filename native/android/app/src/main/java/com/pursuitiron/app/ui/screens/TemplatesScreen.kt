@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.selected
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.semantics.contentDescription
@@ -188,7 +189,13 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                 Surface(color = cs.surfaceContainerLow, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(l.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                            Column(Modifier.weight(1f)) {
+                                Text(l.s("name"), style = MaterialTheme.typography.titleSmall)
+                                // The design's line under each lift: what the number is, and how it sits against your e1RM.
+                                val basis = d.o("method")?.s("basis")?.substringBefore(" (")?.ifBlank { null } ?: "Training max"
+                                if (!l.isNull("pctOfE1rm") && l.i("pctOfE1rm") > 0) Text("$basis · ${l.i("pctOfE1rm")}% of your ${fmtNum(l.d("e1rm"))} $u e1RM",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
+                            }
                             if (tm > 0 && mode == "tm") {
                                 IconButton(onClick = { set((tm - step).coerceAtLeast(step), false) }) { Text("−", style = MaterialTheme.typography.titleLarge) }
                                 Text("${fmtNum(tm)} $u", style = MaterialTheme.typography.titleMedium)
@@ -212,6 +219,35 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                         } else if (tm <= 0) Text("Set a training max to see this week's sets.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                 }
+            }
+            // The design's NEXT CYCLE: what each max becomes when the next block is built (the engine's projection,
+            // the same numbers the next block carries). Tiered Linear carries each lift's stage and load instead.
+            val nexts = d.list("lifts").filter { it.o("next") != null }
+            if (nexts.isNotEmpty()) {
+                Text(if (d.b("tiered")) "NEXT BLOCK · WHERE EACH LIFT IS" else "NEXT CYCLE · FROM YOUR AMRAP SETS",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, letterSpacing = 0.4.sp),
+                    color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    nexts.forEach { l ->
+                        val n = l.o("next")!!; val delta = n.d("delta")
+                        Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 12.dp)
+                            .semantics(mergeDescendants = true) { contentDescription = "${l.s("name")}: ${fmtNum(l.d("tm"))} to ${fmtNum(n.d("tm"))} $u. ${n.s("note")}" },
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(l.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp))
+                                Text(n.s("note"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
+                            }
+                            Text("${fmtNum(l.d("tm"))} → ${fmtNum(n.d("tm"))} $u", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp))
+                            Text(if (delta > 0) "+${fmtNum(delta)}" else if (delta < 0) "−${fmtNum(-delta)}" else "hold",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold),
+                                color = if (delta > 0) cs.onPrimaryContainer else cs.onSurfaceVariant,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(if (delta > 0) cs.primaryContainer else cs.surfaceContainerHighest).padding(horizontal = 8.dp, vertical = 3.dp))
+                        }
+                    }
+                }
+                Text(if (d.b("tiered")) "Each tier’s stage and load move every session from your logged sets; a new block picks up where they are."
+                    else "8+ reps on the AMRAP is a big jump, 3–7 a standard one, 1–2 a small one, and a miss holds the max. Applied when you build the next block.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
             }
             Button(onClick = { vm.tmFor = null }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Done") }
         }

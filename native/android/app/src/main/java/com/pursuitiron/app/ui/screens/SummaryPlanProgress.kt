@@ -149,7 +149,8 @@ fun PlanScreen(vm: AppViewModel) {
     openCycle?.let { id -> CycleSheet(vm, id.ifBlank { null }, p.s("programId")) { openCycle = null } }
     if (confirmNext) AlertDialog(onDismissRequest = { confirmNext = false },
         title = { Text("Build the next block?") },
-        text = { Text("Finish this block first. The next one is built from its logged workouts and the effort you reported. This program and your history stay saved.") },
+        text = { Text("Finish this block first. The next one is built from its logged workouts and the effort you reported." +
+            (if (p.b("percent")) " Your training maxes carry over, moved by your last AMRAP sets (see Training maxes)." else "") + " This program and your history stay saved.") },
         confirmButton = { Button(onClick = { confirmNext = false; vm.nextBlock(p.s("programId")) }) { Text("Build next block") } },
         dismissButton = { TextButton(onClick = { confirmNext = false }) { Text("Cancel") } })
     LazyVerticalStaggeredGrid(

@@ -25,6 +25,8 @@ jobs:
         run: node android-native/data-migration/validate-canonical-backup-test.mjs
       - name: Ensure feature-first contract preserves all capabilities and gates
         run: node android-native/verification/feature-contract-test.mjs
+      - name: Verify native preview draft, focus and shared controls
+        run: node android-native/verification/native-preview-interaction-test.mjs
       - name: Protect existing feature behavior with canonical regression fixtures
         run: |
           node verification/progression-safety-test.mjs

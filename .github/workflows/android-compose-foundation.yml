@@ -1,0 +1,26 @@
+name: Android Compose foundation contracts
+on:
+  push:
+    branches:
+      - architecture/android-compose-foundation
+  pull_request:
+    paths:
+      - 'android-native/**'
+      - '.github/workflows/android-compose-foundation.yml'
+jobs:
+  canonical-bridge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate canonical engine bridge contract
+        run: node android-native/engine-bridge/protocol-test.mjs
+      - name: Verify native scaffold does not alter canonical engine
+        run: |
+          test -f modules/engine-api.js
+          test -f android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/EngineGateway.kt
+          grep -q 'UnconnectedEngineGateway' android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt

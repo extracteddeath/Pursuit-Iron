@@ -69,3 +69,18 @@ revision reference, history edit or write capability is introduced. Before a
 user backup can be presented, certify actual emulator execution, byte digest
 binding, source lifetime and complete dataset support without arbitrary
 size expansion.
+
+## Typed read-only bridge adapter (disconnected)
+
+`SandboxBackupSchemaInspector` now completes the isolated
+`ByteArray -> exact-byte fingerprint gate -> strict UTF-8 -> read-only JSON
+request -> canonical sandbox -> typed Kotlin counts` path. It takes an
+explicit in-memory copy plus the earlier fingerprint, never opens a URI and
+never records the source. A caller-owned byte array can change after method
+invocation without changing the already-encoded immutable request.
+
+This adapter does **not** have an app construction site or import authority.
+Only small snapshots (at most 65,536 UTF-16 characters plus a 128-KiB byte
+ceiling) qualify for this current protocol proof; do not suggest it supports
+the existing 50-MiB picker limit. Native workout execution and personal
+program presentation remain unavailable.

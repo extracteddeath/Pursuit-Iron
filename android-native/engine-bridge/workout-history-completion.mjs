@@ -102,7 +102,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
     const ex = own(EX_BY_ID, currentId) ? EX_BY_ID[currentId] : null;
     ensure(ex); // Custom catalog installation is a separate, unverified feature.
     const prescribed = (issued ? source.sets : prescribeSets(program, day, ex, exerciseIndex, s.weekIndex,
-      s.unit, null, {}, origin.perf, origin.history, false)).filter(row => !row.warm && !row.sub);
+      s.unit, null, {}, origin.perf, origin.history, false)).filter(row => !row.warm);
     ensure(prescribed.length >= 1 && prescribed.length <= 20);
     const sets = prescribed.map((target, setIndex) => {
       const slot = {exerciseIndex, setIndex, exerciseId: currentId};
@@ -136,17 +136,34 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null) {
   const observations = Object.values(performance).flatMap(p => p.sets);
   const completed = journal.events.filter(e => e.disposition === 'COMPLETED');
   if(issued) {
-    // The web logger deliberately summarizes loaded sets when an exercise
-    // mixes positive and zero loads. Keep that canonical result unchanged,
-    // while retaining EVERY native observation before retiring its journal.
-    // Only that known canonical omission is allowed; any other loss rejects.
-    const recorded=new Set(observations.map(set=>`${set.decisionTrace?.slot}:${set.workingSetIndex}`));
-    ensure(recorded.size===observations.length && observations.length<=completed.length);
-    for(const event of completed) {
+    // Sub-sets remain fully loggable but do not become new working-set
+    // ordinals. The web history adapter owns how they influence volume.
+    const isExtension=event=>!!issued.rows.find(row=>row.slot===event.slot.exerciseIndex)
+      ?.sets.filter(set=>!set.warm)[event.slot.setIndex]?.sub;
+    const completedMain=completed.filter(event=>!isExtension(event));
+    const completedExtensions=completed.filter(isExtension);
+    // The canonical summarizer deliberately omits zero-load rows when mixed
+    // with positive loads. Do not rewrite its model; retain every original
+    // observation separately and reject any other unexplained loss.
+    const loggedMain=observations.filter(set=>!set.sub);
+    const recorded=new Set(loggedMain.map(set=>`${set.decisionTrace?.slot}:${set.workingSetIndex}`));
+    ensure(recorded.size===loggedMain.length && loggedMain.length<=completedMain.length);
+    for(const event of completedMain) {
       if(recorded.has(`${event.slot.exerciseIndex}:${event.slot.setIndex}`))continue;
       ensure(Number(event.values.load)===0 && completed.some(other=>
         other.slot.exerciseId===event.slot.exerciseId && Number(other.values.load)>0));
     }
+    // Extension kind, actual load and reps must survive the real canonical
+    // logger exactly; never allow a silent omission masquerading as success.
+    const signature=(kind,weight,reps)=>`${kind}:${Number(weight)}:${Number(reps)}`;
+    const expected=completedExtensions.map(event=>{
+      const row=issued.rows.find(row=>row.slot===event.slot.exerciseIndex);
+      const target=row.sets.filter(set=>!set.warm)[event.slot.setIndex];
+      return signature(target.kind,event.values.load,event.values.reps);
+    }).sort();
+    const persisted=observations.filter(set=>set.sub).map(set=>
+      signature(set.kind,set.w,set.r)).sort();
+    ensure(equalJson(persisted,expected));
   } else ensure(observations.length === completed.length);
   const volume = Math.round(observations.reduce((sum, row) => sum + row.w * row.r, 0));
   return {

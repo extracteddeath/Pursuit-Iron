@@ -7,7 +7,7 @@ const call = (method, params = {}) => dispatchEngineRequest({
 const handshake = call('handshake');
 assert.equal(handshake.ok, true);
 assert.equal(handshake.result.engineCertified, false);
-assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview']);
+assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup']);
 const catalog = call('catalogSummary');
 assert.equal(catalog.ok, true);
 assert.equal(catalog.result.exercises, canonical.EXERCISES.length);
@@ -64,5 +64,39 @@ const overRoundTrip = JSON.parse(dispatchEngineJson(JSON.stringify({
     params:{exerciseId:'back_squat',repMin:5,repMax:8,targetRir:2,sets:below,equipmentAvailable:['barbell','rack']}
 })));
 assert.deepEqual(overRoundTrip, {...under,id:'preview-1'});
+
+
+const exerciseIds = ['bb-bench', 'inc-db-press', 'low-inc-bb-bench', 'not-a-real-exercise'];
+const listInput = {ids:exerciseIds};
+const listCopy = JSON.stringify(listInput);
+const lookup = call('exerciseLookup',listInput);
+assert.equal(lookup.ok,true);
+assert.equal(lookup.result.source,'modules/engine-api.js:EXERCISES');
+assert.equal(lookup.result.readOnly,true);
+assert.deepEqual(lookup.result.exercises.map(item=>item.id),exerciseIds.slice(0,3));
+assert.deepEqual(lookup.result.missingIds,[exerciseIds[3]]);
+const canonicalById = new Map(canonical.EXERCISES.map(e=>[e.id,e]));
+for(const item of lookup.result.exercises) {
+  const canonicalItem=canonicalById.get(item.id);
+  assert.equal(item.name,canonicalItem.name);
+  assert.equal(item.part,canonicalItem.part);
+  assert.equal(item.type,canonicalItem.type);
+  assert.deepEqual(item.equipment,canonicalItem.equip);
+  assert.equal(item.repMin,canonicalItem.rep[0]);
+  assert.equal(item.repMax,canonicalItem.rep[1]);
+}
+assert.equal(JSON.stringify(listInput),listCopy,'lookup cannot mutate request');
+for(const params of [
+  {}, {ids:[]}, {ids:['bb-bench','bb-bench']}, {ids:['__proto__!']},
+  {ids:Array(13).fill('bb-bench')},{ids:['bb-bench'],privateHistory:[]},
+  {ids: ['constructor'] ,extra:1}, {ids: ['bb-bench', 4]}
+]) {
+  const invalid=call('exerciseLookup',params);
+  assert.equal(invalid.ok,false,JSON.stringify(params));
+  assert.equal(invalid.error.code,'INVALID_REQUEST');
+}
+assert.equal(JSON.parse(dispatchEngineJson(JSON.stringify({
+  protocolVersion:1,id:'lookup-json',method:'exerciseLookup',params:{ids:['bb-bench']}
+}))).result.exercises[0].id,'bb-bench');
 
 console.log('PASS canonical JS bridge v1 handshake, read-only progression fixtures, strict bounds and fail-closed methods');

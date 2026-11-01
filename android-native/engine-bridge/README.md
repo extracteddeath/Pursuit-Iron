@@ -29,3 +29,7 @@ An experimental unconnected Android library lives in `android-native/engine-runt
 ## Scoped sandbox compatibility (verified issue)
 
 API-36 emulator instrumentation confirmed `ReferenceError: structuredClone is not defined` in the canonical loading helper. Android bundles are now initialized via `android-entry.mjs`, whose local data-only fallback handles arrays/plain inventory records and primitive values but rejects non-plain objects/accessors. The web engine and its formulas are unchanged. The fallback is covered by unit tests, while **real Android feature parity remains subject to the next emulator milestone**.
+
+## Bounded canonical exercise lookup
+
+`exerciseLookup` accepts exactly `{ids:[...]} ` with 1–12 unique, syntax-valid canonical exercise IDs. It reads the authoritative training-domain `EXERCISES` catalog and projects only `id`, `name`, `part`, `type`, `equipment`, rep-floor/ceiling and movement `pattern`. Requested ordering is preserved and missing IDs are returned separately. It does not expose custom exercises, stored programs, user workouts, or potentially unbounded exercise metadata. All invalid schemas reject, and the native Compose UI is still unconnected.

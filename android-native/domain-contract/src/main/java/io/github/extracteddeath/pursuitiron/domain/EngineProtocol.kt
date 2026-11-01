@@ -9,6 +9,7 @@ object EngineProtocol {
     const val VERSION: Int = 1
     const val METHOD_HANDSHAKE: String = "handshake"
     const val METHOD_CATALOG_SUMMARY: String = "catalogSummary"
+    const val METHOD_EXERCISE_LOOKUP: String = "exerciseLookup"
     const val METHOD_PROGRESSION_PREVIEW: String = "progressionPreview"
 }
 

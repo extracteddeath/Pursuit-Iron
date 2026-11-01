@@ -1,6 +1,7 @@
 // Pure JS transport dispatcher; no browser, Android or persistence dependencies.
 import * as canonical from '../../modules/engine-api.js';
 import { canonicalProgressionPreview, validProgressionPreviewParams } from './progression-preview.mjs';
+import { canonicalExerciseLookup, validExerciseLookupParams } from './exercise-lookup.mjs';
 
 export const PROTOCOL_VERSION = 1;
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
@@ -30,6 +31,15 @@ export function dispatchEngineRequest(request) {
             return error(id, 'ENGINE_UNAVAILABLE', 'Canonical progression preview unavailable');
         }
     }
+    if (request.method === 'exerciseLookup') {
+        if (!validExerciseLookupParams(request.params))
+            return error(id, 'INVALID_REQUEST', 'Invalid bounded exercise lookup parameters');
+        try {
+            return success(id, canonicalExerciseLookup(request.params));
+        } catch {
+            return error(id, 'ENGINE_UNAVAILABLE', 'Canonical exercise catalog unavailable');
+        }
+    }
     if (Object.keys(request.params).length !== 0)
         return error(id, 'INVALID_REQUEST', 'Unexpected method parameters');
     switch (request.method) {
@@ -38,7 +48,7 @@ export function dispatchEngineRequest(request) {
                 protocolVersion: PROTOCOL_VERSION,
                 engineSource: 'modules/engine-api.js',
                 engineCertified: false,
-                capabilities: ['handshake', 'catalogSummary', 'progressionPreview']
+                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup']
             });
         case 'catalogSummary': {
             if (!Array.isArray(canonical.EXERCISES) || !Array.isArray(canonical.TEMPLATES))

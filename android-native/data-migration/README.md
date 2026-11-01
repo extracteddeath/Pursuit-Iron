@@ -102,3 +102,24 @@ A matching fingerprint is only evidence that two copies agree; it is
 not source authentication or user consent for data import. The file picker
 still closes the original copy after fingerprinting, so later integration
 must explicitly design a safe source lifetime and clear user intent.
+
+## Explicit small-backup validation interaction (still unconnected)
+
+`ReadOnlyBackupCandidateReader.screen` scans a selected stream once,
+streaming the full SHA-256 and keeping **only a complete <=128-KiB candidate**
+temporarily. Large sources still receive their complete SHA-256 up to 50 MiB
+but **never** create a partial JSON candidate. The stream closes on failure
+or success. Kotlin unit tests check exact-threshold behavior, matching
+fingerprints, source mutation, over-limit and stalled streams.
+
+`BackupCopyScreeningPanel` now separates user actions: always-available
+fingerprint, plus an optional explicit **Validate small backup structure**
+action only when a canonical verifier is injected. Small bytes are sent
+off the main thread and zeroed in a finally block. Compose state holds
+only the hash/count and validated collection counts; no URI or snapshot.
+Unsupported or rejected sources never activate program presentation.
+
+The shipping preview intentionally supplies `verifier=null`. Next
+milestone: package a verified/pinned canonical JS bundle and attach an
+app-scoped read-only inspector; ensure failures, interrupted sessions and
+config changes never introduce write access or source retention.

@@ -68,3 +68,12 @@ picker, stream it off the UI thread, enforce 50 MiB, and display a temporary
 byte count/fingerprint. It does **not** validate JSON, import data, grant
 persisted access, populate Plan with real workouts or enable training.
 The current-revision program gate stays disconnected from this feature.
+
+### Explicit, bounded read-only schema interaction
+
+The document picker now has a separate, injection-gated read-only validation
+path. When a certified canonical verifier becomes available, a deliberate
+new picker action reads one complete copy, captures only up to 128 KiB and
+drops those bytes after canonical schema checking. Full-sized files stay
+fingerprint-only; the UI cannot imply that large or truncated files passed.
+The ordinary preview remains unconnected.

@@ -59,7 +59,21 @@ assert.ok(screening.includes('ActivityResultContracts.OpenDocument()'),
   'Android document picker requires user selection');
 assert.ok(screening.includes('withContext(Dispatchers.IO)') &&
   screening.includes('ReadOnlyBackupScreening.fingerprint(source)'),
-  'Selected bytes are screened off the main thread');
+  'Fingerprint-only selection must remain available with no backend');
+assert.ok(screening.includes('ReadOnlyBackupCandidateReader.screen(source)') &&
+  screening.includes('screening.bytes.fill(0)') &&
+  screening.includes('verifier!!.inspect('),
+  'Explicit small-source schema selection must use bounded intake, no persistent bytes');
+assert.ok(screening.includes('if (verifier != null)') &&
+  screening.includes('Canonical file validation is not connected in this preview'),
+  'Disconnected Compose preview cannot offer a fake schema validation');
+assert.ok(screening.includes('is ReadOnlyDocumentScreening.FingerprintOnly') &&
+  screening.includes('TooLargeForSchema'),
+  'Oversized copies must never be silently truncated before canonical parsing');
+assert.ok(screening.includes('var wantsSchema by remember') &&
+  screening.includes('picker.launch(arrayOf("application/json", "text/plain"))'),
+  'Canonical validation must require a separate explicit user picker action');
+
 for (const forbidden of ['takePersistableUriPermission', 'SharedPreferences',
   'openOutputStream', 'rememberSaveable', 'parseStoredData(', 'SavedProgramOverviewPanel(']) {
   assert.ok(!screening.includes(forbidden),

@@ -13,4 +13,5 @@ android {
 dependencies {
     implementation(project(":domain-contract"))
     implementation("androidx.javascriptengine:javascriptengine:1.1.1")
+    testImplementation("junit:junit:4.13.2")
 }

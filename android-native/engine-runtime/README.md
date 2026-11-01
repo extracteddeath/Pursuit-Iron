@@ -28,3 +28,5 @@ This module is CI-compiled independently of the preview APK. Android device
 sandbox support and parity remain **unverified**.
 
 The independent `Canonical Android engine JS bundle proof` workflow produces a disposable, version-pinned IIFE from `engine-bridge/protocol.mjs`. A verified bundle SHA-256 is only a packaging identity, not engine approval. The Android module still requires actual on-device handshake and all golden progression cases before the gateway can become eligible.
+
+The APK-free module workflow now also runs local Java unit tests for bundle byte integrity, malformed hashes, zero-length payloads and non-ASCII input. The tests cannot establish real Android sandbox support or on-device execution; those are explicit future gates.

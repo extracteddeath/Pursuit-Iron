@@ -26,7 +26,7 @@ const events=slots.map((slot,i)=>({
   fromRevision:i,toRevision:i+1,replacesOperationId:null,
   adjustment:slot===skipped?{action:'reduce',part}:null
 }));
-assert.equal(events.filter(e=>e.adjustment!==null).length,0,'slots are not identity-equal');
+assert.equal(events.filter(e=>e.adjustment!==null).length,1,'exactly one originally issued set has the user-authorized reason');
 for(const event of events)if(event.slot.exerciseIndex===skipped.exerciseIndex &&
   event.slot.setIndex===skipped.setIndex) {
   event.disposition='SKIPPED';event.values=null;event.adjustment={action:'reduce',part};

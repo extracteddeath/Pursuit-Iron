@@ -41,6 +41,8 @@ jobs:
         run: node android-native/data-migration/roundtrip-revisions-test.mjs
       - name: Verify source-backed read-only saved-program identity and tombstones
         run: node android-native/data-migration/read-only-program-reference-test.mjs
+      - name: Verify canonical read-only program transport against shared Kotlin fixture
+        run: node android-native/data-migration/read-only-program-transport-test.mjs
       - name: Ensure feature-first contract preserves all capabilities and gates
         run: node android-native/verification/feature-contract-test.mjs
       - name: Verify native preview draft, focus and shared controls

@@ -1,0 +1,125 @@
+{
+  "rawSnapshot": "{\"v\":13,\"savedAt\":100,\"saved\":[{\"id\":\"synthetic-program\",\"updatedAt\":42,\"name\":\"Synthetic custom plan\",\"custom\":true,\"weeks\":6,\"config\":{\"goal\":\"strength\",\"weeks\":6,\"unit\":\"lb\",\"progression\":\"double\"},\"days\":[{\"id\":\"synthetic-day\",\"label\":\"Upper\",\"exercises\":[\"bb-bench\",\"cable-fly\"],\"primaryIndex\":0}],\"overrides\":{\"synthetic-day:0\":{\"sets\":3,\"reps\":\"5-8\",\"rir\":\"2\",\"rest\":120,\"tech\":null,\"progressionStyle\":\"double\"},\"synthetic-day:1\":{\"sets\":1,\"reps\":\"10-15\",\"rir\":\"2\",\"rest\":60,\"tech\":null,\"progressionStyle\":\"double\"}}}],\"history\":[],\"cycles\":[],\"custom\":[],\"gyms\":[],\"tombs\":{},\"perf\":{}}",
+  "handoff": {
+    "format": 2,
+    "session": {
+      "reference": {
+        "programId": "synthetic-program",
+        "programUpdatedAt": 42,
+        "storeSavedAt": 100,
+        "storeVersion": 13,
+        "snapshotSha256": "2e470362a7317c4fd1ccc25b9674cf9f64c93b3d15953ac26f2ab83bb1d2b362"
+      },
+      "workoutId": "synthetic-workout",
+      "dayId": "synthetic-day",
+      "weekIndex": 1,
+      "unit": "lb",
+      "startedAt": 1000
+    },
+    "slots": [
+      {
+        "exerciseIndex": 0,
+        "setIndex": 0,
+        "exerciseId": "bb-bench"
+      },
+      {
+        "exerciseIndex": 0,
+        "setIndex": 1,
+        "exerciseId": "bb-bench"
+      },
+      {
+        "exerciseIndex": 0,
+        "setIndex": 2,
+        "exerciseId": "bb-bench"
+      },
+      {
+        "exerciseIndex": 1,
+        "setIndex": 0,
+        "exerciseId": "cable-fly"
+      }
+    ],
+    "startRevision": 7,
+    "events": [
+      {
+        "operationId": "set-2",
+        "slot": {
+          "exerciseIndex": 0,
+          "setIndex": 2,
+          "exerciseId": "bb-bench"
+        },
+        "disposition": "COMPLETED",
+        "values": {
+          "load": "185.5",
+          "unit": "lb",
+          "reps": 6,
+          "rir": null
+        },
+        "fromRevision": 7,
+        "toRevision": 8
+      },
+      {
+        "operationId": "set-1",
+        "slot": {
+          "exerciseIndex": 0,
+          "setIndex": 1,
+          "exerciseId": "bb-bench"
+        },
+        "disposition": "SKIPPED",
+        "values": null,
+        "fromRevision": 8,
+        "toRevision": 9
+      },
+      {
+        "operationId": "set-0",
+        "slot": {
+          "exerciseIndex": 0,
+          "setIndex": 0,
+          "exerciseId": "bb-bench"
+        },
+        "disposition": "COMPLETED",
+        "values": {
+          "load": "185.5",
+          "unit": "lb",
+          "reps": 8,
+          "rir": 2
+        },
+        "fromRevision": 9,
+        "toRevision": 10
+      },
+      {
+        "operationId": "set-3",
+        "slot": {
+          "exerciseIndex": 1,
+          "setIndex": 0,
+          "exerciseId": "cable-fly"
+        },
+        "disposition": "SKIPPED",
+        "values": null,
+        "fromRevision": 10,
+        "toRevision": 11
+      }
+    ],
+    "finish": {
+      "operationId": "finish",
+      "fromRevision": 11,
+      "toRevision": 12,
+      "completedAt": 61000,
+      "durationMs": 60000
+    }
+  },
+  "expected": {
+    "setsDone": 2,
+    "totalSets": 4,
+    "volume": 2597,
+    "date": 61000,
+    "durationMin": 1,
+    "workingSetIndices": [
+      0,
+      2
+    ],
+    "observedRir": [
+      2,
+      null
+    ]
+  }
+}

@@ -201,3 +201,36 @@ semantics still require device acceptance. Later work must authenticate a
 real canonical athlete session and safely publish finished sets to canonical
 v13 history before live logging can be enabled. APK production stays frozen
 until onboarding through completed-workout history passes end-to-end.
+
+## Finished-journal canonical history handoff
+
+Private journal format 2 now durably records the selected day, week, unit,
+start time, finish time and active duration. An exact operation retry must
+retain those facts. Unsupported format-1 bytes are preserved and rejected;
+there are no live athlete journals to migrate because logging is still unwired.
+
+`WorkoutJournalPersistence.finishedHandoff` exports only a disk-verified finished
+journal, without clearing recovery or claiming a history commit. The shared
+`finished-journal-golden.json` fixture is constructed/replayed by Kotlin JVM
+tests and consumed by the canonical JavaScript history tests.
+
+`data-migration/workout-history-completion.mjs` prepares a v13 candidate through
+the actual `prescribeSets`, `loggedWorkoutPerformance` and `mergeStores` exports.
+It authenticates the exact originating snapshot, validates the complete slot
+roster and receipt sequence, preserves skipped working-set positions, and keeps
+target RIR separate from reported RIR. Retrospectively calculated suggestions
+are never recorded as if they were shown during training. Canonical round-trip,
+history correction/deletion conflicts, duplicate finish retries, history limits,
+and real generated Full Body/UL/ULPPL progression lifecycles are covered.
+
+This is Node integration staging, not a newly enabled Android sandbox method or
+store. It returns `persisted: false` and `approvedForWorkoutExecution: false`.
+A native current-store owner must retain the exact origin snapshot until the
+history transaction is acknowledged, authenticate the pinned projector, and
+atomically compare the expected current snapshot hash before saving history.
+It must acknowledge history before clearing the journal. Custom catalog
+installation, session adjustments, assistance loads, and one-shot deload
+consumption still need their canonical owners; unsupported cases cannot silently
+drop observations. Onboarding, native program creation, the authenticated live
+session and the full persistence/resume/completion journey remain unfinished.
+The preview and all APK generation stay disabled.

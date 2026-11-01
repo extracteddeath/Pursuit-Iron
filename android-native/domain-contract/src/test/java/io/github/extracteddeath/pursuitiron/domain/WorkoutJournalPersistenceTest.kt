@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron.domain
 
+import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -21,7 +22,7 @@ class WorkoutJournalPersistenceTest {
 
     private val session=JournalSessionKey(
         ReadOnlyProgramReference("synthetic-program",42,100,13,"a".repeat(64)),
-        "workout-1"
+        "workout-1","synthetic-day",1,"lb",1000
     )
     private val a=JournalSetSlot(0,0,"bb-bench")
     private val b=JournalSetSlot(0,1,"bb-bench")
@@ -75,11 +76,11 @@ class WorkoutJournalPersistenceTest {
         assertNotNull(journal.recordSet(session,2,done("set-1",a)))
         drive.failBefore=true
         assertTrue(runCatching {
-            journal.finish(session,3,JournalFinishIntent("finish-1"))
+            journal.finish(session,3,JournalFinishIntent("finish-1",61000,60000))
         }.isFailure)
         assertFalse(checkNotNull(journal.recover()).isFinished)
         drive.failBefore=false
-        assertTrue(checkNotNull(journal.finish(session,3,JournalFinishIntent("finish-1"))).isFinished)
+        assertTrue(checkNotNull(journal.finish(session,3,JournalFinishIntent("finish-1",61000,60000))).isFinished)
     }
 
     @Test fun crashAfterWriteReplaysWithoutDuplicateTransaction() {
@@ -97,13 +98,13 @@ class WorkoutJournalPersistenceTest {
             values=observation.copy(load="190"))))
         drive.failAfter=true
         assertTrue(runCatching {
-            restarted.finish(session,11,JournalFinishIntent("finish"))
+            restarted.finish(session,11,JournalFinishIntent("finish",61000,60000))
         }.isFailure)
         drive.failAfter=false
         val after=WorkoutJournalPersistence(drive)
         assertTrue(checkNotNull(after.recover()).isFinished)
         val attempts=drive.attempts
-        assertEquals(12,checkNotNull(after.finish(session,11,JournalFinishIntent("finish"))).revision)
+        assertEquals(12,checkNotNull(after.finish(session,11,JournalFinishIntent("finish",61000,60000))).revision)
         assertEquals(attempts,drive.attempts)
     }
 
@@ -111,17 +112,17 @@ class WorkoutJournalPersistenceTest {
         val drive=MemoryBytes()
         val journal=WorkoutJournalPersistence(drive)
         assertNotNull(journal.begin(session,slots,10))
-        assertNull(journal.finish(session,10,JournalFinishIntent("finish")))
+        assertNull(journal.finish(session,10,JournalFinishIntent("finish",61000,60000)))
         assertNotNull(journal.recordSet(session,10,done("s1",a)))
         assertNotNull(journal.recordSet(session,11,done("s2",b)))
-        assertNull(journal.finish(session,12,JournalFinishIntent("finish")))
+        assertNull(journal.finish(session,12,JournalFinishIntent("finish",61000,60000)))
         assertNotNull(journal.recordSet(session,12,skip("s3",c)))
-        val finished=checkNotNull(journal.finish(session,13,JournalFinishIntent("finish")))
+        val finished=checkNotNull(journal.finish(session,13,JournalFinishIntent("finish",61000,60000)))
         assertEquals(14,finished.revision)
         assertEquals(0,finished.unresolvedCount)
         assertTrue(checkNotNull(WorkoutJournalPersistence(drive).recover()).isFinished)
         assertNull(journal.recordSet(session,14,done("late",c)))
-        assertNull(journal.finish(session,14,JournalFinishIntent("again")))
+        assertNull(journal.finish(session,14,JournalFinishIntent("again",61000,60000)))
         assertNotNull(journal.begin(session,slots,10))
     }
 
@@ -139,5 +140,19 @@ class WorkoutJournalPersistenceTest {
         drive.committed=ByteArray(WorkoutJournalPersistence.MAX_JOURNAL_BYTES+1)
         assertTrue(runCatching { journal.recover() }.isFailure)
         assertTrue(runCatching { journal.begin(session,slots,5) }.isFailure)
+    }
+
+    @Test fun unsupportedPreContextJournalIsPreservedRatherThanSilentlyReplaced() {
+        val drive=MemoryBytes()
+        val journal=WorkoutJournalPersistence(drive)
+        assertNotNull(journal.begin(session,slots,0))
+        val unsupported=JSONObject(String(checkNotNull(drive.committed),Charsets.UTF_8))
+            .put("format",1).toString().toByteArray(Charsets.UTF_8)
+        drive.committed=unsupported.copyOf()
+        val attempts=drive.attempts
+        assertTrue(runCatching { journal.recover() }.isFailure)
+        assertTrue(runCatching { journal.begin(session,slots,0) }.isFailure)
+        assertEquals(attempts,drive.attempts)
+        assertArrayEquals(unsupported,drive.committed)
     }
 }

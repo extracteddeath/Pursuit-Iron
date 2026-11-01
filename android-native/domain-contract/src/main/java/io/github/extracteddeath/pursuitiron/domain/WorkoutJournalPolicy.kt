@@ -10,7 +10,11 @@ import java.util.Collections
  */
 data class JournalSessionKey(
     val programRevision: ReadOnlyProgramReference,
-    val workoutId: String
+    val workoutId: String,
+    val dayId: String,
+    val weekIndex: Int,
+    val unit: String,
+    val startedAt: Long
 )
 
 data class JournalSetSlot(val exerciseIndex: Int, val setIndex: Int, val exerciseId: String)
@@ -35,12 +39,18 @@ data class JournalSetReceipt(
 )
 
 data class JournalSetCommit(val intent: JournalSetIntent, val receipt: JournalSetReceipt)
-data class JournalFinishIntent(val operationId: String)
+data class JournalFinishIntent(
+    val operationId: String,
+    val completedAt: Long,
+    val durationMs: Long
+)
 data class JournalFinishReceipt(
     val session: JournalSessionKey,
     val operationId: String,
     val fromRevision: Long,
-    val toRevision: Long
+    val toRevision: Long,
+    val completedAt: Long,
+    val durationMs: Long
 )
 data class JournalFinishCommit(val intent: JournalFinishIntent, val receipt: JournalFinishReceipt)
 
@@ -83,7 +93,10 @@ object WorkoutJournalPolicy {
     fun open(
         session: JournalSessionKey, slots: List<JournalSetSlot>, revision: Long
     ): WorkoutJournalState? {
-        if (!id.matches(session.workoutId) || revision !in 0..MAX_REV ||
+        if (!id.matches(session.workoutId) || !id.matches(session.dayId) ||
+            session.weekIndex !in 1..104 || session.unit !in setOf("lb", "kg") ||
+            session.startedAt !in 1..8_640_000_000_000_000L ||
+            revision !in 0..MAX_REV ||
             !ReadOnlyProgramReferenceGate.sameActiveRevision(
                 session.programRevision, session.programRevision, null
             ) || slots.size !in 1..480) return null
@@ -103,6 +116,7 @@ object WorkoutJournalPolicy {
         state: WorkoutJournalState, intent: JournalSetIntent, ack: JournalSetReceipt
     ): WorkoutJournalState? {
         if (!validIntent(intent) || ack.session != state.session ||
+            (intent.values?.unit != null && intent.values.unit != state.session.unit) ||
             ack.operationId != intent.operationId || ack.slot != intent.slot ||
             ack.disposition != intent.disposition ||
             ack.storedValues != intent.values) return null
@@ -128,6 +142,9 @@ object WorkoutJournalPolicy {
     ): WorkoutJournalState? {
         if (!id.matches(intent.operationId) || ack.session != state.session ||
             ack.operationId != intent.operationId ||
+            intent.completedAt !in state.session.startedAt..8_640_000_000_000_000L ||
+            intent.durationMs !in 0..(intent.completedAt - state.session.startedAt) ||
+            ack.completedAt != intent.completedAt || ack.durationMs != intent.durationMs ||
             state.completed.any { it.intent.operationId == intent.operationId }) return null
         val replay = state.finish
         if (replay != null)

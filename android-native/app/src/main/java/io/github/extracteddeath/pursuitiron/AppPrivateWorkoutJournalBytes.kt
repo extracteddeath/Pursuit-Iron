@@ -16,6 +16,8 @@ import java.io.IOException
  * WorkoutJournalPersistence instance. Not wired to live Train until parity.
  */
 internal class AppPrivateWorkoutJournalBytes(context: Context) : WorkoutJournalBytes {
+    // Keep the same path: an unsupported old journal is preserved and rejected,
+    // never bypassed by creating a second apparently empty recovery file.
     private val file = AtomicFile(File(context.noBackupFilesDir, "workout-pending-v1.json"))
 
     override fun read(): ByteArray? {

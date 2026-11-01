@@ -303,3 +303,21 @@ The Android current store owner remains UNIMPLEMENTED and the source/projector
 are NOT connected to MainActivity. The backup picker cannot supply this path.
 No real Plan view, workout prescription, history writes, or release readiness
 is implied by these wire tests.
+# Finished native journal to canonical history (integration staging)
+
+`workout-history-completion.mjs` is a pure Node integration boundary. It prepares
+one canonical v13 history/store candidate from the exact original store bytes,
+the current store bytes and a finished format-2 private journal. It performs no
+file, network, Android or web-store writes. It is not a backup importer and is
+not exposed through the read-only Android engine channel.
+
+Run `node android-native/data-migration/workout-history-completion-test.mjs`
+from the repository root. All inputs are invented. Kotlin consumes the same
+finished-journal fixture, including out-of-order user logging, skipped set 2,
+and unreported RIR. The test also follows generated Full Body, UL and ULPPL
+programs through canonical history analysis and next-workout suggestions.
+
+The native current-store owner, atomic canonical history publication, verified
+program/session creation and actual user-facing logging are still pending.
+Keep the originating snapshot until a history commit has been acknowledged;
+never clear recovery just because preparation returned a candidate.

@@ -28,7 +28,7 @@ interface WorkoutJournalBytes {
 class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
     companion object {
         const val MAX_JOURNAL_BYTES = 256 * 1024
-        private const val FORMAT = 1
+        private const val FORMAT = 2
     }
 
     private val guard = Any()
@@ -74,19 +74,24 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
     private fun keyJson(key: JournalSessionKey) = JSONObject()
         .put("reference",refJson(key.programRevision))
         .put("workoutId",key.workoutId)
+        .put("dayId",key.dayId).put("weekIndex",key.weekIndex)
+        .put("unit",key.unit).put("startedAt",key.startedAt)
 
     private fun readKey(json: JSONObject): JournalSessionKey {
-        exact(json,"reference","workoutId")
+        exact(json,"reference","workoutId","dayId","weekIndex","unit","startedAt")
         val r = json.getJSONObject("reference")
         exact(r,"programId","programUpdatedAt","storeSavedAt","storeVersion","snapshotSha256")
         val version = number(r,"storeVersion")
         require(version <= Int.MAX_VALUE)
+        val week = number(json,"weekIndex")
+        require(week <= Int.MAX_VALUE)
         return JournalSessionKey(
             ReadOnlyProgramReference(
                 text(r,"programId"),number(r,"programUpdatedAt"),
                 number(r,"storeSavedAt"),version.toInt(),text(r,"snapshotSha256")
             ),
-            text(json,"workoutId")
+            text(json,"workoutId"),text(json,"dayId"),week.toInt(),
+            text(json,"unit"),number(json,"startedAt")
         )
     }
 
@@ -144,12 +149,14 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             .put("operationId",entry.intent.operationId)
             .put("fromRevision",entry.receipt.fromRevision)
             .put("toRevision",entry.receipt.toRevision)
+            .put("completedAt",entry.intent.completedAt)
+            .put("durationMs",entry.intent.durationMs)
 
     private fun initialRevision(state: WorkoutJournalState): Long =
         state.revision - state.completed.size.toLong() - if (state.isFinished) 1L else 0L
 
-    private fun encode(state: WorkoutJournalState): ByteArray {
-        val payload = JSONObject()
+    private fun payloadJson(state: WorkoutJournalState) = JSONObject()
+            .put("format",FORMAT)
             .put("session",keyJson(state.session))
             .put("slots",JSONArray().apply { state.slots.forEach { put(slotJson(it)) } })
             .put("startRevision",initialRevision(state))
@@ -157,7 +164,9 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
                 state.completed.forEach { put(eventJson(it)) }
             })
             .put("finish",finishJson(state.finish))
-            .toString()
+
+    private fun encode(state: WorkoutJournalState): ByteArray {
+        val payload = payloadJson(state).toString()
         val envelope = JSONObject()
             .put("format",FORMAT)
             .put("payload",payload)
@@ -187,7 +196,8 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
                 actual.toByteArray(StandardCharsets.US_ASCII)
             ))
         val data=JSONObject(payload)
-        exact(data,"session","slots","startRevision","events","finish")
+        exact(data,"format","session","slots","startRevision","events","finish")
+        require(number(data,"format") == FORMAT.toLong())
         val key=readKey(data.getJSONObject("session"))
         val slotsJson=data.getJSONArray("slots")
         require(slotsJson.length() in 1..480)
@@ -209,12 +219,14 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         }
         if (!data.isNull("finish")) {
             val finish=data.getJSONObject("finish")
-            exact(finish,"operationId","fromRevision","toRevision")
+            exact(finish,"operationId","fromRevision","toRevision","completedAt","durationMs")
             val op=text(finish,"operationId")
+            val completedAt=number(finish,"completedAt")
+            val durationMs=number(finish,"durationMs")
             state=requireNotNull(WorkoutJournalPolicy.afterPersistedFinish(
-                state,JournalFinishIntent(op),
+                state,JournalFinishIntent(op,completedAt,durationMs),
                 JournalFinishReceipt(key,op,number(finish,"fromRevision"),
-                    number(finish,"toRevision"))
+                    number(finish,"toRevision"),completedAt,durationMs)
             ))
         }
         return state
@@ -239,6 +251,19 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
     }
 
     fun recover(): WorkoutJournalState? = synchronized(guard) { readOwned() }
+
+    /**
+     * Exact, detached handoff of a DURABLY finished private journal. This
+     * does not publish history, clear recovery, or authorize a training UI.
+     * Context and finish clocks come from disk, never from a retry's wall clock.
+     */
+    fun finishedHandoff(session: JournalSessionKey, expectedRevision: Long): String? =
+        synchronized(guard) {
+            val state=readOwned() ?: return@synchronized null
+            if (state.session != session || state.revision != expectedRevision ||
+                !state.isFinished) return@synchronized null
+            payloadJson(state).toString()
+        }
 
     /** Does not overwrite unresolved or finished sessions, even after crashes. */
     fun begin(
@@ -290,7 +315,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             replay.receipt.fromRevision == expectedRevision) current else null
         if (expectedRevision != current.revision) return@synchronized null
         val receipt=JournalFinishReceipt(session,intent.operationId,
-            current.revision,current.revision+1)
+            current.revision,current.revision+1,intent.completedAt,intent.durationMs)
         val next=WorkoutJournalPolicy.afterPersistedFinish(current,intent,receipt)
             ?: return@synchronized null
         save(next)

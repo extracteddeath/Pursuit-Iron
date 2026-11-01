@@ -7,7 +7,7 @@ import org.junit.Test
 class WorkoutJournalPolicyTest {
     private val reference = ReadOnlyProgramReference(
         "synthetic-program", 42, 100, 13, "a".repeat(64))
-    private val session = JournalSessionKey(reference,"synthetic-workout")
+    private val session = JournalSessionKey(reference,"synthetic-workout","synthetic-day",1,"lb",1000)
     private val s1=JournalSetSlot(0,0,"bb-bench")
     private val s2=JournalSetSlot(0,1,"bb-bench")
     private val s3=JournalSetSlot(1,0,"cable-row")
@@ -61,22 +61,26 @@ class WorkoutJournalPolicyTest {
 
     @Test fun finishRequiresCommittedOrSkippedSetsAndCannotRepeat() {
         var state=initial()
-        val finish=JournalFinishIntent("finish-op")
+        val finish=JournalFinishIntent("finish-op",61000,60000)
         assertNull(WorkoutJournalPolicy.afterPersistedFinish(
-            state,finish,JournalFinishReceipt(session,"finish-op",20,21)))
+            state,finish,JournalFinishReceipt(session,"finish-op",20,21,61000,60000)))
         state=checkNotNull(ack(state,s1,"a"))
         state=checkNotNull(ack(state,s2,"b"))
         assertNull(WorkoutJournalPolicy.afterPersistedFinish(
-            state,finish,JournalFinishReceipt(session,"finish-op",22,23)))
+            state,finish,JournalFinishReceipt(session,"finish-op",22,23,61000,60000)))
         state=checkNotNull(ack(state,s3,"c",skipped=true))
         assertEquals(0,state.unresolvedCount)
-        val saved=JournalFinishReceipt(session,"finish-op",23,24)
+        val saved=JournalFinishReceipt(session,"finish-op",23,24,61000,60000)
+        assertNull(WorkoutJournalPolicy.afterPersistedFinish(state,finish,
+            saved.copy(completedAt=62000)))
+        assertNull(WorkoutJournalPolicy.afterPersistedFinish(state,finish,
+            saved.copy(durationMs=59000)))
         val completed=checkNotNull(WorkoutJournalPolicy.afterPersistedFinish(state,finish,saved))
         assertTrue(completed.isFinished)
         assertEquals(24L,completed.revision)
         assertSame(completed,WorkoutJournalPolicy.afterPersistedFinish(completed,finish,saved))
         assertNull(WorkoutJournalPolicy.afterPersistedFinish(completed,
-            JournalFinishIntent("second-finish"),saved.copy(operationId="second-finish")))
+            JournalFinishIntent("second-finish",61000,60000),saved.copy(operationId="second-finish")))
         assertNull(ack(completed,s1,"after-finish"))
     }
 

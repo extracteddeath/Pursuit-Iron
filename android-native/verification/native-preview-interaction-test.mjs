@@ -32,15 +32,15 @@ assert.match(screens, /canSubtract = reps > 1/);
 assert.match(screens, /canSubtract = days > 3/);
 assert.match(screens, /canAdd = days < 6/);
 assert.match(screens, /Adapt exercises between blocks/);
-assert.equal((screens.match(/PreviewSettingSwitch\\(/g) || []).length, 2,
+assert.equal(screens.split('PreviewSettingSwitch(').length - 1, 2,
   'Plan adaptation switches must be composed from one shared native control');
-assert.match(components, /toggleable\\(value = checked, role = Role\\.Switch/,
+assert.ok(components.includes('toggleable(value = checked, role = Role.Switch'),
   'The entire row, not only the switch thumb, owns the accessible action');
-assert.match(components, /Switch\\(checked = checked, onCheckedChange = null\\)/,
+assert.ok(components.includes('Switch(checked = checked, onCheckedChange = null)'),
   'Avoid a second nested switch click owner');
-assert.match(components, /modifier = Modifier\\.weight\\(1f\\)/,
+assert.ok(components.includes('modifier = Modifier.weight(1f)'),
   'Section headings must yield room for narrow-screen trailing labels');
-assert.match(components, /overflow = TextOverflow\\.Ellipsis/,
+assert.ok(components.includes('overflow = TextOverflow.Ellipsis'),
   'Compact screen section metadata must not crowd the title');
 
 const outline = fs.readFileSync(root + 'WorkoutOutlinePanel.kt', 'utf8');

@@ -27,9 +27,11 @@ All interactive examples are **local UI-only state**. They do not generate train
 - `FEATURE_FIRST_ARCHITECTURE.md`: source-backed parity inventory and end-to-end acceptance scenarios.
 - `app/NativeComponents.kt`: native shared presentation primitives.
 - `app/NativeScreens.kt`: screen journeys with only demo UI state.
+- `app/WorkoutOutlinePanel.kt`: shared native Material 3 exercise-outline presentation, showing explicitly illustrative layout examples until a verified stored user program exists.
+- `domain-contract/OutlinePresentation.kt`: fail-closed synthetic/read-only presentation gate; it never accepts an unverified personal program.
 - `app/NativePreviewApp.kt`: adaptive shell, contextual sheets and explicit unconnected engine state.
 - `modules/engine-api.js`: unchanged JavaScript canonical training owner.
-- `engine-bridge/`: read-only protocol; it has not yet been executed inside an Android JS runtime.
+- `engine-bridge/`: a verified, bounded read-only JS protocol running in an AndroidX sandbox for synthetic progression, exercise-catalog and audited workout-outline tests. The canonical engine and web app remain unchanged.
 - `data-migration/`: read-only canonical backup validation, not native import.
 
 ## Android preview build cadence
@@ -43,3 +45,9 @@ GitHub Actions must pass the native APK build and JS protocol, backup and featur
 ## Toolchain
 
 The installable preview uses pinned **AGP 9.1.1**, **Gradle 9.3.1**, **Android SDK 37**, **Compose compiler plugin 2.4.21**, **Compose BOM 2026.09.00**, **Material 3 1.5.0-beta02 (native preview only)**, **Activity Compose 1.11.0**. The preview explicitly opts into the published expressive MotionScheme and theme-aware navigation motion. This beta dependency is isolated from web production. The required SDK 37 / AGP 9.1 migration is in this branch and must compile successfully before a native milestone is considered ready. Native compile, real-device motion and accessibility acceptance are separate requirements.
+
+## Verified read-only Android foundation (not yet real workouts)
+
+Milestone six's isolated AndroidX runtime can execute the canonical generator on a fixed synthetic profile, project audited exercise order/sets/rep bounds/RIR/rest/duration, and decode through Kotlin. The native **Plan** view now has an accessible, expandable read-only layout example. It is intentionally illustrative: `WorkoutOutlinePanel(outline = null)` means the installable UI does not access private workouts or claim to show the user's real program. `OutlinePresentationPolicy` independently requires correct canonical source, synthetic-only/read-only provenance and finite bounded values for any future test output.
+
+The `Native Compose UI compile (no APK)` workflow compiles source edits without making a distributable build. A new installable APK is still produced only by the existing explicit `PREVIEW_MILESTONE.md` gate. Next milestones must implement a schema-validated, revision-aware **read-only user program reference** and safe data import before promoting any personalized workout outline; workout logging remains disabled.

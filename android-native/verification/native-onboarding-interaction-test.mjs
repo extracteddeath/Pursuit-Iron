@@ -22,4 +22,27 @@ assert.ok(activity.includes('onReviewProgram=runtime::review') && activity.inclu
   activity.includes('activeProgramId=state.saved?.program?.id') && shell.includes('onboarding.saved==null'));
 assert.ok(shell.includes('UnconnectedEngineGateway().status'),
   'First-program persistence must not authorize workout logging');
-console.log('PASS native onboarding draft retention, canonical options, review/save separation, single-owner restore and logging gate');
+// Real Train controls are journal-driven; UI must never manufacture a persisted
+// set or publish a workout directly from an unconfirmed tap.
+const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
+assert.ok(train.includes('val committedSlots=journal.completed.map { it.intent.slot }.toSet()') &&
+  train.includes('plan.exercises[index].sets.any { it.slot !in committedSlots }') &&
+  train.includes('Go to next unfinished exercise'),
+  'Train navigation follows committed journal slots, not optimistic taps');
+assert.ok(train.includes('showSkipConfirmation') &&
+  train.includes('showSkipConfirmation=false') &&
+  train.includes('onRecord(set.slot,JournalSetDisposition.SKIPPED,null)') &&
+  train.includes('Skip set') &&
+  train.includes('Keep set'),
+  'Skipping requires an explicit confirmation; a tap must not silently discard a working set');
+assert.ok(train.includes('showFinishReview') &&
+  train.includes('journal.unresolvedCount==0') &&
+  train.includes('journal.completed.count { it.intent.disposition==JournalSetDisposition.SKIPPED }') &&
+  train.includes('Finish workout') &&
+  train.includes('Keep training'),
+  'Finishing requires all durable slots and a review of completed and skipped observations');
+assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCount),effort)') &&
+  train.includes('var rir by rememberSaveable { mutableStateOf("") }') &&
+  train.includes('if(journal.isFinished)onFinish() else showFinishReview=true'),
+  'The review must not synthesize actual RIR or block an exact retry of a durably finished session');
+console.log('PASS native onboarding draft retention, canonical options, review/save separation, single-owner restore and logging gate, plus real-workout safe navigation and confirmation');

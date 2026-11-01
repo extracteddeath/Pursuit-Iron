@@ -41,6 +41,11 @@ assert.ok(train.includes('showFinishReview') &&
   train.includes('Finish workout') &&
   train.includes('Keep training'),
   'Finishing requires all durable slots and a review of completed and skipped observations');
+assert.ok(train.includes('var showLast by rememberSaveable(plan.session.workoutId)') &&
+  train.includes('FilterChip(selected=!showLast') && train.includes('FilterChip(selected=showLast') &&
+  train.includes('if(showLast)Text(set.last?.let') &&
+  train.includes('LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size}'),
+  'Last/target is a single session-scoped presentation choice and progress counts acknowledged sets only');
 assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCount),effort)') &&
   train.includes('var rir by rememberSaveable { mutableStateOf("") }') &&
   train.includes('if(journal.isFinished)onFinish() else showFinishReview=true'),

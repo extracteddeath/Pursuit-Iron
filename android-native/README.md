@@ -168,6 +168,28 @@ JS golden history result shared with Kotlin, including simultaneous finish
 attempts and crashes during cleanup. App-private Android writes explicitly
 sync and verify their committed bytes.
 
-The preview does not instantiate this owner. A pinned completion-runtime
-implementation, native onboarding/program creation and device acceptance are
-still required before live workout logging. APK generation remains frozen.
+The preview does not instantiate this owner. The pinned completion transport is
+implemented, while native onboarding/program creation, authenticated session
+creation and device acceptance are still required before live workout logging.
+APK generation remains frozen.
+
+### Packaged canonical completion runtime
+
+`SandboxCanonicalWorkoutStoreEngine` connects the checksum-pinned JavaScript
+worker to native store initialization and completion preparation. Its dedicated
+bounded channel is separate from ordinary engine diagnostics and backup-only
+metadata; it has no file handles and never writes history itself. Kotlin binds
+responses to the exact request ID, source/current snapshots, journal and candidate
+hashes. Cancellation discards late responses before native publication.
+
+Completion and reference validation now share environment-neutral JS between Node
+and Android. UTF-8/SHA-256 identity is compared to independent native-crypto
+vectors and Unicode cases; training calculations remain in `modules/engine-api.js`.
+One allowlisted source manifest owns bundle packaging for all workflows.
+
+The source-only runtime workflow builds the actual pinned IIFE, runs Kotlin
+store/journal integration through that bundle in a restricted Node VM, and
+compiles the Android sandbox and instrumentation sources without an APK. That
+host proof covers lost commit acknowledgements, canonical history, retry and
+cancellation; it is not Android device certification. The preview remains
+unconnected until the complete user flow and device acceptance are finished.

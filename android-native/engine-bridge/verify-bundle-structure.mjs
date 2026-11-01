@@ -17,16 +17,9 @@ const sources = Object.keys(metadata.inputs).map(p => p.replaceAll('\\','/'));
 const coverage = JSON.parse(fs.readFileSync(path.join(snapshotRoot, 'coverage.json'),'utf8'));
 assert.equal(coverage.entryRoot, 'modules/engine-api.js');
 const allowedCanonical = new Set(coverage.canonicalRuntimeFiles);
-const allowedBridge = new Set([
-  'android-native/engine-bridge/protocol.mjs',
-  'android-native/engine-bridge/progression-preview.mjs',
-  'android-native/engine-bridge/exercise-lookup.mjs',
-  'android-native/engine-bridge/workout-outline.mjs',
-  'android-native/engine-bridge/backup-schema-check.mjs',
-  'android-native/engine-bridge/current-program-projection.mjs',
-  'android-native/engine-bridge/android-entry.mjs',
-  'android-native/engine-bridge/sandbox-compat.mjs'
-]);
+const allowedBridge = new Set(JSON.parse(fs.readFileSync(
+  'android-native/engine-bridge/bundle-sources.json','utf8'))
+  .map(name=>'android-native/engine-bridge/'+name));
 for (const source of sources) {
   const modulePos = source.lastIndexOf('/modules/');
   const bridgePos = source.lastIndexOf('/android-native/engine-bridge/');
@@ -134,6 +127,19 @@ const currentRes = JSON.parse(bridge.dispatchBackupSchemaJson(currentWire));
 assert.equal(currentRes.ok,true,'Android IIFE must project canonical current program');
 assert.deepEqual(JSON.parse(JSON.stringify(currentRes.result)),currentFixture.wire);
 assert.equal(JSON.stringify(currentRes).includes('"history"'),false);
+
+// Execute actual packaged completion code, not a source-level stand-in.
+assert.equal(typeof bridge.dispatchWorkoutStoreJson,'function');
+const completionFixture=JSON.parse(fs.readFileSync(
+  'android-native/domain-contract/src/test/resources/finished-journal-golden.json','utf8'));
+const completeWire=JSON.stringify({protocolVersion:1,id:'bundle-completion',method:'prepareWorkoutHistory',
+  params:{originSnapshot:completionFixture.rawSnapshot,currentSnapshot:completionFixture.rawSnapshot,
+    finishedJournal:JSON.stringify(completionFixture.handoff)}});
+const completed=JSON.parse(bridge.dispatchWorkoutStoreJson(completeWire));
+assert.equal(completed.ok,true);
+assert.deepEqual(completed.result,completionFixture.preparation);
+assert.equal(JSON.parse(bridge.dispatchBackupSchemaJson(completeWire)).ok,false);
+assert.equal(JSON.parse(bridge.dispatchEngineJson(completeWire)).ok,false);
 
 const sha256 = crypto.createHash('sha256').update(raw).digest('hex');
 console.log(JSON.stringify({

@@ -45,15 +45,7 @@ jobs:
           node "$snapshot/scripts/verify-snapshot.mjs"
           node engine-lab/verify-parity.mjs "$snapshot"
           node android-native/engine-contract/snapshot-identity.mjs "$snapshot"
-          mkdir -p "$snapshot/android-native/engine-bridge"
-          cp android-native/engine-bridge/protocol.mjs "$snapshot/android-native/engine-bridge/"
-          cp android-native/engine-bridge/progression-preview.mjs "$snapshot/android-native/engine-bridge/"
-          cp android-native/engine-bridge/exercise-lookup.mjs "$snapshot/android-native/engine-bridge/"
-          cp android-native/engine-bridge/workout-outline.mjs "$snapshot/android-native/engine-bridge/"
-          cp android-native/engine-bridge/backup-schema-check.mjs "$snapshot/android-native/engine-bridge/"
-          cp android-native/engine-bridge/current-program-projection.mjs "$snapshot/android-native/engine-bridge/"
-          cp android-native/engine-bridge/android-entry.mjs "$snapshot/android-native/engine-bridge/"
-          cp android-native/engine-bridge/sandbox-compat.mjs "$snapshot/android-native/engine-bridge/"
+          node android-native/engine-bridge/stage-bundle-sources.mjs "$snapshot"
           mkdir -p android-native/engine-runtime/src/androidTest/assets
           npx --yes esbuild@0.28.2 "$snapshot/android-native/engine-bridge/android-entry.mjs" \
             --bundle --format=iife --platform=browser --target=es2020 \

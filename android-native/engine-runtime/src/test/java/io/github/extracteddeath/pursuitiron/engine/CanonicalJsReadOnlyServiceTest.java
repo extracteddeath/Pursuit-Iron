@@ -7,6 +7,21 @@ import org.junit.Test;
 
 /** Transport-only JVM tests; real sandbox lifecycle requires an Android device. */
 public final class CanonicalJsReadOnlyServiceTest {
+    @Test public void storePreparationCannotUseMetadataChannelsOrHideWrites() throws Exception {
+        JSONObject valid=new JSONObject().put("protocolVersion",1).put("id","owned-1")
+                .put("method","prepareWorkoutHistory").put("params",new JSONObject()
+                .put("originSnapshot","{}").put("currentSnapshot","{}").put("finishedJournal","{}"));
+        assertEquals("prepareWorkoutHistory",CanonicalJsReadOnlyService.checkedWorkoutStoreRequest(
+                valid.toString()).getString("method"));
+        assertThrows(Exception.class,()->CanonicalJsReadOnlyService.checkedBackupSchemaRequest(valid.toString()));
+        assertThrows(Exception.class,()->CanonicalJsReadOnlyService.checkedPreviewRequest(valid.toString()));
+        assertThrows(Exception.class,()->CanonicalJsReadOnlyService.checkedWorkoutStoreRequest(
+                new JSONObject(valid.toString()).put("method","deleteHistory").toString()));
+        assertThrows(Exception.class,()->CanonicalJsReadOnlyService.checkedWorkoutStoreRequest(
+                new JSONObject(valid.toString()).put("protocolVersion",1.5).toString()));
+        valid.getJSONObject("params").put("hiddenWrite",true);
+        assertThrows(Exception.class,()->CanonicalJsReadOnlyService.checkedWorkoutStoreRequest(valid.toString()));
+    }
     private static final String VALID =
             "{\"protocolVersion\":1,\"id\":\"case-1\",\"method\":\"progressionPreview\"," +
             "\"params\":{\"exerciseId\":\"back_squat\"}}";

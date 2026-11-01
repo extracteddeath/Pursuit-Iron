@@ -47,10 +47,7 @@ jobs:
           node "$snapshot/scripts/verify-snapshot.mjs"
           node engine-lab/verify-parity.mjs "$snapshot"
           node android-native/engine-contract/snapshot-identity.mjs "$snapshot"
-          mkdir -p "$snapshot/android-native/engine-bridge"
-          for file in protocol.mjs progression-preview.mjs exercise-lookup.mjs workout-outline.mjs backup-schema-check.mjs current-program-projection.mjs android-entry.mjs sandbox-compat.mjs; do
-            cp "android-native/engine-bridge/$file" "$snapshot/android-native/engine-bridge/$file"
-          done
+          node android-native/engine-bridge/stage-bundle-sources.mjs "$snapshot"
           npx --yes esbuild@0.28.2 "$snapshot/android-native/engine-bridge/android-entry.mjs" \
             --bundle --format=iife --platform=browser --target=es2020 \
             --global-name=PursuitIronBridge --legal-comments=none \

@@ -6,6 +6,9 @@ on:
       - architecture/android-compose-foundation
     paths:
       - 'android-native/engine-runtime/**'
+      - 'android-native/domain-contract/**'
+      - 'android-native/engine-bridge/**'
+      - 'android-native/engine-contract/**'
       - 'android-native/settings.gradle.kts'
       - '.github/workflows/android-engine-runtime.yml'
   workflow_dispatch:
@@ -23,6 +26,14 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build and verify packaged canonical runtime for JVM integration (no APK)
+        run: |
+          node android-native/engine-contract/build-runtime-proof.mjs "$RUNNER_TEMP/workout-store-proof"
+          echo "PURSUIT_CANONICAL_REPO=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          echo "PURSUIT_CANONICAL_BUNDLE=$RUNNER_TEMP/workout-store-proof/canonical-engine.js" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

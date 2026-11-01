@@ -42,15 +42,7 @@ jobs:
           node "$temp/scripts/verify-snapshot.mjs"
           node engine-lab/verify-parity.mjs "$temp"
           node android-native/engine-contract/snapshot-identity.mjs "$temp"
-          mkdir -p "$temp/android-native/engine-bridge"
-          cp android-native/engine-bridge/protocol.mjs "$temp/android-native/engine-bridge/protocol.mjs"
-          cp android-native/engine-bridge/progression-preview.mjs "$temp/android-native/engine-bridge/progression-preview.mjs"
-          cp android-native/engine-bridge/exercise-lookup.mjs "$temp/android-native/engine-bridge/exercise-lookup.mjs"
-          cp android-native/engine-bridge/workout-outline.mjs "$temp/android-native/engine-bridge/"
-          cp android-native/engine-bridge/backup-schema-check.mjs "$temp/android-native/engine-bridge/"
-          cp android-native/engine-bridge/current-program-projection.mjs "$temp/android-native/engine-bridge/"
-          cp android-native/engine-bridge/android-entry.mjs "$temp/android-native/engine-bridge/android-entry.mjs"
-          cp android-native/engine-bridge/sandbox-compat.mjs "$temp/android-native/engine-bridge/sandbox-compat.mjs"
+          node android-native/engine-bridge/stage-bundle-sources.mjs "$temp"
       - name: Produce disposable IIFE from the verified snapshot (pinned esbuild)
         run: |
           npx --yes esbuild@0.28.2 "$BUNDLE_PROOF_DIR/android-native/engine-bridge/android-entry.mjs" \

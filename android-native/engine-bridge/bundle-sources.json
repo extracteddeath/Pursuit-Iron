@@ -1,0 +1,14 @@
+[
+  "protocol.mjs",
+  "progression-preview.mjs",
+  "exercise-lookup.mjs",
+  "workout-outline.mjs",
+  "backup-schema-check.mjs",
+  "current-program-projection.mjs",
+  "json-identity.mjs",
+  "canonical-snapshot-reference.mjs",
+  "workout-history-completion.mjs",
+  "workout-store-protocol.mjs",
+  "android-entry.mjs",
+  "sandbox-compat.mjs"
+]

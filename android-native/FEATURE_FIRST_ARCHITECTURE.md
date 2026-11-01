@@ -214,7 +214,7 @@ journal, without clearing recovery or claiming a history commit. The shared
 `finished-journal-golden.json` fixture is constructed/replayed by Kotlin JVM
 tests and consumed by the canonical JavaScript history tests.
 
-`data-migration/workout-history-completion.mjs` prepares a v13 candidate through
+`engine-bridge/workout-history-completion.mjs` prepares a v13 candidate through
 the actual `prescribeSets`, `loggedWorkoutPerformance` and `mergeStores` exports.
 It authenticates the exact originating snapshot, validates the complete slot
 roster and receipt sequence, preserves skipped working-set positions, and keeps
@@ -223,12 +223,12 @@ are never recorded as if they were shown during training. Canonical round-trip,
 history correction/deletion conflicts, duplicate finish retries, history limits,
 and real generated Full Body/UL/ULPPL progression lifecycles are covered.
 
-This is Node integration staging, not a newly enabled Android sandbox method or
-store. It returns `persisted: false` and `approvedForWorkoutExecution: false`.
-A native current-store owner must retain the exact origin snapshot until the
-history transaction is acknowledged, authenticate the pinned projector, and
-atomically compare the expected current snapshot hash before saving history.
-It must acknowledge history before clearing the journal. Custom catalog
+The pure preparation returns `persisted: false` and
+`approvedForWorkoutExecution: false`; its Node entry point re-exports the same
+Android-compatible implementation. The native owner retains the exact origin
+until history is acknowledged, authenticates the pinned response, and compares
+the expected current snapshot before saving. It acknowledges history before
+clearing the journal. Custom catalog
 installation, session adjustments, assistance loads, and one-shot deload
 consumption still need their canonical owners; unsupported cases cannot silently
 drop observations. Onboarding, native program creation, the authenticated live
@@ -264,8 +264,31 @@ wiped; change listeners track committed canonical snapshots. The initial native
 snapshot window remains 1 MiB, with a separately bounded 16 MiB private envelope.
 Oversized and corrupt stores are preserved and rejected, never treated as empty.
 
-This is unconnected persistence infrastructure. The preview instantiates neither
-private store nor training writer, and no implementation of the new pinned
-workout-store engine is connected yet. Native onboarding/program creation,
+The preview instantiates neither private store nor training writer. The pinned
+workout-store engine implementation is available for source integration. Native onboarding/program creation,
 runtime session authentication, Android interruption acceptance and the complete
 user journey remain pending. No APK generation or real workout logging is enabled.
+
+## Packaged runtime to native storage integration
+
+`SandboxCanonicalWorkoutStoreEngine` implements the native persistence engine
+port over the existing checksum-pinned serial sandbox worker. A dedicated
+`dispatchWorkoutStoreJson` entry point accepts only `validateOwnedStore` and
+`prepareWorkoutHistory`; the ordinary engine and backup channels reject them.
+The channel and strict Kotlin codec independently bound UTF-8 input/output and
+bind every preparation to exact source, current-store and journal bytes.
+Cancellation discards late responses; the worker still has no persistence access.
+
+Node and Android now share completion policy and canonical revision validation.
+The portable content-identity helper is checked against fixed SHA-256 vectors,
+native crypto, block boundaries and Unicode/surrogate cases. The original golden
+history and generated-program lifecycle cases remain unchanged. There are no
+Node, DOM or network dependencies in the bundled runtime.
+
+The runtime CI builds the exact canonical IIFE from a verified source snapshot
+and runs it through the Kotlin transport, journal and atomic store in JVM tests.
+The test includes a post-commit crash, exact retry, skipped-set positions,
+unreported RIR and cancellation. This replaces canned engine responses in the
+integration proof. A shared bundle source manifest prevents packaging drift.
+Android compilation and instrumentation-source compilation remain APK-free;
+actual Android execution, onboarding and live training acceptance are pending.

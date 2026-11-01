@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Objects;
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupLimits;
+import io.github.extracteddeath.pursuitiron.domain.WorkoutStoreRuntimeCodec;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -247,14 +248,17 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request,
             long timeoutSeconds) throws Exception {
         String method = request.getString("method");
-        String entry = ("backupSchemaCheck".equals(method) ||
+        boolean store = "validateOwnedStore".equals(method) || "prepareWorkoutHistory".equals(method);
+        String entry = store ? "PursuitIronBridge.dispatchWorkoutStoreJson"
+                : ("backupSchemaCheck".equals(method) ||
                 "backupProgramInventory".equals(method) ||
                 "currentProgramProjection".equals(method))
                 ? "PursuitIronBridge.dispatchBackupSchemaJson"
                 : "PursuitIronBridge.dispatchEngineJson";
         String script = entry + "(" + JSONObject.quote(request.toString()) + ")";
         String raw = isolate.evaluateJavaScriptAsync(script).get(timeoutSeconds, TimeUnit.SECONDS);
-        if (raw.getBytes(StandardCharsets.UTF_8).length > 65536)
+        if (raw.getBytes(StandardCharsets.UTF_8).length >
+                (store ? WorkoutStoreRuntimeCodec.MAX_RESPONSE_BYTES : 65536))
             throw new SecurityException("Oversized canonical engine response");
         JSONObject response = new JSONObject(raw);
         if (response.getInt("protocolVersion") != 1 ||
@@ -348,12 +352,21 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return submitReadOnly(requestJson, 5);
     }
 
+    /** Pure canonical preparation only. No file handles or persistence access. */
+    public CompletableFuture<String> prepareWorkoutStoreAsync(@NonNull String requestJson) {
+        return submitReadOnly(requestJson, 6);
+    }
+
+    static JSONObject checkedWorkoutStoreRequest(@NonNull String json) {
+        return WorkoutStoreRuntimeCodec.checkedRequest(json);
+    }
+
     private CompletableFuture<String> submitReadOnly(
             @NonNull String requestJson, boolean catalog) {
         return submitReadOnly(requestJson, catalog ? 1 : 0);
     }
 
-    /** Modes: progression 0, catalog 1, outline 2, schema 3, inventory 4, current read-only 5. */
+    /** Modes: progression 0, catalog 1, outline 2, schema 3, inventory 4, current 5, store preparation 6. */
     private CompletableFuture<String> submitReadOnly(
             @NonNull String requestJson, int mode) {
         final CompletableFuture<String> outcome = new CompletableFuture<>();
@@ -365,7 +378,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         // A bad caller cannot poison an otherwise healthy canonical sandbox.
         final JSONObject validated;
         try {
-            validated = mode == 5
+            validated = mode == 6
+                    ? checkedWorkoutStoreRequest(requestJson)
+                    : mode == 5
                     ? checkedCurrentProgramProjectionRequest(requestJson)
                     : mode == 4
                     ? checkedBackupInventoryRequest(requestJson)
@@ -382,16 +397,27 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         }
         try {
             worker.execute(() -> {
+                if (outcome.isCancelled()) return;
                 if (closed.get()) {
                     outcome.completeExceptionally(new IllegalStateException("Canonical service is closed"));
                     return;
                 }
                 try {
                     initialize();
-                    JSONObject response = call(isolate, validated, mode == 2 ? 30 : mode == 3 || mode == 4 || mode == 5 ? 12 : 5);
+                    JSONObject response = call(isolate, validated, mode == 2 || mode == 6 ? 30 : mode == 3 || mode == 4 || mode == 5 ? 12 : 5);
                     if (response.getBoolean("ok")) {
                         JSONObject value = response.getJSONObject("result");
-                        if (mode == 5) {
+                        if (mode == 6) {
+                            JSONObject p = validated.getJSONObject("params");
+                            if ("validateOwnedStore".equals(validated.getString("method"))) {
+                                WorkoutStoreRuntimeCodec.INSTANCE.decodeValidation(response.toString(),
+                                    validated.getString("id"), p.getString("rawSnapshot"));
+                            } else {
+                                WorkoutStoreRuntimeCodec.INSTANCE.decodePreparation(response.toString(),
+                                    validated.getString("id"), p.getString("originSnapshot"),
+                                    p.getString("currentSnapshot"), p.getString("finishedJournal"));
+                            }
+                        } else if (mode == 5) {
                             JSONObject reference = value.getJSONObject("reference");
                             JSONObject params = validated.getJSONObject("params");
                             if (!value.getBoolean("readOnly") ||

@@ -9,7 +9,7 @@
 - Material 3 **MotionScheme** (1.5.0-beta02): standard for routine interactions; expressive for prominent hero moments. Exposes fast/default/slow spatial and effects specs. https://developer.android.com/reference/kotlin/androidx/compose/material3/MotionScheme
 - Android guidance for interruptible spring animations and reducing composition work: https://developer.android.com/develop/ui/compose/animation/quick-guide
 
-**These are reference principles, not a guarantee that 1.5 beta Compose classes exist in a browser.** The browser uses CSS transitions for effects and the existing interruptible spring() engine in `modules/ui-motion.js` for spatial motion. Do not copy Compose code into the web view or imply Android's platform ripple, wallpaper dynamic color, overscroll stretch, edge-to-edge system bars and predictive back are automatically provided by CSS.
+**These are reference principles, not a guarantee that 1.5 beta Compose classes exist in a browser.** The browser uses CSS transitions for effects and the existing interruptible spring() engine in `modules/ui-motion.js` for spatial motion. `MOTION_SCHEMES.standard` preserves the old 700/.9 default while `MOTION_SCHEMES.expressive` provides a softer 560/.84 preset that callers must explicitly request; existing workout and live logger movement is unchanged. Do not copy Compose code into the web view or imply Android's platform ripple, wallpaper dynamic color, overscroll stretch, edge-to-edge system bars and predictive back are automatically provided by CSS.
 
 ## Current design-system rules
 

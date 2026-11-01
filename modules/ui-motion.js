@@ -5,6 +5,14 @@ const active = new Set();
 let frame = 0, previousAt = 0;
 const reduced = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 
+// Material 3 Expressive separates routine/high-frequency motion from prominent
+// spatial motion. Explicit caller stiffness/damping always wins. Legacy calls
+// without a role keep their exact previous defaults (700 / .9).
+export const MOTION_SCHEMES = Object.freeze({
+    standard: Object.freeze({ stiffness: 700, damping: .9 }),
+    expressive: Object.freeze({ stiffness: 560, damping: .84 })
+});
+
 export function motionValue(el, key, fallback = 0) {
     return states.get(el)?.get(key)?.value ?? fallback;
 }
@@ -38,8 +46,10 @@ export function spring(el, key, target, options = {}) {
     // Each retarget gets a unique run token. A disposer returned by an older
     // no-callback spring must never stop a newer spring on the same property.
     const run = (state.run || 0) + 1;
+    const motionScheme = MOTION_SCHEMES[options.scheme] || MOTION_SCHEMES.standard;
     Object.assign(state, {
-        run, target, stiffness: options.stiffness ?? 700, damping: options.damping ?? .9,
+        run, target, stiffness: options.stiffness ?? motionScheme.stiffness,
+        damping: options.damping ?? motionScheme.damping,
         write: options.write || (v => el.style.setProperty(key, String(v))),
         complete: options.complete, precision: options.precision ?? .02
     });

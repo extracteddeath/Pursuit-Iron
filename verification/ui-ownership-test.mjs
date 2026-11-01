@@ -44,7 +44,9 @@ assert.ok(!programSettings.includes('style: iconBtn()') && !programSettings.incl
 
 assert.equal((primitives.match(/export function UiSheetClose\(/g) || []).length, 1,
     'All Program sheets must share one accessible dismiss element');
-assert.ok(primitives.includes('if (variant) return _jsx(UiAction,') &&
+assert.ok(primitives.includes('export function UiIconAction(') &&
+    primitives.includes('return _jsx(UiAction, { variant, "aria-label": label, "data-icon-only": true, ...props })') &&
+    primitives.includes('if (variant) return _jsx(UiIconAction, { variant, ...props,') &&
     primitives.includes('"data-icon-only": true') &&
     primitives.includes('className: `hit wpb-sheet-close') &&
     primitives.includes('"aria-label": label'),

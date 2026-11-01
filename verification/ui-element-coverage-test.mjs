@@ -10,6 +10,8 @@ for(const owner of ['Home','Plan','Program','Next workout','Cycles','Wizard','Li
  assert.ok(result.perOwner.some(x=>x.owner===owner&&x.elements>0),'Missing screen: '+owner);
 assert.ok(result.totals.rawInteractive>0 && result.totals.rawSurfaceCandidates>0,
  'Track raw interactive controls and surfaces even if they have no inline style');
+assert.ok(result.perComponent.length>40 && result.perComponent.some(x=>x.component.includes('App.js:')),
+ 'Audit named component composition, not just a large App auxiliary bucket');
 assert.ok(result.crossOwnerClassCount>0 && result.totals.staticClassTokens>100,
  'Inspect stylesheet class reuse, not only inline styles');
 assert.ok(result.css.rules>3000&&result.css.repeatedSelectors>50,

@@ -68,7 +68,7 @@ export function auditUiElements(root=process.cwd()){
  const css=fs.readFileSync(path.join(root,'app.css'),'utf8');
  const cssTokens=new Set([...css.matchAll(/\.((?:wpb|pi)-[a-z0-9-]+)/g)].map(m=>m[1]));
  const files=fs.readdirSync(modules,{withFileTypes:true}).filter(x=>x.isFile()&&x.name.endsWith('.js')).map(x=>x.name).sort();
- const perFile={},perOwner={},tokenOwners=new Map(),sharedOwners={};
+ const perFile={},perOwner={},perComponent={},tokenOwners=new Map(),sharedOwners={};
  let native=0,shared=0;
  for(const name of files){
   const source=fs.readFileSync(path.join(modules,name),'utf8');
@@ -80,10 +80,23 @@ export function auditUiElements(root=process.cwd()){
    const end=source.indexOf('\nfunction ',start+10);
    ranges.push({screen,start,end:end>start?end:source.length});
   }
+  // Attribute every JSX element to its nearest named function as well as a
+  // screen. This splits the large App auxiliary bucket into actionable owners.
+  // Arrow functions without names remain in their enclosing source span.
+  const functions=[...source.matchAll(/(?:^|\n)(?:export\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)]
+    .map(m=>({name:m[1],start:m.index})).sort((a,b)=>a.start-b.start);
   perFile[file]={elements:0,native:0,shared:0,dynamicClass:0};
   for(const hit of source.matchAll(JSX)){
    const tag=hit[2]||hit[3],isNative=!!hit[2];
    const screen=name==='App.js'?ranges.find(r=>hit.index>=r.start&&hit.index<r.end)?.screen||'App auxiliary composition':file;
+   let component='module scope';
+   for(const fn of functions){if(fn.start>hit.index)break;component=fn.name;}
+   const componentName=file+':'+component;
+   const row=perComponent[componentName]||{elements:0,native:0,shared:0,
+    rawInteractive:0,rawSurfaceCandidates:0,dynamicClass:0,tags:{}};
+   perComponent[componentName]=row;
+   row.elements++;inc(row.tags,tag);
+   if(isNative)row.native++;else row.shared++;
    const role=perOwner[screen]||{elements:0,native:0,shared:0,rawInteractive:0,
      rawSurfaceCandidates:0,dynamicClass:0,staticClassWithoutCss:0,families:{},tags:{}};
    perOwner[screen]=role;
@@ -93,18 +106,21 @@ export function auditUiElements(root=process.cwd()){
    inc(role.families,fam);inc(role.tags,tag);
    if(isNative){native++;role.native++;perFile[file].native++;}
    else{shared++;role.shared++;perFile[file].shared++;inc(sharedOwners,tag);}
-   if(cls.kind==='dynamic'){role.dynamicClass++;perFile[file].dynamicClass++;}
-   if(isNative&&CLICKABLE.has(tag))role.rawInteractive++;
-   if(isNative&&fam==='surface')role.rawSurfaceCandidates++;
+   if(cls.kind==='dynamic'){role.dynamicClass++;row.dynamicClass++;perFile[file].dynamicClass++;}
+   if(isNative&&CLICKABLE.has(tag)){role.rawInteractive++;row.rawInteractive++;}
+   if(isNative&&fam==='surface'){role.rawSurfaceCandidates++;row.rawSurfaceCandidates++;}
    for(const token of cls.tokens){
     if(!tokenOwners.has(token))tokenOwners.set(token,new Set());
-    tokenOwners.get(token).add(screen);
+    tokenOwners.get(token).add(componentName);
     if(!cssTokens.has(token))role.staticClassWithoutCss++;
    }
   }
  }
  const ranked=Object.entries(perOwner).map(([owner,stats])=>({owner,...stats}))
   .sort((a,b)=>b.rawInteractive+b.rawSurfaceCandidates-a.rawInteractive-a.rawSurfaceCandidates);
+ const componentRanking=Object.entries(perComponent)
+   .map(([component,stats])=>({component,...stats}))
+   .sort((a,b)=>b.rawInteractive+b.rawSurfaceCandidates-a.rawInteractive-a.rawSurfaceCandidates);
  const reused=[...tokenOwners.entries()]
   .filter(([name,owners])=>owners.size>1&&!GENERIC.has(name))
   .map(([className,owners])=>({className,owners:[...owners].sort(),cssDefined:cssTokens.has(className)}))
@@ -118,7 +134,7 @@ export function auditUiElements(root=process.cwd()){
    rawSurfaceCandidates:ranked.reduce((n,x)=>n+x.rawSurfaceCandidates,0),
    dynamicClass:ranked.reduce((n,x)=>n+x.dynamicClass,0),
    staticClassTokens:tokenOwners.size,cssClassTokens:cssTokens.size},
-  perOwner:ranked,perFile,sharedOwners,
+  perOwner:ranked,perComponent:componentRanking,perFile,sharedOwners,
   crossOwnerClassCount:reused.length,crossOwnerClasses:reused.slice(0,100),
   staticClassWithoutCssCount:unresolved.length,staticClassWithoutCss:unresolved.slice(0,100),
   css:{characters:css.length,priorityDeclarations:cascade.priorityDeclarations,rules:cascade.rules,
@@ -138,6 +154,8 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   console.log('SHARED_OWNER_USAGE',JSON.stringify(audit.sharedOwners));
   console.log('CSS_DEBT',JSON.stringify(audit.css));
   console.log('REVIEW_QUEUE',JSON.stringify(audit.reviewQueue.slice(0,22)));
+  console.log('COMPONENT_REVIEW_QUEUE',JSON.stringify(audit.perComponent
+    .filter(x=>x.rawInteractive||x.rawSurfaceCandidates).slice(0,28)));
   console.log('REUSED_CLASSES',JSON.stringify(audit.crossOwnerClasses.slice(0,30)));
   console.log('STATIC_CLASS_UNRESOLVED',JSON.stringify(audit.staticClassWithoutCss.slice(0,25)));
   console.log('LIMITATION: computed styles, dynamic classes and native Android need separate validation.');

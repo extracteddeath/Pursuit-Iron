@@ -4,6 +4,8 @@
 
 The earlier inline-style tally was insufficient. The new `node scripts/audit-ui-elements.mjs` inventory scans **every compiled native JSX element and shared Ui* call** in first-party modules/*.js, including App.js and extracted presentation modules. An element is counted whether it has ordinary stylesheet classes, inline styles, dynamic classes, or no class.
 
+The report also identifies individual function/component owners so large auxiliary App.js sections are not treated as a single unexplained bucket. Source attribution uses nearest named functions and needs human review for nested closures or anonymous render helpers.
+
 The report groups by screen/module and inventories native interactive controls, surface candidates, shared component calls, classes reused across different owners, static class references absent from CSS, repeated CSS selectors, and duplicated declaration families. Run `node scripts/audit-ui-elements.mjs --json` for the complete data. Dynamic class names and JSX expressions are explicitly classified as unresolved.
 
 This is a **source-level audit, not a rendered-DOM or computed-style certificate**. CSS selectors not seen in static JSX may be used by dynamic states; do not delete them from this report alone.

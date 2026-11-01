@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron.domain
 
+import java.util.Collections
+
 /**
  * The training UI may inspect synthetic-only, audited engine output but MUST NOT
  * mistake it for the athlete's program. This module has no loading, logging,
@@ -25,7 +27,14 @@ object OutlinePresentationPolicy {
             outline.maxMinutes !in 0.0..600.0 ||
             outline.exercises.size !in 1..24
         ) return OutlinePresentation.Unavailable
-        val safe = outline.exercises.all { exercise ->
+        // Source-backed DTOs may expose a MutableList typed only as List.
+        // Detach before validation so a later change cannot alter the review.
+        val detached = try {
+            outline.copy(exercises = Collections.unmodifiableList(ArrayList(outline.exercises)))
+        } catch (_: RuntimeException) {
+            return OutlinePresentation.Unavailable
+        }
+        val safe = detached.exercises.all { exercise ->
             exercise.exerciseId.matches(Regex("^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$")) &&
                 exercise.name.isNotBlank() && exercise.name.length <= 120 &&
                 exercise.role.isNotBlank() && exercise.role.length <= 60 &&
@@ -35,7 +44,7 @@ object OutlinePresentationPolicy {
                 exercise.restSeconds.isFinite() && exercise.restSeconds in 0.0..600.0 &&
                 exercise.progressionStyle.isNotBlank() && exercise.progressionStyle.length <= 50
         }
-        return if (safe) OutlinePresentation.SyntheticOnly(outline)
+        return if (safe) OutlinePresentation.SyntheticOnly(detached)
             else OutlinePresentation.Unavailable
     }
 }

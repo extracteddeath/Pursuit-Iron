@@ -30,6 +30,21 @@ class OutlinePresentationTest {
             synthetic.copy(dayIndex = 3)))
     }
 
+    @Test fun approvedSyntheticOutlineIsDetachedFromMutableSourceList() {
+        val original = mutableListOf(exercise)
+        val source = synthetic.copy(exercises = original)
+        val reviewed = OutlinePresentationPolicy.inspect(source)
+            as OutlinePresentation.SyntheticOnly
+        assertNotSame(original, reviewed.outline.exercises)
+        original.clear()
+        assertEquals(1, reviewed.outline.exercises.size)
+        assertEquals("bb-bench", reviewed.outline.exercises[0].exerciseId)
+        assertTrue(runCatching {
+            @Suppress("UNCHECKED_CAST")
+            (reviewed.outline.exercises as MutableList<WorkoutOutlineExercise>).clear()
+        }.isFailure)
+    }
+
     @Test fun presentationNeverCorrectsOrInventsEngineTargets() {
         for (invalid in listOf(
             exercise.copy(sets = 0),

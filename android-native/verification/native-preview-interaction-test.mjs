@@ -279,6 +279,24 @@ assert.ok(outline.includes('OutlinePresentationPolicy.inspect(outline)'),
   'Native outline must pass through the presentation gate');
 assert.ok(outline.includes('ILLUSTRATIVE UI ONLY · NOT GENERATED OR SAVED'),
   'Layout-only data must not be mislabeled as canonical workout data');
+const setReviewNav = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/SyntheticSetReviewNavigation.kt', 'utf8'
+);
+assert.ok(setReviewNav.includes('approved.outline.exercises') &&
+  setReviewNav.includes('fun next(') &&
+  setReviewNav.includes('fun previous(') &&
+  setReviewNav.includes('fun jumpToExercise(') &&
+  setReviewNav.includes('totalWorkoutSets = exercises.sumOf { it.sets }') &&
+  outline.includes('SyntheticSetReviewNavigation.inspect(presentation, cursor)') &&
+  outline.includes('SyntheticSetReviewPanel(') &&
+  outline.includes('Browse all exercises') &&
+  outline.includes('Review these sets') &&
+  outline.includes('Complete set · personal engine not connected') &&
+  !outline.includes('saveWorkout(') &&
+  !outline.includes('logSet('),
+  'Engine-derived set-by-set review must be navigation only and never grant workout logging');
+assert.ok(outlinePolicy.includes('Collections.unmodifiableList(ArrayList(outline.exercises))'),
+  'Synthetic outline must not retain mutable source-list aliases');
 assert.ok(outline.includes('SYNTHETIC ENGINE TEST · NOT YOUR PROGRAM'),
   'No synthetic engine session may be presented as a real user session');
 assert.ok(outlinePolicy.includes('!outline.readOnly || !outline.syntheticOnly'),

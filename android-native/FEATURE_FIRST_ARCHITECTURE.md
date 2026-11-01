@@ -138,3 +138,21 @@ Next meaningful product gate: current athlete program and history must be
 owned by a verified Android store, actual session selections must be
 canonical and feature parity-certified, and set completion needs transactional
 storage with resume/recovery before the Train tab can log anything real.
+
+
+## Synthetic canonical workout: set-by-set review
+
+The native Train synthetic explorer now lets a tester review every engine-
+generated exercise and set in actual canonical order, then browse all exercises
+and jump directly to one. A pure Kotlin review cursor walks variable set counts,
+including transitions between different movements; JVM tests cover forward,
+reverse, boundaries, and malformed cursors. Exercise-level rep/RIR targets,
+rest and names are displayed *unchanged*, with an explicit explanation that
+per-set working loads require authenticated athlete context.
+
+The underlying generated outline is still synthetic, read-only, and optional
+for debug engine-bundled previews. The policy now clones and freezes exercise
+lists before presentation to prevent a mutable source alias changing the UI
+after approval. All workout completion remains disabled; no data writes or
+program activation occur. This improves the native journey without inventing
+Kotlin progression rules or more engine adapters.

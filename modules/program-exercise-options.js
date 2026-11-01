@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useEffect, useRef, useState } from 'react';
 import { Pin, Layers, HelpCircle, Info, Ban, Trash2 } from 'lucide-react';
-import { UiAction, UiSheetClose } from './ui-primitives.js';
+import { UiAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 import { PART_LABEL, formatSetup } from './engine-api.js';
 
@@ -38,7 +38,7 @@ export function ProgramExerciseOptions({ exercise, primary, canRemove, canLink, 
         onClick: event => { if (event.target === event.currentTarget) dismiss(); },
         children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-exercise-options-sheet',
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-exercise-options-heading', children: [
+                _jsxs(UiSheetHeading, { as: 'header', className: 'wpb-ui-sheet-heading wpb-exercise-options-heading', children: [
                     _jsxs('div', { className: 'wpb-exercise-options-identity', children: [
                         _jsx('h2', { id: 'program-exercise-options-title', className: 'wpb-exercise-options-title', children: exercise.name }),
                         _jsx('p', { className: 'wpb-exercise-options-meta', children: `${PART_LABEL[exercise.part]} · ${exercise.type}${primary ? ' · key lift' : ''}` })

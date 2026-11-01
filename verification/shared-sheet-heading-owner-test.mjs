@@ -18,7 +18,9 @@ const sheets = [
     ['modules/program-share-sheet.js',1,['wpb-program-share-heading','program-share-title','wpb-program-share-close']],
     ['modules/program-reference-surfaces.js',2,['wpb-progression-choice-heading','wpb-program-reference-heading','program-progression-title','program-reference-title','wpb-progression-choice-close','wpb-program-reference-close']],
     ['modules/program-schedule-sheet.js',1,['wpb-program-schedule-heading','program-weekly-schedule-title','wpb-program-schedule-close']],
-    ['modules/program-review-surfaces.js',1,['wpb-save-review-heading','program-save-title','wpb-save-review-close']]
+    ['modules/program-review-surfaces.js',1,['wpb-save-review-heading','program-save-title','wpb-save-review-close']],
+    ['modules/program-exercise-options.js',1,['wpb-exercise-options-heading','program-exercise-options-title','wpb-exercise-options-identity']],
+    ['modules/program-training-maxes.js',1,['wpb-training-max-heading','program-training-max-title','wpb-ui-sheet-title']]
 ];
 let count=0;
 for(const [path,expected,roles] of sheets){
@@ -37,5 +39,5 @@ assert.ok(share.includes("_jsxs(UiSheetHeading, { as: 'header'") &&
 for(const path of ['modules/program-settings-sheet.js','modules/program-schedule-sheet.js','modules/program-review-surfaces.js'])
     assert.ok(fs.readFileSync(path,'utf8').includes('_jsxs(UiSheetHeading, { className:'),
         path+' preserves its original div header');
-assert.equal(count,6,'Six distinct Program-sheet headings share one DOM owner');
+assert.equal(count,8,'Eight distinct Program-sheet headings share one DOM owner');
 console.log('PASS shared sheet heading: six Program headings retain titles, labels and native DOM.');

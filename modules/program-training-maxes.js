@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useRef, useState } from 'react';
 import { Dumbbell, ChevronRight } from 'lucide-react';
 import { EX_BY_ID, PCT_SCHEMES, trainingMaxForUnit, withTrainingMax, percentagePlanFor, roundTo, loadStep } from './engine-api.js';
-import { UiAction, UiSheetClose } from './ui-primitives.js';
+import { UiAction, UiSheetClose, UiSheetHeading } from './ui-primitives.js';
 import { useProgramSheetFocus } from './program-sheet-focus.js';
 
 const numberValue = text => {
@@ -51,7 +51,7 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
         'aria-labelledby': 'program-training-max-title', onClick: event => { if (event.target === event.currentTarget) onClose(); },
         children: _jsxs('section', { ref: attachPanel, tabIndex: -1, onKeyDown: onPanelKeyDown, className: 'wpb-ui-sheet-panel wpb-training-max-sheet',
             onClick: event => event.stopPropagation(), children: [
-                _jsxs('header', { className: 'wpb-ui-sheet-heading wpb-training-max-heading', children: [
+                _jsxs(UiSheetHeading, { as: 'header', className: 'wpb-ui-sheet-heading wpb-training-max-heading', children: [
                     _jsx('h2', { id: 'program-training-max-title', className: 'wpb-ui-sheet-title', children: 'Training maxes' }),
                     _jsx(UiSheetClose, { variant: 'tonal', 'data-wpb-system-back': !conversion || undefined,
                         'aria-label': 'Close', onClick: onClose })

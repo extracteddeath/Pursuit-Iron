@@ -183,6 +183,9 @@ public final class CanonicalJsSandboxProbe {
                         !"modules/engine-api.js:evaluateWorkoutProgression".equals(
                                 result.optString("source")))
                     throw new SecurityException("Noncanonical engine result: " + id);
+                JSONObject fullExpected = fixture.getJSONObject("expectedResponse");
+                if (!jsonEquals(fullExpected, result))
+                    throw new AssertionError("Android canonical full-result parity drift: " + id);
                 JSONObject expected = fixture.getJSONObject("expected");
                 Iterator<String> keys = expected.keys();
                 while (keys.hasNext()) {

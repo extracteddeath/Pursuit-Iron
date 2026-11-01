@@ -54,3 +54,5 @@ The `:engine-runtime` Android library is intentionally disconnected from UI and 
 ## Native sandbox packaging manifest
 
 The packaging workflow now generates a **three-part, ephemeral provenance manifest** containing the canonical dependency-closure SHA-256, golden-fixture SHA-256 and exact bundled IIFE byte SHA-256. The manifest also records source count, fixture count, bundler identity and explicit `approvedForWorkoutExecution: false` / `androidSandboxParityVerified: false` flags. Tests reject corrupted bundles and altered certifications. The manifest is not user-editable approval and is not promoted to the native app without an independent device test and trusted pinning step.
+
+The Android instrumentation workflow now builds a full expected-result oracle from the live canonical JS source for each synthetic regression case. The emulator compares **every field and ordered set target**, in addition to the human-reviewed fixed expected subset, rather than merely checking action and suggested weight. No real workouts or private history are serialized.

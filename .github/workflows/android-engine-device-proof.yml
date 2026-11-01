@@ -58,7 +58,8 @@ jobs:
           node --check android-native/engine-runtime/src/androidTest/assets/canonical-engine.js
           sha256sum android-native/engine-runtime/src/androidTest/assets/canonical-engine.js \
             | cut -d' ' -f1 > android-native/engine-runtime/src/androidTest/assets/canonical-engine.sha256
-          cp android-native/engine-contract/progression-golden.json \
+          node android-native/engine-contract/export-android-parity.mjs \
+            android-native/engine-contract/progression-golden.json \
             android-native/engine-runtime/src/androidTest/assets/progression-golden.json
           npx --yes esbuild@0.28.2 android-native/engine-bridge/sandbox-diagnostic.mjs \
             --bundle --format=iife --platform=browser --target=es2020 \

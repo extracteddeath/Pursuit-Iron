@@ -27,6 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentationPolicy
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramSummary
 
 /**
  * These are independently designed NATIVE journeys, not ports of React screens.
@@ -176,7 +180,11 @@ internal fun TrainScreen(openTools: () -> Unit) {
 }
 
 @Composable
-internal fun PlanScreen() {
+internal fun PlanScreen(
+    programSummary: ReadOnlyProgramSummary? = null,
+    currentProgramReference: ReadOnlyProgramReference? = null,
+    currentProgramTombstoneAt: Long? = null
+) {
     var goal by rememberSaveable { mutableStateOf("Hypertrophy") }
     var days by rememberSaveable { mutableIntStateOf(4) }
     var adaptiveSplit by rememberSaveable { mutableStateOf(true) }
@@ -219,9 +227,17 @@ internal fun PlanScreen() {
             Text("Generate real program · unavailable")
         }
     }
-    // Do not pass a synthetic engine output as though it were a live user plan.
-    // Layout examples are always explicitly labeled and never writable.
-    WorkoutOutlinePanel(outline = null)
+    // Never present even a decoded saved plan without independent current-store
+    // revision/tombstone evidence. This installable preview supplies all nulls.
+    val programPresentation = ReadOnlyProgramPresentationPolicy.inspect(
+        programSummary, currentProgramReference, currentProgramTombstoneAt
+    )
+    if (programPresentation is ReadOnlyProgramPresentation.Structure) {
+        SavedProgramOverviewPanel(programPresentation)
+    } else {
+        // Unconnected Plan remains illustrative and cannot prescribe a workout.
+        WorkoutOutlinePanel(outline = null)
+    }
     SectionLabel("Plan essentials")
     PursuitCard {
         Text("Equipment and exercise choice", style = MaterialTheme.typography.titleMedium)

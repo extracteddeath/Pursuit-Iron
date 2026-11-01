@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import vm from 'node:vm';
 
 const [bundleFile, metaFile, snapshotRoot] = process.argv.slice(2);
 assert.ok(bundleFile && metaFile && snapshotRoot && process.argv.length === 5,
@@ -53,6 +54,34 @@ assert.ok(!/\bimport\s*\(/.test(bundle),
   'Dynamic imports must not escape the standalone JS bundle');
 assert.ok(!/\brequire\s*\(/.test(bundle),
   'Node CommonJS module loading cannot be used in the Android isolate');
+// The actual minified IIFE must expose every claimed Android method.
+// Source-level protocol tests did not catch a missing android-entry export.
+const sandbox = vm.createContext({});
+vm.runInContext(bundle, sandbox, { timeout: 10000 });
+const bridge = sandbox.PursuitIronBridge;
+assert.ok(bridge && typeof bridge.dispatchEngineJson === 'function',
+  'Android global bridge is missing its canonical request handler');
+assert.equal(typeof bridge.dispatchBackupSchemaJson, 'function',
+  'Android bundle must export the dedicated canonical schema probe');
+const checkedSource = JSON.stringify({
+  v: 13, savedAt: 100, saved: [], history: [], cycles: [],
+  custom: [], gyms: [], tombs: {}, perf: {}
+});
+const schemaWire = JSON.stringify({
+  protocolVersion: 1, id: 'bundle-schema-proof', method: 'backupSchemaCheck',
+  params: { rawSnapshot: checkedSource }
+});
+const checked = JSON.parse(bridge.dispatchBackupSchemaJson(schemaWire));
+assert.equal(checked.ok, true, 'Canonical parser must work through the actual IIFE');
+assert.equal(checked.result.source, 'modules/engine-api.js:parseStoredData');
+assert.equal(checked.result.readOnly, true);
+assert.equal(checked.result.imported, false);
+assert.equal(checked.result.approvedForWorkoutExecution, false);
+assert.equal(checked.result.counts.saved, 0);
+const forbidden = JSON.parse(bridge.dispatchBackupSchemaJson(JSON.stringify({
+  protocolVersion: 1, id: 'bundle-no-writes', method: 'deleteHistory', params: {}
+})));
+assert.equal(forbidden.ok, false, 'Wider schema channel must refuse write methods');
 const sha256 = crypto.createHash('sha256').update(raw).digest('hex');
 console.log(JSON.stringify({
   bundleVerified: true,

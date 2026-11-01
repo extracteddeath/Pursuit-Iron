@@ -60,3 +60,11 @@ Larger backed-up stores and alternative schema versions fail closed.
 The Compose app does not depend on the sandbox module and cannot send a
 selected file to this endpoint. Exact snapshot digest, revision/tombstone
 checks and device lifecycle certification remain separate gates.
+
+## Resolved milestone-7 integration gap (verify on device)
+
+The first Android emulator schema test exposed a packaging mismatch:
+`dispatchBackupSchemaJson` was implemented but not exported by
+`android-entry.mjs`. Bundle verification now runs the actual IIFE and
+requires the exported method plus a canonical v13 parse and write rejection,
+rather than trusting the source-level dispatcher alone.

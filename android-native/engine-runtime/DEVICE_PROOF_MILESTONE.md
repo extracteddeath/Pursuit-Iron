@@ -93,3 +93,16 @@ lifecycle proofs.
 This milestone builds only disposable instrumentation test APKs inside CI.
 It does **not** produce a distributable native preview, read user backups,
 approve imported history, or permit personal workouts.
+
+## Milestone 7a — block an unexported Android schema probe before emulator boot
+
+The first Milestone 7 emulator **failed** on the synthetic schema test:
+`TypeError: PursuitIronBridge.dispatchBackupSchemaJson is not a function`.
+The Android entry imported the method but omitted it from the public IIFE
+exports. Node-only protocol and bundle-structure checks did not detect this.
+
+The fix adds the missing named export and evaluates the **actual esbuild
+IIFE** under a bounded Node VM in the bundle-verification workflow.
+The bundle test must invoke a canonical v13 schema probe successfully and
+refuse a write request. The Android emulator milestone is rerun with the
+same synthetic-only acceptance cases; nothing is imported or published.

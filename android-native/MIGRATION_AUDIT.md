@@ -1,24 +1,24 @@
-# Migration audit — first source inspection (2026-10-31)
+# Migration audit — source inspection (2026-10-31)
 
 ## Confirmed existing boundaries
-- Web entry: `modules/main.js`; React UI is in the modules tree, including the very large `modules/App.js`.
-- Canonical training computation: `modules/engine-api.js`, with `modules/engine-shell.js` compatibility and `modules/next-engine/` + `modules/training-domain/` implementation.
-- `engine-lab/canonical-export.mjs` already exports the canonical JS dependency closure and `engine-lab/verify-parity.mjs` compares standalone and production outputs.
-- Existing persisted records and migration logic: `modules/training-domain/records.js`. Web persistence and backup formats must be inspected and frozen before native import.
-- Existing `play/README.md` describes a *planned* Trusted Web Activity, not a current Kotlin/Compose Android app. Android package identity/signing are not finalized.
+- Web entry: `modules/main.js`; React UI is in the modules tree, including the large `modules/App.js`.
+- Canonical computation: `modules/engine-api.js`; `modules/engine-shell.js` is compatibility, and `modules/next-engine/` + `modules/training-domain/` own domain implementation.
+- `engine-lab/canonical-export.mjs` already exports canonical JS dependency closure; `engine-lab/verify-parity.mjs` compares standalone and production.
+- Existing records and migration logic: `modules/training-domain/records.js`.
+- Backup panel `modules/backup-restore-panel.js` explicitly says the App callbacks own persisted training, merge, compatibility and Undo decisions. `modules/app-storage-ownership.js` implements browser-exclusive storage ownership; Android must not bypass this.
+- Existing `play/README.md` describes a planned Trusted Web Activity, not an existing Kotlin/Compose app.
 
-## Explicitly not yet established
-- Exact production backup schema and all revision/migration invariants.
-- JS engine runtime compatibility on Android (WebView sandbox, JS engine, or future Kotlin port).
-- Gradle/Android SDK compile success; no Android build has been executed.
-- Real-device font scale, TalkBack, keyboard/IME, reduced motion, edge-to-edge, predictive back and interruption certification.
+## Not yet established
+- Exact production backup serializer/schema and every revision/migration invariant. Read-only structural inspection is not schema certification.
+- Android runtime execution of canonical JS and matching outputs for workout operations.
+- Android SDK/Gradle compile success, and physical-device font scale, TalkBack, IME, reduced-motion, edge-to-edge and interruption certification.
 
-## Non-destructive migration rule
-Do not modify `modules/engine-api.js`, `modules/training-domain/`, `modules/next-engine/`, `app.css`, web manifest, release files or service worker as part of this scaffold. Native data starts empty and read-only until explicit import approval and parity gates.
+## Non-destructive rules
+Do not modify web engine, web storage, `app.css`, manifest, release or service-worker files as part of native foundation. Native storage stays empty until explicit import validation. Never print real backup record values in logs or tests.
 
-## Next implementation pass
-1. Inventory the backup serializer/deserializer, schema versions, revision ownership and full engine export API.
-2. Define a typed JSON bridge protocol with fixture digests and errors; verify parity in Android runtime before showing actual training prescriptions.
-3. Add test-only backup import validation, with hash and schema checks; preserve the original file.
-4. Replace the placeholder Workout with a real native vertical slice driven by the certified bridge.
-5. Add CI Android compile and instrumentation tests; review current official Gradle/Kotlin/Compose pins before release.
+## Next pass
+1. Trace web App backup serializer and restore handlers; record schema and compatibility rules.
+2. Implement isolated Android JS execution and a pinned canonical source digest.
+3. Add independent golden fixtures for weight increments, DP, RIR, cycles, workout history and revision identity.
+4. Build the first real Workout vertical slice after bridge certification.
+5. Add Android compile and instrumentation CI, then verify on a physical Android device.

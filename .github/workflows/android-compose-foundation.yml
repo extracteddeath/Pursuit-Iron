@@ -19,6 +19,8 @@ jobs:
           node-version: '22'
       - name: Validate canonical engine bridge contract
         run: node android-native/engine-bridge/protocol-test.mjs
+      - name: Validate read-only backup inspector
+        run: node android-native/data-migration/inspect-backup-test.mjs
       - name: Verify native scaffold does not alter canonical engine
         run: |
           test -f modules/engine-api.js

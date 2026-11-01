@@ -118,6 +118,23 @@ for (const [tech,kind,count] of [['myo-reps','myo',3],['drop set','drop',2]]) {
   assert.ok(persisted.every(set=>!Object.hasOwn(set,'workingSetIndex')),
     'extensions must not count as ordinary working-set ordinals');
   assert.equal(prepareCanonicalWorkoutHistory(snapshot,prepared.candidateSnapshot,journal,JSON.stringify(plan)).alreadyPresent,true);
+  const extensionIndex=plan.rows[0].sets.filter(set=>!set.warm).findIndex(set=>set.sub);
+  assert.ok(extensionIndex>=1);
+  const locateExtension=copy=>copy.events.find(event=>event.slot.exerciseIndex===first.slot &&
+    event.slot.setIndex===extensionIndex);
+  const skipped=JSON.parse(journal);
+  const skippedExtension=locateExtension(skipped);
+  skippedExtension.disposition='SKIPPED';skippedExtension.values=null;
+  const skippedHistory=prepareCanonicalWorkoutHistory(snapshot,snapshot,JSON.stringify(skipped),JSON.stringify(plan)).historyEntry;
+  assert.equal(skippedHistory.perf[first.id].sets.filter(set=>set.sub).length,count-1);
+  assert.equal(skippedHistory.nativeSetObservations.events.filter(event=>event.disposition==='SKIPPED').length,1);
+  const zero=JSON.parse(journal);
+  locateExtension(zero).values.load='0';
+  const mixed=prepareCanonicalWorkoutHistory(snapshot,snapshot,JSON.stringify(zero),JSON.stringify(plan)).historyEntry;
+  assert.equal(mixed.nativeSetObservations.events.find(event=>event.slot.exerciseIndex===first.slot &&
+    event.slot.setIndex===extensionIndex).values.load,'0');
+  assert.equal(mixed.perf[first.id].sets.filter(set=>set.sub).length,count-1,
+    'mixed-load zero extensions survive in raw journal observations without changing the web summary');
   const truncated=structuredClone(plan);
   truncated.rows[0].sets.pop();
   assert.throws(()=>issuedNativeWorkoutFrom(snapshot,JSON.stringify(truncated)),

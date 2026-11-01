@@ -201,6 +201,73 @@ public final class CanonicalJsSandboxInstrumentedTest {
         assertEquals(CanonicalJsReadOnlyService.State.CLOSED,service.state());
     }
 
+
+    @Test public void backupOnlyProgramInventoryHonorsDeletionsAndRejectsWrites()
+            throws Exception {
+        Context test = InstrumentationRegistry.getInstrumentation().getContext();
+        Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        byte[] bundle = asset(test, "canonical-engine.js");
+        String pin = new String(asset(test,"canonical-engine.sha256"),
+                StandardCharsets.UTF_8).trim();
+        CanonicalJsReadOnlyService worker = new CanonicalJsReadOnlyService(app,bundle,pin);
+        try {
+            org.json.JSONArray days = new org.json.JSONArray().put(new JSONObject()
+                    .put("id","day-1")
+                    .put("exercises",new org.json.JSONArray().put("bb-bench")));
+            JSONObject active = new JSONObject()
+                    .put("id","synthetic-kept")
+                    .put("name","Synthetic backup only")
+                    .put("updatedAt",42)
+                    .put("days",days)
+                    .put("config",new JSONObject().put("goal","strength"));
+            JSONObject deleted = new JSONObject(active.toString())
+                    .put("id","synthetic-deleted").put("updatedAt",20);
+            JSONObject backup = new JSONObject()
+                    .put("v",13).put("savedAt",100)
+                    .put("saved",new org.json.JSONArray().put(active).put(deleted))
+                    .put("history",new org.json.JSONArray().put(
+                            new JSONObject().put("id","private-history-marker")))
+                    .put("cycles",new org.json.JSONArray())
+                    .put("custom",new org.json.JSONArray())
+                    .put("gyms",new org.json.JSONArray())
+                    .put("perf",new JSONObject())
+                    .put("tombs",new JSONObject().put("synthetic-deleted",20));
+            String requestId = "android-backup-inventory";
+            JSONObject request = new JSONObject()
+                    .put("protocolVersion",1).put("id",requestId)
+                    .put("method","backupProgramInventory")
+                    .put("params",new JSONObject().put("rawSnapshot",backup.toString()));
+            String raw = worker.backupProgramInventoryAsync(request.toString())
+                    .get(30,java.util.concurrent.TimeUnit.SECONDS);
+            JSONObject packet = new JSONObject(raw);
+            assertTrue(packet.getBoolean("ok"));
+            JSONObject result = packet.getJSONObject("result");
+            assertTrue(result.getBoolean("readOnly"));
+            assertTrue(result.getBoolean("snapshotOnly"));
+            assertFalse(result.getBoolean("imported"));
+            assertFalse(result.getBoolean("approvedForWorkoutExecution"));
+            org.json.JSONArray programs = result.getJSONArray("programs");
+            assertEquals(1,programs.length());
+            assertEquals("synthetic-kept",programs.getJSONObject(0).getString("id"));
+            assertEquals(1,programs.getJSONObject(0).getInt("trainingDays"));
+            assertEquals(1,programs.getJSONObject(0).getInt("exerciseSlots"));
+            assertFalse(raw.contains("private-history-marker"));
+            assertFalse(raw.contains("synthetic-deleted"));
+            assertFalse(raw.contains("strength"));
+            assertTrue(io.github.extracteddeath.pursuitiron.domain.BackupSavedProgramInventoryCodec
+                    .INSTANCE.decode(raw,requestId) instanceof
+                    io.github.extracteddeath.pursuitiron.domain.EngineResponse.Success);
+
+            request.put("method","deleteHistory");
+            assertTrue(worker.backupProgramInventoryAsync(request.toString())
+                    .isCompletedExceptionally());
+            assertEquals(CanonicalJsReadOnlyService.State.READY_READ_ONLY,worker.state());
+        } finally {
+            worker.close();
+            worker.whenClosed().get(10,java.util.concurrent.TimeUnit.SECONDS);
+        }
+    }
+
     @Test public void readOnlyServiceReusesVerifiedSandboxAndCloses() throws Exception {
         Context test = InstrumentationRegistry.getInstrumentation().getContext();
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();

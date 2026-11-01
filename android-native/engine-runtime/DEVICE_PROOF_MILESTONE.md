@@ -106,3 +106,17 @@ IIFE** under a bounded Node VM in the bundle-verification workflow.
 The bundle test must invoke a canonical v13 schema probe successfully and
 refuse a write request. The Android emulator milestone is rerun with the
 same synthetic-only acceptance cases; nothing is imported or published.
+
+## Milestone 8 — read-only saved-program inventory from an offline backup
+
+Real Android API-36 sandbox parity test for `backupProgramInventory`.
+The test supplies only synthetic canonical v13 data with a current entry,
+a same-clock tombstoned entry, and private history. It confirms that the
+sandbox returns bounded labels/day and exercise counts for the active
+entry only, never history or strength goal, validates the strict Kotlin
+backup-only DTO, refuses a write request, and releases the worker.
+
+A passing test does **not** establish that an offline backup is the user's
+current Plan, and does not authorize import, history restoration or native
+training. Device proof builds only disposable instrumentation APKs in CI,
+not a distributable UI APK.

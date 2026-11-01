@@ -116,3 +116,12 @@ history, editing, import, or persistence are exposed.
 Unlike the live `SavedProgramOverviewPanel` path, this backup catalog
 does not assert that the copy is the most recent store revision. It is
 separately typed and must never be forwarded to active Plan presentation.
+
+### Native shared backup-only program cards
+
+`BackupSavedProgramInventoryPanel` presents the saved-program inventory
+with shared M3 surface/shape/typography tokens and a prominent backup-only
+label. It is separate from the active `SavedProgramOverviewPanel` gate:
+no card is clickable, and no saved backup row can activate a training
+program. The actual API-36 emulator gate tests the canonical projection
+with an equal-time deletion and synthetic private history.

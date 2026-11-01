@@ -178,29 +178,7 @@ internal fun BackupCopyScreeningPanel(
             }
             is BackupScreeningStage.ProgramInventory -> {
                 BackupFingerprintText(current.fingerprint)
-                Text(
-                    "Saved programs in this backup · NOT YOUR ACTIVE PLAN",
-                    style = MaterialTheme.typography.titleSmall
-                )
-                if (current.inventory.entries.isEmpty()) {
-                    Text("No active saved programs in this copy.",
-                        style = MaterialTheme.typography.bodyMedium)
-                } else {
-                    current.inventory.entries.forEach { entry ->
-                        Text(entry.name, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            "${entry.trainingDays} training days · ${entry.exerciseSlots} exercise slots",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                Text(
-                    "Backup snapshot only. Deletions within the copy are honored; " +
-                        "nothing is restored, activated or used for training.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                BackupSavedProgramInventoryPanel(current.inventory)
             }
             BackupScreeningStage.Rejected ->
                 Text("The selected copy could not be checked. Nothing was imported or retained.",

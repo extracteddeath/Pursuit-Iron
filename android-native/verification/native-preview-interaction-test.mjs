@@ -67,6 +67,14 @@ assert.ok(activity.includes('readOnlyVerifier?.close()') &&
   activity.includes('PackagedReadOnlySchemaVerifier.openIfPackaged(this)'),
   'Native sandbox service must close with the activity lifecycle');
 
+const backupInventoryUi = fs.readFileSync(root + 'BackupSavedProgramInventoryPanel.kt','utf8');
+assert.ok(backupInventoryUi.includes('BACKUP COPY · NOT YOUR ACTIVE PLAN') &&
+  backupInventoryUi.includes('MaterialTheme.shapes.large') &&
+  backupInventoryUi.includes('surfaceContainerHigh') &&
+  !backupInventoryUi.includes('SavedProgramOverviewPanel(') &&
+  !backupInventoryUi.includes('onClick') &&
+  !backupInventoryUi.includes('deleteHistory('),
+  'M3E backup list must look native while remaining visually distinct and non-actionable');
 const screening = fs.readFileSync(root + 'BackupCopyScreeningPanel.kt', 'utf8');
 const fingerprint = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupScreening.kt',
@@ -93,7 +101,7 @@ assert.ok(screening.includes('var wantsPrograms by remember') &&
   screening.includes('verifier!!.inspectPrograms(') &&
   screening.includes('BackupScreeningStage.ProgramInventory(') &&
   screening.includes('View saved programs in backup') &&
-  screening.includes('NOT YOUR ACTIVE PLAN'),
+  screening.includes('BackupSavedProgramInventoryPanel(current.inventory)'),
   'Program inventory must require explicit selection and be clearly backup-only');
 assert.ok(screening.includes('var wantsSchema by remember') &&
   screening.includes('picker.launch(arrayOf("application/json", "text/plain"))'),

@@ -1,9 +1,11 @@
-# Non-destructive backup intake — stage 1
+# Backup intake — read-only canonical validation
 
-Pursuit Iron's existing backup panel is not the persistence authority. The App callbacks own backup preview, merge, compatibility, and Undo decisions; `modules/app-storage-ownership.js` owns the browser's exclusive storage lock. The native app **must not** attempt to open or mutate browser localStorage or reproduce merge decisions from guessed schemas.
+The web App callbacks own persistence, merge, compatibility and Undo. The backup panel is UI-only, and browser storage is protected by `modules/app-storage-ownership.js`. Android must never bypass those owners.
 
-This folder provides a fail-closed inspection tool for a user-supplied backup **copy**. It never writes a backup, imports it into Android storage, or silently changes records. Because the full production serializer/schema has not yet been certified, inspection is not migration approval.
+Two read-only commands inspect an explicitly supplied backup **copy**:
+- `node android-native/data-migration/inspect-backup.mjs /path/to/copy.json` shows structural keys and counts without record values.
+- `node android-native/data-migration/validate-canonical-backup.mjs /path/to/copy.json` uses the actual web `parseStoredData` and `STORE_VERSION` exports, returning only schema versions and collection counts. This may migrate **in memory** but never writes to disk.
 
-Usage: `node android-native/data-migration/inspect-backup.mjs /path/to/backup.json`. Do not commit real backups, notes, injury details, or personal records. The tool emits structural field names and counts only; it does not print values or identifiers. Keep the backup outside the repository.
+Current canonical store schema is **v13**. `parseStoredData` validates list/object shapes, programs, cycles, reminders and rejects newer versions; `migrateStore` migrates earlier schema versions. History revisions use `updatedAt` and tombstones during `mergeStores`. The Android app must reuse the same rules rather than inventing a Kotlin merge algorithm.
 
-Next: map exact web serializer and restore validation, then implement schema-specific import adapters and golden round-trip tests. No Room database migration or import action until those tests pass.
+Neither command imports a backup into Android, stores a copy, or certifies native round-trip safety. Do not commit real backups or their output if sensitive. The next gate is deterministic full-record round-trip and conflict resolution parity using **synthetic** fixtures, then Android runtime execution.

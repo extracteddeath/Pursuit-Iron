@@ -40,7 +40,8 @@ class ProgressionContractTest {
     }
 
     private val certification = FeatureCertification(
-        EngineProtocol.VERSION, "canonical-sha256-example", "fixtures-sha256-example"
+        EngineFeature.PROGRESSION_PREVIEW, EngineProtocol.VERSION,
+        "a".repeat(64), "b".repeat(64)
     )
 
     private class StubBackend(
@@ -74,6 +75,10 @@ class ProgressionContractTest {
         ).selectedBackend())
         assertNull(ParityGatedProgressionRouter(
             VerifiedFeatureGate(certification.copy(canonicalSourceDigest = ""), EngineImplementation.entries.toSet()),
+            js, kotlin
+        ).selectedBackend())
+        assertNull(ParityGatedProgressionRouter(
+            VerifiedFeatureGate(certification.copy(fixtureDigest = "looks-like-a-digest"), EngineImplementation.entries.toSet()),
             js, kotlin
         ).selectedBackend())
     }

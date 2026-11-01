@@ -46,3 +46,5 @@ Kotlin domain-level unit tests run with `:domain-contract:testDebugUnitTest` in 
 ## Runtime and fixture digests
 
 `snapshot-identity.mjs` verifies every runtime file's bytes against the exported canonical snapshot, then derives deterministic SHA-256 digests for the canonical dependency closure and fixed progression fixtures. CI runs this **after** independent standalone-engine parity. The result is an identity candidate for future Android packaging, **not a signed certificate and not proof that an Android JavaScript sandbox has executed**. A runtime must compare exact pinned digests before granting a Kotlin or JS backend permission to return training decisions.
+
+The Kotlin gate now requires explicit `EngineFeature.PROGRESSION_PREVIEW`, the exact supported protocol version, and two complete lower-case SHA-256 digests. A blank or merely descriptive digest cannot activate an implementation. Identity equality still does not itself certify runtime execution: an independent trusted verifier must supply approved source/fixture identities before promotion.

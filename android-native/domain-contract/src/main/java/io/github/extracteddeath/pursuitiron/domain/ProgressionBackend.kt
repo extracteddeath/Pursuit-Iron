@@ -6,8 +6,10 @@ package io.github.extracteddeath.pursuitiron.domain
  * This is a read-only preview operation, NOT the workout logging engine.
  */
 enum class EngineImplementation { CANONICAL_JS, NATIVE_KOTLIN }
+enum class EngineFeature { PROGRESSION_PREVIEW }
 
 data class FeatureCertification(
+    val feature: EngineFeature,
     val protocolVersion: Int,
     val canonicalSourceDigest: String,
     val fixtureDigest: String
@@ -18,14 +20,17 @@ data class VerifiedFeatureGate(
     val required: FeatureCertification,
     val approvedImplementations: Set<EngineImplementation>
 ) {
+    private val sha256 = Regex("^[0-9a-f]{64}$")
+
     fun permits(
         backend: EngineImplementation,
         attestation: FeatureCertification?
     ): Boolean =
         backend in approvedImplementations && attestation == required &&
+        required.feature == EngineFeature.PROGRESSION_PREVIEW &&
         required.protocolVersion == EngineProtocol.VERSION &&
-        required.canonicalSourceDigest.isNotBlank() &&
-        required.fixtureDigest.isNotBlank()
+        sha256.matches(required.canonicalSourceDigest) &&
+        sha256.matches(required.fixtureDigest)
 }
 
 interface ProgressionBackend {

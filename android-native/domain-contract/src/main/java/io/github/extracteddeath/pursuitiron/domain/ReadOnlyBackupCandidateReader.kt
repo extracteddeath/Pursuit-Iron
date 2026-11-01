@@ -33,7 +33,8 @@ object ReadOnlyBackupCandidateReader {
 
     fun screen(
         source: InputStream,
-        maxBytes: Long = ReadOnlyBackupScreening.MAX_COPY_BYTES
+        maxBytes: Long = ReadOnlyBackupScreening.MAX_COPY_BYTES,
+        checkActive: () -> Unit = {}
     ): ReadOnlyDocumentScreening {
         require(maxBytes in 1..ReadOnlyBackupScreening.MAX_COPY_BYTES)
         val candidate = ByteArray(MAX_CANDIDATE_BYTES)
@@ -44,7 +45,12 @@ object ReadOnlyBackupCandidateReader {
                 var count = 0L
                 var capturable = true
                 while (true) {
+                    // Cancellation is checked on either side of provider I/O.
+                    // This closes the stream and wipes captured bytes promptly
+                    // after the next completed read if the UI is disposed.
+                    checkActive()
                     val read = stream.read(chunk)
+                    checkActive()
                     if (read == -1) break
                     if (read == 0) throw IOException("Document stream made no progress")
                     if (count > maxBytes - read) throw IOException("Selected document exceeds safety limit")

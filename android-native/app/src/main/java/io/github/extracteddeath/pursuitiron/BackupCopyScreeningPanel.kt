@@ -24,6 +24,8 @@ import io.github.extracteddeath.pursuitiron.domain.UnverifiedBackupFingerprint
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -69,7 +71,10 @@ internal fun BackupCopyScreeningPanel(
                             val screened = withContext(Dispatchers.IO) {
                                 val source = context.contentResolver.openInputStream(selectedUri)
                                     ?: throw IOException("Selected source unavailable")
-                                ReadOnlyBackupScreening.fingerprint(source)
+                                val job = currentCoroutineContext()
+                                ReadOnlyBackupScreening.fingerprint(
+                                    source, checkActive = { job.ensureActive() }
+                                )
                             }
                             BackupScreeningStage.Screened(screened)
                         } else {
@@ -78,7 +83,10 @@ internal fun BackupCopyScreeningPanel(
                             val outcome = withContext(Dispatchers.IO) {
                                 val source = context.contentResolver.openInputStream(selectedUri)
                                     ?: throw IOException("Selected source unavailable")
-                                when (val screening = ReadOnlyBackupCandidateReader.screen(source)) {
+                                val job = currentCoroutineContext()
+                                when (val screening = ReadOnlyBackupCandidateReader.screen(
+                                    source, checkActive = { job.ensureActive() }
+                                )) {
                                     is ReadOnlyDocumentScreening.FingerprintOnly ->
                                         BackupScreeningStage.TooLargeForSchema(screening.fingerprint)
                                     is ReadOnlyDocumentScreening.SmallCandidate -> try {

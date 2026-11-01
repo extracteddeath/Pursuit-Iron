@@ -1,12 +1,8 @@
 name: Native Android preview APK (milestone only)
 
+# No push-triggered builds. This workflow is intentionally disabled even
+# for manual dispatch until onboarding -> logging -> workout completion passes.
 on:
-  push:
-    branches:
-      - architecture/android-compose-foundation
-    paths:
-      - 'android-native/PREVIEW_MILESTONE.md'
-      - '.github/workflows/android-native-preview.yml'
   workflow_dispatch:
 
 concurrency:
@@ -18,6 +14,9 @@ permissions:
 
 jobs:
   assemble-preview:
+    # Hard stop, including manually requested runs. Release only after the
+    # complete athlete journey is independently certified on the same revision.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

@@ -27,6 +27,10 @@ assert.ok(!packaged.includes('generateNextProgramForShell') &&
   !packaged.includes('deleteHistory') &&
   !packaged.includes('lookupExercisesAsync'),
   'App may only connect the canonical backup metadata checker');
+const runtimeWorkflow = fs.readFileSync('.github/workflows/android-engine-runtime.yml','utf8');
+assert.ok(runtimeWorkflow.includes(':engine-runtime:compileDebugAndroidTestJavaWithJavac') &&
+  !runtimeWorkflow.includes(':engine-runtime:assembleDebugAndroidTest'),
+  'Routine sandbox checks must not assemble instrumentation APKs');
 assert.match(runtime, /androidx\.javascriptengine:javascriptengine:1\.1\.1/);
 for (const guard of [
   'JavaScriptSandbox.isSupported()', 'JavaScriptSandbox.createConnectedInstanceAsync',
@@ -39,11 +43,13 @@ assert.ok(!core.includes('inspectSyntheticFailure'),
 assert.doesNotMatch(core, /\bSharedPreferences\b|\bContentResolver\b|\bWebView\b|\bsetJavaScriptEnabled\b/,
   'Read-only engine probe must not access persistence, web surfaces or arbitrary Android storage');
 assert.match(device, /on:\s*\n  workflow_dispatch:/);
-assert.ok(device.includes("'android-native/engine-runtime/DEVICE_PROOF_MILESTONE.md'"),
-  'Emulator automation must run only when the explicit milestone file changes');
+assert.ok(!device.includes('  push:') &&
+  device.includes('if: ${{ false }}'),
+  'APK-producing device proof must remain disabled until the full E2E milestone');
 assert.ok(!device.includes("'android-native/engine-runtime/**'"),
   'Routine sandbox source commits cannot trigger an emulator');
-assert.match(apk, /android-native\/PREVIEW_MILESTONE\.md/);
+assert.ok(apk.includes('if: ${{ false }}') && !apk.includes('  push:'),
+  'Preview APK job must remain disabled even for manual workflow dispatch');
 assert.doesNotMatch(apk, /'android-native\/\*\*'/, 'Routine native commits must not generate APKs');
 assert.match(bundle, /canonical-export\.mjs/);
 assert.match(bundle, /verify-snapshot\.mjs/);

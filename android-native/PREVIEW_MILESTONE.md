@@ -1,5 +1,15 @@
 # Native preview build milestones
 
+**APK BUILD FREEZE — active.** Historical milestones below are retained as
+development records, not triggers. Neither editing this file nor manually
+dispatching the workflow can create an APK until the same native revision
+passes real onboarding -> program generation -> personalized workout ->
+transactional logging -> interruption/resume -> completed session ->
+correct history/progression acceptance. See
+`android-native/verification/no-apk-before-end-to-end-test.mjs`.
+The preview and device workflows are explicitly disabled, and routine
+sandbox CI compiles tests without assembling instrumentation APKs.
+
 Edit this file **only when the native preview has a significant user-facing change or a toolchain validation milestone**. Routine engine-contract and Compose UI commits should not create a new APK.
 
 ## M1 — SDK 37 / Material 3 Expressive toolchain validation

@@ -2,6 +2,24 @@
 
 This is a **feature-first native design preview** on a separate development branch. It intentionally does not clone the web layouts. The existing app's features and canonical JS training engine remain the behavioral source of truth.
 
+## APK freeze until the full workout journey is finished
+
+**No new native Android APKs will be built for the remainder of the
+architecture, onboarding, workout runtime, persistence and completion work.**
+Both installable-preview and instrumentation-device workflows are explicitly
+job-disabled; even manual dispatch cannot generate an APK. Routine verification
+is limited to Kotlin/Compose compilation, JVM tests, canonical engine
+regression suites and Java instrumentation-source compilation.
+
+Unblock APK production only in a deliberate later change, after the same
+native revision has end-to-end evidence for: onboarding -> program creation ->
+verified personal workout -> set logging -> interruption/resume -> workout
+completion -> saved history and correct next-workout/progression decisions.
+No current native implementation meets those conditions.
+
+The instructions below describe how **older previously produced** artifacts
+could be installed. They do not authorize new builds before the release gate.
+
 ## Install and view
 
 Open the most recent successful **Native Android preview APK** run at
@@ -36,7 +54,7 @@ All interactive examples are **local UI-only state**. They do not generate train
 
 ## Android preview build cadence
 
-Normal Android commits run the fast foundation and canonical-engine checks, **not** a new APK build. An installable preview is built only when `android-native/PREVIEW_MILESTONE.md` is updated, the APK workflow changes, or a maintainer manually runs the workflow. This keeps experimental UI/engine work from filling Actions with redundant APKs. The most recent successful artifact remains available for 14 days.
+Normal Android commits run the fast foundation and canonical-engine checks, **not** a new APK build. The preview and instrumentation APK jobs are hard-disabled until the complete onboarding-to-workout-completion milestone is certified; edits and manual dispatch cannot build them. This keeps experimental UI/engine work from filling Actions with redundant APKs. The most recent successful artifact remains available for 14 days.
 
 ## Verification gates
 

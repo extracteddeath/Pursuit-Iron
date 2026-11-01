@@ -63,6 +63,8 @@ jobs:
           node verification/m190-progression-lifecycle-test.mjs
       - name: Verify native engine sandbox separation, failure gates and build cadence
         run: node android-native/verification/engine-sandbox-isolation-test.mjs
+      - name: Enforce no APK builds before verified onboarding-to-completion journey
+        run: node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Verify native preview cannot run without canonical engine
         run: |
           test -f modules/engine-api.js

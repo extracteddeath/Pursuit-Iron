@@ -227,6 +227,9 @@ internal fun PlanScreen() {
             Text("Generate real program · unavailable")
         }
     }
+    // Do not pass a synthetic engine output as though it were a live user plan.
+    // Layout examples are always explicitly labeled and never writable.
+    WorkoutOutlinePanel(outline = null)
     SectionLabel("Plan essentials")
     PursuitCard {
         Text("Equipment and exercise choice", style = MaterialTheme.typography.titleMedium)

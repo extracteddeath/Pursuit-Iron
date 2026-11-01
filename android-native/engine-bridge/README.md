@@ -39,3 +39,5 @@ Catalog lookup is next verified in an Android emulator through the existing seri
 ## Read-only synthetic workout outline
 
 The `workoutOutline` diagnostic accepts only `{split,dayIndex}`, with split one of `full_body` (3 days), `upper_lower` (4 days), or `ulppl` (5 days) and a bounded day index. It calls the **canonical** `generateNextProgramForShell` with the fixed, non-user 60-minute configuration already used in standalone parity tests, requires an audited passing engine program and projects exercise order, role, sets, rep bounds, RIR bounds, rest seconds and source duration. It does not include user history, actual plans or weekly load prescriptions. `readOnly` and `syntheticOnly` are both enforced, and the feature remains disconnected from Compose. It is not suitable for suggesting a personal session.
+
+The Kotlin `WorkoutOutlineCodec` and `SandboxWorkoutOutline` adapter preserve generated exercise order, roles, rep bounds, RIR and rest while enforcing `syntheticOnly` and source identity. An emulator test verifies the end-to-end wire and that write-method attempts are blocked. No UI or persistent storage integration has been authorized.

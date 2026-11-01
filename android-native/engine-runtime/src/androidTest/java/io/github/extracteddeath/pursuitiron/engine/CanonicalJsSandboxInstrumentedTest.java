@@ -91,6 +91,40 @@ public final class CanonicalJsSandboxInstrumentedTest {
         }
     }
 
+    @Test public void auditedSyntheticWorkoutOutlineUsesNativeReadOnlyEngine() throws Exception {
+        Context test = InstrumentationRegistry.getInstrumentation().getContext();
+        Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        byte[] bundle = asset(test, "canonical-engine.js");
+        String pin = new String(asset(test,"canonical-engine.sha256"),
+                StandardCharsets.UTF_8).trim();
+        CanonicalJsReadOnlyService worker = new CanonicalJsReadOnlyService(app,bundle,pin);
+        try {
+            String id = "android-outline-emulator";
+            String request = io.github.extracteddeath.pursuitiron.domain.WorkoutOutlineCodec.INSTANCE
+                    .encodeOutline(id,"full_body",0);
+            String json = worker.syntheticOutlineAsync(request)
+                    .get(45,java.util.concurrent.TimeUnit.SECONDS);
+            JSONObject packet = new JSONObject(json);
+            assertTrue(packet.getBoolean("ok"));
+            JSONObject result = packet.getJSONObject("result");
+            assertTrue(result.getBoolean("readOnly"));
+            assertTrue(result.getBoolean("syntheticOnly"));
+            assertEquals("modules/engine-api.js:generateNextProgramForShell",
+                    result.getString("source"));
+            assertTrue(result.getJSONArray("exercises").length() >= 1);
+            assertTrue(io.github.extracteddeath.pursuitiron.domain.WorkoutOutlineCodec.INSTANCE
+                    .decodeOutline(json,id,"full_body",0)
+                    instanceof io.github.extracteddeath.pursuitiron.domain.EngineResponse.Success);
+            String forbidden = request.replace("workoutOutline","deleteHistory");
+            assertTrue(worker.syntheticOutlineAsync(forbidden).isCompletedExceptionally());
+            assertEquals(CanonicalJsReadOnlyService.State.READY_READ_ONLY,worker.state());
+        } finally {
+            worker.close();
+            worker.whenClosed().get(10,java.util.concurrent.TimeUnit.SECONDS);
+        }
+        assertEquals(CanonicalJsReadOnlyService.State.CLOSED,worker.state());
+    }
+
     @Test public void readOnlyServiceReusesVerifiedSandboxAndCloses() throws Exception {
         Context test = InstrumentationRegistry.getInstrumentation().getContext();
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();

@@ -31,7 +31,7 @@ public final class CanonicalJsSandboxInstrumentedTest {
         }
     }
 
-    @Test public void canonicalEngineHandshakeRunsInAndroidSandbox() throws Exception {
+    @Test public void canonicalProgressionRunsInAndroidSandbox() throws Exception {
         Context test = InstrumentationRegistry.getInstrumentation().getContext();
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
         assertTrue("WebView-provided sandbox must be available for Android runtime certification",
@@ -47,5 +47,11 @@ public final class CanonicalJsSandboxInstrumentedTest {
         assertFalse("Handshake never certifies training predictions",
                 answer.getBoolean("engineCertified"));
         assertTrue(answer.getJSONArray("capabilities").length() >= 3);
+        JSONObject fixtures = new JSONObject(new String(asset(test,
+                "progression-golden.json"), StandardCharsets.UTF_8));
+        int verified = new CanonicalJsSandboxProbe(app)
+                .verifyGoldenProgression(bundle,pinnedHash,fixtures);
+        assertEquals("All synthetic canonical fixtures must execute on Android",
+                fixtures.getJSONArray("cases").length(),verified);
     }
 }

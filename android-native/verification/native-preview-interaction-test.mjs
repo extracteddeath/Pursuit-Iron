@@ -181,7 +181,9 @@ assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structur
   'Shared saved-program composable must accept only policy-approved structure');
 assert.ok(planGate.includes('ReadOnlyProgramReferenceGate.sameActiveRevision(') &&
   planGate.includes('CurrentProgramDeletionEvidence.CheckedAbsent') &&
-  planGate.includes('Structure internal constructor('),
+  planGate.includes('class Structure internal constructor(') &&
+  !planGate.includes('data class Structure') &&
+  planGate.includes('Collections.unmodifiableList('),
   'Plan structure requires explicit deletion evidence and restricted constructor');
 assert.ok(!savedPlan.includes('generateNextProgramForShell(') &&
   !savedPlan.includes('prescribeSets(') && !savedPlan.includes('deleteHistory('),

@@ -50,4 +50,37 @@ class ReadOnlyProgramPresentationPolicyTest {
         assertFalse(available(summary = good.copy(
             reference = ref.copy(storeSavedAt = 101))))
     }
+
+    @Test fun approvedPresentationCannotBeClonedOrMutatedViaSourceCollections() {
+        // The source may legally provide a MutableList even though its DTO
+        // exposes List; UI authorization cannot keep that mutable alias.
+        val mutableExercises = mutableListOf("bb-bench", "cable-fly")
+        val mutableDays = mutableListOf(
+            ReadOnlyProgramDay("day-1", "Upper", mutableExercises)
+        )
+        val original = good.copy(days = mutableDays)
+        val approved = ReadOnlyProgramPresentationPolicy.inspect(
+            original, checked()
+        ) as ReadOnlyProgramPresentation.Structure
+        assertNotSame(original, approved.program)
+        assertNotSame(mutableDays, approved.program.days)
+        assertNotSame(mutableExercises, approved.program.days[0].exerciseIds)
+
+        mutableExercises[0] = "unverified-exercise"
+        mutableDays.clear()
+        assertEquals(listOf("bb-bench","cable-fly"),
+            approved.program.days[0].exerciseIds)
+        assertEquals(1, approved.program.days.size)
+        assertTrue(runCatching {
+            @Suppress("UNCHECKED_CAST")
+            (approved.program.days as MutableList<ReadOnlyProgramDay>).clear()
+        }.isFailure)
+        assertTrue(runCatching {
+            @Suppress("UNCHECKED_CAST")
+            (approved.program.days[0].exerciseIds as MutableList<String>).clear()
+        }.isFailure)
+        assertFalse(ReadOnlyProgramPresentation.Structure::class.java
+            .declaredMethods.any { it.name == "copy" ||
+                it.name.startsWith("component") })
+    }
 }

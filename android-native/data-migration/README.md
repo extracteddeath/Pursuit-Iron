@@ -208,3 +208,14 @@ and independently verify the current record and deletion clock. This host
 cannot detect changes the source fails to report; training actions will
 still require independent current-revision checks. No import, storage write,
 personal workout activation or distributable Android build is introduced.
+
+## Detached, non-forgeable read-only Plan presentation
+
+The approved current-Plan wrapper is intentionally a normal class, not a
+Kotlin data class: consumers cannot use a generated public `copy()` to forge
+approval without calling the current-revision policy. The policy copies
+source-owned day and exercise collections before validation, wrapping the
+new lists in unmodifiable containers. An external mutable source list can
+change later without altering already-approved UI structure. This is a
+display-only defense, not authorization for exercise logging, prescription,
+or backup activation.

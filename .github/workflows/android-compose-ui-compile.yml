@@ -1,0 +1,39 @@
+name: Native Compose UI compile (no APK)
+
+on:
+  push:
+    branches:
+      - architecture/android-compose-foundation
+    paths:
+      - 'android-native/app/src/**'
+      - 'android-native/app/build.gradle.kts'
+      - 'android-native/domain-contract/src/**'
+      - '.github/workflows/android-compose-ui-compile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-compose-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile-native-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Install API 37 compile tools
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Compile Compose and typed domain contracts (without APK)
+        working-directory: android-native
+        run: gradle :app:compileDebugKotlin :domain-contract:testDebugUnitTest --no-daemon --stacktrace

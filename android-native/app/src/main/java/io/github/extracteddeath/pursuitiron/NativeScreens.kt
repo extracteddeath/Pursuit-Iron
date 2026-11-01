@@ -81,9 +81,25 @@ internal fun TodayScreen(
 private val demoExercises = listOf("BB bench press", "Chest-supported row", "Romanian deadlift")
 private val sampleLastWeights = intArrayOf(185, 120, 185)
 
-// UI-only draft values. Allocate a fresh array for each change so Compose observes it.
-private fun editPreviewValue(values: IntArray, index: Int, value: Int): IntArray =
-    values.copyOf().also { it[index] = value }
+// UI-only drafts. Previous preview versions saved one number per exercise.
+// Expand those three legacy values into four sample sets each on first edit,
+// and resolve pre-edit reads safely without persisting an alternative engine.
+private fun previewValueAt(values: IntArray, index: Int): Int =
+    when (values.size) {
+        12 -> values[index]
+        3 -> values[index / 4]
+        else -> values.firstOrNull() ?: 0
+    }
+
+private fun editPreviewValue(values: IntArray, index: Int, value: Int): IntArray {
+    val expanded = when (values.size) {
+        12 -> values.copyOf()
+        3 -> IntArray(12) { i -> values[i / 4] }
+        else -> IntArray(12) { value }
+    }
+    expanded[index] = value
+    return expanded
+}
 
 @Composable
 internal fun TrainScreen(
@@ -113,9 +129,9 @@ internal fun TrainScreen(
         mutableStateOf(intArrayOf(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
     }
     val valueIndex = exerciseIndex * 4 + setIndex
-    val weight = sampleWeights[valueIndex]
-    val reps = sampleReps[valueIndex]
-    val rir = sampleRirs[valueIndex]
+    val weight = previewValueAt(sampleWeights, valueIndex)
+    val reps = previewValueAt(sampleReps, valueIndex)
+    val rir = previewValueAt(sampleRirs, valueIndex)
     var focus by rememberSaveable { mutableStateOf(false) }
     var reference by rememberSaveable { mutableStateOf("Last") }
     var rest by rememberSaveable { mutableIntStateOf(90) }

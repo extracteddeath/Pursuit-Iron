@@ -11,9 +11,12 @@ assert.match(shell, /rememberSaveableStateHolder\(\)/);
 assert.match(shell, /destinationStates\.SaveableStateProvider\(current\)/);
 for (const name of ['sampleWeights', 'sampleReps', 'sampleRirs']) {
   assert.match(screens, new RegExp('var ' + name + ' by rememberSaveable'));
-  assert.match(screens, new RegExp(name + '\\[valueIndex\\]'));
+  assert.ok(screens.includes('previewValueAt(' + name + ', valueIndex)'));
 }
-assert.match(screens, /values\.copyOf\(\)\.also/);
+assert.match(screens, /12 -> values\.copyOf\(\)/);
+assert.match(screens, /3 -> IntArray\(12\) \{ i -> values\[i \/ 4\] \}/);
+assert.match(screens, /3 -> values\[index \/ 4\]/);
+assert.match(screens, /expanded\[index\] = value/);
 assert.doesNotMatch(screens, /weight = listOf\(185, 120, 185\)\[index\]/);
 
 // Focus must never fork a logger or remove essential exercise/session controls.

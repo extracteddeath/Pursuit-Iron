@@ -65,10 +65,10 @@ const programModules=[
 const programSheetCoverage=Object.fromEntries(programModules.map(file=>{
  const source=fs.readFileSync(file,'utf8');
  return [file,{
-  sharedHeadingCalls:count(source,/_jsx(?:s)?\\(UiSheetHeading,/g),
-  sharedCloseCalls:count(source,/_jsx(?:s)?\\(UiSheetClose,/g),
-  sharedActionCalls:count(source,/_jsx(?:s)?\\(UiAction,/g),
-  inlineStyleObjects:count(source,/style:\\s*\\{/g)
+  sharedHeadingCalls:count(source,/_jsx(?:s)?\(UiSheetHeading,/g),
+  sharedCloseCalls:count(source,/_jsx(?:s)?\(UiSheetClose,/g),
+  sharedActionCalls:count(source,/_jsx(?:s)?\(UiAction,/g),
+  inlineStyleObjects:count(source,/style:\s*\{/g)
  }];
 }));
 const programSheetHeadingCalls=Object.values(programSheetCoverage)

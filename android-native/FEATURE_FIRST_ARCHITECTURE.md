@@ -64,3 +64,36 @@ E. Program authoring, insights, library and full-feature acceptance; then releas
 ## Future Kotlin engine without an all-at-once rewrite
 
 The `domain-contract` package now defines typed `ProgressionPreviewInput`, `ProgressionPreviewResult` and `ParityGatedProgressionRouter` contracts. Read-only fixed JS golden fixtures in `engine-contract/` are regression-checked in source CI. Certified Kotlin backends may eventually replace JS per feature when they exactly match protocol version, pinned source digest and independent fixture digest. No Kotlin training formulas are in production; feature routing currently has no certified runtime backend.
+
+## Next data milestone: canonical v13 saved-program reference (not yet enabled)
+
+The native read-only `ReadOnlyProgramReference` gate is now a **contract**, not a
+program loader. The canonical v13 store keeps authored programs under
+`saved[]`; individual records have stable `id` and `updatedAt` clocks,
+`savedAt` is a store-level legacy/equal-revision tie breaker, and a
+`tombs[programId]` deletion timestamp at or after `updatedAt` hides the
+record. These facts are owned by `modules/training-domain/records.js` and must
+not be rewritten into a second, diverging merge algorithm on Android.
+
+Before any native screen displays a **real** program:
+
+1. Validate a read-only copy with `parseStoredData` inside the trusted,
+   pinned canonical JavaScript runtime; reject unsupported future versions,
+   malformed lists and any untrusted program structure.
+2. Select a record only by its exact canonical program ID, not list position
+   or a guessed recent date. Preserve custom authored programs and all advanced
+   slot settings without collapsing them into generic exercises.
+3. Derive and pin its `updatedAt`, overall store `savedAt`, and SHA-256 of
+   the exact source snapshot. Reject if the snapshot changes, its version is
+   unsupported, the program clock differs or a deletion tombstone supersedes it.
+4. For an actual workout use canonical schedule/cycle/phase and session
+   prescription code to select the correct week. The existing **synthetic**
+   `workoutOutline` route must NOT be reused as if it were personalized.
+5. Compare a source-backed, read-only outline with a canonical web projection
+   across custom plans, cycle transitions, user overrides, equipment changes and
+   undo/edit revisions. Until this passes, keep Compose in the explicit
+   unconnected state and all workout logging disabled.
+
+`ReadOnlyProgramReferenceGate` alone cannot authenticate the snapshot digest,
+parse a backup, recover stale data or authorize writes. Only a future trusted
+source adapter and device/interruption test can do that.

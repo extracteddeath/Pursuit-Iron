@@ -59,3 +59,32 @@ assert.ok(kotlinBackend.includes('EngineJsonCodec.decodeProgressionPreview'),
   'Kotlin bridge must decode strictly typed protocol results');
 assert.ok(!kotlinBackend.includes('suggestedLoad =') && !kotlinBackend.includes('calculateProgression('),
   'Kotlin transport may not silently implement training calculations');
+
+/**
+ * A large selected file must never bypass smaller Kotlin/Java/JS bounds or
+ * receive a truncated source accepted as the original. Keep the three
+ * transport owners locked to the same bounded 1 MiB source window.
+ */
+const limits = read('domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupLimits.kt');
+const intake = read('domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupCandidateReader.kt');
+const sourceGate = read('domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupSourceGate.kt');
+const codec = read('domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupSchemaCodec.kt');
+const worker = read('engine-runtime/src/main/java/io/github/extracteddeath/pursuitiron/engine/CanonicalJsReadOnlyService.java');
+const jsProbe = read('engine-bridge/backup-schema-check.mjs');
+const jsProtocol = read('engine-bridge/protocol.mjs');
+assert.match(limits, /MAX_SOURCE_BYTES = 1024 \* 1024/);
+assert.match(limits, /MAX_SOURCE_CHARACTERS = 1024 \* 1024/);
+assert.match(limits, /MAX_WIRE_BYTES = 4 \* 1024 \* 1024/);
+assert.match(intake, /MAX_CANDIDATE_BYTES = ReadOnlyBackupLimits\.MAX_SOURCE_BYTES/);
+assert.match(sourceGate, /MAX_PROBE_BYTES = ReadOnlyBackupLimits\.MAX_SOURCE_BYTES/);
+assert.match(sourceGate, /MAX_PROBE_CHARACTERS = ReadOnlyBackupLimits\.MAX_SOURCE_CHARACTERS/);
+assert.match(codec, /ReadOnlyBackupLimits\.MAX_SOURCE_BYTES/);
+assert.match(codec, /ReadOnlyBackupLimits\.MAX_WIRE_BYTES/);
+assert.match(worker, /ReadOnlyBackupLimits\.MAX_SOURCE_BYTES/);
+assert.match(worker, /ReadOnlyBackupLimits\.MAX_SOURCE_CHARACTERS/);
+assert.match(worker, /ReadOnlyBackupLimits\.MAX_WIRE_BYTES/);
+assert.match(jsProbe, /MAX_BACKUP_PROBE_CHARS = 1024 \* 1024/);
+assert.match(jsProtocol, /json\.length > 4 \* 1024 \* 1024/);
+assert.match(intake, /candidate\.fill\(0\)/);
+assert.match(intake, /FingerprintOnly\(fingerprint\)/);
+console.log('PASS consistent 1 MiB source and 4 MiB wire caps across Kotlin, Android and JS; oversized sources fingerprint only');

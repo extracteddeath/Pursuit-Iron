@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -50,5 +51,6 @@ fun PursuitIronTheme(content: @Composable () -> Unit) {
         dark -> darkColorScheme()
         else -> lightColorScheme()
     }
-    MaterialTheme(colorScheme = scheme, typography = Typography(), shapes = PursuitShapes, content = content)
+    MaterialTheme(colorScheme = scheme, motionScheme = MotionScheme.expressive(),
+        typography = Typography(), shapes = PursuitShapes, content = content)
 }

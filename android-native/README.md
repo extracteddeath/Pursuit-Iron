@@ -38,4 +38,4 @@ GitHub Actions must pass the native APK build and JS protocol, backup and featur
 
 ## Toolchain
 
-The installable preview uses pinned **AGP 8.13.2**, **Gradle 8.13**, **Android SDK 36**, **Kotlin 2.2.21**, **Compose BOM 2025.10.01**, **Activity Compose 1.11.0**. Later Material 3 Expressive APIs requiring API 37/AGP 9.x are deferred until the compatible SDK is available and builds pass. The native design system can evolve independently of these versions.
+The installable preview uses pinned **AGP 8.13.2**, **Gradle 8.13**, **Android SDK 36**, **Kotlin 2.2.21**, **Compose BOM 2026.09.00**, **Material 3 1.5.0-beta02 (native preview only)**, **Activity Compose 1.11.0**. The preview explicitly opts into the published expressive MotionScheme and theme-aware navigation motion. This beta dependency is isolated from web production. Any API requiring Android SDK 37 or AGP 9.x remains deferred until compatible tooling and CI pass. Native compile, real-device motion and accessibility acceptance are separate requirements.

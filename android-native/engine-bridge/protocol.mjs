@@ -2,6 +2,7 @@
 import * as canonical from '../../modules/engine-api.js';
 import { canonicalProgressionPreview, validProgressionPreviewParams } from './progression-preview.mjs';
 import { canonicalExerciseLookup, validExerciseLookupParams } from './exercise-lookup.mjs';
+import { canonicalWorkoutOutline, validWorkoutOutlineParams } from './workout-outline.mjs';
 
 export const PROTOCOL_VERSION = 1;
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
@@ -40,6 +41,15 @@ export function dispatchEngineRequest(request) {
             return error(id, 'ENGINE_UNAVAILABLE', 'Canonical exercise catalog unavailable');
         }
     }
+    if (request.method === 'workoutOutline') {
+        if (!validWorkoutOutlineParams(request.params))
+            return error(id, 'INVALID_REQUEST', 'Invalid synthetic workout outline parameters');
+        try {
+            return success(id, canonicalWorkoutOutline(request.params));
+        } catch {
+            return error(id, 'ENGINE_UNAVAILABLE', 'Canonical workout outline unavailable');
+        }
+    }
     if (Object.keys(request.params).length !== 0)
         return error(id, 'INVALID_REQUEST', 'Unexpected method parameters');
     switch (request.method) {
@@ -48,7 +58,7 @@ export function dispatchEngineRequest(request) {
                 protocolVersion: PROTOCOL_VERSION,
                 engineSource: 'modules/engine-api.js',
                 engineCertified: false,
-                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup']
+                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup', 'workoutOutline']
             });
         case 'catalogSummary': {
             if (!Array.isArray(canonical.EXERCISES) || !Array.isArray(canonical.TEMPLATES))

@@ -7,7 +7,7 @@ const call = (method, params = {}) => dispatchEngineRequest({
 const handshake = call('handshake');
 assert.equal(handshake.ok, true);
 assert.equal(handshake.result.engineCertified, false);
-assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup']);
+assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup','workoutOutline']);
 const catalog = call('catalogSummary');
 assert.equal(catalog.ok, true);
 assert.equal(catalog.result.exercises, canonical.EXERCISES.length);
@@ -127,5 +127,41 @@ for (let i = 0; i < canonical.EXERCISES.length; i += 12) {
   }
 }
 assert.equal(coveredCatalog,canonical.EXERCISES.length,'all first-party catalog entries projected');
+
+
+for (const split of ['full_body','upper_lower','ulppl']) {
+  const days = {full_body:3,upper_lower:4,ulppl:5}[split];
+  const outline=call('workoutOutline',{split,dayIndex:0});
+  assert.equal(outline.ok,true,split+' must project an audited canonical outline');
+  assert.equal(outline.result.source,'modules/engine-api.js:generateNextProgramForShell');
+  assert.equal(outline.result.readOnly,true);
+  assert.equal(outline.result.syntheticOnly,true);
+  assert.equal(outline.result.split,split);
+  assert.equal(outline.result.dayIndex,0);
+  assert.ok(outline.result.exercises.length>=1);
+  for(const slot of outline.result.exercises) {
+    assert.ok(slot.exerciseId && slot.name);
+    assert.ok(slot.sets>=1 && slot.sets<=20);
+    assert.ok(slot.repMin>=1 && slot.repMin<=slot.repMax);
+    assert.ok(slot.rirMin>=0 && slot.rirMin<=slot.rirMax);
+    assert.ok(Number.isFinite(slot.restSeconds));
+  }
+  const raw=JSON.parse(dispatchEngineJson(JSON.stringify({
+    protocolVersion:1,id:'outline-'+split,method:'workoutOutline',params:{split,dayIndex:0}
+  })));
+  assert.equal(raw.ok,true);
+  assert.deepEqual(raw.result,outline.result,'synthetic generation must be deterministic');
+}
+for(const params of [
+  {}, {split:'full_body',dayIndex:-1},{split:'full_body',dayIndex:3},
+  {split:'custom',dayIndex:0},{split:'upper_lower',dayIndex:4},
+  {split:'full_body',dayIndex:0,history:[]},
+  {split:'full_body',dayIndex:0,config:{goal:'strength'}},
+  {split:'ppl',dayIndex:0},{split:'full_body',dayIndex:0.5}
+]) {
+  const invalid=call('workoutOutline',params);
+  assert.equal(invalid.ok,false,JSON.stringify(params));
+  assert.equal(invalid.error.code,'INVALID_REQUEST');
+}
 
 console.log('PASS canonical JS bridge v1 handshake, read-only progression fixtures, strict bounds and fail-closed methods');

@@ -158,7 +158,9 @@ assert.ok(train.includes('var showSkipExercise by rememberSaveable(plan.session.
   shell.includes('onCorrectSet,onSkipExercise') &&
   host.includes('fun skipRemainingExercise(exerciseIndex: Int)') &&
   host.includes('owner.recoverIssuedSession(recovery)') &&
-  host.includes('NativeSessionSkipPolicy.remaining(active.journal,exerciseIndex)') &&
+  host.includes('NativeSessionSkipPolicy.remaining(it,exerciseIndex)') &&
+  host.includes('private fun skipSelectedIssuedSlots(') &&
+  host.includes('for(slot in select(active.journal))') &&
   host.includes('recovery.recordSet(active.plan.session,active.journal.revision,intent)') &&
   host.includes('JournalSetDisposition.SKIPPED,null') &&
   host.includes('it.copy(workout=active,workoutBusy=true)') &&

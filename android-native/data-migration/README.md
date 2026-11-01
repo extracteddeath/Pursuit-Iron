@@ -33,3 +33,29 @@ in the Android preview. The test suite uses only invented data and canonical
 `mergeStores` outcomes, including equal/newer tombstones and resurrection.
 For future Android use the snapshot provenance, device-safe reading, complete
 data lifecycle, and native DTO decoding still require independent acceptance.
+
+## Source-bound program structure transport (no app import)
+
+The **inactive** `read-only-program-transport.mjs` projects only bounded
+saved-program metadata from exact canonical **v13** bytes. The caller supplies
+a `ReadOnlyProgramReference` for the same current snapshot. The canonical
+`parseStoredData` validates the source; exact snapshot SHA-256, saved-program
+edit clock and tombstones are rechecked before projection.
+
+The payload contains: read-only/source/schema markers, exact snapshot
+reference, program ID/name, goal/custom status/weeks, and ordered day IDs,
+labels and stable exercise IDs. It contains **no working loads, rep targets,
+RIR, history, personal records or write instructions**. Ambiguous or malformed
+structure fails closed; unrecognized layouts are not guessed or normalized.
+
+`domain-contract/ReadOnlyProgramTransportCodec.kt` independently checks
+the exact keys, all scalar types, bounds, source and expected reference.
+The same wholly synthetic v13 snapshot and wire envelope are tested by Node
+and Kotlin via `src/test/resources/read-only-transport-golden.json`.
+
+**Remaining barriers:** native source acquisition/import consent, authentic
+snapshot provenance, current-store revision/tombstone revalidation on device,
+lifecycle refresh, access controls, privacy review and full device acceptance.
+The app does not call this code, show personal data, store the snapshot or
+unlock workout execution. Do not use this diagnostic payload to drive
+prescriptions or analytics.

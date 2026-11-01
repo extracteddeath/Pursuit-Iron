@@ -6,7 +6,8 @@ import java.util.Collections
 /** Issued targets and UI projections; no training calculations live in Kotlin. */
 data class NativeWorkoutSet(
     val slot: JournalSetSlot,val load: String,val reps: String,
-    val targetReps: String,val targetRir: String?,val last: String?
+    val targetReps: String,val targetRir: String?,val last: String?,
+    val isExtension: Boolean=false,val kind: String?=null,val extensionRestSeconds: Int?=null
 )
 data class NativeWorkoutExercise(
     val index: Int,val id: String,val name: String,val restSeconds: Int,
@@ -73,26 +74,44 @@ object NativeWorkoutCodec {
             val previous=row.getJSONArray("previous");require(previous.length() in 0..20)
             val sets=row.getJSONArray("sets");require(sets.length() in 1..40)
             val warmups=ArrayList<String>();val work=ArrayList<NativeWorkoutSet>()
+            var mainOrdinal=0
+            var reachedExtension=false
             for(j in 0 until sets.length()) {
                 val set=sets.getJSONObject(j)
-                require(set.get("warm") is Boolean && set.get("done")==false && set.get("auto")==true && !set.optBoolean("sub",false))
+                require(set.get("warm") is Boolean && set.get("done")==false && set.get("auto")==true)
+                val extension=set.optBoolean("sub",false)
+                require(!set.has("sub") || set.get("sub") is Boolean)
                 val load=wire.text(set,"weight");val reps=wire.text(set,"reps")
                 require(load.length<=16 && reps.length<=16)
-                if(set.getBoolean("warm"))warmups+="$load ${session.unit} × $reps"
-                else {
-                    val target=set.getJSONObject("target");val trace=target.getJSONObject("decisionTrace")
-                    require(wire.integer(trace,"schemaVersion")==1L && trace.get("programId")==session.programRevision.programId &&
-                        trace.get("dayId")==session.dayId && trace.get("exerciseId")==exerciseId &&
-                        wire.integer(trace,"slot")==index && wire.integer(trace,"weekIndex")==session.weekIndex.toLong() &&
-                        wire.integer(trace,"workingSetIndex")==work.size.toLong())
+                if(set.getBoolean("warm")) {
+                    require(!extension && !reachedExtension)
+                    warmups+="$load ${session.unit} × $reps"
+                } else {
+                    val target=set.getJSONObject("target")
+                    val kind=if(extension)wire.text(set,"kind") else null
+                    val rest=if(extension)wire.integer(target,"rest").toInt() else null
+                    if(extension) {
+                        reachedExtension=true
+                        require(kind in setOf("myo","drop") && rest in 1..60 &&
+                            !target.has("decisionTrace") && set.get("prescribed")==true)
+                    } else {
+                        require(!reachedExtension)
+                        val trace=target.getJSONObject("decisionTrace")
+                        require(wire.integer(trace,"schemaVersion")==1L && trace.get("programId")==session.programRevision.programId &&
+                            trace.get("dayId")==session.dayId && trace.get("exerciseId")==exerciseId &&
+                            wire.integer(trace,"slot")==index && wire.integer(trace,"weekIndex")==session.weekIndex.toLong() &&
+                            wire.integer(trace,"workingSetIndex")==mainOrdinal.toLong())
+                    }
                     val targetReps=wire.text(target,"reps");val rir=if(target.isNull("rir"))null else wire.text(target,"rir")
                     require(targetReps.length in 1..40 && (rir==null || rir.length<=40))
-                    val last=if(work.size<previous.length())previous.getJSONObject(work.size).let { p->
+                    val last=if(!extension && mainOrdinal<previous.length())previous.getJSONObject(mainOrdinal).let { p->
                         "${wire.text(p,"load")} ${wire.text(p,"unit")} × ${wire.integer(p,"reps")}" } else null
-                    work+=NativeWorkoutSet(JournalSetSlot(index.toInt(),work.size,exerciseId),load,reps,targetReps,rir,last)
+                    if(!extension)mainOrdinal++
+                    work+=NativeWorkoutSet(JournalSetSlot(index.toInt(),work.size,exerciseId),load,reps,targetReps,rir,last,
+                        extension,kind,rest)
                 }
             }
-            require(work.size in 1..20)
+            require(mainOrdinal in 1..20 && work.size in 1..20)
             NativeWorkoutExercise(index.toInt(),exerciseId,name,rest.toInt(),row.getBoolean("superset"),
                 Collections.unmodifiableList(warmups),Collections.unmodifiableList(work))
         }

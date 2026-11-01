@@ -65,7 +65,9 @@ internal fun NativeWorkoutScreen(
     }
     PursuitCard {
         Text(exercise.name,style=MaterialTheme.typography.headlineSmall)
-        Text("Rest ${exercise.restSeconds} seconds between working sets" + if(exercise.superset)" · Superset" else "")
+        if(exercise.superset)Text("Superset pairing",style=MaterialTheme.typography.labelMedium)
+        NativeRestTimer(plan.session.workoutId, exercise.restSeconds,
+            enabled=!state.workoutBusy && !journal.isFinished)
         if(exercise.warmups.isNotEmpty()) {
             Text("Warm-up targets",style=MaterialTheme.typography.titleSmall)
             exercise.warmups.forEach { Text(it,style=MaterialTheme.typography.bodyMedium) }

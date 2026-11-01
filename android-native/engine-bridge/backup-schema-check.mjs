@@ -50,3 +50,60 @@ export function canonicalBackupSchemaCheck(params) {
     counts
   });
 }
+
+/**
+ * Explicit backup-only PROGRAM INVENTORY, never a live program projection.
+ * Returns bounded display metadata; no exercises, history, load, RIR,
+ * storage writes, or permission to activate a program.
+ */
+const programId = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+const safeName = name => typeof name === 'string' && name.trim().length > 0 &&
+  name.length <= 120 && !/[\x00-\x1f\x7f-\x9f]/.test(name);
+const own = (v, k) => Object.prototype.hasOwnProperty.call(v, k);
+
+export function canonicalBackupProgramInventory(params) {
+  const schema = canonicalBackupSchemaCheck(params);
+  const store = parseStoredData(params.rawSnapshot); // same canonical schema owner
+  if (store.saved.length > 24) throw new TypeError('Too many saved programs for bounded preview');
+  const seen = new Set();
+  const programs = [];
+  for (const program of store.saved) {
+    if (!plain(program) || typeof program.id !== 'string' ||
+        !programId.test(program.id) || seen.has(program.id) ||
+        !clock(program.updatedAt))
+      throw new TypeError('Ambiguous program revision in backup');
+    seen.add(program.id);
+    const tomb = own(store.tombs, program.id) ? store.tombs[program.id] : null;
+    if (tomb !== null && !clock(tomb))
+      throw new TypeError('Invalid program deletion clock');
+    if (tomb !== null && tomb >= program.updatedAt) continue;
+    if (!safeName(program.name) || !Array.isArray(program.days) ||
+        program.days.length < 1 || program.days.length > 7)
+      throw new TypeError('Invalid active backup program');
+    let exerciseSlots = 0;
+    for (const day of program.days) {
+      if (!plain(day) || !Array.isArray(day.exercises) ||
+          day.exercises.length > 30)
+        throw new TypeError('Invalid saved-program day');
+      exerciseSlots += day.exercises.length;
+    }
+    programs.push({
+      id: program.id,
+      name: program.name,
+      updatedAt: program.updatedAt,
+      trainingDays: program.days.length,
+      exerciseSlots
+    });
+  }
+  return Object.freeze({
+    source: BACKUP_PROBE_SOURCE,
+    readOnly: true,
+    validation: 'canonical-v13-backup-program-inventory',
+    snapshotOnly: true,
+    imported: false,
+    approvedForWorkoutExecution: false,
+    storeVersion: schema.storeVersion,
+    storeSavedAt: store.savedAt,
+    programs
+  });
+}

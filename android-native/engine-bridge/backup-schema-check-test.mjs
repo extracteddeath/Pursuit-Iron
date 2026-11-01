@@ -48,3 +48,45 @@ assert.equal(JSON.parse(dispatchEngineJson(JSON.stringify({
 assert.equal(dispatchEngineRequest({protocolVersion:1,id:'schema-1',
   method:'backupSchemaCheck',params:{rawSnapshot:snapshot}}).ok,true);
 console.log('PASS isolated canonical v13 schema probe, read-only/redacted output, strict bounds and forbidden methods');
+
+const inventory = raw => JSON.parse(call(raw,'backupProgramInventory'));
+const listed = inventory(snapshot);
+assert.equal(listed.ok,true,JSON.stringify(listed));
+assert.deepEqual(Object.keys(listed.result).sort(),[
+  'source','readOnly','validation','snapshotOnly','imported',
+  'approvedForWorkoutExecution','storeVersion','storeSavedAt','programs'
+].sort());
+assert.equal(listed.result.validation,'canonical-v13-backup-program-inventory');
+assert.equal(listed.result.snapshotOnly,true);
+assert.equal(listed.result.readOnly,true);
+assert.equal(listed.result.imported,false);
+assert.equal(listed.result.approvedForWorkoutExecution,false);
+assert.equal(listed.result.storeSavedAt,100);
+assert.deepEqual(listed.result.programs,[{
+  id:'synthetic',name:'synthetic-sensitive-name',updatedAt:42,trainingDays:1,exerciseSlots:0
+}]);
+assert.ok(!JSON.stringify(listed).includes('private-synthetic-history'),
+  'Inventory cannot project historical athlete records');
+assert.ok(!JSON.stringify(listed).includes('strength'),
+  'Inventory cannot project goal or training prescriptions');
+const withTomb = JSON.stringify({...JSON.parse(snapshot),tombs:{synthetic:42}});
+assert.deepEqual(inventory(withTomb).result.programs,[], 'equal deletion clock wins');
+assert.deepEqual(inventory(JSON.stringify({...JSON.parse(snapshot),
+  tombs:{synthetic:43}})).result.programs,[], 'newer deletion clock wins');
+assert.equal(inventory(JSON.stringify({...JSON.parse(snapshot),
+  tombs:{synthetic:41}})).result.programs.length,1,
+  'newer revision is visible only in the backup snapshot');
+assert.equal(inventory(JSON.stringify({...JSON.parse(snapshot),
+  saved:[...JSON.parse(snapshot).saved,JSON.parse(snapshot).saved]})).error.code,
+  'SCHEMA_REJECTED','duplicate revision must fail closed');
+assert.equal(inventory(JSON.stringify({...JSON.parse(snapshot),
+  saved:[{...JSON.parse(snapshot).saved[0],updatedAt:-1}]})).error.code,
+  'SCHEMA_REJECTED');
+assert.equal(inventory(JSON.stringify({...JSON.parse(snapshot),
+  tombs:{synthetic:'42'}})).error.code,'SCHEMA_REJECTED');
+assert.equal(inventory(JSON.stringify({...JSON.parse(snapshot),
+  saved:Array.from({length:25},(_,i)=>({
+    ...JSON.parse(snapshot).saved[0],id:'synthetic-'+i
+  }))})).error.code,'SCHEMA_REJECTED','cannot silently truncate program list');
+assert.equal(JSON.parse(call(snapshot,'deleteHistory')).ok,false);
+console.log('PASS canonical v13 backup-only saved-program inventory, tombstones, duplicate revisions and redaction');

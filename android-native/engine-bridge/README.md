@@ -68,3 +68,16 @@ The first Android emulator schema test exposed a packaging mismatch:
 `android-entry.mjs`. Bundle verification now runs the actual IIFE and
 requires the exported method plus a canonical v13 parse and write rejection,
 rather than trusting the source-level dispatcher alone.
+
+## Backup-only saved-program inventory (not an active Plan)
+
+`backupProgramInventory` is an explicitly separate, bounded request method
+on the same isolated large JSON channel as `backupSchemaCheck`. It calls the
+canonical `parseStoredData` owner, requires v13 revision metadata, rejects
+duplicate IDs and invalid clocks, honors equal/newer tombstones, and returns
+only up to 24 active saved-program labels, IDs, last edit clocks, training-day
+and exercise-slot counts. There are no workout loads, RIR, set targets, history,
+or commands to adopt a snapshot into the live app. If any row is ambiguous
+or any bound is exceeded, it rejects the entire operation rather than
+silently truncating or guessing. Kotlin verifies source bytes against the
+selected-file digest and independently checks the exact response schema.

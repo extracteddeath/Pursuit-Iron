@@ -92,6 +92,21 @@ public final class CanonicalJsReadOnlyServiceTest {
                 () -> CanonicalJsReadOnlyService.checkedBackupSchemaRequest(oversized.toString()));
     }
 
+    @Test public void savedProgramInventoryHasNoWriteOrExtraParamAuthority() throws Exception {
+        JSONObject input=new JSONObject().put("protocolVersion",1).put("id","i-1")
+                .put("method","backupProgramInventory")
+                .put("params",new JSONObject().put("rawSnapshot","{}"));
+        String wire=input.toString();
+        assertEquals("backupProgramInventory",
+                CanonicalJsReadOnlyService.checkedBackupInventoryRequest(wire)
+                .getString("method"));
+        assertThrows(Exception.class,() -> CanonicalJsReadOnlyService.checkedBackupInventoryRequest(
+                new JSONObject(wire).put("method","deleteHistory").toString()));
+        input.getJSONObject("params").put("undo",true);
+        assertThrows(Exception.class,() ->
+                CanonicalJsReadOnlyService.checkedBackupInventoryRequest(input.toString()));
+    }
+
     @Test public void progressionOnlyAndBoundedTransport() throws Exception {
         JSONObject request = CanonicalJsReadOnlyService.checkedPreviewRequest(VALID);
         assertEquals("progressionPreview", request.getString("method"));

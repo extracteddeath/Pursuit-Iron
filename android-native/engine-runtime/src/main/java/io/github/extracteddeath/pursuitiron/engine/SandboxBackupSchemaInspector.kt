@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron.engine
 
+import io.github.extracteddeath.pursuitiron.domain.BackupSavedProgramInventory
+import io.github.extracteddeath.pursuitiron.domain.BackupSavedProgramInventoryCodec
 import io.github.extracteddeath.pursuitiron.domain.EngineResponse
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupSchemaCodec
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupSchemaResult
@@ -16,6 +18,35 @@ import kotlin.coroutines.suspendCoroutine
  */
 class SandboxBackupSchemaInspector(private val worker: CanonicalJsReadOnlyService) {
     private val sequence = AtomicLong(0L)
+
+    suspend fun inspectPrograms(
+        sourceBytes: ByteArray,
+        previouslyScreened: UnverifiedBackupFingerprint
+    ): Result<BackupSavedProgramInventory> = suspendCoroutine { continuation ->
+        val requestId = "android-backup-programs-${sequence.incrementAndGet()}"
+        val request = try {
+            val text = ReadOnlyBackupSourceGate.exactText(sourceBytes, previouslyScreened)
+            BackupSavedProgramInventoryCodec.encode(requestId, text)
+        } catch (failure: Throwable) {
+            continuation.resume(Result.failure(failure))
+            return@suspendCoroutine
+        }
+        try {
+            worker.backupProgramInventoryAsync(request).whenComplete { raw, failure ->
+                continuation.resume(runCatching {
+                    if (failure != null) throw (failure.cause ?: failure)
+                    when (val decoded = BackupSavedProgramInventoryCodec.decode(raw, requestId)) {
+                        is EngineResponse.Success -> decoded.result
+                        is EngineResponse.Failure -> throw IllegalStateException(
+                            "Canonical backup inventory: ${decoded.error.code}"
+                        )
+                    }
+                })
+            }
+        } catch (failure: Throwable) {
+            continuation.resume(Result.failure(failure))
+        }
+    }
 
     suspend fun inspect(
         sourceBytes: ByteArray,

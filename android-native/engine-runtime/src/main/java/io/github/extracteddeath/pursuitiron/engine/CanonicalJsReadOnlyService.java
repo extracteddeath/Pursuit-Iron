@@ -158,6 +158,32 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return request;
     }
 
+    /** Dedicated inventory method cannot inherit write/preview authority. */
+    static JSONObject checkedBackupInventoryRequest(@NonNull String json) throws Exception {
+        JSONObject request = checkedBoundedBackupRequest(json, "backupProgramInventory");
+        return request;
+    }
+
+    private static JSONObject checkedBoundedBackupRequest(
+            @NonNull String json, @NonNull String method) throws Exception {
+        Objects.requireNonNull(json);
+        if (json.getBytes(StandardCharsets.UTF_8).length > 196608)
+            throw new IllegalArgumentException("Oversized backup metadata request");
+        JSONObject request = new JSONObject(json);
+        if (request.length() != 4 || request.getInt("protocolVersion") != 1 ||
+                !method.equals(request.get("method")) ||
+                !(request.get("id") instanceof String) ||
+                request.getString("id").isEmpty() || request.getString("id").length() > 128)
+            throw new IllegalArgumentException("Read-only backup metadata request required");
+        JSONObject params = request.getJSONObject("params");
+        if (params.length() != 1 || !(params.get("rawSnapshot") instanceof String))
+            throw new IllegalArgumentException("Exactly one source field required");
+        String raw = params.getString("rawSnapshot");
+        if (raw.isEmpty() || raw.length() > 65536)
+            throw new IllegalArgumentException("Unbounded source copy");
+        return request;
+    }
+
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request) throws Exception {
         return call(isolate, request, 5);
     }
@@ -165,7 +191,8 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request,
             long timeoutSeconds) throws Exception {
         String method = request.getString("method");
-        String entry = "backupSchemaCheck".equals(method)
+        String entry = ("backupSchemaCheck".equals(method) ||
+                "backupProgramInventory".equals(method))
                 ? "PursuitIronBridge.dispatchBackupSchemaJson"
                 : "PursuitIronBridge.dispatchEngineJson";
         String script = entry + "(" + JSONObject.quote(request.toString()) + ")";
@@ -195,14 +222,15 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 result.getBoolean("engineCertified"))
             throw new SecurityException("Incompatible canonical engine identity");
         JSONArray methods = result.getJSONArray("capabilities");
-        boolean hasPreview = false, hasLookup = false, hasOutline = false, hasSchemaCheck = false;
+        boolean hasPreview = false, hasLookup = false, hasOutline = false, hasSchemaCheck = false, hasInventory = false;
         for (int i = 0; i < methods.length(); i++) {
             if ("progressionPreview".equals(methods.getString(i))) hasPreview = true;
             if ("exerciseLookup".equals(methods.getString(i))) hasLookup = true;
             if ("workoutOutline".equals(methods.getString(i))) hasOutline = true;
             if ("backupSchemaCheck".equals(methods.getString(i))) hasSchemaCheck = true;
+            if ("backupProgramInventory".equals(methods.getString(i))) hasInventory = true;
         }
-        if (!hasPreview || !hasLookup || !hasOutline || !hasSchemaCheck)
+        if (!hasPreview || !hasLookup || !hasOutline || !hasSchemaCheck || !hasInventory)
             throw new SecurityException("Canonical read-only bridge capabilities unavailable");
     }
 
@@ -251,6 +279,11 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return submitReadOnly(requestJson, 3);
     }
 
+    /** Bounded snapshot-only saved-program metadata, no active-store access. */
+    public CompletableFuture<String> backupProgramInventoryAsync(@NonNull String requestJson) {
+        return submitReadOnly(requestJson, 4);
+    }
+
     private CompletableFuture<String> submitReadOnly(
             @NonNull String requestJson, boolean catalog) {
         return submitReadOnly(requestJson, catalog ? 1 : 0);
@@ -268,7 +301,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         // A bad caller cannot poison an otherwise healthy canonical sandbox.
         final JSONObject validated;
         try {
-            validated = mode == 3
+            validated = mode == 4
+                    ? checkedBackupInventoryRequest(requestJson)
+                    : mode == 3
                     ? checkedBackupSchemaRequest(requestJson)
                     : mode == 2
                     ? checkedSyntheticOutlineRequest(requestJson)
@@ -287,10 +322,22 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 }
                 try {
                     initialize();
-                    JSONObject response = call(isolate, validated, mode == 2 ? 30 : mode == 3 ? 12 : 5);
+                    JSONObject response = call(isolate, validated, mode == 2 ? 30 : mode == 3 || mode == 4 ? 12 : 5);
                     if (response.getBoolean("ok")) {
                         JSONObject value = response.getJSONObject("result");
-                        if (mode == 3) {
+                        if (mode == 4) {
+                            if (!value.getBoolean("readOnly") ||
+                                    !value.getBoolean("snapshotOnly") ||
+                                    value.getBoolean("imported") ||
+                                    value.getBoolean("approvedForWorkoutExecution") ||
+                                    value.getInt("storeVersion") != 13 ||
+                                    !"canonical-v13-backup-program-inventory".equals(
+                                            value.getString("validation")) ||
+                                    !"modules/engine-api.js:parseStoredData".equals(
+                                            value.getString("source")) ||
+                                    value.getJSONArray("programs").length() > 24)
+                                throw new SecurityException("Unexpected program inventory provenance");
+                        } else if (mode == 3) {
                             if (!value.getBoolean("readOnly") ||
                                     value.getBoolean("imported") ||
                                     value.getBoolean("approvedForWorkoutExecution") ||

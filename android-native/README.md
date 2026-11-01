@@ -54,7 +54,9 @@ The separate data-migration contract can now derive a bounded saved-program
 structure envelope from an exact canonical v13 snapshot and active reference.
 Its strict Kotlin decoder and shared synthetic fixture establish the
 language-neutral wire shape, not a native importer or trusted personal plan.
-The installable Plan view still passes `outline = null`, and no user backup is
-read or logged.
+The Plan screen now has a shared read-only Compose structure panel guarded by
+an independent current-reference/tombstone check. The installable preview
+passes no program or reference, keeps `outline = null`, and neither reads nor
+logs any user backup.
 
 The `Native Compose UI compile (no APK)` workflow compiles source edits without making a distributable build. A new installable APK is still produced only by the existing explicit `PREVIEW_MILESTONE.md` gate. Next milestones must implement a schema-validated, revision-aware **read-only user program reference** and safe data import before promoting any personalized workout outline; workout logging remains disabled.

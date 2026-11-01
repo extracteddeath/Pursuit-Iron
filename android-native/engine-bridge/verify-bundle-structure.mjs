@@ -82,6 +82,38 @@ const forbidden = JSON.parse(bridge.dispatchBackupSchemaJson(JSON.stringify({
   protocolVersion: 1, id: 'bundle-no-writes', method: 'deleteHistory', params: {}
 })));
 assert.equal(forbidden.ok, false, 'Wider schema channel must refuse write methods');
+
+const backupSnapshot = JSON.stringify({
+  ...JSON.parse(checkedSource),
+  saved: [
+    { id:'backup-active',name:'Synthetic backup view',updatedAt:42,
+      config:{goal:'strength'},days:[{id:'day-a',exercises:['bb-bench']}] },
+    { id:'backup-deleted',name:'Deleted backup entry',updatedAt:19,
+      config:{goal:'strength'},days:[{id:'day-b',exercises:[]}] }
+  ],
+  history: [{id:'synthetic-private-history'}],
+  tombs: {'backup-deleted':19}
+});
+const invWire = JSON.stringify({
+  protocolVersion:1, id:'bundle-inventory-proof',
+  method:'backupProgramInventory',params:{rawSnapshot:backupSnapshot}
+});
+const inventory = JSON.parse(bridge.dispatchBackupSchemaJson(invWire));
+assert.equal(inventory.ok,true,'Actual Android IIFE must expose the backup-only inventory');
+assert.equal(inventory.result.snapshotOnly,true);
+assert.equal(inventory.result.approvedForWorkoutExecution,false);
+assert.equal(inventory.result.programs.length,1);
+assert.equal(inventory.result.programs[0].id,'backup-active');
+assert.equal(inventory.result.programs[0].trainingDays,1);
+assert.equal(inventory.result.programs[0].exerciseSlots,1);
+assert.ok(!JSON.stringify(inventory).includes('synthetic-private-history'));
+assert.ok(!JSON.stringify(inventory).includes('Deleted backup entry'));
+const inventoryWrite = JSON.parse(bridge.dispatchBackupSchemaJson(JSON.stringify({
+  protocolVersion:1,id:'bundle-inventory-write',method:'deleteHistory',
+  params:{rawSnapshot:backupSnapshot}
+})));
+assert.equal(inventoryWrite.ok,false,'Inventory channel must not expose write operations');
+
 const sha256 = crypto.createHash('sha256').update(raw).digest('hex');
 console.log(JSON.stringify({
   bundleVerified: true,

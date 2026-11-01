@@ -69,7 +69,7 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         if (json.getBytes(StandardCharsets.UTF_8).length > 16384)
             throw new IllegalArgumentException("Oversized read-only engine request");
         JSONObject request = new JSONObject(json);
-        if (request.getInt("protocolVersion") != 1 ||
+        if (request.length() != 4 || request.getInt("protocolVersion") != 1 ||
                 !"progressionPreview".equals(request.getString("method")) ||
                 !(request.get("id") instanceof String) ||
                 request.getString("id").isEmpty() || request.getString("id").length() > 128 ||
@@ -187,6 +187,17 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
             outcome.completeExceptionally(new IllegalStateException("Canonical service is closed"));
             return outcome;
         }
+        // Invalid methods are refused before touching the worker or its lease.
+        // A bad caller cannot poison an otherwise healthy canonical sandbox.
+        final JSONObject validated;
+        try {
+            validated = catalog
+                    ? checkedExerciseLookupRequest(requestJson)
+                    : checkedPreviewRequest(requestJson);
+        } catch (Exception invalidRequest) {
+            outcome.completeExceptionally(invalidRequest);
+            return outcome;
+        }
         try {
             worker.execute(() -> {
                 if (closed.get()) {
@@ -194,11 +205,8 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                     return;
                 }
                 try {
-                    JSONObject request = catalog
-                            ? checkedExerciseLookupRequest(requestJson)
-                            : checkedPreviewRequest(requestJson);
                     initialize();
-                    JSONObject response = call(isolate, request);
+                    JSONObject response = call(isolate, validated);
                     if (response.getBoolean("ok")) {
                         JSONObject value = response.getJSONObject("result");
                         if (catalog) {

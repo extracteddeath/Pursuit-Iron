@@ -50,3 +50,5 @@ A Kotlin `SandboxProgressionBackend` now adapts the serial read-only Java worker
 The worker now exposes `lookupExercisesAsync` beside `previewAsync`, with a second native-side allowlist gate: 1–12 unique canonical IDs, exactly one `ids` parameter, strict protocol and result provenance, and a 65-KiB response limit. Both share the same single serial sandbox and never expose writes or custom/user records. The Kotlin codec validates the returned exercise data before any later UI use.
 
 The emulator lifecycle test now checks a third request through the same worker for canonical exercise metadata, preserves the original canonical IDs and missing-ID result, validates the full response through the Kotlin `ExerciseCatalogCodec`, and rejects a simulated write-method attempt. It does not load any real user exercise program.
+
+Invalid read-only requests are rejected on the calling thread **before** starting the serial worker. They do not initialize, reset or poison the sandbox, making a bad lookup safely recoverable while sandbox execution errors still fail closed. This behavior is verified by the reusable-service emulator test.

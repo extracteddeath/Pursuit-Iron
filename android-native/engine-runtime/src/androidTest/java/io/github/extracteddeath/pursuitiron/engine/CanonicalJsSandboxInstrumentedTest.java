@@ -148,10 +148,12 @@ public final class CanonicalJsSandboxInstrumentedTest {
                     instanceof io.github.extracteddeath.pursuitiron.domain.EngineResponse.Success);
             JSONObject forbidden = new JSONObject(catalogRequest.toString())
                     .put("method","deleteHistory");
-            assertTrue(service.lookupExercisesAsync(forbidden.toString())
-                    .isCompletedExceptionally() ||
-                    // Queued failures finish on worker thread, never trigger JS writes.
-                    failsEventually(service.lookupExercisesAsync(forbidden.toString())));
+            java.util.concurrent.CompletableFuture<String> refused =
+                    service.lookupExercisesAsync(forbidden.toString());
+            assertTrue("Write-capable methods are refused before JS execution",
+                    refused.isCompletedExceptionally());
+            assertEquals("Invalid input must not poison the verified sandbox",
+                    CanonicalJsReadOnlyService.State.READY_READ_ONLY,service.state());
         } finally {
             service.close();
             service.whenClosed().get(10,java.util.concurrent.TimeUnit.SECONDS);
@@ -160,14 +162,5 @@ public final class CanonicalJsSandboxInstrumentedTest {
         assertTrue(service.previewAsync(request.toString()).isCompletedExceptionally());
     }
 
-    private static boolean failsEventually(java.util.concurrent.CompletableFuture<String> future)
-            throws Exception {
-        try {
-            future.get(10,java.util.concurrent.TimeUnit.SECONDS);
-            return false;
-        } catch (java.util.concurrent.ExecutionException expected) {
-            return true;
-        }
-    }
 
 }

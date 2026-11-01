@@ -40,6 +40,7 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 return thread;
             });
     private final AtomicBoolean closed = new AtomicBoolean(false);
+    private final CompletableFuture<Void> termination = new CompletableFuture<>();
 
     private volatile State state = State.UNCONNECTED;
     private JavaScriptSandbox sandbox;  // only accessed on worker thread
@@ -54,6 +55,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
     }
 
     @NonNull public State state() { return state; }
+
+    /** Nonblocking signal that close actually released the process-scoped sandbox. */
+    @NonNull public CompletableFuture<Void> whenClosed() { return termination; }
 
     /**
      * This is transport validation, not an engine prescription.
@@ -203,7 +207,10 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         try {
             worker.execute(() -> {
                 try { releaseOnWorker(); }
-                finally { state = State.CLOSED; }
+                finally {
+                    state = State.CLOSED;
+                    termination.complete(null);
+                }
             });
         } finally {
             worker.shutdown();

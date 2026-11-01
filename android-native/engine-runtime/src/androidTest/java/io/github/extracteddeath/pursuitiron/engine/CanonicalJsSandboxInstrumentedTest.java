@@ -91,4 +91,41 @@ public final class CanonicalJsSandboxInstrumentedTest {
         }
     }
 
+    @Test public void readOnlyServiceReusesVerifiedSandboxAndCloses() throws Exception {
+        Context test = InstrumentationRegistry.getInstrumentation().getContext();
+        Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        byte[] bundle = asset(test, "canonical-engine.js");
+        String pin = new String(asset(test,"canonical-engine.sha256"),
+                StandardCharsets.UTF_8).trim();
+        JSONObject golden = new JSONObject(new String(asset(test,"progression-golden.json"),
+                StandardCharsets.UTF_8));
+        JSONObject first = golden.getJSONArray("cases").getJSONObject(0);
+        CanonicalJsReadOnlyService service = new CanonicalJsReadOnlyService(app,bundle,pin);
+        assertEquals(CanonicalJsReadOnlyService.State.UNCONNECTED,service.state());
+        JSONObject request = new JSONObject()
+                .put("protocolVersion",1).put("id","service-case-1")
+                .put("method","progressionPreview")
+                .put("params",first.getJSONObject("params"));
+        try {
+            String result = service.previewAsync(request.toString())
+                    .get(35,java.util.concurrent.TimeUnit.SECONDS);
+            assertTrue("Read-only service returned a failure",new JSONObject(result).getBoolean("ok"));
+            assertEquals(CanonicalJsReadOnlyService.State.READY_READ_ONLY,service.state());
+            assertTrue(io.github.extracteddeath.pursuitiron.domain.EngineJsonCodec.INSTANCE
+                    .decodeProgressionPreview(result,"service-case-1")
+                    instanceof io.github.extracteddeath.pursuitiron.domain.EngineResponse.Success);
+            request.put("id","service-case-2");
+            String repeated = service.previewAsync(request.toString())
+                    .get(10,java.util.concurrent.TimeUnit.SECONDS);
+            assertTrue(new JSONObject(repeated).getBoolean("ok"));
+            assertEquals("service-case-2",new JSONObject(repeated).getString("id"));
+            assertEquals(CanonicalJsReadOnlyService.State.READY_READ_ONLY,service.state());
+        } finally {
+            service.close();
+            service.whenClosed().get(10,java.util.concurrent.TimeUnit.SECONDS);
+        }
+        assertEquals(CanonicalJsReadOnlyService.State.CLOSED,service.state());
+        assertTrue(service.previewAsync(request.toString()).isCompletedExceptionally());
+    }
+
 }

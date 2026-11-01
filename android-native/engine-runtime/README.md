@@ -42,3 +42,5 @@ A real emulator trace verified that Android JavaScriptEngine lacks the `structur
 ## Reusable disconnected read-only worker
 
 `CanonicalJsReadOnlyService` manages a single-worker AndroidX sandbox lifecycle: external bundle SHA-256 verification, handshake, bounded read-only progression JSON requests, fail-closed errors, an exclusive per-process sandbox lease, and non-blocking cleanup. The class is **not connected to Compose or workout data**; its outputs are unapproved diagnostics until independently routed through the pinned Kotlin feature gate. It intentionally has no retry on engine failure and no write-capable methods. The next instrumented device milestone must verify reuse, explicit close and crash behavior before any user-facing integration.
+
+The next emulator milestone also validates the **reusable read-only service**: it loads a pinned bundle once, performs two canonical progression calls with distinct request IDs, decodes a result via the strict Kotlin codec, explicitly closes the worker and awaits confirmed sandbox lease release. This checks real lifecycle reuse without enabling the engine in Compose.

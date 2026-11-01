@@ -79,25 +79,12 @@ internal fun BackupSavedProgramInventoryPanel(inventory: BackupSavedProgramInven
                     }
                     if (expandedProgramId == entry.id) {
                         entry.days.forEachIndexed { dayIndex, day ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    day.label ?: "Day ${dayIndex + 1}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    "${day.exerciseSlots} exercises",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            ReadOnlyTrainingDayRow(
+                                dayIndex = dayIndex,
+                                title = day.label ?: ("Day " + (dayIndex + 1)),
+                                exerciseCount = day.exerciseSlots,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
                         }
                     }
                 }

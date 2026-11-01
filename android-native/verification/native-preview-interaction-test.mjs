@@ -89,6 +89,15 @@ assert.ok(activity.includes('readOnlyVerifier?.close()') &&
   'Read-only bundle must load off the first frame, close on destruction, and never leak cancelled results');
 
 const backupInventoryUi = fs.readFileSync(root + 'BackupSavedProgramInventoryPanel.kt','utf8');
+const approvedProgramUi = fs.readFileSync(root + 'SavedProgramOverviewPanel.kt','utf8');
+assert.ok(components.includes('internal fun ReadOnlyTrainingDayRow(') &&
+  components.includes('MaterialTheme.shapes.small') &&
+  backupInventoryUi.includes('ReadOnlyTrainingDayRow(') &&
+  approvedProgramUi.includes('ReadOnlyTrainingDayRow(') &&
+  !components.includes('ReadOnlyProgramTransportCodec') &&
+  !components.includes('CurrentReadOnlyPlanSource'),
+  'Current and backup Plan rows must reuse one M3 presentation without merging authority');
+
 assert.ok(backupInventoryUi.includes('BACKUP COPY · NOT YOUR ACTIVE PLAN') &&
   backupInventoryUi.includes('MaterialTheme.shapes.large') &&
   backupInventoryUi.includes('surfaceContainerHigh') &&

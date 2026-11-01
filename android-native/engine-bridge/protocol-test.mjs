@@ -99,4 +99,33 @@ assert.equal(JSON.parse(dispatchEngineJson(JSON.stringify({
   protocolVersion:1,id:'lookup-json',method:'exerciseLookup',params:{ids:['bb-bench']}
 }))).result.exercises[0].id,'bb-bench');
 
+
+let coveredCatalog = 0;
+const projectedIds = new Set();
+for (let i = 0; i < canonical.EXERCISES.length; i += 12) {
+  const page = canonical.EXERCISES.slice(i,i+12);
+  const query = call('exerciseLookup',{ids:page.map(ex=>ex.id)});
+  assert.equal(query.ok,true,'canonical page '+i+' must project without schema drift');
+  assert.equal(query.result.exercises.length,page.length);
+  assert.deepEqual(query.result.missingIds,[]);
+  for(let j=0;j<page.length;j++) {
+    const result=query.result.exercises[j], source=page[j];
+    assert.equal(result.id,source.id);
+    assert.equal(result.name,source.name);
+    assert.equal(result.part,source.part);
+    assert.equal(result.type,source.type);
+    assert.deepEqual(result.equipment,source.equip);
+    assert.equal(result.repMin,source.rep[0]);
+    assert.equal(result.repMax,source.rep[1]);
+    assert.equal(result.pattern,source.pattern ?? null);
+    assert.deepEqual(Object.keys(result).sort(),[
+      'id','name','part','type','equipment','repMin','repMax','pattern'
+    ].sort(),'no hidden properties or user metadata allowed');
+    assert.ok(!projectedIds.has(result.id),'canonical IDs must be stable and unique');
+    projectedIds.add(result.id);
+    coveredCatalog++;
+  }
+}
+assert.equal(coveredCatalog,canonical.EXERCISES.length,'all first-party catalog entries projected');
+
 console.log('PASS canonical JS bridge v1 handshake, read-only progression fixtures, strict bounds and fail-closed methods');

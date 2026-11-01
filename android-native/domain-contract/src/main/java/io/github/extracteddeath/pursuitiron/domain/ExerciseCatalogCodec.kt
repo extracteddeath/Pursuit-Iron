@@ -79,7 +79,7 @@ object ExerciseCatalogCodec {
         }
         val result = envelope.getJSONObject("result")
         require(string(result, "source", 160) == SOURCE)
-        require(result.get("readOnly") === true) { "Unapproved writable catalog result" }
+        require(result.get("readOnly") is Boolean && result.getBoolean("readOnly")) { "Unapproved writable catalog result" }
         val records = result.getJSONArray("exercises")
         require(records.length() <= requestedIds.size)
         val exercises = (0 until records.length()).map { i ->
@@ -88,9 +88,16 @@ object ExerciseCatalogCodec {
             require(idPattern.matches(id))
             val kind = string(ex,"type",32)
             require(kind == "compound" || kind == "isolation")
-            val lower = ex.getInt("repMin")
-            val upper = ex.getInt("repMax")
-            require(lower in 1..100 && upper in lower..100)
+            fun strictRep(key: String): Int {
+                val raw = ex.get(key)
+                require(raw is Number && raw.toDouble().isFinite())
+                val value = raw.toDouble()
+                require(value in 1.0..100.0 && value == value.toInt().toDouble())
+                return value.toInt()
+            }
+            val lower = strictRep("repMin")
+            val upper = strictRep("repMax")
+            require(upper >= lower)
             val equipment = stringArray(ex,"equipment",20)
             val pattern = ex.get("pattern").let { raw ->
                 if (raw === JSONObject.NULL) null

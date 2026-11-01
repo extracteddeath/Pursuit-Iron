@@ -47,6 +47,7 @@ class ExerciseCatalogCodecTest {
         reject(body.replace("catalog-test","wrong-request"))
         reject(body.replace("modules/engine-api.js:EXERCISES","untrusted"))
         reject(body.replace("\"repMin\":5","\"repMin\":15"))
+        reject(body.replace("\"repMin\":5","\"repMin\":5.5"))
         reject(body.replace("\"id\":\"bb-bench\"","\"id\":\"unknown\""))
         reject(body.replace("\"not-a-real-exercise\"","\"bb-bench\""))
         reject(body.replace("\"type\":\"compound\"","\"type\":\"other\""))

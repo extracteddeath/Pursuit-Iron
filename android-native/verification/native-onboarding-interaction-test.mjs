@@ -46,6 +46,16 @@ assert.ok(train.includes('var showLast by rememberSaveable(plan.session.workoutI
   train.includes('if(showLast)Text(set.last?.let') &&
   train.includes('LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size}'),
   'Last/target is a single session-scoped presentation choice and progress counts acknowledged sets only');
+assert.ok(train.includes('val setDraftStates=rememberSaveableStateHolder()') &&
+  train.includes('setDraftStates.SaveableStateProvider(') &&
+  train.includes('${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}') &&
+  train.includes('NativeWorkingSet(plan.session,set,commit'),
+  'Exercise navigation must not destroy another set’s unsaved load/reps/RIR draft');
+assert.ok(train.includes('input.length<=10 && input.all { ch->ch.isDigit() || ch==\'.\' }') &&
+  train.includes('input.length<=3 && input.all(Char::isDigit)') &&
+  train.includes('input.length<=2 && input.all(Char::isDigit)') &&
+  train.includes('validLoad && repCount!=null'),
+  'Native set edits remain bounded and cannot be committed with invalid load or reps');
 assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCount),effort)') &&
   train.includes('var rir by rememberSaveable { mutableStateOf("") }') &&
   train.includes('if(journal.isFinished)onFinish() else showFinishReview=true'),

@@ -71,4 +71,18 @@ assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCou
   train.includes('var rir by rememberSaveable { mutableStateOf("") }') &&
   train.includes('if(journal.isFinished)onFinish() else showFinishReview=true'),
   'The review must not synthesize actual RIR or block an exact retry of a durably finished session');
-console.log('PASS native onboarding draft retention, canonical options, review/save separation, single-owner restore and logging gate, plus real-workout safe navigation and confirmation');
+// Insights may only display a previously committed canonical receipt, not
+// estimate achievements from demo controls or from an unfinished workout.
+assert.ok(shell.includes('NativeDestination.INSIGHTS -> InsightsScreen(onboarding)') &&
+  screens.includes('internal fun InsightsScreen(state: NativeRuntimeState?)') &&
+  screens.includes('val receipt=state?.completion') &&
+  screens.includes('saved?.program?.days?.firstOrNull { it.id==id }?.label') &&
+  screens.includes('if(receipt!=null)') &&
+  screens.includes('NO VERIFIED NATIVE COMPLETION') &&
+  !screens.includes('YOUR RECORD", "Progress with context.",\n        "No fabricated personal bests or charts. Your history will appear'),
+  'Native Insights must distinguish a confirmed completion from missing/imported history');
+assert.ok(host.includes('val completion=owner.lastCompletionReceipt()') &&
+  host.includes('Starting another workout cannot erase the last durable completion receipt.') &&
+  !host.includes('workoutError=null,completion=null'),
+  'Starting the next workout must not hide the previous confirmed history receipt');
+console.log('PASS native onboarding draft retention, canonical options, review/save separation, single-owner restore and logging gate, plus real-workout safe navigation, timer and confirmed history');

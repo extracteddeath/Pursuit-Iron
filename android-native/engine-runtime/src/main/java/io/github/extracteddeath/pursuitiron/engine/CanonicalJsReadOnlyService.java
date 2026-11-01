@@ -215,6 +215,7 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         String programId = params.getString("programId");
         String sha = params.getString("snapshotSha256");
         byte[] bytes = raw.getBytes(StandardCharsets.UTF_8);
+        try {
         if (bytes.length == 0 || bytes.length > ReadOnlyBackupLimits.MAX_SOURCE_BYTES ||
                 raw.length() > ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS ||
                 !programId.matches("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$") ||
@@ -232,6 +233,11 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 sha.getBytes(StandardCharsets.US_ASCII)))
             throw new SecurityException("Snapshot SHA does not match current-program source");
         return request;
+        } finally {
+            // The raw String is immutable, but do not retain an extra
+            // sensitive UTF-8 byte copy after hashing, even on failure.
+            java.util.Arrays.fill(bytes, (byte) 0);
+        }
     }
 
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request) throws Exception {

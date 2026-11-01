@@ -262,6 +262,9 @@ assert.ok(currentCodec.includes('ReadOnlyProgramTransportCodec.decode(json, refe
   currentSandbox.includes('worker.currentProgramProjectionAsync(wire)') &&
   currentWorker.includes('checkedCurrentProgramProjectionRequest(') &&
   currentWorker.includes('MessageDigest.isEqual(') &&
+  currentWorker.includes('java.util.Arrays.fill(bytes, (byte) 0)') &&
+  currentCodec.includes('bytes.fill(0)') &&
+  currentCodec.includes('original.fill(0)') &&
   currentWorker.includes('currentProgramProjectionAsync(') &&
   !shell.includes('SandboxCanonicalCurrentPlanProjector(') &&
   !activity.includes('SandboxCanonicalCurrentPlanProjector('),

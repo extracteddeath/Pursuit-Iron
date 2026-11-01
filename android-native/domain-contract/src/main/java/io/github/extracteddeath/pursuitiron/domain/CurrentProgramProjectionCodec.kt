@@ -26,6 +26,7 @@ object CurrentProgramProjectionCodec {
         require(requestId.isNotBlank() && requestId.length <= 128)
         require(id.matches(programId))
         val bytes = exactSnapshot.toByteArray(Charsets.UTF_8)
+        return try {
         require(bytes.isNotEmpty() && bytes.size <= ReadOnlyBackupLimits.MAX_SOURCE_BYTES)
         require(exactSnapshot.length <= ReadOnlyBackupLimits.MAX_SOURCE_CHARACTERS)
         return JSONObject()
@@ -39,6 +40,9 @@ object CurrentProgramProjectionCodec {
             .toString().also {
                 require(it.toByteArray(Charsets.UTF_8).size <= ReadOnlyBackupLimits.MAX_WIRE_BYTES)
             }
+        } finally {
+            bytes.fill(0)
+        }
     }
 
     fun decode(
@@ -67,6 +71,7 @@ object CurrentProgramProjectionCodec {
         )
         // SHA covers the exact original UTF-8 text, not parsed/re-serialized JSON.
         val original = exactSnapshot.toByteArray(Charsets.UTF_8)
+        return try {
         require(original.isNotEmpty() && original.size <= ReadOnlyBackupLimits.MAX_SOURCE_BYTES)
         require(reference.programId == requestedProgramId &&
             reference.snapshotSha256 == sha256(original) &&
@@ -76,8 +81,11 @@ object CurrentProgramProjectionCodec {
         require(safe.reference == reference)
         // Explicit JS contract rejects any equal/newer tombstone. A different
         // current store revision is caught by the outer current-source gate.
-        return CanonicalCurrentPlanFrame(
+        CanonicalCurrentPlanFrame(
             reference, CurrentProgramDeletionEvidence.CheckedAbsent, json
         )
+        } finally {
+            original.fill(0)
+        }
     }
 }

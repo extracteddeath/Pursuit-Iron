@@ -80,4 +80,18 @@ class ReadOnlyBackupCandidateReaderTest {
         assertEquals(1,screened.bytes[0].toInt())
         screened.bytes.fill(0)
     }
+    @Test fun cancellationStopsAReadInProgressClosesTheSourceAndReturnsNoCandidate() {
+        val source = Tracked(ByteArrayInputStream(ByteArray(96 * 1024)))
+        val cancelled = IllegalStateException("synthetic cancellation")
+        var checkpoints = 0
+        val failure = runCatching {
+            ReadOnlyBackupCandidateReader.screen(source, checkActive = {
+                if (++checkpoints == 4) throw cancelled
+            })
+        }.exceptionOrNull()
+        assertSame(cancelled, failure)
+        assertTrue("Provider stream must close on cancellation", source.closed)
+        assertEquals("Cancellation must interrupt before whole copy is read", 4, checkpoints)
+    }
+
 }

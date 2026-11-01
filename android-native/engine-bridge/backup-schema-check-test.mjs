@@ -107,7 +107,7 @@ assert.ok(!JSON.stringify(inventory(daySnapshot)).includes('bb-bench'));
 assert.ok(!JSON.stringify(inventory(daySnapshot)).includes('db-press'));
 const invalidLabel = JSON.stringify({...JSON.parse(daySnapshot),saved:[{
   ...JSON.parse(daySnapshot).saved[0],
-  days:[{id:'day-a',label:'Bad\\u0000Label',exercises:[]}]
+  days:[{id:'day-a',label:'Bad'+String.fromCharCode(0)+'Label',exercises:[]}]
 }]});
 assert.equal(inventory(invalidLabel).error.code,'SCHEMA_REJECTED');
 assert.equal(inventory(JSON.stringify({...JSON.parse(daySnapshot),saved:[{

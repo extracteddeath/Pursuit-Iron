@@ -87,6 +87,25 @@ assert.ok(shell.includes('UnconnectedCurrentReadOnlyPlanSource') &&
   shell.includes('else ReadOnlyProgramPresentation.Unavailable'),
   'Plan navigation must invalidate old content without giving backups authority');
 
+const syntheticReader = fs.readFileSync(root + 'CanonicalBackupSchemaVerifier.kt', 'utf8');
+const syntheticPanel = fs.readFileSync(root + 'SyntheticCanonicalWorkoutPanel.kt', 'utf8');
+assert.ok(syntheticReader.includes('internal interface CanonicalSyntheticOutlineReader') &&
+  packaged.includes('SandboxWorkoutOutline(worker)') &&
+  packaged.includes('outlines.inspect(split, dayIndex)') &&
+  shell.includes('syntheticOutlineReader = syntheticOutlineReader') &&
+  activity.includes('syntheticOutlineReader = readOnlyVerifier') &&
+  screens.includes('SyntheticCanonicalWorkoutPanel(reader = syntheticOutlineReader)') &&
+  syntheticPanel.includes('LaunchedEffect(reader, request)') &&
+  syntheticPanel.includes('withContext(Dispatchers.IO)') &&
+  syntheticPanel.includes('OutlinePresentationPolicy.inspect(it) is OutlinePresentation.SyntheticOnly') &&
+  syntheticPanel.includes('WorkoutOutlinePanel(outline = outline)') &&
+  syntheticPanel.includes('enabled = reader != null && !loading') &&
+  syntheticPanel.includes('request = null') &&
+  syntheticPanel.includes('if (isActive)') &&
+  !syntheticPanel.includes('SharedPreferences') &&
+  !syntheticPanel.includes('Complete set') &&
+  !syntheticPanel.includes('onCompleteSet'),
+  'Canonical synthetic Train explorer must use only the existing pinned worker, gate displays and never enable a workout');
 assert.ok(packaged.includes('CanonicalJsSandboxProbe.verifyBundleBytes(binary, expected)') &&
   packaged.includes('SandboxBackupSchemaInspector(worker)') &&
   packaged.includes('openIfPackaged(context: Context)'),

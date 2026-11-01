@@ -114,3 +114,27 @@ This is intentionally an end-to-end read-only navigation path, NOT a working
 logger; the old explicitly labeled demo remains separate for users with
 no verified current program. No active store is connected in the installable
 preview, so synthetic demo UI is unaffected and no program is saved.
+
+
+## Canonical synthetic Train exploration (read-only device path)
+
+The native Train tab now has an optional, explicitly synthetic session explorer
+backed by the app's preexisting locally SHA-checked canonical JavaScript sandbox.
+Only a finite set of predetermined split/day pairs may enter the existing
+SandboxWorkoutOutline operation. The strict Kotlin WorkoutOutlineCodec and
+OutlinePresentationPolicy inspect outputs before the existing Material 3
+WorkoutOutlinePanel renders exercise names, working-set counts, rep/RIR ranges,
+rest, and order. There is no duplicate Kotlin generator or new sandbox service.
+Requests run off-main; navigation and choice changes discard old results.
+
+The ordinary native source checkout deliberately packages no canonical bundle,
+so this action remains disabled unless a separately verified local debug
+bundle is supplied. Even when available it is a synthetic test, not an
+individual's session or a certified prescription. It never touches current
+store, backup import, saved workout logs, equipment overrides or PR history.
+The interactive sample set editor is a separate, clearly labeled demo.
+
+Next meaningful product gate: current athlete program and history must be
+owned by a verified Android store, actual session selections must be
+canonical and feature parity-certified, and set completion needs transactional
+storage with resume/recovery before the Train tab can log anything real.

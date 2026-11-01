@@ -78,6 +78,34 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return request;
     }
 
+    /** Native-bound catalog lookup is limited to canonical IDs; no program or user history. */
+    static JSONObject checkedExerciseLookupRequest(@NonNull String json) throws Exception {
+        Objects.requireNonNull(json);
+        if (json.getBytes(StandardCharsets.UTF_8).length > 16384)
+            throw new IllegalArgumentException("Oversized exercise catalog request");
+        JSONObject request = new JSONObject(json);
+        if (request.length() != 4 || request.getInt("protocolVersion") != 1 ||
+                !"exerciseLookup".equals(request.getString("method")) ||
+                !(request.get("id") instanceof String) ||
+                request.getString("id").isEmpty() || request.getString("id").length() > 128)
+            throw new IllegalArgumentException("Only bounded canonical exercise lookups permitted");
+        JSONObject params = request.getJSONObject("params");
+        if (params.length() != 1 || !params.has("ids"))
+            throw new IllegalArgumentException("Lookup must include only IDs");
+        JSONArray ids = params.getJSONArray("ids");
+        if (ids.length() < 1 || ids.length() > 12)
+            throw new IllegalArgumentException("Exercise lookup count out of bounds");
+        java.util.HashSet<String> seen = new java.util.HashSet<>();
+        for (int i = 0; i < ids.length(); i++) {
+            Object raw = ids.get(i);
+            if (!(raw instanceof String) ||
+                    !((String)raw).matches("^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$") ||
+                    !seen.add((String)raw))
+                throw new IllegalArgumentException("Invalid or repeated canonical exercise ID");
+        }
+        return request;
+    }
+
     private static JSONObject call(JavaScriptIsolate isolate, JSONObject request) throws Exception {
         String script = "PursuitIronBridge.dispatchEngineJson(" +
                 JSONObject.quote(request.toString()) + ")";
@@ -107,11 +135,13 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 result.getBoolean("engineCertified"))
             throw new SecurityException("Incompatible canonical engine identity");
         JSONArray methods = result.getJSONArray("capabilities");
-        boolean hasPreview = false;
-        for (int i = 0; i < methods.length(); i++)
+        boolean hasPreview = false, hasLookup = false;
+        for (int i = 0; i < methods.length(); i++) {
             if ("progressionPreview".equals(methods.getString(i))) hasPreview = true;
-        if (!hasPreview)
-            throw new SecurityException("Read-only progression preview unavailable");
+            if ("exerciseLookup".equals(methods.getString(i))) hasLookup = true;
+        }
+        if (!hasPreview || !hasLookup)
+            throw new SecurityException("Canonical read-only bridge capabilities unavailable");
     }
 
     /** Runs only on the dedicated worker. No automatic retry on failure. */
@@ -142,6 +172,16 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
      * bypass the independently certified Kotlin per-feature gate.
      */
     public CompletableFuture<String> previewAsync(@NonNull String requestJson) {
+        return submitReadOnly(requestJson, false);
+    }
+
+    /** Bounded canonical catalog metadata only; it cannot edit an exercise. */
+    public CompletableFuture<String> lookupExercisesAsync(@NonNull String requestJson) {
+        return submitReadOnly(requestJson, true);
+    }
+
+    private CompletableFuture<String> submitReadOnly(
+            @NonNull String requestJson, boolean catalog) {
         final CompletableFuture<String> outcome = new CompletableFuture<>();
         if (closed.get()) {
             outcome.completeExceptionally(new IllegalStateException("Canonical service is closed"));
@@ -154,15 +194,22 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                     return;
                 }
                 try {
-                    JSONObject request = checkedPreviewRequest(requestJson);
+                    JSONObject request = catalog
+                            ? checkedExerciseLookupRequest(requestJson)
+                            : checkedPreviewRequest(requestJson);
                     initialize();
                     JSONObject response = call(isolate, request);
                     if (response.getBoolean("ok")) {
                         JSONObject value = response.getJSONObject("result");
-                        if (!value.getBoolean("previewOnly") ||
+                        if (catalog) {
+                            if (!value.getBoolean("readOnly") ||
+                                    !"modules/engine-api.js:EXERCISES".equals(
+                                            value.getString("source")))
+                                throw new SecurityException("Unexpected canonical catalog provenance");
+                        } else if (!value.getBoolean("previewOnly") ||
                                 !"modules/engine-api.js:evaluateWorkoutProgression"
                                         .equals(value.getString("source")))
-                            throw new SecurityException("Unexpected read-only provenance");
+                            throw new SecurityException("Unexpected read-only progression provenance");
                     }
                     if (closed.get())
                         outcome.completeExceptionally(new IllegalStateException("Canonical service closed while evaluating"));

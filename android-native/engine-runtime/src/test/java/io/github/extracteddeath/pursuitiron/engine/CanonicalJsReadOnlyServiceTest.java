@@ -16,6 +16,30 @@ public final class CanonicalJsReadOnlyServiceTest {
                 () -> CanonicalJsReadOnlyService.checkedPreviewRequest(json));
     }
 
+    @Test public void canonicalLookupRejectsWritesDuplicatesAndInvalidPayloads() throws Exception {
+        final String lookup =
+                "{\"protocolVersion\":1,\"id\":\"catalog-1\",\"method\":\"exerciseLookup\"," +
+                "\"params\":{\"ids\":[\"bb-bench\",\"inc-db-press\"]}}";
+        JSONObject request = CanonicalJsReadOnlyService.checkedExerciseLookupRequest(lookup);
+        assertEquals("exerciseLookup", request.getString("method"));
+        assertEquals(2, request.getJSONObject("params").getJSONArray("ids").length());
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedExerciseLookupRequest(
+                        lookup.replace("exerciseLookup","deleteHistory")));
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedExerciseLookupRequest(
+                        lookup.replace("inc-db-press","bb-bench")));
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedExerciseLookupRequest(
+                        lookup.replace("bb-bench","not valid!")));
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedExerciseLookupRequest(
+                        lookup.replace("\"params\":{\"ids\":","\"params\":{\"history\":1,\"ids\":")));
+        assertThrows(Exception.class,
+                () -> CanonicalJsReadOnlyService.checkedExerciseLookupRequest(
+                        lookup.replace("\"protocolVersion\":1","\"protocolVersion\":2")));
+    }
+
     @Test public void progressionOnlyAndBoundedTransport() throws Exception {
         JSONObject request = CanonicalJsReadOnlyService.checkedPreviewRequest(VALID);
         assertEquals("progressionPreview", request.getString("method"));

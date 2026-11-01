@@ -252,15 +252,29 @@ for(const cls of ['wpb-program-settings-body','wpb-program-share-body',
     assert.ok(body&&!body.includes('min-width:0'),
         'Sheet body must inherit the common min-width guard: '+cls);
 }
+// B1027: footer layout remains local; sizing, state, typography and paint
+// now belong to shared UiAction variants instead of a second footer-specific
+// button system. Preserve both callbacks and the real 48/52px touch contract.
 const saveActionGeometry=css.split('#root .wpb :is(.wpb-save-review-confirm,.wpb-save-review-cancel){')[1]?.split('}')[0]||'';
-for(const prop of ['width:100%','min-height:48px','font-size:.9375rem','line-height:1.4',
-    'padding:13px','border-radius:12px','cursor:pointer'])
-    assert.ok(saveActionGeometry.includes(prop),'Review actions share accessible geometry: '+prop);
-for(const cls of ['wpb-save-review-confirm','wpb-save-review-cancel']){
-    const local=css.split('#root .wpb .'+cls+'{')[1]?.split('}')[0]||'';
-    assert.ok(local&&!['width:','min-height:','font-size:','line-height:','padding:','border-radius:','cursor:'].some(prop=>local.includes(prop)),
-        'Review button-specific styling only owns paint, weight and spacing: '+cls);
-}
+assert.ok(saveActionGeometry.includes('width:100%'),
+    'Review actions retain full-width footer composition');
+for(const token of ['min-height:','font-size:','line-height:','padding:','border-radius:','cursor:'])
+    assert.ok(!saveActionGeometry.includes(token),
+        'Shared action owner must supply footer geometry instead of feature CSS: '+token);
+const sharedTonal=css.split('#root .wpb .wpb-ui-action[data-action="tonal"]{')[1]?.split('}')[0]||'';
+const sharedPrimary=css.split('#root[data-pi-motion="expressive"] .wpb .wpb-ui-action.wpb-ui-action[data-action="primary"]{')[1]?.split('}')[0]||'';
+assert.ok(sharedTonal.includes('min-height:var(--pi-control-min)') &&
+    sharedPrimary.includes('min-height:var(--pi-primary-min,52px)'),
+    'Save review and Keep editing use shared 52px primary and 48px tonal control sizing');
+assert.ok(programReview.includes('_jsx(UiAction, { variant: "primary", disabled: !changes.length || !!conflicts.length') &&
+    programReview.includes('_jsx(UiAction, { variant: "tonal", onClick: onClose') &&
+    programReview.includes('className: "wpb-save-review-confirm"') &&
+    programReview.includes('className: "wpb-save-review-cancel"'),
+    'Save review retains disabled/confirm semantics and Keep editing retains its close callback');
+assert.ok(!css.includes('#root .wpb .wpb-save-review-confirm{') &&
+    css.includes('#root .wpb .wpb-save-review-cancel{margin-top:8px}'),
+    'Program feature CSS retains only needed footer spacing, not its own button paint');
+
 
 
 /* Design passes 27–30: Program overlay, panel and focus owners stay shared. */

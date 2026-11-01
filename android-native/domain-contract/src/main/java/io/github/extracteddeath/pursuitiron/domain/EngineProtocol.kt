@@ -2,7 +2,7 @@ package io.github.extracteddeath.pursuitiron.domain
 
 /**
  * The wire schema is versioned independently of its implementation language.
- * The actual JSON codec and native JS runtime are NOT yet connected.
+ * The Android-only typed JSON codec can validate read-only responses; native JS runtime remains unconnected.
  * Kotlin must not invent engine decisions or serialize params as Map<String, String>.
  */
 object EngineProtocol {

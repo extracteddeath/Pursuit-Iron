@@ -54,8 +54,11 @@ function finishedJournal(raw) {
   ensure(Array.isArray(j.slots) && j.slots.length >= 1 && j.slots.length <= 480 &&
     j.slots.every(validSlot) &&
     new Set(j.slots.map(v => `${v.exerciseIndex}:${v.setIndex}`)).size === j.slots.length);
-  ensure(Array.isArray(j.events) && (j.format===2 ? j.events.length===j.slots.length :
-    j.events.length>j.slots.length && j.events.length<=1024));
+  // v4 may contain an adjusted skip with NO edited sets; only format 3
+  // requires an extra correction event. All versions retain the full roster.
+  ensure(Array.isArray(j.events) && j.events.length>=j.slots.length &&
+    j.events.length<=1024 && (j.format!==2 || j.events.length===j.slots.length) &&
+    (j.format!==3 || j.events.length>j.slots.length));
   const operations = new Set(), positions = new Map();
   let corrections=0;
   for (const [i, event] of j.events.entries()) {

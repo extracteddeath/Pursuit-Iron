@@ -25,9 +25,9 @@ for (const guard of [
 assert.doesNotMatch(core, /\bSharedPreferences\b|\bContentResolver\b|\bWebView\b|\bsetJavaScriptEnabled\b/,
   'Read-only engine probe must not access persistence, web surfaces or arbitrary Android storage');
 assert.match(device, /on:\s*\n  workflow_dispatch:/);
-assert.match(device, /'android-native\\/engine-runtime\\/DEVICE_PROOF_MILESTONE\\.md'/,
+assert.ok(device.includes("'android-native/engine-runtime/DEVICE_PROOF_MILESTONE.md'"),
   'Emulator automation must run only when the explicit milestone file changes');
-assert.doesNotMatch(device, /'android-native\\/engine-runtime\\/\\*\\*'/,
+assert.ok(!device.includes("'android-native/engine-runtime/**'"),
   'Routine sandbox source commits cannot trigger an emulator');
 assert.match(apk, /android-native\/PREVIEW_MILESTONE\.md/);
 assert.doesNotMatch(apk, /'android-native\/\*\*'/, 'Routine native commits must not generate APKs');

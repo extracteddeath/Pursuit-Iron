@@ -125,6 +125,82 @@ public final class CanonicalJsSandboxInstrumentedTest {
         assertEquals(CanonicalJsReadOnlyService.State.CLOSED,worker.state());
     }
 
+
+    @Test public void canonicalV13SchemaProbeUsesRealAndroidSandboxWithoutLeakingRecords()
+            throws Exception {
+        Context test = InstrumentationRegistry.getInstrumentation().getContext();
+        Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        byte[] bundle = asset(test, "canonical-engine.js");
+        String pin = new String(asset(test,"canonical-engine.sha256"),
+                StandardCharsets.UTF_8).trim();
+        CanonicalJsReadOnlyService service = new CanonicalJsReadOnlyService(app,bundle,pin);
+        try {
+            String privateMarker = "synthetic-private-program-name";
+            JSONObject source = new JSONObject()
+                    .put("v",13).put("savedAt",100)
+                    .put("saved",new org.json.JSONArray()
+                            .put(new JSONObject()
+                                    .put("id","synthetic-program")
+                                    .put("updatedAt",42)
+                                    .put("name",privateMarker)
+                                    .put("config",new JSONObject().put("goal","hypertrophy"))
+                                    .put("weeks",4)
+                                    .put("days",new org.json.JSONArray()
+                                            .put(new JSONObject().put("id","day-1")
+                                                    .put("label","Demo")
+                                                    .put("exercises",new org.json.JSONArray())))))
+                    .put("history",new org.json.JSONArray())
+                    .put("cycles",new org.json.JSONArray())
+                    .put("custom",new org.json.JSONArray())
+                    .put("gyms",new org.json.JSONArray())
+                    .put("tombs",new JSONObject())
+                    .put("perf",new JSONObject());
+            String requestId = "android-schema-1";
+            JSONObject request = new JSONObject()
+                    .put("protocolVersion",1)
+                    .put("id",requestId)
+                    .put("method","backupSchemaCheck")
+                    .put("params",new JSONObject().put("rawSnapshot",source.toString()));
+            String wire = service.checkBackupSchemaAsync(request.toString())
+                    .get(30,java.util.concurrent.TimeUnit.SECONDS);
+            JSONObject envelope = new JSONObject(wire);
+            assertTrue("Canonical schema probe failed in actual Android V8", envelope.getBoolean("ok"));
+            JSONObject value = envelope.getJSONObject("result");
+            assertEquals("modules/engine-api.js:parseStoredData",value.getString("source"));
+            assertTrue(value.getBoolean("readOnly"));
+            assertFalse(value.getBoolean("imported"));
+            assertFalse(value.getBoolean("approvedForWorkoutExecution"));
+            assertEquals(13,value.getInt("storeVersion"));
+            assertEquals(1,value.getJSONObject("counts").getInt("saved"));
+            assertFalse("Private synthetic marker leaked into result",wire.contains(privateMarker));
+            assertTrue(io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupSchemaCodec.INSTANCE
+                    .decode(wire,requestId)
+                    instanceof io.github.extracteddeath.pursuitiron.domain.EngineResponse.Success);
+            assertEquals(CanonicalJsReadOnlyService.State.READY_READ_ONLY,service.state());
+
+            // Canonical parse rejection stays a returned error, not a partial import.
+            JSONObject invalid = new JSONObject(source.toString())
+                    .put("history","not-an-array");
+            request.put("id","android-schema-rejected")
+                    .put("params",new JSONObject().put("rawSnapshot",invalid.toString()));
+            JSONObject rejected = new JSONObject(service.checkBackupSchemaAsync(request.toString())
+                    .get(30,java.util.concurrent.TimeUnit.SECONDS));
+            assertFalse(rejected.getBoolean("ok"));
+            assertEquals("SCHEMA_REJECTED",rejected.getJSONObject("error").getString("code"));
+            assertEquals(CanonicalJsReadOnlyService.State.READY_READ_ONLY,service.state());
+
+            // A write method must be rejected on the Java call boundary.
+            request.put("method","deleteHistory");
+            assertTrue(service.checkBackupSchemaAsync(request.toString())
+                    .isCompletedExceptionally());
+            assertEquals(CanonicalJsReadOnlyService.State.READY_READ_ONLY,service.state());
+        } finally {
+            service.close();
+            service.whenClosed().get(10,java.util.concurrent.TimeUnit.SECONDS);
+        }
+        assertEquals(CanonicalJsReadOnlyService.State.CLOSED,service.state());
+    }
+
     @Test public void readOnlyServiceReusesVerifiedSandboxAndCloses() throws Exception {
         Context test = InstrumentationRegistry.getInstrumentation().getContext();
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();

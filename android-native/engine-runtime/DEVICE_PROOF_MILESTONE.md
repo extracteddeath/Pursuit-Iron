@@ -78,3 +78,18 @@ new `workoutOutline` **synthetic-only** contract. The test must:
 
 No production APK build, migration of real workouts, personalized program
 generation, storage write or promotion to the live Compose workout UI.
+
+## Milestone 7 — bounded canonical backup schema probe on real Android V8
+
+Verify a **strictly synthetic** v13 snapshot with the newly allowlisted
+`backupSchemaCheck` entry. The API-36 emulator must execute the canonical
+`parseStoredData` export in the pinned AndroidX isolated JavaScript engine;
+reject malformed source and an attempted write method; prove that the result
+contains only collection counts, source/version provenance and disabled
+import/workout flags; decode through the Kotlin typed gate. Re-run the
+existing progression, exercise lookup, synthetic outline and sandbox
+lifecycle proofs.
+
+This milestone builds only disposable instrumentation test APKs inside CI.
+It does **not** produce a distributable native preview, read user backups,
+approve imported history, or permit personal workouts.

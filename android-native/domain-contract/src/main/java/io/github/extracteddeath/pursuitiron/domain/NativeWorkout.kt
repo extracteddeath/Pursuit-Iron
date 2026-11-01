@@ -15,7 +15,8 @@ data class NativeWorkoutExercise(
 )
 class NativeWorkoutPlan internal constructor(
     val issuedJson: String,val session: JournalSessionKey,val programName: String,
-    val dayLabel: String,val exercises: List<NativeWorkoutExercise>
+    val dayLabel: String,val exercises: List<NativeWorkoutExercise>,
+    val shortenedMinutes: Int?=null,val shortenedEstimatedMinutes: Int?=null
 ) {
     val slots: List<JournalSetSlot> = Collections.unmodifiableList(exercises.flatMap { row->row.sets.map { it.slot } })
 }
@@ -33,10 +34,13 @@ object NativeWorkoutCodec {
     const val SOURCE="modules/engine-api.js:nextSessionCursor+calibratedAnchorPerf+sessionSuggestion+prescribeSets"
     private val wire=WorkoutStoreRuntimeCodec
     private val identifier=Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
-    fun startJson(programId: String,workoutId: String,startedAt: Long): String {
+    fun startJson(programId: String,workoutId: String,startedAt: Long,minutes: Int?=null): String {
         require(identifier.matches(programId) && identifier.matches(workoutId) &&
             programId!=workoutId && startedAt in 1..8_640_000_000_000_000L)
-        return JSONObject().put("programId",programId).put("workoutId",workoutId).put("startedAt",startedAt).toString()
+        require(minutes==null || minutes in listOf(20,30,45))
+        val start=JSONObject().put("programId",programId).put("workoutId",workoutId).put("startedAt",startedAt)
+        if(minutes!=null)start.put("minutes",minutes)
+        return start.toString()
     }
     fun encodeWorkout(id: String,snapshot: String,startJson: String)=wire.encode(id,"prepareNativeWorkout",
         JSONObject().put("rawSnapshot",snapshot).put("startJson",startJson))
@@ -50,14 +54,18 @@ object NativeWorkoutCodec {
         require(value.get("inputStartSha256")==wire.sha(startJson) &&
             plan.session.programRevision.snapshotSha256==wire.sha(snapshot) &&
             plan.session.programRevision.programId==wire.text(start,"programId") &&
-            plan.session.workoutId==wire.text(start,"workoutId") && plan.session.startedAt==wire.integer(start,"startedAt"))
+            plan.session.workoutId==wire.text(start,"workoutId") && plan.session.startedAt==wire.integer(start,"startedAt") &&
+            (plan.shortenedMinutes?.toLong()==if(start.has("minutes"))wire.integer(start,"minutes") else null))
         return plan
     }
     /** Only private checksummed pending storage calls this on recovery. */
     internal fun readIssued(raw: String): NativeWorkoutPlan {
         wire.bounded(raw,MAX_ISSUED_BYTES);val v=JSONObject(raw)
-        wire.exact(v,"format","source","preparedOnly","persisted","inputStartSha256","session","programName","dayLabel","rows")
-        require(wire.integer(v,"format")==1L && v.get("source")==SOURCE && v.get("preparedOnly")==true &&
+        val format=wire.integer(v,"format")
+        require(format in 1L..2L)
+        wire.exact(v,"format","source","preparedOnly","persisted","inputStartSha256","session","programName",
+            "dayLabel",*(if(format==2L)arrayOf("sessionLengthPlan") else emptyArray()),"rows")
+        require(v.get("source")==SOURCE && v.get("preparedOnly")==true &&
             v.get("persisted")==false && wire.text(v,"inputStartSha256").matches(Regex("^[0-9a-f]{64}$")))
         val s=v.getJSONObject("session");wire.exact(s,"reference","workoutId","dayId","weekIndex","unit","startedAt")
         val r=s.getJSONObject("reference");wire.exact(r,"programId","programUpdatedAt","storeSavedAt","storeVersion","snapshotSha256")
@@ -65,6 +73,16 @@ object NativeWorkoutCodec {
         val session=JournalSessionKey(ReadOnlyProgramReference(wire.text(r,"programId"),wire.integer(r,"programUpdatedAt"),
             wire.integer(r,"storeSavedAt"),13,wire.text(r,"snapshotSha256")),wire.text(s,"workoutId"),wire.text(s,"dayId"),
             wire.integer(s,"weekIndex").toInt(),wire.text(s,"unit"),wire.integer(s,"startedAt"))
+        val short=if(format==2L)v.getJSONObject("sessionLengthPlan") else null
+        val minutes=short?.let { wire.integer(it,"minutes") }
+        val estimate=short?.let { wire.integer(it,"estimatedMinutes") }
+        if(short!=null) {
+            require(minutes in listOf(20L,30L,45L) && estimate!=null && estimate in 0L..10000L &&
+                short.get("fits")==true && short.get("changed") is Boolean &&
+                wire.text(short,"programId")==session.programRevision.programId &&
+                wire.text(short,"dayId")==session.dayId &&
+                wire.integer(short,"weekIndex")==session.weekIndex.toLong())
+        }
         val rows=v.getJSONArray("rows");require(rows.length() in 1..48)
         val exercises=(0 until rows.length()).map { i->
             val row=rows.getJSONObject(i)
@@ -118,7 +136,8 @@ object NativeWorkoutCodec {
         }
         val name=wire.text(v,"programName");val label=wire.text(v,"dayLabel")
         require(name.length in 1..200 && label.length in 1..200 && exercises.map { it.index }.distinct().size==exercises.size)
-        val plan=NativeWorkoutPlan(raw,session,name,label,Collections.unmodifiableList(exercises))
+        val plan=NativeWorkoutPlan(raw,session,name,label,Collections.unmodifiableList(exercises),
+            minutes?.toInt(),estimate?.toInt())
         requireNotNull(WorkoutJournalPolicy.open(session,plan.slots,0))
         return plan
     }

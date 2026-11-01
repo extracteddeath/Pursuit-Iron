@@ -26,7 +26,10 @@ const slotsFor=rows=>rows.flatMap(row=>row.sets.filter(set=>!set.warm).map((_,se
 export function prepareNativeWorkout(rawSnapshot,startJson) {
   ensure(bounded(rawSnapshot,1024*1024) && bounded(startJson,16384));
   const start=JSON.parse(startJson);
-  ensure(exact(start,['programId','workoutId','startedAt']) && id(start.programId) &&
+  const shortened=Object.hasOwn(start,'minutes');
+  ensure(exact(start,shortened?['programId','workoutId','startedAt','minutes']:
+    ['programId','workoutId','startedAt']) &&
+    (!shortened || [20,30,45].includes(start.minutes)) && id(start.programId) &&
     id(start.workoutId) && start.workoutId!==start.programId && integer(start.startedAt,1,8_640_000_000_000_000));
   // Only an explicitly saved native program enters execution. Backup inspection
   // and read-only day navigation do not call or authorize this flow.
@@ -41,15 +44,20 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
   const cursor=nextSessionCursor(program,store.history),weekIndex=cursor.weekIndex;
   ensure(integer(weekIndex,1,weeksOf(program)) && integer(cursor.dayIndex,0,program.days.length-1));
   const day=program.days[cursor.dayIndex],unit=program.config.unit;
+  // Only the canonical policy may reduce the issued roster and working dose.
+  // Unfit requests fail closed; the full session remains available unchanged.
+  const sessionLengthPlan=shortened?planShorterSession(program,day,weekIndex,start.minutes):null;
+  ensure(!sessionLengthPlan || sessionLengthPlan.fits);
+  const issuedDay=sessionLengthPlan?{...day,sessionLengthPlan}:day;
   const lifter=buildLifterModel(store.history,store.perf,program);
   const anchors=calibratedAnchorPerf(program,day,store.perf,store.history,weekIndex,lifter.effort);
   const previous=lastDayPerf(day,store.perf,store.history,program);
   const rows=day.exercises.map((_,slot)=>{
     const exerciseId=exerciseAt(program,day,slot,weekIndex),ex=EX_BY_ID[exerciseId];
     ensure(ex);
-    if(!(computeCell(program,day,exerciseId,slot,weekIndex).sets>0))return null;
+    if(!(computeCell(program,issuedDay,exerciseId,slot,weekIndex).sets>0))return null;
     const suggestion=sessionSuggestion(program,day,slot,anchors,unit,weekIndex,store.history);
-    const sets=prescribeSets(program,day,ex,slot,weekIndex,unit,suggestion,anchors,store.perf,store.history,true);
+    const sets=prescribeSets(program,issuedDay,ex,slot,weekIndex,unit,suggestion,anchors,store.perf,store.history,true);
     // Every engine-issued extension has its own journal slot. Never strip
     // myo/drop rows from a personal workout or synthesize new prescriptions.
     ensure(sets.filter(set=>!set.warm).length<=20);
@@ -60,9 +68,10 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
       superset:!program.config.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
       previous:last.map(set=>({load:String(set.w),reps:set.r,unit:previous[exerciseId].unit || unit})),sets};
   }).filter(Boolean);
-  const result=JSON.parse(JSON.stringify({format:1,source:NATIVE_WORKOUT_SOURCE,preparedOnly:true,persisted:false,
+  const result=JSON.parse(JSON.stringify({format:shortened?2:1,source:NATIVE_WORKOUT_SOURCE,preparedOnly:true,persisted:false,
     inputStartSha256:sha256Utf8(startJson),session:{reference,workoutId:start.workoutId,dayId:day.id,
-      weekIndex,unit,startedAt:start.startedAt},programName:program.name,dayLabel:day.label,rows}));
+      weekIndex,unit,startedAt:start.startedAt},programName:program.name,dayLabel:day.label,
+    ...(sessionLengthPlan?{sessionLengthPlan}:{}),rows}));
   issuedNativeWorkoutFrom(rawSnapshot,JSON.stringify(result));
   return result;
 }
@@ -99,8 +108,9 @@ export function previewNativeShorterSession(rawSnapshot,programId,minutes) {
 export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
   ensure(bounded(issuedRaw,MAX_ISSUED_WORKOUT_BYTES));
   const p=JSON.parse(issuedRaw);
-  ensure(exact(p,['format','source','preparedOnly','persisted','inputStartSha256','session','programName','dayLabel','rows']) &&
-    p.format===1 && p.source===NATIVE_WORKOUT_SOURCE && p.preparedOnly===true && p.persisted===false &&
+  ensure([1,2].includes(p?.format) && exact(p,['format','source','preparedOnly','persisted','inputStartSha256',
+    'session','programName','dayLabel',...(p.format===2?['sessionLengthPlan']:[]),'rows']) &&
+    p.source===NATIVE_WORKOUT_SOURCE && p.preparedOnly===true && p.persisted===false &&
     typeof p.inputStartSha256==='string' && /^[0-9a-f]{64}$/.test(p.inputStartSha256));
   const s=p.session;
   ensure(exact(s,['reference','workoutId','dayId','weekIndex','unit','startedAt']) &&
@@ -109,12 +119,15 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
   const store=parseStoredData(originRaw),program=store.saved.find(row=>row.id===s.reference.programId);
   ensure(validDeloads(program));
   const day=program.days.find(row=>row.id===s.dayId);
+  const lengthPlan=p.format===2 && day && planShorterSession(program,day,s.weekIndex,p.sessionLengthPlan?.minutes);
+  ensure(p.format===1 || lengthPlan?.fits===true && equalJson(lengthPlan,p.sessionLengthPlan));
+  const issuedDay=lengthPlan?{...day,sessionLengthPlan:lengthPlan}:day;
   ensure(day && p.programName===program.name && p.dayLabel===day.label &&
     s.unit===program.config.unit && s.weekIndex<=weeksOf(program) &&
     Array.isArray(p.rows) && p.rows.length>=1 && p.rows.length<=48);
   const roster=day.exercises.flatMap((_,slot)=>{
     const exerciseId=exerciseAt(program,day,slot,s.weekIndex);
-    return computeCell(program,day,exerciseId,slot,s.weekIndex).sets>0?[{id:exerciseId,slot}]:[];
+    return computeCell(program,issuedDay,exerciseId,slot,s.weekIndex).sets>0?[{id:exerciseId,slot}]:[];
   });
   ensure(equalJson(p.rows.map(({id,slot})=>({id,slot})),roster));
   for(const row of p.rows) {
@@ -123,7 +136,8 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
       typeof row.superset==='boolean' && Array.isArray(row.previous) && row.previous.length<=20 &&
       Array.isArray(row.sets) && row.sets.length>=1 && row.sets.length<=40);
     let working=0, extension=0, extensionKind=null, reachedExtension=false;
-    const protocol=techniqueProtocolFromCell(computeCell(program,day,row.id,row.slot,s.weekIndex));
+    const prescribedCell=computeCell(program,issuedDay,row.id,row.slot,s.weekIndex);
+    const protocol=techniqueProtocolFromCell(prescribedCell);
     for(const set of row.sets) {
       ensure(object(set) && set.done===false && set.auto===true && typeof set.warm==='boolean' &&
         typeof set.weight==='string' && typeof set.reps==='string' &&
@@ -147,6 +161,7 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
       }
     }
     ensure(working>=1 && working<=20 && working+extension<=20);
+    if(lengthPlan) ensure(working===lengthPlan.slots[row.slot]?.sets);
     // A forged or incomplete extension roster is never a valid issued session.
     if(protocol.type==='myo_reps')
       ensure(extensionKind==='myo' && extension===protocol.miniSets.minimum);

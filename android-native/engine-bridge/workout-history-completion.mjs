@@ -99,6 +99,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
   const days = program.days.filter(d => d.id === s.dayId);
   ensure(days.length === 1 && days[0].exercises.length >= 1 && days[0].exercises.length <= 48);
   const day = days[0], slots = [];
+  const issuedDay=issued?.format===2 ? {...day,sessionLengthPlan:issued.sessionLengthPlan}:day;
   // Reuse the actual canonical runtime rows, including percentage-owned counts.
   // No Kotlin prescription, progression, summary or equipment formula lives here.
   const sources = issued?.rows || day.exercises.map((_, slot) => ({slot}));
@@ -134,7 +135,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
     return {id:currentId, slot:exerciseIndex, sets};
   });
   ensure(equalJson(journal.slots, slots));
-  const performance = loggedWorkoutPerformance(program, day, rows, s.weekIndex,
+  const performance = loggedWorkoutPerformance(program, issuedDay, rows, s.weekIndex,
     s.unit, origin.perf, origin.history);
   // The canonical logger stamps per-exercise dates with Date.now. Use the
   // journal's durable finish time so retries are deterministic after a crash.
@@ -184,6 +185,9 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
     engineV:program.engineV || 1, weekIndex:s.weekIndex, unit:s.unit,
     setsDone:completed.length, totalSets:slots.length, volume,
     durationMin:Math.max(1, Math.round(f.durationMs / 60000)), perf:performance,
+    ...(issued?.format===2?{sessionLengthPlan:issued.sessionLengthPlan,
+      prescriptionEdited:issued.sessionLengthPlan.changed,
+      timeLimited:issued.sessionLengthPlan.changed}:{}),
     ...(issued ? {nativeSetObservations:{format:1,events:events.map(event=>({
       slot:event.slot,disposition:event.disposition,values:event.values}))}} : {}),
     ...(journal.format===3 ? {nativeSetRevisions:{format:1,startRevision:journal.startRevision,

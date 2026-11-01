@@ -163,6 +163,26 @@ the actual worker and rejects a different program; a stale response cannot
 appear while the next full workout is opening.
 No APK or production web code is changed.
 
+## Follow-up: shortened issuance and canonical history provenance
+
+The isolated Android workout-store bridge now prepares source-issued shortened
+sessions using the original canonical `planShorterSession` policy, with a versioned
+issued record. Full sessions retain the original version-1 schema and byte
+handling. Shortened issued workouts carry the full canonical length plan,
+only the retained exercise slots and exact prescribed warmups, loads and
+extensions. The pending owner pins this issued JSON to the same atomic
+pre-history journal, and recovery reuses those bytes rather than re-prescribing.
+
+Before completing a shortened session the source bridge revalidates its
+shortening plan against the pinned original canonical snapshot, including
+eligible exercise roster, set counts and extension protocols. Canonical
+history uses the original engine performance summarizer with the shortened
+day's dose and publishes `sessionLengthPlan`, `prescriptionEdited` and
+`timeLimited` from that approved plan. The source web engine and existing
+history are not modified. This prepares execution without yet exposing
+shortened-session starting in native UI until integration tests are green.
+Actual end-to-end and device certification remain required; no APK built.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of

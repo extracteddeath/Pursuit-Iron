@@ -9,12 +9,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlin.math.abs
 
 /**
  * A presentation-only rest countdown. The target comes from the pinned,
@@ -30,26 +30,49 @@ import kotlinx.coroutines.isActive
 internal fun NativeRestTimer(workoutId: String, prescribedSeconds: Int, enabled: Boolean) {
     if (prescribedSeconds <= 0) return
     var deadline by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
+    var startedElapsed by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
+    var startedWall by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
+    var activeSeconds by rememberSaveable(workoutId) { mutableIntStateOf(0) }
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
-    LaunchedEffect(deadline) {
+    // A saved elapsedRealtime deadline is invalid after a device reboot.
+    // Compare elapsed and wall time; clock changes also fail closed instead
+    // of leaving a phantom multi-hour countdown on the user's workout.
+    fun hasValidClock(elapsed: Long, wall: Long): Boolean {
+        if (startedElapsed <= 0L || startedWall <= 0L ||
+            elapsed < startedElapsed || wall < startedWall) return false
+        val monotonicAge = elapsed - startedElapsed
+        val wallAge = wall - startedWall
+        return abs(wallAge - monotonicAge) <= 60_000L
+    }
+
+    LaunchedEffect(deadline, startedElapsed, startedWall) {
         if (deadline <= 0L) return@LaunchedEffect
-        now = SystemClock.elapsedRealtime()
-        while (isActive && now < deadline) {
+        while (isActive) {
+            val elapsed = SystemClock.elapsedRealtime()
+            if (!hasValidClock(elapsed, System.currentTimeMillis())) {
+                deadline = 0L
+                activeSeconds = 0
+                break
+            }
+            now = elapsed
+            if (elapsed >= deadline) break
             delay(250L)
-            now = SystemClock.elapsedRealtime()
         }
     }
-    val remaining = if (deadline <= 0L) 0L else
+    val valid = deadline > 0L && hasValidClock(now, System.currentTimeMillis())
+    val remaining = if (!valid) 0L else
         ((deadline - now).coerceAtLeast(0L) + 999L) / 1000L
     val time = "%d:%02d".format(remaining / 60, remaining % 60)
     val title = when {
-        deadline <= 0L -> "Start rest timer"
+        !valid -> "Start rest timer"
         remaining > 0L -> "Rest · $time left"
         else -> "Rest complete"
     }
-    val supporting = if (deadline > 0L)
-        "Tap to restart for $prescribedSeconds seconds · Hold to reset"
+    // If the user switches exercises mid-countdown, the active rest period
+    // remains unchanged; the next tap uses the currently selected target.
+    val supporting = if (valid)
+        "Current rest: $activeSeconds s · Tap for $prescribedSeconds s · Hold to reset"
     else "Tap for $prescribedSeconds seconds · Hold to reset"
 
     Surface(
@@ -60,9 +83,15 @@ internal fun NativeRestTimer(workoutId: String, prescribedSeconds: Int, enabled:
             onClick = {
                 val current = SystemClock.elapsedRealtime()
                 now = current
+                startedElapsed = current
+                startedWall = System.currentTimeMillis()
+                activeSeconds = prescribedSeconds
                 deadline = current + prescribedSeconds * 1000L
             },
-            onLongClick = { deadline = 0L }
+            onLongClick = {
+                deadline = 0L
+                activeSeconds = 0
+            }
         ),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.secondaryContainer

@@ -37,14 +37,10 @@ internal fun ReadOnlyTrainingDayPanel(
         SectionLabel("Saved movement IDs", "Not prescriptions")
         day.exerciseIds.forEachIndexed { index, exerciseId ->
             PursuitCard {
-                ReadOnlyTrainingDayRow(
-                    dayIndex = index,
-                    title = exerciseId,
-                    exerciseCount = 0
+                ReadOnlyMovementIdentityRow(
+                    ordinal = index,
+                    canonicalExerciseId = exerciseId
                 )
-                Text("Canonical exercise ID · set targets not connected",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         PursuitCard {

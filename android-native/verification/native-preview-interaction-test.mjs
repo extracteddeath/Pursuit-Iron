@@ -198,6 +198,9 @@ assert.ok(dayJourney.includes('selection.reference != program.reference') &&
   !shell.includes('rememberSaveable { mutableStateOf<ReadOnlyTrainingDaySelection') &&
   selectedDayUi.includes('ReadOnlyTrainingDayView.Structure') &&
   selectedDayUi.includes('Workout execution is not connected') &&
+  selectedDayUi.includes('ReadOnlyMovementIdentityRow(') &&
+  components.includes('internal fun ReadOnlyMovementIdentityRow(') &&
+  !selectedDayUi.includes('exerciseCount = 0') &&
   !selectedDayUi.includes('onCompleteSet') &&
   !selectedDayUi.includes('logSet('),
   'Read-only Plan to Train journey must require the same approved revision and disable workout logging');

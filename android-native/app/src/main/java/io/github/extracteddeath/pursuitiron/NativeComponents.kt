@@ -223,3 +223,45 @@ internal fun ReadOnlyTrainingDayRow(
         }
     }
 }
+
+
+/** Shared native row for a canonical exercise ID when exercise names and
+ * prescriptions have NOT yet been verified by the read-only engine. */
+@Composable
+internal fun ReadOnlyMovementIdentityRow(
+    ordinal: Int,
+    canonicalExerciseId: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        ) {
+            Text(
+                (ordinal + 1).toString().padStart(2, '0'),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                canonicalExerciseId,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                "Canonical exercise ID · targets not connected",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}

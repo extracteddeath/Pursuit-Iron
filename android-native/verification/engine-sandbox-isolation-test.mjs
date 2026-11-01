@@ -41,6 +41,9 @@ assert.match(manifest, /androidSandboxParityVerified: false/);
 console.log('PASS Android sandbox is separate, read-only, digest-guarded; milestone emulator and preview-APK pipelines');
 
 const kotlinBackend = read('engine-runtime/src/main/java/io/github/extracteddeath/pursuitiron/engine/SandboxProgressionBackend.kt');
-assert.match(kotlinBackend, /certification: FeatureCertification\\? = null/);
-assert.match(kotlinBackend, /EngineJsonCodec\\.decodeProgressionPreview/);
-assert.doesNotMatch(kotlinBackend, /suggestedLoad\\s*=|calculateProgression\\(/);
+assert.ok(kotlinBackend.includes('certification: FeatureCertification? = null'),
+  'Uncertified Kotlin bridge must never be routed to the workout UI');
+assert.ok(kotlinBackend.includes('EngineJsonCodec.decodeProgressionPreview'),
+  'Kotlin bridge must decode strictly typed protocol results');
+assert.ok(!kotlinBackend.includes('suggestedLoad =') && !kotlinBackend.includes('calculateProgression('),
+  'Kotlin transport may not silently implement training calculations');

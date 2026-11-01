@@ -120,12 +120,54 @@ public final class CanonicalJsSandboxInstrumentedTest {
             assertTrue(new JSONObject(repeated).getBoolean("ok"));
             assertEquals("service-case-2",new JSONObject(repeated).getString("id"));
             assertEquals(CanonicalJsReadOnlyService.State.READY_READ_ONLY,service.state());
+            // Same verified isolate, separate bounded read-only canonical catalog lookup.
+            java.util.List<String> exerciseIds = java.util.Arrays.asList(
+                    "bb-bench", "inc-db-press", "not-a-real-exercise");
+            String requestId = "service-catalog-3";
+            JSONObject catalogRequest = new JSONObject()
+                    .put("protocolVersion",1)
+                    .put("id",requestId)
+                    .put("method","exerciseLookup")
+                    .put("params",new JSONObject()
+                            .put("ids",new org.json.JSONArray(exerciseIds)));
+            String catalogJson = service.lookupExercisesAsync(catalogRequest.toString())
+                    .get(10,java.util.concurrent.TimeUnit.SECONDS);
+            JSONObject catalogEnvelope = new JSONObject(catalogJson);
+            assertTrue(catalogEnvelope.getBoolean("ok"));
+            JSONObject catalogPayload = catalogEnvelope.getJSONObject("result");
+            assertEquals("modules/engine-api.js:EXERCISES",catalogPayload.getString("source"));
+            assertTrue(catalogPayload.getBoolean("readOnly"));
+            assertEquals("bb-bench",catalogPayload.getJSONArray("exercises")
+                    .getJSONObject(0).getString("id"));
+            assertEquals("Barbell Bench Press",catalogPayload.getJSONArray("exercises")
+                    .getJSONObject(0).getString("name"));
+            assertEquals("not-a-real-exercise",catalogPayload
+                    .getJSONArray("missingIds").getString(0));
+            assertTrue(io.github.extracteddeath.pursuitiron.domain.ExerciseCatalogCodec.INSTANCE
+                    .decodeLookup(catalogJson,requestId,exerciseIds)
+                    instanceof io.github.extracteddeath.pursuitiron.domain.EngineResponse.Success);
+            JSONObject forbidden = new JSONObject(catalogRequest.toString())
+                    .put("method","deleteHistory");
+            assertTrue(service.lookupExercisesAsync(forbidden.toString())
+                    .isCompletedExceptionally() ||
+                    // Queued failures finish on worker thread, never trigger JS writes.
+                    failsEventually(service.lookupExercisesAsync(forbidden.toString())));
         } finally {
             service.close();
             service.whenClosed().get(10,java.util.concurrent.TimeUnit.SECONDS);
         }
         assertEquals(CanonicalJsReadOnlyService.State.CLOSED,service.state());
         assertTrue(service.previewAsync(request.toString()).isCompletedExceptionally());
+    }
+
+    private static boolean failsEventually(java.util.concurrent.CompletableFuture<String> future)
+            throws Exception {
+        try {
+            future.get(10,java.util.concurrent.TimeUnit.SECONDS);
+            return false;
+        } catch (java.util.concurrent.ExecutionException expected) {
+            return true;
+        }
     }
 
 }

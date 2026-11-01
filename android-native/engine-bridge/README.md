@@ -33,3 +33,5 @@ API-36 emulator instrumentation confirmed `ReferenceError: structuredClone is no
 ## Bounded canonical exercise lookup
 
 `exerciseLookup` accepts exactly `{ids:[...]} ` with 1–12 unique, syntax-valid canonical exercise IDs. It reads the authoritative training-domain `EXERCISES` catalog and projects only `id`, `name`, `part`, `type`, `equipment`, rep-floor/ceiling and movement `pattern`. Requested ordering is preserved and missing IDs are returned separately. It does not expose custom exercises, stored programs, user workouts, or potentially unbounded exercise metadata. All invalid schemas reject, and the native Compose UI is still unconnected.
+
+Catalog lookup is next verified in an Android emulator through the existing serial sandbox, using a typed Kotlin codec to guard IDs, equipment, rep ranges, missing IDs, and source provenance. The canonical training policies remain unchanged.

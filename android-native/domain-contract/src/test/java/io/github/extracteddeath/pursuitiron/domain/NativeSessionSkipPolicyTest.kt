@@ -118,14 +118,26 @@ class NativeSessionSkipPolicyTest {
         assertEquals(listOf(all[3],all[6]),NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders"))
         disk.failAfterCommit=true
         assertThrows(IllegalStateException::class.java) {
-            journal.recordSet(session,state.revision,intent(all[3],"reduce-first"))
+            journal.recordSet(session,state.revision,JournalSetIntent(
+                "reduce-first",all[3],JournalSetDisposition.SKIPPED,null,
+                adjustment=JournalSetAdjustment("reduce","shoulders")))
         }
         disk.failAfterCommit=false
         journal=WorkoutJournalPersistence(disk)
         state=checkNotNull(journal.recover())
         assertEquals(listOf(all[6]),NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders"))
-        state=checkNotNull(journal.recordSet(session,state.revision,intent(all[6],"reduce-last")))
+        state=checkNotNull(journal.recordSet(session,state.revision,JournalSetIntent(
+            "reduce-last",all[6],JournalSetDisposition.SKIPPED,null,
+            adjustment=JournalSetAdjustment("reduce","shoulders"))))
         assertTrue(NativeSessionSkipPolicy.reduceAffected(state,review,"shoulders").isEmpty())
+        val restored=checkNotNull(WorkoutJournalPersistence(disk).recover())
+        assertEquals(JournalSetAdjustment("reduce","shoulders"),
+            restored.completed.single { it.intent.slot==all[3] }.intent.adjustment)
+        assertEquals(JournalSetAdjustment("reduce","shoulders"),
+            restored.completed.single { it.intent.slot==all[6] }.intent.adjustment)
+        val envelope=org.json.JSONObject(String(checkNotNull(disk.current),Charsets.UTF_8))
+        assertEquals(4,envelope.getInt("format"))
+        assertEquals(4,org.json.JSONObject(envelope.getString("payload")).getInt("format"))
         assertEquals(JournalSetDisposition.COMPLETED,
             state.completed.single { it.intent.slot==extension }.intent.disposition)
         assertEquals(listOf(a,b,other,all[5]),state.slots.filter {

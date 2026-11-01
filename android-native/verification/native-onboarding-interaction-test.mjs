@@ -56,6 +56,12 @@ assert.ok(host.includes('fun reduceAffectedMuscle(part: String)') &&
   train.includes('onReduceAffectedMuscle(approved)') &&
   train.includes('The first half of each original prescription remains available'),
   'Reduced planned work must be confirmed and originate from stable canonical issued slots');
+// User-selected muscle adjustments must persist as versioned, bounded
+// SKIPPED receipts instead of a UI-only "reason" that vanishes on restart.
+assert.ok(host.includes('JournalSetAdjustment("skip",part)') &&
+  host.includes('JournalSetAdjustment("reduce",part)') &&
+  host.includes('JournalSetDisposition.SKIPPED,null,adjustment=adjustment'),
+  'Confirmed muscle adjustments must use the persisted journal annotation contract');
 // Short-session previews come only from the canonical engine and cannot
 // masquerade as an applied session or a UI-computed training prescription.
 assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine preview")') &&

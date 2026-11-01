@@ -334,7 +334,8 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             // One confirmed skip was committed but its acknowledgement was lost.
             recovery.failAfterWrite=true
             assertTrue(runCatching { journal.recordSet(plan.session,progress.journal.revision,
-                JournalSetIntent("reduce-first",initial.first(),JournalSetDisposition.SKIPPED,null)) }.isFailure)
+                JournalSetIntent("reduce-first",initial.first(),JournalSetDisposition.SKIPPED,null,
+                    adjustment=JournalSetAdjustment("reduce",part))) }.isFailure)
             recovery.failAfterWrite=false
             journal=WorkoutJournalPersistence(recovery)
             owner=CanonicalWorkoutStorePersistence(drive,engine)
@@ -343,7 +344,8 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertEquals(initial.drop(1),NativeSessionSkipPolicy.reduceAffected(progress.journal,review,part))
             for((i,slot) in NativeSessionSkipPolicy.reduceAffected(progress.journal,review,part).withIndex()) {
                 progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,
-                    JournalSetIntent("reduce-other-$i",slot,JournalSetDisposition.SKIPPED,null))))
+                    JournalSetIntent("reduce-other-$i",slot,JournalSetDisposition.SKIPPED,null,
+                        adjustment=JournalSetAdjustment("reduce",part)))))
             }
             assertTrue(NativeSessionSkipPolicy.reduceAffected(progress.journal,review,part).isEmpty())
             val acknowledged=progress.journal.completed.map { it.intent.slot }.toSet()
@@ -368,6 +370,18 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertEquals(initial.size,(0 until events.length()).count {
                 events.getJSONObject(it).getString("disposition")=="SKIPPED"
             })
+            val adjusted=history.getJSONObject("nativeSetAdjustments")
+            assertEquals(1,adjusted.getInt("format"))
+            val annotated=adjusted.getJSONArray("events")
+            assertEquals(initial.size,annotated.length())
+            for(index in 0 until annotated.length()) {
+                val entry=annotated.getJSONObject(index)
+                assertEquals("reduce",entry.getString("action"))
+                assertEquals(part,entry.getString("part"))
+            }
+            val audit=history.getJSONObject("nativeSetRevisions")
+            assertEquals(1,audit.getInt("format"))
+            assertEquals(plan.slots.size,audit.getJSONArray("events").length())
             val saved=drive.writes
             assertNotNull(owner.complete(plan.session,finished.revision,journal))
             assertEquals(saved,drive.writes)

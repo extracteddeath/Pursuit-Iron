@@ -31,6 +31,9 @@ assert.equal(preview.counts.incoming.history, 2);
 assert.equal(preview.counts.hypothetical.history, 2);
 assert.equal(preview.conflicts, 1);
 assert.ok(preview.flags.includes('RECORD_CONFLICTS_REQUIRE_REVIEW'));
+assert.equal(preview.ownedRecordsRemoved,0);
+assert.equal(preview.ownedRecordsReplaced,1);
+assert.ok(preview.flags.includes('OWNED_RECORDS_REPLACED'));
 assert.deepEqual([current, incoming], before, 'both sources stay byte-exact');
 assert.ok(!JSON.stringify(preview).includes('bb-bench'));
 assert.ok(!JSON.stringify(preview).includes('"weight":225'));
@@ -44,6 +47,15 @@ const deleted = JSON.stringify(store(130, [], { old: 30 }));
 const tombPreview = previewCanonicalBackupMerge(current, deleted);
 assert.equal(tombPreview.counts.hypothetical.history, 0,
   'a newer deletion clock must defeat an older record');
+assert.equal(tombPreview.ownedRecordsRemoved,1);
+assert.ok(tombPreview.flags.includes('OWNED_RECORDS_REMOVED'));
+assert.equal(tombPreview.ownedRecordsReplaced,0);
+const preferences=previewCanonicalBackupMerge(
+  JSON.stringify({...store(100),unit:'lb'}),
+  JSON.stringify({...store(101),unit:'kg'}));
+assert.equal(preferences.settingsChanged,1);
+assert.ok(preferences.flags.includes('SETTINGS_CHANGED'));
+assert.ok(!JSON.stringify(preferences).includes('"unit"'));
 const restored = JSON.stringify(store(135, [history('old', 190, 40)], { old: 30 }));
 assert.equal(previewCanonicalBackupMerge(deleted, restored).counts.hypothetical.history, 1,
   'a later explicit edit may resurrect a deleted record');

@@ -208,7 +208,7 @@ object NativeProgramSetupCodec {
                 val position=wire.integer(slot,"sourceIndex")
                 val reason=wire.text(slot,"reason")
                 require(position>=0 && position<(original[dayId] ?: 0).toLong() &&
-                    reason in setOf("primary","paired"))
+                    reason in setOf("primary","paired","primary_paired"))
                 val from=position.toInt()
                 require(seen.add(dayId to from))
                 NativeProtectedProgramSlot(dayId,from,reason)

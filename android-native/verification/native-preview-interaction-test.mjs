@@ -18,6 +18,11 @@ assert.ok(onboardingSource.includes('protectedSlots.push({dayId:day.id,sourceInd
   programEditor.includes('protectedRole==null') &&
   screens.includes('protectedSourceSlots=matchingSaved?.protectedSlots.orEmpty()'),
   'Canonical primary/pair protection must be keyed by original slot identity, not exercise ID');
+assert.ok(programEditor.includes('draft.canMoveWithoutSplittingPair(') &&
+  programEditor.includes('"primary_paired"') &&
+  savedCodec.includes('"primary_paired"') &&
+  onboardingSource.includes("protectedBySource.set(sourceIndex,'primary_paired')"),
+  'Linked primary and partner must never be individually swapped or split during Plan reordering');
 assert.ok(programEditor.includes('draft.wouldOrphanVerifiedLoading(') &&
   programEditor.includes('!protectedLoad') &&
   screens.includes('verifiedEquipmentExerciseIds=verifiedPhysicalIds') &&

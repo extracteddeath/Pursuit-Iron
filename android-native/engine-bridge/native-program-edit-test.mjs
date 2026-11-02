@@ -94,7 +94,7 @@ paired.saved[0].ss={[`${pd.id}:0`]:true};paired.saved[0].rounds={[`${pd.id}:0`]:
 const pairedSnapshot=JSON.stringify(paired);
 const pairingProtection=inspectNativeProgram(pairedSnapshot).protectedSlots;
 assert.ok(pairingProtection.some(s=>s.dayId===pd.id && s.sourceIndex===0 &&
-  ['primary','paired'].includes(s.reason)),
+  ['primary','paired','primary_paired'].includes(s.reason)),
   'A linked source slot remains protected even when it is also the primary');
 assert.ok(pairingProtection.some(s=>s.dayId===pd.id && s.sourceIndex===1 && s.reason==='paired'),
   'The linked partner must be individually protected against removal');

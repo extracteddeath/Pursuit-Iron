@@ -118,6 +118,27 @@ class NativeProgramEditDraft private constructor(
         }?.reason
     }
 
+    /** 
+     * Individual swapping across a linked pair corrupts the group's adjacency.
+     * Until atomic group moves are supported, neither end of a pair may be
+     * individually swapped. Original source positions survive draft reorders.
+     */
+    fun canMoveWithoutSplittingPair(dayId: String,index: Int,delta: Int,
+        protectedSlots: List<NativeProtectedProgramSlot>): Boolean {
+        if(delta !in listOf(-1,1))return false
+        val order=slotOrders[dayId] ?: return false
+        val target=index+delta
+        if(index !in order.indices || target !in order.indices)return false
+        fun paired(position: Int): Boolean {
+            val from=order[position]
+            return protectedSlots.any {
+                it.dayId==dayId && it.sourceIndex==from &&
+                    it.reason in setOf("paired","primary_paired")
+            }
+        }
+        return !paired(index) && !paired(target)
+    }
+
     /** UI preflight; the canonical save separately refuses orphaned physical stock. */
     fun wouldOrphanVerifiedLoading(dayId: String,index: Int,verifiedExerciseIds: Set<String>): Boolean {
         val id=days.firstOrNull { it.id==dayId }?.exerciseIds?.getOrNull(index) ?: return false

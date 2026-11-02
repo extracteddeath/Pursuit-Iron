@@ -143,6 +143,31 @@ class NativeProgramEditDraftTest {
         assertFalse(original.isChanged)
     }
 
+    @Test fun linkedPairsCannotBeSplitByIndividualExerciseMoves() {
+        val base=verified()
+        val draft=NativeProgramEditDraft.from(base)
+        val paired=listOf(
+            NativeProtectedProgramSlot("day-1",0,"primary_paired"),
+            NativeProtectedProgramSlot("day-1",1,"paired"))
+        assertFalse(draft.canMoveWithoutSplittingPair("day-1",0,1,paired))
+        assertFalse(draft.canMoveWithoutSplittingPair("day-1",1,-1,paired))
+        assertFalse(draft.canMoveWithoutSplittingPair("day-1",1,1,paired))
+        assertFalse(draft.canMoveWithoutSplittingPair("day-1",2,-1,paired))
+        assertFalse(draft.canMoveWithoutSplittingPair("day-1",2,1,paired))
+        assertTrue(draft.canMoveWithoutSplittingPair("day-2",0,1,paired))
+        assertFalse(draft.canMoveWithoutSplittingPair("day-1",1,0,paired))
+        assertFalse(draft.canMoveWithoutSplittingPair("day-1",30,-1,paired))
+        assertFalse(draft.canMoveWithoutSplittingPair("missing",0,1,paired))
+        // A standalone primary remains movable when it is not linked.
+        assertTrue(draft.canMoveWithoutSplittingPair("day-1",0,1,listOf(
+            NativeProtectedProgramSlot("day-1",0,"primary"))))
+        // Distinct source slots, not repeated movement identities, dictate locks.
+        val reordered=checkNotNull(draft.moveExercise("day-1",1,1))
+        assertEquals(listOf(0,2,1),reordered.originalSlots("day-1"))
+        assertFalse(reordered.canMoveWithoutSplittingPair("day-1",1,1,paired))
+        assertFalse(reordered.canMoveWithoutSplittingPair("day-1",2,-1,paired))
+    }
+
     @Test fun primaryAndPairedSlotGuardsSurviveReorderAndDuplicateIds() {
         val base=verified()
         val summary=base.program.copy(days=listOf(ReadOnlyProgramDay(

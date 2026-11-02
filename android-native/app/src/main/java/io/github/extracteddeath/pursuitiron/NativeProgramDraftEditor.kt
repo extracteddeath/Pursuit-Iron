@@ -95,7 +95,9 @@ internal fun NativeProgramDraftEditor(
     SectionLabel("Program editor", if(saving) "Saving changes…" else "Review and save your changes")
     PursuitCard(highlighted=true) {
         Text("Organize your existing training days",style=MaterialTheme.typography.titleLarge)
-        Text("Rename, reorder or remove movements. Retained slot settings follow the movement. Primary lifts and paired movements cannot be removed.",
+        Text("Rename, reorder or remove movements. Retained slot settings follow the movement. " +
+            "Key lifts and linked pairs cannot be removed. Linked groups stay together; " +
+            "individual moves across a pair are disabled.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(!allowEditing && !saving) Text("Finish or resolve the active workout before modifying a plan.",
@@ -169,11 +171,13 @@ internal fun NativeProgramDraftEditor(
                     }
                     OutlinedButton(
                         onClick={draft.moveExercise(day.id,index,-1)?.let { draft=it }},
-                        enabled=allowEditing && index>0
+                        enabled=allowEditing && draft.canMoveWithoutSplittingPair(
+                            day.id,index,-1,protectedSourceSlots)
                     ) { Text("Up") }
                     OutlinedButton(
                         onClick={draft.moveExercise(day.id,index,1)?.let { draft=it }},
-                        enabled=allowEditing && index<day.exerciseIds.lastIndex
+                        enabled=allowEditing && draft.canMoveWithoutSplittingPair(
+                            day.id,index,1,protectedSourceSlots)
                     ) { Text("Down") }
                     OutlinedButton(
                         onClick={pendingRemoval=day.id to index},
@@ -182,8 +186,11 @@ internal fun NativeProgramDraftEditor(
                     ) { Text("Remove") }
                 }
                 if(protectedRole!=null) Text(
-                    if(protectedRole=="primary") "Key lift: this slot cannot be removed."
-                    else "Linked movement: this slot belongs to a paired exercise group.",
+                    when(protectedRole) {
+                        "primary" -> "Key lift: this slot cannot be removed."
+                        "primary_paired" -> "Key lift and linked pair: this slot cannot be removed or moved alone."
+                        else -> "Linked movement: this slot cannot be removed or moved alone."
+                    },
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant
                 )

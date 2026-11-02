@@ -165,9 +165,13 @@ export function inspectNativeProgram(rawSnapshot) {
       protectedBySource.set(day.primaryIndex,'primary');
     for(let i=0;i<day.exercises.length;i++) {
       if(saved.ss?.[`${day.id}:${i}`]) {
-        if(!protectedBySource.has(i))protectedBySource.set(i,'paired');
-        if(i+1<day.exercises.length && !protectedBySource.has(i+1))
-          protectedBySource.set(i+1,'paired');
+        for(const sourceIndex of [i,i+1]) {
+          if(sourceIndex>=day.exercises.length)continue;
+          if(protectedBySource.get(sourceIndex)==='primary')
+            protectedBySource.set(sourceIndex,'primary_paired');
+          else if(!protectedBySource.has(sourceIndex))
+            protectedBySource.set(sourceIndex,'paired');
+        }
       }
     }
     for(const [sourceIndex,reason] of protectedBySource)

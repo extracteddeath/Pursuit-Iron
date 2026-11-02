@@ -1476,3 +1476,17 @@ The canonical editor remains authoritative at Save, and no exercise
 substitution, training prescription, workout history or physical inventory
 is automatically altered. Source and Kotlin tests cover paired source slots,
 repeated movements and modified display order. No APK or live deployment.
+
+## 2026-11-02 — Linked pair move preflight
+
+A protected source slot may now be classified as both primary and paired.
+The Kotlin domain and saved-program verifier recognize that exact combination,
+so a key lift that anchors a superset cannot be accidentally moved alone.
+In the native editor, Up and Down are enabled for ordinary standalone
+movements, but disabled whenever an individual move would swap across a
+source-pinned member of a linked group. This is intentionally conservative:
+proper atomic group reordering can be introduced separately, only with
+canonical writer parity. The existing editor still independently rejects
+split pairing writes. Kotlin + source interaction regressions cover both
+pair members, neighboring movements, standalone primary slots, invalid
+indices, and state-preserving local reorder cases. No native APK.

@@ -387,13 +387,19 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
                 val explanation=when(review.family) {
                     "dumbbells_per_hand" -> "Verified dumbbell loads · per hand"
                     "barbell_plates" -> "Verified bar weight and plate pairs · total load"
-                    "exercise_override" -> "Verified exercise-specific loading"
+                    "exercise_override" -> if(review.mode=="external_load")
+                        "Verified selectable logged values" else "Verified exercise-specific loading"
                     "smith_confirmed_totals" -> "Verified Smith total load values"
                     "machine_stack" -> "Verified machine rack"
                     "cable_stack" -> "Verified cable stack"
                     else -> "Verified equipment"
                 }
                 Text(explanation,style=MaterialTheme.typography.labelMedium)
+                if(review.family=="exercise_override" && review.mode=="external_load")
+                    Text("These are your verified logged machine values, not a measurement of " +
+                        "effective resistance. Use the same logging basis for every set.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(!review.exact)Text("This entered load is not selectable in the saved equipment list. Manual entry remains available.",
                     style=MaterialTheme.typography.bodySmall)
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {

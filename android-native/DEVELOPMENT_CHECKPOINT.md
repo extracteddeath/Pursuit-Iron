@@ -1453,3 +1453,11 @@ machine range guesses remain disallowed. Interaction gates require focus
 propagation, explicit clearing and absence of duplicated profile fields.
 This is targeted equipment editing, not a progression formula rewrite.
 No APK, production web release or other native branch is touched.
+
+## 2026-11-02 — Honest specialty-machine loading units
+
+Native physical inventory and in-workout weight inspection now explicitly label
+specialty-machine settings as **verified logged values**, not estimated
+mechanical resistance, sled base weights or plate-per-side math. The logger
+continues to use the same user-verified basis; no conversion or progression
+formula is added. Source interaction checks cover the contextual explanation.

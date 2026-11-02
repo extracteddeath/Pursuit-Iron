@@ -72,7 +72,7 @@ internal fun NativeGymInventoryEditor(
             NativeGymLoadField(unit,draft,onChange,enabled,"override:${focused.id}",
                 focused.name,
                 if(focused.mode=="external_load")
-                    "Only exact logged total weights; do not assume a sled or plate-per-side basis"
+                    "Exact values AS LOGGED. Never infer per-side plates, sled base weight, or effective resistance"
                 else "Exact verified weights or a checked minimum, increment and maximum")
             OutlinedButton(
                 onClick={onChange("override:${focused.id}","")},

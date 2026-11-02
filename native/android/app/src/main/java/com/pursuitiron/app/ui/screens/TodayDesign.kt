@@ -198,6 +198,24 @@ fun CheckInCard(vm: AppViewModel) {
         }
         return
     }
+    // Folded to one row until opened: three questions shouldn't stand between Today and the session.
+    var expanded by remember { mutableStateOf(false) }
+    if (!expanded && c.answers.isEmpty()) {
+        Surface(onClick = { expanded = true }, color = cs.surfaceContainerLow, shape = RoundedCornerShape(22.dp),
+            modifier = Modifier.fillMaxWidth().semantics { contentDescription = "How are you today? Optional check-in" }) {
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(cs.tertiaryContainer), contentAlignment = Alignment.Center) {
+                    Icon(PiIcons.Sparkle, null, tint = cs.onTertiaryContainer, modifier = Modifier.size(18.dp))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("How are you today?", style = MaterialTheme.typography.titleSmall)
+                    Text("Optional · three taps tune today's readiness", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                }
+                Icon(PiIcons.ChevronDown, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            }
+        }
+        return
+    }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("How are you today?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))

@@ -75,9 +75,10 @@ fun PlanProgramHeader(p: JSONObject, onIcon: () -> Unit, onPrograms: () -> Unit)
     Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         com.pursuitiron.app.ui.common.IconTile(p.optJSONObject("icon"), 44.dp, Modifier.clickable(onClick = onIcon).semantics { contentDescription = "Change the icon for ${p.s("name")}"; role = Role.Button })
         Surface(onClick = onPrograms, color = Color.Transparent, shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.semantics { contentDescription = "Program: ${p.s("name")}. Switch or manage programs" }) {
+            modifier = Modifier.weight(1f, fill = false).semantics { contentDescription = "Program: ${p.s("name")}. Switch or manage programs" }) {
             Row(Modifier.padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(p.s("name"), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // Two lines and room for the chevron: a long program name used to push the switch affordance off screen.
+                Text(p.s("name"), style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 Box(Modifier.size(24.dp).clip(CircleShape).background(cs.surfaceContainerHigh), contentAlignment = Alignment.Center) { Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(16.dp)) }
             }
         }

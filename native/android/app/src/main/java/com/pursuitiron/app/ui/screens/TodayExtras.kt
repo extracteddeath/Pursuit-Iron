@@ -45,6 +45,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.unit.dp
 import com.pursuitiron.app.AppViewModel
 import com.pursuitiron.app.ui.common.Kicker
@@ -267,12 +268,26 @@ fun RestDayHero(vm: AppViewModel, r: JSONObject) {
 
 /* ---------------------------------------------------------------- the design's Today pieces */
 
+/** The design's week card: the block's progress, this week's days and the streak in one place (they all answer
+    "where am I this week", and three stacked cards pushed the session off the first screen). */
+@Composable
+fun TodayWeekCard(vm: AppViewModel, h: JSONObject, showBlock: Boolean) {
+    if (h.list("weekStrip").size != 7 && !showBlock) return
+    PiCard(radius = 28.dp, padding = 14.dp) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            if (showBlock) BlockProgressContent(vm, h)
+            WeekStripContent(h)
+            if (showBlock) StreakLine(h)
+        }
+    }
+}
+
 /** "6-week streak": consecutive 7-day windows with a workout (App.js), so planned rest never breaks it. */
 @Composable
 fun StreakLine(h: JSONObject) {
     val n = h.i("streakWeeks"); if (n <= 0) return
     val cs = MaterialTheme.colorScheme
-    Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Icon(PiIcons.Flame, null, Modifier.size(18.dp), tint = cs.primary)
         Text("$n-week streak", style = MaterialTheme.typography.titleSmall)
         Text("· a week counts with one workout in it", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -281,7 +296,7 @@ fun StreakLine(h: JSONObject) {
 
 /** Block progress: one segment per week, the current one part-filled, the deload week marked. */
 @Composable
-fun BlockProgressCard(vm: AppViewModel, h: JSONObject) {
+fun BlockProgressContent(vm: AppViewModel, h: JSONObject) {
     val b = h.o("block") ?: return
     val cs = MaterialTheme.colorScheme
     val wk = b.i("weekIndex"); val total = b.i("weeksTotal").coerceAtLeast(1)
@@ -292,7 +307,8 @@ fun BlockProgressCard(vm: AppViewModel, h: JSONObject) {
         b.b("inDeload") -> "Deload week"
         else -> "Week $wk of $total" + (b.s("goal").takeIf { it.isNotBlank() }?.let { " · $it block" } ?: "")
     }
-    PiCard(radius = 24.dp, padding = 16.dp, onClick = { vm.goTab(com.pursuitiron.app.Tab.Plan) }) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = "Open Plan") { vm.goTab(com.pursuitiron.app.Tab.Plan) }.padding(horizontal = 4.dp, vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Text("Plan", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
@@ -313,10 +329,10 @@ fun BlockProgressCard(vm: AppViewModel, h: JSONObject) {
 
 /** Monday-first week strip: workouts logged (check), today (ring), scheduled days (dot). */
 @Composable
-fun WeekStrip(h: JSONObject) {
+fun WeekStripContent(h: JSONObject) {
     val strip = h.list("weekStrip"); if (strip.size != 7) return
     val cs = MaterialTheme.colorScheme
-    PiCard(radius = 24.dp, padding = 14.dp) {
+    Column {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             strip.forEach { d ->
                 val done = d.b("done"); val today = d.b("today")

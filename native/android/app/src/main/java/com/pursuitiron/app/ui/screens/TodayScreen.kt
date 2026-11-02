@@ -154,13 +154,8 @@ fun TodayScreen(vm: AppViewModel) {
         }
 
         // The design keeps the backup reminder in You → Settings.
-        if (next != null && h.o("live") == null) {
-            item(span = full) { StreakLine(h) }
-            item(span = full) { BlockProgressCard(vm, h) }
-        }
         if (!h.b("empty") && vm.prefs.seenWhatsNew < WHATS_NEW_VERSION) item(span = full) { WhatsNewCard(vm) }
-        if (next != null) item(span = full) { WeekStrip(h) }
-        if (next != null && h.o("live") == null && h.o("restDay") == null) item(span = full) { CheckInCard(vm) }
+        if (next != null) item(span = full) { TodayWeekCard(vm, h, showBlock = h.o("live") == null) }
         if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { TrainingMaxPrompt(vm) }
         h.o("reentry")?.takeIf { next != null && h.o("live") == null && it.optLong("lastDate") != vm.prefs.reentrySkippedFor }?.let { r ->
             item(span = full) { WelcomeBackCard(vm, r) }
@@ -169,6 +164,8 @@ fun TodayScreen(vm: AppViewModel) {
             val rest = h.o("restDay")
             if (rest != null) RestDayHero(vm, rest) else Hero(vm, next, h)
         }
+        // The check-in tunes the session above it, so it sits under it, folded to one row until opened.
+        if (next != null && h.o("live") == null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { CheckInCard(vm) }
         if (next != null) next.optJSONArray("plateaus")?.optJSONObject(0)?.takeIf { h.o("live") == null && h.o("restDay") == null }?.let { pl ->
             item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { PlateauCard(vm, next, pl) }
         }

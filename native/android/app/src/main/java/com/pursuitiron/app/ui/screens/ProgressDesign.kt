@@ -66,7 +66,12 @@ fun LandmarksCard(d: JSONObject) {
             Text("This week: solid bar is done so far, faint bar is the plan. The band runs from MEV (least that grows) to MRV (most you recover from).",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
         }
-        rows.forEach { r ->
+        // Fifteen bars every visit buried the few that matter: muscles off their range lead, then the rest behind Show all.
+        var all by remember { mutableStateOf(false) }
+        val off = { r: JSONObject -> r.d("sets") < r.d("mev") || r.d("sets") > r.d("mrv") }
+        val ordered = rows.filter(off) + rows.filterNot(off)
+        val shown = if (all || ordered.size <= 6) ordered else ordered.take(maxOf(6, rows.count(off)))
+        shown.forEach { r ->
             val planned = r.d("sets"); val done = r.d("done"); val mev = r.d("mev"); val mrv = r.d("mrv")
             val status = when { planned < mev -> "under MEV"; planned > mrv -> "over MRV"; planned > (mev + mrv) / 2 -> "high"; else -> "productive" }
             val col = when { planned < mev -> cs.onSurfaceVariant; planned > mrv -> cs.onTertiaryContainer; else -> cs.primary }
@@ -88,6 +93,9 @@ fun LandmarksCard(d: JSONObject) {
                     Box(Modifier.offset(x = w * pos(mrv) - 2.dp).width(2.dp).fillMaxHeight().background(cs.onSurface.copy(alpha = 0.5f)))
                 }
             }
+        }
+        if (shown.size < ordered.size || all) androidx.compose.material3.TextButton(onClick = { all = !all }) {
+            Text(if (all) "Show fewer" else "Show all ${ordered.size} muscles", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
         }
     }
 }

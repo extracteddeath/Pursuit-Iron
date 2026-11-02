@@ -297,7 +297,9 @@ if not scroll_to(r"^\|This week$", tries=4):
     FAILS.append("no This week list on Today")
 scroll_up_to(r"Start workout|^\|?Train .+ now", tries=8)
 # The design's check-in sits on Today (training days); readiness is applied when the workout opens
-if find(r"How are you today\?", timeout=3):
+# It sits under the session, folded to one row until opened
+if find(r"How are you today\?", timeout=3) or scroll_to(r"How are you today\?", tries=3, step=500):
+    tap(r"^How are you today\? Optional check-in", "check-in-open", required=False)
     tap(r"^Sleep: Great", "check-in")
     tap(r"^Energy: High")
     tap(r"^\|Save$|^\|Done$")

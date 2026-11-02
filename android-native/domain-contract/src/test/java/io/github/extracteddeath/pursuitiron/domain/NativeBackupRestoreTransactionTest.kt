@@ -77,7 +77,7 @@ class NativeBackupRestoreTransactionTest {
         assertEquals(sha(candidate),undo.installedSha256)
         assertEquals(originalWrites+1,s.drive.writes)
         assertEquals(candidate,s.current())
-        assertEquals(2,JSONObject(String(checkNotNull(s.drive.raw),Charsets.UTF_8)).getInt("format"))
+        assertEquals(3,JSONObject(String(checkNotNull(s.drive.raw),Charsets.UTF_8)).getInt("format"))
         s.reboot()
         assertEquals(sha(candidate),checkNotNull(s.install()).installedSha256)
         assertEquals(originalWrites+1,s.drive.writes)
@@ -89,6 +89,70 @@ class NativeBackupRestoreTransactionTest {
         assertEquals(originalWrites+2,s.drive.writes)
         assertFalse(s.store.undoApprovedBackupMerge("different-operation"))
     }
+    @Test fun aSecondDistinctRestoreAfterUndoWorksWhileTheOriginalApprovalNeverReplays() {
+        val s=Setup();s.bootstrap();assertNotNull(s.install())
+        assertTrue(s.store.undoApprovedBackupMerge("restore-1"))
+        s.reboot()
+        // The exact old approval can no longer be reused, despite the
+        // restored current bytes matching its original expected hash.
+        val writesAfterUndo=s.drive.writes
+        assertNull(s.install())
+        assertEquals(writesAfterUndo,s.drive.writes)
+        val second=NativeBackupRestoreApproval("restore-2",sha(before),sha(incoming),sha(candidate))
+        assertNotNull(now { s.store.installApprovedBackupMerge(incoming,second) })
+        assertEquals(candidate,s.current())
+        assertNull(s.install())
+        assertTrue(s.store.undoApprovedBackupMerge("restore-2"))
+        assertEquals(before,s.current())
+        s.reboot()
+        assertNull(s.install())
+        assertNull(now { s.store.installApprovedBackupMerge(incoming,second) })
+        val data=JSONObject(JSONObject(String(checkNotNull(s.drive.raw),Charsets.UTF_8))
+            .getString("payload"))
+        val consumed=data.getJSONArray("consumedRestoreIds")
+        assertEquals(2,consumed.length())
+        assertEquals("restore-1",consumed.getString(0))
+        assertEquals("restore-2",consumed.getString(1))
+    }
+
+    @Test fun consumedRestoreOperationsSurviveWorkoutStartAndLegacyFormatTwoIsReadable() {
+        val s=Setup();s.bootstrap();assertNotNull(s.install())
+        val wrapper=JSONObject(String(checkNotNull(s.drive.raw),Charsets.UTF_8))
+        val olderBody=JSONObject(wrapper.getString("payload"))
+        olderBody.remove("consumedRestoreIds")
+        val text=olderBody.toString()
+        // An existing format-2 Undo envelope from a prior build still loads.
+        s.drive.raw=JSONObject().put("format",2).put("payload",text)
+            .put("sha256",sha(text)).toString().toByteArray(Charsets.UTF_8)
+        s.reboot()
+        assertEquals(candidate,s.current())
+        assertTrue(s.store.undoApprovedBackupMerge("restore-1"))
+        assertNull(s.install())
+        // Starting a workout revokes Undo but must not erase replay history.
+        val session=JournalSessionKey(ReadOnlyProgramReference("demo",1,10,13,sha(before)),
+            "workout-after-restore","day",1,"lb",100)
+        val journal=WorkoutJournalPersistence(Drive())
+        assertNotNull(s.store.beginSession(session,listOf(JournalSetSlot(0,0,"bb-bench")),0,journal))
+        val body=JSONObject(JSONObject(String(checkNotNull(s.drive.raw),Charsets.UTF_8))
+            .getString("payload"))
+        assertEquals("restore-1",body.getJSONArray("consumedRestoreIds").getString(0))
+        assertFalse(s.store.undoApprovedBackupMerge("restore-1"))
+    }
+
+    @Test fun forgedOrDuplicatedConsumedOperationHistoryFailsClosed() {
+        val s=Setup();s.bootstrap();assertNotNull(s.install())
+        val envelope=JSONObject(String(checkNotNull(s.drive.raw),Charsets.UTF_8))
+        val data=JSONObject(envelope.getString("payload"))
+        data.put("consumedRestoreIds",org.json.JSONArray()
+            .put("restore-1").put("restore-1"))
+        val body=data.toString()
+        s.drive.raw=JSONObject().put("format",3).put("payload",body)
+            .put("sha256",sha(body)).toString().toByteArray(Charsets.UTF_8)
+        assertTrue(runCatching { s.current() }.isFailure)
+        // Checks happen even if the enclosing SHA was deliberately recomputed.
+        assertFalse(s.store.undoApprovedBackupMerge("restore-1"))
+    }
+
     @Test fun lostAcknowledgementsRecoverExactCommittedMergeAndUndo() {
         val s=Setup();s.bootstrap()
         s.drive.failAfter=true

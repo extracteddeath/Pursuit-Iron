@@ -252,6 +252,123 @@ class CanonicalWorkoutStorePersistence(
         return created
     }
 
+    /**
+     * Internal restore transaction foundation. No Android action currently
+     * creates NativeBackupRestoreApproval. Compare/preparation come from the
+     * pinned canonical JS engine, not a Kotlin merge or a picker callback.
+     * Existing records/settings must survive unchanged; no conflict approval
+     * or replacement policy is implemented here.
+     */
+    internal suspend fun installApprovedBackupMerge(
+        incomingSnapshot: String, approval: NativeBackupRestoreApproval
+    ): NativeBackupRestoreOutcome? {
+        val identifier=Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+        if(!identifier.matches(approval.operationId) ||
+            !hashPattern.matches(approval.currentSha256) ||
+            !hashPattern.matches(approval.incomingSha256) ||
+            !hashPattern.matches(approval.candidateSha256)) return null
+        val incoming=boundedSnapshot(incomingSnapshot)
+        if(sha(incoming)!=approval.incomingSha256) return null
+        val initial=synchronized(guard) { read() } ?: return null
+        initial.undo?.let { prior ->
+            return if(prior.operationId==approval.operationId &&
+                prior.installedSha256==approval.candidateSha256 &&
+                sha(initial.snapshot)==approval.candidateSha256 &&
+                sha(prior.priorSnapshot)==approval.currentSha256)
+                NativeBackupRestoreOutcome(approval.operationId,approval.candidateSha256)
+            else null
+        }
+        if(initial.pending!=null || sha(initial.snapshot)!=approval.currentSha256 ||
+            initial.undoAck!=null) return null
+        val mergeEngine=engine as? PinnedCanonicalBackupMergeEngine ?: return null
+        val preview=mergeEngine.previewBackupMerge(initial.snapshot,incoming) ?: return null
+        if(preview.currentSha256!=approval.currentSha256 ||
+            preview.incomingSha256!=approval.incomingSha256 ||
+            preview.hypotheticalMergedSha256!=approval.candidateSha256 ||
+            preview.flags.isNotEmpty() || preview.historyDropped!=0 ||
+            preview.ownedRecordsRemoved!=0 || preview.ownedRecordsReplaced!=0 ||
+            preview.settingsChanged!=0) return null
+        val prepared=mergeEngine.prepareBackupMerge(initial.snapshot,incoming,
+            approval.candidateSha256) ?: return null
+        if(prepared.currentSha256!=approval.currentSha256 ||
+            prepared.incomingSha256!=approval.incomingSha256 ||
+            prepared.candidateSha256!=approval.candidateSha256 ||
+            sha(prepared.candidateSnapshot)!=approval.candidateSha256 ||
+            prepared.candidateBytes!=prepared.candidateSnapshot.toByteArray(Charsets.UTF_8).size ||
+            prepared.candidateSnapshot==initial.snapshot ||
+            !engine.validateInitialSnapshot(prepared.candidateSnapshot)) return null
+        var wrote=false
+        val result=try { synchronized(guard) {
+            val current=read() ?: return@synchronized null
+            if(current.undo?.operationId==approval.operationId &&
+                current.undo.installedSha256==approval.candidateSha256 &&
+                sha(current.snapshot)==approval.candidateSha256)
+                return@synchronized NativeBackupRestoreOutcome(approval.operationId,approval.candidateSha256)
+            val sameCompletion=initial.receipt?.let { sameReceipt(current.receipt,it) }
+                ?: (current.receipt==null)
+            if(current.pending!=null || current.undo!=null || current.undoAck!=null ||
+                current.snapshot!=initial.snapshot || !sameCompletion)
+                return@synchronized null
+            val committedReceipt=current.receipt?.let { prior ->
+                CanonicalWorkoutHistoryReceipt(prior.session,prior.journalRevision,
+                    prior.handoffSha256,approval.candidateSha256)
+            }
+            save(State(prepared.candidateSnapshot,null,committedReceipt,
+                RestoreUndo(approval.operationId,current.snapshot,current.receipt,
+                    approval.candidateSha256)))
+            val verified=read() ?: return@synchronized null
+            require(verified.undo?.operationId==approval.operationId &&
+                verified.undo.installedSha256==approval.candidateSha256 &&
+                sha(verified.snapshot)==approval.candidateSha256)
+            wrote=true
+            NativeBackupRestoreOutcome(approval.operationId,approval.candidateSha256)
+        } } catch (failure: Exception) {
+            val advanced=runCatching { synchronized(guard) {
+                read()?.undo?.operationId==approval.operationId
+            } }.getOrDefault(false)
+            if(advanced)changed()
+            throw failure
+        }
+        if(wrote)changed()
+        return result
+    }
+
+    /**
+     * Restore the exact former snapshot AND its original completion receipt.
+     * Can run only while the installed snapshot remains untouched. An atomic
+     * undo acknowledgement makes a lost post-commit ACK retry idempotent.
+     */
+    internal fun undoApprovedBackupMerge(operationId: String): Boolean {
+        if(!operationId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")))return false
+        var wrote=false
+        val result=try { synchronized(guard) {
+            val current=read() ?: return@synchronized false
+            val undo=current.undo
+            if(undo==null) return@synchronized current.undoAck?.let {
+                it.operationId==operationId && it.restoredSha256==sha(current.snapshot)
+            } ?: false
+            if(undo.operationId!=operationId || current.pending!=null ||
+                sha(current.snapshot)!=undo.installedSha256) return@synchronized false
+            val formerHash=sha(undo.priorSnapshot)
+            save(State(undo.priorSnapshot,null,undo.priorReceipt,null,
+                RestoreUndoAck(operationId,formerHash)))
+            val confirmed=read() ?: return@synchronized false
+            require(confirmed.undo==null && confirmed.undoAck?.operationId==operationId &&
+                confirmed.undoAck.restoredSha256==formerHash &&
+                sha(confirmed.snapshot)==formerHash)
+            wrote=true
+            true
+        } } catch (failure: Exception) {
+            val advanced=runCatching { synchronized(guard) {
+                read()?.undoAck?.operationId==operationId
+            } }.getOrDefault(false)
+            if(advanced)changed()
+            throw failure
+        }
+        if(wrote)changed()
+        return result
+    }
+
     /** Pin origin before starting the journal; retries cannot replace another workout. */
     fun beginSession(session: JournalSessionKey, slots: List<JournalSetSlot>, revision: Long,
         journal: WorkoutJournalPersistence): WorkoutJournalState? = beginPinned(session,slots,revision,journal,null)

@@ -46,7 +46,7 @@ class NativeBackupRestoreTransactionTest {
             return NativeBackupMergePreview(sha(before),sha(incoming),sha(candidate),
                 candidate.toByteArray(Charsets.UTF_8).size,
                 NativeBackupMergeCounts(0,0,0,0,0),NativeBackupMergeCounts(0,1,0,0,0),
-                NativeBackupMergeCounts(0,1,0,0,0),0,0,0,0,0,emptyList())
+                NativeBackupMergeCounts(0,1,0,0,0),0,0,0,0,0,0,0,emptyList())
         }
         override suspend fun prepareBackupMerge(currentSnapshot: String,incomingSnapshot: String,
             expectedCandidateSha256: String): NativeBackupMergePreparation? {

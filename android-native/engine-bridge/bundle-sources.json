@@ -12,6 +12,7 @@
   "native-onboarding.mjs",
   "native-workout.mjs",
   "native-history.mjs",
+  "native-history-basis.mjs",
   "android-entry.mjs",
   "sandbox-compat.mjs"
 ]

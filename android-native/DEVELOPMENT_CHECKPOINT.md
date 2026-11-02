@@ -288,10 +288,53 @@ Last transport and legacy issued recovery. Fresh GitHub Kotlin/Compose/runtime
 checks must be read for the published revision; this is not device acceptance.
 No APK or production web release is produced.
 
+## Follow-up: restoring and skipping saved observations
+
+New issued completions retain version-1 `nativeHistoryBasis` evidence for every
+original exercise occurrence. Its per-exercise metadata comes from the canonical
+logger; only skipped or omitted rows need additional set templates. Completed
+rows reuse their retained targets, avoiding a second copy of every decision
+trace. Template preparation strips placeholder actuals and applied values before
+publication. The Kotlin atomic owner verifies each missing template against the
+pinned issued target and requires complete, unique original-slot coverage.
+
+Saved history can now restore an originally skipped set, correct a completed
+zero-load row omitted from the performance summary, or explicitly mark a
+completed working/myo/drop set as skipped. The native editor shares the existing
+numeric controls and busy/dismissal protection. Skipped sets start with blank
+actual-value fields. A lost acknowledgement retries the identical command and
+timestamp. Marking completed work as skipped requires confirmation. The last
+working set cannot silently remove completed extensions.
+
+Format-2 history correction commands identify original journal slots, independent
+of changing performance-array indices. Canonical `normalizeEditedHistoryEntry`,
+`perfAfterHistoryReplace` and `exRecords` still own summaries, Last and records.
+Original dates, completion identity, targets, rotation, saved programs and the
+active-workout audit stay intact. `nativeHistoryRevisions` appends bounded
+before/after receipts. Restoring an adjusted skip clears its effective adjustment
+while retaining the original adjustment audit; a later plain skip does not
+reactivate an earlier reason. The Kotlin owner checks requested observations,
+unchanged targets/audit/other store owners and exact retry identity before commit.
+
+Legacy completions without this basis retain their prior value-only editor.
+They are never assigned retrospective targets. A completion already committed
+before the new annotation can still acknowledge its exact handoff without
+rewriting bytes. Zero-rep failed-attempt history editing remains separate.
+Existing failed-attempt completion evidence remains preserved.
+
+Local verification passes all 41 native/canonical source suites and the actual
+Android IIFE, including independent canonical source/export parity. New source
+cases cover fully skipped workouts, omitted zero-load rows, working/myo/drop and
+repeated occurrences, full exercise removal/restoration, older edits with newer
+Last/PR results, audit retention and malformed requests. JVM tests add disk-full,
+post-commit crash/restart/retry, active-workout write rejection and coherent
+transport tampering of targets, observations, audits and saved programs. Read
+fresh Kotlin/Compose/runtime CI for the pushed revision. No APK is produced.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of
-skipped/omitted rows or failed attempts, broader native session-adjustment
+zero-rep failed attempts, broader native session-adjustment
 controls and imported web history remain separate
 milestones. Physical-device interaction, interruption and accessibility
 acceptance is still required for the complete agreed journey; preserve the APK

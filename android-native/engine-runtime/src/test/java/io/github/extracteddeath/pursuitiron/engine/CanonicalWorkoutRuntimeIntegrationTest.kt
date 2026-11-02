@@ -964,6 +964,166 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun savedObservationRestoresVerifyTargetsAndRecoverDiskFullLostAcknowledgementAndRestart() {
+        NodeTransport().use { node -> runBlocking {
+            val actual=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(actual.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Saved observation journey",unit="kg"),"create-observations","program-observations",1000,223)))
+            val source=JSONObject(proposal.snapshot);val program=source.getJSONArray("saved").getJSONObject(0)
+            val day=program.getJSONArray("days").getJSONObject(0)
+            program.getJSONObject("nextWeekPrescriptions").getJSONObject(day.getString("id")+":0")
+                .getJSONObject("1").put("tech","drop set")
+            var forge: String?=null
+            val transport=CanonicalWorkoutStoreTransport { wire ->
+                val raw=node.request(wire)
+                if(forge!=null && JSONObject(wire).getString("method")=="prepareNativeHistoryCorrection") {
+                    val response=JSONObject(raw);val result=response.getJSONObject("result")
+                    val candidate=JSONObject(result.getString("candidateSnapshot"))
+                    val entry=candidate.getJSONArray("history").getJSONObject(0)
+                    when(forge) {
+                        "targets" -> entry.getJSONObject("nativeHistoryBasis").getJSONArray("rows").getJSONObject(0)
+                            .getJSONArray("omitted").getJSONObject(0).getJSONObject("template").getJSONObject("decisionTrace")
+                            .getJSONObject("target").put("load",9999)
+                        "observation" -> entry.getJSONObject("nativeSetObservations").getJSONArray("events").getJSONObject(2)
+                            .getJSONObject("values").put("load","41")
+                        "audit" -> entry.getJSONObject("nativeHistoryRevisions").getJSONArray("events").getJSONObject(0)
+                            .getJSONObject("from").put("disposition","COMPLETED")
+                        "active-audit" -> entry.getJSONObject("nativeSetRevisions").getJSONArray("events").getJSONObject(0)
+                            .getJSONObject("values").put("load","39")
+                        "program" -> candidate.getJSONArray("saved").getJSONObject(0).put("name","Unrequested program change")
+                    }
+                    result.put("candidateSnapshot",candidate.toString()).put("candidateSnapshotSha256",sha(candidate.toString()))
+                    result.getJSONObject("history").put("snapshotSha256",sha(candidate.toString()))
+                    response.toString()
+                } else raw
+            }
+            val engine=SandboxCanonicalWorkoutStoreEngine(transport)
+            val drive=Drive();val recovery=Drive()
+            var store=CanonicalWorkoutStorePersistence(drive,engine);var journal=WorkoutJournalPersistence(recovery)
+            val origin=source.toString();assertTrue(store.initialize(origin))
+            val plan=checkNotNull(engine.prepareWorkout(origin,NativeWorkoutCodec.startJson("program-observations","workout-observations",2000)))
+            val first=plan.exercises[0]
+            val muscles=checkNotNull(engine.inspectWorkoutMuscles(origin,plan.issuedJson))
+            val part=muscles.rows.first { it.exerciseIndex==first.index }.primaryPart
+            var progress=checkNotNull(store.beginIssuedSession(plan,journal))
+            for((i,slot) in plan.slots.withIndex()) {
+                val skip=slot.exerciseIndex==first.index && slot.setIndex==1
+                val zero=slot.exerciseIndex==first.index && slot.setIndex==0
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,
+                    JournalSetIntent("observe-$i",slot,if(skip)JournalSetDisposition.SKIPPED else JournalSetDisposition.COMPLETED,
+                        if(skip)null else JournalSetValues(if(zero)"0" else "50","kg",8,null),
+                        adjustment=if(skip)JournalSetAdjustment("reduce",part) else null))))
+            }
+            val finish=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("finish-observations",62000,60000)))
+            assertNotNull(store.complete(plan.session,finish.revision,journal))
+            val before=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val original=JSONObject(before).getJSONArray("history").getJSONObject(0)
+            val view=checkNotNull(engine.inspectHistory(before,"workout-observations"))
+            val rows=checkNotNull(view.editRows)
+            val skipped=rows.single { it.disposition==JournalSetDisposition.SKIPPED }
+            val zero=rows.single { it.slot.exerciseIndex==first.index && it.slot.setIndex==0 }
+            assertNull(skipped.values);assertEquals("0",checkNotNull(zero.values).load);assertFalse(zero.retained)
+            val request=NativeHistoryObservationCodec.correctionJson(view,"restore-owned",70000,
+                listOf(NativeHistoryObservationChange(skipped.slot,JournalSetDisposition.COMPLETED,JournalSetValues("45","kg",9,3))))
+            val writes=drive.writes
+            for(mode in listOf("targets","observation","audit","active-audit","program")) {
+                forge=mode
+                assertTrue("Forged $mode must fail before publication",runCatching { store.correctHistory(request) }.isFailure)
+                assertEquals(writes,drive.writes)
+                assertEquals(before,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            }
+            forge=null
+            var notifications=0;store.subscribeCommittedChanges { notifications++ }
+            drive.failBeforeWrite=true
+            assertTrue(runCatching { store.correctHistory(request) }.isFailure)
+            assertEquals(before,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8));assertEquals(0,notifications)
+            drive.failBeforeWrite=false;drive.failAfterWrite=true
+            assertTrue(runCatching { store.correctHistory(request) }.isFailure)
+            drive.failAfterWrite=false;assertEquals(1,notifications)
+            store=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            val committedWrites=drive.writes
+            var corrected=checkNotNull(store.correctHistory(request));assertEquals(committedWrites,drive.writes)
+            var raw=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            var entry=JSONObject(raw).getJSONArray("history").getJSONObject(0)
+            assertEquals(original.getInt("setsDone")+1,entry.getInt("setsDone"))
+            assertEquals(original.getInt("volume")+45*9,entry.getInt("volume"))
+            assertEquals(0,entry.getJSONObject("nativeSetAdjustments").getJSONArray("events").length())
+            assertEquals(original.getJSONObject("nativeSetRevisions").toString(),entry.getJSONObject("nativeSetRevisions").toString())
+            assertEquals(original.getJSONObject("nativeCompletion").toString(),entry.getJSONObject("nativeCompletion").toString())
+            corrected=checkNotNull(store.correctHistory(NativeHistoryObservationCodec.correctionJson(corrected,"correct-zero",70010,
+                listOf(NativeHistoryObservationChange(zero.slot,JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",8,null))))))
+            assertTrue(checkNotNull(corrected.editRows).single { it.slot==zero.slot }.retained)
+            val extension=checkNotNull(corrected.editRows).first { it.slot.exerciseIndex==first.index && it.kind=="drop" }
+            corrected=checkNotNull(store.correctHistory(NativeHistoryObservationCodec.correctionJson(corrected,"skip-extension",70020,
+                listOf(NativeHistoryObservationChange(extension.slot,JournalSetDisposition.SKIPPED,null)))))
+            corrected=checkNotNull(store.correctHistory(NativeHistoryObservationCodec.correctionJson(corrected,"restore-extension",70030,
+                listOf(NativeHistoryObservationChange(extension.slot,JournalSetDisposition.COMPLETED,JournalSetValues("999","kg",2,null))))))
+            assertEquals(50.0,checkNotNull(corrected.exercises.single { it.id==first.id }.record).load,0.0)
+            val all=checkNotNull(corrected.editRows).filter { it.slot.exerciseId==first.id }
+                .map { NativeHistoryObservationChange(it.slot,JournalSetDisposition.SKIPPED,null) }
+            corrected=checkNotNull(store.correctHistory(NativeHistoryObservationCodec.correctionJson(corrected,"skip-entire-lift",70040,all)))
+            assertTrue(corrected.exercises.none { it.id==first.id })
+            val third=checkNotNull(corrected.editRows).single { it.slot.exerciseIndex==first.index && it.slot.setIndex==2 }
+            corrected=checkNotNull(store.correctHistory(NativeHistoryObservationCodec.correctionJson(corrected,"restore-third",70050,
+                listOf(NativeHistoryObservationChange(third.slot,JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",8,null))))))
+            assertEquals(3,corrected.exercises.single { it.id==first.id }.sets.single().ordinal)
+            assertNull(journal.recover())
+            raw=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            entry=JSONObject(raw).getJSONArray("history").getJSONObject(0)
+            assertEquals(62000,entry.getInt("date"));assertEquals(1,JSONObject(raw).getJSONArray("history").length())
+            assertEquals(original.getJSONObject("nativeSetRevisions").toString(),entry.getJSONObject("nativeSetRevisions").toString())
+            val next=checkNotNull(engine.prepareWorkout(raw,NativeWorkoutCodec.startJson("program-observations","next-observation-workout",80000)))
+            assertNotEquals(plan.session.dayId,next.session.dayId);assertNotNull(store.beginIssuedSession(next,journal))
+            val pendingWrites=drive.writes
+            assertNull(store.correctHistory(NativeHistoryObservationCodec.correctionJson(corrected,"blocked-observation-edit",80001,
+                listOf(NativeHistoryObservationChange(third.slot,JournalSetDisposition.SKIPPED,null)))))
+            assertEquals(pendingWrites,drive.writes);assertEquals(next.session,checkNotNull(journal.recover()).session)
+        } }
+    }
+
+    @Test(timeout=60000) fun whollySkippedCompletionVerifiesEveryMissingTemplateAgainstPinnedIssuedTargets() {
+        NodeTransport().use { node -> runBlocking {
+            val actual=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(actual.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Skipped target proof",unit="kg"),"create-skipped-basis","program-skipped-basis",1000,223)))
+            var forge=true
+            val transport=CanonicalWorkoutStoreTransport { wire ->
+                val raw=node.request(wire)
+                if(forge && JSONObject(wire).getString("method")=="prepareIssuedWorkoutHistory") {
+                    val response=JSONObject(raw);val result=response.getJSONObject("result");val entry=result.getJSONObject("historyEntry")
+                    entry.getJSONObject("nativeHistoryBasis").getJSONArray("rows").getJSONObject(0).getJSONArray("omitted")
+                        .getJSONObject(0).getJSONObject("template").getJSONObject("decisionTrace").getJSONObject("target").put("load",9999)
+                    val candidate=JSONObject(result.getString("candidateSnapshot"));candidate.getJSONArray("history").put(0,entry)
+                    result.put("candidateSnapshot",candidate.toString()).put("candidateSnapshotSha256",sha(candidate.toString()))
+                    response.toString()
+                } else raw
+            }
+            val engine=SandboxCanonicalWorkoutStoreEngine(transport)
+            val drive=Drive();val recovery=Drive();val store=CanonicalWorkoutStorePersistence(drive,engine)
+            val journal=WorkoutJournalPersistence(recovery);assertTrue(store.initialize(proposal.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(proposal.snapshot,
+                NativeWorkoutCodec.startJson("program-skipped-basis","workout-skipped-basis",2000)))
+            var progress=checkNotNull(store.beginIssuedSession(plan,journal))
+            for((i,slot) in plan.slots.withIndex())progress=NativeWorkoutProgress(plan,
+                checkNotNull(journal.recordSet(plan.session,progress.journal.revision,
+                    JournalSetIntent("skip-basis-$i",slot,JournalSetDisposition.SKIPPED,null))))
+            val finish=checkNotNull(journal.finish(plan.session,progress.journal.revision,JournalFinishIntent("finish-skipped-basis",62000,60000)))
+            val writes=drive.writes
+            assertTrue(runCatching { store.complete(plan.session,finish.revision,journal) }.isFailure)
+            assertEquals(writes,drive.writes);assertNotNull(journal.recover())
+            forge=false;assertNotNull(store.complete(plan.session,finish.revision,journal))
+            val raw=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val view=checkNotNull(engine.inspectHistory(raw,"workout-skipped-basis"))
+            assertTrue(view.exercises.isEmpty());assertEquals(0,view.setsDone)
+            assertEquals(plan.slots.size,checkNotNull(view.editRows).size)
+            val row=checkNotNull(view.editRows).first();assertNull(row.values)
+            val restored=checkNotNull(store.correctHistory(NativeHistoryObservationCodec.correctionJson(view,"restore-skipped-basis",70000,
+                listOf(NativeHistoryObservationChange(row.slot,JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",8,null))))))
+            assertEquals(1,restored.setsDone);assertEquals(320L,restored.volume)
+        } }
+    }
+
     @Test(timeout=60000) fun historyCorrectionRejectsChangedResponseAndConcurrentWorkoutWithoutPublishing() {
         NodeTransport().use { node -> runBlocking {
             val actual=SandboxCanonicalWorkoutStoreEngine(node)

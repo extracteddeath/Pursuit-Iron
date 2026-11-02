@@ -235,3 +235,14 @@ assert.ok(historyUi.includes('NativeSetValueFields(history.unit,load,reps,rir,!b
   host.includes('owner.correctHistory(correctionJson)') && !historyUi.includes('commitAtomically'),
   'History edits share input controls, retry exact operations and go through the owned canonical transaction');
 console.log('PASS native onboarding draft retention, canonical options, review/save separation, single-owner restore and logging gate, plus real-workout safe navigation, timer and confirmed history');
+const observationEditor=fs.readFileSync(root+'NativeHistoryObservationEditor.kt','utf8');
+assert.ok(historyUi.includes('NativeHistoryObservationEditor(history,observation,') &&
+  historyUi.includes('Skipped and other recorded sets') && historyUi.includes('history.editRows.orEmpty()') &&
+  observationEditor.includes('mutableStateOf(actual?.load ?: "")') &&
+  observationEditor.includes('mutableStateOf(actual?.reps?.toString() ?: "")') &&
+  observationEditor.includes('NativeSetValueFields(history.unit,load,reps,rir,!busy') &&
+  observationEditor.includes('NativeHistoryObservationCodec.correctionJson(') &&
+  observationEditor.includes('command?.let(onCorrect) ?: submit(') &&
+  observationEditor.includes('Mark this saved set as skipped?') &&
+  !observationEditor.includes('commitAtomically') && !observationEditor.includes('set.target'),
+  'Saved skip/zero edits use explicit actuals, original slots, shared controls and exact atomic-owner retries');

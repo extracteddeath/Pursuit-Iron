@@ -77,6 +77,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     }
     var selectedExercise by rememberSaveable(history.entrySha256) { mutableStateOf<String?>(null) }
     var selectedSet by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
+    var selectedObservation by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy
     TextButton(onClick=onList,enabled=!state.historyBusy) { Text("Back to workouts") }
     Text(history.dayLabel,style=MaterialTheme.typography.headlineSmall)
@@ -100,12 +101,31 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
                 if(occurrences.size>1)Text("Exercise ${exerciseIndex+1} in workout",
                     style=MaterialTheme.typography.titleSmall)
                 sets.forEach { set ->
-                    TextButton(onClick={selectedExercise=exercise.id;selectedSet=set.setIndex},enabled=canEdit,
+                    val observation=history.editRows?.firstOrNull { it.slot.exerciseId==exercise.id &&
+                        it.slot.exerciseIndex==set.exerciseIndex && it.slot.setIndex==set.ordinal-1 }
+                    TextButton(onClick={if(observation!=null)selectedObservation=observation.slot.exerciseIndex*20+observation.slot.setIndex
+                        else { selectedExercise=exercise.id;selectedSet=set.setIndex }},enabled=canEdit,
                         modifier=Modifier.fillMaxWidth()) {
-                        val label=historySetLabel(exercise,set)
+                        val label=observation?.let { historyObservationLabel(history,it) } ?: historySetLabel(exercise,set)
                         Text("$label · ${set.load} ${history.unit} × ${set.reps}" +
                             (set.rir?.let { " · $it RIR" } ?: "") + " · Edit")
                     }
+                }
+            }
+        }
+    }
+    val otherRows=history.editRows.orEmpty().filter { !it.retained }
+    if(otherRows.isNotEmpty())SectionLabel("Skipped and other recorded sets")
+    otherRows.groupBy { it.slot.exerciseIndex }.forEach { (exerciseIndex,rows)->
+        PursuitCard {
+            Text(rows.first().name,style=MaterialTheme.typography.titleMedium)
+            Text("Exercise ${exerciseIndex+1} in workout",style=MaterialTheme.typography.bodySmall)
+            rows.forEach { row->
+                TextButton(onClick={selectedObservation=exerciseIndex*20+row.slot.setIndex},enabled=canEdit,
+                    modifier=Modifier.fillMaxWidth()) {
+                    val value=row.values
+                    Text(historyObservationLabel(history,row)+if(value==null)" · Skipped · Record set"
+                        else " · ${value.load} ${history.unit} × ${value.reps} · Edit")
                 }
             }
         }
@@ -116,6 +136,11 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     }
     val exercise=history.exercises.firstOrNull { it.id==selectedExercise }
     val set=exercise?.sets?.firstOrNull { it.setIndex==selectedSet }
+    val observation=history.editRows?.firstOrNull { it.slot.exerciseIndex*20+it.slot.setIndex==selectedObservation }
+    if(observation!=null)NativeSetEditSheet(state.historyBusy,onDismiss={selectedObservation=-1}) {
+        NativeHistoryObservationEditor(history,observation,state.historyBusy,state.historyError,onCorrect,
+            onCancel={selectedObservation=-1})
+    }
     if(exercise!=null && set!=null) {
         NativeSetEditSheet(state.historyBusy,onDismiss={selectedExercise=null}) {
             NativeHistorySetEditor(history,exercise,set,state.historyBusy,state.historyError,onCorrect,

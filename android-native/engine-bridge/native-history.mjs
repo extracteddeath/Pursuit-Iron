@@ -1,6 +1,7 @@
 /** Owned native history only. Canonical JS owns summaries, mirrors and records. */
 import { parseStoredData,normalizeEditedHistoryEntry,perfAfterHistoryReplace,exRecords,EX_BY_ID } from '../../modules/engine-api.js';
-import { sha256Utf8 as sha,utf8ByteLength } from './json-identity.mjs';
+import { sha256Utf8 as sha,utf8ByteLength,equalJson } from './json-identity.mjs';
+import { readNativeHistoryBasis } from './native-history-basis.mjs';
 
 const object=v=>v!==null && typeof v==='object' && !Array.isArray(v);
 const own=(v,k)=>Object.prototype.hasOwnProperty.call(v,k);
@@ -134,7 +135,11 @@ export function inspectNativeHistoryPage(rawSnapshot,queryJson) {
     ensure(offset===0 || offset<total);
     const page=matches.slice(offset,offset+NATIVE_HISTORY_PAGE_SIZE).map(entry=>{
       let detailsAvailable=false;
-      try { mappedSets(entryFrom(store,entry.id));detailsAvailable=true; } catch { /* Summary only. */ }
+      try {
+        const owned=entryFrom(store,entry.id),mapped=mappedSets(owned);
+        if(own(owned,'nativeHistoryBasis'))readNativeHistoryBasis(owned,mapped);
+        detailsAvailable=true;
+      } catch { /* Summary only. */ }
       return {historyId:entry.id,programName:entry.programName,dayLabel:entry.dayLabel,
         weekIndex:entry.weekIndex,unit:entry.unit,date:entry.date,setsDone:entry.setsDone,
         totalSets:entry.totalSets,volume:entry.volume,detailsAvailable};
@@ -146,6 +151,7 @@ export function inspectNativeHistoryPage(rawSnapshot,queryJson) {
 export function inspectNativeHistory(rawSnapshot,historyId) {
   try {
     const store=storeFrom(rawSnapshot),entry=entryFrom(store,historyId),mapped=mappedSets(entry);
+    const editRows=own(entry,'nativeHistoryBasis')?readNativeHistoryBasis(entry,mapped):null;
     return {source:'modules/engine-api.js:normalizeEditedHistoryEntry+perfAfterHistoryReplace+exRecords',
       snapshotSha256:sha(rawSnapshot),entrySha256:semanticSha(entry),historyId:entry.id,
       dayLabel:entry.dayLabel,weekIndex:entry.weekIndex,unit:entry.unit,date:entry.date,
@@ -154,14 +160,89 @@ export function inspectNativeHistory(rawSnapshot,historyId) {
         sets:mapped.filter(s=>s.exerciseId===id).map(({setIndex,set,event})=>({setIndex,
           exerciseIndex:event.slot.exerciseIndex,kind:set.sub?set.kind:'working',ordinal:event.slot.setIndex+1,
           load:event.values.load,reps:event.values.reps,rir:event.values.rir})),
-        record:exRecords(store.history,id,entry.unit).maxWeight}))};
+        record:exRecords(store.history,id,entry.unit).maxWeight})),
+      ...(editRows?{editRows:editRows.map(row=>({slot:row.slot,name:EX_BY_ID[row.slot.exerciseId]?.name,
+        kind:row.kind,retained:row.retained,disposition:row.event.disposition,values:row.event.values}))}:{})};
   } catch {throw new TypeError('Native history unavailable');}
+}
+function applyObservationChanges(original,request,updatedAt) {
+  const mapped=mappedSets(original),basis=readNativeHistoryBasis(original,mapped);
+  const slotKey=slot=>`${slot.exerciseIndex}:${slot.setIndex}`;
+  const bySlot=new Map(basis.map(row=>[slotKey(row.slot),row])),changes=new Map();
+  for(const change of request.changes) {
+    const slot=change.slot,value=change.values;
+    ensure(exact(change,['slot','disposition','values']) && exact(slot,['exerciseIndex','setIndex','exerciseId']) &&
+      integer(slot.exerciseIndex,0,47) && integer(slot.setIndex,0,19) && identifier(slot.exerciseId));
+    const row=bySlot.get(slotKey(slot));ensure(row && equalJson(row.slot,slot) && !changes.has(slotKey(slot)));
+    ensure(change.disposition==='SKIPPED' ? value===null : change.disposition==='COMPLETED' &&
+      exact(value,['load','unit','reps','rir']) && load(value.load) && value.unit===original.unit &&
+      integer(value.reps,1,100) && (value.rir===null || integer(value.rir,0,10)));
+    changes.set(slotKey(slot),change);
+  }
+  ensure([...changes.values()].some(change=>{
+    const before=bySlot.get(slotKey(change.slot)).event;
+    return !equalJson({disposition:before.disposition,values:before.values},
+      {disposition:change.disposition,values:change.values});
+  }));
+  const base=clone(original),draft=clone(original),performance={},locations=[],occurrences=new Map();
+  const omitted=new Map(original.nativeHistoryBasis.rows.map(row=>[row.exerciseIndex,[]]));
+  for(const row of basis) {
+    const change=changes.get(slotKey(row.slot));
+    const event=change?{slot:row.slot,disposition:change.disposition,values:change.values}:row.event;
+    base.nativeSetObservations.events[row.eventIndex]=clone(event);
+    // Unchanged zero-load omissions retain their original representation.
+    if(event.disposition==='SKIPPED' || !row.retained && !change) {
+      omitted.get(row.slot.exerciseIndex).push({setIndex:row.slot.setIndex,template:row.template});continue;
+    }
+    const id=row.slot.exerciseId,values=event.values;
+    const set={...clone(row.template),w:Number(values.load),r:values.reps,
+      ...(values.rir!==null?{rir:values.rir,rirReported:true}:
+        own(row.template,'tr')?{rir:row.template.tr,rirReported:false}:{})};
+    if(set.decisionTrace)set.decisionTrace.applied={load:set.w,reps:set.r,owner:'user'};
+    if(!performance[id]) {
+      performance[id]={...clone(row.performance),date:original.date,sets:[]};occurrences.set(id,[]);
+      if(original.perf[id]?.prescriptionEdited===true)performance[id].prescriptionEdited=true;
+    }
+    const slots=occurrences.get(id);if(!slots.includes(row.slot.exerciseIndex))slots.push(row.slot.exerciseIndex);
+    const setIndex=performance[id].sets.length;
+    performance[id].sets.push(set);locations.push({exerciseId:id,setIndex,slot:row.slot});
+  }
+  for(const [id,slots] of occurrences)if(slots.length>1)Object.assign(performance[id],
+    {prescriptionEdited:true,duplicateExerciseSlots:slots});
+  base.nativeHistoryBasis={format:1,rows:original.nativeHistoryBasis.rows.map(row=>
+    ({...clone(row),omitted:omitted.get(row.exerciseIndex)}))};
+  base.nativeSetLocations={format:1,sets:locations};
+  if(base.nativeSetAdjustments) {
+    ensure(exact(base.nativeSetAdjustments,['format','events']) && base.nativeSetAdjustments.format===1 &&
+      Array.isArray(base.nativeSetAdjustments.events));
+    base.nativeSetAdjustments.events=base.nativeSetAdjustments.events.filter(adjustment=>
+      base.nativeSetObservations.events.find(event=>equalJson(event.slot,adjustment.slot))?.disposition==='SKIPPED');
+  }
+  draft.perf=performance;
+  // Actual RIR ownership follows its original slot across insertion/removal.
+  // The canonical edit owner still computes every summary and set count.
+  base.perf=performance;
+  const corrected=clone(normalizeEditedHistoryEntry(base,draft));
+  ensure(Object.keys(corrected.perf).length===Object.keys(performance).length &&
+    Object.entries(performance).every(([id,p])=>corrected.perf[id]?.sets.length===p.sets.length));
+  const audit=original.nativeHistoryRevisions || {format:1,events:[]};
+  ensure(exact(audit,['format','events']) && audit.format===1 && Array.isArray(audit.events) &&
+    audit.events.length+request.changes.length<=1024);
+  corrected.nativeHistoryRevisions={format:1,events:[...clone(audit.events),...request.changes.map(change=>{
+    const before=bySlot.get(slotKey(change.slot)).event;
+    return {operationId:request.operationId,slot:change.slot,correctedAt:updatedAt,
+      from:{disposition:before.disposition,values:before.values},
+      to:{disposition:change.disposition,values:change.values}};
+  })]};
+  return corrected;
 }
 export function prepareNativeHistoryCorrection(currentSnapshot,correctionJson) {
   try {
     ensure(typeof correctionJson==='string' && utf8ByteLength(correctionJson)<=16384);
     const request=JSON.parse(correctionJson);
-    ensure(exact(request,['operationId','snapshotSha256','historyId','entrySha256','correctedAt','changes']) &&
+    const observationMode=own(request,'format');
+    ensure((!observationMode || request.format===2) &&
+      exact(request,['operationId','snapshotSha256','historyId','entrySha256','correctedAt','changes',...(observationMode?['format']:[])]) &&
       identifier(request.operationId) && hash(request.snapshotSha256) && hash(request.entrySha256) &&
       integer(request.correctedAt,1,8640000000000000) && Array.isArray(request.changes) &&
       request.changes.length>=1 && request.changes.length<=48);
@@ -174,6 +255,11 @@ export function prepareNativeHistoryCorrection(currentSnapshot,correctionJson) {
       candidateSnapshot=currentSnapshot;alreadyPresent=true;
     } else {
       ensure(sha(currentSnapshot)===request.snapshotSha256 && semanticSha(original)===request.entrySha256);
+      const updatedAt=Math.max(request.correctedAt,Number(original.updatedAt || original.date)+1,store.savedAt+1);
+      ensure(Number.isSafeInteger(updatedAt));
+      let corrected;
+      if(observationMode)corrected=applyObservationChanges(original,request,updatedAt);
+      else {
       const mapped=mappedSets(original),base=clone(original),draft=clone(original),seen=new Set();
       for(const change of request.changes) {
         ensure(exact(change,['exerciseId','setIndex','load','reps','rir']) && identifier(change.exerciseId) &&
@@ -187,14 +273,15 @@ export function prepareNativeHistoryCorrection(currentSnapshot,correctionJson) {
         if(set.decisionTrace?.applied)set.decisionTrace.applied={...set.decisionTrace.applied,
           load:set.w,reps:set.r,owner:'user'};
       }
-      const corrected=clone(normalizeEditedHistoryEntry(base,draft));
+      corrected=clone(normalizeEditedHistoryEntry(base,draft));
       ensure(Object.keys(corrected.perf).length===Object.keys(original.perf).length &&
         Object.entries(original.perf).every(([id,p])=>corrected.perf[id]?.sets.length===p.sets.length));
-      corrected.updatedAt=Math.max(request.correctedAt,Number(original.updatedAt || original.date)+1,store.savedAt+1);
-      ensure(Number.isSafeInteger(corrected.updatedAt));
+      }
+      corrected.updatedAt=updatedAt;
       corrected.nativeCorrection={format:1,operationId:request.operationId,requestSha256,
         priorEntrySha256:request.entrySha256,correctedAt:corrected.updatedAt};
-      mappedSets(corrected); // Do not publish observations that disagree with canonical evidence.
+      const checked=mappedSets(corrected); // Reject disagreement with canonical evidence.
+      if(own(corrected,'nativeHistoryBasis'))readNativeHistoryBasis(corrected,checked);
       const history=store.history.map(h=>h.id===original.id?corrected:h);
       const perf=perfAfterHistoryReplace(store.history,store.perf,original.id,corrected);
       candidateSnapshot=JSON.stringify({...store,savedAt:corrected.updatedAt,history,perf});

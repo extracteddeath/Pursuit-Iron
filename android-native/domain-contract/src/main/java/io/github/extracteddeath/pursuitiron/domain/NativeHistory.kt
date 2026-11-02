@@ -16,7 +16,8 @@ data class NativeHistoryExercise(val id: String,val name: String,val sets: List<
     val record: NativeHistoryRecord?)
 data class NativeWorkoutHistory(val snapshotSha256: String,val entrySha256: String,val historyId: String,
     val dayLabel: String,val weekIndex: Int,val unit: String,val date: Long,val setsDone: Int,
-    val totalSets: Int,val volume: Long,val exercises: List<NativeHistoryExercise>)
+    val totalSets: Int,val volume: Long,val exercises: List<NativeHistoryExercise>,
+    val editRows: List<NativeHistoryObservation>?=null)
 data class NativeHistoryChange(val exerciseId: String,val setIndex: Int,val load: String,val reps: Int,val rir: Int?)
 data class NativeHistoryPreparation(val candidate: String,val alreadyPresent: Boolean,val history: NativeWorkoutHistory)
 
@@ -55,7 +56,8 @@ object NativeHistoryCodec {
     }
     private fun history(v: JSONObject,expectedSnapshot: String,expectedId: String): NativeWorkoutHistory {
         WorkoutStoreRuntimeCodec.exact(v,"source","snapshotSha256","entrySha256","historyId","dayLabel",
-            "weekIndex","unit","date","setsDone","totalSets","volume","exercises")
+            "weekIndex","unit","date","setsDone","totalSets","volume","exercises",
+            *(if(v.has("editRows"))arrayOf("editRows") else emptyArray()))
         require(text(v,"source")==SOURCE && sha(v,"snapshotSha256")==WorkoutStoreRuntimeCodec.sha(expectedSnapshot) &&
             text(v,"historyId")==expectedId && identifier.matches(expectedId))
         val unit=text(v,"unit");require(unit in listOf("lb","kg"))
@@ -91,7 +93,8 @@ object NativeHistoryCodec {
         require(exercises.sumOf { it.sets.size }<=done)
         return NativeWorkoutHistory(sha(v,"snapshotSha256"),sha(v,"entrySha256"),expectedId,
             text(v,"dayLabel"),number(v,"weekIndex",1,104).toInt(),unit,number(v,"date",1,8_640_000_000_000_000L),
-            done,total,number(v,"volume",0,9_007_199_254_740_991L),exercises)
+            done,total,number(v,"volume",0,9_007_199_254_740_991L),exercises,
+            if(v.has("editRows"))NativeHistoryObservationCodec.readRows(v.getJSONArray("editRows"),unit,exercises,total,done) else null)
     }
     fun decodeInspect(raw: String,id: String,snapshot: String,historyId: String): NativeWorkoutHistory? =
         WorkoutStoreRuntimeCodec.result(raw,id)?.let { history(it,snapshot,historyId) }
@@ -120,6 +123,7 @@ object NativeHistoryCodec {
             text(correction,"operationId")==text(request,"operationId") &&
             sha(correction,"priorEntrySha256")==sha(request,"entrySha256"))
         sha(correction,"requestSha256")
+        if(request.has("format"))NativeHistoryObservationCodec.verifyPreparation(snapshot,candidate,request,already)
         return NativeHistoryPreparation(candidate,already,result)
     }
     fun decodeCorrection(raw: String,id: String,snapshot: String,correctionJson: String): String? {

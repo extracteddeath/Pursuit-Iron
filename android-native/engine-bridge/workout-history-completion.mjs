@@ -12,6 +12,7 @@ import {
 } from '../../modules/engine-api.js';
 import { matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
 import { issuedNativeWorkoutFrom } from './native-workout.mjs';
+import { nativeSetTemplate,nativePerformanceTemplate } from './native-history-basis.mjs';
 
 const MAX_BYTES = 50 * 1024 * 1024;
 const MAX_REV = Number.MAX_SAFE_INTEGER;
@@ -161,25 +162,36 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
   // separately, including extensions which have no working-set decision trace.
   // The canonical logger remains the only owner of retained rows and zero-load
   // omissions; obtain each occurrence from that same logger, not a new summary.
-  const locations=[],offsets=new Map();
+  const locations=[],basisRows=[],offsets=new Map();
   if(issued)for(const row of rows) {
-    const local=loggedWorkoutPerformance(program,issuedDay,[row],s.weekIndex,
-      s.unit,origin.perf,origin.history)[row.id]?.sets || [];
+    const localPerformance=loggedWorkoutPerformance(program,issuedDay,[row],s.weekIndex,
+      s.unit,origin.perf,origin.history)[row.id];
+    const local=localPerformance?.sets || [];
     const offset=offsets.get(row.id) || 0;
     ensure(equalJson(local,(performance[row.id]?.sets || []).slice(offset,offset+local.length)));
     const candidates=row.sets.filter(set=>!set.warm);
-    let previous=-1;
+    let previous=-1;const retained=new Set();
     for(const [index,set] of local.entries()) {
       const setIndex=candidates.findIndex((target,i)=>i>previous && target.done &&
         !!target.sub===!!set.sub && (!set.sub || target.kind===set.kind) &&
         Number(target.weight)===set.w && Number(target.reps)===set.r &&
         (set.rirReported===true ? target.actualRIR===set.rir : target.actualRIR===null) &&
         (set.sub || set.decisionTrace?.slot===row.slot && set.workingSetIndex===i));
-      ensure(setIndex>=0);previous=setIndex;
+      ensure(setIndex>=0);previous=setIndex;retained.add(setIndex);
       locations.push({exerciseId:row.id,setIndex:offset+index,
         slot:{exerciseIndex:row.slot,setIndex,exerciseId:row.id}});
     }
     offsets.set(row.id,offset+local.length);
+    const omitted=candidates.flatMap((_,i)=>retained.has(i)?[]:[i]);
+    // Only missing rows need target templates. Placeholder values are discarded
+    // here and never published as actual observations or performance evidence.
+    const templatePerformance=omitted.length ? loggedWorkoutPerformance(program,issuedDay,[{...row,
+      sets:row.sets.map(set=>({...set,weight:'1',reps:'1',done:!set.warm,
+        auto:false,valueOwner:'user',actualRIR:null}))}],s.weekIndex,s.unit,origin.perf,origin.history)[row.id] : localPerformance;
+    ensure(templatePerformance && (!omitted.length || templatePerformance.sets.length===candidates.length));
+    basisRows.push({exerciseIndex:row.slot,exerciseId:row.id,setCount:candidates.length,
+      performance:nativePerformanceTemplate(templatePerformance),
+      omitted:omitted.map(setIndex=>({setIndex,template:nativeSetTemplate(templatePerformance.sets[setIndex])}))});
   }
   // The canonical logger stamps per-exercise dates with Date.now. Use the
   // journal's durable finish time so retries are deterministic after a crash.
@@ -235,6 +247,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
     ...(issued ? {nativeSetObservations:{format:1,events:events.map(event=>({
       slot:event.slot,disposition:event.disposition,values:event.values}))}} : {}),
     ...(issued ? {nativeSetLocations:{format:1,sets:locations}} : {}),
+    ...(issued ? {nativeHistoryBasis:{format:1,rows:basisRows}} : {}),
     ...(journal.format===4 ? {nativeSetAdjustments:{format:1,events:events
       .filter(event=>event.adjustment!==null)
       .map(event=>({slot:event.slot,action:event.adjustment.action,part:event.adjustment.part}))}} : {}),
@@ -272,10 +285,8 @@ export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw
       // An earlier engine version may have committed this exact handoff before
       // slot locations existed. A lost acknowledgement must still retire that
       // journal, without rewriting the already-published history or its bytes.
-      if(existing.length===1 && !own(existing[0],'nativeSetLocations')) {
-        const {nativeSetLocations:_locations,...legacy}=entry;
-        ensure(equalJson(existing[0],legacy));entry=legacy;
-      }
+      if(existing.length===1)for(const field of ['nativeSetLocations','nativeHistoryBasis'])
+        if(!own(existing[0],field))delete entry[field];
       ensure(existing.length === 1 && equalJson(existing[0], entry));
       candidateRaw = currentRaw;
     } else {

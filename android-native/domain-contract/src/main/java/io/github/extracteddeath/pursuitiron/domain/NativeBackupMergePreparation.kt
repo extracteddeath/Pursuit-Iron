@@ -73,3 +73,23 @@ object NativeBackupMergePreparationCodec {
             candidateHash,byteCount.toInt())
     }
 }
+
+
+/** Canonical preparation port; neither UI nor storage is available to this engine. */
+interface PinnedCanonicalBackupMergeEngine {
+    suspend fun previewBackupMerge(currentSnapshot: String,incomingSnapshot: String): NativeBackupMergePreview?
+    suspend fun prepareBackupMerge(currentSnapshot: String,incomingSnapshot: String,
+        expectedCandidateSha256: String): NativeBackupMergePreparation?
+}
+
+/**
+ * Private explicit user-confirmation evidence. No factory or UI is connected
+ * yet: the store's restore API cannot be reached through the shipping app.
+ */
+data class NativeBackupRestoreApproval internal constructor(
+    val operationId: String,
+    val currentSha256: String,
+    val incomingSha256: String,
+    val candidateSha256: String
+)
+data class NativeBackupRestoreOutcome(val operationId: String,val installedSha256: String)

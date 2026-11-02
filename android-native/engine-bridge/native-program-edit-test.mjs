@@ -180,6 +180,17 @@ const orphanRequest={format:2,operationId:'orphan-protection',reference:orphanRe
 orphanRequest.days[unique.di].slots.splice(unique.index,1);
 assert.throws(()=>prepareNativeProgramEdit(beforeOrphan,JSON.stringify(orphanRequest)),
   'Never orphan physical machine loading when its final exercise is removed');
+// A verified load must survive if the movement still exists on another day.
+const repeatedFixture=structuredClone(orphanFixture);
+const otherDay=repeatedFixture.saved[0].days[(unique.di+1)%p0.days.length];
+assert.ok(otherDay.exercises.length>1);
+otherDay.exercises[1]=unique.id;
+const repeatedSnapshot=JSON.stringify(repeatedFixture),repeatedRequest=structuredClone(orphanRequest);
+repeatedRequest.reference=inspectNativeProgram(repeatedSnapshot).program.reference;
+const retained=JSON.parse(prepareNativeProgramEdit(repeatedSnapshot,JSON.stringify(repeatedRequest)).candidateSnapshot);
+assert.deepEqual(retained.saved[0].config.loadingInventory.exerciseOverrides[unique.id],
+  repeatedFixture.saved[0].config.loadingInventory.exerciseOverrides[unique.id]);
+assert.ok(retained.saved[0].days.some(d=>d.exercises.includes(unique.id)));
 const withoutStock=structuredClone(orphanFixture);
 delete withoutStock.saved[0].config.loadingInventory;
 const bare=JSON.stringify(withoutStock);

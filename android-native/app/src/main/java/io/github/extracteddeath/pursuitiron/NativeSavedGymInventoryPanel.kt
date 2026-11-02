@@ -29,11 +29,12 @@ internal fun NativeSavedGymInventoryPanel(
     busy: Boolean,
     error: String?,
     message: String?,
-    onSave: (ReadOnlyProgramReference, String?)->Unit
+    onSave: (ReadOnlyProgramReference, String?)->Unit,
+    initiallyEditing: Boolean = false
 ) {
     val unit=saved.profile.unit
     val original=NativeGymInventoryCodec.toDraft(saved.loadingInventory)
-    var editing by rememberSaveable(reference.snapshotSha256) { mutableStateOf(false) }
+    var editing by rememberSaveable(reference.snapshotSha256) { mutableStateOf(initiallyEditing) }
     var pending by rememberSaveable(reference.snapshotSha256) { mutableStateOf(false) }
     var draft by rememberSaveable(reference.snapshotSha256) { mutableStateOf(HashMap(original)) }
     val result=NativeGymInventoryCodec.fromDraft(draft,unit,saved.loadingCandidates.map { it.id }.toSet(),
@@ -57,7 +58,7 @@ internal fun NativeSavedGymInventoryPanel(
         } else {
             NativeGymInventoryEditor(unit,draft,{ key,value ->
                 draft=HashMap(draft).apply { put(key,value) }
-            },result,enabled && !busy,saved.loadingCandidates)
+            },result,enabled && !busy,saved.loadingCandidates,initiallyExpanded=initiallyEditing)
             Text("Only verified physical settings change. Exercises, current prescriptions, and history remain unchanged.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

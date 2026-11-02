@@ -44,9 +44,10 @@ internal fun NativeGymInventoryEditor(
     onChange: (String, String) -> Unit,
     validation: NativeGymInventoryDraftResult,
     enabled: Boolean,
-    candidates: List<NativeStackCandidate> = emptyList()
+    candidates: List<NativeStackCandidate> = emptyList(),
+    initiallyExpanded: Boolean = false
 ) {
-    var expanded by rememberSaveable { mutableStateOf(draft.values.any { it.isNotBlank() }) }
+    var expanded by rememberSaveable { mutableStateOf(initiallyExpanded || draft.values.any { it.isNotBlank() }) }
     SectionLabel("Your actual gym weights")
     Text(
         "Optional. Enter only physical settings you have checked. Without them, weight entry stays manual.",

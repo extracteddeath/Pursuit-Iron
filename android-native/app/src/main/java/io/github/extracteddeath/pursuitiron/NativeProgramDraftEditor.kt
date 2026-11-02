@@ -38,11 +38,13 @@ internal fun NativeProgramDraftEditor(
     saveError: String?,
     onSave: (NativeProgramEditDraft)->Unit,
     lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>?,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onOpenGym: () -> Unit
 ) {
     var confirmSave by remember { mutableStateOf(false) }
     var pendingRemoval by remember { mutableStateOf<Pair<String,Int>?>(null) }
     var confirmClose by remember { mutableStateOf(false) }
+    var confirmOpenGym by remember { mutableStateOf(false) }
     val approved=verified.program
     val draftSaver=remember(approved.reference) { Saver<NativeProgramEditDraft,String>(
         save={NativeProgramEditCodec.workspaceJson(it)},
@@ -191,6 +193,11 @@ internal fun NativeProgramDraftEditor(
                 if(draft.isChanged || invalidInputs)confirmClose=true else onClose()
             },enabled=!saving) { Text("Close editor") }
         }
+        OutlinedButton(onClick={
+            if(draft.isChanged || invalidInputs) confirmOpenGym=true else onOpenGym()
+        },enabled=!saving,modifier=Modifier.fillMaxWidth()) {
+            Text("Edit verified gym weights")
+        }
     }
     pendingRemoval?.let { (dayId,index)->
         val movementId=draft.days.firstOrNull { it.id==dayId }?.exerciseIds?.getOrNull(index)
@@ -222,5 +229,12 @@ internal fun NativeProgramDraftEditor(
         text={Text("Your saved program will stay as it is.")},
         confirmButton={Button(onClick={confirmClose=false;onClose()}) {Text("Discard changes")}},
         dismissButton={OutlinedButton(onClick={confirmClose=false}) {Text("Keep editing")}}
+    )
+    if(confirmOpenGym) AlertDialog(
+        onDismissRequest={confirmOpenGym=false},
+        title={Text("Leave program editor?")},
+        text={Text("Unsaved program changes will be discarded. Your saved plan stays unchanged while you edit verified gym weights.")},
+        confirmButton={Button(onClick={confirmOpenGym=false;onOpenGym()}) {Text("Discard and edit gym weights")}},
+        dismissButton={OutlinedButton(onClick={confirmOpenGym=false}) {Text("Keep editing program")}}
     )
 }

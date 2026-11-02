@@ -402,7 +402,29 @@ internal fun PlanScreen(
         // Recreate on every authenticated canonical revision; a stale local
         // draft may never be presented as an editable CURRENT program.
         var editingDraft by rememberSaveable(currentPlan.program.reference) { mutableStateOf(false) }
-        if(editingDraft) {
+        var gymOnly by rememberSaveable(currentPlan.program.reference) { mutableStateOf(false) }
+        if(gymOnly) {
+            SectionLabel("Verified gym weights", "Physical loading settings for this saved program")
+            OutlinedButton(onClick={gymOnly=false},modifier=Modifier.fillMaxWidth()) {
+                Text("Back to program")
+            }
+            runtimeState?.saved?.takeIf {
+                it.program.id==currentPlan.program.id &&
+                    it.program.reference==currentPlan.program.reference
+            }?.let { saved ->
+                NativeSavedGymInventoryPanel(
+                    saved=saved,reference=currentPlan.program.reference,
+                    enabled=runtimeState.workout==null && !runtimeState.workoutBusy &&
+                        !runtimeState.historyBusy && !runtimeState.busy &&
+                        !runtimeState.backupExportBusy && !runtimeState.shortPreviewBusy &&
+                        !runtimeState.blocked,
+                    busy=runtimeState.busy,
+                    error=runtimeState.gymInventoryError,
+                    message=runtimeState.gymInventoryMessage,
+                    onSave=onSaveGymInventory,
+                    initiallyEditing=true)
+            } ?: Text("Verified gym settings are unavailable until the current saved program is loaded.")
+        } else if(editingDraft) {
             NativeProgramDraftEditor(
                 verified=currentPlan,
                 lookupNames=onLookupProgramExercises,
@@ -412,7 +434,8 @@ internal fun PlanScreen(
                 allowEditing=runtimeState?.workout==null && runtimeState?.workoutBusy!=true &&
                     runtimeState?.historyBusy!=true && runtimeState?.busy!=true &&
                     runtimeState?.backupExportBusy!=true && runtimeState?.shortPreviewBusy!=true && runtimeState?.blocked!=true,
-                onClose={ editingDraft=false }
+                onClose={ editingDraft=false },
+                onOpenGym={ editingDraft=false;gymOnly=true }
             )
         } else {
             SavedProgramOverviewPanel(currentPlan) { dayId ->

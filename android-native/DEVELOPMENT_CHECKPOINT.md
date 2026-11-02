@@ -1405,3 +1405,18 @@ rule, preserving exact existing program configuration, historical workouts
 and atomic revision checks. The removal confirmation explains how to
 clear equipment settings first. No automatic inventory deletion or guessed
 remapping to a replacement exercise is authorized.
+
+## 2026-11-02 — Direct, discard-safe gym weight editing from Plan
+
+The native saved-program editor now offers a direct route to verified gym
+settings. It is a navigation-only action: a dirty program draft requires
+explicit discard confirmation before the equipment editor opens. The equipment
+form opens ready for inspection; saving still uses its own canonical, revision-
+authenticated transaction and confirmation. A changed snapshot returns to the
+current Plan rather than silently replaying the old draft. No workout or
+training formula is changed by navigation.
+
+The exercise-removal regression now also covers a repeated movement retained
+on a different training day. The same verified loading profile must survive
+that legitimate removal. Full Compose and source-contract verification is
+required on the published revision; no APK or web changes.

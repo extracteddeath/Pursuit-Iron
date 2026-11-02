@@ -87,6 +87,33 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             f.getLong("completedAt"),f.getLong("durationMs"))))
     }
 
+    @Test(timeout=60000) fun packagedEnginePreviewsBackupConflictRiskWithoutWritingPersonalStore() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val drive=Drive()
+            val store=CanonicalWorkoutStorePersistence(drive,engine)
+            assertTrue(store.initialize(source))
+            val sourceBytes=checkNotNull(store.readOwnedCurrentStoreBytes())
+            val current=String(sourceBytes,Charsets.UTF_8)
+            sourceBytes.fill(0)
+            val selected=JSONObject(current).put("savedAt",JSONObject(current).getLong("savedAt")+1).toString()
+            val priorWrites=drive.writes
+            val preview=checkNotNull(engine.previewBackupMerge(current,selected))
+            assertEquals(sha(current),preview.currentSha256)
+            assertEquals(sha(selected),preview.incomingSha256)
+            assertEquals(64,preview.hypotheticalMergedSha256.length)
+            assertTrue(preview.hypotheticalMergedBytes>0)
+            assertEquals(JSONObject(current).getJSONArray("history").length(),preview.current.history)
+            assertEquals(JSONObject(selected).getJSONArray("history").length(),preview.incoming.history)
+            assertTrue(preview.hypothetical.history>=preview.current.history)
+            assertEquals(priorWrites,drive.writes)
+            assertArrayEquals(current.toByteArray(Charsets.UTF_8),
+                checkNotNull(store.readOwnedCurrentStoreBytes()))
+            assertNull(engine.previewBackupMerge(current,"invalid-json"))
+            assertEquals(priorWrites,drive.writes)
+        } }
+    }
+
     @Test(timeout=60000) fun realOnboardingCreatesSavesAndRestoresWithoutReplacingAnotherProgram() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

@@ -504,7 +504,16 @@ if scroll_to(r"Quick workout", tries=3):
         adb("shell", "input", "text", "12")
         hide_keyboard()
         time.sleep(0.6)
-        tap(r"^\|Save$")
+        # Run 159: the keyboard stayed up over Save and every later step ran under the open sheet. Escape and
+        # retry before giving up, and never leave the editor open behind us.
+        for _ in range(3):
+            if tap(r"^\|Save$", timeout=3, required=False):
+                break
+            adb("shell", "input", "keyevent", "111")
+            time.sleep(0.8)
+        else:
+            FAILS.append("quick set editor: Save never became reachable")
+            back(); back()
     tap(r"^Set 1:", "quick-logged")
     tap(r"^\|Finish$|^Finish$")
     tap(r"^\|Finish$|^Finish$", timeout=5, required=False)

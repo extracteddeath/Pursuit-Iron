@@ -72,8 +72,8 @@ internal fun NativeGymInventoryEditor(
             NativeGymLoadField(unit,draft,onChange,enabled,"override:${focused.id}",
                 focused.name,
                 if(focused.mode=="external_load")
-                    "Exact values AS LOGGED. Never infer per-side plates, sled base weight, or effective resistance"
-                else "Exact verified weights or a checked minimum, increment and maximum")
+                    "Use exact: 45, 55, 65. Values must match your real logged totals; never infer plate sides, sled weight or resistance"
+                else "Use exact: 5, 10, 15 or range: 5, 5, 150. Enter only physically checked selectable loads")
             OutlinedButton(
                 onClick={onChange("override:${focused.id}","")},
                 enabled=enabled && !draft["override:${focused.id}"].isNullOrBlank(),
@@ -99,16 +99,16 @@ internal fun NativeGymInventoryEditor(
                 Text(if(showSpecific) "Hide individual machine settings" else "Set individual machine weights")
             }
             if(showSpecific) {
-                Text("Enter only verified weights. Cable/standard stacks can use exact: 5, 10, 15 or range: 5, 5, 150. Specialty machines require exact: weights AS LOGGED, not plates-per-side, assumed sled loads or inferred increments. If the log basis is uncertain, leave it blank.",
+                Text("Each exercise setting needs a prefix: exact: 5, 10, 15 or range: 5, 5, 150. Range is allowed only for checked cable/standard stacks. Specialty machines require exact: weights AS LOGGED, never assumed plate sides, sled loads or inferred increments. If the loading basis is uncertain, leave it blank.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 candidates.filter { it.id!=focused?.id }.forEach { candidate ->
                     NativeGymLoadField(unit,draft,onChange,enabled,"override:${candidate.id}",
                         candidate.name,
                         when(candidate.mode) {
-                            "cable_stack" -> "Verified cable weights; overrides the shared cable stack"
-                            "machine_stack" -> "Verified selectorized weights; overrides the shared machine stack"
-                            else -> "EXACT logged loads only; do not enter per-side plates or assume machine resistance"
+                            "cable_stack" -> "Use exact: 5, 10, 15 or range: 5, 5, 150. Overrides the shared cable stack"
+                            "machine_stack" -> "Use exact: 5, 10, 15 or range: 5, 5, 150. Overrides the shared stack"
+                            else -> "Use exact: 45, 55, 65. Logged total values only; never assume side plates or resistance"
                         })
                 }
             }

@@ -888,3 +888,13 @@ assert.ok(acknowledgedRest.includes('fun latestAcknowledged(progress: NativeWork
   acknowledgedRestTest.includes('acknowledgedRestFollowsSavedSetAcrossFocusExerciseSwitch') &&
   acknowledgedRestTest.includes('NativeRestCue("finish-bench",90,0)'),
   'Focus must preserve the correct canonical rest cue when navigation advances to a new exercise after a durable receipt');
+
+const gymEntryHelp=fs.readFileSync(root+'NativeGymInventoryEditor.kt','utf8');
+assert.ok(gymEntryHelp.includes('Each exercise setting needs a prefix: exact:') &&
+  gymEntryHelp.includes('Range is allowed only for checked cable/standard stacks') &&
+  gymEntryHelp.includes('Use exact: 45, 55, 65. Values must match your real logged totals') &&
+  gymEntryHelp.includes('Use exact: 5, 10, 15 or range: 5, 5, 150') &&
+  verifiedLoadUi.includes('if(review.mode=="bodyweight")') &&
+  verifiedLoadUi.includes('no verified external weight steps') &&
+  verifiedLoadUi.includes('No assumed load increments are offered.'),
+  'Equipment setup must explain exact/range syntax and never imply bodyweight or specialty-machine increments that were not inventoried');

@@ -93,7 +93,9 @@ internal fun NativeVerifiedLoadOptions(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else if(review!=null) {
-        Text("Equipment not confirmed for this exercise. No assumed load increments are offered.",
+        Text(if(review.mode=="bodyweight")
+            "Bodyweight loading has no verified external weight steps. Use 0 for unweighted bodyweight or enter a real additional load manually."
+            else "Equipment not confirmed for this exercise. No assumed load increments are offered.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }

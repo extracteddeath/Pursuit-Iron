@@ -1900,3 +1900,16 @@ semantics for other callers. Added Kotlin regression coverage for a
 bench-to-row Focus transition and source assertions. Timer state remains
 session-scoped, nonpersisting and user-resettable. No prescriptions or
 stored workout bytes changed; no APK.
+
+## 2026-11-02 — Accurate physical load entry guidance
+
+Improved the native gym inventory editor's exercise-specific input
+instructions. The parser already required exact: or range: prefixes, but
+several individual field hints omitted them, leading to rejected input.
+Every applicable field now explains the valid syntax; specialty/externally
+loaded machines explicitly require exact verified logged totals, while
+checked cable/standard stacks may supply exact values or real increments.
+Bodyweight's unconfirmed loading hint no longer suggests that the exercise
+itself has unconfirmed equipment or invented steps. No example is
+autofilled and no default load is prescribed; users still enter their
+actual physical inventory. The engine and persisted values are untouched.

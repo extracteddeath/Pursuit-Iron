@@ -143,6 +143,29 @@ class NativeProgramEditDraftTest {
         assertFalse(original.isChanged)
     }
 
+    @Test fun singleSubstitutionStaysIsolatedFromOtherOrganizationEditsAndRestores() {
+        val original=NativeProgramEditDraft.from(verified())
+        val switched=checkNotNull(original.substituteExercise("day-1",1,"rdl"))
+        assertEquals(listOf("bench","rdl","row"),switched.days[0].exerciseIds)
+        assertEquals(NativeProgramReplacement("day-1",1,"rdl"),switched.replacement)
+        val payload=org.json.JSONObject(NativeProgramEditCodec.editJson(switched,"sub-once",30))
+        assertEquals(3,payload.getInt("format"))
+        assertEquals("rdl",payload.getJSONObject("replacement").getString("exerciseId"))
+        assertEquals("[0,1,2]",payload.getJSONArray("days").getJSONObject(0).getJSONArray("slots").toString())
+        val restored=checkNotNull(NativeProgramEditCodec.restoreWorkspace(
+            verified(),NativeProgramEditCodec.workspaceJson(switched)))
+        assertEquals(switched.days,restored.days)
+        assertEquals(switched.replacement,restored.replacement)
+        assertNull(switched.moveExercise("day-1",0,1))
+        assertNull(switched.removeExercise("day-1",0))
+        assertNull(switched.renameProgram("Different"))
+        assertNull(original.substituteExercise("day-1",0,"bench"))
+        assertNull(original.substituteExercise("day-1",1,"anything-unknown"))
+        assertNull(original.substituteExercise("day-1",1,"row"))
+        assertFalse(original.isChanged)
+        assertFalse(switched.reset().isChanged)
+    }
+
     @Test fun invalidMovementOperationsOrLabelsRefuseWithoutPartialMutation() {
         val draft=NativeProgramEditDraft.from(verified())
         assertNull(draft.moveExercise("day-bogus",0,1))

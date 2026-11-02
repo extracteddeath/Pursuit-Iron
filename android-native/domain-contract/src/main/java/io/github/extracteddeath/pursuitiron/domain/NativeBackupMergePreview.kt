@@ -20,6 +20,9 @@ data class NativeBackupMergePreview(
     val hypothetical: NativeBackupMergeCounts,
     val conflicts: Int,
     val historyDropped: Int,
+    val ownedRecordsRemoved: Int,
+    val ownedRecordsReplaced: Int,
+    val settingsChanged: Int,
     val flags: List<String>
 ) {
     val requiresIntervention: Boolean get() = flags.isNotEmpty()
@@ -48,7 +51,8 @@ object NativeBackupMergePreviewCodec {
             "source","validation","readOnly","imported","approvedForImport",
             "approvedForWorkoutExecution","requiresExplicitApproval","storeVersion",
             "currentSha256","incomingSha256","hypotheticalMergedSha256",
-            "hypotheticalMergedBytes","counts","conflicts","historyDropped","flags")
+            "hypotheticalMergedBytes","counts","conflicts","historyDropped",
+            "ownedRecordsRemoved","ownedRecordsReplaced","settingsChanged","flags")
         require(result.get("source") == "modules/engine-api.js:mergeStores" &&
             result.get("validation") == "canonical-v13-merge-preview" &&
             result.get("readOnly") == true && result.get("imported") == false &&
@@ -68,6 +72,9 @@ object NativeBackupMergePreviewCodec {
         require(hypotheticalBytes > 0)
         val collisions = boundedInt(result,"conflicts",100000)
         val lost = boundedInt(result,"historyDropped",100000)
+        val removed = boundedInt(result,"ownedRecordsRemoved",100000)
+        val replaced = boundedInt(result,"ownedRecordsReplaced",100000)
+        val settings = boundedInt(result,"settingsChanged",100000)
         val counts = result.getJSONObject("counts")
         WorkoutStoreRuntimeCodec.exact(counts,"current","incoming","hypothetical")
         val original = decodeCounts(counts.getJSONObject("current"))
@@ -75,7 +82,7 @@ object NativeBackupMergePreviewCodec {
         val hypothetical = decodeCounts(counts.getJSONObject("hypothetical"))
 
         val rawFlags = result.getJSONArray("flags")
-        require(rawFlags.length() <= 3)
+        require(rawFlags.length() <= 6)
         val flags = (0 until rawFlags.length()).map { index ->
             val value = rawFlags.get(index)
             require(value is String)
@@ -85,10 +92,14 @@ object NativeBackupMergePreviewCodec {
             if (lost > 0) add("HISTORY_CAP_LOSS")
             if (hypotheticalBytes > STORE_LIMIT) add("NATIVE_STORE_CAPACITY")
             if (collisions > 0) add("RECORD_CONFLICTS_REQUIRE_REVIEW")
+            if (removed > 0) add("OWNED_RECORDS_REMOVED")
+            if (replaced > 0) add("OWNED_RECORDS_REPLACED")
+            if (settings > 0) add("SETTINGS_CHANGED")
         }
         require(flags == expected)
         return NativeBackupMergePreview(currentHash,incomingHash,candidateHash,
-            hypotheticalBytes,original,selected,hypothetical,collisions,lost,flags)
+            hypotheticalBytes,original,selected,hypothetical,collisions,lost,
+            removed,replaced,settings,flags)
     }
 
     private fun boundedInt(value: JSONObject,key: String,limit: Int): Int {

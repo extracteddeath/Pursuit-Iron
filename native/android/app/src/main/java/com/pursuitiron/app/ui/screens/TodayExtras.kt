@@ -287,10 +287,12 @@ fun TodayWeekCard(vm: AppViewModel, h: JSONObject, showBlock: Boolean) {
 fun StreakLine(h: JSONObject) {
     val n = h.i("streakWeeks"); if (n <= 0) return
     val cs = MaterialTheme.colorScheme
-    Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // One line inside the week card; the rule behind it is what TalkBack reads.
+    Row(Modifier.padding(horizontal = 4.dp).semantics(mergeDescendants = true) { contentDescription = "$n-week streak. A week counts with one workout in it." },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Icon(PiIcons.Flame, null, Modifier.size(18.dp), tint = cs.primary)
         Text("$n-week streak", style = MaterialTheme.typography.titleSmall)
-        Text("· a week counts with one workout in it", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        Text("· one workout keeps a week", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

@@ -200,7 +200,6 @@ internal fun NativeProgramDraftEditor(
             "One accessory replacement pending. Old exercise history is kept, but its load and progression are not transferred."
             else "Changes apply to this program; ${draft.removedMovementCount} removal(s) pending. Workout history and other cycle blocks are kept.",
             style=MaterialTheme.typography.bodySmall)
-            style=MaterialTheme.typography.bodySmall)
         saveError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         Button(onClick={confirmSave=true},enabled=allowEditing && !saving && draft.isChanged && !invalidInputs,
             modifier=Modifier.fillMaxWidth()) {

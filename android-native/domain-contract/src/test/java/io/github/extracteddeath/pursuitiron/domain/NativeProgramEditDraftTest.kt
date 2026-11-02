@@ -143,6 +143,28 @@ class NativeProgramEditDraftTest {
         assertFalse(original.isChanged)
     }
 
+    @Test fun nonconsecutiveOriginalPositionsAreValidAndForgedIndicesAreNot() {
+        val check=NativeProgramEditCodec::validSurvivingSourceSlots
+        assertTrue(check(listOf(0,2,4),5))
+        assertTrue(check(listOf(4,1,3),5))
+        assertTrue(check(listOf(1,2),3))
+        assertTrue(check(listOf(2,0),3))
+        assertFalse(check(emptyList(),5))
+        assertFalse(check(listOf(0,0,2),5))
+        assertFalse(check(listOf(0,2,5),5))
+        assertFalse(check(listOf(-1,2),5))
+        assertFalse(check(listOf(0,1,2),2))
+        assertFalse(check(listOf(0),0))
+        // The workspace preserves source indices after multiple removals.
+        val base=verified()
+        val draft=NativeProgramEditDraft.from(base)
+        val removed=checkNotNull(draft.removeExercise("day-1",1))
+        assertEquals(listOf(0,2),removed.originalSlots("day-1"))
+        val saved=NativeProgramEditCodec.workspaceJson(removed)
+        assertEquals(listOf(0,2),checkNotNull(
+            NativeProgramEditCodec.restoreWorkspace(base,saved)).originalSlots("day-1"))
+    }
+
     @Test fun invalidMovementOperationsOrLabelsRefuseWithoutPartialMutation() {
         val draft=NativeProgramEditDraft.from(verified())
         assertNull(draft.moveExercise("day-bogus",0,1))

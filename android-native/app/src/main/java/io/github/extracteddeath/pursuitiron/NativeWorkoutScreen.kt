@@ -268,6 +268,7 @@ internal fun NativeWorkoutScreen(
     nextPreview?.let { preview->
         NativeUpNextPanel(preview,exerciseIndex,
             enabled=!state.workoutBusy && !state.historyBusy,
+            unit=plan.session.unit,
             onOpenExercise={ position ->exerciseIndex=position })
     }
     state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }

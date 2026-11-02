@@ -721,3 +721,11 @@ assert.ok(train.includes('if(!journal.isFinished && focusMode) {') &&
     train.indexOf('Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())') &&
   train.includes('if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0)'),
   'The ready-to-finish action must allow immediate review of saved sets without submitting a finish or losing the confirmation gate');
+
+assert.ok(shell.includes('val readyToFinishWorkoutId=onboarding?.workout?.takeIf {') &&
+  shell.includes('it.journal.unresolvedCount==0') &&
+  shell.includes('LaunchedEffect(current,readyToFinishWorkoutId)') &&
+  shell.includes('current==NativeDestination.TRAIN.ordinal &&') &&
+  shell.includes('readyToFinishWorkoutId!=null) pageScroll.animateScrollTo(0)') &&
+  !shell.includes('LaunchedEffect(pageScroll.value'),
+  'A durably resolved workout must reveal Finish once without repeatedly stealing manual review scroll');

@@ -1730,3 +1730,15 @@ publishing history. The same confirmation remains required to finish.
 A durably finished journal does not display an edit shortcut, but can
 still retry its history publication. The interaction contract checks
 the ordering and absence of an optimistic completion path.
+
+## 2026-11-02 — Reveal Finish after the final acknowledged set
+
+The native destination scroll state is intentionally retained while
+logging. To avoid hiding the newly elevated Review and finish action
+after the final set, Train now animates its page to the top on the
+specific transition to an active workout with zero unresolved journal
+slots. The effect is keyed to the authenticated session workout ID
+and destination, not page-scroll position or ordinary recomposition:
+manual Show all review and corrections do not cause repeated scrolling.
+The final state is still read from canonical journal receipts, not
+a button tap or an optimistic set count. No APK generated.

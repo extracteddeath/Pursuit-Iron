@@ -35,6 +35,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -223,6 +224,17 @@ internal fun NativePreviewApp(
                                 "plan-day-${selectedTrainingDay?.dayId}-${selectedTrainingDay?.reference?.snapshotSha256}"
                             else "destination"
                         val pageScroll=key(scrollContext) { rememberScrollState() }
+                        // Focus completion must actually reveal the finish
+                        // action. Key the transition to the acknowledged
+                        // all-resolved workout identity; manual review scroll
+                        // afterwards must never be repeatedly overridden.
+                        val readyToFinishWorkoutId=onboarding?.workout?.takeIf {
+                            it.journal.unresolvedCount==0
+                        }?.plan?.session?.workoutId
+                        LaunchedEffect(current,readyToFinishWorkoutId) {
+                            if(current==NativeDestination.TRAIN.ordinal &&
+                                readyToFinishWorkoutId!=null) pageScroll.animateScrollTo(0)
+                        }
                         Box(Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 760.dp)

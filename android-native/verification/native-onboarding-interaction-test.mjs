@@ -853,3 +853,11 @@ assert.ok(screens.includes('val canPreviewShorter=workoutState?.let { it.ready &
   host.includes('current.historyBusy || current.backupExportBusy || current.workoutBlocked ||') &&
   host.includes('if(!current.ready || current.blocked || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked'),
   'Short-session preview and explicit start must be disabled across blocked/history/export store work');
+
+assert.ok(historyUi.includes('val historyEditorBusy=state.historyBusy || state.workoutBusy ||') &&
+  historyUi.includes('state.backupExportBusy || state.busy || state.workout!=null ||') &&
+  historyUi.includes('!state.ready || state.blocked || state.workoutBlocked') &&
+  historyUi.includes('val canEdit=!historyEditorBusy') &&
+  historyUi.split('NativeSetEditSheet(historyEditorBusy,').length-1===3 &&
+  host.includes('if(!current.ready || current.blocked || current.busy || current.workoutBlocked ||'),
+  'Saved-history corrections must be disabled when the runtime writer is unready or blocked, not just during active workout or backup');

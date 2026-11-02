@@ -1866,3 +1866,13 @@ The native runtime independently rejects the same invalid previews and
 rejects starting a workout when the store is blocked. An approved short
 session is still source-matched against the canonical engine before
 issuance. No UI training calculations, persisted data changes or APK.
+
+## 2026-11-02 — Saved-history edit gating after recovery
+
+History detail now disables its existing Edit/Record and all three
+shared correction sheets during unready or blocked recovery states, as
+well as the original active workout, backup, history I/O and other busy
+conditions. This matches the tighter canonical correction writer and
+avoids a Save button that can only be rejected. Current corrected
+observations, original targets, exact retry identity and saved data
+remain unchanged. Source-only validation and Compose compile required.

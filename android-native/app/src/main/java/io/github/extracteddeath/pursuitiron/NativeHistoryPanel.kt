@@ -92,7 +92,8 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     var selectedObservation by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     var selectedWarmup by rememberSaveable(history.entrySha256) {mutableStateOf<String?>(null)}
     val historyEditorBusy=state.historyBusy || state.workoutBusy ||
-        state.backupExportBusy || state.busy || state.workout!=null
+        state.backupExportBusy || state.busy || state.workout!=null ||
+        !state.ready || state.blocked || state.workoutBlocked
     val canEdit=!historyEditorBusy
     // If a new active workout is started from another tab, stale history
     // correction sheets must close instead of remaining seemingly editable.

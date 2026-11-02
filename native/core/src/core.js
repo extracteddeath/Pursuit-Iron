@@ -265,7 +265,8 @@ function readiness() {
 }
 
 /* The design's row subtitle: movement pattern · main equipment ("Horizontal push · Barbell"). */
-const EQUIP_LABEL = { ...Object.fromEntries((E.EQUIPMENT || []).map((x) => [x.id, x.label])), barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Band', pullup: 'Bodyweight', bodyweight: 'Bodyweight' };
+// A dedicated machine reads "Machine" beside the lift's name: "Machine Row · Chest-Supported Row" named the machine twice.
+const EQUIP_LABEL = { ...Object.fromEntries((E.EQUIPMENT || []).map((x) => [x.id, x.cat === 'Machines' && !['cable', 'smith'].includes(x.id) ? 'Machine' : x.label])), barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Band', pullup: 'Bodyweight', bodyweight: 'Bodyweight' };
 /* The lift's main equipment in words ("Barbell", "Dumbbell"); benches and racks are where you do it, not what you lift. */
 function equipLabelOf(ex) { const eq = (ex?.equip || []).find((x) => !['bench', 'rack'].includes(x)) || (ex?.equip || [])[0]; return eq ? (EQUIP_LABEL[eq] || eq.replace(/[-_]/g, ' ').replace(/^./, (c) => c.toUpperCase())) : 'Bodyweight'; }
 function exSub(ex) {
@@ -2959,7 +2960,8 @@ function lastTop(id) {
         if (!done.length) continue;
         const top = E.pickTopSet(done, (x) => Number(x.w) || 0, (x) => Number(x.r)) || done[0];
         const w = Number(top.w) || 0, from = H[i].unit || u;
-        const v = w > 0 ? Math.round((from === u ? w : (u === 'lb' ? w * 2.20462 : w / 2.20462)) * 10) / 10 : 0;
+        // A converted load reads to the half unit (45 kg → 99 lb, not 99.2): plates don't come in tenths.
+        const v = w > 0 ? (from === u ? Math.round(w * 10) / 10 : Math.round((u === 'lb' ? w * 2.20462 : w / 2.20462) * 2) / 2) : 0;
         return { w: v, r: Number(top.r), unit: u };
     }
     return null;

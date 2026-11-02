@@ -35,7 +35,7 @@ object NativeGymInventoryCodec {
         }
     }
     /** Strict accepted subset: missing families do not inherit factory defaults. */
-    fun validate(raw: String, expectedUnit: String): String {
+    fun validate(raw: String, expectedUnit: String, allowedExerciseIds: Set<String> = emptySet()): String {
         require(expectedUnit == "lb" || expectedUnit == "kg")
         require(raw.toByteArray(Charsets.UTF_8).size <= 16384)
         val obj = JSONObject(raw)
@@ -78,7 +78,24 @@ object NativeGymInventoryCodec {
             loadList(smith.getJSONArray("availableLoads"))
             count++
         }
-        if (obj.has("exerciseOverrides")) exact(obj.getJSONObject("exerciseOverrides"), emptySet())
+        if (obj.has("exerciseOverrides")) {
+            val overrides=obj.getJSONObject("exerciseOverrides")
+            require(overrides.length()<=24)
+            keys(overrides).forEach { id ->
+                require(id in allowedExerciseIds && id.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")))
+                val setting=overrides.getJSONObject(id)
+                if (keys(setting)==setOf("availableLoads")) {
+                    loadList(setting.getJSONArray("availableLoads"))
+                } else {
+                    exact(setting,setOf("minimum","increment","maximum"))
+                    val minimum=number(setting,"minimum")
+                    number(setting,"increment",BigDecimal("0.01"))
+                    val maximum=number(setting,"maximum")
+                    require(maximum>=minimum)
+                }
+                count++
+            }
+        }
         require(count > 0)
         return obj.toString()
     }
@@ -87,10 +104,13 @@ object NativeGymInventoryCodec {
      * Blank is explicitly unknown. No form field is prefilled with hypothetical
      * plate or stack availability. Incomplete sets are errors, not guessed.
      */
-    fun fromDraft(fields: Map<String, String>, unit: String): NativeGymInventoryDraftResult = try {
+    fun fromDraft(fields: Map<String, String>, unit: String,
+        allowedExerciseIds: Set<String> = emptySet()): NativeGymInventoryDraftResult = try {
         val nonblank = fields.mapValues { it.value.trim() }.filterValues { it.isNotEmpty() }
         if (nonblank.isEmpty()) NativeGymInventoryDraftResult()
         else {
+            require(nonblank.keys.all { it in setOf("bar","plates","dumbbells","cable","machine","smith") ||
+                it.startsWith("override:") && it.removePrefix("override:") in allowedExerciseIds })
             val obj = JSONObject().put("unit", unit)
             fun numeric(token: String): BigDecimal {
                 require(decimal.matches(token.trim()))
@@ -122,7 +142,24 @@ object NativeGymInventoryCodec {
             }
             if ("smith" in nonblank) obj.put("smith", JSONObject()
                 .put("availableLoads", loads(nonblank.getValue("smith"))))
-            NativeGymInventoryDraftResult(json = validate(obj.toString(), unit))
+            val overrides=JSONObject()
+            nonblank.filterKeys { it.startsWith("override:") }.forEach { (key, text) ->
+                val id=key.removePrefix("override:")
+                val profile=when {
+                    text.startsWith("exact:",ignoreCase=true) ->
+                        JSONObject().put("availableLoads",loads(text.substringAfter(':')))
+                    text.startsWith("range:",ignoreCase=true) -> {
+                        val values=text.substringAfter(':').split(",").map { numeric(it) }
+                        require(values.size==3)
+                        JSONObject().put("minimum",values[0])
+                            .put("increment",values[1]).put("maximum",values[2])
+                    }
+                    else -> throw IllegalArgumentException("Unknown physical profile")
+                }
+                overrides.put(id,profile)
+            }
+            if(overrides.length()>0)obj.put("exerciseOverrides",overrides)
+            NativeGymInventoryDraftResult(json = validate(obj.toString(), unit, allowedExerciseIds))
         }
     } catch (_: Exception) {
         NativeGymInventoryDraftResult(error = "Check actual weights, counts and units. Use commas between entries; no defaults are assumed.")
@@ -149,6 +186,15 @@ object NativeGymInventoryCodec {
             draft[family] = "${r.get("minimum")}, ${r.get("increment")}, ${r.get("maximum")}"
         }
         if (obj.has("smith")) draft["smith"] = list(obj.getJSONObject("smith").getJSONArray("availableLoads"))
+        if(obj.has("exerciseOverrides")) {
+            val overrides=obj.getJSONObject("exerciseOverrides")
+            keys(overrides).forEach { id ->
+                val value=overrides.getJSONObject(id)
+                draft["override:$id"]=if(value.has("availableLoads"))
+                    "exact: "+list(value.getJSONArray("availableLoads"))
+                else "range: "+"${value.get("minimum")}, ${value.get("increment")}, ${value.get("maximum")}"
+            }
+        }
         return draft
     }
 }

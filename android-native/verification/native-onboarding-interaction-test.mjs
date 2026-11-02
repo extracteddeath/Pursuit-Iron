@@ -387,3 +387,17 @@ assert.ok(mergePreflightSource.includes('deletionClocksChanged') &&
   restoreReviewUi.includes('"DELETION_CLOCKS_CHANGED"') &&
   !restoreReviewUi.includes('commitAtomically'),
   'Privileged merge may not hide performance cache changes or future deletion markers');
+
+const reviewOwnerSource=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeBackupReviewGate.kt','utf8');
+assert.ok(
+  activity.includes('onDiscardBackupReview=runtime::discardBackupReview') &&
+  shell.includes('onDiscardBackupReview=onDiscardBackupReview') &&
+  screens.includes('onDiscardBackupReview = onDiscardBackupReview') &&
+  backupScreening.includes('DisposableEffect(Unit)') &&
+  backupScreening.includes('onDiscardBackupReview()') &&
+  reviewOwnerSource.includes('fun claimReselection()') &&
+  reviewOwnerSource.includes('fun abandonReselection(') &&
+  reviewOwnerSource.includes('fun completeReselection(') &&
+  reviewOwnerSource.includes('pending === claimed'),
+  'Backup re-selection identity must be single-use and screen-scoped'
+);

@@ -112,7 +112,7 @@ internal fun BackupCopyScreeningPanel(
                                             val matched=previous!=null &&
                                                 checkNotNull(onVerifyBackupMerge).invoke(screening.bytes)
                                             if(matched) BackupScreeningStage.ReselectionVerified(
-                                                previous!!.fingerprint,previous.preview)
+                                                checkNotNull(previous).fingerprint,previous.preview)
                                             else BackupScreeningStage.ReselectionMismatch
                                         } else if (inspectMerge) {
                                             val preview = checkNotNull(onPreviewBackupMerge).invoke(screening.bytes)

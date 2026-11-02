@@ -333,7 +333,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 }
             }
             val draft=checkNotNull(selected) {
-                "No eligible replacement: candidates=$"+"candidatesSeen accepted=$"+"canonicalAccepted failures=$"+"failureCounts"
+                "No eligible replacement: candidates=${candidatesSeen} accepted=${canonicalAccepted} failures=${failureCounts}"
             }
             val request=checkNotNull(acceptedRequest)
             assertEquals(3,JSONObject(request).getInt("format"))

@@ -138,7 +138,7 @@ assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workout
   train.includes('it.slot !in committedSlots') &&
   train.includes('visibleSets.forEach { set->') &&
   train.includes('NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord,') &&
-  train.includes('onCorrect,state.workoutError)') &&
+  train.includes('onCorrect,state.workoutError,state,onInspectEquipmentLoad)') &&
   train.includes('FilterChip(selected=focusMode,onClick={focusMode=!focusMode}') &&
   train.includes('val setDraftStates=rememberSaveableStateHolder()'),
   'Focus mode must project the identical receipt-based set logger and preserve unsent drafts');

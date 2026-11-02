@@ -1103,4 +1103,12 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   ok(x.tm === want && t.method.label === label, id + ': a 100 kg 1RM sets the ' + label + ' to ' + want + ' (got ' + x.tm + ', ' + t.method.label + ')');
 }
 
+// Percentage plans: day rows show the method (reps and share of max); a method switch renames a method-named program.
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id: 'p531bbb' });
+  const ex = C.plan({ programId: r.programId }).days[0].exercises.find((e) => e.primary);
+  ok(ex.reps === '5+' && ex.effort === '65–85%', 'plan day row shows the wave, not a RIR bracket (' + ex.sets + ' × ' + ex.reps + ' @' + ex.effort + ')');
+  C.changePercentMethod({ programId: r.programId, templateId: 'texas' });
+  ok(C.plan({ programId: r.programId }).name === 'Volume / Recovery / Intensity', 'switching method renames a program still named after its old method');
+  C.renameProgram?.({ programId: r.programId, name: 'My strength' }); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

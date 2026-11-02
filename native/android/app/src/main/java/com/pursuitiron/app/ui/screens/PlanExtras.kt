@@ -175,7 +175,7 @@ fun WeekByWeekSheet(vm: AppViewModel, programId: String, onClose: () -> Unit) {
                             val fg = if (step) cs.onPrimaryContainer else cs.onSurface
                             Column(Modifier.width(76.dp).clip(RoundedCornerShape(14.dp)).background(bg).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("${x.i("sets")} × ${x.s("range")}", style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
-                                (x.s("rir").takeIf { it.isNotBlank() }?.let { "@$it" } ?: x.s("load").takeIf { it.isNotBlank() })?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = if (step) cs.onPrimaryContainer else cs.onSurfaceVariant, maxLines = 1) }
+                                (x.s("effort").takeIf { it.isNotBlank() }?.let { if (it.startsWith("RPE")) it else "@$it" } ?: x.s("load").takeIf { it.isNotBlank() })?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = if (step) cs.onPrimaryContainer else cs.onSurfaceVariant, maxLines = 1) }
                             }
                         }
                     }

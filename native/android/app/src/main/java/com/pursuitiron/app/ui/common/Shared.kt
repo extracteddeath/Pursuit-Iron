@@ -32,3 +32,9 @@ fun Modifier.sharedElement(key: String): Modifier {
 
 /** A duration in minutes as people read it: "45m", or "2h 50m" past an hour ("170m" read like a distance). */
 fun minutesLabel(m: Int): String = if (m >= 60) "${m / 60}h" + (if (m % 60 > 0) " ${m % 60}m" else "") else "${m}m"
+
+/** A prescription's effort as the core words it: "@2–3" (RIR), "@75%" (share of max), or " · RPE 7–8". */
+fun effortTail(e: org.json.JSONObject): String {
+    val v = e.optString("effort").takeIf { it.isNotBlank() && it != "null" } ?: e.optString("rir").takeIf { it.isNotBlank() && it != "null" } ?: return ""
+    return if (v.startsWith("RPE")) " · $v" else " @$v"
+}

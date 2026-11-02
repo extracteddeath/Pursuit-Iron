@@ -276,6 +276,12 @@ function exSub(ex) {
     return [pat, eq ? (EQUIP_LABEL[eq] || eq) : 'Bodyweight'].filter(Boolean).join(' · ');
 }
 const SUPP_LABEL = { bbb: '5×10 supplemental', fsl: 'FSL 5×5' };
+/* "@2–3" in RIR mode (the plan's compact style); "RPE 7–8" when the lifter logs by RPE, where "@2–3" meant nothing. */
+function effortShort(rir) {
+    if (rir == null || rir === '') return null;
+    if (S.store.loadMode === 'rpe') { try { return E.effortLabel(rir, 'rpe'); } catch { return null; } }
+    return String(rir).replace('-', '–');
+}
 function dayPreview(program, day, weekIndex) {
     const goal = (() => { try { return E.goalForDay(program, day); } catch { return null; } })(), scale = Number(S.store.restScale) || 1;
     return day.exercises.map((_id, slot) => {
@@ -283,7 +289,11 @@ function dayPreview(program, day, weekIndex) {
         let cell = null; try { cell = E.computeCell(program, day, id, slot, weekIndex); } catch { cell = null; }
         let rest = null; try { rest = EX_BY_ID[id] ? E.effectiveRest(goal, EX_BY_ID[id], slot === day.primaryIndex, 0, scale) : null; } catch { rest = null; }
         const supp = program.overrides?.[`${day.id}:${slot}`]?.supplemental ? SUPP_LABEL[program.overrides[`${day.id}:${slot}`].supplemental] || 'Supplemental' : null;
-        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, supplemental: supp, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null, sub: exSub(EX_BY_ID[id]), rest };
+        // A percentage main lift shows the method's reps and share of max (what the workout runs), not the
+        // generic RIR bracket; everything else shows its effort in the lifter's own scale (RIR or RPE).
+        const pc = cell && EX_BY_ID[id] ? pctCell(program, day, EX_BY_ID[id], slot, weekIndex, cell) : null;
+        if (pc) return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, supplemental: supp, sets: pc.sets, reps: pc.range, rir: null, effort: pc.load, sub: exSub(EX_BY_ID[id]), rest };
+        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, supplemental: supp, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null, effort: effortShort(cell?.rir), sub: exSub(EX_BY_ID[id]), rest };
     });
 }
 /* The engine's weekly volume (analytics weeklyVolume): direct sets plus fractional secondary shares, per day. */
@@ -1928,7 +1938,7 @@ export function weekByWeek({ programId } = {}) {
                 const pct = pctCell(p, d, ex, slot, w, c);
                 if (pct) return { w, ...pct, rir: null, tech: null, deload: B.isDeload(w) };
                 const rir = c.rir != null ? c.rir : (c.targetRIR != null ? c.targetRIR : null);
-                return { w, sets: Number(c.sets) || 0, range: String(c.range ?? c.reps ?? ''), rir: rir == null ? null : String(rir), tech: c.tech ? String(c.tech) : null, deload: B.isDeload(w) };
+                return { w, sets: Number(c.sets) || 0, range: String(c.range ?? c.reps ?? ''), rir: rir == null ? null : String(rir), effort: effortShort(rir), tech: c.tech ? String(c.tech) : null, deload: B.isDeload(w) };
             }) });
     }));
     return { programId: p.id, name: p.name, weeks: B.weeks, deloadWeek: B.deloadWeek, current: nx?.program.id === p.id ? nx.weekIndex : null, percent: !!p.config?.percentScheme, rows };
@@ -3350,13 +3360,16 @@ export function changePercentMethod({ programId, templateId }) {
     if (!p || !t?.cfg?.percentScheme) return { ok: false, error: 'That method is not available.' };
     if (p.cycleId && cycles().some((c) => c.id === p.cycleId)) return { ok: false, error: 'This block belongs to a cycle, which decides how it is built.' };
     if (S.live?.programId === programId) return { ok: false, error: 'Finish or discard the workout in progress first.' };
-    const cfg = programConfig({ ...E.templateConfig(t, p.config?.equipment?.length ? p.config.equipment : E.ALL_EQUIP_IDS), name: p.name, unit: p.config?.unit || unit() });
+    // A program still named after its old method takes the new method's name (it was left reading "Main-Lift Waves"
+    // while running Texas); a name the lifter chose stays.
+    const methodNamed = E.TEMPLATES.some((x) => x.cfg?.percentScheme && x.name === p.name), newName = methodNamed ? t.name : p.name;
+    const cfg = programConfig({ ...E.templateConfig(t, p.config?.equipment?.length ? p.config.equipment : E.ALL_EQUIP_IDS), name: newName, unit: p.config?.unit || unit() });
     let np;
     try { np = E.generateNextProgramForShell({ config: cfg, banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid }).program; }
     catch (err) { return { ok: false, error: 'This method could not be built for your equipment. Your program was left unchanged.' }; }
     if (!np) return { ok: false, error: 'The engine could not build that method.' };
     np.generationRoute = E.GENERATION_ROUTE;
-    Object.assign(np, { id: p.id, name: p.name, createdAt: p.createdAt, folder: p.folder, description: p.description, edited: true });
+    Object.assign(np, { id: p.id, name: newName, createdAt: p.createdAt, folder: p.folder, description: p.description, edited: true });
     const oldBasis = E.PCT_SCHEMES[p.config.percentScheme]?.basis, newBasis = E.PCT_SCHEMES[t.cfg.percentScheme]?.basis;
     let carried = 0;
     if (oldBasis && oldBasis === newBasis && p.trainingMax) {

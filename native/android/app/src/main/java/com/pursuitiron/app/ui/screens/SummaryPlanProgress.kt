@@ -326,7 +326,7 @@ private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int,
         }
         Column(Modifier.clip(RoundedCornerShape(20.dp)).background(cs.surface), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             d.list("exercises").forEachIndexed { k, e ->
-                val rx = listOfNotNull(e.i("sets").takeIf { it > 0 }?.let { "$it ×" }, e.s("reps").takeIf { it.isNotBlank() }, e.s("rir").takeIf { it.isNotBlank() }?.let { "@$it" }).joinToString(" ")
+                val rx = listOfNotNull(e.i("sets").takeIf { it > 0 }?.let { "$it ×" }, e.s("reps").takeIf { it.isNotBlank() }).joinToString(" ") + com.pursuitiron.app.ui.common.effortTail(e)
                 // The design's day row ⓘ: tap a lift for why it is in this slot.
                 Row(
                     Modifier.fillMaxWidth().clickable { onWhy(k) }.semantics(mergeDescendants = true) { contentDescription = "Why ${e.s("name")}? $rx" }

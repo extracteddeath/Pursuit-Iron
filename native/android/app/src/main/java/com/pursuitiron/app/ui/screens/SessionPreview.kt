@@ -113,7 +113,7 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
                         }
                         Column(Modifier.weight(1f)) {
                             Text(e.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${e.i("sets")} × ${e.s("reps")}" + (e.s("rir").takeIf { it.isNotBlank() }?.let { " @$it" } ?: "") +
+                            Text("${e.i("sets")} × ${e.s("reps")}" + com.pursuitiron.app.ui.common.effortTail(e) +
                                 (if (!e.isNull("cutFrom")) " · was ${e.i("cutFrom")} sets" else "") + (if (e.b("amplifierOff")) " · amplifier off" else ""),
                                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }

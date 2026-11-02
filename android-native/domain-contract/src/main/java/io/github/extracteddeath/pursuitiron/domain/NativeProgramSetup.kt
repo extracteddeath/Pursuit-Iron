@@ -24,10 +24,15 @@ class NativeProgramProposal internal constructor(
     val profile: NativeProgramProfile
 )
 data class NativeStackCandidate(val id: String,val name: String,val mode: String)
+/** Original canonical source slot, not a movement ID or reordered display index. */
+data class NativeProtectedProgramSlot(
+    val dayId: String,val sourceIndex: Int,val reason: String
+)
 class NativeSavedProgram internal constructor(
     val creationId: String,val profile: NativeProgramProfile,val program: ReadOnlyProgramSummary,
     val loadingInventory: String? = null,
-    val loadingCandidates: List<NativeStackCandidate> = emptyList()
+    val loadingCandidates: List<NativeStackCandidate> = emptyList(),
+    val protectedSlots: List<NativeProtectedProgramSlot> = emptyList()
 )
 interface NativeProgramCreationEngine {
     suspend fun programOptions(): NativeProgramOptions?
@@ -157,7 +162,9 @@ object NativeProgramSetupCodec {
     }
     fun decodeSaved(raw: String,id: String,snapshot: String): NativeSavedProgram? {
         val value=wire.result(raw,id) ?: return null
-        if(value.has("loadingCandidates"))wire.exact(value,"source","readOnly","creationId",
+        if(value.has("protectedSlots"))wire.exact(value,"source","readOnly","creationId",
+            "setupJson","snapshotSha256","program","loadingInventory","loadingCandidates","protectedSlots")
+        else if(value.has("loadingCandidates"))wire.exact(value,"source","readOnly","creationId",
             "setupJson","snapshotSha256","program","loadingInventory","loadingCandidates")
         else if(value.has("loadingInventory"))wire.exact(value,"source","readOnly","creationId",
             "setupJson","snapshotSha256","program","loadingInventory")
@@ -189,6 +196,24 @@ object NativeProgramSetupCodec {
             else NativeGymInventoryCodec.validate(value.getJSONObject("loadingInventory").toString(),
                 p.unit,candidates.map { it.id }.toSet(),
                 candidates.filter { it.mode=="external_load" }.map { it.id }.toSet())
-        return NativeSavedProgram(s.getString("creationId"),p,program,inventory,candidates)
+        val protected=if(value.has("protectedSlots")) {
+            val rows=value.getJSONArray("protectedSlots")
+            require(rows.length()<=210)
+            val original=program.days.associate { it.id to it.exerciseIds.size }
+            val seen=mutableSetOf<Pair<String,Int>>()
+            (0 until rows.length()).map { index ->
+                val slot=rows.getJSONObject(index)
+                wire.exact(slot,"dayId","sourceIndex","reason")
+                val dayId=wire.text(slot,"dayId")
+                val position=wire.integer(slot,"sourceIndex")
+                val reason=wire.text(slot,"reason")
+                require(position>=0 && position<(original[dayId] ?: 0).toLong() &&
+                    reason in setOf("primary","paired"))
+                val from=position.toInt()
+                require(seen.add(dayId to from))
+                NativeProtectedProgramSlot(dayId,from,reason)
+            }
+        } else emptyList()
+        return NativeSavedProgram(s.getString("creationId"),p,program,inventory,candidates,protected)
     }
 }

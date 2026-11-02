@@ -155,8 +155,27 @@ export function inspectNativeProgram(rawSnapshot) {
   try {if(saved.config.loadingInventory)
     loadingInventory=authoredInventory(saved.config.loadingInventory,s.profile.unit,saved);
   } catch { /* Older or foreign stock is never asserted as user-confirmed. */ }
+  // This is a source-SLOT protection map, not merely a set of exercise IDs:
+  // identical movements can have different primary/pairing roles on each day.
+  const protectedSlots=[];
+  for(const day of saved.days) {
+    const protectedBySource=new Map();
+    if(Number.isInteger(day.primaryIndex) && day.primaryIndex>=0 &&
+       day.primaryIndex<day.exercises.length)
+      protectedBySource.set(day.primaryIndex,'primary');
+    for(let i=0;i<day.exercises.length;i++) {
+      if(saved.ss?.[`${day.id}:${i}`]) {
+        if(!protectedBySource.has(i))protectedBySource.set(i,'paired');
+        if(i+1<day.exercises.length && !protectedBySource.has(i+1))
+          protectedBySource.set(i+1,'paired');
+      }
+    }
+    for(const [sourceIndex,reason] of protectedBySource)
+      protectedSlots.push({dayId:day.id,sourceIndex,reason});
+  }
   return {source:'modules/engine-api.js:parseStoredData',readOnly:true,creationId:s.creationId,
     setupJson:meta.setupJson,loadingInventory,loadingCandidates:nativeStackCandidates(saved),
+    protectedSlots,
     snapshotSha256:sha256Utf8(rawSnapshot),
     program:projectCanonicalSavedProgram(rawSnapshot,s.programId,sha256Utf8(rawSnapshot))};
 }

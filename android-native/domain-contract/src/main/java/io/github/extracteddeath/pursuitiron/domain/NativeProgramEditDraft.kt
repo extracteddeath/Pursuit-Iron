@@ -106,6 +106,18 @@ class NativeProgramEditDraft private constructor(
         return next(days=updated,orders=slotOrders+(dayId to positions))
     }
 
+    /**
+     * Slot identity follows its ORIGINAL source position, even after moves.
+     * A repeated exercise ID is not enough to infer key-lift or linked status.
+     */
+    fun removalProtection(dayId: String,index: Int,
+        protectedSlots: List<NativeProtectedProgramSlot>): String? {
+        val from=slotOrders[dayId]?.getOrNull(index) ?: return null
+        return protectedSlots.firstOrNull {
+            it.dayId==dayId && it.sourceIndex==from
+        }?.reason
+    }
+
     /** UI preflight; the canonical save separately refuses orphaned physical stock. */
     fun wouldOrphanVerifiedLoading(dayId: String,index: Int,verifiedExerciseIds: Set<String>): Boolean {
         val id=days.firstOrNull { it.id==dayId }?.exerciseIds?.getOrNull(index) ?: return false

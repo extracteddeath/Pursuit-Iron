@@ -91,7 +91,16 @@ assert.throws(()=>prepareNativeProgramEdit(legacySnapshot,JSON.stringify(legacyE
 // Superset links and round counts travel with a complete, ordered group.
 const paired=JSON.parse(proposal.snapshot),pd=paired.saved[0].days[0];
 paired.saved[0].ss={[`${pd.id}:0`]:true};paired.saved[0].rounds={[`${pd.id}:0`]:4};
-const pairedSnapshot=JSON.stringify(paired),pr=inspectNativeProgram(pairedSnapshot).program;
+const pairedSnapshot=JSON.stringify(paired);
+const pairingProtection=inspectNativeProgram(pairedSnapshot).protectedSlots;
+assert.ok(pairingProtection.some(s=>s.dayId===pd.id && s.sourceIndex===0 &&
+  ['primary','paired'].includes(s.reason)),
+  'A linked source slot remains protected even when it is also the primary');
+assert.ok(pairingProtection.some(s=>s.dayId===pd.id && s.sourceIndex===1 && s.reason==='paired'),
+  'The linked partner must be individually protected against removal');
+assert.ok(pairingProtection.every(s=>s.sourceIndex>=0 &&
+  paired.saved[0].days.find(d=>d.id===s.dayId)?.exercises[s.sourceIndex]!==undefined));
+const pr=inspectNativeProgram(pairedSnapshot).program;
 const pairedRequest={format:1,operationId:'save-paired',reference:pr.reference,editedAt:3000,name:'Paired plan',
   days:paired.saved[0].days.map(d=>({id:d.id,label:d.label,slots:d.exercises.map((_,i)=>i)}))};
 const group=pairedRequest.days[0].slots.splice(0,2);pairedRequest.days[0].slots.push(...group);

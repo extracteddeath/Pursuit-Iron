@@ -459,7 +459,8 @@ internal fun PlanScreen(
                         gymOnly=true
                     }
                 },
-                verifiedEquipmentExerciseIds=verifiedPhysicalIds
+                verifiedEquipmentExerciseIds=verifiedPhysicalIds,
+                protectedSourceSlots=matchingSaved?.protectedSlots.orEmpty()
             )
         } else {
             SavedProgramOverviewPanel(currentPlan) { dayId ->

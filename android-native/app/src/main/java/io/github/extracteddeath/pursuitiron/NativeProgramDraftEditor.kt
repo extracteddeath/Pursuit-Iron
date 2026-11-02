@@ -40,7 +40,8 @@ internal fun NativeProgramDraftEditor(
     lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>?,
     onClose: () -> Unit,
     onOpenGym: (String?) -> Unit,
-    verifiedEquipmentExerciseIds: Set<String>
+    verifiedEquipmentExerciseIds: Set<String>,
+    protectedSourceSlots: List<io.github.extracteddeath.pursuitiron.domain.NativeProtectedProgramSlot>
 ) {
     var confirmSave by remember { mutableStateOf(false) }
     var pendingRemoval by remember { mutableStateOf<Pair<String,Int>?>(null) }
@@ -155,6 +156,7 @@ internal fun NativeProgramDraftEditor(
             day.exerciseIds.forEachIndexed { index,id ->
                 val protectedLoad=draft.wouldOrphanVerifiedLoading(
                     day.id,index,verifiedEquipmentExerciseIds)
+                val protectedRole=draft.removalProtection(day.id,index,protectedSourceSlots)
                 Row(modifier=Modifier.fillMaxWidth(),
                     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     Column(modifier=Modifier.weight(1f)) {
@@ -176,9 +178,15 @@ internal fun NativeProgramDraftEditor(
                     OutlinedButton(
                         onClick={pendingRemoval=day.id to index},
                         enabled=allowEditing && !saving && day.exerciseIds.size>1 &&
-                            !protectedLoad
+                            !protectedLoad && protectedRole==null
                     ) { Text("Remove") }
                 }
+                if(protectedRole!=null) Text(
+                    if(protectedRole=="primary") "Key lift: this slot cannot be removed."
+                    else "Linked movement: this slot belongs to a paired exercise group.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if(protectedLoad) {
                     Text(
                         "This is the last occurrence with a verified machine loading profile. " +

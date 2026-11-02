@@ -143,6 +143,33 @@ class NativeProgramEditDraftTest {
         assertFalse(original.isChanged)
     }
 
+    @Test fun primaryAndPairedSlotGuardsSurviveReorderAndDuplicateIds() {
+        val base=verified()
+        val summary=base.program.copy(days=listOf(ReadOnlyProgramDay(
+            "day-1","Repeated",listOf("bench","curl","bench","row"))))
+        val structure=ReadOnlyProgramPresentationPolicy.inspect(summary,
+            CurrentProgramEvidence(reference,CurrentProgramDeletionEvidence.CheckedAbsent))
+            as ReadOnlyProgramPresentation.Structure
+        val original=NativeProgramEditDraft.from(structure)
+        val roles=listOf(
+            NativeProtectedProgramSlot("day-1",0,"primary"),
+            NativeProtectedProgramSlot("day-1",1,"paired"),
+            NativeProtectedProgramSlot("day-1",2,"paired"))
+        assertEquals("primary",original.removalProtection("day-1",0,roles))
+        assertEquals("paired",original.removalProtection("day-1",2,roles))
+        assertNull(original.removalProtection("day-1",3,roles))
+        // Same exercise ID can occupy a protected source slot and a
+        // different unprotected source slot. No ID-based conflation.
+        val removedOther=checkNotNull(original.removeExercise("day-1",3))
+        val moved=checkNotNull(removedOther.moveExercise("day-1",2,-1))
+        assertEquals(listOf(0,2,1),moved.originalSlots("day-1"))
+        assertEquals("paired",moved.removalProtection("day-1",1,roles))
+        assertEquals("paired",moved.removalProtection("day-1",2,roles))
+        assertEquals("primary",moved.removalProtection("day-1",0,roles))
+        assertNull(moved.removalProtection("invalid",0,roles))
+        assertNull(moved.removalProtection("day-1",4,roles))
+    }
+
     @Test fun physicalStockPreflightTracksLastOccurrenceAcrossDaysAndEdits() {
         val base=verified()
         val configured=setOf("curl","row","bench")

@@ -8,6 +8,16 @@ const shell = fs.readFileSync(root + 'NativePreviewApp.kt', 'utf8');
 const gymEditor = fs.readFileSync(root + 'NativeSavedGymInventoryPanel.kt', 'utf8');
 const programEditor = fs.readFileSync(root + 'NativeProgramDraftEditor.kt', 'utf8');
 const inventoryEditor = fs.readFileSync(root + 'NativeGymInventoryEditor.kt', 'utf8');
+const onboardingSource = fs.readFileSync(
+  'android-native/engine-bridge/native-onboarding.mjs','utf8');
+const savedCodec = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeProgramSetup.kt','utf8');
+assert.ok(onboardingSource.includes('protectedSlots.push({dayId:day.id,sourceIndex,reason})') &&
+  savedCodec.includes('val protected=if(value.has("protectedSlots"))') &&
+  programEditor.includes('draft.removalProtection(day.id,index,protectedSourceSlots)') &&
+  programEditor.includes('protectedRole==null') &&
+  screens.includes('protectedSourceSlots=matchingSaved?.protectedSlots.orEmpty()'),
+  'Canonical primary/pair protection must be keyed by original slot identity, not exercise ID');
 assert.ok(programEditor.includes('draft.wouldOrphanVerifiedLoading(') &&
   programEditor.includes('!protectedLoad') &&
   screens.includes('verifiedEquipmentExerciseIds=verifiedPhysicalIds') &&

@@ -1461,3 +1461,18 @@ specialty-machine settings as **verified logged values**, not estimated
 mechanical resistance, sled base weights or plate-per-side math. The logger
 continues to use the same user-verified basis; no conversion or progression
 formula is added. Source interaction checks cover the contextual explanation.
+
+## 2026-11-02 — Primary/paired exercise removal preflight
+
+The canonical JS inspector now projects a bounded read-only map of primary
+and paired original slot positions from the exact saved program, not generic
+exercise IDs. Kotlin validates every entry against the currently projected
+day and source slot. The Compose editor blocks the removal button for key
+lifts and both members of linked pairs, with an explanation. The immutable
+program draft resolves original source positions after moves and deletions,
+so repeated exercise IDs never inherit the wrong slot's protection.
+
+The canonical editor remains authoritative at Save, and no exercise
+substitution, training prescription, workout history or physical inventory
+is automatically altered. Source and Kotlin tests cover paired source slots,
+repeated movements and modified display order. No APK or live deployment.

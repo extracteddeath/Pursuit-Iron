@@ -150,7 +150,7 @@ class NativeBackupRestoreTransactionTest {
             .put("sha256",sha(body)).toString().toByteArray(Charsets.UTF_8)
         assertTrue(runCatching { s.current() }.isFailure)
         // Checks happen even if the enclosing SHA was deliberately recomputed.
-        assertFalse(s.store.undoApprovedBackupMerge("restore-1"))
+        assertTrue(runCatching { s.store.undoApprovedBackupMerge("restore-1") }.isFailure)
     }
 
     @Test fun lostAcknowledgementsRecoverExactCommittedMergeAndUndo() {

@@ -28,7 +28,8 @@ internal fun NativeWorkoutScreen(
     onSaveSessionNote: (String)->Unit = {},
     onSaveWarmup: (JournalWarmupIntent)->Unit = {},
     onSaveExerciseNote: (JournalExerciseNote)->Unit = {},
-    onInspectEquipmentLoad:(JournalSetSlot,String)->Unit = {_,_->}
+    onInspectEquipmentLoad:(JournalSetSlot,String)->Unit = {_,_->},
+    onViewHistory: ()->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -43,11 +44,24 @@ internal fun NativeWorkoutScreen(
         PageHeading("TRAIN",if(state.completion!=null)"Workout saved" else "Ready when you are",
             state.saved?.program?.name ?: "Your training")
         PursuitCard(highlighted=true) {
-            if(state.completion!=null)Text("Your workout is in your training history. The next session will use your logged performance.")
-            else Text("Open your next scheduled workout with targets from your saved program.")
-            Button(onClick=onStart,enabled=state.ready && !state.workoutBusy && !state.historyBusy && !state.backupExportBusy && !state.workoutBlocked,
-                modifier=Modifier.fillMaxWidth()) {
-                Text(if(state.backupExportBusy)"Saving backup…" else if(state.workoutBusy)"Opening workout…" else "Start next workout")
+            val canStart=state.ready && !state.workoutBusy && !state.historyBusy &&
+                !state.backupExportBusy && !state.workoutBlocked
+            if(state.completion!=null) {
+                Text("Your workout was saved to training history.",
+                    style=MaterialTheme.typography.titleMedium)
+                Button(onClick=onViewHistory,modifier=Modifier.fillMaxWidth()) {
+                    Text("View saved workout")
+                }
+                OutlinedButton(onClick=onStart,enabled=canStart,
+                    modifier=Modifier.fillMaxWidth()) {
+                    Text("Start next workout")
+                }
+            } else {
+                Text("Open your next scheduled workout with targets from your saved program.")
+                Button(onClick=onStart,enabled=canStart,modifier=Modifier.fillMaxWidth()) {
+                    Text(if(state.backupExportBusy)"Saving backup…"
+                        else if(state.workoutBusy)"Opening workout…" else "Start next workout")
+                }
             }
         }
         state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }

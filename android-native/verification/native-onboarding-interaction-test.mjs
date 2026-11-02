@@ -66,7 +66,8 @@ assert.ok(host.includes('JournalSetAdjustment("skip",part)') &&
 // masquerade as an applied session or a UI-computed training prescription.
 assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine preview")') &&
   screens.includes('previewShorterSession(minutes)') &&
-  screens.includes('Preview only — not applied.') &&
+  screens.includes('Review first. No workout is shortened until you choose Start.') &&
+  screens.includes('if(showShorterSession) {') &&
   activity.includes('onPreviewShortSession=runtime::previewShorterSession') &&
   shell.includes('previewShorterSession=onPreviewShortSession') &&
   shell.includes('startShortWorkout=onStartShortWorkout') &&
@@ -610,3 +611,13 @@ assert.ok(todayStart>=0 && nextWorkoutCta>todayStart &&
   screens.includes('startShortWorkout(preview.minutes)') &&
   screens.includes('if(!activeWorkout) {'),
   'Today must lead with real Start/Resume and keep canonical shorter-session options opt-in');
+
+assert.ok(train.includes('onViewHistory: ()->Unit = {}') &&
+  train.includes('if(state.completion!=null) {') &&
+  train.includes('Button(onClick=onViewHistory,modifier=Modifier.fillMaxWidth())') &&
+  train.includes('Text("View saved workout")') &&
+  train.indexOf('Button(onClick=onViewHistory,modifier=Modifier.fillMaxWidth())') <
+    train.indexOf('OutlinedButton(onClick=onStart,enabled=canStart,') &&
+  shell.includes('onViewHistory={selectedTrainingDay=null;section=NativeDestination.INSIGHTS.ordinal}') &&
+  host.includes('history=history,historyPage=page,historyCalendar=calendar'),
+  'A confirmed completion must show the saved workout in Insights before offering the next session, using the same canonical history');

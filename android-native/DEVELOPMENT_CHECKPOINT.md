@@ -1564,3 +1564,18 @@ over the default Today view. Expansion is saveable per program identity.
 Canonical engine issuance, preview safety, held revisions and workout
 state/journal are unchanged. Source interaction tests verify CTA ordering
 and guarded opt-in preview. No APK is built.
+
+## 2026-11-02 — Completion-to-history navigation and revised Today assertion
+
+After a canonical journal completion has been durably published and exposed
+as `state.completion`, the native Train landing screen now offers a
+primary **View saved workout** action that opens the existing Insights
+history reader, while starting the next session remains secondary.
+This never manufactures or caches a completion in the UI. It simply routes
+to the existing authenticated, source-owned history already loaded by
+`NativeRuntimeHost.finishWorkout`, with normal manual reload available
+if the detail could not be read.
+
+The unchanged canonical short-session policy is protected by a source
+assertion using the new, more explicit user-facing copy. No new
+training engine assumptions or history writes; no new APK.

@@ -48,9 +48,9 @@ const restored = JSON.stringify(store(135, [history('old', 190, 40)], { old: 30 
 assert.equal(previewCanonicalBackupMerge(deleted, restored).counts.hypothetical.history, 1,
   'a later explicit edit may resurrect a deleted record');
 
-const firstHalf = JSON.stringify(store(100, Array.from({ length: 310 }, (_, i) =>
+const firstHalf = JSON.stringify(store(100, Array.from({ length: 1200 }, (_, i) =>
   history('one-' + i, 100 + i, 20 + i, 1000 + i))));
-const secondHalf = JSON.stringify(store(101, Array.from({ length: 310 }, (_, i) =>
+const secondHalf = JSON.stringify(store(101, Array.from({ length: 1200 }, (_, i) =>
   history('two-' + i, 100 + i, 20 + i, 3000 + i))));
 const capacity = previewCanonicalBackupMerge(firstHalf, secondHalf);
 assert.ok(capacity.historyDropped > 0, 'canonical history cap loss is never silent');

@@ -109,8 +109,12 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             val store=JSONObject(proposal.snapshot)
             val saved=store.getJSONArray("saved").getJSONObject(0)
             val inventory=JSONObject().put("unit","lb")
-                .put("exerciseOverrides",JSONObject().put(first.exerciseId,JSONObject()
-                    .put("minimum",0).put("increment",5).put("maximum",250)))
+                .put("barbell",JSONObject().put("barWeight",45)
+                    .put("platePairs",org.json.JSONArray().apply {
+                        listOf(2.5,5.0,10.0,25.0).forEach { weight ->
+                            put(JSONObject().put("weight",weight).put("pairs",2))
+                        }
+                    }))
             saved.getJSONObject("config").put("loadingInventory",inventory)
             val confirmedSource=store.toString()
             val issued=checkNotNull(engine.prepareWorkout(confirmedSource,start))
@@ -119,7 +123,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             val exact=checkNotNull(engine.inspectEquipmentLoad(
                 confirmedSource,issued.issuedJson,slot,"159.5"))
             assertTrue(exact.confirmed)
-            assertEquals("exercise_override",exact.family)
+            assertEquals("barbell_plates",exact.family)
             assertEquals("155",exact.previous)
             assertEquals("160",exact.next)
             assertFalse(exact.exact)

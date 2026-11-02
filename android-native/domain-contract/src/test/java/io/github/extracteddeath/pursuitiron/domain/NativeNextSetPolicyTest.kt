@@ -76,6 +76,37 @@ class NativeNextSetPolicyTest {
         assertNull(complete?.upNext)
     }
 
+    @Test fun focusCrossesExercisesOnlyAfterNewAcknowledgedFinalSet() {
+        var state=empty()
+        assertNull(NativeNextSetPolicy.advanceAfterAcknowledged(
+            NativeWorkoutProgress(plan,state),0,null))
+        state=log(state,a,"a-logged")
+        assertNull(NativeNextSetPolicy.advanceAfterAcknowledged(
+            NativeWorkoutProgress(plan,state),0,null))
+        state=log(state,b,"b-skipped",JournalSetDisposition.SKIPPED)
+        val resolved=NativeWorkoutProgress(plan,state)
+        assertEquals(1,NativeNextSetPolicy.advanceAfterAcknowledged(resolved,0,"a-logged"))
+        assertNull("Receipt replay cannot jump",NativeNextSetPolicy.advanceAfterAcknowledged(resolved,0,"b-skipped"))
+        assertNull("Do not move manually selected other tabs",
+            NativeNextSetPolicy.advanceAfterAcknowledged(resolved,1,"a-logged"))
+        assertNull("Do not move during unrelated history changes",
+            NativeNextSetPolicy.advanceAfterAcknowledged(resolved,2,"a-logged"))
+        state=log(state,b,"b-corrected",JournalSetDisposition.COMPLETED,replace="b-skipped")
+        assertNull("Correction cannot auto-navigate",
+            NativeNextSetPolicy.advanceAfterAcknowledged(NativeWorkoutProgress(plan,state),0,"b-skipped"))
+
+        state=log(state,e,"row-logged")
+        assertNull("Different exercise receipt cannot move selected bench",
+            NativeNextSetPolicy.advanceAfterAcknowledged(NativeWorkoutProgress(plan,state),1,"b-corrected"))
+        state=log(state,c,"second-bench-1")
+        assertNull(NativeNextSetPolicy.advanceAfterAcknowledged(
+            NativeWorkoutProgress(plan,state),1,"row-logged"))
+        state=log(state,d,"second-bench-2")
+        assertNull("No remaining exercise after final saved set",
+            NativeNextSetPolicy.advanceAfterAcknowledged(
+                NativeWorkoutProgress(plan,state),1,"second-bench-1"))
+    }
+
     @Test fun staleSessionOrUnmatchedIssuedSlotsFailClosed() {
         val state=empty()
         assertNull(NativeNextSetPolicy.inspect(NativeWorkoutProgress(plan,state),-1))

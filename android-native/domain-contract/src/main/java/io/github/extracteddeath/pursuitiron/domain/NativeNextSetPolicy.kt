@@ -17,6 +17,31 @@ data class NativeNextSetPreview(
 )
 
 object NativeNextSetPolicy {
+    /**
+     * Focus may cross to the next exercise ONLY when a new durable set
+     * acknowledgement resolved the selected exercise. Edits of old receipts,
+     * foreign exercise saves and repeated/recovered acknowledgements cannot
+     * silently move the user's selected tab.
+     */
+    fun advanceAfterAcknowledged(
+        progress: NativeWorkoutProgress,
+        selectedPosition: Int,
+        observedOperationId: String?
+    ): Int? {
+        val last=progress.journal.events.lastOrNull() ?: return null
+        if(last.intent.operationId==observedOperationId ||
+            last.intent.replacesOperationId!=null ||
+            last.receipt.operationId!=last.intent.operationId ||
+            last.receipt.session!=progress.plan.session) return null
+        val selected=progress.plan.exercises.getOrNull(selectedPosition) ?: return null
+        if(last.intent.slot.exerciseIndex!=selected.index ||
+            progress.journal.completed.none { it.intent.operationId==last.intent.operationId })
+            return null
+        val preview=inspect(progress,selectedPosition) ?: return null
+        if(preview.current!=null || preview.remainingTotal==0) return null
+        return preview.upNext?.exercisePosition?.takeIf { it!=selectedPosition }
+    }
+
     fun inspect(progress: NativeWorkoutProgress, selectedPosition: Int): NativeNextSetPreview? {
         val plan=progress.plan
         val journal=progress.journal

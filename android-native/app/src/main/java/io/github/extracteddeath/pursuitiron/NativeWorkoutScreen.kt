@@ -64,6 +64,23 @@ internal fun NativeWorkoutScreen(
     var showSkipExercise by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showLast by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
+    val lastSetReceiptId=journal.events.lastOrNull()?.intent?.operationId
+    // The event observed at first composition is a baseline, not a new set.
+    // Keep this saveable through rotation, navigation and ordinary recovery.
+    var observedFocusReceipt by rememberSaveable(plan.session.workoutId) {
+        mutableStateOf(lastSetReceiptId)
+    }
+    LaunchedEffect(lastSetReceiptId,focusMode,state.workoutBusy,state.historyBusy,exerciseIndex) {
+        if(lastSetReceiptId!=observedFocusReceipt) {
+            if(!focusMode || journal.isFinished)observedFocusReceipt=lastSetReceiptId
+            else if(!state.workoutBusy && !state.historyBusy) {
+                val destination=NativeNextSetPolicy.advanceAfterAcknowledged(
+                    progress,exerciseIndex,observedFocusReceipt)
+                observedFocusReceipt=lastSetReceiptId
+                if(destination!=null)exerciseIndex=destination
+            }
+        }
+    }
     // Each working set has its own saveable draft even while other exercises
     // replace the visible composition. Drafts are not confirmed journal events.
     val setDraftStates=rememberSaveableStateHolder()
@@ -71,8 +88,22 @@ internal fun NativeWorkoutScreen(
     var affectedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
     var confirmAffectedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
     var confirmReducedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
-    PursuitCard {
-        Text("Affected muscle review",style=MaterialTheme.typography.titleMedium)
+    var showAffectedTools by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
+    if(!showAffectedTools) {
+        OutlinedCard(onClick={showAffectedTools=true},modifier=Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal=16.dp,vertical=12.dp),
+                verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                Text("Adjust for discomfort",style=MaterialTheme.typography.titleSmall)
+                Text("Review affected muscles · Reduce or skip work",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    } else PursuitCard {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+            Text("Affected muscle review",style=MaterialTheme.typography.titleMedium)
+            TextButton(onClick={showAffectedTools=false}) {Text("Close")}
+        }
         Text("Shows muscles involved in this workout, including secondary work. Review potentially affected lifts; nothing is skipped automatically.",
             style=MaterialTheme.typography.bodySmall)
         if(state.muscleReview==null) {

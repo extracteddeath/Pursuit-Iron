@@ -143,6 +143,40 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun focusCrossesOnlyAfterLastConfirmedExerciseSetInPackagedWorkout() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val program=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Focus handoff",allowSupersets=false),
+                "focus-create","focus-program",1000,223)))
+            val disk=Drive();val owner=CanonicalWorkoutStorePersistence(disk,engine)
+            assertTrue(owner.initialize(program.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(program.snapshot,
+                NativeWorkoutCodec.startJson("focus-program","focus-workout",2000)))
+            assertTrue("Need two issued exercises for Focus transition",plan.exercises.size>1)
+            val journalDisk=Drive();val journal=WorkoutJournalPersistence(journalDisk)
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            val storeWrites=disk.writes
+            var observed: String?=null
+            for((i,set) in plan.exercises.first().sets.withIndex()) {
+                val operation="focus-first-$i"
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(
+                    plan.session,progress.journal.revision,
+                    JournalSetIntent(operation,set.slot,JournalSetDisposition.COMPLETED,
+                        JournalSetValues("0",plan.session.unit,8,2)))))
+                assertEquals(if(i==plan.exercises.first().sets.lastIndex)1 else null,
+                    NativeNextSetPolicy.advanceAfterAcknowledged(progress,0,observed))
+                observed=operation
+            }
+            assertNull("Same receipt must not replay navigation",
+                NativeNextSetPolicy.advanceAfterAcknowledged(progress,0,observed))
+            val recovered=checkNotNull(WorkoutJournalPersistence(journalDisk).recover())
+            assertEquals(1,NativeNextSetPolicy.advanceAfterAcknowledged(
+                NativeWorkoutProgress(plan,recovered),0,"focus-first-0"))
+            assertEquals(storeWrites,disk.writes)
+        } }
+    }
+
     @Test(timeout=60000) fun acknowledgedCanonicalSetsTriggerOnlySafeRestCues() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

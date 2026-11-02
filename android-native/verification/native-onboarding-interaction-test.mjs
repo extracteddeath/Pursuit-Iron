@@ -128,6 +128,19 @@ assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workout
   train.includes('FilterChip(selected=focusMode,onClick={focusMode=!focusMode}') &&
   train.includes('val setDraftStates=rememberSaveableStateHolder()'),
   'Focus mode must project the identical receipt-based set logger and preserve unsent drafts');
+assert.ok(train.includes('var observedFocusReceipt by rememberSaveable(plan.session.workoutId)') &&
+  train.includes('LaunchedEffect(lastSetReceiptId,focusMode,state.workoutBusy,state.historyBusy,exerciseIndex)') &&
+  train.includes('NativeNextSetPolicy.advanceAfterAcknowledged(') &&
+  train.includes('if(destination!=null)exerciseIndex=destination') &&
+  train.includes('if(!focusMode || journal.isFinished)observedFocusReceipt=lastSetReceiptId'),
+  'Focus may cross exercise boundaries only after a fresh persisted receipt and must suppress replay after recovery');
+assert.ok(train.includes('var showAffectedTools by rememberSaveable(plan.session.workoutId)') &&
+  train.includes('OutlinedCard(onClick={showAffectedTools=true}') &&
+  train.includes('Text("Adjust for discomfort"') &&
+  train.includes('TextButton(onClick={showAffectedTools=false})') &&
+  train.includes('NativeSessionSkipPolicy.reduceAffected(journal,review,affectedPart)') &&
+  train.includes('Confirm reduced work'),
+  'Compact discomfort tools must retain the real confirmation and journal-backed reductions');
 assert.ok(train.includes('val view=LocalView.current') &&
   train.includes('DisposableEffect(view,progress?.plan?.session?.workoutId)') &&
   train.includes('if(progress!=null)view.keepScreenOn=true') &&

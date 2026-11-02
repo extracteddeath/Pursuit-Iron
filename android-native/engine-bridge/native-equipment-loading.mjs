@@ -1,6 +1,7 @@
 /** Read-only, source-pinned equipment accuracy gate for native set entry. */
 import { parseStoredData } from '../../modules/engine-api.js';
 import { nativeIssuedLoadMode } from './native-loading-catalog.mjs';
+import { authoredInventory } from './native-onboarding.mjs';
 import { loadingInventoryInUnit, resolveLoadingMode, nextAvailableLoad,
   availableLoadAtOrBelow } from '../../modules/next-engine/loading.js';
 import { issuedNativeWorkoutFrom,MAX_ISSUED_WORKOUT_BYTES } from './native-workout.mjs';
@@ -56,7 +57,12 @@ export function inspectNativeEquipmentLoad(rawSnapshot,issuedWorkout,slot,load) 
   ensure(program && program.config.unit===plan.session.unit);
   const raw=program.config.loadingInventory;
   let confirmed=false,family=null,mode='unconfirmed',previous=null,next=null,exact=false;
-  if(object(raw) && raw.unit===plan.session.unit) {
+  // A canonical snapshot may contain old/injected loading fields. Only a
+  // fully reauthenticated user-authored physical inventory may enable steps.
+  const trusted=object(raw) && raw.unit===plan.session.unit &&
+    (()=>{try {authoredInventory(raw,plan.session.unit,program);return true;}
+      catch{return false;}})();
+  if(trusted) {
     const inventory=loadingInventoryInUnit(raw,plan.session.unit);
     const actualMode=nativeIssuedLoadMode(slot.exerciseId,program.config.equipment);
     const userMode=inventory.exerciseOverrides?.[slot.exerciseId]?.mode;

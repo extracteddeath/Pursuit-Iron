@@ -22,6 +22,9 @@ import io.github.extracteddeath.pursuitiron.domain.NativeShortSessionPreview
 import io.github.extracteddeath.pursuitiron.domain.NativeShortSessionPreviewCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutMuscleReview
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutMuscleReviewCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeEquipmentLoading
+import io.github.extracteddeath.pursuitiron.domain.NativeEquipmentLoadingCodec
+import io.github.extracteddeath.pursuitiron.domain.JournalSetSlot
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeWorkoutHistory
@@ -105,6 +108,15 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         val raw=transport.request(NativeHistoryCodec.encodeCorrection(id,snapshot,correctionJson))
         currentCoroutineContext().ensureActive()
         return NativeHistoryCodec.decodeCorrection(raw,id,snapshot,correctionJson)
+    }
+
+    override suspend fun inspectEquipmentLoad(
+        snapshot:String,issued:String,slot:JournalSetSlot,input:String
+    ):NativeEquipmentLoading? {
+        val id="native-equipment-load-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeEquipmentLoadingCodec.encode(id,snapshot,issued,slot,input))
+        currentCoroutineContext().ensureActive()
+        return NativeEquipmentLoadingCodec.decode(raw,id,snapshot,issued,slot,input)
     }
 
     override suspend fun inspectWorkoutMuscles(snapshot: String,issuedWorkout: String): NativeWorkoutMuscleReview? {

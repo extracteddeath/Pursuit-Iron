@@ -83,6 +83,16 @@ object WorkoutStoreRuntimeCodec {
                 bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES)
                 require(text(p,"programId").matches(identifier) &&
                     integer(p,"minutes") in listOf(20L,30L,45L)) }
+            "inspectNativeEquipmentLoad" -> {
+                exact(p,"rawSnapshot","issuedWorkout","slot","inputLoad")
+                bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES)
+                bounded(text(p,"issuedWorkout"),NativeWorkoutCodec.MAX_ISSUED_BYTES)
+                val slot=p.getJSONObject("slot");exact(slot,"exerciseIndex","setIndex","exerciseId")
+                require(integer(slot,"exerciseIndex") in 0L..47L &&
+                    integer(slot,"setIndex") in 0L..19L &&
+                    text(slot,"exerciseId").matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) &&
+                    text(p,"inputLoad").matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")))
+            }
             "inspectNativeWorkoutMuscles" -> { exact(p,"rawSnapshot","issuedWorkout")
                 bounded(text(p,"rawSnapshot"),MAX_SNAPSHOT_BYTES)
                 bounded(text(p,"issuedWorkout"),NativeWorkoutCodec.MAX_ISSUED_BYTES) }

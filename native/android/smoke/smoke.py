@@ -608,7 +608,7 @@ scroll_up_to(r"^\|Edit program$|Review block", tries=10)
 if tap(r"Review block", "block-review", required=False):
     if not find(r"\|Block \d+ review$", timeout=10):
         FAILS.append("block review page did not open")
-    elif not find(r"sessions done|not enough|No sessions were logged", timeout=10):
+    elif not find(r"sessions done|not enough|No sessions were logged|Too early to review", timeout=10):
         FAILS.append("block review page has no session summary")
     shot("block-review")
     close_sheet(r"\|Block \d+ review$")
@@ -1008,6 +1008,11 @@ if tap(r"^\|New$", "cycle-setup"):
         if scroll_to(r"End this block early", tries=8, step=600):
             tap(r"End this block early", "cycle-end-confirm")
             if tap(r"^\|?Review block$", "cycle-review", required=False):
+                # Early in a block the review's main action is Keep training; moving on is behind a confirmation.
+                if find(r"\|Move on early$|\|End cycle early$", timeout=6):
+                    tap(r"\|Move on early$|\|End cycle early$", "cycle-move-early")
+                    if not find(r"planned sessions in this block", timeout=4):
+                        FAILS.append("moving on early has no confirmation")
                 if find(r"\|Start block \d+$|\|Complete cycle$", timeout=10):
                     tap(r"\|Start block \d+$|\|Complete cycle$")
                     time.sleep(6)

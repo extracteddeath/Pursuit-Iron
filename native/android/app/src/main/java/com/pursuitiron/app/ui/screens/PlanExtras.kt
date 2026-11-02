@@ -201,13 +201,14 @@ fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
     if (rows.isEmpty()) return
     val cs = MaterialTheme.colorScheme
     var open by remember { mutableStateOf(false) }
-    val flagged = rows.count { it.s("tone") != "good" }
+    // The same verdict as the landmarks card and the audit: helper credit on a muscle the program doesn't target isn't "off".
+    val flagged = rows.count { it.b("off") }
     PiCard(radius = 28.dp) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }.semantics(mergeDescendants = true) { contentDescription = "Week $week volume. " + if (open) "Collapse" else "Expand" },
             verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Week $week volume", style = MaterialTheme.typography.titleMedium)
-                Text("${com.pursuitiron.app.ui.common.fmtNum(d.optDouble("total"))} sets · ${rows.size} muscles" + if (flagged > 0) " · $flagged outside MEV–MRV" else " · all in range",
+                Text("${d.optInt("workingSets").takeIf { it > 0 } ?: com.pursuitiron.app.ui.common.fmtNum(d.optDouble("total"))} sets · ${rows.size} muscles" + if (flagged > 0) " · $flagged outside MEV–MRV" else " · all in range",
                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
             Icon(if (open) PiIcons.ChevronDown else PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)

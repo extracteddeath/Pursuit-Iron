@@ -236,7 +236,7 @@ fun shareWorkoutImage(context: Context, card: JSONObject, cs: ColorScheme) {
     text(card.s("label"), 80f, 215f, 76f, cs.onSurface.toArgb(), true)
     val date = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date(card.optLong("date")))
     text(listOf(card.s("programName"), date).filter { it.isNotBlank() }.joinToString(" · "), 80f, 275f, 34f, cs.onSurfaceVariant.toArgb())
-    val tiles = listOf("Sets" to "${card.i("doneSets")}", "Volume" to "${Math.round(card.d("volume"))} $u", "Time" to "${card.i("durMin").coerceAtLeast(1)}m")
+    val tiles = listOf("Sets" to "${card.i("doneSets")}", "Volume" to "${Math.round(card.d("volume"))} $u", "Time" to com.pursuitiron.app.ui.common.minutesLabel(card.i("durMin").coerceAtLeast(1)))
     val tw = (W - 160f - 2 * 24f) / 3
     tiles.forEachIndexed { k, (label, v) ->
         val x0 = 80f + k * (tw + 24f)

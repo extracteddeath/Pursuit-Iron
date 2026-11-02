@@ -1053,10 +1053,12 @@ private fun WarmupCard(w: JSONObject, onDone: () -> Unit) {
             }
             TextButton(onClick = onDone) { Text("Hide") }
         }
+        // On a tablet the moves sit two to a row: one long column pushed the first lift below the fold.
+        val cols = if (LocalWide.current) 2 else 1
         Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            moves.forEachIndexed { k, m ->
+            moves.withIndex().chunked(cols).forEach { line -> Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(2.dp)) { line.forEach { (k, m) ->
                 val on = k in ticked
-                Row(Modifier.fillMaxWidth().background(cs.surface).clickable { if (on) ticked.remove(k) else ticked.add(k) }
+                Row(Modifier.weight(1f).fillMaxHeight().background(cs.surface).clickable { if (on) ticked.remove(k) else ticked.add(k) }
                     .semantics(mergeDescendants = true) { role = Role.Checkbox; stateDescription = if (on) "Done" else "Not done" }
                     .padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(24.dp).clip(CircleShape).background(if (on) cs.primary else cs.surface).border(2.dp, if (on) cs.primary else cs.outlineVariant, CircleShape), contentAlignment = Alignment.Center) {
@@ -1064,7 +1066,7 @@ private fun WarmupCard(w: JSONObject, onDone: () -> Unit) {
                     }
                     Text(m, style = MaterialTheme.typography.bodyMedium, color = if (on) cs.onSurfaceVariant else cs.onSurface)
                 }
-            }
+            }; if (line.size < cols) Spacer(Modifier.weight(1f)) } }
         }
         Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = cs.onPrimaryContainer, contentColor = cs.primaryContainer)) {
             Text("Warmed up — let's train")

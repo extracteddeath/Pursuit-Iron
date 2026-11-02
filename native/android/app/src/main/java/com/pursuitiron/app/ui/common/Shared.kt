@@ -29,3 +29,6 @@ fun Modifier.sharedElement(key: String): Modifier {
         )
     }
 }
+
+/** A duration in minutes as people read it: "45m", or "2h 50m" past an hour ("170m" read like a distance). */
+fun minutesLabel(m: Int): String = if (m >= 60) "${m / 60}h" + (if (m % 60 > 0) " ${m % 60}m" else "") else "${m}m"

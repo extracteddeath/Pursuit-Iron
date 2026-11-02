@@ -201,11 +201,10 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
                     preview?.b("ok") == false -> Text(preview.s("error", "This rebuild isn't possible with these settings."), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.error)
                     lines.isEmpty() -> Text("Those settings don’t change any lifts in this program.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant)
                     else -> {
-                        lines.take(6).forEach { (a, t) ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(a, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = cs.primary, modifier = Modifier.widthIn(min = 44.dp, max = 120.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Text(t, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), modifier = Modifier.weight(1f))
-                            }
+                        // Grouped by day: the day name once, its changes under it (it repeated beside every line, wrapped in a narrow column).
+                        lines.take(6).groupBy({ it.first }, { it.second }).forEach { (a, ts) ->
+                            Text(a, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = cs.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            ts.forEach { t -> Text("· $t", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), modifier = Modifier.padding(start = 8.dp)) }
                         }
                         if (lines.size > 6) Text("+ ${lines.size - 6} more changes", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
                     }

@@ -255,7 +255,8 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                 IconButton(onClick = { back() }) { Icon(PiIcons.ChevronLeft, "Back") }
                 Text(if (key == "mode") "Create" else if (cyc) "Create Cycle" else "Create Program", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                Text(if (key == "mode") "" else "${at + 1}/${steps.size}", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = cs.onSurfaceVariant,
+                // Count the answers that matter first: "1/15" counted the optional tail too and made setup look twice as long.
+                Text(if (key == "mode") "" else if (essEnd < 0 || at <= essEnd) "${at + 1}/${essEnd.takeIf { it >= 0 }?.plus(1) ?: steps.size}" else "+${at - essEnd}/${steps.size - 1 - essEnd}", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = cs.onSurfaceVariant,
                     modifier = Modifier.widthIn(min = 48.dp), textAlign = TextAlign.Center)
             }
             val prog by animateFloatAsState(if (key == "mode") 0.06f else (at + 1f) / steps.size, Motion.data(), label = "wz")

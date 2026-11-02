@@ -266,6 +266,8 @@ function readiness() {
 
 /* The design's row subtitle: movement pattern · main equipment ("Horizontal push · Barbell"). */
 const EQUIP_LABEL = { ...Object.fromEntries((E.EQUIPMENT || []).map((x) => [x.id, x.label])), barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Band', pullup: 'Bodyweight', bodyweight: 'Bodyweight' };
+/* The lift's main equipment in words ("Barbell", "Dumbbell"); benches and racks are where you do it, not what you lift. */
+function equipLabelOf(ex) { const eq = (ex?.equip || []).find((x) => !['bench', 'rack'].includes(x)) || (ex?.equip || [])[0]; return eq ? (EQUIP_LABEL[eq] || eq.replace(/[-_]/g, ' ').replace(/^./, (c) => c.toUpperCase())) : 'Bodyweight'; }
 function exSub(ex) {
     if (!ex) return '';
     const pat = ex.pattern ? ex.pattern.replace(/[-_]/g, ' ').replace(/^./, (c) => c.toUpperCase()) : (E.PART_LABEL?.[ex.part] || '');
@@ -367,7 +369,7 @@ export function programDetails({ programId } = {}) {
     const priorities = [...focus.map(([k, v]) => ({ label: `${label(k)} · Focus ×${v}`, sets: setsOf(k) })), ...(cfg.reduce || []).map((k) => ({ label: `${label(k)} · Reduced`, sets: setsOf(k) }))];
     const B = blockWeeks(p), start = Number(p.createdAt) || now();
     const plan = B.list.map((w) => { let wi = null; try { wi = E.weekIntent(p, w); } catch { wi = null; } let pw = null; try { pw = E.plannedWeek(p, w); } catch { pw = null; }
-        return { w, deload: w === B.deloadWeek, date: start + (w - 1) * 7 * 86400000, note: wi ? (wi.deload ? 'Deload · ' : '') + wi.label : '', sets: pw?.sets || 0, current: w === wk }; });
+        return { w, deload: w === B.deloadWeek, date: (() => { const d = new Date(start); d.setDate(d.getDate() + (w - 1) * 7); return d.getTime(); })(), note: wi ? (wi.deload ? 'Deload · ' : '') + wi.label : '', sets: pw?.sets || 0, current: w === wk }; });
     return { programId: p.id, name: p.name, week: wk, chips, cycleLine, priorities, plan };
 }
 export function sessionReview({ programId, dayId, weekIndex } = {}) {
@@ -1472,7 +1474,7 @@ export function swapOptions({ ei }) {
     const banned = new Set(S.store.banned || []);
     const pool = E.availableFor(cur.part, kit).filter((x) => x.id !== cur.id && !banned.has(x.id) && !l.data.some((r) => r.id === x.id));
     let ranked = pool; try { ranked = E.rankSwapAlts(cur, pool, null, l.data.map((r) => r.id), ctx.program, ctx.day) || pool; } catch { ranked = pool; }
-    return ranked.slice(0, 12).map((x) => ({ id: x.id, name: x.name, equip: x.equip, part: x.part, type: x.type }));
+    return ranked.slice(0, 12).map((x) => ({ id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part, type: x.type }));
 }
 
 export function explain({ ei }) {
@@ -1752,12 +1754,16 @@ export function profileBoard() {
     const r1 = (v) => Math.round(v * 10) / 10;
     let trends = []; try { trends = E.exerciseTrends(H) || []; } catch { trends = []; }
     let lifted = 0; H.forEach((h) => { try { lifted += E.historyVolumeIn(h, u) || 0; } catch { /* unreadable entry */ } });
+    const big3 = new Set(Object.values(E.BIG_THREE || {}));
+    const liftTier = (id) => big3.has(id) ? 0 : EX_BY_ID[id]?.type === 'compound' ? 1 : 2;
     const recOf = (t, key) => (t.sessions || []).reduce((m, x) => {
         const v = key === 'e1rm' ? conv(x.best ?? 0, x.unit || t.unit) : conv(x.top?.w ?? 0, x.unit || t.unit);
         return !m || v > m.v ? { v, x } : m;
     }, null);
     const board = (key) => trends.map((t) => { const r = recOf(t, key); return r && r.v > 0 ? { id: t.id, name: exName(t.id), value: r1(r.v), date: r.x.date ?? null, reps: key === 'heaviest' ? (r.x.top?.r ?? null) : null } : null; })
-        .filter(Boolean).sort((a, b) => b.value - a.value).slice(0, 10);
+        // Big lifts lead: an estimated max only compares within a kind of lift, so a fly or a Nordic curl ranked above
+        // the bench press said nothing. The big three, then other compounds, then isolation, each by value.
+        .filter(Boolean).sort((a, b) => liftTier(a.id) - liftTier(b.id) || b.value - a.value).slice(0, 10);
     const since30 = Date.now() - 30 * DAY;
     const prs30 = trends.filter((t) => { const r = recOf(t, 'e1rm'); return r && Number(r.x.date) >= since30 && (t.sessions || []).length > 1; }).length;
     const big = Object.entries(E.BIG_THREE || {}).map(([k, id]) => {
@@ -1844,7 +1850,7 @@ export function plan({ programId, weekIndex } = {}) {
         days: (() => {
             // The design's day cards: weekday badge from the schedule, and this week's status when the week shown is the current one.
             const sched = p.schedule || {}, isCur = nx?.program.id === p.id && wk === nx.weekIndex;
-            const ws = (() => { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); return d.getTime() - day * 86400000; })();
+            const ws = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); })();
             const done = new Set(isCur ? history().filter((h) => h.programId === p.id && Number(h.date) >= ws).map((h) => h.dayId) : []);
             return p.days.map((d) => {
                 let m = null; try { m = E.estimateMinutes(p, d, wk); } catch { m = null; }
@@ -1919,15 +1925,25 @@ export function weeklyVolumeView({ programId, weekIndex } = {}) {
     let audit = { issues: [], volBias: {} }; try { audit = E.volumeAudit(p) || audit; } catch { audit = { issues: [], volBias: {} }; }
     // The design's "solid bar is done so far": working sets logged since Monday, per muscle.
     const doneThisWeek = {};
-    (() => { const d = new Date(); d.setHours(0, 0, 0, 0); const ws = d.getTime() - ((d.getDay() + 6) % 7) * 86400000;
+    (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); const ws = d.getTime();
         history().filter((h) => Number(h.date) >= ws).forEach((h) => Object.entries(h.perf || {}).forEach(([id, pf]) => {
             const part = EX_BY_ID[id]?.part; if (!part) return; let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; }
             const n = rows.filter((x) => !x.warm && !x.sub && Number(x.r) > 0).length; if (n) doneThisWeek[part] = (doneThisWeek[part] || 0) + n; })); })();
+    // One verdict per muscle for every surface (landmarks, week volume, audit). The engine's audit never asks for more
+    // sets on a muscle the program doesn't target (traps, forearms… with no direct slot): below MEV there is accessory
+    // credit, not a shortfall, so it reads "light · not targeted" and is not counted as off range.
+    const directParts = new Set(); p.days.forEach((d) => d.exercises.forEach((id) => { const pt = EX_BY_ID[id]?.part; if (pt) directParts.add(pt); }));
     const rows = parts.map((part) => {
-        const lm = E.landmarkFor(part, p.config?.experience || 'intermediate', p), z = partZoneOf(part, volume[part], sub, p);
-        return { part, label: E.PART_LABEL?.[part] || part, sets: r1(volume[part]), done: r1(doneThisWeek[part] || 0), mev: lm.mev, mav: E.mavFor(part, p), mrv: lm.mrv, zone: z.label, zoneSub: z.sub, tone: z.tone };
+        const lm = E.landmarkFor(part, p.config?.experience || 'intermediate', p); let z = partZoneOf(part, volume[part], sub, p);
+        const optional = !(E.COVERED_MUSCLES?.has?.(part)) && !directParts.has(part);
+        if (optional && z.tone === 'muted') z = { label: 'light · not targeted', sub: 'helper work only; this program doesn\'t train it directly', tone: 'neutral' };
+        return { part, label: E.PART_LABEL?.[part] || part, sets: r1(volume[part]), done: r1(doneThisWeek[part] || 0), mev: lm.mev, mav: E.mavFor(part, p), mrv: lm.mrv, zone: z.label, zoneSub: z.sub, tone: z.tone, optional,
+            off: z.tone === 'muted' || z.tone === 'warn' };
     });
-    return { programId: p.id, weekIndex: wk, total: r1(parts.reduce((a, x) => a + volume[x], 0)), rows,
+    // The week's working sets as the plan counts them (Plan, the volume wave): per-muscle credit adds helper shares,
+    // so its sum (80.5) is not a set count and was being shown as one beside a 61-set week.
+    let workingSets = 0; try { p.days.forEach((d) => d.exercises.forEach((_id, slot) => { const id = E.exerciseAt(p, d, slot, wk); workingSets += Number(E.computeCell(p, d, id, slot, wk)?.sets) || 0; })); } catch { workingSets = 0; }
+    return { programId: p.id, weekIndex: wk, total: r1(parts.reduce((a, x) => a + volume[x], 0)), workingSets, rows,
         issues: (audit.issues || []).map((i) => ({ part: i.part, label: i.label || E.PART_LABEL?.[i.part] || i.part, status: i.status, sets: r1(i.v), mev: i.mev ?? null, mrv: i.mrv ?? null, fix: i.fix || '' })),
         canRepair: p.engineSource === 'pursuit-next' ? (audit.issues || []).length > 0 : Object.keys(audit.volBias || {}).length > 0,
         verdicts: verdicts.map((v) => ({ part: v.part, label: E.PART_LABEL?.[v.part] || v.part, status: v.status, planned: r1(v.planned), lo: v.lo, hi: v.hi, weeks: v.weeks })) };
@@ -2396,7 +2412,11 @@ export function reviewBlock({ id, index }) {
     const r1 = (v) => Math.round(v * 10) / 10;
     const lifts = (r.lifts || []).map((l) => ({ ...l, start: ends[l.id] ? r1(ends[l.id].start) : null, end: ends[l.id] ? r1(ends[l.id].end) : null }));
     const planned = bp ? (bp.days || []).length * (E.weeksOf(bp) || 0) : null;
-    return { ...r, lifts, unit: u, cycleName: c.name, label: r.block?.label || `Block ${index + 1}`, note: r.block?.note || '',
+    // How far into the block this is: the review offers the next block as the main action only near the end (three
+    // quarters of the planned sessions, or the block's last week reached), so one tap can't drop a block after a session.
+    const weeks = bp ? (E.weeksOf(bp) || 0) : 0, weekReached = hs.reduce((m, h) => Math.max(m, Number(h.weekIndex) || 0), 0);
+    const nearEnd = !planned || hs.length >= Math.ceil(planned * 0.75) || (weeks > 0 && weekReached >= weeks);
+    return { ...r, lifts, done: hs.length, weeks, weekReached, nearEnd, unit: u, cycleName: c.name, label: r.block?.label || `Block ${index + 1}`, note: r.block?.note || '',
         standalone: !!prog, programId: blockId || null, blockIndex: bi, blocks: c.blockIds.length, planned,
         stronger: lifts.filter((l) => l.state === 'progressed').length, judged: lifts.filter((l) => l.state !== 'thin').length };
 }
@@ -2530,6 +2550,8 @@ export function profile() {
             totalLb: Math.round(c.totalLb || 0), tiers: (E.STRENGTH_CLUB_TIERS_LB || []).map((t) => ({ lb: t.lb, name: t.name, on: (c.achieved || []).some((a) => a.lb === t.lb) })),
             rows: c.rows.map((r) => ({ label: r.label, value: r1(r.val), has: r.has, actual: r.actual })) };
     };
+    const histDates = history().map((h) => Number(h.date)).filter(Number.isFinite);
+    const trendReady = histDates.length >= 3 && Date.now() - Math.min(...histDates) >= 21 * 86400000;
     const tPoints = (() => { const pts = trend?.overall || trend?.points || trend?.series || []; return Array.isArray(pts) ? pts.slice(-40).map((p) => (typeof p === 'number' ? p : Number(p?.score ?? p?.v ?? p?.y ?? p?.overall ?? 0))) : []; })();
     const val = (id) => ms.find((m) => m.id === id)?.value || 0;
     const next = ms.filter((m) => !m.done).sort((x, y) => (y.progress - x.progress) || (x.target - y.target))[0] || null;
@@ -2542,9 +2564,11 @@ export function profile() {
             next: score.nextMilestone ? (() => { const m = score.nextMilestone, cv = (v) => (m.unit && m.unit !== u ? E.convertHistoryLoad(v, m.unit, u) : v);
                 // The lift's record can be in the unit it was logged in; show the milestone in the unit you lift in.
                 return { name: m.name, pattern: m.pattern, current: Math.round(cv(m.current)), target: Math.ceil(cv(m.target)), unit: u, level: m.level }; })() : null,
-            trend: tPoints,
+            // A trend needs time behind it: two days of sessions read as "−4 in 8 wk" with a falling line. Both wait for
+            // three sessions over at least three weeks.
+            trend: trendReady ? tPoints : [],
             delta8w: (() => { const pts = (trend?.overall || []).filter((x) => x && typeof x === 'object' && Number.isFinite(Number(x.v)));
-                if (pts.length < 2) return null; const cut = Date.now() - 56 * 86400000;
+                if (pts.length < 2 || !trendReady) return null; const cut = Date.now() - 56 * 86400000;
                 const base = [...pts].reverse().find((x) => Number(x.date) <= cut) || pts[0];
                 return Math.round(pts[pts.length - 1].v - base.v); })() } : null,
         scoreLocked: scorable,
@@ -2949,7 +2973,7 @@ export function editSwapOptions({ programId, dayId, slot }) {
     const used = new Set(day.exercises.filter((_, i) => i !== slot));
     const pool = E.availableFor(cur.part, gymKit(p), S.store.banned || [], !!p.config?.noBodyweight).filter((e) => e.id !== curId && !used.has(e.id));
     let ranked = pool; try { ranked = E.rankSwapAlts(cur, pool, E.starvedRegions(p), [...used].map((id) => EX_BY_ID[id]), p, day) || pool; } catch { ranked = pool; }
-    return ranked.slice(0, 16).map((x) => ({ id: x.id, name: x.name, equip: x.equip, part: x.part }));
+    return ranked.slice(0, 16).map((x) => ({ id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part }));
 }
 export function editAddOptions({ programId, dayId, q = '', part = null }) {
     const p = draftOf(programId), day = p?.days.find((d) => d.id === dayId); if (!day) return { parts: [], items: [] };

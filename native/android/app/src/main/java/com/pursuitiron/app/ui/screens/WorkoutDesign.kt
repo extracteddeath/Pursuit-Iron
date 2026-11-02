@@ -222,16 +222,18 @@ fun TimeSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                 val rests = listOfNotNull(x.optInt("compoundRest").takeIf { it > 0 }?.let { "${mmss(it.toLong())} compound" }, x.optInt("isolationRest").takeIf { it > 0 }?.let { "${mmss(it.toLong())} isolation" })
                 Text("About ${x.i("leftMin")} minutes of work left, at each lift's own rest" + (if (rests.isNotEmpty()) " (${rests.joinToString(", ")})." else "."),
                     style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                // No option is chosen yet, so none is filled: the ones that would trim read as actions, the ones that already fit are quiet outlines.
+                Text("How long do you have left?", style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     x.list("options").forEach { op ->
                         val cut = op.i("cut")
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(if (cut > 0) cs.primaryContainer else cs.surfaceContainerHigh)
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(if (cut > 0) cs.surfaceContainerHigh else Color.Transparent)
+                            .then(if (cut > 0) Modifier else Modifier.border(1.dp, cs.outlineVariant, RoundedCornerShape(20.dp)))
                             .clickable { if (cut > 0) { vm.act("fitTime", "minutes" to op.i("minutes")); vm.toast("Fit to ${op.i("minutes")} min · $cut set${if (cut == 1) "" else "s"} trimmed") } else vm.toast("${op.i("minutes")} min fits what's left"); onClose() }
                             .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "${op.i("minutes")} minutes, " + if (cut > 0) "trims $cut sets" else "fits now" }
                             .padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            val fg = if (cut > 0) cs.onPrimaryContainer else cs.onSurface
-                            Text("${op.i("minutes")}m", style = MaterialTheme.typography.titleLarge, color = fg)
-                            Text(if (cut > 0) "−$cut sets" else "fits now", style = MaterialTheme.typography.labelSmall, color = fg.copy(alpha = 0.8f))
+                            Text("${op.i("minutes")}m", style = MaterialTheme.typography.titleLarge, color = if (cut > 0) cs.onSurface else cs.onSurfaceVariant)
+                            Text(if (cut > 0) "trim $cut set${if (cut == 1) "" else "s"}" else "fits already", style = MaterialTheme.typography.labelSmall, color = if (cut > 0) cs.primary else cs.onSurfaceVariant)
                         }
                     }
                 }

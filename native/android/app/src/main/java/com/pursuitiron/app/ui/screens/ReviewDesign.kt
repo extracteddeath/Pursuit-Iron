@@ -111,22 +111,50 @@ fun BlockReviewSheet(vm: AppViewModel, id: String, index: Int, onClose: () -> Un
     val r = d
     val blockNo = (r?.optInt("blockIndex", index) ?: index) + 1
     val last = r != null && !r.b("standalone") && blockNo >= r.optInt("blocks", 1)
+    var confirmEarly by remember { mutableStateOf(false) }
+    val advance = { onClose(); if (r?.b("standalone") == true) vm.nextBlock(r.s("programId")) else vm.advanceCycle(id) }
+    val nextLabel = if (last) "Complete cycle" else "Start block ${blockNo + 1}"
+    // Early in a block the main action is to keep training; moving on stays available, behind a confirmation.
+    val early = r != null && r.has("nearEnd") && !r.b("nearEnd")
     DesignPage("Block $blockNo review", onClose, bottom = if (r == null) null else ({
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = { onClose(); vm.openEditor(r.s("programId")) }, enabled = r.s("programId").isNotBlank(),
-                modifier = Modifier.weight(1f).height(56.dp)) { Text("Edit in builder", fontWeight = FontWeight.Bold, maxLines = 1) }
-            Button(onClick = { onClose(); if (r.b("standalone")) vm.nextBlock(r.s("programId")) else vm.advanceCycle(id) },
-                modifier = Modifier.weight(1.4f).height(56.dp)) {
-                Text(if (last) "Complete cycle" else "Start block ${blockNo + 1}", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
+            if (early) {
+                FilledTonalButton(onClick = { confirmEarly = true }, modifier = Modifier.weight(1f).height(56.dp)) { Text(if (last) "End cycle early" else "Move on early", fontWeight = FontWeight.Bold, maxLines = 1) }
+                Button(onClick = onClose, modifier = Modifier.weight(1.4f).height(56.dp)) {
+                    Text("Keep training", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
+                }
+            } else {
+                FilledTonalButton(onClick = { onClose(); vm.openEditor(r.s("programId")) }, enabled = r.s("programId").isNotBlank(),
+                    modifier = Modifier.weight(1f).height(56.dp)) { Text("Edit in builder", fontWeight = FontWeight.Bold, maxLines = 1) }
+                Button(onClick = advance, modifier = Modifier.weight(1.4f).height(56.dp)) {
+                    Text(nextLabel, style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold), maxLines = 1)
+                }
             }
         }
     })) {
+        if (confirmEarly && r != null) androidx.compose.material3.AlertDialog(onDismissRequest = { confirmEarly = false },
+            title = { Text(if (last) "End the cycle now?" else "Start block ${blockNo + 1} now?") },
+            text = { Text("You've logged ${r.i("done")} of ${r.i("planned")} planned sessions in this block. The next block is built from what you've done so far, so moving on this early gives it little to work from.") },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmEarly = false; advance() }) { Text(nextLabel) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmEarly = false }) { Text("Keep training") } })
         when {
             !loaded -> {}
             r == null -> Text("This block couldn't be reviewed.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-            !r.b("ok") -> Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.surfaceContainerLow).padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("${r.i("sessions")}", style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, lineHeight = 38.sp))
+            // Too early to judge: where the block stands and when the review starts saying something, instead of a lone number.
+            !r.b("ok") -> Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.surfaceContainerLow).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                val done = r.optInt("done", r.i("sessions")); val planned = r.i("planned")
+                Text("Too early to review", style = MaterialTheme.typography.titleLarge)
+                if (planned > 0) {
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("$done", style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, lineHeight = 38.sp))
+                        Text("of $planned sessions" + (if (r.i("weeks") > 0) " · week ${r.i("weekReached").coerceAtLeast(1)} of ${r.i("weeks")}" else ""),
+                            style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, modifier = Modifier.padding(bottom = 4.dp))
+                    }
+                    com.pursuitiron.app.ui.common.ProgressBar((done.toFloat() / planned).coerceIn(0f, 1f))
+                }
                 Text(r.s("reason", "Not enough logged sessions to say anything honest."), style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp), color = cs.onSurfaceVariant)
+                Text("It fills in as you train: each lift's trend once it has three sessions, and a full verdict on sets, strength and what changes next as the block nears its end.",
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp), color = cs.onSurfaceVariant)
             }
             else -> ReviewBody(r)
         }

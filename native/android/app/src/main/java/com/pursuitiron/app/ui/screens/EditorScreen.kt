@@ -163,7 +163,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                                 .padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
                                 val fg = if (on) cs.onPrimary else cs.onSurface
                                 Text(label, style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = fg)
-                                Text("${w.i("sets")} sets · ${w.i("minutes")}m", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
+                                Text("${w.i("sets")} sets · ${com.pursuitiron.app.ui.common.minutesLabel(w.i("minutes"))}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
                             }
                         }
                     }
@@ -496,7 +496,8 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                                 .clickable { vm.edit("replace", "dayId" to dayId, "slot" to slot, "newId" to o.s("id")); onToggle("swap") }
                                 .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(o.s("name"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold))
-                                if (o.s("equip").isNotBlank()) Text(" · ${o.s("equip")}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
+                                // The equipment in words; the raw list showed as ["dumbbell","bench"].
+                                o.s("equipLabel").takeIf { it.isNotBlank() }?.let { Text(" · $it", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp), color = cs.onSurfaceVariant) }
                             }
                         }
                     }

@@ -69,13 +69,14 @@ fun LandmarksCard(d: JSONObject) {
         }
         // Fifteen bars every visit buried the few that matter: muscles off their range lead, then the rest behind Show all.
         var all by remember { mutableStateOf(false) }
-        val off = { r: JSONObject -> r.d("sets") < r.d("mev") || r.d("sets") > r.d("mrv") }
+        val off = { r: JSONObject -> r.b("off") }
         val ordered = rows.filter(off) + rows.filterNot(off)
         val shown = if (all || ordered.size <= 6) ordered else ordered.take(maxOf(6, rows.count(off)))
         shown.forEach { r ->
             val planned = r.d("sets"); val done = r.d("done"); val mev = r.d("mev"); val mrv = r.d("mrv")
-            val status = when { planned < mev -> "under MEV"; planned > mrv -> "over MRV"; planned > (mev + mrv) / 2 -> "high"; else -> "productive" }
-            val col = when { planned < mev -> cs.onSurfaceVariant; planned > mrv -> cs.onTertiaryContainer; else -> cs.primary }
+            // The core's verdict, shared with the week volume card and the audit (it used to compute its own "high" at the midpoint).
+            val status = r.s("zone").ifBlank { "productive" }
+            val col = when (r.s("tone")) { "muted", "neutral" -> cs.onSurfaceVariant; "warn" -> cs.onTertiaryContainer; else -> cs.primary }
             val pos = { v: Double -> (v / scale).toFloat().coerceIn(0f, 1f) }
             val fill by animateFloatAsState(pos(done), Motion.data(), label = "lm")
             Column(Modifier.semantics(mergeDescendants = true) { contentDescription = "${r.s("label")}: ${sets(done)} done, ${sets(planned)} planned, $status. MEV ${fmtNum(mev)}, MRV ${fmtNum(mrv)}" },
@@ -133,7 +134,7 @@ fun AuditCard(vm: AppViewModel, d: JSONObject) {
         }
         if (issues.isEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.primaryContainer).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PiIcons.Check, null, Modifier.size(20.dp), tint = cs.onPrimaryContainer)
-            Text("Every muscle sits between its MEV and MRV across the planned week.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
+            Text("Every muscle this program trains sits between its MEV and MRV in its heaviest week.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
         }
         Text("Checks the full planned week · ${if (issues.any { it.s("status") != "under" }) "something over MRV" else "nothing over MRV"}", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
     }

@@ -158,7 +158,8 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
     val tier = club?.let { c ->
         val cur = c.s("current").takeIf { it.isNotBlank() && it != "null" } ?: "No club yet"
         if (c.b("maxedOut") || c.s("next").let { it.isBlank() || it == "null" }) "$cur · every club cleared"
-        else "$cur · ${ink(c.d("remaining"))} $u to ${c.s("next").replace(" lb Club", "").replace(" Club", "")}"
+        // A kg distance needs the club named in full: "359.5 kg to 1,000" read as 1,000 kg.
+        else "$cur · ${ink(c.d("remaining"))} $u to the ${c.s("next")}"
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -305,7 +306,8 @@ fun ProfBodyweightCard(vm: AppViewModel, onOpenBody: () -> Unit) {
                 Text("Log it", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.clip(CircleShape).background(cs.primary).clickable(onClick = onOpenBody).padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
-        val vals = log.map { it.d("w") }.let { if (it.size == 1) it + it else it }
+        // A line needs two weigh-ins; one entry drew a flat line beside "log it again to see the line".
+        val vals = log.map { it.d("w") }
         if (vals.size >= 2) {
             val line = cs.primary
             Canvas(Modifier.fillMaxWidth().height(54.dp).semantics { contentDescription = "Bodyweight over 8 weeks: ${vals.joinToString(", ") { fmt1(it) }} $u" }) {
@@ -610,6 +612,9 @@ fun StrengthClubCard(vm: AppViewModel) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("${if (u == "lb") java.text.NumberFormat.getIntegerInstance(Locale.US).format(Math.round(c.d("total"))) else Math.round(c.d("total")).toString()} $u",
                 style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, lineHeight = 38.sp))
+            // Clubs are named in pounds; a kg lifter sees their total in pounds too, so it can be read against the tiers.
+            if (u == "kg" && c.i("totalLb") > 0) Text("${java.text.NumberFormat.getIntegerInstance(Locale.US).format(c.i("totalLb"))} lb", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
+                color = cs.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
             Text(cur ?: "Not in a club yet", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold), color = cs.primary, modifier = Modifier.padding(bottom = 6.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -633,12 +638,14 @@ fun StrengthClubCard(vm: AppViewModel) {
             tiers.forEach { t ->
                 val on = t.b("on")
                 val bg by animateColorAsState(if (on) cs.primary else cs.surfaceContainerHighest, com.pursuitiron.app.ui.theme.Motion.effects(), label = "tier")
-                Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(12.dp)).background(bg).semantics { contentDescription = t.s("name") + if (on) ", cleared" else "" }, contentAlignment = Alignment.Center) {
+                Column(Modifier.weight(1f).height(if (u == "kg") 46.dp else 34.dp).clip(RoundedCornerShape(12.dp)).background(bg).semantics { contentDescription = t.s("name") + if (on) ", cleared" else "" },
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(java.text.NumberFormat.getIntegerInstance(Locale.US).format(t.i("lb")), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = if (on) cs.onPrimary else cs.onSurfaceVariant)
+                    if (u == "kg") Text("${Math.round(t.i("lb") / 2.20462)} kg", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = (if (on) cs.onPrimary else cs.onSurfaceVariant).copy(alpha = 0.8f))
                 }
             }
         }
         Text((if (mode == "lifted") "Heaviest weight you have put on the bar across squat, bench and deadlift." else "What your best sets predict you could lift for one rep.") +
-            " Clubs are counted in pounds, the way the lifting world counts them.", style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp), color = cs.onSurfaceVariant)
+            " Clubs are counted in pounds, the way the lifting world counts them" + (if (u == "kg") "; each tier shows its kg below." else "."), style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp), color = cs.onSurfaceVariant)
     }
 }

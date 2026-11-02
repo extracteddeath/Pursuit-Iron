@@ -654,3 +654,31 @@ complete conflict-resolution policy. Canonical JavaScript remains the
 temporary merge authority. It is still impossible to import, merge, restore
 or Undo a selected document from the app UI. Physical provider and
 process-death acceptance is outstanding; maintain the APK freeze.
+
+## Follow-up: single-use native backup review lifecycle
+
+The first two-selection backup comparison was read-only but kept its original
+fingerprint ticket in the process after a successful or failed re-selection.
+That left a stale review available to an unrelated later picker action and
+allowed a canceled old verification to revoke an unrelated newer comparison.
+The review owner is now an explicit, process-only `NativeBackupReviewGate`.
+
+A first comparison creates a revision-bound ticket; a second selection claims
+and **consumes** that ticket before the canonical worker call. The result can
+be confirmed once. An old worker result, canceled input, failed provider read,
+dismissed Plan view, newly selected backup, committed workout change or
+runtime shutdown cannot resurrect it. Cancelling a stale job invalidates only
+its own claimed attempt, not a newer review. No saved source bytes, URI,
+candidate store or approval evidence are retained by this owner.
+
+Native Plan and Activity wire explicit revocation when the picker is canceled,
+another inspection mode is selected, a result is cleared or the backup panel
+is disposed. JVM unit tests cover one-shot success, mismatch, cancellation,
+concurrent revisions, stale job abandonment, tampering and shutdown.
+Source interaction contracts ensure this never invokes the private
+`installApprovedBackupMerge` or an Android document writer.
+
+This remains **read-only lifecycle safety**, not user-authorized restoration.
+Provider and process-death testing on a physical Android device, a full
+consent/conflict policy, web backup migration and complete app integration
+must be accepted before enabling import. Preserve the APK freeze.

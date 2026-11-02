@@ -594,3 +594,39 @@ provider-bound repeat selection and exact-source revalidation, Android
 interruption/recovery tests, conflict-resolution policy, legacy web backup
 migration and whole-journey device acceptance. The installed training engine
 has not been rewritten and the APK freeze remains in effect.
+
+## Follow-up: exact repeated backup selection before any restore consent
+
+A second, **read-only** OpenDocument selection is available after the initial
+canonical comparison in Plan. The user must choose the same physical backup
+copy again. A process-owned `NativeBackupReviewTicket` retains only the
+first selected source byte count, source fingerprint and canonical redacted
+preview. It does not retain the selected URI or raw records, and is never a
+`NativeBackupRestoreApproval`.
+
+The second selection is read completely through the bounded provider reader,
+then the native runtime independently re-fingerprints the bytes, reruns the
+pinned canonical merge comparison against the current owned snapshot and
+requires the same source fingerprints, hypothetical merged digest, counts and
+risk flags. The runtime re-reads the exact current canonical source after
+the worker await. A new comparison or committed store change invalidates
+the process-scoped ticket; closing the runtime invalidates it as well.
+Cancellation and provider failures never allow a verified result. The
+second selection's detached bytes are erased when the picker finishes.
+
+The UI distinguishes an exact second match from a mismatched, changed or
+unreadable copy, and says explicitly that **verification does not import,
+save, approve or enable restoration**. The regular read-only preview,
+export, onboarding, workouts and history still use their existing owners.
+
+Domain tests cover first-source mismatch, invalid/oversized hashes, stale
+current-store revisions, selected-byte length mismatch, changed merge
+prediction and risky-but-reidentifiable inputs. A source-level Android
+interaction contract traces Plan -> picker -> runtime -> selected-byte wiping
+while ensuring neither the UI nor runtime calls the private import writer.
+
+Remaining activation blockers: a real consent and conflict-resolution sheet,
+provider re-opening/recovery acceptance on actual Android devices, no-loss
+legacy backup migration, process-death and storage capacity acceptance, and
+integration of the rest of the native training workflow. Do not build an APK
+or describe this as a user-operable restore.

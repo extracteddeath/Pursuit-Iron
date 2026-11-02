@@ -343,8 +343,14 @@ if tap(r"Why .* kg\?|Why .* reps\?|No suggestion yet", "why-inline"):
     tap(r"^Close explanation", required=False)
 # The design's header: focus mode, the exercise list, and "Short on time?" from the clock
 if tap(r"^Focus mode", "focus-mode"):
-    if not find(r"Log (set|warm-up): press and hold|Reps left in the tank", timeout=4):
+    c = find(r"Log (set|warm-up): press and hold|Reps left in the tank", timeout=4)
+    if not c:
         FAILS.append("focus mode shows no set to log")
+    else:
+        # Entering focus brings the set to the top: its log control must sit above the rest card and the dock, no scrolling.
+        lows = [p[1] for p in (find(r"^Rest, ", timeout=1), find(r"^\|Finish$", timeout=1)) if p]
+        if lows and c[1] > min(lows) - 60:
+            FAILS.append(f"focus mode: log control at y={c[1]} is under the rest card or dock ({min(lows)})")
     tap(r"^Focus mode")
 if tap(r"^All exercises", "exercise-list"):
     if not find(r"Today's exercises", timeout=4):

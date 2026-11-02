@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.Rise
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -99,38 +100,38 @@ fun YouScreen(vm: AppViewModel) {
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 16.dp, modifier = Modifier.statusBarsPadding(),
     ) {
-        item(span = full) { YouHeader(vm, board) { meOpen = true } }
-        board?.takeIf { (it.o("lifetime")?.i("sessions") ?: 0) > 0 }?.let { b -> item(span = full) { YouStats(b) } }
-        item(span = full) { Segmented(listOf("profile" to "Profile", "body" to "Body", "settings" to "Settings"), section, { section = it }) }
+        item(span = full) { Rise { YouHeader(vm, board) { meOpen = true } }}
+        board?.takeIf { (it.o("lifetime")?.i("sessions") ?: 0) > 0 }?.let { b -> item(span = full) { Rise { YouStats(b) }} }
+        item(span = full) { Rise { Segmented(listOf("profile" to "Profile", "body" to "Body", "settings" to "Settings"), section, { section = it }) }}
         when (section) {
             "profile" -> {
                 // The design's profile sections, in your order, hidden ones left out.
                 vm.prefs.profileLayout.visible().forEach { id ->
                     when (id) {
-                        "big3" -> board?.let { b -> item { ProfBig3Card(vm, b) } }
-                        "score" -> item { ProfScoreCard(vm, onOpen = { standardsOpen = true }) { section = "body" } }
-                        "bw" -> item { ProfBodyweightCard(vm) { section = "body" } }
-                        "prs" -> board?.let { b -> item { ProfPrBoard(vm, b) } }
-                        "cal" -> board?.let { b -> item { ProfHeatCard(b) { historyId = it } } }
-                        "ach" -> board?.let { b -> item(span = full) { ProfBadges(b) } }
-                        "bal" -> board?.let { b -> item { ProfBalance(b) } }
+                        "big3" -> board?.let { b -> item { Rise { ProfBig3Card(vm, b) }} }
+                        "score" -> item { Rise { ProfScoreCard(vm, onOpen = { standardsOpen = true }) { section = "body" } }}
+                        "bw" -> item { Rise { ProfBodyweightCard(vm) { section = "body" } }}
+                        "prs" -> board?.let { b -> item { Rise { ProfPrBoard(vm, b) }} }
+                        "cal" -> board?.let { b -> item { Rise { ProfHeatCard(b) { historyId = it } }} }
+                        "ach" -> board?.let { b -> item(span = full) { Rise { ProfBadges(b) }} }
+                        "bal" -> board?.let { b -> item { Rise { ProfBalance(b) }} }
                     }
                 }
-                item(span = full) { ShareCardButton(onShare = { shareCardOpen = true }) { customizeOpen = true } }
+                item(span = full) { Rise { ShareCardButton(onShare = { shareCardOpen = true }) { customizeOpen = true } }}
             }
-            "body" -> { item { BodyBwCard(vm) }; item { BodyMeasureCard(vm) }; item(span = full) { ProgressPhotosCard(vm) } }
+            "body" -> { item { Rise { BodyBwCard(vm) }}; item { Rise { BodyMeasureCard(vm) }}; item(span = full) { Rise { ProgressPhotosCard(vm) }} }
             else -> {
                 // The design's Settings: the backup reminder, the everyday controls as one list, every other page a row away,
                 // the banned list and the e1RM calculator.
-                vm.home?.o("backup")?.takeIf { System.currentTimeMillis() - vm.prefs.backupNudgeHiddenAt > 7 * 86_400_000L }?.let { b -> item(span = full) { BackupBanner(vm, b) } }
-                item { SettingsGroup(vm) { gymsOpen = true } }
-                item { SettingsRows(vm) { k -> when (k) {
+                vm.home?.o("backup")?.takeIf { System.currentTimeMillis() - vm.prefs.backupNudgeHiddenAt > 7 * 86_400_000L }?.let { b -> item(span = full) { Rise { BackupBanner(vm, b) }} }
+                item { Rise { SettingsGroup(vm) { gymsOpen = true } }}
+                item { Rise { SettingsRows(vm) { k -> when (k) {
                     "setup" -> vm.openSetupMode("program", full = true)
                     "injury" -> vm.injuryLogOpen = true
                     else -> settingsSheet = k
-                } } }
-                item { BannedSection(vm) }
-                item { E1rmCalcCard(vm) }
+                } } }}
+                item { Rise { BannedSection(vm) }}
+                item { Rise { E1rmCalcCard(vm) }}
             }
         }
     }

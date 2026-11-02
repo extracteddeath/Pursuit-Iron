@@ -2,6 +2,10 @@
 
 package com.pursuitiron.app.ui.screens
 
+import androidx.compose.foundation.layout.wrapContentWidth
+import com.pursuitiron.app.ui.common.chipIn
+import com.pursuitiron.app.ui.common.popIn
+import com.pursuitiron.app.ui.common.DrawnCheck
 import com.pursuitiron.app.ui.common.has
 import android.Manifest
 import android.os.Build
@@ -343,17 +347,27 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
     // counting each time the item recomposed (sets read 5–8 after the warm-up card was hidden).
     val setLabels = run { var n = 0; sets.map { st -> when { st.b("warm") -> "W"; st.b("sub") -> if (st.s("kind") == "drop") "D" else "M"; else -> { n++; "$n" } } } }
     var warmHidden by androidx.compose.runtime.saveable.rememberSaveable(s.s("sessionId")) { mutableStateOf(false) }
-    LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = 190.dp)) {
-        val warm = s.o("warmup")
-        if (ei == 0 && warm != null && !warmHidden) item { WarmupCard(warm) { warmHidden = true } }
+    val focus = vm.prefs.focus
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val warm = s.o("warmup")
+    val warmShown = ei == 0 && warm != null && !warmHidden
+    // Focus mode puts the set itself at the top of the screen: the card and its log control are in view at once,
+    // above the rest card and the dock (it used to sit under the lift's details, a scroll away).
+    LaunchedEffect(focus, ei) { if (focus) listState.animateScrollToItem(if (warmShown) 2 else 1) }
+    LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = 190.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (warmShown) item { WarmupCard(warm!!) { warmHidden = true } }
         item {
             PiCard(Modifier.widthIn(max = 780.dp), radius = 32.dp, padding = 20.dp) {
                 ExerciseHead(s, ex, onInfo = { open(WSheet.Info(ex.s("id"))) }, onProg = { open(WSheet.Progression(ei)) },
                     onSetup = { open(WSheet.Pin(ex.s("id"))) }, onMenu = { open(WSheet.Menu(ei)) })
                 if (ex.b("superset")) Badge("Superset", cs.secondaryContainer, cs.onSecondaryContainer)
-                LastNoteCard(ex, s.s("dayLabel"))
-                s.o("reentry")?.let { r -> ReentryBanner(r) }
-                ex.o("estimate")?.let { est -> StartingEstimateCard(s, ex, est) } ?: WhyInline(vm, s, ex) { open(WSheet.History(ex.s("id"))) }
+                // Focus mode keeps only what bears on the set in hand; the notes and the why are a tap away in list mode.
+                if (!focus) {
+                    LastNoteCard(ex, s.s("dayLabel"))
+                    s.o("reentry")?.let { r -> ReentryBanner(r) }
+                    ex.o("estimate")?.let { est -> StartingEstimateCard(s, ex, est) } ?: WhyInline(vm, s, ex) { open(WSheet.History(ex.s("id"))) }
+                }
                 if (injury != null || ex.has("injuryAdjusted") && !ex.isNull("injuryAdjusted")) {
                     Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(18.dp)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -369,11 +383,14 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                 }
                 // The design: skip the remaining warm-ups in one tap, right above the sets (tap ✓ on one to bring it back).
                 val warmLeft = sets.filter { it.b("warm") && !it.b("done") && !it.b("skipped") }
-                if (warmLeft.isNotEmpty() && !vm.prefs.focus) TextButton(onClick = {
+                if (warmLeft.isNotEmpty() && !focus) TextButton(onClick = {
                     warmLeft.forEach { w -> vm.act("skipSet", "ei" to ei, "si" to w.i("i")) }; vm.toast("Warm-ups skipped · tap ✓ on one to bring it back")
                 }, modifier = Modifier.align(Alignment.End)) { Text("Skip warm-up →") }
-                if (vm.prefs.focus) FocusCard(vm, s, ex, onAdjust = { si -> open(WSheet.Edit(ei, si)) }, onNextLift = { if (ei < s.list("exercises").size - 1) vm.act("select", "ei" to ei + 1) })
-                else {
+                if (!focus) {
+                // The header and the rows share one set of column widths, so KG and Reps sit over their cells; the
+                // rows sit closer together than the card's sections (6 dp, not 10).
+                val gripC = vm.prefs.grip
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Set", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
                     // The design's Target ⇄ Last: the reference column shows the plan or what you did last time.
@@ -383,14 +400,16 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                         Text(if (vm.prefs.lastMode) "Last" else "Target", style = MaterialTheme.typography.labelMedium, color = cs.primary)
                         Icon(PiIcons.Redo, null, tint = cs.primary, modifier = Modifier.size(12.dp))
                     }
-                    Text(if (ex.b("assisted")) "ASSIST" else s.s("unit").uppercase(), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (vm.prefs.grip) 76.dp else 72.dp), textAlign = TextAlign.Center)
-                    Text("Reps", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (vm.prefs.grip) 62.dp else 58.dp), textAlign = TextAlign.Center)
-                    Spacer(Modifier.width(if (vm.prefs.grip) 72.dp else 52.dp))
+                    Text(if (ex.b("assisted")) "ASSIST" else s.s("unit").uppercase(), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (gripC) 72.dp else 68.dp), textAlign = TextAlign.Center)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Reps", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(if (gripC) 58.dp else 54.dp), textAlign = TextAlign.Center)
+                    Spacer(Modifier.width(4.dp + if (gripC) 68.dp else 44.dp))
                 }
                 sets.forEachIndexed { si, set ->
                     val label = setLabels[si]
                     val showRating = si == lastDoneWork && set.b("done") && set.isNull("rir")
                     SetRow(vm, s, ex, ei, si, set, label, showRating, onEdit = { open(WSheet.Edit(ei, si)) }, onOptions = { open(WSheet.SetOptions(ei, si)) })
+                }
                 }
                 PlateBar(ex, s.s("unit")) { open(WSheet.Plates(ei, ex.i("platesFor"))) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -398,10 +417,13 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                     if (wide && !s.b("quick") && ei < s.list("exercises").size - 1) OutlinedButton(onClick = { vm.act("select", "ei" to ei + 1) }, modifier = Modifier.height(48.dp)) { Text("Next exercise") }
                 }
                 }
-                if (s.b("quick")) OutlinedButton(onClick = { open(WSheet.AddLift) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Add a lift") }
+                if (s.b("quick") && !focus) OutlinedButton(onClick = { open(WSheet.AddLift) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Add a lift") }
             }
         }
-        item { Spacer(Modifier.height(12.dp)); SessionTotals(s) }
+        if (focus) item(key = "focus") {
+            FocusCard(vm, s, ex, Modifier.widthIn(max = 780.dp), onAdjust = { si -> open(WSheet.Edit(ei, si)) }, onNextLift = { if (ei < s.list("exercises").size - 1) vm.act("select", "ei" to ei + 1) })
+        }
+        item { SessionTotals(s) }
     }
 }
 
@@ -413,6 +435,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
     val isCur = si == ex.i("cur") && !set.b("done")
     val cs = MaterialTheme.colorScheme
     val done = set.b("done"); val warm = set.b("warm")
+    val loggedAtOpen = remember(ei, si) { done }
     val grip = vm.prefs.grip
     val cellH: Dp = if (grip) 58.dp else 44.dp
     val bg by animateColorAsState(when { done && warm -> cs.surfaceContainerHigh; done -> cs.primaryContainer; else -> cs.surfaceContainerLow }, com.pursuitiron.app.ui.theme.Motion.effects(), label = "row")
@@ -460,11 +483,13 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
         if (showRating) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 labelCell()
-                Row(Modifier.weight(1f).clip(CircleShape).background(cs.primary).padding(4.dp), verticalAlignment = Alignment.CenterVertically,
+                // The design morphs the check into this pill (they share a view-transition name): it grows out from
+                // where the check was, and the chips arrive one after another.
+                Row(Modifier.weight(1f).popIn(from = 0.4f, origin = androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)).clip(CircleShape).background(cs.primary).padding(4.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Reps left?", style = MaterialTheme.typography.labelMedium, color = cs.onPrimary, modifier = Modifier.padding(start = 8.dp).weight(1f))
                     (0..4).forEach { r ->
-                        Box(Modifier.size(if (grip) 44.dp else 36.dp).clip(CircleShape).background(cs.onPrimary.copy(alpha = 0.16f))
+                        Box(Modifier.chipIn(r).size(if (grip) 44.dp else 36.dp).clip(CircleShape).background(cs.onPrimary.copy(alpha = 0.16f))
                             .clickable { vm.act("rir", "ei" to ei, "si" to si, "rir" to r) }
                             .semantics { contentDescription = if (r == 4) "4 or more reps left" else "$r reps left"; role = Role.Button },
                             contentAlignment = Alignment.Center) {
@@ -510,14 +535,22 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
                 contentAlignment = Alignment.Center,
             ) {
                 if (!done) Canvas(Modifier.fillMaxSize()) { drawRoundRect(cs.outlineVariant, cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.minDimension / 2), style = Stroke(1.5.dp.toPx())) }
-                Icon(PiIcons.Check, null, tint = if (done) cs.onPrimary else cs.onSurfaceVariant.copy(alpha = 0.55f), modifier = Modifier.size(22.dp))
+                // Logging pops the check in and draws it (.pop + .draw); sets already logged when the lift opened just show it.
+                if (done) DrawnCheck(cs.onPrimary, Modifier.popIn(from = 0.6f).size(22.dp), animate = !loggedAtOpen)
+                else Icon(PiIcons.Check, null, tint = cs.onSurfaceVariant.copy(alpha = 0.55f), modifier = Modifier.size(22.dp))
             }
         }
-        // The design: the current set's plates, right under its weight.
+        // The design: the current set's plates, centred right under its weight (they may run wider than the cell).
         val pl = ex.o("plates")
         if (!showRating && isCur && !skipped && !tag && pl != null && ex.i("platesFor") == si && (set.s("weight").toDoubleOrNull() ?: 0.0) > 0)
-            Text(pl.s("text"), style = MaterialTheme.typography.labelMedium, color = cs.primary, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().padding(start = 40.dp, end = if (grip) 72.dp else 48.dp, top = 2.dp), textAlign = TextAlign.End)
+            Row(Modifier.fillMaxWidth().padding(top = 2.dp).chipIn(0)) {
+                Spacer(Modifier.weight(1f))
+                Box(Modifier.width(if (grip) 72.dp else 68.dp), contentAlignment = Alignment.Center) {
+                    Text(pl.s("text"), style = MaterialTheme.typography.labelMedium, color = cs.primary, maxLines = 1, softWrap = false,
+                        modifier = Modifier.wrapContentWidth(unbounded = true))
+                }
+                Spacer(Modifier.width(4.dp + (if (grip) 58.dp else 54.dp) + 4.dp + (if (grip) 68.dp else 44.dp)))
+            }
         if (!showRating && vm.prefs.steppers && !done && !skipped) SetSteppers(vm, s, ex, ei, si, set)
     }
 }
@@ -540,7 +573,7 @@ private fun RestCard(vm: AppViewModel, s: JSONObject, endAt: Long) {
             }
             Column(Modifier.weight(1f)) {
                 Text(when (r.s("kind")) { "mini" -> "Myo rest"; "warm" -> "Warm-up rest"; else -> "Rest" }, style = MaterialTheme.typography.labelMedium)
-                Text(mmss(left), style = MaterialTheme.typography.headlineMedium)
+                com.pursuitiron.app.ui.common.RollingText(mmss(left), MaterialTheme.typography.headlineMedium)
             }
             listOf(-15 to "−15", 15 to "+15").forEach { (d, t) ->
                 Box(Modifier.height(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.onPrimary).clickable { vm.act("restAdjust", "delta" to d) }
@@ -996,7 +1029,7 @@ private fun WarmupCard(w: JSONObject, onDone: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val moves = w.strings("moves")
     val ticked = remember(moves) { androidx.compose.runtime.mutableStateListOf<Int>() }
-    PiCard(Modifier.widthIn(max = 780.dp).padding(bottom = 12.dp), color = cs.primaryContainer, radius = 28.dp, padding = 16.dp) {
+    PiCard(Modifier.widthIn(max = 780.dp), color = cs.primaryContainer, radius = 28.dp, padding = 16.dp) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PiIcons.Flame, null, tint = cs.onPrimaryContainer)
             Column(Modifier.weight(1f)) {

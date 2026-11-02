@@ -169,7 +169,8 @@ private fun Tabs(vm: AppViewModel, wide: Boolean) {
             @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
             androidx.compose.animation.SharedTransitionLayout {
                 AnimatedContent(targetState = vm.tab, transitionSpec = { com.pursuitiron.app.ui.theme.Motion.fadeThrough() }, label = "tab") { t ->
-                    CompositionLocalProvider(com.pursuitiron.app.ui.common.LocalSharedScope provides this@SharedTransitionLayout, com.pursuitiron.app.ui.common.LocalTabScope provides this) {
+                    CompositionLocalProvider(com.pursuitiron.app.ui.common.LocalSharedScope provides this@SharedTransitionLayout, com.pursuitiron.app.ui.common.LocalTabScope provides this,
+                        com.pursuitiron.app.ui.common.LocalStagger provides remember(t) { com.pursuitiron.app.ui.common.StaggerClock() }) {
                         when (t) {
                             Tab.Today -> TodayScreen(vm)
                             Tab.Plan -> PlanScreen(vm)

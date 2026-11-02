@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.Rise
 import com.pursuitiron.app.ui.common.d
 import com.pursuitiron.app.ui.common.has
 import android.content.Intent
@@ -98,10 +99,10 @@ fun TodayScreen(vm: AppViewModel) {
         verticalItemSpacing = 16.dp,
         modifier = Modifier.statusBarsPadding(),
     ) {
-        item(span = full) { TodayHeader(vm) }
-        review?.takeIf { next != null && h.o("live") == null && it.list("changes").isNotEmpty() }?.let { r -> item(span = full) { PlanChangesBanner(r) { changesOpen = true } } }
+        item(span = full) { Rise { TodayHeader(vm) }}
+        review?.takeIf { next != null && h.o("live") == null && it.list("changes").isNotEmpty() }?.let { r -> item(span = full) { Rise { PlanChangesBanner(r) { changesOpen = true } }} }
 
-        if (h.b("empty") && !vm.prefs.transferDismissed) item(span = full) {
+        if (h.b("empty") && !vm.prefs.transferDismissed) item(span = full) { Rise {
             PiCard(color = cs.secondaryContainer, radius = 28.dp, padding = 20.dp) {
                 Kicker("Already training with Pursuit Iron?", cs.onSecondaryContainer)
                 Text("Bring your workouts over", style = MaterialTheme.typography.headlineSmall, color = cs.onSecondaryContainer)
@@ -112,9 +113,9 @@ fun TodayScreen(vm: AppViewModel) {
                     TextButton(onClick = { vm.prefs.dismissTransfer() }) { Text("I'm new") }
                 }
             }
-        }
+        }}
 
-        if (next == null) item(span = full) {
+        if (next == null) item(span = full) { Rise {
             PiCard(color = cs.primaryContainer, radius = 28.dp, padding = 20.dp) {
                 Kicker("Welcome", cs.onPrimaryContainer)
                 Text("Let's build your first program", style = MaterialTheme.typography.headlineMedium, color = cs.onPrimaryContainer)
@@ -122,11 +123,11 @@ fun TodayScreen(vm: AppViewModel) {
                     style = MaterialTheme.typography.bodyMedium, color = cs.onPrimaryContainer)
                 Button(onClick = { vm.openSetup() }) { Text("Build my program") }
             }
-        }
+        }}
 
         // The design's protection card: the area, what the next session does about it, Feels fine now / Change.
         h.list("injuries").forEach { inj ->
-            item {
+            item { Rise {
                 val lifts = inj.strings("lifts")
                 PiCard(color = cs.tertiaryContainer, radius = 24.dp, padding = 16.dp) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -150,30 +151,30 @@ fun TodayScreen(vm: AppViewModel) {
                         }
                     }
                 }
-            }
+            }}
         }
 
         // The design keeps the backup reminder in You → Settings.
-        if (!h.b("empty") && vm.prefs.seenWhatsNew < WHATS_NEW_VERSION) item(span = full) { WhatsNewCard(vm) }
-        if (next != null) item(span = full) { TodayWeekCard(vm, h, showBlock = h.o("live") == null) }
-        if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { TrainingMaxPrompt(vm) }
+        if (!h.b("empty") && vm.prefs.seenWhatsNew < WHATS_NEW_VERSION) item(span = full) { Rise { WhatsNewCard(vm) }}
+        if (next != null) item(span = full) { Rise { TodayWeekCard(vm, h, showBlock = h.o("live") == null) }}
+        if (h.optInt("needsTrainingMax", 0) > 0) item(span = full) { Rise { TrainingMaxPrompt(vm) }}
         h.o("reentry")?.takeIf { next != null && h.o("live") == null && it.optLong("lastDate") != vm.prefs.reentrySkippedFor }?.let { r ->
-            item(span = full) { WelcomeBackCard(vm, r) }
+            item(span = full) { Rise { WelcomeBackCard(vm, r) }}
         }
-        if (next != null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) {
+        if (next != null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise {
             val rest = h.o("restDay")
             if (rest != null) RestDayHero(vm, rest) else Hero(vm, next, h)
-        }
+        }}
         // The check-in tunes the session above it, so it sits under it, folded to one row until opened.
-        if (next != null && h.o("live") == null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { CheckInCard(vm) }
+        if (next != null && h.o("live") == null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { CheckInCard(vm) }}
         if (next != null) next.optJSONArray("plateaus")?.optJSONObject(0)?.takeIf { h.o("live") == null && h.o("restDay") == null }?.let { pl ->
-            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { PlateauCard(vm, next, pl) }
+            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { PlateauCard(vm, next, pl) }}
         }
 
-        if (next != null && h.o("alt") != null && h.o("live") == null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { FresherDayCard(vm, h) { altOpen = true } }
-        if (h.o("deload") != null && h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { DeloadDueCard(vm, h) }
+        if (next != null && h.o("alt") != null && h.o("live") == null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { FresherDayCard(vm, h) { altOpen = true } }}
+        if (h.o("deload") != null && h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { DeloadDueCard(vm, h) }}
 
-        if (h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) {
+        if (h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise {
             PiCard(color = cs.surfaceContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.quickPickOpen = true }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Zap, null, tint = cs.onPrimaryContainer) }
@@ -184,21 +185,21 @@ fun TodayScreen(vm: AppViewModel) {
                     Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
                 }
             }
-        }
+        }}
 
-        if (h.o("recap") != null && vm.prefs.recapHiddenUntil < System.currentTimeMillis()) item(span = full) { RecapCard(vm, h) }
-        review?.takeIf { next != null && h.o("restDay") == null }?.let { r -> item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { GamePlanCard(r, r.list("changes").size) } }
-        if (next != null && readinessOpen) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { ReadinessPanel(vm, h) { readinessOpen = false } }
-        else if (next != null) item {
+        if (h.o("recap") != null && vm.prefs.recapHiddenUntil < System.currentTimeMillis()) item(span = full) { Rise { RecapCard(vm, h) }}
+        review?.takeIf { next != null && h.o("restDay") == null }?.let { r -> item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { GamePlanCard(r, r.list("changes").size) }} }
+        if (next != null && readinessOpen) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { ReadinessPanel(vm, h) { readinessOpen = false } }}
+        else if (next != null) item { Rise {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val wk = h.o("week")
                 StatTile("Sessions", "${wk.i("sessions")}", "/ ${wk.i("planned")}", Modifier.weight(1f))
                 StatTile("Volume", com.pursuitiron.app.ui.common.fmt1(wk.i("volume") / 1000.0), com.pursuitiron.app.ui.common.volUnit(h.s("unit", "kg")), Modifier.weight(1f))
                 StatTile("Readiness", "${readinessToday(vm, h)}", "%", Modifier.weight(1f), color = cs.tertiaryContainer, onClick = { readinessOpen = true })
             }
-        }
+        }}
 
-        if (next != null) item(span = full) { ThisWeekList(vm, h) }
+        if (next != null) item(span = full) { Rise { ThisWeekList(vm, h) }}
     }
 
     if (altOpen) FresherDaySheet(vm, h) { altOpen = false }

@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.Rise
 import com.pursuitiron.app.ui.common.o
 import org.json.JSONObject
 import kotlinx.coroutines.launch
@@ -158,7 +159,7 @@ fun PlanScreen(vm: AppViewModel) {
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 14.dp, modifier = Modifier.statusBarsPadding(),
     ) {
-        item(span = full) {
+        item(span = full) { Rise {
             Column(Modifier.padding(top = 20.dp, start = 4.dp)) {
                 Text("Plan", style = MaterialTheme.typography.displayMedium)
                 PlanProgramHeader(p, onIcon = { iconFor = p.s("programId") }) { programsOpen = true }
@@ -169,9 +170,9 @@ fun PlanScreen(vm: AppViewModel) {
                     onCycle = { openCycle = p.s("cycleId") }, onSettings = { settingsOpen = true }, onDetails = { detailsOpen = true },
                     onNew = { vm.openSetup() }, onTm = if (p.b("percent")) ({ vm.tmFor = p.s("programId") }) else null)
             }
-        }
-        if (p.s("cycleId").isNotBlank()) item(span = full) { CycleBanner(vm, p.s("cycleId")) { openCycle = p.s("cycleId") } }
-        item(span = full) {
+        }}
+        if (p.s("cycleId").isNotBlank()) item(span = full) { Rise { CycleBanner(vm, p.s("cycleId")) { openCycle = p.s("cycleId") } }}
+        item(span = full) { Rise {
             // The design's week chips: W1 … with DONE / NOW, and the deload week as its own chip.
             val cur = p.i("current"); val list = (1..weeks).toList() + if (p.b("deload")) listOf(weeks + 1) else emptyList()
             // On a tablet the chips share the row, as in the design; on a phone they scroll.
@@ -180,16 +181,16 @@ fun PlanScreen(vm: AppViewModel) {
             } else LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(list) { n -> PlanWeekChip(n, n > weeks, n == wk, cur, { vm.loadPlan(p.s("programId"), n) }) }
             }
-        }
-        item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }
+        }}
+        item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }}
         p.list("days").forEach { d ->
-            item { PlanDayCard(vm, p, d, wk) { k -> whyFor = Triple(p.s("programId"), d.s("id"), k) } }
+            item { Rise { PlanDayCard(vm, p, d, wk) { k -> whyFor = Triple(p.s("programId"), d.s("id"), k) } }}
         }
-        if (p.b("canNextBlock")) item(span = full) {
+        if (p.b("canNextBlock")) item(span = full) { Rise {
             OutlinedButton(onClick = { confirmNext = true }, modifier = Modifier.fillMaxWidth()) { Icon(PiIcons.Redo, null, modifier = Modifier.size(18.dp)); Text("  Build next block") }
-        }
+        }}
         // The design: routines (quick workouts you saved) sit at the foot of Plan; everything else is in Programs.
-        item(span = full) { RoutinesSection(vm) }
+        item(span = full) { Rise { RoutinesSection(vm) }}
     }
 }
 
@@ -212,34 +213,34 @@ fun ProgressScreen(vm: AppViewModel) {
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(20.dp), verticalItemSpacing = 16.dp, modifier = Modifier.statusBarsPadding(),
     ) {
-        item(span = full) { Text("Progress", style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(top = 20.dp, start = 4.dp)) }
+        item(span = full) { Rise { Text("Progress", style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(top = 20.dp, start = 4.dp)) }}
         if (p == null || p.i("sessions") == 0) {
-            item(span = full) { EmptyState("Your charts start here", "Log your first session and this fills with strength trends, weekly volume and records. Trends need two sessions per lift.") }
+            item(span = full) { Rise { EmptyState("Your charts start here", "Log your first session and this fills with strength trends, weekly volume and records. Trends need two sessions per lift.") }}
             return@LazyVerticalStaggeredGrid
         }
         // The design: Trends and History one tap apart (history used to sit under every chart).
-        item(span = full) { Segmented(listOf("trends" to "Trends", "history" to "History"), vm.progView, { vm.progView = it; day = null }) }
+        item(span = full) { Rise { Segmented(listOf("trends" to "Trends", "history" to "History"), vm.progView, { vm.progView = it; day = null }) }}
         if (vm.progView == "history") {
-            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { MonthCalendar(vm, day) { day = it } }
-            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { HistoryList(vm, day) { historyId = it } }
+            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { MonthCalendar(vm, day) { day = it } }}
+            item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { HistoryList(vm, day) { historyId = it } }}
             return@LazyVerticalStaggeredGrid
         }
         // On a tablet the cards sit in two columns, as in the design: volume, landmarks and audit on the left,
         // recovery & feedback and intensity on the right.
         val lane = if (wide) StaggeredGridItemSpan.SingleLane else full
-        charts?.let { g -> item(span = lane) { VolumeChartCard(g) } }
-        if (wide) charts?.let { g -> item(span = lane) { FeedbackCard(g) } }
+        charts?.let { g -> item(span = lane) { Rise { VolumeChartCard(g) }} }
+        if (wide) charts?.let { g -> item(span = lane) { Rise { FeedbackCard(g) }} }
         // Web VolumeCard: this week's sets per muscle against the landmarks, for the program being trained.
         vm.home?.o("next")?.let { nx ->
-            item(span = lane) { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> LandmarksCard(d) } }
-            if (wide) charts?.let { g -> item(span = lane) { IntensityCard(g) } }
-            item(span = lane) { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> AuditCard(vm, d) } }
+            item(span = lane) { Rise { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> LandmarksCard(d) } }}
+            if (wide) charts?.let { g -> item(span = lane) { Rise { IntensityCard(g) }} }
+            item(span = lane) { Rise { WeekLandmarksAndAudit(vm, nx.s("programId"), nx.i("weekIndex")) { d -> AuditCard(vm, d) } }}
         }
         charts?.let { g ->
-            if (!wide) item(span = full) { FeedbackCard(g) }
-            if (!wide || vm.home?.o("next") == null) item(span = lane) { IntensityCard(g) }
+            if (!wide) item(span = full) { Rise { FeedbackCard(g) }}
+            if (!wide || vm.home?.o("next") == null) item(span = lane) { Rise { IntensityCard(g) }}
         }
-        item(span = full) { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }
+        item(span = full) { Rise { PinnedLiftsSection(vm, onOpen = { liftId = it }, onManage = { pinsOpen = true }) }}
     }
 }
 

@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.Rise
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.pursuitiron.app.ui.common.i
@@ -100,41 +101,41 @@ fun LibraryScreen(vm: AppViewModel) {
         contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.statusBarsPadding(),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             Row(Modifier.padding(top = 20.dp, start = 4.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Exercises", style = MaterialTheme.typography.displayMedium, modifier = Modifier.weight(1f))
                 androidx.compose.material3.FilledTonalIconButton(onClick = { comparing = true }) { Icon(PiIcons.Trend, "Compare exercises") }
                 androidx.compose.material3.FilledTonalButton(onClick = { creating = true }) { Icon(PiIcons.Plus, null, Modifier.size(18.dp)); Text(" New") }
             }
-        }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        }}
+        item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             OutlinedTextField(q, { q = it; vm.searchLibrary(it, part, equip) }, Modifier.fillMaxWidth().padding(bottom = 10.dp), singleLine = true,
                 placeholder = { Text("Search exercises") }, shape = CircleShape, leadingIcon = { Icon(PiIcons.Search, null) },
                 colors = TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh, unfocusedIndicatorColor = Color.Transparent))
-        }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        }}
+        item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
                 items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id, equip) }, check = true) }
             }
-        }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        }}
+        item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
                 items(listOf("all" to "All lifts", "recent" to "Recent", "goals" to "Goals", "banned" to "Banned")) { (id, label) ->
                     MorphChip(if (id == "all") label else "$label · ${counts[id] ?: 0}", st == id, { st = id }, height = 36.dp)
                 }
             }
-        }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        }}
+        item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
                 items(EQUIPS) { (id, label) -> MorphChip(label, equip == id, { equip = id; vm.searchLibrary(q, part, id) }, height = 36.dp) }
             }
-        }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        }}
+        item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             Text((if (shown.size >= 400) "400+ exercises" else "${shown.size} exercise${if (shown.size == 1) "" else "s"}") +
                 when (st) { "recent" -> " · trained recently"; "goals" -> " · with a goal"; "banned" -> " · banned"; else -> "" },
                 style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
-        }
-        if (shown.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
+        }}
+        if (shown.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(when {
                     vm.library.isNotEmpty() && st == "goals" -> "No goals yet — set one from any lift's Records tab."
@@ -144,7 +145,7 @@ fun LibraryScreen(vm: AppViewModel) {
                 }, color = cs.onSurfaceVariant)
                 if (st != "all") androidx.compose.material3.TextButton(onClick = { st = "all" }) { Text("Show all lifts") }
             }
-        }
+        }}
         itemsIndexed(shown, key = { _, it -> it.s("id") }) { k, x ->
             // The design's tile: colour and shape by muscle group (Chest/Shoulders, Back/Arms, Legs/Core)
             val g = (listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core").indexOf(x.s("group")).coerceAtLeast(0)) % 3

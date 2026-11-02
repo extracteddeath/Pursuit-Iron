@@ -2,6 +2,9 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.chipIn
+import com.pursuitiron.app.ui.common.popIn
+import com.pursuitiron.app.ui.common.DrawnCheck
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -61,6 +64,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
@@ -391,19 +397,22 @@ fun SessionTotals(s: JSONObject) {
 
 /** The design's focus mode: one set at a time, big, with hold-to-log. */
 @Composable
-fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, onAdjust: (Int) -> Unit, onNextLift: () -> Unit) {
+fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifier: Modifier = Modifier, onAdjust: (Int) -> Unit, onNextLift: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val ei = ex.i("ei"); val sets = ex.list("sets"); val u = s.s("unit")
     // After a set is logged the card holds on it for the rating, as in the list.
     val lastDone = sets.indexOfLast { it.b("done") && !it.b("warm") && !it.b("sub") && it.isNull("rir") }
     val fi = if (lastDone >= 0 && lastDone == sets.indexOfLast { it.b("done") }) lastDone else ex.i("cur")
-    if (fi < 0 || fi >= sets.size) { LiftDoneCard(vm, s, ex, onNextLift); return }
+    if (fi < 0 || fi >= sets.size) { LiftDoneCard(vm, s, ex, modifier, onNextLift); return }
     val x = sets[fi]
     val rating = x.b("done")
     val label = setLabelOf(ex, fi)
     val tag = showsTag(ex, x)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(horizontal = 20.dp, vertical = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // The card sits at the top of the screen in focus mode, so it names the lift it belongs to.
+        Text(ex.s("name"), style = MaterialTheme.typography.titleMedium, color = cs.onPrimaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.semantics { heading() })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(label, style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.clip(CircleShape).background(cs.primary).padding(horizontal = 12.dp, vertical = 6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -415,38 +424,41 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, onAdjust: (Int) -
         }
         LiftDemo(ex.s("name"), ex.s("part"))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(if (tag) ex.s("loadTag") else x.s("weight").ifBlank { "—" }, style = MaterialTheme.typography.displayMedium.copy(fontSize = 88.sp, lineHeight = 92.sp), color = cs.onPrimaryContainer,
-                modifier = Modifier.semantics { contentDescription = if (tag) ex.s("loadTag") else "${x.s("weight")} $u" })
+            // The design's ticker: the load rolls digit by digit as the set changes.
+            com.pursuitiron.app.ui.common.RollingText(if (tag) ex.s("loadTag") else x.s("weight").ifBlank { "—" },
+                MaterialTheme.typography.displayMedium.copy(fontSize = 84.sp, lineHeight = 88.sp), cs.onPrimaryContainer,
+                Modifier.clearAndSetSemantics { contentDescription = if (tag) ex.s("loadTag") else "${x.s("weight")} $u" })
             if (!tag) Text(" $u", style = MaterialTheme.typography.titleLarge, color = cs.onPrimaryContainer, modifier = Modifier.padding(bottom = 14.dp))
         }
         val t = x.o("target")
         val sub = when { x.b("warm") -> "warm-up"; x.b("sub") && x.s("kind") == "myo" -> "then a short rest"; t != null && !t.isNull("rir") -> "@" + t.s("effort").ifBlank { t.s("rir") + " RIR" }; else -> "" }
         Text("× ${x.s("reps").ifBlank { "—" }} reps" + if (sub.isNotBlank()) " · $sub" else "", style = MaterialTheme.typography.titleLarge, color = cs.onPrimaryContainer)
         x.o("prev")?.takeIf { it.d("w") > 0 }?.let { p -> Text("Last: ${fmtNum(p.d("w"))} × ${p.s("r")}", style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer.copy(alpha = 0.85f)) }
-        // The bar with one side's plates, as the prototype draws it.
+        // The bar with one side's plates, as the prototype draws it, each plate labelled with its weight.
         val pl = ex.o("plates")
         if (!tag && pl != null && ex.i("platesFor") == fi) {
             val per = pl.optJSONArray("perSide")?.let { a -> (0 until a.length()).map { a.optDouble(it) } } ?: emptyList()
-            if (per.isNotEmpty()) Row(Modifier.height(40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                val big = if (u == "lb") 25.0 else 15.0; val maxP = if (u == "lb") 45.0 else 25.0
-                Box(Modifier.width(22.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(cs.onPrimaryContainer.copy(alpha = 0.35f)))
-                per.forEach { p -> Box(Modifier.width(9.dp).height((14 + Math.round(p / maxP * 26).toInt()).dp).clip(RoundedCornerShape(3.dp)).background(if (p >= big) cs.primary else cs.onPrimaryContainer.copy(alpha = 0.7f))) }
-                Box(Modifier.width(60.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(cs.onPrimaryContainer.copy(alpha = 0.35f)))
-            }
+            if (per.isNotEmpty()) FocusBar(per, u, pl)
         }
-        if (rating) {
+        // Logging morphs the hold button into the rating (the design's shared chk element); the chips arrive one by one.
+        androidx.compose.animation.AnimatedContent(rating to fi, transitionSpec = {
+            (androidx.compose.animation.fadeIn(Motion.effects()) + androidx.compose.animation.scaleIn(Motion.spatialFast(), initialScale = 0.92f)) togetherWith
+                androidx.compose.animation.fadeOut(Motion.effectsFast()) using androidx.compose.animation.SizeTransform(clip = false) { _, _ -> Motion.spatial() }
+        }, label = "focusLog") { (rated, k) ->
+        if (rated) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.primary).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Reps left in the tank?", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     (0..4).forEach { r ->
-                        Box(Modifier.size(52.dp).clip(CircleShape).background(cs.onPrimary.copy(alpha = 0.16f)).clickable { vm.act("rir", "ei" to ei, "si" to fi, "rir" to r) }
+                        Box(Modifier.chipIn(r).size(52.dp).clip(CircleShape).background(cs.onPrimary.copy(alpha = 0.16f)).clickable { vm.act("rir", "ei" to ei, "si" to k, "rir" to r) }
                             .semantics { contentDescription = if (r == 4) "4 or more reps left" else "$r reps left"; role = Role.Button }, contentAlignment = Alignment.Center) {
                             Text(if (r == 4) "4+" else "$r", style = MaterialTheme.typography.titleMedium, color = cs.onPrimary)
                         }
                     }
                 }
             }
-        } else HoldToLog(if (x.b("warm")) "warm-up" else "set") { vm.act("toggle", "ei" to ei, "si" to fi) }
+        } else HoldToLog(if (x.b("warm")) "warm-up" else "set") { vm.act("toggle", "ei" to ei, "si" to k) }
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Surface(onClick = { onAdjust(fi) }, color = cs.surface, shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).height(44.dp)) {
                 Box(contentAlignment = Alignment.Center) { Text("Adjust", style = MaterialTheme.typography.labelLarge) }
@@ -466,19 +478,46 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, onAdjust: (Int) -
     }
 }
 
+/** The focus card's bar: the sleeve, one side's plates drawn to scale with each one's weight under it, and the
+    collar; the line below names the bar so the total adds up. */
+@Composable
+private fun FocusBar(per: List<Double>, u: String, pl: JSONObject) {
+    val cs = MaterialTheme.colorScheme
+    val big = if (u == "lb") 25.0 else 15.0; val maxP = if (u == "lb") 45.0 else 25.0
+    val ink = cs.onPrimaryContainer
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.clearAndSetSemantics { contentDescription = "Each side: " + per.joinToString(", ") { fmtNum(it) } + " $u, on the ${fmtNum(pl.optDouble("barW"))} $u ${pl.s("barLabel")}" }) {
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Box(Modifier.height(44.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(22.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(ink.copy(alpha = 0.35f))) }
+            per.forEachIndexed { k, p ->
+                Column(Modifier.chipIn(k).widthIn(min = 20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Box(Modifier.height(44.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.width(12.dp).height((16 + Math.round(p / maxP * 28).toInt()).dp).clip(RoundedCornerShape(3.dp)).background(if (p >= big) cs.primary else ink.copy(alpha = 0.6f)))
+                    }
+                    Text(fmtNum(p), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = ink)
+                }
+            }
+            Box(Modifier.height(44.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(56.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(ink.copy(alpha = 0.35f))) }
+        }
+        Text("per side · ${fmtNum(pl.optDouble("barW"))} $u ${pl.s("barLabel")}", style = MaterialTheme.typography.labelMedium, color = ink.copy(alpha = 0.8f))
+    }
+}
+
 /** Press and hold to log (the design's guard against a stray tap); TalkBack and keyboards activate it directly. */
 @Composable
 fun HoldToLog(kind: String, onLog: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     var holding by remember { mutableStateOf(false) }
+    // The gesture handler outlives recompositions; it must log the set shown now, not the one it first saw.
+    val log by androidx.compose.runtime.rememberUpdatedState(onLog)
     val fill by animateFloatAsState(if (holding) 1f else 0f, if (holding) tween(700) else tween(150), label = "hold")
     val scope = rememberCoroutineScope()
     Box(Modifier.fillMaxWidth().height(68.dp).clip(CircleShape).background(cs.primary)
-        .semantics { contentDescription = "Log $kind: press and hold"; role = Role.Button; onClick(label = "Log $kind") { onLog(); true } }
+        .semantics { contentDescription = "Log $kind: press and hold"; role = Role.Button; onClick(label = "Log $kind") { log(); true } }
         .pointerInput(Unit) {
             detectTapGestures(onPress = {
                 holding = true
-                val job = scope.launch { delay(700); holding = false; onLog() }
+                val job = scope.launch { delay(700); holding = false; log() }
                 tryAwaitRelease()
                 if (job.isActive) { job.cancel(); holding = false }
             })
@@ -493,17 +532,17 @@ fun HoldToLog(kind: String, onLog: () -> Unit) {
 
 /** Focus mode when the lift is finished: the design's done card with its sets, top set and e1RM. */
 @Composable
-private fun LiftDoneCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, onNextLift: () -> Unit) {
+private fun LiftDoneCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifier: Modifier, onNextLift: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val work = ex.list("sets").filter { !it.b("warm") && !it.b("sub") && it.b("done") }
     val top = work.maxByOrNull { (it.s("weight").toDoubleOrNull() ?: 0.0) * 100 + (it.s("reps").toDoubleOrNull() ?: 0.0) }
     val e1 = work.maxOfOrNull { val w = it.s("weight").toDoubleOrNull() ?: 0.0; val r = it.s("reps").toDoubleOrNull() ?: 0.0; if (w > 0 && r > 0) w * (1 + r / 30.0) else 0.0 } ?: 0.0
     val pr = work.any { it.b("pr") }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(24.dp),
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(cs.primaryContainer).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(cs.primary), contentAlignment = Alignment.Center) { Icon(PiIcons.Check, null, tint = cs.onPrimary, modifier = Modifier.size(28.dp)) }
+        Box(Modifier.popIn().size(56.dp).clip(RoundedCornerShape(18.dp)).background(cs.primary), contentAlignment = Alignment.Center) { DrawnCheck(cs.onPrimary, Modifier.size(28.dp)) }
         Text("${ex.s("short").ifBlank { ex.s("name") }} done", style = MaterialTheme.typography.headlineMedium, color = cs.onPrimaryContainer)
-        if (pr) Text("NEW e1RM PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
+        if (pr) Text("NEW e1RM PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.popIn(delayMs = 120).clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Sets" to "${work.size}", "Top set" to (top?.let { "${it.s("weight")}×${it.s("reps")}" } ?: "—"), "e1RM" to if (e1 > 0) fmtNum(Math.round(e1 * 2) / 2.0) else "—").forEach { (k, v) ->
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surface).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {

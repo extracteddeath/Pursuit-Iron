@@ -284,6 +284,81 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun compatibleAccessorySubstitutionResetsOldTargetsAndSurvivesRestart() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Substitution",days=4,split="full_body",
+                    allowSupersets=false,session="s90"),
+                "create-substitute","program-substitute",1000,223)))
+            val drive=Drive();var owner=CanonicalWorkoutStorePersistence(drive,engine)
+            assertTrue(owner.initialize(proposal.snapshot))
+            val original=proposal.program
+            val structure=ReadOnlyProgramPresentationPolicy.inspect(original,
+                CurrentProgramEvidence(original.reference,CurrentProgramDeletionEvidence.CheckedAbsent))
+                as ReadOnlyProgramPresentation.Structure
+            val verified=NativeProgramEditDraft.from(structure)
+            val known=original.days.flatMap { it.exerciseIds }.distinct()
+            var selected: NativeProgramEditDraft?=null
+            var acceptedRequest: String?=null
+            scan@ for(day in original.days) {
+                for(slot in 1 until day.exerciseIds.size) {
+                    for(target in known) {
+                        val draft=verified.substituteExercise(day.id,slot,target) ?: continue
+                        val request=NativeProgramEditCodec.editJson(
+                            draft,"swap-test-${day.id}-${slot}-${target}",2000)
+                        val candidate=runCatching {
+                            engine.prepareProgramEdit(proposal.snapshot,request)
+                        }.getOrNull() ?: continue
+                        if(candidate.program.days==draft.days) {
+                            selected=draft;acceptedRequest=request
+                            break@scan
+                        }
+                    }
+                }
+            }
+            val draft=checkNotNull(selected) {
+                "Canonical generated program needs one eligible cross-day accessory for the native picker"
+            }
+            val request=checkNotNull(acceptedRequest)
+            assertEquals(3,JSONObject(request).getInt("format"))
+            val before=JSONObject(proposal.snapshot)
+            val beforeHistory=before.getJSONArray("history").toString()
+            val beforePerf=before.getJSONObject("perf").toString()
+            val writes=drive.writes
+            val saved=checkNotNull(owner.saveProgramEdits(request))
+            assertEquals(draft.days,saved.days)
+            assertEquals(writes+1,drive.writes)
+            owner=CanonicalWorkoutStorePersistence(drive,engine)
+            assertNotNull(owner.saveProgramEdits(request))
+            assertEquals(writes+1,drive.writes)
+            val afterRaw=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            assertTrue(engine.validateInitialSnapshot(afterRaw))
+            val after=JSONObject(afterRaw)
+            assertEquals(beforeHistory,after.getJSONArray("history").toString())
+            assertEquals(beforePerf,after.getJSONObject("perf").toString())
+            val edited=after.getJSONArray("saved").getJSONObject(0)
+            val change=checkNotNull(draft.replacement)
+            val key="${change.dayId}:${change.originalSlot}"
+            val overrides=edited.getJSONObject("overrides").getJSONObject(key)
+            assertEquals(change.exerciseId,overrides.getString("legacyExerciseId"))
+            assertTrue(overrides.getBoolean("nextEngine"))
+            assertEquals(setOf("nextEngine","legacyExerciseId","nextExerciseId"),
+                overrides.keys().asSequence().toSet())
+            for(field in listOf("nextWeekPrescriptions","progStyle","slotBias","autoBias",
+                "rounds","weekOff","pairs","ss")) {
+                val values=edited.optJSONObject(field) ?: continue
+                assertFalse(values.keys().asSequence().any { it==key || it.startsWith(key+":") })
+            }
+            val reopened=checkNotNull(engine.inspectProgram(afterRaw))
+            assertEquals(draft.days,reopened.program.days)
+            val plan=checkNotNull(engine.prepareWorkout(afterRaw,NativeWorkoutCodec.startJson(
+                "program-substitute","workout-after-substitute",3000)))
+            assertTrue(plan.slots.isNotEmpty())
+            assertNotNull(owner.beginIssuedSession(plan,WorkoutJournalPersistence(Drive())))
+        } }
+    }
+
     @Test(timeout=60000) fun delayedProgramSaveCannotOverwriteANewerProgramRevision() {
         NodeTransport().use { node -> runBlocking {
             val started=CompletableDeferred<Unit>();val release=CompletableDeferred<Unit>()

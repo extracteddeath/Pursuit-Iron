@@ -238,7 +238,9 @@ object NativeProgramEditCodec {
         require(target.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) &&
             before.get("name")==request.get("name") && after.get("name")==before.get("name") &&
             after.get("edited")==true)
-        val mutable=setOf("updatedAt","edited","days","overrides")
+        val mutable=setOf("updatedAt","edited","days","overrides",
+            "nextWeekPrescriptions","progStyle","slotBias","autoBias","rounds",
+            "weekOff","pairs","ss")
         require(before.keys().asSequence().toSet()-mutable==after.keys().asSequence().toSet()-mutable)
         before.keys().asSequence().filter { it !in mutable }.forEach { key->
             require(equivalent(before.get(key),after.get(key)))

@@ -48,6 +48,9 @@ class NativeGymInventoryCodecTest {
         assertFalse(NativeGymInventoryCodec.fromDraft(mapOf("bar" to "45"),"lb").valid)
         assertFalse(NativeGymInventoryCodec.fromDraft(mapOf("plates" to "5x2"),"lb").valid)
         assertFalse(NativeGymInventoryCodec.fromDraft(mapOf("smith" to "20, 20"),"lb").valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(mapOf("smith" to "20.0, 20"),"lb").valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(mapOf("bar" to "45",
+            "plates" to "5x2, 5.0x2"),"lb").valid)
         assertFalse(NativeGymInventoryCodec.fromDraft(mapOf("machine" to "5, 5"),"lb").valid)
         assertFalse(NativeGymInventoryCodec.fromDraft(mapOf("cable" to "5, 0, 100"),"lb").valid)
     }

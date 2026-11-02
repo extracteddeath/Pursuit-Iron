@@ -407,3 +407,28 @@ assert.ok(backupScreening.includes('if(inspectReselection) onDiscardBackupReview
   backupScreening.includes('BackupScreeningStage.Rejected') &&
   backupScreening.includes('selectedUri == null'),
   'Failed or canceled second-source reads must revoke the old one-shot review');
+
+const nativePriorityUi=fs.readFileSync(root+'NativeMusclePrioritySelector.kt','utf8');
+const priorityContract=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeProgramSetup.kt','utf8');
+const canonicalBuilder=fs.readFileSync('android-native/engine-bridge/native-onboarding.mjs','utf8');
+assert.ok(
+  ui.includes('var focus by rememberSaveable') &&
+  ui.includes('var reduced by rememberSaveable') &&
+  ui.includes('NativeMusclePrioritySelector(') &&
+  ui.includes('focus.toMap(),reduced.toList()') &&
+  ui.includes('proposal.profile.focus') &&
+  ui.includes('proposal.profile.reduced') &&
+  nativePriorityUi.includes('muscles: List<NativeProgramMuscle>') &&
+  nativePriorityUi.includes('onChange: (String,Int)->Unit') &&
+  nativePriorityUi.includes('focus.size<3') &&
+  nativePriorityUi.includes('reduced.size<3') &&
+  priorityContract.includes('val focus: Map<String,Int>') &&
+  priorityContract.includes('val reduced: List<String>') &&
+  priorityContract.includes('if(hasPriorities)wire.exact(') &&
+  canonicalBuilder.includes('MUSCLE_IDS.has(part)') &&
+  canonicalBuilder.includes('focus:{...(p.focus||{})}') &&
+  canonicalBuilder.includes('reduce:[...(p.reduced||[])]') &&
+  !ui.includes('generateNextProgramForShell(') &&
+  !nativePriorityUi.includes('commitAtomically'),
+  'Native authored priorities must be bounded and preserved by the canonical generator, not a UI-only rule'
+);

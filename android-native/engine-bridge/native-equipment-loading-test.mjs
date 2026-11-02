@@ -29,6 +29,19 @@ const inventory={unit:'lb',
  cable:{minimum:5,increment:5,maximum:150},
  smith:{availableLoads:[15,20,25,30]},
  exerciseOverrides:{}};
+// End-to-end: a real user-authored onboarding inventory, not test-only store tampering,
+// must reach the issued native workout's physical load inspection unchanged.
+const configured=prepareNativeProgram(JSON.stringify({creationId:'equipment-authored',
+  programId:'equipment-program',createdAt:1000,seed:223,
+  profile:{...profile,focus:{},reduced:[],loadingInventory:inventory}})).snapshot;
+assert.deepEqual(JSON.parse(configured).saved[0].config.loadingInventory,inventory);
+const fromSetup=inspect(configured,null,'160');
+assert.equal(fromSetup.review.mode,'barbell_total');
+assert.equal(fromSetup.review.confirmed,true);
+assert.equal(fromSetup.review.family,'barbell_plates');
+assert.equal(fromSetup.review.exact,true);
+assert.equal(fromSetup.review.previous,155);
+assert.equal(fromSetup.review.next,165);
 const modified=JSON.parse(original);modified.saved[0].config.loadingInventory=inventory;
 const explicit=JSON.stringify(modified);
 const barbell=inspect(explicit,null,'160');

@@ -305,3 +305,24 @@ assert.ok(activity.includes('onPreviewBackupMerge=runtime::previewBackupMerge') 
   !mergePolicy.includes('commitAtomically') && !mergePolicy.includes('publishSnapshot') &&
   !backupScreening.includes('commitAtomically'),
   'Backup comparison requires explicit selected source, bounded in-memory canonical merge, stale-owner refusal, redacted results, and no import authority');
+
+const restoreOwner=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/CanonicalWorkoutStorePersistence.kt','utf8');
+const restorePort=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeBackupMergePreparation.kt','utf8');
+const restorePreparation=fs.readFileSync('android-native/engine-bridge/backup-merge-preparation.mjs','utf8');
+assert.ok(restoreOwner.includes('private data class RestoreUndo(') &&
+  restoreOwner.includes('val extended=state.undo!=null || state.undoAck!=null') &&
+  restoreOwner.includes('if(extended)2 else 1') &&
+  restoreOwner.includes('internal suspend fun installApprovedBackupMerge(') &&
+  restoreOwner.includes('internal fun undoApprovedBackupMerge(') &&
+  restoreOwner.includes('preview.flags.isNotEmpty()') &&
+  restoreOwner.includes('current.snapshot!=initial.snapshot') &&
+  restoreOwner.includes('undo=null,undoAck=null') &&
+  restorePreparation.includes('approvedForImport:false') &&
+  restorePreparation.includes('requiresAtomicUndo:true') &&
+  restorePort.includes('class NativeBackupRestoreApproval internal constructor(') &&
+  !activity.includes('installApprovedBackupMerge') &&
+  !activity.includes('undoApprovedBackupMerge') &&
+  !shell.includes('installApprovedBackupMerge') &&
+  !screens.includes('installApprovedBackupMerge') &&
+  !backupScreening.includes('installApprovedBackupMerge'),
+  'Atomic undo transaction remains private and unconnected until real consent, provider/recovery and Android acceptance');

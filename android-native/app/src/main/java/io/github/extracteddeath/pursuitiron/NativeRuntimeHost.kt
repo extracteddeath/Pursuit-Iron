@@ -142,6 +142,47 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
+    /**
+     * No import or write. Selected document bytes remain caller-owned and must
+     * be wiped after this suspending comparison. The current store is checked
+     * again before any result can reach Compose.
+     */
+    suspend fun previewBackupMerge(selected: ByteArray): NativeBackupMergePreview {
+        val before=mutable.value
+        check(before.ready && !before.blocked && !before.busy && !before.workoutBusy &&
+            !before.workoutBlocked && before.workout==null &&
+            !before.historyBusy && !before.backupExportBusy && before.saved!=null)
+        val owner=checkNotNull(store)
+        val loaded=checkNotNull(before.verifier)
+        val job=currentCoroutineContext()
+        var first: ByteArray?=null
+        var latest: ByteArray?=null
+        try {
+            job.ensureActive()
+            val source=checkNotNull(owner.readOwnedCurrentStoreBytes());first=source
+            val sourceFp=ReadOnlyBackupScreening.fingerprint(java.io.ByteArrayInputStream(source)) {
+                job.ensureActive()
+            }
+            val selectedFp=ReadOnlyBackupScreening.fingerprint(java.io.ByteArrayInputStream(selected)) {
+                job.ensureActive()
+            }
+            val currentText=ReadOnlyBackupSourceGate.exactText(source,sourceFp)
+            val selectedText=ReadOnlyBackupSourceGate.exactText(selected,selectedFp)
+            val preview=checkNotNull(loaded.programEngine.previewBackupMerge(currentText,selectedText))
+            job.ensureActive()
+            val now=mutable.value
+            check(now.ready && !now.blocked && !now.busy && !now.workoutBusy &&
+                !now.workoutBlocked && now.workout==null &&
+                !now.historyBusy && !now.backupExportBusy && now.storeChangeKey==before.storeChangeKey)
+            val fresh=checkNotNull(owner.readOwnedCurrentStoreBytes());latest=fresh
+            check(source.contentEquals(fresh))
+            job.ensureActive()
+            return preview
+        } finally {
+            first?.fill(0);latest?.fill(0)
+        }
+    }
+
     fun reloadHistory() {
         val current=mutable.value
         val selected=current.history

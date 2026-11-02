@@ -1111,4 +1111,13 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   ok(C.plan({ programId: r.programId }).name === 'Volume / Recovery / Intensity', 'switching method renames a program still named after its old method');
   C.renameProgram?.({ programId: r.programId, name: 'My strength' }); }
 
+// A percentage workout: the main lift's sets carry their share of max, the top set is an AMRAP, accessories stay unlocked.
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id: 'p531' });
+  C.trainingMaxes({ programId: r.programId }).lifts.forEach((l) => C.setTrainingMax({ programId: r.programId, exId: l.id, value: 100 }));
+  const s = C.startSession({}); const main = s.exercises[0], acc = s.exercises[1], work = main.sets.filter((x) => !x.warm && !x.sub), top = work[work.length - 1];
+  ok(top.target.amrap && top.target.reps === '5+' && top.target.pct === 85 && work[0].target.pct === 65 && /^5\+ reps · 65–85% of max/.test(main.line),
+    'percentage sets show % of max and an AMRAP top set (' + main.line + ' · top ' + top.target.reps + ' @' + top.target.pct + '%)');
+  ok(main.progression.locked && !acc.progression.locked, 'only the method lift is locked to the method; accessories progress normally');
+  C.discardSession(); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

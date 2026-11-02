@@ -484,6 +484,9 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
         warm -> "Warm-up"
         set.b("sub") -> if (set.s("kind") == "drop") "Drop · to failure" else "Myo mini"
         set.s("type") == "failure" -> "to failure"
+        // A percentage set: its share of max, and the top set as an AMRAP rather than "@0 RIR".
+        target != null && target.b("amrap") -> "AMRAP" + (target.optDouble("pct").takeIf { !it.isNaN() }?.let { " · ${fmtNum(it)}%" } ?: "")
+        target != null && !target.isNull("pct") -> "${fmtNum(target.optDouble("pct"))}%" + (if (!target.isNull("rir")) " · @" + target.s("effort").ifBlank { target.s("rir") + " RIR" } else "")
         target != null && !target.isNull("rir") -> "@" + target.s("effort").ifBlank { target.s("rir") + " RIR" }
         set.b("added") -> "Added set"
         else -> ""
@@ -672,7 +675,8 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
                     else -> "Counts toward volume and records, and sets the next load."
                 }, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 6.dp))
             }
-            set.o("target")?.let { t -> if (!set.b("warm")) Text("Target: ${t.s("reps")} reps" + (if (!t.isNull("rir")) " at ${t.s("effort").ifBlank { t.s("rir") + " RIR" }}" else ""),
+            set.o("target")?.let { t -> if (!set.b("warm")) Text(if (t.b("amrap")) "Target: at least ${t.s("reps").trimEnd('+')} reps, as many as you can with good form" + (t.optDouble("pct").takeIf { !it.isNaN() }?.let { " · ${fmtNum(it)}% of max" } ?: "")
+                else "Target: ${t.s("reps")} reps" + (if (!t.isNull("rir")) " at ${t.s("effort").ifBlank { t.s("rir") + " RIR" }}" else "") + (t.optDouble("pct").takeIf { !it.isNaN() }?.let { " · ${fmtNum(it)}% of max" } ?: ""),
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
             if (assisted) {
                 // App.js: help is a negative load. Typed and shown as the amount of help; minus adds help, plus takes it off.

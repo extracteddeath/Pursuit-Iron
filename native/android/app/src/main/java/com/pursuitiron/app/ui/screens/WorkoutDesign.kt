@@ -272,6 +272,7 @@ fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -
                         }
                     }
                 }
+                if (prog != null && prog.b("locked") && ex.s("line").contains("of max")) com.pursuitiron.app.ui.common.Badge("% of max · set by the method", cs.tertiaryContainer, cs.onTertiaryContainer)
                 if (ex.b("primary")) com.pursuitiron.app.ui.common.Badge("Primary")
                 ex.s("supplemental").takeIf { it.isNotBlank() && it != "null" }?.let { com.pursuitiron.app.ui.common.Badge(it.replaceFirstChar { c -> c.uppercase() }, cs.secondaryContainer, cs.onSecondaryContainer) }
                 if (ex.b("assisted")) com.pursuitiron.app.ui.common.Badge("Assisted · less help is progress", cs.tertiaryContainer, cs.onTertiaryContainer)

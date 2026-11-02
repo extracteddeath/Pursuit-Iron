@@ -1058,6 +1058,14 @@ function shortName(name) {
     const w = n.split(/\s+/), two = w.slice(-2).join(' ');
     return two.length <= 15 ? two : w[w.length - 1];
 }
+/* A percentage lift's header line: the wave and its share of max ("5+ reps · 65–85% of max · Barbell"), not a RIR target. */
+function pctLine(plan, ex) {
+    const sets = plan.sets, reps = [...new Set(sets.map((x) => String(x.reps).replace('+', '')))], amrap = sets.some((x) => x.amrap);
+    const pcts = sets.map((x) => Math.round(Number(x.pct) * 100)).filter((x) => x > 0);
+    const load = pcts.length ? (Math.min(...pcts) === Math.max(...pcts) ? `${pcts[0]}%` : `${Math.min(...pcts)}–${Math.max(...pcts)}%`) + ' of max' : null;
+    const eq = (ex.equip || []).find((q) => q !== 'bench' && q !== 'rack');
+    return [(reps.length === 1 ? reps[0] : reps.join('/')) + (amrap ? '+' : '') + ' reps', load, eq ? EQUIP_LABEL[eq] || null : null].filter(Boolean).join(' · ');
+}
 function liftLine(e, ex) {
     const w = e.sets.find((x) => isWork(x) && x.target); if (!w) return '';
     const t = w.target, eq = (ex.equip || []).find((q) => q !== 'bench' && q !== 'rack');
@@ -1086,8 +1094,18 @@ export function session() {
             const best = Number(bests?.[e.id]?.e1rm ?? bests?.[e.id]?.best ?? 0) || 0;
             // App.js "last" column: the previous workout's set at the same working-set position.
             let workIdx = -1;
+            // A percentage lift's sets carry their share of max and the AMRAP top set (the web set tag's "85% AMRAP"):
+            // without them the top set read "5 reps @0 RIR" — a fixed target, not as many as you can.
+            let pctPlan = null;
+            const pctSlot = !!ctx.program.config?.percentScheme && (e.slot === ctx.day.primaryIndex || (ctx.day.t2Index != null && e.slot === ctx.day.t2Index));
+            if (pctSlot && EX_BY_ID[e.id]) {
+                try { pctPlan = E.percentagePlanFor(ctx.program, ctx.day, EX_BY_ID[e.id], e.slot, ctx.wk, u, ctx.H); } catch { pctPlan = null; } }
             const sets = e.sets.map((s, i) => { const isW = !s.warm && !s.sub; if (isW) workIdx++;
-return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workIdx) : null); });
+                const v = setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workIdx) : null);
+                const ps = isW && !s.added ? pctPlan?.sets?.[workIdx] : null;
+                if (ps && v.target) { v.target.pct = ps.pct != null ? Math.round(ps.pct * 1000) / 10 : null; v.target.amrap = !!ps.amrap;
+                    if (ps.amrap) { v.target.reps = String(ps.reps).replace('+', '') + '+'; v.target.effort = 'as many as you can'; } }
+                return v; });
             let restDefault = null; try { restDefault = E.effectiveRest(E.goalForDay(ctx.program, ctx.day), ex, e.slot === ctx.day.primaryIndex, 0, Number(S.store.restScale) || 1); } catch { restDefault = null; }
             const inc = ctx.program.exLoadInc?.[e.id];
             let setup = []; try { setup = E.setupFieldsWithStored(ex, S.store.exSetup?.[e.id]).map((f) => ({ key: f.key, label: f.label, value: S.store.exSetup?.[e.id]?.[f.key] || '' })); } catch { setup = []; }
@@ -1099,7 +1117,7 @@ return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workId
             const estSet = e.sets.find((x) => isWork(x) && x.target?.estimate);
             const estimate = estSet && !e.sets.some((x) => isWork(x) && x.done) ? { w: estSet.target.w, from: estSet.target.estimate.from,
                 text: E.startingEstimateText(estSet.target.estimate, u) } : null;
-            return { ei, id: e.id, name: ex.name || e.id, short: shortName(ex.name || e.id), line: (() => { try { return liftLine(e, ex); } catch { return ''; } })(), bar, cur, loadTag: loadTag(ex), estimate,
+            return { ei, id: e.id, name: ex.name || e.id, short: shortName(ex.name || e.id), line: (() => { try { return pctPlan?.sets?.length ? pctLine(pctPlan, ex) : liftLine(e, ex); } catch { return ''; } })(), bar, cur, loadTag: loadTag(ex), estimate,
                 plates: (() => { try { return plateRef ? platesFor(parseFloat(plateRef.weight), bar, u) : null; } catch { return null; } })(),
                 platesFor: plateRef ? e.sets.indexOf(plateRef) : -1, addRules: addRules(e, ex, style), part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', pattern: ex.pattern || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
                 superset: !!e.superset, supplemental: ctx.program.overrides?.[`${ctx.day.id}:${e.slot}`]?.supplemental ? (SUPP_LABEL[ctx.program.overrides[`${ctx.day.id}:${e.slot}`].supplemental] || 'Supplemental') : null, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', lastNoteDate: ctx.P[e.id]?.note && ctx.P[e.id]?.date ? (typeof ctx.P[e.id].date === 'number' ? ctx.P[e.id].date : Date.parse(ctx.P[e.id].date) || null) : null, pinNote: S.store.exNotes?.[e.id] || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
@@ -1113,7 +1131,8 @@ return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workId
                 assisted: (() => { try { return !!E.isAssistedEx(ex); } catch { return false; } })(),
                 // The design's muscles worked: the engine's own part and secondary shares, biggest first.
                 secondary: (() => { try { return (E.secondaryOf(ex) || []).slice().sort((a, b) => b[1] - a[1]).map(([p, f]) => ({ part: p, label: E.PART_LABEL?.[p] || p, share: f })); } catch { return []; } })(),
-                progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: !!ctx.program.config?.percentScheme,
+                // Only the method's own lifts are locked to it; a percentage program's accessories progress like any other lift.
+                progression: { style: E.styleFor(ctx.program, e.id), changed: !!l.sessionProgressions?.[e.id], locked: pctSlot,
                     ...progressionOptions(ctx, e, ex, u) },
                 // App.js Plateau options: shown only when the day-scoped detector reports one.
                 plateau: e.freestyle ? null : plateauFor(ctx.program, ctx.day, e.id),

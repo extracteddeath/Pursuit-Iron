@@ -519,3 +519,47 @@ The packaged real-runtime test also checks no canonical store writes.
 Physical document-provider and lifecycle acceptance, atomic merge/Undo and
 web-backup migration are **still open**. The latest CI head needs confirmation,
 and APK freeze remains active.
+
+## Follow-up: no-loss candidate preparation and private atomic Undo transaction
+
+The previous two-snapshot Plan comparison now reports **existing records
+removed, existing records replaced and personal settings changed**, separately
+from the canonical merge's generic collision count and history-cap losses.
+A deletion tombstone can otherwise remove an original workout with no ordinary
+record conflict. These new risk indicators remain redacted; no training loads,
+records or selected source bytes enter Compose state.
+
+A separate `prepareBackupMerge` method is now allowlisted **only** on the
+private pinned workout-store channel. It binds two exact canonical v13 sources
+and an expected candidate digest; any loss, overwrite, settings change, conflict,
+oversized result or changed digest fails closed. The strict Kotlin result decoder
+checks the whole candidate, hashes, version, byte count and non-writing flags.
+Neither the bridge nor this decoder can publish a candidate.
+
+The existing single-process `CanonicalWorkoutStorePersistence` now supports a
+backward-compatible **format-2 atomic envelope** that can store a prepared
+additive candidate and the exact prior snapshot/completion receipt for Undo in
+ONE atomic file write. Existing non-restore writes continue using format 1.
+The private transaction independently rechecks the canonical preview and
+preparation, explicit authorization evidence, active/pending ownership and
+the exact pre-await current snapshot before publication. Undo is permitted
+only while the installed snapshot remains unchanged. Committed restore and
+Undo retries are idempotent after lost acknowledgements, and starting a
+new workout revokes pending Undo rights. Corruption cannot silently bootstrap
+an empty store.
+
+The private `installApprovedBackupMerge` and `undoApprovedBackupMerge`
+methods are intentionally **not called by Compose, Plan, Activity or the native
+runtime host**. No actual user-selected backup is imported. JVM synthetic
+fault tests cover before/after-write crashes, restart, duplicate operations,
+owner revisions, workout start and corrupt envelopes; packaged JavaScript
+candidate preparation is separately verified through the pinned transport.
+Read the exact-head CI reports for results.
+
+**Still blocking activation:** a documented explicit user consent sheet,
+revision- and provider-bound source ownership, recovery/Undo on real Android
+storage and process death, realistic migrated web histories with 1-MiB limits,
+detailed conflict-resolution controls (including deletions, settings and
+custom cycles), full workflow/device accessibility acceptance. Preserve the
+APK freeze. A passing backend contract is not enough to describe restore or
+the Kotlin engine rebuild as production ready.

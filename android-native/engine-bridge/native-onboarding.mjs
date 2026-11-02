@@ -9,6 +9,15 @@ export const NATIVE_SETUP_EQUIPMENT=Object.freeze([
   'barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip',
   'legpress','hacksquat','legext','legcurl','calfmachine','ezbar','kettlebell','bands'
 ]);
+export const NATIVE_MUSCLE_PRIORITIES=Object.freeze([
+  ['chest','Chest'],['lats','Lats'],['upper_back','Upper back'],
+  ['shoulders','Shoulders'],['biceps','Biceps'],['triceps','Triceps'],
+  ['quads','Quads'],['hamstrings','Hamstrings'],['glutes','Glutes'],
+  ['calves','Calves'],['abs','Abs'],['traps','Traps'],
+  ['forearms','Forearms'],['adductors','Adductors'],['abductors','Abductors'],
+  ['lower_back','Lower back'],['neck','Neck']
+].map(([id,label])=>Object.freeze({id,label})));
+const MUSCLE_IDS=new Set(NATIVE_MUSCLE_PRIORITIES.map(x=>x.id));
 const object=v=>v!==null && typeof v==='object' && !Array.isArray(v);
 const exact=(v,keys)=>object(v) && Object.keys(v).length===keys.length &&
   keys.every(k=>Object.prototype.hasOwnProperty.call(v,k));
@@ -19,7 +28,8 @@ const ensure=v=>{if(!v) throw new TypeError('Native program setup rejected');};
 export function nativeProgramOptions() {
   return {source:'modules/engine-api.js:splitSupportsTrainingDays',readOnly:true,
     splits:Object.entries(SPLITS).map(([id,label])=>({id,label,
-      days:[3,4,5,6].filter(n=>splitSupportsTrainingDays(id,n))})),equipment:[...NATIVE_SETUP_EQUIPMENT]};
+      days:[3,4,5,6].filter(n=>splitSupportsTrainingDays(id,n))})),equipment:[...NATIVE_SETUP_EQUIPMENT],
+    muscles:NATIVE_MUSCLE_PRIORITIES.map(({id,label})=>({id,label}))};
 }
 
 function setupFrom(raw) {
@@ -29,8 +39,11 @@ function setupFrom(raw) {
     id(s.creationId) && id(s.programId) && s.creationId!==s.programId && clock(s.createdAt) &&
     Number.isInteger(s.seed) && s.seed>=1 && s.seed<=2147483646);
   const p=s.profile;
-  ensure(exact(p,['name','goal','experience','unit','split','days','session','equipment',
-    'allowBodyweight','allowSupersets','barbellCap']) &&
+  const legacy=['name','goal','experience','unit','split','days','session','equipment',
+    'allowBodyweight','allowSupersets','barbellCap'];
+  const priorities=Object.prototype.hasOwnProperty.call(p,'focus') ||
+    Object.prototype.hasOwnProperty.call(p,'reduced');
+  ensure((priorities?exact(p,[...legacy,'focus','reduced']):exact(p,legacy)) &&
     typeof p.name==='string' && p.name.trim().length>0 && p.name.length<=60 &&
     !/[\x00-\x1f\x7f-\x9f]/.test(p.name) &&
     ['hypertrophy','strength','both'].includes(p.goal) &&
@@ -42,6 +55,15 @@ function setupFrom(raw) {
     Array.isArray(p.equipment) && p.equipment.length>0 &&
     new Set(p.equipment).size===p.equipment.length &&
     p.equipment.every(eq=>NATIVE_SETUP_EQUIPMENT.includes(eq)));
+  if(priorities) {
+    ensure(object(p.focus) && Object.keys(p.focus).length<=3 &&
+      Object.entries(p.focus).every(([part,level])=>
+        MUSCLE_IDS.has(part) && Number.isInteger(level) && level>=1 && level<=2) &&
+      Array.isArray(p.reduced) && p.reduced.length<=3 &&
+      new Set(p.reduced).size===p.reduced.length &&
+      p.reduced.every(part=>MUSCLE_IDS.has(part) &&
+        !Object.prototype.hasOwnProperty.call(p.focus,part)));
+  }
   return s;
 }
 
@@ -49,7 +71,9 @@ export function prepareNativeProgram(setupJson) {
   const s=setupFrom(setupJson),p=s.profile;
   const config={name:p.name.trim(),unit:p.unit,goal:p.goal,experience:p.experience,
     split:p.split,days:p.days,session:p.session,weeks:6,progression:'auto',deload:false,
-    equipment:[...p.equipment],focus:{},reduce:[],barbellCap:p.barbellCap,
+    equipment:[...p.equipment],focus:{...(p.focus||{})},
+    focusList:Object.entries(p.focus||{}).flatMap(([part,level])=>Array(level).fill(part)),
+    reduce:[...(p.reduced||[])],barbellCap:p.barbellCap,
     noBodyweight:!p.allowBodyweight,noSupersets:!p.allowSupersets};
   const generated=generateNextProgramForShell({config,legacyExercises:EXERCISES,
     seed:s.seed,makeId:()=>s.programId});

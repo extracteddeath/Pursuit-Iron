@@ -20,16 +20,11 @@ object NativeProgramEditCodec {
         require(editedAt>r.programUpdatedAt && editedAt>r.storeSavedAt && editedAt<=8_640_000_000_000_000L)
         val reference=JSONObject().put("programId",r.programId).put("programUpdatedAt",r.programUpdatedAt)
             .put("storeSavedAt",r.storeSavedAt).put("storeVersion",r.storeVersion).put("snapshotSha256",r.snapshotSha256)
-        return JSONObject().put("format",if(draft.replacement!=null) 3
-            else if(draft.removedMovementCount>0) 2 else 1)
-            .put("operationId",operationId).put("reference",reference)
+        return JSONObject().put("format",if(draft.removedMovementCount>0) 2 else 1).put("operationId",operationId).put("reference",reference)
             .put("editedAt",editedAt).put("name",draft.name).put("days",JSONArray().apply {
                 draft.days.forEach { d->put(JSONObject().put("id",d.id).put("label",d.label)
                     .put("slots",JSONArray(draft.originalSlots(d.id)))) }
-            }).apply {
-                draft.replacement?.let { put("replacement",JSONObject().put("dayId",it.dayId)
-                    .put("sourceSlot",it.originalSlot).put("exerciseId",it.exerciseId)) }
-            }.toString().also { wire.bounded(it,32768) }
+            }).toString().also { wire.bounded(it,32768) }
     }
 
     /** SavedState-only draft. This contains neither an operation nor save approval. */
@@ -38,36 +33,14 @@ object NativeProgramEditCodec {
         .put("name",draft.name).put("days",JSONArray().apply {
             draft.days.forEach { d->put(JSONObject().put("id",d.id).put("label",d.label)
                 .put("slots",JSONArray(draft.originalSlots(d.id)))) }
-        }).apply {
-            draft.replacement?.let { put("replacement",JSONObject().put("dayId",it.dayId)
-                .put("sourceSlot",it.originalSlot).put("exerciseId",it.exerciseId)) }
-        }.toString()
+        }).toString()
 
     fun restoreWorkspace(verified: ReadOnlyProgramPresentation.Structure,raw: String): NativeProgramEditDraft? =
         runCatching {
             wire.bounded(raw,32768)
-            val v=JSONObject(raw)
-            if(v.has("replacement"))wire.exact(v,"snapshotSha256","programId","name","days","replacement")
-            else wire.exact(v,"snapshotSha256","programId","name","days")
+            val v=JSONObject(raw);wire.exact(v,"snapshotSha256","programId","name","days")
             val original=NativeProgramEditDraft.from(verified)
             require(v.get("snapshotSha256")==original.reference.snapshotSha256 && v.get("programId")==original.reference.programId)
-            if(v.has("replacement")) {
-                val change=v.getJSONObject("replacement")
-                wire.exact(change,"dayId","sourceSlot","exerciseId")
-                require(v.get("name")==original.name)
-                val rows=v.getJSONArray("days")
-                require(rows.length()==original.days.size)
-                for(i in original.days.indices) {
-                    val row=rows.getJSONObject(i);wire.exact(row,"id","label","slots")
-                    val day=original.days[i];val slots=row.getJSONArray("slots")
-                    require(row.get("id")==day.id && row.get("label")==day.label &&
-                        slots.length()==day.exerciseIds.size &&
-                        (0 until slots.length()).all { slots.getInt(it)==it })
-                }
-                return@runCatching checkNotNull(original.substituteExercise(
-                    wire.text(change,"dayId"),wire.integer(change,"sourceSlot").toInt(),
-                    wire.text(change,"exerciseId")))
-            }
             var draft=checkNotNull(original.renameProgram(wire.text(v,"name")))
             val rows=v.getJSONArray("days");require(rows.length()==original.days.size)
             val seen=mutableSetOf<String>()
@@ -112,8 +85,6 @@ object NativeProgramEditCodec {
             value.get("requestSha256")==wire.sha(editJson) && value.get("sourceSnapshotSha256")==wire.sha(snapshot) &&
             value.get("candidateSnapshotSha256")==wire.sha(candidate) && value.get("alreadyPresent") is Boolean)
         val already=value.getBoolean("alreadyPresent")
-        val format=wire.integer(request,"format")
-        require(format in 1L..3L)
         val c=JSONObject(candidate);val original=JSONObject(snapshot)
         val audit=c.getJSONObject("nativeProgramEdit")
         wire.exact(audit,"format","operationId","requestSha256","sourceSnapshotSha256","programId","editedAt")
@@ -138,10 +109,6 @@ object NativeProgramEditCodec {
                 if(a.get("id")==programId) {
                     matching++
                     require(b.get("id")==programId && b.get("updatedAt")==request.get("editedAt"))
-                    if(format==3L) {
-                        verifyReplacement(a,b,request)
-                        continue
-                    }
                     val editable=setOf("name","updatedAt","days","edited","overrides","nextWeekPrescriptions","progStyle",
                         "slotBias","autoBias","rounds","weekOff","pairs","ss")
                     require(a.keys().asSequence().toSet()-editable==b.keys().asSequence().toSet()-editable)
@@ -218,104 +185,7 @@ object NativeProgramEditCodec {
             val row=days.getJSONObject(i)
             require(d.id==row.get("id") && d.label==row.get("label"))
         }
-        if(format==3L) {
-            val change=request.getJSONObject("replacement")
-            val day=program.days.single { it.id==wire.text(change,"dayId") }
-            require(day.exerciseIds[wire.integer(change,"sourceSlot").toInt()]==change.get("exerciseId"))
-        }
         return NativeProgramEditPreparation(candidate,already,program)
-    }
-
-    /** Independently reconstruct the one authorized identity change. */
-    private fun verifyReplacement(before: JSONObject,after: JSONObject,request: JSONObject) {
-        wire.exact(request,"format","operationId","reference","editedAt","name","days","replacement")
-        val change=request.getJSONObject("replacement")
-        wire.exact(change,"dayId","sourceSlot","exerciseId")
-        val dayId=wire.text(change,"dayId")
-        val index=wire.integer(change,"sourceSlot").toInt()
-        require(index in 0..29)
-        val target=wire.text(change,"exerciseId")
-        require(target.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) &&
-            before.get("name")==request.get("name") && after.get("name")==before.get("name") &&
-            after.get("edited")==true)
-        val mutable=setOf("updatedAt","edited","days","overrides",
-            "nextWeekPrescriptions","progStyle","slotBias","autoBias","rounds",
-            "weekOff","pairs","ss")
-        require(before.keys().asSequence().toSet()-mutable==after.keys().asSequence().toSet()-mutable)
-        before.keys().asSequence().filter { it !in mutable }.forEach { key->
-            require(equivalent(before.get(key),after.get(key)))
-        }
-        val originals=before.getJSONArray("days");val changed=after.getJSONArray("days")
-        val requested=request.getJSONArray("days")
-        require(originals.length()==changed.length() && originals.length()==requested.length())
-        var replacements=0
-        for(dayIndex in 0 until originals.length()) {
-            val old=originals.getJSONObject(dayIndex)
-            val new=changed.getJSONObject(dayIndex)
-            val row=requested.getJSONObject(dayIndex)
-            wire.exact(row,"id","label","slots")
-            val id=wire.text(old,"id")
-            val from=old.getJSONArray("exercises");val to=new.getJSONArray("exercises")
-            val slots=row.getJSONArray("slots")
-            require(old.get("id")==new.get("id") && row.get("id")==id &&
-                old.get("label")==new.get("label") && row.get("label")==old.get("label") &&
-                slots.length()==from.length() && from.length()==to.length() &&
-                (0 until slots.length()).all { slots.getInt(it)==it })
-            val fields=setOf("exercises")
-            require(old.keys().asSequence().toSet()-fields==new.keys().asSequence().toSet()-fields)
-            old.keys().asSequence().filter { it !in fields }.forEach { key->
-                require(equivalent(old.get(key),new.get(key)))
-            }
-            for(slot in 0 until from.length()) {
-                if(id==dayId && slot==index) {
-                    replacements++
-                    require(from.get(slot)!=target && to.get(slot)==target &&
-                        (0 until from.length()).none { it!=slot && from.get(it)==target })
-                } else require(equivalent(from.get(slot),to.get(slot)))
-            }
-        }
-        require(replacements==1)
-        val sourceKey=dayId+":"+index
-        val prior=before.optJSONObject("overrides") ?: JSONObject()
-        val now=after.getJSONObject("overrides")
-        val newMeta=now.getJSONObject(sourceKey)
-        wire.exact(newMeta,"nextEngine","legacyExerciseId","nextExerciseId")
-        require(newMeta.get("nextEngine")==true && newMeta.get("legacyExerciseId")==target &&
-            wire.text(newMeta,"nextExerciseId").isNotBlank())
-        fun withoutOriginalSlot(map: JSONObject): JSONObject = JSONObject().also { kept->
-            map.keys().asSequence().forEach { key->
-                if(key!=sourceKey && !key.startsWith(sourceKey+":"))
-                    kept.put(key,map.get(key))
-            }
-        }
-        val priorOthers=withoutOriginalSlot(prior)
-        val currentOthers=JSONObject(now.toString()).apply { remove(sourceKey) }
-        require(equivalent(priorOthers,currentOthers))
-        for(field in listOf("nextWeekPrescriptions","progStyle","slotBias","autoBias","rounds",
-            "weekOff","pairs","ss")) {
-            require(before.has(field)==after.has(field))
-            if(before.has(field)) {
-                if(field=="nextWeekPrescriptions") {
-                    val previous=before.getJSONObject(field)
-                    val updated=after.getJSONObject(field)
-                    require(previous.keys().asSequence().toSet()==updated.keys().asSequence().toSet())
-                    previous.keys().asSequence().forEach { entry->
-                        if(entry!=sourceKey) require(equivalent(previous.get(entry),updated.get(entry)))
-                        else {
-                            val weeks=previous.getJSONObject(entry)
-                            val retained=updated.getJSONObject(entry)
-                            require(weeks.keys().asSequence().toSet()==retained.keys().asSequence().toSet())
-                            weeks.keys().asSequence().forEach { week->
-                                val oldCell=weeks.getJSONObject(week);val newCell=retained.getJSONObject(week)
-                                val expected=JSONObject(oldCell.toString()).put("tech",JSONObject.NULL)
-                                require(equivalent(expected,newCell))
-                            }
-                        }
-                    }
-                } else require(equivalent(withoutOriginalSlot(before.getJSONObject(field)),
-                    after.getJSONObject(field)))
-            }
-        }
     }
 
     private fun equivalent(a: Any,b: Any,depth: Int=0): Boolean {

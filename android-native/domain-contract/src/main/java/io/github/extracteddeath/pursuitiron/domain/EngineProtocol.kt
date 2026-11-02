@@ -10,7 +10,6 @@ object EngineProtocol {
     const val METHOD_HANDSHAKE: String = "handshake"
     const val METHOD_CATALOG_SUMMARY: String = "catalogSummary"
     const val METHOD_EXERCISE_LOOKUP: String = "exerciseLookup"
-    const val METHOD_EXERCISE_ALTERNATIVES: String = "exerciseAlternatives"
     const val METHOD_WORKOUT_OUTLINE: String = "workoutOutline"
     const val METHOD_BACKUP_SCHEMA_CHECK: String = "backupSchemaCheck"
     const val METHOD_BACKUP_PROGRAM_INVENTORY: String = "backupProgramInventory"

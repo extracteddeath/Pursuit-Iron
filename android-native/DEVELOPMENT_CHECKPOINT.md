@@ -969,3 +969,39 @@ This finishes **removing** existing movements, not adding or substituting
 new ones, writing full custom programs, adaptive cycle changes, or Android
 interaction/device acceptance. It does not authorize an APK or the Kotlin
 training-engine replacement. Other native app/web branches remain untouched.
+
+
+## 2026-11-02 — Accessory substitution deliberately held behind prescription gate
+
+A separate research branch,
+`feature/native-accessory-swap-prescription-gate`, retains the attempted
+Compose accessory picker, catalog-only alternative query, version-3 program
+edit and regression harness. It is **not released or accepted** into the
+verified Android migration. The stable migration branch retains tested
+movement removal and the earlier native workout journey.
+
+The blocker is a domain invariant, not a missing button: Pursuit Next stores
+week-by-week engine-owned targets in `nextWeekPrescriptions` by original
+exercise slot. Deleting that cell makes `computeCell` return an unavailable
+zero-set workout, while carrying it blindly to another exercise risks
+incompatible rep windows, techniques and exercise-specific progression.
+A generated native program did not offer even one alternative satisfying
+the overly strict equal-rep/technique constraints. Tests correctly refused
+to certify a substitution that cannot issue a valid workout.
+
+Next implementation requires the canonical engine to **re-prescribe the
+new exercise for every affected week/phase**, using actual exercise identity,
+equipment, loading convention, role, fatigue, set dose and available increments,
+without transferring recorded loads, user-owned prescriptions, prior PRs or
+exercise-specific amplifiers. The native save owner must independently verify
+the entire candidate snapshot; subsequent issued workouts must contain
+nonzero, valid sets for the replacement. Repeat with matching and differing
+rep-range alternatives, primary/paired protections, explicit user overrides,
+multiple phases, custom programs, zero-availability, retries, stale revisions,
+restart, history integrity, and fail-closed recovery. The M3E picker can then
+be enabled on the migration branch with end-to-end/device acceptance.
+
+No APK was built, the working web app and another developer's Android
+branch were not modified, and the scheduled independent Kotlin engine rebuild
+remains gated behind native integration. Failed experimental CI is intentionally
+not treated as evidence that the stable migration is broken.

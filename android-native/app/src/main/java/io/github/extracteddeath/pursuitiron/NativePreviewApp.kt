@@ -55,7 +55,6 @@ import io.github.extracteddeath.pursuitiron.domain.UnconnectedCurrentReadOnlyPla
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
-import io.github.extracteddeath.pursuitiron.domain.CanonicalExercise
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
@@ -118,8 +117,7 @@ internal fun NativePreviewApp(
     onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
     onDiscardBackupReview: () -> Unit = {},
     onSaveProgramEdits: (NativeProgramEditDraft)->Unit = {},
-    onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,CanonicalExercise>? = {_,_->null},
-    onLookupProgramAlternatives: suspend (ReadOnlyProgramReference,String,List<String>) -> List<CanonicalExercise>? = {_,_,_->null}
+    onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>? = {_,_->null}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -261,7 +259,6 @@ internal fun NativePreviewApp(
                                     onVerifyBackupMerge=onVerifyBackupMerge,
                                     onDiscardBackupReview=onDiscardBackupReview,
                                     onLookupProgramExercises=onLookupProgramExercises,
-                                     onLookupProgramAlternatives=onLookupProgramAlternatives,
                                     onSaveProgramEdits=onSaveProgramEdits,
                                     onPreviewDay = { day ->
                                         selectedTrainingDay = day

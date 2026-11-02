@@ -436,12 +436,6 @@ assert.ok(
 
 const nativeDraftContract=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeProgramEditDraft.kt','utf8');
 const nativeDraftUi=fs.readFileSync(root+'NativeProgramDraftEditor.kt','utf8');
-assert.ok(nativeDraftUi.includes('Replace accessory movement') &&
-  nativeDraftUi.includes('lookupAlternatives(approved.reference,id,day.exerciseIds)') &&
-  nativeDraftUi.includes('draft.substituteExercise(dayId,index,ex.id)') &&
-  nativeDraftUi.includes("load and progression won't carry over") &&
-  nativeDraftUi.includes('draft.replacement!=null'),
-  'Accessory substitution must be explicit, compatible, and cannot silently inherit numeric loads');
 assert.ok(
   screens.includes('NativeProgramDraftEditor(') &&
   screens.includes('rememberSaveable(currentPlan.program.reference)') &&
@@ -471,14 +465,13 @@ assert.ok(
   programDraftUi.includes('Review program changes') &&
   programDraftUi.includes('onSave(draft)') &&
   programDraftUi.includes('draft.matchesCurrent(verified)') &&
-  programDraftUi.includes('LaunchedEffect(approved.reference,draft.replacement?.exerciseId)') &&
+  programDraftUi.includes('LaunchedEffect(approved.reference)') &&
   programDraftUi.includes('lookupNames(approved.reference,ids)') &&
   packagedCatalog.includes('SandboxExerciseCatalog(worker)') &&
-  host.includes('suspend fun lookupProgramExercises(') &&
-  host.includes('suspend fun lookupProgramAlternatives(') &&
+  host.includes('suspend fun lookupProgramExerciseNames(') &&
   host.includes('actual.sha256Hex==expected.snapshotSha256') &&
   host.includes('!sameSource()') &&
-  activity.includes('onLookupProgramExercises=runtime::lookupProgramExercises') &&
+  activity.includes('onLookupProgramExercises=runtime::lookupProgramExerciseNames') &&
   programDraftDomain.includes('Collections.unmodifiableList(') &&
   !programDraftUi.includes('commitAtomically') &&
   !programDraftUi.includes('initialize('),

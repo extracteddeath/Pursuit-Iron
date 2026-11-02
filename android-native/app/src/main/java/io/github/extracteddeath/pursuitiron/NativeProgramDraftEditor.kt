@@ -4,9 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -25,7 +22,6 @@ import androidx.compose.runtime.saveable.Saver
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditCodec
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.github.extracteddeath.pursuitiron.domain.CanonicalExercise
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
@@ -41,13 +37,11 @@ internal fun NativeProgramDraftEditor(
     saving: Boolean,
     saveError: String?,
     onSave: (NativeProgramEditDraft)->Unit,
-    lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,CanonicalExercise>?,
-    lookupAlternatives: suspend (ReadOnlyProgramReference,String,List<String>) -> List<CanonicalExercise>?,
+    lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>?,
     onClose: () -> Unit
 ) {
     var confirmSave by remember { mutableStateOf(false) }
     var pendingRemoval by remember { mutableStateOf<Pair<String,Int>?>(null) }
-    var pendingReplacement by remember { mutableStateOf<Pair<String,Int>?>(null) }
     var confirmClose by remember { mutableStateOf(false) }
     val approved=verified.program
     val draftSaver=remember(approved.reference) { Saver<NativeProgramEditDraft,String>(
@@ -70,23 +64,11 @@ internal fun NativeProgramDraftEditor(
     var dayLabelsInput by rememberSaveable(approved.reference,stateSaver=labelSaver) {
         mutableStateOf(approved.days.associate { it.id to it.label })
     }
-    var catalog by remember(approved.reference) { mutableStateOf<Map<String,CanonicalExercise>>(emptyMap()) }
-    val names=catalog.mapValues { it.value.name }
-    var alternatives by remember(approved.reference) { mutableStateOf<List<CanonicalExercise>?>(null) }
-    LaunchedEffect(pendingReplacement,approved.reference) {
-        alternatives=null
-        val (dayId,index)=pendingReplacement ?: return@LaunchedEffect
-        val day=draft.days.firstOrNull { it.id==dayId } ?: return@LaunchedEffect
-        val id=day.exerciseIds.getOrNull(index) ?: return@LaunchedEffect
-        alternatives=try { lookupAlternatives(approved.reference,id,day.exerciseIds) }
-            catch(cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-            catch(_: Exception) { null }
-    }
-    LaunchedEffect(approved.reference,draft.replacement?.exerciseId) {
-        val ids=(approved.days.flatMap { it.exerciseIds }+
-            listOfNotNull(draft.replacement?.exerciseId)).distinct()
+    var names by remember(approved.reference) { mutableStateOf<Map<String,String>>(emptyMap()) }
+    LaunchedEffect(approved.reference) {
+        val ids=approved.days.flatMap { it.exerciseIds }.distinct()
         if(ids.isNotEmpty()) {
-            catalog=try { lookupNames(approved.reference,ids).orEmpty() }
+            names=try { lookupNames(approved.reference,ids).orEmpty() }
                 catch(cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                 catch(_: Exception) { emptyMap() }
         }
@@ -102,11 +84,9 @@ internal fun NativeProgramDraftEditor(
     SectionLabel("Program editor", if(saving) "Saving changes…" else "Review and save your changes")
     PursuitCard(highlighted=true) {
         Text("Organize your existing training days",style=MaterialTheme.typography.titleLarge)
-        Text("Organize movements or replace one accessory using matching exercises from the canonical library. The previous movement's loads and progression are not transferred.",
+        Text("Rename, reorder or remove movements. Retained slot settings follow the movement. Primary lifts and paired movements cannot be removed.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        if(draft.replacement!=null) Text("Replacement selected: review or reset before making another change.",
-            color=MaterialTheme.colorScheme.primary)
         if(!allowEditing && !saving) Text("Finish or resolve the active workout before modifying a plan.",
             color=MaterialTheme.colorScheme.error)
         OutlinedTextField(
@@ -115,7 +95,7 @@ internal fun NativeProgramDraftEditor(
                 nameInput=value
                 draft.renameProgram(value)?.let { draft=it }
             },
-            enabled=allowEditing && draft.replacement==null, label={Text("Program name")},
+            enabled=allowEditing, label={Text("Program name")},
             isError=nameInput!=draft.name,
             supportingText={
                 if(nameInput!=draft.name)
@@ -138,11 +118,11 @@ internal fun NativeProgramDraftEditor(
                     modifier=Modifier.weight(1f))
                 OutlinedButton(
                     onClick={ draft.moveDay(dayIndex,-1)?.let { draft=it } },
-                    enabled=allowEditing && draft.replacement==null && dayIndex>0
+                    enabled=allowEditing && dayIndex>0
                 ) { Text("Day up") }
                 OutlinedButton(
                     onClick={ draft.moveDay(dayIndex,1)?.let { draft=it } },
-                    enabled=allowEditing && draft.replacement==null && dayIndex<draft.days.lastIndex
+                    enabled=allowEditing && dayIndex<draft.days.lastIndex
                 ) { Text("Day down") }
             }
             OutlinedTextField(
@@ -151,7 +131,7 @@ internal fun NativeProgramDraftEditor(
                     dayLabelsInput=dayLabelsInput+(day.id to value)
                     draft.renameDay(day.id,value)?.let { draft=it }
                 },
-                enabled=allowEditing && draft.replacement==null,label={Text("Training day name")},
+                enabled=allowEditing,label={Text("Training day name")},
                 isError=(dayLabelsInput[day.id] ?: day.label)!=day.label,
                 supportingText={
                     if((dayLabelsInput[day.id] ?: day.label)!=day.label)
@@ -175,21 +155,16 @@ internal fun NativeProgramDraftEditor(
                     }
                     OutlinedButton(
                         onClick={draft.moveExercise(day.id,index,-1)?.let { draft=it }},
-                        enabled=allowEditing && draft.replacement==null && index>0
+                        enabled=allowEditing && index>0
                     ) { Text("Up") }
                     OutlinedButton(
                         onClick={draft.moveExercise(day.id,index,1)?.let { draft=it }},
-                        enabled=allowEditing && draft.replacement==null && index<day.exerciseIds.lastIndex
+                        enabled=allowEditing && index<day.exerciseIds.lastIndex
                     ) { Text("Down") }
                     OutlinedButton(
                         onClick={pendingRemoval=day.id to index},
-                        enabled=allowEditing && !saving && draft.replacement==null &&
-                            day.exerciseIds.size>1
+                        enabled=allowEditing && !saving && day.exerciseIds.size>1
                     ) { Text("Remove") }
-                    OutlinedButton(
-                        onClick={pendingReplacement=day.id to index},
-                        enabled=allowEditing && !saving && !draft.isChanged && index>0
-                    ) { Text("Replace") }
                 }
                 if(index<day.exerciseIds.lastIndex) HorizontalDivider()
             }
@@ -197,9 +172,7 @@ internal fun NativeProgramDraftEditor(
     }
     PursuitCard {
         Text("Save this program",style=MaterialTheme.typography.titleMedium)
-        Text(if(draft.replacement!=null)
-            "One accessory replacement pending. Old exercise history is kept, but its load and progression are not transferred."
-            else "Changes apply to this program; ${draft.removedMovementCount} removal(s) pending. Workout history and other cycle blocks are kept.",
+        Text("Changes apply to this program; ${draft.removedMovementCount} removal(s) pending. Workout history and other cycle blocks are kept.",
             style=MaterialTheme.typography.bodySmall)
         saveError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         Button(onClick={confirmSave=true},enabled=allowEditing && !saving && draft.isChanged && !invalidInputs,
@@ -234,39 +207,11 @@ internal fun NativeProgramDraftEditor(
             dismissButton={OutlinedButton(onClick={pendingRemoval=null}) { Text("Keep movement") }}
         )
     }
-    pendingReplacement?.let { (dayId,index)->
-        val targetDay=draft.days.firstOrNull { it.id==dayId }
-        val oldId=targetDay?.exerciseIds?.getOrNull(index)
-        val choices=if(oldId==null) emptyList() else alternatives.orEmpty()
-        AlertDialog(
-            onDismissRequest={pendingReplacement=null},
-            title={Text("Replace accessory movement")},
-            text={
-                Column(modifier=Modifier.heightIn(max=340.dp).verticalScroll(rememberScrollState()),
-                    verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Text("Choose a compatible exercise from the canonical catalog. The existing load and progression won't carry over.",
-                        style=MaterialTheme.typography.bodySmall)
-                    choices.forEach { ex ->
-                        OutlinedButton(onClick={
-                            draft.substituteExercise(dayId,index,ex.id)?.let { draft=it }
-                            pendingReplacement=null
-                        },enabled=allowEditing && !saving,
-                            modifier=Modifier.fillMaxWidth()) { Text(ex.name) }
-                    }
-                    if(alternatives==null) Text("Loading eligible exercises…")
-                    else if(choices.isEmpty()) Text("No compatible exercise is available with this equipment.")
-                }
-            },
-            confirmButton={OutlinedButton(onClick={pendingReplacement=null}) { Text("Cancel") }}
-        )
-    }
     if(confirmSave) AlertDialog(
         onDismissRequest={if(!saving)confirmSave=false},
-        title={Text(if(draft.replacement!=null) "Save accessory replacement?" else "Save program changes?")},
-        text={Text(if(draft.replacement!=null)
-            "Use the selected replacement in future workouts. Keep all past workout history. Do not carry over the old movement's training loads, progression or amplifiers."
-            else "Save “${draft.name}” with ${draft.changedDayCount} changed training days. " +
-                "Paired exercises must stay together. Your saved workouts are kept.")},
+        title={Text("Save program changes?")},
+        text={Text("Save “${draft.name}” with ${draft.changedDayCount} changed training days. " +
+            "Paired exercises must stay together. Your saved workouts are kept.")},
         confirmButton={Button(onClick={confirmSave=false;onSave(draft)},enabled=allowEditing && !saving) {
             Text("Save changes")
         }},

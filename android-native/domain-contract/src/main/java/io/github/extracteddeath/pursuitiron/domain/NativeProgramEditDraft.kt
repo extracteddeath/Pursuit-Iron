@@ -10,16 +10,13 @@ import java.util.Collections
  * slots. This is not an authored program, an engine prescription, a candidate
  * canonical snapshot or consent to modify the personal store.
  */
-data class NativeProgramReplacement(val dayId: String,val originalSlot: Int,val exerciseId: String)
-
 class NativeProgramEditDraft private constructor(
     val reference: ReadOnlyProgramReference,
     val originalName: String,
     val name: String,
     val originalDays: List<ReadOnlyProgramDay>,
     val days: List<ReadOnlyProgramDay>,
-    private val slotOrders: Map<String,List<Int>>,
-    val replacement: NativeProgramReplacement? = null
+    private val slotOrders: Map<String,List<Int>>
 ) {
     companion object {
         private fun freeze(days: List<ReadOnlyProgramDay>): List<ReadOnlyProgramDay> =
@@ -46,20 +43,19 @@ class NativeProgramEditDraft private constructor(
         verified.program.name==originalName &&
         verified.program.days==originalDays
 
-    val isChanged: Boolean get() = replacement!=null || name!=originalName || days!=originalDays ||
+    val isChanged: Boolean get() = name!=originalName || days!=originalDays ||
         slotOrders.values.any { order -> order.withIndex().any { it.index!=it.value } }
 
     private fun next(name: String=this.name, days: List<ReadOnlyProgramDay> = this.days,
-        orders: Map<String,List<Int>> = slotOrders,
-        substitution: NativeProgramReplacement? = replacement):
+        orders: Map<String,List<Int>> = slotOrders):
         NativeProgramEditDraft =
-        NativeProgramEditDraft(reference,originalName,name,originalDays,freeze(days),freezeOrders(orders),substitution)
+        NativeProgramEditDraft(reference,originalName,name,originalDays,freeze(days),freezeOrders(orders))
 
     fun renameProgram(newName: String): NativeProgramEditDraft? =
-        if(replacement==null && validLabel(newName,120)) next(name=newName) else null
+        if(validLabel(newName,120)) next(name=newName) else null
 
     fun renameDay(dayId: String, label: String): NativeProgramEditDraft? {
-        if(replacement!=null || !validLabel(label,120)) return null
+        if(!validLabel(label,120)) return null
         val index=days.indexOfFirst { it.id==dayId }
         if(index<0) return null
         val updated=days.toMutableList()
@@ -69,7 +65,7 @@ class NativeProgramEditDraft private constructor(
 
     /** Reorder whole days locally without changing any day or movement identity. */
     fun moveDay(from: Int, delta: Int): NativeProgramEditDraft? {
-        if (replacement!=null || delta !in listOf(-1, 1)) return null
+        if (delta !in listOf(-1, 1)) return null
         val target = from + delta
         if (from !in days.indices || target !in days.indices) return null
         val moved = days.toMutableList()
@@ -79,7 +75,7 @@ class NativeProgramEditDraft private constructor(
     }
 
     fun moveExercise(dayId: String, from: Int, delta: Int): NativeProgramEditDraft? {
-        if(replacement!=null || delta !in listOf(-1,1)) return null
+        if(delta !in listOf(-1,1)) return null
         val day=days.indexOfFirst { it.id==dayId }
         if(day<0) return null
         val before=days[day].exerciseIds
@@ -101,30 +97,13 @@ class NativeProgramEditDraft private constructor(
      */
     fun removeExercise(dayId: String,index: Int): NativeProgramEditDraft? {
         val dayIndex=days.indexOfFirst { it.id==dayId }
-        if(dayIndex<0 || replacement!=null) return null
+        if(dayIndex<0) return null
         val before=days[dayIndex].exerciseIds
         if(before.size<=1 || index !in before.indices) return null
         val updated=days.toMutableList()
         updated[dayIndex]=updated[dayIndex].copy(exerciseIds=before.filterIndexed { i,_->i!=index })
         val positions=slotOrders.getValue(dayId).filterIndexed { i,_->i!=index }
         return next(days=updated,orders=slotOrders+(dayId to positions))
-    }
-
-    /**
-     * A replacement is a separate, single-change operation. An exercise confirmed by the canonical catalog can be selected without transferring
-     * weights or slot-specific user prescriptions. Compatibility is verified
-     * by the packaged canonical editor, never inferred by Kotlin.
-     */
-    fun substituteExercise(dayId: String,index: Int,toId: String): NativeProgramEditDraft? {
-        if(isChanged || !toId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"))) return null
-        val dayIndex=days.indexOfFirst { it.id==dayId }
-        if(dayIndex<0) return null
-        val old=days[dayIndex].exerciseIds
-        if(index !in old.indices || old[index]==toId || toId in old) return null
-        val updated=days.toMutableList()
-        updated[dayIndex]=updated[dayIndex].copy(
-            exerciseIds=old.mapIndexed { i,id->if(i==index)toId else id })
-        return next(days=updated,substitution=NativeProgramReplacement(dayId,index,toId))
     }
 
     val removedMovementCount: Int get()=originalDays.sumOf { day->
@@ -135,7 +114,7 @@ class NativeProgramEditDraft private constructor(
     fun originalSlots(dayId: String): List<Int> = slotOrders.getValue(dayId)
 
     fun reset(): NativeProgramEditDraft = next(
-        name=originalName,days=originalDays,orders=orders(originalDays),substitution=null
+        name=originalName,days=originalDays,orders=orders(originalDays)
     )
 
     val changedDayCount: Int get()=days.zip(originalDays).count { (now,old)->

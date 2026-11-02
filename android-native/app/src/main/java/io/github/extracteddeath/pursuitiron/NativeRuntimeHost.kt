@@ -101,9 +101,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         } finally { bytes.fill(0) }
     }
     /** Read-only, bounded catalog labels for the EXACT current saved-program revision. */
-    suspend fun lookupProgramExercises(
+    suspend fun lookupProgramExerciseNames(
         expected: ReadOnlyProgramReference, requested: List<String>
-    ): Map<String,CanonicalExercise>? {
+    ): Map<String,String>? {
         val before=mutable.value
         if(!before.ready || before.blocked || before.workout!=null ||
             before.workoutBusy || before.busy || before.backupExportBusy ||
@@ -123,48 +123,16 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             } finally { bytes.fill(0) }
         }
         if(!sameSource()) return null
-        val result=LinkedHashMap<String,CanonicalExercise>()
+        val result=LinkedHashMap<String,String>()
         for(batch in ids.chunked(12)) {
             val lookup=engine.lookup(batch).getOrNull() ?: return null
             context.ensureActive()
             if(lookup.missingIds.isNotEmpty() || !lookup.readOnly) return null
-            lookup.exercises.forEach { ex -> result[ex.id]=ex }
+            lookup.exercises.forEach { ex -> result[ex.id]=ex.name }
         }
         if(mutable.value.storeChangeKey!=before.storeChangeKey || !sameSource())
             return null
         return if(result.size==ids.size) result.toMap() else null
-    }
-
-    /** Catalog suggestions are pinned to the CURRENT owned program. */
-    suspend fun lookupProgramAlternatives(expected: ReadOnlyProgramReference,
-        sourceId: String,excludeIds: List<String>): List<CanonicalExercise>? {
-        val before=mutable.value
-        val profile=before.saved?.profile ?: return null
-        if(!before.ready || before.blocked || before.busy || before.workout!=null ||
-            before.workoutBusy || before.backupExportBusy ||
-            before.saved?.program?.reference!=expected ||
-            !sourceId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) ||
-            excludeIds.size>30 || excludeIds.distinct().size!=excludeIds.size ||
-            before.saved?.program?.days?.none { sourceId in it.exerciseIds }!=false)
-            return null
-        val engine=before.verifier?.exerciseCatalog ?: return null
-        val owner=store ?: return null
-        val context=currentCoroutineContext()
-        suspend fun sameSource(): Boolean {
-            val bytes=owner.readOwnedCurrentStoreBytes() ?: return false
-            return try {
-                ReadOnlyBackupScreening.fingerprint(
-                    java.io.ByteArrayInputStream(bytes)) { context.ensureActive() }
-                    .sha256Hex==expected.snapshotSha256
-            } finally { bytes.fill(0) }
-        }
-        if(!sameSource()) return null
-        val list=engine.alternatives(sourceId,excludeIds,
-            profile.equipment,profile.allowBodyweight).getOrNull() ?: return null
-        context.ensureActive()
-        if(mutable.value.storeChangeKey!=before.storeChangeKey || !sameSource())
-            return null
-        return list
     }
 
     private suspend fun readHistory(receipt: CanonicalWorkoutHistoryReceipt?): NativeWorkoutHistory? {
@@ -471,7 +439,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 mutable.update { it.copy(busy=false,programEditError=
-                    "Changes could not be saved. Check equipment, movement compatibility, protected primary/paired slots, or reopen if the saved plan changed.") }
+                    "Changes could not be saved. Primary or paired movements cannot be removed. Keep pairs together and reopen the editor if your plan changed.") }
             }
         }
     }

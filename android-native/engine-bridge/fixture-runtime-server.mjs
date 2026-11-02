@@ -18,11 +18,7 @@ input.on('line',wire=>{
   try {
     assert.ok(Buffer.byteLength(wire,'utf8')<=12*1024*1024);
     context.requestWire=wire;
-    const method=JSON.parse(wire).method;
-    const entry=method==='exerciseAlternatives'
-      ? 'PursuitIronBridge.dispatchEngineJson(requestWire)'
-      : 'PursuitIronBridge.dispatchWorkoutStoreJson(requestWire)';
-    const response=vm.runInContext(entry,context,{timeout:15000});
+    const response=vm.runInContext('PursuitIronBridge.dispatchWorkoutStoreJson(requestWire)',context,{timeout:15000});
     process.stdout.write(response+'\n');
   } catch {
     // Do not print request data or private parser exceptions on a failed test.

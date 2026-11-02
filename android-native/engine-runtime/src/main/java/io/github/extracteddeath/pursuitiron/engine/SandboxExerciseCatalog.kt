@@ -45,34 +45,4 @@ class SandboxExerciseCatalog(
                 continuation.resume(Result.failure(failure))
             }
         }
-
-    /** Revision-safe caller must pin the current program before presenting. */
-    suspend fun alternatives(sourceId: String,excludeIds: List<String>,
-        equipment: List<String>,allowBodyweight: Boolean
-    ): Result<List<io.github.extracteddeath.pursuitiron.domain.CanonicalExercise>> =
-        suspendCoroutine { continuation ->
-            val requestId="android-alternatives-${sequence.incrementAndGet()}"
-            val request=try {
-                ExerciseCatalogCodec.encodeAlternatives(
-                    requestId,sourceId,excludeIds,equipment,allowBodyweight)
-            } catch (failure: Throwable) {
-                continuation.resume(Result.failure(failure))
-                return@suspendCoroutine
-            }
-            try {
-                worker.alternativeExercisesAsync(request).whenComplete { raw,failure ->
-                    continuation.resume(runCatching {
-                        if(failure!=null) throw (failure.cause?:failure)
-                        when(val decoded=ExerciseCatalogCodec.decodeAlternatives(
-                            raw,requestId,sourceId,excludeIds)) {
-                            is EngineResponse.Success -> decoded.result
-                            is EngineResponse.Failure -> throw IllegalStateException(
-                                "Canonical alternatives: ${decoded.error.code}")
-                        }
-                    })
-                }
-            } catch (failure: Throwable) {
-                continuation.resume(Result.failure(failure))
-            }
-        }
 }

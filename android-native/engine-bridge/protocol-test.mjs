@@ -7,7 +7,7 @@ const call = (method, params = {}) => dispatchEngineRequest({
 const handshake = call('handshake');
 assert.equal(handshake.ok, true);
 assert.equal(handshake.result.engineCertified, false);
-assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup','exerciseAlternatives','workoutOutline','backupSchemaCheck','backupProgramInventory','currentProgramProjection']);
+assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup','workoutOutline','backupSchemaCheck','backupProgramInventory','currentProgramProjection']);
 const catalog = call('catalogSummary');
 assert.equal(catalog.ok, true);
 assert.equal(catalog.result.exercises, canonical.EXERCISES.length);
@@ -216,24 +216,3 @@ for (const method of ['deleteHistory','restoreBackup','generateProgram'])
   }))).ok,false,'wider wire must not permit storage writes');
 assert.equal(typeof currentProjection.result.program.days[0].exerciseIds[0],'string');
 console.log('PASS browser-safe current saved-program projection matches Node and Kotlin golden wire');
-
-
-// Read-only alternatives cannot be used as a store write or injected session.
-const alternativesWire=JSON.stringify({protocolVersion:1,id:'alternatives-test',
-  method:'exerciseAlternatives',params:{
-    sourceId:'bb-bench',excludeIds:['bb-bench'],equipment:['barbell','bench','rack','dumbbell','inclinebench'],
-    allowBodyweight:true}});
-const alternativesResult=JSON.parse(dispatchEngineJson(alternativesWire));
-assert.equal(alternativesResult.ok,true);
-assert.equal(alternativesResult.result.readOnly,true);
-assert.equal(alternativesResult.result.sourceId,'bb-bench');
-assert.ok(alternativesResult.result.candidates.length>0);
-for(const ex of alternativesResult.result.candidates) {
-  assert.equal(ex.part,'chest');
-  assert.equal(ex.type,'compound');
-  assert.notEqual(ex.id,'bb-bench');
-  assert.ok(ex.equipment.every(item=>['barbell','bench','rack','dumbbell','inclinebench'].includes(item)));
-}
-assert.equal(JSON.parse(dispatchEngineJson(JSON.stringify({protocolVersion:1,
-  id:'bad-alternatives',method:'exerciseAlternatives',params:{
-    sourceId:'bb-bench',excludeIds:[],equipment:['barbell'],allowBodyweight:true,extra:true}}))).ok,false);

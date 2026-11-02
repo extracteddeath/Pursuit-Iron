@@ -106,7 +106,8 @@ internal fun NativePreviewApp(
     onFilterHistory: (NativeHistoryFilter)->Unit = {},
     onHistoryCalendar: (NativeHistoryCalendarQuery)->Unit = {},
     onExportBackup: (NativeBackupExportDocument)->Unit = {},onResetBackupExport: ()->Unit = {},
-    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null
+    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null,
+    onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -245,6 +246,7 @@ internal fun NativePreviewApp(
                                     schemaVerifierLoading = schemaVerifierLoading,
                                     runtimeState=onboarding,onExportBackup=onExportBackup,onResetBackupExport=onResetBackupExport,
                                     onPreviewBackupMerge=onPreviewBackupMerge,
+                                    onVerifyBackupMerge=onVerifyBackupMerge,
                                     onPreviewDay = { day ->
                                         selectedTrainingDay = day
                                         section = NativeDestination.TRAIN.ordinal

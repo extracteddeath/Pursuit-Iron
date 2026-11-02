@@ -58,11 +58,7 @@ internal fun NativeWorkoutScreen(
     val exercise=plan.exercises[exerciseIndex.coerceIn(plan.exercises.indices)]
     val committedSlots=journal.completed.map { it.intent.slot }.toSet()
     val exercisePending=exercise.sets.count { it.slot !in committedSlots }
-    val nextUnfinished=plan.exercises.indices.firstOrNull { index->
-        index>exerciseIndex && plan.exercises[index].sets.any { it.slot !in committedSlots }
-    } ?: plan.exercises.indices.firstOrNull { index->
-        index<exerciseIndex && plan.exercises[index].sets.any { it.slot !in committedSlots }
-    }
+    val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)
     var showNote by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showSkipExercise by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
@@ -269,9 +265,10 @@ internal fun NativeWorkoutScreen(
             }
         }
     }
-    if(nextUnfinished!=null)FilledTonalButton(onClick={exerciseIndex=nextUnfinished},
-        modifier=Modifier.fillMaxWidth()) {
-        Text("Go to next unfinished exercise")
+    nextPreview?.let { preview->
+        NativeUpNextPanel(preview,exerciseIndex,
+            enabled=!state.workoutBusy && !state.historyBusy,
+            onOpenExercise={ position ->exerciseIndex=position })
     }
     state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
     PursuitCard(highlighted=journal.unresolvedCount==0) {

@@ -85,9 +85,12 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
 // set or publish a workout directly from an unconfirmed tap.
 const controls=fs.readFileSync(root+'NativeComponents.kt','utf8');
 assert.ok(train.includes('val committedSlots=journal.completed.map { it.intent.slot }.toSet()') &&
-  train.includes('plan.exercises[index].sets.any { it.slot !in committedSlots }') &&
-  train.includes('Go to next unfinished exercise'),
-  'Train navigation follows committed journal slots, not optimistic taps');
+  train.includes('val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)') &&
+  train.includes('NativeUpNextPanel(preview,exerciseIndex,') &&
+  train.includes('onOpenExercise={ position ->exerciseIndex=position }') &&
+  !train.includes('Go to next unfinished exercise') &&
+  fs.readFileSync(root+'NativeUpNextPanel.kt','utf8').includes('preview.upNext'),
+  'Train next-up navigation must use the exact issued slot and committed journal, not optimistic taps or exercise ID matches');
 assert.ok(train.includes('showSkipConfirmation') &&
   train.includes('showSkipConfirmation=false') &&
   train.includes('onRecord(set.slot,JournalSetDisposition.SKIPPED,null)') &&

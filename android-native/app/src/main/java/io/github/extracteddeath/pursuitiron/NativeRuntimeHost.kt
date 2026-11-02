@@ -99,6 +99,41 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             checkNotNull(loaded.programEngine.inspectProgram(String(bytes,Charsets.UTF_8)))
         } finally { bytes.fill(0) }
     }
+    /** Read-only, bounded catalog labels for the EXACT current saved-program revision. */
+    suspend fun lookupProgramExerciseNames(
+        expected: ReadOnlyProgramReference, requested: List<String>
+    ): Map<String,String>? {
+        val before=mutable.value
+        if(!before.ready || before.blocked || before.workout!=null ||
+            before.workoutBusy || before.busy || before.backupExportBusy ||
+            requested.size !in 1..210) return null
+        val ids=requested.distinct()
+        if(ids.any { !it.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) })
+            return null
+        val owner=store ?: return null
+        val engine=before.verifier?.exerciseCatalog ?: return null
+        val context=currentCoroutineContext()
+        suspend fun sameSource(): Boolean {
+            val bytes=owner.readOwnedCurrentStoreBytes() ?: return false
+            return try {
+                val actual=ReadOnlyBackupScreening.fingerprint(
+                    java.io.ByteArrayInputStream(bytes)) { context.ensureActive() }
+                actual.sha256Hex==expected.snapshotSha256
+            } finally { bytes.fill(0) }
+        }
+        if(!sameSource()) return null
+        val result=LinkedHashMap<String,String>()
+        for(batch in ids.chunked(12)) {
+            val lookup=engine.lookup(batch).getOrNull() ?: return null
+            context.ensureActive()
+            if(lookup.missingIds.isNotEmpty() || !lookup.readOnly) return null
+            lookup.exercises.forEach { ex -> result[ex.id]=ex.name }
+        }
+        if(mutable.value.storeChangeKey!=before.storeChangeKey || !sameSource())
+            return null
+        return if(result.size==ids.size) result.toMap() else null
+    }
+
     private suspend fun readHistory(receipt: CanonicalWorkoutHistoryReceipt?): NativeWorkoutHistory? {
         val id=receipt?.session?.workoutId ?: return null
         return historyReader?.workout(id)

@@ -10,7 +10,7 @@ data class NativeGymInventoryDraftResult(val json: String? = null, val error: St
 }
 
 object NativeGymInventoryCodec {
-    private val decimal = Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")
+    private val decimal = Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,2})?$")
     private val allowed = setOf("unit", "barbell", "dumbbells", "cable", "machine", "smith", "exerciseOverrides")
     private fun keys(obj: JSONObject): Set<String> = obj.keys().asSequence().toSet()
     private fun exact(obj: JSONObject, expected: Set<String>) {

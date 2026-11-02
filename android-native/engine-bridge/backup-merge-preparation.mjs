@@ -40,6 +40,14 @@ export function prepareCanonicalBackupMerge(params) {
         !equalJson(row,candidates.get(row.id))))
       throw new TypeError('Existing owned record would be changed');
   }
+  // Recheck excluded structural metadata independently; a deletion clock
+  // can poison a future merge, and perf is an authoritative cache for the UI.
+  if(Object.entries(merged.data.tombs || {}).some(([id,clock]) =>
+      !own(current.tombs || {},id) || current.tombs[id]!==clock))
+    throw new TypeError('Deletion clocks would be changed');
+  if(Object.entries(current.perf || {}).some(([id,value]) =>
+      !own(merged.data.perf || {},id) || !equalJson(value,merged.data.perf[id])))
+    throw new TypeError('Existing performance mirror would change');
   // An append-only preparation may introduce new non-conflicting records,
   // but must not silently change the existing device's settings, notes,
   // bodyweight, equipment or preferences.

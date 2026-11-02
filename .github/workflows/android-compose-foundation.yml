@@ -29,6 +29,7 @@ jobs:
           node android-native/engine-bridge/native-workout-test.mjs
           node android-native/engine-bridge/native-adjustment-provenance-test.mjs
           node android-native/engine-bridge/native-workout-muscle-review-test.mjs
+          node android-native/engine-bridge/native-equipment-loading-test.mjs
           node android-native/engine-bridge/native-short-session-issuance-test.mjs
           node android-native/engine-bridge/native-short-session-preview-test.mjs
           node android-native/engine-bridge/native-workout-deload-test.mjs

@@ -8,6 +8,7 @@ import { prepareNativeProgramEdit } from './native-program-edit.mjs';
 import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
 import { prepareNativeWorkout,previewNativeShorterSession,inspectNativeWorkoutMuscles,MAX_ISSUED_WORKOUT_BYTES } from './native-workout.mjs';
 import { inspectNativeHistory,inspectNativeHistoryPage,prepareNativeHistoryCorrection } from './native-history.mjs';
+import { inspectNativeEquipmentLoad } from './native-equipment-loading.mjs';
 
 export const WORKOUT_STORE_LIMITS=Object.freeze({
   snapshotBytes:1024*1024,journalBytes:256*1024,
@@ -69,6 +70,13 @@ export function dispatchWorkoutStoreJson(json) {
           !bounded(p.programId,128) || ![20,30,45].includes(p.minutes))
         return error(id,'INVALID_REQUEST');
       result=previewNativeShorterSession(p.rawSnapshot,p.programId,p.minutes);
+    } else if(request.method==='inspectNativeEquipmentLoad') {
+      if(!exact(p,['rawSnapshot','issuedWorkout','slot','inputLoad']) ||
+        !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+        !bounded(p.issuedWorkout,MAX_ISSUED_WORKOUT_BYTES) ||
+        !object(p.slot) || typeof p.inputLoad!=='string' || p.inputLoad.length>20)
+        return error(id,'INVALID_REQUEST');
+      result=inspectNativeEquipmentLoad(p.rawSnapshot,p.issuedWorkout,p.slot,p.inputLoad);
     } else if (request.method==='inspectNativeWorkoutMuscles') {
       if(!exact(p,['rawSnapshot','issuedWorkout']) ||
           !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||

@@ -8,6 +8,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,10 +64,14 @@ internal fun BackupCopyScreeningPanel(
     verifierLoading: Boolean = false,
     onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null,
     onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
+    onDiscardBackupReview: () -> Unit = {},
     currentStoreChangeKey: Long = 0L
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val latestDiscard by rememberUpdatedState(onDiscardBackupReview)
+    // Navigating away must revoke the process ticket; rotation loses this UI review too.
+    DisposableEffect(Unit) { onDispose { latestDiscard() } }
     // Neither selected URI nor raw bytes are saveable or held in Compose state.
     var stage by remember(currentStoreChangeKey) { mutableStateOf<BackupScreeningStage>(BackupScreeningStage.NoSelection) }
     var wantsSchema by remember(currentStoreChangeKey) { mutableStateOf(false) }
@@ -76,7 +82,10 @@ internal fun BackupCopyScreeningPanel(
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { selectedUri ->
-            if (selectedUri != null) {
+            if (selectedUri == null) {
+                onDiscardBackupReview()
+                stage = BackupScreeningStage.NoSelection
+            } else {
                 val inspectMerge = wantsMerge && onPreviewBackupMerge != null
                 val inspectReselection=wantsReselection && onVerifyBackupMerge != null
                 val previous=if(inspectReselection)stage as? BackupScreeningStage.MergePreview else null
@@ -161,6 +170,7 @@ internal fun BackupCopyScreeningPanel(
                 wantsPrograms = false
                 wantsMerge = false
                 wantsReselection=false
+                onDiscardBackupReview()
                 stage = BackupScreeningStage.NoSelection
                 picker.launch(arrayOf("*/*"))
             },
@@ -174,6 +184,7 @@ internal fun BackupCopyScreeningPanel(
                     wantsPrograms = false
                     wantsMerge = false
                     wantsReselection=false
+                    onDiscardBackupReview()
                     stage = BackupScreeningStage.NoSelection
                     picker.launch(arrayOf("application/json", "text/plain"))
                 },
@@ -199,6 +210,7 @@ internal fun BackupCopyScreeningPanel(
                     wantsPrograms = false
                     wantsMerge = true
                     wantsReselection=false
+                    onDiscardBackupReview()
                     stage = BackupScreeningStage.NoSelection
                     picker.launch(arrayOf("application/json", "text/plain"))
                 },
@@ -278,7 +290,10 @@ internal fun BackupCopyScreeningPanel(
             stage is BackupScreeningStage.ReselectionVerified ||
             stage is BackupScreeningStage.ReselectionMismatch ||
             stage is BackupScreeningStage.TooLargeForSchema) {
-            OutlinedButton(onClick = { stage = BackupScreeningStage.NoSelection }) {
+            OutlinedButton(onClick = {
+                onDiscardBackupReview()
+                stage = BackupScreeningStage.NoSelection
+            }) {
                 Text("Clear result")
             }
         }

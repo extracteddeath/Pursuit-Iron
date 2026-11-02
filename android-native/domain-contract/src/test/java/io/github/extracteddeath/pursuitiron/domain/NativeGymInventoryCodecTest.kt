@@ -28,6 +28,37 @@ class NativeGymInventoryCodecTest {
             .has("loadingInventory"))
     }
 
+    @Test fun perExerciseStacksKeepExactWeightsAndDoNotBorrowFactorySettings() {
+        val allowed=setOf("lat-pulldown","cable-fly")
+        val fields=mapOf("override:lat-pulldown" to "range: 5, 7.5, 200",
+            "override:cable-fly" to "exact: 17.5, 22.5, 27.5")
+        val result=NativeGymInventoryCodec.fromDraft(fields,"lb",allowed)
+        assertTrue(result.error.orEmpty(),result.valid)
+        val raw=checkNotNull(result.json)
+        val inventory=JSONObject(raw)
+        assertFalse(inventory.has("cable"))
+        val profiles=inventory.getJSONObject("exerciseOverrides")
+        assertEquals(7.5,profiles.getJSONObject("lat-pulldown").getDouble("increment"),0.00001)
+        assertEquals(3,profiles.getJSONObject("cable-fly").getJSONArray("availableLoads").length())
+        assertEquals("exact: 17.5, 22.5, 27.5",
+            NativeGymInventoryCodec.toDraft(raw)["override:cable-fly"])
+        assertEquals("range: 5, 7.5, 200",
+            NativeGymInventoryCodec.toDraft(raw)["override:lat-pulldown"])
+        assertEquals(raw,NativeGymInventoryCodec.validate(raw,"lb",allowed))
+        assertFalse(NativeGymInventoryCodec.fromDraft(fields,"lb").valid)
+        assertTrue(runCatching { NativeGymInventoryCodec.validate(raw,"kg",allowed) }.isFailure)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:lat-pulldown" to "exact: 20, 20.0"),"lb",allowed).valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:lat-pulldown" to "range: 5, 0, 200"),"lb",allowed).valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:lat-pulldown" to "range: 5, 7.5"),"lb",allowed).valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:lat-pulldown" to "exact: 20.001, 25"),"lb",allowed).valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:back-squat" to "exact: 45, 50"),"lb",allowed).valid)
+    }
+
     @Test fun noUnitConversionAndNoUnknownHardware() {
         val stock=checkNotNull(NativeGymInventoryCodec.fromDraft(mapOf("dumbbells" to "20, 25"),"lb").json)
         assertTrue(runCatching { NativeGymInventoryCodec.validate(stock,"kg") }.isFailure)

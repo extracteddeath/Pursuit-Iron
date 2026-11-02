@@ -1470,13 +1470,16 @@ function liftBests(history, unit, include = () => true) {
     return out;
 }
 
-function weeklyRecap(history, unit) {
+/* The rolling last 7 days by default (native Today's recap card says LAST 7 DAYS). `from` starts the window at a
+   given time instead — web Home's "This week" passes Monday (weekKeyOf), so its numbers are this calendar week's,
+   compared with the same span of last week rather than a whole week. */
+function weeklyRecap(history, unit, { from = null } = {}) {
     history = normalizeHistoryRevisions(history).entries;
     unit = unit || history.at(-1)?.unit || 'lb';
     const now = Date.now(), wk = 7 * 86400000;
-    const inWin = (h, a, b) => h.date > now - a && h.date <= now - b;
-    const thisW = history.filter(h => h.date > now - wk);
-    const prevW = history.filter(h => inWin(h, 2 * wk, wk));
+    const start = Number.isFinite(from) && from <= now ? from : now - wk;
+    const thisW = history.filter(h => h.date > start && h.date <= now);
+    const prevW = history.filter(h => h.date > start - wk && h.date <= now - wk);
     const sets = arr => arr.reduce((s, h) => s + (h.setsDone || 0), 0);
     const vol = arr => arr.reduce((s, h) => s + historyVolumeIn(h, unit || h?.unit), 0);
     const muscle = {};
@@ -1486,8 +1489,8 @@ function weeklyRecap(history, unit) {
         return; muscle[ex.part] = (muscle[ex.part] || 0) + setsOf(p).filter(isWorkSet).length; }));
     const topMuscle = Object.entries(muscle).sort((a, b) => b[1] - a[1])[0] || null;
     const prUnit = unit || history.at(-1)?.unit || 'lb';
-    const prior = liftBests(history, prUnit, h => h.date <= now - wk);
-    const current = liftBests(history, prUnit, h => h.date > now - wk);
+    const prior = liftBests(history, prUnit, h => h.date <= start);
+    const current = liftBests(history, prUnit, h => h.date > start);
     const prs = Object.entries(current).filter(([id, best]) => prior[id] && best.e1rm > prior[id].e1rm + 1e-9).length;
     return { count: thisW.length, sets: sets(thisW), vol: Math.round(vol(thisW)), prevCount: prevW.length, prevSets: sets(prevW), prevVol: Math.round(vol(prevW)), topMuscle, prs };
 }

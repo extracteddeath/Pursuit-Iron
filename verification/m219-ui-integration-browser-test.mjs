@@ -210,8 +210,10 @@ try {
             assert.ok(accessibility.labels.length===5 &&
                 accessibility.labels.every(b=>b.w>=44 && b.h>=44 && !b.labelOverflows),
                 `R34 ${theme}/${tab} bottom navigation remains touch-safe and legible: ${JSON.stringify(accessibility)}`);
+            // M281 retired the 2px perimeter on purpose (r74 now requires the indicator to have NO outline); the
+            // selected state is carried by the opaque tonal pill and the AA label, which is what R35 still pins.
             assert.ok(accessibility.navLabelRatio>=4.5 &&
-                accessibility.navOutlineRatio>=3 && accessibility.outlineWidth>=2,
+                accessibility.outlineWidth===0 && accessibility.indicatorAlpha===255,
                 `R35 ${theme}/${tab} semantic navigation contrast: ${JSON.stringify(accessibility)}`);
             assert.ok(accessibility.indicatorHeight>=26 && accessibility.indicatorHeight<=28 &&
                 accessibility.indicatorAlpha===255 &&

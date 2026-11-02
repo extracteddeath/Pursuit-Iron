@@ -16,6 +16,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeGymInventoryDraftResult
 
+@Composable
+private fun NativeGymLoadField(
+    unit: String, draft: Map<String,String>, onChange: (String,String)->Unit,
+    enabled: Boolean, key: String, label: String, hint: String
+) {
+    OutlinedTextField(
+        value = draft[key].orEmpty(),
+        onValueChange = { if (it.length <= 900) onChange(key, it) },
+        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
+        label = { Text("$label ($unit)") },
+        supportingText = { Text(hint) },
+        singleLine = true
+    )
+}
+
 /**
  * Optional physical inventory, deliberately empty on first launch.
  * This is NOT a training prescription and never guesses gym availability.
@@ -40,25 +56,12 @@ internal fun NativeGymInventoryEditor(
     }
     if (!expanded) return
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        fun labelUnit(label: String) = "$label ($unit)"
-        @Composable
-        fun Field(key: String, label: String, hint: String) {
-            OutlinedTextField(
-                value = draft[key].orEmpty(),
-                onValueChange = { if (it.length <= 900) onChange(key, it) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = enabled,
-                label = { Text(labelUnit(label)) },
-                supportingText = { Text(hint) },
-                singleLine = true
-            )
-        }
-        Field("bar", "Empty bar weight", "Enter only if known; pair with your actual plates below.")
-        Field("plates", "Plate pairs", "Weight x number of matching pairs, e.g. 2.5x2, 5x2, 25x1")
-        Field("dumbbells", "Dumbbells per hand", "Exact available weights, e.g. 15, 20, 25, 30")
-        Field("cable", "Cable stack", "Verified minimum, increment, maximum; e.g. 5, 5, 150")
-        Field("machine", "Machine stack", "Only if this same stack applies: min, increment, max")
-        Field("smith", "Smith TOTAL loads", "Actual selectable total loads, not assumed empty-bar weight")
+        NativeGymLoadField(unit, draft, onChange, enabled, "bar", "Empty bar weight", "Enter only if known; pair with your actual plates below.")
+        NativeGymLoadField(unit, draft, onChange, enabled, "plates", "Plate pairs", "Weight x number of matching pairs, e.g. 2.5x2, 5x2, 25x1")
+        NativeGymLoadField(unit, draft, onChange, enabled, "dumbbells", "Dumbbells per hand", "Exact available weights, e.g. 15, 20, 25, 30")
+        NativeGymLoadField(unit, draft, onChange, enabled, "cable", "Cable stack", "Verified minimum, increment, maximum; e.g. 5, 5, 150")
+        NativeGymLoadField(unit, draft, onChange, enabled, "machine", "Machine stack", "Only if this same stack applies: min, increment, max")
+        NativeGymLoadField(unit, draft, onChange, enabled, "smith", "Smith TOTAL loads", "Actual selectable total loads, not assumed empty-bar weight")
         if (!validation.valid) Text(
             validation.error ?: "Check equipment entries.",
             color = MaterialTheme.colorScheme.error,

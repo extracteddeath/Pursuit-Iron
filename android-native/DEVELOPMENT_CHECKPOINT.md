@@ -1005,3 +1005,45 @@ No APK was built, the working web app and another developer's Android
 branch were not modified, and the scheduled independent Kotlin engine rebuild
 remains gated behind native integration. Failed experimental CI is intentionally
 not treated as evidence that the stable migration is broken.
+
+
+## 2026-11-02 — Receipt-confirmed rest timing in native Train
+
+Rest timing is now connected to the already-persisted canonical workout
+journal, not a speculative "Complete set" click. The pure Kotlin
+`NativeRestCuePolicy` selects only the most recently acknowledged, retained,
+non-correction completed working-set receipt in the selected exercise, with a
+remaining set in the actual workout. Issued rest targets, including the rest
+before myo/drop extensions, are used without training calculations on Android.
+Skipped or corrected sets, finished workouts, other exercise tabs and grouped
+supersets cannot auto-trigger this individual-exercise timer.
+
+The Compose `NativeRestTimer` starts after the store becomes available again.
+It saves the last observed receipt key to prevent re-triggering on ordinary
+rotation, navigation or workout recovery. Monotonic elapsed-time deadlines
+continue through backgrounding; wall-clock/boot changes fail closed. Tapping
+restarts the current issued target, holding clears it, and an M3 progress
+indicator makes the interval visible. This is a presentation capability,
+not a journal event, engine prescription or notification service.
+
+Three pure domain JVM tests cover persisted acknowledgements, extension
+timing, skips, corrections, other exercises, superset suppression and end-of-
+workout behavior. A packaged-engine JVM test now generates a real program,
+issues a real workout, persists one working set, recovers the journal, and
+verifies the cue and unchanged canonical store; a skip and a later correction
+are confirmed not to restart rest. The latest source-contract check passed at
+[41427843063](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41427843063),
+Compose UI compilation passed at
+[41427128436](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41427128436),
+Kotlin domain tests passed at
+[41426868076](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41426868076),
+and the packaged sandbox runtime/JVM plus Android instrumentation-source
+compilation passed at
+[41427842402](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41427842402).
+No APK was generated. Device/background behavior still needs real Android
+acceptance testing before the integrated APK gate.
+
+The unsafe accessory replacement attempt remains isolated at
+`feature/native-accessory-swap-prescription-gate`. No JS training formulas
+were changed, and the live web/other programmer's Android branch remain
+untouched.

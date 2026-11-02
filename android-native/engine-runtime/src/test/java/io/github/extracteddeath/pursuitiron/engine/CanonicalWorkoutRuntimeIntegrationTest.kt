@@ -6,6 +6,8 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.time.YearMonth
 import java.time.ZoneOffset
 
@@ -25,6 +27,12 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             if (failAfterWrite) throw java.io.IOException("Synthetic post-commit crash")
         }
         override fun clearAtomically() { raw=null }
+    }
+    private class BackupDocument: NativeBackupExportDocument {
+        val output=ByteArrayOutputStream();var discarded=false
+        override fun openOutput()=output
+        override fun openInput()=ByteArrayInputStream(output.toByteArray())
+        override fun discard() { discarded=true;output.reset() }
     }
     private class NodeTransport : CanonicalWorkoutStoreTransport, AutoCloseable {
         private val root=checkNotNull(System.getenv("PURSUIT_CANONICAL_REPO")) {
@@ -1225,6 +1233,18 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             entry=JSONObject(raw).getJSONArray("history").getJSONObject(0)
             assertEquals(original.getJSONObject("nativeCompletion").toString(),entry.getJSONObject("nativeCompletion").toString())
             assertEquals(1,JSONObject(raw).getJSONArray("history").length())
+            val backup=BackupDocument();val writesBeforeExport=drive.writes
+            val export=NativeBackupExporter(store,engine).export(backup)
+            val exported=backup.output.toByteArray()
+            assertArrayEquals(raw.toByteArray(Charsets.UTF_8),exported)
+            assertEquals(sha(raw),export.snapshotSha256);assertEquals(exported.size.toLong(),export.byteCount)
+            assertFalse(backup.discarded);assertEquals(writesBeforeExport,drive.writes)
+            val backupText=String(exported,Charsets.UTF_8)
+            assertTrue(engine.validateInitialSnapshot(backupText))
+            val backupHistory=checkNotNull(engine.inspectHistory(backupText,"workout-failed"))
+            assertEquals(view.entrySha256,backupHistory.entrySha256)
+            assertEquals(view.editRows,backupHistory.editRows);assertNull(backupHistory.exercises.single { it.id==id }.record)
+            exported.fill(0)
             var returned=false
             for(step in 0..2) {
                 val snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)

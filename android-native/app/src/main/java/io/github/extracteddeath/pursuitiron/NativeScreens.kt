@@ -33,6 +33,7 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
 import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupExportDocument
 
 /**
  * These are independently designed NATIVE journeys, not ports of React screens.
@@ -61,9 +62,9 @@ internal fun TodayScreen(
             Button(onClick=openPlan,modifier=Modifier.fillMaxWidth()){Text("View your program")}
             if(workoutState?.completion!=null)Text("Your last workout is saved in your training history.")
             Button(onClick={if(workoutState?.workout==null)startWorkout();openTrain()},
-                enabled=workoutState?.ready==true && !workoutState.workoutBusy && !workoutState.workoutBlocked,
+                enabled=workoutState?.ready==true && !workoutState.workoutBusy && !workoutState.backupExportBusy && !workoutState.workoutBlocked,
                 modifier=Modifier.fillMaxWidth()) {
-                Text(if(workoutState?.workoutBusy==true)"Opening workout…" else if(workoutState?.workout!=null)"Resume workout" else "Start next workout")
+                Text(if(workoutState?.backupExportBusy==true)"Saving backup…" else if(workoutState?.workoutBusy==true)"Opening workout…" else if(workoutState?.workout!=null)"Resume workout" else "Start next workout")
             }
             workoutState?.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         }
@@ -104,7 +105,7 @@ internal fun TodayScreen(
                             startShortWorkout(preview.minutes)
                             openTrain()
                         },enabled=workoutState?.ready==true && !workoutState.workoutBusy &&
-                            !workoutState.historyBusy && !workoutState.workoutBlocked,
+                            !workoutState.historyBusy && !workoutState.backupExportBusy && !workoutState.workoutBlocked,
                             modifier=Modifier.fillMaxWidth()) {
                             Text("Start ${preview.minutes}-minute workout")
                         }
@@ -333,6 +334,7 @@ internal fun PlanScreen(
     hasSavedProgram: Boolean = false,
     schemaVerifier: CanonicalBackupSchemaVerifier? = null,
     schemaVerifierLoading: Boolean = false,
+    runtimeState: NativeRuntimeState?=null,onExportBackup: (NativeBackupExportDocument)->Unit = {},onResetBackupExport: ()->Unit = {},
     onPreviewDay: (ReadOnlyTrainingDaySelection) -> Unit = {}
 ) {
     if(hasSavedProgram && currentPlan !is ReadOnlyProgramPresentation.Structure) {
@@ -395,6 +397,7 @@ internal fun PlanScreen(
     }
     // Fingerprint-only document chooser never unlocks personal program display.
     BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading)
+    if(runtimeState?.saved!=null)NativeBackupExportPanel(runtimeState,onExportBackup,onResetBackupExport)
     SectionLabel("Plan essentials")
     PursuitCard {
         Text("Equipment and exercise choice", style = MaterialTheme.typography.titleMedium)

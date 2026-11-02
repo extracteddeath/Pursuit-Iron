@@ -38,9 +38,9 @@ internal fun NativeWorkoutScreen(
         PursuitCard(highlighted=true) {
             if(state.completion!=null)Text("Your workout is in your training history. The next session will use your logged performance.")
             else Text("Open your next scheduled workout with targets from your saved program.")
-            Button(onClick=onStart,enabled=state.ready && !state.workoutBusy && !state.historyBusy && !state.workoutBlocked,
+            Button(onClick=onStart,enabled=state.ready && !state.workoutBusy && !state.historyBusy && !state.backupExportBusy && !state.workoutBlocked,
                 modifier=Modifier.fillMaxWidth()) {
-                Text(if(state.workoutBusy)"Opening workout…" else "Start next workout")
+                Text(if(state.backupExportBusy)"Saving backup…" else if(state.workoutBusy)"Opening workout…" else "Start next workout")
             }
         }
         state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }

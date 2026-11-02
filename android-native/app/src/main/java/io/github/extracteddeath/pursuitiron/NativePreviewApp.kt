@@ -57,6 +57,7 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupExportDocument
 import io.github.extracteddeath.pursuitiron.domain.JournalSetSlot
 import io.github.extracteddeath.pursuitiron.domain.JournalSetDisposition
 import io.github.extracteddeath.pursuitiron.domain.JournalSetValues
@@ -102,7 +103,8 @@ internal fun NativePreviewApp(
     onHistoryPage: (Int)->Unit = {},
     onHistoryList: ()->Unit = {},
     onFilterHistory: (NativeHistoryFilter)->Unit = {},
-    onHistoryCalendar: (NativeHistoryCalendarQuery)->Unit = {}
+    onHistoryCalendar: (NativeHistoryCalendarQuery)->Unit = {},
+    onExportBackup: (NativeBackupExportDocument)->Unit = {},onResetBackupExport: ()->Unit = {}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -239,6 +241,7 @@ internal fun NativePreviewApp(
                                     hasSavedProgram=onboarding?.saved!=null,
                                     schemaVerifier = schemaVerifier,
                                     schemaVerifierLoading = schemaVerifierLoading,
+                                    runtimeState=onboarding,onExportBackup=onExportBackup,onResetBackupExport=onResetBackupExport,
                                     onPreviewDay = { day ->
                                         selectedTrainingDay = day
                                         section = NativeDestination.TRAIN.ordinal

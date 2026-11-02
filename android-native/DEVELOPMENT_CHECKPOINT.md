@@ -412,11 +412,52 @@ calendar overlapping Finish and reopens the resulting 30-workout month. Read
 fresh CI for the published revision; Android interaction acceptance remains open.
 No APK is produced, and the current canonical training source is unchanged.
 
+## Follow-up: validated saved-data backup export
+
+The native Plan screen now offers Save backup through Android's CreateDocument
+Save As flow. The system selects a new JSON destination; no selected import copy
+is overwritten or promoted into the current store. Picker cancellation writes
+nothing. A process-owned job continues across rotation after a destination is
+returned. Only status messages, never source bytes or document URIs, enter UI state.
+
+The exporter reads detached owned v13 snapshot bytes, checks UTF-8/bounds and the
+existing pinned canonical parser, then rechecks ownership before opening output.
+It writes exact bytes in bounded chunks, closes the stream, reopens the chosen
+document and compares every byte plus its complete length. It rechecks the owned
+source again before success. A changed revision, write/flush/close/readback error
+or cancellation cannot report a saved backup. Detached/readback buffers are wiped;
+an unsuccessful export attempts deletion of the new incomplete document. A
+provider can refuse cleanup, so the UI tells the user to discard an unconfirmed copy.
+
+An active/blocked workout prevents export. Starting a workout and editing saved
+history wait during export; the existing history interaction gate also protects
+an open correction sheet. Export includes the complete canonical saved-data
+snapshot, including native observations, original targets and correction audits.
+It excludes the private unfinished journal/receipt envelope and does not write
+the canonical store or implement import, restore, merge or Undo.
+
+All 31 native source suites pass locally. Added JVM cases cover exact
+Unicode/chunked bytes, invalid or rejected sources,
+source changes, corrupt/truncated/appended provider results, output/read failures,
+cancellation, cleanup failure and buffer wiping. The actual packaged-engine
+failed-attempt journey exports its corrected owned snapshot, checks canonical
+validation and history identity/observations, and verifies zero additional store
+writes. Read fresh CI for the published revision. Android document-provider and
+interaction acceptance remain open. No APK is produced.
+
+The rewrite plan now groups the remaining work into data migration/recovery,
+programming, live training, insights, personal settings and final Android
+acceptance. It separates baseline integration from the independent training-rule
+correctness tests required of the rebuilt engine. Existing engine bugs remain
+tracked rebuild requirements rather than a prerequisite to fixing that engine
+before it can be replaced.
+
 ## Next work
 
-Richer training analytics, broader native session-adjustment
-controls and imported web history remain separate
-milestones. Physical-device interaction, interruption and accessibility
+Safe restore/merge/Undo and existing web-data migration, custom programming and
+cycles, full workout tools/readiness, real-data analytics/bodyweight, and complete
+gym/profile preferences remain integration workstreams. Physical-device
+interaction, interruption and accessibility
 acceptance is still required for the complete agreed journey; preserve the APK
 freeze until its release gate has the required evidence.
 The full Kotlin engine rebuild follows the integrated-system gate in

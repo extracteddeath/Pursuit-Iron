@@ -35,14 +35,20 @@ issues recorded before the system is described as fully integrated. Source/JVM
 tests and device acceptance are separate evidence. Current integration is still
 in progress; the gate has not been declared complete.
 
+Integration acceptance establishes that the app's workflows, ownership and data
+contracts work together. Known training-rule defects must be catalogued as
+rebuild requirements; fixing all of the old engine's calculations is not a
+prerequisite to starting its replacement. Independent correctness acceptance
+applies to the rebuilt engine before it becomes the app's training authority.
+
 ### Current integration evidence and open coverage
 
 | Catalog capability | Current evidence / remaining integration |
 | --- | --- |
-| Adaptive progression | Current engine supplies issued targets and re-reads corrections; independent training correctness and Android acceptance remain open |
-| Workout logging | Real logging, corrections, recovery, completion and supported failed attempts have source/JVM scenarios; device acceptance remains open |
+| Adaptive progression | Current engine supplies issued targets and re-reads corrections; integration/device acceptance remains open, with training-rule correctness assigned to the rebuild |
+| Workout logging | Working/extension logging, corrections, recovery, completion and supported failed attempts have source/JVM scenarios; warm-up observation logging and device acceptance remain open |
 | Session adjustments | Shortened sessions and confirmed affected-muscle skips/reductions are wired; full readiness/constraint coverage remains open |
-| Workout tools | Rest/focus/extensions/history have integrated paths; complete notes, loading, substitution and superset workflows still need acceptance evidence |
+| Workout tools | Rest/focus/extensions/history have integrated paths; complete notes, plate/bar loading, substitution and superset workflows still need acceptance evidence |
 | Program builder | Native setup/review/save/restore covers generated programs; all advanced authoring controls still need integration coverage |
 | Custom programs | Inspection/reference contracts exist; first-class native authoring/edit/cycle parity remains open |
 | Adaptive cycles | Required scope is preserved; complete native cycle transitions and authorized adaptation remain open |
@@ -50,12 +56,28 @@ in progress; the gate has not been declared complete.
 | History and PRs | Owned history, corrections, records, filters, a complete local-month calendar and Last have source/JVM coverage; import/live-feedback and Android acceptance remain open |
 | Strength/volume trends | Required regional-volume/standards/chart outcomes still need complete real-data workflows |
 | Bodyweight/milestones | Required measurements, bodyweight and milestone workflows remain open |
-| Backup/restore | Read-only validation/inventory exists; approved import/merge, rollback/Undo and export workflows remain open |
+| Backup/restore | Read-only validation/inventory and exact validated export/readback are wired; approved import/merge, rollback/Undo, web-history migration and Android provider acceptance remain open |
 | Gyms/equipment | Onboarding equipment is persisted; complete gym/inventory/increment/bar-setting workflows remain open |
 | Profile/preferences | Initial profile settings are restored; full preference persistence and progress identity still need acceptance evidence |
 
 This table prevents source-only progress from being mistaken for a fully
 integrated system. Close the actual workflow gaps before the rebuild gate is met.
+
+### Remaining work before starting the rebuild
+
+| Workstream | What still needs a complete native workflow |
+| --- | --- |
+| Data migration and recovery | Import preview -> explicit merge -> conflict/tombstone handling -> Undo; bring across existing web records/settings without changing IDs or facts; prove restore from exported data |
+| Programming | Advanced builder settings, first-class custom authoring/editing, cycle transitions and explicit split/exercise adaptation |
+| Live training | Warm-up observations, session/pinned notes, plate and bar settings, equipment-aware substitutions, complete supersets and real readiness-driven changes |
+| Insights | Real-data strength/volume/consistency/standards, bodyweight/measurements and milestones; correction-safe feedback |
+| Personal settings | Gyms/inventory/increments, complete preferences, profile/progress identity and cold restore |
+| Final acceptance | Complete journeys with real saved data on Android; rotation/background/process death, keyboard, TalkBack/large text, phone/foldable layouts and document providers; pin the accepted baseline and a recoverable copy |
+
+Keep the APK freeze while implementation/source acceptance is incomplete. Device
+acceptance is a separate later step that will need a test build; no device result
+can be inferred from JVM tests or source compilation. The current export is a
+saved-data copy, not a restore/merge implementation or active-workout journal backup.
 
 ## Replacement architecture
 

@@ -265,3 +265,21 @@ assert.ok(activity.includes('onHistoryCalendar=runtime::loadHistoryCalendar') &&
   host.includes('loadHistoryWorkout(historyId,calendar.snapshotSha256)') &&
   host.includes('optionalHistoryCalendar(current.historyCalendarQuery,history.snapshotSha256)'),
   'Complete-month calendars must preserve day selection, share saved review cards, bind reads to the owned revision and refresh after corrections');
+const backupUi=fs.readFileSync(root+'NativeBackupExportPanel.kt','utf8');
+const backupExport=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeBackupExport.kt','utf8');
+assert.ok(backupUi.includes('ActivityResultContracts.CreateDocument("application/json")') &&
+  backupUi.includes('if(uri==null)pickerMessage="Backup canceled."') &&
+  backupUi.includes('resolver.openOutputStream(uri,"wt")') && backupUi.includes('DocumentsContract.deleteDocument(resolver,uri)') &&
+  !backupUi.includes('mutableStateOf<ByteArray') && !backupUi.includes('commitAtomically') &&
+  screens.includes('NativeBackupExportPanel(runtimeState,onExportBackup,onResetBackupExport)') &&
+  activity.includes('onExportBackup=runtime::exportBackup') &&
+  host.includes('current.historyBusy || current.backupExportBusy') &&
+  host.includes('NativeBackupExporter(owner,loaded.programEngine).export(document)') &&
+  host.includes('it.copy(backupExportBusy=true,historyBusy=true') &&
+  host.includes('current.historyBusy || current.workoutBusy || current.backupExportBusy || current.workout!=null') &&
+  host.includes('current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked') &&
+  backupExport.includes('engine.validateInitialSnapshot(text)') && backupExport.includes('document.openInput().use') &&
+  backupExport.includes('checkActive();checkCurrent(bytes);checkActive()') &&
+  backupExport.includes('source?.fill(0)') && backupExport.includes('if(!saved)runCatching { document.discard() }') &&
+  !backupExport.includes('commitAtomically') && !backupExport.includes('.initialize('),
+  'Backup export uses a new user-selected destination, exact canonical-owned data, readback verification and cleanup without import or store writes');

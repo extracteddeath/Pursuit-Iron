@@ -20,6 +20,7 @@ internal data class NativeRuntimeState(
     val historyBusy: Boolean=false,val historyError: String?=null,
     val historyFilter: NativeHistoryFilter=NativeHistoryFilter(),
     val historyCalendarQuery: NativeHistoryCalendarQuery?=null,val historyCalendar: NativeHistoryCalendar?=null,
+    val backupExportBusy: Boolean=false,val backupExportMessage: String?=null,val backupExportError: String?=null,
     val shortPreview: NativeShortSessionPreview?=null,
     val shortPreviewBusy: Boolean=false,val shortPreviewError: String?=null,
     val muscleReview: NativeWorkoutMuscleReview?=null,
@@ -111,6 +112,36 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     } catch(cancelled: CancellationException) { throw cancelled }
       catch(_: Exception) { null }
 
+    fun resetBackupExportStatus() {
+        mutable.update { if(it.backupExportBusy)it else it.copy(backupExportMessage=null,backupExportError=null) }
+    }
+    fun exportBackup(document: NativeBackupExportDocument) {
+        val current=mutable.value;val owner=store;val loaded=current.verifier
+        if(!current.ready || current.blocked || current.busy || current.workoutBlocked || current.workout!=null ||
+            current.workoutBusy || current.historyBusy || current.backupExportBusy || current.saved==null || owner==null || loaded==null) {
+            scope.launch { runCatching { document.discard() } }
+            if(!current.backupExportBusy)mutable.update { it.copy(backupExportMessage=null,
+                backupExportError="Backup could not start. Finish any active workout and wait for saved changes, then try again.") }
+            return
+        }
+        // Hold the existing history interaction gate until readback finishes;
+        // open correction sheets must also wait rather than submit a no-op.
+        mutable.update { it.copy(backupExportBusy=true,historyBusy=true,backupExportMessage=null,backupExportError=null) }
+        scope.launch {
+            try {
+                val job=currentCoroutineContext()
+                NativeBackupExporter(owner,loaded.programEngine).export(document) { job.ensureActive() }
+                ensureActive()
+                mutable.update { it.copy(backupExportBusy=false,historyBusy=false,backupExportMessage="Backup saved and verified.",backupExportError=null) }
+            } catch(cancelled: CancellationException) {
+                mutable.update { it.copy(backupExportBusy=false,historyBusy=false,backupExportMessage=null) };throw cancelled
+            } catch(_: Exception) {
+                mutable.update { it.copy(backupExportBusy=false,historyBusy=false,backupExportMessage=null,
+                    backupExportError="The backup could not be confirmed. Discard any incomplete copy and try again.") }
+            }
+        }
+    }
+
     fun reloadHistory() {
         val current=mutable.value
         val selected=current.history
@@ -198,7 +229,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     }
     fun correctHistory(correctionJson: String) {
         val current=mutable.value
-        if(!current.ready || current.historyBusy || current.workoutBusy || current.workout!=null)return
+        if(!current.ready || current.historyBusy || current.workoutBusy || current.backupExportBusy || current.workout!=null)return
         val owner=store ?: return
         mutable.update { it.copy(historyBusy=true,historyError=null) }
         scope.launch {
@@ -298,7 +329,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     fun startWorkout(minutes: Int?=null) {
         val current=mutable.value
-        if(!current.ready || current.workoutBusy || current.historyBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
+        if(!current.ready || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
         // A shortened start is permitted only for the preview actually shown.
         // The owned snapshot is verified AGAIN immediately before issuing.
         val approvedPreview=if(minutes!=null) current.shortPreview?.takeIf {

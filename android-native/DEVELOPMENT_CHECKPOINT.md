@@ -1190,3 +1190,90 @@ features include canonical equipment increments/attachments, full advanced
 custom and adaptive-cycle behavior, verified safe exercise replacement,
 backup-restore activation and Android device accessibility/resume acceptance
 before the planned Kotlin training-engine rebuild.
+
+
+## 2026-11-02 — Equipment-aware load inspection with explicit physical confirmation
+
+Native Train now offers an optional **Check equipment-aware weights** action
+for one unfinished, engine-issued working-set slot and its literal edited
+load. This is strictly a read-only source-pinned *adjacent selectable load*
+inspection, not a progression decision or a change to actual performance.
+The original manual input and journal-confirmed Complete action remain the
+only way to log the set. The review is valid only while workout ID, original
+exercise slot, display unit, entered load and owned canonical snapshot
+revision match; subsequent edits invalidate the displayed review.
+
+The new isolated `native-equipment-loading.mjs` bridge delegates physical
+availability to the existing canonical `nextAvailableLoad` and
+`availableLoadAtOrBelow` solvers. It does **not** treat factory loading
+defaults as verified physical gym inventory. A saved explicit same-unit
+inventory is required. It can confirm user-owned exercise-specific racks
+and increments; exact dumbbell loads **per hand**; explicit cable/machine
+stacks; and total barbell loads achievable using a known empty bar and
+physically owned paired plates. Generic Smith stack assumptions are
+**not enough to certify the effective empty Smith bar**: only an explicit
+list of selectable Smith *total loads* enables its corresponding controls.
+Unknown or specialized bars, machine configurations not supported by the
+actual native catalog metadata, missing plate pairs, ambiguous load carriers,
+unit-mismatched stock and absent inventory fail closed to manual entry.
+Where the current manually entered load is not selectable, the UI says so
+without silently overwriting the user's actual log.
+
+The audit discovered an important preexisting integration defect:
+`modules/next-engine/loading.js` looks up its default exercise mode through
+the newer `EXERCISE_MAP` (underscore exercise IDs), whereas actual native
+issued workouts use `EX_BY_ID` (hyphen exercise IDs, e.g. `back-squat`).
+Blindly using that mode had marked actual barbell exercises
+`external_load`. The **native-only bridge adapter** now reads authoritative
+`EX_BY_ID[eid].equip`, authenticates one unambiguous supported loading
+carrier against the program equipment, and passes that mode as a temporary
+read-only override to the canonical physical solver. No web engine or
+historical workout formulas were modified. Unknown/specialized equipment
+still requires a genuinely configured exercise-specific load profile.
+
+A new `NativeEquipmentLoadingCodec` in Kotlin independently validates the
+worker's method/result, issued-workout and current-snapshot SHA-256 hashes,
+source, active workout ID, original exercise/slot identity, unit, exact input,
+typed family, optional load numbers and strictly decreasing/increasing
+candidate bounds. The Java sandbox request allowlist is updated separately,
+and the JS bridge is included in the checksum-pinned IIFE bundle. The native
+runtime re-reads the owned snapshot for every inspection and rejects stale
+snapshot revisions or already completed sets before publishing the display.
+No workout or gym store mutation is available through this capability.
+
+Verification includes:
+- JS canonical source tests for no default-inventory confirmation, legacy
+  unit conversion ambiguity, 159.5 lb → next 160 lb with an explicit 5 lb
+  exercise step, 45 lb bar with real paired plates, absent plate inventories,
+  forged issued targets and isolated channels;
+- a **real packaged runtime JVM integration test** verifying actual program
+  issuance, exact input and unit, unknown default inventory refusal,
+  confirmed user override, malicious non-increasing response rejection and
+  mismatch of saved source;
+- Kotlin contract tests and Compose compilation in addition to the native
+  source and manifest-integrity checks.
+
+The final source-contract workflow passed at
+[41435161541](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41435161541);
+the canonical JS bundle proof passed at
+[41435161393](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41435161393);
+the packaged sandbox runtime and JVM integration suite passed at
+[41435161387](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41435161387).
+The Compose UI previously compiled at
+[41434096325](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41434096325)
+for the identical Compose code. The Kotlin domain contracts passed at
+[41433908752](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41433908752).
+No APK was generated.
+
+**Critical remaining scope:** native onboarding currently creates programs
+without a user-authored `config.loadingInventory`, so verified weight
+buttons stay disabled on those newly created programs until explicit
+equipment/rack/bar/plate inventories can be configured and transactionally
+persisted. A first-class native gym/equipment editor, personalized gym
+selection and trustworthy cross-unit and exercise-specific equipment
+migration are still required. More importantly, inspecting selectable
+hardware is **not** the planned correction of the existing adaptive training
+engine's flawed progression formulas. The full Kotlin engine rebuild remains
+scheduled only after the native feature journey is integrated and accepted.
+The live web application, production main, another developer's Android branch
+and the quarantined substitution experiment were not changed.

@@ -151,7 +151,8 @@ assert.ok(train.includes('onInspectEquipmentLoad:(JournalSetSlot,String)->Unit')
   activity.includes('onInspectEquipmentLoad=runtime::inspectEquipmentLoad'),
   'Compact equipment options must use an exact canonical verified result for the current set, typed load and source revision; no inferred increments or writes');
 assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId)') &&
-  train.includes('val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull') &&
+  train.includes('val visibleSets=if(focusMode && journal.unresolvedCount==0)') &&
+  train.includes('else if(focusMode)listOf(exercise.sets.firstOrNull') &&
   train.includes('it.slot !in committedSlots') &&
   train.includes('visibleSets.forEach { set->') &&
   train.includes('NativeWorkingSet(plan.session,set,commit,') &&
@@ -695,3 +696,20 @@ assert.ok(controls.includes('val repsControl: @Composable () -> Unit') &&
   controls.includes('if(load=="0")"0 load = bodyweight') &&
   controls.includes('RIR is optional'),
   'The one shared set-entry control must be compact on wide phones and remain unclipped, accessible and optional on narrow phones');
+
+const finishReadyAt=train.indexOf('    if(journal.unresolvedCount==0) {\n        PursuitCard(highlighted=true)');
+const progressAt=train.indexOf('LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size}');
+const movementAt=train.indexOf('Text(exercise.name,style=MaterialTheme.typography.headlineSmall)');
+const loggerAt=train.indexOf('visibleSets.forEach { set->');
+const injuryReviewAt=train.indexOf('if(!showAffectedTools) {');
+assert.ok(progressAt>0 && finishReadyAt>progressAt &&
+  movementAt>finishReadyAt && loggerAt>movementAt &&
+  injuryReviewAt>loggerAt &&
+  train.includes('if(focusMode && journal.unresolvedCount==0)') &&
+  train.includes('emptyList<NativeWorkoutSet>()') &&
+  train.includes('if(journal.unresolvedCount>0) {\n        NativeRestTimer(') &&
+  train.includes('if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0)') &&
+  train.includes('confirmButton={Button(onClick={showFinishReview=false;onFinish()}') &&
+  train.includes('if(journal.isFinished)"Retry finishing workout"') &&
+  !train.includes('PursuitCard(highlighted=journal.unresolvedCount==0)'),
+  'Once every issued set is durably resolved, Focus must prioritize confirmed finish, hide stale set/rest controls, and retain exact retry and review gates');

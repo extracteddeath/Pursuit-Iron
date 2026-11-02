@@ -1691,3 +1691,22 @@ non-null value. Canonical verification, manual drafts, units, and
 no-inferred-increment rules are unchanged. The interaction fixture
 verifies the local value gating. This is a compilation integration
 repair, not an engine change.
+
+## 2026-11-02 — Finish-first transition after acknowledged final set
+
+Train no longer leaves a previously saved set and its rest timer in the
+foreground after all originally issued working-set slots have durable
+completion/skip receipts. Once the journal reports zero unresolved
+slots, a highlighted Review and finish action appears immediately below
+the real completed-set progress indicator, ahead of movement tabs,
+optional notes and adjustment tools. In Focus, the stale saved set
+is hidden; Show all still gives access to exact saved-set corrections.
+No rest timer is shown with no remaining sets.
+
+The final publication action still goes through the original explicit
+Finish dialog, including the warm-up summary; an already durably
+finished journal still exposes the exact retry path rather than
+manufacturing a new finish. Runtime-owned history publication,
+saved-set receipts, recovery and progression are unchanged.
+Verification contracts check source ordering, zero-unresolved
+gates and the original review/retry requirements. No APK.

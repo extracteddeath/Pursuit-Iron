@@ -119,6 +119,24 @@ internal fun NativeWorkoutScreen(
         style=MaterialTheme.typography.titleSmall)
     LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size},
         modifier=Modifier.fillMaxWidth())
+    // Acknowledged completion is the primary Focus action, not a footer
+    // buried below a timer and optional review tools. The existing dialog
+    // still confirms publication; nothing is auto-finished by UI state.
+    if(journal.unresolvedCount==0) {
+        PursuitCard(highlighted=true) {
+            Text(if(journal.isFinished)"All sets saved · completion needs confirmation"
+                else "All working sets saved · ready to finish",
+                style=MaterialTheme.typography.titleMedium)
+            Button(onClick={if(journal.isFinished)onFinish() else showFinishReview=true},
+                enabled=!state.workoutBusy && !state.historyBusy &&
+                    !state.backupExportBusy && !state.workoutBlocked,
+                modifier=Modifier.fillMaxWidth()) {
+                Text(if(state.workoutBusy)"Saving…" else
+                    if(journal.isFinished)"Retry finishing workout" else "Review and finish")
+            }
+        }
+    }
+    state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         plan.exercises.forEachIndexed { index,ex->
             val completed=ex.sets.count { it.slot in committedSlots }
@@ -201,7 +219,9 @@ internal fun NativeWorkoutScreen(
     }
     // Focus is a projection of the same durable set journal, never a
     // different logger. It advances only after an acknowledged set receipt.
-    val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull {
+    val visibleSets=if(focusMode && journal.unresolvedCount==0)
+        emptyList<NativeWorkoutSet>()
+    else if(focusMode)listOf(exercise.sets.firstOrNull {
         it.slot !in committedSlots
     } ?: exercise.sets.last()) else exercise.sets
     visibleSets.forEach { set->
@@ -221,10 +241,12 @@ internal fun NativeWorkoutScreen(
     val activeExtension=if(focusMode)exercise.sets.firstOrNull {
         it.slot !in committedSlots
     }?.extensionRestSeconds else null
-    NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
-        enabled=!state.workoutBusy && !journal.isFinished,
-        latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId,
-        autoCue=NativeRestCuePolicy.latest(progress,exercise.index))
+    if(journal.unresolvedCount>0) {
+        NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
+            enabled=!state.workoutBusy && !journal.isFinished,
+            latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId,
+            autoCue=NativeRestCuePolicy.latest(progress,exercise.index))
+    }
     if(exercisePending>0 && !journal.isFinished) {
         TextButton(onClick={showSkipExercise=true},
             enabled=!state.workoutBusy && !state.historyBusy) {
@@ -339,16 +361,6 @@ internal fun NativeWorkoutScreen(
             },enabled=pendingCount>0 && !state.workoutBusy && !state.historyBusy &&
                 !journal.isFinished) { Text("Confirm related skips") }},
             dismissButton={TextButton(onClick={confirmAffectedPart=""}) { Text("Keep training") }})
-    }
-    state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
-    PursuitCard(highlighted=journal.unresolvedCount==0) {
-        if(journal.unresolvedCount>0)Text("Complete or skip ${journal.unresolvedCount} remaining sets to finish.")
-        else Text(if(journal.isFinished)"All sets are saved. Finishing your training history…" else "Every working set is saved. Ready to finish.")
-        Button(onClick={if(journal.isFinished)onFinish() else showFinishReview=true},
-            enabled=journal.unresolvedCount==0 && !state.workoutBusy && !state.historyBusy,
-            modifier=Modifier.fillMaxWidth()) {
-            Text(if(state.historyBusy)"Loading history…" else if(state.workoutBusy)"Saving…" else if(journal.isFinished)"Retry finishing workout" else "Review and finish")
-        }
     }
     if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0) {
         val skipped=journal.completed.count { it.intent.disposition==JournalSetDisposition.SKIPPED }

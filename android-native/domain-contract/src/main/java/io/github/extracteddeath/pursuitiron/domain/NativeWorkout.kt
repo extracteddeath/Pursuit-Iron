@@ -7,7 +7,8 @@ import java.util.Collections
 data class NativeWorkoutSet(
     val slot: JournalSetSlot,val load: String,val reps: String,
     val targetReps: String,val targetRir: String?,val last: String?,
-    val isExtension: Boolean=false,val kind: String?=null,val extensionRestSeconds: Int?=null
+    val isExtension: Boolean=false,val kind: String?=null,val extensionRestSeconds: Int?=null,
+    val allowFailedAttempt: Boolean=false
 )
 data class NativeWorkoutExercise(
     val index: Int,val id: String,val name: String,val restSeconds: Int,
@@ -35,6 +36,14 @@ object NativeWorkoutCodec {
     const val SOURCE="modules/engine-api.js:nextSessionCursor+calibratedAnchorPerf+sessionSuggestion+prescribeSets"
     private val wire=WorkoutStoreRuntimeCodec
     private val identifier=Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+    /** Facts must fit the pinned issued capability before the runtime journals them. */
+    fun acceptsValues(plan: NativeWorkoutPlan,slot: JournalSetSlot,values: JournalSetValues?): Boolean {
+        val target=plan.exercises.flatMap { it.sets }.firstOrNull { it.slot==slot } ?: return false
+        val actual=values ?: return false;val load=actual.load ?: return false
+        if(actual.unit!=plan.session.unit || !load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")) ||
+            actual.reps !in 0..100 || actual.rir!=null && actual.rir !in 0..10)return false
+        return actual.reps>0 || target.allowFailedAttempt && load.toBigDecimal().signum()>0
+    }
     fun startJson(programId: String,workoutId: String,startedAt: Long,minutes: Int?=null): String {
         require(identifier.matches(programId) && identifier.matches(workoutId) &&
             programId!=workoutId && startedAt in 1..8_640_000_000_000_000L)
@@ -51,6 +60,12 @@ object NativeWorkoutCodec {
     fun decodeWorkout(raw: String,id: String,snapshot: String,startJson: String): NativeWorkoutPlan? {
         val value=wire.result(raw,id) ?: return null
         val plan=readIssued(value.toString())
+        if(value.has("allowFailedAttempts")) {
+            val saved=JSONObject(snapshot).getJSONArray("saved")
+            val program=(0 until saved.length()).map { saved.getJSONObject(it) }
+                .single { it.getString("id")==plan.session.programRevision.programId }
+            require(program.getJSONObject("config").opt("percentScheme")=="gzclp")
+        }
         val start=JSONObject(startJson)
         require(value.get("inputStartSha256")==wire.sha(startJson) &&
             plan.session.programRevision.snapshotSha256==wire.sha(snapshot) &&
@@ -65,7 +80,9 @@ object NativeWorkoutCodec {
         val format=wire.integer(v,"format")
         require(format in 1L..2L)
         wire.exact(v,"format","source","preparedOnly","persisted","inputStartSha256","session","programName",
-            "dayLabel",*(if(format==2L)arrayOf("sessionLengthPlan") else emptyArray()),"rows")
+            "dayLabel",*(if(format==2L)arrayOf("sessionLengthPlan") else emptyArray()),
+            *(if(v.has("allowFailedAttempts"))arrayOf("allowFailedAttempts") else emptyArray()),"rows")
+        val allowFailed=v.has("allowFailedAttempts");if(allowFailed)require(v.get("allowFailedAttempts")==true)
         require(v.get("source")==SOURCE && v.get("preparedOnly")==true &&
             v.get("persisted")==false && wire.text(v,"inputStartSha256").matches(Regex("^[0-9a-f]{64}$")))
         val s=v.getJSONObject("session");wire.exact(s,"reference","workoutId","dayId","weekIndex","unit","startedAt")
@@ -100,7 +117,7 @@ object NativeWorkoutCodec {
                 val load=wire.text(value,"load");val reps=wire.integer(value,"reps");val unit=wire.text(value,"unit")
                 require(rawPosition in 0..19 && load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")) &&
                     reps in 0..100 && unit in listOf("lb","kg"))
-                rawPosition.toInt() to "$load $unit × $reps"
+                rawPosition.toInt() to ("$load $unit × $reps"+if(reps==0L)" · failed attempt" else "")
             }.toMap()
             require(previousByPosition.size==previous.length())
             val sets=row.getJSONArray("sets");require(sets.length() in 1..40)
@@ -138,7 +155,7 @@ object NativeWorkoutCodec {
                     val last=if(!extension)previousByPosition[mainOrdinal] else null
                     if(!extension)mainOrdinal++
                     work+=NativeWorkoutSet(JournalSetSlot(index.toInt(),work.size,exerciseId),load,reps,targetReps,rir,last,
-                        extension,kind,rest)
+                        extension,kind,rest,allowFailed && !extension)
                 }
             }
             require(mainOrdinal in 1..20 && work.size in 1..20)

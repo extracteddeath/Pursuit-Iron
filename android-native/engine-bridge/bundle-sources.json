@@ -13,6 +13,7 @@
   "native-workout.mjs",
   "native-history.mjs",
   "native-history-basis.mjs",
+  "native-history-normalization.mjs",
   "android-entry.mjs",
   "sandbox-compat.mjs"
 ]

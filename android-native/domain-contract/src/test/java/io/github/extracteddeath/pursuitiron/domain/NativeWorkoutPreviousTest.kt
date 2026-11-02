@@ -51,4 +51,28 @@ class NativeWorkoutPreviousTest {
             assertTrue(runCatching { NativeWorkoutCodec.readIssued(issued(value).toString()) }.isFailure)
         }
     }
+
+    @Test fun zeroRepRuntimeWritesRequireThePinnedWorkingSetCapability() {
+        val raw=issued(JSONArray()).put("allowFailedAttempts",true)
+        val sets=raw.getJSONArray("rows").getJSONObject(0).getJSONArray("sets")
+        sets.put(JSONObject().put("warm",false).put("done",false).put("auto",true).put("sub",true).put("kind","drop")
+            .put("prescribed",true).put("weight","25").put("reps","").put("target",JSONObject().put("reps","to failure")
+                .put("rir",JSONObject.NULL).put("rest",15)))
+        val plan=NativeWorkoutCodec.readIssued(raw.toString());val working=plan.exercises[0].sets[0]
+        val extension=plan.exercises[0].sets.last()
+        assertTrue(working.allowFailedAttempt);assertFalse(extension.allowFailedAttempt)
+        assertTrue(NativeWorkoutCodec.acceptsValues(plan,working.slot,JournalSetValues("80","kg",0,null)))
+        assertFalse(NativeWorkoutCodec.acceptsValues(plan,extension.slot,JournalSetValues("25","kg",0,null)))
+        for(value in listOf(JournalSetValues("0","kg",0,null),JournalSetValues("","kg",0,null),
+            JournalSetValues("80","lb",0,null),JournalSetValues("80","kg",-1,null)))
+            assertFalse(NativeWorkoutCodec.acceptsValues(plan,working.slot,value))
+        val ordinary=NativeWorkoutCodec.readIssued(issued(JSONArray()).toString())
+        assertFalse(NativeWorkoutCodec.acceptsValues(ordinary,ordinary.slots[0],JournalSetValues("80","kg",0,null)))
+    }
+
+    @Test fun failedPreviousResultsKeepTheirPositionAndAttemptLabel() {
+        val raw=issued(JSONArray().put(previous(2).put("reps",0)))
+        val plan=NativeWorkoutCodec.readIssued(raw.toString());val sets=plan.exercises[0].sets
+        assertNull(sets[0].last);assertNull(sets[1].last);assertEquals("40 kg × 0 · failed attempt",sets[2].last)
+    }
 }

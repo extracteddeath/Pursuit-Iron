@@ -10,7 +10,7 @@ interface NativeHistoryEngine {
 }
 
 data class NativeHistorySet(val setIndex: Int,val kind: String,val ordinal: Int,
-    val load: String,val reps: Int,val rir: Int?,val exerciseIndex: Int)
+    val load: String,val reps: Int,val rir: Int?,val exerciseIndex: Int,val failedAttempt: Boolean=false)
 data class NativeHistoryRecord(val load: Double,val reps: Int,val date: Long,val unit: String)
 data class NativeHistoryExercise(val id: String,val name: String,val sets: List<NativeHistorySet>,
     val record: NativeHistoryRecord?)
@@ -68,11 +68,14 @@ object NativeHistoryCodec {
             val rawSets=ex.getJSONArray("sets");require(rawSets.length() in 1..480)
             val sets=(0 until rawSets.length()).map { j ->
                 val s=rawSets.getJSONObject(j)
-                WorkoutStoreRuntimeCodec.exact(s,"setIndex","exerciseIndex","kind","ordinal","load","reps","rir")
+                WorkoutStoreRuntimeCodec.exact(s,"setIndex","exerciseIndex","kind","ordinal","load","reps","rir",
+                    *(if(s.has("failedAttempt"))arrayOf("failedAttempt") else emptyArray()))
                 val kind=text(s,"kind");require(kind in listOf("working","myo","drop"))
                 val weight=text(s,"load",9);require(load.matches(weight))
+                val failed=s.has("failedAttempt");if(failed)require(s.get("failedAttempt")==true && kind=="working" && weight.toBigDecimal().signum()>0)
+                val reps=number(s,"reps",if(failed)0 else 1,100).toInt();require(!failed || reps==0)
                 NativeHistorySet(number(s,"setIndex",0,479).toInt(),kind,number(s,"ordinal",1,20).toInt(),
-                    weight,number(s,"reps",1,100).toInt(),optionalRir(s),number(s,"exerciseIndex",0,47).toInt())
+                    weight,reps,optionalRir(s),number(s,"exerciseIndex",0,47).toInt(),failed)
             }
             require(sets.map { it.setIndex }==sets.indices.toList() && sets.zipWithNext().all { (a,b)->
                 a.exerciseIndex*20+a.ordinal<b.exerciseIndex*20+b.ordinal })

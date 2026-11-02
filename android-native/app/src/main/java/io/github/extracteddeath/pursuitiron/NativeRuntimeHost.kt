@@ -424,7 +424,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         if(current.workoutBusy || current.workoutBlocked || progress.journal.isFinished)return
         // A blank load is never turned into zero; target RIR is never actual RIR.
         val values=intent.values
-        if(intent.disposition==JournalSetDisposition.COMPLETED && (values?.load==null || values.unit!=progress.plan.session.unit || values.reps !in 1..100))return
+        if(intent.disposition==JournalSetDisposition.COMPLETED && !NativeWorkoutCodec.acceptsValues(progress.plan,intent.slot,values))return
         val owner=store ?: return;val recovery=journal ?: return
         mutable.update { it.copy(workoutBusy=true,workoutError=null) }
         scope.launch {

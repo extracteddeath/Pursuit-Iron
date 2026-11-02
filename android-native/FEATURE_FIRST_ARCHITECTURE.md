@@ -2,6 +2,13 @@
 
 ## Product decision
 
+The user has scheduled a complete Kotlin engine rebuild after native integration
+is certified. [ENGINE_REBUILD_PLAN.md](ENGINE_REBUILD_PLAN.md) defines that gate,
+scope and rule-based acceptance. The latest
+[DEVELOPMENT_CHECKPOINT.md](DEVELOPMENT_CHECKPOINT.md) is the implementation status;
+the dated execution notes below are historical. Current JS parity checks verify
+integration compatibility and do not certify training correctness.
+
 The current Pursuit Iron web application is a **behavioral reference and data authority**, not a pixel, component or navigation specification. Native Android is allowed to reorganize, combine, simplify or completely replace screen layouts where doing so materially improves training. No screen-by-screen cloning mandate. The live web app continues independently.
 
 **A feature is preserved when an actual end-to-end user scenario and its invariants pass**: input, calculation, displayed prescription, user ownership, persistence, resume, correction, accessibility and history interpretation. Screenshots alone do not prove preservation.
@@ -61,9 +68,16 @@ C. Read-only data bridge with canonical historical projections and safe preview 
 D. Real Workout vertical slice with transactional set logging, failure recovery and device tests.
 E. Program authoring, insights, library and full-feature acceptance; then release readiness.
 
-## Future Kotlin engine without an all-at-once rewrite
+## Existing migration router and the scheduled engine rebuild
 
-The `domain-contract` package now defines typed `ProgressionPreviewInput`, `ProgressionPreviewResult` and `ParityGatedProgressionRouter` contracts. Read-only fixed JS golden fixtures in `engine-contract/` are regression-checked in source CI. Certified Kotlin backends may eventually replace JS per feature when they exactly match protocol version, pinned source digest and independent fixture digest. No Kotlin training formulas are in production; feature routing currently has no certified runtime backend.
+The `domain-contract` package defines typed `ProgressionPreviewInput`,
+`ProgressionPreviewResult` and `ParityGatedProgressionRouter` contracts. Their
+current JS fixtures and pinned source digests verify migration compatibility.
+The scheduled full Kotlin replacement will use the independent rule-based
+certification in `ENGINE_REBUILD_PLAN.md`, including intentional corrections to
+existing engine behavior. The migration router stays fail-closed until that
+replacement is implemented and certified. No production Kotlin training formulas
+are introduced by this planning change.
 
 ## Next data milestone: canonical v13 saved-program reference (not yet enabled)
 

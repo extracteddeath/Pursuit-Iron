@@ -1,7 +1,8 @@
 /** Owned native history only. Canonical JS owns summaries, mirrors and records. */
-import { parseStoredData,normalizeEditedHistoryEntry,perfAfterHistoryReplace,exRecords,EX_BY_ID } from '../../modules/engine-api.js';
+import { parseStoredData,perfAfterHistoryReplace,exRecords,EX_BY_ID } from '../../modules/engine-api.js';
 import { sha256Utf8 as sha,utf8ByteLength,equalJson } from './json-identity.mjs';
 import { readNativeHistoryBasis } from './native-history-basis.mjs';
+import { normalizeNativeHistoryEntry } from './native-history-normalization.mjs';
 
 const object=v=>v!==null && typeof v==='object' && !Array.isArray(v);
 const own=(v,k)=>Object.prototype.hasOwnProperty.call(v,k);
@@ -55,7 +56,7 @@ function mappedSets(entry) {
     const key=`${s.exerciseIndex}:${s.setIndex}`;ensure(!positions.has(key));positions.add(key);
     ensure(event.disposition==='SKIPPED' ? v===null : event.disposition==='COMPLETED' &&
       exact(v,['load','unit','reps','rir']) && load(v.load) && v.unit===entry.unit &&
-      integer(v.reps,1,100) && (v.rir===null || integer(v.rir,0,10)));
+      integer(v.reps,0,100) && (v.rir===null || integer(v.rir,0,10)));
   }
   let locations=null;
   if(own(entry,'nativeSetLocations')) {
@@ -77,7 +78,8 @@ function mappedSets(entry) {
       (locations || !p.duplicateExerciseSlots && p.sets.length<=20) && integer(p.prescription?.sets,1,20));
     const slots=new Set();let previous=-1;
     for(const [setIndex,set] of p.sets.entries()) {
-      ensure(!set.warm && integer(set.r,1,100) && Number.isFinite(set.w) && set.w>=0 &&
+      ensure(!set.warm && integer(set.r,0,100) && Number.isFinite(set.w) && set.w>=0 &&
+        (set.r>0 || set.failedAttempt===true && !set.sub && set.w>0) &&
         (!set.sub || ['myo','drop'].includes(set.kind)));
       const location=locations?.get(`${exerciseId}:${setIndex}`);
       ensure(!locations || location);
@@ -101,6 +103,7 @@ function mappedSets(entry) {
     else ensure(slots.size===1);
   }
   ensure(out.length<=480 && (!locations || locations.size===out.length));
+  events.forEach((event,index)=>{if(event.disposition==='COMPLETED' && event.values.reps===0)ensure(used.has(index));});
   return out;
 }
 /** Snapshot-bound pages of owned native completions; never a backup/import reader. */
@@ -159,10 +162,12 @@ export function inspectNativeHistory(rawSnapshot,historyId) {
       exercises:Object.keys(entry.perf).map(id=>({id,name:EX_BY_ID[id].name,
         sets:mapped.filter(s=>s.exerciseId===id).map(({setIndex,set,event})=>({setIndex,
           exerciseIndex:event.slot.exerciseIndex,kind:set.sub?set.kind:'working',ordinal:event.slot.setIndex+1,
-          load:event.values.load,reps:event.values.reps,rir:event.values.rir})),
+          load:event.values.load,reps:event.values.reps,rir:event.values.rir,
+          ...(set.r===0?{failedAttempt:true}:{})})),
         record:exRecords(store.history,id,entry.unit).maxWeight})),
       ...(editRows?{editRows:editRows.map(row=>({slot:row.slot,name:EX_BY_ID[row.slot.exerciseId]?.name,
-        kind:row.kind,retained:row.retained,disposition:row.event.disposition,values:row.event.values}))}:{})};
+        kind:row.kind,retained:row.retained,disposition:row.event.disposition,values:row.event.values,
+        ...(row.allowFailedAttempt?{allowFailedAttempt:true}:{})}))}:{})};
   } catch {throw new TypeError('Native history unavailable');}
 }
 function applyObservationChanges(original,request,updatedAt) {
@@ -176,7 +181,8 @@ function applyObservationChanges(original,request,updatedAt) {
     const row=bySlot.get(slotKey(slot));ensure(row && equalJson(row.slot,slot) && !changes.has(slotKey(slot)));
     ensure(change.disposition==='SKIPPED' ? value===null : change.disposition==='COMPLETED' &&
       exact(value,['load','unit','reps','rir']) && load(value.load) && value.unit===original.unit &&
-      integer(value.reps,1,100) && (value.rir===null || integer(value.rir,0,10)));
+      integer(value.reps,0,100) && (value.reps>0 || row.allowFailedAttempt && Number(value.load)>0) &&
+      (value.rir===null || integer(value.rir,0,10)));
     changes.set(slotKey(slot),change);
   }
   ensure([...changes.values()].some(change=>{
@@ -196,6 +202,7 @@ function applyObservationChanges(original,request,updatedAt) {
     }
     const id=row.slot.exerciseId,values=event.values;
     const set={...clone(row.template),w:Number(values.load),r:values.reps,
+      ...(values.reps===0?{failedAttempt:true}:{}),
       ...(values.rir!==null?{rir:values.rir,rirReported:true}:
         own(row.template,'tr')?{rir:row.template.tr,rirReported:false}:{})};
     if(set.decisionTrace)set.decisionTrace.applied={load:set.w,reps:set.r,owner:'user'};
@@ -209,7 +216,7 @@ function applyObservationChanges(original,request,updatedAt) {
   }
   for(const [id,slots] of occurrences)if(slots.length>1)Object.assign(performance[id],
     {prescriptionEdited:true,duplicateExerciseSlots:slots});
-  base.nativeHistoryBasis={format:1,rows:original.nativeHistoryBasis.rows.map(row=>
+  base.nativeHistoryBasis={...clone(original.nativeHistoryBasis),rows:original.nativeHistoryBasis.rows.map(row=>
     ({...clone(row),omitted:omitted.get(row.exerciseIndex)}))};
   base.nativeSetLocations={format:1,sets:locations};
   if(base.nativeSetAdjustments) {
@@ -222,7 +229,7 @@ function applyObservationChanges(original,request,updatedAt) {
   // Actual RIR ownership follows its original slot across insertion/removal.
   // The canonical edit owner still computes every summary and set count.
   base.perf=performance;
-  const corrected=clone(normalizeEditedHistoryEntry(base,draft));
+  const corrected=normalizeNativeHistoryEntry(base,draft);
   ensure(Object.keys(corrected.perf).length===Object.keys(performance).length &&
     Object.entries(performance).every(([id,p])=>corrected.perf[id]?.sets.length===p.sets.length));
   const audit=original.nativeHistoryRevisions || {format:1,events:[]};
@@ -273,7 +280,7 @@ export function prepareNativeHistoryCorrection(currentSnapshot,correctionJson) {
         if(set.decisionTrace?.applied)set.decisionTrace.applied={...set.decisionTrace.applied,
           load:set.w,reps:set.r,owner:'user'};
       }
-      corrected=clone(normalizeEditedHistoryEntry(base,draft));
+      corrected=normalizeNativeHistoryEntry(base,draft);
       ensure(Object.keys(corrected.perf).length===Object.keys(original.perf).length &&
         Object.entries(original.perf).every(([id,p])=>corrected.perf[id]?.sets.length===p.sets.length));
       }

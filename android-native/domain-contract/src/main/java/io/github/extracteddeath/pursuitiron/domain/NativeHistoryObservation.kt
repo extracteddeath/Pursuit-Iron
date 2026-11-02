@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 data class NativeHistoryObservation(val slot: JournalSetSlot,val name: String,val kind: String,
-    val retained: Boolean,val disposition: JournalSetDisposition,val values: JournalSetValues?)
+    val retained: Boolean,val disposition: JournalSetDisposition,val values: JournalSetValues?,val allowFailedAttempt: Boolean=false)
 data class NativeHistoryObservationChange(val slot: JournalSetSlot,val disposition: JournalSetDisposition,
     val values: JournalSetValues?)
 
@@ -26,6 +26,7 @@ object NativeHistoryObservationCodec {
         val weight=wire.text(v,"load");val reps=wire.integer(v,"reps")
         val rir=if(v.isNull("rir"))null else wire.integer(v,"rir").also { require(it in 0..10) }.toInt()
         require(load.matches(weight) && wire.text(v,"unit")==unit && reps in minReps..100)
+        if(reps==0L)require(weight.toBigDecimal().signum()>0)
         return JournalSetValues(weight,unit,reps.toInt(),rir)
     }
     private fun json(value: JournalSetValues?)=value?.let { JSONObject().put("load",it.load)
@@ -34,17 +35,22 @@ object NativeHistoryObservationCodec {
     internal fun readRows(list: JSONArray,unit: String,exercises: List<NativeHistoryExercise>,total: Int,
         done: Int): List<NativeHistoryObservation> {
         require(list.length()==total)
+        val known=exercises.flatMap { ex->ex.sets.map { JournalSetSlot(it.exerciseIndex,it.ordinal-1,ex.id) to it } }.toMap()
         val result=(0 until list.length()).map { i->
-            val row=list.getJSONObject(i);wire.exact(row,"slot","name","kind","retained","disposition","values")
+            val row=list.getJSONObject(i);wire.exact(row,"slot","name","kind","retained","disposition","values",
+                *(if(row.has("allowFailedAttempt"))arrayOf("allowFailedAttempt") else emptyArray()))
             val name=wire.text(row,"name");val kind=wire.text(row,"kind");val location=slot(row.getJSONObject("slot"))
             require(name.length in 1..200 && kind in listOf("working","myo","drop") && row.get("retained") is Boolean)
+            val allowed=row.has("allowFailedAttempt");if(allowed)require(row.get("allowFailedAttempt")==true && kind=="working")
             val disposition=JournalSetDisposition.valueOf(wire.text(row,"disposition"))
-            val value=if(row.isNull("values"))null else values(row.getJSONObject("values"),unit)
+            val value=if(row.isNull("values"))null else values(row.getJSONObject("values"),unit,
+                if(allowed || known[location]?.failedAttempt==true)0 else 1)
             require((disposition==JournalSetDisposition.SKIPPED)==(value==null))
             val retained=row.getBoolean("retained")
             require(!retained || disposition==JournalSetDisposition.COMPLETED)
+            if(value?.reps==0)require(retained && kind=="working" && known[location]?.failedAttempt==true)
             require(disposition!=JournalSetDisposition.COMPLETED || retained || value?.load?.toBigDecimal()?.signum()==0)
-            NativeHistoryObservation(location,name,kind,retained,disposition,value)
+            NativeHistoryObservation(location,name,kind,retained,disposition,value,allowed)
         }
         require(result.count { it.disposition==JournalSetDisposition.COMPLETED }==done &&
             result.map { it.slot }.toSet().size==result.size && result.zipWithNext().all { (a,b)->
@@ -71,10 +77,10 @@ object NativeHistoryObservationCodec {
             changes.size in 1..48 && changes.map { it.slot }.toSet().size==changes.size)
         val list=JSONArray()
         changes.forEach { change->
-            require(rows.any { it.slot==change.slot })
+            val row=rows.single { it.slot==change.slot }
             val value=json(change.values)
             if(change.disposition==JournalSetDisposition.SKIPPED)require(change.values==null)
-            else values(value as JSONObject,history.unit)
+            else values(value as JSONObject,history.unit,if(row.allowFailedAttempt)0 else 1)
             list.put(JSONObject().put("slot",json(change.slot)).put("disposition",change.disposition.name).put("values",value))
         }
         return JSONObject().put("format",2).put("operationId",operationId).put("snapshotSha256",history.snapshotSha256)
@@ -101,14 +107,20 @@ object NativeHistoryObservationCodec {
         for(key in listOf("w","r","rir","rirReported","failedAttempt"))remove(key)
         optJSONObject("decisionTrace")?.remove("applied")
     }
+    private fun basis(value: JSONObject): JSONObject {
+        val result=value.getJSONObject("nativeHistoryBasis");val format=wire.integer(result,"format")
+        require(format in 1..2)
+        wire.exact(result,"format","rows",*(if(format==2L)arrayOf("allowFailedAttempts") else emptyArray()))
+        if(format==2L)require(result.get("allowFailedAttempts") is Boolean)
+        return result
+    }
     private fun templates(value: JSONObject,allowAttempts: Boolean=false): Map<JournalSetSlot,JSONObject> {
         val result=mutableMapOf<JournalSetSlot,JSONObject>()
         val rawObservations=value.getJSONObject("nativeSetObservations").getJSONArray("events")
         val observations=(0 until rawObservations.length()).map { rawObservations.getJSONObject(it) }.associateBy {
             wire.exact(it,"slot","disposition","values");slot(it.getJSONObject("slot")) }
         require(observations.size==rawObservations.length())
-        val basis=value.getJSONObject("nativeHistoryBasis");wire.exact(basis,"format","rows")
-        require(wire.integer(basis,"format")==1L)
+        val basis=basis(value)
         val rows=basis.getJSONArray("rows")
         require(rows.length() in 1..48)
         for(i in 0 until rows.length()) {
@@ -142,9 +154,11 @@ object NativeHistoryObservationCodec {
             val sets=value.getJSONObject("perf").getJSONObject(id).getJSONArray("sets")
             val set=sets.getJSONObject(index.toInt());val observation=checkNotNull(observations[key])
             require(observation.getString("disposition")=="COMPLETED")
-            val actual=values(observation.getJSONObject("values"),value.getString("unit"),if(allowAttempts)0 else 1)
+            val actual=values(observation.getJSONObject("values"),value.getString("unit"),
+                if(allowAttempts || set.optBoolean("failedAttempt",false))0 else 1)
             val weight=set.get("w");require(weight is Number && weight.toString().toBigDecimal().compareTo(checkNotNull(actual.load).toBigDecimal())==0 &&
                 wire.integer(set,"r")==actual.reps.toLong())
+            if(actual.reps==0)require(set.get("failedAttempt")==true && !set.optBoolean("warm",false) && !set.optBoolean("sub",false))
             require(!set.has("rirReported") || set.get("rirReported") is Boolean)
             if(set.optBoolean("rirReported",false))require(actual.rir!=null && wire.integer(set,"rir")==actual.rir.toLong())
             else require(actual.rir==null)
@@ -157,8 +171,15 @@ object NativeHistoryObservationCodec {
     }
 
     /** Check a new completion's missing targets against its original issued bytes. */
-    internal fun verifyIssuedBasis(entry: JSONObject,plan: NativeWorkoutPlan) {
+    internal fun verifyIssuedBasis(entry: JSONObject,plan: NativeWorkoutPlan,origin: String) {
         val evidence=templates(entry,allowAttempts=true);require(evidence.keys==plan.slots.toSet())
+        val basis=basis(entry)
+        if(wire.integer(basis,"format")==2L) {
+            val saved=JSONObject(origin).getJSONArray("saved")
+            val program=(0 until saved.length()).map { saved.getJSONObject(it) }
+                .single { it.getString("id")==plan.session.programRevision.programId }
+            require(basis.getBoolean("allowFailedAttempts")==(program.getJSONObject("config").opt("percentScheme")=="gzclp"))
+        }
         val rows=entry.getJSONObject("nativeHistoryBasis").getJSONArray("rows")
         val issued=JSONObject(plan.issuedJson).getJSONArray("rows")
         require(rows.length()==plan.exercises.size)
@@ -185,11 +206,13 @@ object NativeHistoryObservationCodec {
     internal fun verifyPreparation(snapshot: String,candidate: String,request: JSONObject,already: Boolean) {
         require(wire.integer(request,"format")==2L)
         val id=wire.text(request,"historyId");val after=entry(candidate,id)
+        val afterBasis=basis(after);val allowZero=afterBasis.optBoolean("allowFailedAttempts",false)
         val changes=request.getJSONArray("changes");require(changes.length() in 1..48)
         val actual=after.getJSONObject("nativeSetObservations").getJSONArray("events")
         val requested=(0 until changes.length()).map { changes.getJSONObject(it) }.associateBy { slot(it.getJSONObject("slot")) }
         require(requested.size==changes.length())
         requested.forEach { (key,change)->
+            if(change.get("disposition")=="COMPLETED")values(change.getJSONObject("values"),after.getString("unit"),if(allowZero)0 else 1)
             val match=(0 until actual.length()).map { actual.getJSONObject(it) }.single { slot(it.getJSONObject("slot"))==key }
             require(same(match.get("disposition"),change.get("disposition")) && same(match.get("values"),change.get("values")))
         }
@@ -201,7 +224,7 @@ object NativeHistoryObservationCodec {
             val old=prior.getJSONObject(i);val next=actual.getJSONObject(i);val key=slot(old.getJSONObject("slot"))
             wire.exact(next,"slot","disposition","values")
             if(next.get("disposition")=="SKIPPED")require(next.isNull("values"))
-            else { require(next.get("disposition")=="COMPLETED");values(next.getJSONObject("values"),after.getString("unit")) }
+            else { require(next.get("disposition")=="COMPLETED");values(next.getJSONObject("values"),after.getString("unit"),0) }
             require(same(old.get("slot"),next.get("slot")))
             if(key !in requested)require(same(old,next))
         }
@@ -209,8 +232,11 @@ object NativeHistoryObservationCodec {
             "durationMin","nativeCompletion","nativeSetRevisions","sessionLengthPlan","timeLimited","prescriptionEdited")) {
             require(before.has(key)==after.has(key));if(before.has(key))require(same(before.get(key),after.get(key)))
         }
-        val oldBasis=before.getJSONObject("nativeHistoryBasis").getJSONArray("rows")
-        val newBasis=after.getJSONObject("nativeHistoryBasis").getJSONArray("rows")
+        val oldPolicy=basis(before)
+        require(oldPolicy.get("format")==afterBasis.get("format") && oldPolicy.has("allowFailedAttempts")==afterBasis.has("allowFailedAttempts"))
+        if(oldPolicy.has("allowFailedAttempts"))require(oldPolicy.get("allowFailedAttempts")==afterBasis.get("allowFailedAttempts"))
+        val oldBasis=oldPolicy.getJSONArray("rows")
+        val newBasis=afterBasis.getJSONArray("rows")
         require(oldBasis.length()==newBasis.length())
         for(i in 0 until oldBasis.length())for(key in listOf("exerciseIndex","exerciseId","setCount","performance"))
             require(same(oldBasis.getJSONObject(i).get(key),newBasis.getJSONObject(i).get(key)))

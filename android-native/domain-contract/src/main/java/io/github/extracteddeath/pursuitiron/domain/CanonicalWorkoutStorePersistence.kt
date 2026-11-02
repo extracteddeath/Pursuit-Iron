@@ -386,7 +386,7 @@ class CanonicalWorkoutStorePersistence(
         if(entry.has("nativeSetLocations"))checkSetLocations(entry,
             NativeWorkoutCodec.readIssued(requireNotNull(pending.issuedWorkout)),journal)
         if(entry.has("nativeHistoryBasis"))NativeHistoryObservationCodec.verifyIssuedBasis(entry,
-            NativeWorkoutCodec.readIssued(requireNotNull(pending.issuedWorkout)))
+            NativeWorkoutCodec.readIssued(requireNotNull(pending.issuedWorkout)),pending.origin)
         val annotated=journal.events.any { it.intent.adjustment!=null }
         if(annotated) {
             val data=entry.getJSONObject("nativeSetAdjustments")

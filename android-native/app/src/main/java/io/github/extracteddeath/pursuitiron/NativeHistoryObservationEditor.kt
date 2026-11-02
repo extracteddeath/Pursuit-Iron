@@ -9,7 +9,8 @@ import io.github.extracteddeath.pursuitiron.domain.*
 import java.util.UUID
 
 internal fun historyObservationLabel(history: NativeWorkoutHistory,row: NativeHistoryObservation): String {
-    if(row.kind=="working")return "Set ${row.slot.setIndex+1}"
+    if(row.kind=="working")return "Set ${row.slot.setIndex+1}"+
+        if(row.values?.reps==0)" · Failed attempt" else ""
     val ordinal=history.editRows.orEmpty().count { it.slot.exerciseIndex==row.slot.exerciseIndex &&
         it.kind==row.kind && it.slot.setIndex<=row.slot.setIndex }
     return if(row.kind=="myo")"Myo-rep mini $ordinal" else "Drop set $ordinal"
@@ -35,7 +36,9 @@ internal fun NativeHistoryObservationEditor(history: NativeWorkoutHistory,row: N
         {load=it;command=null},{reps=it;command=null},{rir=it;command=null})
     val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
     val valid=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")) &&
-        repCount!=null && repCount in 1..100 && (rir.isEmpty() || effort!=null && effort in 0..10)
+        repCount!=null && repCount in (if(row.allowFailedAttempt)0 else 1)..100 &&
+        (repCount>0 || load.toBigDecimalOrNull()?.signum()==1) && (rir.isEmpty() || effort!=null && effort in 0..10)
+    if(row.allowFailedAttempt)Text("0 reps records a failed attempt.",style=MaterialTheme.typography.bodySmall)
     val entered=load.toBigDecimalOrNull();val previous=actual?.load?.toBigDecimalOrNull()
     val changed=skipped || entered==null || previous==null || entered.compareTo(previous)!=0 ||
         repCount!=actual?.reps || effort!=actual?.rir

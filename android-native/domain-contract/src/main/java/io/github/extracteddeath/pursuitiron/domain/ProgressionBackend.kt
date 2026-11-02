@@ -1,8 +1,9 @@
 package io.github.extracteddeath.pursuitiron.domain
 
 /**
- * Language-neutral feature gateway. Canonical JS is the benchmark; Kotlin may
- * replace an individual feature only after matching that benchmark.
+ * Migration compatibility gateway. The later full Kotlin rebuild uses explicit
+ * rule-based acceptance (ENGINE_REBUILD_PLAN.md); JS output parity alone is not
+ * evidence that a training decision is correct. Keep this gate fail-closed.
  * This is a read-only preview operation, NOT the workout logging engine.
  */
 enum class EngineImplementation { CANONICAL_JS, NATIVE_KOTLIN }

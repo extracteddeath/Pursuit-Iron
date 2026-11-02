@@ -27,5 +27,6 @@ run(node,['--check',bundle]);
 run(node,['android-native/engine-bridge/verify-bundle-structure.mjs',bundle,metadata,snapshot]);
 run(node,['android-native/engine-bridge/native-history-test.mjs',bundle]);
 run(node,['android-native/engine-bridge/native-history-observation-test.mjs',bundle]);
+run(node,['android-native/engine-bridge/native-failed-attempt-test.mjs',bundle]);
 run(node,['android-native/engine-contract/create-bundle-manifest.mjs',snapshot,bundle,
   path.join(output,'canonical-engine-manifest.json')]);

@@ -247,7 +247,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
     ...(issued ? {nativeSetObservations:{format:1,events:events.map(event=>({
       slot:event.slot,disposition:event.disposition,values:event.values}))}} : {}),
     ...(issued ? {nativeSetLocations:{format:1,sets:locations}} : {}),
-    ...(issued ? {nativeHistoryBasis:{format:1,rows:basisRows}} : {}),
+    ...(issued ? {nativeHistoryBasis:{format:2,allowFailedAttempts:program.config.percentScheme==='gzclp',rows:basisRows}} : {}),
     ...(journal.format===4 ? {nativeSetAdjustments:{format:1,events:events
       .filter(event=>event.adjustment!==null)
       .map(event=>({slot:event.slot,action:event.adjustment.action,part:event.adjustment.part}))}} : {}),
@@ -287,6 +287,9 @@ export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw
       // journal, without rewriting the already-published history or its bytes.
       if(existing.length===1)for(const field of ['nativeSetLocations','nativeHistoryBasis'])
         if(!own(existing[0],field))delete entry[field];
+      if(existing[0]?.nativeHistoryBasis?.format===1 && entry.nativeHistoryBasis?.format===2) {
+        delete entry.nativeHistoryBasis.allowFailedAttempts;entry.nativeHistoryBasis.format=1;
+      }
       ensure(existing.length === 1 && equalJson(existing[0], entry));
       candidateRaw = currentRaw;
     } else {

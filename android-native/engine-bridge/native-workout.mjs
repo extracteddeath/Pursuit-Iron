@@ -79,7 +79,8 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
   const result=JSON.parse(JSON.stringify({format:shortened?2:1,source:NATIVE_WORKOUT_SOURCE,preparedOnly:true,persisted:false,
     inputStartSha256:sha256Utf8(startJson),session:{reference,workoutId:start.workoutId,dayId:day.id,
       weekIndex,unit,startedAt:start.startedAt},programName:program.name,dayLabel:day.label,
-    ...(sessionLengthPlan?{sessionLengthPlan}:{}),rows}));
+    ...(sessionLengthPlan?{sessionLengthPlan}:{}),
+    ...(program.config.percentScheme==='gzclp'?{allowFailedAttempts:true}:{}),rows}));
   issuedNativeWorkoutFrom(rawSnapshot,JSON.stringify(result));
   return result;
 }
@@ -141,7 +142,8 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
   ensure(bounded(issuedRaw,MAX_ISSUED_WORKOUT_BYTES));
   const p=JSON.parse(issuedRaw);
   ensure([1,2].includes(p?.format) && exact(p,['format','source','preparedOnly','persisted','inputStartSha256',
-    'session','programName','dayLabel',...(p.format===2?['sessionLengthPlan']:[]),'rows']) &&
+    'session','programName','dayLabel',...(p.format===2?['sessionLengthPlan']:[]),
+    ...(Object.hasOwn(p,'allowFailedAttempts')?['allowFailedAttempts']:[]),'rows']) &&
     p.source===NATIVE_WORKOUT_SOURCE && p.preparedOnly===true && p.persisted===false &&
     typeof p.inputStartSha256==='string' && /^[0-9a-f]{64}$/.test(p.inputStartSha256));
   const s=p.session;
@@ -150,6 +152,7 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
     integer(s.weekIndex,1,104) && ['lb','kg'].includes(s.unit) && integer(s.startedAt,1,8_640_000_000_000_000));
   const store=parseStoredData(originRaw),program=store.saved.find(row=>row.id===s.reference.programId);
   ensure(validDeloads(program));
+  ensure(!Object.hasOwn(p,'allowFailedAttempts') || p.allowFailedAttempts===true && program.config.percentScheme==='gzclp');
   const day=program.days.find(row=>row.id===s.dayId);
   const lengthPlan=p.format===2 && day && planShorterSession(program,day,s.weekIndex,p.sessionLengthPlan?.minutes);
   ensure(p.format===1 || lengthPlan?.fits===true && equalJson(lengthPlan,p.sessionLengthPlan));

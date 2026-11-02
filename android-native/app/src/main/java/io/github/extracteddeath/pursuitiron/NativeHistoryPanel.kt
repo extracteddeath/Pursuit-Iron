@@ -13,7 +13,7 @@ import java.text.DateFormat
 private fun historyDateLabel(date: Long)=DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT).format(Date(date))
 
 private fun historySetLabel(exercise: NativeHistoryExercise,set: NativeHistorySet): String {
-    if(set.kind=="working")return "Set ${set.ordinal}"
+    if(set.kind=="working")return "Set ${set.ordinal}"+if(set.failedAttempt)" · Failed attempt" else ""
     val number=exercise.sets.count { it.exerciseIndex==set.exerciseIndex && it.kind==set.kind && it.setIndex<=set.setIndex }
     return if(set.kind=="myo")"Myo-rep mini $number" else "Drop set $number"
 }
@@ -56,7 +56,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
                     Text(summary.dayLabel,style=MaterialTheme.typography.titleMedium)
                     Text(historyDateLabel(summary.date),style=MaterialTheme.typography.bodyMedium)
                     Text("${summary.programName} · Week ${summary.weekIndex}",style=MaterialTheme.typography.bodySmall)
-                    Text("${summary.setsDone} completed · ${summary.totalSets-summary.setsDone} skipped · ${summary.volume} ${summary.unit} volume",
+                    Text("${summary.setsDone} recorded · ${summary.totalSets-summary.setsDone} skipped · ${summary.volume} ${summary.unit} volume",
                         style=MaterialTheme.typography.bodySmall)
                     if(summary.detailsAvailable)FilledTonalButton(onClick={onOpen(summary.historyId)},
                         enabled=!state.historyBusy && !state.workoutBusy,modifier=Modifier.fillMaxWidth()) { Text("Review workout") }
@@ -83,7 +83,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     Text(history.dayLabel,style=MaterialTheme.typography.headlineSmall)
     Text("${historyDateLabel(history.date)} · Week ${history.weekIndex}",style=MaterialTheme.typography.bodyMedium)
     if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
-    Text("${history.setsDone} completed · ${history.totalSets-history.setsDone} skipped · ${history.volume} ${history.unit} volume",
+    Text("${history.setsDone} recorded · ${history.totalSets-history.setsDone} skipped · ${history.volume} ${history.unit} volume",
         style=MaterialTheme.typography.bodyMedium)
     if(state.workout!=null)Text("Finish your active workout before correcting saved history.",
         style=MaterialTheme.typography.bodySmall)

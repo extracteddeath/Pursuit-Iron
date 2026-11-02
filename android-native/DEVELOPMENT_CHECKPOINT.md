@@ -331,11 +331,60 @@ post-commit crash/restart/retry, active-workout write rejection and coherent
 transport tampering of targets, observations, audits and saved programs. Read
 fresh Kotlin/Compose/runtime CI for the pushed revision. No APK is produced.
 
+## User direction: integrated native system, then full Kotlin rebuild
+
+The user explicitly wants the whole engine rebuilt after the native system meets
+fully integrated acceptance standards. The current engine has reported training
+and programming defects. JS parity is integration/compatibility evidence only;
+it must not be used as the sole correctness oracle for the replacement.
+`ENGINE_REBUILD_PLAN.md` records the integration gate, complete domain scope,
+independent regression requirements, data migration boundaries and rebuild order.
+The full engine replacement has not started. Integration and Android acceptance
+remain incomplete; required features cannot be counted complete from demo UI.
+
+## Follow-up: factual zero-rep attempts through the native journey
+
+Fresh GZCLP-issued working sets carry an explicit failed-attempt capability.
+Issuance decoding checks it against the owned source program. Live entry, active
+correction and the runtime writer all enforce the pinned per-slot capability and
+a positive load. Extensions and ordinary programs do not acquire it. A zero-rep
+entry is labeled as a failed attempt, with zero successful repetitions.
+
+New version-2 `nativeHistoryBasis` annotations pin the same source capability at
+completion. The atomic owner checks it against the original source snapshot;
+format-1 bases and previously issued bytes remain readable. An old committed
+completion still acknowledges its original handoff without a rewrite.
+
+Native history now reads and corrects failed attempts, including changes among
+failed, successful and skipped observations. Original working positions, targets,
+active audit, correction receipts and completion identity remain intact. Failed
+attempts contribute no invented successful rep, tonnage or working-set PR.
+Last displays the zero-rep attempt with its original position. Summary counts use
+"recorded" to include resolved attempts without calling them successful work.
+
+The existing canonical positive-rep edit helper drops zero-rep rows. A bounded
+native evidence normalizer preserves verified failed facts around that helper;
+positive summaries remain canonical, and an all-failed summary retains zero reps
+and the heaviest actual failed load. It makes no prescription/progression choices.
+The web engine modules and release package are unchanged. This data adapter is
+part of integration, not the planned Kotlin engine rebuild or certification of
+the current engine's training rules.
+
+Local verification passes 44 native/canonical and targeted regression suites,
+plus the actual Android IIFE with the canonical source digest unchanged.
+Source/IIFE coverage checks kg/lb, mixed and all-failed work, extensions, repeated
+occurrences, original targets, legacy acknowledgement, positive/skip/failure edits,
+invalid permissions/zero loads and next-session replay. JVM coverage adds issued
+permission checks, active logging/correction, restart, lost completion/edit
+acknowledgements, saved corrections, no phantom PR and a full rotation back to
+the failed lift. Read fresh CI for the published revision. No APK is produced.
+
 ## Next work
 
-Calendar views and richer training analytics, saved-history correction of
-zero-rep failed attempts, broader native session-adjustment
+Calendar views and richer training analytics, broader native session-adjustment
 controls and imported web history remain separate
 milestones. Physical-device interaction, interruption and accessibility
 acceptance is still required for the complete agreed journey; preserve the APK
 freeze until its release gate has the required evidence.
+The full Kotlin engine rebuild follows the integrated-system gate in
+`ENGINE_REBUILD_PLAN.md`; current parity success does not close that gate.

@@ -153,7 +153,7 @@ assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId)') &&
 
 assert.ok(train.includes('set.isExtension') &&
   train.includes('set.extensionRestSeconds?.let') &&
-  train.includes('if(set.isExtension)"Complete extension" else "Complete set"') &&
+  train.includes('if(set.isExtension)"Complete extension"') && train.includes('else "Complete set"') &&
   train.includes('if(focusMode)exercise.sets.firstOrNull { it.slot !in committedSlots }') &&
   train.includes('activeExtension ?: exercise.restSeconds'),
   'Myo/drop extensions must remain independently visible, loggable and rest-aware');
@@ -246,3 +246,8 @@ assert.ok(historyUi.includes('NativeHistoryObservationEditor(history,observation
   observationEditor.includes('Mark this saved set as skipped?') &&
   !observationEditor.includes('commitAtomically') && !observationEditor.includes('set.target'),
   'Saved skip/zero edits use explicit actuals, original slots, shared controls and exact atomic-owner retries');
+assert.ok(train.includes('"Record failed attempt"') && train.includes('set.allowFailedAttempt') &&
+  host.includes('NativeWorkoutCodec.acceptsValues(progress.plan,intent.slot,values)') &&
+  activeEdit.includes('set.allowFailedAttempt') && observationEditor.includes('row.allowFailedAttempt') &&
+  observationEditor.includes('0 reps records a failed attempt.'),
+  'Zero-rep entry, active edits and saved edits must use issued eligibility and label the attempt explicitly');

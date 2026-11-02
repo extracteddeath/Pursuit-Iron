@@ -256,7 +256,7 @@ internal fun NativeWorkoutScreen(
         AlertDialog(
             onDismissRequest={showFinishReview=false},
             title={Text("Finish this workout?")},
-            text={Text("${journal.completed.size-skipped} completed · $skipped skipped · ${journal.completed.size} of ${plan.slots.size} sets saved. Finishing publishes these observations to training history.")},
+            text={Text("${journal.completed.size-skipped} recorded · $skipped skipped · ${journal.completed.size} of ${plan.slots.size} sets saved. Finishing publishes these observations to training history.")},
             confirmButton={Button(onClick={showFinishReview=false;onFinish()},
                 enabled=!state.workoutBusy && !state.historyBusy) { Text("Finish workout") }},
             dismissButton={TextButton(onClick={showFinishReview=false}) { Text("Keep training") }}
@@ -298,7 +298,7 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
         if(commit!=null) {
             if(commit.intent.disposition==JournalSetDisposition.SKIPPED)Text("Skipped · saved")
             else commit.intent.values?.let { value->
-                Text("${value.load} ${value.unit} × ${value.reps} · saved")
+                Text((if(value.reps==0)"Failed attempt · " else "")+"${value.load} ${value.unit} × ${value.reps} · saved")
                 Text(value.rir?.let { "$it RIR reported" } ?: "RIR not reported",style=MaterialTheme.typography.bodySmall)
             }
             NativeActiveSetCorrection(session,set,commit,busy,error,onCorrect)
@@ -308,9 +308,10 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
             val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
             Button(onClick={onRecord(set.slot,JournalSetDisposition.COMPLETED,
                 JournalSetValues(load,session.unit,checkNotNull(repCount),effort))},
-                enabled=!busy && validLoad && repCount!=null && repCount in 1..100 &&
+                enabled=!busy && validLoad && repCount!=null && repCount in (if(set.allowFailedAttempt)0 else 1)..100 &&
+                    (repCount>0 || load.toBigDecimalOrNull()?.signum()==1) &&
                     (rir.isEmpty() || effort!=null && effort in 0..10),modifier=Modifier.fillMaxWidth()) {
-                Text(if(set.isExtension)"Complete extension" else "Complete set")
+                Text(if(set.isExtension)"Complete extension" else if(repCount==0)"Record failed attempt" else "Complete set")
             }
             TextButton(onClick={showSkipConfirmation=true},enabled=!busy) { Text(if(set.isExtension)"Skip extension" else "Skip set") }
         }

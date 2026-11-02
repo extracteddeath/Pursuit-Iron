@@ -27,7 +27,8 @@ export function nativePerformanceTemplate(performance) {
 /** Every original slot resolves once, from retained evidence or an omitted template. */
 export function readNativeHistoryBasis(entry,mapped) {
   const basis=entry.nativeHistoryBasis;
-  ensure(exact(basis,['format','rows']) && basis.format===1 && Array.isArray(basis.rows) &&
+  ensure([1,2].includes(basis?.format) && exact(basis,['format','rows',...(basis.format===2?['allowFailedAttempts']:[])]) &&
+    (basis.format===1 || typeof basis.allowFailedAttempts==='boolean') && Array.isArray(basis.rows) &&
     basis.rows.length>=1 && basis.rows.length<=48 && entry.nativeSetLocations?.format===1);
   const events=entry.nativeSetObservations.events;
   ensure(events.length===entry.totalSets && events.filter(e=>e.disposition==='COMPLETED').length===entry.setsDone);
@@ -65,7 +66,8 @@ export function readNativeHistoryBasis(entry,mapped) {
       }
       if(!saved && observation.event.disposition==='COMPLETED')ensure(Number(observation.event.values.load)===0);
       result.push({slot,template,performance:row.performance,kind:sub?template.kind:'working',
-        retained:!!saved,perfIndex:saved?.setIndex ?? null,...observation});
+        retained:!!saved,perfIndex:saved?.setIndex ?? null,
+        allowFailedAttempt:basis.format===2 && basis.allowFailedAttempts && !sub,...observation});
     }
   }
   ensure(result.length===events.length && new Set(result.map(row=>key(row.slot))).size===events.length);

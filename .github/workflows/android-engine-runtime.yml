@@ -46,3 +46,11 @@ jobs:
       - name: Verify sandbox JVM tests and compile Java instrumentation sources (no APK)
         working-directory: android-native
         run: gradle :engine-runtime:testDebugUnitTest :engine-runtime:compileDebugAndroidTestJavaWithJavac --no-daemon --stacktrace
+
+      - name: Print failed runtime test details
+        if: failure()
+        run: |
+          for report in android-native/engine-runtime/build/test-results/testDebugUnitTest/TEST-*.xml; do
+            [ -f "$report" ] || continue
+            grep -A 18 -B 2 '<failure' "$report" || true
+          done

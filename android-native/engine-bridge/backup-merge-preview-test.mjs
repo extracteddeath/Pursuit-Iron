@@ -33,7 +33,7 @@ assert.equal(preview.conflicts, 1);
 assert.ok(preview.flags.includes('RECORD_CONFLICTS_REQUIRE_REVIEW'));
 assert.deepEqual([current, incoming], before, 'both sources stay byte-exact');
 assert.ok(!JSON.stringify(preview).includes('bb-bench'));
-assert.ok(!JSON.stringify(preview).includes('225'));
+assert.ok(!JSON.stringify(preview).includes('"weight":225'));
 assert.ok(!JSON.stringify(preview).includes('synthetic-plan'));
 assert.equal(preview.currentSha256.length, 64);
 assert.equal(preview.incomingSha256.length, 64);

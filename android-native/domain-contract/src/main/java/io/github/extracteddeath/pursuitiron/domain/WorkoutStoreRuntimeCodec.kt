@@ -60,6 +60,12 @@ object WorkoutStoreRuntimeCodec {
         require(integer(request,"protocolVersion")==1L && identifier.matches(text(request,"id")))
         val p=request.getJSONObject("params")
         when (text(request,"method")) {
+            "prepareBackupMerge" -> {
+                exact(p,"currentSnapshot","incomingSnapshot","expectedCandidateSha256")
+                bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES)
+                bounded(text(p,"incomingSnapshot"),MAX_SNAPSHOT_BYTES)
+                require(text(p,"expectedCandidateSha256").matches(Regex("^[0-9a-f]{64}$")))
+            }
             "previewBackupMerge" -> {
                 exact(p,"currentSnapshot","incomingSnapshot")
                 bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES)

@@ -1507,3 +1507,14 @@ slot indices. Source interaction checks require wired group controls. The
 canonical JS save planner still owns the final verification; this pass does
 not alter the existing training engine, exercise prescriptions or log data.
 No APK is generated; no live web or other developer branch is modified.
+
+## 2026-11-02 — User-authorized installable smoke milestone
+
+The explicit APK threshold changed to onboarding -> saved program -> real
+workout screen. An isolated preview workflow is allowed to assemble one
+debug-signed `.preview` package with verified canonical source assets after
+rerunning onboarding, workout and UI tests. This does not imply physical
+Android-device success, completion acceptance, engine rewrite or production
+release. Normal source CI remains no-APK and the instrumentation-device
+workflow remains disabled. The existing web and other native branches are
+untouched.

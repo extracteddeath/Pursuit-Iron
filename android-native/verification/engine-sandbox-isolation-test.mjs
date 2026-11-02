@@ -48,15 +48,17 @@ assert.ok(!device.includes('  push:') &&
   'APK-producing device proof must remain disabled until the full E2E milestone');
 assert.ok(!device.includes("'android-native/engine-runtime/**'"),
   'Routine sandbox source commits cannot trigger an emulator');
-assert.ok(apk.includes('if: ${{ false }}') && !apk.includes('  push:'),
-  'Preview APK job must remain disabled even for manual workflow dispatch');
+assert.ok(apk.includes("      - '.github/workflows/android-native-preview.yml'") &&
+  apk.includes("github.ref == 'refs/heads/architecture/android-compose-foundation'") &&
+  apk.includes('Gate onboarding to real workout screen'),
+  'Preview APK requires an explicit isolated-workflow milestone and source onboarding gates');
 assert.doesNotMatch(apk, /'android-native\/\*\*'/, 'Routine native commits must not generate APKs');
 assert.match(bundle, /canonical-export\.mjs/);
 assert.match(bundle, /verify-snapshot\.mjs/);
 assert.match(bundle, /verify-parity\.mjs/);
 assert.match(manifest, /approvedForWorkoutExecution: false/);
 assert.match(manifest, /androidSandboxParityVerified: false/);
-console.log('PASS Android sandbox is separate, read-only, digest-guarded; milestone emulator and preview-APK pipelines');
+console.log('PASS Android sandbox isolated and digest guarded; one deliberate preview APK milestone, no routine builds');
 
 const kotlinBackend = read('engine-runtime/src/main/java/io/github/extracteddeath/pursuitiron/engine/SandboxProgressionBackend.kt');
 assert.ok(kotlinBackend.includes('certification: FeatureCertification? = null'),

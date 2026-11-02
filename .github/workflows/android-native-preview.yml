@@ -1,8 +1,13 @@
 name: Native Android preview APK (milestone only)
 
-# No push-triggered builds. This workflow is intentionally disabled even
-# for manual dispatch until onboarding -> logging -> workout completion passes.
+# One user-authorized onboarding-to-Train debug milestone. Routine source
+# commits do not produce APKs, only an explicit workflow-file edit does.
 on:
+  push:
+    branches:
+      - architecture/android-compose-foundation
+    paths:
+      - '.github/workflows/android-native-preview.yml'
   workflow_dispatch:
 
 concurrency:
@@ -14,9 +19,8 @@ permissions:
 
 jobs:
   assemble-preview:
-    # Hard stop, including manually requested runs. Release only after the
-    # complete athlete journey is independently certified on the same revision.
-    if: ${{ false }}
+    # Debug tester preview only. No production release or device certification.
+    if: ${{ github.ref == 'refs/heads/architecture/android-compose-foundation' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -39,7 +43,18 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
-      - name: Package pinned canonical read-only engine for debug-only backup schema viewing
+      - name: Gate onboarding to real workout screen
+        run: |
+          node android-native/engine-bridge/native-onboarding-test.mjs
+          node android-native/engine-bridge/native-workout-test.mjs
+          node android-native/engine-bridge/workout-store-protocol-test.mjs
+          node android-native/verification/native-onboarding-interaction-test.mjs
+          node android-native/verification/native-preview-interaction-test.mjs
+          node android-native/verification/no-apk-before-end-to-end-test.mjs
+          grep -Fq 'onStartWorkout={runtime.startWorkout()}' android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/MainActivity.kt
+          grep -Fq 'NativeWorkoutScreen(onboarding,onStartWorkout,' android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativePreviewApp.kt
+          grep -Fq 'fun startWorkout(minutes: Int?=null)' android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeRuntimeHost.kt
+      - name: Package verified canonical engine for debug first run
         run: |
           snapshot="$(mktemp -d)"
           trap 'rm -rf "$snapshot"' EXIT
@@ -66,7 +81,7 @@ jobs:
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: pursuit-iron-native-preview
+          name: pursuit-iron-onboarding-to-train-preview
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30

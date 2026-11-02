@@ -2,7 +2,14 @@
 
 This is a **feature-first native design preview** on a separate development branch. It intentionally does not clone the web layouts. The existing app's features and canonical JS training engine remain the behavioral source of truth.
 
-## APK freeze until the full workout journey is finished
+## User-authorized onboarding-to-Train debug APK (2026-11-02)
+
+A single milestone debug build is now permitted after source verification of
+onboarding, program save and opening the native workout screen. It is a device
+smoke-test package, not a release or device acceptance certificate. The
+production app and the other developer's native branch are unaffected.
+
+## Historical full-journey APK freeze (superseded for this tester milestone)
 
 **No new native Android APKs will be built for the remainder of the
 architecture, onboarding, workout runtime, persistence and completion work.**
@@ -30,7 +37,7 @@ could be installed. They do not authorize new builds before the release gate.
 
 Open the most recent successful **Native Android preview APK** run at
 https://github.com/extracteddeath/Pursuit-Iron/actions/workflows/android-native-preview.yml
-and download the artifact `pursuit-iron-native-preview`. Extract the ZIP and install `app-debug.apk` on Android. It's debug signed with a different certificate on each CI run; to replace an old native preview, uninstall the old **Pursuit Iron Native Preview** first. The package has a separate `.preview` suffix, not the future production identity.
+and download the artifact `pursuit-iron-onboarding-to-train-preview` for the M4 run. Extract the ZIP and install `app-debug.apk` on Android. It's debug signed with a different certificate on each CI run; to replace an old native preview, uninstall the old **Pursuit Iron Native Preview** first. The package has a separate `.preview` suffix, not the future production identity.
 
 Alternatively, open `android-native/` in Android Studio, provision JDK 17, Android SDK 37 and Gradle 9.3.1, and run the debug `app` module.
 

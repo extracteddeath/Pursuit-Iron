@@ -1831,3 +1831,18 @@ reject that tap. The latest-history action still uses the durable receipt and
 reader, not local screen state. Source regression contracts pin both disabled
 states. This changes no saved data, engine calculations or navigation targets;
 no APK.
+
+## 2026-11-02 — Canonical workout write-gate parity
+
+The native runtime now uses one shared fail-closed gate across all live
+journal mutation entry points: recording/correcting working sets, recording
+warm-ups, saving session or pinned exercise notes, skipping/reducing issued
+slots, and finishing. It rejects writes when initialization is incomplete,
+recovery is blocked, program/store operations are active, history I/O or
+backup export is busy, or a workout write is already pending. A journal with
+an acknowledged Finish may still retry its original canonical publication;
+it cannot accept new set or note writes. Saved-history correction and latest-
+completion reading also honor broad blocked/store states. This protects
+against stale UI callbacks and interleaved owned writes without changing
+engine prescriptions, journal formats, existing facts, or finish recovery.
+Source contract coverage was extended. No APK or production merge.

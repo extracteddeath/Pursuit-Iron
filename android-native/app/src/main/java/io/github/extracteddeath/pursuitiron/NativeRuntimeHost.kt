@@ -290,9 +290,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     fun openLatestCompletedWorkout() {
         val current=mutable.value
         val receipt=current.completion ?: return
-        if(!current.ready || current.saved==null || current.busy ||
+        if(!current.ready || current.saved==null || current.busy || current.blocked ||
             current.workout!=null || current.workoutBusy || current.historyBusy ||
-            current.backupExportBusy)return
+            current.backupExportBusy || current.workoutBlocked)return
         val reader=historyReader ?: return
         val id=receipt.session.workoutId
         val filter=NativeHistoryFilter()
@@ -400,7 +400,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     }
     fun correctHistory(correctionJson: String) {
         val current=mutable.value
-        if(!current.ready || current.historyBusy || current.workoutBusy || current.backupExportBusy || current.workout!=null)return
+        if(!current.ready || current.blocked || current.busy || current.workoutBlocked ||
+            current.historyBusy || current.workoutBusy || current.backupExportBusy || current.workout!=null)return
         val owner=store ?: return
         mutable.update { it.copy(historyBusy=true,historyError=null) }
         scope.launch {
@@ -722,8 +723,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     private fun skipSelectedIssuedSlots(adjustment: JournalSetAdjustment?=null,
         select: (WorkoutJournalState)->List<JournalSetSlot>) {
         val current=mutable.value;val progress=current.workout ?: return
-        if(current.workoutBusy || current.historyBusy || current.workoutBlocked ||
-            progress.journal.isFinished || progress.plan.slots!=progress.journal.slots)return
+        if(!canMutateWorkout(current) || progress.plan.slots!=progress.journal.slots)return
         val pending=runCatching { select(progress.journal) }.getOrNull() ?: return
         if(pending.isEmpty())return
         val owner=store ?: return;val recovery=journal ?: return
@@ -753,6 +753,16 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
+    /** All active-session writes share one fail-closed runtime gate. Button
+     * enabled states are not an ownership or concurrency boundary.
+     * A journal already marked finished may only retry canonical Finish.
+     */
+    private fun canMutateWorkout(current: NativeRuntimeState,allowFinished: Boolean=false): Boolean =
+        current.ready && !current.blocked && !current.busy &&
+        !current.workoutBusy && !current.historyBusy &&
+        !current.backupExportBusy && !current.workoutBlocked &&
+        current.workout?.journal?.let { allowFinished || !it.isFinished }==true
+
     fun recordSet(slot: JournalSetSlot,disposition: JournalSetDisposition,values: JournalSetValues?) {
         persistSet(JournalSetIntent("set-"+UUID.randomUUID(),slot,disposition,values))
     }
@@ -764,7 +774,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     private fun persistSet(intent: JournalSetIntent) {
         val current=mutable.value;val progress=current.workout ?: return
-        if(current.workoutBusy || current.workoutBlocked || progress.journal.isFinished)return
+        if(!canMutateWorkout(current))return
         // A blank load is never turned into zero; target RIR is never actual RIR.
         val values=intent.values
         if(intent.disposition==JournalSetDisposition.COMPLETED && !NativeWorkoutCodec.acceptsValues(progress.plan,intent.slot,values))return
@@ -788,7 +798,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     fun saveWarmup(intent: JournalWarmupIntent) {
         val current=mutable.value;val progress=current.workout ?: return
-        if(current.workoutBusy || current.historyBusy || current.workoutBlocked || progress.journal.isFinished ||
+        if(!canMutateWorkout(current) ||
             !NativeWarmupPolicy.valid(intent,progress.plan.session))return
         val owner=store ?: return;val recovery=journal ?: return
         mutable.update {it.copy(workoutBusy=true,warmupError=null)}
@@ -809,7 +819,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     fun saveExerciseNote(edit: JournalExerciseNote) {
         val current=mutable.value;val progress=current.workout ?: return
-        if(current.workoutBusy || current.historyBusy || current.workoutBlocked || progress.journal.isFinished ||
+        if(!canMutateWorkout(current) ||
             !NativeExerciseNotePolicy.valid(edit,progress.plan.session))return
         val owner=store ?: return;val recovery=journal ?: return
         mutable.update {it.copy(workoutBusy=true,exerciseNoteError=null)}
@@ -831,7 +841,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     fun saveSessionNote(text: String) {
         val current=mutable.value;val progress=current.workout ?: return
-        if(current.workoutBusy || current.workoutBlocked || progress.journal.isFinished ||
+        if(!canMutateWorkout(current) ||
             !JournalSessionNoteCodec.validText(text))return
         val owner=store ?: return;val recovery=journal ?: return
         val prior=progress.journal.note
@@ -856,7 +866,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     fun finishWorkout() {
         val current=mutable.value;val progress=current.workout ?: return
-        if(current.workoutBusy || current.historyBusy || current.workoutBlocked || progress.journal.unresolvedCount!=0)return
+        if(!canMutateWorkout(current,allowFinished=true) || progress.journal.unresolvedCount!=0)return
         val owner=store ?: return;val recovery=journal ?: return;val loaded=current.verifier ?: return
         mutable.update { it.copy(workoutBusy=true,workoutError=null) }
         scope.launch {

@@ -813,3 +813,21 @@ assert.ok(train.includes('val canStart=state.ready && !state.busy && !state.bloc
   host.includes('if(!current.ready || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked') &&
   host.includes('if(!current.ready || current.saved==null || current.busy ||'),
   'Train Start and latest-saved-history actions must not offer taps during runtime-blocked store operations');
+
+// UI callbacks must never bypass a single host-level write gate during backup,
+// history I/O, blocked recovery or other canonical store transactions.
+assert.ok(host.includes('private fun canMutateWorkout(current: NativeRuntimeState,allowFinished: Boolean=false): Boolean') &&
+  host.includes('current.ready && !current.blocked && !current.busy &&') &&
+  host.includes('!current.workoutBusy && !current.historyBusy &&') &&
+  host.includes('!current.backupExportBusy && !current.workoutBlocked &&') &&
+  host.includes('allowFinished || !it.isFinished') &&
+  host.includes('if(!canMutateWorkout(current) || progress.plan.slots!=progress.journal.slots)return') &&
+  host.includes('if(!canMutateWorkout(current))return') &&
+  host.includes('if(!canMutateWorkout(current) ||\\n            !NativeWarmupPolicy.valid')===false &&
+  host.includes('if(!canMutateWorkout(current) ||\n            !NativeWarmupPolicy.valid') &&
+  host.includes('if(!canMutateWorkout(current) ||\n            !NativeExerciseNotePolicy.valid') &&
+  host.includes('if(!canMutateWorkout(current) ||\n            !JournalSessionNoteCodec.validText') &&
+  host.includes('if(!canMutateWorkout(current,allowFinished=true) || progress.journal.unresolvedCount!=0)return') &&
+  host.includes('current.historyBusy || current.workoutBusy || current.backupExportBusy || current.workout!=null') &&
+  host.includes('current.backupExportBusy || current.workoutBlocked)return'),
+  'All active workout mutations must fail closed across backup, history and blocked states while preserving finished-journal publication retries');

@@ -25,6 +25,39 @@ const id=v=>typeof v==='string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(v);
 const clock=v=>Number.isSafeInteger(v) && v>0 && v<=8_640_000_000_000_000;
 const ensure=v=>{if(!v) throw new TypeError('Native program setup rejected');};
 
+// Only explicitly owned physical settings may authorize native weight controls.
+const physicalDecimal=n=>typeof n==='number' && Number.isFinite(n) && n>=0 && n<=99999.999 && Number(n.toFixed(3))===n;
+const physicalLoads=v=>Array.isArray(v) && v.length>=1 && v.length<=250 && v.every(physicalDecimal) && new Set(v).size===v.length;
+const physicalRange=v=>exact(v,['minimum','increment','maximum']) && physicalDecimal(v.minimum) &&
+  physicalDecimal(v.increment) && v.increment>0 && physicalDecimal(v.maximum) && v.maximum>=v.minimum;
+function authoredInventory(v,unit) {
+  ensure(object(v) && v.unit===unit && Object.keys(v).every(k=>
+    ['unit','barbell','dumbbells','cable','machine','smith','exerciseOverrides'].includes(k)));
+  let families=0;
+  if(Object.prototype.hasOwnProperty.call(v,'barbell')) {
+    const bar=v.barbell;
+    ensure(exact(bar,['barWeight','platePairs']) && physicalDecimal(bar.barWeight) &&
+      bar.barWeight<=500 && Array.isArray(bar.platePairs) && bar.platePairs.length>=1 && bar.platePairs.length<=24 &&
+      bar.platePairs.every(p=>exact(p,['weight','pairs']) && physicalDecimal(p.weight) &&
+        p.weight>0 && p.weight<=100 && Number.isInteger(p.pairs) && p.pairs>=1 && p.pairs<=50) &&
+      new Set(bar.platePairs.map(p=>p.weight)).size===bar.platePairs.length);
+    families++;
+  }
+  if(Object.prototype.hasOwnProperty.call(v,'dumbbells')) {
+    ensure(exact(v.dumbbells,['availablePerHand']) && physicalLoads(v.dumbbells.availablePerHand));families++;
+  }
+  for(const key of ['cable','machine']) if(Object.prototype.hasOwnProperty.call(v,key)) {
+    ensure(physicalRange(v[key]));families++;
+  }
+  if(Object.prototype.hasOwnProperty.call(v,'smith')) {
+    ensure(exact(v.smith,['availableLoads']) && physicalLoads(v.smith.availableLoads));families++;
+  }
+  if(Object.prototype.hasOwnProperty.call(v,'exerciseOverrides'))
+    ensure(exact(v.exerciseOverrides,[])); // no unverified per-exercise modes from onboarding
+  ensure(families>0);
+  return v;
+}
+
 export function nativeProgramOptions() {
   return {source:'modules/engine-api.js:splitSupportsTrainingDays',readOnly:true,
     splits:Object.entries(SPLITS).map(([id,label])=>({id,label,
@@ -43,7 +76,9 @@ function setupFrom(raw) {
     'allowBodyweight','allowSupersets','barbellCap'];
   const priorities=Object.prototype.hasOwnProperty.call(p,'focus') ||
     Object.prototype.hasOwnProperty.call(p,'reduced');
-  ensure((priorities?exact(p,[...legacy,'focus','reduced']):exact(p,legacy)) &&
+  const inventory=Object.prototype.hasOwnProperty.call(p,'loadingInventory');
+  ensure((inventory?exact(p,[...legacy,'focus','reduced','loadingInventory']):
+    priorities?exact(p,[...legacy,'focus','reduced']):exact(p,legacy)) &&
     typeof p.name==='string' && p.name.trim().length>0 && p.name.length<=60 &&
     !/[\x00-\x1f\x7f-\x9f]/.test(p.name) &&
     ['hypertrophy','strength','both'].includes(p.goal) &&
@@ -64,6 +99,7 @@ function setupFrom(raw) {
       p.reduced.every(part=>MUSCLE_IDS.has(part) &&
         !Object.prototype.hasOwnProperty.call(p.focus,part)));
   }
+  if(inventory) authoredInventory(p.loadingInventory,p.unit);
   return s;
 }
 
@@ -74,7 +110,8 @@ export function prepareNativeProgram(setupJson) {
     equipment:[...p.equipment],focus:{...(p.focus||{})},
     focusList:Object.entries(p.focus||{}).flatMap(([part,level])=>Array(level).fill(part)),
     reduce:[...(p.reduced||[])],barbellCap:p.barbellCap,
-    noBodyweight:!p.allowBodyweight,noSupersets:!p.allowSupersets};
+    noBodyweight:!p.allowBodyweight,noSupersets:!p.allowSupersets,
+     ...(p.loadingInventory?{loadingInventory:authoredInventory(p.loadingInventory,p.unit)}:{})};
   const generated=generateNextProgramForShell({config,legacyExercises:EXERCISES,
     seed:s.seed,makeId:()=>s.programId});
   const program=generated.program;

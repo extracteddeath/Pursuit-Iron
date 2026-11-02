@@ -250,6 +250,9 @@ assert.ok(train.includes('NativeActiveSetCorrection(session,set,commit,busy,erro
   activeEdit.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy') &&
   activeEdit.includes('onCorrect(JournalSetIntent(id,set.slot,disposition,values,commit.intent.operationId))') &&
   activeEdit.includes('pendingDisposition==JournalSetDisposition.SKIPPED.name') &&
+  activeEdit.includes('val retryingSkip=operation!=null && pendingDisposition==JournalSetDisposition.SKIPPED.name') &&
+  activeEdit.includes('enabled=!busy && (retryingSkip || valid && (changed || operation!=null))') &&
+  activeEdit.includes('Text(if(busy)"Saving…" else if(retryingSkip)"Retry skip correction"') &&
   activeEdit.includes('Mark this set as skipped?') && activity.includes('onCorrectSet=runtime::correctSet') &&
   host.includes('previous?.receipt?.fromRevision ?: progress.journal.revision,intent)') &&
   !activeEdit.includes('recordSet(') && !activeEdit.includes('commitAtomically'),

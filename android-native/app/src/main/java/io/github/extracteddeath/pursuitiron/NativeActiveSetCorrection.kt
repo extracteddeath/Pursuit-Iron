@@ -43,12 +43,18 @@ internal fun NativeActiveSetCorrection(session: JournalSessionKey,set: NativeWor
                     ("edit-"+UUID.randomUUID()).also { operation=it;pendingDisposition=disposition.name }
                 onCorrect(JournalSetIntent(id,set.slot,disposition,values,commit.intent.operationId))
             }
+            // A submitted SKIP has no numeric payload. After a lost
+            // acknowledgement, its exact retry must stay available even if
+            // the editable fields are blank or invalid.
+            val retryingSkip=operation!=null && pendingDisposition==JournalSetDisposition.SKIPPED.name
             error?.let { Text(it,color=MaterialTheme.colorScheme.error) }
-            Button(onClick={if(pendingDisposition==JournalSetDisposition.SKIPPED.name)
+            Button(onClick={if(retryingSkip)
                 submit(JournalSetDisposition.SKIPPED,null) else submit(JournalSetDisposition.COMPLETED,
                     JournalSetValues(load,session.unit,checkNotNull(repCount),effort))},
-                enabled=!busy && valid && (changed || operation!=null),modifier=Modifier.fillMaxWidth()) {
-                Text(if(busy)"Saving…" else if(operation!=null)"Retry correction" else "Save correction")
+                enabled=!busy && (retryingSkip || valid && (changed || operation!=null)),
+                modifier=Modifier.fillMaxWidth()) {
+                Text(if(busy)"Saving…" else if(retryingSkip)"Retry skip correction"
+                    else if(operation!=null)"Retry correction" else "Save correction")
             }
             if(commit.intent.disposition==JournalSetDisposition.COMPLETED)TextButton(
                 onClick={confirmSkip=true},enabled=!busy,modifier=Modifier.fillMaxWidth()) { Text("Mark as skipped") }

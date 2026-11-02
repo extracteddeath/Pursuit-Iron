@@ -399,7 +399,8 @@ internal fun PlanScreen(
     }
     // Fingerprint-only document chooser never unlocks personal program display.
     BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading,
-        onPreviewBackupMerge = if (hasSavedProgram) onPreviewBackupMerge else null)
+        onPreviewBackupMerge = if (hasSavedProgram) onPreviewBackupMerge else null,
+        currentStoreChangeKey = runtimeState?.storeChangeKey ?: 0L)
     if(runtimeState?.saved!=null)NativeBackupExportPanel(runtimeState,onExportBackup,onResetBackupExport)
     SectionLabel("Plan essentials")
     PursuitCard {

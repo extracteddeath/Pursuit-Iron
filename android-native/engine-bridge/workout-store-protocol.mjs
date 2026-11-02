@@ -5,6 +5,7 @@ import { prepareCanonicalBackupMerge } from './backup-merge-preparation.mjs';
 import { prepareCanonicalWorkoutHistory } from './workout-history-completion.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 import { prepareNativeProgramEdit } from './native-program-edit.mjs';
+import { prepareNativeGymInventoryEdit } from './native-gym-inventory-edit.mjs';
 import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
 import { prepareNativeWorkout,previewNativeShorterSession,inspectNativeWorkoutMuscles,MAX_ISSUED_WORKOUT_BYTES } from './native-workout.mjs';
 import { inspectNativeHistory,inspectNativeHistoryPage,prepareNativeHistoryCorrection } from './native-history.mjs';
@@ -38,6 +39,11 @@ export function dispatchWorkoutStoreJson(json) {
       if(!exact(p,['currentSnapshot','editJson']) || !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
           !bounded(p.editJson,32768))return error(id,'INVALID_REQUEST');
       result=prepareNativeProgramEdit(p.currentSnapshot,p.editJson);
+    } else if (request.method==='prepareNativeGymInventoryEdit') {
+      if(!exact(p,['currentSnapshot','editJson']) ||
+          !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+          !bounded(p.editJson,16384))return error(id,'INVALID_REQUEST');
+      result=prepareNativeGymInventoryEdit(p.currentSnapshot,p.editJson);
     } else if (request.method==='prepareBackupMerge') {
       if(!exact(p,['currentSnapshot','incomingSnapshot','expectedCandidateSha256']) ||
           !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||

@@ -8,6 +8,7 @@ import io.github.extracteddeath.pursuitiron.engine.CanonicalJsReadOnlyService
 import io.github.extracteddeath.pursuitiron.engine.CanonicalJsSandboxProbe
 import io.github.extracteddeath.pursuitiron.engine.SandboxBackupSchemaInspector
 import io.github.extracteddeath.pursuitiron.engine.SandboxWorkoutOutline
+import io.github.extracteddeath.pursuitiron.engine.SandboxExerciseCatalog
 import io.github.extracteddeath.pursuitiron.engine.SandboxCanonicalWorkoutStoreEngine
 import io.github.extracteddeath.pursuitiron.engine.SandboxCanonicalCurrentPlanProjector
 import io.github.extracteddeath.pursuitiron.domain.WorkoutOutline
@@ -35,6 +36,7 @@ internal class PackagedReadOnlySchemaVerifier private constructor(
     // onboarding flow uses the same verified worker, without another sandbox.
     internal val programEngine by lazy { SandboxCanonicalWorkoutStoreEngine(worker) }
     internal val currentPlanProjector by lazy { SandboxCanonicalCurrentPlanProjector(worker) }
+    internal val exerciseCatalog by lazy { SandboxExerciseCatalog(worker) }
 
     override suspend fun inspectSyntheticOutline(split: String, dayIndex: Int): Result<WorkoutOutline> =
         outlines.inspect(split, dayIndex)

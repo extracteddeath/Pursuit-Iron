@@ -257,7 +257,9 @@ internal fun NativeWorkoutScreen(
     val activeExtension=if(focusMode)exercise.sets.firstOrNull {
         it.slot !in committedSlots
     }?.extensionRestSeconds else null
-    if(journal.unresolvedCount>0 && exercisePending>0) {
+    // Rest is scoped to the workout, not the selected exercise. Keep its
+    // composable mounted during manual tab switches so elapsed rest survives.
+    if(journal.unresolvedCount>0) {
         NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
             enabled=!state.workoutBusy && !journal.isFinished,
             latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId,

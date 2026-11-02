@@ -710,7 +710,7 @@ assert.ok(progressAt>0 && finishReadyAt>progressAt &&
   injuryReviewAt>loggerAt &&
   train.includes('if(focusMode && (journal.unresolvedCount==0 || exercisePending==0))') &&
   train.includes('emptyList<NativeWorkoutSet>()') &&
-  train.includes('if(journal.unresolvedCount>0 && exercisePending>0) {\n        NativeRestTimer(') &&
+  train.includes('if(journal.unresolvedCount>0) {\n        NativeRestTimer(') &&
   train.includes('if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0)') &&
   train.includes('confirmButton={Button(onClick={showFinishReview=false;onFinish()}') &&
   train.includes('if(journal.isFinished)"Retry finishing workout"') &&
@@ -801,6 +801,6 @@ assert.ok(train.includes('if(focusMode && exercisePending==0 && journal.unresolv
   train.includes('Use Continue below to open the next pending exercise') &&
   train.includes('else if(focusMode)listOfNotNull(') &&
   !train.includes('} ?: exercise.sets.last())') &&
-  train.includes('if(journal.unresolvedCount>0 && exercisePending>0) {') &&
+  train.includes('if(journal.unresolvedCount>0) {') &&
   train.includes('NativeUpNextPanel(preview,exerciseIndex,'),
-  'A completed manually selected exercise must not masquerade as an active working set or start a stale rest timer; resume stays receipt-derived');
+  'A completed manually selected exercise must not masquerade as an active working set; its session-scoped rest timer and receipt-derived resume remain mounted');

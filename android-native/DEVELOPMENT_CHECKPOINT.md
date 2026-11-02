@@ -1813,9 +1813,10 @@ working sets remain, Focus now shows a resolved-state explanation rather than
 reopening the previously logged last set as if it were actionable. It
 preserves the issued next-set preview and its explicit Continue/Open
 navigation; no automatic crossing between exercises occurs without a new
-durable receipt. A rest timer is shown only for the currently selected
-exercise when that exercise still has unresolved work. Show all continues
-to expose the original journal-backed set corrections. Source assertions
-guard against the completed-set fallback and stale rest timer. This is a
-presentation-only fix: no prescriptions, logged facts, or data store writes
-change; no APK.
+durable receipt. The workout-scoped rest timer remains
+mounted when manually switching to a fully resolved exercise, so an active
+countdown is not inadvertently reset. Show all continues to expose the
+original journal-backed set corrections. Source assertions guard against
+the completed-set fallback while retaining session-scoped rest continuity.
+This is a presentation-only fix: no prescriptions, logged facts, or data
+store writes change; no APK.

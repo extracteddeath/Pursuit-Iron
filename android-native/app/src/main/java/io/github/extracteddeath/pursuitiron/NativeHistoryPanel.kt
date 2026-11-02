@@ -6,6 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import io.github.extracteddeath.pursuitiron.domain.*
 import java.util.UUID
 import java.util.Date
@@ -120,12 +122,17 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
                 sets.forEach { set ->
                     val observation=history.editRows?.firstOrNull { it.slot.exerciseId==exercise.id &&
                         it.slot.exerciseIndex==set.exerciseIndex && it.slot.setIndex==set.ordinal-1 }
-                    TextButton(onClick={if(observation!=null)selectedObservation=observation.slot.exerciseIndex*20+observation.slot.setIndex
-                        else { selectedExercise=exercise.id;selectedSet=set.setIndex }},enabled=canEdit,
-                        modifier=Modifier.fillMaxWidth()) {
-                        val label=observation?.let { historyObservationLabel(history,it) } ?: historySetLabel(exercise,set)
-                        Text("$label · ${set.load} ${history.unit} × ${set.reps}" +
-                            (set.rir?.let { " · $it RIR" } ?: "") + " · Edit")
+                    val label=observation?.let { historyObservationLabel(history,it) } ?: historySetLabel(exercise,set)
+                    NativeHistorySetRow(label,
+                        "${set.load} ${history.unit} × ${set.reps} reps" +
+                            (set.rir?.let { " · $it RIR" } ?: ""),
+                        canEdit,"Edit") {
+                        if(observation!=null)
+                            selectedObservation=observation.slot.exerciseIndex*20+observation.slot.setIndex
+                        else {
+                            selectedExercise=exercise.id
+                            selectedSet=set.setIndex
+                        }
                     }
                 }
             }
@@ -136,9 +143,10 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
         PursuitCard {
             Text(rows.first().name,style=MaterialTheme.typography.titleMedium)
             rows.forEach {row->
-                TextButton(onClick={selectedWarmup="${row.slot.exerciseIndex}:${row.slot.warmupIndex}"},enabled=canEdit,
-                    modifier=Modifier.fillMaxWidth()) {
-                    Text("Warm-up ${row.slot.warmupIndex+1} · "+warmupActualLabel(row.disposition,row.values))
+                NativeHistorySetRow("Warm-up ${row.slot.warmupIndex+1}",
+                    warmupActualLabel(row.disposition,row.values),
+                    canEdit,if(row.disposition==JournalSetDisposition.SKIPPED)"Record" else "Edit") {
+                    selectedWarmup="${row.slot.exerciseIndex}:${row.slot.warmupIndex}"
                 }
             }
         }
@@ -161,11 +169,13 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
             Text(rows.first().name,style=MaterialTheme.typography.titleMedium)
             Text("Exercise ${exerciseIndex+1} in workout",style=MaterialTheme.typography.bodySmall)
             rows.forEach { row->
-                TextButton(onClick={selectedObservation=exerciseIndex*20+row.slot.setIndex},enabled=canEdit,
-                    modifier=Modifier.fillMaxWidth()) {
-                    val value=row.values
-                    Text(historyObservationLabel(history,row)+if(value==null)" · Skipped · Record set"
-                        else " · ${value.load} ${history.unit} × ${value.reps} · Edit")
+                val value=row.values
+                NativeHistorySetRow(historyObservationLabel(history,row),
+                    if(value==null)"Skipped · no recorded reps"
+                    else "${value.load} ${history.unit} × ${value.reps} reps" +
+                        (value.rir?.let { " · $it RIR" } ?: ""),
+                    canEdit,if(value==null)"Record" else "Edit") {
+                    selectedObservation=exerciseIndex*20+row.slot.setIndex
                 }
             }
         }
@@ -187,6 +197,28 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
                 onCancel={selectedExercise=null})
         }
     }
+}
+
+/** Shared compact history row. Display never edits until the explicit action. */
+@Composable
+private fun NativeHistorySetRow(
+    label: String,
+    detail: String,
+    enabled: Boolean,
+    action: String,
+    onAction: ()->Unit
+) {
+    ListItem(
+        headlineContent={Text(label,style=MaterialTheme.typography.titleSmall)},
+        supportingContent={Text(detail,style=MaterialTheme.typography.bodySmall)},
+        trailingContent={
+            TextButton(onClick=onAction,enabled=enabled,
+                modifier=Modifier.semantics {
+                    contentDescription="$action $label"
+                }) {Text(action)}
+        },
+        colors=ListItemDefaults.colors(containerColor=MaterialTheme.colorScheme.surfaceContainerLow)
+    )
 }
 
 /** The calendar and paged list open the identical revision-bound review action. */

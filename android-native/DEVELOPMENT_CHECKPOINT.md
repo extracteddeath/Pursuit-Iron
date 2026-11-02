@@ -1777,3 +1777,17 @@ guards to avoid taps that the canonical host would reject.
 The source contract was corrected for the already-added busy-state
 guard on Train's history button. All changes remain isolated to the
 native Compose branch, source-only and no APK.
+
+## 2026-11-02 — Compact, accessible saved-history set rows
+
+Saved workout details now use a single reusable native M3 `ListItem`
+row for recorded working sets, warm-ups, and skipped/other observations.
+Set kind/index and actual load/reps/RIR are separate readable lines,
+with a distinct accessible Edit or Record action rather than a long
+sentence-shaped full-width button. The existing exact observation slot,
+legacy set correction and warm-up correction callbacks are unchanged.
+Correction controls remain disabled during an active workout or busy
+history write. Training history remains the canonical read-only source;
+all edits still flow through the original revision-verified writer.
+Source checks cover shared row use and original correction identity.
+No APK.

@@ -762,3 +762,21 @@ assert.ok(screens.includes('viewLatestHistory: () -> Unit = {}') &&
   screens.indexOf('Button(onClick={if(!activeWorkout)startWorkout();openTrain()}') <
     screens.indexOf('TextButton(onClick=viewLatestHistory,'),
   'Today must keep Start/Resume first and route review of the last saved workout through the same guarded canonical receipt read as Train');
+
+const historyRow=fs.readFileSync(root+'NativeHistoryPanel.kt','utf8');
+assert.ok(historyRow.includes('private fun NativeHistorySetRow(') &&
+  historyRow.split('NativeHistorySetRow(').length-1===4 &&
+  historyRow.includes('ListItem(') &&
+  historyRow.includes('headlineContent={Text(label') &&
+  historyRow.includes('supportingContent={Text(detail') &&
+  historyRow.includes('trailingContent={') &&
+  historyRow.includes('contentDescription="$action $label"') &&
+  historyRow.includes('if(observation!=null)') &&
+  historyRow.includes('selectedObservation=observation.slot.exerciseIndex*20+observation.slot.setIndex') &&
+  historyRow.includes('selectedExercise=exercise.id') &&
+  historyRow.includes('selectedSet=set.setIndex') &&
+  historyRow.includes('selectedWarmup="${row.slot.exerciseIndex}:${row.slot.warmupIndex}"') &&
+  historyRow.includes('selectedObservation=exerciseIndex*20+row.slot.setIndex') &&
+  historyRow.includes('if(value==null)"Skipped · no recorded reps"') &&
+  historyRow.includes('canEdit,if(value==null)"Record" else "Edit"'),
+  'Real history must show structured legible set values with accessible Edit/Record actions and preserve each exact correction identity');

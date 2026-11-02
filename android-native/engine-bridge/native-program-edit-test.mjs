@@ -125,7 +125,11 @@ const removalWire=JSON.stringify(removal);
 const removalPrepared=prepareNativeProgramEdit(removedSnapshot,removalWire);
 const removedStore=JSON.parse(removalPrepared.candidateSnapshot);
 assert.equal(removedStore.saved[0].days[0].exercises.length,removedDay.exercises.length-1);
-assert.equal(removedStore.saved[0].overrides[`${removedDay.id}:2`],undefined);
+assert.deepEqual(removedStore.saved[0].overrides[`${removedDay.id}:2`],
+  removedRaw.saved[0].overrides[`${removedDay.id}:3`],
+  'The next original slot shifts forward without inheriting the removed slot override');
+assert.notDeepEqual(removedStore.saved[0].overrides[`${removedDay.id}:2`],
+  removedRaw.saved[0].overrides[`${removedDay.id}:2`]);
 assert.deepEqual(removedStore.saved[0].overrides[`${removedDay.id}:0`],
   removedRaw.saved[0].overrides[`${removedDay.id}:0`]);
 assert.deepEqual(removedStore.cycles,removedRaw.cycles);

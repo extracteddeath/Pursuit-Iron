@@ -44,13 +44,15 @@ internal fun NativeWorkoutScreen(
         PageHeading("TRAIN",if(state.completion!=null)"Workout saved" else "Ready when you are",
             state.saved?.program?.name ?: "Your training")
         PursuitCard(highlighted=true) {
-            val canStart=state.ready && !state.workoutBusy && !state.historyBusy &&
+            val canStart=state.ready && !state.busy && !state.blocked &&
+                !state.workoutBusy && !state.historyBusy &&
                 !state.backupExportBusy && !state.workoutBlocked
             if(state.completion!=null) {
                 Text("Your workout was saved to training history.",
                     style=MaterialTheme.typography.titleMedium)
                 Button(onClick=onViewHistory,enabled=state.ready && !state.historyBusy &&
-                    !state.workoutBusy && !state.backupExportBusy,
+                    !state.workoutBusy && !state.backupExportBusy && !state.busy &&
+                    !state.blocked && !state.workoutBlocked,
                     modifier=Modifier.fillMaxWidth()) {
                     Text("View saved workout")
                 }

@@ -804,3 +804,12 @@ assert.ok(train.includes('if(focusMode && exercisePending==0 && journal.unresolv
   train.includes('if(journal.unresolvedCount>0) {') &&
   train.includes('NativeUpNextPanel(preview,exerciseIndex,'),
   'A completed manually selected exercise must not masquerade as an active working set; its session-scoped rest timer and receipt-derived resume remain mounted');
+
+assert.ok(train.includes('val canStart=state.ready && !state.busy && !state.blocked &&') &&
+  train.includes('!state.backupExportBusy && !state.workoutBlocked') &&
+  train.includes('Button(onClick=onViewHistory,enabled=state.ready && !state.historyBusy &&') &&
+  train.includes('!state.workoutBusy && !state.backupExportBusy && !state.busy &&') &&
+  train.includes('!state.blocked && !state.workoutBlocked,') &&
+  host.includes('if(!current.ready || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked') &&
+  host.includes('if(!current.ready || current.saved==null || current.busy ||'),
+  'Train Start and latest-saved-history actions must not offer taps during runtime-blocked store operations');

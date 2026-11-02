@@ -1820,3 +1820,14 @@ original journal-backed set corrections. Source assertions guard against
 the completed-set fallback while retaining session-scoped rest continuity.
 This is a presentation-only fix: no prescriptions, logged facts, or data
 store writes change; no APK.
+
+## 2026-11-02 — Train landing action guard parity
+
+The Train landing actions now use the canonical runtime's general busy and
+blocked conditions as well as workout, history, backup and recovery guards.
+Starting the next workout or opening the exact latest saved completion cannot
+look enabled while another owned program/store operation makes the runtime
+reject that tap. The latest-history action still uses the durable receipt and
+reader, not local screen state. Source regression contracts pin both disabled
+states. This changes no saved data, engine calculations or navigation targets;
+no APK.

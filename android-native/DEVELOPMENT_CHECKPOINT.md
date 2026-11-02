@@ -1579,3 +1579,22 @@ if the detail could not be read.
 The unchanged canonical short-session policy is protected by a source
 assertion using the new, more explicit user-facing copy. No new
 training engine assumptions or history writes; no new APK.
+
+## 2026-11-02 — Compact issued Up Next and stronger editor busy gating
+
+The real Train Focus screen now renders a compact, touch-friendly Up Next
+summary. It retains the actual canonical-issued exercise, set kind, load
+and unit, target reps and optional RIR, and offers an accessible Open
+action only when the next unresolved exercise differs. The existing full
+Up Next presentation remains when Show all is selected; navigation is
+still driven by the acknowledged journal and verified
+`NativeNextSetPolicy` rather than optimistic taps. All derived targets
+remain display-only; no training or persistence math was introduced.
+
+The live working-set editors are disabled during history and backup
+operations as well as workout writes and already-finished sessions, rather
+than showing tappable controls that the runtime will reject. Existing
+draft preservation, manual load entry, truly verified equipment-adjusted
+load choices, skip confirmation and receipt-based Focus advancement
+are retained. Interaction contracts cover these invariants. Source-only
+Android builds remain required; no APK.

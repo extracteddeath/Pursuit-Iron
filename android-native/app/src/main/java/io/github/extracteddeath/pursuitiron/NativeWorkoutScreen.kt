@@ -201,8 +201,10 @@ internal fun NativeWorkoutScreen(
             setDraftStates.SaveableStateProvider(
                 "${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}"
             ) {
-                NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord,
-                    onCorrect,state.workoutError,state,onInspectEquipmentLoad)
+                NativeWorkingSet(plan.session,set,commit,
+                    state.workoutBusy || state.historyBusy || state.backupExportBusy ||
+                        journal.isFinished,
+                    showLast,onRecord,onCorrect,state.workoutError,state,onInspectEquipmentLoad)
             }
         }
     }
@@ -223,7 +225,8 @@ internal fun NativeWorkoutScreen(
         NativeUpNextPanel(preview,exerciseIndex,
             enabled=!state.workoutBusy && !state.historyBusy,
             unit=plan.session.unit,
-            onOpenExercise={ position ->exerciseIndex=position })
+            onOpenExercise={ position ->exerciseIndex=position },
+            compact=focusMode)
     }
     if(!showAffectedTools) {
         TextButton(onClick={showAffectedTools=true},

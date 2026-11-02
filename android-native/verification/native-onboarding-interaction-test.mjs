@@ -138,7 +138,9 @@ assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workout
   train.includes('val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull') &&
   train.includes('it.slot !in committedSlots') &&
   train.includes('visibleSets.forEach { set->') &&
-  train.includes('NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord,') &&
+  train.includes('NativeWorkingSet(plan.session,set,commit,') &&
+  train.includes('state.workoutBusy || state.historyBusy || state.backupExportBusy ||') &&
+  train.includes('journal.isFinished,') &&
   train.includes('onCorrect,state.workoutError,state,onInspectEquipmentLoad)') &&
   train.includes('FilterChip(selected=focusMode,onClick={focusMode=!focusMode}') &&
   train.includes('val setDraftStates=rememberSaveableStateHolder()'),
@@ -621,3 +623,19 @@ assert.ok(train.includes('onViewHistory: ()->Unit = {}') &&
   shell.includes('onViewHistory={selectedTrainingDay=null;section=NativeDestination.INSIGHTS.ordinal}') &&
   host.includes('history=history,historyPage=page,historyCalendar=calendar'),
   'A confirmed completion must show the saved workout in Insights before offering the next session, using the same canonical history');
+
+const upNext=fs.readFileSync(root+'NativeUpNextPanel.kt','utf8');
+assert.ok(train.includes('compact=focusMode)') &&
+  upNext.includes('compact: Boolean = false') &&
+  upNext.includes('if(compact) {') &&
+  upNext.includes('next.set.load') &&
+  upNext.includes('next.set.targetReps') &&
+  upNext.includes('next.set.targetRir') &&
+  upNext.includes('next.set.kind') &&
+  upNext.includes('onOpenExercise(next.exercisePosition)') &&
+  upNext.includes('contentDescription="Open ${next.exercise.name}"') &&
+  !upNext.includes('prescribeSets(') &&
+  !upNext.includes('store.') &&
+  !upNext.includes('journal.') &&
+  train.includes('val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)'),
+  'Focus Up Next must be concise, accessible and sourced only from the issued set, while full mode remains available');

@@ -157,7 +157,8 @@ const fingerprint = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/ReadOnlyBackupScreening.kt',
   'utf8'
 );
-assert.ok(screens.includes('BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading)'),
+assert.ok(screens.includes('BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading,') &&
+  screens.includes('onPreviewBackupMerge = if (hasSavedProgram) onPreviewBackupMerge else null'),
   'Plan includes an asynchronous verifier gate and explicit file screening');
 assert.ok(screening.includes('ActivityResultContracts.OpenDocument()'),
   'Android document picker requires user selection');

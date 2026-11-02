@@ -1,5 +1,5 @@
 /** Program organization only. The canonical save planner remains the editor owner. */
-import { parseStoredData, programSavePlan, EX_BY_ID, expandEquipment, nextExerciseIdForShellExercise, isBarLike } from '../../modules/engine-api.js';
+import { parseStoredData, programSavePlan, EX_BY_ID, expandEquipment, nextExerciseIdForShellExercise, isBarLike, canonicalRepRange } from '../../modules/engine-api.js';
 import { projectCanonicalSavedProgram } from './current-program-projection.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 
@@ -86,6 +86,21 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
         ensure(bars<=cap);
       }
       const sourceKey=`${day.id}:${change.sourceSlot}`;
+      const savedMeta=original.overrides?.[sourceKey];
+      ensure(original.config?.progression==='auto' && savedMeta &&
+        exact(savedMeta,['nextEngine','nextExerciseId','legacyExerciseId']) &&
+        savedMeta.nextEngine===true && savedMeta.legacyExerciseId===oldId);
+      // Engine-owned per-week role targets must remain executable: removing
+      // them turns Pursuit Next computeCell into zero sets. Retain ONLY a
+      // verified schedule whose reps fit the replacement and which has no
+      // exercise-specific techniques; old user overrides are cleared.
+      const engineWeeks=original.nextWeekPrescriptions?.[sourceKey];
+      ensure(object(engineWeeks) && Object.keys(engineWeeks).length>0 &&
+        Object.values(engineWeeks).every(cell=>{
+          if(!object(cell) || !Number.isInteger(cell.sets) || cell.sets<1 || cell.tech!=null)return false;
+          const reps=canonicalRepRange(cell.reps);
+          return reps && reps[0]>=to.rep[0] && reps[1]<=to.rep[1];
+        }));
       // Replacing the movement explicitly discards its *slot-local* loading,
       // progression, amplifier and alternate-week settings. Do not transfer
       // any source exercise targets to a different physical movement.
@@ -94,6 +109,10 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
         if(!Object.prototype.hasOwnProperty.call(original,field))continue;
         const store=original[field];
         ensure(object(store));
+        if(field==='nextWeekPrescriptions') {
+          cleaned[field]=store; // verified immutable engine role schedule, not a user load
+          continue;
+        }
         const without={...store};
         for(const key of Object.keys(without))
           if(key===sourceKey || key.startsWith(sourceKey+':'))delete without[key];

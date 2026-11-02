@@ -63,7 +63,7 @@ const reject=p=>{
   assert.ok(!JSON.stringify(result).includes('synthetic'));
 };
 reject({...params,expectedCandidateSha256:'f'.repeat(64)});
-reject({...params,currentSnapshot:raw(101,[history('old',100,10)])});
+reject({...params,currentSnapshot:raw(101,[history('old',101,10)])});
 reject({...params,incomingSnapshot:'{"v":14}'});
 reject({...params,extra:true});
 reject({...params,incomingSnapshot:'é'.repeat(600000)});

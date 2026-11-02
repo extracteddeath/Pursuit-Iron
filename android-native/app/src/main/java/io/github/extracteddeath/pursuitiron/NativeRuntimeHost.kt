@@ -167,8 +167,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         val second=try { readOnlyBackupMerge(selected,false) }
             catch(cancelled: CancellationException) { throw cancelled }
             catch(_: Exception) { return false }
+        val job=currentCoroutineContext()
         val fresh=ReadOnlyBackupScreening.fingerprint(
-            java.io.ByteArrayInputStream(selected)) { currentCoroutineContext().ensureActive() }
+            java.io.ByteArrayInputStream(selected)) { job.ensureActive() }
         return synchronized(lifetime) {
             !closed && backupReviewTicket===first &&
                 first.matchesReselection(fresh,second)

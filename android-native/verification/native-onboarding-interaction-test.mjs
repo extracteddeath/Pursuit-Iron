@@ -311,7 +311,8 @@ const restorePort=fs.readFileSync('android-native/domain-contract/src/main/java/
 const restorePreparation=fs.readFileSync('android-native/engine-bridge/backup-merge-preparation.mjs','utf8');
 assert.ok(restoreOwner.includes('private data class RestoreUndo(') &&
   restoreOwner.includes('val extended=state.undo!=null || state.undoAck!=null') &&
-  restoreOwner.includes('if(extended)2 else 1') &&
+  restoreOwner.includes('if(extended)3 else 1') &&
+  restoreOwner.includes('consumedRestoreIds') &&
   restoreOwner.includes('internal suspend fun installApprovedBackupMerge(') &&
   restoreOwner.includes('internal fun undoApprovedBackupMerge(') &&
   restoreOwner.includes('preview.flags.isNotEmpty()') &&

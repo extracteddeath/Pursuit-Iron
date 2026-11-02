@@ -160,7 +160,9 @@ class NativeProgramEditDraftTest {
         assertNull(switched.removeExercise("day-1",0))
         assertNull(switched.renameProgram("Different"))
         assertNull(original.substituteExercise("day-1",0,"bench"))
-        assertNull(original.substituteExercise("day-1",1,"anything-unknown"))
+        assertNotNull(original.substituteExercise("day-1",1,"anything-unknown"))
+        // The immutable draft accepts a syntactically valid catalog choice;
+        // the canonical save preparation rejects unknown exercise identities.
         assertNull(original.substituteExercise("day-1",1,"row"))
         assertFalse(original.isChanged)
         assertFalse(switched.reset().isChanged)

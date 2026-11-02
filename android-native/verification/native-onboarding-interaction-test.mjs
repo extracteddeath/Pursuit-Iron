@@ -437,7 +437,7 @@ assert.ok(
 const nativeDraftContract=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeProgramEditDraft.kt','utf8');
 const nativeDraftUi=fs.readFileSync(root+'NativeProgramDraftEditor.kt','utf8');
 assert.ok(nativeDraftUi.includes('Replace accessory movement') &&
-  nativeDraftUi.includes('compatibleCandidates') &&
+  nativeDraftUi.includes('lookupAlternatives(approved.reference,id,day.exerciseIds)') &&
   nativeDraftUi.includes('draft.substituteExercise(dayId,index,ex.id)') &&
   nativeDraftUi.includes("load and progression won't carry over") &&
   nativeDraftUi.includes('draft.replacement!=null'),
@@ -471,10 +471,11 @@ assert.ok(
   programDraftUi.includes('Review program changes') &&
   programDraftUi.includes('onSave(draft)') &&
   programDraftUi.includes('draft.matchesCurrent(verified)') &&
-  programDraftUi.includes('LaunchedEffect(approved.reference)') &&
+  programDraftUi.includes('LaunchedEffect(approved.reference,draft.replacement?.exerciseId)') &&
   programDraftUi.includes('lookupNames(approved.reference,ids)') &&
   packagedCatalog.includes('SandboxExerciseCatalog(worker)') &&
   host.includes('suspend fun lookupProgramExercises(') &&
+  host.includes('suspend fun lookupProgramAlternatives(') &&
   host.includes('actual.sha256Hex==expected.snapshotSha256') &&
   host.includes('!sameSource()') &&
   activity.includes('onLookupProgramExercises=runtime::lookupProgramExercises') &&

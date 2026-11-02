@@ -72,6 +72,11 @@ internal fun NativeWorkoutScreen(
         return
     }
     val plan=progress.plan;val journal=progress.journal
+    // Presentation follows the writer's owned state; the writer also rejects stale callbacks.
+    val operationBlocked=!state.ready || state.blocked || state.busy ||
+        state.workoutBusy || state.historyBusy || state.backupExportBusy ||
+        state.workoutBlocked
+    val writeBlocked=operationBlocked || journal.isFinished
     val initial=plan.exercises.indexOfFirst { ex->ex.sets.any { set->journal.completed.none { it.intent.slot==set.slot } } }.coerceAtLeast(0)
     var exerciseIndex by rememberSaveable(plan.session.workoutId) { mutableIntStateOf(initial) }
     val exercise=plan.exercises[exerciseIndex.coerceIn(plan.exercises.indices)]
@@ -132,8 +137,7 @@ internal fun NativeWorkoutScreen(
                 else "All working sets saved · ready to finish",
                 style=MaterialTheme.typography.titleMedium)
             Button(onClick={if(journal.isFinished)onFinish() else showFinishReview=true},
-                enabled=!state.workoutBusy && !state.historyBusy &&
-                    !state.backupExportBusy && !state.workoutBlocked,
+                enabled=!operationBlocked,
                 modifier=Modifier.fillMaxWidth()) {
                 Text(if(state.workoutBusy)"Saving…" else
                     if(journal.isFinished)"Retry finishing workout" else "Review and finish")
@@ -174,7 +178,7 @@ internal fun NativeWorkoutScreen(
         TextButton(onClick={showWarmups=true}) { Text("Add a warm-up") }
     }
     if(showWarmups) NativeWarmupPanel(
-        progress,exercise,state.workoutBusy || state.historyBusy,
+        progress,exercise,writeBlocked,
         state.warmupError,onSaveWarmup)
 
     if(showSkipExercise) {
@@ -183,7 +187,7 @@ internal fun NativeWorkoutScreen(
             title={Text("Skip the rest of ${exercise.name}?")},
             text={Text("$exercisePending unfinished sets will each be saved as skipped. Completed sets stay unchanged. This does not automatically modify other exercises or your future program.")},
             confirmButton={Button(onClick={showSkipExercise=false;onSkipExercise(exercise.index)},
-                enabled=exercisePending>0 && !state.workoutBusy && !state.historyBusy && !journal.isFinished) {
+                enabled=exercisePending>0 && !writeBlocked) {
                 Text("Skip remaining sets")
             }},
             dismissButton={TextButton(onClick={showSkipExercise=false}) { Text("Keep training") }}
@@ -191,20 +195,19 @@ internal fun NativeWorkoutScreen(
     }
     val pinnedNote=NativeExerciseNotePolicy.resolved(plan,journal.exerciseNotes,exercise.id)
     var showPinnedNote by rememberSaveable(plan.session.workoutId,exercise.id) {mutableStateOf(false)}
-    if(showPinnedNote)NativeExerciseNoteSheet(progress,exercise,state.workoutBusy || state.historyBusy,
+    if(showPinnedNote)NativeExerciseNoteSheet(progress,exercise,writeBlocked,
         state.exerciseNoteError,onSaveExerciseNote) {showPinnedNote=false}
-    if(showNote)NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote) {showNote=false}
+    if(showNote)NativeSessionNoteSheet(progress,writeBlocked,state.workoutError,onSaveSessionNote) {showNote=false}
     // Session note, pinned setup and Focus stay visible on narrow phones.
     // A scrollable row containing a weighted Spacer could push Focus offscreen.
     Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        IconButton(onClick={showNote=true},enabled=!journal.isFinished &&
-            !state.workoutBusy && !state.historyBusy) {
+        IconButton(onClick={showNote=true},enabled=!writeBlocked) {
             Icon(Icons.Outlined.Edit,contentDescription=if(journal.note?.text.isNullOrEmpty())"Add session note" else "Edit session note",
                 tint=if(journal.note?.text.isNullOrEmpty())MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
         }
         if(pinnedNote!=null)IconButton(onClick={showPinnedNote=true},
-            enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy) {
+            enabled=!writeBlocked) {
             Icon(Icons.Outlined.PushPin,contentDescription="Edit pinned note and setup for ${exercise.name}",
                 tint=if(pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})
                     MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -218,7 +221,7 @@ internal fun NativeWorkoutScreen(
         FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
     }
     if(pinnedNote!=null && (pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})) {
-        OutlinedCard(onClick={showPinnedNote=true},enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy,
+        OutlinedCard(onClick={showPinnedNote=true},enabled=!writeBlocked,
             modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 val setup=pinnedNote.fields.mapNotNull {field->pinnedNote.setup[field.key]?.takeIf {it.isNotEmpty()}
@@ -248,9 +251,7 @@ internal fun NativeWorkoutScreen(
             setDraftStates.SaveableStateProvider(
                 "${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}"
             ) {
-                NativeWorkingSet(plan.session,set,commit,
-                    state.workoutBusy || state.historyBusy || state.backupExportBusy ||
-                        journal.isFinished,
+                NativeWorkingSet(plan.session,set,commit,writeBlocked,
                     showLast,onRecord,onCorrect,state.workoutError,state,onInspectEquipmentLoad,
                     exercise.sets.size)
             }
@@ -269,7 +270,7 @@ internal fun NativeWorkoutScreen(
     }
     if(exercisePending>0 && !journal.isFinished) {
         TextButton(onClick={showSkipExercise=true},
-            enabled=!state.workoutBusy && !state.historyBusy) {
+            enabled=!writeBlocked) {
             Text("Skip remaining ${exercisePending} sets for this exercise")
         }
     }
@@ -326,7 +327,7 @@ internal fun NativeWorkoutScreen(
                 }.getOrDefault(emptyList()).size
                 if(pendingReduction>0 && !journal.isFinished) {
                     OutlinedButton(onClick={confirmReducedPart=affectedPart},
-                        enabled=!state.workoutBusy && !state.historyBusy,
+                        enabled=!writeBlocked,
                         modifier=Modifier.fillMaxWidth()) {
                         Text("Reduce planned work · skip $pendingReduction unfinished sets")
                     }
@@ -335,7 +336,7 @@ internal fun NativeWorkoutScreen(
                 }
                 if(pendingRelated>0 && !journal.isFinished) {
                     FilledTonalButton(onClick={confirmAffectedPart=affectedPart},
-                        enabled=!state.workoutBusy && !state.historyBusy,
+                        enabled=!writeBlocked,
                         modifier=Modifier.fillMaxWidth()) {
                         Text("Skip $pendingRelated unfinished related sets")
                     }
@@ -362,8 +363,7 @@ internal fun NativeWorkoutScreen(
                 val approved=confirmReducedPart
                 confirmReducedPart=""
                 onReduceAffectedMuscle(approved)
-            },enabled=removed.isNotEmpty() && !state.workoutBusy && !state.historyBusy &&
-                !journal.isFinished) { Text("Confirm reduced work") }},
+            },enabled=removed.isNotEmpty() && !writeBlocked) { Text("Confirm reduced work") }},
             dismissButton={TextButton(onClick={confirmReducedPart=""}) { Text("Keep full workout") }})
     }
     if(confirmAffectedPart.isNotEmpty()) {
@@ -378,8 +378,7 @@ internal fun NativeWorkoutScreen(
                 val confirmedPart=confirmAffectedPart
                 confirmAffectedPart=""
                 onSkipAffectedMuscle(confirmedPart)
-            },enabled=pendingCount>0 && !state.workoutBusy && !state.historyBusy &&
-                !journal.isFinished) { Text("Confirm related skips") }},
+            },enabled=pendingCount>0 && !writeBlocked) { Text("Confirm related skips") }},
             dismissButton={TextButton(onClick={confirmAffectedPart=""}) { Text("Keep training") }})
     }
     if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0) {
@@ -392,7 +391,7 @@ internal fun NativeWorkoutScreen(
             text={Text("${journal.completed.size-skipped} recorded · $skipped skipped · ${journal.completed.size} of ${plan.slots.size} sets saved. Finishing publishes these observations to training history."+
                 if(unloggedWarmups>0)" $unloggedWarmups warm-up targets are unrecorded." else "")},
             confirmButton={Button(onClick={showFinishReview=false;onFinish()},
-                enabled=!state.workoutBusy && !state.historyBusy) { Text("Finish workout") }},
+                enabled=!operationBlocked) { Text("Finish workout") }},
             dismissButton={TextButton(onClick={showFinishReview=false}) { Text("Keep training") }}
         )
     }

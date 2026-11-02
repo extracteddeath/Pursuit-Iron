@@ -1846,3 +1846,13 @@ completion reading also honor broad blocked/store states. This protects
 against stale UI callbacks and interleaved owned writes without changing
 engine prescriptions, journal formats, existing facts, or finish recovery.
 Source contract coverage was extended. No APK or production merge.
+
+## 2026-11-02 — Train control parity with the runtime writer
+
+Train now derives one common operation-busy state and one mutation-busy
+state, incorporating blocked recovery, program/store activity, history I/O,
+backup export, workout I/O, and the journal's terminal state. Working
+sets, warm-ups, session/pinned notes, skip/reduction confirmations, and
+Finish bind to the writer's source of availability. Finished journals still
+allow only the original explicit publication retry. This is UI integration
+and source contract coverage, with no replacement writer or engine rule.

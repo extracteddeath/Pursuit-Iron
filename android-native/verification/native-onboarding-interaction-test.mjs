@@ -156,8 +156,8 @@ assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workout
   train.includes('it.slot !in committedSlots') &&
   train.includes('visibleSets.forEach { set->') &&
   train.includes('NativeWorkingSet(plan.session,set,commit,') &&
-  train.includes('state.workoutBusy || state.historyBusy || state.backupExportBusy ||') &&
-  train.includes('journal.isFinished,') &&
+  train.includes('val writeBlocked=operationBlocked || journal.isFinished') &&
+  train.includes('NativeWorkingSet(plan.session,set,commit,writeBlocked,') &&
   train.includes('onCorrect,state.workoutError,state,onInspectEquipmentLoad,') &&
   train.includes('FilterChip(selected=focusMode,onClick={focusMode=!focusMode}') &&
   train.includes('val setDraftStates=rememberSaveableStateHolder()'),
@@ -823,7 +823,6 @@ assert.ok(host.includes('private fun canMutateWorkout(current: NativeRuntimeStat
   host.includes('allowFinished || !it.isFinished') &&
   host.includes('if(!canMutateWorkout(current) || progress.plan.slots!=progress.journal.slots)return') &&
   host.includes('if(!canMutateWorkout(current))return') &&
-  host.includes('if(!canMutateWorkout(current) ||\\n            !NativeWarmupPolicy.valid')===false &&
   host.includes('if(!canMutateWorkout(current) ||\n            !NativeWarmupPolicy.valid') &&
   host.includes('if(!canMutateWorkout(current) ||\n            !NativeExerciseNotePolicy.valid') &&
   host.includes('if(!canMutateWorkout(current) ||\n            !JournalSessionNoteCodec.validText') &&
@@ -831,3 +830,16 @@ assert.ok(host.includes('private fun canMutateWorkout(current: NativeRuntimeStat
   host.includes('current.historyBusy || current.workoutBusy || current.backupExportBusy || current.workout!=null') &&
   host.includes('current.backupExportBusy || current.workoutBlocked)return'),
   'All active workout mutations must fail closed across backup, history and blocked states while preserving finished-journal publication retries');
+
+assert.ok(train.includes('val operationBlocked=!state.ready || state.blocked || state.busy ||') &&
+  train.includes('state.workoutBusy || state.historyBusy || state.backupExportBusy ||') &&
+  train.includes('state.workoutBlocked') &&
+  train.includes('val writeBlocked=operationBlocked || journal.isFinished') &&
+  train.includes('NativeWarmupPanel(\n        progress,exercise,writeBlocked,') &&
+  train.includes('NativeExerciseNoteSheet(progress,exercise,writeBlocked,') &&
+  train.includes('NativeSessionNoteSheet(progress,writeBlocked,') &&
+  train.includes('NativeWorkingSet(plan.session,set,commit,writeBlocked,') &&
+  train.includes('enabled=removed.isNotEmpty() && !writeBlocked') &&
+  train.includes('enabled=pendingCount>0 && !writeBlocked') &&
+  train.includes('enabled=!operationBlocked) { Text("Finish workout")'),
+  'Native Train controls and Finish must reflect the same busy/blocked predicate as the canonical journal writer');

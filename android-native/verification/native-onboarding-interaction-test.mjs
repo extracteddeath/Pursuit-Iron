@@ -371,3 +371,19 @@ assert.ok(activity.includes('onVerifyBackupMerge=runtime::verifyBackupMergeSelec
   !host.includes('installApprovedBackupMerge') &&
   !backupScreening.includes('installApprovedBackupMerge'),
   'Second selection must fully recheck current owner and exact selected bytes without import authority');
+
+const mergePreflightSource=fs.readFileSync('android-native/engine-bridge/backup-merge-preview.mjs','utf8');
+const mergePreparationSource=fs.readFileSync('android-native/engine-bridge/backup-merge-preparation.mjs','utf8');
+assert.ok(mergePreflightSource.includes('deletionClocksChanged') &&
+  mergePreflightSource.includes('performanceChanged') &&
+  mergePreflightSource.includes("'DELETION_CLOCKS_CHANGED'") &&
+  mergePreflightSource.includes("'PERFORMANCE_CHANGED'") &&
+  mergePreparationSource.includes('Deletion clocks would be changed') &&
+  mergePreparationSource.includes('Existing performance mirror would change') &&
+  mergeCodec.includes('"performanceChanged","deletionClocksChanged","flags"') &&
+  restoreReviewUi.includes('preview.performanceChanged') &&
+  restoreReviewUi.includes('preview.deletionClocksChanged') &&
+  restoreReviewUi.includes('"PERFORMANCE_CHANGED"') &&
+  restoreReviewUi.includes('"DELETION_CLOCKS_CHANGED"') &&
+  !restoreReviewUi.includes('commitAtomically'),
+  'Privileged merge may not hide performance cache changes or future deletion markers');

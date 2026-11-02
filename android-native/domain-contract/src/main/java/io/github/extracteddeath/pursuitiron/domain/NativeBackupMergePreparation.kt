@@ -86,7 +86,7 @@ interface PinnedCanonicalBackupMergeEngine {
  * Private explicit user-confirmation evidence. No factory or UI is connected
  * yet: the store's restore API cannot be reached through the shipping app.
  */
-data class NativeBackupRestoreApproval internal constructor(
+class NativeBackupRestoreApproval internal constructor(
     val operationId: String,
     val currentSha256: String,
     val incomingSha256: String,

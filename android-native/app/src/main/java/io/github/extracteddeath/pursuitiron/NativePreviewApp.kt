@@ -58,6 +58,7 @@ import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupExportDocument
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
 import io.github.extracteddeath.pursuitiron.domain.JournalSetSlot
 import io.github.extracteddeath.pursuitiron.domain.JournalSetDisposition
 import io.github.extracteddeath.pursuitiron.domain.JournalSetValues
@@ -104,7 +105,8 @@ internal fun NativePreviewApp(
     onHistoryList: ()->Unit = {},
     onFilterHistory: (NativeHistoryFilter)->Unit = {},
     onHistoryCalendar: (NativeHistoryCalendarQuery)->Unit = {},
-    onExportBackup: (NativeBackupExportDocument)->Unit = {},onResetBackupExport: ()->Unit = {}
+    onExportBackup: (NativeBackupExportDocument)->Unit = {},onResetBackupExport: ()->Unit = {},
+    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -242,6 +244,7 @@ internal fun NativePreviewApp(
                                     schemaVerifier = schemaVerifier,
                                     schemaVerifierLoading = schemaVerifierLoading,
                                     runtimeState=onboarding,onExportBackup=onExportBackup,onResetBackupExport=onResetBackupExport,
+                                    onPreviewBackupMerge=onPreviewBackupMerge,
                                     onPreviewDay = { day ->
                                         selectedTrainingDay = day
                                         section = NativeDestination.TRAIN.ordinal

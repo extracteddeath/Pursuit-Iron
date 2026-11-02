@@ -33,7 +33,7 @@ export function prepareNativeGymInventoryEdit(currentSnapshot,editJson) {
   const record=before.saved.find(p=>p.id===ref.programId);
   ensure(record && before.nativeOnboarding?.programId===ref.programId &&
     record.config && ['lb','kg'].includes(record.config.unit));
-  const inventory=r.loadingInventory===null ? null : authoredInventory(r.loadingInventory,record.config.unit);
+  const inventory=r.loadingInventory===null ? null : authoredInventory(r.loadingInventory,record.config.unit,record);
   const prior=before.nativeGymInventoryEdit;
   const alreadyPresent=prior?.operationId===r.operationId;
   let candidateSnapshot=currentSnapshot;

@@ -62,6 +62,8 @@ object WorkoutStoreRuntimeCodec {
         when (text(request,"method")) {
             "prepareNativeProgramEdit" -> { exact(p,"currentSnapshot","editJson")
                 bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES);bounded(text(p,"editJson"),32768) }
+            "prepareNativeGymInventoryEdit" -> { exact(p,"currentSnapshot","editJson")
+                bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES);bounded(text(p,"editJson"),16384) }
             "prepareBackupMerge" -> {
                 exact(p,"currentSnapshot","incomingSnapshot","expectedCandidateSha256")
                 bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES)

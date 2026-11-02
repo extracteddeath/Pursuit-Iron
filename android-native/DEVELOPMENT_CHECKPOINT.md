@@ -462,3 +462,36 @@ acceptance is still required for the complete agreed journey; preserve the APK
 freeze until its release gate has the required evidence.
 The full Kotlin engine rebuild follows the integrated-system gate in
 `ENGINE_REBUILD_PLAN.md`; current parity success does not close that gate.
+
+## Follow-up: redacted canonical backup merge preflight (no import)
+
+The isolated Android bridge now exposes `previewBackupMerge` solely on the
+private workout-store preparation channel. It accepts **two separately bounded
+exact v13 snapshots** (the owned current store and an explicitly selected
+backup), verifies the existing canonical parser, rejects duplicate/invalid
+record IDs and deletion clocks, and evaluates the unmodified canonical
+`mergeStores` policy in memory. It returns only source fingerprints, counts,
+hypothetical size, conflict count and explicit history-cap/capacity warnings.
+It never returns proposed merged records or writable snapshot bytes.
+
+The Kotlin boundary independently checks both full UTF-8 source hashes,
+protocol/version, strict result keys, bounded counts and candidate size,
+risk flags and the permanent `approvedForImport=false` markers. The sandbox
+method is **not wired to a document picker, Compose, or a canonical store writer**.
+No import, merge, Undo, migration of old web backups or recovery of an active
+journal occurs in this pass. Current JS data ownership and both other apps
+remain unchanged.
+
+The Node test covers correction clocks, tombstones and resurrection, real
+2,000-workout history-cap loss, source bounds, private-channel isolation and
+redacted results. Kotlin tests cover forged approval, fingerprints, flags,
+counts and request bounds. Remote CI and Android device acceptance must be
+checked separately at the exact final head before calling this stage certified.
+
+**Next actual integration step:** hold chosen import bytes in a process-scoped
+owner, read and fingerprint a provider copy, run canonical v13 inspection and
+the two-snapshot preflight against an immutable current-store revision, show
+conflicts and risks for user confirmation, and explicitly refuse import until
+an atomic Undo/rollback and revision/tombstone-safe publication path has its
+own crash/retry tests. Never imply this diagnostic is safe to publish merely
+because its risk list is empty.

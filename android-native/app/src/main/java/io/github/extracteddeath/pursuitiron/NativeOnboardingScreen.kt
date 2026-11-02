@@ -35,6 +35,10 @@ internal fun NativeOnboardingScreen(
     var barbellCap by rememberSaveable { mutableStateOf<Int?>(initial.barbellCap) }
     var focus by rememberSaveable { mutableStateOf(HashMap(initial.focus)) }
     var reduced by rememberSaveable { mutableStateOf(ArrayList(initial.reduced)) }
+    var inventoryFields by rememberSaveable {
+        mutableStateOf(HashMap(NativeGymInventoryCodec.toDraft(initial.loadingInventory)))
+    }
+    val inventoryValidation = NativeGymInventoryCodec.fromDraft(inventoryFields, unit)
     val splits=state.options?.splits ?: listOf(NativeProgramSplit("full_body","Full body",listOf(3,4,5,6)))
     val selected=splits.firstOrNull { it.id==split } ?: splits.first()
     LaunchedEffect(state.options) {
@@ -123,8 +127,13 @@ internal fun NativeOnboardingScreen(
         }
         SectionLabel("Weight units")
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            listOf("lb","kg").forEach { id -> PreviewChoice(id,unit==id,!state.busy){unit=id} }
+            listOf("lb","kg").forEach { id -> PreviewChoice(id,unit==id,!state.busy){
+                if(unit!=id) { unit=id; inventoryFields=HashMap() }
+            } }
         }
+        NativeGymInventoryEditor(unit,inventoryFields,{ key,value ->
+            inventoryFields=HashMap(inventoryFields).apply { put(key,value) }
+        },inventoryValidation,!state.busy)
         PreviewSettingSwitch("Bodyweight exercises","Include movements such as push-ups and pull-ups.",bodyweight,enabled=!state.busy) {
             if(!state.busy)bodyweight=it
         }
@@ -154,8 +163,9 @@ internal fun NativeOnboardingScreen(
         }
         if(equipment.isEmpty()) Text("Choose at least one equipment option.",color=MaterialTheme.colorScheme.error)
         Button(onClick={onReview(NativeProgramProfile(name,goal,experience,unit,split,days,session,
-            equipment.toList(),bodyweight,supersets,barbellCap,focus.toMap(),reduced.toList()))},
-            enabled=state.ready && !state.blocked && !state.busy && equipment.isNotEmpty() && name.isNotBlank(),
+            equipment.toList(),bodyweight,supersets,barbellCap,focus.toMap(),reduced.toList(),
+            inventoryValidation.json))},
+            enabled=state.ready && !state.blocked && !state.busy && equipment.isNotEmpty() && name.isNotBlank() && inventoryValidation.valid,
             modifier=Modifier.fillMaxWidth()) { Text(if(state.busy) "Building your program…" else "Review generated plan") }
         OutlinedButton(onClick={if(state.busy)onEdit() else step=0},modifier=Modifier.fillMaxWidth()) {
             Text(if(state.busy) "Cancel" else "Back")

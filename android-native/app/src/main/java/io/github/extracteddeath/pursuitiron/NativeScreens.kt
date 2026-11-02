@@ -344,6 +344,7 @@ internal fun PlanScreen(
     onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
     onDiscardBackupReview: () -> Unit = {},
     onSaveProgramEdits: (NativeProgramEditDraft)->Unit = {},
+    onSaveGymInventory: (ReadOnlyProgramReference,String?)->Unit = {_,_->},
     onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>? = {_,_->null}
 ) {
     if(hasSavedProgram && currentPlan !is ReadOnlyProgramPresentation.Structure) {
@@ -423,6 +424,21 @@ internal fun PlanScreen(
                     runtimeState?.workoutBusy!=true && runtimeState?.historyBusy!=true,
                 modifier=Modifier.fillMaxWidth()
             ) { Text("Edit saved program") }
+            runtimeState?.saved?.takeIf {
+                it.program.id==currentPlan.program.id &&
+                    it.program.reference==currentPlan.program.reference
+            }?.let { saved ->
+                NativeSavedGymInventoryPanel(
+                    saved=saved,reference=currentPlan.program.reference,
+                    enabled=runtimeState.workout==null && !runtimeState.workoutBusy &&
+                        !runtimeState.historyBusy && !runtimeState.busy &&
+                        !runtimeState.backupExportBusy && !runtimeState.shortPreviewBusy &&
+                        !runtimeState.blocked,
+                    busy=runtimeState.busy,
+                    error=runtimeState.gymInventoryError,
+                    message=runtimeState.gymInventoryMessage,
+                    onSave=onSaveGymInventory)
+            }
         }
     } else {
         // Unconnected Plan remains illustrative and cannot prescribe a workout.

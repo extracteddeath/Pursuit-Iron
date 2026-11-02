@@ -439,7 +439,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 mutable.update { it.copy(busy=false,programEditError=
-                    "Changes could not be saved. Keep paired exercises together and reopen the editor if your saved plan changed.") }
+                    "Changes could not be saved. Primary or paired movements cannot be removed. Keep pairs together and reopen the editor if your plan changed.") }
             }
         }
     }

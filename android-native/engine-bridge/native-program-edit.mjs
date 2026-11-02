@@ -18,13 +18,13 @@ function requestFrom(raw) {
   ensure(typeof raw==='string' && utf8ByteLength(raw)<=32768);
   const r=JSON.parse(raw);
   ensure(exact(r,['format','operationId','reference','editedAt','name','days']) &&
-    r.format===1 && id(r.operationId) && label(r.name) &&
+    (r.format===1 || r.format===2) && id(r.operationId) && label(r.name) &&
     Number.isSafeInteger(r.editedAt) && r.editedAt>0 && r.editedAt<=8_640_000_000_000_000 &&
     exact(r.reference,['programId','programUpdatedAt','storeSavedAt','storeVersion','snapshotSha256']) &&
     id(r.reference.programId) && r.reference.storeVersion===13 &&
     /^[0-9a-f]{64}$/.test(r.reference.snapshotSha256) && Array.isArray(r.days) && r.days.length>=1 && r.days.length<=7);
   for(const d of r.days) ensure(exact(d,['id','label','slots']) && id(d.id) && label(d.label) &&
-    Array.isArray(d.slots) && d.slots.length<=30 &&
+    Array.isArray(d.slots) && d.slots.length>=1 && d.slots.length<=30 &&
     d.slots.every(s=>Number.isInteger(s) && s>=0 && s<30) && new Set(d.slots).size===d.slots.length);
   ensure(new Set(r.days.map(d=>d.id)).size===r.days.length);
   return r;
@@ -56,14 +56,17 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
     let edited={...original,name:r.name,updatedAt:r.editedAt};
     const days=r.days.map(d=>{
       const old=original.days.find(x=>x.id===d.id);
-      ensure(old && d.slots.length===old.exercises.length && d.slots.every(s=>s<old.exercises.length));
-      const moved=d.slots.some((s,i)=>s!==i);
+      ensure(old && d.slots.length>=1 && d.slots.length<=old.exercises.length &&
+        (r.format===2 || d.slots.length===old.exercises.length) &&
+        d.slots.every(s=>s<old.exercises.length));
+      const moved=d.slots.length!==old.exercises.length || d.slots.some((s,i)=>s!==i);
       if(!moved)return {...old,label:d.label};
       const positions=new Map(d.slots.map((from,to)=>[from,to]));
       // Keep linked superset/circuit members together, in their authored order.
       // Moving a whole group is safe; splitting it requires an explicit pairing edit.
       for(let i=0;i<old.exercises.length;i++)if(original.ss?.[`${d.id}:${i}`])
-        ensure(i+1<old.exercises.length && positions.get(i+1)===positions.get(i)+1);
+        ensure(i+1<old.exercises.length && positions.has(i) && positions.has(i+1) &&
+          positions.get(i+1)===positions.get(i)+1);
       for(const field of slotFields) {
         if(!Object.prototype.hasOwnProperty.call(original,field))continue;
         ensure(object(original[field]));
@@ -86,9 +89,12 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
       return {...old,label:d.label,exercises:d.slots.map(s=>old.exercises[s]),
         ...(old.primaryIndex!==undefined?{primaryIndex:positions.get(old.primaryIndex)}:{})};
     });
-    edited={...edited,days,...(r.days.some(d=>d.slots.some((from,to)=>from!==to))?{edited:true}:{})};
+    edited={...edited,days,...(r.days.some(d=>
+      d.slots.length!==original.days.find(x=>x.id===d.id).exercises.length ||
+      d.slots.some((from,to)=>from!==to))?{edited:true}:{})};
     ensure(r.name!==original.name || JSON.stringify(days)!==JSON.stringify(original.days) ||
-      r.days.some(d=>d.slots.some((from,to)=>from!==to)));
+      r.days.some(d=>d.slots.length!==original.days.find(x=>x.id===d.id).exercises.length ||
+        d.slots.some((from,to)=>from!==to)));
     // Scope is explicitly this program. A linked cycle and its sibling blocks
     // are never implicitly propagated by an organization-only save.
     const plan=programSavePlan(edited,before.saved,before.cycles||[],'program');

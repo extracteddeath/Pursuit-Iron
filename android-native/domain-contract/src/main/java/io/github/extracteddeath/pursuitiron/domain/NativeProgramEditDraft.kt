@@ -92,6 +92,24 @@ class NativeProgramEditDraft private constructor(
         return next(days=updated,orders=slotOrders+(dayId to positions))
     }
 
+    /** Remove one requested *slot*, never all occurrences of a repeated ID.
+     * The canonical editor rejects protected primary and paired movements.
+     */
+    fun removeExercise(dayId: String,index: Int): NativeProgramEditDraft? {
+        val dayIndex=days.indexOfFirst { it.id==dayId }
+        if(dayIndex<0) return null
+        val before=days[dayIndex].exerciseIds
+        if(before.size<=1 || index !in before.indices) return null
+        val updated=days.toMutableList()
+        updated[dayIndex]=updated[dayIndex].copy(exerciseIds=before.filterIndexed { i,_->i!=index })
+        val positions=slotOrders.getValue(dayId).filterIndexed { i,_->i!=index }
+        return next(days=updated,orders=slotOrders+(dayId to positions))
+    }
+
+    val removedMovementCount: Int get()=originalDays.sumOf { day->
+        day.exerciseIds.size-originalSlots(day.id).size
+    }
+
     /** Original slot identity survives even when the same movement occurs twice. */
     fun originalSlots(dayId: String): List<Int> = slotOrders.getValue(dayId)
 

@@ -20,7 +20,7 @@ object NativeProgramEditCodec {
         require(editedAt>r.programUpdatedAt && editedAt>r.storeSavedAt && editedAt<=8_640_000_000_000_000L)
         val reference=JSONObject().put("programId",r.programId).put("programUpdatedAt",r.programUpdatedAt)
             .put("storeSavedAt",r.storeSavedAt).put("storeVersion",r.storeVersion).put("snapshotSha256",r.snapshotSha256)
-        return JSONObject().put("format",1).put("operationId",operationId).put("reference",reference)
+        return JSONObject().put("format",if(draft.removedMovementCount>0) 2 else 1).put("operationId",operationId).put("reference",reference)
             .put("editedAt",editedAt).put("name",draft.name).put("days",JSONArray().apply {
                 draft.days.forEach { d->put(JSONObject().put("id",d.id).put("label",d.label)
                     .put("slots",JSONArray(draft.originalSlots(d.id)))) }
@@ -55,7 +55,13 @@ object NativeProgramEditCodec {
                 val desired=(0 until slots.length()).map {
                     wire.integer(JSONObject().put("n",slots.get(it)),"n").also { require(it in 0..29) }.toInt()
                 }
-                require(desired.sorted()==expected)
+                require(desired.isNotEmpty() && desired.size<=expected.size &&
+                    desired.distinct().size==desired.size && desired.all { it in expected })
+                // Restore the surviving source slots, even when two have the same ID.
+                for(source in expected.asReversed()) if(source !in desired) {
+                    val current=draft.originalSlots(id).indexOf(source)
+                    draft=checkNotNull(draft.removeExercise(id,current))
+                }
                 for(target in desired.indices) {
                     var current=draft.originalSlots(id).indexOf(desired[target]);require(current>=target)
                     while(current>target) {draft=checkNotNull(draft.moveExercise(id,current,-1));current--}
@@ -125,15 +131,45 @@ object NativeProgramEditCodec {
                         }
                         val slots=row.getJSONArray("slots");val priorExercises=old.getJSONArray("exercises")
                         val exercises=day.getJSONArray("exercises")
-                        require(slots.length()==priorExercises.length() && exercises.length()==slots.length())
+                        require(slots.length() in 1..priorExercises.length() && exercises.length()==slots.length())
+                        val format=wire.integer(request,"format")
+                        require(format==2L || (format==1L && slots.length()==priorExercises.length()))
                         val from=(0 until slots.length()).map { slots.getInt(it) }
                         require(from.sorted()==(0 until slots.length()).toList())
                         from.forEachIndexed { to,source->require(exercises.get(to)==priorExercises.get(source)) }
                         require(day.get("label")==row.get("label"))
-                        if(old.has("primaryIndex"))require(day.getInt("primaryIndex")==from.indexOf(old.getInt("primaryIndex")))
+                        if(old.has("primaryIndex")) {
+                            val primary=from.indexOf(old.getInt("primaryIndex"))
+                            require(primary>=0 && day.getInt("primaryIndex")==primary)
+                        }
                         else require(!day.has("primaryIndex"))
                     }
-
+                    // Verify every slot store independently: removed slot keys
+                    // disappear and surviving slot keys retain their exact values.
+                    val byDay=(0 until requestedDays.length()).associate { index->
+                        val row=requestedDays.getJSONObject(index)
+                        val slots=row.getJSONArray("slots")
+                        wire.text(row,"id") to (0 until slots.length()).map { slots.getInt(it) }
+                    }
+                    val indexed=Regex("^([^:]+):([0-9]+)(:.*)?$")
+                    for(field in listOf("overrides","nextWeekPrescriptions","progStyle",
+                        "slotBias","autoBias","rounds","weekOff","pairs","ss")) {
+                        if(!a.has(field)) {require(!b.has(field));continue}
+                        val originalStore=a.getJSONObject(field)
+                        val candidateStore=b.getJSONObject(field)
+                        val rebuilt=JSONObject()
+                        originalStore.keys().asSequence().forEach { key->
+                            val parts=indexed.matchEntire(key)
+                            val source=parts?.groupValues?.get(2)?.toIntOrNull()
+                            val dayId=parts?.groupValues?.get(1)
+                            val slots=dayId?.let { byDay[it] }
+                            if(slots!=null && source!=null) {
+                                val moved=slots.indexOf(source)
+                                if(moved>=0) rebuilt.put("${dayId}:${moved}${parts.groupValues[3]}",originalStore.get(key))
+                            } else rebuilt.put(key,originalStore.get(key))
+                        }
+                        require(equivalent(rebuilt,candidateStore))
+                    }
                 } else require(equivalent(a,b))
             }
             require(matching==1)

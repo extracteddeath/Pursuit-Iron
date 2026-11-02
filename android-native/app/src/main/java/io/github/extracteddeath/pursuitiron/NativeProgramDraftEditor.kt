@@ -41,6 +41,7 @@ internal fun NativeProgramDraftEditor(
     onClose: () -> Unit
 ) {
     var confirmSave by remember { mutableStateOf(false) }
+    var pendingRemoval by remember { mutableStateOf<Pair<String,Int>?>(null) }
     var confirmClose by remember { mutableStateOf(false) }
     val approved=verified.program
     val draftSaver=remember(approved.reference) { Saver<NativeProgramEditDraft,String>(
@@ -83,7 +84,7 @@ internal fun NativeProgramDraftEditor(
     SectionLabel("Program editor", if(saving) "Saving changes…" else "Review and save your changes")
     PursuitCard(highlighted=true) {
         Text("Organize your existing training days",style=MaterialTheme.typography.titleLarge)
-        Text("Rename or reorder your days and movements. Keep paired exercises together. Your exercise settings follow each movement.",
+        Text("Rename, reorder or remove movements. Retained slot settings follow the movement. Primary lifts and paired movements cannot be removed.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(!allowEditing && !saving) Text("Finish or resolve the active workout before modifying a plan.",
@@ -160,6 +161,10 @@ internal fun NativeProgramDraftEditor(
                         onClick={draft.moveExercise(day.id,index,1)?.let { draft=it }},
                         enabled=allowEditing && index<day.exerciseIds.lastIndex
                     ) { Text("Down") }
+                    OutlinedButton(
+                        onClick={pendingRemoval=day.id to index},
+                        enabled=allowEditing && !saving && day.exerciseIds.size>1
+                    ) { Text("Remove") }
                 }
                 if(index<day.exerciseIds.lastIndex) HorizontalDivider()
             }
@@ -167,7 +172,7 @@ internal fun NativeProgramDraftEditor(
     }
     PursuitCard {
         Text("Save this program",style=MaterialTheme.typography.titleMedium)
-        Text("Changes apply to this program. Workout history and other cycle blocks are kept.",
+        Text("Changes apply to this program; ${draft.removedMovementCount} removal(s) pending. Workout history and other cycle blocks are kept.",
             style=MaterialTheme.typography.bodySmall)
         saveError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         Button(onClick={confirmSave=true},enabled=allowEditing && !saving && draft.isChanged && !invalidInputs,
@@ -186,6 +191,21 @@ internal fun NativeProgramDraftEditor(
                 if(draft.isChanged || invalidInputs)confirmClose=true else onClose()
             },enabled=!saving) { Text("Close editor") }
         }
+    }
+    pendingRemoval?.let { (dayId,index)->
+        val movementId=draft.days.firstOrNull { it.id==dayId }?.exerciseIds?.getOrNull(index)
+        if(movementId==null) pendingRemoval=null
+        else AlertDialog(
+            onDismissRequest={pendingRemoval=null},
+            title={Text("Remove this movement?")},
+            text={Text("Remove ${names[movementId] ?: movementId} from this day only? " +
+                "Saved workouts stay. Removing a protected primary or paired movement is refused on Save.")},
+            confirmButton={Button(onClick={
+                draft.removeExercise(dayId,index)?.let { draft=it }
+                pendingRemoval=null
+            }) { Text("Remove movement") }},
+            dismissButton={OutlinedButton(onClick={pendingRemoval=null}) { Text("Keep movement") }}
+        )
     }
     if(confirmSave) AlertDialog(
         onDismissRequest={if(!saving)confirmSave=false},

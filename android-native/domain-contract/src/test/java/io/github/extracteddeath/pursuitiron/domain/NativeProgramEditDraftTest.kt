@@ -117,6 +117,32 @@ class NativeProgramEditDraftTest {
         assertFalse(raw.contains("operationId"))
     }
 
+    @Test fun removalRetainsRepeatedSlotIdentityAndRestoresSavedWorkspace() {
+        val base=verified()
+        val summary=base.program.copy(days=listOf(
+            ReadOnlyProgramDay("day-1","Repeated",listOf("bench","bench","curl"))))
+        val structure=ReadOnlyProgramPresentationPolicy.inspect(summary,
+            CurrentProgramEvidence(reference,CurrentProgramDeletionEvidence.CheckedAbsent))
+            as ReadOnlyProgramPresentation.Structure
+        val original=NativeProgramEditDraft.from(structure)
+        val removed=checkNotNull(original.removeExercise("day-1",0))
+        assertEquals(listOf("bench","curl"),removed.days[0].exerciseIds)
+        assertEquals(listOf(1,2),removed.originalSlots("day-1"))
+        assertEquals(1,removed.removedMovementCount)
+        assertEquals(2,org.json.JSONObject(NativeProgramEditCodec.editJson(removed,"edit-remove",30)).getInt("format"))
+        val restored=checkNotNull(NativeProgramEditCodec.restoreWorkspace(structure,
+            NativeProgramEditCodec.workspaceJson(removed)))
+        assertEquals(removed.originalSlots("day-1"),restored.originalSlots("day-1"))
+        val moved=checkNotNull(removed.moveExercise("day-1",1,-1))
+        assertEquals(listOf(2,1),checkNotNull(NativeProgramEditCodec.restoreWorkspace(
+            structure,NativeProgramEditCodec.workspaceJson(moved))).originalSlots("day-1"))
+        assertNull(removed.removeExercise("day-1",-1))
+        assertNull(removed.removeExercise("day-1",2))
+        assertNull(original.removeExercise("missing",0))
+        assertNull(checkNotNull(removed.removeExercise("day-1",0)).removeExercise("day-1",0))
+        assertFalse(original.isChanged)
+    }
+
     @Test fun invalidMovementOperationsOrLabelsRefuseWithoutPartialMutation() {
         val draft=NativeProgramEditDraft.from(verified())
         assertNull(draft.moveExercise("day-bogus",0,1))

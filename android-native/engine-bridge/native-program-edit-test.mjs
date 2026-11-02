@@ -114,4 +114,41 @@ const workout=prepareNativeWorkout(issuedSnapshot,JSON.stringify({programId:'pro
   workoutId:'after-edit',startedAt:5000}));
 assert.equal(workout.rows[0].id,plain.program.days[0].exerciseIds[1]);
 assert.equal(workout.rows[1].id,plain.program.days[0].exerciseIds[0]);
+// Native edit v2 deletes a selected *slot*, without changing older format-1 saves.
+const removedRaw=structuredClone(raw),removedDay=removedRaw.saved[0].days[0];
+const removedSnapshot=JSON.stringify(removedRaw),removedRef=inspectNativeProgram(removedSnapshot).program.reference;
+const removal={format:2,operationId:'remove-slot',reference:removedRef,editedAt:6000,
+  name:removedRaw.saved[0].name,days:removedRaw.saved[0].days.map(d=>
+    ({id:d.id,label:d.label,slots:d.exercises.map((_,i)=>i)}))};
+removal.days[0].slots.splice(2,1);
+const removalWire=JSON.stringify(removal);
+const removalPrepared=prepareNativeProgramEdit(removedSnapshot,removalWire);
+const removedStore=JSON.parse(removalPrepared.candidateSnapshot);
+assert.equal(removedStore.saved[0].days[0].exercises.length,removedDay.exercises.length-1);
+assert.equal(removedStore.saved[0].overrides[`${removedDay.id}:2`],undefined);
+assert.deepEqual(removedStore.saved[0].overrides[`${removedDay.id}:0`],
+  removedRaw.saved[0].overrides[`${removedDay.id}:0`]);
+assert.deepEqual(removedStore.cycles,removedRaw.cycles);
+assert.deepEqual(removedStore.history,removedRaw.history);
+assert.deepEqual(removedStore.saved[1],removedRaw.saved[1]);
+assert.equal(prepareNativeProgramEdit(removalPrepared.candidateSnapshot,removalWire).alreadyPresent,true);
+const badPrimary=structuredClone(removal);badPrimary.days[0].slots=[1,2];
+assert.throws(()=>prepareNativeProgramEdit(removedSnapshot,JSON.stringify(badPrimary)));
+const lastGone=structuredClone(removal);lastGone.days[0].slots=[];
+assert.throws(()=>prepareNativeProgramEdit(removedSnapshot,JSON.stringify(lastGone)));
+const oldFormat=structuredClone(removal);oldFormat.format=1;
+assert.throws(()=>prepareNativeProgramEdit(removedSnapshot,JSON.stringify(oldFormat)));
+const pairedRemoval=structuredClone(removedRaw);
+pairedRemoval.saved[0].ss={[`${removedDay.id}:1`]:true};
+const pairedRemovalSnapshot=JSON.stringify(pairedRemoval);
+const pairedRemovalRequest=structuredClone(removal);
+pairedRemovalRequest.reference=inspectNativeProgram(pairedRemovalSnapshot).program.reference;
+assert.throws(()=>prepareNativeProgramEdit(pairedRemovalSnapshot,JSON.stringify(pairedRemovalRequest)),
+  'Removing a member from an authored pair must be refused');
+const beforeRemovalWorkout=prepareNativeWorkout(removedSnapshot,JSON.stringify({
+  programId:'program-edit',workoutId:'pre-removal',startedAt:7000}));
+const afterRemovalWorkout=prepareNativeWorkout(removalPrepared.candidateSnapshot,JSON.stringify({
+  programId:'program-edit',workoutId:'post-removal',startedAt:8000}));
+assert.ok(afterRemovalWorkout.rows.length<beforeRemovalWorkout.rows.length);
+assert.equal(afterRemovalWorkout.rows[0].id,beforeRemovalWorkout.rows[0].id);
 console.log('PASS native program edit: revision save, rich slot metadata, duplicate identity, pairings, retries, retained records and canonical issuance');

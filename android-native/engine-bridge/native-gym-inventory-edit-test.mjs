@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
 import {prepareNativeProgram,inspectNativeProgram,nativeProgramOptions} from './native-onboarding.mjs';
 import {prepareNativeGymInventoryEdit} from './native-gym-inventory-edit.mjs';
 import {prepareNativeWorkout} from './native-workout.mjs';
@@ -7,6 +9,12 @@ import {dispatchWorkoutStoreJson} from './workout-store-protocol.mjs';
 import {dispatchEngineJson,dispatchBackupSchemaJson} from './protocol.mjs';
 import {sha256Utf8} from './json-identity.mjs';
 
+let packagedDispatch=dispatchWorkoutStoreJson;
+if(process.argv[2]) {
+  const context=vm.createContext({});
+  vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),context,{timeout:10000});
+  packagedDispatch=context.PursuitIronBridge.dispatchWorkoutStoreJson;
+}
 const profile={name:'Own gym',goal:'both',experience:'intermediate',unit:'lb',
   split:'full_body',days:3,session:'s60',equipment:nativeProgramOptions().equipment,
   allowBodyweight:true,allowSupersets:false,barbellCap:3,focus:{},reduced:[]};
@@ -68,7 +76,7 @@ assert.equal(JSON.stringify(original),exactSource);
 const wire=(params,method='prepareNativeGymInventoryEdit')=>JSON.stringify({
  protocolVersion:1,id:'gym-edit-wire',method,params});
 const params={currentSnapshot:exactSource,editJson};
-assert.equal(JSON.parse(dispatchWorkoutStoreJson(wire(params))).ok,true);
+assert.equal(JSON.parse(packagedDispatch(wire(params))).ok,true);
 assert.equal(JSON.parse(dispatchEngineJson(wire(params))).ok,false);
 assert.equal(JSON.parse(dispatchBackupSchemaJson(wire(params))).ok,false);
 for(const change of [
@@ -83,7 +91,7 @@ for(const change of [
 ]) {
  const forged=structuredClone(request);change(forged);
  assert.throws(()=>prepareNativeGymInventoryEdit(exactSource,JSON.stringify(forged)));
- assert.equal(JSON.parse(dispatchWorkoutStoreJson(wire({
+ assert.equal(JSON.parse(packagedDispatch(wire({
   currentSnapshot:exactSource,editJson:JSON.stringify(forged)}))).ok,false);
 }
 assert.throws(()=>prepareNativeGymInventoryEdit(prepared.candidateSnapshot,

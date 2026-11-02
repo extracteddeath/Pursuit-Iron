@@ -135,7 +135,7 @@ object NativeProgramEditCodec {
                         val format=wire.integer(request,"format")
                         require(format==2L || (format==1L && slots.length()==priorExercises.length()))
                         val from=(0 until slots.length()).map { slots.getInt(it) }
-                        require(from.sorted()==(0 until slots.length()).toList())
+                        require(validSurvivingSourceSlots(from,priorExercises.length()))
                         from.forEachIndexed { to,source->require(exercises.get(to)==priorExercises.get(source)) }
                         require(day.get("label")==row.get("label"))
                         if(old.has("primaryIndex")) {
@@ -187,6 +187,14 @@ object NativeProgramEditCodec {
         }
         return NativeProgramEditPreparation(candidate,already,program)
     }
+
+    /**
+     * Format 2 uses positions in the ORIGINAL day, not a new dense list.
+     * Surviving positions may contain gaps after arbitrary deletion.
+     */
+    internal fun validSurvivingSourceSlots(source: List<Int>, originalCount: Int): Boolean =
+        originalCount in 1..30 && source.isNotEmpty() && source.size<=originalCount &&
+            source.distinct().size==source.size && source.all { it in 0 until originalCount }
 
     private fun equivalent(a: Any,b: Any,depth: Int=0): Boolean {
         require(depth<=64)

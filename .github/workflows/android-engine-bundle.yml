@@ -57,6 +57,7 @@ jobs:
           node android-native/engine-bridge/verify-bundle-structure.mjs \
             "$BUNDLE_PROOF_DIR/engine.js" "$BUNDLE_PROOF_DIR/metafile.json" "$BUNDLE_PROOF_DIR"
           node android-native/engine-bridge/native-gym-inventory-edit-test.mjs "$BUNDLE_PROOF_DIR/engine.js"
+          node android-native/engine-bridge/native-exercise-stock-test.mjs "$BUNDLE_PROOF_DIR/engine.js"
           node android-native/engine-bridge/native-history-test.mjs "$BUNDLE_PROOF_DIR/engine.js"
           node android-native/engine-bridge/native-history-observation-test.mjs "$BUNDLE_PROOF_DIR/engine.js"
           node android-native/engine-bridge/native-failed-attempt-test.mjs "$BUNDLE_PROOF_DIR/engine.js"

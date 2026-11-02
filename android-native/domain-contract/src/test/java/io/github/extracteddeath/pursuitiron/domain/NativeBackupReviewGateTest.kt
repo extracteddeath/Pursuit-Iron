@@ -72,6 +72,26 @@ class NativeBackupReviewGateTest {
         assertNull(gate.claimReselection())
     }
 
+    @Test fun lateFailureCannotClearAnotherCommittedReview() {
+        val gate=NativeBackupReviewGate()
+        val oldVersion=gate.beginPreview()
+        assertTrue(gate.registerPreview(oldVersion,ticket()))
+        val oldAttempt=checkNotNull(gate.claimReselection())
+        val newerVersion=gate.beginPreview()
+        assertTrue(gate.registerPreview(newerVersion,ticket()))
+        gate.abandonReselection(oldAttempt)
+        assertTrue(gate.isCurrent(newerVersion))
+        assertNotNull(gate.claimReselection())
+    }
+
+    @Test fun stalePreviewCannotBeRegisteredAfterUserDiscardsIt() {
+        val gate=NativeBackupReviewGate()
+        val pending=gate.beginPreview()
+        gate.discard()
+        assertFalse(gate.registerPreview(pending,ticket()))
+        assertNull(gate.claimReselection())
+    }
+
     @Test fun closedOwnerNeverCreatesReviewsOrVerifications() {
         val gate=NativeBackupReviewGate()
         val token=gate.beginPreview()

@@ -36,6 +36,7 @@ import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupExportDocument
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 
 /**
@@ -342,6 +343,7 @@ internal fun PlanScreen(
     onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null,
     onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
     onDiscardBackupReview: () -> Unit = {},
+    onSaveProgramEdits: (NativeProgramEditDraft)->Unit = {},
     onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>? = {_,_->null}
 ) {
     if(hasSavedProgram && currentPlan !is ReadOnlyProgramPresentation.Structure) {
@@ -393,17 +395,22 @@ internal fun PlanScreen(
         }
     }
     }
+    runtimeState?.programEditMessage?.let { Text(it,color=MaterialTheme.colorScheme.primary) }
     // Plan cannot authorize a raw backup or unchecked current program.
     if (currentPlan is ReadOnlyProgramPresentation.Structure) {
         // Recreate on every authenticated canonical revision; a stale local
         // draft may never be presented as an editable CURRENT program.
-        var editingDraft by remember(currentPlan.program.reference) { mutableStateOf(false) }
+        var editingDraft by rememberSaveable(currentPlan.program.reference) { mutableStateOf(false) }
         if(editingDraft) {
             NativeProgramDraftEditor(
                 verified=currentPlan,
                 lookupNames=onLookupProgramExercises,
+                onSave=onSaveProgramEdits,
+                saving=runtimeState?.busy==true,
+                saveError=runtimeState?.programEditError,
                 allowEditing=runtimeState?.workout==null && runtimeState?.workoutBusy!=true &&
-                    runtimeState?.historyBusy!=true && runtimeState?.busy!=true,
+                    runtimeState?.historyBusy!=true && runtimeState?.busy!=true &&
+                    runtimeState?.backupExportBusy!=true && runtimeState?.shortPreviewBusy!=true && runtimeState?.blocked!=true,
                 onClose={ editingDraft=false }
             )
         } else {
@@ -415,7 +422,7 @@ internal fun PlanScreen(
                 enabled=hasSavedProgram && runtimeState?.workout==null &&
                     runtimeState?.workoutBusy!=true && runtimeState?.historyBusy!=true,
                 modifier=Modifier.fillMaxWidth()
-            ) { Text("Edit saved program · local draft") }
+            ) { Text("Edit saved program") }
         }
     } else {
         // Unconnected Plan remains illustrative and cannot prescribe a workout.

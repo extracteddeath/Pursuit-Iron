@@ -20,10 +20,16 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         var writes=0
         var failAfterWrite=false
         var failBeforeWrite=false
-        override fun read()=raw?.copyOf()
+        var failReadAfterWrite=false
+        private var failNextRead=false
+        override fun read(): ByteArray? {
+            if(failNextRead) {failNextRead=false;throw java.io.IOException("Synthetic post-commit read failure")}
+            return raw?.copyOf()
+        }
         override fun commitAtomically(bytes: ByteArray) {
             if (failBeforeWrite) throw java.io.IOException("Synthetic disk-full before commit")
             writes++;raw=bytes.copyOf()
+            if(failReadAfterWrite)failNextRead=true
             if (failAfterWrite) throw java.io.IOException("Synthetic post-commit crash")
         }
         override fun clearAtomically() { raw=null }
@@ -131,6 +137,120 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 checkNotNull(store.readOwnedCurrentStoreBytes()))
             assertNull(engine.previewBackupMerge(current,"invalid-json"))
             assertEquals(priorWrites,drive.writes)
+        } }
+    }
+
+    @Test(timeout=60000) fun savedProgramOrganizationSurvivesRestartWorkoutCompletionAndLostSaveAcknowledgement() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Editable plan",unit="kg"),"create-edit","program-edit",1000,223)))
+            val drive=Drive();var store=CanonicalWorkoutStorePersistence(drive,engine)
+            assertTrue(store.initialize(proposal.snapshot))
+            fun verified(summary: ReadOnlyProgramSummary)=ReadOnlyProgramPresentationPolicy.inspect(summary,
+                CurrentProgramEvidence(summary.reference,CurrentProgramDeletionEvidence.CheckedAbsent)) as ReadOnlyProgramPresentation.Structure
+            val original=NativeProgramEditDraft.from(verified(proposal.program))
+            val draft=checkNotNull(checkNotNull(checkNotNull(original.renameProgram("Organized plan"))
+                .renameDay(original.days[0].id,"Reordered training"))
+                .moveExercise(original.days[0].id,0,1))
+            val request=NativeProgramEditCodec.editJson(draft,"edit-once",2000)
+            val initialWrites=drive.writes
+            var notifications=0
+            store.subscribeCommittedChanges { notifications++ }
+            val saved=checkNotNull(store.saveProgramEdits(request))
+            assertEquals("Organized plan",saved.name)
+            assertEquals(draft.days,saved.days)
+            assertEquals(initialWrites+1,drive.writes);assertEquals(1,notifications)
+            assertNotNull(store.saveProgramEdits(request));assertEquals(initialWrites+1,drive.writes)
+            store=CanonicalWorkoutStorePersistence(drive,engine)
+            var snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val reopened=checkNotNull(engine.inspectProgram(snapshot))
+            assertEquals(saved.reference,reopened.program.reference)
+            assertEquals("Editable plan",reopened.profile.name) // creation provenance stays factual
+            val journal=WorkoutJournalPersistence(Drive())
+            val plan=checkNotNull(engine.prepareWorkout(snapshot,
+                NativeWorkoutCodec.startJson("program-edit","after-edit-workout",3000)))
+            assertEquals(draft.days[0].exerciseIds.first(),plan.exercises.first().id)
+            assertEquals("Reordered training",plan.dayLabel)
+            var progress=checkNotNull(store.beginIssuedSession(plan,journal))
+            val during=NativeProgramEditCodec.editJson(checkNotNull(
+                NativeProgramEditDraft.from(verified(reopened.program)).renameProgram("Blocked edit")),"edit-during",4000)
+            assertNull(store.saveProgramEdits(during))
+            for((i,slot) in plan.slots.withIndex())progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(
+                plan.session,progress.journal.revision,JournalSetIntent("edit-set-$i",slot,
+                    if(i==0)JournalSetDisposition.COMPLETED else JournalSetDisposition.SKIPPED,
+                    if(i==0)JournalSetValues("40","kg",6,2) else null))))
+            val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("edit-finish",63000,60000)))
+            assertTrue(checkNotNull(store.complete(plan.session,finished.revision,journal)).recoveryCleared)
+            snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val historical=JSONObject(snapshot).getJSONArray("history").toString()
+            val current=checkNotNull(engine.inspectProgram(snapshot))
+            val next=checkNotNull(NativeProgramEditDraft.from(verified(current.program)).renameProgram("After completion"))
+            val nextRequest=NativeProgramEditCodec.editJson(next,"edit-after-workout",64000)
+            val beforeWrite=drive.writes
+            drive.failBeforeWrite=true
+            assertTrue(runCatching { store.saveProgramEdits(nextRequest) }.isFailure)
+            assertEquals(beforeWrite,drive.writes)
+            assertEquals(snapshot,String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            drive.failBeforeWrite=false;drive.failAfterWrite=true
+            assertNotNull(store.saveProgramEdits(nextRequest)) // exact committed bytes reconcile the lost ack
+            drive.failAfterWrite=false
+            assertEquals(beforeWrite+1,drive.writes)
+            store=CanonicalWorkoutStorePersistence(drive,engine)
+            assertNotNull(store.saveProgramEdits(nextRequest));assertEquals(beforeWrite+1,drive.writes)
+            snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            assertEquals(historical,JSONObject(snapshot).getJSONArray("history").toString())
+            assertEquals(sha(snapshot),checkNotNull(store.lastCompletionReceipt()).savedSnapshotSha256)
+            assertEquals("After completion",checkNotNull(engine.inspectProgram(snapshot)).program.name)
+            val readbackDraft=checkNotNull(NativeProgramEditDraft.from(verified(checkNotNull(engine.inspectProgram(snapshot)).program))
+                .renameProgram("Recovered readback"))
+            val readbackRequest=NativeProgramEditCodec.editJson(readbackDraft,"readback-edit",65000)
+            var readbackNotifications=0
+            store.subscribeCommittedChanges {readbackNotifications++}
+            val beforeReadback=drive.writes
+            drive.failReadAfterWrite=true
+            assertTrue(runCatching { store.saveProgramEdits(readbackRequest) }.isFailure)
+            assertEquals(beforeReadback+1,drive.writes)
+            assertEquals(1,readbackNotifications)
+            drive.failReadAfterWrite=false
+            assertNotNull(store.saveProgramEdits(readbackRequest))
+            assertEquals(beforeReadback+1,drive.writes)
+
+            assertNull(store.saveProgramEdits(request)) // an older accepted edit cannot replay over a newer one
+        } }
+    }
+
+    @Test(timeout=60000) fun delayedProgramSaveCannotOverwriteANewerProgramRevision() {
+        NodeTransport().use { node -> runBlocking {
+            val started=CompletableDeferred<Unit>();val release=CompletableDeferred<Unit>()
+            val delayed=CanonicalWorkoutStoreTransport { wire ->
+                val result=node.request(wire)
+                val request=JSONObject(wire)
+                if(request.getString("method")=="prepareNativeProgramEdit" &&
+                    JSONObject(request.getJSONObject("params").getString("editJson")).getString("operationId")=="delayed-edit") {
+                    started.complete(Unit);release.await()
+                }
+                result
+            }
+            val engine=SandboxCanonicalWorkoutStoreEngine(delayed)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(),"race-create","race-program",1000,223)))
+            val drive=Drive();val store=CanonicalWorkoutStorePersistence(drive,engine)
+            assertTrue(store.initialize(proposal.snapshot))
+            val verified=ReadOnlyProgramPresentationPolicy.inspect(proposal.program,
+                CurrentProgramEvidence(proposal.program.reference,CurrentProgramDeletionEvidence.CheckedAbsent)) as ReadOnlyProgramPresentation.Structure
+            val original=NativeProgramEditDraft.from(verified)
+            val first=NativeProgramEditCodec.editJson(checkNotNull(original.renameProgram("Late result")),"delayed-edit",2000)
+            val second=NativeProgramEditCodec.editJson(checkNotNull(original.renameProgram("Newer save")),"newer-edit",3000)
+            val pending=async { store.saveProgramEdits(first) }
+            started.await()
+            assertEquals("Newer save",checkNotNull(store.saveProgramEdits(second)).name)
+            val writes=drive.writes
+            release.complete(Unit)
+            assertNull(pending.await());assertEquals(writes,drive.writes)
+            val snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            assertEquals("Newer save",checkNotNull(engine.inspectProgram(snapshot)).program.name)
         } }
     }
 

@@ -1,5 +1,8 @@
 package io.github.extracteddeath.pursuitiron.engine
 
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditEngine
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditPreparation
 import io.github.extracteddeath.pursuitiron.domain.PinnedCanonicalWorkoutStoreEngine
 import io.github.extracteddeath.pursuitiron.domain.WorkoutStoreRuntimeCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
@@ -45,7 +48,7 @@ internal fun interface CanonicalWorkoutStoreTransport {
 class SandboxCanonicalWorkoutStoreEngine internal constructor(
     private val transport: CanonicalWorkoutStoreTransport
 ) : PinnedCanonicalWorkoutStoreEngine, NativeProgramCreationEngine, NativeWorkoutEngine, NativeHistoryEngine,
-    PinnedCanonicalBackupMergeEngine {
+    PinnedCanonicalBackupMergeEngine, NativeProgramEditEngine {
     constructor(worker: CanonicalJsReadOnlyService) : this(CanonicalWorkoutStoreTransport { wire ->
         suspendCancellableCoroutine { continuation ->
             val future=worker.prepareWorkoutStoreAsync(wire)
@@ -130,6 +133,13 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         val raw=transport.request(NativeWorkoutCodec.encodeCompletion(id,origin,current,journal,issued))
         currentCoroutineContext().ensureActive()
         return WorkoutStoreRuntimeCodec.decodePreparation(raw,id,origin,current,journal)
+    }
+
+    override suspend fun prepareProgramEdit(snapshot: String,editJson: String): NativeProgramEditPreparation? {
+        val id="native-program-edit-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeProgramEditCodec.encode(id,snapshot,editJson))
+        currentCoroutineContext().ensureActive()
+        return NativeProgramEditCodec.decode(raw,id,snapshot,editJson)
     }
 
     override suspend fun programOptions(): NativeProgramOptions? {

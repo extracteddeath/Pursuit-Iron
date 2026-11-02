@@ -25,6 +25,7 @@ run('npx',['--yes','esbuild@0.28.2',path.join(snapshot,'android-native/engine-br
   '--global-name=PursuitIronBridge','--legal-comments=none',`--metafile=${metadata}`,`--outfile=${bundle}`]);
 run(node,['--check',bundle]);
 run(node,['android-native/engine-bridge/verify-bundle-structure.mjs',bundle,metadata,snapshot]);
+run(node,['android-native/engine-bridge/native-program-edit-test.mjs',bundle]);
 run(node,['android-native/engine-bridge/native-history-test.mjs',bundle]);
 run(node,['android-native/engine-bridge/native-history-observation-test.mjs',bundle]);
 run(node,['android-native/engine-bridge/native-failed-attempt-test.mjs',bundle]);

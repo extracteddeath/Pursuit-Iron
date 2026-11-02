@@ -12,6 +12,7 @@
   "workout-history-completion.mjs",
   "workout-store-protocol.mjs",
   "native-onboarding.mjs",
+  "native-program-edit.mjs",
   "native-workout.mjs",
   "native-history.mjs",
   "native-history-basis.mjs",

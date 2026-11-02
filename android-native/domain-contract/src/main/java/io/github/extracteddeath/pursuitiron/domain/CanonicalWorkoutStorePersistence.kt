@@ -446,6 +446,44 @@ class CanonicalWorkoutStorePersistence(
 
     fun lastCompletionReceipt(): CanonicalWorkoutHistoryReceipt? = synchronized(guard) { read()?.receipt }
 
+    /** Expected-revision organization save; issued workouts always keep their original plan. */
+    suspend fun saveProgramEdits(editJson: String): ReadOnlyProgramSummary? {
+        val initial=synchronized(guard) { read() } ?: return null
+        if(initial.pending!=null)return null
+        val editor=engine as? NativeProgramEditEngine ?: return null
+        val prepared=editor.prepareProgramEdit(initial.snapshot,editJson) ?: return null
+        var wrote=false
+        val result=try { synchronized(guard) {
+            val current=read() ?: return@synchronized null
+            if(current.pending!=null || current.snapshot!=initial.snapshot)return@synchronized null
+            if(prepared.alreadyPresent) {
+                require(prepared.candidate==current.snapshot)
+                return@synchronized prepared.program
+            }
+            val receipt=current.receipt?.let { CanonicalWorkoutHistoryReceipt(it.session,it.journalRevision,
+                it.handoffSha256,sha(prepared.candidate)) }
+            try {
+                save(State(prepared.candidate,null,receipt,consumedRestoreIds=current.consumedRestoreIds))
+            } catch(failure: Exception) {
+                // A committed atomic file can lose only its acknowledgement.
+                // Confirm exact durable bytes before reporting success or retrying.
+                if(runCatching { read()?.snapshot==prepared.candidate }.getOrDefault(false)) {
+                    wrote=true
+                } else throw failure
+            }
+            val confirmed=read() ?: return@synchronized null
+            require(confirmed.snapshot==prepared.candidate)
+            wrote=true
+            prepared.program
+        } } catch(failure: Exception) {
+            val advanced=runCatching { synchronized(guard) { read()?.snapshot!=initial.snapshot } }.getOrDefault(false)
+            if(advanced)changed()
+            throw failure
+        }
+        if(wrote)changed()
+        return result
+    }
+
     /** Exact revision correction. A pending workout pins its original store until completion. */
     suspend fun correctHistory(correctionJson: String): NativeWorkoutHistory? {
         val initial=synchronized(guard) { read() } ?: return null

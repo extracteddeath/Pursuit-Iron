@@ -753,3 +753,50 @@ custom programs and adaptive-cycle editing remain future integration work.
 This is an incremental native editing foundation, not completion of the
 "custom programs" or "program builder" feature catalog gates. No APK
 or training-engine replacement is authorized by this milestone.
+
+
+## Follow-up — 2026-11-02: saved program organization is connected
+
+The native Plan editor now reviews and saves program/day renames, whole-day
+ordering and within-day movement ordering. Save requires explicit confirmation
+and an exact current snapshot/program revision. The packaged JavaScript bridge
+uses the existing canonical `programSavePlan` with scope `program`; it never
+propagates these changes to another cycle block. The single native store owner
+checks the source again after the worker returns, commits atomically, refreshes
+the latest completion receipt's snapshot identity, and reconciles an exact
+committed file after a lost acknowledgement. An active workout prevents editing.
+
+Every movement carries its original slot number through a draft. Duplicate
+exercise IDs therefore retain independent overrides, next-week prescriptions,
+progression settings, dose biases, alternate-week data and amplifiers. The
+original primary lift follows its slot. Superset links and round counts travel
+with intact, ordered groups; a save that would split/reverse a group is rejected.
+The editor does not yet offer dedicated group-moving or pairing authoring tools.
+
+History, performance/PR caches, tombstones, equipment/settings, creation
+provenance, custom definitions, cycle settings and other saved blocks are retained.
+Reordering days with ambiguous legacy position-only history is refused rather
+than silently assigning that history to another day. SavedState retains the
+draft's day/slot order and partially typed labels across rotation and tab changes;
+a mismatched source revision cannot restore a draft as current. Closing the
+editor requires confirmation before discarding unsaved changes.
+
+Source tests cover rich per-slot data, duplicate movements, paired groups, stale
+and malformed requests, exact retry identity, channel isolation and canonical
+issuance from the edited program. Kotlin integration scenarios cover a real
+packaged-engine save/restart/start/log/finish journey, retained completion/history,
+disk-full refusal, lost acknowledgement reconciliation, and a delayed edit racing
+a newer save. Android interaction contracts trace the confirmed Save through
+Activity, Compose, runtime, canonical editor and atomic owner. These checks do
+not substitute for an Android device journey.
+
+This closes the disabled-save gap for organizing an existing saved program.
+Adding/removing/substituting exercises, authored custom plans, advanced cycle
+controls, the rest of live training/tools/settings/insights, restore activation,
+and Android interaction acceptance remain integration work. APK readiness and
+the independent Kotlin training-engine rewrite have not been declared complete.
+
+Validation for this follow-up: 185 domain JVM tests and 32 packaged-runtime JVM
+tests passed with zero failures/skips; Compose Kotlin and Android instrumentation
+Java compilation passed. The full `Android Compose foundation contracts` source
+suite and a freshly built/verified canonical IIFE proof passed. No APK was built.

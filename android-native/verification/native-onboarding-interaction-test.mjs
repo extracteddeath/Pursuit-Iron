@@ -437,8 +437,8 @@ const nativeDraftContract=fs.readFileSync('android-native/domain-contract/src/ma
 const nativeDraftUi=fs.readFileSync(root+'NativeProgramDraftEditor.kt','utf8');
 assert.ok(
   screens.includes('NativeProgramDraftEditor(') &&
-  screens.includes('remember(currentPlan.program.reference)') &&
-  screens.includes('Edit saved program · local draft') &&
+  screens.includes('rememberSaveable(currentPlan.program.reference)') &&
+  screens.includes('Edit saved program') &&
   screens.includes('runtimeState?.workout==null') &&
   nativeDraftContract.includes('fun from(verified: ReadOnlyProgramPresentation.Structure)') &&
   nativeDraftContract.includes('fun matchesCurrent(') &&
@@ -446,12 +446,12 @@ assert.ok(
   nativeDraftContract.includes('fun moveExercise(') &&
   nativeDraftContract.includes('fun renameDay(') &&
   nativeDraftUi.includes('draft.matchesCurrent(verified)') &&
-  nativeDraftUi.includes('Save program edits · not connected') &&
-  nativeDraftUi.includes('enabled=false') &&
+  nativeDraftUi.includes('Review program changes') &&
+  nativeDraftUi.includes('confirmSave=true') &&
   !nativeDraftUi.includes('commitAtomically') &&
   !nativeDraftUi.includes('installApprovedBackupMerge') &&
   !nativeDraftUi.includes('generateNextProgramForShell'),
-  'Current owned-program drafts must be non-writing, revision-bound and never reinterpret prescriptions'
+  'Current owned-program drafts must use confirmed revision-bound canonical saves'
 );
 
 const programDraftUi=fs.readFileSync(root+'NativeProgramDraftEditor.kt','utf8');
@@ -459,10 +459,10 @@ const programDraftDomain=fs.readFileSync('android-native/domain-contract/src/mai
 const packagedCatalog=fs.readFileSync(root+'PackagedReadOnlySchemaVerifier.kt','utf8');
 assert.ok(
   screens.includes('NativeProgramDraftEditor(') &&
-  screens.includes('remember(currentPlan.program.reference)') &&
-  screens.includes('Edit saved program · local draft') &&
-  programDraftUi.includes('Save program edits · not connected') &&
-  programDraftUi.includes('enabled=false') &&
+  screens.includes('rememberSaveable(currentPlan.program.reference)') &&
+  screens.includes('Edit saved program') &&
+  programDraftUi.includes('Review program changes') &&
+  programDraftUi.includes('onSave(draft)') &&
   programDraftUi.includes('draft.matchesCurrent(verified)') &&
   programDraftUi.includes('LaunchedEffect(approved.reference)') &&
   programDraftUi.includes('lookupNames(approved.reference,ids)') &&
@@ -474,5 +474,21 @@ assert.ok(
   programDraftDomain.includes('Collections.unmodifiableList(') &&
   !programDraftUi.includes('commitAtomically') &&
   !programDraftUi.includes('initialize('),
-  'Native draft editing must preserve source identity and display only packaged catalog names without saving'
+  'Native draft editing must preserve source identity and display packaged catalog names while routing confirmed saves through the runtime'
 );
+
+assert.ok(activity.includes('onSaveProgramEdits=runtime::saveProgramEdits') &&
+  shell.includes('onSaveProgramEdits=onSaveProgramEdits') &&
+  screens.includes('onSave=onSaveProgramEdits') &&
+  host.includes('checkNotNull(owner.saveProgramEdits(request))') &&
+  host.includes('current.saved.program.id!=draft.reference.programId') &&
+  nativeDraftUi.includes('Save program changes?') &&
+  nativeDraftUi.includes('Discard unsaved changes?') &&
+  nativeDraftUi.includes('enabled=!saving') &&
+  !nativeDraftUi.includes('Save program edits · not connected'),
+  'Saved-program edits require an explicit review, current ownership, and guarded canonical save');
+
+assert.ok(nativeDraftUi.includes('NativeProgramEditCodec.restoreWorkspace(verified,it)') &&
+  nativeDraftUi.includes('rememberSaveable(approved.reference,stateSaver=draftSaver)') &&
+  nativeDraftUi.includes('rememberSaveable(approved.reference,stateSaver=labelSaver)'),
+  'Program organization and partially typed labels must survive Android SavedState restoration');

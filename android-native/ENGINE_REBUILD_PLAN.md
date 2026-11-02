@@ -49,7 +49,7 @@ applies to the rebuilt engine before it becomes the app's training authority.
 | Workout logging | Working/extension logging, corrections, recovery, completion and supported failed attempts have source/JVM scenarios; warm-up observation logging and device acceptance remain open |
 | Session adjustments | Shortened sessions and confirmed affected-muscle skips/reductions are wired; full readiness/constraint coverage remains open |
 | Workout tools | Rest/focus/extensions/history have integrated paths; complete notes, plate/bar loading, substitution and superset workflows still need acceptance evidence |
-| Program builder | Native setup/review/save/restore covers generated programs; all advanced authoring controls still need integration coverage |
+| Program builder | Native setup/review/save/restore covers generated programs. Existing saved plans support confirmed renames and day/movement ordering with preserved slot settings; advanced authoring controls still need integration coverage |
 | Custom programs | Inspection/reference contracts exist; first-class native authoring/edit/cycle parity remains open |
 | Adaptive cycles | Required scope is preserved; complete native cycle transitions and authorized adaptation remain open |
 | Exercise discovery | Read-only engine/catalog contracts exist; full variant/attachment/swap workflows remain open |
@@ -68,7 +68,7 @@ integrated system. Close the actual workflow gaps before the rebuild gate is met
 | Workstream | What still needs a complete native workflow |
 | --- | --- |
 | Data migration and recovery | Import preview -> explicit merge -> conflict/tombstone handling -> Undo; bring across existing web records/settings without changing IDs or facts; prove restore from exported data |
-| Programming | Advanced builder settings, first-class custom authoring/editing, cycle transitions and explicit split/exercise adaptation |
+| Programming | Advanced builder settings, adding/removing/swapping movements, first-class custom authoring, cycle transitions and explicit split/exercise adaptation; existing-plan rename/reorder saves are connected |
 | Live training | Warm-up observations, session/pinned notes, plate and bar settings, equipment-aware substitutions, complete supersets and real readiness-driven changes |
 | Insights | Real-data strength/volume/consistency/standards, bodyweight/measurements and milestones; correction-safe feedback |
 | Personal settings | Gyms/inventory/increments, complete preferences, profile/progress identity and cold restore |

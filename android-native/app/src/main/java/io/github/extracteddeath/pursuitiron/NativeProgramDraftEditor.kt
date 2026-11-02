@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.Saver
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditCodec
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
@@ -23,25 +27,40 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 
 /**
- * Native, revision-pinned program edit workspace. Not a canonical editor.
- * A draft must never become a prescription or a saved program without a
- * future engine-certified edit preparation and guarded owner transaction.
+ * Revision-pinned editing workspace. Saves are explicitly confirmed and
+ * prepared by the packaged canonical editor through the atomic store owner.
  */
 @Composable
 internal fun NativeProgramDraftEditor(
     verified: ReadOnlyProgramPresentation.Structure,
     allowEditing: Boolean,
+    saving: Boolean,
+    saveError: String?,
+    onSave: (NativeProgramEditDraft)->Unit,
     lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>?,
     onClose: () -> Unit
 ) {
+    var confirmSave by remember { mutableStateOf(false) }
+    var confirmClose by remember { mutableStateOf(false) }
     val approved=verified.program
-    var draft by remember(approved.reference) {
+    val draftSaver=remember(approved.reference) { Saver<NativeProgramEditDraft,String>(
+        save={NativeProgramEditCodec.workspaceJson(it)},
+        restore={NativeProgramEditCodec.restoreWorkspace(verified,it)}
+    ) }
+    var draft by rememberSaveable(approved.reference,stateSaver=draftSaver) {
         mutableStateOf(NativeProgramEditDraft.from(verified))
     }
     // Input buffers are separate from the validated, immutable edit draft:
     // deleting a whole label while typing must not trap the text field.
-    var nameInput by remember(approved.reference) { mutableStateOf(approved.name) }
-    var dayLabelsInput by remember(approved.reference) {
+    var nameInput by rememberSaveable(approved.reference) { mutableStateOf(approved.name) }
+    val labelSaver=remember(approved.reference) { Saver<Map<String,String>,String>(
+        save={org.json.JSONObject(it).toString()},
+        restore={raw->runCatching {
+            val rows=org.json.JSONObject(raw)
+            approved.days.associate { it.id to rows.getString(it.id) }
+        }.getOrNull()}
+    ) }
+    var dayLabelsInput by rememberSaveable(approved.reference,stateSaver=labelSaver) {
         mutableStateOf(approved.days.associate { it.id to it.label })
     }
     var names by remember(approved.reference) { mutableStateOf<Map<String,String>>(emptyMap()) }
@@ -61,13 +80,13 @@ internal fun NativeProgramDraftEditor(
     }
     val invalidInputs = nameInput != draft.name ||
         draft.days.any { dayLabelsInput[it.id] != it.label }
-    SectionLabel("Program editor", "Local draft · no saved changes")
+    SectionLabel("Program editor", if(saving) "Saving changes…" else "Review and save your changes")
     PursuitCard(highlighted=true) {
         Text("Organize your existing training days",style=MaterialTheme.typography.titleLarge)
-        Text("Exercise identities stay attached to their original day. Nothing here changes your saved program, set targets or workout history.",
+        Text("Rename or reorder your days and movements. Keep paired exercises together. Your exercise settings follow each movement.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
-        if(!allowEditing) Text("Finish or resolve the active workout before modifying a plan.",
+        if(!allowEditing && !saving) Text("Finish or resolve the active workout before modifying a plan.",
             color=MaterialTheme.colorScheme.error)
         OutlinedTextField(
             value=nameInput,
@@ -119,7 +138,7 @@ internal fun NativeProgramDraftEditor(
                 },
                 singleLine=true,modifier=Modifier.fillMaxWidth()
             )
-            Text("${day.exerciseIds.size} original movements · IDs unchanged",
+            Text("${day.exerciseIds.size} movements",
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             day.exerciseIds.forEachIndexed { index,id ->
@@ -147,11 +166,13 @@ internal fun NativeProgramDraftEditor(
         }
     }
     PursuitCard {
-        Text("Review only — not saved",style=MaterialTheme.typography.titleMedium)
-        Text("Renaming or reordering is a draft. The next integration step must obtain a fresh canonical engine validation, resolve equipment and adaptive-cycle constraints, and atomically update only the expected saved-program revision.",
+        Text("Save this program",style=MaterialTheme.typography.titleMedium)
+        Text("Changes apply to this program. Workout history and other cycle blocks are kept.",
             style=MaterialTheme.typography.bodySmall)
-        Button(onClick={},enabled=false,modifier=Modifier.fillMaxWidth()) {
-            Text("Save program edits · not connected")
+        saveError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
+        Button(onClick={confirmSave=true},enabled=allowEditing && !saving && draft.isChanged && !invalidInputs,
+            modifier=Modifier.fillMaxWidth()) {
+            Text(if(saving) "Saving changes…" else "Review program changes")
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick={
@@ -161,7 +182,25 @@ internal fun NativeProgramDraftEditor(
             },enabled=allowEditing && (draft.isChanged || invalidInputs)) {
                 Text("Reset draft")
             }
-            OutlinedButton(onClick=onClose) { Text("Close editor") }
+            OutlinedButton(onClick={
+                if(draft.isChanged || invalidInputs)confirmClose=true else onClose()
+            },enabled=!saving) { Text("Close editor") }
         }
     }
+    if(confirmSave) AlertDialog(
+        onDismissRequest={if(!saving)confirmSave=false},
+        title={Text("Save program changes?")},
+        text={Text("Save “${draft.name}” with ${draft.changedDayCount} changed training days. " +
+            "Paired exercises must stay together. Your saved workouts are kept.")},
+        confirmButton={Button(onClick={confirmSave=false;onSave(draft)},enabled=allowEditing && !saving) {
+            Text("Save changes")
+        }},
+        dismissButton={OutlinedButton(onClick={confirmSave=false},enabled=!saving) {Text("Keep editing")}}
+    )
+    if(confirmClose) AlertDialog(
+        onDismissRequest={confirmClose=false},title={Text("Discard unsaved changes?")},
+        text={Text("Your saved program will stay as it is.")},
+        confirmButton={Button(onClick={confirmClose=false;onClose()}) {Text("Discard changes")}},
+        dismissButton={OutlinedButton(onClick={confirmClose=false}) {Text("Keep editing")}}
+    )
 }

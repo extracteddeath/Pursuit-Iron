@@ -12,6 +12,7 @@ import kotlin.random.Random
 internal data class NativeRuntimeState(
     val loading: Boolean=true,val ready: Boolean=false,val busy: Boolean=false,val blocked: Boolean=false,
     val verifier: PackagedReadOnlySchemaVerifier?=null,val options: NativeProgramOptions?=null,
+    val programEditError: String?=null,val programEditMessage: String?=null,
     val proposal: NativeProgramProposal?=null,val saved: NativeSavedProgram?=null,val error: String?=null,
     val planSource: CurrentReadOnlyPlanSource=UnconnectedCurrentReadOnlyPlanSource,val storeChangeKey: Long=0,
     val workout: NativeWorkoutProgress?=null,val workoutBusy: Boolean=false,val workoutError: String?=null,
@@ -416,6 +417,33 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
+    fun saveProgramEdits(draft: NativeProgramEditDraft) {
+        val current=mutable.value
+        if(!current.ready || current.blocked || current.busy || current.workout!=null || current.workoutBusy ||
+            current.historyBusy || current.backupExportBusy || current.shortPreviewBusy || current.saved==null ||
+            current.saved.program.id!=draft.reference.programId || !draft.isChanged)return
+        val owner=store ?: return;val loaded=current.verifier ?: return
+        val request=NativeProgramEditCodec.editJson(draft,"program-edit-"+UUID.randomUUID(),
+            maxOf(System.currentTimeMillis(),draft.reference.storeSavedAt+1,draft.reference.programUpdatedAt+1))
+        mutable.update { it.copy(busy=true,programEditError=null,programEditMessage=null) }
+        scope.launch {
+            try {
+                checkNotNull(owner.saveProgramEdits(request))
+                val saved=checkNotNull(readSaved(owner,loaded))
+                val receipt=owner.lastCompletionReceipt()
+                val page=optionalHistoryPage(current.historyPage?.offset ?: 0,null,current.historyFilter)
+                val calendar=optionalHistoryCalendar(current.historyCalendarQuery)
+                ensureActive()
+                mutable.update { it.copy(busy=false,saved=saved,completion=receipt,historyPage=page,
+                    historyCalendar=calendar,programEditError=null,programEditMessage="Program changes saved.") }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) {
+                mutable.update { it.copy(busy=false,programEditError=
+                    "Changes could not be saved. Keep paired exercises together and reopen the editor if your saved plan changed.") }
+            }
+        }
+    }
+
     /** Show canonical choices without changing this or any future session. */
     fun previewShorterSession(minutes: Int) {
         val current=mutable.value
@@ -454,7 +482,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     fun startWorkout(minutes: Int?=null) {
         val current=mutable.value
-        if(!current.ready || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
+        if(!current.ready || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
         // A shortened start is permitted only for the preview actually shown.
         // The owned snapshot is verified AGAIN immediately before issuing.
         val approvedPreview=if(minutes!=null) current.shortPreview?.takeIf {

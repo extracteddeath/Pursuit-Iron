@@ -53,6 +53,7 @@ import io.github.extracteddeath.pursuitiron.domain.UnconnectedEngineGateway
 import io.github.extracteddeath.pursuitiron.domain.CurrentReadOnlyPlanSource
 import io.github.extracteddeath.pursuitiron.domain.UnconnectedCurrentReadOnlyPlanSource
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
+import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
@@ -110,6 +111,7 @@ internal fun NativePreviewApp(
     onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null,
     onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
     onDiscardBackupReview: () -> Unit = {},
+    onSaveProgramEdits: (NativeProgramEditDraft)->Unit = {},
     onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>? = {_,_->null}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
@@ -252,6 +254,7 @@ internal fun NativePreviewApp(
                                     onVerifyBackupMerge=onVerifyBackupMerge,
                                     onDiscardBackupReview=onDiscardBackupReview,
                                     onLookupProgramExercises=onLookupProgramExercises,
+                                    onSaveProgramEdits=onSaveProgramEdits,
                                     onPreviewDay = { day ->
                                         selectedTrainingDay = day
                                         section = NativeDestination.TRAIN.ordinal

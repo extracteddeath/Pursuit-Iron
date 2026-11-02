@@ -84,6 +84,39 @@ class NativeProgramEditDraftTest {
         assertEquals(listOf("bench","curl","row"),draft.days[0].exerciseIds)
     }
 
+    @Test fun repeatedExerciseSlotsHaveIndependentImmutableIdentity() {
+        val base=verified()
+        val summary=base.program.copy(days=listOf(ReadOnlyProgramDay("day-1","Repeated",listOf("bench","bench","curl"))))
+        val structure=ReadOnlyProgramPresentationPolicy.inspect(summary,
+            CurrentProgramEvidence(reference,CurrentProgramDeletionEvidence.CheckedAbsent)) as ReadOnlyProgramPresentation.Structure
+        val original=NativeProgramEditDraft.from(structure)
+        val moved=checkNotNull(original.moveExercise("day-1",0,1))
+        assertEquals(original.days,moved.days)
+        assertTrue(moved.isChanged)
+        assertEquals(listOf(1,0,2),moved.originalSlots("day-1"))
+        assertEquals(listOf(0,1,2),original.originalSlots("day-1"))
+        assertTrue(runCatching { (moved.originalSlots("day-1") as MutableList<Int>).clear() }.isFailure)
+        val request=org.json.JSONObject(NativeProgramEditCodec.editJson(moved,"edit-repeat",30))
+        assertEquals("[1,0,2]",request.getJSONArray("days").getJSONObject(0).getJSONArray("slots").toString())
+        assertFalse(moved.reset().isChanged)
+    }
+
+    @Test fun savedWorkspaceRestoresAllDraftIdentityAndRejectsOtherRevisions() {
+        val approved=verified()
+        val draft=checkNotNull(checkNotNull(checkNotNull(checkNotNull(NativeProgramEditDraft.from(approved)
+            .moveDay(0,1)).moveExercise("day-1",0,1)).renameDay("day-1","Changed day")).renameProgram("Changed plan"))
+        val raw=NativeProgramEditCodec.workspaceJson(draft)
+        val restored=checkNotNull(NativeProgramEditCodec.restoreWorkspace(approved,raw))
+        assertEquals(draft.days,restored.days)
+        assertEquals(draft.name,restored.name)
+        assertEquals(draft.originalSlots("day-1"),restored.originalSlots("day-1"))
+        assertEquals(draft.reference,restored.reference)
+        assertNull(NativeProgramEditCodec.restoreWorkspace(verified(reference.copy(snapshotSha256="b".repeat(64))),raw))
+        assertNull(NativeProgramEditCodec.restoreWorkspace(approved,raw.replace("Changed plan","")))
+        assertNull(NativeProgramEditCodec.restoreWorkspace(approved,"{}"))
+        assertFalse(raw.contains("operationId"))
+    }
+
     @Test fun invalidMovementOperationsOrLabelsRefuseWithoutPartialMutation() {
         val draft=NativeProgramEditDraft.from(verified())
         assertNull(draft.moveExercise("day-bogus",0,1))

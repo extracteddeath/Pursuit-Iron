@@ -372,3 +372,19 @@ Empty results retain the total saved count and a Clear filters action.
 The current source-only checks include 110 domain JVM tests, 21 packaged-runtime
 JVM tests, Compose and instrumentation source compilation, the updated history
 page/protocol/UI gates and a newly verified IIFE. No APK is produced.
+
+
+### Saved program organization (2026-11-02)
+
+Plan → Edit saved program supports renaming and reordering existing days and
+movements, with an explicit review/save and an unsaved-discard confirmation.
+The canonical save planner and atomic native owner retain original slot settings,
+primary lift identity, intact supersets, cycle siblings and historical data.
+Edits wait until no workout is active. Drafts and partially typed names survive
+SavedState restoration; stale source revisions are rejected. This does not yet
+provide add/remove/swap authoring or a complete native custom/cycle builder.
+
+Run `node android-native/engine-bridge/native-program-edit-test.mjs` and the
+source-only Gradle/JVM/Compose tasks in `DEVELOPMENT_CHECKPOINT.md`. The packaged
+IIFE runtime proof also runs the edit protocol suite. An accepted native device
+journey remains necessary before the next installable test milestone.

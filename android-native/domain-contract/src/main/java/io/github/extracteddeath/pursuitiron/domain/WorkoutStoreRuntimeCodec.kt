@@ -60,6 +60,8 @@ object WorkoutStoreRuntimeCodec {
         require(integer(request,"protocolVersion")==1L && identifier.matches(text(request,"id")))
         val p=request.getJSONObject("params")
         when (text(request,"method")) {
+            "prepareNativeProgramEdit" -> { exact(p,"currentSnapshot","editJson")
+                bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES);bounded(text(p,"editJson"),32768) }
             "prepareBackupMerge" -> {
                 exact(p,"currentSnapshot","incomingSnapshot","expectedCandidateSha256")
                 bounded(text(p,"currentSnapshot"),MAX_SNAPSHOT_BYTES)

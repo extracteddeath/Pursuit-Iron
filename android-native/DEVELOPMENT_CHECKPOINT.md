@@ -682,3 +682,40 @@ This remains **read-only lifecycle safety**, not user-authorized restoration.
 Provider and process-death testing on a physical Android device, a full
 consent/conflict policy, web backup migration and complete app integration
 must be accepted before enabling import. Preserve the APK freeze.
+
+## Follow-up: native muscle emphasis and reduced-volume program authoring
+
+The native onboarding workflow now exposes a shared Material 3 muscle-priority
+picker sourced from the **canonical JavaScript engine's supported choices**.
+A user can request up to three muscle priorities (focus or specialization)
+and three reduced muscles, with an explicit no-overlap rule and a Balanced
+reset for each group. Choices are included in the typed native profile,
+passed through the pinned canonical `generateNextProgramForShell` request,
+shown in the complete program review and saved into the canonical program
+creation snapshot. The generator, not Compose or Kotlin, remains responsible
+for exercise selection, real training dose and the existing audit.
+
+`NativeProgramSetupCodec` accepts both the original exact 11-field saved
+onboarding profile and the new exact 13-field setup with `focus` and
+`reduced`. New fields have strict finite domains, numeric focus points
+(1 or 2), up to three selected muscles, no duplicate/reduced overlaps,
+deterministic source serialization, and no arbitrary private settings.
+Old saved native programs can still be restored without rewriting their data.
+Canonical bridge and Kotlin tests exercise valid requests, incorrect shapes,
+missing paired fields, duplicate IDs, unsupported muscles, preservation across
+inspect/restart and no public diagnostic write authority.
+
+The existing engine maps lats and upper back onto one general `back`
+priority. Native onboarding now advertises that **combined back group**
+rather than incorrectly promising two independently controlled groups.
+Similarly, the current engine does not yet provide independent brachialis,
+wrist-flexor and wrist-extensor training credits: those remain explicit
+Kotlin engine rebuild requirements, not native feature-completion claims.
+The picker warns that reduced muscles may still receive compound work.
+
+**Important boundaries:** this pass enhances initial *generated program*
+authoring, not custom day/exercise authoring or editing an already saved
+program. There is still no first-class custom editor, no complete adaptive
+cycle builder, no restoration import button and no APK. Complete all native
+workflows and Android device acceptance before switching training authority
+to the independent Kotlin engine.

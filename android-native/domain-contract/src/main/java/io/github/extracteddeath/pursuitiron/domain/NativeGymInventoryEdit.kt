@@ -16,11 +16,12 @@ object NativeGymInventoryEditCodec {
     private val wire = WorkoutStoreRuntimeCodec
 
     fun editJson(reference: ReadOnlyProgramReference, unit: String,
-        inventoryJson: String?, operationId: String, editedAt: Long): String {
+        inventoryJson: String?, operationId: String, editedAt: Long,
+        eligibleExerciseIds: Set<String> = emptySet()): String {
         require(operationId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")) &&
             reference.storeVersion == 13 && editedAt > reference.storeSavedAt &&
             editedAt > reference.programUpdatedAt && editedAt <= 8_640_000_000_000_000L)
-        val inventory = inventoryJson?.let { JSONObject(NativeGymInventoryCodec.validate(it,unit)) }
+        val inventory = inventoryJson?.let { JSONObject(NativeGymInventoryCodec.validate(it,unit,eligibleExerciseIds)) }
         val r = JSONObject().put("programId",reference.programId)
             .put("programUpdatedAt",reference.programUpdatedAt)
             .put("storeSavedAt",reference.storeSavedAt)
@@ -96,8 +97,15 @@ object NativeGymInventoryEditCodec {
                         else newConfig.has(adjustable) &&
                             equivalent(request.getJSONObject(adjustable),newConfig.getJSONObject(adjustable)))
                     val unit=wire.text(oldConfig,"unit")
-                    if(!request.isNull(adjustable))
-                        NativeGymInventoryCodec.validate(newConfig.getJSONObject(adjustable).toString(),unit)
+                    if(!request.isNull(adjustable)) {
+                        val days=old.getJSONArray("days")
+                        val owned=(0 until days.length()).flatMap { dayIndex ->
+                            val exercises=days.getJSONObject(dayIndex).getJSONArray("exercises")
+                            (0 until exercises.length()).map { exercises.getString(it) }
+                        }.toSet()
+                        NativeGymInventoryCodec.validate(newConfig.getJSONObject(adjustable).toString(),
+                            unit,owned)
+                    }
                 } else require(equivalent(old,next))
             }
             require(matches==1)

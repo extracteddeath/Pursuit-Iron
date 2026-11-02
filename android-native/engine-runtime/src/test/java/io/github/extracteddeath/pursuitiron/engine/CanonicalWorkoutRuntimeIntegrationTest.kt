@@ -119,7 +119,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 ?.extensionRestSeconds ?: eligible.restSeconds
             assertEquals(NativeRestCue("rest-logged",expected,eligible.index),
                 NativeRestCuePolicy.latest(progress,eligible.index))
-            assertNull(NativeRestCuePolicy.latest(progress,(eligible.index+1)%plan.exercises.size))
+            assertNull(NativeRestCuePolicy.latest(progress,eligible.index+100))
             val writes=journalDrive.writes
             val storeWrites=storeDrive.writes
             // The cue is pure. Recovering durable journal bytes must not

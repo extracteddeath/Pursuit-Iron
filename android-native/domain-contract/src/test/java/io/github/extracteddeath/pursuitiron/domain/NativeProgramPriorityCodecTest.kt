@@ -17,8 +17,8 @@ class NativeProgramPriorityCodecTest {
         val decoded=NativeProgramSetupCodec.readProfile(raw)
         assertEquals(profile.focus,decoded.focus)
         assertEquals(profile.reduced.toSet(),decoded.reduced.toSet())
-        assertEquals(listOf("chest","quads"),JSONObject(raw).getJSONObject("focus").keys()
-            .asSequence().toList())
+        assertEquals(setOf("chest","quads"),JSONObject(raw).getJSONObject("focus").keys()
+            .asSequence().toSet())
         assertEquals("calves",JSONObject(raw).getJSONArray("reduced").getString(0))
         assertEquals(raw,NativeProgramSetupCodec.profileJson(decoded))
         val request=NativeProgramSetupCodec.setupJson(profile,

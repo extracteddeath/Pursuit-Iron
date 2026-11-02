@@ -123,6 +123,16 @@ assert.ok(train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy'
   controls.includes('minWidth=48.dp,minHeight=48.dp') &&
   !controls.includes('stepLoad('),
   'All set editors share bounded keyboard-and-stepper entry, touch targets and no made-up equipment increments');
+assert.ok(train.includes('onInspectEquipmentLoad:(JournalSetSlot,String)->Unit') &&
+  train.includes('it.workoutId==session.workoutId && it.slot==set.slot') &&
+  train.includes('it.unit==session.unit && it.inputLoad==load') &&
+  train.includes('if(review?.confirmed==true)') &&
+  train.includes('No assumed load increments are offered') &&
+  host.includes('NativeEquipmentLoadingCodec.matchesOrigin(snapshot,progress.plan)') &&
+  host.includes('engine.inspectEquipmentLoad(snapshot,progress.plan.issuedJson,slot,input)') &&
+  host.includes('latest.storeChangeKey==initial.storeChangeKey') &&
+  activity.includes('onInspectEquipmentLoad=runtime::inspectEquipmentLoad'),
+  'Equipment-based load changes require canonical source identity, strict typed verification, unchanged saved revision, and genuinely confirmed hardware');
 assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId)') &&
   train.includes('val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull') &&
   train.includes('it.slot !in committedSlots') &&

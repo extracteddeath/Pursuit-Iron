@@ -25,7 +25,9 @@ internal data class NativeRuntimeState(
     val shortPreview: NativeShortSessionPreview?=null,
     val shortPreviewBusy: Boolean=false,val shortPreviewError: String?=null,
     val muscleReview: NativeWorkoutMuscleReview?=null,
-    val muscleReviewBusy: Boolean=false,val muscleReviewError: String?=null
+    val muscleReviewBusy: Boolean=false,val muscleReviewError: String?=null,
+    val equipmentLoad: NativeEquipmentLoading?=null,
+    val equipmentLoadBusy:Boolean=false,val equipmentLoadError:String?=null
 )
 
 /** One process-scoped engine, canonical writer and workout journal. No backup import. */
@@ -65,7 +67,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 historyReader=NativeHistoryReadPort(owner,engine)
                 val watching=owner.subscribeCommittedChanges {
                     backupReviewGate.discard()
-                    mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null,muscleReview=null,historyCalendar=null) }
+                    mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null,muscleReview=null,
+                        equipmentLoad=null,equipmentLoadError=null,historyCalendar=null) }
                 }
                 synchronized(lifetime) {
                     if(closed) { watching.close();throw CancellationException("Runtime closed") }
@@ -532,6 +535,44 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
      * Read the exact engine-issued workout's primary and secondary muscles.
      * This has no permission to change exercises or saved training records.
      */
+    /** Inspect one literal user-entered load against the exact saved issue.
+     * No state changes to the training engine, gym, or workout journal.
+     */
+    fun inspectEquipmentLoad(slot:JournalSetSlot,input:String) {
+        val initial=mutable.value
+        val progress=initial.workout ?: return
+        if(!initial.ready || initial.workoutBusy || initial.historyBusy || initial.busy ||
+            initial.equipmentLoadBusy || progress.journal.isFinished ||
+            slot !in progress.journal.slots ||
+            progress.journal.completed.any {it.intent.slot==slot} ||
+            !input.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")))return
+        val owner=store ?: return;val engine=initial.verifier?.programEngine ?: return
+        mutable.update {it.copy(equipmentLoad=null,equipmentLoadBusy=true,equipmentLoadError=null)}
+        scope.launch {
+            try {
+                val bytes=checkNotNull(owner.readOwnedCurrentStoreBytes())
+                val result=try {
+                    val snapshot=String(bytes,Charsets.UTF_8)
+                    check(NativeEquipmentLoadingCodec.matchesOrigin(snapshot,progress.plan))
+                    checkNotNull(engine.inspectEquipmentLoad(snapshot,progress.plan.issuedJson,slot,input))
+                } finally { bytes.fill(0) }
+                ensureActive()
+                mutable.update { latest ->
+                    if(latest.workout?.plan?.issuedJson==progress.plan.issuedJson &&
+                        latest.workout?.journal?.completed?.none {it.intent.slot==slot}==true &&
+                        latest.storeChangeKey==initial.storeChangeKey)
+                        latest.copy(equipmentLoad=result,equipmentLoadBusy=false,equipmentLoadError=null)
+                    else latest.copy(equipmentLoad=null,equipmentLoadBusy=false,
+                        equipmentLoadError="The workout changed. Check equipment again.")
+                }
+            } catch(cancelled:CancellationException) {throw cancelled}
+              catch(_:Exception) {
+                mutable.update {it.copy(equipmentLoad=null,equipmentLoadBusy=false,
+                    equipmentLoadError="Cannot verify selectable weights. Use manual entry; nothing was changed.")}
+            }
+        }
+    }
+
     fun inspectWorkoutMuscles() {
         val current=mutable.value
         val plan=current.workout?.plan ?: return

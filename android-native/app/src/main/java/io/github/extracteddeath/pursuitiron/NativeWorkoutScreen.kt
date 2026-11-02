@@ -27,7 +27,8 @@ internal fun NativeWorkoutScreen(
     onReduceAffectedMuscle: (String)->Unit = {},
     onSaveSessionNote: (String)->Unit = {},
     onSaveWarmup: (JournalWarmupIntent)->Unit = {},
-    onSaveExerciseNote: (JournalExerciseNote)->Unit = {}
+    onSaveExerciseNote: (JournalExerciseNote)->Unit = {},
+    onInspectEquipmentLoad:(JournalSetSlot,String)->Unit = {_,_->}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -292,7 +293,7 @@ internal fun NativeWorkoutScreen(
                 "${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}"
             ) {
                 NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord,
-                    onCorrect,state.workoutError)
+                    onCorrect,state.workoutError,state,onInspectEquipmentLoad)
             }
         }
     }
@@ -331,7 +332,8 @@ internal fun NativeWorkoutScreen(
 @Composable
 private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,commit: JournalSetCommit?,busy: Boolean,
     showLast: Boolean,onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,
-    onCorrect: (JournalSetIntent)->Unit,error: String?) {
+    onCorrect: (JournalSetIntent)->Unit,error: String?,
+    state:NativeRuntimeState,onInspectEquipmentLoad:(JournalSetSlot,String)->Unit) {
     var load by rememberSaveable { mutableStateOf(set.load) }
     var reps by rememberSaveable { mutableStateOf(set.reps) }
     // Optional actual effort starts empty, independently of the prescribed RIR.
@@ -369,6 +371,49 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
         } else {
             NativeSetValueFields(session.unit,load,reps,rir,!busy,{load=it},{reps=it},{rir=it},
                 allowFailedAttempt=set.allowFailedAttempt)
+            val review=state.equipmentLoad?.takeIf {
+                it.workoutId==session.workoutId && it.slot==set.slot &&
+                it.unit==session.unit && it.inputLoad==load
+            }
+            if(load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$"))) {
+                OutlinedButton(onClick={onInspectEquipmentLoad(set.slot,load)},
+                    enabled=!busy && !state.equipmentLoadBusy &&
+                        !state.historyBusy,modifier=Modifier.fillMaxWidth()) {
+                    Text(if(state.equipmentLoadBusy)"Checking available loads…"
+                        else "Check equipment-aware weights")
+                }
+            }
+            if(review?.confirmed==true) {
+                val explanation=when(review.family) {
+                    "dumbbells_per_hand" -> "Verified dumbbell loads · per hand"
+                    "barbell_plates" -> "Verified bar weight and plate pairs · total load"
+                    "exercise_override" -> "Verified exercise-specific loading"
+                    "smith_confirmed_totals" -> "Verified Smith total load values"
+                    "machine_stack" -> "Verified machine rack"
+                    "cable_stack" -> "Verified cable stack"
+                    else -> "Verified equipment"
+                }
+                Text(explanation,style=MaterialTheme.typography.labelMedium)
+                if(!review.exact)Text("This entered load is not selectable in the saved equipment list. Manual entry remains available.",
+                    style=MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick={load=checkNotNull(review.previous)},
+                        enabled=!busy && review.previous!=null,modifier=Modifier.weight(1f)) {
+                        Text(review.previous?.let { "− $it ${session.unit}" } ?: "No lower load")
+                    }
+                    OutlinedButton(onClick={load=checkNotNull(review.next)},
+                        enabled=!busy && review.next!=null,modifier=Modifier.weight(1f)) {
+                        Text(review.next?.let { "+ $it ${session.unit}" } ?: "No higher load")
+                    }
+                }
+            } else if(review!=null) {
+                Text("Equipment not confirmed for this exercise. No assumed load increments are offered.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            state.equipmentLoadError?.let {
+                if(review==null)Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
+            }
             val validLoad=NativeSetEntryPolicy.accepts(load,reps,rir,set.allowFailedAttempt)
             val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
             Button(onClick={onRecord(set.slot,JournalSetDisposition.COMPLETED,

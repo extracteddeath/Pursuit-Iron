@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
                     onCorrectSet=runtime::correctSet,
                     onSkipExercise=runtime::skipRemainingExercise,
                     onInspectMuscles=runtime::inspectWorkoutMuscles,
+                    onInspectEquipmentLoad=runtime::inspectEquipmentLoad,
                     onSkipAffectedMuscle=runtime::skipAffectedMuscle,
                     onReduceAffectedMuscle=runtime::reduceAffectedMuscle,
                     onFinishWorkout=runtime::finishWorkout,

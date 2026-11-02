@@ -319,6 +319,136 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=120000) fun actualWarmupsKeepTargetsAndFactsThroughRecoveryHistoryCorrectionAndExportWithoutWorkingCredit() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Integrated warm-ups",unit="kg"),"warm-create","warm-program",1000,223)))
+            val drive=Drive();val recovery=Drive()
+            var owner=CanonicalWorkoutStorePersistence(drive,engine);var journal=WorkoutJournalPersistence(recovery)
+            assertTrue(owner.initialize(proposal.snapshot))
+            // Build actual canonical lifting history rather than inventing a warm-up prescription.
+            for(rotation in 0..2) {
+                val source=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+                val plan=checkNotNull(engine.prepareWorkout(source,NativeWorkoutCodec.startJson("warm-program","warm-seed-$rotation",2000+rotation*70000L)))
+                var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+                assertTrue(progress.journal.tracksWarmups)
+                for((i,slot) in plan.slots.withIndex())progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,
+                    progress.journal.revision,JournalSetIntent("seed-work-$i",slot,JournalSetDisposition.COMPLETED,JournalSetValues("100","kg",8,2)))))
+                val finish=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                    JournalFinishIntent("seed-finish",plan.session.startedAt+60000,60000)))
+                assertTrue(checkNotNull(owner.complete(plan.session,finish.revision,journal)).recoveryCleared)
+            }
+            val source=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val plan=checkNotNull(engine.prepareWorkout(source,NativeWorkoutCodec.startJson("warm-program","warm-workout",300000)))
+            val row=plan.exercises.first();assertTrue(row.warmupTargets.size>=2)
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            val first=JournalWarmupIntent("warm-first",row.warmupTargets[0].slot,JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",8,null),301000)
+            recovery.failAfterWrite=true
+            assertTrue(runCatching {journal.recordWarmup(plan,0,0,first)}.isFailure)
+            recovery.failAfterWrite=false
+            owner=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            progress=checkNotNull(owner.recoverIssuedSession(journal))
+            assertEquals(plan.issuedJson,progress.plan.issuedJson);assertEquals(listOf(first),progress.journal.warmupEvents)
+            val writes=recovery.writes
+            assertNotNull(journal.recordWarmup(plan,0,0,first));assertEquals(writes,recovery.writes)
+            var state=checkNotNull(journal.recordWarmup(plan,0,1,JournalWarmupIntent("warm-skip",row.warmupTargets[1].slot,
+                JournalSetDisposition.SKIPPED,null,302000)))
+            val added=JournalWarmupSlot(row.index,row.warmupTargets.size,row.id)
+            state=checkNotNull(journal.recordWarmup(plan,0,state.warmupEvents.size,JournalWarmupIntent("warm-added",added,
+                JournalSetDisposition.COMPLETED,JournalSetValues("0","kg",10,null),303000)))
+            state=checkNotNull(journal.recordWarmup(plan,0,state.warmupEvents.size,JournalWarmupIntent("warm-attempt",first.slot,
+                JournalSetDisposition.COMPLETED,JournalSetValues("80","kg",0,null),304000,first.operationId)))
+            state=checkNotNull(journal.recordNote(plan.session,0,JournalSessionNote("warm-note","Keep this session note",305000)))
+            assertEquals(0L,state.revision);assertEquals(plan.slots.size,state.unresolvedCount)
+            for((i,slot) in plan.slots.withIndex())state=checkNotNull(journal.recordSet(plan.session,state.revision,
+                JournalSetIntent("warm-working-$i",slot,if(i==1)JournalSetDisposition.SKIPPED else JournalSetDisposition.COMPLETED,
+                    if(i==1)null else JournalSetValues("100","kg",8,2))))
+            val finish=checkNotNull(journal.finish(plan.session,state.revision,JournalFinishIntent("warm-finish",360000,60000)))
+            assertTrue(checkNotNull(owner.complete(plan.session,finish.revision,journal)).recoveryCleared)
+            val completed=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            var history=checkNotNull(engine.inspectHistory(completed,plan.session.workoutId))
+            assertEquals("Keep this session note",history.sessionNote)
+            assertEquals(plan.slots.size,history.totalSets);assertEquals(plan.slots.size-1,history.setsDone)
+            assertEquals((plan.slots.size-1)*800L,history.volume)
+            assertEquals(0,history.warmups.single {it.slot==first.slot}.values?.reps)
+            assertEquals("0",history.warmups.single {it.slot==added}.values?.load)
+            assertEquals(JournalSetDisposition.SKIPPED,history.warmups.single {it.slot==row.warmupTargets[1].slot}.disposition)
+            assertTrue(history.warmups.any {it.disposition==null})
+            val recordedFacts=JSONObject(completed).getJSONArray("history").getJSONObject(0).getJSONObject("nativeWarmups")
+            val rawIssued=JSONObject(plan.issuedJson).getJSONArray("rows").getJSONObject(0).getJSONArray("sets")
+            val originals=org.json.JSONArray().apply {for(i in 0 until rawIssued.length())if(rawIssued.getJSONObject(i).getBoolean("warm"))put(rawIssued.get(i))}
+            assertEquals(originals.toString(),recordedFacts.getJSONArray("exercises").getJSONObject(0).getJSONArray("targets").toString())
+            val request=NativeWarmupHistoryCodec.correctionJson(history,"warm-history-edit",370000,
+                listOf(NativeWarmupChange(first.slot,JournalSetDisposition.COMPLETED,JournalSetValues("500","kg",12,1))))
+            val beforeHistoryWrites=drive.writes
+            drive.failAfterWrite=true
+            assertTrue(runCatching {owner.correctHistory(request)}.isFailure)
+            drive.failAfterWrite=false;owner=CanonicalWorkoutStorePersistence(drive,engine)
+            history=checkNotNull(owner.correctHistory(request))
+            assertEquals(beforeHistoryWrites+1,drive.writes)
+            assertEquals("500",history.warmups.single {it.slot==first.slot}.values?.load)
+            assertEquals("Keep this session note",history.sessionNote)
+            val corrected=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            assertEquals(JSONObject(completed).getJSONObject("perf").toString(),JSONObject(corrected).getJSONObject("perf").toString())
+            assertEquals(sha(corrected),checkNotNull(owner.lastCompletionReceipt()).savedSnapshotSha256)
+            val nextStart=NativeWorkoutCodec.startJson("warm-program","warm-next",390000)
+            assertEquals(JSONObject(checkNotNull(engine.prepareWorkout(completed,nextStart)).issuedJson).getJSONArray("rows").toString(),
+                JSONObject(checkNotNull(engine.prepareWorkout(corrected,nextStart)).issuedJson).getJSONArray("rows").toString())
+            val observation=checkNotNull(history.editRows).first {it.retained}
+            val workEdit=NativeHistoryObservationCodec.correctionJson(history,"work-after-warmup",380000,
+                listOf(NativeHistoryObservationChange(observation.slot,JournalSetDisposition.COMPLETED,JournalSetValues("90","kg",8,2))))
+            history=checkNotNull(owner.correctHistory(workEdit))
+            assertEquals("500",history.warmups.single {it.slot==first.slot}.values?.load)
+            val exported=BackupDocument();assertNotNull(NativeBackupExporter(owner,engine).export(exported))
+            val exportedHistory=JSONObject(String(exported.output.toByteArray(),Charsets.UTF_8)).getJSONArray("history").getJSONObject(0)
+            assertEquals(recordedFacts.getJSONArray("exercises").toString(),exportedHistory.getJSONObject("nativeWarmups").getJSONArray("exercises").toString())
+            val current=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val next=checkNotNull(engine.prepareWorkout(current,nextStart))
+            val opened=checkNotNull(owner.beginIssuedSession(next,journal))
+            assertTrue(opened.journal.warmupEvents.isEmpty());assertNull(opened.journal.note)
+        } }
+    }
+
+    @Test(timeout=60000) fun aWarmupTargetChangedByTheBackendCannotRetireRecoveryOrInventAWorkingSet() {
+        NodeTransport().use { node -> runBlocking {
+            val real=SandboxCanonicalWorkoutStoreEngine(node)
+            val forged=object: PinnedCanonicalWorkoutStoreEngine by real,NativeWorkoutEngine by real {
+                override suspend fun prepareIssuedCompletion(origin: String,current: String,journal: String,issued: String): String? {
+                    val raw=JSONObject(checkNotNull(real.prepareIssuedCompletion(origin,current,journal,issued)))
+                    val entry=raw.getJSONObject("historyEntry")
+                    entry.getJSONObject("nativeWarmups").getJSONArray("exercises").getJSONObject(0).getJSONArray("targets")
+                        .put(JSONObject().put("warm",true).put("weight","999").put("reps","99"))
+                    val candidate=JSONObject(raw.getString("candidateSnapshot"));candidate.getJSONArray("history").put(0,entry)
+                    val text=candidate.toString();raw.put("candidateSnapshot",text).put("candidateSnapshotSha256",sha(text))
+                    return raw.toString()
+                }
+            }
+            val proposal=checkNotNull(real.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(),"bad-warm-create","bad-warm-program",1000,223)))
+            val drive=Drive();val recovery=Drive();var owner=CanonicalWorkoutStorePersistence(drive,forged)
+            val journal=WorkoutJournalPersistence(recovery)
+            assertTrue(owner.initialize(proposal.snapshot))
+            val plan=checkNotNull(real.prepareWorkout(proposal.snapshot,NativeWorkoutCodec.startJson("bad-warm-program","bad-warm-workout",2000)))
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            val ex=plan.exercises.first()
+            var state=checkNotNull(journal.recordWarmup(plan,0,0,JournalWarmupIntent("only-warmup",
+                JournalWarmupSlot(ex.index,ex.warmupTargets.size,ex.id),JournalSetDisposition.COMPLETED,JournalSetValues("20",plan.session.unit,8,null),2100)))
+            for((i,slot) in plan.slots.withIndex())state=checkNotNull(journal.recordSet(plan.session,state.revision,
+                JournalSetIntent("skipped-work-$i",slot,JournalSetDisposition.SKIPPED,null)))
+            val finish=checkNotNull(journal.finish(plan.session,state.revision,JournalFinishIntent("bad-warm-finish",62000,60000)))
+            val writes=drive.writes
+            assertTrue(runCatching {owner.complete(plan.session,finish.revision,journal)}.isFailure)
+            assertEquals(writes,drive.writes);assertTrue(checkNotNull(journal.recover()).isFinished)
+            owner=CanonicalWorkoutStorePersistence(drive,real)
+            assertTrue(checkNotNull(owner.complete(plan.session,finish.revision,journal)).recoveryCleared)
+            val snapshot=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val history=checkNotNull(real.inspectHistory(snapshot,plan.session.workoutId))
+            assertEquals(0,history.setsDone);assertEquals(0L,history.volume);assertTrue(history.exercises.isEmpty())
+            assertEquals("20",history.warmups.single {it.disposition==JournalSetDisposition.COMPLETED}.values?.load)
+        } }
+    }
+
     @Test(timeout=60000) fun realOnboardingCreatesSavesAndRestoresWithoutReplacingAnotherProgram() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)
@@ -1010,7 +1140,8 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 }
                 val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,JournalFinishIntent("finish-active",62000,60000)))
                 val handoff=JSONObject(checkNotNull(journal.finishedHandoff(plan.session,finished.revision)))
-                assertEquals(3,handoff.getInt("format"))
+                assertEquals(6,handoff.getInt("format"))
+                assertEquals(0,handoff.getJSONArray("warmups").length())
                 assertEquals(plan.slots.size+3,handoff.getJSONArray("events").length())
                 drive.failAfterWrite=true
                 assertTrue(runCatching { owner.complete(plan.session,finished.revision,journal) }.isFailure)

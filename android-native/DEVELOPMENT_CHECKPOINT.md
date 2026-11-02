@@ -834,3 +834,55 @@ corrections, export and next-workout isolation. Compose and instrumentation-sour
 compilation, the complete source-contract suite and a freshly verified Android
 IIFE proof pass. Notes do not change set counts, volume, strength records or
 prescription data. No APK has been produced and device acceptance remains open.
+
+
+## Follow-up — 2026-11-02: warm-up logging, original targets and saved corrections
+
+The real native Train workspace now records warm-ups through the same atomic
+recovery journal as working sets and session notes. Issued warm-up targets have
+independent positions, including repeated exercise IDs in different workout
+slots. Users can also add consecutive warm-ups when no initial load estimate
+exists, log actual load/reps/optional RIR, explicitly skip a target, and replace
+an earlier warm-up observation. Blank input is never treated as zero; explicit
+zero-load work and positive-load zero-rep attempts remain distinct factual rows.
+
+The shared keyboard-aware edit sheet and numeric controls are used in Train,
+Focus Mode and saved history. Each warm-up draft and retry identity is saveable.
+A lost acknowledgement recovers the exact recorded operation, and a stale edit
+cannot replace a newer fact. Warm-up writes reserve the space needed for all
+unresolved working observations and Finish. The finish review identifies any
+unrecorded targets; those targets are not silently marked completed or skipped.
+
+New issued workouts carry `warmupLogging: true`; their format-6 journals preserve
+the original target roster even if no warm-up is recorded. Existing issued
+workouts and journal formats 2–5 retain their exact old identity and remain
+readable. Recording warm-ups during an older active workout adds the new facts
+without regenerating that workout's prescriptions. Set revisions, working-set
+positions and completion counters remain independent of warm-up receipts.
+
+Canonical completion retains the exact original target objects, exercise roster
+and full warm-up observation/replacement audit in `nativeWarmups`. The native
+store independently checks those facts against the pinned issued workout before
+publishing history or retiring recovery. Saved warm-ups can be corrected through
+the existing expected-revision history owner. These corrections retain other
+history, notes, working observations/targets, records, progression mirrors and
+program/cycle data. Later working-set edits retain the warm-up evidence. Validated
+exports include both original targets and corrected observations; the next
+workout starts with no previously logged warm-up facts.
+
+Warm-ups intentionally do not contribute to working-set completion, recorded
+training volume, strength records or progression. Tests compare next-workout
+issued rows before/after a false high warm-up correction and require exact
+agreement. This integrates factual logging; it does not rewrite warm-up loading
+or any training formula in the existing engine.
+
+Verification: 193 domain JVM tests and 35 actual packaged-runtime JVM tests pass
+with no failures/skips. Scenarios cover real history-derived targets, added
+warm-ups, repeated lifts, unrecorded/skipped/zero-load/zero-rep rows, active and
+saved corrections, disk-full/lost-ack recovery, a forged backend target, protected
+Finish capacity, export and next-workout isolation. Compose Kotlin,
+instrumentation-source compilation, the complete source-contract suite and a
+freshly verified Android IIFE proof pass. No APK was built. Custom/cycle
+programming, pinned notes/setup, loading/substitution/superset/readiness tools,
+insights/preferences, restore activation and Android device acceptance remain
+integration work before the engine rewrite.

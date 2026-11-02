@@ -402,3 +402,19 @@ separate from pinned exercise notes/setup, which still need native integration.
 `node android-native/engine-bridge/native-session-note-test.mjs` verifies the source
 handoff and can also exercise the actual packaged IIFE. JVM tests additionally
 cover the complete save/restart/log/correct/complete/export/next-workout journey.
+
+
+### Warm-up observations and corrections (2026-11-02)
+
+Train and Focus Mode can record or skip issued warm-ups, add a warm-up, and edit
+its actual load/reps/RIR. The atomic journal preserves these facts independently
+of working-set positions and counters. Original targets and unrecorded positions
+remain in completed history. Saved warm-ups can be corrected without changing
+working records, progression or the next workout's issued targets. Exports retain
+the complete evidence; a new workout starts with no logged warm-up facts.
+
+Run `node android-native/engine-bridge/native-warmups-test.mjs` for the source
+suite or pass an actual packaged IIFE path to exercise the Android bundle.
+JVM tests additionally cover restart/lost-ack/disk-full recovery, full completion,
+history edits, export, altered-target rejection and protected Finish capacity.
+Android device acceptance and the APK integration milestone remain open.

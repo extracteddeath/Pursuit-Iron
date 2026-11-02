@@ -497,7 +497,7 @@ assert.ok(nativeDraftUi.includes('NativeProgramEditCodec.restoreWorkspace(verifi
 const sessionNoteSheet=fs.readFileSync(root+'NativeSessionNoteSheet.kt','utf8');
 const sessionNoteJournal=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/WorkoutJournalPersistence.kt','utf8');
 assert.ok(activity.includes('onSaveSessionNote=runtime::saveSessionNote') &&
-  shell.includes('onReduceAffectedMuscle,onSaveSessionNote)') &&
+  shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup)') &&
   fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8').includes('NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote)') &&
   host.includes('recovery.recordNote(progress.plan.session,progress.journal.revision,note)') &&
   host.includes('restored?.journal?.note==note') &&
@@ -509,3 +509,19 @@ assert.ok(activity.includes('onSaveSessionNote=runtime::saveSessionNote') &&
   sessionNoteJournal.includes('if(!hasFinishCapacity(next))') &&
   !sessionNoteSheet.includes('commitAtomically'),
   'Session notes must use the durable journal, retain drafts, reserve Finish capacity and close only on an acknowledged save');
+
+const warmupUi=fs.readFileSync(root+'NativeWarmupPanel.kt','utf8');
+const warmupDomain=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeWarmups.kt','utf8');
+assert.ok(activity.includes('onSaveWarmup=runtime::saveWarmup') &&
+  shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup)') &&
+  train.includes('NativeWarmupPanel(progress,exercise,') &&
+  warmupUi.includes('rememberSaveableStateHolder()') &&
+  warmupUi.includes('Add warm-up') && warmupUi.includes('Retry warm-up save') &&
+  warmupUi.includes('journal.warmupEvents.any {it.operationId==awaiting}') &&
+  warmupUi.includes('NativeSetValueFields(unit,load,reps,rir,!busy') &&
+  host.includes('recovery.recordWarmup(progress.plan,progress.journal.revision,progress.journal.warmupEvents.size,intent)') &&
+  host.includes('restored?.journal?.warmupEvents?.any {it==intent}') &&
+  sessionNoteJournal.includes('state.tracksWarmups -> 6') &&
+  warmupDomain.includes('warmupIndex') &&
+  !warmupUi.includes('commitAtomically') && !warmupUi.includes('prescribeSets('),
+  'Warm-up facts must use their own durable positions, retained drafts, exact acknowledgements and shared controls');

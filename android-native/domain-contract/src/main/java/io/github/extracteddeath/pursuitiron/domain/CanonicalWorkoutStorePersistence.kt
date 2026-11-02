@@ -420,7 +420,7 @@ class CanonicalWorkoutStorePersistence(
             save(current.copy(pending=Pending(session,current.snapshot,revision,proposed.slots,issued),
                 undo=null,undoAck=null)); true
         }
-        return if (pinned) journal.begin(session,proposed.slots,revision) else null
+        return if (pinned) journal.begin(session,proposed.slots,revision,issued?.let {NativeWorkoutCodec.readIssued(it).tracksWarmups} ?: false) else null
     }
 
     /** Restores issued bytes, never fresh prescriptions, including an interrupted begin. */
@@ -439,8 +439,8 @@ class CanonicalWorkoutStorePersistence(
             checkNotNull(retire(receipt,journal))
             return@synchronized null
         }
-        val restored=checkNotNull(journal.begin(pending.session,pending.slots,pending.startRevision))
-        require(restored.session==plan.session && restored.slots==plan.slots)
+        val restored=checkNotNull(journal.begin(pending.session,pending.slots,pending.startRevision,plan.tracksWarmups))
+        require(restored.session==plan.session && restored.slots==plan.slots && NativeWarmupPolicy.matchesPlan(plan,restored.warmupEvents))
         NativeWorkoutProgress(plan,restored)
     }
 
@@ -644,6 +644,11 @@ class CanonicalWorkoutStorePersistence(
         } else require(!entry.has("nativeSetRevisions"))
         if(journal.note!=null)require(equivalent(entry.getJSONObject("nativeSessionNote"),JournalSessionNoteCodec.json(journal.note)))
         else require(!entry.has("nativeSessionNote"))
+        if(journal.tracksWarmups) {
+            val plan=NativeWorkoutCodec.readIssued(requireNotNull(pending.issuedWorkout))
+            require(NativeWarmupPolicy.matchesPlan(plan,journal.warmupEvents) &&
+                equivalent(entry.getJSONObject("nativeWarmups"),NativeWarmupHistoryCodec.issuedFacts(plan,journal.warmupEvents)))
+        } else require(!entry.has("nativeWarmups"))
         val identity=entry.getJSONObject("nativeCompletion")
         exact(identity,"format","handoffSha256","sourceSnapshotSha256","journalRevision")
         require(number(identity,"format")==2L && number(identity,"journalRevision")==journal.revision &&

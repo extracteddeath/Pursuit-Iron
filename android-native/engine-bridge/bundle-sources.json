@@ -14,6 +14,7 @@
   "native-onboarding.mjs",
   "native-program-edit.mjs",
   "native-session-note.mjs",
+  "native-warmups.mjs",
   "native-workout.mjs",
   "native-history.mjs",
   "native-history-basis.mjs",

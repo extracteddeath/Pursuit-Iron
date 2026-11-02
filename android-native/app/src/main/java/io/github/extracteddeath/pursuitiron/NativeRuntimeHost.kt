@@ -16,7 +16,7 @@ internal data class NativeRuntimeState(
     val proposal: NativeProgramProposal?=null,val saved: NativeSavedProgram?=null,val error: String?=null,
     val planSource: CurrentReadOnlyPlanSource=UnconnectedCurrentReadOnlyPlanSource,val storeChangeKey: Long=0,
     val workout: NativeWorkoutProgress?=null,val workoutBusy: Boolean=false,val workoutError: String?=null,
-    val workoutBlocked: Boolean=false,val completion: CanonicalWorkoutHistoryReceipt?=null,
+    val warmupError: String?=null,val workoutBlocked: Boolean=false,val completion: CanonicalWorkoutHistoryReceipt?=null,
     val history: NativeWorkoutHistory?=null,val historyPage: NativeHistoryPage?=null,
     val historyBusy: Boolean=false,val historyError: String?=null,
     val historyFilter: NativeHistoryFilter=NativeHistoryFilter(),
@@ -508,7 +508,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 }
                 ensureActive()
                 // Starting another workout cannot erase the last durable completion receipt.
-                mutable.update { it.copy(workout=progress,workoutBusy=false,workoutError=null) }
+                mutable.update { it.copy(workout=progress,workoutBusy=false,workoutError=null,warmupError=null) }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 // A begin may have landed before its ack was lost. Recover the
@@ -663,6 +663,27 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
+    fun saveWarmup(intent: JournalWarmupIntent) {
+        val current=mutable.value;val progress=current.workout ?: return
+        if(current.workoutBusy || current.historyBusy || current.workoutBlocked || progress.journal.isFinished ||
+            !NativeWarmupPolicy.valid(intent,progress.plan.session))return
+        val owner=store ?: return;val recovery=journal ?: return
+        mutable.update {it.copy(workoutBusy=true,warmupError=null)}
+        scope.launch {
+            try {
+                val next=checkNotNull(recovery.recordWarmup(progress.plan,progress.journal.revision,progress.journal.warmupEvents.size,intent))
+                ensureActive()
+                mutable.update {it.copy(workout=NativeWorkoutProgress(progress.plan,next),workoutBusy=false,warmupError=null)}
+            } catch(cancelled: CancellationException) {throw cancelled}
+              catch(_: Exception) {
+                val restored=runCatching {owner.recoverIssuedSession(recovery)}.getOrNull()
+                val confirmed=restored?.journal?.warmupEvents?.any {it==intent}==true
+                mutable.update {it.copy(workout=restored ?: it.workout,workoutBusy=false,
+                    warmupError=if(confirmed)null else "The warm-up could not be confirmed. Your saved sets are kept. Review the entry and retry.")}
+            }
+        }
+    }
+
     fun saveSessionNote(text: String) {
         val current=mutable.value;val progress=current.workout ?: return
         if(current.workoutBusy || current.workoutBlocked || progress.journal.isFinished ||
@@ -695,7 +716,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         mutable.update { it.copy(workoutBusy=true,workoutError=null) }
         scope.launch {
             try {
-                val now=maxOf(System.currentTimeMillis(),progress.plan.session.startedAt,progress.journal.note?.updatedAt ?: 0)
+                val now=maxOf(System.currentTimeMillis(),progress.plan.session.startedAt,progress.journal.note?.updatedAt ?: 0,progress.journal.warmupEvents.maxOfOrNull {it.recordedAt} ?: 0)
                 val finished=if(progress.journal.isFinished)progress.journal else checkNotNull(recovery.finish(
                     progress.plan.session,progress.journal.revision,JournalFinishIntent("finish-"+UUID.randomUUID(),
                         now,now-progress.plan.session.startedAt)))

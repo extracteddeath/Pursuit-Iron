@@ -78,7 +78,7 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
   }).filter(Boolean);
   const result=JSON.parse(JSON.stringify({format:shortened?2:1,source:NATIVE_WORKOUT_SOURCE,preparedOnly:true,persisted:false,
     inputStartSha256:sha256Utf8(startJson),session:{reference,workoutId:start.workoutId,dayId:day.id,
-      weekIndex,unit,startedAt:start.startedAt},programName:program.name,dayLabel:day.label,
+      weekIndex,unit,startedAt:start.startedAt},programName:program.name,dayLabel:day.label,warmupLogging:true,
     ...(sessionLengthPlan?{sessionLengthPlan}:{}),
     ...(program.config.percentScheme==='gzclp'?{allowFailedAttempts:true}:{}),rows}));
   issuedNativeWorkoutFrom(rawSnapshot,JSON.stringify(result));
@@ -143,9 +143,11 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
   const p=JSON.parse(issuedRaw);
   ensure([1,2].includes(p?.format) && exact(p,['format','source','preparedOnly','persisted','inputStartSha256',
     'session','programName','dayLabel',...(p.format===2?['sessionLengthPlan']:[]),
-    ...(Object.hasOwn(p,'allowFailedAttempts')?['allowFailedAttempts']:[]),'rows']) &&
+    ...(Object.hasOwn(p,'allowFailedAttempts')?['allowFailedAttempts']:[]),
+    ...(Object.hasOwn(p,'warmupLogging')?['warmupLogging']:[]),'rows']) &&
     p.source===NATIVE_WORKOUT_SOURCE && p.preparedOnly===true && p.persisted===false &&
     typeof p.inputStartSha256==='string' && /^[0-9a-f]{64}$/.test(p.inputStartSha256));
+  ensure(!Object.hasOwn(p,'warmupLogging') || p.warmupLogging===true);
   const s=p.session;
   ensure(exact(s,['reference','workoutId','dayId','weekIndex','unit','startedAt']) &&
     matchesCurrentReadOnlyProgram(originRaw,s.reference) && id(s.workoutId) && id(s.dayId) &&

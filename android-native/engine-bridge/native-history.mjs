@@ -1,3 +1,4 @@
+import { nativeWarmupHistoryRows,applyNativeWarmupChanges } from './native-warmups.mjs';
 import { readNativeSessionNote } from './native-session-note.mjs';
 /** Owned native history only. Canonical JS owns summaries, mirrors and records. */
 import { parseStoredData,perfAfterHistoryReplace,exRecords,EX_BY_ID } from '../../modules/engine-api.js';
@@ -162,6 +163,7 @@ export function inspectNativeHistory(rawSnapshot,historyId) {
       dayLabel:entry.dayLabel,weekIndex:entry.weekIndex,unit:entry.unit,date:entry.date,
       setsDone:entry.setsDone,totalSets:entry.totalSets,volume:entry.volume,
       ...(note?{sessionNote:note.text}:{}),
+      ...(own(entry,'nativeWarmups')?{warmups:nativeWarmupHistoryRows(entry)}:{}),
       exercises:Object.keys(entry.perf).map(id=>({id,name:EX_BY_ID[id].name,
         sets:mapped.filter(s=>s.exerciseId===id).map(({setIndex,set,event})=>({setIndex,
           exerciseIndex:event.slot.exerciseIndex,kind:set.sub?set.kind:'working',ordinal:event.slot.setIndex+1,
@@ -251,7 +253,7 @@ export function prepareNativeHistoryCorrection(currentSnapshot,correctionJson) {
     ensure(typeof correctionJson==='string' && utf8ByteLength(correctionJson)<=16384);
     const request=JSON.parse(correctionJson);
     const observationMode=own(request,'format');
-    ensure((!observationMode || request.format===2) &&
+    ensure((!observationMode || [2,3].includes(request.format)) &&
       exact(request,['operationId','snapshotSha256','historyId','entrySha256','correctedAt','changes',...(observationMode?['format']:[])]) &&
       identifier(request.operationId) && hash(request.snapshotSha256) && hash(request.entrySha256) &&
       integer(request.correctedAt,1,8640000000000000) && Array.isArray(request.changes) &&
@@ -268,7 +270,8 @@ export function prepareNativeHistoryCorrection(currentSnapshot,correctionJson) {
       const updatedAt=Math.max(request.correctedAt,Number(original.updatedAt || original.date)+1,store.savedAt+1);
       ensure(Number.isSafeInteger(updatedAt));
       let corrected;
-      if(observationMode)corrected=applyObservationChanges(original,request,updatedAt);
+      if(request.format===3)corrected=applyNativeWarmupChanges(original,request,updatedAt);
+      else if(observationMode)corrected=applyObservationChanges(original,request,updatedAt);
       else {
       const mapped=mappedSets(original),base=clone(original),draft=clone(original),seen=new Set();
       for(const change of request.changes) {
@@ -293,7 +296,7 @@ export function prepareNativeHistoryCorrection(currentSnapshot,correctionJson) {
       const checked=mappedSets(corrected); // Reject disagreement with canonical evidence.
       if(own(corrected,'nativeHistoryBasis'))readNativeHistoryBasis(corrected,checked);
       const history=store.history.map(h=>h.id===original.id?corrected:h);
-      const perf=perfAfterHistoryReplace(store.history,store.perf,original.id,corrected);
+      const perf=request.format===3?store.perf:perfAfterHistoryReplace(store.history,store.perf,original.id,corrected);
       candidateSnapshot=JSON.stringify({...store,savedAt:corrected.updatedAt,history,perf});
       storeFrom(candidateSnapshot);
     }

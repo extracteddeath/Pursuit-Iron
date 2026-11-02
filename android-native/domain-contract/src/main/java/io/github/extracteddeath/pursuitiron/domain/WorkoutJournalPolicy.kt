@@ -68,8 +68,11 @@ class WorkoutJournalState internal constructor(
     val completed: List<JournalSetCommit>,
     val finish: JournalFinishCommit?,
     val events: List<JournalSetCommit> = completed,
-    val note: JournalSessionNote? = null
+    val note: JournalSessionNote? = null,
+    val warmupEvents: List<JournalWarmupIntent> = emptyList(),
+    val tracksWarmups: Boolean = warmupEvents.isNotEmpty()
 ) {
+    val warmups: List<JournalWarmupIntent> get() = NativeWarmupPolicy.latest(warmupEvents)
     val isFinished get() = finish != null
     val unresolvedCount get() = slots.size - completed.size
 }
@@ -130,7 +133,7 @@ object WorkoutJournalPolicy {
     fun afterPersistedSet(
         state: WorkoutJournalState, intent: JournalSetIntent, ack: JournalSetReceipt
     ): WorkoutJournalState? {
-        if (!validIntent(intent) || intent.operationId==state.note?.operationId || ack.session != state.session ||
+        if (!validIntent(intent) || intent.operationId==state.note?.operationId || state.warmupEvents.any {it.operationId==intent.operationId} || ack.session != state.session ||
             (intent.values?.unit != null && intent.values.unit != state.session.unit) ||
             ack.operationId != intent.operationId || ack.slot != intent.slot ||
             ack.disposition != intent.disposition ||
@@ -153,7 +156,7 @@ object WorkoutJournalPolicy {
         val events=ArrayList(state.events).apply { add(committed) }
         return WorkoutJournalState(
             state.session, state.slots, ack.toRevision,
-            Collections.unmodifiableList(next), null, Collections.unmodifiableList(events), state.note
+            Collections.unmodifiableList(next), null, Collections.unmodifiableList(events), state.note, state.warmupEvents, state.tracksWarmups
         )
     }
 
@@ -162,10 +165,11 @@ object WorkoutJournalPolicy {
         state: WorkoutJournalState, intent: JournalFinishIntent,
         ack: JournalFinishReceipt
     ): WorkoutJournalState? {
-        if (!id.matches(intent.operationId) || intent.operationId==state.note?.operationId || ack.session != state.session ||
+        if (!id.matches(intent.operationId) || intent.operationId==state.note?.operationId || state.warmupEvents.any {it.operationId==intent.operationId} || ack.session != state.session ||
             ack.operationId != intent.operationId ||
             intent.completedAt !in state.session.startedAt..8_640_000_000_000_000L ||
             state.note?.let { it.updatedAt>intent.completedAt }==true ||
+            state.warmupEvents.any {it.recordedAt>intent.completedAt} ||
             intent.durationMs !in 0..(intent.completedAt - state.session.startedAt) ||
             ack.completedAt != intent.completedAt || ack.durationMs != intent.durationMs ||
             state.events.any { it.intent.operationId == intent.operationId }) return null
@@ -176,7 +180,7 @@ object WorkoutJournalPolicy {
             !increment(ack.fromRevision, ack.toRevision)) return null
         return WorkoutJournalState(
             state.session, state.slots, ack.toRevision, state.completed,
-            JournalFinishCommit(intent, ack), state.events, state.note
+            JournalFinishCommit(intent, ack), state.events, state.note, state.warmupEvents, state.tracksWarmups
         )
     }
 }

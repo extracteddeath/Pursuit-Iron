@@ -88,6 +88,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     var selectedExercise by rememberSaveable(history.entrySha256) { mutableStateOf<String?>(null) }
     var selectedSet by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     var selectedObservation by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
+    var selectedWarmup by rememberSaveable(history.entrySha256) {mutableStateOf<String?>(null)}
     val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy
     TextButton(onClick=onList,enabled=!state.historyBusy) { Text(if(state.historyCalendarQuery!=null)"Back to calendar" else "Back to workouts") }
     Text(history.dayLabel,style=MaterialTheme.typography.headlineSmall)
@@ -128,6 +129,29 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
                     }
                 }
             }
+        }
+    }
+    if(history.warmups.isNotEmpty())SectionLabel("Warm-ups")
+    history.warmups.groupBy {it.slot.exerciseIndex}.values.forEach { rows->
+        PursuitCard {
+            Text(rows.first().name,style=MaterialTheme.typography.titleMedium)
+            rows.forEach {row->
+                TextButton(onClick={selectedWarmup="${row.slot.exerciseIndex}:${row.slot.warmupIndex}"},enabled=canEdit,
+                    modifier=Modifier.fillMaxWidth()) {
+                    Text("Warm-up ${row.slot.warmupIndex+1} · "+warmupActualLabel(row.disposition,row.values))
+                }
+            }
+        }
+    }
+    history.warmups.firstOrNull {"${it.slot.exerciseIndex}:${it.slot.warmupIndex}"==selectedWarmup}?.let {row->
+        NativeSetEditSheet(state.historyBusy,onDismiss={selectedWarmup=null}) {
+            Text("Correct warm-up ${row.slot.warmupIndex+1}",style=MaterialTheme.typography.headlineSmall)
+            Text(row.name,style=MaterialTheme.typography.titleMedium)
+            NativeWarmupFields(history.unit,row.targetLoad,row.targetReps,row.disposition,row.values,history.date,
+                state.historyBusy,state.historyError,canSkip=true,onSave={op,clock,disposition,values->
+                    onCorrect(NativeWarmupHistoryCodec.correctionJson(history,op,clock,
+                        listOf(NativeWarmupChange(row.slot,disposition,values))))
+                },onCancel={selectedWarmup=null})
         }
     }
     val otherRows=history.editRows.orEmpty().filter { !it.retained }

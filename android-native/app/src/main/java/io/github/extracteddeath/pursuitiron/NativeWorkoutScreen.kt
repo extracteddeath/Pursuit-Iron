@@ -24,7 +24,8 @@ internal fun NativeWorkoutScreen(
     onInspectMuscles: ()->Unit = {},
     onSkipAffectedMuscle: (String)->Unit = {},
     onReduceAffectedMuscle: (String)->Unit = {},
-    onSaveSessionNote: (String)->Unit = {}
+    onSaveSessionNote: (String)->Unit = {},
+    onSaveWarmup: (JournalWarmupIntent)->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -192,10 +193,7 @@ internal fun NativeWorkoutScreen(
             ?.extensionRestSeconds else null
         NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
             enabled=!state.workoutBusy && !journal.isFinished)
-        if(exercise.warmups.isNotEmpty()) {
-            Text("Warm-up targets",style=MaterialTheme.typography.titleSmall)
-            exercise.warmups.forEach { Text(it,style=MaterialTheme.typography.bodyMedium) }
-        }
+        NativeWarmupPanel(progress,exercise,state.workoutBusy || state.historyBusy,state.warmupError,onSaveWarmup)
         if(exercisePending>0 && !journal.isFinished) {
             OutlinedButton(onClick={showSkipExercise=true},
                 enabled=!state.workoutBusy && !state.historyBusy,
@@ -262,10 +260,13 @@ internal fun NativeWorkoutScreen(
     }
     if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0) {
         val skipped=journal.completed.count { it.intent.disposition==JournalSetDisposition.SKIPPED }
+        val recordedWarmups=journal.warmups.map {it.slot}.toSet()
+        val unloggedWarmups=plan.exercises.flatMap {it.warmupTargets}.count {it.slot !in recordedWarmups}
         AlertDialog(
             onDismissRequest={showFinishReview=false},
             title={Text("Finish this workout?")},
-            text={Text("${journal.completed.size-skipped} recorded · $skipped skipped · ${journal.completed.size} of ${plan.slots.size} sets saved. Finishing publishes these observations to training history.")},
+            text={Text("${journal.completed.size-skipped} recorded · $skipped skipped · ${journal.completed.size} of ${plan.slots.size} sets saved. Finishing publishes these observations to training history."+
+                if(unloggedWarmups>0)" $unloggedWarmups warm-up targets are unrecorded." else "")},
             confirmButton={Button(onClick={showFinishReview=false;onFinish()},
                 enabled=!state.workoutBusy && !state.historyBusy) { Text("Finish workout") }},
             dismissButton={TextButton(onClick={showFinishReview=false}) { Text("Keep training") }}

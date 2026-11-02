@@ -1,3 +1,4 @@
+import { nativeWarmupFacts } from './native-warmups.mjs';
 import { readNativeSessionNote } from './native-session-note.mjs';
 /**
  * Environment-neutral canonical completion preparation. No file, network or store writes.
@@ -47,8 +48,8 @@ function storeFrom(raw) {
 function finishedJournal(raw) {
   ensure(typeof raw === 'string' && utf8ByteLength(raw) <= 256 * 1024);
   const j = JSON.parse(raw);
-  ensure(exact(j, ['format','session','slots','startRevision','events','finish',...(j.format===5?['note']:[])]) &&
-    [2,3,4,5].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
+  ensure(exact(j, ['format','session','slots','startRevision','events','finish',...(j.format>=5?['note']:[]),...(j.format===6?['warmups']:[])]) &&
+    [2,3,4,5,6].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
   const s = j.session;
   ensure(exact(s, ['reference','workoutId','dayId','weekIndex','unit','startedAt']) &&
     validId(s.workoutId) && validId(s.dayId) && integer(s.weekIndex, 1, 104) &&
@@ -95,7 +96,7 @@ function finishedJournal(raw) {
   }
   ensure(positions.size===j.slots.length &&
     (j.format===2 || j.format===3 && corrections>0 ||
-      (j.format===4 && j.events.some(e=>e.adjustment!==null) || j.format===5)));
+      (j.format===4 && j.events.some(e=>e.adjustment!==null) || j.format>=5)));
   const f = j.finish;
   ensure(exact(f, ['operationId','fromRevision','toRevision','completedAt','durationMs']) &&
     validId(f.operationId) && !operations.has(f.operationId) &&
@@ -103,7 +104,7 @@ function finishedJournal(raw) {
     f.fromRevision === j.startRevision + j.events.length &&
     f.toRevision === f.fromRevision + 1 && integer(f.completedAt, s.startedAt, MAX_DATE) &&
     integer(f.durationMs, 0, f.completedAt - s.startedAt));
-  if(j.format===5) {
+  if(j.format===5 || j.format===6 && j.note!==null) {
     readNativeSessionNote(j.note,s.startedAt,f.completedAt);
     ensure(!operations.has(j.note.operationId) && j.note.operationId!==f.operationId);
   }
@@ -258,7 +259,8 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
       .map(event=>({slot:event.slot,action:event.adjustment.action,part:event.adjustment.part}))}} : {}),
     ...(journal.events.some(e=>e.replacesOperationId!=null || e.adjustment!=null) ? {nativeSetRevisions:{format:1,startRevision:journal.startRevision,
       events:journal.events,finish:journal.finish}} : {}),
-    ...(journal.format===5?{nativeSessionNote:journal.note}:{}),
+    ...(journal.note?{nativeSessionNote:journal.note}:{}),
+    ...(journal.format===6?{nativeWarmups:nativeWarmupFacts(issued,journal)}:{}),
     nativeCompletion:{format:2, handoffSha256,
       sourceSnapshotSha256:s.reference.snapshotSha256, journalRevision:f.toRevision}
   };

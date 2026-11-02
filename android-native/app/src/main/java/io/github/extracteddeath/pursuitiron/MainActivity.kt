@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
                     onReduceAffectedMuscle=runtime::reduceAffectedMuscle,
                     onFinishWorkout=runtime::finishWorkout,
                     onSaveSessionNote=runtime::saveSessionNote,
+                    onSaveWarmup=runtime::saveWarmup,
                     onCorrectHistory=runtime::correctHistory,
                     onReloadHistory=runtime::reloadHistory,
                     onOpenHistory=runtime::openHistory,

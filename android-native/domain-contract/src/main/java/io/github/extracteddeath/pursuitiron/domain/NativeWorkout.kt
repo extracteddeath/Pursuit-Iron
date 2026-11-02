@@ -12,12 +12,13 @@ data class NativeWorkoutSet(
 )
 data class NativeWorkoutExercise(
     val index: Int,val id: String,val name: String,val restSeconds: Int,
-    val superset: Boolean,val warmups: List<String>,val sets: List<NativeWorkoutSet>
+    val superset: Boolean,val warmups: List<String>,val sets: List<NativeWorkoutSet>,
+    val warmupTargets: List<NativeWarmupTarget> = emptyList()
 )
 class NativeWorkoutPlan internal constructor(
     val issuedJson: String,val session: JournalSessionKey,val programName: String,
     val dayLabel: String,val exercises: List<NativeWorkoutExercise>,
-    val shortenedMinutes: Int?=null,val shortenedEstimatedMinutes: Int?=null
+    val shortenedMinutes: Int?=null,val shortenedEstimatedMinutes: Int?=null,val tracksWarmups: Boolean=false
 ) {
     val slots: List<JournalSetSlot> = Collections.unmodifiableList(exercises.flatMap { row->row.sets.map { it.slot } })
 }
@@ -81,7 +82,9 @@ object NativeWorkoutCodec {
         require(format in 1L..2L)
         wire.exact(v,"format","source","preparedOnly","persisted","inputStartSha256","session","programName",
             "dayLabel",*(if(format==2L)arrayOf("sessionLengthPlan") else emptyArray()),
-            *(if(v.has("allowFailedAttempts"))arrayOf("allowFailedAttempts") else emptyArray()),"rows")
+            *(if(v.has("allowFailedAttempts"))arrayOf("allowFailedAttempts") else emptyArray()),
+            *(if(v.has("warmupLogging"))arrayOf("warmupLogging") else emptyArray()),"rows")
+        if(v.has("warmupLogging"))require(v.get("warmupLogging")==true)
         val allowFailed=v.has("allowFailedAttempts");if(allowFailed)require(v.get("allowFailedAttempts")==true)
         require(v.get("source")==SOURCE && v.get("preparedOnly")==true &&
             v.get("persisted")==false && wire.text(v,"inputStartSha256").matches(Regex("^[0-9a-f]{64}$")))
@@ -122,6 +125,7 @@ object NativeWorkoutCodec {
             require(previousByPosition.size==previous.length())
             val sets=row.getJSONArray("sets");require(sets.length() in 1..40)
             val warmups=ArrayList<String>();val work=ArrayList<NativeWorkoutSet>()
+            val warmupTargets=ArrayList<NativeWarmupTarget>()
             var mainOrdinal=0
             var reachedExtension=false
             for(j in 0 until sets.length()) {
@@ -133,6 +137,8 @@ object NativeWorkoutCodec {
                 require(load.length<=16 && reps.length<=16)
                 if(set.getBoolean("warm")) {
                     require(!extension && !reachedExtension)
+                    require(warmupTargets.size<20)
+                    warmupTargets+=NativeWarmupTarget(JournalWarmupSlot(index.toInt(),warmupTargets.size,exerciseId),load,reps)
                     warmups+="$load ${session.unit} × $reps"
                 } else {
                     val target=set.getJSONObject("target")
@@ -160,12 +166,12 @@ object NativeWorkoutCodec {
             }
             require(mainOrdinal in 1..20 && work.size in 1..20)
             NativeWorkoutExercise(index.toInt(),exerciseId,name,rest.toInt(),row.getBoolean("superset"),
-                Collections.unmodifiableList(warmups),Collections.unmodifiableList(work))
+                Collections.unmodifiableList(warmups),Collections.unmodifiableList(work),Collections.unmodifiableList(warmupTargets))
         }
         val name=wire.text(v,"programName");val label=wire.text(v,"dayLabel")
         require(name.length in 1..200 && label.length in 1..200 && exercises.map { it.index }.distinct().size==exercises.size)
         val plan=NativeWorkoutPlan(raw,session,name,label,Collections.unmodifiableList(exercises),
-            minutes?.toInt(),estimate?.toInt())
+            minutes?.toInt(),estimate?.toInt(),v.optBoolean("warmupLogging",false))
         requireNotNull(WorkoutJournalPolicy.open(session,plan.slots,0))
         return plan
     }

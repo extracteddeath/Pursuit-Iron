@@ -135,6 +135,38 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         return if(result.size==ids.size) result.toMap() else null
     }
 
+    /** Catalog suggestions are pinned to the CURRENT owned program. */
+    suspend fun lookupProgramAlternatives(expected: ReadOnlyProgramReference,
+        sourceId: String,excludeIds: List<String>): List<CanonicalExercise>? {
+        val before=mutable.value
+        val profile=before.saved?.profile ?: return null
+        if(!before.ready || before.blocked || before.busy || before.workout!=null ||
+            before.workoutBusy || before.backupExportBusy ||
+            before.saved?.program?.reference!=expected ||
+            !sourceId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) ||
+            excludeIds.size>30 || excludeIds.distinct().size!=excludeIds.size ||
+            before.saved?.program?.days?.none { sourceId in it.exerciseIds }!=false)
+            return null
+        val engine=before.verifier?.exerciseCatalog ?: return null
+        val owner=store ?: return null
+        val context=currentCoroutineContext()
+        suspend fun sameSource(): Boolean {
+            val bytes=owner.readOwnedCurrentStoreBytes() ?: return false
+            return try {
+                ReadOnlyBackupScreening.fingerprint(
+                    java.io.ByteArrayInputStream(bytes)) { context.ensureActive() }
+                    .sha256Hex==expected.snapshotSha256
+            } finally { bytes.fill(0) }
+        }
+        if(!sameSource()) return null
+        val list=engine.alternatives(sourceId,excludeIds,
+            profile.equipment,profile.allowBodyweight).getOrNull() ?: return null
+        context.ensureActive()
+        if(mutable.value.storeChangeKey!=before.storeChangeKey || !sameSource())
+            return null
+        return list
+    }
+
     private suspend fun readHistory(receipt: CanonicalWorkoutHistoryReceipt?): NativeWorkoutHistory? {
         val id=receipt?.session?.workoutId ?: return null
         return historyReader?.workout(id)

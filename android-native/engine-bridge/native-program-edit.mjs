@@ -75,13 +75,14 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
           if(!key.startsWith(prefix))continue;
           const match=key.slice(prefix.length).match(/^(\d+)(:.*)?$/);
           if(!match)continue;
-          const from=Number(match[1]);ensure(positions.has(from));
+          const from=Number(match[1]);ensure(Number.isSafeInteger(from) && from>=0 && from<old.exercises.length);
           delete out[key];
         }
         for(const [key,value] of Object.entries(original[field])) {
           if(!key.startsWith(prefix))continue;
           const match=key.slice(prefix.length).match(/^(\d+)(:.*)?$/);
-          if(match)out[`${prefix}${positions.get(Number(match[1]))}${match[2]||''}`]=value;
+          if(match && positions.has(Number(match[1])))
+            out[`${prefix}${positions.get(Number(match[1]))}${match[2]||''}`]=value;
         }
         edited[field]=out;
       }

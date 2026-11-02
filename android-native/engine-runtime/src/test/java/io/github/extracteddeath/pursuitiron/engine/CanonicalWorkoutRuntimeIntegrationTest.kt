@@ -300,6 +300,9 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             val verified=NativeProgramEditDraft.from(structure)
             var selected: NativeProgramEditDraft?=null
             var acceptedRequest: String?=null
+            var candidatesSeen=0;var canonicalAccepted=0
+            val failureCounts=mutableMapOf<String,Int>()
+            fun mark(reason: String) {failureCounts[reason]=(failureCounts[reason] ?: 0)+1}
             scan@ for(day in original.days) {
                 for(slot in 1 until day.exerciseIds.size) {
                     val sourceId=day.exerciseIds[slot]
@@ -310,14 +313,18 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                         val decoded=ExerciseCatalogCodec.decodeAlternatives(
                             node.request(wire),"integration-alternatives",sourceId,day.exerciseIds)
                         checkNotNull((decoded as? EngineResponse.Success)?.result)
-                    }.getOrNull().orEmpty()
+                    }.onFailure { mark("catalog:"+it::class.simpleName) }.getOrNull().orEmpty()
+                    candidatesSeen+=candidates.size
                     for(ex in candidates) {
                         val draft=verified.substituteExercise(day.id,slot,ex.id) ?: continue
                         val request=NativeProgramEditCodec.editJson(
                             draft,"swap-test-${day.id}-${slot}-${ex.id}",2000)
                         val candidate=runCatching {
                             engine.prepareProgramEdit(proposal.snapshot,request)
-                        }.getOrNull() ?: continue
+                        }.onFailure { mark("save:"+it::class.simpleName+":"+(it.message ?: "").take(70)) }
+                            .getOrNull()
+                        if(candidate==null) {mark("save:null");continue}
+                        canonicalAccepted++
                         if(candidate.program.days==draft.days) {
                             selected=draft;acceptedRequest=request
                             break@scan
@@ -326,7 +333,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 }
             }
             val draft=checkNotNull(selected) {
-                "Canonical generated program needs one eligible catalog accessory replacement"
+                "No eligible replacement: candidates=$"+"candidatesSeen accepted=$"+"canonicalAccepted failures=$"+"failureCounts"
             }
             val request=checkNotNull(acceptedRequest)
             assertEquals(3,JSONObject(request).getInt("format"))

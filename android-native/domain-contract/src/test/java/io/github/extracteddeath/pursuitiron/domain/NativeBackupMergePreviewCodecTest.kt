@@ -24,6 +24,8 @@ class NativeBackupMergePreviewCodecTest {
         .put("counts",JSONObject().put("current",counts(1))
             .put("incoming",counts(2)).put("hypothetical",counts(2)))
         .put("conflicts",1).put("historyDropped",0)
+        .put("ownedRecordsRemoved",0).put("ownedRecordsReplaced",0)
+        .put("settingsChanged",0)
         .put("flags",JSONArray().put("RECORD_CONFLICTS_REQUIRE_REVIEW"))
     private fun response(value: JSONObject = result()) = JSONObject()
         .put("protocolVersion",1).put("id","backup-1").put("ok",true)
@@ -65,6 +67,9 @@ class NativeBackupMergePreviewCodecTest {
             { it.put("storeVersion",12) },
             { it.put("extra","private data") },
             { it.put("historyDropped",1) },
+            { it.put("ownedRecordsRemoved",1) },
+            { it.put("ownedRecordsReplaced",1) },
+            { it.put("settingsChanged",1) },
             { it.put("hypotheticalMergedBytes",1024*1024+1) },
             { it.put("flags",JSONArray().put("RECORD_CONFLICTS_REQUIRE_REVIEW").put("RECORD_CONFLICTS_REQUIRE_REVIEW")) },
             { it.getJSONObject("counts").getJSONObject("current").put("secret","bad") }

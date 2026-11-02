@@ -1856,3 +1856,13 @@ sets, warm-ups, session/pinned notes, skip/reduction confirmations, and
 Finish bind to the writer's source of availability. Finished journals still
 allow only the original explicit publication retry. This is UI integration
 and source contract coverage, with no replacement writer or engine rule.
+
+## 2026-11-02 — Short-session preview availability parity
+
+Today’s canonical shorter-session choices and explicit shortened Start
+share one disabled-state predicate for blocked recovery, program/store
+operations, history I/O, backup export and a pending workout write.
+The native runtime independently rejects the same invalid previews and
+rejects starting a workout when the store is blocked. An approved short
+session is still source-matched against the canonical engine before
+issuance. No UI training calculations, persisted data changes or APK.

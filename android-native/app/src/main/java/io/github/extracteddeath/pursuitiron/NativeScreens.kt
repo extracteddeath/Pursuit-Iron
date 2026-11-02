@@ -94,6 +94,9 @@ internal fun TodayScreen(
             workoutState?.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         }
         if(!activeWorkout) {
+            val canPreviewShorter=workoutState?.let { it.ready && !it.blocked && !it.busy &&
+                !it.workoutBusy && !it.historyBusy && !it.backupExportBusy &&
+                !it.workoutBlocked && !it.shortPreviewBusy && it.workout==null }==true
             var showShorterSession by rememberSaveable(savedProgram.program.id) {
                 mutableStateOf(false)
             }
@@ -109,8 +112,7 @@ internal fun TodayScreen(
                     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     listOf(45,30,20).forEach { minutes ->
                         OutlinedButton(onClick={previewShorterSession(minutes)},
-                            enabled=workoutState?.ready==true && !workoutState.shortPreviewBusy &&
-                                !workoutState.workoutBusy && !workoutState.busy) {
+                            enabled=canPreviewShorter) {
                             Text("$minutes min")
                         }
                     }
@@ -137,8 +139,7 @@ internal fun TodayScreen(
                         FilledTonalButton(onClick={
                             startShortWorkout(preview.minutes)
                             openTrain()
-                        },enabled=workoutState?.ready==true && !workoutState.workoutBusy &&
-                            !workoutState.historyBusy && !workoutState.backupExportBusy && !workoutState.workoutBlocked,
+                        },enabled=canPreviewShorter,
                             modifier=Modifier.fillMaxWidth()) {
                             Text("Start ${preview.minutes}-minute workout")
                         }

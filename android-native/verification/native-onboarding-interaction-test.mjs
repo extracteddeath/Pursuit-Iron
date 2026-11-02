@@ -810,7 +810,7 @@ assert.ok(train.includes('val canStart=state.ready && !state.busy && !state.bloc
   train.includes('Button(onClick=onViewHistory,enabled=state.ready && !state.historyBusy &&') &&
   train.includes('!state.workoutBusy && !state.backupExportBusy && !state.busy &&') &&
   train.includes('!state.blocked && !state.workoutBlocked,') &&
-  host.includes('if(!current.ready || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked') &&
+  host.includes('if(!current.ready || current.blocked || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked') &&
   host.includes('if(!current.ready || current.saved==null || current.busy ||'),
   'Train Start and latest-saved-history actions must not offer taps during runtime-blocked store operations');
 
@@ -843,3 +843,13 @@ assert.ok(train.includes('val operationBlocked=!state.ready || state.blocked || 
   train.includes('enabled=pendingCount>0 && !writeBlocked') &&
   train.includes('enabled=!operationBlocked) { Text("Finish workout")'),
   'Native Train controls and Finish must reflect the same busy/blocked predicate as the canonical journal writer');
+
+assert.ok(screens.includes('val canPreviewShorter=workoutState?.let { it.ready && !it.blocked && !it.busy &&') &&
+  screens.includes('!it.workoutBusy && !it.historyBusy && !it.backupExportBusy &&') &&
+  screens.includes('!it.workoutBlocked && !it.shortPreviewBusy && it.workout==null') &&
+  screens.includes('enabled=canPreviewShorter) {') &&
+  screens.includes('},enabled=canPreviewShorter,') &&
+  host.includes('if(minutes !in listOf(20,30,45) || !current.ready || current.blocked ||') &&
+  host.includes('current.historyBusy || current.backupExportBusy || current.workoutBlocked ||') &&
+  host.includes('if(!current.ready || current.blocked || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked'),
+  'Short-session preview and explicit start must be disabled across blocked/history/export store work');

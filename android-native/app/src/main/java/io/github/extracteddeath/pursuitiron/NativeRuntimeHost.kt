@@ -533,8 +533,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     /** Show canonical choices without changing this or any future session. */
     fun previewShorterSession(minutes: Int) {
         val current=mutable.value
-        if(minutes !in listOf(20,30,45) || !current.ready ||
+        if(minutes !in listOf(20,30,45) || !current.ready || current.blocked ||
             current.workout!=null || current.workoutBusy || current.busy ||
+            current.historyBusy || current.backupExportBusy || current.workoutBlocked ||
             current.shortPreviewBusy || current.saved==null)return
         val owner=store ?: return;val engine=current.verifier?.programEngine ?: return
         val programId=current.saved.program.id
@@ -568,7 +569,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
 
     fun startWorkout(minutes: Int?=null) {
         val current=mutable.value
-        if(!current.ready || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
+        if(!current.ready || current.blocked || current.busy || current.workoutBusy || current.historyBusy || current.backupExportBusy || current.workoutBlocked || current.workout!=null || current.saved==null)return
         // A shortened start is permitted only for the preview actually shown.
         // The owned snapshot is verified AGAIN immediately before issuing.
         val approvedPreview=if(minutes!=null) current.shortPreview?.takeIf {

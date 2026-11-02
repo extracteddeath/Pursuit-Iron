@@ -161,4 +161,59 @@ if(beforeRemovalWorkout.session.dayId===removedDay.id) {
   assert.deepEqual(afterRemovalWorkout.rows.map(x=>x.id),beforeRemovalWorkout.rows.map(x=>x.id),
     'A changed future day must not alter the canonical next-day roster');
 }
+// The single-slot substitution route never transfers numeric prescriptions.
+// Use the exact generated program as a fixture: choose a same-part/type
+// replacement from the canonical catalog with matching equipment and pattern.
+const replacementBase=JSON.parse(proposal.snapshot),replacementDay=replacementBase.saved[0].days[0];
+const existingId=replacementDay.exercises[1];
+const {EX_BY_ID:exerciseMap, EXERCISES:exerciseCatalog, expandEquipment:expand, nextExerciseIdForShellExercise:engineIdFor, isBarLike:barLike}=await import('../../modules/engine-api.js');
+const originalExercise=exerciseMap[existingId],allow=expand(replacementBase.saved[0].config.equipment);
+const replacementId=exerciseCatalog.find(ex=>ex.id!==existingId &&
+  ex.part===originalExercise.part && ex.type===originalExercise.type &&
+  (!ex.pattern || !originalExercise.pattern || ex.pattern===originalExercise.pattern) &&
+  ex.equip.every(item=>allow.has(item)) &&
+  (ex.equip.length>0 || !replacementBase.saved[0].config.noBodyweight) &&
+  !replacementDay.exercises.includes(ex.id) && engineIdFor(ex) &&
+  (!Number.isInteger(replacementBase.saved[0].config.barbellCap) ||
+    replacementDay.exercises.reduce((sum,id,i)=>sum+(barLike(exerciseMap[i===1?ex.id:id]?.equip)?1:0),0)
+    <=replacementBase.saved[0].config.barbellCap))?.id;
+assert.ok(replacementId,'Generated program must offer a compatible alternate');
+replacementBase.saved[0].overrides={...replacementBase.saved[0].overrides,
+  [`${replacementDay.id}:1`]:{
+    nextEngine:true,legacyExerciseId:existingId,
+    nextExerciseId:engineIdFor(originalExercise)
+  }};
+for(const field of ['nextWeekPrescriptions','progStyle','slotBias','autoBias','rounds','weekOff','pairs','ss']) {
+  const map=replacementBase.saved[0][field]||{};
+  for(const key of Object.keys(map)) if(key===`${replacementDay.id}:1` ||
+    key.startsWith(`${replacementDay.id}:1:`)) delete map[key];
+  replacementBase.saved[0][field]=map;
+}
+const replacementSnapshot=JSON.stringify(replacementBase);
+const replacementRef=inspectNativeProgram(replacementSnapshot).program.reference;
+const substitution={format:3,operationId:'substitution-one',
+  reference:replacementRef,editedAt:7000,name:replacementBase.saved[0].name,
+  days:replacementBase.saved[0].days.map(d=>({id:d.id,label:d.label,
+    slots:d.exercises.map((_,i)=>i)})),
+  replacement:{dayId:replacementDay.id,sourceSlot:1,exerciseId:replacementId}};
+const replacementWire=JSON.stringify(substitution);
+const replacementPrepared=prepareNativeProgramEdit(replacementSnapshot,replacementWire);
+const substitutionStore=JSON.parse(replacementPrepared.candidateSnapshot);
+assert.equal(substitutionStore.saved[0].days[0].exercises[1],replacementId);
+assert.deepEqual(substitutionStore.saved[0].overrides[`${replacementDay.id}:1`],{
+  nextEngine:true,legacyExerciseId:replacementId,
+  nextExerciseId:engineIdFor(exerciseMap[replacementId])
+});
+assert.deepEqual(substitutionStore.history,replacementBase.history);
+assert.equal(prepareNativeProgramEdit(replacementPrepared.candidateSnapshot,replacementWire).alreadyPresent,true);
+const illegal=structuredClone(substitution);illegal.replacement.sourceSlot=replacementDay.primaryIndex;
+assert.throws(()=>prepareNativeProgramEdit(replacementSnapshot,JSON.stringify(illegal)));
+illegal.replacement.sourceSlot=1;illegal.replacement.exerciseId='non-existent';
+assert.throws(()=>prepareNativeProgramEdit(replacementSnapshot,JSON.stringify(illegal)));
+const withMetadata=structuredClone(replacementBase);
+withMetadata.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`]={userOwned:true};
+const metaSnapshot=JSON.stringify(withMetadata);
+const metaReq=structuredClone(substitution);metaReq.reference=inspectNativeProgram(metaSnapshot).program.reference;
+assert.throws(()=>prepareNativeProgramEdit(metaSnapshot,JSON.stringify(metaReq)),
+  'Explicit user prescription state must not be donated to a new exercise');
 console.log('PASS native program edit: revision save, rich slot metadata, duplicate identity, pairings, retries, retained records and canonical issuance');

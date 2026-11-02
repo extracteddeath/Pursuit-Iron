@@ -1,5 +1,5 @@
 /** Program organization only. The canonical save planner remains the editor owner. */
-import { parseStoredData, programSavePlan } from '../../modules/engine-api.js';
+import { parseStoredData, programSavePlan, EX_BY_ID, expandEquipment, nextExerciseIdForShellExercise, isBarLike } from '../../modules/engine-api.js';
 import { projectCanonicalSavedProgram } from './current-program-projection.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 
@@ -17,8 +17,9 @@ const slotFields=['overrides','nextWeekPrescriptions','progStyle','slotBias',
 function requestFrom(raw) {
   ensure(typeof raw==='string' && utf8ByteLength(raw)<=32768);
   const r=JSON.parse(raw);
-  ensure(exact(r,['format','operationId','reference','editedAt','name','days']) &&
-    (r.format===1 || r.format===2) && id(r.operationId) && label(r.name) &&
+  ensure(exact(r,['format','operationId','reference','editedAt','name','days',
+    ...(r?.format===3?['replacement']:[])]) &&
+    [1,2,3].includes(r.format) && id(r.operationId) && label(r.name) &&
     Number.isSafeInteger(r.editedAt) && r.editedAt>0 && r.editedAt<=8_640_000_000_000_000 &&
     exact(r.reference,['programId','programUpdatedAt','storeSavedAt','storeVersion','snapshotSha256']) &&
     id(r.reference.programId) && r.reference.storeVersion===13 &&
@@ -27,6 +28,10 @@ function requestFrom(raw) {
     Array.isArray(d.slots) && d.slots.length>=1 && d.slots.length<=30 &&
     d.slots.every(s=>Number.isInteger(s) && s>=0 && s<30) && new Set(d.slots).size===d.slots.length);
   ensure(new Set(r.days.map(d=>d.id)).size===r.days.length);
+  if(r.format===3)ensure(exact(r.replacement,['dayId','sourceSlot','exerciseId']) &&
+    id(r.replacement.dayId) && Number.isInteger(r.replacement.sourceSlot) &&
+    r.replacement.sourceSlot>=0 && r.replacement.sourceSlot<30 &&
+    id(r.replacement.exerciseId) && r.replacement.exerciseId.length<=80);
   return r;
 }
 
@@ -54,7 +59,56 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
     if(dayOrderChanged)ensure((before.history||[]).every(h=>h.programId!==original.id ||
       (typeof h.dayId==='string' && original.days.some(d=>d.id===h.dayId))));
     let edited={...original,name:r.name,updatedAt:r.editedAt};
-    const days=r.days.map(d=>{
+    if(r.format===3) {
+      // This is deliberately one substitution, NOT a roster reauthoring,
+      // historical load transfer, or cycle-wide mutation.
+      ensure(r.name===original.name && r.days.every((d,i)=>{
+        const old=original.days[i];
+        return d.id===old.id && d.label===old.label && d.slots.length===old.exercises.length &&
+          d.slots.every((slot,j)=>slot===j);
+      }));
+      const change=r.replacement,day=original.days.find(d=>d.id===change.dayId);
+      ensure(original.engineSource==='pursuit-next' && day &&
+        change.sourceSlot<day.exercises.length && change.sourceSlot!==day.primaryIndex &&
+        !original.ss?.[`${day.id}:${change.sourceSlot}`] &&
+        (change.sourceSlot===0 || !original.ss?.[`${day.id}:${change.sourceSlot-1}`]));
+      const oldId=day.exercises[change.sourceSlot],from=EX_BY_ID[oldId],to=EX_BY_ID[change.exerciseId];
+      ensure(from && to && from.id!==to.id && from.part===to.part &&
+        from.type===to.type && (!from.pattern || !to.pattern || from.pattern===to.pattern) &&
+        !day.exercises.includes(to.id));
+      const available=expandEquipment(original.config?.equipment);
+      ensure(Array.isArray(original.config?.equipment) && to.equip.every(e=>available.has(e)) &&
+        (to.equip.length>0 || !original.config.noBodyweight));
+      const cap=original.config.barbellCap;
+      if(Number.isInteger(cap) && cap>=0) {
+        const bars=day.exercises.reduce((n,id,i)=>
+          n+(isBarLike(EX_BY_ID[i===change.sourceSlot?to.id:id]?.equip)?1:0),0);
+        ensure(bars<=cap);
+      }
+      const sourceKey=`${day.id}:${change.sourceSlot}`;
+      const originalOverrides=original.overrides||{};
+      const metadata=originalOverrides[sourceKey];
+      ensure(!metadata || exact(metadata,['nextEngine','legacyExerciseId','nextExerciseId']) &&
+        metadata.nextEngine===true && metadata.legacyExerciseId===oldId);
+      // The former exercise must not silently donate user-authored dose,
+      // amplifiers, progression, or alternate-week prescriptions.
+      for(const field of slotFields) {
+        const store=original[field]||{};
+        ensure(object(store));
+        for(const key of Object.keys(store)) {
+          if(key===sourceKey || key.startsWith(sourceKey+':'))
+            ensure(field==='overrides' && key===sourceKey);
+        }
+      }
+      const engineId=nextExerciseIdForShellExercise(to);
+      ensure(typeof engineId==='string' && engineId.length>0);
+      const newDay={...day,exercises:day.exercises.map((id,i)=>i===change.sourceSlot?to.id:id)};
+      edited={...edited,edited:true,days:original.days.map(d=>d.id===day.id?newDay:d),
+        overrides:{...originalOverrides,[sourceKey]:{
+          nextEngine:true,legacyExerciseId:to.id,nextExerciseId:engineId
+        }}};
+    }
+    const days=r.format===3?edited.days:r.days.map(d=>{
       const old=original.days.find(x=>x.id===d.id);
       ensure(old && d.slots.length>=1 && d.slots.length<=old.exercises.length &&
         (r.format===2 || d.slots.length===old.exercises.length) &&
@@ -90,12 +144,14 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
       return {...old,label:d.label,exercises:d.slots.map(s=>old.exercises[s]),
         ...(old.primaryIndex!==undefined?{primaryIndex:positions.get(old.primaryIndex)}:{})};
     });
-    edited={...edited,days,...(r.days.some(d=>
-      d.slots.length!==original.days.find(x=>x.id===d.id).exercises.length ||
-      d.slots.some((from,to)=>from!==to))?{edited:true}:{})};
-    ensure(r.name!==original.name || JSON.stringify(days)!==JSON.stringify(original.days) ||
-      r.days.some(d=>d.slots.length!==original.days.find(x=>x.id===d.id).exercises.length ||
-        d.slots.some((from,to)=>from!==to)));
+    if(r.format!==3) {
+      edited={...edited,days,...(r.days.some(d=>
+        d.slots.length!==original.days.find(x=>x.id===d.id).exercises.length ||
+        d.slots.some((from,to)=>from!==to))?{edited:true}:{})};
+      ensure(r.name!==original.name || JSON.stringify(days)!==JSON.stringify(original.days) ||
+        r.days.some(d=>d.slots.length!==original.days.find(x=>x.id===d.id).exercises.length ||
+          d.slots.some((from,to)=>from!==to)));
+    }
     // Scope is explicitly this program. A linked cycle and its sibling blocks
     // are never implicitly propagated by an organization-only save.
     const plan=programSavePlan(edited,before.saved,before.cycles||[],'program');
@@ -110,6 +166,10 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
   const program=projectCanonicalSavedProgram(candidateSnapshot,ref.programId,sha256Utf8(candidateSnapshot));
   ensure(program.program.name===r.name && program.program.days.length===r.days.length &&
     program.program.days.every((d,i)=>d.id===r.days[i].id && d.label===r.days[i].label));
+  if(r.format===3) {
+    const day=program.program.days.find(d=>d.id===r.replacement.dayId);
+    ensure(day?.exerciseIds[r.replacement.sourceSlot]===r.replacement.exerciseId);
+  }
   return {source,preparedOnly:true,approvedForWorkoutExecution:false,operationId:r.operationId,
     requestSha256,sourceSnapshotSha256:currentSha256,candidateSnapshot,
     candidateSnapshotSha256:sha256Utf8(candidateSnapshot),alreadyPresent,program};

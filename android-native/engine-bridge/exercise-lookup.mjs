@@ -1,6 +1,6 @@
 // Read-only catalog projection from canonical TRAINING-DOMAIN exercise IDs.
 // Intentionally excludes app user records, custom exercises and training writes.
-import { EXERCISES } from '../../modules/engine-api.js';
+import { EXERCISES, EX_BY_ID, expandEquipment, nextExerciseIdForShellExercise } from '../../modules/engine-api.js';
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const plain = x => x !== null && typeof x === 'object' &&
@@ -56,4 +56,41 @@ export function canonicalExerciseLookup(params) {
     exercises,
     missingIds
   };
+}
+
+
+/**
+ * Catalog-only candidates for a same-stimulus accessory. No personal data or
+ * training decisions cross this read-only channel. Actual saved-program
+ * compatibility is checked again by prepareNativeProgramEdit against the
+ * current canonical store revision.
+ */
+export function validExerciseAlternativesParams(p) {
+  return plain(p) && Object.keys(p).length===4 &&
+    typeof p.sourceId==='string' && exerciseId.test(p.sourceId) &&
+    typeof p.allowBodyweight==='boolean' &&
+    Array.isArray(p.excludeIds) && p.excludeIds.length<=30 &&
+    p.excludeIds.every(x=>typeof x==='string' && exerciseId.test(x)) &&
+    new Set(p.excludeIds).size===p.excludeIds.length &&
+    Array.isArray(p.equipment) && p.equipment.length>=1 && p.equipment.length<=60 &&
+    p.equipment.every(x=>typeof x==='string' && /^[a-z][a-z0-9_-]{0,39}$/.test(x)) &&
+    new Set(p.equipment).size===p.equipment.length;
+}
+
+export function canonicalExerciseAlternatives(params) {
+  if(!validExerciseAlternativesParams(params))
+    throw new TypeError('Invalid bounded exercise alternatives request');
+  const from=EX_BY_ID[params.sourceId];
+  if(!from)throw new TypeError('Unknown canonical exercise identity');
+  const equipped=expandEquipment(params.equipment),excluded=new Set(params.excludeIds);
+  const choices=EXERCISES.filter(ex=>ex.id!==from.id && !excluded.has(ex.id) &&
+    ex.part===from.part && ex.type===from.type &&
+    (!ex.pattern || !from.pattern || ex.pattern===from.pattern) &&
+    ex.equip.every(id=>equipped.has(id)) &&
+    (ex.equip.length>0 || params.allowBodyweight) &&
+    !!nextExerciseIdForShellExercise(ex))
+    .sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id))
+    .slice(0,12).map(projectExercise);
+  return {source:'modules/engine-api.js:EXERCISES',readOnly:true,
+    sourceId:from.id,candidates:choices};
 }

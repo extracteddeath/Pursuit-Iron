@@ -1,7 +1,7 @@
 // Pure JS transport dispatcher; no browser, Android or persistence dependencies.
 import * as canonical from '../../modules/engine-api.js';
 import { canonicalProgressionPreview, validProgressionPreviewParams } from './progression-preview.mjs';
-import { canonicalExerciseLookup, validExerciseLookupParams } from './exercise-lookup.mjs';
+import { canonicalExerciseLookup, validExerciseLookupParams, canonicalExerciseAlternatives, validExerciseAlternativesParams } from './exercise-lookup.mjs';
 import { canonicalWorkoutOutline, validWorkoutOutlineParams } from './workout-outline.mjs';
 import { canonicalBackupSchemaCheck, canonicalBackupProgramInventory, validBackupSchemaParams } from './backup-schema-check.mjs';
 import { projectCanonicalSavedProgram, validCurrentProjectionParams } from './current-program-projection.mjs';
@@ -41,6 +41,15 @@ export function dispatchEngineRequest(request) {
             return success(id, canonicalExerciseLookup(request.params));
         } catch {
             return error(id, 'ENGINE_UNAVAILABLE', 'Canonical exercise catalog unavailable');
+        }
+    }
+    if (request.method === 'exerciseAlternatives') {
+        if (!validExerciseAlternativesParams(request.params))
+            return error(id,'INVALID_REQUEST','Invalid bounded exercise alternatives request');
+        try {
+            return success(id,canonicalExerciseAlternatives(request.params));
+        } catch {
+            return error(id,'ENGINE_UNAVAILABLE','Canonical exercise alternatives unavailable');
         }
     }
     if (request.method === 'workoutOutline') {
@@ -91,7 +100,7 @@ export function dispatchEngineRequest(request) {
                 protocolVersion: PROTOCOL_VERSION,
                 engineSource: 'modules/engine-api.js',
                 engineCertified: false,
-                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup', 'workoutOutline', 'backupSchemaCheck', 'backupProgramInventory', 'currentProgramProjection']
+                capabilities: ['handshake', 'catalogSummary', 'progressionPreview', 'exerciseLookup', 'exerciseAlternatives', 'workoutOutline', 'backupSchemaCheck', 'backupProgramInventory', 'currentProgramProjection']
             });
         case 'catalogSummary': {
             if (!Array.isArray(canonical.EXERCISES) || !Array.isArray(canonical.TEMPLATES))

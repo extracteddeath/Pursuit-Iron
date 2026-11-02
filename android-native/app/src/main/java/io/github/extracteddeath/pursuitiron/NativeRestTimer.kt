@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -14,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import io.github.extracteddeath.pursuitiron.domain.NativeRestCue
 import kotlin.math.abs
 
 /**
@@ -27,13 +29,42 @@ import kotlin.math.abs
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun NativeRestTimer(workoutId: String, prescribedSeconds: Int, enabled: Boolean) {
+internal fun NativeRestTimer(
+    workoutId: String,
+    prescribedSeconds: Int,
+    enabled: Boolean,
+    latestReceiptOperationId: String? = null,
+    autoCue: NativeRestCue? = null
+) {
     if (prescribedSeconds <= 0) return
     var deadline by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
     var startedElapsed by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
     var startedWall by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
     var activeSeconds by rememberSaveable(workoutId) { mutableIntStateOf(0) }
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+    // Initialize from the *already visible* journal receipt. Re-entering
+    // Train, rotating or recovering the app must not replay old rests.
+    var observedEvent by rememberSaveable(workoutId) {
+        mutableStateOf(latestReceiptOperationId)
+    }
+    fun begin(seconds: Int) {
+        if(seconds !in 1..3600)return
+        val elapsed=SystemClock.elapsedRealtime()
+        now=elapsed
+        startedElapsed=elapsed
+        startedWall=System.currentTimeMillis()
+        activeSeconds=seconds
+        deadline=elapsed+seconds*1000L
+    }
+    LaunchedEffect(latestReceiptOperationId) {
+        if(latestReceiptOperationId != null && latestReceiptOperationId!=observedEvent) {
+            observedEvent=latestReceiptOperationId
+            // Skipped/corrected sets don't produce an auto cue. The journal
+            // receipt, not a pending Log click, is what starts the countdown.
+            if(enabled && autoCue?.operationId==latestReceiptOperationId)
+                begin(autoCue.seconds)
+        }
+    }
 
     // A saved elapsedRealtime deadline is invalid after a device reboot.
     // Compare elapsed and wall time; clock changes also fail closed instead
@@ -71,23 +102,16 @@ internal fun NativeRestTimer(workoutId: String, prescribedSeconds: Int, enabled:
     }
     // If the user switches exercises mid-countdown, the active rest period
     // remains unchanged; the next tap uses the currently selected target.
-    val supporting = if (valid)
-        "Current rest: $activeSeconds s · Tap for $prescribedSeconds s · Hold to reset"
-    else "Tap for $prescribedSeconds seconds · Hold to reset"
+    val supporting = if(valid)
+        "Tap to restart at $prescribedSeconds s · Hold to clear"
+    else "Tap to start $prescribedSeconds s · Hold to clear"
 
     Surface(
         modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).combinedClickable(
             enabled = enabled,
             onClickLabel = "Start or restart rest timer",
             onLongClickLabel = "Reset rest timer",
-            onClick = {
-                val current = SystemClock.elapsedRealtime()
-                now = current
-                startedElapsed = current
-                startedWall = System.currentTimeMillis()
-                activeSeconds = prescribedSeconds
-                deadline = current + prescribedSeconds * 1000L
-            },
+            onClick = { begin(prescribedSeconds) },
             onLongClick = {
                 deadline = 0L
                 activeSeconds = 0
@@ -101,6 +125,11 @@ internal fun NativeRestTimer(workoutId: String, prescribedSeconds: Int, enabled:
             Text(title, style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSecondaryContainer)
+            if(valid && activeSeconds>0) {
+                LinearProgressIndicator(
+                    progress={ (remaining.toFloat()/activeSeconds).coerceIn(0f,1f) },
+                    modifier=Modifier.fillMaxWidth())
+            }
             Text(supporting, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer)
         }

@@ -194,7 +194,9 @@ internal fun NativeWorkoutScreen(
         val activeExtension=if(focusMode)exercise.sets.firstOrNull { it.slot !in committedSlots }
             ?.extensionRestSeconds else null
         NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
-            enabled=!state.workoutBusy && !journal.isFinished)
+            enabled=!state.workoutBusy && !journal.isFinished,
+            latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId,
+            autoCue=NativeRestCuePolicy.latest(progress,exercise.index))
         NativeWarmupPanel(progress,exercise,state.workoutBusy || state.historyBusy,state.warmupError,onSaveWarmup)
         if(exercisePending>0 && !journal.isFinished) {
             OutlinedButton(onClick={showSkipExercise=true},

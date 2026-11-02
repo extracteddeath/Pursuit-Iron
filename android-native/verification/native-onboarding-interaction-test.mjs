@@ -401,3 +401,9 @@ assert.ok(
   reviewOwnerSource.includes('pending === claimed'),
   'Backup re-selection identity must be single-use and screen-scoped'
 );
+
+assert.ok(backupScreening.includes('if(inspectReselection) onDiscardBackupReview()') &&
+  backupScreening.includes('is ReadOnlyDocumentScreening.FingerprintOnly -> {') &&
+  backupScreening.includes('BackupScreeningStage.Rejected') &&
+  backupScreening.includes('selectedUri == null'),
+  'Failed or canceled second-source reads must revoke the old one-shot review');

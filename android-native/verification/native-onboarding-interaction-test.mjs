@@ -146,10 +146,16 @@ assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId)') &&
   rest.includes('var activeSeconds by rememberSaveable(workoutId)') &&
   rest.includes('elapsed < startedElapsed || wall < startedWall') &&
   rest.includes('abs(wallAge - monotonicAge) <= 60_000L') &&
-  rest.includes('Current rest: $activeSeconds s') &&
-  rest.includes('activeSeconds = prescribedSeconds') &&
-  rest.includes('activeSeconds = 0'),
-  'Recovered rest deadlines must reject reboot/time drift and preserve the active interval when selecting another exercise');
+  rest.includes('activeSeconds=seconds') &&
+  rest.includes('activeSeconds = 0') &&
+  rest.includes('var observedEvent by rememberSaveable(workoutId)') &&
+  rest.includes('LaunchedEffect(latestReceiptOperationId,enabled)') &&
+  rest.includes('latestReceiptOperationId!=observedEvent') &&
+  rest.includes('autoCue?.operationId==latestReceiptOperationId') &&
+  rest.includes('begin(autoCue.seconds)') &&
+  train.includes('autoCue=NativeRestCuePolicy.latest(progress,exercise.index)') &&
+  train.includes('latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId'),
+  'Rest countdown must use the issued duration after a new durable set receipt, not a pending save, and must not replay after recovery');
 
 assert.ok(train.includes('set.isExtension') &&
   train.includes('set.extensionRestSeconds?.let') &&

@@ -56,12 +56,12 @@ internal fun NativeRestTimer(
         activeSeconds=seconds
         deadline=elapsed+seconds*1000L
     }
-    LaunchedEffect(latestReceiptOperationId) {
-        if(latestReceiptOperationId != null && latestReceiptOperationId!=observedEvent) {
+    LaunchedEffect(latestReceiptOperationId,enabled) {
+        if(enabled && latestReceiptOperationId != null && latestReceiptOperationId!=observedEvent) {
             observedEvent=latestReceiptOperationId
             // Skipped/corrected sets don't produce an auto cue. The journal
             // receipt, not a pending Log click, is what starts the countdown.
-            if(enabled && autoCue?.operationId==latestReceiptOperationId)
+            if(autoCue?.operationId==latestReceiptOperationId)
                 begin(autoCue.seconds)
         }
     }

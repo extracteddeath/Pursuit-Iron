@@ -5,6 +5,17 @@ const root = 'android-native/app/src/main/java/io/github/extracteddeath/pursuiti
 const components = fs.readFileSync(root + 'NativeComponents.kt', 'utf8');
 const screens = fs.readFileSync(root + 'NativeScreens.kt', 'utf8');
 const shell = fs.readFileSync(root + 'NativePreviewApp.kt', 'utf8');
+const gymEditor = fs.readFileSync(root + 'NativeSavedGymInventoryPanel.kt', 'utf8');
+const programEditor = fs.readFileSync(root + 'NativeProgramDraftEditor.kt', 'utf8');
+assert.ok(programEditor.includes('draft.wouldOrphanVerifiedLoading(') &&
+  programEditor.includes('!protectedLoad') &&
+  screens.includes('verifiedEquipmentExerciseIds=verifiedPhysicalIds') &&
+  screens.includes('NativeGymInventoryCodec.verifiedOverrideIds('),
+  'Only authenticated saved equipment can proactively block orphaned physical stock');
+assert.ok(gymEditor.includes('draft=HashMap(original)') &&
+  gymEditor.includes('Discard unsaved gym changes?') &&
+  screens.includes('onClose={gymOnly=false}'),
+  'Cancel discards equipment edits; leaving a dirty equipment editor asks permission');
 
 // A feature-first UI must not destroy working drafts when switching context.
 assert.match(shell, /rememberSaveableStateHolder\(\)/);

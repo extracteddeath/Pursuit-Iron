@@ -37,6 +37,7 @@ import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupExportDocument
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
+import io.github.extracteddeath.pursuitiron.domain.NativeGymInventoryCodec
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 
 /**
@@ -399,19 +400,27 @@ internal fun PlanScreen(
     runtimeState?.programEditMessage?.let { Text(it,color=MaterialTheme.colorScheme.primary) }
     // Plan cannot authorize a raw backup or unchecked current program.
     if (currentPlan is ReadOnlyProgramPresentation.Structure) {
+        // Only the authenticated, exact saved program authorizes a physical
+        // loading preflight. A stale backup cannot disable or enable editing.
+        val matchingSaved=runtimeState?.saved?.takeIf {
+            it.program.id==currentPlan.program.id &&
+                it.program.reference==currentPlan.program.reference
+        }
+        val verifiedPhysicalIds=remember(matchingSaved?.loadingInventory,matchingSaved?.loadingCandidates) {
+            matchingSaved?.let { saved ->
+                NativeGymInventoryCodec.verifiedOverrideIds(
+                    saved.loadingInventory,saved.profile.unit,
+                    saved.loadingCandidates.map { it.id }.toSet(),
+                    saved.loadingCandidates.filter { it.mode=="external_load" }.map { it.id }.toSet())
+            } ?: emptySet()
+        }
         // Recreate on every authenticated canonical revision; a stale local
         // draft may never be presented as an editable CURRENT program.
         var editingDraft by rememberSaveable(currentPlan.program.reference) { mutableStateOf(false) }
         var gymOnly by rememberSaveable(currentPlan.program.reference) { mutableStateOf(false) }
         if(gymOnly) {
             SectionLabel("Verified gym weights", "Physical loading settings for this saved program")
-            OutlinedButton(onClick={gymOnly=false},modifier=Modifier.fillMaxWidth()) {
-                Text("Back to program")
-            }
-            runtimeState?.saved?.takeIf {
-                it.program.id==currentPlan.program.id &&
-                    it.program.reference==currentPlan.program.reference
-            }?.let { saved ->
+            matchingSaved?.let { saved ->
                 NativeSavedGymInventoryPanel(
                     saved=saved,reference=currentPlan.program.reference,
                     enabled=runtimeState.workout==null && !runtimeState.workoutBusy &&
@@ -422,8 +431,12 @@ internal fun PlanScreen(
                     error=runtimeState.gymInventoryError,
                     message=runtimeState.gymInventoryMessage,
                     onSave=onSaveGymInventory,
-                    initiallyEditing=true)
-            } ?: Text("Verified gym settings are unavailable until the current saved program is loaded.")
+                    initiallyEditing=true,
+                    onClose={gymOnly=false})
+            } ?: run {
+                Text("Verified gym settings are unavailable until the current saved program is loaded.")
+                OutlinedButton(onClick={gymOnly=false}) { Text("Back to program") }
+            }
         } else if(editingDraft) {
             NativeProgramDraftEditor(
                 verified=currentPlan,
@@ -435,7 +448,8 @@ internal fun PlanScreen(
                     runtimeState?.historyBusy!=true && runtimeState?.busy!=true &&
                     runtimeState?.backupExportBusy!=true && runtimeState?.shortPreviewBusy!=true && runtimeState?.blocked!=true,
                 onClose={ editingDraft=false },
-                onOpenGym={ editingDraft=false;gymOnly=true }
+                onOpenGym={ editingDraft=false;gymOnly=true },
+                verifiedEquipmentExerciseIds=verifiedPhysicalIds
             )
         } else {
             SavedProgramOverviewPanel(currentPlan) { dayId ->
@@ -447,10 +461,7 @@ internal fun PlanScreen(
                     runtimeState?.workoutBusy!=true && runtimeState?.historyBusy!=true,
                 modifier=Modifier.fillMaxWidth()
             ) { Text("Edit saved program") }
-            runtimeState?.saved?.takeIf {
-                it.program.id==currentPlan.program.id &&
-                    it.program.reference==currentPlan.program.reference
-            }?.let { saved ->
+            matchingSaved?.let { saved ->
                 NativeSavedGymInventoryPanel(
                     saved=saved,reference=currentPlan.program.reference,
                     enabled=runtimeState.workout==null && !runtimeState.workoutBusy &&

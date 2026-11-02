@@ -106,6 +106,13 @@ class NativeProgramEditDraft private constructor(
         return next(days=updated,orders=slotOrders+(dayId to positions))
     }
 
+    /** UI preflight; the canonical save separately refuses orphaned physical stock. */
+    fun wouldOrphanVerifiedLoading(dayId: String,index: Int,verifiedExerciseIds: Set<String>): Boolean {
+        val id=days.firstOrNull { it.id==dayId }?.exerciseIds?.getOrNull(index) ?: return false
+        if(id !in verifiedExerciseIds)return false
+        return days.sumOf { day->day.exerciseIds.count { it==id } }==1
+    }
+
     val removedMovementCount: Int get()=originalDays.sumOf { day->
         day.exerciseIds.size-originalSlots(day.id).size
     }

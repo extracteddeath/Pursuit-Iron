@@ -34,6 +34,14 @@ object NativeGymInventoryCodec {
             require(unique.add(value.stripTrailingZeros()))
         }
     }
+    /** Protected IDs come only from fully revalidated saved physical stock. */
+    fun verifiedOverrideIds(raw: String?, expectedUnit: String,
+        allowedExerciseIds: Set<String>, exactOnlyIds: Set<String> = emptySet()): Set<String> {
+        if(raw==null)return emptySet()
+        val inventory=JSONObject(validate(raw,expectedUnit,allowedExerciseIds,exactOnlyIds))
+        return inventory.optJSONObject("exerciseOverrides")?.keys()?.asSequence()?.toSet() ?: emptySet()
+    }
+
     /** Strict accepted subset: missing families do not inherit factory defaults. */
     fun validate(raw: String, expectedUnit: String, allowedExerciseIds: Set<String> = emptySet(),
         exactOnlyIds: Set<String> = emptySet()): String {

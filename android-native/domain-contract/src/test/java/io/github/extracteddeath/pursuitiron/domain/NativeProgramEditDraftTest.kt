@@ -143,6 +143,30 @@ class NativeProgramEditDraftTest {
         assertFalse(original.isChanged)
     }
 
+    @Test fun physicalStockPreflightTracksLastOccurrenceAcrossDaysAndEdits() {
+        val base=verified()
+        val configured=setOf("curl","row","bench")
+        val original=NativeProgramEditDraft.from(base)
+        assertTrue(original.wouldOrphanVerifiedLoading("day-1",1,configured))
+        assertFalse(original.wouldOrphanVerifiedLoading("day-1",1,emptySet()))
+        assertFalse(original.wouldOrphanVerifiedLoading("wrong",0,configured))
+        assertFalse(original.wouldOrphanVerifiedLoading("day-1",40,configured))
+        val summary=base.program.copy(days=listOf(
+            ReadOnlyProgramDay("day-1","Upper",listOf("bench","curl","row")),
+            ReadOnlyProgramDay("day-2","Lower",listOf("squat","curl","rdl"))))
+        val structure=ReadOnlyProgramPresentationPolicy.inspect(summary,
+            CurrentProgramEvidence(reference,CurrentProgramDeletionEvidence.CheckedAbsent))
+            as ReadOnlyProgramPresentation.Structure
+        val repeated=NativeProgramEditDraft.from(structure)
+        assertFalse(repeated.wouldOrphanVerifiedLoading("day-1",1,setOf("curl")))
+        val removed=checkNotNull(repeated.removeExercise("day-1",1))
+        assertTrue(removed.wouldOrphanVerifiedLoading("day-2",1,setOf("curl")))
+        val reordered=checkNotNull(removed.moveDay(1,-1))
+        assertTrue(reordered.wouldOrphanVerifiedLoading("day-2",1,setOf("curl")))
+        assertFalse(removed.wouldOrphanVerifiedLoading("day-2",0,setOf("curl")))
+        assertFalse(repeated.isChanged)
+    }
+
     @Test fun nonconsecutiveOriginalPositionsAreValidAndForgedIndicesAreNot() {
         val check=NativeProgramEditCodec::validSurvivingSourceSlots
         assertTrue(check(listOf(0,2,4),5))

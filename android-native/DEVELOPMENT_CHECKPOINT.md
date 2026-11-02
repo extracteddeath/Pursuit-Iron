@@ -1420,3 +1420,17 @@ The exercise-removal regression now also covers a repeated movement retained
 on a different training day. The same verified loading profile must survive
 that legitimate removal. Full Compose and source-contract verification is
 required on the published revision; no APK or web changes.
+
+## 2026-11-02 — Protect physical stock before removing a movement
+
+The authenticated current Plan editor now disables removing the last
+occurrence of any movement with a verified, exercise-specific loading profile,
+with an explanation and the direct gym settings route. Repeated movements
+elsewhere in the current draft remain removable; the final one requires first
+clearing its saved setting. The independent canonical save contract still
+enforces this invariant.
+
+Cancel in the physical inventory editor now discards the uncommitted draft.
+Leaving for Plan with unsaved edits explicitly asks whether to discard them,
+rather than silently losing settings. No invented equipment, formulas, history
+writes, APK, or changes to production web and other native branches.

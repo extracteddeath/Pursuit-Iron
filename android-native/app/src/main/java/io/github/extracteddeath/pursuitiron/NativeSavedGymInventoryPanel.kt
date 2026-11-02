@@ -30,12 +30,14 @@ internal fun NativeSavedGymInventoryPanel(
     error: String?,
     message: String?,
     onSave: (ReadOnlyProgramReference, String?)->Unit,
-    initiallyEditing: Boolean = false
+    initiallyEditing: Boolean = false,
+    onClose: (() -> Unit)? = null
 ) {
     val unit=saved.profile.unit
     val original=NativeGymInventoryCodec.toDraft(saved.loadingInventory)
     var editing by rememberSaveable(reference.snapshotSha256) { mutableStateOf(initiallyEditing) }
     var pending by rememberSaveable(reference.snapshotSha256) { mutableStateOf(false) }
+    var confirmExit by rememberSaveable(reference.snapshotSha256) { mutableStateOf(false) }
     var draft by rememberSaveable(reference.snapshotSha256) { mutableStateOf(HashMap(original)) }
     val result=NativeGymInventoryCodec.fromDraft(draft,unit,saved.loadingCandidates.map { it.id }.toSet(),
         saved.loadingCandidates.filter { it.mode=="external_load" }.map { it.id }.toSet())
@@ -68,11 +70,28 @@ internal fun NativeSavedGymInventoryPanel(
                 Text(if(busy) "Saving…" else if(result.json==null) "Remove verified weight setup"
                     else "Review weight setup changes")
             }
-            OutlinedButton(onClick={editing=false},enabled=!busy,modifier=Modifier.fillMaxWidth()) {
-                Text("Cancel")
+            OutlinedButton(onClick={
+                draft=HashMap(original)
+                pending=false
+                editing=false
+            },enabled=!busy,modifier=Modifier.fillMaxWidth()) {
+                Text("Cancel changes")
             }
         }
+        if(onClose!=null) OutlinedButton(
+            onClick={if(changed)confirmExit=true else onClose()},
+            enabled=!busy,modifier=Modifier.fillMaxWidth()
+        ) { Text("Back to program") }
     }
+    if(confirmExit && onClose!=null) AlertDialog(
+        onDismissRequest={confirmExit=false},
+        title={Text("Discard unsaved gym changes?")},
+        text={Text("The verified weight settings already saved with your program will stay unchanged.")},
+        confirmButton={Button(onClick={confirmExit=false;onClose()}) {
+            Text("Discard and return")
+        }},
+        dismissButton={TextButton(onClick={confirmExit=false}) { Text("Keep editing weights") }}
+    )
     if(pending) AlertDialog(
         onDismissRequest={pending=false},
         title={Text(if(result.json==null) "Remove verified gym weights?" else "Save verified gym weights?")},

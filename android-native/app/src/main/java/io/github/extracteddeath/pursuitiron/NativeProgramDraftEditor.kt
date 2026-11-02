@@ -39,7 +39,8 @@ internal fun NativeProgramDraftEditor(
     onSave: (NativeProgramEditDraft)->Unit,
     lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>?,
     onClose: () -> Unit,
-    onOpenGym: () -> Unit
+    onOpenGym: () -> Unit,
+    verifiedEquipmentExerciseIds: Set<String>
 ) {
     var confirmSave by remember { mutableStateOf(false) }
     var pendingRemoval by remember { mutableStateOf<Pair<String,Int>?>(null) }
@@ -145,6 +146,8 @@ internal fun NativeProgramDraftEditor(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             day.exerciseIds.forEachIndexed { index,id ->
+                val protectedLoad=draft.wouldOrphanVerifiedLoading(
+                    day.id,index,verifiedEquipmentExerciseIds)
                 Row(modifier=Modifier.fillMaxWidth(),
                     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     Column(modifier=Modifier.weight(1f)) {
@@ -165,9 +168,16 @@ internal fun NativeProgramDraftEditor(
                     ) { Text("Down") }
                     OutlinedButton(
                         onClick={pendingRemoval=day.id to index},
-                        enabled=allowEditing && !saving && day.exerciseIds.size>1
+                        enabled=allowEditing && !saving && day.exerciseIds.size>1 &&
+                            !protectedLoad
                     ) { Text("Remove") }
                 }
+                if(protectedLoad) Text(
+                    "Verified machine loading is saved for this movement. Clear its individual " +
+                        "weight setting before removing the last occurrence.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if(index<day.exerciseIds.lastIndex) HorizontalDivider()
             }
         }

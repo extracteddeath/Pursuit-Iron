@@ -59,6 +59,28 @@ class NativeGymInventoryCodecTest {
             mapOf("override:back-squat" to "exact: 45, 50"),"lb",allowed).valid)
     }
 
+    @Test fun verifiedOverrideIdsExcludeFactoryLoadingAndRejectUntrustedEntries() {
+        val eligible=setOf("lat-pulldown","leg-ext")
+        val physical=checkNotNull(NativeGymInventoryCodec.fromDraft(
+            mapOf("cable" to "5, 5, 150",
+                "override:lat-pulldown" to "range: 5, 7.5, 200",
+                "override:leg-ext" to "exact: 12.5, 17.5, 22.5"),
+            "lb",eligible,setOf("leg-ext")).json)
+        assertEquals(setOf("lat-pulldown","leg-ext"),NativeGymInventoryCodec.verifiedOverrideIds(
+            physical,"lb",eligible,setOf("leg-ext")))
+        assertEquals(emptySet<String>(),NativeGymInventoryCodec.verifiedOverrideIds(
+            null,"lb",eligible,setOf("leg-ext")))
+        assertEquals(emptySet<String>(),NativeGymInventoryCodec.verifiedOverrideIds(
+            checkNotNull(NativeGymInventoryCodec.fromDraft(mapOf("cable" to "5, 5, 150"),"lb").json),
+            "lb",eligible,setOf("leg-ext")))
+        assertTrue(runCatching {
+            NativeGymInventoryCodec.verifiedOverrideIds(physical,"kg",eligible,setOf("leg-ext"))
+        }.isFailure)
+        assertTrue(runCatching {
+            NativeGymInventoryCodec.verifiedOverrideIds(physical,"lb",setOf("leg-ext"),setOf("leg-ext"))
+        }.isFailure)
+    }
+
     @Test fun specialtyMachinesRequireUserVerifiedExactLoggedValues() {
         val eligible=setOf("leg-ext","lat-pulldown")
         val specialty=setOf("leg-ext")

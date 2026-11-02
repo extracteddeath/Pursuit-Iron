@@ -106,6 +106,12 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertEquals(JSONObject(current).getJSONArray("history").length(),preview.current.history)
             assertEquals(JSONObject(selected).getJSONArray("history").length(),preview.incoming.history)
             assertTrue(preview.hypothetical.history>=preview.current.history)
+            val prepared=checkNotNull(engine.prepareBackupMerge(
+                current,selected,preview.hypotheticalMergedSha256))
+            assertEquals(preview.hypotheticalMergedSha256,prepared.candidateSha256)
+            assertEquals(preview.hypotheticalMergedBytes,prepared.candidateBytes)
+            assertTrue(engine.validateInitialSnapshot(prepared.candidateSnapshot))
+            assertNull(engine.prepareBackupMerge(current,selected,"f".repeat(64)))
             assertEquals(priorWrites,drive.writes)
             assertArrayEquals(current.toByteArray(Charsets.UTF_8),
                 checkNotNull(store.readOwnedCurrentStoreBytes()))

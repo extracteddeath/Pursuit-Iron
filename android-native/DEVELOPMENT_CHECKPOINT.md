@@ -719,3 +719,37 @@ program. There is still no first-class custom editor, no complete adaptive
 cycle builder, no restoration import button and no APK. Complete all native
 workflows and Android device acceptance before switching training authority
 to the independent Kotlin engine.
+
+## Follow-up: verified native saved-program editing draft (not yet persistable)
+
+The Plan screen now opens a revision-pinned Material 3 editing workspace for
+the authenticated current saved program. The user can rename the program,
+rename existing training days, reorder existing movements within their
+original day, reset the draft or close it. The workspace uses an immutable
+`NativeProgramEditDraft` with private construction, frozen nested movement
+arrays, exact original-day and snapshot reference checks, and no write
+authority. It refuses invalid indexes and labels, and clears/recreates its
+state for each verified saved-program revision. Editing is disabled during
+an active/in-flight workout.
+
+The draft's movement names are resolved via the app's existing **packaged
+canonical exercise catalog**, not guessed from exercise IDs or duplicated in
+Compose. The process-owned runtime rechecks the exact current-store fingerprint
+both before and after bounded catalog lookups. Missing, stale or inaccessible
+results remain identified only by their original stable exercise IDs. The
+read-only catalog cannot issue targets, authorize a custom record, update a
+program, alter history or access a user-selected backup.
+
+**No program edits are saved yet.** The editor makes this explicit with a
+disabled save action. Renaming/reordering an existing program must first be
+certified by the canonical program editor and converted into an atomic
+expected-revision update, while preserving movement-specific overrides,
+primary lift identity, slot references, custom amplifiers, superset pairings
+and associated cycle settings. Source/JVM tests establish immutable draft
+behavior and current-source identity, not training correctness or Android
+device acceptance. Adding/removing/swapping exercises, genuinely authored
+custom programs and adaptive-cycle editing remain future integration work.
+
+This is an incremental native editing foundation, not completion of the
+"custom programs" or "program builder" feature catalog gates. No APK
+or training-engine replacement is authorized by this milestone.

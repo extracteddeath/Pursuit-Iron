@@ -344,3 +344,10 @@ assert.ok(backupScreening.includes('NativeBackupMergeReviewPanel(current.preview
   !restoreReviewUi.includes('commitAtomically') &&
   !restoreReviewUi.includes('CreateDocument('),
   'Native M3 backup differences must cover every collection and preserve explicit non-import status');
+
+assert.ok(screens.includes('currentStoreChangeKey = runtimeState?.storeChangeKey ?: 0L') &&
+  backupScreening.includes('remember(currentStoreChangeKey) { mutableStateOf<BackupScreeningStage>') &&
+  backupScreening.includes('remember(currentStoreChangeKey) { mutableStateOf(false) }') &&
+  host.includes('now.storeChangeKey==before.storeChangeKey') &&
+  host.includes('source.contentEquals(fresh)'),
+  'Backup review must be revision-bound in Compose and reject stale source during comparison');

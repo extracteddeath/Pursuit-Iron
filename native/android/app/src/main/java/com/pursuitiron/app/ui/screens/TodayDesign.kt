@@ -232,26 +232,44 @@ private fun androidx.compose.ui.semantics.SemanticsPropertyReceiver.stateDescrip
 /** Web SessionGamePlan: up to three highlights from the next session's review — a PR chance first. */
 @Composable
 fun GamePlanCard(review: JSONObject, changes: Int) {
-    val notes = review.list("gamePlan"); if (notes.isEmpty()) return
+    val all = review.list("gamePlan"); if (all.isEmpty()) return
     val cs = MaterialTheme.colorScheme
     var open by remember { mutableStateOf<String?>(null) }
+    var showAll by remember { mutableStateOf(false) }
+    val notes = if (showAll) all else all.take(3)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(PiIcons.Progress, null, tint = cs.primary, modifier = Modifier.size(20.dp))
+            Icon(PiIcons.Trend, null, tint = cs.primary, modifier = Modifier.size(20.dp))
             Text("Today's game plan", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             if (changes > 0) Text("$changes change${if (changes == 1) "" else "s"} from last time", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
         }
         notes.forEach { g ->
             val key = g.s("id") + g.i("slot"); val on = open == key
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { open = if (on) null else key }, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(if (g.s("kind") == "pr") cs.primary else cs.tertiaryContainer), contentAlignment = Alignment.Center) {
-                    Icon(when (g.s("kind")) { "pr" -> PiIcons.Trophy; "technique" -> PiIcons.Sparkle; else -> PiIcons.Progress }, null,
-                        tint = if (g.s("kind") == "pr") cs.onPrimary else cs.onTertiaryContainer, modifier = Modifier.size(16.dp))
+            // The design marks each note by what it is: a PR chance stands out, a reset reads as a step back.
+            val (icon, bg, fg) = when (g.s("kind")) {
+                "pr" -> Triple(PiIcons.Trophy, cs.primary, cs.onPrimary)
+                "technique" -> Triple(PiIcons.Sparkle, cs.tertiaryContainer, cs.onTertiaryContainer)
+                "estimate" -> Triple(PiIcons.Star, cs.secondaryContainer, cs.onSecondaryContainer)
+                "up" -> Triple(PiIcons.Trend, cs.primaryContainer, cs.onPrimaryContainer)
+                "down" -> Triple(PiIcons.Redo, cs.tertiaryContainer, cs.onTertiaryContainer)
+                "plan" -> Triple(PiIcons.Calendar, cs.secondaryContainer, cs.onSecondaryContainer)
+                else -> Triple(PiIcons.Progress, cs.surfaceContainerHighest, cs.onSurfaceVariant)
+            }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = if (on) "Show less" else "Show more") { open = if (on) null else key },
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(bg), contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
                 }
                 Column(Modifier.weight(1f)) {
                     Text(g.s("title"), style = MaterialTheme.typography.titleSmall)
-                    Text(g.s("guidance"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = if (on) 8 else 2, overflow = TextOverflow.Ellipsis)
+                    Text(g.s("guidance"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = if (on) 12 else 3, overflow = TextOverflow.Ellipsis)
                 }
+            }
+        }
+        if (all.size > 3) androidx.compose.material3.Surface(onClick = { showAll = !showAll }, color = cs.surfaceContainerHigh, contentColor = cs.onSurface,
+            shape = RoundedCornerShape(999.dp), modifier = Modifier.height(36.dp)) {
+            Box(Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                Text(if (showAll) "Show fewer" else "Show all ${all.size}", style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
             }
         }
     }

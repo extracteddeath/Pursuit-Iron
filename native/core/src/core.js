@@ -378,12 +378,17 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
     let r = null; try { r = buildSessionReview(p, day, wk, u, history(), perf()); } catch { r = null; }
     if (!r) return null;
     const restScale = Number(S.store.restScale) || 1;
-    const ranked = [...r.exercises].sort((a, b) => { const sc = (x) => (x.opportunity ? 8 : 0) + (x.change.undone ? 4 : 0) + (x.protocol.type !== 'straight' ? 2 : 0) + (x.change ? 1 : 0); return sc(b) - sc(a); }).slice(0, 3);
+    const ranked = [...r.exercises].sort((a, b) => { const sc = (x) => (x.opportunity ? 8 : 0) + (x.change.undone ? 4 : 0) + (x.protocol.type !== 'straight' ? 2 : 0) + (x.change ? 1 : 0); return sc(b) - sc(a); }); // the card shows three, Show all reveals the rest
     const gamePlan = ranked.map((x) => {
         const pr = x.opportunity;
         const tech = x.protocol.type === 'myo_reps' ? `Myo-reps · ${Math.max(8, Math.round(15 * restScale))}-second rests.` : x.protocol.type === 'drop_set' ? 'Drop set on the last set.' : null;
         const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${Math.round(pr.estimated * 10) / 10} ${u}.` : `Could beat your ${pr.bestReps}-rep best at this load.`) : x.reason;
-        return { id: x.id, slot: x.slot, name: x.name, kind: pr ? 'pr' : x.protocol.type !== 'straight' ? 'technique' : 'trend', title: pr ? `PR chance · ${x.name}` : x.name,
+        // What kind of note it is, so the card can mark it the way the design does (a PR chance, a technique, a first
+        // estimate, load going up, load coming down for a reset, or targets the program sets).
+        const estimate = (x.proposed || []).some((t) => t?.target?.estimate);
+        const kind = pr ? 'pr' : x.protocol.type !== 'straight' ? 'technique' : estimate ? 'estimate'
+            : x.category === 'Progression' ? 'up' : x.category === 'Load adjustment' ? 'down' : x.category === 'Programmed targets' ? 'plan' : 'trend';
+        return { id: x.id, slot: x.slot, name: x.name, kind, title: pr ? `PR chance · ${x.name}` : x.name,
             dose: targetsText(x.effective, u), guidance: `${targetsText(x.effective, u)} · ${tech || why}` };
     });
     const changes = r.changes.map((x) => {

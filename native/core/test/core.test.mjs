@@ -954,7 +954,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   s3.exercises.forEach((e) => e.sets.forEach((x) => { if (x.warm || x.sub) return; C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'weight', value: '50' }); C.act({ type: 'edit', ei: e.ei, si: x.i, field: 'reps', value: '15' }); C.act({ type: 'toggle', ei: e.ei, si: x.i }); C.act({ type: 'rir', ei: e.ei, si: x.i, rir: 3 }); }));
   C.finishSession();
   const r = C.sessionReview({ programId: pid, dayId: day, weekIndex: 2 });
-  ok(r && r.gamePlan.length > 0 && r.gamePlan.length <= 3 && r.changes.length > 0, 'next session review: ' + r.gamePlan.length + ' game-plan notes, ' + r.changes.length + ' plan changes');
+  ok(r && r.gamePlan.length > 0 && r.gamePlan.every((g) => ['pr', 'technique', 'estimate', 'up', 'down', 'plan', 'trend'].includes(g.kind)) && r.changes.length > 0, 'next session review: ' + r.gamePlan.length + ' game-plan notes, ' + r.changes.length + ' plan changes');
   ok(r.gamePlan.some((g) => g.kind === 'pr'), 'a PR chance leads the game plan');
   const ch = r.changes.find((c) => c.canUndo);
   ok(!!ch, 'one change can be undone');

@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.pursuitiron.app.ui.common.i
 import com.pursuitiron.app.ui.common.o
@@ -144,13 +145,15 @@ fun LibraryScreen(vm: AppViewModel) {
                 if (st != "all") androidx.compose.material3.TextButton(onClick = { st = "all" }) { Text("Show all lifts") }
             }
         }
-        items(shown, key = { it.s("id") }) { x ->
+        itemsIndexed(shown, key = { _, it -> it.s("id") }) { k, x ->
             // The design's tile: colour and shape by muscle group (Chest/Shoulders, Back/Arms, Legs/Core)
             val g = (listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core").indexOf(x.s("group")).coerceAtLeast(0)) % 3
             val tileBg = listOf(cs.tertiaryContainer, cs.primaryContainer, cs.secondaryContainer)[g]
             val tileFg = listOf(cs.onTertiaryContainer, cs.onPrimaryContainer, cs.onSecondaryContainer)[g]
             val tileShape = listOf(CircleShape, RoundedCornerShape(14.dp), RoundedCornerShape(14.dp, 14.dp, 14.dp, 4.dp))[g]
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
+            // The design's grouped list: one surface split by hairline gaps, rounded only at its two ends (one column).
+            val top = if (k == 0 || wide) 22.dp else 6.dp; val bottom = if (k == shown.lastIndex || wide) 22.dp else 6.dp
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(40.dp).clip(tileShape).background(tileBg).clearAndSetSemantics { }, contentAlignment = Alignment.Center) { // decoration: the row reads its name
                     Text(x.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleSmall, color = tileFg)

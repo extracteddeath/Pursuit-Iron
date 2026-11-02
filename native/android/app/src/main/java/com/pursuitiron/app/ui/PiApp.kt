@@ -2,6 +2,13 @@
 
 package com.pursuitiron.app.ui
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -140,8 +147,23 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
 
 @Composable
 private fun Tabs(vm: AppViewModel, wide: Boolean) {
+    // The design's scrolled title bar: once a tab's own big title has scrolled away, a small centred title sits under
+    // the status bar (Main.dc.html `scrolled`). Read from nested scroll, so every tab's list gets it without its own state.
+    var scrolled by remember { mutableStateOf(0f) }
+    androidx.compose.runtime.LaunchedEffect(vm.tab) { scrolled = 0f }
+    val scrollWatch = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                scrolled = (scrolled - consumed.y).coerceAtLeast(0f)
+                if (available.y > 0f) scrolled = 0f // pulled past the top
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val showBar = scrolled > with(density) { 72.dp.toPx() }
     val content: @Composable (Modifier) -> Unit = { m ->
-        Box(m) {
+        Box(m.nestedScroll(scrollWatch)) {
             // Top-level destinations fade through; shared elements (the avatar) morph across.
             @OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
             androidx.compose.animation.SharedTransitionLayout {
@@ -155,6 +177,17 @@ private fun Tabs(vm: AppViewModel, wide: Boolean) {
                             Tab.You -> YouScreen(vm)
                         }
                     }
+                }
+            }
+            androidx.compose.animation.AnimatedVisibility(visible = showBar, enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter)) {
+                val cs = MaterialTheme.colorScheme
+                Column(Modifier.fillMaxWidth().background(cs.surfaceContainer).statusBarsPadding()) {
+                    Box(Modifier.fillMaxWidth().height(52.dp), contentAlignment = Alignment.Center) {
+                        Text(tabs.firstOrNull { it.first == vm.tab }?.second ?: "", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                            modifier = Modifier.clearAndSetSemantics { }) // repeats the tab's own heading, which TalkBack already reads
+                    }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(cs.outlineVariant.copy(alpha = 0.5f)))
                 }
             }
         }

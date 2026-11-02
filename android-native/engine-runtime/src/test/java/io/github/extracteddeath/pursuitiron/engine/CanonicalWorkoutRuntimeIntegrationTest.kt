@@ -106,12 +106,26 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertEquals(JSONObject(current).getJSONArray("history").length(),preview.current.history)
             assertEquals(JSONObject(selected).getJSONArray("history").length(),preview.incoming.history)
             assertTrue(preview.hypothetical.history>=preview.current.history)
-            val prepared=checkNotNull(engine.prepareBackupMerge(
-                current,selected,preview.hypotheticalMergedSha256))
-            assertEquals(preview.hypotheticalMergedSha256,prepared.candidateSha256)
-            assertEquals(preview.hypotheticalMergedBytes,prepared.candidateBytes)
-            assertTrue(engine.validateInitialSnapshot(prepared.candidateSnapshot))
+            val maybePrepared=engine.prepareBackupMerge(
+                current,selected,preview.hypotheticalMergedSha256)
+            if (preview.flags.isEmpty()) {
+                val prepared=checkNotNull(maybePrepared)
+                assertEquals(preview.hypotheticalMergedSha256,prepared.candidateSha256)
+                assertEquals(preview.hypotheticalMergedBytes,prepared.candidateBytes)
+                assertTrue(engine.validateInitialSnapshot(prepared.candidateSnapshot))
+            } else {
+                assertNull("Existing device data must not be changed without consent",maybePrepared)
+            }
             assertNull(engine.prepareBackupMerge(current,selected,"f".repeat(64)))
+            val cleanCurrent="""{"v":13,"savedAt":1,"saved":[],"history":[],"cycles":[],"custom":[],"gyms":[],"perf":{},"tombs":{}}"""
+            val cleanIncoming="""{"v":13,"savedAt":2,"saved":[],"history":[{"id":"new-synthetic","date":2,"updatedAt":2}],"cycles":[],"custom":[],"gyms":[],"perf":{},"tombs":{}}"""
+            val cleanPreview=checkNotNull(engine.previewBackupMerge(cleanCurrent,cleanIncoming))
+            assertTrue("Additive source must have no silent change risk",cleanPreview.flags.isEmpty())
+            val additive=checkNotNull(engine.prepareBackupMerge(
+                cleanCurrent,cleanIncoming,cleanPreview.hypotheticalMergedSha256))
+            assertEquals(cleanPreview.hypotheticalMergedSha256,additive.candidateSha256)
+            assertEquals(1,JSONObject(additive.candidateSnapshot).getJSONArray("history").length())
+            assertTrue(engine.validateInitialSnapshot(additive.candidateSnapshot))
             assertEquals(priorWrites,drive.writes)
             assertArrayEquals(current.toByteArray(Charsets.UTF_8),
                 checkNotNull(store.readOwnedCurrentStoreBytes()))

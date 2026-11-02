@@ -7,7 +7,8 @@
  */
 import { mergeStores, parseStoredData } from '../../modules/engine-api.js';
 import { previewCanonicalBackupMerge, MERGE_PREVIEW_LIMIT } from './backup-merge-preview.mjs';
-import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
+import { sha256Utf8, utf8ByteLength, equalJson } from './json-identity.mjs';
+import { canonicalBackupSchemaCheck } from './backup-schema-check.mjs';
 
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 const exact=(v,keys)=>v!==null && typeof v==='object' && !Array.isArray(v) &&
@@ -25,12 +26,32 @@ export function prepareCanonicalBackupMerge(params) {
       preview.historyDropped!==0 || preview.hypotheticalMergedBytes>MERGE_PREVIEW_LIMIT ||
       preview.flags.length!==0)
     throw new TypeError('Merge risks require a separate approved policy');
-  const merged=mergeStores(parseStoredData(currentSnapshot),
-    parseStoredData(incomingSnapshot));
+  const current=parseStoredData(currentSnapshot);
+  const merged=mergeStores(current,parseStoredData(incomingSnapshot));
   if(!merged || !merged.data || !merged.stats || merged.stats.historyDropped!==0)
     throw new TypeError('Canonical merge unavailable');
+  // Preflight's generic conflict statistic does not detect deletion by
+  // incoming tombstone, and scalar setting precedence can change user
+  // choices without a record collision. Refuse both until a detailed,
+  // explicit, user-approved conflict/deletion policy has been certified.
+  for(const key of ['saved','history','cycles','custom','gyms']) {
+    const candidates=new Map((merged.data[key]||[]).map(row=>[row.id,row]));
+    if((current[key]||[]).some(row=>!candidates.has(row.id) ||
+        !equalJson(row,candidates.get(row.id))))
+      throw new TypeError('Existing owned record would be changed');
+  }
+  // An append-only preparation may introduce new non-conflicting records,
+  // but must not silently change the existing device's settings, notes,
+  // bodyweight, equipment or preferences.
+  const exempt=new Set(['v','savedAt','saved','history','cycles','custom',
+    'gyms','tombs','perf']);
+  for(const key of Object.keys(current)) {
+    if(!exempt.has(key) && !equalJson(current[key],merged.data[key]))
+      throw new TypeError('Existing owned setting would change');
+  }
   const candidateSnapshot=JSON.stringify(merged.data);
   const candidateBytes=utf8ByteLength(candidateSnapshot);
+  canonicalBackupSchemaCheck({rawSnapshot:candidateSnapshot});
   if(candidateBytes!==preview.hypotheticalMergedBytes ||
       candidateBytes>MERGE_PREVIEW_LIMIT ||
       sha256Utf8(candidateSnapshot)!==expectedCandidateSha256)

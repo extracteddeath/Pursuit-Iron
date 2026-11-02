@@ -79,11 +79,10 @@ assert.ok(deletion.flags.length===0, 'canonical tombstone can be clean yet destr
 reject({currentSnapshot:current,incomingSnapshot:deleting,
   expectedCandidateSha256:deletion.hypotheticalMergedSha256});
 // Non-record settings use the original device's own approval policy, too.
-const changedPreferences=JSON.stringify({
-  ...JSON.parse(incoming),unit:'kg'
-});
-const preferencesPreview=previewCanonicalBackupMerge(current,changedPreferences);
-reject({currentSnapshot:current,incomingSnapshot:changedPreferences,
+const currentWithSettings=JSON.stringify({...JSON.parse(current),unit:'lb'});
+const changedPreferences=JSON.stringify({...JSON.parse(incoming),unit:'kg'});
+const preferencesPreview=previewCanonicalBackupMerge(currentWithSettings,changedPreferences);
+reject({currentSnapshot:currentWithSettings,incomingSnapshot:changedPreferences,
   expectedCandidateSha256:preferencesPreview.hypotheticalMergedSha256});
 
 const crowdedA=raw(100,Array.from({length:1150},(_,i)=>history('a-'+i,100,11+i)));

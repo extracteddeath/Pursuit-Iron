@@ -42,6 +42,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     private var historyReader: NativeHistoryReadPort?=null
     private var subscription: AutoCloseable?=null
     private var action: Job?=null
+    private val backupReviewEpoch=AtomicLong(0)
+    private var backupReviewTicket: NativeBackupReviewTicket?=null
 
     fun start() {
         if (!started.compareAndSet(false,true)) return
@@ -62,6 +64,10 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 store=owner
                 historyReader=NativeHistoryReadPort(owner,engine)
                 val watching=owner.subscribeCommittedChanges {
+                    synchronized(lifetime) {
+                        backupReviewEpoch.incrementAndGet()
+                        backupReviewTicket=null
+                    }
                     mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null,muscleReview=null,historyCalendar=null) }
                 }
                 synchronized(lifetime) {
@@ -147,7 +153,36 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
      * be wiped after this suspending comparison. The current store is checked
      * again before any result can reach Compose.
      */
-    suspend fun previewBackupMerge(selected: ByteArray): NativeBackupMergePreview {
+    suspend fun previewBackupMerge(selected: ByteArray): NativeBackupMergePreview =
+        readOnlyBackupMerge(selected,true)
+
+    /**
+     * Explicit SECOND document selection. No picker URI, raw JSON or
+     * restore approval is retained. Even a perfect second match is a
+     * read-only check and does not unlock canonical store publication.
+     */
+    suspend fun verifyBackupMergeSelection(selected: ByteArray): Boolean {
+        val first=synchronized(lifetime) { if(closed)null else backupReviewTicket }
+            ?: return false
+        val second=try { readOnlyBackupMerge(selected,false) }
+            catch(cancelled: CancellationException) { throw cancelled }
+            catch(_: Exception) { return false }
+        val fresh=ReadOnlyBackupScreening.fingerprint(
+            java.io.ByteArrayInputStream(selected)) { currentCoroutineContext().ensureActive() }
+        return synchronized(lifetime) {
+            !closed && backupReviewTicket===first &&
+                first.matchesReselection(fresh,second)
+        }
+    }
+
+    private suspend fun readOnlyBackupMerge(
+        selected: ByteArray,registerReview: Boolean
+    ): NativeBackupMergePreview {
+        val reviewRevision=if(registerReview) synchronized(lifetime) {
+            check(!closed)
+            backupReviewTicket=null
+            backupReviewEpoch.incrementAndGet()
+        } else backupReviewEpoch.get()
         val before=mutable.value
         check(before.ready && !before.blocked && !before.busy && !before.workoutBusy &&
             !before.workoutBlocked && before.workout==null &&
@@ -177,6 +212,12 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             val fresh=checkNotNull(owner.readOwnedCurrentStoreBytes());latest=fresh
             check(source.contentEquals(fresh))
             job.ensureActive()
+            synchronized(lifetime) {
+                check(!closed && backupReviewEpoch.get()==reviewRevision)
+                if(registerReview) {
+                    backupReviewTicket=NativeBackupReviewTicket.open(preview,selectedFp)
+                }
+            }
             return preview
         } finally {
             first?.fill(0);latest?.fill(0)
@@ -594,6 +635,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         synchronized(lifetime) {
             if(closed)return
             closed=true;actionVersion.incrementAndGet()
+            backupReviewEpoch.incrementAndGet();backupReviewTicket=null
             scope.cancel();subscription?.close();mutable.value.verifier?.close()
         }
     }

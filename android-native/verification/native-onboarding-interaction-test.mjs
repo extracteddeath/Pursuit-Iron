@@ -134,13 +134,15 @@ assert.ok(train.includes('onInspectEquipmentLoad:(JournalSetSlot,String)->Unit')
   verifiedLoadUi.includes('it.workoutId==session.workoutId && it.slot==set.slot') &&
   verifiedLoadUi.includes('it.unit==session.unit && it.inputLoad==load') &&
   verifiedLoadUi.includes('if(review?.confirmed==true)') &&
-  verifiedLoadUi.includes('if(review.previous!=null)') &&
-  verifiedLoadUi.includes('if(review.next!=null)') &&
+  verifiedLoadUi.includes('val previous=review.previous') &&
+  verifiedLoadUi.includes('if(previous!=null)') &&
+  verifiedLoadUi.includes('val next=review.next') &&
+  verifiedLoadUi.includes('if(next!=null)') &&
   verifiedLoadUi.includes('No assumed load increments are offered') &&
   verifiedLoadUi.includes('if(!review.exact)') &&
   verifiedLoadUi.includes('About these loads') &&
-  verifiedLoadUi.includes('onLoad(review.previous)') &&
-  verifiedLoadUi.includes('onLoad(review.next)') &&
+  verifiedLoadUi.includes('onLoad(previous)') &&
+  verifiedLoadUi.includes('onLoad(next)') &&
   !verifiedLoadUi.includes('stepLoad(') &&
   !verifiedLoadUi.includes('commitAtomically') &&
   host.includes('NativeEquipmentLoadingCodec.matchesOrigin(snapshot,progress.plan)') &&

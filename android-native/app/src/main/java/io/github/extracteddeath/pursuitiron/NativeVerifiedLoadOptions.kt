@@ -57,17 +57,21 @@ internal fun NativeVerifiedLoadOptions(
         }
         Text(sourceLabel,style=MaterialTheme.typography.labelMedium,
             color=MaterialTheme.colorScheme.primary)
-        if(review.previous!=null || review.next!=null) {
+        // Capture nullable cross-module fields locally; the UI may only
+        // apply a source-confirmed, non-null adjacent value.
+        val previous=review.previous
+        val next=review.next
+        if(previous!=null || next!=null) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                if(review.previous!=null)
-                    OutlinedButton(onClick={onLoad(review.previous)},
+                if(previous!=null)
+                    OutlinedButton(onClick={onLoad(previous)},
                         enabled=enabled,modifier=Modifier.weight(1f)) {
-                        Text("− ${review.previous} ${session.unit}")
+                        Text("− $previous ${session.unit}")
                     }
-                if(review.next!=null)
-                    OutlinedButton(onClick={onLoad(review.next)},
+                if(next!=null)
+                    OutlinedButton(onClick={onLoad(next)},
                         enabled=enabled,modifier=Modifier.weight(1f)) {
-                        Text("+ ${review.next} ${session.unit}")
+                        Text("+ $next ${session.unit}")
                     }
             }
         } else Text("No adjacent verified load options for this set.",

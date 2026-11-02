@@ -1679,3 +1679,15 @@ equipment-dependent load steps are *not* inferred. A short contextual
 bodyweight hint appears only when actual load is zero, reducing repeated
 instructional text on normal weighted sets. Draft ownership, engine
 values and storage remain unchanged. No APK until end-to-end acceptance.
+
+## 2026-11-02 — Cross-module nullable verified load compile correction
+
+The no-APK Compose compile found that public `previous` and `next`
+properties of the typed verified-loading model cannot be smart-cast
+across the domain module boundary inside Compose button callbacks.
+The load presentation now captures these source-confirmed nullable
+values in local immutable variables and offers a button only for a
+non-null value. Canonical verification, manual drafts, units, and
+no-inferred-increment rules are unchanged. The interaction fixture
+verifies the local value gating. This is a compilation integration
+repair, not an engine change.

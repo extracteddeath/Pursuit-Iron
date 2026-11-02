@@ -495,3 +495,27 @@ conflicts and risks for user confirmation, and explicitly refuse import until
 an atomic Undo/rollback and revision/tombstone-safe publication path has its
 own crash/retry tests. Never imply this diagnostic is safe to publish merely
 because its risk list is empty.
+
+## Follow-up: backed-up program comparison visible in native Plan
+
+The native Plan screen now offers an explicit **Compare backup with saved data ·
+preview only** document picker once a saved program and the packaged canonical
+runtime are present. The selected document is read through the existing bounded
+read-only provider stream; no picked URI, raw backup data, or merged snapshot
+is retained in Compose. Selected bytes are cleared on completion or failure.
+
+The process-owned runtime reads the exact active store, fingerprints both
+sources, submits the two snapshots through the typed private canonical
+`mergeStores` preflight, checks for an intervening owned-store revision, and
+reads the current bytes again before releasing only a redacted summary.
+An active workout or competing history/export task refuses the comparison.
+The view labels hypothetical program/workout counts, revision conflicts,
+history cap loss and native capacity violations. It is not an import decision,
+does not preview every scalar settings conflict and cannot restore records.
+
+A new source interaction test requires Activity -> PreviewApp -> Plan ->
+document picker -> process owner -> strict decoder wiring and source wiping.
+The packaged real-runtime test also checks no canonical store writes.
+Physical document-provider and lifecycle acceptance, atomic merge/Undo and
+web-backup migration are **still open**. The latest CI head needs confirmation,
+and APK freeze remains active.

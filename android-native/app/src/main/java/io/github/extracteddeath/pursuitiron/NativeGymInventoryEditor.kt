@@ -72,13 +72,17 @@ internal fun NativeGymInventoryEditor(
                 Text(if(showSpecific) "Hide individual machine settings" else "Set individual machine weights")
             }
             if(showSpecific) {
-                Text("Use exact: 5, 10, 15 for confirmed selectable weights, or range: 5, 5, 150 for a confirmed minimum, step and maximum. Leave unknown machines blank.",
+                Text("Enter only verified weights. Cable/standard stacks can use exact: 5, 10, 15 or range: 5, 5, 150. Specialty machines require exact: weights AS LOGGED, not plates-per-side, assumed sled loads or inferred increments. If the log basis is uncertain, leave it blank.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 candidates.forEach { candidate ->
                     NativeGymLoadField(unit,draft,onChange,enabled,"override:${candidate.id}",
                         candidate.name,
-                        "Verified ${if(candidate.mode=="cable_stack") "cable" else "machine"} settings only; overrides its general category")
+                        when(candidate.mode) {
+                            "cable_stack" -> "Verified cable weights; overrides the shared cable stack"
+                            "machine_stack" -> "Verified selectorized weights; overrides the shared machine stack"
+                            else -> "EXACT logged loads only; do not enter per-side plates or assume machine resistance"
+                        })
                 }
             }
         }

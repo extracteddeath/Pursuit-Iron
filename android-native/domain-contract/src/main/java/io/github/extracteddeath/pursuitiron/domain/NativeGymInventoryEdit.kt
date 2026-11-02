@@ -17,11 +17,12 @@ object NativeGymInventoryEditCodec {
 
     fun editJson(reference: ReadOnlyProgramReference, unit: String,
         inventoryJson: String?, operationId: String, editedAt: Long,
-        eligibleExerciseIds: Set<String> = emptySet()): String {
+        eligibleExerciseIds: Set<String> = emptySet(),
+        exactOnlyIds: Set<String> = emptySet()): String {
         require(operationId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")) &&
             reference.storeVersion == 13 && editedAt > reference.storeSavedAt &&
             editedAt > reference.programUpdatedAt && editedAt <= 8_640_000_000_000_000L)
-        val inventory = inventoryJson?.let { JSONObject(NativeGymInventoryCodec.validate(it,unit,eligibleExerciseIds)) }
+        val inventory = inventoryJson?.let { JSONObject(NativeGymInventoryCodec.validate(it,unit,eligibleExerciseIds,exactOnlyIds)) }
         val r = JSONObject().put("programId",reference.programId)
             .put("programUpdatedAt",reference.programUpdatedAt)
             .put("storeSavedAt",reference.storeSavedAt)

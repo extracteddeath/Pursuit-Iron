@@ -5,6 +5,13 @@ const unsafe=new Set(['ezbar','trapbar','safetybar','landmine','kettlebell','ban
   'legpress','hacksquat','legext','legcurl','pecdeck','machinerow','assisted',
   'calfmachine','abduction','machinepress','machineshoulder','machinelatraise',
   'machinecurl','machineext']);
+// Machine families with an ambiguous resistance mechanism must NEVER use
+// the generic selectorized/plate solver. Only user-entered exact LOGGED loads
+// may authorize stepping, not plate-per-side, sled weight or counterbalance.
+const specialty=new Set(['legpress','hacksquat','legext','legcurl','calfmachine',
+  'pecdeck','machinerow','machinepress','machineshoulder','machinelatraise',
+  'machinecurl','machineext','abduction','adduction','beltsquat',
+  'hipthrustmachine','kickback','machinecrunch','machineshrug','machinepullover']);
 const modes={barbell:'barbell_total',dumbbell:'dumbbell_per_hand',smith:'smith_total',
   cable:'cable_stack',machine:'machine_stack'};
 export function nativeIssuedLoadMode(exerciseId,equipment) {
@@ -20,10 +27,17 @@ export function nativeStackCandidates(program) {
     return [];
   const ids=[...new Set(program.days.flatMap(day=>Array.isArray(day.exercises)?day.exercises:[]))];
   return ids.flatMap(id=>{
-    const mode=nativeIssuedLoadMode(id,program.config.equipment);
     const exercise=EX_BY_ID[id];
-    return (mode==='cable_stack' || mode==='machine_stack') &&
-      typeof exercise?.name==='string' && exercise.name.length>0 && exercise.name.length<=120
-      ? [{id,name:exercise.name,mode}]:[];
+    if(!exercise || !Array.isArray(exercise.equip) ||
+        !exercise.equip.every(key=>program.config.equipment.includes(key)) ||
+        typeof exercise.name!=='string' || exercise.name.length<1 || exercise.name.length>120)
+      return [];
+    const nativeMode=nativeIssuedLoadMode(id,program.config.equipment);
+    if(nativeMode==='cable_stack' || nativeMode==='machine_stack')
+      return [{id,name:exercise.name,mode:nativeMode}];
+    const types=exercise.equip.filter(key=>specialty.has(key));
+    const unambiguous=types.length===1 && !exercise.equip.some(key=>Object.hasOwn(modes,key)) &&
+      exercise.equip.every(key=>specialty.has(key) || ['bench','rack'].includes(key));
+    return unambiguous?[{id,name:exercise.name,mode:'external_load'}]:[];
   });
 }

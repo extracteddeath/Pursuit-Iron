@@ -179,7 +179,7 @@ object NativeProgramSetupCodec {
                 require(key in ownedIds && key.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) &&
                     name.isNotBlank() && name.length<=120 &&
                     !name.any { it.code<32 || it.code in 127..159 } &&
-                    mode in listOf("cable_stack","machine_stack"))
+                    mode in listOf("cable_stack","machine_stack","external_load"))
                 NativeStackCandidate(key,name,mode)
             }
             require(parsed.map { it.id }.distinct().size==parsed.size)
@@ -187,7 +187,8 @@ object NativeProgramSetupCodec {
         } else emptyList()
         val inventory=if(!value.has("loadingInventory") || value.isNull("loadingInventory"))null
             else NativeGymInventoryCodec.validate(value.getJSONObject("loadingInventory").toString(),
-                p.unit,candidates.map { it.id }.toSet())
+                p.unit,candidates.map { it.id }.toSet(),
+                candidates.filter { it.mode=="external_load" }.map { it.id }.toSet())
         return NativeSavedProgram(s.getString("creationId"),p,program,inventory,candidates)
     }
 }

@@ -55,12 +55,12 @@ export function authoredInventory(v,unit,program=null) {
   }
   if(Object.prototype.hasOwnProperty.call(v,'exerciseOverrides')) {
     ensure(object(v.exerciseOverrides) && Object.keys(v.exerciseOverrides).length<=24);
-    const eligible=new Set(nativeStackCandidates(program).map(row=>row.id));
+    const eligible=new Map(nativeStackCandidates(program).map(row=>[row.id,row.mode]));
     for(const [exerciseId,setting] of Object.entries(v.exerciseOverrides)) {
       // No user-chosen carrier and no inferred plate/smith/bodyweight loading.
-      ensure(eligible.has(exerciseId) &&
-        (exact(setting,['availableLoads']) && physicalLoads(setting.availableLoads) ||
-          physicalRange(setting)));
+      const mode=eligible.get(exerciseId);
+      ensure(mode && (exact(setting,['availableLoads']) && physicalLoads(setting.availableLoads) ||
+        mode!=='external_load' && physicalRange(setting)));
       families++;
     }
   }

@@ -36,7 +36,8 @@ internal fun NativeSavedGymInventoryPanel(
     var editing by rememberSaveable(reference.snapshotSha256) { mutableStateOf(false) }
     var pending by rememberSaveable(reference.snapshotSha256) { mutableStateOf(false) }
     var draft by rememberSaveable(reference.snapshotSha256) { mutableStateOf(HashMap(original)) }
-    val result=NativeGymInventoryCodec.fromDraft(draft,unit,saved.loadingCandidates.map { it.id }.toSet())
+    val result=NativeGymInventoryCodec.fromDraft(draft,unit,saved.loadingCandidates.map { it.id }.toSet(),
+        saved.loadingCandidates.filter { it.mode=="external_load" }.map { it.id }.toSet())
     val changed=draft.filterValues { it.isNotBlank() }!=original.filterValues { it.isNotBlank() }
 
     PursuitCard {

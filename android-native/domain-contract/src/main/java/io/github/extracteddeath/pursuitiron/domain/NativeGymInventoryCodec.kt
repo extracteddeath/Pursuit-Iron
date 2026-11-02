@@ -35,7 +35,8 @@ object NativeGymInventoryCodec {
         }
     }
     /** Strict accepted subset: missing families do not inherit factory defaults. */
-    fun validate(raw: String, expectedUnit: String, allowedExerciseIds: Set<String> = emptySet()): String {
+    fun validate(raw: String, expectedUnit: String, allowedExerciseIds: Set<String> = emptySet(),
+        exactOnlyIds: Set<String> = emptySet()): String {
         require(expectedUnit == "lb" || expectedUnit == "kg")
         require(raw.toByteArray(Charsets.UTF_8).size <= 16384)
         val obj = JSONObject(raw)
@@ -87,6 +88,7 @@ object NativeGymInventoryCodec {
                 if (keys(setting)==setOf("availableLoads")) {
                     loadList(setting.getJSONArray("availableLoads"))
                 } else {
+                    require(id !in exactOnlyIds) // No inferred increments for specialty machines.
                     exact(setting,setOf("minimum","increment","maximum"))
                     val minimum=number(setting,"minimum")
                     number(setting,"increment",BigDecimal("0.01"))
@@ -105,7 +107,8 @@ object NativeGymInventoryCodec {
      * plate or stack availability. Incomplete sets are errors, not guessed.
      */
     fun fromDraft(fields: Map<String, String>, unit: String,
-        allowedExerciseIds: Set<String> = emptySet()): NativeGymInventoryDraftResult = try {
+        allowedExerciseIds: Set<String> = emptySet(),
+        exactOnlyIds: Set<String> = emptySet()): NativeGymInventoryDraftResult = try {
         val nonblank = fields.mapValues { it.value.trim() }.filterValues { it.isNotEmpty() }
         if (nonblank.isEmpty()) NativeGymInventoryDraftResult()
         else {
@@ -159,7 +162,7 @@ object NativeGymInventoryCodec {
                 overrides.put(id,profile)
             }
             if(overrides.length()>0)obj.put("exerciseOverrides",overrides)
-            NativeGymInventoryDraftResult(json = validate(obj.toString(), unit, allowedExerciseIds))
+            NativeGymInventoryDraftResult(json = validate(obj.toString(), unit, allowedExerciseIds, exactOnlyIds))
         }
     } catch (_: Exception) {
         NativeGymInventoryDraftResult(error = "Check actual weights, counts and units. Use commas between entries; no defaults are assumed.")

@@ -1,5 +1,7 @@
 package io.github.extracteddeath.pursuitiron.domain
 
+import java.util.Collections
+
 /**
  * Pure, non-persistable program edit workspace.
  *
@@ -8,7 +10,7 @@ package io.github.extracteddeath.pursuitiron.domain
  * slots. This is not an authored program, an engine prescription, a candidate
  * canonical snapshot or consent to modify the personal store.
  */
-data class NativeProgramEditDraft private constructor(
+class NativeProgramEditDraft private constructor(
     val reference: ReadOnlyProgramReference,
     val originalName: String,
     val name: String,
@@ -19,7 +21,7 @@ data class NativeProgramEditDraft private constructor(
         fun from(verified: ReadOnlyProgramPresentation.Structure): NativeProgramEditDraft {
             val p=verified.program
             require(p.days.size in 1..7 && p.id==p.reference.programId)
-            val original=p.days.map { it.copy(exerciseIds=it.exerciseIds.toList()) }
+            val original=freeze(p.days)
             return NativeProgramEditDraft(p.reference,p.name,p.name,original,original)
         }
     }
@@ -32,8 +34,19 @@ data class NativeProgramEditDraft private constructor(
 
     val isChanged: Boolean get() = name!=originalName || days!=originalDays
 
+    private fun next(name: String=this.name, days: List<ReadOnlyProgramDay>=this.days):
+        NativeProgramEditDraft =
+        NativeProgramEditDraft(reference,originalName,name,originalDays,freeze(days))
+
+    private companion object Work {
+        fun freeze(days: List<ReadOnlyProgramDay>): List<ReadOnlyProgramDay> =
+            Collections.unmodifiableList(days.map { day ->
+                day.copy(exerciseIds=Collections.unmodifiableList(day.exerciseIds.toList()))
+            })
+    }
+
     fun renameProgram(newName: String): NativeProgramEditDraft? =
-        if(validLabel(newName,120)) copy(name=newName) else null
+        if(validLabel(newName,120)) next(name=newName) else null
 
     fun renameDay(dayId: String, label: String): NativeProgramEditDraft? {
         if(!validLabel(label,120)) return null
@@ -41,7 +54,7 @@ data class NativeProgramEditDraft private constructor(
         if(index<0) return null
         val updated=days.toMutableList()
         updated[index]=updated[index].copy(label=label)
-        return copy(days=updated)
+        return next(days=updated)
     }
 
     fun moveExercise(dayId: String, from: Int, delta: Int): NativeProgramEditDraft? {
@@ -59,7 +72,7 @@ data class NativeProgramEditDraft private constructor(
         return copy(days=updated)
     }
 
-    fun reset(): NativeProgramEditDraft = copy(
+    fun reset(): NativeProgramEditDraft = next(
         name=originalName,days=originalDays
     )
 

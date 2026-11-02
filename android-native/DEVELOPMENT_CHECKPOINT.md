@@ -563,3 +563,34 @@ detailed conflict-resolution controls (including deletions, settings and
 custom cycles), full workflow/device accessibility acceptance. Preserve the
 APK freeze. A passing backend contract is not enough to describe restore or
 the Kotlin engine rebuild as production ready.
+
+## Follow-up: restore operation replay protection and shared M3 review
+
+The private restore transaction now records a bounded ledger of consumed
+operation IDs in envelope format 3. It remains readable alongside older
+format-1 canonical snapshots and format-2 Undo envelopes. A duplicate
+approval cannot silently run again after Undo or a subsequent workout;
+a new explicit operation ID can be evaluated against the restored current
+snapshot. The ledger persists through new workout starts, history corrections
+and saved completions, and fails closed at its 512-operation limit rather
+than evicting older authorization history.
+
+Both live Undo state and its durable acknowledgement are decoded from
+formats 2 **and** 3. Crash/restart tests also verify the exact serialized
+envelope, replay refusals, fresh approved transaction after Undo, tampered
+ledger refusal and backward-format compatibility. The API is still internal
+and cannot be invoked from Plan, Activity or the native runtime host.
+
+The Plan backup comparison now uses a reusable Material 3 review component.
+It displays current/selected/hypothetical counts for workouts, programs,
+custom programs, cycles and gyms, with explicit risk descriptions for removal,
+replacement, history-cap loss, conflicts, setting changes and capacity.
+It never offers an Import or Undo action. An earlier result is discarded when
+the process-owned canonical store revision changes; the owner separately
+rejects selected sources that become stale during comparison.
+
+**Activation remains blocked** pending a real explicit-consent interaction,
+provider-bound repeat selection and exact-source revalidation, Android
+interruption/recovery tests, conflict-resolution policy, legacy web backup
+migration and whole-journey device acceptance. The installed training engine
+has not been rewritten and the APK freeze remains in effect.

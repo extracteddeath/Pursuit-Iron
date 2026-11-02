@@ -8,10 +8,11 @@ const hash=raw=>createHash('sha256').update(raw,'utf8').digest('hex');
 const options=nativeProgramOptions();
 for(const split of options.splits)
   assert.deepEqual(split.days,[3,4,5,6].filter(days=>splitSupportsTrainingDays(split.id,days)));
-assert.equal(options.muscles.length,17);
-assert.equal(new Set(options.muscles.map(x=>x.id)).size,17);
+assert.equal(options.muscles.length,16);
+assert.equal(new Set(options.muscles.map(x=>x.id)).size,16);
 assert.ok(options.muscles.some(x=>x.id==='forearms'));
-assert.ok(options.muscles.some(x=>x.id==='upper_back'));
+assert.ok(options.muscles.some(x=>x.id==='back'));
+assert.ok(!options.muscles.some(x=>x.id==='lats' || x.id==='upper_back'));
 const base={creationId:'create-native-test',programId:'program-native-test',createdAt:1000,seed:223,
   profile:{name:'My native plan',goal:'both',experience:'intermediate',unit:'lb',split:'full_body',
     days:3,session:'s60',equipment:options.equipment,allowBodyweight:true,allowSupersets:false,barbellCap:3}};

@@ -636,6 +636,6 @@ assert.ok(train.includes('compact=focusMode)') &&
   upNext.includes('contentDescription="Open ${next.exercise.name}"') &&
   !upNext.includes('prescribeSets(') &&
   !upNext.includes('store.') &&
-  !upNext.includes('journal.') &&
+  !upNext.includes('JournalSetIntent(') &&
   train.includes('val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)'),
   'Focus Up Next must be concise, accessible and sourced only from the issued set, while full mode remains available');

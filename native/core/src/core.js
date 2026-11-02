@@ -369,7 +369,8 @@ export function programDetails({ programId } = {}) {
         (cfg.reduce || []).length ? ['Less', cfg.reduce.map(label).join(', ')] : null,
         ['Split', E.SPLITS?.[cfg.split]?.name || cfg.split], ['Days', `${p.days.length}/week`], sess ? ['Session', sess.label] : null, ['Goal', goal],
         cfg.experience ? ['Level', cfg.experience === 'none' || cfg.experience === 'novice' ? 'New to lifting' : cfg.experience.charAt(0).toUpperCase() + cfg.experience.slice(1)] : null,
-        ['Block', `${E.weeksOf(p)} weeks`], ['Deload', cfg.deload ? `Yes · week ${E.weeksOf(p) + 1}` : E.isSchemeDeloadWeek(cfg.percentScheme, 4, E.weeksOf(p)) ? 'Built in · week 4' : 'No'],
+        cfg.endless ? ['Block', 'Endless'] : null, cfg.endless ? ['Deload', 'Automatic · when you stall or tire'] : null,
+        ...(cfg.endless ? [] : [['Block', `${E.weeksOf(p)} weeks`]]), cfg.endless ? null : ['Deload', cfg.deload ? `Yes · week ${E.weeksOf(p) + 1}` : E.isSchemeDeloadWeek(cfg.percentScheme, 4, E.weeksOf(p)) ? 'Built in · week 4' : 'No'],
     ].filter(Boolean).map(([k, v]) => ({ k, v, accent: k === 'More' }));
     const c = p.cycleId ? cycles().find((cy) => cy.id === p.cycleId) : null;
     let cycleLine = null;

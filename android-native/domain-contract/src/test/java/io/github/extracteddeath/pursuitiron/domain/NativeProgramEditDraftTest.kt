@@ -36,6 +36,25 @@ class NativeProgramEditDraftTest {
         assertFalse(renamed.reset().isChanged)
     }
 
+    @Test fun movingDaysNeverChangesDayMembershipOrExerciseSequence() {
+        val original = NativeProgramEditDraft.from(verified())
+        val moved = checkNotNull(original.moveDay(0, 1))
+        assertEquals(listOf("day-2", "day-1"), moved.days.map { it.id })
+        assertEquals(listOf("squat", "rdl"), moved.days[0].exerciseIds)
+        assertEquals(listOf("bench", "curl", "row"), moved.days[1].exerciseIds)
+        assertEquals(listOf("day-1", "day-2"), original.days.map { it.id })
+        assertEquals(reference, moved.reference)
+        assertTrue(moved.isChanged)
+        assertTrue(moved.matchesCurrent(verified()))
+        assertEquals(original.days, moved.reset().days)
+        assertNull(original.moveDay(-1, 1))
+        assertNull(original.moveDay(0, -1))
+        assertNull(original.moveDay(1, 1))
+        assertNull(original.moveDay(0, 0))
+        assertNull(original.moveDay(0, 2))
+        assertEquals(original.days, NativeProgramEditDraft.from(verified()).days)
+    }
+
     @Test fun staleCurrentRevisionAndChangedInitialStructureCannotBeReused() {
         val draft=NativeProgramEditDraft.from(verified())
         assertFalse(draft.matchesCurrent(verified(reference.copy(snapshotSha256="b".repeat(64)))))

@@ -85,6 +85,23 @@ const preferencesPreview=previewCanonicalBackupMerge(currentWithSettings,changed
 reject({currentSnapshot:currentWithSettings,incomingSnapshot:changedPreferences,
   expectedCandidateSha256:preferencesPreview.hypotheticalMergedSha256});
 
+// New deletion metadata is dangerous even when no current record is lost.
+const ghost=raw(120,[],{'future-id':21});
+const ghostPreview=previewCanonicalBackupMerge(raw(100),ghost);
+assert.equal(ghostPreview.ownedRecordsRemoved,0);
+assert.equal(ghostPreview.deletionClocksChanged,1);
+assert.ok(ghostPreview.flags.includes('DELETION_CLOCKS_CHANGED'));
+reject({currentSnapshot:raw(100),incomingSnapshot:ghost,
+  expectedCandidateSha256:ghostPreview.hypotheticalMergedSha256});
+// Merge may replace a current lift mirror without touching a record ID.
+const liftCurrent=JSON.stringify({...JSON.parse(raw(100)),perf:{bench:{weight:185,reps:8}}});
+const liftIncoming=JSON.stringify({...JSON.parse(raw(120)),perf:{bench:{weight:225,reps:8}}});
+const liftPreview=previewCanonicalBackupMerge(liftCurrent,liftIncoming);
+assert.equal(liftPreview.performanceChanged,1);
+assert.ok(liftPreview.flags.includes('PERFORMANCE_CHANGED'));
+reject({currentSnapshot:liftCurrent,incomingSnapshot:liftIncoming,
+  expectedCandidateSha256:liftPreview.hypotheticalMergedSha256});
+
 const crowdedA=raw(100,Array.from({length:1150},(_,i)=>history('a-'+i,100,11+i)));
 const crowdedB=raw(200,Array.from({length:1150},(_,i)=>history('b-'+i,100,21+i)));
 const loss=previewCanonicalBackupMerge(crowdedA,crowdedB);

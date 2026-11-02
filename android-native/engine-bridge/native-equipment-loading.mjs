@@ -1,5 +1,6 @@
 /** Read-only, source-pinned equipment accuracy gate for native set entry. */
-import { parseStoredData,EX_BY_ID } from '../../modules/engine-api.js';
+import { parseStoredData } from '../../modules/engine-api.js';
+import { nativeIssuedLoadMode } from './native-loading-catalog.mjs';
 import { loadingInventoryInUnit, resolveLoadingMode, nextAvailableLoad,
   availableLoadAtOrBelow } from '../../modules/next-engine/loading.js';
 import { issuedNativeWorkoutFrom,MAX_ISSUED_WORKOUT_BYTES } from './native-workout.mjs';
@@ -19,24 +20,6 @@ const fullBar=b=>object(b) && Number.isFinite(b.barWeight) && b.barWeight>=0 &&
   b.barWeight<=500 && Array.isArray(b.platePairs) && b.platePairs.length<=24 &&
   b.platePairs.every(p=>object(p) && Number.isFinite(p.weight) && p.weight>0 &&
     p.weight<=100 && naturalNumber(p.pairs));
-// Native-issued IDs belong to EX_BY_ID; the newer EXERCISE_MAP uses
-// a different ID family. Never treat its "external_load" fallback as a
-// reliable equipment classification. Read actual issued metadata instead.
-const nativeMode=(exId,equipment)=>{
-  const ex=EX_BY_ID[exId];
-  if(!ex || !Array.isArray(ex.equip) || !Array.isArray(equipment))return null;
-  if(!ex.equip.every(item=>equipment.includes(item)))return null;
-  const loadKinds=['barbell','dumbbell','smith','cable','machine'];
-  const unsupported=['ezbar','trapbar','safetybar','landmine','kettlebell','bands',
-    'legpress','hacksquat','legext','legcurl','pecdeck','machinerow','assisted',
-    'calfmachine','abduction','machinepress','machineshoulder','machinelatraise',
-    'machinecurl','machineext'];
-  if(ex.equip.some(item=>unsupported.includes(item)))return null;
-  const carriers=ex.equip.filter(item=>loadKinds.includes(item));
-  if(carriers.length!==1)return null;
-  return ({barbell:'barbell_total',dumbbell:'dumbbell_per_hand',
-    smith:'smith_total',cable:'cable_stack',machine:'machine_stack'})[carriers[0]]||null;
-};
 function authenticatedFamily(raw,exId,mode) {
   const override=raw.exerciseOverrides?.[exId];
   if(override && (exactList(override.availableLoads) ||
@@ -75,7 +58,7 @@ export function inspectNativeEquipmentLoad(rawSnapshot,issuedWorkout,slot,load) 
   let confirmed=false,family=null,mode='unconfirmed',previous=null,next=null,exact=false;
   if(object(raw) && raw.unit===plan.session.unit) {
     const inventory=loadingInventoryInUnit(raw,plan.session.unit);
-    const actualMode=nativeMode(slot.exerciseId,program.config.equipment);
+    const actualMode=nativeIssuedLoadMode(slot.exerciseId,program.config.equipment);
     const userMode=inventory.exerciseOverrides?.[slot.exerciseId]?.mode;
     // An explicit exercise rack can support otherwise unknown hardware.
     // Without that override, require a single unambiguous canonical mode.

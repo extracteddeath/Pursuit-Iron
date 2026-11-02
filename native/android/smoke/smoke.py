@@ -468,13 +468,19 @@ shot("summary")
 if scroll_to(r"Quick workout", tries=3):
     tap(r"Quick workout")
     time.sleep(2)
-    shot("quick-empty")
-    tap(r"Add a lift", "add-lift")
-    tap(r"^\|Search exercises$")
+    # The design's picker: pick lifts in order, then Start · N lifts
+    if not find(r"Pick at least one lift", timeout=6):
+        FAILS.append("Quick workout does not open the lift picker")
+    shot("quick-picker")
+    tap(r"Search exercises")
     adb("shell", "input", "text", "curl")
     hide_keyboard()
     time.sleep(1.5)
-    tap(r"^\|[A-Za-z -]*Curl[A-Za-z -]*$", "quick-added")
+    tap(r"^Add [A-Za-z -]*Curl", "quick-picked")
+    if not tap(r"^\|?Start · 1 lift", "quick-added"):
+        FAILS.append("the picker has no Start · 1 lift after picking")
+    time.sleep(2)
+    tap(r"^\|Skip$", required=False)  # the readiness check-in
     if tap(r"Weight not set, edit"):
         tap(r"^Weight \((kg|lb)\), tap to type")
         adb("shell", "input", "text", "12")

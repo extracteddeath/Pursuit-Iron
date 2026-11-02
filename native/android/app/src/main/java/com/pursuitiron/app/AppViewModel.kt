@@ -347,8 +347,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
     suspend fun shareCard(id: String): JSONObject? = obj("shareCard", jsonOf("id" to id))
 
-    fun startQuick() = launchCore {
-        val s = obj("startQuick") ?: return@launchCore
+    /** The design's quick workout picker, shown over Today; Start opens the workout with the picked lifts. */
+    var quickPickOpen by mutableStateOf(false)
+    fun startQuick(ids: List<String> = emptyList()) = launchCore {
+        val s = obj("startQuick", jsonOf("ids" to JSONArray(ids))) ?: return@launchCore
         if (!s.b("active")) { toast(s.s("error", "Couldn't start a quick workout")); return@launchCore }
         session = s; screen = Screen.Workout; publishWidget()
     }

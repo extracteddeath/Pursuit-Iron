@@ -3515,9 +3515,13 @@ function startWith(program, day) {
     markLive();
     return session();
 }
-export function startQuick() {
+/* The design's quick workout: the lifts picked, in the order picked (the first compound anchors the day). None picked
+   still opens an empty workout to add to. */
+export function startQuick({ ids = [] } = {}) {
     if (S.live) return session();
-    const day = { id: E.uid(), label: 'Quick workout', exercises: [], primaryIndex: 0 };
+    const picked = [...new Set((Array.isArray(ids) ? ids : []).filter((id) => EX_BY_ID[id]))];
+    const pi = picked.findIndex((id) => EX_BY_ID[id]?.type === 'compound');
+    const day = { id: E.uid(), label: 'Quick workout', exercises: picked, primaryIndex: pi < 0 ? 0 : pi };
     return startWith({ id: E.uid(), name: 'Quick workout', quick: true, artifactType: 'freestyle', engineV: E.ENGINE_V, createdAt: now(), config: quickConfig('Quick workout'), days: [day], overrides: {} }, day);
 }
 export function repeatWorkout({ historyId }) {

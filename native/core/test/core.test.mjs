@@ -1074,4 +1074,9 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const w = C.trainingMaxes({ programId: p.id }).lifts[0].week;
   ok(w && w.sets.every((x) => x.pct === 100), 'Tiered Linear sets read 100% of the stage load (was 10000%)'); }
 
+// The design's quick workout picker: the lifts picked, in order, the first compound anchoring the day
+{ C.init({}); const s = C.startQuick({ ids: ['cable-curl', 'bb-bench', 'not-a-lift', 'bb-bench'] });
+  ok(s.active && s.exercises.map((e) => e.id).join() === 'cable-curl,bb-bench', 'quick workout opens with the picked lifts in order (' + s.exercises.map((e) => e.id).join() + ')');
+  C.discardSession(); ok(C.startQuick().active && C.session().exercises.length === 0, 'nothing picked still opens an empty quick workout'); C.discardSession(); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

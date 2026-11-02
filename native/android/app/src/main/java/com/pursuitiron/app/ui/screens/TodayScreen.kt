@@ -177,7 +177,7 @@ fun TodayScreen(vm: AppViewModel) {
         if (h.o("deload") != null && h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { DeloadDueCard(vm, h) }
 
         if (h.o("live") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) {
-            PiCard(color = cs.surfaceContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.startQuick() }) {
+            PiCard(color = cs.surfaceContainer, radius = 24.dp, padding = 16.dp, onClick = { vm.quickPickOpen = true }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Zap, null, tint = cs.onPrimaryContainer) }
                     Column(Modifier.weight(1f)) {

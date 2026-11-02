@@ -259,7 +259,7 @@ fun RestDayHero(vm: AppViewModel, r: JSONObject) {
                     colors = ButtonDefaults.buttonColors(containerColor = cs.onSecondaryContainer, contentColor = cs.secondaryContainer)) {
                     Text("Train ${r.s("nextLabel")} now", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
-                OutlinedButton(onClick = { vm.startQuick() }, modifier = Modifier.height(48.dp)) { Text("Quick workout", color = cs.onSecondaryContainer) }
+                OutlinedButton(onClick = { vm.quickPickOpen = true }, modifier = Modifier.height(48.dp)) { Text("Quick workout", color = cs.onSecondaryContainer) }
             }
         }
     }

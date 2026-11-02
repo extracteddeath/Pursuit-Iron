@@ -44,6 +44,27 @@ class NativeProgramEditDraftTest {
         assertTrue(renamed.matchesCurrent(verified()))
     }
 
+    @Test fun nestedMovementCollectionsCannotMutateTheOriginalOrDraft() {
+        val draft=NativeProgramEditDraft.from(verified())
+        assertTrue(runCatching {
+            @Suppress("UNCHECKED_CAST")
+            (draft.days as MutableList<ReadOnlyProgramDay>).clear()
+        }.isFailure)
+        assertTrue(runCatching {
+            @Suppress("UNCHECKED_CAST")
+            (draft.days.first().exerciseIds as MutableList<String>).clear()
+        }.isFailure)
+        assertEquals(2,draft.days.size)
+        assertEquals(3,draft.days[0].exerciseIds.size)
+        val changed=checkNotNull(draft.moveExercise("day-1",1,1))
+        assertTrue(runCatching {
+            @Suppress("UNCHECKED_CAST")
+            (changed.days.first().exerciseIds as MutableList<String>).add("unexpected")
+        }.isFailure)
+        assertEquals(listOf("bench","row","curl"),changed.days[0].exerciseIds)
+        assertEquals(listOf("bench","curl","row"),draft.days[0].exerciseIds)
+    }
+
     @Test fun invalidMovementOperationsOrLabelsRefuseWithoutPartialMutation() {
         val draft=NativeProgramEditDraft.from(verified())
         assertNull(draft.moveExercise("day-bogus",0,1))

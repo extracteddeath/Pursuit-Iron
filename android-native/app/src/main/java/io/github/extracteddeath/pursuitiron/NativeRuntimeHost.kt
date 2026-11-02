@@ -162,11 +162,11 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         val claimed=backupReviewGate.claimReselection() ?: return false
         val second=try { readOnlyBackupMerge(selected,false) }
             catch(cancelled: CancellationException) {
-                backupReviewGate.discard()
+                backupReviewGate.abandonReselection(claimed)
                 throw cancelled
             }
             catch(_: Exception) {
-                backupReviewGate.discard()
+                backupReviewGate.abandonReselection(claimed)
                 return false
             }
         val job=currentCoroutineContext()
@@ -175,10 +175,10 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 job.ensureActive()
             }
         } catch(cancelled: CancellationException) {
-            backupReviewGate.discard()
+            backupReviewGate.abandonReselection(claimed)
             throw cancelled
         } catch(_: Exception) {
-            backupReviewGate.discard()
+            backupReviewGate.abandonReselection(claimed)
             return false
         }
         return backupReviewGate.completeReselection(claimed,fresh,second)

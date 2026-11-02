@@ -86,6 +86,16 @@ export function previewCanonicalBackupMerge(currentSnapshot, incomingSnapshot) {
   for (const key of settings) {
     if (!equalJson(current[key],merged[key])) settingsChanged++;
   }
+  // A deletion clock can suppress records in a future merge even when
+  // today's candidate lost none. It must never be imported unnoticed.
+  const deletionClocksChanged=Object.entries(merged.tombs || {}).filter(
+    ([id,clock])=>!own(current.tombs || {},id) || current.tombs[id]!==clock
+  ).length;
+  // The canonical merger rebuilds the latest-performance mirror. A newer
+  // workout may change an established lift without a record ID collision.
+  const performanceChanged=Object.keys(current.perf || {}).filter(
+    id=>!own(merged.perf || {},id) || !equalJson(current.perf[id],merged.perf[id])
+  ).length;
   const flags = [];
   if (historyDropped > 0) flags.push('HISTORY_CAP_LOSS');
   if (capacityExceeded) flags.push('NATIVE_STORE_CAPACITY');
@@ -93,6 +103,8 @@ export function previewCanonicalBackupMerge(currentSnapshot, incomingSnapshot) {
   if (ownedRecordsRemoved > 0) flags.push('OWNED_RECORDS_REMOVED');
   if (ownedRecordsReplaced > 0) flags.push('OWNED_RECORDS_REPLACED');
   if (settingsChanged > 0) flags.push('SETTINGS_CHANGED');
+  if (performanceChanged > 0) flags.push('PERFORMANCE_CHANGED');
+  if (deletionClocksChanged > 0) flags.push('DELETION_CLOCKS_CHANGED');
   // A nonzero risk list is not an authorization policy: even a clean
   // summary is only a read-only estimate, never a consent or write receipt.
   return Object.freeze({
@@ -108,7 +120,7 @@ export function previewCanonicalBackupMerge(currentSnapshot, incomingSnapshot) {
     hypotheticalMergedBytes: candidateBytes,
     counts: { current: prior, incoming: selected, hypothetical: counts(merged) },
     conflicts, historyDropped, ownedRecordsRemoved, ownedRecordsReplaced,
-    settingsChanged, flags
+    settingsChanged, performanceChanged, deletionClocksChanged, flags
   });
 }
 

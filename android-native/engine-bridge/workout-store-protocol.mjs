@@ -1,6 +1,7 @@
 /** Dedicated, pure workout-store preparation channel. It never writes storage. */
 import { canonicalBackupSchemaCheck } from './backup-schema-check.mjs';
 import { previewCanonicalBackupMerge } from './backup-merge-preview.mjs';
+import { prepareCanonicalBackupMerge } from './backup-merge-preparation.mjs';
 import { prepareCanonicalWorkoutHistory } from './workout-history-completion.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
@@ -31,7 +32,15 @@ export function dispatchWorkoutStoreJson(json) {
     if (request.protocolVersion!==1) return error(id,'UNSUPPORTED_VERSION');
     const p=request.params;
     let result;
-    if (request.method==='previewBackupMerge') {
+    if (request.method==='prepareBackupMerge') {
+      if(!exact(p,['currentSnapshot','incomingSnapshot','expectedCandidateSha256']) ||
+          !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+          !bounded(p.incomingSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+          typeof p.expectedCandidateSha256!=='string' ||
+          !/^[0-9a-f]{64}$/.test(p.expectedCandidateSha256))
+        return error(id,'INVALID_REQUEST');
+      result=prepareCanonicalBackupMerge(p);
+    } else if (request.method==='previewBackupMerge') {
       if(!exact(p,['currentSnapshot','incomingSnapshot']) ||
           !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
           !bounded(p.incomingSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes))

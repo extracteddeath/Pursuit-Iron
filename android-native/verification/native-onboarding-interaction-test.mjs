@@ -432,3 +432,24 @@ assert.ok(
   !nativePriorityUi.includes('commitAtomically'),
   'Native authored priorities must be bounded and preserved by the canonical generator, not a UI-only rule'
 );
+
+const nativeDraftContract=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeProgramEditDraft.kt','utf8');
+const nativeDraftUi=fs.readFileSync(root+'NativeProgramDraftEditor.kt','utf8');
+assert.ok(
+  screens.includes('NativeProgramDraftEditor(') &&
+  screens.includes('remember(currentPlan.program.reference)') &&
+  screens.includes('Edit saved program · local draft') &&
+  screens.includes('runtimeState?.workout==null') &&
+  nativeDraftContract.includes('fun from(verified: ReadOnlyProgramPresentation.Structure)') &&
+  nativeDraftContract.includes('fun matchesCurrent(') &&
+  nativeDraftContract.includes('Collections.unmodifiableList(') &&
+  nativeDraftContract.includes('fun moveExercise(') &&
+  nativeDraftContract.includes('fun renameDay(') &&
+  nativeDraftUi.includes('draft.matchesCurrent(verified)') &&
+  nativeDraftUi.includes('Save program edits · not connected') &&
+  nativeDraftUi.includes('enabled=false') &&
+  !nativeDraftUi.includes('commitAtomically') &&
+  !nativeDraftUi.includes('installApprovedBackupMerge') &&
+  !nativeDraftUi.includes('generateNextProgramForShell'),
+  'Current owned-program drafts must be non-writing, revision-bound and never reinterpret prescriptions'
+);

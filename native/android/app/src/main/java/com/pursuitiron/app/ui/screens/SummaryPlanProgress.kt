@@ -307,9 +307,11 @@ private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int,
                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
             when {
-                today -> androidx.compose.material3.Button(onClick = { vm.openPreview(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp)) { Text("Start") }
+                today -> androidx.compose.material3.Button(onClick = { vm.openPreview(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp),
+                    modifier = Modifier.semantics { contentDescription = "Start ${d.s("label")}" }) { Text("Start") }
                 done -> Badge("Done", cs.surfaceContainerHighest, cs.onSurfaceVariant)
-                else -> FilledTonalButton(onClick = { vm.openPreview(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp)) { Text("Start") }
+                else -> FilledTonalButton(onClick = { vm.openPreview(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp),
+                    modifier = Modifier.semantics { contentDescription = "Start ${d.s("label")}" }) { Text("Start") }
             }
         }
         // The design's "Hits …" line: the engine's weekly volume for this day, direct plus secondary shares

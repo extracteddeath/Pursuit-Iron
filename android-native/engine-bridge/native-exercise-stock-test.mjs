@@ -38,7 +38,7 @@ for(const seed of [223,7,71,1122,2026,4929,99,1201,805,1782]) {
 }
 assert.ok(entry,'An actual issued cable exercise must be available for source-pinned physical testing');
 const {snapshot,saved,candidate}=entry;
-assert.ok(saved.program.days.some(day=>day.exerciseIds.includes(candidate.id)));
+assert.ok(saved.program.program.days.some(day=>day.exerciseIds.includes(candidate.id)));
 assert.equal(candidate.mode,'cable_stack');
 assert.equal(inspectNativeProgram(snapshot).loadingInventory,null,
   'Unconfigured gym cannot claim a factory load');

@@ -337,7 +337,8 @@ internal fun PlanScreen(
     schemaVerifierLoading: Boolean = false,
     runtimeState: NativeRuntimeState?=null,onExportBackup: (NativeBackupExportDocument)->Unit = {},onResetBackupExport: ()->Unit = {},
     onPreviewDay: (ReadOnlyTrainingDaySelection) -> Unit = {},
-    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null
+    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null,
+    onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null
 ) {
     if(hasSavedProgram && currentPlan !is ReadOnlyProgramPresentation.Structure) {
         PageHeading("YOUR PROGRAM","Loading your program","Your saved plan is being loaded.")
@@ -400,6 +401,7 @@ internal fun PlanScreen(
     // Fingerprint-only document chooser never unlocks personal program display.
     BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading,
         onPreviewBackupMerge = if (hasSavedProgram) onPreviewBackupMerge else null,
+        onVerifyBackupMerge = if (hasSavedProgram) onVerifyBackupMerge else null,
         currentStoreChangeKey = runtimeState?.storeChangeKey ?: 0L)
     if(runtimeState?.saved!=null)NativeBackupExportPanel(runtimeState,onExportBackup,onResetBackupExport)
     SectionLabel("Plan essentials")

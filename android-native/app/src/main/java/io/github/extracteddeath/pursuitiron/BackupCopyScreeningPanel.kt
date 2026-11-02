@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import io.github.extracteddeath.pursuitiron.domain.BackupSavedProgramInventory
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupCandidateReader
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyBackupScreening
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyDocumentScreening
@@ -42,6 +43,10 @@ private sealed interface BackupScreeningStage {
         val fingerprint: UnverifiedBackupFingerprint,
         val inventory: BackupSavedProgramInventory
     ) : BackupScreeningStage
+    data class MergePreview(
+        val fingerprint: UnverifiedBackupFingerprint,
+        val preview: NativeBackupMergePreview
+    ) : BackupScreeningStage
     data class TooLargeForSchema(val fingerprint: UnverifiedBackupFingerprint) : BackupScreeningStage
     data object Rejected : BackupScreeningStage
 }
@@ -49,7 +54,8 @@ private sealed interface BackupScreeningStage {
 @Composable
 internal fun BackupCopyScreeningPanel(
     verifier: CanonicalBackupSchemaVerifier? = null,
-    verifierLoading: Boolean = false
+    verifierLoading: Boolean = false,
+    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -57,17 +63,19 @@ internal fun BackupCopyScreeningPanel(
     var stage by remember { mutableStateOf<BackupScreeningStage>(BackupScreeningStage.NoSelection) }
     var wantsSchema by remember { mutableStateOf(false) }
     var wantsPrograms by remember { mutableStateOf(false) }
+    var wantsMerge by remember { mutableStateOf(false) }
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { selectedUri ->
             if (selectedUri != null) {
+                val inspectMerge = wantsMerge && onPreviewBackupMerge != null
                 val inspectPrograms = wantsPrograms && verifier != null
                 val inspectSchema = wantsSchema && verifier != null
                 stage = BackupScreeningStage.Reading
                 scope.launch {
                     stage = try {
-                        if (!inspectSchema && !inspectPrograms) {
+                        if (!inspectSchema && !inspectPrograms && !inspectMerge) {
                             val screened = withContext(Dispatchers.IO) {
                                 val source = context.contentResolver.openInputStream(selectedUri)
                                     ?: throw IOException("Selected source unavailable")
@@ -90,7 +98,10 @@ internal fun BackupCopyScreeningPanel(
                                     is ReadOnlyDocumentScreening.FingerprintOnly ->
                                         BackupScreeningStage.TooLargeForSchema(screening.fingerprint)
                                     is ReadOnlyDocumentScreening.SmallCandidate -> try {
-                                        if (inspectPrograms) {
+                                        if (inspectMerge) {
+                                            val preview = checkNotNull(onPreviewBackupMerge).invoke(screening.bytes)
+                                            BackupScreeningStage.MergePreview(screening.fingerprint,checkNotNull(preview))
+                                        } else if (inspectPrograms) {
                                             val saved = verifier!!.inspectPrograms(
                                                 screening.bytes, screening.fingerprint
                                             ).getOrThrow()
@@ -132,6 +143,7 @@ internal fun BackupCopyScreeningPanel(
             onClick = {
                 wantsSchema = false
                 wantsPrograms = false
+                wantsMerge = false
                 stage = BackupScreeningStage.NoSelection
                 picker.launch(arrayOf("*/*"))
             },
@@ -143,6 +155,7 @@ internal fun BackupCopyScreeningPanel(
                 onClick = {
                     wantsSchema = true
                     wantsPrograms = false
+                    wantsMerge = false
                     stage = BackupScreeningStage.NoSelection
                     picker.launch(arrayOf("application/json", "text/plain"))
                 },
@@ -153,12 +166,26 @@ internal fun BackupCopyScreeningPanel(
                 onClick = {
                     wantsSchema = false
                     wantsPrograms = true
+                    wantsMerge = false
                     stage = BackupScreeningStage.NoSelection
                     picker.launch(arrayOf("application/json", "text/plain"))
                 },
                 enabled = stage !is BackupScreeningStage.Reading,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("View saved programs in backup") }
+        }
+        if (onPreviewBackupMerge != null && verifier != null) {
+            OutlinedButton(
+                onClick = {
+                    wantsSchema = false
+                    wantsPrograms = false
+                    wantsMerge = true
+                    stage = BackupScreeningStage.NoSelection
+                    picker.launch(arrayOf("application/json", "text/plain"))
+                },
+                enabled = stage !is BackupScreeningStage.Reading,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Compare backup with saved data · preview only") }
         }
         when (val current = stage) {
             BackupScreeningStage.NoSelection ->
@@ -185,6 +212,22 @@ internal fun BackupCopyScreeningPanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            is BackupScreeningStage.MergePreview -> {
+                BackupFingerprintText(current.fingerprint)
+                val preview = current.preview
+                Text("Read-only comparison with your saved data",style=MaterialTheme.typography.titleMedium)
+                Text("Saved workouts: currently ${preview.current.history} · selected copy ${preview.incoming.history} · hypothetical ${preview.hypothetical.history}")
+                Text("Saved programs: currently ${preview.current.saved} · selected copy ${preview.incoming.saved} · hypothetical ${preview.hypothetical.saved}")
+                Text("Overlapping record conflicts: ${preview.conflicts} · records lost to history cap: ${preview.historyDropped}")
+                if(preview.flags.isNotEmpty()) Text(
+                    "Attention: " + preview.flags.map { flag -> when(flag) {
+                        "HISTORY_CAP_LOSS" -> "history records could be removed"
+                        "NATIVE_STORE_CAPACITY" -> "merged data would exceed supported storage"
+                        else -> "revisions require review"
+                    }}.joinToString("; "),color=MaterialTheme.colorScheme.error)
+                Text("Estimate only. Settings and other data need review. Nothing was imported, changed or approved for restoration.",
+                    style=MaterialTheme.typography.bodySmall)
+            }
             is BackupScreeningStage.ProgramInventory -> {
                 BackupFingerprintText(current.fingerprint)
                 BackupSavedProgramInventoryPanel(current.inventory)
@@ -197,6 +240,7 @@ internal fun BackupCopyScreeningPanel(
         if (stage is BackupScreeningStage.Screened ||
             stage is BackupScreeningStage.SchemaChecked ||
             stage is BackupScreeningStage.ProgramInventory ||
+            stage is BackupScreeningStage.MergePreview ||
             stage is BackupScreeningStage.TooLargeForSchema) {
             OutlinedButton(onClick = { stage = BackupScreeningStage.NoSelection }) {
                 Text("Clear result")

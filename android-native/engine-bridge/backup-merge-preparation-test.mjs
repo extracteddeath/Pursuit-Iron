@@ -75,14 +75,16 @@ reject({currentSnapshot:current,incomingSnapshot:conflicting,
 const deleting=raw(130,[],{old:40});
 const deletion=previewCanonicalBackupMerge(current,deleting);
 assert.ok(deletion.flags.length===0, 'canonical tombstone can be clean yet destructive');
-// Deletion is canonical, but the candidate is still NOT a publishable snapshot;
-// final atomic policy must require explicit consent for removal of owned records.
-const tombPrep=prepareCanonicalBackupMerge({
-  currentSnapshot:current,incomingSnapshot:deleting,
-  expectedCandidateSha256:deletion.hypotheticalMergedSha256
+// Preflight conflict counts alone do NOT certify a non-destructive merge.
+reject({currentSnapshot:current,incomingSnapshot:deleting,
+  expectedCandidateSha256:deletion.hypotheticalMergedSha256});
+// Non-record settings use the original device's own approval policy, too.
+const changedPreferences=JSON.stringify({
+  ...JSON.parse(incoming),unit:'kg'
 });
-assert.equal(JSON.parse(tombPrep.candidateSnapshot).history.length,0);
-assert.equal(tombPrep.approvedForImport,false);
+const preferencesPreview=previewCanonicalBackupMerge(current,changedPreferences);
+reject({currentSnapshot:current,incomingSnapshot:changedPreferences,
+  expectedCandidateSha256:preferencesPreview.hypotheticalMergedSha256});
 
 const crowdedA=raw(100,Array.from({length:1150},(_,i)=>history('a-'+i,100,11+i)));
 const crowdedB=raw(200,Array.from({length:1150},(_,i)=>history('b-'+i,100,21+i)));

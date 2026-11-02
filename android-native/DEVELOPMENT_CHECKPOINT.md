@@ -1090,3 +1090,51 @@ Device accessibility, animated transitions and true background/resume behavior
 remain a later real-device acceptance gate. The experimental exercise
 substitution implementation remains quarantined until canonical fresh
 prescription generation is available.
+
+
+## 2026-11-02 — Focus receipt handoff and contextual discomfort controls
+
+The native Train surface now advances an existing Focus session between
+exercises **only after a new, durably acknowledged final set** resolves all
+slots on the selected exercise. A pure `NativeNextSetPolicy.advanceAfterAcknowledged`
+checks canonical session, current exercise position, the original
+exercise-indexed slot and the latest retained journal receipt. It refuses to
+advance after same-receipt replay, saved-set corrections, unrelated exercise
+saves, a still-pending set, mismatched journal data or the workout's final set.
+Focus does not create any training targets or write to history. The
+last-observed receipt ID is saveable across normal Android rotation and
+navigation; an already-present receipt at first composition is the baseline,
+not a new completion. Busy saves delay navigation until the store settles.
+User-selected exercise tabs and unsaved per-set drafts remain intact.
+
+The full affected-muscle control surface is now behind a compact M3
+`Adjust for discomfort` card above the live workout. Expanding restores
+all canonical muscle inspection, affected exercise navigation, explicit
+reduce/skip confirmations and existing journal adjustment annotations.
+Collapsing the card cannot silently skip a set, change an exercise or apply
+an injury diagnosis. This avoids placing a large secondary tool before every
+working set by default.
+
+Pure Kotlin tests exercise fresh and repeated receipts, corrections,
+skips, cross-exercise identity and end-of-session behavior. A packaged
+canonical-engine runtime integration test issues a real multi-exercise
+workout, commits all sets of its first exercise, proves Focus does not jump
+until the last acknowledged receipt and verifies restored journal identity
+and unchanged canonical saved-store writes.
+
+Verified CI: source contracts
+[41430484122](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41430484122),
+Kotlin domain tests
+[41430484259](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41430484259),
+Compose compilation without APK
+[41430484226](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41430484226)
+and packaged engine-runtime JVM/instrumentation-source checks
+[41430484159](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41430484159)
+all passed. Device-level accessibility, background/rotation and real UX
+acceptance still require Android hardware; compile/runtime tests do not
+replace them.
+
+No APK was generated. Existing JavaScript training formulas, the live web
+application and the other programmer's Android branch remain unchanged.
+Unsafe accessory substitution is still quarantined behind canonical
+re-prescription. The planned Kotlin training-engine rewrite has not begun.

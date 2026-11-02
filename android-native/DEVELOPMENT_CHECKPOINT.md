@@ -1805,3 +1805,17 @@ rather than leaving a stale editable form. This avoids no-op
 Save actions that the canonical owner correctly rejects, while
 preserving exact retry payloads, entry revisions, and all durable
 history. There is no new writer, and no APK.
+
+## 2026-11-02 — Completed-exercise Focus navigation
+
+When a user manually selects a fully resolved exercise while other issued
+working sets remain, Focus now shows a resolved-state explanation rather than
+reopening the previously logged last set as if it were actionable. It
+preserves the issued next-set preview and its explicit Continue/Open
+navigation; no automatic crossing between exercises occurs without a new
+durable receipt. A rest timer is shown only for the currently selected
+exercise when that exercise still has unresolved work. Show all continues
+to expose the original journal-backed set corrections. Source assertions
+guard against the completed-set fallback and stale rest timer. This is a
+presentation-only fix: no prescriptions, logged facts, or data store writes
+change; no APK.

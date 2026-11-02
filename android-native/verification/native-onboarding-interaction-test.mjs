@@ -151,8 +151,8 @@ assert.ok(train.includes('onInspectEquipmentLoad:(JournalSetSlot,String)->Unit')
   activity.includes('onInspectEquipmentLoad=runtime::inspectEquipmentLoad'),
   'Compact equipment options must use an exact canonical verified result for the current set, typed load and source revision; no inferred increments or writes');
 assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId)') &&
-  train.includes('val visibleSets=if(focusMode && journal.unresolvedCount==0)') &&
-  train.includes('else if(focusMode)listOf(exercise.sets.firstOrNull') &&
+  train.includes('val visibleSets=if(focusMode && (journal.unresolvedCount==0 || exercisePending==0))') &&
+  train.includes('else if(focusMode)listOfNotNull(exercise.sets.firstOrNull') &&
   train.includes('it.slot !in committedSlots') &&
   train.includes('visibleSets.forEach { set->') &&
   train.includes('NativeWorkingSet(plan.session,set,commit,') &&
@@ -708,9 +708,9 @@ const injuryReviewAt=train.indexOf('if(!showAffectedTools) {');
 assert.ok(progressAt>0 && finishReadyAt>progressAt &&
   movementAt>finishReadyAt && loggerAt>movementAt &&
   injuryReviewAt>loggerAt &&
-  train.includes('if(focusMode && journal.unresolvedCount==0)') &&
+  train.includes('if(focusMode && (journal.unresolvedCount==0 || exercisePending==0))') &&
   train.includes('emptyList<NativeWorkoutSet>()') &&
-  train.includes('if(journal.unresolvedCount>0) {\n        NativeRestTimer(') &&
+  train.includes('if(journal.unresolvedCount>0 && exercisePending>0) {\n        NativeRestTimer(') &&
   train.includes('if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0)') &&
   train.includes('confirmButton={Button(onClick={showFinishReview=false;onFinish()}') &&
   train.includes('if(journal.isFinished)"Retry finishing workout"') &&
@@ -796,3 +796,11 @@ assert.ok(historyUi.includes('val historyEditorBusy=state.historyBusy || state.w
   host.includes('current.workout!=null') &&
   host.includes('current.backupExportBusy'),
   'History corrections must be disabled during backup or active workout and close obsolete edit sheets when a workout starts');
+
+assert.ok(train.includes('if(focusMode && exercisePending==0 && journal.unresolvedCount>0)') &&
+  train.includes('Use Continue below to open the next pending exercise') &&
+  train.includes('else if(focusMode)listOfNotNull(') &&
+  !train.includes('} ?: exercise.sets.last())') &&
+  train.includes('if(journal.unresolvedCount>0 && exercisePending>0) {') &&
+  train.includes('NativeUpNextPanel(preview,exerciseIndex,'),
+  'A completed manually selected exercise must not masquerade as an active working set or start a stale rest timer; resume stays receipt-derived');

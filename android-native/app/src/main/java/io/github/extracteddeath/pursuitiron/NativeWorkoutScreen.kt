@@ -228,11 +228,18 @@ internal fun NativeWorkoutScreen(
     }
     // Focus is a projection of the same durable set journal, never a
     // different logger. It advances only after an acknowledged set receipt.
-    val visibleSets=if(focusMode && journal.unresolvedCount==0)
+    // A completed exercise is not an active logger even if other movements
+    // remain. Only an unresolved, issued slot may be projected in Focus.
+    val visibleSets=if(focusMode && (journal.unresolvedCount==0 || exercisePending==0))
         emptyList<NativeWorkoutSet>()
-    else if(focusMode)listOf(exercise.sets.firstOrNull {
+    else if(focusMode)listOfNotNull(exercise.sets.firstOrNull {
         it.slot !in committedSlots
-    } ?: exercise.sets.last()) else exercise.sets
+    }) else exercise.sets
+    if(focusMode && exercisePending==0 && journal.unresolvedCount>0) {
+        Text("All sets for this exercise are resolved. Use Continue below to open the next pending exercise, or Show all to review saved sets.",
+            style=MaterialTheme.typography.bodyMedium,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     visibleSets.forEach { set->
         val commit=journal.completed.find { it.intent.slot==set.slot }
         key(plan.session.workoutId,set.slot.exerciseIndex,set.slot.setIndex) {
@@ -250,7 +257,7 @@ internal fun NativeWorkoutScreen(
     val activeExtension=if(focusMode)exercise.sets.firstOrNull {
         it.slot !in committedSlots
     }?.extensionRestSeconds else null
-    if(journal.unresolvedCount>0) {
+    if(journal.unresolvedCount>0 && exercisePending>0) {
         NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
             enabled=!state.workoutBusy && !journal.isFinished,
             latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId,

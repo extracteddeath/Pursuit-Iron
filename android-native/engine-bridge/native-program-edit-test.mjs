@@ -166,11 +166,14 @@ if(beforeRemovalWorkout.session.dayId===removedDay.id) {
 // replacement from the canonical catalog with matching equipment and pattern.
 const replacementBase=JSON.parse(proposal.snapshot),replacementDay=replacementBase.saved[0].days[0];
 const existingId=replacementDay.exercises[1];
-const {EX_BY_ID:exerciseMap, EXERCISES:exerciseCatalog, expandEquipment:expand, nextExerciseIdForShellExercise:engineIdFor, isBarLike:barLike}=await import('../../modules/engine-api.js');
+const {EX_BY_ID:exerciseMap, EXERCISES:exerciseCatalog, expandEquipment:expand, nextExerciseIdForShellExercise:engineIdFor, isBarLike:barLike, canonicalRepRange:repPair}=await import('../../modules/engine-api.js');
 const originalExercise=exerciseMap[existingId],allow=expand(replacementBase.saved[0].config.equipment);
+const engineWeeks=replacementBase.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`];
 const replacementId=exerciseCatalog.find(ex=>ex.id!==existingId &&
   ex.part===originalExercise.part && ex.type===originalExercise.type &&
   (!ex.pattern || !originalExercise.pattern || ex.pattern===originalExercise.pattern) &&
+  Object.values(engineWeeks).every(cell=>cell.tech==null && cell.sets>0 &&
+    repPair(cell.reps)?.[0]>=ex.rep[0] && repPair(cell.reps)?.[1]<=ex.rep[1]) &&
   ex.equip.every(item=>allow.has(item)) &&
   (ex.equip.length>0 || !replacementBase.saved[0].config.noBodyweight) &&
   !replacementDay.exercises.includes(ex.id) && engineIdFor(ex) &&
@@ -183,7 +186,7 @@ replacementBase.saved[0].overrides={...replacementBase.saved[0].overrides,
     nextEngine:true,legacyExerciseId:existingId,
     nextExerciseId:engineIdFor(originalExercise)
   }};
-for(const field of ['nextWeekPrescriptions','progStyle','slotBias','autoBias','rounds','weekOff','pairs','ss']) {
+for(const field of ['progStyle','slotBias','autoBias','rounds','weekOff','pairs','ss']) {
   const map=replacementBase.saved[0][field]||{};
   for(const key of Object.keys(map)) if(key===`${replacementDay.id}:1` ||
     key.startsWith(`${replacementDay.id}:1:`)) delete map[key];
@@ -215,12 +218,14 @@ withMetadata.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`]={userOwned
 const metaSnapshot=JSON.stringify(withMetadata);
 const metaReq=structuredClone(substitution);metaReq.reference=inspectNativeProgram(metaSnapshot).program.reference;
 const cleanedMeta=JSON.parse(prepareNativeProgramEdit(metaSnapshot,JSON.stringify(metaReq)).candidateSnapshot);
-assert.equal(cleanedMeta.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`],undefined,
-  'User prescriptions for the replaced movement are explicitly cleared, not transferred');
+assert.deepEqual(cleanedMeta.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`],
+  withMetadata.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`],
+  'Only the verified engine-owned weekly role template can survive replacement');
+
 const forgedReplacement=structuredClone(substitution);forgedReplacement.replacement.exerciseId='not-in-catalog';
 assert.throws(()=>prepareNativeProgramEdit(replacementSnapshot,JSON.stringify(forgedReplacement)));
 const fullMeta=structuredClone(replacementBase);
-for(const field of ['overrides','nextWeekPrescriptions','slotBias','progStyle','autoBias','weekOff','rounds','pairs'])
+for(const field of ['overrides','slotBias','progStyle','autoBias','weekOff','rounds','pairs'])
   fullMeta.saved[0][field][`${replacementDay.id}:1:week-4`]={oldExerciseOwned:field};
 const fullMetaSnapshot=JSON.stringify(fullMeta);
 const fullMetaReq=structuredClone(substitution);

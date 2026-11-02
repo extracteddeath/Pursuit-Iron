@@ -295,7 +295,8 @@ object NativeProgramEditCodec {
             "weekOff","pairs","ss")) {
             require(before.has(field)==after.has(field))
             if(before.has(field)) {
-                val expected=withoutOriginalSlot(before.getJSONObject(field))
+                val expected=if(field=="nextWeekPrescriptions")before.getJSONObject(field)
+                    else withoutOriginalSlot(before.getJSONObject(field))
                 require(equivalent(expected,after.getJSONObject(field)))
             }
         }

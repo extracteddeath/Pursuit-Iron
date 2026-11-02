@@ -360,7 +360,11 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertTrue(overrides.getBoolean("nextEngine"))
             assertEquals(setOf("nextEngine","legacyExerciseId","nextExerciseId"),
                 overrides.keys().asSequence().toSet())
-            for(field in listOf("nextWeekPrescriptions","progStyle","slotBias","autoBias",
+            val originalProgram=before.getJSONArray("saved").getJSONObject(0)
+            val originalWeek=originalProgram.getJSONObject("nextWeekPrescriptions").getJSONObject(key)
+            assertEquals(originalWeek.toString(),edited.getJSONObject("nextWeekPrescriptions")
+                .getJSONObject(key).toString())
+            for(field in listOf("progStyle","slotBias","autoBias",
                 "rounds","weekOff","pairs","ss")) {
                 val values=edited.optJSONObject(field) ?: continue
                 assertFalse(values.keys().asSequence().any { it==key || it.startsWith(key+":") })

@@ -266,7 +266,7 @@ internal fun NativeWorkoutScreen(
         NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
             enabled=!state.workoutBusy && !journal.isFinished,
             latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId,
-            autoCue=NativeRestCuePolicy.latest(progress,exercise.index))
+            autoCue=NativeRestCuePolicy.latestAcknowledged(progress))
     }
     if(exercisePending>0 && !journal.isFinished) {
         TextButton(onClick={showSkipExercise=true},

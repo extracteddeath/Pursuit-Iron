@@ -10,7 +10,11 @@ package io.github.extracteddeath.pursuitiron.domain
 data class NativeRestCue(val operationId: String, val seconds: Int, val exerciseIndex: Int)
 
 object NativeRestCuePolicy {
-    fun latest(progress: NativeWorkoutProgress, selectedExerciseIndex: Int): NativeRestCue? {
+    /** Derive rest from the last durably acknowledged exercise, even when
+     * Focus immediately moves to the next exercise on that same receipt.
+     * The selected tab must not be treated as the author of a saved set.
+     */
+    fun latestAcknowledged(progress: NativeWorkoutProgress): NativeRestCue? {
         val plan=progress.plan
         val journal=progress.journal
         if(plan.session!=journal.session || journal.isFinished || journal.unresolvedCount==0)
@@ -22,8 +26,7 @@ object NativeRestCuePolicy {
             last.receipt.session!=plan.session ||
             journal.completed.none { it.intent.operationId==action.operationId })
             return null
-        val exercise=plan.exercises.firstOrNull { it.index==selectedExerciseIndex &&
-            it.index==action.slot.exerciseIndex } ?: return null
+        val exercise=plan.exercises.firstOrNull { it.index==action.slot.exerciseIndex } ?: return null
         // A superset's rest belongs to the PAIR, not a random individual set;
         // no automated cue is issued until a real paired-session rest protocol.
         if(exercise.superset) return null
@@ -35,4 +38,8 @@ object NativeRestCuePolicy {
         if(seconds !in 1..3600) return null
         return NativeRestCue(action.operationId,seconds,exercise.index)
     }
+
+    /** Compatibility for previews that explicitly constrain a selected tab. */
+    fun latest(progress: NativeWorkoutProgress, selectedExerciseIndex: Int): NativeRestCue? =
+        latestAcknowledged(progress)?.takeIf { it.exerciseIndex==selectedExerciseIndex }
 }

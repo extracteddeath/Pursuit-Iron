@@ -66,6 +66,20 @@ class NativeRestCuePolicyTest {
         assertNull(NativeRestCuePolicy.latest(NativeWorkoutProgress(plan(),state),1))
     }
 
+    @Test fun acknowledgedRestFollowsSavedSetAcrossFocusExerciseSwitch() {
+        var state=add(fresh(),first,"first")
+        state=add(state,second,"second")
+        state=add(state,extension,"finish-bench")
+        val progress=NativeWorkoutProgress(plan(),state)
+        // Focus now displays Row, but the most recent acknowledged
+        // working set came from Bench; its issued rest still applies.
+        assertEquals(NativeRestCue("finish-bench",90,0),
+            NativeRestCuePolicy.latestAcknowledged(progress))
+        assertNull(NativeRestCuePolicy.latest(progress,1))
+        state=add(state,nextExercise,"finish-row")
+        assertNull(NativeRestCuePolicy.latestAcknowledged(NativeWorkoutProgress(plan(),state)))
+    }
+
     @Test fun skipsDoNotStartRestAndNoCueAfterAllSetsResolved() {
         var state=add(fresh(),first,"skip",JournalSetDisposition.SKIPPED)
         assertNull(NativeRestCuePolicy.latest(NativeWorkoutProgress(plan(),state),0))

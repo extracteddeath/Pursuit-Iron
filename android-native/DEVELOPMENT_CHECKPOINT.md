@@ -1886,3 +1886,17 @@ picker, pagination and Today latest-workout shortcut reflect the same
 availability. Read-only history remains usable during an active workout,
 while corrections still require finishing it. No saved facts, journal,
 training engine calculation or backup files are changed. No APK.
+
+## 2026-11-02 — Auto-rest follows the acknowledged set across Focus navigation
+
+Fixed a real lifecycle/UX gap: Focus may switch to the next exercise after
+an acknowledged final set, but the rest cue previously inspected only
+the newly selected exercise and lost the logged lift's rest. The cue is
+now derived from the last durable, uncorrected working-set receipt and
+that exercise's issued rest (including extension rest). It never starts
+for skipped/corrected sets, supersets with no paired rest protocol, or
+finished workouts. A compatibility API retains explicitly selected-tab
+semantics for other callers. Added Kotlin regression coverage for a
+bench-to-row Focus transition and source assertions. Timer state remains
+session-scoped, nonpersisting and user-resettable. No prescriptions or
+stored workout bytes changed; no APK.

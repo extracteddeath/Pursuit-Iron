@@ -203,7 +203,7 @@ assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId)') &&
   rest.includes('latestReceiptOperationId!=observedEvent') &&
   rest.includes('autoCue?.operationId==latestReceiptOperationId') &&
   rest.includes('begin(autoCue.seconds)') &&
-  train.includes('autoCue=NativeRestCuePolicy.latest(progress,exercise.index)') &&
+  train.includes('autoCue=NativeRestCuePolicy.latestAcknowledged(progress)') &&
   train.includes('latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId'),
   'Rest countdown must use the issued duration after a new durable set receipt, not a pending save, and must not replay after recovery');
 
@@ -874,3 +874,17 @@ assert.ok(host.includes('private fun canReadHistory(current: NativeRuntimeState)
   screens.includes('enabled=workoutState.ready && !workoutState.blocked && !workoutState.busy &&') &&
   screens.includes('!workoutState.backupExportBusy && !workoutState.workoutBlocked,'),
   'History browsing and Today latest-workout shortcut must match reader availability while allowing live-workout read-only history');
+
+const acknowledgedRest=fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeRestCuePolicy.kt','utf8');
+const acknowledgedRestTest=fs.readFileSync(
+  'android-native/domain-contract/src/test/java/io/github/extracteddeath/pursuitiron/domain/NativeRestCuePolicyTest.kt','utf8');
+assert.ok(acknowledgedRest.includes('fun latestAcknowledged(progress: NativeWorkoutProgress): NativeRestCue?') &&
+  acknowledgedRest.includes('it.index==action.slot.exerciseIndex') &&
+  acknowledgedRest.includes('last.receipt.operationId!=action.operationId') &&
+  acknowledgedRest.includes('action.replacesOperationId!=null') &&
+  acknowledgedRest.includes('if(exercise.superset) return null') &&
+  train.includes('autoCue=NativeRestCuePolicy.latestAcknowledged(progress)') &&
+  acknowledgedRestTest.includes('acknowledgedRestFollowsSavedSetAcrossFocusExerciseSwitch') &&
+  acknowledgedRestTest.includes('NativeRestCue("finish-bench",90,0)'),
+  'Focus must preserve the correct canonical rest cue when navigation advances to a new exercise after a durable receipt');

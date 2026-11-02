@@ -1913,3 +1913,19 @@ Bodyweight's unconfirmed loading hint no longer suggests that the exercise
 itself has unconfirmed equipment or invented steps. No example is
 autofilled and no default load is prescribed; users still enter their
 actual physical inventory. The engine and persisted values are untouched.
+
+## 2026-11-02 — Native verified barbell plate breakdown
+
+Added an exact, read-only plate calculator to live working-set loading
+options. It appears ONLY after the canonical engine confirms the selected
+issued set is a barbell-plates family and the entered weight is an exact
+selectable total. It independently validates the persisted physical bar
+and matching plate pairs, computes a symmetric per-side layout without
+rounding, and chooses a minimal-pair setup with larger denominations
+preferred on ties. A bounded solver fails closed on impossible/large
+cases; Smith, specialty machines, bodyweight and unknown equipment never
+borrow a barbell setup. Its Material 3 confirmation dialog displays the
+bar weight, exact total and verified plates per side. It does not alter
+the set draft, training prescription, journal, history or inventory.
+Kotlin tests cover actual combinations, decimals, impossible totals,
+missing stock, wrong units and other equipment families. No APK.

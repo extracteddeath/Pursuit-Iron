@@ -898,3 +898,20 @@ assert.ok(gymEntryHelp.includes('Each exercise setting needs a prefix: exact:') 
   verifiedLoadUi.includes('no verified external weight steps') &&
   verifiedLoadUi.includes('No assumed load increments are offered.'),
   'Equipment setup must explain exact/range syntax and never imply bodyweight or specialty-machine increments that were not inventoried');
+
+const platePolicy=fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeBarbellPlateBreakdown.kt','utf8');
+const plateTest=fs.readFileSync(
+  'android-native/domain-contract/src/test/java/io/github/extracteddeath/pursuitiron/domain/NativeBarbellPlateBreakdownTest.kt','utf8');
+const plateUi=fs.readFileSync(root+'NativeVerifiedPlateBreakdown.kt','utf8');
+assert.ok(verifiedLoadUi.includes('if(review.family=="barbell_plates")') &&
+  verifiedLoadUi.includes('NativeVerifiedPlateBreakdown(state,session,load,review.exact)') &&
+  plateUi.includes('if(!exact)null else NativeBarbellPlateBreakdownPolicy.inspect(') &&
+  plateUi.includes('saved?.loadingInventory') &&
+  plateUi.includes('Load the SAME plates on each side:') &&
+  plateUi.includes('This does not log or prescribe a weight.') &&
+  platePolicy.includes('NativeGymInventoryCodec.validate(') &&
+  platePolicy.includes('MAX_SEARCH_STATES=100_000') &&
+  platePolicy.includes('longValueExact()') &&
+  plateTest.includes('unlistedTotalsMissingStockOrWrongUnitsNeverProduceImaginaryPlates'),
+  'Plate breakdown is read-only, exact and sourced solely from verified barbell inventory; no Smith/machine guessing or journal writes');

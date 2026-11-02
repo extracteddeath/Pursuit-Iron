@@ -45,6 +45,12 @@ internal fun NativeVerifiedLoadOptions(
         }
     }
     if(review?.confirmed==true) {
+        // A barbell plate breakdown needs BOTH a verified current loading
+        // result and the same saved physical stock. Never infer Smith bars,
+        // specialty machines or unspecified inventory.
+        if(review.family=="barbell_plates") {
+            NativeVerifiedPlateBreakdown(state,session,load,review.exact)
+        }
         val sourceLabel=when(review.family) {
             "dumbbells_per_hand" -> "Verified dumbbells · per hand"
             "barbell_plates" -> "Verified plates · total load"

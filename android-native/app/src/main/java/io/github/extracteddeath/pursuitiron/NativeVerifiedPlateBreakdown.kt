@@ -1,0 +1,63 @@
+package io.github.extracteddeath.pursuitiron
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import io.github.extracteddeath.pursuitiron.domain.*
+
+/**
+ * Read-only Material 3 physical plate viewer. The caller has confirmed
+ * canonical barbell_plates loading for THIS issued session, set and load.
+ * Does not change actual set entries, issued targets or future progression.
+ */
+@Composable
+internal fun NativeVerifiedPlateBreakdown(
+    state: NativeRuntimeState,session: JournalSessionKey,
+    selectedLoad: String,exact: Boolean
+) {
+    val saved=state.saved
+    val inventory=saved?.loadingInventory
+    val allowed=saved?.loadingCandidates?.map { it.id }?.toSet().orEmpty()
+    val exactOnly=saved?.loadingCandidates?.filter { it.mode=="external_load" }
+        ?.map { it.id }?.toSet().orEmpty()
+    val breakdown=remember(inventory,session.unit,selectedLoad,allowed,exactOnly,exact) {
+        if(!exact)null else NativeBarbellPlateBreakdownPolicy.inspect(
+            inventory,session.unit,selectedLoad,allowed,exactOnly)
+    }
+    var show by remember(session.workoutId,selectedLoad) { mutableStateOf(false) }
+    if(!exact) {
+        Text("That load is not an exact selectable barbell total. No plate layout is assumed.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
+    if(breakdown==null) {
+        Text("An exact plate layout could not be verified for this load.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
+    OutlinedButton(onClick={show=true},modifier=Modifier.fillMaxWidth()) {
+        Text("Show plates for ${breakdown.totalLoad} ${breakdown.unit}")
+    }
+    if(show) AlertDialog(
+        onDismissRequest={show=false},
+        title={Text("Verified plate setup")},
+        text={
+            Column(verticalArrangement=Arrangement.spacedBy(androidx.compose.ui.unit.Dp(8f))) {
+                Text("Total ${breakdown.totalLoad} ${breakdown.unit} · Bar ${breakdown.barWeight} ${breakdown.unit}")
+                if(breakdown.perSide.isEmpty())Text("Empty verified bar — no added plates.")
+                else {
+                    Text("Load the SAME plates on each side:",style=MaterialTheme.typography.titleSmall)
+                    breakdown.perSide.forEach { item ->
+                        Text("${item.weight} ${breakdown.unit} × ${item.pairs} per side")
+                    }
+                }
+                Text("Uses only saved physical plate pairs. Confirm collars, balance and safe loading yourself. This does not log or prescribe a weight.",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton={TextButton(onClick={show=false}) { Text("Done") }}
+    )
+}

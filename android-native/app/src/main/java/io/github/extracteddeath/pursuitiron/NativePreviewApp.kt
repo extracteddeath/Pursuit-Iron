@@ -118,7 +118,8 @@ internal fun NativePreviewApp(
     onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
     onDiscardBackupReview: () -> Unit = {},
     onSaveProgramEdits: (NativeProgramEditDraft)->Unit = {},
-    onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,CanonicalExercise>? = {_,_->null}
+    onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,CanonicalExercise>? = {_,_->null},
+    onLookupProgramAlternatives: suspend (ReadOnlyProgramReference,String,List<String>) -> List<CanonicalExercise>? = {_,_,_->null}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -260,6 +261,7 @@ internal fun NativePreviewApp(
                                     onVerifyBackupMerge=onVerifyBackupMerge,
                                     onDiscardBackupReview=onDiscardBackupReview,
                                     onLookupProgramExercises=onLookupProgramExercises,
+                                     onLookupProgramAlternatives=onLookupProgramAlternatives,
                                     onSaveProgramEdits=onSaveProgramEdits,
                                     onPreviewDay = { day ->
                                         selectedTrainingDay = day

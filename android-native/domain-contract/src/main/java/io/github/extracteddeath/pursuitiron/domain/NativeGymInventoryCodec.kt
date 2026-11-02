@@ -31,7 +31,7 @@ object NativeGymInventoryCodec {
         val unique = mutableSetOf<BigDecimal>()
         repeat(array.length()) { i ->
             val value = number(JSONObject().put("weight", array.get(i)), "weight")
-            require(unique.add(value))
+            require(unique.add(value.stripTrailingZeros()))
         }
     }
     /** Strict accepted subset: missing families do not inherit factory defaults. */
@@ -51,9 +51,9 @@ object NativeGymInventoryCodec {
             repeat(plates.length()) { i ->
                 val pair = plates.getJSONObject(i)
                 exact(pair, setOf("weight", "pairs"))
-                require(unique.add(number(pair, "weight", BigDecimal("0.001"), BigDecimal("100"))))
+                require(unique.add(number(pair, "weight", BigDecimal("0.001"), BigDecimal("100")).stripTrailingZeros()))
                 val pairs = number(pair, "pairs", BigDecimal.ONE, BigDecimal("50"))
-                require(pairs.scale() <= 0)
+                require(pairs.stripTrailingZeros().scale() <= 0)
             }
             count++
         }

@@ -254,7 +254,8 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 || "nativeProgramOptions".equals(method) || "prepareNativeProgram".equals(method)
                 || "inspectNativeHistory".equals(method) || "prepareNativeHistoryCorrection".equals(method)
                 || "inspectNativeHistoryPage".equals(method)
-                || "inspectNativeProgram".equals(method) || "prepareNativeProgramEdit".equals(method);
+                || "inspectNativeProgram".equals(method) || "prepareNativeProgramEdit".equals(method)
+                || "prepareNativeGymInventoryEdit".equals(method);
         String entry = store ? "PursuitIronBridge.dispatchWorkoutStoreJson"
                 : ("backupSchemaCheck".equals(method) ||
                 "backupProgramInventory".equals(method) ||
@@ -427,6 +428,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                                 NativeProgramSetupCodec.INSTANCE.decodeProposal(response.toString(),validated.getString("id"),p.getString("setupJson"));
                             } else if ("prepareNativeProgramEdit".equals(validated.getString("method"))) {
                                 io.github.extracteddeath.pursuitiron.domain.NativeProgramEditCodec.INSTANCE.decode(response.toString(),
+                                    validated.getString("id"),p.getString("currentSnapshot"),p.getString("editJson"));
+                            } else if ("prepareNativeGymInventoryEdit".equals(validated.getString("method"))) {
+                                io.github.extracteddeath.pursuitiron.domain.NativeGymInventoryEditCodec.INSTANCE.decode(response.toString(),
                                     validated.getString("id"),p.getString("currentSnapshot"),p.getString("editJson"));
                             } else if ("inspectNativeProgram".equals(validated.getString("method"))) {
                                 NativeProgramSetupCodec.INSTANCE.decodeSaved(response.toString(),validated.getString("id"),p.getString("rawSnapshot"));

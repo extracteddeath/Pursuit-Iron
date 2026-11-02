@@ -314,9 +314,10 @@ private fun Header(vm: AppViewModel, s: JSONObject, wide: Boolean, onDiscard: ()
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(mmss(elapsed), style = MaterialTheme.typography.titleLarge)
                 if (est > 0) {
-                    val left = est - (elapsed / 60).toInt()
+                    // The core's remaining-work clock, the same one Short on time reads.
+                    val left = if (!s.isNull("leftMin")) s.i("leftMin") else est - (elapsed / 60).toInt()
                     Surface(color = cs.surfaceContainerHigh, shape = CircleShape) {
-                        Text(if (left > 0) "~$left min left" else "over by ${-left} min", style = MaterialTheme.typography.labelMedium,
+                        Text(if (left > 0) "~$left min left" else if (!s.isNull("leftMin")) "all sets done" else "over by ${-left} min", style = MaterialTheme.typography.labelMedium,
                             color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                     }
                 }
@@ -676,7 +677,7 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
                 }, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 6.dp))
             }
             set.o("target")?.let { t -> if (!set.b("warm")) Text(if (t.b("amrap")) "Target: at least ${t.s("reps").trimEnd('+')} reps, as many as you can with good form" + (t.optDouble("pct").takeIf { !it.isNaN() }?.let { " · ${fmtNum(it)}% of max" } ?: "")
-                else "Target: ${t.s("reps")} reps" + (if (!t.isNull("rir")) " at ${t.s("effort").ifBlank { t.s("rir") + " RIR" }}" else "") + (t.optDouble("pct").takeIf { !it.isNaN() }?.let { " · ${fmtNum(it)}% of max" } ?: ""),
+                else "Target: ${t.s("reps").replace('-', '–')} reps" + (if (!t.isNull("rir")) " at ${t.s("effort").ifBlank { t.s("rir") + " RIR" }}" else "") + (t.optDouble("pct").takeIf { !it.isNaN() }?.let { " · ${fmtNum(it)}% of max" } ?: ""),
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
             if (assisted) {
                 // App.js: help is a negative load. Typed and shown as the amount of help; minus adds help, plus takes it off.

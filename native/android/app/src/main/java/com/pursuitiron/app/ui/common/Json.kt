@@ -29,6 +29,8 @@ fun plural(n: Int, word: String) = "$n $word" + if (n == 1) "" else "s"
 fun fmt1(v: Double): String = fmtNum(Math.round(v * 10) / 10.0)
 /** Volume in thousands: tonnes for kg, "k lb" for lb (a tonne of pounds is not a unit). */
 fun volUnit(unit: String): String = if (unit == "lb") "k lb" else "t"
+/** A volume as a reader says it: "96 kg" under a thousand (not "0.1 t", beside a finish screen that said 96 kg), else "7.8 t" / "17.2 k lb". */
+fun volText(v: Double, unit: String): String = if (v < 1000) "${Math.round(v)} $unit" else "${fmt1(v / 1000.0)} ${volUnit(unit)}"
 
 /** Numeric text as typed: a comma keyboard's "212,5" becomes 212.5 (never 2125), one decimal point kept. */
 fun decimalText(s: String, max: Int = 7): String {

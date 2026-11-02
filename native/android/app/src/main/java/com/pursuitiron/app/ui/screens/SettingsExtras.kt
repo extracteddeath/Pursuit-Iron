@@ -81,8 +81,9 @@ fun TrainingPrefsCard(vm: AppViewModel) {
         cap("TRAINING EXPERIENCE")
         val exp = st.s("experience").let { if (it == "novice") "none" else it }
         Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            listOf(Triple("none", "New to lifting", "Under 6 months. Fewer sets, more technique practice"), Triple("beginner", "Beginner", "6–18 months. Volume ramps gently"),
-                Triple("intermediate", "Intermediate", "1.5–4 years. The full volume range"), Triple("advanced", "Advanced", "4+ years. Higher volume, harder top sets")).forEach { (id, l, sub) ->
+            // The same year bands as program setup (the engine's EXP table); setup said 1–3 years where this said 1.5–4.
+            listOf(Triple("none", "New to lifting", "Brand new. Fewer sets, more technique practice"), Triple("beginner", "Beginner", "Under a year. Volume ramps gently"),
+                Triple("intermediate", "Intermediate", "1–3 years. The full volume range"), Triple("advanced", "Advanced", "3+ years. Higher volume, harder top sets")).forEach { (id, l, sub) ->
                 val on = exp == id
                 Row(Modifier.fillMaxWidth().background(if (on) cs.secondaryContainer else cs.surfaceContainerHigh).clickable { vm.updateSetting("experience", id) }
                     .semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on }.padding(horizontal = 14.dp, vertical = 12.dp),

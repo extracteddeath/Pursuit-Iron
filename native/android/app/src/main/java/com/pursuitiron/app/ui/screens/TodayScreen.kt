@@ -269,7 +269,7 @@ fun HistoryRow(r: JSONObject, onClick: () -> Unit) {
                 Text(listOfNotNull(
                     if (date > 0) SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(date)) else null,
                     r.i("setsDone").takeIf { it > 0 }?.let { "$it sets" },
-                    r.i("volume").takeIf { it > 0 }?.let { "${com.pursuitiron.app.ui.common.fmt1(it / 1000.0)} ${com.pursuitiron.app.ui.common.volUnit(r.s("unit", "kg"))}" },
+                    r.i("volume").takeIf { it > 0 }?.let { com.pursuitiron.app.ui.common.volText(it.toDouble(), r.s("unit", "kg")) },
                     r.i("durationMin").takeIf { it > 0 }?.let { "$it min" },
                 ).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
@@ -305,7 +305,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             }
             val vol = d.d("volume")
             val stats = listOf("Time" to (d.i("durationMin").takeIf { it > 0 }?.let { "${it / 60}:${(it % 60).toString().padStart(2, '0')}" } ?: "—"),
-                "Sets" to "${d.i("setsDone")}", "Volume" to (if (vol > 0) "${com.pursuitiron.app.ui.common.fmt1(vol / 1000.0)} ${com.pursuitiron.app.ui.common.volUnit(u)}" else "—"))
+                "Sets" to "${d.i("setsDone")}", "Volume" to (if (vol > 0) com.pursuitiron.app.ui.common.volText(vol.toDouble(), u) else "—"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 stats.forEach { (k, v) ->
                     Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 10.dp, vertical = 12.dp)) {

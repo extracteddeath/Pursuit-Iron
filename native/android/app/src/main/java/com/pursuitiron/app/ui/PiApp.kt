@@ -282,7 +282,7 @@ private fun ImportDialog(vm: AppViewModel) {
         onDismissRequest = { vm.importOffer = null },
         title = { Text(if (offer.source == "web app") "Bring your training over?" else "Import this backup?") },
         text = {
-            Text("${offer.sessions} workouts and ${offer.programs} programs from the ${offer.source}. " +
+            Text("${offer.sessions} ${if (offer.sessions == 1) "workout" else "workouts"} and ${offer.programs} ${if (offer.programs == 1) "program" else "programs"} from the ${offer.source}. " +
                 "Nothing on this phone is deleted: matching workouts merge, and the newer copy of each wins." +
                 if (offer.live != null) " Your workout in progress comes too." else "")
         },

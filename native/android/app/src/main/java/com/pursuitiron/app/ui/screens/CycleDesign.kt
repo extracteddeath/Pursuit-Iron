@@ -307,10 +307,13 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                             Text("Phase: ${PHASE_NAMES[b.phase]}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
                         }
                         val firstFree = blocks.indexOfFirst { !it.fixed }
-                        if (!locked && k > firstFree) IconBtn(PiIcons.ChevronUp, "Move block ${k + 1} earlier") { swap(draft, k, k - 1) }
-                        if (!locked && k < blocks.lastIndex) IconBtn(PiIcons.ChevronDown, "Move block ${k + 1} later") { swap(draft, k, k + 1) }
-                        if (!locked && blocks.size > 2) Box(Modifier.height(42.dp).clip(CircleShape).clickable { draft.removeAt(k) }.semantics { role = Role.Button }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                            Text("Remove", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = fg)
+                        // Move and Remove wrap as one group, so an arrow never strands on its own line apart from its pair.
+                        if (!locked) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (k > firstFree) IconBtn(PiIcons.ChevronUp, "Move block ${k + 1} earlier") { swap(draft, k, k - 1) }
+                            if (k < blocks.lastIndex) IconBtn(PiIcons.ChevronDown, "Move block ${k + 1} later") { swap(draft, k, k + 1) }
+                            if (blocks.size > 2) Box(Modifier.height(42.dp).clip(CircleShape).clickable { draft.removeAt(k) }.semantics { role = Role.Button }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                                Text("Remove", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = fg)
+                            }
                         }
                     }
                 }

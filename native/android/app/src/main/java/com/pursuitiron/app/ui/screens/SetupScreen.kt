@@ -108,7 +108,7 @@ private val PRESETS = listOf(
     "Dumbbells only" to listOf("dumbbell"),
     "Bodyweight" to emptyList(),
 )
-private val EXP = listOf(Triple("none", "None", "Brand new to lifting"), Triple("beginner", "Beginner", "< 1 year training"), Triple("intermediate", "Intermediate", "1–3 years training"), Triple("advanced", "Advanced", "3+ years, dialled-in"))
+private val EXP = listOf(Triple("none", "New to lifting", "Brand new to lifting"), Triple("beginner", "Beginner", "< 1 year training"), Triple("intermediate", "Intermediate", "1–3 years training"), Triple("advanced", "Advanced", "3+ years, dialled-in"))
 private val GOALS = mapOf("hypertrophy" to "Hypertrophy", "strength" to "Strength", "both" to "Strength & Size")
 
 /* B894: an unfinished cycle setup stays on this device; Discard starts the wizard fresh. */

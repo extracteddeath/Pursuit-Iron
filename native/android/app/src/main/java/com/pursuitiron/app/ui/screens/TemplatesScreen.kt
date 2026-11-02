@@ -102,8 +102,12 @@ fun TrainingMaxPrompt(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
     PiCard(color = cs.tertiaryContainer, radius = 28.dp, onClick = { vm.tmFor = pid }) {
         Kicker("Before you start", cs.onTertiaryContainer)
-        Text("Set training maxes for $n lift${if (n == 1) "" else "s"}", style = MaterialTheme.typography.titleMedium, color = cs.onTertiaryContainer)
-        Text("This program works in percentages of a training max. Type one, or enter a recent 1RM and the app uses 90% of it.",
+        // The method's own max (Texas works from a 5-rep max at 85% of a 1RM, not a training max at 90%).
+        val basis = h.o("maxBasis"); val label = basis?.s("label")?.ifBlank { null } ?: "Training max"; val pct = basis?.i("pct", 90) ?: 90
+        val lower = if (label.length > 1 && label[1].isLowerCase()) label.replaceFirstChar { it.lowercase() } else label
+        Text("Set the $lower for $n lift${if (n == 1) "" else "s"}", style = MaterialTheme.typography.titleMedium, color = cs.onTertiaryContainer)
+        Text(if (pct >= 100) "This program works in percentages of your 1-rep max. Type one for each main lift."
+            else "This program works in percentages of a $lower. Type one, or enter a recent 1RM and the app uses $pct% of it.",
             style = MaterialTheme.typography.bodySmall, color = cs.onTertiaryContainer)
     }
 }

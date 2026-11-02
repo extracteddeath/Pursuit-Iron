@@ -116,12 +116,14 @@ fun WorkoutHeader(vm: AppViewModel, s: JSONObject, wide: Boolean, focus: Boolean
         Column(Modifier.weight(1f)) {
             Text(s.s("dayLabel"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onTime)
-                .semantics { contentDescription = "${mmss(elapsed)} elapsed" + (if (paused) ", paused" else "") + (if (est > 0) ", about ${(est - elapsed / 60).coerceAtLeast(0)} minutes left" else "") + ". Short on time?"; role = Role.Button },
+                .semantics { contentDescription = "${mmss(elapsed)} elapsed" + (if (paused) ", paused" else "") + (if (est > 0) ", about ${(if (!s.isNull("leftMin")) s.i("leftMin").toLong() else est - elapsed / 60).coerceAtLeast(0)} minutes left" else "") + ". Short on time?"; role = Role.Button },
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(mmss(elapsed), style = MaterialTheme.typography.titleLarge, color = if (paused) cs.onSurfaceVariant else cs.onSurface)
                 Surface(color = cs.surfaceContainerHigh, shape = CircleShape) {
-                    val left = est - (elapsed / 60).toInt()
-                    Text(when { paused -> "paused"; est <= 0 -> "short on time?"; left > 0 -> "~$left min left"; else -> "over by ${-left} min" },
+                    // The core's remaining-work clock (warm-ups and changeovers included), the same one Short on time reads.
+                    val hasLeft = !s.isNull("leftMin")
+                    val left = if (hasLeft) s.i("leftMin") else est - (elapsed / 60).toInt()
+                    Text(when { paused -> "paused"; est <= 0 -> "short on time?"; left > 0 -> "~$left min left"; hasLeft -> "all sets done"; else -> "over by ${-left} min" },
                         style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                 }
             }
@@ -220,7 +222,7 @@ fun TimeSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
             val x = o
             if (x != null) {
                 val rests = listOfNotNull(x.optInt("compoundRest").takeIf { it > 0 }?.let { "${mmss(it.toLong())} compound" }, x.optInt("isolationRest").takeIf { it > 0 }?.let { "${mmss(it.toLong())} isolation" })
-                Text("About ${x.i("leftMin")} minutes of work left, at each lift's own rest" + (if (rests.isNotEmpty()) " (${rests.joinToString(", ")})." else "."),
+                Text("About ${x.i("leftMin")} minutes left, at each lift's own rest" + (if (rests.isNotEmpty()) " (${rests.joinToString(", ")})." else "."),
                     style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 // No option is chosen yet, so none is filled: the ones that would trim read as actions, the ones that already fit are quiet outlines.
                 Text("How long do you have left?", style = MaterialTheme.typography.titleSmall)
@@ -477,7 +479,7 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifier: Modifie
         val ni = sets.indices.firstOrNull { it > fi && !sets[it].b("done") && !sets[it].b("skipped") }
         val nextEx = s.list("exercises").getOrNull(ei + 1)
         Text(when {
-            ni != null -> "Up next: " + (if (sets[ni].b("warm")) "warm-up" else if (sets[ni].b("sub")) "mini" else "set") + " · " + (if (showsTag(ex, sets[ni])) ex.s("loadTag") else sets[ni].s("weight")) + " × " + sets[ni].s("reps")
+            ni != null -> "Up next: " + (if (sets[ni].b("warm")) "warm-up" else if (sets[ni].b("sub")) "mini" else "set ${sets.take(ni + 1).count { !it.b("warm") && !it.b("sub") }}") + " · " + (if (showsTag(ex, sets[ni])) ex.s("loadTag") else sets[ni].s("weight")) + " × " + sets[ni].s("reps")
             nextEx != null -> "Then: ${nextEx.s("name")}"
             else -> "Last set of the workout"
         }, style = MaterialTheme.typography.labelMedium, color = cs.onPrimaryContainer.copy(alpha = 0.8f))

@@ -368,7 +368,7 @@ export function programDetails({ programId } = {}) {
         focus.length ? ['More', focus.map(([k]) => label(k)).join(', ')] : null,
         (cfg.reduce || []).length ? ['Less', cfg.reduce.map(label).join(', ')] : null,
         ['Split', E.SPLITS?.[cfg.split]?.name || cfg.split], ['Days', `${p.days.length}/week`], sess ? ['Session', sess.label] : null, ['Goal', goal],
-        cfg.experience ? ['Level', cfg.experience.charAt(0).toUpperCase() + cfg.experience.slice(1)] : null,
+        cfg.experience ? ['Level', cfg.experience === 'none' || cfg.experience === 'novice' ? 'New to lifting' : cfg.experience.charAt(0).toUpperCase() + cfg.experience.slice(1)] : null,
         ['Block', `${E.weeksOf(p)} weeks`], ['Deload', cfg.deload ? `Yes · week ${E.weeksOf(p) + 1}` : E.isSchemeDeloadWeek(cfg.percentScheme, 4, E.weeksOf(p)) ? 'Built in · week 4' : 'No'],
     ].filter(Boolean).map(([k, v]) => ({ k, v, accent: k === 'More' }));
     const c = p.cycleId ? cycles().find((cy) => cy.id === p.cycleId) : null;
@@ -468,6 +468,9 @@ export function home() {
             lifts: nx ? nx.day.exercises.filter((id) => EX_BY_ID[id] && injuryMatchesExercise(i, EX_BY_ID[id], E.secondaryOf(EX_BY_ID[id]))).map(exName) : [] })),
         live: S.live ? liveSummary() : null,
         needsTrainingMax: nx && nx.program.config?.percentScheme ? mainLifts(nx.program).filter((id) => !(E.trainingMaxForUnit(nx.program, id, unit()) > 0)).length : 0,
+        // What that max is for this method ("5-rep max" for Texas) and the share of a 1RM it stands for.
+        maxBasis: nx && nx.program.config?.percentScheme && E.PCT_SCHEMES?.[nx.program.config.percentScheme]
+            ? { label: BASIS_LABEL[E.PCT_SCHEMES[nx.program.config.percentScheme].basis] || 'Training max', pct: Math.round(E.oneRmShare(nx.program.config.percentScheme) * 100) } : null,
         cycle: (() => { const ci = liveCycleInfo(); return ci ? { id: ci.cycle.id, name: ci.cycle.name || 'Training cycle', blockIdx: ci.blockIdx, blocks: (ci.cycle.blockMeta || []).map((b) => b.label || 'Block'),
             weekIndex: ci.weekIndex, weeksTotal: ci.weeksTotal, isDeload: ci.isDeload, dayIndex: ci.dayIndex, daysPerWeek: ci.daysPerWeek } : null; })(),
         recent: H.slice(0, 7).map(historyRow),
@@ -1026,15 +1029,26 @@ function liveRestOf(ctx, e) {
 function timeLeftSec(ctx, data) {
     return data.reduce((a, e) => { const r = liveRestOf(ctx, e); return a + e.sets.filter((x) => isWork(x) && !x.done && !x.skipped).length * (SET_WORK_SEC + r); }, 0);
 }
+/* Working sets and their rests are not the whole session: warm-ups and changeovers are in the engine's estimate
+   too. The header counted down the full estimate ("~48 min left") while Short on time counted work only ("about 34
+   minutes"), on the same screen. Both now scale the remaining work by the session's own overhead (estimate ÷ the
+   plan's work time), so they agree, and a time budget is read against the same clock. */
+function overheadOf(ctx, data) {
+    let est = null; try { est = E.estimateMinutes(ctx.program, ctx.day, ctx.wk); } catch { est = null; }
+    const all = data.reduce((a, e) => { const r = liveRestOf(ctx, e); return a + e.sets.filter((x) => isWork(x) && !x.skipped).length * (SET_WORK_SEC + r); }, 0);
+    return est > 0 && all > 0 ? Math.max(1, Math.min(1.8, est * 60 / all)) : 1;
+}
+function liveLeftMin(ctx, data) { return Math.round(timeLeftSec(ctx, data) * overheadOf(ctx, data) / 60); }
 function trimPlan(ctx, data, minutes) {
-    const budget = minutes * 60; let left = timeLeftSec(ctx, data); const cut = [];
+    const k = overheadOf(ctx, data);
+    const budget = minutes * 60 / k; let left = timeLeftSec(ctx, data); const cut = [];
     for (let ei = data.length - 1; ei >= 0 && left > budget; ei--) {
         const e = data[ei], r = liveRestOf(ctx, e);
         const open = e.sets.map((x, si) => ({ x, si })).filter(({ x }) => isWork(x) && !x.done && !x.skipped);
         const keep = e.sets.some((x) => isWork(x) && x.done) ? 0 : 1;
         for (let k = open.length - 1; k >= keep && left > budget; k--) { cut.push([ei, open[k].si]); left -= SET_WORK_SEC + r; }
     }
-    return { cut, fits: left <= budget, leftMin: Math.round(left / 60) };
+    return { cut, fits: left <= budget, leftMin: Math.round(left * k / 60) };
 }
 export function timeOptions() {
     const l = S.live; if (!l) return null;
@@ -1043,7 +1057,7 @@ export function timeOptions() {
     const rests = data.map((e) => ({ rest: liveRestOf(ctx, e), compound: EX_BY_ID[e.id]?.type === 'compound' }));
     const cRest = rests.find((r) => r.compound)?.rest, iRest = rests.find((r) => !r.compound)?.rest;
     const trimmed = data.reduce((a, e) => a + e.sets.filter((x) => x.skipped && x.trimWhy === 'time').length, 0);
-    return { leftMin: Math.round(timeLeftSec(ctx, data) / 60), compoundRest: cRest || null, isolationRest: iRest || null, trimmed,
+    return { leftMin: liveLeftMin(ctx, data), compoundRest: cRest || null, isolationRest: iRest || null, trimmed,
         options: [20, 30, 45, 60].map((m) => { const pl = trimPlan(ctx, data, m); return { minutes: m, cut: pl.cut.length, fits: pl.fits }; }) };
 }
 
@@ -1087,7 +1101,7 @@ export function session() {
     let est = null; try { est = E.estimateMinutes(ctx.program, ctx.day, ctx.wk); } catch { est = null; }
     return {
         active: true, sessionId: l.sessionId, programId: l.programId, programName: ctx.program.name, dayId: ctx.day.id, dayLabel: ctx.day.label,
-        weekIndex: ctx.wk, weeksTotal: E.weeksOf(ctx.program), startedAt: l.startedAt, pausedAt: l.pausedAt || null, estimateMin: est, unit: u,
+        weekIndex: ctx.wk, weeksTotal: E.weeksOf(ctx.program), startedAt: l.startedAt, pausedAt: l.pausedAt || null, estimateMin: est, leftMin: (() => { try { return liveLeftMin(ctx, data); } catch { return null; } })(), unit: u,
         exIdx: Math.max(0, Math.min(data.length - 1, l.exIdx || 0)), doneSets, totalSets, volume: Math.round(volume),
         exercises: data.map((e, ei) => {
             const ex = EX_BY_ID[e.id] || {};
@@ -1969,11 +1983,12 @@ function volumeZoneOf(part, sets, program) {
     const mav = E.mavFor(part, program);
     if (sets < mev) return { label: 'below MEV', sub: 'under the volume that reliably drives growth', tone: 'muted' };
     if (sets <= mav) return { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' };
-    /* An engine-built program's MAV is its own planned target for this session length (lats: 4 of a 16.8 MRV on a
-       40-minute plan), not the population's MAV, so 5 sets read "above MAV — more than most need", which said the
-       wrong thing. Past its target it's "above target". */
+    /* An engine-built program's MAV is its own target for this session length (lats: 4 of a 16.8 MRV on a 40-minute
+       plan), counted on direct sets, while these counts include helper credit — so nearly every muscle read past it
+       ("above MAV", then "above target") on a plan the audit calls all clear. For those programs the band is the
+       verdict: MEV to MRV is productive. */
     if (sets <= mrv + E.MRV_GRAIN) return program?.engineSource === 'pursuit-next'
-        ? { label: 'above target', sub: 'a little past what this program aims for; fine while you recover from it', tone: 'good' }
+        ? { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' }
         : { label: 'above MAV', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
     return { label: 'over MRV', sub: 'past what this app budgets to recover from', tone: 'warn' };
 }

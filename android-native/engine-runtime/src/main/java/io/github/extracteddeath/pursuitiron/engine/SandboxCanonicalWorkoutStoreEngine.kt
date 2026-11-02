@@ -4,6 +4,8 @@ import io.github.extracteddeath.pursuitiron.domain.PinnedCanonicalWorkoutStoreEn
 import io.github.extracteddeath.pursuitiron.domain.WorkoutStoreRuntimeCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreviewCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreparation
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreparationCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramCreationEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramSetupCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramOptions
@@ -53,6 +55,21 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         }
     })
     private val sequence=AtomicLong(0)
+
+    /**
+     * Exact, private, non-writing preparation. The returned candidate must
+     * not be used outside a later independently certified atomic Undo owner.
+     */
+    suspend fun prepareBackupMerge(
+        currentSnapshot: String,incomingSnapshot: String,expectedCandidateSha256: String
+    ): NativeBackupMergePreparation? {
+        val id="native-merge-preparation-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeBackupMergePreparationCodec.encode(
+            id,currentSnapshot,incomingSnapshot,expectedCandidateSha256))
+        currentCoroutineContext().ensureActive()
+        return NativeBackupMergePreparationCodec.decode(
+            raw,id,currentSnapshot,incomingSnapshot,expectedCandidateSha256)
+    }
 
     /**
      * Pure owner-agnostic dry-run. Callers must pin exact owned bytes and hold

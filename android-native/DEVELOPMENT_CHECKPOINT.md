@@ -930,3 +930,42 @@ Kotlin compilation and instrumentation-source compilation pass. No APK was built
 and no training formulas were rewritten. Remaining integration includes advanced
 custom/cycle programming, loading/substitution/superset/readiness tools,
 insights/preferences, restore activation and Android device acceptance.
+
+
+## Follow-up — 2026-11-02: guarded movement removal in saved native plans
+
+The native Plan editor now supports explicit, confirmed removal of one movement
+slot from an existing saved program. A repeated exercise ID is not treated as
+one shared slot: retained occurrences keep their independent original positions
+and prescription metadata. Removal cannot empty a training day, delete its
+designated primary movement or silently split a linked superset. Unavailable
+group and primary authoring tools are not implied by the removal control.
+
+The revision-pinned organization request remains format 1 for reorder/rename
+only; format 2 allows a strict nonempty subset of original exercise positions.
+The canonical JavaScript editor still owns the actual program modification and
+scopes it to the selected saved block. Original slot-keyed overrides, week
+prescriptions, progression and amplifier data move only with retained slots.
+The Kotlin decoder independently reconstructs those maps and refuses any
+unauthorized mutation of history, performance, cycles, sibling programs,
+settings, identity clocks or deletion records. Draft restoration preserves
+the selected original slots. The atomic store owner still handles stale
+revisions, write failures, exact retries, interrupted acknowledgements and
+the active-session lock.
+
+Verification includes JS source contracts, a freshly verified canonical
+Android JavaScript bundle, the Android sandbox JVM suite with a new real
+save/restart/issued-workout test, Kotlin domain contracts and the Compose UI
+compilation carried by this branch. The source contract suite passed at
+[41419837876](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41419837876)
+and the packaged sandbox runtime/JVM verification passed at
+[41419837893](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41419837893).
+An earlier integration-test write-count failure was a test expectation error:
+starting an issued session legitimately records its own reservation. The
+corrected test measures the blocked program edit independently and confirms
+history remains unchanged.
+
+This finishes **removing** existing movements, not adding or substituting
+new ones, writing full custom programs, adaptive cycle changes, or Android
+interaction/device acceptance. It does not authorize an APK or the Kotlin
+training-engine replacement. Other native app/web branches remain untouched.

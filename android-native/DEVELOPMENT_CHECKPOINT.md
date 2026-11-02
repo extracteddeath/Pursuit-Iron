@@ -1742,3 +1742,23 @@ and destination, not page-scroll position or ordinary recomposition:
 manual Show all review and corrections do not cause repeated scrolling.
 The final state is still read from canonical journal receipts, not
 a button tap or an optimistic set count. No APK generated.
+
+## 2026-11-02 — Verified latest-completion history handoff
+
+Train's post-completion **View saved workout** no longer merely switches
+tabs, which could reveal a previously browsed older history detail or
+a filtered/empty list. A new runtime-only `openLatestCompletedWorkout`
+operation uses the durable latest `CanonicalWorkoutHistoryReceipt`
+session ID, clears unrelated history-selection state, and fetches the
+exact workout through the existing canonical read-only history port.
+The returned history ID and currently saved revision/completion identity
+must still match before the UI publishes its result. A source-bound
+unfiltered history page is refreshed for navigation if available;
+detail itself remains readable if the list refresh fails. Interrupted
+or stale requests fail visibly instead of presenting old workout details.
+Train's link is disabled while the relevant runtime is busy.
+
+No new history writer, cache, or training progression logic is added,
+and the active workout and any unsaved set drafts remain untouched.
+Source interaction tests verify the receipt identity, tab/action wiring,
+revision checks and fallback error path. No APK.

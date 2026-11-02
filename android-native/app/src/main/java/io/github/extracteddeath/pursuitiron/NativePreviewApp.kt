@@ -111,6 +111,7 @@ internal fun NativePreviewApp(
     onCorrectHistory: (String)->Unit = {},
     onReloadHistory: ()->Unit = {},
     onOpenHistory: (String)->Unit = {},
+    onOpenLatestHistory: ()->Unit = {},
     onHistoryPage: (Int)->Unit = {},
     onHistoryList: ()->Unit = {},
     onFilterHistory: (NativeHistoryFilter)->Unit = {},
@@ -256,7 +257,11 @@ internal fun NativePreviewApp(
                                     startShortWorkout=onStartShortWorkout)
                                 NativeDestination.TRAIN -> if(onboarding?.saved!=null)
                                     NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet,onSkipExercise,onInspectMuscles,onSkipAffectedMuscle,onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote,onInspectEquipmentLoad,
-                                        onViewHistory={selectedTrainingDay=null;section=NativeDestination.INSIGHTS.ordinal})
+                                        onViewHistory={
+                                            selectedTrainingDay=null
+                                            onOpenLatestHistory()
+                                            section=NativeDestination.INSIGHTS.ordinal
+                                        })
                                 else TrainScreen(
                                     openTools = { sheet = 3 },
                                     syntheticOutlineReader = syntheticOutlineReader

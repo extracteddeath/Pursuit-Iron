@@ -637,7 +637,10 @@ assert.ok(train.includes('onViewHistory: ()->Unit = {}') &&
   train.includes('Text("View saved workout")') &&
   train.indexOf('Button(onClick=onViewHistory,modifier=Modifier.fillMaxWidth())') <
     train.indexOf('OutlinedButton(onClick=onStart,enabled=canStart,') &&
-  shell.includes('onViewHistory={selectedTrainingDay=null;section=NativeDestination.INSIGHTS.ordinal}') &&
+  shell.includes('onOpenLatestHistory()') &&
+  shell.includes('onViewHistory={') &&
+  activity.includes('onOpenLatestHistory=runtime::openLatestCompletedWorkout') &&
+  host.includes('fun openLatestCompletedWorkout()') &&
   host.includes('history=history,historyPage=page,historyCalendar=calendar'),
   'A confirmed completion must show the saved workout in Insights before offering the next session, using the same canonical history');
 
@@ -729,3 +732,21 @@ assert.ok(shell.includes('val readyToFinishWorkoutId=onboarding?.workout?.takeIf
   shell.includes('readyToFinishWorkoutId!=null) pageScroll.animateScrollTo(0)') &&
   !shell.includes('LaunchedEffect(pageScroll.value'),
   'A durably resolved workout must reveal Finish once without repeatedly stealing manual review scroll');
+
+assert.ok(train.includes('Button(onClick=onViewHistory,enabled=state.ready && !state.historyBusy &&') &&
+  shell.includes('onOpenLatestHistory()') &&
+  shell.includes('section=NativeDestination.INSIGHTS.ordinal') &&
+  host.includes('val receipt=current.completion ?: return') &&
+  host.includes('val id=receipt.session.workoutId') &&
+  host.includes('val history=checkNotNull(reader.workout(id))') &&
+  host.includes('check(history.historyId==id)') &&
+  host.includes('val page=optionalHistoryPage(0,history.snapshotSha256,filter)') &&
+  host.includes('latest.storeChangeKey==current.storeChangeKey') &&
+  host.includes('latest.completion?.session==receipt.session') &&
+  host.includes('latest.workout==null') &&
+  host.includes('history=null,historyPage=null,') &&
+  host.includes('historyCalendarQuery=null,historyCalendar=null,historyFilter=filter,') &&
+  host.includes('historyBusy=true,historyError=null') &&
+  host.includes('historyError="The latest saved workout could not be opened.') &&
+  !host.includes('onOpenHistory(current.history?.historyId'),
+  'The latest completion CTA must fetch the exact durable receipt, never show a stale previously browsed workout, and guard asynchronous history updates');

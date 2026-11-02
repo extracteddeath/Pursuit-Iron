@@ -60,6 +60,7 @@ class MainActivity : ComponentActivity() {
                     onCorrectHistory=runtime::correctHistory,
                     onReloadHistory=runtime::reloadHistory,
                     onOpenHistory=runtime::openHistory,
+                    onOpenLatestHistory=runtime::openLatestCompletedWorkout,
                     onHistoryPage=runtime::loadHistoryPage,
                     onHistoryList=runtime::showHistoryList,
                     onFilterHistory=runtime::filterHistory,

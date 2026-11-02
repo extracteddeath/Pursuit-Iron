@@ -49,7 +49,9 @@ internal fun NativeWorkoutScreen(
             if(state.completion!=null) {
                 Text("Your workout was saved to training history.",
                     style=MaterialTheme.typography.titleMedium)
-                Button(onClick=onViewHistory,modifier=Modifier.fillMaxWidth()) {
+                Button(onClick=onViewHistory,enabled=state.ready && !state.historyBusy &&
+                    !state.workoutBusy && !state.backupExportBusy,
+                    modifier=Modifier.fillMaxWidth()) {
                     Text("View saved workout")
                 }
                 OutlinedButton(onClick=onStart,enabled=canStart,

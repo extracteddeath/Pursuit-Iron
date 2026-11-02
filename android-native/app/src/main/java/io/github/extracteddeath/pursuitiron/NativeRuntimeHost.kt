@@ -282,6 +282,47 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         if(mutable.value.historyBusy)return
         mutable.update { it.copy(history=null,historyError=null) }
     }
+    /**
+     * Train's "View saved workout" must open the actual latest completion,
+     * not a previously browsed history detail or an arbitrary filtered page.
+     * This never writes history; the canonical reader revalidates the receipt.
+     */
+    fun openLatestCompletedWorkout() {
+        val current=mutable.value
+        val receipt=current.completion ?: return
+        if(!current.ready || current.saved==null || current.busy ||
+            current.workout!=null || current.workoutBusy || current.historyBusy ||
+            current.backupExportBusy)return
+        val reader=historyReader ?: return
+        val id=receipt.session.workoutId
+        val filter=NativeHistoryFilter()
+        mutable.update { it.copy(history=null,historyPage=null,
+            historyCalendarQuery=null,historyCalendar=null,historyFilter=filter,
+            historyBusy=true,historyError=null) }
+        scope.launch {
+            try {
+                val history=checkNotNull(reader.workout(id))
+                check(history.historyId==id)
+                val page=optionalHistoryPage(0,history.snapshotSha256,filter)
+                ensureActive()
+                mutable.update { latest ->
+                    if(latest.storeChangeKey==current.storeChangeKey &&
+                        latest.completion?.session==receipt.session &&
+                        latest.workout==null) {
+                        latest.copy(history=history,historyPage=page,historyBusy=false,
+                            historyError=if(page==null)
+                                "Workout opened. Reload the list to refresh other saved workouts."
+                                else null)
+                    } else latest.copy(historyBusy=false,
+                        historyError="Training history changed. Reload workouts to review the latest saved session.")
+                }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) {
+                mutable.update { it.copy(historyBusy=false,
+                    historyError="The latest saved workout could not be opened. Reload workouts to check the current history.") }
+            }
+        }
+    }
     fun filterHistory(filter: NativeHistoryFilter)=loadHistoryPage(0,filter)
     fun loadHistoryPage(offset: Int)=loadHistoryPage(offset,mutable.value.historyFilter)
     private fun loadHistoryPage(offset: Int,filter: NativeHistoryFilter) {

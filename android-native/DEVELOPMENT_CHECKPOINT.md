@@ -1138,3 +1138,55 @@ No APK was generated. Existing JavaScript training formulas, the live web
 application and the other programmer's Android branch remain unchanged.
 Unsafe accessory substitution is still quarantined behind canonical
 re-prescription. The planned Kotlin training-engine rewrite has not begun.
+
+
+## 2026-11-02 — One shared numeric set-entry experience across Train and Insights
+
+The Android UI uses the same `NativeSetValueFields` for issued workout
+logging, corrections to completed or skipped active sets, and later historical
+observation corrections. The formerly separate numeric validators now call
+the pure `NativeSetEntryPolicy.accepts` in all three flows. It preserves
+the canonical observational bounds (nonnegative load with at most three
+fractional decimals, 1–100 normal reps, actual RIR 0–10 or omitted) and
+the **issued GZCLP-only failed-attempt exception**: zero reps require the
+engine-authorized slot and positive observed load. This input policy does
+not alter engine training prescriptions or independent journal validation.
+
+Shared M3 filled-tonal plus/minus controls give 48 dp minimum touch targets
+beside keyboard-editable rep and actual-RIR fields. Rep steps are exactly one
+observed rep and respect the zero-rep capability. The empty RIR field means
+*unknown*, not an assumed RIR of zero: pressing plus starts at zero, pressing
+minus from zero clears it again, and the 0–10 bounds are enforced. Invalid
+or incomplete drafts cannot be silently rounded to a value. `Load` retains
+direct manual entry; no barbell, dumbbell, Smith, cable or machine increment
+has been invented by Kotlin. Actual equipment-specific loading steps remain
+gated behind canonical provenance and a separate integration test.
+
+A follow-up fixes a lost-ack retry edge case in the active correction sheet.
+An already-issued **skip correction** contains no numeric values, and its
+existing idempotent operation can now be retried even when load/reps inputs
+are blank or invalid. An ordinary completed-set correction still requires
+valid actual values before it can be submitted. The retry retains the
+original operation identity; it does not create an optimistic skipped set.
+
+Verification: the Kotlin domain contract suite (including three new bounded
+input/stepper scenarios) passed at
+[41431513823](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41431513823).
+The shared source-contract suite passed at
+[41431514063](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41431514063)
+and after the retry fix at
+[41432136852](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41432136852).
+Compose compilation passed at
+[41431513971](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41431513971)
+and again after the retry fix at
+[41432136903](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41432136903).
+The packaged canonical runtime JVM/instrumentation-source test suite passed at
+[41431514097](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41431514097).
+These are integration and compiler checks, not physical-device UX acceptance.
+
+No APK was generated; no live web, main, other native branch, canonical
+engine algorithm or user-owned workout data was modified. Remaining gating
+features include canonical equipment increments/attachments, full advanced
+custom and adaptive-cycle behavior, verified safe exercise replacement,
+backup-restore activation and Android device accessibility/resume acceptance
+before the planned Kotlin training-engine rebuild.

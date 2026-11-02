@@ -397,7 +397,7 @@ the atomic recovery journal, survive interruption, appear in completed history,
 remain intact through set corrections and are included in validated exports.
 Every new workout starts with an empty session note. A shared keyboard-aware edit
 sheet retains unsaved text and protects saving/discard actions. Session notes are
-separate from pinned exercise notes/setup, which still need native integration.
+separate from the pinned exercise notes/setup editor described below.
 
 `node android-native/engine-bridge/native-session-note-test.mjs` verifies the source
 handoff and can also exercise the actual packaged IIFE. JVM tests additionally
@@ -418,3 +418,27 @@ suite or pass an actual packaged IIFE path to exercise the Android bundle.
 JVM tests additionally cover restart/lost-ack/disk-full recovery, full completion,
 history edits, export, altered-target rejection and protected Finish capacity.
 Android device acceptance and the APK integration milestone remain open.
+
+
+### Pinned exercise notes and setup (2026-11-02)
+
+Train and Focus Mode expose a pin icon and the same keyboard-aware editor. The
+issued workout retains the original exercise note, physical settings and
+canonical equipment field labels. Repeated appearances of a movement share its
+pinned details. Saved legacy setup fields remain visible and editable; clearing
+an old setting removes it from the next workout's fields. Unsupported legacy
+values and older issued rows stay untouched rather than becoming empty edits.
+
+Edits use independent, bounded format-7 journal operations, survive restart and
+retain retry identity without advancing working-set progress. Finish publishes
+the edits to canonical `exNotes`/`exSetup` together with history, using the same
+atomic owner. The native writer checks the original context, exact edit audit
+and complete resulting note/setup maps before retiring recovery. History
+corrections and validated exports retain the facts; subsequent workouts receive
+the saved details. The active recovery journal is not a backup export.
+
+Run `node android-native/engine-bridge/native-exercise-notes-test.mjs` for source
+scenarios, or pass the actual IIFE path. JVM scenarios cover lost acknowledgements,
+restart, stale edits, protected Finish capacity, completion retry, unauthorized
+map changes, corrections, backup and future workouts. Android interaction
+acceptance remains open; no APK is produced by these checks.

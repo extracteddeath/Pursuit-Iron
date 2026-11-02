@@ -48,7 +48,7 @@ applies to the rebuilt engine before it becomes the app's training authority.
 | Adaptive progression | Current engine supplies issued targets and re-reads corrections; integration/device acceptance remains open, with training-rule correctness assigned to the rebuild |
 | Workout logging | Working/extension and warm-up logging, original targets, active/saved corrections, recovery, completion and supported failed attempts have source/JVM scenarios; device acceptance remains open |
 | Session adjustments | Shortened sessions and confirmed affected-muscle skips/reductions are wired; full readiness/constraint coverage remains open |
-| Workout tools | Rest/focus/extensions/history and durable session notes have integrated paths; pinned notes/setup, plate/bar loading, substitution and superset workflows still need acceptance evidence |
+| Workout tools | Rest/focus/extensions/history, durable session notes and pinned exercise notes/setup have source/JVM paths; plate/bar loading, substitution, complete supersets and Android acceptance remain open |
 | Program builder | Native setup/review/save/restore covers generated programs. Existing saved plans support confirmed renames and day/movement ordering with preserved slot settings; advanced authoring controls still need integration coverage |
 | Custom programs | Inspection/reference contracts exist; first-class native authoring/edit/cycle parity remains open |
 | Adaptive cycles | Required scope is preserved; complete native cycle transitions and authorized adaptation remain open |
@@ -69,7 +69,7 @@ integrated system. Close the actual workflow gaps before the rebuild gate is met
 | --- | --- |
 | Data migration and recovery | Import preview -> explicit merge -> conflict/tombstone handling -> Undo; bring across existing web records/settings without changing IDs or facts; prove restore from exported data |
 | Programming | Advanced builder settings, adding/removing/swapping movements, first-class custom authoring, cycle transitions and explicit split/exercise adaptation; existing-plan rename/reorder saves are connected |
-| Live training | Pinned exercise notes/setup, plate and bar settings, equipment-aware substitutions, complete supersets and real readiness-driven changes; warm-up logging/correction is connected |
+| Live training | Plate and bar settings, equipment-aware substitutions, complete supersets and real readiness-driven changes; warm-up logging/correction and pinned exercise notes/setup are connected |
 | Insights | Real-data strength/volume/consistency/standards, bodyweight/measurements and milestones; correction-safe feedback |
 | Personal settings | Gyms/inventory/increments, complete preferences, profile/progress identity and cold restore |
 | Final acceptance | Complete journeys with real saved data on Android; rotation/background/process death, keyboard, TalkBack/large text, phone/foldable layouts and document providers; pin the accepted baseline and a recoverable copy |

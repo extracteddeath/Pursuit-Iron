@@ -5,6 +5,7 @@ import {
   lastDayPerf, effectiveRest, goalForDay, weeksOf, techniqueProtocolFromCell, oneShotDeloadFactor,
   planShorterSession,secondaryOf
 } from '../../modules/engine-api.js';
+import { pinnedExerciseContext } from './native-exercise-notes.mjs';
 import { inspectNativeProgram } from './native-onboarding.mjs';
 import { deriveReadOnlyProgramReference, matchesCurrentReadOnlyProgram } from './canonical-snapshot-reference.mjs';
 import { sha256Utf8, utf8ByteLength, equalJson } from './json-identity.mjs';
@@ -74,7 +75,7 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
       restSeconds:effectiveRest(goalForDay(program,day),ex,slot===day.primaryIndex,
         program.overrides?.[`${day.id}:${slot}`]?.rest || 0,1),
       superset:!program.config.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
-      previous:previousSets,sets};
+      previous:previousSets,sets,pinnedNote:pinnedExerciseContext(store,exerciseId)};
   }).filter(Boolean);
   const result=JSON.parse(JSON.stringify({format:shortened?2:1,source:NATIVE_WORKOUT_SOURCE,preparedOnly:true,persisted:false,
     inputStartSha256:sha256Utf8(startJson),session:{reference,workoutId:start.workoutId,dayId:day.id,
@@ -168,7 +169,8 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
   });
   ensure(equalJson(p.rows.map(({id,slot})=>({id,slot})),roster));
   for(const row of p.rows) {
-    ensure(exact(row,['id','slot','name','restSeconds','superset','previous','sets']) &&
+    ensure(exact(row,['id','slot','name','restSeconds','superset','previous','sets',...(Object.hasOwn(row,'pinnedNote')?['pinnedNote']:[])]) &&
+      (!Object.hasOwn(row,'pinnedNote') || equalJson(row.pinnedNote,pinnedExerciseContext(store,row.id))) &&
       row.name===EX_BY_ID[row.id]?.name && integer(row.restSeconds,0,3600) &&
       typeof row.superset==='boolean' && Array.isArray(row.previous) && row.previous.length<=20 &&
       Array.isArray(row.sets) && row.sets.length>=1 && row.sets.length<=40);

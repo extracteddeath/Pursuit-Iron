@@ -497,7 +497,7 @@ assert.ok(nativeDraftUi.includes('NativeProgramEditCodec.restoreWorkspace(verifi
 const sessionNoteSheet=fs.readFileSync(root+'NativeSessionNoteSheet.kt','utf8');
 const sessionNoteJournal=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/WorkoutJournalPersistence.kt','utf8');
 assert.ok(activity.includes('onSaveSessionNote=runtime::saveSessionNote') &&
-  shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup)') &&
+  shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote)') &&
   fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8').includes('NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote)') &&
   host.includes('recovery.recordNote(progress.plan.session,progress.journal.revision,note)') &&
   host.includes('restored?.journal?.note==note') &&
@@ -513,7 +513,7 @@ assert.ok(activity.includes('onSaveSessionNote=runtime::saveSessionNote') &&
 const warmupUi=fs.readFileSync(root+'NativeWarmupPanel.kt','utf8');
 const warmupDomain=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeWarmups.kt','utf8');
 assert.ok(activity.includes('onSaveWarmup=runtime::saveWarmup') &&
-  shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup)') &&
+  shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote)') &&
   train.includes('NativeWarmupPanel(progress,exercise,') &&
   warmupUi.includes('rememberSaveableStateHolder()') &&
   warmupUi.includes('Add warm-up') && warmupUi.includes('Retry warm-up save') &&
@@ -525,3 +525,19 @@ assert.ok(activity.includes('onSaveWarmup=runtime::saveWarmup') &&
   warmupDomain.includes('warmupIndex') &&
   !warmupUi.includes('commitAtomically') && !warmupUi.includes('prescribeSets('),
   'Warm-up facts must use their own durable positions, retained drafts, exact acknowledgements and shared controls');
+
+const pinnedUi=fs.readFileSync(root+'NativeExerciseNoteSheet.kt','utf8');
+const pinnedDomain=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeExerciseNotes.kt','utf8');
+assert.ok(activity.includes('onSaveExerciseNote=runtime::saveExerciseNote') &&
+  shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote)') &&
+  train.includes('NativeExerciseNotePolicy.resolved(plan,journal.exerciseNotes,exercise.id)') &&
+  train.includes('Icons.Outlined.PushPin') && train.includes('NativeExerciseNoteSheet(progress,exercise,') &&
+  pinnedUi.includes('NativeEditSheet(busy,onDismiss={close()},canDismiss=') &&
+  pinnedUi.includes('rememberSaveable(workoutId,exercise.id)') &&
+  pinnedUi.includes('prior?.operationId==operationId') && pinnedUi.includes('Discard pinned changes?') &&
+  host.includes('recovery.recordExerciseNote(progress.plan,progress.journal.revision,') &&
+  host.includes('restored?.journal?.exerciseNotes?.any {it==edit}') &&
+  sessionNoteJournal.includes('state.exerciseNotes.isNotEmpty() -> 7') &&
+  pinnedDomain.includes('verifyOrigin(') && pinnedDomain.includes('verifyPublication(') &&
+  !pinnedUi.includes('commitAtomically') && !pinnedDomain.includes('prescribeSets('),
+  'Pinned exercise facts must use verified contexts, shared edit controls, durable independent edits and exact acknowledgements in both workout modes');

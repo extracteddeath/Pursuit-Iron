@@ -27,6 +27,7 @@ run(node,['--check',bundle]);
 run(node,['android-native/engine-bridge/verify-bundle-structure.mjs',bundle,metadata,snapshot]);
 run(node,['android-native/engine-bridge/native-program-edit-test.mjs',bundle]);
 run(node,['android-native/engine-bridge/native-session-note-test.mjs',bundle]);
+run(node,['android-native/engine-bridge/native-exercise-notes-test.mjs',bundle]);
 run(node,['android-native/engine-bridge/native-warmups-test.mjs',bundle]);
 run(node,['android-native/engine-bridge/native-history-test.mjs',bundle]);
 run(node,['android-native/engine-bridge/native-history-observation-test.mjs',bundle]);

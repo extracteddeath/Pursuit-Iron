@@ -886,3 +886,47 @@ freshly verified Android IIFE proof pass. No APK was built. Custom/cycle
 programming, pinned notes/setup, loading/substitution/superset/readiness tools,
 insights/preferences, restore activation and Android device acceptance remain
 integration work before the engine rewrite.
+
+
+## 2026-11-02 — Pinned exercise notes and physical setup
+
+The actual Train and Focus Mode controls now include a pin icon, saved detail
+card and shared keyboard-aware note/setup editor below the exercise heading.
+Drafts and retry identities survive rotation; saving disables competing actions,
+closing protects unsaved changes and only an acknowledged operation dismisses
+the editor. Equipment fields and labels come from canonical
+`setupFieldsWithStored`; Kotlin does not infer exercise equipment. Stored orphan
+settings remain editable and an explicit clear carries into future workouts.
+
+New issued rows retain the exact original note/setup context. Unsupported legacy
+values and old rows without that context remain readable and cannot be silently
+overwritten through an empty editor. Note edits are per exercise ID, so repeated
+slots share the same pinned details while retaining independent set identities.
+
+The private format-7 journal retains ordered, per-exercise replacement operations
+with bounded text/setup and independent clocks. Working revisions, target values,
+completion counters, warm-ups and session notes remain separate. Exact retries
+recover the prior operation; stale revisions, replacement IDs, collisions,
+invalid text/fields and edits after Finish are rejected. Edits reserve enough
+bytes to log every remaining set and Finish. Formats 2–6 remain readable.
+
+Finish applies the recorded note/setup edits to canonical `exNotes`/`exSetup` in
+the same publication as workout history. The completed entry retains the full
+`nativeExerciseNotes` audit. The native owner independently checks the base facts,
+exact audit and complete resulting maps, including unchanged unrelated exercise
+entries, before committing or retiring recovery. A lost completion acknowledgement
+recovers the one existing publication. Saved history corrections retain the
+audit and pinned details; validated export and the next workout retain the
+final saved values. Active journal edits are exported after completion, not as
+part of a saved-data-only backup during a workout.
+
+Verification: 198 domain JVM tests and 37 actual packaged-runtime JVM tests pass
+with zero failures or skips. Source and freshly built Android IIFE scenarios
+cover repeated lifts, legacy fields, clear operations, exact retries, wrong
+contexts, corrections and unchanged training facts. Runtime scenarios cover
+restart, lost save/completion acknowledgements, unauthorized candidate changes,
+backup and the next issued workout. The complete source-contract suite, Compose
+Kotlin compilation and instrumentation-source compilation pass. No APK was built
+and no training formulas were rewritten. Remaining integration includes advanced
+custom/cycle programming, loading/substitution/superset/readiness tools,
+insights/preferences, restore activation and Android device acceptance.

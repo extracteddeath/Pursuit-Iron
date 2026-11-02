@@ -440,7 +440,9 @@ class CanonicalWorkoutStorePersistence(
             return@synchronized null
         }
         val restored=checkNotNull(journal.begin(pending.session,pending.slots,pending.startRevision,plan.tracksWarmups))
-        require(restored.session==plan.session && restored.slots==plan.slots && NativeWarmupPolicy.matchesPlan(plan,restored.warmupEvents))
+        require(restored.session==plan.session && restored.slots==plan.slots && NativeWarmupPolicy.matchesPlan(plan,restored.warmupEvents) &&
+            NativeExerciseNotePolicy.matchesPlan(plan,restored.exerciseNotes))
+        NativeExerciseNoteCodec.verifyOrigin(plan,pending.origin)
         NativeWorkoutProgress(plan,restored)
     }
 
@@ -649,6 +651,9 @@ class CanonicalWorkoutStorePersistence(
             require(NativeWarmupPolicy.matchesPlan(plan,journal.warmupEvents) &&
                 equivalent(entry.getJSONObject("nativeWarmups"),NativeWarmupHistoryCodec.issuedFacts(plan,journal.warmupEvents)))
         } else require(!entry.has("nativeWarmups"))
+        if(pending.issuedWorkout!=null)NativeExerciseNoteCodec.verifyPublication(
+            NativeWorkoutCodec.readIssued(pending.issuedWorkout),pending.origin,candidate,entry,journal.exerciseNotes)
+        else require(journal.exerciseNotes.isEmpty() && !entry.has("nativeExerciseNotes"))
         val identity=entry.getJSONObject("nativeCompletion")
         exact(identity,"format","handoffSha256","sourceSnapshotSha256","journalRevision")
         require(number(identity,"format")==2L && number(identity,"journalRevision")==journal.revision &&

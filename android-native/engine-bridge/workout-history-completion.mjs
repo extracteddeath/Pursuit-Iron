@@ -1,3 +1,4 @@
+import { pinnedExerciseEdits,applyPinnedExerciseEdits } from './native-exercise-notes.mjs';
 import { nativeWarmupFacts } from './native-warmups.mjs';
 import { readNativeSessionNote } from './native-session-note.mjs';
 /**
@@ -48,8 +49,8 @@ function storeFrom(raw) {
 function finishedJournal(raw) {
   ensure(typeof raw === 'string' && utf8ByteLength(raw) <= 256 * 1024);
   const j = JSON.parse(raw);
-  ensure(exact(j, ['format','session','slots','startRevision','events','finish',...(j.format>=5?['note']:[]),...(j.format===6?['warmups']:[])]) &&
-    [2,3,4,5,6].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
+  ensure(exact(j, ['format','session','slots','startRevision','events','finish',...(j.format>=5?['note']:[]),...(j.format>=6?['warmups']:[]),...(j.format===7?['exerciseNotes']:[])]) &&
+    [2,3,4,5,6,7].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
   const s = j.session;
   ensure(exact(s, ['reference','workoutId','dayId','weekIndex','unit','startedAt']) &&
     validId(s.workoutId) && validId(s.dayId) && integer(s.weekIndex, 1, 104) &&
@@ -104,7 +105,7 @@ function finishedJournal(raw) {
     f.fromRevision === j.startRevision + j.events.length &&
     f.toRevision === f.fromRevision + 1 && integer(f.completedAt, s.startedAt, MAX_DATE) &&
     integer(f.durationMs, 0, f.completedAt - s.startedAt));
-  if(j.format===5 || j.format===6 && j.note!==null) {
+  if(j.format===5 || j.format>=6 && j.note!==null) {
     readNativeSessionNote(j.note,s.startedAt,f.completedAt);
     ensure(!operations.has(j.note.operationId) && j.note.operationId!==f.operationId);
   }
@@ -260,7 +261,8 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
     ...(journal.events.some(e=>e.replacesOperationId!=null || e.adjustment!=null) ? {nativeSetRevisions:{format:1,startRevision:journal.startRevision,
       events:journal.events,finish:journal.finish}} : {}),
     ...(journal.note?{nativeSessionNote:journal.note}:{}),
-    ...(journal.format===6?{nativeWarmups:nativeWarmupFacts(issued,journal)}:{}),
+    ...(journal.format>=6?{nativeWarmups:nativeWarmupFacts(issued,journal)}:{}),
+    ...(journal.format===7?{nativeExerciseNotes:{format:1,edits:pinnedExerciseEdits(issued,journal)}}:{}),
     nativeCompletion:{format:2, handoffSha256,
       sourceSnapshotSha256:s.reference.snapshotSha256, journalRevision:f.toRevision}
   };
@@ -313,9 +315,10 @@ export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw
       ensure(issued || !Object.keys(program.deloadNext || {}).length);
       const completedProgram=consumeOneShotDeload(program,entry.perf,entry.updatedAt);
       const saved=current.saved.map(p=>p.id===program.id ? completedProgram : p);
-      const next = mergeStores(current, {...current,
+      const merged = mergeStores(current, {...current,
         savedAt:Math.max(current.savedAt, entry.updatedAt,completedProgram.updatedAt || 0),
         saved,history:[entry]}).data;
+      const next=journal.format===7?applyPinnedExerciseEdits(merged,pinnedExerciseEdits(issued?.plan,journal)):merged;
       ensure(equalJson(next.saved,JSON.parse(JSON.stringify(saved))));
       // Canonical history limits must not silently discard old workouts here.
       ensure(next.history.length === current.history.length + 1 &&

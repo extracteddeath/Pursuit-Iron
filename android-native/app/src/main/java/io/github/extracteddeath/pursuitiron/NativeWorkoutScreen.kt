@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -25,7 +26,8 @@ internal fun NativeWorkoutScreen(
     onSkipAffectedMuscle: (String)->Unit = {},
     onReduceAffectedMuscle: (String)->Unit = {},
     onSaveSessionNote: (String)->Unit = {},
-    onSaveWarmup: (JournalWarmupIntent)->Unit = {}
+    onSaveWarmup: (JournalWarmupIntent)->Unit = {},
+    onSaveExerciseNote: (JournalExerciseNote)->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -214,17 +216,38 @@ internal fun NativeWorkoutScreen(
             dismissButton={TextButton(onClick={showSkipExercise=false}) { Text("Keep training") }}
         )
     }
+    val pinnedNote=NativeExerciseNotePolicy.resolved(plan,journal.exerciseNotes,exercise.id)
+    var showPinnedNote by rememberSaveable(plan.session.workoutId,exercise.id) {mutableStateOf(false)}
+    if(showPinnedNote)NativeExerciseNoteSheet(progress,exercise,state.workoutBusy || state.historyBusy,
+        state.exerciseNoteError,onSaveExerciseNote) {showPinnedNote=false}
     if(showNote)NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote) {showNote=false}
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         IconButton(onClick={showNote=true},enabled=!journal.isFinished && !state.workoutBusy) {
             Icon(Icons.Outlined.Edit,contentDescription=if(journal.note?.text.isNullOrEmpty())"Add session note" else "Edit session note",
                 tint=if(journal.note?.text.isNullOrEmpty())MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
         }
+        if(pinnedNote!=null)IconButton(onClick={showPinnedNote=true},
+            enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy) {
+            Icon(Icons.Outlined.PushPin,contentDescription="Edit pinned note and setup for ${exercise.name}",
+                tint=if(pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})
+                    MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})
         FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
         Spacer(Modifier.weight(1f))
         FilterChip(selected=focusMode,onClick={focusMode=!focusMode},
             label={Text(if(focusMode)"Show all" else "Focus")})
+    }
+    if(pinnedNote!=null && (pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})) {
+        OutlinedCard(onClick={showPinnedNote=true},enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy,
+            modifier=Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                val setup=pinnedNote.fields.mapNotNull {field->pinnedNote.setup[field.key]?.takeIf {it.isNotEmpty()}
+                    ?.let {"${field.label} $it"}}.joinToString(" · ")
+                if(setup.isNotEmpty())Text(setup,style=MaterialTheme.typography.labelMedium)
+                if(pinnedNote.text.isNotEmpty())Text(pinnedNote.text,style=MaterialTheme.typography.bodyMedium)
+            }
+        }
     }
     // Focus is a projection of the same durable set journal, never a
     // different logger. It advances only after an acknowledged set receipt.

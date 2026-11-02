@@ -172,6 +172,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         state.revision - state.events.size.toLong() - if (state.isFinished) 1L else 0L
 
     private fun format(state: WorkoutJournalState)=when {
+        state.exerciseNotes.isNotEmpty() -> 7
         state.tracksWarmups -> 6
         state.note!=null -> 5
         state.events.any { it.intent.adjustment!=null } -> 4
@@ -189,7 +190,8 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             .put("finish",finishJson(state.finish))
             .apply {
                 if(format(state)>=5)put("note",state.note?.let {JournalSessionNoteCodec.json(it)} ?: JSONObject.NULL)
-                if(format(state)==6)put("warmups",JSONArray().apply {state.warmupEvents.forEach {put(NativeWarmupCodec.json(it))}})
+                if(format(state)>=6)put("warmups",JSONArray().apply {state.warmupEvents.forEach {put(NativeWarmupCodec.json(it))}})
+                if(format(state)==7)put("exerciseNotes",JSONArray().apply {state.exerciseNotes.forEach {put(NativeExerciseNoteCodec.json(it))}})
             }
 
     private fun encode(state: WorkoutJournalState): ByteArray {
@@ -213,7 +215,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         require(source.size in 1..MAX_JOURNAL_BYTES)
         val envelope=JSONObject(String(source,StandardCharsets.UTF_8))
         exact(envelope,"format","payload","sha256")
-        val version=number(envelope,"format").also { require(it in 2L..6L) }.toInt()
+        val version=number(envelope,"format").also { require(it in 2L..7L) }.toInt()
         val payload = text(envelope,"payload")
         val digest = text(envelope,"sha256")
         val actual = sha(payload.toByteArray(StandardCharsets.UTF_8))
@@ -225,7 +227,8 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         val data=JSONObject(payload)
         exact(data,"format","session","slots","startRevision","events","finish",
             *(if(version>=5)arrayOf("note") else emptyArray()),
-            *(if(version==6)arrayOf("warmups") else emptyArray()))
+            *(if(version>=6)arrayOf("warmups") else emptyArray()),
+            *(if(version==7)arrayOf("exerciseNotes") else emptyArray()))
         require(number(data,"format") == version.toLong())
         val key=readKey(data.getJSONObject("session"))
         val slotsJson=data.getJSONArray("slots")
@@ -237,7 +240,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         for (index in 0 until events.length()) {
             val raw=events.getJSONObject(index)
             when(version) {
-                4,5,6 -> exact(raw,"operationId","slot","disposition","values",
+                4,5,6,7 -> exact(raw,"operationId","slot","disposition","values",
                     "fromRevision","toRevision","replacesOperationId","adjustment")
                 3 -> exact(raw,"operationId","slot","disposition","values",
                     "fromRevision","toRevision","replacesOperationId")
@@ -261,7 +264,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             require(state.events.none { it.intent.operationId==note.operationId })
             state=WorkoutJournalState(state.session,state.slots,state.revision,state.completed,state.finish,state.events,note)
         }
-        if(version==6) {
+        if(version>=6) {
             val list=data.getJSONArray("warmups");require(list.length() in 0..NativeWarmupPolicy.MAX_EVENTS)
             var events: List<JournalWarmupIntent> = emptyList()
             for(i in 0 until list.length()) {
@@ -270,6 +273,18 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
                 events=checkNotNull(NativeWarmupPolicy.append(key,events,e))
             }
             state=WorkoutJournalState(state.session,state.slots,state.revision,state.completed,state.finish,state.events,state.note,events,true)
+        }
+        if(version==7) {
+            val list=data.getJSONArray("exerciseNotes");require(list.length() in 1..NativeExerciseNotePolicy.MAX_EVENTS)
+            var edits: List<JournalExerciseNote> = emptyList()
+            for(i in 0 until list.length()) {
+                val edit=NativeExerciseNoteCodec.read(list.getJSONObject(i),key)
+                require(state.events.none {it.intent.operationId==edit.operationId} && state.note?.operationId!=edit.operationId &&
+                    state.warmupEvents.none {it.operationId==edit.operationId})
+                edits=checkNotNull(NativeExerciseNotePolicy.append(key,edits,edit))
+            }
+            state=WorkoutJournalState(state.session,state.slots,state.revision,state.completed,state.finish,state.events,
+                state.note,state.warmupEvents,state.tracksWarmups,edits)
         }
         require(format(state)==version)
         if (!data.isNull("finish")) {
@@ -381,9 +396,9 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             if(current.revision!=expectedRevision || note.replacesOperationId!=current.note?.operationId ||
                 current.note?.let { note.updatedAt<=it.updatedAt }==true ||
                 current.events.any { it.intent.operationId==note.operationId } ||
-                current.warmupEvents.any {it.operationId==note.operationId})return@synchronized null
+                current.warmupEvents.any {it.operationId==note.operationId} || current.exerciseNotes.any {it.operationId==note.operationId})return@synchronized null
             val next=WorkoutJournalState(current.session,current.slots,current.revision,current.completed,
-                current.finish,current.events,note,current.warmupEvents,current.tracksWarmups)
+                current.finish,current.events,note,current.warmupEvents,current.tracksWarmups,current.exerciseNotes)
             if(!hasFinishCapacity(next))return@synchronized null
             save(next)
             next
@@ -397,12 +412,32 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         val replay=current.warmupEvents.firstOrNull {it.operationId==intent.operationId}
         if(replay!=null)return@synchronized if(replay==intent)current else null
         if(current.revision!=expectedRevision || current.warmupEvents.size!=expectedWarmupRevision ||
-            current.events.any {it.intent.operationId==intent.operationId} || current.note?.operationId==intent.operationId)
+            current.events.any {it.intent.operationId==intent.operationId} || current.note?.operationId==intent.operationId || current.exerciseNotes.any {it.operationId==intent.operationId})
             return@synchronized null
         val events=NativeWarmupPolicy.append(current.session,current.warmupEvents,intent) ?: return@synchronized null
         if(!NativeWarmupPolicy.matchesPlan(plan,events))return@synchronized null
         val next=WorkoutJournalState(current.session,current.slots,current.revision,current.completed,current.finish,
-            current.events,current.note,events)
+            current.events,current.note,events,true,current.exerciseNotes)
+        if(!hasFinishCapacity(next))return@synchronized null
+        save(next)
+        next
+    }
+
+    /** Atomic pinned-note edits share recovery, with independent per-exercise replacement identities. */
+    fun recordExerciseNote(plan: NativeWorkoutPlan,expectedRevision: Long,expectedEditCount: Int,
+        edit: JournalExerciseNote): WorkoutJournalState? = synchronized(guard) {
+        val current=readOwned() ?: return@synchronized null
+        if(current.session!=plan.session || current.slots!=plan.slots || current.isFinished || !plan.tracksWarmups)
+            return@synchronized null
+        val replay=current.exerciseNotes.firstOrNull {it.operationId==edit.operationId}
+        if(replay!=null)return@synchronized if(replay==edit)current else null
+        if(current.revision!=expectedRevision || current.exerciseNotes.size!=expectedEditCount ||
+            current.events.any {it.intent.operationId==edit.operationId} || current.note?.operationId==edit.operationId ||
+            current.warmupEvents.any {it.operationId==edit.operationId})return@synchronized null
+        val edits=NativeExerciseNotePolicy.append(current.session,current.exerciseNotes,edit) ?: return@synchronized null
+        if(!NativeExerciseNotePolicy.matchesPlan(plan,edits))return@synchronized null
+        val next=WorkoutJournalState(current.session,current.slots,current.revision,current.completed,current.finish,
+            current.events,current.note,current.warmupEvents,true,edits)
         if(!hasFinishCapacity(next))return@synchronized null
         save(next)
         next

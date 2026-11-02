@@ -64,7 +64,7 @@ export function readNativeWarmups(facts,unit,startedAt,until,excludedOperations=
 }
 
 export function nativeWarmupFacts(issued,journal) {
-  ensure(issued && journal.format===6 && Array.isArray(journal.warmups) && (journal.warmups.length>0 || issued.warmupLogging===true));
+  ensure(issued && journal.format>=6 && Array.isArray(journal.warmups) && (journal.warmups.length>0 || issued.warmupLogging===true));
   const facts={format:1,exercises:issued.rows.map(row=>({exerciseIndex:row.slot,exerciseId:row.id,
     name:row.name,targets:row.sets.filter(set=>set.warm)})),events:journal.warmups};
   readNativeWarmups(facts,journal.session.unit,journal.session.startedAt,journal.finish.completedAt,

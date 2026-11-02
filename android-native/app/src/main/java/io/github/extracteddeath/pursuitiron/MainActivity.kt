@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
                     onFinishWorkout=runtime::finishWorkout,
                     onSaveSessionNote=runtime::saveSessionNote,
                     onSaveWarmup=runtime::saveWarmup,
+                    onSaveExerciseNote=runtime::saveExerciseNote,
                     onCorrectHistory=runtime::correctHistory,
                     onReloadHistory=runtime::reloadHistory,
                     onOpenHistory=runtime::openHistory,

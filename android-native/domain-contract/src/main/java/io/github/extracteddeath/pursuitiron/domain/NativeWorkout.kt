@@ -13,7 +13,7 @@ data class NativeWorkoutSet(
 data class NativeWorkoutExercise(
     val index: Int,val id: String,val name: String,val restSeconds: Int,
     val superset: Boolean,val warmups: List<String>,val sets: List<NativeWorkoutSet>,
-    val warmupTargets: List<NativeWarmupTarget> = emptyList()
+    val warmupTargets: List<NativeWarmupTarget> = emptyList(),val pinnedNote: NativePinnedNote?=null
 )
 class NativeWorkoutPlan internal constructor(
     val issuedJson: String,val session: JournalSessionKey,val programName: String,
@@ -73,6 +73,7 @@ object NativeWorkoutCodec {
             plan.session.programRevision.programId==wire.text(start,"programId") &&
             plan.session.workoutId==wire.text(start,"workoutId") && plan.session.startedAt==wire.integer(start,"startedAt") &&
             (plan.shortenedMinutes?.toLong()==if(start.has("minutes"))wire.integer(start,"minutes") else null))
+        NativeExerciseNoteCodec.verifyOrigin(plan,snapshot)
         return plan
     }
     /** Only private checksummed pending storage calls this on recovery. */
@@ -107,7 +108,8 @@ object NativeWorkoutCodec {
         val rows=v.getJSONArray("rows");require(rows.length() in 1..48)
         val exercises=(0 until rows.length()).map { i->
             val row=rows.getJSONObject(i)
-            wire.exact(row,"id","slot","name","restSeconds","superset","previous","sets")
+            wire.exact(row,"id","slot","name","restSeconds","superset","previous","sets",
+                *(if(row.has("pinnedNote"))arrayOf("pinnedNote") else emptyArray()))
             val index=wire.integer(row,"slot");val rest=wire.integer(row,"restSeconds")
             val exerciseId=wire.text(row,"id");val name=wire.text(row,"name")
             require(index in 0..47 && rest in 0..3600 && name.length in 1..200 && row.get("superset") is Boolean)
@@ -166,7 +168,8 @@ object NativeWorkoutCodec {
             }
             require(mainOrdinal in 1..20 && work.size in 1..20)
             NativeWorkoutExercise(index.toInt(),exerciseId,name,rest.toInt(),row.getBoolean("superset"),
-                Collections.unmodifiableList(warmups),Collections.unmodifiableList(work),Collections.unmodifiableList(warmupTargets))
+                Collections.unmodifiableList(warmups),Collections.unmodifiableList(work),Collections.unmodifiableList(warmupTargets),
+                if(!row.has("pinnedNote") || row.isNull("pinnedNote"))null else NativeExerciseNoteCodec.readContext(row.getJSONObject("pinnedNote")))
         }
         val name=wire.text(v,"programName");val label=wire.text(v,"dayLabel")
         require(name.length in 1..200 && label.length in 1..200 && exercises.map { it.index }.distinct().size==exercises.size)

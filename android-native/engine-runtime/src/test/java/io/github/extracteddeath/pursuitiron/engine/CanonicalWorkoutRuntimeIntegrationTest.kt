@@ -319,6 +319,122 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=120000) fun pinnedExerciseFactsRecoverPublishOnceAndCarryThroughHistoryBackupAndNextWorkout() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Pinned exercise facts",unit="kg"),"pinned-create","pinned-program",1000,223)))
+            val source=JSONObject(proposal.snapshot);val program=source.getJSONArray("saved").getJSONObject(0)
+            val days=program.getJSONArray("days");val exerciseId=days.getJSONObject(0).getJSONArray("exercises").getString(0)
+            for(i in 0 until days.length()) {
+                days.getJSONObject(i).getJSONArray("exercises").put(0,exerciseId).put(1,exerciseId)
+            }
+            source.put("exNotes",JSONObject().put(exerciseId,"Old cue").put("unrelated","Keep this note"))
+                .put("exSetup",JSONObject().put(exerciseId,JSONObject().put("oldMachine","7"))
+                    .put("unrelated",JSONObject().put("seat","9")))
+            val origin=source.toString();val drive=Drive();val recovery=Drive()
+            var owner=CanonicalWorkoutStorePersistence(drive,engine);var journal=WorkoutJournalPersistence(recovery)
+            assertTrue(owner.initialize(origin))
+            val plan=checkNotNull(engine.prepareWorkout(origin,NativeWorkoutCodec.startJson("pinned-program","pinned-workout",2000)))
+            assertTrue(plan.exercises.count {it.id==exerciseId}>=2)
+            val row=plan.exercises.first();assertEquals("Old cue",row.pinnedNote?.text)
+            assertTrue(checkNotNull(row.pinnedNote).fields.any {it.key=="oldMachine" && it.orphan})
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            val first=JournalExerciseNote("pinned-first",exerciseId,"Pause on chest 🏋️",mapOf("oldMachine" to "8"),2500)
+            recovery.failAfterWrite=true
+            assertTrue(runCatching {journal.recordExerciseNote(plan,0,0,first)}.isFailure)
+            recovery.failAfterWrite=false;owner=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            progress=checkNotNull(owner.recoverIssuedSession(journal));assertEquals(listOf(first),progress.journal.exerciseNotes)
+            assertEquals(plan.issuedJson,progress.plan.issuedJson);assertEquals(0L,progress.journal.revision)
+            val recoveryWrites=recovery.writes
+            assertNotNull(journal.recordExerciseNote(plan,0,0,first));assertEquals(recoveryWrites,recovery.writes)
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordNote(plan.session,0,
+                JournalSessionNote("pinned-session-note","Only this session",3000))))
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordWarmup(plan,0,0,
+                JournalWarmupIntent("pinned-warmup",JournalWarmupSlot(row.index,row.warmupTargets.size,row.id),
+                    JournalSetDisposition.COMPLETED,JournalSetValues("20","kg",5,null),3100))))
+            for((i,slot) in plan.slots.withIndex())progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(
+                plan.session,progress.journal.revision,JournalSetIntent("pinned-working-$i",slot,
+                    if(i==0)JournalSetDisposition.COMPLETED else JournalSetDisposition.SKIPPED,
+                    if(i==0)JournalSetValues("40","kg",6,2) else null))))
+            val final=JournalExerciseNote("pinned-final",exerciseId,"Final cue\nWrists stacked.",emptyMap(),4000,first.operationId)
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordExerciseNote(plan,progress.journal.revision,1,final)))
+            assertEquals(plan.slots.size.toLong(),progress.journal.revision)
+            assertEquals(final.text,NativeExerciseNotePolicy.resolved(plan,progress.journal.exerciseNotes,exerciseId)?.text)
+            // The canonical snapshot remains pinned until history and the exercise edits publish together.
+            assertEquals(origin,String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+            val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,JournalFinishIntent("pinned-finish",62000,60000)))
+            drive.failAfterWrite=true
+            assertTrue(runCatching {owner.complete(plan.session,finished.revision,journal)}.isFailure)
+            drive.failAfterWrite=false;owner=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            assertNotNull(owner.recoverIssuedSession(journal))
+            assertTrue(checkNotNull(owner.complete(plan.session,finished.revision,journal)).recoveryCleared)
+            assertNull(journal.recover())
+            val saved=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8);val savedStore=JSONObject(saved)
+            assertEquals(final.text,savedStore.getJSONObject("exNotes").getString(exerciseId))
+            assertEquals("Keep this note",savedStore.getJSONObject("exNotes").getString("unrelated"))
+            assertEquals(0,savedStore.getJSONObject("exSetup").getJSONObject(exerciseId).length())
+            assertEquals("9",savedStore.getJSONObject("exSetup").getJSONObject("unrelated").getString("seat"))
+            assertEquals(1,savedStore.getJSONArray("history").length())
+            assertEquals(2,savedStore.getJSONArray("history").getJSONObject(0).getJSONObject("nativeExerciseNotes").getJSONArray("edits").length())
+            val history=checkNotNull(engine.inspectHistory(saved,plan.session.workoutId))
+            assertEquals(1,history.setsDone);assertEquals(240L,history.volume);assertEquals("Only this session",history.sessionNote)
+            val working=checkNotNull(history.editRows).first {it.retained}
+            assertNotNull(owner.correctHistory(NativeHistoryObservationCodec.correctionJson(history,"pinned-history-correction",63000,
+                listOf(NativeHistoryObservationChange(working.slot,JournalSetDisposition.COMPLETED,JournalSetValues("45","kg",6,2))))))
+            val document=BackupDocument();assertNotNull(NativeBackupExporter(owner,engine).export(document))
+            val exported=JSONObject(String(document.output.toByteArray(),Charsets.UTF_8))
+            assertEquals(final.text,exported.getJSONObject("exNotes").getString(exerciseId))
+            assertEquals(2,exported.getJSONArray("history").getJSONObject(0).getJSONObject("nativeExerciseNotes").getJSONArray("edits").length())
+            val nextSnapshot=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val next=checkNotNull(engine.prepareWorkout(nextSnapshot,NativeWorkoutCodec.startJson("pinned-program","pinned-next",64000)))
+            val nextRow=next.exercises.first {it.id==exerciseId}
+            assertEquals(final.text,nextRow.pinnedNote?.text);assertTrue(checkNotNull(nextRow.pinnedNote).setup.isEmpty())
+            assertFalse(checkNotNull(nextRow.pinnedNote).fields.any {it.key=="oldMachine"})
+            assertTrue(checkNotNull(owner.beginIssuedSession(next,journal)).journal.exerciseNotes.isEmpty())
+        } }
+    }
+
+    @Test(timeout=120000) fun unauthorizedPinnedMapChangesOrMissingAuditNeverRetireRecovery() {
+        NodeTransport().use { node -> runBlocking {
+            val real=SandboxCanonicalWorkoutStoreEngine(node)
+            for(mode in listOf("unrelated-note","unrelated-setup","changed-value","missing-audit")) {
+                val forged=object: PinnedCanonicalWorkoutStoreEngine by real,NativeWorkoutEngine by real {
+                    override suspend fun prepareIssuedCompletion(origin: String,current: String,journal: String,issued: String): String? {
+                        val response=JSONObject(checkNotNull(real.prepareIssuedCompletion(origin,current,journal,issued)))
+                        val entry=response.getJSONObject("historyEntry");val candidate=JSONObject(response.getString("candidateSnapshot"))
+                        when(mode) {
+                            "unrelated-note"->candidate.getJSONObject("exNotes").put("unrelated","Forged")
+                            "unrelated-setup"->candidate.getJSONObject("exSetup").put("unrelated",JSONObject().put("seat","99"))
+                            "changed-value"->candidate.getJSONObject("exNotes").put(entry.getJSONObject("nativeExerciseNotes")
+                                .getJSONArray("edits").getJSONObject(0).getString("exerciseId"),"Forged")
+                            else->entry.remove("nativeExerciseNotes")
+                        }
+                        candidate.getJSONArray("history").put(0,entry)
+                        val text=candidate.toString();response.put("candidateSnapshot",text).put("candidateSnapshotSha256",sha(text))
+                        return response.toString()
+                    }
+                }
+                val proposal=checkNotNull(real.prepareProgram(NativeProgramSetupCodec.setupJson(
+                    NativeProgramProfile(),"bad-pinned-create","bad-pinned-program",1000,223)))
+                val drive=Drive();val recovery=Drive();var owner=CanonicalWorkoutStorePersistence(drive,forged)
+                val journal=WorkoutJournalPersistence(recovery);assertTrue(owner.initialize(proposal.snapshot))
+                val plan=checkNotNull(real.prepareWorkout(proposal.snapshot,NativeWorkoutCodec.startJson("bad-pinned-program","bad-pinned-workout",2000)))
+                owner.beginIssuedSession(plan,journal)
+                var state=checkNotNull(journal.recordExerciseNote(plan,0,0,
+                    JournalExerciseNote("bad-pinned-edit",plan.exercises.first().id,"Only this exercise",emptyMap(),2500)))
+                for((i,slot) in plan.slots.withIndex())state=checkNotNull(journal.recordSet(plan.session,state.revision,
+                    JournalSetIntent("bad-pinned-work-$i",slot,JournalSetDisposition.SKIPPED,null)))
+                state=checkNotNull(journal.finish(plan.session,state.revision,JournalFinishIntent("bad-pinned-finish",62000,60000)))
+                val writes=drive.writes
+                assertTrue(mode,runCatching {owner.complete(plan.session,state.revision,journal)}.isFailure)
+                assertEquals(writes,drive.writes);assertTrue(checkNotNull(journal.recover()).isFinished)
+                owner=CanonicalWorkoutStorePersistence(drive,real)
+                assertTrue(checkNotNull(owner.complete(plan.session,state.revision,journal)).recoveryCleared)
+            }
+        } }
+    }
+
     @Test(timeout=120000) fun actualWarmupsKeepTargetsAndFactsThroughRecoveryHistoryCorrectionAndExportWithoutWorkingCredit() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

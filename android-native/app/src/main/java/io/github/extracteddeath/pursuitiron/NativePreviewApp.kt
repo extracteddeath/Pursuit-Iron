@@ -65,6 +65,7 @@ import io.github.extracteddeath.pursuitiron.domain.JournalSetSlot
 import io.github.extracteddeath.pursuitiron.domain.JournalSetDisposition
 import io.github.extracteddeath.pursuitiron.domain.JournalSetValues
 import io.github.extracteddeath.pursuitiron.domain.JournalWarmupIntent
+import io.github.extracteddeath.pursuitiron.domain.JournalExerciseNote
 import io.github.extracteddeath.pursuitiron.domain.JournalSetIntent
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.key
@@ -103,6 +104,7 @@ internal fun NativePreviewApp(
     onFinishWorkout: ()->Unit = {},
     onSaveSessionNote: (String)->Unit = {},
     onSaveWarmup: (JournalWarmupIntent)->Unit = {},
+    onSaveExerciseNote: (JournalExerciseNote)->Unit = {},
     onCorrectHistory: (String)->Unit = {},
     onReloadHistory: ()->Unit = {},
     onOpenHistory: (String)->Unit = {},
@@ -239,7 +241,7 @@ internal fun NativePreviewApp(
                                     previewShorterSession=onPreviewShortSession,
                                     startShortWorkout=onStartShortWorkout)
                                 NativeDestination.TRAIN -> if(onboarding?.saved!=null && selectedTrainingDay==null)
-                                    NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet,onSkipExercise,onInspectMuscles,onSkipAffectedMuscle,onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup)
+                                    NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet,onSkipExercise,onInspectMuscles,onSkipAffectedMuscle,onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote)
                                 else TrainScreen(
                                     openTools = { sheet = 3 },
                                     syntheticOutlineReader = syntheticOutlineReader,

@@ -42,6 +42,7 @@ internal fun NativeProgramDraftEditor(
     saveError: String?,
     onSave: (NativeProgramEditDraft)->Unit,
     lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,CanonicalExercise>?,
+    lookupAlternatives: suspend (ReadOnlyProgramReference,String,List<String>) -> List<CanonicalExercise>?,
     onClose: () -> Unit
 ) {
     var confirmSave by remember { mutableStateOf(false) }
@@ -71,18 +72,19 @@ internal fun NativeProgramDraftEditor(
     }
     var catalog by remember(approved.reference) { mutableStateOf<Map<String,CanonicalExercise>>(emptyMap()) }
     val names=catalog.mapValues { it.value.name }
-    val catalogCandidates=approved.days.flatMap { it.exerciseIds }.distinct().mapNotNull { catalog[it] }
-    fun compatibleCandidates(dayIds: List<String>,oldId: String): List<CanonicalExercise> {
-        val source=catalog[oldId] ?: return emptyList()
-        return catalogCandidates.filter { ex ->
-            ex.id!=oldId && ex.id !in dayIds && ex.muscleGroup==source.muscleGroup &&
-                ex.type==source.type &&
-                (ex.movementPattern==null || source.movementPattern==null ||
-                    ex.movementPattern==source.movementPattern)
-        }.sortedBy { it.name }.take(8)
+    var alternatives by remember(approved.reference) { mutableStateOf<List<CanonicalExercise>?>(null) }
+    LaunchedEffect(pendingReplacement,approved.reference) {
+        alternatives=null
+        val (dayId,index)=pendingReplacement ?: return@LaunchedEffect
+        val day=draft.days.firstOrNull { it.id==dayId } ?: return@LaunchedEffect
+        val id=day.exerciseIds.getOrNull(index) ?: return@LaunchedEffect
+        alternatives=try { lookupAlternatives(approved.reference,id,day.exerciseIds) }
+            catch(cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch(_: Exception) { null }
     }
-    LaunchedEffect(approved.reference) {
-        val ids=approved.days.flatMap { it.exerciseIds }.distinct()
+    LaunchedEffect(approved.reference,draft.replacement?.exerciseId) {
+        val ids=(approved.days.flatMap { it.exerciseIds }+
+            listOfNotNull(draft.replacement?.exerciseId)).distinct()
         if(ids.isNotEmpty()) {
             catalog=try { lookupNames(approved.reference,ids).orEmpty() }
                 catch(cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
@@ -100,7 +102,7 @@ internal fun NativeProgramDraftEditor(
     SectionLabel("Program editor", if(saving) "Saving changes…" else "Review and save your changes")
     PursuitCard(highlighted=true) {
         Text("Organize your existing training days",style=MaterialTheme.typography.titleLarge)
-        Text("Organize movements or replace one accessory with a compatible exercise already in this program. A replacement starts without the previous exercise's progression.",
+        Text("Organize movements or replace one accessory using matching exercises from the canonical library. The previous movement's loads and progression are not transferred.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(draft.replacement!=null) Text("Replacement selected: review or reset before making another change.",
@@ -186,8 +188,7 @@ internal fun NativeProgramDraftEditor(
                     ) { Text("Remove") }
                     OutlinedButton(
                         onClick={pendingReplacement=day.id to index},
-                        enabled=allowEditing && !saving && !draft.isChanged && index>0 &&
-                            compatibleCandidates(day.exerciseIds,id).isNotEmpty()
+                        enabled=allowEditing && !saving && !draft.isChanged && index>0
                     ) { Text("Replace") }
                 }
                 if(index<day.exerciseIds.lastIndex) HorizontalDivider()
@@ -236,15 +237,14 @@ internal fun NativeProgramDraftEditor(
     pendingReplacement?.let { (dayId,index)->
         val targetDay=draft.days.firstOrNull { it.id==dayId }
         val oldId=targetDay?.exerciseIds?.getOrNull(index)
-        val choices=if(oldId==null) emptyList()
-            else compatibleCandidates(targetDay.exerciseIds,oldId)
+        val choices=if(oldId==null) emptyList() else alternatives.orEmpty()
         AlertDialog(
             onDismissRequest={pendingReplacement=null},
             title={Text("Replace accessory movement")},
             text={
                 Column(modifier=Modifier.heightIn(max=340.dp).verticalScroll(rememberScrollState()),
                     verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Text("Choose a similar movement from another training day. The existing load and progression won't carry over.",
+                    Text("Choose a compatible exercise from the canonical catalog. The existing load and progression won't carry over.",
                         style=MaterialTheme.typography.bodySmall)
                     choices.forEach { ex ->
                         OutlinedButton(onClick={
@@ -253,7 +253,8 @@ internal fun NativeProgramDraftEditor(
                         },enabled=allowEditing && !saving,
                             modifier=Modifier.fillMaxWidth()) { Text(ex.name) }
                     }
-                    if(choices.isEmpty()) Text("No compatible movement is available in this program.")
+                    if(alternatives==null) Text("Loading eligible exercises…")
+                    else if(choices.isEmpty()) Text("No compatible exercise is available with this equipment.")
                 }
             },
             confirmButton={OutlinedButton(onClick={pendingReplacement=null}) { Text("Cancel") }}

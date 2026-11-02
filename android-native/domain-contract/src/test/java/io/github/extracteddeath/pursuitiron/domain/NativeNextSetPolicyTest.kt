@@ -22,7 +22,7 @@ class NativeNextSetPolicyTest {
             NativeWorkoutSet(c,"90","6","5-8","2",null),
             NativeWorkoutSet(d,"90","6","5-8","2",null))),
         NativeWorkoutExercise(2,"row","Row",75,false,emptyList(),listOf(
-            NativeWorkoutSet(e,"45","10","8-12","2",null))))
+            NativeWorkoutSet(e,"45","10","8-12","2",null)))
     )
     private val plan=NativeWorkoutPlan("issued",session,"Training","Upper",exercises)
     private fun empty()=checkNotNull(WorkoutJournalPolicy.open(session,slots,0))

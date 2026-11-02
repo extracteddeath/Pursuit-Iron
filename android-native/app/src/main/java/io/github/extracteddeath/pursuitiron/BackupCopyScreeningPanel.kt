@@ -55,15 +55,16 @@ private sealed interface BackupScreeningStage {
 internal fun BackupCopyScreeningPanel(
     verifier: CanonicalBackupSchemaVerifier? = null,
     verifierLoading: Boolean = false,
-    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null
+    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null,
+    currentStoreChangeKey: Long = 0L
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // Neither selected URI nor raw bytes are saveable or held in Compose state.
-    var stage by remember { mutableStateOf<BackupScreeningStage>(BackupScreeningStage.NoSelection) }
-    var wantsSchema by remember { mutableStateOf(false) }
-    var wantsPrograms by remember { mutableStateOf(false) }
-    var wantsMerge by remember { mutableStateOf(false) }
+    var stage by remember(currentStoreChangeKey) { mutableStateOf<BackupScreeningStage>(BackupScreeningStage.NoSelection) }
+    var wantsSchema by remember(currentStoreChangeKey) { mutableStateOf(false) }
+    var wantsPrograms by remember(currentStoreChangeKey) { mutableStateOf(false) }
+    var wantsMerge by remember(currentStoreChangeKey) { mutableStateOf(false) }
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),

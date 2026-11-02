@@ -8,6 +8,10 @@ const hash=raw=>createHash('sha256').update(raw,'utf8').digest('hex');
 const options=nativeProgramOptions();
 for(const split of options.splits)
   assert.deepEqual(split.days,[3,4,5,6].filter(days=>splitSupportsTrainingDays(split.id,days)));
+assert.equal(options.muscles.length,17);
+assert.equal(new Set(options.muscles.map(x=>x.id)).size,17);
+assert.ok(options.muscles.some(x=>x.id==='forearms'));
+assert.ok(options.muscles.some(x=>x.id==='upper_back'));
 const base={creationId:'create-native-test',programId:'program-native-test',createdAt:1000,seed:223,
   profile:{name:'My native plan',goal:'both',experience:'intermediate',unit:'lb',split:'full_body',
     days:3,session:'s60',equipment:options.equipment,allowBodyweight:true,allowSupersets:false,barbellCap:3}};
@@ -35,6 +39,20 @@ for(const changes of [{},{split:'upper_lower',days:4,goal:'strength',unit:'kg'},
   assert.equal(inspectNativeProgram(JSON.stringify(current)).program.reference.storeSavedAt,2000,
     'owned program restore uses the current store revision');
 }
+// New setup fields must route directly into the existing canonical program
+// audit, not into a Kotlin dose estimator or UI-only description.
+const focusedSetup=JSON.stringify({...base,profile:{...base.profile,
+  focus:{chest:2,biceps:1},reduced:['calves']}});
+const focused=prepareNativeProgram(focusedSetup);
+const focusedProgram=parseStoredData(focused.snapshot).saved[0];
+assert.deepEqual(focusedProgram.config.focus,{chest:2,biceps:1});
+assert.deepEqual(focusedProgram.config.focusList,['chest','chest','biceps']);
+assert.deepEqual(focusedProgram.config.reduce,['calves']);
+assert.equal(focusedProgram.nextEngine.program.audit.result,'pass');
+assert.equal(inspectNativeProgram(focused.snapshot).setupJson,focusedSetup,
+  'Authored muscle priorities survive exact saved-program restore');
+assert.equal(JSON.parse(first.snapshot).nativeOnboarding.setupJson,JSON.stringify(base),
+  'Older native profiles without priorities remain intact');
 const original=Date.now;Date.now=()=>999999;
 try { assert.deepEqual(prepareNativeProgram(JSON.stringify(base)),first); }
 finally { Date.now=original; }
@@ -42,6 +60,19 @@ for(const changes of [{split:'upper_lower',days:3},{split:'ulppl',days:6},{goal:
   {equipment:['unknown']},{equipment:[]},{equipment:['barbell','barbell']},{barbellCap:9},
   {name:'private-profile\ninvalid'},{allowSupersets:1}])
   assert.throws(()=>prepareNativeProgram(JSON.stringify({...base,profile:{...base.profile,...changes}})));
+for(const changes of [{focus:{invented:1},reduced:[]},
+  {focus:{chest:3},reduced:[]},{focus:{chest:1.5},reduced:[]},
+  {focus:{chest:1},reduced:['chest']},
+  {focus:{chest:1,biceps:1,triceps:1,quads:1},reduced:[]},
+  {focus:{},reduced:['calves','calves']},
+  {focus:{},reduced:['chest','quads','calves','abs']},
+  {focus:{},reduced:['invented']},
+  {focus:{chest:1}},
+  {reduced:['calves']},
+  {focus:{},reduced:[],extra:true}]) {
+  assert.throws(()=>prepareNativeProgram(JSON.stringify({...base,
+    profile:{...base.profile,...changes}})));
+}
 const send=(method,params)=>JSON.stringify({protocolVersion:1,id:'onboarding-test',method,params});
 for(const method of ['nativeProgramOptions','prepareNativeProgram','inspectNativeProgram']) {
   const params=method==='nativeProgramOptions'?{}:method==='prepareNativeProgram'

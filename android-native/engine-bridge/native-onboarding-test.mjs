@@ -89,4 +89,30 @@ const forged=JSON.parse(first.snapshot);forged.nativeOnboarding.creationId='anot
 assert.throws(()=>inspectNativeProgram(JSON.stringify(forged)));
 assert.equal(JSON.parse(dispatchWorkoutStoreJson(send('prepareNativeProgram',
   {setupJson:JSON.stringify({...base,private:'do-not-echo'})}))).ok,false);
+// Physical inventory is supplied only by the user, in the selected unit.
+const authoredStock={unit:'lb',barbell:{barWeight:45,platePairs:[{weight:2.5,pairs:2},{weight:5,pairs:1}]},
+  dumbbells:{availablePerHand:[20,25,30]},cable:{minimum:5,increment:5,maximum:150},
+  smith:{availableLoads:[15,25,35]}};
+const equippedSetup=JSON.stringify({...base,profile:{...base.profile,focus:{},reduced:[],loadingInventory:authoredStock}});
+const equipped=prepareNativeProgram(equippedSetup);
+const nativeStock=parseStoredData(equipped.snapshot).saved[0].config.loadingInventory;
+assert.deepEqual(nativeStock,authoredStock,'Native creation retains only expressly declared physical inventory');
+assert.equal(inspectNativeProgram(equipped.snapshot).setupJson,equippedSetup,
+  'Verified gym facts survive first-program restore');
+assert.equal(parseStoredData(first.snapshot).saved[0].config.loadingInventory,undefined,
+  'Legacy onboarding never receives fabricated inventory');
+for(const stock of [
+  {...authoredStock,unit:'kg'},
+  {...authoredStock,barbell:{barWeight:45,platePairs:[{weight:5,pairs:1},{weight:5,pairs:2}]}},
+  {...authoredStock,barbell:{barWeight:45,platePairs:[]}},
+  {...authoredStock,dumbbells:{availablePerHand:[20,20]}},
+  {...authoredStock,cable:{minimum:5,increment:0,maximum:150}},
+  {...authoredStock,machine:{minimum:5,increment:5}},
+  {...authoredStock,smith:{availableLoads:[15,-5]}},
+  {...authoredStock,exerciseOverrides:{'back-squat':{minimum:0,increment:5}}},
+  {unit:'lb'},
+  {...authoredStock,unrecognized:true}
+]) assert.throws(()=>prepareNativeProgram(JSON.stringify({...base,
+  profile:{...base.profile,focus:{},reduced:[],loadingInventory:stock}})),
+  'Malformed or invented physical gym stock must be rejected');
 console.log('PASS native setup: four audited splits, goal/unit/time/equipment preservation, deterministic creation, restore, tombstones and channel separation');

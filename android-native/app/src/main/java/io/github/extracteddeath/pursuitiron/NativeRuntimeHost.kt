@@ -101,9 +101,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         } finally { bytes.fill(0) }
     }
     /** Read-only, bounded catalog labels for the EXACT current saved-program revision. */
-    suspend fun lookupProgramExerciseNames(
+    suspend fun lookupProgramExercises(
         expected: ReadOnlyProgramReference, requested: List<String>
-    ): Map<String,String>? {
+    ): Map<String,CanonicalExercise>? {
         val before=mutable.value
         if(!before.ready || before.blocked || before.workout!=null ||
             before.workoutBusy || before.busy || before.backupExportBusy ||
@@ -123,12 +123,12 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             } finally { bytes.fill(0) }
         }
         if(!sameSource()) return null
-        val result=LinkedHashMap<String,String>()
+        val result=LinkedHashMap<String,CanonicalExercise>()
         for(batch in ids.chunked(12)) {
             val lookup=engine.lookup(batch).getOrNull() ?: return null
             context.ensureActive()
             if(lookup.missingIds.isNotEmpty() || !lookup.readOnly) return null
-            lookup.exercises.forEach { ex -> result[ex.id]=ex.name }
+            lookup.exercises.forEach { ex -> result[ex.id]=ex }
         }
         if(mutable.value.storeChangeKey!=before.storeChangeKey || !sameSource())
             return null
@@ -439,7 +439,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 mutable.update { it.copy(busy=false,programEditError=
-                    "Changes could not be saved. Primary or paired movements cannot be removed. Keep pairs together and reopen the editor if your plan changed.") }
+                    "Changes could not be saved. Check equipment, movement compatibility, protected primary/paired slots, or reopen if the saved plan changed.") }
             }
         }
     }

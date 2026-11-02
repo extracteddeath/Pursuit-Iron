@@ -38,6 +38,7 @@ import io.github.extracteddeath.pursuitiron.domain.NativeBackupExportDocument
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
+import io.github.extracteddeath.pursuitiron.domain.CanonicalExercise
 
 /**
  * These are independently designed NATIVE journeys, not ports of React screens.
@@ -344,7 +345,7 @@ internal fun PlanScreen(
     onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
     onDiscardBackupReview: () -> Unit = {},
     onSaveProgramEdits: (NativeProgramEditDraft)->Unit = {},
-    onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>? = {_,_->null}
+    onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,CanonicalExercise>? = {_,_->null}
 ) {
     if(hasSavedProgram && currentPlan !is ReadOnlyProgramPresentation.Structure) {
         PageHeading("YOUR PROGRAM","Loading your program","Your saved plan is being loaded.")

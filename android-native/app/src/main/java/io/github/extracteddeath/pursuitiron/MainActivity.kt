@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
                     onVerifyBackupMerge=runtime::verifyBackupMergeSelection,
                     onDiscardBackupReview=runtime::discardBackupReview,
                     onSaveProgramEdits=runtime::saveProgramEdits,
-                    onLookupProgramExercises=runtime::lookupProgramExerciseNames
+                    onLookupProgramExercises=runtime::lookupProgramExercises
                 )
             }
         }

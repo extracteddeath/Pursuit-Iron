@@ -436,6 +436,12 @@ assert.ok(
 
 const nativeDraftContract=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeProgramEditDraft.kt','utf8');
 const nativeDraftUi=fs.readFileSync(root+'NativeProgramDraftEditor.kt','utf8');
+assert.ok(nativeDraftUi.includes('Replace accessory movement') &&
+  nativeDraftUi.includes('compatibleCandidates') &&
+  nativeDraftUi.includes('draft.substituteExercise(dayId,index,ex.id)') &&
+  nativeDraftUi.includes("load and progression won't carry over") &&
+  nativeDraftUi.includes('draft.replacement!=null'),
+  'Accessory substitution must be explicit, compatible, and cannot silently inherit numeric loads');
 assert.ok(
   screens.includes('NativeProgramDraftEditor(') &&
   screens.includes('rememberSaveable(currentPlan.program.reference)') &&

@@ -63,7 +63,8 @@ class MainActivity : ComponentActivity() {
                     onExportBackup=runtime::exportBackup,
                     onResetBackupExport=runtime::resetBackupExportStatus,
                     onPreviewBackupMerge=runtime::previewBackupMerge,
-                    onVerifyBackupMerge=runtime::verifyBackupMergeSelection
+                    onVerifyBackupMerge=runtime::verifyBackupMergeSelection,
+                    onDiscardBackupReview=runtime::discardBackupReview
                 )
             }
         }

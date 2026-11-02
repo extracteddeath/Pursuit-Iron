@@ -254,6 +254,71 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun actualSessionNoteSurvivesRestartCorrectionsCompletionAndExportWithoutAffectingSetRevisions() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Durable session notes",unit="kg"),"notes-create","notes-program",1000,223)))
+            val drive=Drive();val recovery=Drive()
+            var owner=CanonicalWorkoutStorePersistence(drive,engine)
+            var journal=WorkoutJournalPersistence(recovery)
+            assertTrue(owner.initialize(proposal.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(proposal.snapshot,
+                NativeWorkoutCodec.startJson("notes-program","notes-workout",2000)))
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            val note=JournalSessionNote("note-initial","Seat 4\nNo strap today.",2500)
+            recovery.failAfterWrite=true
+            assertTrue(runCatching {journal.recordNote(plan.session,0,note)}.isFailure)
+            recovery.failAfterWrite=false
+            owner=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            progress=checkNotNull(owner.recoverIssuedSession(journal))
+            assertEquals(note,progress.journal.note);assertEquals(0L,progress.journal.revision)
+            val writes=recovery.writes
+            assertNotNull(journal.recordNote(plan.session,0,note));assertEquals(writes,recovery.writes)
+            val review=checkNotNull(engine.inspectWorkoutMuscles(proposal.snapshot,plan.issuedJson))
+            for((i,slot) in plan.slots.withIndex()) {
+                val part=review.rows.single {it.exerciseIndex==slot.exerciseIndex}.primaryPart
+                val intent=JournalSetIntent("note-working-$i",slot,
+                    if(i==0)JournalSetDisposition.COMPLETED else JournalSetDisposition.SKIPPED,
+                    if(i==0)JournalSetValues("40","kg",6,2) else null,
+                    adjustment=if(i==1)JournalSetAdjustment("skip",part) else null)
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,intent)))
+                assertEquals(note,progress.journal.note)
+            }
+            val first=progress.journal.completed.first().intent
+            val corrected=JournalSetIntent("note-active-correction",first.slot,JournalSetDisposition.COMPLETED,
+                JournalSetValues("45","kg",6,2),first.operationId)
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,corrected)))
+            val finalNote=JournalSessionNote("note-final","Final note: seat 4\nFelt strong. 🏋️",3000,note.operationId)
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordNote(plan.session,progress.journal.revision,finalNote)))
+            assertEquals(plan.slots.size+1L,progress.journal.revision)
+            val finished=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("notes-finish",62000,60000)))
+            assertEquals(finalNote,finished.note)
+            assertTrue(checkNotNull(owner.complete(plan.session,finished.revision,journal)).recoveryCleared)
+            assertNull(journal.recover())
+            val snapshot=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val history=checkNotNull(engine.inspectHistory(snapshot,plan.session.workoutId))
+            assertEquals(finalNote.text,history.sessionNote)
+            assertEquals(plan.slots.size,history.totalSets);assertEquals(1,history.setsDone)
+            assertEquals(270L,history.volume)
+            val firstObservation=checkNotNull(history.editRows).first {it.retained}
+            val correction=NativeHistoryObservationCodec.correctionJson(history,"note-history-correct",63000,
+                listOf(NativeHistoryObservationChange(firstObservation.slot,JournalSetDisposition.COMPLETED,
+                    JournalSetValues("50","kg",6,2))))
+            assertEquals(finalNote.text,checkNotNull(owner.correctHistory(correction)).sessionNote)
+            val exported=BackupDocument()
+            assertNotNull(NativeBackupExporter(owner,engine).export(exported))
+            val savedNote=JSONObject(String(exported.output.toByteArray(),Charsets.UTF_8)).getJSONArray("history")
+                .getJSONObject(0).getJSONObject("nativeSessionNote")
+            assertEquals(finalNote.text,savedNote.getString("text"))
+            val nextSnapshot=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val next=checkNotNull(engine.prepareWorkout(nextSnapshot,
+                NativeWorkoutCodec.startJson("notes-program","notes-next",64000)))
+            assertNull(checkNotNull(owner.beginIssuedSession(next,journal)).journal.note)
+        } }
+    }
+
     @Test(timeout=60000) fun realOnboardingCreatesSavesAndRestoresWithoutReplacingAnotherProgram() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

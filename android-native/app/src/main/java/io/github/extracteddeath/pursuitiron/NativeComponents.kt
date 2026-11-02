@@ -53,15 +53,22 @@ import androidx.compose.ui.unit.dp
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun NativeSetEditSheet(busy: Boolean,onDismiss: ()->Unit,content: @Composable ColumnScope.()->Unit) {
+internal fun NativeEditSheet(busy: Boolean,onDismiss: ()->Unit,
+    canDismiss: ()->Boolean = {true},content: @Composable ColumnScope.()->Unit) {
     val currentBusy by rememberUpdatedState(busy)
+    val currentCanDismiss by rememberUpdatedState(canDismiss)
     val sheet=rememberBottomSheetState(initialValue=SheetValue.Hidden,
         enabledValues=setOf(SheetValue.Hidden,SheetValue.Expanded),
-        confirmValueChange={it!=SheetValue.Hidden || !currentBusy})
-    ModalBottomSheet(sheetState=sheet,onDismissRequest={if(!currentBusy)onDismiss()}) {
+        confirmValueChange={it!=SheetValue.Hidden || !currentBusy && currentCanDismiss()})
+    ModalBottomSheet(sheetState=sheet,onDismissRequest={if(!currentBusy && currentCanDismiss())onDismiss()}) {
         Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
     }
+}
+
+@Composable
+internal fun NativeSetEditSheet(busy: Boolean,onDismiss: ()->Unit,content: @Composable ColumnScope.()->Unit) {
+    NativeEditSheet(busy,onDismiss,content=content)
 }
 
 @Composable

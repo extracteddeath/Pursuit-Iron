@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
                     onSkipAffectedMuscle=runtime::skipAffectedMuscle,
                     onReduceAffectedMuscle=runtime::reduceAffectedMuscle,
                     onFinishWorkout=runtime::finishWorkout,
+                    onSaveSessionNote=runtime::saveSessionNote,
                     onCorrectHistory=runtime::correctHistory,
                     onReloadHistory=runtime::reloadHistory,
                     onOpenHistory=runtime::openHistory,

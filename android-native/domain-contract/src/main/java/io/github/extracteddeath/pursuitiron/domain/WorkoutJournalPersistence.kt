@@ -156,7 +156,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             .put("toRevision",receipt.toRevision)
             .apply {
                 if(version>=3)put("replacesOperationId",intent.replacesOperationId ?: JSONObject.NULL)
-                if(version==4)put("adjustment",adjustmentJson(intent.adjustment))
+                if(version>=4)put("adjustment",adjustmentJson(intent.adjustment))
             }
     }
 
@@ -172,6 +172,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         state.revision - state.events.size.toLong() - if (state.isFinished) 1L else 0L
 
     private fun format(state: WorkoutJournalState)=when {
+        state.note!=null -> 5
         state.events.any { it.intent.adjustment!=null } -> 4
         state.events.any { it.intent.replacesOperationId!=null } -> 3
         else -> 2
@@ -185,6 +186,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
                 state.events.forEach { put(eventJson(it,format(state))) }
             })
             .put("finish",finishJson(state.finish))
+            .apply { state.note?.let { put("note",JournalSessionNoteCodec.json(it)) } }
 
     private fun encode(state: WorkoutJournalState): ByteArray {
         val payload = payloadJson(state).toString()
@@ -207,7 +209,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         require(source.size in 1..MAX_JOURNAL_BYTES)
         val envelope=JSONObject(String(source,StandardCharsets.UTF_8))
         exact(envelope,"format","payload","sha256")
-        val version=number(envelope,"format").also { require(it in 2L..4L) }.toInt()
+        val version=number(envelope,"format").also { require(it in 2L..5L) }.toInt()
         val payload = text(envelope,"payload")
         val digest = text(envelope,"sha256")
         val actual = sha(payload.toByteArray(StandardCharsets.UTF_8))
@@ -217,7 +219,8 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
                 actual.toByteArray(StandardCharsets.US_ASCII)
             ))
         val data=JSONObject(payload)
-        exact(data,"format","session","slots","startRevision","events","finish")
+        exact(data,"format","session","slots","startRevision","events","finish",
+            *(if(version==5)arrayOf("note") else emptyArray()))
         require(number(data,"format") == version.toLong())
         val key=readKey(data.getJSONObject("session"))
         val slotsJson=data.getJSONArray("slots")
@@ -229,7 +232,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         for (index in 0 until events.length()) {
             val raw=events.getJSONObject(index)
             when(version) {
-                4 -> exact(raw,"operationId","slot","disposition","values",
+                4,5 -> exact(raw,"operationId","slot","disposition","values",
                     "fromRevision","toRevision","replacesOperationId","adjustment")
                 3 -> exact(raw,"operationId","slot","disposition","values",
                     "fromRevision","toRevision","replacesOperationId")
@@ -240,13 +243,18 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
             val disposition=JournalSetDisposition.valueOf(text(raw,"disposition"))
             val values=readValues(raw.get("values"))
             val replaces=if(version>=3 && !raw.isNull("replacesOperationId"))text(raw,"replacesOperationId") else null
-            val adjustment=if(version==4)readAdjustment(raw.get("adjustment")) else null
+            val adjustment=if(version>=4)readAdjustment(raw.get("adjustment")) else null
             val intent=JournalSetIntent(op,slot,disposition,values,replaces,adjustment)
             val receipt=JournalSetReceipt(key,op,slot,disposition,values,
                 number(raw,"fromRevision"),number(raw,"toRevision"),replaces,adjustment)
             // Replays are valid API retries, but never duplicate durable log entries.
             require(receipt.fromRevision==state.revision)
             state=requireNotNull(WorkoutJournalPolicy.afterPersistedSet(state,intent,receipt))
+        }
+        if(version==5) {
+            val note=JournalSessionNoteCodec.read(data.getJSONObject("note"),key)
+            require(state.events.none { it.intent.operationId==note.operationId })
+            state=WorkoutJournalState(state.session,state.slots,state.revision,state.completed,state.finish,state.events,note)
         }
         require(format(state)==version)
         if (!data.isNull("finish")) {
@@ -347,6 +355,23 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
         next
     }
 
+    /** Notes have their own replacement identity; they never advance set ordinals/revisions. */
+    fun recordNote(session: JournalSessionKey,expectedRevision: Long,note: JournalSessionNote): WorkoutJournalState? =
+        synchronized(guard) {
+            val current=readOwned() ?: return@synchronized null
+            if(current.session!=session || current.isFinished || !JournalSessionNoteCodec.valid(note,session))
+                return@synchronized null
+            if(current.note==note)return@synchronized current
+            if(current.revision!=expectedRevision || note.replacesOperationId!=current.note?.operationId ||
+                current.note?.let { note.updatedAt<=it.updatedAt }==true ||
+                current.events.any { it.intent.operationId==note.operationId })return@synchronized null
+            val next=WorkoutJournalState(current.session,current.slots,current.revision,current.completed,
+                current.finish,current.events,note)
+            if(!hasFinishCapacity(next))return@synchronized null
+            save(next)
+            next
+        }
+
     /** Editing cannot spend the bytes needed to log the remaining slots and Finish. */
     private fun hasFinishCapacity(state: WorkoutJournalState): Boolean {
         val payload=payloadJson(state)
@@ -359,7 +384,7 @@ class WorkoutJournalPersistence(private val bytes: WorkoutJournalBytes) {
                 .put("disposition","COMPLETED").put("values",valuesJson(JournalSetValues("99999.999",state.session.unit,100,10)))
                 .put("fromRevision",revision).put("toRevision",revision+1)
                 .put("replacesOperationId",JSONObject.NULL)
-                .apply { if(version==4)put("adjustment",JSONObject.NULL) })
+                .apply { if(version>=4)put("adjustment",JSONObject.NULL) })
             revision++
         }
         payload.put("finish",JSONObject().put("operationId","x".repeat(128))

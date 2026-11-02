@@ -642,6 +642,8 @@ class CanonicalWorkoutStorePersistence(
                 equivalent(audit.getJSONArray("events"),input.getJSONArray("events")) &&
                 equivalent(audit.getJSONObject("finish"),input.getJSONObject("finish")))
         } else require(!entry.has("nativeSetRevisions"))
+        if(journal.note!=null)require(equivalent(entry.getJSONObject("nativeSessionNote"),JournalSessionNoteCodec.json(journal.note)))
+        else require(!entry.has("nativeSessionNote"))
         val identity=entry.getJSONObject("nativeCompletion")
         exact(identity,"format","handoffSha256","sourceSnapshotSha256","journalRevision")
         require(number(identity,"format")==2L && number(identity,"journalRevision")==journal.revision &&

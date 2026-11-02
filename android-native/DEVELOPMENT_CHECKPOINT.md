@@ -800,3 +800,37 @@ Validation for this follow-up: 185 domain JVM tests and 32 packaged-runtime JVM
 tests passed with zero failures/skips; Compose Kotlin and Android instrumentation
 Java compilation passed. The full `Android Compose foundation contracts` source
 suite and a freshly built/verified canonical IIFE proof passed. No APK was built.
+
+
+## Follow-up — 2026-11-02: durable session notes through the real workout journey
+
+The real Train logger now has an accessible session-note icon in its controls,
+including Focus Mode. The shared `NativeEditSheet` owns keyboard scrolling and
+save/dismiss protection for both set corrections and notes. The note editor keeps
+its draft through SavedState, confirms unsaved discard, and closes after a save
+only when the exact stored text is acknowledged. Clearing text requires saving
+that change. Notes are limited to 2,000 characters, preserve Unicode/newlines,
+and never appear as coaching above the exercise name.
+
+Session notes are stored in the atomic workout journal, with a separate operation
+and replacement identity. They do not consume a working-set slot, advance set
+revisions, alter issued targets or affect progression. Note writes reserve enough
+journal space for every unresolved observation and Finish. Existing journal formats
+2–4 remain readable and unchanged when a note has never been recorded; format 5
+adds a bounded note and retains all working/correction/adjustment events. A finish
+cannot predate its saved note, and a finished workout's note cannot be mutated.
+
+The canonical completion handoff validates and retains the exact note as
+`nativeSessionNote` in saved history, in the same atomic history transaction.
+The native history reader displays it, later set corrections preserve it, and a
+validated export contains it. A new workout starts with no session note. This is
+a session note, not a pinned per-exercise note/setup or completed-note editor.
+Those separate tools remain integration work.
+
+Verification: 188 domain JVM tests and 33 actual packaged-runtime JVM tests pass
+with no failures/skips, including disk-full/lost-ack note saves, restarted journals,
+working-set and adjusted-skip preservation, active corrections, completion, saved
+corrections, export and next-workout isolation. Compose and instrumentation-source
+compilation, the complete source-contract suite and a freshly verified Android
+IIFE proof pass. Notes do not change set counts, volume, strength records or
+prescription data. No APK has been produced and device acceptance remains open.

@@ -95,6 +95,12 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
     Text("${history.setsDone} recorded · ${history.totalSets-history.setsDone} skipped · ${history.volume} ${history.unit} volume",
         style=MaterialTheme.typography.bodyMedium)
+    history.sessionNote?.takeIf { it.isNotBlank() }?.let { note->
+        PursuitCard {
+            Text("Session note",style=MaterialTheme.typography.titleMedium)
+            Text(note,style=MaterialTheme.typography.bodyMedium)
+        }
+    }
     if(state.workout!=null)Text("Finish your active workout before correcting saved history.",
         style=MaterialTheme.typography.bodySmall)
     if(history.exercises.isEmpty())Text("No completed sets were recorded in this workout.")

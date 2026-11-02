@@ -1,3 +1,4 @@
+import { readNativeSessionNote } from './native-session-note.mjs';
 /** Owned native history only. Canonical JS owns summaries, mirrors and records. */
 import { parseStoredData,perfAfterHistoryReplace,exRecords,EX_BY_ID } from '../../modules/engine-api.js';
 import { sha256Utf8 as sha,utf8ByteLength,equalJson } from './json-identity.mjs';
@@ -155,10 +156,12 @@ export function inspectNativeHistory(rawSnapshot,historyId) {
   try {
     const store=storeFrom(rawSnapshot),entry=entryFrom(store,historyId),mapped=mappedSets(entry);
     const editRows=own(entry,'nativeHistoryBasis')?readNativeHistoryBasis(entry,mapped):null;
+    const note=own(entry,'nativeSessionNote')?readNativeSessionNote(entry.nativeSessionNote,1,entry.date):null;
     return {source:'modules/engine-api.js:normalizeEditedHistoryEntry+perfAfterHistoryReplace+exRecords',
       snapshotSha256:sha(rawSnapshot),entrySha256:semanticSha(entry),historyId:entry.id,
       dayLabel:entry.dayLabel,weekIndex:entry.weekIndex,unit:entry.unit,date:entry.date,
       setsDone:entry.setsDone,totalSets:entry.totalSets,volume:entry.volume,
+      ...(note?{sessionNote:note.text}:{}),
       exercises:Object.keys(entry.perf).map(id=>({id,name:EX_BY_ID[id].name,
         sets:mapped.filter(s=>s.exerciseId===id).map(({setIndex,set,event})=>({setIndex,
           exerciseIndex:event.slot.exerciseIndex,kind:set.sub?set.kind:'working',ordinal:event.slot.setIndex+1,

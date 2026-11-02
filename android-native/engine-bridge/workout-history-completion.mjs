@@ -1,3 +1,4 @@
+import { readNativeSessionNote } from './native-session-note.mjs';
 /**
  * Environment-neutral canonical completion preparation. No file, network or store writes.
  * A finished private journal is not itself canonical history or permission to log.
@@ -46,8 +47,8 @@ function storeFrom(raw) {
 function finishedJournal(raw) {
   ensure(typeof raw === 'string' && utf8ByteLength(raw) <= 256 * 1024);
   const j = JSON.parse(raw);
-  ensure(exact(j, ['format','session','slots','startRevision','events','finish']) &&
-    [2,3,4].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
+  ensure(exact(j, ['format','session','slots','startRevision','events','finish',...(j.format===5?['note']:[])]) &&
+    [2,3,4,5].includes(j.format) && integer(j.startRevision, 0, MAX_REV));
   const s = j.session;
   ensure(exact(s, ['reference','workoutId','dayId','weekIndex','unit','startedAt']) &&
     validId(s.workoutId) && validId(s.dayId) && integer(s.weekIndex, 1, 104) &&
@@ -65,7 +66,7 @@ function finishedJournal(raw) {
   for (const [i, event] of j.events.entries()) {
     ensure(exact(event, ['operationId','slot','disposition','values','fromRevision','toRevision',
       ...(j.format>=3?['replacesOperationId']:[]),
-      ...(j.format===4?['adjustment']:[])]) &&
+      ...(j.format>=4?['adjustment']:[])]) &&
       validId(event.operationId) && !operations.has(event.operationId) &&
       validSlot(event.slot) &&
       integer(event.fromRevision, 0, MAX_REV - 1) &&
@@ -73,7 +74,7 @@ function finishedJournal(raw) {
       j.slots.some(slot => equalJson(slot, event.slot)));
     const position = `${event.slot.exerciseIndex}:${event.slot.setIndex}`;
     const replaces=j.format>=3?event.replacesOperationId:null,prior=positions.get(position);
-    if(j.format===4 && event.adjustment!==null) {
+    if(j.format>=4 && event.adjustment!==null) {
       const a=event.adjustment;
       ensure(exact(a,['action','part']) && ['reduce','skip'].includes(a.action) &&
         typeof a.part==='string' && /^[a-z][a-z_]{0,39}$/.test(a.part) &&
@@ -94,7 +95,7 @@ function finishedJournal(raw) {
   }
   ensure(positions.size===j.slots.length &&
     (j.format===2 || j.format===3 && corrections>0 ||
-      j.format===4 && j.events.some(e=>e.adjustment!==null)));
+      (j.format===4 && j.events.some(e=>e.adjustment!==null) || j.format===5)));
   const f = j.finish;
   ensure(exact(f, ['operationId','fromRevision','toRevision','completedAt','durationMs']) &&
     validId(f.operationId) && !operations.has(f.operationId) &&
@@ -102,6 +103,10 @@ function finishedJournal(raw) {
     f.fromRevision === j.startRevision + j.events.length &&
     f.toRevision === f.fromRevision + 1 && integer(f.completedAt, s.startedAt, MAX_DATE) &&
     integer(f.durationMs, 0, f.completedAt - s.startedAt));
+  if(j.format===5) {
+    readNativeSessionNote(j.note,s.startedAt,f.completedAt);
+    ensure(!operations.has(j.note.operationId) && j.note.operationId!==f.operationId);
+  }
   return {journal:j,observations:Array.from(positions.values())};
 }
 
@@ -248,11 +253,12 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
       slot:event.slot,disposition:event.disposition,values:event.values}))}} : {}),
     ...(issued ? {nativeSetLocations:{format:1,sets:locations}} : {}),
     ...(issued ? {nativeHistoryBasis:{format:2,allowFailedAttempts:program.config.percentScheme==='gzclp',rows:basisRows}} : {}),
-    ...(journal.format===4 ? {nativeSetAdjustments:{format:1,events:events
-      .filter(event=>event.adjustment!==null)
+    ...(journal.events.some(e=>e.adjustment!=null) ? {nativeSetAdjustments:{format:1,events:events
+      .filter(event=>event.adjustment!=null)
       .map(event=>({slot:event.slot,action:event.adjustment.action,part:event.adjustment.part}))}} : {}),
-    ...(journal.format>=3 ? {nativeSetRevisions:{format:1,startRevision:journal.startRevision,
+    ...(journal.events.some(e=>e.replacesOperationId!=null || e.adjustment!=null) ? {nativeSetRevisions:{format:1,startRevision:journal.startRevision,
       events:journal.events,finish:journal.finish}} : {}),
+    ...(journal.format===5?{nativeSessionNote:journal.note}:{}),
     nativeCompletion:{format:2, handoffSha256,
       sourceSnapshotSha256:s.reference.snapshotSha256, journalRevision:f.toRevision}
   };

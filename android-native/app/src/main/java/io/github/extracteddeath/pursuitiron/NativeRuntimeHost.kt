@@ -663,6 +663,31 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         }
     }
 
+    fun saveSessionNote(text: String) {
+        val current=mutable.value;val progress=current.workout ?: return
+        if(current.workoutBusy || current.workoutBlocked || progress.journal.isFinished ||
+            !JournalSessionNoteCodec.validText(text))return
+        val owner=store ?: return;val recovery=journal ?: return
+        val prior=progress.journal.note
+        if(text==prior?.text.orEmpty())return
+        val note=JournalSessionNote("session-note-"+UUID.randomUUID(),text,
+            maxOf(System.currentTimeMillis(),progress.plan.session.startedAt,(prior?.updatedAt ?: 0)+1),prior?.operationId)
+        mutable.update { it.copy(workoutBusy=true,workoutError=null) }
+        scope.launch {
+            try {
+                val next=checkNotNull(recovery.recordNote(progress.plan.session,progress.journal.revision,note))
+                ensureActive()
+                mutable.update { it.copy(workout=NativeWorkoutProgress(progress.plan,next),workoutBusy=false,workoutError=null) }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) {
+                val restored=runCatching { owner.recoverIssuedSession(recovery) }.getOrNull()
+                val confirmed=restored?.journal?.note==note
+                mutable.update { it.copy(workout=restored ?: it.workout,workoutBusy=false,
+                    workoutError=if(confirmed)null else "The note could not be confirmed. Your saved workout is kept. Retry saving the note.") }
+            }
+        }
+    }
+
     fun finishWorkout() {
         val current=mutable.value;val progress=current.workout ?: return
         if(current.workoutBusy || current.historyBusy || current.workoutBlocked || progress.journal.unresolvedCount!=0)return
@@ -670,7 +695,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         mutable.update { it.copy(workoutBusy=true,workoutError=null) }
         scope.launch {
             try {
-                val now=maxOf(System.currentTimeMillis(),progress.plan.session.startedAt)
+                val now=maxOf(System.currentTimeMillis(),progress.plan.session.startedAt,progress.journal.note?.updatedAt ?: 0)
                 val finished=if(progress.journal.isFinished)progress.journal else checkNotNull(recovery.finish(
                     progress.plan.session,progress.journal.revision,JournalFinishIntent("finish-"+UUID.randomUUID(),
                         now,now-progress.plan.session.startedAt)))

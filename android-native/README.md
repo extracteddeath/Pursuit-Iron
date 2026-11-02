@@ -388,3 +388,17 @@ Run `node android-native/engine-bridge/native-program-edit-test.mjs` and the
 source-only Gradle/JVM/Compose tasks in `DEVELOPMENT_CHECKPOINT.md`. The packaged
 IIFE runtime proof also runs the edit protocol suite. An accepted native device
 journey remains necessary before the next installable test milestone.
+
+
+### Durable session notes (2026-11-02)
+
+The real Train logger and Focus Mode expose a session-note icon. Notes save through
+the atomic recovery journal, survive interruption, appear in completed history,
+remain intact through set corrections and are included in validated exports.
+Every new workout starts with an empty session note. A shared keyboard-aware edit
+sheet retains unsaved text and protects saving/discard actions. Session notes are
+separate from pinned exercise notes/setup, which still need native integration.
+
+`node android-native/engine-bridge/native-session-note-test.mjs` verifies the source
+handoff and can also exercise the actual packaged IIFE. JVM tests additionally
+cover the complete save/restart/log/correct/complete/export/next-workout journey.

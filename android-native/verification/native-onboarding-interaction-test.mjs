@@ -214,7 +214,8 @@ assert.ok(host.includes('val completion=owner.lastCompletionReceipt()') &&
   'Starting the next workout must not hide the previous confirmed history receipt');
 const activeEdit=fs.readFileSync(root+'NativeActiveSetCorrection.kt','utf8');
 assert.ok(controls.includes('internal fun NativeSetEditSheet(') &&
-  controls.includes('confirmValueChange={it!=SheetValue.Hidden || !currentBusy}') &&
+  controls.includes('confirmValueChange={it!=SheetValue.Hidden || !currentBusy && currentCanDismiss()}') &&
+  controls.includes('NativeEditSheet(busy,onDismiss,content=content)') &&
   controls.includes('imePadding().verticalScroll(rememberScrollState())') &&
   historyUi.includes('NativeSetEditSheet(state.historyBusy,') && activeEdit.includes('NativeSetEditSheet(busy,'),
   'Both correction sheets share keyboard layout and prevent drag-dismissal during an unacknowledged save');
@@ -492,3 +493,19 @@ assert.ok(nativeDraftUi.includes('NativeProgramEditCodec.restoreWorkspace(verifi
   nativeDraftUi.includes('rememberSaveable(approved.reference,stateSaver=draftSaver)') &&
   nativeDraftUi.includes('rememberSaveable(approved.reference,stateSaver=labelSaver)'),
   'Program organization and partially typed labels must survive Android SavedState restoration');
+
+const sessionNoteSheet=fs.readFileSync(root+'NativeSessionNoteSheet.kt','utf8');
+const sessionNoteJournal=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/WorkoutJournalPersistence.kt','utf8');
+assert.ok(activity.includes('onSaveSessionNote=runtime::saveSessionNote') &&
+  shell.includes('onReduceAffectedMuscle,onSaveSessionNote)') &&
+  fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8').includes('NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote)') &&
+  host.includes('recovery.recordNote(progress.plan.session,progress.journal.revision,note)') &&
+  host.includes('restored?.journal?.note==note') &&
+  sessionNoteSheet.includes('rememberSaveable(progress.plan.session.workoutId)') &&
+  sessionNoteSheet.includes('Discard note changes?') &&
+  sessionNoteSheet.includes('NativeEditSheet(busy,onDismiss={close()},canDismiss=') &&
+  sessionNoteSheet.includes('note?.text==submitted') &&
+  sessionNoteJournal.includes('state.note!=null -> 5') &&
+  sessionNoteJournal.includes('if(!hasFinishCapacity(next))') &&
+  !sessionNoteSheet.includes('commitAtomically'),
+  'Session notes must use the durable journal, retain drafts, reserve Finish capacity and close only on an acknowledged save');

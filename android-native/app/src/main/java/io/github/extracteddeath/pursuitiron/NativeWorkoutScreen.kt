@@ -4,6 +4,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -21,7 +23,8 @@ internal fun NativeWorkoutScreen(
     onSkipExercise: (Int)->Unit = {},
     onInspectMuscles: ()->Unit = {},
     onSkipAffectedMuscle: (String)->Unit = {},
-    onReduceAffectedMuscle: (String)->Unit = {}
+    onReduceAffectedMuscle: (String)->Unit = {},
+    onSaveSessionNote: (String)->Unit = {}
 ) {
     val progress=state.workout
     // Native sessions keep the screen awake while Train is visible. The
@@ -57,6 +60,7 @@ internal fun NativeWorkoutScreen(
     } ?: plan.exercises.indices.firstOrNull { index->
         index<exerciseIndex && plan.exercises[index].sets.any { it.slot !in committedSlots }
     }
+    var showNote by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showSkipExercise by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showLast by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
@@ -212,7 +216,12 @@ internal fun NativeWorkoutScreen(
             dismissButton={TextButton(onClick={showSkipExercise=false}) { Text("Keep training") }}
         )
     }
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+    if(showNote)NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote) {showNote=false}
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        IconButton(onClick={showNote=true},enabled=!journal.isFinished && !state.workoutBusy) {
+            Icon(Icons.Outlined.Edit,contentDescription=if(journal.note?.text.isNullOrEmpty())"Add session note" else "Edit session note",
+                tint=if(journal.note?.text.isNullOrEmpty())MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
+        }
         FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})
         FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
         Spacer(Modifier.weight(1f))

@@ -630,3 +630,27 @@ provider re-opening/recovery acceptance on actual Android devices, no-loss
 legacy backup migration, process-death and storage capacity acceptance, and
 integration of the rest of the native training workflow. Do not build an APK
 or describe this as a user-operable restore.
+
+## Follow-up: complete silent-mutation warning coverage for private merges
+
+The canonical web merge maintains a latest-performance mirror (`perf`) and
+deletion clocks (`tombs`) outside the five ID-based saved collections.
+A backup can therefore change an existing exercise's latest-performance
+summary, or introduce a deletion marker for a record not currently on this
+device, even with zero generic conflicts and zero immediately removed rows.
+Those risks were omitted from the initial review summary.
+
+The isolated native bridge now explicitly counts `performanceChanged` (existing
+exercise mirror rows altered or removed) and `deletionClocksChanged`
+(introduced or advanced future deletion clocks). Both produce named risk
+flags in a strictly checked order. Kotlin rejects missing, forged or
+unflagged risk counts. The shared Material 3 review shows the warnings,
+and the private candidate preparation independently rejects these changes
+before returning a candidate. The source branch is protected by synthetic
+redaction/negative tests and the exact-head Android contract workflows.
+
+These are **safety gates**, not a second Kotlin merge implementation or a
+complete conflict-resolution policy. Canonical JavaScript remains the
+temporary merge authority. It is still impossible to import, merge, restore
+or Undo a selected document from the app UI. Physical provider and
+process-death acceptance is outstanding; maintain the APK freeze.

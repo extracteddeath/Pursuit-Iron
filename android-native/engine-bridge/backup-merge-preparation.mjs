@@ -1,0 +1,48 @@
+/**
+ * Privileged but NON-WRITING second phase after backup preflight.
+ * Produces a candidate only if the exact sources and expected preview hash
+ * still match, and there is no silent history loss or unsupported storage size.
+ * The returned candidate is private transport data, NEVER UI data or import
+ * authority. A separate atomic owner/Undo protocol must authorize publication.
+ */
+import { mergeStores, parseStoredData } from '../../modules/engine-api.js';
+import { previewCanonicalBackupMerge, MERGE_PREVIEW_LIMIT } from './backup-merge-preview.mjs';
+import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
+
+const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+const exact=(v,keys)=>v!==null && typeof v==='object' && !Array.isArray(v) &&
+  Object.keys(v).length===keys.length && keys.every(k=>own(v,k));
+const sha=/^[0-9a-f]{64}$/;
+
+export function prepareCanonicalBackupMerge(params) {
+  if(!exact(params,['currentSnapshot','incomingSnapshot','expectedCandidateSha256']) ||
+      typeof params.expectedCandidateSha256!=='string' ||
+      !sha.test(params.expectedCandidateSha256))
+    throw new TypeError('Exact approved preview identity required');
+  const {currentSnapshot,incomingSnapshot,expectedCandidateSha256}=params;
+  const preview=previewCanonicalBackupMerge(currentSnapshot,incomingSnapshot);
+  if(preview.hypotheticalMergedSha256!==expectedCandidateSha256 ||
+      preview.historyDropped!==0 || preview.hypotheticalMergedBytes>MERGE_PREVIEW_LIMIT ||
+      preview.flags.length!==0)
+    throw new TypeError('Merge risks require a separate approved policy');
+  const merged=mergeStores(parseStoredData(currentSnapshot),
+    parseStoredData(incomingSnapshot));
+  if(!merged || !merged.data || !merged.stats || merged.stats.historyDropped!==0)
+    throw new TypeError('Canonical merge unavailable');
+  const candidateSnapshot=JSON.stringify(merged.data);
+  const candidateBytes=utf8ByteLength(candidateSnapshot);
+  if(candidateBytes!==preview.hypotheticalMergedBytes ||
+      candidateBytes>MERGE_PREVIEW_LIMIT ||
+      sha256Utf8(candidateSnapshot)!==expectedCandidateSha256)
+    throw new TypeError('Canonical candidate changed since preflight');
+  return {
+    source:'modules/engine-api.js:mergeStores',
+    validation:'canonical-v13-merge-preparation',
+    preparedOnly:true,persisted:false,approvedForImport:false,
+    approvedForWorkoutExecution:false,
+    requiresAtomicUndo:true,storeVersion:13,
+    currentSha256:preview.currentSha256,incomingSha256:preview.incomingSha256,
+    candidateSnapshotSha256:expectedCandidateSha256,candidateSnapshotBytes:candidateBytes,
+    candidateSnapshot
+  };
+}

@@ -1640,3 +1640,17 @@ Canonical engine, persistence and progression math are unchanged.
 The shared source assertions now inspect the dedicated component rather
 than requiring loading-detail presentation code inside the workout screen.
 No APK is produced; the entire journey must pass before another device build.
+
+## 2026-11-02 — Narrow-screen workout toolbar and machine-load semantics
+
+The live workout note, pinned exercise setup and Focus mode controls now
+share a non-scrolling row; Last/Targets controls use their own visible row.
+This removes a previously scrollable weighted Spacer that could obscure
+Focus on phones. The same saveable state and the same durable set editor
+remain active.
+
+The shared verified-equipment component distinguishes source-confirmed
+machine logging scale values from effective mechanical resistance and
+keeps the detailed note available on demand. Source contracts were updated
+to follow the new shared component rather than incorrectly reading its
+copy from the old monolithic workout screen. No APK is authorized.

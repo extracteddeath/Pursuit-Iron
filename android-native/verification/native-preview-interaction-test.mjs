@@ -52,12 +52,13 @@ assert.ok(programEditor.includes('requestGymEdit(id)') &&
   inventoryEditor.includes('onChange("override:${focused.id}","")') &&
   inventoryEditor.includes('candidates.filter { it.id!=focused?.id }'),
   'The blocked movement must open its exact saved physical field without duplicate controls or an implicit write');
-const workoutUi=fs.readFileSync(root + 'NativeWorkoutScreen.kt','utf8');
+const verifiedLoad=fs.readFileSync(root + 'NativeVerifiedLoadOptions.kt','utf8');
 assert.ok(inventoryEditor.includes('Never infer per-side plates, sled base weight, or effective resistance') &&
-  workoutUi.includes('Verified selectable logged values') &&
-  workoutUi.includes('not a measurement of') &&
-  workoutUi.includes('review.mode=="external_load"'),
-  'A specialty-machine label must not confuse entered values with calculated mechanical resistance');
+  verifiedLoad.includes('Verified selectable logged values') &&
+  verifiedLoad.includes('not a measurement of') &&
+  verifiedLoad.includes('review.mode=="external_load"') &&
+  verifiedLoad.includes('showExplanation'),
+  'A specialty-machine label must distinguish selectable logged values from calculated mechanical resistance, even when details are collapsed');
 
 // A feature-first UI must not destroy working drafts when switching context.
 assert.match(shell, /rememberSaveableStateHolder\(\)/);

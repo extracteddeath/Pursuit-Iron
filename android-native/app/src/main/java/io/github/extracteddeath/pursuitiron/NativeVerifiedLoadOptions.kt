@@ -48,7 +48,8 @@ internal fun NativeVerifiedLoadOptions(
         val sourceLabel=when(review.family) {
             "dumbbells_per_hand" -> "Verified dumbbells · per hand"
             "barbell_plates" -> "Verified plates · total load"
-            "exercise_override" -> "Verified exercise-specific loading"
+            "exercise_override" -> if(review.mode=="external_load")
+                "Verified selectable logged values" else "Verified exercise-specific loading"
             "smith_confirmed_totals" -> "Verified Smith total load"
             "machine_stack" -> "Verified machine stack"
             "cable_stack" -> "Verified cable stack"
@@ -82,7 +83,7 @@ internal fun NativeVerifiedLoadOptions(
         }
         if(showExplanation) {
             Text(if(review.family=="exercise_override" && review.mode=="external_load")
-                "Verified machine values reflect your saved logging scale, not effective mechanical resistance. Keep the same basis for every set."
+                "These are verified logged machine values, not a measurement of effective mechanical resistance. Keep the same logging basis for every set."
                 else "Adjacent loads were verified against this exercise's saved equipment. Only your actual logged value changes when selected.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

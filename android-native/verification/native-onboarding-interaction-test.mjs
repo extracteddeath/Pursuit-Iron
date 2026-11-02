@@ -665,3 +665,15 @@ assert.ok(train.includes('if(showLast)Text(set.last?.let') &&
   train.includes('set.targetRir?.let { " · $it RIR" }') &&
   train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy'),
   'The Target/Last control must show canonical issued weight, reps and RIR in that order without replacing editable actual load');
+
+const toolbarStart=train.indexOf('    // Session note, pinned setup and Focus stay visible');
+const toolbarEnd=train.indexOf('    if(pinnedNote!=null && (pinnedNote.text',toolbarStart);
+assert.ok(toolbarStart>=0 && toolbarEnd>toolbarStart &&
+  !train.slice(toolbarStart,toolbarEnd).includes('horizontalScroll(') &&
+  train.slice(toolbarStart,toolbarEnd).includes('Spacer(Modifier.weight(1f))') &&
+  train.slice(toolbarStart,toolbarEnd).includes('Icon(Icons.Outlined.Edit') &&
+  train.slice(toolbarStart,toolbarEnd).includes('Icon(Icons.Outlined.PushPin') &&
+  train.slice(toolbarStart,toolbarEnd).includes('FilterChip(selected=focusMode,onClick={focusMode=!focusMode}') &&
+  train.slice(toolbarStart,toolbarEnd).includes('FilterChip(selected=!showLast,onClick={showLast=false}') &&
+  train.slice(toolbarStart,toolbarEnd).includes('FilterChip(selected=showLast,onClick={showLast=true}'),
+  'The live note, setup, Focus and Last/Target controls must be visible without horizontal scroll on phones');

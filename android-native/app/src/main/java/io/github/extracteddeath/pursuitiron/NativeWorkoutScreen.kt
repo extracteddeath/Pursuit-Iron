@@ -165,8 +165,12 @@ internal fun NativeWorkoutScreen(
     if(showPinnedNote)NativeExerciseNoteSheet(progress,exercise,state.workoutBusy || state.historyBusy,
         state.exerciseNoteError,onSaveExerciseNote) {showPinnedNote=false}
     if(showNote)NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote) {showNote=false}
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        IconButton(onClick={showNote=true},enabled=!journal.isFinished && !state.workoutBusy) {
+    // Session note, pinned setup and Focus stay visible on narrow phones.
+    // A scrollable row containing a weighted Spacer could push Focus offscreen.
+    Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        IconButton(onClick={showNote=true},enabled=!journal.isFinished &&
+            !state.workoutBusy && !state.historyBusy) {
             Icon(Icons.Outlined.Edit,contentDescription=if(journal.note?.text.isNullOrEmpty())"Add session note" else "Edit session note",
                 tint=if(journal.note?.text.isNullOrEmpty())MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
         }
@@ -176,11 +180,13 @@ internal fun NativeWorkoutScreen(
                 tint=if(pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})
                     MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})
-        FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
         Spacer(Modifier.weight(1f))
         FilterChip(selected=focusMode,onClick={focusMode=!focusMode},
             label={Text(if(focusMode)"Show all" else "Focus")})
+    }
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})
+        FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
     }
     if(pinnedNote!=null && (pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})) {
         OutlinedCard(onClick={showPinnedNote=true},enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy,

@@ -23,9 +23,11 @@ class NativeProgramProposal internal constructor(
     val creationId: String,val setupJson: String,val snapshot: String,val program: ReadOnlyProgramSummary,
     val profile: NativeProgramProfile
 )
+data class NativeStackCandidate(val id: String,val name: String,val mode: String)
 class NativeSavedProgram internal constructor(
     val creationId: String,val profile: NativeProgramProfile,val program: ReadOnlyProgramSummary,
-    val loadingInventory: String? = null
+    val loadingInventory: String? = null,
+    val loadingCandidates: List<NativeStackCandidate> = emptyList()
 )
 interface NativeProgramCreationEngine {
     suspend fun programOptions(): NativeProgramOptions?
@@ -155,15 +157,37 @@ object NativeProgramSetupCodec {
     }
     fun decodeSaved(raw: String,id: String,snapshot: String): NativeSavedProgram? {
         val value=wire.result(raw,id) ?: return null
-        if(value.has("loadingInventory"))wire.exact(value,"source","readOnly","creationId","setupJson","snapshotSha256","program","loadingInventory")
+        if(value.has("loadingCandidates"))wire.exact(value,"source","readOnly","creationId",
+            "setupJson","snapshotSha256","program","loadingInventory","loadingCandidates")
+        else if(value.has("loadingInventory"))wire.exact(value,"source","readOnly","creationId",
+            "setupJson","snapshotSha256","program","loadingInventory")
         else wire.exact(value,"source","readOnly","creationId","setupJson","snapshotSha256","program")
         require(value.get("source")=="modules/engine-api.js:parseStoredData" && value.get("readOnly")==true &&
             value.get("snapshotSha256")==wire.sha(snapshot))
         val s=JSONObject(wire.text(value,"setupJson"));require(value.get("creationId")==s.get("creationId"))
         val p=readProfile(s.getJSONObject("profile").toString())
+        val program=summary(value.getJSONObject("program"),snapshot,s.getString("programId"))
+        val ownedIds=program.days.flatMap { it.exerciseIds }.toSet()
+        val candidates=if(value.has("loadingCandidates")) {
+            val rows=value.getJSONArray("loadingCandidates");require(rows.length()<=210)
+            val parsed=(0 until rows.length()).map { index ->
+                val item=rows.getJSONObject(index)
+                wire.exact(item,"id","name","mode")
+                val key=wire.text(item,"id")
+                val name=wire.text(item,"name")
+                val mode=wire.text(item,"mode")
+                require(key in ownedIds && key.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) &&
+                    name.isNotBlank() && name.length<=120 &&
+                    !name.any { it.code<32 || it.code in 127..159 } &&
+                    mode in listOf("cable_stack","machine_stack"))
+                NativeStackCandidate(key,name,mode)
+            }
+            require(parsed.map { it.id }.distinct().size==parsed.size)
+            parsed
+        } else emptyList()
         val inventory=if(!value.has("loadingInventory") || value.isNull("loadingInventory"))null
-            else NativeGymInventoryCodec.validate(value.getJSONObject("loadingInventory").toString(),p.unit)
-        return NativeSavedProgram(s.getString("creationId"),p,
-            summary(value.getJSONObject("program"),snapshot,s.getString("programId")),inventory)
+            else NativeGymInventoryCodec.validate(value.getJSONObject("loadingInventory").toString(),
+                p.unit,candidates.map { it.id }.toSet())
+        return NativeSavedProgram(s.getString("creationId"),p,program,inventory,candidates)
     }
 }

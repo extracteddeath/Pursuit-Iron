@@ -49,6 +49,8 @@ class CanonicalWorkoutStorePersistence(
     companion object {
         const val MAX_STORE_BYTES = 16 * 1024 * 1024
         private const val MAX_SNAPSHOT_BYTES = ReadOnlyBackupLimits.MAX_SOURCE_BYTES
+        // Fail closed rather than evict a consumed operation and permit its replay.
+        private const val MAX_RESTORE_OPERATION_IDS = 512
     }
     private data class Pending(val session: JournalSessionKey, val origin: String,
         val startRevision: Long, val slots: List<JournalSetSlot>,val issuedWorkout: String?=null)
@@ -59,7 +61,8 @@ class CanonicalWorkoutStorePersistence(
     private data class RestoreUndoAck(val operationId: String,val restoredSha256: String)
     private data class State(val snapshot: String, val pending: Pending?,
         val receipt: CanonicalWorkoutHistoryReceipt?,
-        val undo: RestoreUndo?=null, val undoAck: RestoreUndoAck?=null)
+        val undo: RestoreUndo?=null, val undoAck: RestoreUndoAck?=null,
+        val consumedRestoreIds: List<String> = emptyList())
     private val guard=Any()
     private val listeners=CopyOnWriteArraySet<() -> Unit>()
     private val hashPattern=Regex("^[0-9a-f]{64}$")
@@ -137,7 +140,10 @@ class CanonicalWorkoutStorePersistence(
                 .put("exerciseIndex",s.exerciseIndex).put("setIndex",s.setIndex).put("exerciseId",s.exerciseId)) } })
             .apply { if(p.issuedWorkout!=null)put("issuedWorkout",p.issuedWorkout) } }
             ?: JSONObject.NULL
-        val extended=state.undo!=null || state.undoAck!=null
+        val extended=state.undo!=null || state.undoAck!=null ||
+            state.consumedRestoreIds.isNotEmpty()
+        require(state.consumedRestoreIds.size <= MAX_RESTORE_OPERATION_IDS &&
+            state.consumedRestoreIds.distinct().size == state.consumedRestoreIds.size)
         val body=JSONObject().put("snapshot",state.snapshot).put("pending",pending)
             .put("receipt",receiptJson(state.receipt))
         if(extended) {
@@ -149,9 +155,12 @@ class CanonicalWorkoutStorePersistence(
                 .put("operationId",it.operationId).put("restoredSha256",it.restoredSha256) }
                 ?: JSONObject.NULL
             body.put("restoreUndo",undo).put("restoreUndoAck",undoAck)
+                .put("consumedRestoreIds",JSONArray().apply {
+                    state.consumedRestoreIds.forEach(::put)
+                })
         }
         val payload=body.toString()
-        val encoded=JSONObject().put("format",if(extended)2 else 1).put("payload",payload).put("sha256",sha(payload))
+        val encoded=JSONObject().put("format",if(extended)3 else 1).put("payload",payload).put("sha256",sha(payload))
             .toString().toByteArray(Charsets.UTF_8)
         try {
             require(encoded.size in 1..MAX_STORE_BYTES)
@@ -168,12 +177,16 @@ class CanonicalWorkoutStorePersistence(
             val envelope=JSONObject(decoded)
             exact(envelope,"format","payload","sha256")
             val format=number(envelope,"format")
-            require(format==1L || format==2L)
+            require(format in 1L..3L)
             val payload=text(envelope,"payload")
             require(text(envelope,"sha256")==sha(payload))
             val data=JSONObject(payload)
-            if(format==1L) exact(data,"snapshot","pending","receipt")
-            else exact(data,"snapshot","pending","receipt","restoreUndo","restoreUndoAck")
+            when(format) {
+                1L -> exact(data,"snapshot","pending","receipt")
+                2L -> exact(data,"snapshot","pending","receipt","restoreUndo","restoreUndoAck")
+                else -> exact(data,"snapshot","pending","receipt",
+                    "restoreUndo","restoreUndoAck","consumedRestoreIds")
+            }
             val snapshot=boundedSnapshot(text(data,"snapshot"))
             val receipt=if (data.isNull("receipt")) null else readReceipt(data.getJSONObject("receipt"))
             require(receipt==null || receipt.savedSnapshotSha256==sha(snapshot))
@@ -226,7 +239,19 @@ class CanonicalWorkoutStorePersistence(
                 RestoreUndoAck(op,restored)
             } else null
             require(undo==null || ack==null)
-            return State(snapshot,pending,receipt,undo,ack)
+            val consumed=if(format==3L) {
+                val a=data.getJSONArray("consumedRestoreIds")
+                require(a.length() in 1..MAX_RESTORE_OPERATION_IDS)
+                (0 until a.length()).map { idx ->
+                    val id=a.get(idx)
+                    require(id is String &&
+                        id.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")))
+                    id
+                }.also { ids -> require(ids.size==ids.distinct().size) }
+            } else listOfNotNull(undo?.operationId,ack?.operationId)
+            require(undo==null || consumed.contains(undo.operationId))
+            require(ack==null || consumed.contains(ack.operationId))
+            return State(snapshot,pending,receipt,undo,ack,consumed)
         } finally { raw.fill(0) }
     }
     private fun changed() { listeners.forEach { listener -> runCatching { listener() } } }
@@ -279,7 +304,8 @@ class CanonicalWorkoutStorePersistence(
             else null
         }
         if(initial.pending!=null || sha(initial.snapshot)!=approval.currentSha256 ||
-            initial.undoAck!=null) return null
+            initial.consumedRestoreIds.contains(approval.operationId) ||
+            initial.consumedRestoreIds.size>=MAX_RESTORE_OPERATION_IDS) return null
         val mergeEngine=engine as? PinnedCanonicalBackupMergeEngine ?: return null
         val preview=mergeEngine.previewBackupMerge(initial.snapshot,incoming) ?: return null
         if(preview.currentSha256!=approval.currentSha256 ||
@@ -306,7 +332,9 @@ class CanonicalWorkoutStorePersistence(
                 return@synchronized NativeBackupRestoreOutcome(approval.operationId,approval.candidateSha256)
             val sameCompletion=initial.receipt?.let { sameReceipt(current.receipt,it) }
                 ?: (current.receipt==null)
-            if(current.pending!=null || current.undo!=null || current.undoAck!=null ||
+            if(current.pending!=null || current.undo!=null ||
+                current.consumedRestoreIds.contains(approval.operationId) ||
+                current.consumedRestoreIds.size>=MAX_RESTORE_OPERATION_IDS ||
                 current.snapshot!=initial.snapshot || !sameCompletion)
                 return@synchronized null
             val committedReceipt=current.receipt?.let { prior ->
@@ -315,7 +343,8 @@ class CanonicalWorkoutStorePersistence(
             }
             save(State(prepared.candidateSnapshot,null,committedReceipt,
                 RestoreUndo(approval.operationId,current.snapshot,current.receipt,
-                    approval.candidateSha256)))
+                    approval.candidateSha256),null,
+                current.consumedRestoreIds + approval.operationId))
             val verified=read() ?: return@synchronized null
             require(verified.undo?.operationId==approval.operationId &&
                 verified.undo.installedSha256==approval.candidateSha256 &&
@@ -351,7 +380,7 @@ class CanonicalWorkoutStorePersistence(
                 sha(current.snapshot)!=undo.installedSha256) return@synchronized false
             val formerHash=sha(undo.priorSnapshot)
             save(State(undo.priorSnapshot,null,undo.priorReceipt,null,
-                RestoreUndoAck(operationId,formerHash)))
+                RestoreUndoAck(operationId,formerHash),current.consumedRestoreIds))
             val confirmed=read() ?: return@synchronized false
             require(confirmed.undo==null && confirmed.undoAck?.operationId==operationId &&
                 confirmed.undoAck.restoredSha256==formerHash &&
@@ -433,7 +462,8 @@ class CanonicalWorkoutStorePersistence(
             if(preparation.alreadyPresent)return@synchronized preparation.history
             val receipt=current.receipt?.let { CanonicalWorkoutHistoryReceipt(it.session,it.journalRevision,
                 it.handoffSha256,sha(preparation.candidate)) }
-            save(State(preparation.candidate,null,receipt))
+            save(State(preparation.candidate,null,receipt,
+                consumedRestoreIds=current.consumedRestoreIds))
             val confirmed=read() ?: return@synchronized null
             require(confirmed.snapshot==preparation.candidate)
             wrote=true
@@ -628,7 +658,8 @@ class CanonicalWorkoutStorePersistence(
             if (current.pending!=pending) return@synchronized null
             if (current.snapshot!=initial.snapshot || current.receipt?.session==session)
                 return@synchronized null
-            save(State(candidate,pending,proposed))
+            save(State(candidate,pending,proposed,
+                consumedRestoreIds=current.consumedRestoreIds))
             // Confirm the exact committed bytes before permitting cleanup.
             val verified=read() ?: return@synchronized null
             if (!sameReceipt(verified.receipt,proposed)) return@synchronized null

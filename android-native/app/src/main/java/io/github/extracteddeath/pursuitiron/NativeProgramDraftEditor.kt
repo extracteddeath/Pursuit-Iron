@@ -38,6 +38,12 @@ internal fun NativeProgramDraftEditor(
     var draft by remember(approved.reference) {
         mutableStateOf(NativeProgramEditDraft.from(verified))
     }
+    // Input buffers are separate from the validated, immutable edit draft:
+    // deleting a whole label while typing must not trap the text field.
+    var nameInput by remember(approved.reference) { mutableStateOf(approved.name) }
+    var dayLabelsInput by remember(approved.reference) {
+        mutableStateOf(approved.days.associate { it.id to it.label })
+    }
     var names by remember(approved.reference) { mutableStateOf<Map<String,String>>(emptyMap()) }
     LaunchedEffect(approved.reference) {
         val ids=approved.days.flatMap { it.exerciseIds }.distinct()
@@ -53,6 +59,8 @@ internal fun NativeProgramDraftEditor(
         OutlinedButton(onClick=onClose) { Text("Close outdated draft") }
         return
     }
+    val invalidInputs = nameInput != draft.name ||
+        draft.days.any { dayLabelsInput[it.id] != it.label }
     SectionLabel("Program editor", "Local draft · no saved changes")
     PursuitCard(highlighted=true) {
         Text("Organize your existing training days",style=MaterialTheme.typography.titleLarge)
@@ -62,22 +70,53 @@ internal fun NativeProgramDraftEditor(
         if(!allowEditing) Text("Finish or resolve the active workout before modifying a plan.",
             color=MaterialTheme.colorScheme.error)
         OutlinedTextField(
-            value=draft.name,
-            onValueChange={ value->draft.renameProgram(value)?.let { draft=it } },
+            value=nameInput,
+            onValueChange={ value->
+                nameInput=value
+                draft.renameProgram(value)?.let { draft=it }
+            },
             enabled=allowEditing, label={Text("Program name")},
+            isError=nameInput!=draft.name,
+            supportingText={
+                if(nameInput!=draft.name)
+                    Text("Enter a non-empty name of up to 120 characters.")
+            },
             singleLine=true,modifier=Modifier.fillMaxWidth()
         )
-        Text("${draft.changedDayCount} training day(s) changed · " +
-            if(draft.isChanged)"Unsaved draft" else "Matches saved plan",
+        Text("${draft.changedDayCount} training day position(s)/detail(s) changed · " +
+            when {
+                invalidInputs -> "Fix highlighted names"
+                draft.isChanged -> "Unsaved draft"
+                else -> "Matches saved plan"
+            },
             style=MaterialTheme.typography.labelMedium)
     }
     draft.days.forEachIndexed { dayIndex,day ->
         PursuitCard {
-            Text("Day ${dayIndex+1}",style=MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text("Day ${dayIndex+1}",style=MaterialTheme.typography.labelLarge,
+                    modifier=Modifier.weight(1f))
+                OutlinedButton(
+                    onClick={ draft.moveDay(dayIndex,-1)?.let { draft=it } },
+                    enabled=allowEditing && dayIndex>0
+                ) { Text("Day up") }
+                OutlinedButton(
+                    onClick={ draft.moveDay(dayIndex,1)?.let { draft=it } },
+                    enabled=allowEditing && dayIndex<draft.days.lastIndex
+                ) { Text("Day down") }
+            }
             OutlinedTextField(
-                value=day.label,
-                onValueChange={value->draft.renameDay(day.id,value)?.let { draft=it }},
+                value=dayLabelsInput[day.id] ?: day.label,
+                onValueChange={value->
+                    dayLabelsInput=dayLabelsInput+(day.id to value)
+                    draft.renameDay(day.id,value)?.let { draft=it }
+                },
                 enabled=allowEditing,label={Text("Training day name")},
+                isError=(dayLabelsInput[day.id] ?: day.label)!=day.label,
+                supportingText={
+                    if((dayLabelsInput[day.id] ?: day.label)!=day.label)
+                        Text("Enter a non-empty day name of up to 120 characters.")
+                },
                 singleLine=true,modifier=Modifier.fillMaxWidth()
             )
             Text("${day.exerciseIds.size} original movements · IDs unchanged",
@@ -88,7 +127,7 @@ internal fun NativeProgramDraftEditor(
                     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     Column(modifier=Modifier.weight(1f)) {
                         Text("Movement ${index+1}",style=MaterialTheme.typography.labelSmall)
-                        Text(names[id] ?: id.replace('_',' ').replace('-',' '),
+                        Text(names[id] ?: "Movement name unavailable",
                             style=MaterialTheme.typography.bodyMedium)
                         if(names[id]==null) Text("Movement ID: $id",
                             style=MaterialTheme.typography.labelSmall,
@@ -115,7 +154,11 @@ internal fun NativeProgramDraftEditor(
             Text("Save program edits · not connected")
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick={draft=draft.reset()},enabled=allowEditing && draft.isChanged) {
+            OutlinedButton(onClick={
+                draft=draft.reset()
+                nameInput=draft.name
+                dayLabelsInput=draft.days.associate { it.id to it.label }
+            },enabled=allowEditing && (draft.isChanged || invalidInputs)) {
                 Text("Reset draft")
             }
             OutlinedButton(onClick=onClose) { Text("Close editor") }

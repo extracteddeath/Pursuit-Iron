@@ -453,3 +453,26 @@ assert.ok(
   !nativeDraftUi.includes('generateNextProgramForShell'),
   'Current owned-program drafts must be non-writing, revision-bound and never reinterpret prescriptions'
 );
+
+const programDraftUi=fs.readFileSync(root+'NativeProgramDraftEditor.kt','utf8');
+const programDraftDomain=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeProgramEditDraft.kt','utf8');
+const packagedCatalog=fs.readFileSync(root+'PackagedReadOnlySchemaVerifier.kt','utf8');
+assert.ok(
+  screens.includes('NativeProgramDraftEditor(') &&
+  screens.includes('remember(currentPlan.program.reference)') &&
+  screens.includes('Edit saved program · local draft') &&
+  programDraftUi.includes('Save program edits · not connected') &&
+  programDraftUi.includes('enabled=false') &&
+  programDraftUi.includes('draft.matchesCurrent(verified)') &&
+  programDraftUi.includes('LaunchedEffect(approved.reference)') &&
+  programDraftUi.includes('lookupNames(approved.reference,ids)') &&
+  packagedCatalog.includes('SandboxExerciseCatalog(worker)') &&
+  host.includes('suspend fun lookupProgramExerciseNames(') &&
+  host.includes('actual.sha256Hex==expected.snapshotSha256') &&
+  host.includes('!sameSource()') &&
+  activity.includes('onLookupProgramExercises=runtime::lookupProgramExerciseNames') &&
+  programDraftDomain.includes('Collections.unmodifiableList(') &&
+  !programDraftUi.includes('commitAtomically') &&
+  !programDraftUi.includes('initialize('),
+  'Native draft editing must preserve source identity and display only packaged catalog names without saving'
+);

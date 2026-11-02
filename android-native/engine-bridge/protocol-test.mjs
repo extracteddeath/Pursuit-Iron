@@ -7,7 +7,7 @@ const call = (method, params = {}) => dispatchEngineRequest({
 const handshake = call('handshake');
 assert.equal(handshake.ok, true);
 assert.equal(handshake.result.engineCertified, false);
-assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup','workoutOutline','backupSchemaCheck','backupProgramInventory','currentProgramProjection']);
+assert.deepEqual(handshake.result.capabilities, ['handshake','catalogSummary','progressionPreview','exerciseLookup','exerciseAlternatives','workoutOutline','backupSchemaCheck','backupProgramInventory','currentProgramProjection']);
 const catalog = call('catalogSummary');
 assert.equal(catalog.ok, true);
 assert.equal(catalog.result.exercises, canonical.EXERCISES.length);

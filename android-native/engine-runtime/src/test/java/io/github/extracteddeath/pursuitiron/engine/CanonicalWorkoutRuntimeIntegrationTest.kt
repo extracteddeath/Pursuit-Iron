@@ -93,6 +93,61 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             f.getLong("completedAt"),f.getLong("durationMs"))))
     }
 
+    @Test(timeout=60000) fun packagedEquipmentProbeRefusesDefaultsAndOnlyStepsConfirmedWeights() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Verified gym weight",allowSupersets=false),
+                "load-create","load-program",1000,223)))
+            val start=NativeWorkoutCodec.startJson("load-program","load-workout",2000)
+            val original=checkNotNull(engine.prepareWorkout(proposal.snapshot,start))
+            val first=original.exercises.first().sets.first().slot
+            val unknown=checkNotNull(engine.inspectEquipmentLoad(proposal.snapshot,
+                original.issuedJson,first,"159.5"))
+            assertFalse("Default hardware is not real gym confirmation",unknown.confirmed)
+            assertNull(unknown.next)
+            val store=JSONObject(proposal.snapshot)
+            val saved=store.getJSONArray("saved").getJSONObject(0)
+            val inventory=JSONObject().put("unit","lb")
+                .put("exerciseOverrides",JSONObject().put(first.exerciseId,JSONObject()
+                    .put("minimum",0).put("increment",5).put("maximum",250)))
+            saved.getJSONObject("config").put("loadingInventory",inventory)
+            val confirmedSource=store.toString()
+            val issued=checkNotNull(engine.prepareWorkout(confirmedSource,start))
+            val slot=issued.exercises.first().sets.first().slot
+            assertEquals(first.exerciseId,slot.exerciseId)
+            val exact=checkNotNull(engine.inspectEquipmentLoad(
+                confirmedSource,issued.issuedJson,slot,"159.5"))
+            assertTrue(exact.confirmed)
+            assertEquals("exercise_override",exact.family)
+            assertEquals("155",exact.previous)
+            assertEquals("160",exact.next)
+            assertFalse(exact.exact)
+            assertEquals("lb",exact.unit)
+            assertEquals("159.5",exact.inputLoad)
+            val wire=NativeEquipmentLoadingCodec.encode("load-forgery",confirmedSource,
+                issued.issuedJson,slot,"159.5")
+            val response=JSONObject(node.request(wire))
+            assertTrue(response.getBoolean("ok"))
+            val forged=JSONObject(response.toString())
+            forged.getJSONObject("result").put("next",159.5)
+            assertTrue("Kotlin must reject worker values that cannot advance load",runCatching {
+                NativeEquipmentLoadingCodec.decode(forged.toString(),"load-forgery",
+                    confirmedSource,issued.issuedJson,slot,"159.5")
+            }.isFailure)
+            val changed=JSONObject(response.toString())
+            changed.getJSONObject("result").put("unit","kg")
+            assertTrue(runCatching {
+                NativeEquipmentLoadingCodec.decode(changed.toString(),"load-forgery",
+                    confirmedSource,issued.issuedJson,slot,"159.5")
+            }.isFailure)
+            assertNull("A mismatched source may never authenticate this workout",
+                runCatching {
+                    engine.inspectEquipmentLoad(proposal.snapshot,issued.issuedJson,slot,"159.5")
+                }.getOrNull())
+        } }
+    }
+
     @Test(timeout=60000) fun actualIssuedUpNextHonorsPersistedSkipCorrectionAndRecovery() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

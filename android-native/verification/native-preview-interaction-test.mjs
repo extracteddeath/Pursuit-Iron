@@ -53,7 +53,7 @@ assert.ok(programEditor.includes('requestGymEdit(id)') &&
   inventoryEditor.includes('candidates.filter { it.id!=focused?.id }'),
   'The blocked movement must open its exact saved physical field without duplicate controls or an implicit write');
 const verifiedLoad=fs.readFileSync(root + 'NativeVerifiedLoadOptions.kt','utf8');
-assert.ok(inventoryEditor.includes('Never infer per-side plates, sled base weight, or effective resistance') &&
+assert.ok(inventoryEditor.includes('Values must match your real logged totals; never infer plate sides, sled weight or resistance') &&
   verifiedLoad.includes('Verified selectable logged values') &&
   verifiedLoad.includes('not a measurement of') &&
   verifiedLoad.includes('review.mode=="external_load"') &&

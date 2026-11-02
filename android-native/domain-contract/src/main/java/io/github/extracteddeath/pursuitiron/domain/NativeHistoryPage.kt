@@ -112,4 +112,29 @@ class NativeHistoryReadPort(private val owner: CanonicalCurrentSnapshotOwner,pri
             require(it.snapshotSha256==WorkoutStoreRuntimeCodec.sha(source) && it.historyId==historyId)
         }
     }
+    /** Read every page before publishing any day markers. Never combine store revisions. */
+    suspend fun calendar(query: NativeHistoryCalendarQuery,expected: String?=null): NativeHistoryCalendar? = read(expected) { source ->
+        val sha=WorkoutStoreRuntimeCodec.sha(source);val filter=query.filter
+        val rows=ArrayList<NativeHistorySummary>();var offset=0;var total: Int?=null;var unfiltered: Int?=null
+        val seen=HashSet<String>()
+        fun ordered(a: NativeHistorySummary,b: NativeHistorySummary)=a.date>b.date || a.date==b.date && a.historyId<b.historyId
+        do {
+            val page=checkNotNull(engine.inspectHistoryPage(source,NativeHistoryPageCodec.query(offset,sha,filter)))
+            require(page.snapshotSha256==sha && page.filter==filter && page.offset==offset &&
+                page.total in 0..2000 && page.unfilteredTotal in page.total..2000 &&
+                (total==null || total==page.total) && (unfiltered==null || unfiltered==page.unfilteredTotal))
+            total=page.total;unfiltered=page.unfilteredTotal
+            require(page.entries.size==minOf(NativeHistoryPageCodec.PAGE_SIZE,(page.total-offset).coerceAtLeast(0)))
+            require(page.entries.zipWithNext().all { (a,b)->ordered(a,b) } &&
+                (rows.isEmpty() || page.entries.isEmpty() || ordered(rows.last(),page.entries.first())) &&
+                page.entries.all { seen.add(it.historyId) && it.date>=checkNotNull(filter.fromInclusive) &&
+                    it.date<checkNotNull(filter.untilExclusive) })
+            rows+=page.entries
+            val next=(offset+page.entries.size).takeIf { it<page.total }
+            require(page.nextOffset==next && (next==null || next>offset))
+            offset=next ?: break
+        } while(true)
+        require(rows.size==total)
+        NativeHistoryCalendar(query,sha,checkNotNull(unfiltered),rows)
+    }
 }

@@ -5,9 +5,9 @@ Branch: `architecture/android-compose-foundation`. APK production stays frozen.
 The source journey covers onboarding, generated review and explicit program
 save, engine-issued working sets and myo/drop extensions, durable logging,
 interruption recovery, active-set correction, canonical completion, one-shot
-deload consumption and saved-history corrections. This pass adds name and date
-filters to paged history browsing. A follow-up adds Today, 7 days, 30 days
-and This month shortcuts using local calendar boundaries. This is source verification, not device
+deload consumption and saved-history corrections. History browsing includes
+name/date filters, local-calendar shortcuts and a complete month calendar linked
+to saved-workout review and correction. This is source verification, not device
 acceptance.
 
 ## History browsing
@@ -379,9 +379,42 @@ permission checks, active logging/correction, restart, lost completion/edit
 acknowledgements, saved corrections, no phantom PR and a full rotation back to
 the failed lift. Read fresh CI for the published revision. No APK is produced.
 
+## Follow-up: complete local-month history calendar
+
+Insights now switches between the existing filtered list and a Material 3 month
+calendar. Available dates contain saved workouts; selecting a date shows all of
+its workouts through the same summary cards and revision-bound review action.
+Program/day-name search applies to the visible month. Its drafts and the selected
+day survive rotation and a trip through workout detail/correction. Calendar
+search and list filters keep their own browsing context.
+
+The existing canonical page reader supplies every matching row before any day
+is exposed. A month can span more than one 12-workout page. Kotlin groups factual
+dates for presentation only; it introduces no new JS bridge method, history
+writer or training rule. Every page must agree on revision, exact local-month
+filter, count, offset, ordering and continuation. Missing, duplicated, malformed
+or conflicting pages reject the whole calendar. The owned snapshot is checked
+again after the final page, and detached read buffers are wiped.
+
+Local date boundaries use the established UTC-picker-label conversion, including
+23/25-hour days, leap years and opposite zone offsets. Repeated local clock hours
+remain on the same calendar day. Corrections and completion invalidate old
+calendar data and reload the pinned query; a late result overlapping a store
+change is dropped. Opening an older day does not replace the latest completion
+receipt or advance workout rotation. Legacy summaries stay explicitly summary-only.
+
+All 31 native source suites pass locally. Added JVM cases cover complete
+multi-page and 2,000-workout months, empty/search
+results, local-day grouping, changed source bytes, cancellation and forged page
+metadata/content. The real packaged-runtime journey also browses all 29 saved
+workouts, edits an older workout, checks refreshed dates/counts/volume, rejects a
+calendar overlapping Finish and reopens the resulting 30-workout month. Read
+fresh CI for the published revision; Android interaction acceptance remains open.
+No APK is produced, and the current canonical training source is unchanged.
+
 ## Next work
 
-Calendar views and richer training analytics, broader native session-adjustment
+Richer training analytics, broader native session-adjustment
 controls and imported web history remain separate
 milestones. Physical-device interaction, interruption and accessibility
 acceptance is still required for the complete agreed journey; preserve the APK

@@ -47,7 +47,7 @@ in progress; the gate has not been declared complete.
 | Custom programs | Inspection/reference contracts exist; first-class native authoring/edit/cycle parity remains open |
 | Adaptive cycles | Required scope is preserved; complete native cycle transitions and authorized adaptation remain open |
 | Exercise discovery | Read-only engine/catalog contracts exist; full variant/attachment/swap workflows remain open |
-| History and PRs | Owned history, corrections, records, filters and Last have source/JVM coverage; calendar/import/live-feedback and Android acceptance remain open |
+| History and PRs | Owned history, corrections, records, filters, a complete local-month calendar and Last have source/JVM coverage; import/live-feedback and Android acceptance remain open |
 | Strength/volume trends | Required regional-volume/standards/chart outcomes still need complete real-data workflows |
 | Bodyweight/milestones | Required measurements, bodyweight and milestone workflows remain open |
 | Backup/restore | Read-only validation/inventory exists; approved import/merge, rollback/Undo and export workflows remain open |

@@ -29,7 +29,8 @@ private fun calendarLabel(utcDay: Long)=Instant.ofEpochMilli(utcDay).atZone(Zone
 
 /** Drafts survive rotation. Only Apply, Use dates or Clear issues a read. */
 @Composable
-internal fun NativeHistoryFilters(applied: NativeHistoryFilter,enabled: Boolean,onApply: (NativeHistoryFilter)->Unit) {
+internal fun NativeHistoryFilters(applied: NativeHistoryFilter,enabled: Boolean,onApply: (NativeHistoryFilter)->Unit,
+    calendar: Boolean=false) {
     val zone=ZoneId.systemDefault()
     val keyboard=LocalSoftwareKeyboardController.current
     var search by rememberSaveable(applied.search) { mutableStateOf(applied.search) }
@@ -40,8 +41,11 @@ internal fun NativeHistoryFilters(applied: NativeHistoryFilter,enabled: Boolean,
         mutableStateOf(applied.untilExclusive?.let { NativeHistoryDates.pickerDay(it-1,zone) })
     }
     var showDates by rememberSaveable { mutableStateOf(false) }
-    val draft=if(start!=null && end!=null)NativeHistoryDates.range(search.trim(),checkNotNull(start),checkNotNull(end),zone)
+    val draft=if(calendar)applied.copy(search=search.trim())
+        else if(start!=null && end!=null)NativeHistoryDates.range(search.trim(),checkNotNull(start),checkNotNull(end),zone)
         else NativeHistoryFilter(search.trim())
+    val canClear=if(calendar)search.isNotEmpty() || applied.search.isNotEmpty()
+        else draft.isActive || applied.isActive || search.isNotEmpty()
     fun apply(filter: NativeHistoryFilter) { keyboard?.hide();onApply(filter) }
     PursuitCard {
         OutlinedTextField(value=search,onValueChange={ value ->
@@ -50,40 +54,42 @@ internal fun NativeHistoryFilters(applied: NativeHistoryFilter,enabled: Boolean,
             enabled=enabled,singleLine=true,modifier=Modifier.fillMaxWidth(),
             keyboardOptions=KeyboardOptions(imeAction=ImeAction.Search),
             keyboardActions=KeyboardActions(onSearch={if(enabled && draft!=applied)apply(draft)}))
-        Text("Quick dates",style=MaterialTheme.typography.labelMedium)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            listOf(
-                NativeHistoryPeriod.TODAY to "Today",
-                NativeHistoryPeriod.SEVEN_DAYS to "7 days",
-                NativeHistoryPeriod.THIRTY_DAYS to "30 days",
-                NativeHistoryPeriod.THIS_MONTH to "This month"
-            ).forEach { (period,label) ->
-                val quick=NativeHistoryDates.period(search.trim(),period,LocalDate.now(zone),zone)
-                FilterChip(
-                    selected=applied.fromInclusive==quick.fromInclusive &&
-                        applied.untilExclusive==quick.untilExclusive,
-                    enabled=enabled,
-                    onClick={
-                        start=quick.fromInclusive?.let { NativeHistoryDates.pickerDay(it,zone) }
-                        end=quick.untilExclusive?.let { NativeHistoryDates.pickerDay(it-1,zone) }
-                        apply(quick)
-                    },
-                    label={Text(label)}
-                )
+        if(!calendar) {
+            Text("Quick dates",style=MaterialTheme.typography.labelMedium)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    NativeHistoryPeriod.TODAY to "Today",
+                    NativeHistoryPeriod.SEVEN_DAYS to "7 days",
+                    NativeHistoryPeriod.THIRTY_DAYS to "30 days",
+                    NativeHistoryPeriod.THIS_MONTH to "This month"
+                ).forEach { (period,label) ->
+                    val quick=NativeHistoryDates.period(search.trim(),period,LocalDate.now(zone),zone)
+                    FilterChip(
+                        selected=applied.fromInclusive==quick.fromInclusive &&
+                            applied.untilExclusive==quick.untilExclusive,
+                        enabled=enabled,
+                        onClick={
+                            start=quick.fromInclusive?.let { NativeHistoryDates.pickerDay(it,zone) }
+                            end=quick.untilExclusive?.let { NativeHistoryDates.pickerDay(it-1,zone) }
+                            apply(quick)
+                        },
+                        label={Text(label)}
+                    )
+                }
+            }
+            OutlinedButton(onClick={keyboard?.hide();showDates=true},enabled=enabled,modifier=Modifier.fillMaxWidth()) {
+                Text(if(start!=null && end!=null)"${calendarLabel(checkNotNull(start))} – ${calendarLabel(checkNotNull(end))}"
+                    else "Choose date range")
             }
         }
-        OutlinedButton(onClick={keyboard?.hide();showDates=true},enabled=enabled,modifier=Modifier.fillMaxWidth()) {
-            Text(if(start!=null && end!=null)"${calendarLabel(checkNotNull(start))} – ${calendarLabel(checkNotNull(end))}"
-                else "Choose date range")
-        }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            TextButton(onClick={search="";start=null;end=null;apply(NativeHistoryFilter())},
-                enabled=enabled && (draft.isActive || applied.isActive || search.isNotEmpty())) { Text("Clear filters") }
-            FilledTonalButton(onClick={apply(draft)},enabled=enabled && draft!=applied) { Text("Apply filters") }
+            TextButton(onClick={search="";start=null;end=null;apply(if(calendar)applied.copy(search="") else NativeHistoryFilter())},
+                enabled=enabled && canClear) { Text(if(calendar)"Clear search" else "Clear filters") }
+            FilledTonalButton(onClick={apply(draft)},enabled=enabled && draft!=applied) { Text(if(calendar)"Search month" else "Apply filters") }
         }
     }
-    if(showDates)NativeHistoryDatePicker(start,end,zone,enabled,onDismiss={showDates=false}) { first,last ->
+    if(showDates && !calendar)NativeHistoryDatePicker(start,end,zone,enabled,onDismiss={showDates=false}) { first,last ->
         start=first;end=last;showDates=false
         apply(NativeHistoryDates.range(search.trim(),first,last,zone))
     }

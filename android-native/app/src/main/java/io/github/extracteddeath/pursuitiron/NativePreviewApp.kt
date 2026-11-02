@@ -56,6 +56,7 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
+import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery
 import io.github.extracteddeath.pursuitiron.domain.JournalSetSlot
 import io.github.extracteddeath.pursuitiron.domain.JournalSetDisposition
 import io.github.extracteddeath.pursuitiron.domain.JournalSetValues
@@ -100,7 +101,8 @@ internal fun NativePreviewApp(
     onOpenHistory: (String)->Unit = {},
     onHistoryPage: (Int)->Unit = {},
     onHistoryList: ()->Unit = {},
-    onFilterHistory: (NativeHistoryFilter)->Unit = {}
+    onFilterHistory: (NativeHistoryFilter)->Unit = {},
+    onHistoryCalendar: (NativeHistoryCalendarQuery)->Unit = {}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
@@ -201,6 +203,7 @@ internal fun NativePreviewApp(
                     destinationStates.SaveableStateProvider(current) {
                         val scrollContext=if(current==NativeDestination.INSIGHTS.ordinal)
                             onboarding?.history?.historyId?.let { "workout:$it" }
+                                ?: onboarding?.historyCalendarQuery?.let { "history-calendar-$it" }
                                 ?: "history-page-${onboarding?.historyFilter}-${onboarding?.historyPage?.offset ?: 0}" else "destination"
                         val pageScroll=key(scrollContext) { rememberScrollState() }
                         Box(Modifier.fillMaxSize()) {
@@ -242,7 +245,7 @@ internal fun NativePreviewApp(
                                     }
                                 )
                                 NativeDestination.INSIGHTS -> InsightsScreen(onboarding,onCorrectHistory,onReloadHistory,
-                                    onOpenHistory,onHistoryPage,onHistoryList,onFilterHistory)
+                                    onOpenHistory,onHistoryPage,onHistoryList,onFilterHistory,onHistoryCalendar)
                             }
                             if(onboarding?.saved==null)ConnectionNotice(status,false)
                         }

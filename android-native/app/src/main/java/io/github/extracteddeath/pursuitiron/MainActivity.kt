@@ -58,7 +58,8 @@ class MainActivity : ComponentActivity() {
                     onOpenHistory=runtime::openHistory,
                     onHistoryPage=runtime::loadHistoryPage,
                     onHistoryList=runtime::showHistoryList,
-                    onFilterHistory=runtime::filterHistory
+                    onFilterHistory=runtime::filterHistory,
+                    onHistoryCalendar=runtime::loadHistoryCalendar
                 )
             }
         }

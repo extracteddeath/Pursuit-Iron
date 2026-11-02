@@ -6,6 +6,8 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
+import java.time.YearMonth
+import java.time.ZoneOffset
 
 /** Actual packaged canonical JS -> Kotlin transport -> atomic store/journal. No APK. */
 class CanonicalWorkoutRuntimeIntegrationTest {
@@ -587,7 +589,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
-    @Test(timeout=60000) fun historyBrowserPagesOlderWorkoutsAndRejectsReadsOverlappingCompletionOrCancellation() {
+    @Test(timeout=60000) fun historyBrowserPagesAndCalendarsOlderWorkoutsWithoutMixingCompletionOrCancellation() {
         NodeTransport().use { node -> runBlocking {
             var block=false;var forgeFilter=false
             var reached=CompletableDeferred<Unit>();var release=CompletableDeferred<Unit>()
@@ -625,6 +627,13 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             }
             val reader=NativeHistoryReadPort(owner,engine);val writes=drive.writes
             val first=checkNotNull(reader.page());assertEquals(29,first.total);assertEquals("browser-3",first.entries[0].historyId)
+            val monthQuery=NativeHistoryCalendarQuery(YearMonth.of(1970,1),ZoneOffset.UTC)
+            val month=checkNotNull(reader.calendar(monthQuery))
+            assertEquals(29,month.entries.size);assertEquals(1,month.activeDays)
+            assertEquals(month.entries,month.workoutsOn(monthQuery.firstUtcDay))
+            assertTrue(month.entries.any { !it.detailsAvailable });assertEquals(writes,drive.writes)
+            val emptyMonth=checkNotNull(reader.calendar(monthQuery.copy(month=YearMonth.of(1970,2))))
+            assertTrue(emptyMonth.entries.isEmpty());assertEquals(29,emptyMonth.unfilteredTotal)
             val filter=NativeHistoryFilter(legacy.getString("programName"),100000,900000)
             val filteredFirst=checkNotNull(reader.page(filter=filter))
             assertEquals(25,filteredFirst.total);assertEquals(29,filteredFirst.unfilteredTotal);assertEquals(filter,filteredFirst.filter)
@@ -633,6 +642,8 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             val filteredRows=filteredFirst.entries+filteredSecond.entries+filteredLast.entries
             assertEquals(25,filteredRows.size);assertEquals(25,filteredRows.map { it.historyId }.toSet().size)
             assertTrue(filteredRows.all { it.historyId.startsWith("legacy-") });assertEquals(1,filteredLast.entries.size)
+            val namedMonth=checkNotNull(reader.calendar(monthQuery.copy(search=filter.search)))
+            assertEquals(filteredRows,namedMonth.entries)
             val olderFilter=NativeHistoryFilter(seed.getJSONArray("saved").getJSONObject(0).getString("name"),62000,62001)
             val olderPage=checkNotNull(reader.page(filter=olderFilter))
             assertEquals("browser-0",olderPage.entries.single().historyId)
@@ -661,6 +672,12 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertEquals(90.0,checkNotNull(corrected.exercises.single { it.id==lift.id }.record).load,0.0)
             assertNull(reader.page(12,first.snapshotSha256))
             assertNull(reader.page(12,filteredFirst.snapshotSha256,filter))
+            assertNull(reader.calendar(monthQuery,month.snapshotSha256))
+            val correctedMonth=checkNotNull(reader.calendar(monthQuery))
+            assertEquals(month.entries.map { it.historyId to it.date },correctedMonth.entries.map { it.historyId to it.date })
+            assertEquals(month.activeDays,correctedMonth.activeDays)
+            assertTrue(correctedMonth.entries.single { it.historyId==older.historyId }.volume<
+                month.entries.single { it.historyId==older.historyId }.volume)
             val correctedFiltered=checkNotNull(reader.page(filter=olderFilter))
             assertEquals(olderFilter,correctedFiltered.filter)
             assertEquals(olderPage.entries.map { it.historyId to it.date },correctedFiltered.entries.map { it.historyId to it.date })
@@ -676,7 +693,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertNull(owner.correctHistory(NativeHistoryCodec.correctionJson(corrected,"blocked-active-edit",5100000,
                 listOf(NativeHistoryChange(lift.id,lift.sets[0].setIndex,"55",6,null)))))
             block=true
-            val stale=async { reader.page(filter=filter) };reached.await()
+            val stale=async { reader.calendar(monthQuery) };reached.await()
             for((i,slot) in next.slots.withIndex())progress=NativeWorkoutProgress(next,checkNotNull(journal.recordSet(
                 next.session,progress.journal.revision,JournalSetIntent("skip-next-$i",slot,JournalSetDisposition.SKIPPED,null))))
             val finished=checkNotNull(journal.finish(next.session,progress.journal.revision,JournalFinishIntent("finish-next",6060000,60000)))
@@ -685,7 +702,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             block=false;assertEquals(30,checkNotNull(reader.page()).total)
             reached=CompletableDeferred();release=CompletableDeferred();block=true
             val beforeCancel=drive.writes
-            val cancelled=async { reader.page(filter=filter) };reached.await();cancelled.cancelAndJoin();release.complete(Unit)
+            val cancelled=async { reader.calendar(monthQuery) };reached.await();cancelled.cancelAndJoin();release.complete(Unit)
             assertEquals(beforeCancel,drive.writes)
             assertEquals("browser-next",checkNotNull(owner.lastCompletionReceipt()).session.workoutId)
             block=false
@@ -694,6 +711,8 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             val restoredFilter=checkNotNull(reopened.page(filter=filter))
             assertEquals(25,restoredFilter.total);assertEquals(30,restoredFilter.unfilteredTotal)
             assertEquals(filteredFirst.entries,restoredFilter.entries)
+            val restoredMonth=checkNotNull(reopened.calendar(monthQuery))
+            assertEquals(30,restoredMonth.entries.size);assertEquals("browser-next",restoredMonth.entries.first().historyId)
             assertEquals("browser-0",checkNotNull(reopened.workout("browser-0")).historyId)
         } }
     }

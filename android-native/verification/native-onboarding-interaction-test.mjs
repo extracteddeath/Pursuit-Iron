@@ -251,3 +251,17 @@ assert.ok(train.includes('"Record failed attempt"') && train.includes('set.allow
   activeEdit.includes('set.allowFailedAttempt') && observationEditor.includes('row.allowFailedAttempt') &&
   observationEditor.includes('0 reps records a failed attempt.'),
   'Zero-rep entry, active edits and saved edits must use issued eligibility and label the attempt explicitly');
+const calendarUi=fs.readFileSync(root+'NativeHistoryCalendarPanel.kt','utf8');
+assert.ok(activity.includes('onHistoryCalendar=runtime::loadHistoryCalendar') &&
+  screens.includes('onFilterHistory,onHistoryCalendar)') &&
+  shell.includes('onboarding?.historyCalendarQuery?.let') &&
+  historyUi.includes('val browserState=rememberSaveableStateHolder()') &&
+  historyUi.includes('browserState.SaveableStateProvider("calendar")') &&
+  historyUi.includes('NativeHistorySummaryCard(summary,enabled,onOpen)') &&
+  calendarUi.includes('DatePicker(state=picker,showModeToggle=false') &&
+  calendarUi.includes('remember(calendar,enabled)') && calendarUi.includes('calendar?.workoutsOn(utcTimeMillis)') &&
+  calendarUi.includes('workouts.forEach { NativeHistorySummaryCard(it,enabled,onOpen) }') &&
+  host.includes('reader.calendar(query)') &&
+  host.includes('loadHistoryWorkout(historyId,calendar.snapshotSha256)') &&
+  host.includes('optionalHistoryCalendar(current.historyCalendarQuery,history.snapshotSha256)'),
+  'Complete-month calendars must preserve day selection, share saved review cards, bind reads to the owned revision and refresh after corrections');

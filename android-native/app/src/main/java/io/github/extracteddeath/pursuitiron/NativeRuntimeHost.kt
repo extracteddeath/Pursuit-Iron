@@ -19,6 +19,7 @@ internal data class NativeRuntimeState(
     val history: NativeWorkoutHistory?=null,val historyPage: NativeHistoryPage?=null,
     val historyBusy: Boolean=false,val historyError: String?=null,
     val historyFilter: NativeHistoryFilter=NativeHistoryFilter(),
+    val historyCalendarQuery: NativeHistoryCalendarQuery?=null,val historyCalendar: NativeHistoryCalendar?=null,
     val shortPreview: NativeShortSessionPreview?=null,
     val shortPreviewBusy: Boolean=false,val shortPreviewError: String?=null,
     val muscleReview: NativeWorkoutMuscleReview?=null,
@@ -60,7 +61,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 store=owner
                 historyReader=NativeHistoryReadPort(owner,engine)
                 val watching=owner.subscribeCommittedChanges {
-                    mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null,muscleReview=null) }
+                    mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null,muscleReview=null,historyCalendar=null) }
                 }
                 synchronized(lifetime) {
                     if(closed) { watching.close();throw CancellationException("Runtime closed") }
@@ -105,10 +106,16 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     } catch(cancelled: CancellationException) { throw cancelled }
       catch(_: Exception) { null }
 
+    private suspend fun optionalHistoryCalendar(query: NativeHistoryCalendarQuery?,expected: String?=null): NativeHistoryCalendar? = try {
+        query?.let { historyReader?.calendar(it,expected) }
+    } catch(cancelled: CancellationException) { throw cancelled }
+      catch(_: Exception) { null }
+
     fun reloadHistory() {
         val current=mutable.value
         val selected=current.history
-        if(selected==null)loadHistoryPage(0) else loadHistoryWorkout(selected.historyId,null)
+        if(selected!=null)loadHistoryWorkout(selected.historyId,null)
+        else current.historyCalendarQuery?.let(::loadHistoryCalendar) ?: loadHistoryPage(0)
     }
     fun showHistoryList() {
         if(mutable.value.historyBusy)return
@@ -130,17 +137,42 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val page=checkNotNull(reader.page(offset,expected,filter))
                 ensureActive()
                 mutable.update { if(it.storeChangeKey==current.storeChangeKey)
-                    it.copy(history=null,historyPage=page,historyFilter=page.filter,historyBusy=false,historyError=null)
+                    it.copy(history=null,historyPage=page,historyFilter=page.filter,historyBusy=false,historyError=null,
+                        historyCalendarQuery=null,historyCalendar=null)
                     else it.copy(historyBusy=false,historyError="History changed while loading. Reload workouts to continue.") }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) { mutable.update { it.copy(historyBusy=false,
                 historyError="History could not be refreshed. Reload workouts to check the latest saved values.") } }
         }
     }
+    fun loadHistoryCalendar(query: NativeHistoryCalendarQuery) {
+        val current=mutable.value
+        if(!current.ready || current.busy || current.saved==null || current.historyBusy || current.workoutBusy)return
+        val reader=historyReader ?: return
+        mutable.update { it.copy(history=null,historyCalendarQuery=query,historyCalendar=null,historyBusy=true,historyError=null) }
+        scope.launch {
+            try {
+                val calendar=checkNotNull(reader.calendar(query))
+                ensureActive()
+                mutable.update { if(it.storeChangeKey==current.storeChangeKey)
+                    it.copy(historyCalendar=calendar,historyBusy=false,historyError=null)
+                    else it.copy(historyBusy=false,historyError="History changed while loading. Reload the calendar to continue.") }
+            } catch(cancelled: CancellationException) { throw cancelled }
+              catch(_: Exception) { mutable.update { it.copy(historyBusy=false,
+                historyError="The calendar could not be refreshed. Reload it to check your saved workouts.") } }
+        }
+    }
     fun openHistory(historyId: String) {
-        val page=mutable.value.historyPage ?: return
-        if(page.entries.none { it.historyId==historyId && it.detailsAvailable })return
-        loadHistoryWorkout(historyId,page.snapshotSha256)
+        val current=mutable.value
+        if(current.historyCalendarQuery!=null) {
+            val calendar=current.historyCalendar ?: return
+            if(calendar.query!=current.historyCalendarQuery || calendar.entries.none { it.historyId==historyId && it.detailsAvailable })return
+            loadHistoryWorkout(historyId,calendar.snapshotSha256)
+        } else {
+            val page=current.historyPage ?: return
+            if(page.entries.none { it.historyId==historyId && it.detailsAvailable })return
+            loadHistoryWorkout(historyId,page.snapshotSha256)
+        }
     }
     private fun loadHistoryWorkout(historyId: String,expected: String?) {
         val current=mutable.value
@@ -152,10 +184,12 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val history=checkNotNull(reader.workout(historyId,expected))
                 val page=current.historyPage?.takeIf { it.snapshotSha256==history.snapshotSha256 && it.filter==current.historyFilter }
                     ?: optionalHistoryPage(current.historyPage?.offset ?: 0,history.snapshotSha256,current.historyFilter)
+                val calendar=current.historyCalendar?.takeIf { it.snapshotSha256==history.snapshotSha256 && it.query==current.historyCalendarQuery }
+                    ?: optionalHistoryCalendar(current.historyCalendarQuery,history.snapshotSha256)
                 ensureActive()
                 // Browsing an older workout never replaces the latest completion receipt.
                 mutable.update { if(it.storeChangeKey==current.storeChangeKey)
-                    it.copy(history=history,historyPage=page,historyBusy=false,historyError=null)
+                    it.copy(history=history,historyPage=page,historyCalendar=calendar,historyBusy=false,historyError=null)
                     else it.copy(historyBusy=false,historyError="History changed while loading. Reload workouts to continue.") }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) { mutable.update { it.copy(historyBusy=false,
@@ -172,9 +206,11 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val history=checkNotNull(owner.correctHistory(correctionJson))
                 val receipt=owner.lastCompletionReceipt()
                 val page=optionalHistoryPage(current.historyPage?.offset ?: 0,history.snapshotSha256,current.historyFilter)
+                val calendar=optionalHistoryCalendar(current.historyCalendarQuery,history.snapshotSha256)
                 ensureActive()
-                mutable.update { it.copy(history=history,historyPage=page,completion=receipt,historyBusy=false,
-                    historyError=if(page==null)"Correction saved. Reload workouts to refresh the list." else null) }
+                mutable.update { it.copy(history=history,historyPage=page,historyCalendar=calendar,completion=receipt,historyBusy=false,
+                    historyError=if(current.historyCalendarQuery!=null && calendar==null)"Correction saved. Reload the calendar to refresh it."
+                        else if(page==null)"Correction saved. Reload workouts to refresh the list." else null) }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) { mutable.update { it.copy(historyBusy=false,
                 historyError="The correction could not be confirmed. Retry saving, or reload saved sets to check the current values.") } }
@@ -460,9 +496,10 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val saved=checkNotNull(readSaved(owner,loaded))
                 val history=runCatching { readHistory(outcome.receipt) }.getOrNull()
                 val page=optionalHistoryPage(filter=current.historyFilter)
+                val calendar=optionalHistoryCalendar(current.historyCalendarQuery,page?.snapshotSha256)
                 ensureActive()
                 mutable.update { it.copy(workout=null,workoutBusy=false,workoutError=null,completion=outcome.receipt,saved=saved,muscleReview=null,
-                    history=history,historyPage=page,historyError=null) }
+                    history=history,historyPage=page,historyCalendar=calendar,historyError=null) }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 // This also recovers history committed immediately before an
@@ -473,9 +510,10 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val saved=if(done)runCatching { readSaved(owner,loaded) }.getOrNull() else null
                 val history=if(done)runCatching { readHistory(receipt) }.getOrNull() else null
                 val page=if(done)optionalHistoryPage(filter=current.historyFilter) else null
+                val calendar=if(done)optionalHistoryCalendar(current.historyCalendarQuery,page?.snapshotSha256) else null
                 mutable.update { it.copy(workout=if(done)null else restored.getOrNull() ?: it.workout,workoutBusy=false,
                     completion=if(done)receipt else it.completion,saved=saved ?: it.saved,history=if(done)history else it.history,
-                    historyPage=if(done)page else it.historyPage,
+                    historyPage=if(done)page else it.historyPage,historyCalendar=if(done)calendar else it.historyCalendar,
                     workoutError=if(done)null else "Workout completion could not be confirmed. Your saved sets are kept here. Retry finishing.") }
             }
         }

@@ -4,11 +4,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import io.github.extracteddeath.pursuitiron.domain.*
 import java.util.UUID
 import java.util.Date
 import java.text.DateFormat
+import java.time.YearMonth
+import java.time.ZoneId
 
 private fun historyDateLabel(date: Long)=DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT).format(Date(date))
 
@@ -22,9 +25,25 @@ private fun historySetLabel(exercise: NativeHistoryExercise,set: NativeHistorySe
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->Unit,onReload: ()->Unit,
-    onOpen: (String)->Unit,onPage: (Int)->Unit,onList: ()->Unit,onFilter: (NativeHistoryFilter)->Unit) {
+    onOpen: (String)->Unit,onPage: (Int)->Unit,onList: ()->Unit,onFilter: (NativeHistoryFilter)->Unit,
+    onCalendar: (NativeHistoryCalendarQuery)->Unit) {
     val history=state.history
+    val browserState=rememberSaveableStateHolder()
     if(history==null) {
+        val enabled=!state.historyBusy && !state.workoutBusy
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
+            FilterChip(selected=state.historyCalendarQuery==null,onClick={onPage(0)},enabled=enabled,label={Text("List")})
+            FilterChip(selected=state.historyCalendarQuery!=null,enabled=enabled,onClick={
+                val zone=ZoneId.systemDefault()
+                onCalendar(state.historyCalendarQuery ?: NativeHistoryCalendarQuery(YearMonth.now(zone),zone,state.historyFilter.search))
+            },label={Text("Calendar")})
+        }
+        if(state.historyCalendarQuery!=null) {
+            browserState.SaveableStateProvider("calendar") {
+                NativeHistoryCalendarPanel(state,onCalendar,onOpen,onReload)
+            }
+            return
+        }
         val page=state.historyPage
         NativeHistoryFilters(state.historyFilter,!state.historyBusy && !state.workoutBusy,onFilter)
         if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
@@ -52,16 +71,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
         } else {
             SectionLabel(if(page.filter.isActive)"${page.total} of ${page.unfilteredTotal} workouts" else "${page.total} saved workouts")
             page.entries.forEach { summary ->
-                PursuitCard {
-                    Text(summary.dayLabel,style=MaterialTheme.typography.titleMedium)
-                    Text(historyDateLabel(summary.date),style=MaterialTheme.typography.bodyMedium)
-                    Text("${summary.programName} · Week ${summary.weekIndex}",style=MaterialTheme.typography.bodySmall)
-                    Text("${summary.setsDone} recorded · ${summary.totalSets-summary.setsDone} skipped · ${summary.volume} ${summary.unit} volume",
-                        style=MaterialTheme.typography.bodySmall)
-                    if(summary.detailsAvailable)FilledTonalButton(onClick={onOpen(summary.historyId)},
-                        enabled=!state.historyBusy && !state.workoutBusy,modifier=Modifier.fillMaxWidth()) { Text("Review workout") }
-                    else Text("Summary only · set details are unavailable",style=MaterialTheme.typography.bodySmall)
-                }
+                NativeHistorySummaryCard(summary,enabled,onOpen)
             }
             Text("${page.offset+1}–${page.offset+page.entries.size} of ${page.total}",style=MaterialTheme.typography.bodySmall)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
@@ -79,7 +89,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     var selectedSet by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     var selectedObservation by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy
-    TextButton(onClick=onList,enabled=!state.historyBusy) { Text("Back to workouts") }
+    TextButton(onClick=onList,enabled=!state.historyBusy) { Text(if(state.historyCalendarQuery!=null)"Back to calendar" else "Back to workouts") }
     Text(history.dayLabel,style=MaterialTheme.typography.headlineSmall)
     Text("${historyDateLabel(history.date)} · Week ${history.weekIndex}",style=MaterialTheme.typography.bodyMedium)
     if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
@@ -146,6 +156,21 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
             NativeHistorySetEditor(history,exercise,set,state.historyBusy,state.historyError,onCorrect,
                 onCancel={selectedExercise=null})
         }
+    }
+}
+
+/** The calendar and paged list open the identical revision-bound review action. */
+@Composable
+internal fun NativeHistorySummaryCard(summary: NativeHistorySummary,enabled: Boolean,onOpen: (String)->Unit) {
+    PursuitCard {
+        Text(summary.dayLabel,style=MaterialTheme.typography.titleMedium)
+        Text(historyDateLabel(summary.date),style=MaterialTheme.typography.bodyMedium)
+        Text("${summary.programName} · Week ${summary.weekIndex}",style=MaterialTheme.typography.bodySmall)
+        Text("${summary.setsDone} recorded · ${summary.totalSets-summary.setsDone} skipped · ${summary.volume} ${summary.unit} volume",
+            style=MaterialTheme.typography.bodySmall)
+        if(summary.detailsAvailable)FilledTonalButton(onClick={onOpen(summary.historyId)},
+            enabled=enabled,modifier=Modifier.fillMaxWidth()) { Text("Review workout") }
+        else Text("Summary only · set details are unavailable",style=MaterialTheme.typography.bodySmall)
     }
 }
 

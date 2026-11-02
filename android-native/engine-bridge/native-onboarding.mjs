@@ -10,7 +10,7 @@ export const NATIVE_SETUP_EQUIPMENT=Object.freeze([
   'legpress','hacksquat','legext','legcurl','calfmachine','ezbar','kettlebell','bands'
 ]);
 export const NATIVE_MUSCLE_PRIORITIES=Object.freeze([
-  ['chest','Chest'],['lats','Lats'],['upper_back','Upper back'],
+  ['chest','Chest'],['back','Back · lats and upper back'],
   ['shoulders','Shoulders'],['biceps','Biceps'],['triceps','Triceps'],
   ['quads','Quads'],['hamstrings','Hamstrings'],['glutes','Glutes'],
   ['calves','Calves'],['abs','Abs'],['traps','Traps'],

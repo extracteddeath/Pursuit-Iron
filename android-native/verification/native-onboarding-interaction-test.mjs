@@ -713,3 +713,11 @@ assert.ok(progressAt>0 && finishReadyAt>progressAt &&
   train.includes('if(journal.isFinished)"Retry finishing workout"') &&
   !train.includes('PursuitCard(highlighted=journal.unresolvedCount==0)'),
   'Once every issued set is durably resolved, Focus must prioritize confirmed finish, hide stale set/rest controls, and retain exact retry and review gates');
+
+assert.ok(train.includes('if(!journal.isFinished && focusMode) {') &&
+  train.includes('TextButton(onClick={focusMode=false},') &&
+  train.includes('Text("Review saved sets")') &&
+  train.indexOf('Text("Review saved sets")') <
+    train.indexOf('Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())') &&
+  train.includes('if(showFinishReview && !journal.isFinished && journal.unresolvedCount==0)'),
+  'The ready-to-finish action must allow immediate review of saved sets without submitting a finish or losing the confirmation gate');

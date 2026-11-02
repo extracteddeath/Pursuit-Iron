@@ -134,6 +134,13 @@ internal fun NativeWorkoutScreen(
                 Text(if(state.workoutBusy)"Saving…" else
                     if(journal.isFinished)"Retry finishing workout" else "Review and finish")
             }
+            if(!journal.isFinished && focusMode) {
+                TextButton(onClick={focusMode=false},
+                    enabled=!state.workoutBusy && !state.historyBusy,
+                    modifier=Modifier.fillMaxWidth()) {
+                    Text("Review saved sets")
+                }
+            }
         }
     }
     state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }

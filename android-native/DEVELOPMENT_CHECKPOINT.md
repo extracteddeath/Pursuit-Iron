@@ -1719,3 +1719,14 @@ room for its field and two 48dp M3 touch targets. Ordinary phones
 stack the controls instead of forcing tiny input fields. This adjusts
 layout only: direct numeric editing, policy-backed rep/RIR steppers,
 optional RIR, draft retention and journal writes are unchanged.
+
+## 2026-11-02 — Direct saved-set review before Finish
+
+When the acknowledged journal has no unresolved slots, the highlighted
+Finish card also exposes a secondary Review saved sets action while
+Focus mode is active. This switches to the identical real journal
+logger/correction view (Show all) without recording any operation or
+publishing history. The same confirmation remains required to finish.
+A durably finished journal does not display an edit shortcut, but can
+still retry its history publication. The interaction contract checks
+the ordering and absence of an optimistic completion path.

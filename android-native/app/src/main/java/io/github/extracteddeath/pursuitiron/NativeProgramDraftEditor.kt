@@ -11,6 +11,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 
 /**
@@ -29,11 +31,21 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 internal fun NativeProgramDraftEditor(
     verified: ReadOnlyProgramPresentation.Structure,
     allowEditing: Boolean,
+    lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>?,
     onClose: () -> Unit
 ) {
     val approved=verified.program
     var draft by remember(approved.reference) {
         mutableStateOf(NativeProgramEditDraft.from(verified))
+    }
+    var names by remember(approved.reference) { mutableStateOf<Map<String,String>>(emptyMap()) }
+    LaunchedEffect(approved.reference) {
+        val ids=approved.days.flatMap { it.exerciseIds }.distinct()
+        if(ids.isNotEmpty()) {
+            names=try { lookupNames(approved.reference,ids).orEmpty() }
+                catch(cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch(_: Exception) { emptyMap() }
+        }
     }
     if(!draft.matchesCurrent(verified)) {
         Text("Your saved program changed. Close this draft and reopen it from the current Plan.",
@@ -76,8 +88,11 @@ internal fun NativeProgramDraftEditor(
                     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     Column(modifier=Modifier.weight(1f)) {
                         Text("Movement ${index+1}",style=MaterialTheme.typography.labelSmall)
-                        Text(id.replace('_',' ').replace('-',' '),
+                        Text(names[id] ?: id.replace('_',' ').replace('-',' '),
                             style=MaterialTheme.typography.bodyMedium)
+                        if(names[id]==null) Text("Movement ID: $id",
+                            style=MaterialTheme.typography.labelSmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     OutlinedButton(
                         onClick={draft.moveExercise(day.id,index,-1)?.let { draft=it }},

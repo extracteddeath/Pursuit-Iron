@@ -141,7 +141,7 @@ assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workout
   train.includes('NativeWorkingSet(plan.session,set,commit,') &&
   train.includes('state.workoutBusy || state.historyBusy || state.backupExportBusy ||') &&
   train.includes('journal.isFinished,') &&
-  train.includes('onCorrect,state.workoutError,state,onInspectEquipmentLoad)') &&
+  train.includes('onCorrect,state.workoutError,state,onInspectEquipmentLoad,') &&
   train.includes('FilterChip(selected=focusMode,onClick={focusMode=!focusMode}') &&
   train.includes('val setDraftStates=rememberSaveableStateHolder()'),
   'Focus mode must project the identical receipt-based set logger and preserve unsent drafts');
@@ -639,3 +639,12 @@ assert.ok(train.includes('compact=focusMode)') &&
   !upNext.includes('JournalSetIntent(') &&
   train.includes('val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)'),
   'Focus Up Next must be concise, accessible and sourced only from the issued set, while full mode remains available');
+
+const setContext=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
+assert.ok(setContext.includes('Text("Exercise ${exerciseIndex+1} of ${plan.exercises.size}"') &&
+  setContext.includes('exercise.sets.size)') &&
+  setContext.includes('exerciseSetCount:Int)') &&
+  setContext.includes('else "Set ${set.slot.setIndex+1} of $exerciseSetCount"') &&
+  setContext.includes('set.isExtension') &&
+  setContext.includes('set.extensionRestSeconds?.let'),
+  'The live set header must identify current exercise and correct issued set count, including independent myo/drop extension labels');

@@ -1598,3 +1598,15 @@ draft preservation, manual load entry, truly verified equipment-adjusted
 load choices, skip confirmation and receipt-based Focus advancement
 are retained. Interaction contracts cover these invariants. Source-only
 Android builds remain required; no APK.
+
+## 2026-11-02 — Explicit real exercise/set position
+
+In the authenticated, active Train session, the selected exercise now
+identifies its original issued position out of the full exercise list
+("Exercise X of Y"). The active working set shows "Set N of M"
+using that exact exercise's issued set count, rather than leaving
+the user to infer the total from navigation chips. Myo/drop extensions
+retain their distinct display names, rest policies, and independently
+journaled slot identities; this pass introduces no new set numbering,
+training prescription, or logging calculation. Shared source contracts
+verify the source of both counts. All normal CI stays no-APK.

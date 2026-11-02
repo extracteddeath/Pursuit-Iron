@@ -129,6 +129,9 @@ internal fun NativeWorkoutScreen(
     var showWarmups by rememberSaveable(plan.session.workoutId,exercise.index) {
         mutableStateOf(false)
     }
+    Text("Exercise ${exerciseIndex+1} of ${plan.exercises.size}",
+        style=MaterialTheme.typography.labelLarge,
+        color=MaterialTheme.colorScheme.primary)
     Text(exercise.name,style=MaterialTheme.typography.headlineSmall)
     if(exercise.superset)Text("Superset pairing",style=MaterialTheme.typography.labelMedium)
     if(exercise.warmupTargets.isNotEmpty() ||
@@ -204,7 +207,8 @@ internal fun NativeWorkoutScreen(
                 NativeWorkingSet(plan.session,set,commit,
                     state.workoutBusy || state.historyBusy || state.backupExportBusy ||
                         journal.isFinished,
-                    showLast,onRecord,onCorrect,state.workoutError,state,onInspectEquipmentLoad)
+                    showLast,onRecord,onCorrect,state.workoutError,state,onInspectEquipmentLoad,
+                    exercise.sets.size)
             }
         }
     }
@@ -360,7 +364,8 @@ internal fun NativeWorkoutScreen(
 private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,commit: JournalSetCommit?,busy: Boolean,
     showLast: Boolean,onRecord: (JournalSetSlot,JournalSetDisposition,JournalSetValues?)->Unit,
     onCorrect: (JournalSetIntent)->Unit,error: String?,
-    state:NativeRuntimeState,onInspectEquipmentLoad:(JournalSetSlot,String)->Unit) {
+    state:NativeRuntimeState,onInspectEquipmentLoad:(JournalSetSlot,String)->Unit,
+    exerciseSetCount:Int) {
     var load by rememberSaveable { mutableStateOf(set.load) }
     var reps by rememberSaveable { mutableStateOf(set.reps) }
     // Optional actual effort starts empty, independently of the prescribed RIR.
@@ -380,7 +385,8 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
     }
     PursuitCard {
         Text(if(set.isExtension)"${if(set.kind=="myo")"Myo-rep mini" else "Drop"} set"
-            else "Set ${set.slot.setIndex+1}",style=MaterialTheme.typography.titleMedium)
+            else "Set ${set.slot.setIndex+1} of $exerciseSetCount",
+            style=MaterialTheme.typography.titleMedium)
         set.extensionRestSeconds?.let { seconds->
             Text("Extension of the last working set · $seconds-second rest target",
                 style=MaterialTheme.typography.labelMedium)

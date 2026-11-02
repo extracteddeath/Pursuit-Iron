@@ -557,7 +557,7 @@ const sessionNoteSheet=fs.readFileSync(root+'NativeSessionNoteSheet.kt','utf8');
 const sessionNoteJournal=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/WorkoutJournalPersistence.kt','utf8');
 assert.ok(activity.includes('onSaveSessionNote=runtime::saveSessionNote') &&
   shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote,onInspectEquipmentLoad,') &&
-  fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8').includes('NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote)') &&
+  fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8').includes('NativeSessionNoteSheet(progress,writeBlocked,state.workoutError,onSaveSessionNote)') &&
   host.includes('recovery.recordNote(progress.plan.session,progress.journal.revision,note)') &&
   host.includes('restored?.journal?.note==note') &&
   sessionNoteSheet.includes('rememberSaveable(progress.plan.session.workoutId)') &&

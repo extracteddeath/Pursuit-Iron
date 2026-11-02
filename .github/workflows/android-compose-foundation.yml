@@ -24,6 +24,7 @@ jobs:
           node android-native/engine-bridge/native-onboarding-test.mjs
           node android-native/engine-bridge/native-program-edit-test.mjs
           node android-native/engine-bridge/native-gym-inventory-edit-test.mjs
+          node android-native/engine-bridge/native-exercise-stock-test.mjs
           node android-native/engine-bridge/native-session-note-test.mjs
           node android-native/engine-bridge/native-exercise-notes-test.mjs
           node android-native/engine-bridge/native-warmups-test.mjs

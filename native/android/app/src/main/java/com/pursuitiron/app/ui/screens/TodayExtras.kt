@@ -151,7 +151,9 @@ fun RecapCard(vm: AppViewModel, h: JSONObject) {
     val sameMonth = java.text.SimpleDateFormat("M", java.util.Locale.US).let { it.format(from) == it.format(to) }
     val range = fmt.format(from).uppercase() + "–" + (if (sameMonth) java.text.SimpleDateFormat("d", java.util.Locale.getDefault()).format(to) else fmt.format(to).uppercase())
     val count = r.i("count"); val planned = r.i("planned")
-    val title = if (planned > 0) "$count of $planned sessions" + (if (count >= planned) " — a full week" else "") else plural(count, "session")
+    // The window counts every session, so it can pass the active program's days (a quick workout, another program).
+    val title = if (planned > 0 && count <= planned) "$count of $planned sessions" + (if (count == planned) " — a full week" else "")
+        else if (planned > 0) "${plural(count, "session")} — more than the $planned planned" else plural(count, "session")
     val mins = r.i("minutes")
     val stats = listOf("${r.i("sets")}" to "sets", "${fmt1(r.d("vol") / 1000.0)} ${volUnit(u)}" to "volume", "${r.i("prs")}" to if (r.i("prs") == 1) "PR" else "PRs", "${mins / 60}:${(mins % 60).toString().padStart(2, '0')}" to "hours")
     val line = buildString {

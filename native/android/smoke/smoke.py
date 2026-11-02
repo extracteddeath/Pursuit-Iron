@@ -1229,6 +1229,8 @@ def a11y_pass():
             floor = min([int(re.findall(r"\d+", m.get("bounds", "0,0,0,0"))[1]) for m in ns
                          if re.match(r"^(WORKOUT IN PROGRESS|Today|Plan|Progress|Exercises|You)$", m.get("text") or "")
                          and len(re.findall(r"\d+", m.get("bounds", ""))) == 4 and int(re.findall(r"\d+", m.get("bounds"))[1]) > screen_h // 2] or [screen_h])
+            viewports = [tuple(map(int, re.findall(r"\d+", m.get("bounds", "")))) for m in ns
+                         if m.get("scrollable") == "true" and len(re.findall(r"\d+", m.get("bounds", ""))) == 4]
             for n in ns:
                 if n.get("clickable") != "true" or n.get("package") != PKG:
                     continue
@@ -1239,6 +1241,9 @@ def a11y_pass():
                 w, h = (x2 - x1) / dpx, (y2 - y1) / dpx
                 lab = label_of(n)
                 # Touching an edge of the screen or the bars: not the control's real size or label.
+                # ...or at the edge of the list it scrolls in (the list's own bounds are its viewport).
+                if any(abs(y1 - v[1]) <= 3 or abs(y2 - v[3]) <= 3 for v in viewports):
+                    continue
                 if y1 <= 40 * dpx or y2 >= min(screen_h - 100 * dpx, floor - 8 * dpx) or x1 <= 0 or x2 >= sw - 1:
                     continue
                 if not lab:

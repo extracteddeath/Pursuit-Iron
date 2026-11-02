@@ -393,7 +393,9 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
         }
         if(showLast)Text(set.last?.let { "Last time: $it" } ?: "No previous result for this set",
             style=MaterialTheme.typography.bodySmall)
-        else Text("Target: ${set.targetReps} reps" + (set.targetRir?.let { " · $it RIR" } ?: ""))
+        else Text("Target: ${set.load} ${session.unit} × ${set.targetReps} reps" +
+            (set.targetRir?.let { " · $it RIR" } ?: ""),
+            style=MaterialTheme.typography.bodyMedium)
         if(commit!=null) {
             if(commit.intent.disposition==JournalSetDisposition.SKIPPED)Text("Skipped · saved")
             else commit.intent.values?.let { value->

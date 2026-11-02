@@ -1610,3 +1610,14 @@ retain their distinct display names, rest policies, and independently
 journaled slot identities; this pass introduces no new set numbering,
 training prescription, or logging calculation. Shared source contracts
 verify the source of both counts. All normal CI stays no-APK.
+
+## 2026-11-02 — Source-backed target load visibility
+
+The saved-workout Train set card now shows the exact engine-issued load
+and unit before target repetitions and RIR in the Targets view. The
+Last-time toggle remains journal/history-backed, and actual entered
+weight remains independently editable and unmodified by changing the
+presentation. This prevents an editable actual value from being the
+only visible indication of the originally issued weight. No equipment
+weight guesses, progression rules or storage writes were introduced.
+The source interaction check pins this ordering; no APK.

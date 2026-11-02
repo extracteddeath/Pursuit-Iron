@@ -648,3 +648,9 @@ assert.ok(setContext.includes('Text("Exercise ${exerciseIndex+1} of ${plan.exerc
   setContext.includes('set.isExtension') &&
   setContext.includes('set.extensionRestSeconds?.let'),
   'The live set header must identify current exercise and correct issued set count, including independent myo/drop extension labels');
+
+assert.ok(train.includes('if(showLast)Text(set.last?.let') &&
+  train.includes('Target: ${set.load} ${session.unit} × ${set.targetReps} reps') &&
+  train.includes('set.targetRir?.let { " · $it RIR" }') &&
+  train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy'),
+  'The Target/Last control must show canonical issued weight, reps and RIR in that order without replacing editable actual load');

@@ -47,6 +47,11 @@ private sealed interface BackupScreeningStage {
         val fingerprint: UnverifiedBackupFingerprint,
         val preview: NativeBackupMergePreview
     ) : BackupScreeningStage
+    data class ReselectionVerified(
+        val fingerprint: UnverifiedBackupFingerprint,
+        val preview: NativeBackupMergePreview
+    ) : BackupScreeningStage
+    data object ReselectionMismatch : BackupScreeningStage
     data class TooLargeForSchema(val fingerprint: UnverifiedBackupFingerprint) : BackupScreeningStage
     data object Rejected : BackupScreeningStage
 }
@@ -56,6 +61,7 @@ internal fun BackupCopyScreeningPanel(
     verifier: CanonicalBackupSchemaVerifier? = null,
     verifierLoading: Boolean = false,
     onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null,
+    onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
     currentStoreChangeKey: Long = 0L
 ) {
     val context = LocalContext.current
@@ -65,18 +71,21 @@ internal fun BackupCopyScreeningPanel(
     var wantsSchema by remember(currentStoreChangeKey) { mutableStateOf(false) }
     var wantsPrograms by remember(currentStoreChangeKey) { mutableStateOf(false) }
     var wantsMerge by remember(currentStoreChangeKey) { mutableStateOf(false) }
+    var wantsReselection by remember(currentStoreChangeKey) { mutableStateOf(false) }
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { selectedUri ->
             if (selectedUri != null) {
                 val inspectMerge = wantsMerge && onPreviewBackupMerge != null
+                val inspectReselection=wantsReselection && onVerifyBackupMerge != null
+                val previous=if(inspectReselection)stage as? BackupScreeningStage.MergePreview else null
                 val inspectPrograms = wantsPrograms && verifier != null
                 val inspectSchema = wantsSchema && verifier != null
                 stage = BackupScreeningStage.Reading
                 scope.launch {
                     stage = try {
-                        if (!inspectSchema && !inspectPrograms && !inspectMerge) {
+                        if (!inspectSchema && !inspectPrograms && !inspectMerge && !inspectReselection) {
                             val screened = withContext(Dispatchers.IO) {
                                 val source = context.contentResolver.openInputStream(selectedUri)
                                     ?: throw IOException("Selected source unavailable")
@@ -99,7 +108,13 @@ internal fun BackupCopyScreeningPanel(
                                     is ReadOnlyDocumentScreening.FingerprintOnly ->
                                         BackupScreeningStage.TooLargeForSchema(screening.fingerprint)
                                     is ReadOnlyDocumentScreening.SmallCandidate -> try {
-                                        if (inspectMerge) {
+                                        if (inspectReselection) {
+                                            val matched=previous!=null &&
+                                                checkNotNull(onVerifyBackupMerge).invoke(screening.bytes)
+                                            if(matched) BackupScreeningStage.ReselectionVerified(
+                                                previous!!.fingerprint,previous.preview)
+                                            else BackupScreeningStage.ReselectionMismatch
+                                        } else if (inspectMerge) {
                                             val preview = checkNotNull(onPreviewBackupMerge).invoke(screening.bytes)
                                             BackupScreeningStage.MergePreview(screening.fingerprint,checkNotNull(preview))
                                         } else if (inspectPrograms) {
@@ -145,6 +160,7 @@ internal fun BackupCopyScreeningPanel(
                 wantsSchema = false
                 wantsPrograms = false
                 wantsMerge = false
+                wantsReselection=false
                 stage = BackupScreeningStage.NoSelection
                 picker.launch(arrayOf("*/*"))
             },
@@ -157,6 +173,7 @@ internal fun BackupCopyScreeningPanel(
                     wantsSchema = true
                     wantsPrograms = false
                     wantsMerge = false
+                    wantsReselection=false
                     stage = BackupScreeningStage.NoSelection
                     picker.launch(arrayOf("application/json", "text/plain"))
                 },
@@ -181,6 +198,7 @@ internal fun BackupCopyScreeningPanel(
                     wantsSchema = false
                     wantsPrograms = false
                     wantsMerge = true
+                    wantsReselection=false
                     stage = BackupScreeningStage.NoSelection
                     picker.launch(arrayOf("application/json", "text/plain"))
                 },
@@ -216,7 +234,34 @@ internal fun BackupCopyScreeningPanel(
             is BackupScreeningStage.MergePreview -> {
                 BackupFingerprintText(current.fingerprint)
                 NativeBackupMergeReviewPanel(current.preview)
+                if(onVerifyBackupMerge!=null) {
+                    OutlinedButton(
+                        onClick = {
+                            wantsSchema=false
+                            wantsPrograms=false
+                            wantsMerge=false
+                            wantsReselection=true
+                            picker.launch(arrayOf("application/json","text/plain"))
+                        },
+                        modifier=Modifier.fillMaxWidth()
+                    ) { Text("Select same backup again · verify only") }
+                }
             }
+            is BackupScreeningStage.ReselectionVerified -> {
+                BackupFingerprintText(current.fingerprint)
+                Text("Same backup verified twice against the current saved data.",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("This confirms only the selected source and current merge comparison. " +
+                    "No data was imported, and restoration is still disabled.",
+                    style=MaterialTheme.typography.bodySmall)
+                NativeBackupMergeReviewPanel(current.preview)
+            }
+            BackupScreeningStage.ReselectionMismatch ->
+                Text("The second selection did not match the reviewed backup, " +
+                    "or the saved training data changed. Compare a new copy before proceeding. " +
+                    "Nothing was imported.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.error)
             is BackupScreeningStage.ProgramInventory -> {
                 BackupFingerprintText(current.fingerprint)
                 BackupSavedProgramInventoryPanel(current.inventory)
@@ -230,6 +275,8 @@ internal fun BackupCopyScreeningPanel(
             stage is BackupScreeningStage.SchemaChecked ||
             stage is BackupScreeningStage.ProgramInventory ||
             stage is BackupScreeningStage.MergePreview ||
+            stage is BackupScreeningStage.ReselectionVerified ||
+            stage is BackupScreeningStage.ReselectionMismatch ||
             stage is BackupScreeningStage.TooLargeForSchema) {
             OutlinedButton(onClick = { stage = BackupScreeningStage.NoSelection }) {
                 Text("Clear result")

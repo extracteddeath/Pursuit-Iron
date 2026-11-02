@@ -18,6 +18,7 @@
   "native-exercise-notes.mjs",
   "native-warmups.mjs",
   "native-workout.mjs",
+  "native-loading-catalog.mjs",
   "native-equipment-loading.mjs",
   "native-history.mjs",
   "native-history-basis.mjs",

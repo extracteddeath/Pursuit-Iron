@@ -48,8 +48,21 @@ class NativeBackupReviewGate {
         Reselection(epoch, selected).also { pending = it }
     }
 
+    fun currentRevision(): Long = synchronized(lock) {
+        check(!closed)
+        epoch
+    }
+
     fun isCurrent(at: Long): Boolean = synchronized(lock) {
         !closed && at == epoch
+    }
+
+    // A failed asynchronous read must not revoke a *newer* review.
+    fun abandonReselection(claimed: Reselection) = synchronized(lock) {
+        if (pending === claimed) {
+            pending = null
+            epoch++
+        }
     }
 
     fun completeReselection(

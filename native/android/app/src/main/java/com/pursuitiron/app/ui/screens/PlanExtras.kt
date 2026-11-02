@@ -127,7 +127,7 @@ fun WeekByWeekSheet(vm: AppViewModel, programId: String, onClose: () -> Unit) {
             // Opens on the week you're in; the pager takes over from there.
             val start = (if (from < 0) (if (current > 0) current else 1) - 1 else from).coerceIn(0, (total - cols).coerceAtLeast(0))
             val shownCols = (start until (start + cols).coerceAtMost(total)).toList()
-            val days = rows.map { it.s("dayLabel") }.distinct().size
+            val days = rows.map { it.s("dayId").ifBlank { it.s("dayLabel") } }.distinct().size // days, not day names: two Upper days are two days
             Text("${rows.size} lifts across $days day${if (days == 1) "" else "s"}. The same numbers the plan and the workout use; highlighted cells are where a lift steps up from the week before.",
                 style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Search a lift") }, shape = RoundedCornerShape(999.dp))

@@ -98,7 +98,8 @@ private fun RvGroup(content: @Composable ColumnScope.() -> Unit) =
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp), content = content)
 
 private fun pct(v: Double) = (if (v >= 0) "+" else "−") + String.format("%.1f", abs(v)) + "%"
-private fun cap(s: String) = s.replaceFirstChar { it.uppercase() }
+// Engine ids read as words ("upper_back" → "Upper back").
+private fun cap(s: String) = s.replace('_', ' ').replaceFirstChar { it.uppercase() }
 
 /* The design's "Block N review" (Main.dc.html reviewOn): sessions against the plan, which lifts went up or stalled,
    how each muscle's weekly sets lined up with its e1RM, sets against the personal range, what changes next block. */

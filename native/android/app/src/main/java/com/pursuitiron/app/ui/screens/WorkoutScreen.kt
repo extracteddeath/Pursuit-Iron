@@ -366,7 +366,8 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
         else -> if (resting) 96.dp + 84.dp + 16.dp else (if (vm.prefs.grip) 86.dp else 78.dp) + 16.dp
     }, Motion.spatial(), label = "listBottom")
     LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = bottomPad),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // On a tablet the 780 dp column sits centred in its pane instead of hugging the rail with a gap on the right.
+        verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         if (warmShown) item { WarmupCard(warm!!) { warmHidden = true } }
         item {
             PiCard(Modifier.widthIn(max = 780.dp), radius = 32.dp, padding = 20.dp) {

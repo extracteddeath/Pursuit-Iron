@@ -130,11 +130,13 @@ fun CompareSheet(vm: AppViewModel, onClose: () -> Unit) {
                 if (onlyB.isNotEmpty()) Text("Only in B: ${onlyB.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = colB)
                 if (shared.isNotEmpty()) Text("Both: ${shared.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             } else {
-                CompareRow("Primary muscle", ra.s("part"), rb.s("part"))
+                CompareRow("Primary muscle", words(ra.s("part")), words(rb.s("part")))
                 CompareRow("Type", ra.s("type").replaceFirstChar { it.uppercase() }, rb.s("type").replaceFirstChar { it.uppercase() })
-                CompareRow("Equipment", ra.strings("equip").joinToString(", ").ifBlank { "Bodyweight" }, rb.strings("equip").joinToString(", ").ifBlank { "Bodyweight" })
+                // Equipment in words: the ids ("ezbar, legpress") read like code.
+                val eqWords = { l: List<String> -> l.filter { it !in setOf("bench", "rack") }.joinToString(", ") { EQUIP_WORDS[it] ?: it.replace('_', ' ').replaceFirstChar { c -> c.uppercase() } }.ifBlank { "Bodyweight" } }
+                CompareRow("Equipment", eqWords(ra.strings("equip")), eqWords(rb.strings("equip")))
                 CompareRow("Rep range", ra?.optJSONArray("rep")?.let { "${it.optInt(0)}–${it.optInt(1)}" } ?: "—", rb?.optJSONArray("rep")?.let { "${it.optInt(0)}–${it.optInt(1)}" } ?: "—")
-                CompareRow("Pattern", ra.s("pattern").replaceFirstChar { it.uppercase() }, rb.s("pattern").replaceFirstChar { it.uppercase() })
+                CompareRow("Pattern", words(ra.s("pattern")), words(rb.s("pattern")))
                 CompareRow("Tempo", ra.s("tempo"), rb.s("tempo"))
                 CompareRow("Axial / systemic", if (ra.b("axial")) "Yes" else "No", if (rb.b("axial")) "Yes" else "No")
                 MuscleBars(r.list("muscles"), colA, colB, "Muscles worked (share of the lift)", percent = true)
@@ -222,3 +224,10 @@ private fun ExercisePickSheet(vm: AppViewModel, onPick: (JSONObject) -> Unit, on
         }
     }
 }
+
+private val EQUIP_WORDS = mapOf("barbell" to "Barbell", "dumbbell" to "Dumbbell", "cable" to "Cable", "machine" to "Machine", "kettlebell" to "Kettlebell", "band" to "Band", "bands" to "Bands",
+    "pullup" to "Pull-up bar", "dip" to "Dip bars", "smith" to "Smith machine", "ezbar" to "EZ bar", "legpress" to "Leg press", "hacksquat" to "Hack squat", "legext" to "Leg extension",
+    "legcurl" to "Leg curl", "pecdeck" to "Pec deck", "machinerow" to "Row machine", "landmine" to "Landmine", "trapbar" to "Trap bar", "bodyweight" to "Bodyweight")
+
+/** An engine id as words: "upper_back" → "Upper back", "horizontal-push" → "Horizontal push". */
+private fun words(id: String) = id.replace('_', ' ').replace('-', ' ').replaceFirstChar { it.uppercase() }

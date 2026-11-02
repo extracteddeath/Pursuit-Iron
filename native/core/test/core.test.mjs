@@ -634,7 +634,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   C.createProgram({ config: { name: 'V', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'ppl', days: 3, session: 's40',
     equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 7 });
   const v = C.weeklyVolumeView({});
-  ok(v.rows.length > 5 && v.rows.every((r) => r.mev >= 0 && r.mrv > r.mev && ['below MEV', 'productive', 'high', 'over MRV', 'a head over MRV', 'light · not targeted'].includes(r.zone)), 'volume rows carry landmarks and a zone');
+  ok(v.rows.length > 5 && v.rows.every((r) => r.mev >= 0 && r.mrv > r.mev && ['below MEV', 'productive', 'above MAV', 'over MRV', 'a head over MRV', 'light · not targeted'].includes(r.zone)), 'volume rows carry landmarks and a zone');
   const sum = Math.round(v.rows.reduce((a, r) => a + r.sets, 0));
   ok(Math.abs(sum - v.total) <= 1, 'rows add up to the total (' + sum + ' vs ' + v.total + ')');
   ok(v.rows.every((r) => (r.sets < r.mev) === (r.zone === 'below MEV' || r.zone === 'light · not targeted')), 'below MEV exactly when sets are under MEV');

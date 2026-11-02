@@ -111,7 +111,7 @@ fun WorkoutHeader(vm: AppViewModel, s: JSONObject, wide: Boolean, focus: Boolean
     val elapsed = liveElapsedSec(s, vm.now)
     val est = s.i("estimateMin")
     val paused = s.optLong("pausedAt") > 0
-    Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = if (wide) 20.dp else 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.IconButton(onClick = { vm.minimise() }, modifier = Modifier.size(48.dp)) { Icon(PiIcons.ChevronDown, "Minimise workout") }
         Column(Modifier.weight(1f)) {
             Text(s.s("dayLabel"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -387,7 +387,7 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, onHistory: () -> 
 @Composable
 fun SessionTotals(s: JSONObject) {
     val cs = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainer).padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Row(Modifier.widthIn(max = 780.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainer).padding(horizontal = 20.dp, vertical = 16.dp)) {
         Column(Modifier.weight(1f)) {
             Text("Working sets", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
             Text("${s.i("doneSets")} / ${s.i("totalSets")}", style = MaterialTheme.typography.titleLarge)

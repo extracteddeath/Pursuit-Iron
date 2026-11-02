@@ -1882,7 +1882,7 @@ export function weekByWeek({ programId } = {}) {
     const B = blockWeeks(p), rows = [];
     p.days.forEach((d) => (d.exercises || []).forEach((exId, slot) => {
         const ex = EX_BY_ID[exId]; if (!ex) return;
-        rows.push({ exId, name: ex.name, part: ex.part, upper: UPPER_PARTS.has(ex.part), dayLabel: d.label, primary: slot === d.primaryIndex,
+        rows.push({ exId, name: ex.name, part: ex.part, upper: UPPER_PARTS.has(ex.part), dayId: d.id, dayLabel: d.label, primary: slot === d.primaryIndex,
             cells: B.list.map((w) => {
                 const c = E.computeCell(p, d, exId, slot, w);
                 const rir = c.rir != null ? c.rir : (c.targetRIR != null ? c.targetRIR : null);
@@ -1898,7 +1898,7 @@ function volumeZoneOf(part, sets, program) {
     const mav = E.mavFor(part, program);
     if (sets < mev) return { label: 'below MEV', sub: 'under the volume that reliably drives growth', tone: 'muted' };
     if (sets <= mav) return { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' };
-    if (sets <= mrv + E.MRV_GRAIN) return { label: 'high', sub: 'near the top of the planned range', tone: 'good' };
+    if (sets <= mrv + E.MRV_GRAIN) return { label: 'above MAV', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
     return { label: 'over MRV', sub: 'past what this app budgets to recover from', tone: 'warn' };
 }
 function partZoneOf(part, sets, sub, program) {
@@ -1909,7 +1909,7 @@ function partZoneOf(part, sets, sub, program) {
     if (sets < mev) return { label: 'below MEV', sub: 'under the volume that reliably drives growth', tone: 'muted' };
     const over = heads.some((h) => { const lm = E.SUB_LANDMARKS?.[h]; return lm && lm.mev !== 0 && (sub[h] || 0) > (lm.mrv != null ? lm.mrv + E.MRV_GRAIN : Infinity); });
     if (over) return { label: 'a head over MRV', sub: 'one deltoid head is past its own ceiling', tone: 'warn' };
-    return sets <= E.mavFor(part) ? { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' } : { label: 'high', sub: 'near the top of the planned range', tone: 'good' };
+    return sets <= E.mavFor(part) ? { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' } : { label: 'above MAV', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
 }
 /* App.js VolumeCard for a program week: sets per muscle against MEV/MAV/MRV, the volume check (every
    training week), and what your own history says about each muscle's productive range. */

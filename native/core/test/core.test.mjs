@@ -1085,14 +1085,16 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
 for (const id of ['p531', 'p531beg', 'p531bbb']) {
   C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id });
   const d = C.programDetails({ programId: r.programId }), wb = C.weekByWeek({ programId: r.programId }), main = wb.rows.find((x) => x.primary);
-  ok(d.plan.length === 4 && d.plan[3].deload && d.plan[3].note === 'Deload' && d.chips.find((c) => c.k === 'Deload')?.v === 'Built in · week 4',
+  ok(d.plan.length === 4 && d.plan[3].deload && /^Deload · light sets at 40–60%/.test(d.plan[3].note) && /^5\+? reps · 65–85% of max$/.test(d.plan[0].note) && d.chips.find((c) => c.k === 'Deload')?.v === 'Built in · week 4',
     id + ': four weeks, week 4 the built-in deload, no week 5 (' + d.plan.map((w) => w.w + (w.deload ? 'D' : '')).join() + ')');
   ok(main.cells.length === 4 && main.cells[3].deload && main.cells[3].load === '40–60%' && /^5/.test(main.cells[0].range),
     id + ': week by week shows the method\'s reps and share of training max (' + main.cells.map((c) => c.range + ' ' + c.load).join(' | ') + ')');
   ok(C.plan({ programId: r.programId }).waveDeloads.join() === '4', id + ': the plan marks week 4 as a deload');
 }
 { C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id: 'madcow' }); const d = C.programDetails({ programId: r.programId });
-  ok(d.plan.length === 7 && d.plan[6].deload && d.plan[6].note === 'Deload', 'a linear method keeps its deload week after the block, labelled once (' + d.plan[6].note + ')'); }
+  ok(d.plan.length === 7 && d.plan[6].deload && d.plan[6].note === 'Deload · fewer sets, more in reserve', 'a linear method keeps its deload week after the block, labelled once (' + d.plan[6].note + ')'); }
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id: 'ppl6' }); const d = C.programDetails({ programId: r.programId });
+  ok(d.plan[0].note.startsWith('Base sets · ') && /^Sets [+-]\d+ · \d–\d RIR on main lifts$/.test(d.plan[1].note) && d.plan[0].phase, 'block plan rows say what changes each week, with the phase kept separately (' + d.plan.slice(0, 2).map((w) => w.note).join(' | ') + ')'); }
 
 // From a 1RM: each method's own basis, not 90% everywhere.
 for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-rep max'], ['gzclp', 85, 'T1 5×3 weight'], ['madcow', 80, 'Top 5×5'], ['gvt', 100, '1-rep max']]) {

@@ -289,7 +289,9 @@ fun ProgramDetailsSheet(vm: AppViewModel, programId: String, onSettings: () -> U
                 }
             }
             WeekVolumeCard(vm, programId, x.i("week"))
-            Kicker("Block plan")
+            // One phase for the whole block reads once here; each row says what changes that week.
+            val phases = x.list("plan").filter { !it.b("deload") }.map { it.s("phase") }.filter { it.isNotBlank() }.distinct()
+            Kicker("Block plan" + (phases.singleOrNull()?.let { " · $it" } ?: ""))
             val df = SimpleDateFormat("MMM d", Locale.getDefault())
             Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 x.list("plan").forEach { w ->

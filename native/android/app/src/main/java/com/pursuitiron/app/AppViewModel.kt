@@ -288,8 +288,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Kept changes join the saved line rather than replacing it, so the save is never lost from the toast.
         val k = r.optJSONObject("kept")
         val keptN = k?.takeIf { it.s("error").isBlank() }?.i("applied") ?: 0
-        toast((if (quick) "Quick workout saved · your program is unchanged" else if (nudged > 0) "Saved · next session adjusted for $nudged ${if (nudged == 1) "muscle" else "muscles"}" else if (keptN > 0) "Session saved · $keptN ${if (keptN == 1) "change" else "changes"} kept in the program" else "Session saved · week updated") +
-            (if (earned.isNotEmpty()) " · earned ${earned.joinToString(", ")}" else "") +
+        // Every outcome that applies is said: adjusted muscles and changes kept both, not whichever came first.
+        val parts = if (quick) listOf("Quick workout saved · your program is unchanged") else listOfNotNull(
+            if (nudged > 0 || keptN > 0) "Saved" else "Session saved · week updated",
+            if (nudged > 0) "next session adjusted for $nudged ${if (nudged == 1) "muscle" else "muscles"}" else null,
+            if (keptN > 0) "$keptN ${if (keptN == 1) "change" else "changes"} kept in the program" else null)
+        toast(parts.joinToString(" · ") +
+            (if (earned.isNotEmpty()) " · new ${if (earned.size == 1) "badge" else "badges"}: ${earned.joinToString(", ")}" else "") +
             (r.s("switchedTo").takeIf { it.isNotBlank() && !r.isNull("switchedTo") }?.let { " · block done, $it starts next" } ?: ""))
         if (routineName != null && routineIds.isNotEmpty()) {
             val sr = obj("saveRoutine", jsonOf("ids" to JSONArray(routineIds), "name" to routineName))

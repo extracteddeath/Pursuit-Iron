@@ -368,8 +368,21 @@ export function programDetails({ programId } = {}) {
     const setsOf = (k) => Math.round((bk.find((x) => x.part === k)?.sets || 0) * 2) / 2;
     const priorities = [...focus.map(([k, v]) => ({ label: `${label(k)} · Focus ×${v}`, sets: setsOf(k) })), ...(cfg.reduce || []).map((k) => ({ label: `${label(k)} · Reduced`, sets: setsOf(k) }))];
     const B = blockWeeks(p), start = Number(p.createdAt) || now();
+    /* What changes week to week, as the design words it ("Sets +1 · RIR 2 on compounds"): the phase name alone
+       repeated the same words on every row. Percentage programs say the wave and its share of max instead. */
+    const d0 = p.days[0], main = d0 ? d0.exercises[d0.primaryIndex ?? 0] : null, mainEx = main ? EX_BY_ID[main] : null;
+    let firstSets = null; try { firstSets = E.plannedWeek(p, 1)?.sets ?? null; } catch { firstSets = null; }
+    const weekNote = (w, wi, sets) => {
+        if (B.isDeload(w)) return E.isSchemeDeloadWeek(cfg.percentScheme, w, E.weeksOf(p)) ? 'Deload · light sets at 40–60%, no top set' : 'Deload · fewer sets, more in reserve';
+        let c = null; try { c = mainEx ? E.computeCell(p, d0, main, d0.primaryIndex ?? 0, w) : null; } catch { c = null; }
+        const pc = c && mainEx ? pctCell(p, d0, mainEx, d0.primaryIndex ?? 0, w, c) : null;
+        if (pc) return `${pc.range} reps` + (pc.load ? ` · ${pc.load} of max` : '');
+        const delta = firstSets != null ? sets - firstSets : 0;
+        const rir = c?.rir != null ? String(c.rir).replace('-', '–') : null;
+        return [w === 1 ? 'Base sets' : delta ? `Sets ${delta > 0 ? '+' : ''}${delta}` : 'Same sets', rir ? `${rir} RIR on main lifts` : null].filter(Boolean).join(' · ') || (wi?.label || '');
+    };
     const plan = B.list.map((w) => { let wi = null; try { wi = E.weekIntent(p, w); } catch { wi = null; } let pw = null; try { pw = E.plannedWeek(p, w); } catch { pw = null; }
-        return { w, deload: B.isDeload(w), date: (() => { const d = new Date(start); d.setDate(d.getDate() + (w - 1) * 7); return d.getTime(); })(), note: wi ? (wi.deload && wi.label !== 'Deload' ? 'Deload · ' : '') + wi.label : '', sets: pw?.sets || 0, current: w === wk }; });
+        return { w, deload: B.isDeload(w), date: (() => { const d = new Date(start); d.setDate(d.getDate() + (w - 1) * 7); return d.getTime(); })(), note: weekNote(w, wi, pw?.sets || 0), phase: wi?.label || null, sets: pw?.sets || 0, current: w === wk }; });
     return { programId: p.id, name: p.name, week: wk, chips, cycleLine, priorities, plan };
 }
 export function sessionReview({ programId, dayId, weekIndex } = {}) {

@@ -1937,3 +1937,11 @@ Material-styled LEFT/RIGHT plate columns around a labeled BAR, each using
 the exact same validated per-side plate counts. The original numeric
 bar/total summary and no-write warning remain visible. Compact layout
 does not claim a mechanical force estimate or change the workout.
+
+## 2026-11-02 — Plate calculator dialog overflow protection
+
+The two-sided physical plate breakdown now caps its content area at 360 dp
+and scrolls through long verified inventories within the existing Material
+3 confirmation sheet. This keeps the Done action accessible on compact
+phones and larger text sizes without truncating denominations or guessing
+missing plate stock. Source-only UI change; no APK.

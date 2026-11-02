@@ -922,3 +922,8 @@ assert.ok(plateUi.includes('private fun RowScope.VerifiedPlateSide(') &&
   plateUi.includes('Text("BAR"') &&
   plateUi.includes('OutlinedCard(modifier=Modifier.weight(1f))'),
   'Small-screen plate breakdown must show the same verified per-side physical stock symmetrically without guessed weights');
+
+assert.ok(plateUi.includes('Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())') &&
+  plateUi.includes('VerifiedPlateSide("LEFT",breakdown)') &&
+  plateUi.includes('VerifiedPlateSide("RIGHT",breakdown)'),
+  'Long verified plate inventories must remain reviewable in a bounded, scrolling dialog on narrow phones');

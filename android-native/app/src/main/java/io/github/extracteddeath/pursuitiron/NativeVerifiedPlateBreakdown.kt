@@ -1,6 +1,8 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -63,7 +65,8 @@ internal fun NativeVerifiedPlateBreakdown(
         onDismissRequest={show=false},
         title={Text("Verified plate setup")},
         text={
-            Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("Total ${breakdown.totalLoad} ${breakdown.unit} · Bar ${breakdown.barWeight} ${breakdown.unit}")
                 Text("Load the SAME plates on each side:",style=MaterialTheme.typography.titleSmall)
                 Row(Modifier.fillMaxWidth(),

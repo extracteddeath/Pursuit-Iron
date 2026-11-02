@@ -13,6 +13,7 @@ internal data class NativeRuntimeState(
     val loading: Boolean=true,val ready: Boolean=false,val busy: Boolean=false,val blocked: Boolean=false,
     val verifier: PackagedReadOnlySchemaVerifier?=null,val options: NativeProgramOptions?=null,
     val programEditError: String?=null,val programEditMessage: String?=null,
+    val gymInventoryError:String?=null,val gymInventoryMessage:String?=null,
     val proposal: NativeProgramProposal?=null,val saved: NativeSavedProgram?=null,val error: String?=null,
     val planSource: CurrentReadOnlyPlanSource=UnconnectedCurrentReadOnlyPlanSource,val storeChangeKey: Long=0,
     val workout: NativeWorkoutProgress?=null,val workoutBusy: Boolean=false,val workoutError: String?=null,
@@ -443,6 +444,44 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
               catch(_: Exception) {
                 mutable.update { it.copy(busy=false,programEditError=
                     "Changes could not be saved. Primary or paired movements cannot be removed. Keep pairs together and reopen the editor if your plan changed.") }
+            }
+        }
+    }
+
+    fun saveGymInventory(reference: ReadOnlyProgramReference, inventoryJson: String?) {
+        val current=mutable.value
+        if(!current.ready || current.blocked || current.busy ||
+            current.workout!=null || current.workoutBusy || current.historyBusy ||
+            current.backupExportBusy || current.shortPreviewBusy || current.saved==null ||
+            current.saved.program.reference!=reference ||
+            current.saved.program.id!=reference.programId)return
+        val owner=store ?: return
+        val verifier=current.verifier ?: return
+        val request=try {
+            NativeGymInventoryEditCodec.editJson(reference,current.saved.profile.unit,inventoryJson,
+                "gym-stock-"+UUID.randomUUID(),
+                maxOf(System.currentTimeMillis(),reference.storeSavedAt+1,reference.programUpdatedAt+1))
+        } catch(_:Exception) {
+            mutable.update { it.copy(gymInventoryError="Invalid physical weights. Check their units and counts.") }
+            return
+        }
+        mutable.update { it.copy(busy=true,gymInventoryError=null,gymInventoryMessage=null) }
+        scope.launch {
+            try {
+                checkNotNull(owner.saveGymInventory(request))
+                val saved=checkNotNull(readSaved(owner,verifier))
+                check(saved.program.id==reference.programId)
+                val receipt=owner.lastCompletionReceipt()
+                val page=optionalHistoryPage(current.historyPage?.offset ?: 0,null,current.historyFilter)
+                val calendar=optionalHistoryCalendar(current.historyCalendarQuery)
+                ensureActive()
+                mutable.update { it.copy(busy=false,saved=saved,completion=receipt,historyPage=page,
+                    historyCalendar=calendar,gymInventoryError=null,
+                    gymInventoryMessage="Verified physical weight settings saved.") }
+            } catch(cancelled:CancellationException) { throw cancelled }
+              catch(_:Exception) {
+                mutable.update { it.copy(busy=false,gymInventoryError=
+                    "Gym weights could not be saved. Your existing training data is unchanged; reload the program and retry.") }
             }
         }
     }

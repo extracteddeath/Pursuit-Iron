@@ -3321,7 +3321,7 @@ export function percentMethods({ programId }) {
     const cur = p.config.percentScheme, curBbb = p.config.assistance === 'bbb';
     return { programId: p.id, current: cur, methods: E.TEMPLATES.filter((t) => t.cfg?.percentScheme).map((t) => {
         const S2 = E.PCT_SCHEMES[t.cfg.percentScheme] || {};
-        return { templateId: t.id, scheme: t.cfg.percentScheme, name: t.name, method: S2.name || t.cfg.percentScheme, basis: S2.basis || '', desc: t.desc || '', tag: t.tag || '',
+        return { templateId: t.id, scheme: t.cfg.percentScheme, name: t.name, method: S2.name && !t.name.startsWith(S2.name) ? S2.name : '', basis: S2.basis || '', desc: t.desc || '', tag: t.tag || '',
             days: t.cfg.days || null, weeks: t.cfg.weeks || null, current: t.cfg.percentScheme === cur && (t.cfg.assistance === 'bbb') === curBbb };
     }) };
 }
@@ -3365,6 +3365,11 @@ function mainLifts(p) { const ids = []; (p.days || []).forEach((d) => { const id
 /* App.js tmSheet + the design's percentage program panel: the method, a chip per week of the block
    (deload included), and for each main lift its training max and that week's sets from the engine's
    own percentagePlanFor — the same call the workout prescribes from. */
+// "Loads are set from your …": each method's basis as a reader says it.
+const BASIS_PHRASE = { 'Training Max (90% of 1RM)': 'training max, about 90% of your 1RM', 'top 5×5 weight': 'top 5×5 weight', 'top 5RM': 'best set of 5 (5RM)',
+    'T1 5×3 working weight': 'main-lift 5×3 working weight', '60% of 1RM (enter your 1RM)': '1RM; the sets use 60% of it' };
+const BASIS_LABEL = { 'Training Max (90% of 1RM)': 'Training max', 'top 5×5 weight': 'Top 5×5', 'top 5RM': '5-rep max', 'T1 5×3 working weight': 'T1 5×3 weight', '60% of 1RM (enter your 1RM)': '1-rep max' };
+const BASIS_WORD = { 'Training Max (90% of 1RM)': 'training max', 'top 5×5 weight': 'top 5×5 weight', 'top 5RM': '5-rep max', 'T1 5×3 working weight': 'T1 5×3 weight' };
 export function trainingMaxes({ programId, weekIndex = null }) {
     const p = programById(programId); if (!p) return null;
     const u = unit(), percent = !!p.config?.percentScheme, scheme = p.config?.percentScheme || null;
@@ -3389,7 +3394,11 @@ export function trainingMaxes({ programId, weekIndex = null }) {
     let carried = null; try { carried = percent ? E.carryTrainingMaxes(p, { config: p.config }, H, u) : null; } catch { carried = null; }
     const carriedTm = (id) => { const v = carried?.trainingMax?.[id]; return v > 0 ? E.convertHistoryLoad(v, carried.trainingMaxUnit || u, u) : null; };
     return { programId: p.id, name: p.name, percent, unit: u, tiered,
-        method: S ? { id: scheme, name: S.name, basis: S.basis } : null,
+        // Named as the template the method came from (the method list's names), not the engine's internal one.
+        method: S ? { id: scheme, name: E.TEMPLATES.find((t) => t.cfg?.percentScheme === scheme && (t.cfg.assistance === 'bbb') === (p.config?.assistance === 'bbb'))?.name || S.name, basis: S.basis, from: BASIS_PHRASE[S.basis] || S.basis, oneRmPct: Math.round(E.oneRmShare(scheme) * 100), label: BASIS_LABEL[S.basis] || 'Training max',
+            ormNote: E.oneRmShare(scheme) >= 1 ? 'Enter a recent one-rep max; the sets take their share of it.'
+                : `Enter a recent one-rep max; ${Math.round(E.oneRmShare(scheme) * 100)}% of it, rounded to the lift's step, becomes your ${BASIS_WORD[S.basis] || 'training max'}.`,
+            tmNote: E.oneRmShare(scheme) >= 1 ? 'This method works from your one-rep max itself.' : `Usually about ${Math.round(E.oneRmShare(scheme) * 100)}% of your true one-rep max.` } : null,
         weekIndex: wk, current, deloadWeek: bw.deloadWeek,
         weeks: percent ? bw.list.map((w) => {
             const pl = firstMain && (E.trainingMaxForUnit(p, firstMain, u) || 0) > 0 ? planOf(firstMain, w) : null;
@@ -3446,7 +3455,7 @@ export function programText({ programId, weekIndex = null }) {
 export function setTrainingMax({ programId, exId, value, fromOneRm = false }) {
     const p = programById(programId), ex = EX_BY_ID[exId]; if (!p || !ex) return { ok: false };
     const n = Number(value), u = unit();
-    const tm = !(n > 0) ? 0 : fromOneRm ? E.roundTo(n * 0.9, E.loadStep(ex, u)) : n;
+    const tm = !(n > 0) ? 0 : fromOneRm ? E.roundTo(n * E.oneRmShare(p.config?.percentScheme), E.loadStep(ex, u)) : n;
     setList('saved', saved().map((x) => (x.id === programId ? E.withTrainingMax(x, exId, tm, u) : x)));
     return { ok: true, tm };
 }

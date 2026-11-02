@@ -178,6 +178,16 @@ export const SUPPLEMENTAL_PROTOCOLS = {
         deload: { label: "Deload · light supplemental", sets: [[0.40, "5"], [0.40, "5"], [0.40, "5"], [0.40, "5"], [0.40, "5"]] } }
 };
 
+/* "From a 1RM": the share of a one-rep max each method's basis stands for. Not 90% everywhere — that is the
+   training max of the 5/3/1-style methods only. A 5RM (Texas) is about 85% of 1RM, a GZCLP 5×3 working
+   weight starts near 85%, the Madcow top 5×5 near 80% (five sets build to it), and German Volume
+   Training's basis IS the 1RM (its sets take 60% of it). Reading 90% for all of them put Texas's 5+
+   intensity set and GZCLP's 5×3+ at a three-rep max, and GVT's 10×10 at 54%. */
+export const ONE_RM_SHARE = { "531": 0.9, "531beg": 0.9, nsuns: 0.9, rippler: 0.9, jt: 0.9, madcow: 0.8, texas: 0.85, gzclp: 0.85, gvt: 1 };
+export function oneRmShare(scheme) {
+    return ONE_RM_SHARE[scheme] ?? 0.9;
+}
+
 /* A method whose wave carries its own deload (5/3/1's fourth week): true for that week inside the block.
    A separate deload week after the block would be a second one in a row, so templates of these methods
    leave config.deload off and every surface reads the in-wave week through this one test. */

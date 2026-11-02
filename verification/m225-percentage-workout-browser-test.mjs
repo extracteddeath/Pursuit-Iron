@@ -4,7 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import puppeteer from 'puppeteer-core';
 import { programToText } from '../modules/program-share-sheet.js';
-import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, percentagePlanFor, prescribeSets, withTrainingMax, roundTo, loadStep } from '../modules/engine-api.js';
+import { EXERCISES, EX_BY_ID, TEMPLATES, templateConfig, percentagePlanFor, prescribeSets, withTrainingMax, roundTo, loadStep, oneRmShare } from '../modules/engine-api.js';
 
 import { generateNextProgramForShell } from '../modules/next-engine/app-shell-adapter.js';
 const root = path.resolve(new URL('../', import.meta.url).pathname);
@@ -99,7 +99,7 @@ async function verifyTrainingMaxEditing(browser) {
         await open();await click('Use 1RM');
         await type(await page.$('.wpb-training-max-conversion input'),'12..5');
         assert.ok(await page.$$eval('.wpb-training-max-conversion button',buttons=>buttons.find(b=>b.textContent==='Use this max').disabled));
-        const rm=unit==='lb'?300.5:121.5,converted=roundTo(rm*.9,loadStep(ex,unit));
+        const rm=unit==='lb'?300.5:121.5,converted=roundTo(rm*oneRmShare(p.config.percentScheme),loadStep(ex,unit));
         await type(await page.$('.wpb-training-max-conversion input'),String(rm));
         assert.ok((await page.$eval('.wpb-training-max-conversion',el=>el.textContent)).includes(`training max ${converted} ${unit}`));
         await page.keyboard.press('Escape');await page.waitForSelector('.wpb-training-max-conversion',{hidden:true});

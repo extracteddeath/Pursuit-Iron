@@ -1141,8 +1141,11 @@ if tap(r"^\|New$"):
             if tap(r"Change method", "methods-open"):
                 if tap(r"Texas Method", "method-confirm", required=False):
                     if tap(r"^\|Switch$", "method-switched"):
-                        if not find(r"Texas Method", timeout=6):
+                        # The panel names the method as its template does, and its max as the method's own basis.
+                        if not find(r"Volume / Recovery / Intensity", timeout=6):
                             FAILS.append("method switch did not show the new method")
+                        if not find(r"5-rep max", timeout=3):
+                            FAILS.append("Texas method still asks for a training max instead of its 5-rep max")
                 else:
                     FAILS.append("percentage methods not listed")
             back(); back()

@@ -134,7 +134,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Kicker("Method")
                             Text(m.s("name"), style = MaterialTheme.typography.titleMedium)
-                            Text("${d.s("name")} works from your ${m.s("basis").substringBefore(" (").lowercase()}.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            Text("Loads are set from your ${m.s("from")}.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                         Icon(if (methodsOpen) com.pursuitiron.app.ui.common.PiIcons.ChevronUp else com.pursuitiron.app.ui.common.PiIcons.ChevronDown, if (methodsOpen) "Hide methods" else "Change method")
                     }
@@ -154,7 +154,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                                 androidx.compose.material3.RadioButton(selected = on, onClick = null)
                                 Column(Modifier.weight(1f)) {
                                     Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
-                                    Text(x.s("method") + (x.s("tag").takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                                    Text(listOf(x.s("method"), x.s("tag")).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                                 }
                             }
                         }
@@ -179,8 +179,9 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                 }
             }
             var mode by remember { mutableStateOf("tm") }
-            Segmented(listOf("tm" to "Training max", "orm" to "From a 1RM"), mode, { mode = it })
-            Text(if (mode == "tm") "Usually about 90% of your true one-rep max." else "Enter a recent one-rep max; 90% of it, rounded to the lift's step, becomes the training max.",
+            val basisLabel = d.o("method")?.s("label")?.ifBlank { null } ?: "Training max"
+            Segmented(listOf("tm" to basisLabel, "orm" to "From a 1RM"), mode, { mode = it })
+            Text(d.o("method")?.s(if (mode == "tm") "tmNote" else "ormNote")?.ifBlank { null } ?: "",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             d.list("lifts").forEach { l ->
                 val tm = l.d("tm"); val step = l.d("step").takeIf { it > 0 } ?: if (u == "lb") 5.0 else 2.5
@@ -192,7 +193,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                             Column(Modifier.weight(1f)) {
                                 Text(l.s("name"), style = MaterialTheme.typography.titleSmall)
                                 // The design's line under each lift: what the number is, and how it sits against your e1RM.
-                                val basis = d.o("method")?.s("basis")?.substringBefore(" (")?.ifBlank { null } ?: "Training max"
+                                val basis = basisLabel
                                 if (!l.isNull("pctOfE1rm") && l.i("pctOfE1rm") > 0) Text("$basis · ${l.i("pctOfE1rm")}% of your ${fmtNum(l.d("e1rm"))} $u e1RM",
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
                             }
@@ -208,7 +209,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                             val parsed = v.trim().replace(',', '.').takeIf { Regex("""\d{1,4}(\.\d{1,2})?""").matches(it) }?.toDoubleOrNull()?.takeIf { it > 0 }
                             OutlinedTextField(v, { v = it.take(8) }, Modifier.weight(1f), singleLine = true, isError = v.isNotBlank() && parsed == null,
                                 supportingText = if (v.isNotBlank() && parsed == null) ({ Text("Enter a number like 212.5") }) else null,
-                                label = { Text("${if (mode == "tm") "Training max" else "1RM"} ($u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                                label = { Text("${if (mode == "tm") basisLabel else "1RM"} ($u)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                             Button(onClick = { parsed?.let { set(it, mode == "orm") } }, enabled = parsed != null, modifier = Modifier.height(56.dp)) { Text("Set") }
                         }
                         val wk = l.o("week")
@@ -216,7 +217,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                             Text(wk.s("label"), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                             Text(wk.list("sets").joinToString("  ·  ") { x -> x.s("text") + (x.optDouble("pct").takeIf { !it.isNaN() }?.let { " @${fmtNum(it)}%" } ?: "") },
                                 style = MaterialTheme.typography.bodyMedium)
-                        } else if (tm <= 0) Text("Set a training max to see this week's sets.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        } else if (tm <= 0) Text("Set a ${basisLabel.let { if (it.length > 1 && it[1].isLowerCase()) it.replaceFirstChar { c -> c.lowercase() } else it }} to see this week's sets.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                 }
             }

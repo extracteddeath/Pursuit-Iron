@@ -1094,4 +1094,11 @@ for (const id of ['p531', 'p531beg', 'p531bbb']) {
 { C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id: 'madcow' }); const d = C.programDetails({ programId: r.programId });
   ok(d.plan.length === 7 && d.plan[6].deload && d.plan[6].note === 'Deload', 'a linear method keeps its deload week after the block, labelled once (' + d.plan[6].note + ')'); }
 
+// From a 1RM: each method's own basis, not 90% everywhere.
+for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-rep max'], ['gzclp', 85, 'T1 5×3 weight'], ['madcow', 80, 'Top 5×5'], ['gvt', 100, '1-rep max']]) {
+  C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id }); const t = C.trainingMaxes({ programId: r.programId });
+  const x = C.setTrainingMax({ programId: r.programId, exId: t.lifts[0].id, value: 100, fromOneRm: true });
+  ok(x.tm === want && t.method.label === label, id + ': a 100 kg 1RM sets the ' + label + ' to ' + want + ' (got ' + x.tm + ', ' + t.method.label + ')');
+}
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

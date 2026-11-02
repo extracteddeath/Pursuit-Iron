@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 import { useRef, useState } from 'react';
 import { Dumbbell, ChevronRight, X } from 'lucide-react';
-import { EX_BY_ID, PCT_SCHEMES, trainingMaxForUnit, withTrainingMax, percentagePlanFor, roundTo, loadStep } from './engine-api.js';
+import { EX_BY_ID, PCT_SCHEMES, trainingMaxForUnit, withTrainingMax, percentagePlanFor, roundTo, loadStep, oneRmShare } from './engine-api.js';
 import { UiAction } from './ui-primitives.js';
 
 const numberValue = text => {
@@ -55,7 +55,7 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
                 ] }),
                 _jsxs('div', { className: 'wpb-scroll wpb-training-max-body', children: [
                     _jsx('p', { className: 'wpb-training-max-help', children: `${scheme?.name || 'Percentage training'} loads each main lift from its ${scheme?.basis || 'training max'}. Apply your maxes here, then review and save the program to keep the changes.` }),
-                    _jsx('p', { className: 'wpb-training-max-help', children: 'Use 1RM calculates 90% of a recent one-rep max, rounded to the lift’s loading step. Leave a max blank to clear it.' }),
+                    _jsx('p', { className: 'wpb-training-max-help', children: `Use 1RM calculates ${Math.round(oneRmShare(program.config?.percentScheme) * 100)}% of a recent one-rep max, rounded to the lift’s loading step. Leave a max blank to clear it.` }),
                     mainLifts.map(id => {
                         const ex = EX_BY_ID[id];
                         if (!ex) return null;
@@ -64,7 +64,7 @@ export function ProgramTrainingMaxes({ program, mainLifts, unit, onApply, onClos
                         const ownerDay = program.days.find(day => day.exercises.includes(id));
                         const week = value > 0 && ownerDay ? percentagePlanFor(preview, ownerDay, ex, ownerDay.exercises.indexOf(id), 1, unit) : null;
                         const source = conversion?.id === id ? numberValue(conversion.value) : 0;
-                        const calculated = source > 0 ? roundTo(source * .9, loadStep(ex, unit)) : 0;
+                        const calculated = source > 0 ? roundTo(source * oneRmShare(program.config?.percentScheme), loadStep(ex, unit)) : 0;
                         const canConvert = Number.isFinite(calculated) && calculated > 0;
                         const useConversion = () => { if (!canConvert) return; setDraft(previous => ({ ...previous, [id]: String(calculated) })); closeConversion(); };
                         return _jsxs('div', { className: 'wpb-training-max-row', 'data-training-max': id, children: [

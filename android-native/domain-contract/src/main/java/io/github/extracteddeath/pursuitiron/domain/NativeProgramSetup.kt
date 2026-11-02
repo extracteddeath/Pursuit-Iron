@@ -9,7 +9,8 @@ data class NativeProgramProfile(
     val equipment: List<String> = listOf("barbell","rack","bench","dumbbell","cable","machine",
         "smith","pullup","dip","legpress","hacksquat","legext","legcurl","calfmachine"),
     val allowBodyweight: Boolean=true,val allowSupersets: Boolean=true,val barbellCap: Int?=3,
-    val focus: Map<String,Int> = emptyMap(),val reduced: List<String> = emptyList()
+    val focus: Map<String,Int> = emptyMap(),val reduced: List<String> = emptyList(),
+    val loadingInventory: String? = null
 )
 data class NativeProgramSplit(val id: String,val label: String,val days: List<Int>)
 data class NativeProgramMuscle(val id: String,val label: String)
@@ -45,12 +46,16 @@ object NativeProgramSetupCodec {
         .put("equipment",JSONArray(p.equipment.sorted())).put("allowBodyweight",p.allowBodyweight)
         .put("allowSupersets",p.allowSupersets).put("barbellCap",p.barbellCap ?: JSONObject.NULL)
         .put("focus",JSONObject().apply { p.focus.toSortedMap().forEach { (key,level) -> put(key,level) } })
-        .put("reduced",JSONArray(p.reduced.sorted())).toString()
+        .put("reduced",JSONArray(p.reduced.sorted())).apply {
+            p.loadingInventory?.let { put("loadingInventory",JSONObject(NativeGymInventoryCodec.validate(it,p.unit))) }
+        }.toString()
     fun readProfile(raw: String): NativeProgramProfile {
         wire.bounded(raw,16384);val p=JSONObject(raw)
         // Old v1 saved native programs omitted priorities; preserve exact restore.
         val hasPriorities=p.has("focus") || p.has("reduced")
-        if(hasPriorities)wire.exact(p,*baseFields,"focus","reduced")
+        val hasInventory=p.has("loadingInventory")
+        if(hasInventory)wire.exact(p,*baseFields,"focus","reduced","loadingInventory")
+        else if(hasPriorities)wire.exact(p,*baseFields,"focus","reduced")
         else wire.exact(p,*baseFields)
         val name=wire.text(p,"name");val goal=wire.text(p,"goal");val experience=wire.text(p,"experience")
         val unit=wire.text(p,"unit");val split=wire.text(p,"split");val days=wire.integer(p,"days")
@@ -83,7 +88,8 @@ object NativeProgramSetupCodec {
             }.also { require(it.size==it.distinct().size) }
         } else emptyList()
         return NativeProgramProfile(name,goal,experience,unit,split,days.toInt(),session,equipment,
-            p.getBoolean("allowBodyweight"),p.getBoolean("allowSupersets"),cap,focus,reduced)
+            p.getBoolean("allowBodyweight"),p.getBoolean("allowSupersets"),cap,focus,reduced,
+            if(hasInventory)NativeGymInventoryCodec.validate(p.getJSONObject("loadingInventory").toString(),unit) else null)
     }
     fun setupJson(profile: NativeProgramProfile,creationId: String,programId: String,createdAt: Long,seed: Int): String {
         val p=readProfile(profileJson(profile))

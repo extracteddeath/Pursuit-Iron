@@ -156,7 +156,7 @@ class CanonicalWorkoutStorePersistence(
                 ?: JSONObject.NULL
             body.put("restoreUndo",undo).put("restoreUndoAck",undoAck)
                 .put("consumedRestoreIds",JSONArray().apply {
-                    state.consumedRestoreIds.forEach(::put)
+                    state.consumedRestoreIds.forEach { put(it) }
                 })
         }
         val payload=body.toString()

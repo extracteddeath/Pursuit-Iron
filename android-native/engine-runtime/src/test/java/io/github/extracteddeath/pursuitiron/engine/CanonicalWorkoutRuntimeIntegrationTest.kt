@@ -246,7 +246,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 selected.id,checkNotNull(removable)))
             val request=NativeProgramEditCodec.editJson(draft,"remove-once",2000)
             assertEquals(2,JSONObject(request).getInt("format"))
-            val previousHistory=initial.toString()
+            val originalHistory=JSONObject(proposal.snapshot).getJSONArray("history").toString()
             val writes=drive.writes
             val saved=checkNotNull(owner.saveProgramEdits(request))
             assertEquals(selected.exerciseIds.size-1,saved.days.first().exerciseIds.size)
@@ -267,6 +267,9 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 NativeWorkoutCodec.startJson("program-removal","post-removal-workout",3000)))
             val journal=WorkoutJournalPersistence(Drive())
             assertNotNull(owner.beginIssuedSession(plan,journal))
+            // Beginning a real session may commit its own reservation; the blocked
+            // edit must not add another store write.
+            val writesAtSessionStart=drive.writes
             val competing=checkNotNull(NativeProgramEditDraft.from(
                 ReadOnlyProgramPresentationPolicy.inspect(refreshed.program,
                     CurrentProgramEvidence(refreshed.program.reference,
@@ -274,8 +277,10 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                     as ReadOnlyProgramPresentation.Structure).renameProgram("Blocked while active"))
             assertNull(owner.saveProgramEdits(NativeProgramEditCodec.editJson(
                 competing,"edit-while-active",4000)))
-            assertEquals(writes+1,drive.writes)
-            assertEquals(previousHistory,initial.toString())
+            assertEquals(writesAtSessionStart,drive.writes)
+            assertEquals(originalHistory,JSONObject(String(
+                checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8))
+                .getJSONArray("history").toString())
         } }
     }
 

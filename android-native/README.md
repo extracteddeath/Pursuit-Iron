@@ -11,24 +11,21 @@ production app and the other developer's native branch are unaffected.
 
 ## Historical full-journey APK freeze (superseded for this tester milestone)
 
-**No new native Android APKs will be built for the remainder of the
-architecture, onboarding, workout runtime, persistence and completion work.**
-Both installable-preview and instrumentation-device workflows are explicitly
-job-disabled; even manual dispatch cannot generate an APK. Routine verification
-is limited to Kotlin/Compose compilation, JVM tests, canonical engine
-regression suites and Java instrumentation-source compilation.
+The prior full-journey APK freeze is superseded for this **one authorized
+debug tester build**. The new preview workflow only runs when its own file
+changes on the isolated Compose branch and verifies onboarding-to-Train
+before assembly. Routine source changes still compile without an APK.
+On-device instrumentation builds remain disabled.
 
-Unblock APK production only in a deliberate later change, after the same
-native revision has end-to-end evidence for: onboarding -> program creation ->
-verified personal workout -> set logging -> interruption/resume -> workout
-completion -> saved history and correct next-workout/progression decisions.
+A production release still requires end-to-end evidence for: onboarding ->
+program creation -> verified workout -> set logging -> interruption/resume ->
+workout completion -> saved history and progression decisions.
 The source implementation now covers the standard working-set journey and
 engine-issued myo/drop extension recording and one-shot deload consumption.
 Durable in-workout corrections and corrections to retained sets in saved
 native workouts are connected through the journal and canonical history.
 Insights can browse older native completions in revision-bound pages, with
-program/day search and local calendar date filters. Real-device acceptance remains pending; the build
-freeze remains active.
+program/day search and local calendar date filters. Real-device acceptance remains pending; the preview APK is for testing.
 
 The instructions below describe how **older previously produced** artifacts
 could be installed. They do not authorize new builds before the release gate.

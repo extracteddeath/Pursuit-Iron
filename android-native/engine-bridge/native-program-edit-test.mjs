@@ -161,4 +161,30 @@ if(beforeRemovalWorkout.session.dayId===removedDay.id) {
   assert.deepEqual(afterRemovalWorkout.rows.map(x=>x.id),beforeRemovalWorkout.rows.map(x=>x.id),
     'A changed future day must not alter the canonical next-day roster');
 }
+// A final movement removal cannot strand verified machine loading facts.
+const orphanFixture=JSON.parse(proposal.snapshot);
+const p0=orphanFixture.saved[0];
+const counts=new Map(p0.days.flatMap(d=>d.exercises).map(x=>[x,0]));
+p0.days.flatMap(d=>d.exercises).forEach(id=>counts.set(id,(counts.get(id)||0)+1));
+const unique=p0.days.flatMap((d,di)=>d.exercises.map((id,index)=>({id,di,index})))
+  .find(x=>x.index>0 && x.index!==p0.days[x.di].primaryIndex &&
+    counts.get(x.id)===1);
+assert.ok(unique,'A removable unique exercise is required for a physical-stock deletion test');
+p0.ss={}; // This fixture tests inventory only, not pairing policy.
+p0.config.loadingInventory={unit:'lb',exerciseOverrides:{
+  [unique.id]:{availableLoads:[10,15,20]}}};
+const beforeOrphan=JSON.stringify(orphanFixture),orphanReference=inspectNativeProgram(beforeOrphan).program.reference;
+const orphanRequest={format:2,operationId:'orphan-protection',reference:orphanReference,
+  editedAt:9000,name:p0.name,days:p0.days.map(d=>({
+    id:d.id,label:d.label,slots:d.exercises.map((_,i)=>i)}))};
+orphanRequest.days[unique.di].slots.splice(unique.index,1);
+assert.throws(()=>prepareNativeProgramEdit(beforeOrphan,JSON.stringify(orphanRequest)),
+  'Never orphan physical machine loading when its final exercise is removed');
+const withoutStock=structuredClone(orphanFixture);
+delete withoutStock.saved[0].config.loadingInventory;
+const bare=JSON.stringify(withoutStock);
+orphanRequest.reference=inspectNativeProgram(bare).program.reference;
+assert.doesNotThrow(()=>prepareNativeProgramEdit(bare,JSON.stringify(orphanRequest)),
+  'A safe ordinary unpaired removal must remain allowed after clearing physical stock');
+
 console.log('PASS native program edit: revision save, rich slot metadata, duplicate identity, pairings, retries, retained records and canonical issuance');

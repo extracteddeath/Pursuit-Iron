@@ -199,7 +199,7 @@ internal fun NativeProgramDraftEditor(
             onDismissRequest={pendingRemoval=null},
             title={Text("Remove this movement?")},
             text={Text("Remove ${names[movementId] ?: movementId} from this day only? " +
-                "Saved workouts stay. Removing a protected primary or paired movement is refused on Save.")},
+                "Saved workouts stay. Primary and paired movements are protected. Clear any verified gym weight setting for the final occurrence of this movement before removing it.")},
             confirmButton={Button(onClick={
                 draft.removeExercise(dayId,index)?.let { draft=it }
                 pendingRemoval=null

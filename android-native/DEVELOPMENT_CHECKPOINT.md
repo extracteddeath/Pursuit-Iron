@@ -1392,3 +1392,16 @@ kept separate. New tests reject fake modes, missing equipment, disallowed
 candidate IDs, ambiguous machine ranges and invented increments while
 retaining the same atomic revision pin and original workout history.
 The training engine and deployed web app remain untouched; no APK is built.
+
+
+## 2026-11-02 — Exercise removal may not orphan physical stock
+
+Saved program organization now explicitly refuses to delete the final occurrence
+of a movement while the native plan still retains a verified, per-exercise
+physical load profile for it. A repeat of the same movement on another day is
+not an orphan: its verified equipment values are retained. The canonical
+program edit JS and independent Kotlin response verifier each enforce that
+rule, preserving exact existing program configuration, historical workouts
+and atomic revision checks. The removal confirmation explains how to
+clear equipment settings first. No automatic inventory deletion or guessed
+remapping to a replacement exercise is authorized.

@@ -144,6 +144,24 @@ object NativeProgramEditCodec {
                         }
                         else require(!day.has("primaryIndex"))
                     }
+                    // Independently refuse orphaned machine settings after a
+                    // deletion. Repeated movements on another day may retain
+                    // their existing authenticated loading profile.
+                    val physical=a.getJSONObject("config").optJSONObject("loadingInventory")
+                        ?.optJSONObject("exerciseOverrides")
+                    if(physical!=null) {
+                        val oldIds=(0 until originalDays.length()).flatMap { j->
+                            val exercises=originalDays.getJSONObject(j).getJSONArray("exercises")
+                            (0 until exercises.length()).map { exercises.getString(it) }
+                        }.toSet()
+                        val liveIds=(0 until editedDays.length()).flatMap { j->
+                            val exercises=editedDays.getJSONObject(j).getJSONArray("exercises")
+                            (0 until exercises.length()).map { exercises.getString(it) }
+                        }.toSet()
+                        require(physical.keys().asSequence().all { id->
+                            id !in oldIds || id in liveIds
+                        })
+                    }
                     // Verify every slot store independently: removed slot keys
                     // disappear and surviving slot keys retain their exact values.
                     val byDay=(0 until requestedDays.length()).associate { index->

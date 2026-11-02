@@ -93,6 +93,15 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
     edited={...edited,days,...(r.days.some(d=>
       d.slots.length!==original.days.find(x=>x.id===d.id).exercises.length ||
       d.slots.some((from,to)=>from!==to))?{edited:true}:{})};
+    // A plan change cannot silently strand verified exercise-specific stock.
+    // Keep an override if the same movement survives on another day. Otherwise
+    // the athlete must explicitly clear its physical stock before deleting it.
+    const physical=original.config?.loadingInventory?.exerciseOverrides;
+    if(object(physical)) {
+      const previously=new Set(original.days.flatMap(day=>day.exercises));
+      const remaining=new Set(days.flatMap(day=>day.exercises));
+      ensure(Object.keys(physical).every(id=>!previously.has(id) || remaining.has(id)));
+    }
     ensure(r.name!==original.name || JSON.stringify(days)!==JSON.stringify(original.days) ||
       r.days.some(d=>d.slots.length!==original.days.find(x=>x.id===d.id).exercises.length ||
         d.slots.some((from,to)=>from!==to)));

@@ -443,7 +443,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
                 mutable.update { it.copy(busy=false,programEditError=
-                    "Changes could not be saved. Primary or paired movements cannot be removed. Keep pairs together and reopen the editor if your plan changed.") }
+                    "Changes were not saved. Keep primary and paired lifts, clear verified machine weights before removing their final movement, and reopen the editor if your plan changed.") }
             }
         }
     }

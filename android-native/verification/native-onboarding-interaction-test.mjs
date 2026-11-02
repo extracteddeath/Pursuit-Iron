@@ -687,7 +687,7 @@ assert.ok(toolbarStart>=0 && toolbarEnd>toolbarStart &&
 assert.ok(controls.includes('val repsControl: @Composable () -> Unit') &&
   controls.includes('val rirControl: @Composable () -> Unit') &&
   controls.includes('BoxWithConstraints(Modifier.fillMaxWidth())') &&
-  controls.includes('if(maxWidth>=368.dp) {') &&
+  controls.includes('if(maxWidth>=560.dp) {') &&
   controls.includes('Box(Modifier.weight(1f)) { repsControl() }') &&
   controls.includes('Box(Modifier.weight(1f)) { rirControl() }') &&
   controls.includes('Column(verticalArrangement=Arrangement.spacedBy(8.dp))') &&

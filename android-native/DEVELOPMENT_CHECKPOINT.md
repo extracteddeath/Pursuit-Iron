@@ -1710,3 +1710,12 @@ manufacturing a new finish. Runtime-owned history publication,
 saved-set receipts, recovery and progression are unchanged.
 Verification contracts check source ordering, zero-unresolved
 gates and the original review/retry requirements. No APK.
+
+## 2026-11-02 — Readable native counter sizing
+
+Responsive shared reps/RIR counters now require at least 560dp of
+available width before using adjacent columns, allowing each column
+room for its field and two 48dp M3 touch targets. Ordinary phones
+stack the controls instead of forcing tiny input fields. This adjusts
+layout only: direct numeric editing, policy-backed rep/RIR steppers,
+optional RIR, draft retention and journal writes are unchanged.

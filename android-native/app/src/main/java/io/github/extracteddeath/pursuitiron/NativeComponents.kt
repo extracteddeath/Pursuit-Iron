@@ -111,7 +111,9 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
             canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null)
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        if(maxWidth>=368.dp) {
+        // Each column contains a text field and two 48dp steppers.
+        // Small phones need the stacked layout rather than tiny text fields.
+        if(maxWidth>=560.dp) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) { repsControl() }
                 Box(Modifier.weight(1f)) { rirControl() }

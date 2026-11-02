@@ -13,6 +13,7 @@
   "workout-store-protocol.mjs",
   "native-onboarding.mjs",
   "native-program-edit.mjs",
+  "native-gym-inventory-edit.mjs",
   "native-session-note.mjs",
   "native-exercise-notes.mjs",
   "native-warmups.mjs",

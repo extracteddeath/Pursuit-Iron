@@ -221,6 +221,64 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         } }
     }
 
+    @Test(timeout=60000) fun removedProgramMovementSurvivesAtomicSaveRestartAndWorkoutIssuance() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Editable removal",allowSupersets=false),
+                "create-removal","program-removal",1000,223)))
+            val drive=Drive();var owner=CanonicalWorkoutStorePersistence(drive,engine)
+            assertTrue(owner.initialize(proposal.snapshot))
+            val selected=proposal.program.days.first()
+            val initial=JSONObject(proposal.snapshot).getJSONArray("saved").getJSONObject(0)
+            val firstDay=initial.getJSONArray("days").getJSONObject(0)
+            val primary=firstDay.optInt("primaryIndex",-1)
+            val pairMap=initial.optJSONObject("ss")
+            val removable=selected.exerciseIds.indices.lastOrNull { index ->
+                index!=primary && pairMap?.has("${selected.id}:${index}")!=true &&
+                    (index==0 || pairMap?.has("${selected.id}:${index-1}")!=true)
+            }
+            assertNotNull("An ordinary generated day needs a removable accessory",removable)
+            val verified=ReadOnlyProgramPresentationPolicy.inspect(proposal.program,
+                CurrentProgramEvidence(proposal.program.reference,CurrentProgramDeletionEvidence.CheckedAbsent))
+                as ReadOnlyProgramPresentation.Structure
+            val draft=checkNotNull(NativeProgramEditDraft.from(verified).removeExercise(
+                selected.id,checkNotNull(removable)))
+            val request=NativeProgramEditCodec.editJson(draft,"remove-once",2000)
+            assertEquals(2,JSONObject(request).getInt("format"))
+            val previousHistory=initial.toString()
+            val writes=drive.writes
+            val saved=checkNotNull(owner.saveProgramEdits(request))
+            assertEquals(selected.exerciseIds.size-1,saved.days.first().exerciseIds.size)
+            assertEquals(draft.days,saved.days)
+            assertEquals(writes+1,drive.writes)
+            var stored=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            assertTrue(engine.validateInitialSnapshot(stored))
+            assertEquals(JSONObject(proposal.snapshot).getJSONArray("history").toString(),
+                JSONObject(stored).getJSONArray("history").toString())
+            assertEquals(1,JSONObject(stored).getJSONObject("nativeProgramEdit").getInt("format"))
+            owner=CanonicalWorkoutStorePersistence(drive,engine)
+            assertNotNull(owner.saveProgramEdits(request))
+            assertEquals("Replaying the accepted operation must not commit again",writes+1,drive.writes)
+            stored=String(checkNotNull(owner.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val refreshed=checkNotNull(engine.inspectProgram(stored))
+            assertEquals(draft.days,refreshed.program.days)
+            val plan=checkNotNull(engine.prepareWorkout(stored,
+                NativeWorkoutCodec.startJson("program-removal","post-removal-workout",3000)))
+            val journal=WorkoutJournalPersistence(Drive())
+            assertNotNull(owner.beginIssuedSession(plan,journal))
+            val competing=checkNotNull(NativeProgramEditDraft.from(
+                ReadOnlyProgramPresentationPolicy.inspect(refreshed.program,
+                    CurrentProgramEvidence(refreshed.program.reference,
+                        CurrentProgramDeletionEvidence.CheckedAbsent))
+                    as ReadOnlyProgramPresentation.Structure).renameProgram("Blocked while active"))
+            assertNull(owner.saveProgramEdits(NativeProgramEditCodec.editJson(
+                competing,"edit-while-active",4000)))
+            assertEquals(writes+1,drive.writes)
+            assertEquals(previousHistory,initial.toString())
+        } }
+    }
+
     @Test(timeout=60000) fun delayedProgramSaveCannotOverwriteANewerProgramRevision() {
         NodeTransport().use { node -> runBlocking {
             val started=CompletableDeferred<Unit>();val release=CompletableDeferred<Unit>()

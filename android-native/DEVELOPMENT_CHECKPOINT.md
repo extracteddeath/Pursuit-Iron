@@ -255,11 +255,44 @@ Older journal formats and nativeSetObservations remain unchanged.
 It is session-scoped user-selected context, not a longitudinal medical log.
 The web app and global engine stay untouched.
 
+## Follow-up: repeated-exercise history and original Last positions
+
+New issued completions publish version-1 `nativeSetLocations`: each retained
+canonical performance row links to its exact original exercise/set slot. The
+canonical logger still owns row retention, zero-load omission, summaries and
+progression. The Kotlin atomic owner independently verifies locations against
+the pinned issued targets and durable observations before publishing history.
+Identical myo/drop values cannot silently move between repeated exercises.
+
+Saved-history review now groups repeated exercises by their workout position.
+Working and extension sets can be corrected independently, including merged
+performance indices beyond 19, within the existing 480-slot workout bound.
+Corrections preserve original locations, targets, adjustment/audit records and
+the engine's duplicate-exposure comparability flags. Existing ambiguous legacy
+repeated workouts remain summary-only. A completion committed before location
+metadata existed can still acknowledge its exact handoff after restart without
+rewriting the saved entry or snapshot bytes.
+
+The related native Last projection now carries original working-set positions.
+Skipped and omitted sets leave gaps rather than borrowing the following set.
+Repeated exercises select their own program/day/slot observations. Extensions
+remain outside Last, and old pinned issued arrays still recover unchanged.
+No prescription or progression formulas moved into Kotlin.
+
+Local verification passes all 40 native/canonical source suites plus canonical
+export, independent source parity and the real Android IIFE. The history suite
+also runs against that actual bundle in source-only CI. Added JVM coverage for
+large repeated-lift corrections, forged location rejection before publication,
+post-commit crash/retry, a full rotation back to correct Last positions, sparse
+Last transport and legacy issued recovery. Fresh GitHub Kotlin/Compose/runtime
+checks must be read for the published revision; this is not device acceptance.
+No APK or production web release is produced.
+
 ## Next work
 
 Calendar views and richer training analytics, saved-history correction of
-skipped/omitted rows or failed attempts, duplicate exercise-slot history editing,
-native session-adjustment controls and imported web history remain separate
+skipped/omitted rows or failed attempts, broader native session-adjustment
+controls and imported web history remain separate
 milestones. Physical-device interaction, interruption and accessibility
 acceptance is still required for the complete agreed journey; preserve the APK
 freeze until its release gate has the required evidence.

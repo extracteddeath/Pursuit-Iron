@@ -41,7 +41,8 @@ function entryFrom(store,historyId) {
   return entry;
 }
 // Resolve each retained canonical set back to its own original observation.
-// Omitted mixed-zero rows and skips stay untouched. Ambiguous/legacy data fails closed.
+// Omitted mixed-zero rows and skips stay untouched. New completions pin exact
+// locations for repeated lifts; legacy ambiguous data remains summary-only.
 function mappedSets(entry) {
   const events=entry.nativeSetObservations.events;
   ensure(events.length>=1 && events.length<=480);
@@ -55,26 +56,50 @@ function mappedSets(entry) {
       exact(v,['load','unit','reps','rir']) && load(v.load) && v.unit===entry.unit &&
       integer(v.reps,1,100) && (v.rir===null || integer(v.rir,0,10)));
   }
+  let locations=null;
+  if(own(entry,'nativeSetLocations')) {
+    const data=entry.nativeSetLocations;
+    ensure(exact(data,['format','sets']) && data.format===1 && Array.isArray(data.sets) && data.sets.length<=480);
+    locations=new Map();
+    for(const location of data.sets) {
+      const slot=location.slot;
+      ensure(exact(location,['exerciseId','setIndex','slot']) && identifier(location.exerciseId) &&
+        integer(location.setIndex,0,479) && exact(slot,['exerciseIndex','setIndex','exerciseId']) &&
+        slot.exerciseId===location.exerciseId && integer(slot.exerciseIndex,0,47) && integer(slot.setIndex,0,19));
+      const key=`${location.exerciseId}:${location.setIndex}`;
+      ensure(!locations.has(key));locations.set(key,slot);
+    }
+  }
   const used=new Set(),out=[];
   for(const [exerciseId,p] of Object.entries(entry.perf)) {
-    ensure(own(EX_BY_ID,exerciseId) && Array.isArray(p.sets) && p.sets.length<=20 &&
-      !p.duplicateExerciseSlots && integer(p.prescription?.sets,1,20));
+    ensure(own(EX_BY_ID,exerciseId) && Array.isArray(p.sets) && p.sets.length>=1 && p.sets.length<=480 &&
+      (locations || !p.duplicateExerciseSlots && p.sets.length<=20) && integer(p.prescription?.sets,1,20));
+    const slots=new Set();let previous=-1;
     for(const [setIndex,set] of p.sets.entries()) {
       ensure(!set.warm && integer(set.r,1,100) && Number.isFinite(set.w) && set.w>=0 &&
         (!set.sub || ['myo','drop'].includes(set.kind)));
+      const location=locations?.get(`${exerciseId}:${setIndex}`);
+      ensure(!locations || location);
       const candidates=events.map((event,index)=>({event,index})).filter(({event,index})=>
         !used.has(index) && event.disposition==='COMPLETED' && event.slot.exerciseId===exerciseId &&
+        (!location || location.exerciseIndex===event.slot.exerciseIndex && location.setIndex===event.slot.setIndex) &&
         Number(event.values.load)===set.w && event.values.reps===set.r &&
         (set.rirReported===true ? event.values.rir===set.rir : event.values.rir===null) &&
-        (set.sub ? event.slot.setIndex>=p.prescription.sets :
+        (set.sub ? !!location || event.slot.setIndex>=p.prescription.sets :
           event.slot.exerciseIndex===set.decisionTrace?.slot && event.slot.setIndex===set.workingSetIndex))
         .sort((a,b)=>a.event.slot.exerciseIndex-b.event.slot.exerciseIndex || a.event.slot.setIndex-b.event.slot.setIndex);
-      ensure(candidates.length>=1 && (set.sub || candidates.length===1));
+      ensure(candidates.length>=1 && (!location && set.sub || candidates.length===1));
       const matched=candidates[0];used.add(matched.index);
+      const position=matched.event.slot.exerciseIndex*20+matched.event.slot.setIndex;
+      ensure(position>previous);previous=position;slots.add(matched.event.slot.exerciseIndex);
       out.push({exerciseId,setIndex,set,event:matched.event,eventIndex:matched.index});
     }
+    if(p.duplicateExerciseSlots)ensure(Array.isArray(p.duplicateExerciseSlots) &&
+      p.duplicateExerciseSlots.length>=2 && p.duplicateExerciseSlots.length===slots.size &&
+      p.duplicateExerciseSlots.every((slot,i)=>integer(slot,0,47) && slot===[...slots][i]));
+    else ensure(slots.size===1);
   }
-  ensure(out.length<=480);
+  ensure(out.length<=480 && (!locations || locations.size===out.length));
   return out;
 }
 /** Snapshot-bound pages of owned native completions; never a backup/import reader. */
@@ -127,7 +152,7 @@ export function inspectNativeHistory(rawSnapshot,historyId) {
       setsDone:entry.setsDone,totalSets:entry.totalSets,volume:entry.volume,
       exercises:Object.keys(entry.perf).map(id=>({id,name:EX_BY_ID[id].name,
         sets:mapped.filter(s=>s.exerciseId===id).map(({setIndex,set,event})=>({setIndex,
-          kind:set.sub?set.kind:'working',ordinal:set.sub?setIndex+1:set.workingSetIndex+1,
+          exerciseIndex:event.slot.exerciseIndex,kind:set.sub?set.kind:'working',ordinal:event.slot.setIndex+1,
           load:event.values.load,reps:event.values.reps,rir:event.values.rir})),
         record:exRecords(store.history,id,entry.unit).maxWeight}))};
   } catch {throw new TypeError('Native history unavailable');}
@@ -152,7 +177,7 @@ export function prepareNativeHistoryCorrection(currentSnapshot,correctionJson) {
       const mapped=mappedSets(original),base=clone(original),draft=clone(original),seen=new Set();
       for(const change of request.changes) {
         ensure(exact(change,['exerciseId','setIndex','load','reps','rir']) && identifier(change.exerciseId) &&
-          integer(change.setIndex,0,19) && load(change.load) && integer(change.reps,1,100) &&
+          integer(change.setIndex,0,479) && load(change.load) && integer(change.reps,1,100) &&
           (change.rir===null || integer(change.rir,0,10)));
         const key=`${change.exerciseId}:${change.setIndex}`;ensure(!seen.has(key));seen.add(key);
         const match=mapped.find(s=>s.exerciseId===change.exerciseId && s.setIndex===change.setIndex);ensure(match);

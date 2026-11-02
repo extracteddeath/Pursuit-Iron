@@ -92,6 +92,17 @@ object NativeWorkoutCodec {
             val exerciseId=wire.text(row,"id");val name=wire.text(row,"name")
             require(index in 0..47 && rest in 0..3600 && name.length in 1..200 && row.get("superset") is Boolean)
             val previous=row.getJSONArray("previous");require(previous.length() in 0..20)
+            val positioned=previous.length()>0 && previous.getJSONObject(0).has("workingSetIndex")
+            val previousByPosition=(0 until previous.length()).map { j->
+                val value=previous.getJSONObject(j)
+                wire.exact(value,"load","reps","unit",*(if(positioned)arrayOf("workingSetIndex") else emptyArray()))
+                val rawPosition=if(positioned)wire.integer(value,"workingSetIndex") else j.toLong()
+                val load=wire.text(value,"load");val reps=wire.integer(value,"reps");val unit=wire.text(value,"unit")
+                require(rawPosition in 0..19 && load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")) &&
+                    reps in 0..100 && unit in listOf("lb","kg"))
+                rawPosition.toInt() to "$load $unit × $reps"
+            }.toMap()
+            require(previousByPosition.size==previous.length())
             val sets=row.getJSONArray("sets");require(sets.length() in 1..40)
             val warmups=ArrayList<String>();val work=ArrayList<NativeWorkoutSet>()
             var mainOrdinal=0
@@ -124,8 +135,7 @@ object NativeWorkoutCodec {
                     }
                     val targetReps=wire.text(target,"reps");val rir=if(target.isNull("rir"))null else wire.text(target,"rir")
                     require(targetReps.length in 1..40 && (rir==null || rir.length<=40))
-                    val last=if(!extension && mainOrdinal<previous.length())previous.getJSONObject(mainOrdinal).let { p->
-                        "${wire.text(p,"load")} ${wire.text(p,"unit")} × ${wire.integer(p,"reps")}" } else null
+                    val last=if(!extension)previousByPosition[mainOrdinal] else null
                     if(!extension)mainOrdinal++
                     work+=NativeWorkoutSet(JournalSetSlot(index.toInt(),work.size,exerciseId),load,reps,targetReps,rir,last,
                         extension,kind,rest)

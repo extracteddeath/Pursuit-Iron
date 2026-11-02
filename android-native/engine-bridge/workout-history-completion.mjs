@@ -157,6 +157,30 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
   ensure(equalJson(journal.slots, slots));
   const performance = loggedWorkoutPerformance(program, issuedDay, rows, s.weekIndex,
     s.unit, origin.perf, origin.history);
+  // History merges repeated exercise IDs. Preserve the original issued slot
+  // separately, including extensions which have no working-set decision trace.
+  // The canonical logger remains the only owner of retained rows and zero-load
+  // omissions; obtain each occurrence from that same logger, not a new summary.
+  const locations=[],offsets=new Map();
+  if(issued)for(const row of rows) {
+    const local=loggedWorkoutPerformance(program,issuedDay,[row],s.weekIndex,
+      s.unit,origin.perf,origin.history)[row.id]?.sets || [];
+    const offset=offsets.get(row.id) || 0;
+    ensure(equalJson(local,(performance[row.id]?.sets || []).slice(offset,offset+local.length)));
+    const candidates=row.sets.filter(set=>!set.warm);
+    let previous=-1;
+    for(const [index,set] of local.entries()) {
+      const setIndex=candidates.findIndex((target,i)=>i>previous && target.done &&
+        !!target.sub===!!set.sub && (!set.sub || target.kind===set.kind) &&
+        Number(target.weight)===set.w && Number(target.reps)===set.r &&
+        (set.rirReported===true ? target.actualRIR===set.rir : target.actualRIR===null) &&
+        (set.sub || set.decisionTrace?.slot===row.slot && set.workingSetIndex===i));
+      ensure(setIndex>=0);previous=setIndex;
+      locations.push({exerciseId:row.id,setIndex:offset+index,
+        slot:{exerciseIndex:row.slot,setIndex,exerciseId:row.id}});
+    }
+    offsets.set(row.id,offset+local.length);
+  }
   // The canonical logger stamps per-exercise dates with Date.now. Use the
   // journal's durable finish time so retries are deterministic after a crash.
   for (const perf of Object.values(performance)) perf.date = f.completedAt;
@@ -210,6 +234,7 @@ function canonicalEntry(origin, journal, handoffSha256, issued = null, events = 
       timeLimited:issued.sessionLengthPlan.changed}:{}),
     ...(issued ? {nativeSetObservations:{format:1,events:events.map(event=>({
       slot:event.slot,disposition:event.disposition,values:event.values}))}} : {}),
+    ...(issued ? {nativeSetLocations:{format:1,sets:locations}} : {}),
     ...(journal.format===4 ? {nativeSetAdjustments:{format:1,events:events
       .filter(event=>event.adjustment!==null)
       .map(event=>({slot:event.slot,action:event.adjustment.action,part:event.adjustment.part}))}} : {}),
@@ -239,11 +264,18 @@ export function prepareCanonicalWorkoutHistory(originRaw, currentRaw, handoffRaw
       ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value);
     // Canonical helpers use optional undefined fields. Compare exactly what
     // survives a real JSON store round-trip, rather than in-memory optionals.
-    const entry = JSON.parse(JSON.stringify(canonicalEntry(origin, journal, sha(semanticHandoff),issued?.plan,observations)));
+    let entry = JSON.parse(JSON.stringify(canonicalEntry(origin, journal, sha(semanticHandoff),issued?.plan,observations)));
     const existing = current.history.filter(h => h.id === entry.id);
     ensure(!own(current.tombs, entry.id));
     let candidateRaw;
     if (existing.length) {
+      // An earlier engine version may have committed this exact handoff before
+      // slot locations existed. A lost acknowledgement must still retire that
+      // journal, without rewriting the already-published history or its bytes.
+      if(existing.length===1 && !own(existing[0],'nativeSetLocations')) {
+        const {nativeSetLocations:_locations,...legacy}=entry;
+        ensure(equalJson(existing[0],legacy));entry=legacy;
+      }
       ensure(existing.length === 1 && equalJson(existing[0], entry));
       candidateRaw = currentRaw;
     } else {

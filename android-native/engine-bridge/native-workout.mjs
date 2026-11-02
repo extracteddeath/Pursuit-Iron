@@ -61,12 +61,20 @@ export function prepareNativeWorkout(rawSnapshot,startJson) {
     // Every engine-issued extension has its own journal slot. Never strip
     // myo/drop rows from a personal workout or synthesize new prescriptions.
     ensure(sets.filter(set=>!set.warm).length<=20);
-    const last=(previous[exerciseId]?.sets || []).filter(set=>!set.warm && !set.sub && set.done!==false);
+    const prior=previous[exerciseId];
+    const repeated=!!prior?.duplicateExerciseSlots || day.exercises.filter((_,i)=>
+      exerciseAt(program,day,i,weekIndex)===exerciseId).length>1;
+    const last=(prior?.sets || []).filter(set=>!set.warm && !set.sub && set.done!==false &&
+      (!repeated || set.decisionTrace?.programId===program.id && set.decisionTrace.dayId===day.id &&
+        set.decisionTrace.exerciseId===exerciseId && set.decisionTrace.slot===slot));
+    const positioned=last.some(set=>integer(set.workingSetIndex,0,19));
+    const previousSets=last.map((set,index)=>({workingSetIndex:positioned?set.workingSetIndex:index,
+      load:String(set.w),reps:set.r,unit:prior.unit || unit}));
     return {id:exerciseId,slot,name:ex.name,
       restSeconds:effectiveRest(goalForDay(program,day),ex,slot===day.primaryIndex,
         program.overrides?.[`${day.id}:${slot}`]?.rest || 0,1),
       superset:!program.config.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
-      previous:last.map(set=>({load:String(set.w),reps:set.r,unit:previous[exerciseId].unit || unit})),sets};
+      previous:previousSets,sets};
   }).filter(Boolean);
   const result=JSON.parse(JSON.stringify({format:shortened?2:1,source:NATIVE_WORKOUT_SOURCE,preparedOnly:true,persisted:false,
     inputStartSha256:sha256Utf8(startJson),session:{reference,workoutId:start.workoutId,dayId:day.id,
@@ -159,6 +167,16 @@ export function issuedNativeWorkoutFrom(originRaw,issuedRaw) {
       row.name===EX_BY_ID[row.id]?.name && integer(row.restSeconds,0,3600) &&
       typeof row.superset==='boolean' && Array.isArray(row.previous) && row.previous.length<=20 &&
       Array.isArray(row.sets) && row.sets.length>=1 && row.sets.length<=40);
+    const positioned=row.previous.length>0 && Object.hasOwn(row.previous[0],'workingSetIndex');
+    const previousPositions=new Set();
+    for(const [i,previous] of row.previous.entries()) {
+      const position=positioned?previous.workingSetIndex:i;
+      ensure(exact(previous,['load','reps','unit',...(positioned?['workingSetIndex']:[])]) &&
+        integer(position,0,19) && !previousPositions.has(position) &&
+        typeof previous.load==='string' && /^(0|[1-9][0-9]{0,4})(\.[0-9]{1,3})?$/.test(previous.load) &&
+        integer(previous.reps,0,100) && ['lb','kg'].includes(previous.unit));
+      previousPositions.add(position);
+    }
     let working=0, extension=0, extensionKind=null, reachedExtension=false;
     const prescribedCell=computeCell(program,issuedDay,row.id,row.slot,s.weekIndex);
     const protocol=techniqueProtocolFromCell(prescribedCell);

@@ -14,7 +14,7 @@ private fun historyDateLabel(date: Long)=DateFormat.getDateTimeInstance(DateForm
 
 private fun historySetLabel(exercise: NativeHistoryExercise,set: NativeHistorySet): String {
     if(set.kind=="working")return "Set ${set.ordinal}"
-    val number=exercise.sets.count { it.kind==set.kind && it.setIndex<=set.setIndex }
+    val number=exercise.sets.count { it.exerciseIndex==set.exerciseIndex && it.kind==set.kind && it.setIndex<=set.setIndex }
     return if(set.kind=="myo")"Myo-rep mini $number" else "Drop set $number"
 }
 
@@ -95,12 +95,17 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
                 Text("Overall heaviest working set: $weight ${record.unit} × ${record.reps}",
                     style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)
             }
-            exercise.sets.forEach { set ->
-                TextButton(onClick={selectedExercise=exercise.id;selectedSet=set.setIndex},enabled=canEdit,
-                    modifier=Modifier.fillMaxWidth()) {
-                    val label=historySetLabel(exercise,set)
-                    Text("$label · ${set.load} ${history.unit} × ${set.reps}" +
-                        (set.rir?.let { " · $it RIR" } ?: "") + " · Edit")
+            val occurrences=exercise.sets.groupBy { it.exerciseIndex }
+            occurrences.forEach { (exerciseIndex,sets) ->
+                if(occurrences.size>1)Text("Exercise ${exerciseIndex+1} in workout",
+                    style=MaterialTheme.typography.titleSmall)
+                sets.forEach { set ->
+                    TextButton(onClick={selectedExercise=exercise.id;selectedSet=set.setIndex},enabled=canEdit,
+                        modifier=Modifier.fillMaxWidth()) {
+                        val label=historySetLabel(exercise,set)
+                        Text("$label · ${set.load} ${history.unit} × ${set.reps}" +
+                            (set.rir?.let { " · $it RIR" } ?: "") + " · Edit")
+                    }
                 }
             }
         }
@@ -129,6 +134,8 @@ private fun NativeHistorySetEditor(history: NativeWorkoutHistory,exercise: Nativ
     var command by rememberSaveable(history.entrySha256,exercise.id,set.setIndex) { mutableStateOf<String?>(null) }
     Text("Correct saved set",style=MaterialTheme.typography.headlineSmall)
     Text("${exercise.name} · ${historySetLabel(exercise,set)}",style=MaterialTheme.typography.titleMedium)
+    if(exercise.sets.map { it.exerciseIndex }.distinct().size>1)
+        Text("Exercise ${set.exerciseIndex+1} in workout",style=MaterialTheme.typography.bodyMedium)
     Text("Update what you performed. Records and future workouts use the corrected values.",
         style=MaterialTheme.typography.bodyMedium)
     NativeSetValueFields(history.unit,load,reps,rir,!busy,

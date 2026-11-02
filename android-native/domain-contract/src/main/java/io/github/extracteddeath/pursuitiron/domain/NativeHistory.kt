@@ -10,7 +10,7 @@ interface NativeHistoryEngine {
 }
 
 data class NativeHistorySet(val setIndex: Int,val kind: String,val ordinal: Int,
-    val load: String,val reps: Int,val rir: Int?)
+    val load: String,val reps: Int,val rir: Int?,val exerciseIndex: Int)
 data class NativeHistoryRecord(val load: Double,val reps: Int,val date: Long,val unit: String)
 data class NativeHistoryExercise(val id: String,val name: String,val sets: List<NativeHistorySet>,
     val record: NativeHistoryRecord?)
@@ -42,7 +42,7 @@ object NativeHistoryCodec {
             changes.size in 1..48 && changes.map { it.exerciseId to it.setIndex }.toSet().size==changes.size)
         val list=JSONArray()
         changes.forEach { change ->
-            require(identifier.matches(change.exerciseId) && change.setIndex in 0..19 && load.matches(change.load) &&
+            require(identifier.matches(change.exerciseId) && change.setIndex in 0..479 && load.matches(change.load) &&
                 change.reps in 1..100 && (change.rir==null || change.rir in 0..10) &&
                 history.exercises.any { ex -> ex.id==change.exerciseId && ex.sets.any { it.setIndex==change.setIndex } })
             list.put(JSONObject().put("exerciseId",change.exerciseId).put("setIndex",change.setIndex)
@@ -63,16 +63,17 @@ object NativeHistoryCodec {
         val exercises=(0 until list.length()).map { i ->
             val ex=list.getJSONObject(i);WorkoutStoreRuntimeCodec.exact(ex,"id","name","sets","record")
             val exId=text(ex,"id",80);require(identifier.matches(exId))
-            val rawSets=ex.getJSONArray("sets");require(rawSets.length() in 1..20)
+            val rawSets=ex.getJSONArray("sets");require(rawSets.length() in 1..480)
             val sets=(0 until rawSets.length()).map { j ->
                 val s=rawSets.getJSONObject(j)
-                WorkoutStoreRuntimeCodec.exact(s,"setIndex","kind","ordinal","load","reps","rir")
+                WorkoutStoreRuntimeCodec.exact(s,"setIndex","exerciseIndex","kind","ordinal","load","reps","rir")
                 val kind=text(s,"kind");require(kind in listOf("working","myo","drop"))
                 val weight=text(s,"load",9);require(load.matches(weight))
-                NativeHistorySet(number(s,"setIndex",0,19).toInt(),kind,number(s,"ordinal",1,20).toInt(),
-                    weight,number(s,"reps",1,100).toInt(),optionalRir(s))
+                NativeHistorySet(number(s,"setIndex",0,479).toInt(),kind,number(s,"ordinal",1,20).toInt(),
+                    weight,number(s,"reps",1,100).toInt(),optionalRir(s),number(s,"exerciseIndex",0,47).toInt())
             }
-            require(sets.map { it.setIndex }.toSet().size==sets.size)
+            require(sets.map { it.setIndex }==sets.indices.toList() && sets.zipWithNext().all { (a,b)->
+                a.exerciseIndex*20+a.ordinal<b.exerciseIndex*20+b.ordinal })
             val record=if(ex.isNull("record"))null else {
                 val r=ex.getJSONObject("record");WorkoutStoreRuntimeCodec.exact(r,"w","r","date","unit")
                 val w=r.get("w");require(w is Number && w.toDouble().isFinite() && w.toDouble()>0)
@@ -82,11 +83,15 @@ object NativeHistoryCodec {
             }
             NativeHistoryExercise(exId,text(ex,"name"),sets,record)
         }
-        require(exercises.map { it.id }.toSet().size==exercises.size)
+        require(exercises.map { it.id }.toSet().size==exercises.size && exercises.sumOf { it.sets.size }<=480)
+        require(exercises.flatMap { ex->ex.sets.map { it.exerciseIndex to ex.id } }
+            .groupBy({it.first},{it.second}).values.all { it.distinct().size==1 })
         val total=number(v,"totalSets",1,480).toInt()
+        val done=number(v,"setsDone",0,total.toLong()).toInt()
+        require(exercises.sumOf { it.sets.size }<=done)
         return NativeWorkoutHistory(sha(v,"snapshotSha256"),sha(v,"entrySha256"),expectedId,
             text(v,"dayLabel"),number(v,"weekIndex",1,104).toInt(),unit,number(v,"date",1,8_640_000_000_000_000L),
-            number(v,"setsDone",0,total.toLong()).toInt(),total,number(v,"volume",0,9_007_199_254_740_991L),exercises)
+            done,total,number(v,"volume",0,9_007_199_254_740_991L),exercises)
     }
     fun decodeInspect(raw: String,id: String,snapshot: String,historyId: String): NativeWorkoutHistory? =
         WorkoutStoreRuntimeCodec.result(raw,id)?.let { history(it,snapshot,historyId) }

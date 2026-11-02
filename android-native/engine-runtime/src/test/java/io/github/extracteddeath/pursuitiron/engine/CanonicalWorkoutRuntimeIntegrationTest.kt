@@ -9,6 +9,8 @@ import java.io.File
 
 /** Actual packaged canonical JS -> Kotlin transport -> atomic store/journal. No APK. */
 class CanonicalWorkoutRuntimeIntegrationTest {
+    private fun sha(raw: String)=java.security.MessageDigest.getInstance("SHA-256")
+        .digest(raw.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it.toInt() and 255) }
     private class Drive : CanonicalWorkoutStoreBytes, WorkoutJournalBytes {
         var raw: ByteArray?=null
         var writes=0
@@ -855,6 +857,110 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             assertNotNull(store.complete(plan.session,finish.revision,journal))
             assertEquals(next.session,checkNotNull(journal.recover()).session)
             assertEquals(next.issuedJson,checkNotNull(store.recoverIssuedSession(journal)).plan.issuedJson)
+        } }
+    }
+
+    @Test(timeout=60000) fun repeatedLiftLocationsAreVerifiedBeforePublicationAndSurviveCorrectionRecovery() {
+        NodeTransport().use { node -> runBlocking {
+            val actual=SandboxCanonicalWorkoutStoreEngine(node)
+            val proposal=checkNotNull(actual.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Repeated lift",unit="kg"),"create-repeat","program-repeat",1000,223)))
+            val source=JSONObject(proposal.snapshot)
+            val program=source.getJSONArray("saved").getJSONObject(0)
+            val day=program.getJSONArray("days").getJSONObject(0)
+            val id=day.getJSONArray("exercises").getString(0)
+            day.getJSONArray("exercises").put(1,id)
+            val cells=program.getJSONObject("nextWeekPrescriptions")
+            cells.put(day.getString("id")+":1",JSONObject(cells.getJSONObject(day.getString("id")+":0").toString()))
+            for(slot in 0..1)cells.getJSONObject(day.getString("id")+":$slot").getJSONObject("1")
+                .put("sets",12).put("tech","drop set")
+            var forgeLocations=true
+            val transport=CanonicalWorkoutStoreTransport { wire ->
+                val raw=node.request(wire)
+                if(forgeLocations && JSONObject(wire).getString("method")=="prepareIssuedWorkoutHistory") {
+                    val response=JSONObject(raw);val result=response.getJSONObject("result")
+                    val entry=result.getJSONObject("historyEntry")
+                    entry.getJSONObject("nativeSetLocations").getJSONArray("sets").getJSONObject(0)
+                        .getJSONObject("slot").put("exerciseIndex",47)
+                    val candidate=JSONObject(result.getString("candidateSnapshot"))
+                    val history=candidate.getJSONArray("history")
+                    for(i in 0 until history.length())if(history.getJSONObject(i).getString("id")==entry.getString("id"))
+                        history.put(i,entry)
+                    result.put("candidateSnapshot",candidate.toString())
+                        .put("candidateSnapshotSha256",sha(candidate.toString()))
+                    response.toString()
+                } else raw
+            }
+            val engine=SandboxCanonicalWorkoutStoreEngine(transport)
+            val drive=Drive();val recovery=Drive()
+            var store=CanonicalWorkoutStorePersistence(drive,engine)
+            var journal=WorkoutJournalPersistence(recovery)
+            val origin=source.toString();assertTrue(store.initialize(origin))
+            val plan=checkNotNull(engine.prepareWorkout(origin,NativeWorkoutCodec.startJson("program-repeat","workout-repeat",2000)))
+            assertEquals(plan.exercises[0].id,plan.exercises[1].id)
+            assertTrue(plan.exercises.take(2).all { it.sets.size==14 })
+            var progress=checkNotNull(store.beginIssuedSession(plan,journal))
+            for((index,slot) in plan.slots.reversed().withIndex()) {
+                val skip=slot.exerciseIndex==0 && slot.setIndex==1
+                val zero=slot.exerciseIndex==1 && slot.setIndex==0
+                progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,progress.journal.revision,
+                    JournalSetIntent("repeat-$index",slot,if(skip)JournalSetDisposition.SKIPPED else JournalSetDisposition.COMPLETED,
+                        if(skip)null else JournalSetValues(if(zero)"0" else "75","kg",8,null)))))
+            }
+            val finish=checkNotNull(journal.finish(plan.session,progress.journal.revision,
+                JournalFinishIntent("finish-repeat",62000,60000)))
+            val writes=drive.writes
+            assertTrue(runCatching { store.complete(plan.session,finish.revision,journal) }.isFailure)
+            assertEquals(writes,drive.writes);assertNotNull(journal.recover())
+            forgeLocations=false
+            assertNotNull(store.complete(plan.session,finish.revision,journal))
+            val before=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val view=checkNotNull(engine.inspectHistory(before,"workout-repeat"))
+            val lift=view.exercises.single { it.id==id }
+            assertEquals(listOf(0,1),lift.sets.map { it.exerciseIndex }.distinct())
+            val target=lift.sets.last { it.exerciseIndex==1 && it.kind=="drop" }
+            assertTrue(target.setIndex>19)
+            val command=NativeHistoryCodec.correctionJson(view,"correct-repeat",70000,
+                listOf(NativeHistoryChange(id,target.setIndex,"35",9,null)))
+            drive.failAfterWrite=true
+            assertTrue(runCatching { store.correctHistory(command) }.isFailure)
+            drive.failAfterWrite=false
+            store=CanonicalWorkoutStorePersistence(drive,engine);journal=WorkoutJournalPersistence(recovery)
+            val afterCrashWrites=drive.writes
+            val corrected=checkNotNull(store.correctHistory(command))
+            assertEquals(afterCrashWrites,drive.writes)
+            val after=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+            val oldEntry=JSONObject(before).getJSONArray("history").getJSONObject(0)
+            val entry=JSONObject(after).getJSONArray("history").getJSONObject(0)
+            assertEquals(oldEntry.getJSONObject("nativeSetLocations").toString(),entry.getJSONObject("nativeSetLocations").toString())
+            assertEquals(oldEntry.getInt("volume")-75*8+35*9,entry.getInt("volume"))
+            assertEquals(oldEntry.getInt("setsDone"),entry.getInt("setsDone"))
+            val updated=corrected.exercises.single { it.id==id }
+            assertEquals("35",updated.sets.single { it.setIndex==target.setIndex }.load)
+            assertTrue(updated.sets.filter { it.exerciseIndex==0 }.all { it.load=="75" })
+            assertEquals(75.0,checkNotNull(updated.record).load,0.0)
+            assertNull(journal.recover())
+            var returned=false
+            for(step in 0..2) {
+                val snapshot=String(checkNotNull(store.readOwnedCurrentStoreBytes()),Charsets.UTF_8)
+                val next=checkNotNull(engine.prepareWorkout(snapshot,NativeWorkoutCodec.startJson(
+                    "program-repeat","repeat-next-$step",80000+step*70000L)))
+                if(next.session.dayId==plan.session.dayId) {
+                    val first=next.exercises[0].sets;val second=next.exercises[1].sets
+                    assertEquals("75 kg × 8",first[0].last);assertNull(first[1].last)
+                    assertNull(second[0].last);assertEquals("75 kg × 8",second[1].last)
+                    assertTrue(next.exercises.flatMap { it.sets }.filter { it.isExtension }.all { it.last==null })
+                    returned=true;break
+                }
+                var pending=checkNotNull(store.beginIssuedSession(next,journal))
+                for((i,slot) in next.slots.withIndex())pending=NativeWorkoutProgress(next,
+                    checkNotNull(journal.recordSet(next.session,pending.journal.revision,JournalSetIntent("repeat-next-$step-$i",slot,
+                        JournalSetDisposition.COMPLETED,JournalSetValues("40","kg",8,null)))))
+                val ended=checkNotNull(journal.finish(next.session,pending.journal.revision,
+                    JournalFinishIntent("repeat-next-finish-$step",next.session.startedAt+60000,60000)))
+                assertNotNull(store.complete(next.session,ended.revision,journal))
+            }
+            assertTrue(returned)
         } }
     }
 

@@ -25,5 +25,6 @@ run('npx',['--yes','esbuild@0.28.2',path.join(snapshot,'android-native/engine-br
   '--global-name=PursuitIronBridge','--legal-comments=none',`--metafile=${metadata}`,`--outfile=${bundle}`]);
 run(node,['--check',bundle]);
 run(node,['android-native/engine-bridge/verify-bundle-structure.mjs',bundle,metadata,snapshot]);
+run(node,['android-native/engine-bridge/native-history-test.mjs',bundle]);
 run(node,['android-native/engine-contract/create-bundle-manifest.mjs',snapshot,bundle,
   path.join(output,'canonical-engine-manifest.json')]);

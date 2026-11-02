@@ -299,6 +299,53 @@ class CanonicalWorkoutStorePersistence(
         }
     }
 
+    /** Location evidence is checked against pinned targets and durable receipts.
+     * This checks identity and observed values, not canonical summary policy. */
+    private fun checkSetLocations(entry: JSONObject,plan: NativeWorkoutPlan,journal: WorkoutJournalState) {
+        val locations=entry.getJSONObject("nativeSetLocations")
+        exact(locations,"format","sets");require(number(locations,"format")==1L)
+        val list=locations.getJSONArray("sets");require(list.length() in 0..480)
+        val perf=entry.getJSONObject("perf")
+        val expected=perf.keys().asSequence().flatMap { id->
+            val sets=perf.getJSONObject(id).getJSONArray("sets");require(sets.length() in 1..480)
+            (0 until sets.length()).asSequence().map { id to it }
+        }.toSet()
+        require(expected.size==list.length())
+        val issued=plan.exercises.flatMap { it.sets }.associateBy { it.slot }
+        val observed=journal.completed.associateBy { it.intent.slot }
+        val seen=mutableSetOf<Pair<String,Int>>();val used=mutableSetOf<JournalSetSlot>()
+        val previous=mutableMapOf<String,Int>()
+        for(i in 0 until list.length()) {
+            val location=list.getJSONObject(i);exact(location,"exerciseId","setIndex","slot")
+            val id=text(location,"exerciseId");val index=number(location,"setIndex")
+            require(index in 0..479)
+            val key=id to index.toInt();require(key in expected && seen.add(key))
+            val rawSlot=location.getJSONObject("slot");exact(rawSlot,"exerciseIndex","setIndex","exerciseId")
+            val exerciseIndex=number(rawSlot,"exerciseIndex");val setIndex=number(rawSlot,"setIndex")
+            require(exerciseIndex in 0..47 && setIndex in 0..19 && text(rawSlot,"exerciseId")==id)
+            val slot=JournalSetSlot(exerciseIndex.toInt(),setIndex.toInt(),id)
+            require(used.add(slot))
+            val position=exerciseIndex.toInt()*20+setIndex.toInt()
+            require(position>(previous[id] ?: -1));previous[id]=position
+            val target=checkNotNull(issued[slot]);val commit=checkNotNull(observed[slot]).intent
+            require(commit.disposition==JournalSetDisposition.COMPLETED)
+            val value=checkNotNull(commit.values)
+            val set=perf.getJSONObject(id).getJSONArray("sets").getJSONObject(index.toInt())
+            val weight=set.get("w");require(weight is Number && value.load!=null &&
+                java.math.BigDecimal(weight.toString()).compareTo(java.math.BigDecimal(value.load))==0 &&
+                number(set,"r")==value.reps.toLong())
+            require(!set.has("sub") || set.get("sub") is Boolean)
+            require(!set.has("warm") || set.get("warm") is Boolean)
+            require(!set.has("rirReported") || set.get("rirReported") is Boolean)
+            require(set.optBoolean("sub",false)==target.isExtension && !set.optBoolean("warm",false))
+            if(target.isExtension)require(set.get("kind")==target.kind)
+            else require(number(set,"workingSetIndex")==setIndex &&
+                number(set.getJSONObject("decisionTrace"),"slot")==exerciseIndex)
+            if(set.optBoolean("rirReported",false))require(value.rir!=null && number(set,"rir")==value.rir.toLong())
+            else require(value.rir==null)
+        }
+    }
+
     private fun checkPreparation(raw: String, current: State, journal: WorkoutJournalState,
         handoff: String): Pair<String,CanonicalWorkoutHistoryReceipt> {
         require(raw.toByteArray(Charsets.UTF_8).size in 1..(8*1024*1024))
@@ -336,6 +383,8 @@ class CanonicalWorkoutStorePersistence(
             } }
             require(equivalent(observations.getJSONArray("events"),expected))
         }
+        if(entry.has("nativeSetLocations"))checkSetLocations(entry,
+            NativeWorkoutCodec.readIssued(requireNotNull(pending.issuedWorkout)),journal)
         val annotated=journal.events.any { it.intent.adjustment!=null }
         if(annotated) {
             val data=entry.getJSONObject("nativeSetAdjustments")

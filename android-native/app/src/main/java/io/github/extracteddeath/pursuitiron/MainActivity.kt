@@ -62,7 +62,8 @@ class MainActivity : ComponentActivity() {
                     onHistoryCalendar=runtime::loadHistoryCalendar,
                     onExportBackup=runtime::exportBackup,
                     onResetBackupExport=runtime::resetBackupExportStatus,
-                    onPreviewBackupMerge=runtime::previewBackupMerge
+                    onPreviewBackupMerge=runtime::previewBackupMerge,
+                    onVerifyBackupMerge=runtime::verifyBackupMergeSelection
                 )
             }
         }

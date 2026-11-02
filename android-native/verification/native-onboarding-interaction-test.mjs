@@ -474,10 +474,10 @@ assert.ok(
   programDraftUi.includes('LaunchedEffect(approved.reference)') &&
   programDraftUi.includes('lookupNames(approved.reference,ids)') &&
   packagedCatalog.includes('SandboxExerciseCatalog(worker)') &&
-  host.includes('suspend fun lookupProgramExerciseNames(') &&
+  host.includes('suspend fun lookupProgramExercises(') &&
   host.includes('actual.sha256Hex==expected.snapshotSha256') &&
   host.includes('!sameSource()') &&
-  activity.includes('onLookupProgramExercises=runtime::lookupProgramExerciseNames') &&
+  activity.includes('onLookupProgramExercises=runtime::lookupProgramExercises') &&
   programDraftDomain.includes('Collections.unmodifiableList(') &&
   !programDraftUi.includes('commitAtomically') &&
   !programDraftUi.includes('initialize('),

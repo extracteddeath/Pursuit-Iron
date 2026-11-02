@@ -3,6 +3,7 @@ import { generateNextProgramForShell, EXERCISES, parseStoredData,
   splitSupportsTrainingDays, STORE_VERSION } from '../../modules/engine-api.js';
 import { projectCanonicalSavedProgram } from './current-program-projection.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
+import { nativeStackCandidates } from './native-loading-catalog.mjs';
 
 const SPLITS={full_body:'Full body',upper_lower:'Upper / Lower',ppl:'Push / Pull / Legs',ulppl:'Upper / Lower / Push / Pull / Legs'};
 export const NATIVE_SETUP_EQUIPMENT=Object.freeze([
@@ -26,11 +27,11 @@ const clock=v=>Number.isSafeInteger(v) && v>0 && v<=8_640_000_000_000_000;
 const ensure=v=>{if(!v) throw new TypeError('Native program setup rejected');};
 
 // Only explicitly owned physical settings may authorize native weight controls.
-const physicalDecimal=n=>typeof n==='number' && Number.isFinite(n) && n>=0 && n<=99999.999 && Number(n.toFixed(3))===n;
+const physicalDecimal=n=>typeof n==='number' && Number.isFinite(n) && n>=0 && n<=99999.999 && Number(n.toFixed(2))===n;
 const physicalLoads=v=>Array.isArray(v) && v.length>=1 && v.length<=250 && v.every(physicalDecimal) && new Set(v).size===v.length;
 const physicalRange=v=>exact(v,['minimum','increment','maximum']) && physicalDecimal(v.minimum) &&
   physicalDecimal(v.increment) && v.increment>0 && physicalDecimal(v.maximum) && v.maximum>=v.minimum;
-export function authoredInventory(v,unit) {
+export function authoredInventory(v,unit,program=null) {
   ensure(object(v) && v.unit===unit && Object.keys(v).every(k=>
     ['unit','barbell','dumbbells','cable','machine','smith','exerciseOverrides'].includes(k)));
   let families=0;
@@ -52,8 +53,17 @@ export function authoredInventory(v,unit) {
   if(Object.prototype.hasOwnProperty.call(v,'smith')) {
     ensure(exact(v.smith,['availableLoads']) && physicalLoads(v.smith.availableLoads));families++;
   }
-  if(Object.prototype.hasOwnProperty.call(v,'exerciseOverrides'))
-    ensure(exact(v.exerciseOverrides,[])); // no unverified per-exercise modes from onboarding
+  if(Object.prototype.hasOwnProperty.call(v,'exerciseOverrides')) {
+    ensure(object(v.exerciseOverrides) && Object.keys(v.exerciseOverrides).length<=24);
+    const eligible=new Set(nativeStackCandidates(program).map(row=>row.id));
+    for(const [exerciseId,setting] of Object.entries(v.exerciseOverrides)) {
+      // No user-chosen carrier and no inferred plate/smith/bodyweight loading.
+      ensure(eligible.has(exerciseId) &&
+        (exact(setting,['availableLoads']) && physicalLoads(setting.availableLoads) ||
+          physicalRange(setting)));
+      families++;
+    }
+  }
   ensure(families>0);
   return v;
 }
@@ -143,9 +153,10 @@ export function inspectNativeProgram(rawSnapshot) {
   ensure(saved && saved.config?.unit===s.profile.unit);
   let loadingInventory=null;
   try {if(saved.config.loadingInventory)
-    loadingInventory=authoredInventory(saved.config.loadingInventory,s.profile.unit);
+    loadingInventory=authoredInventory(saved.config.loadingInventory,s.profile.unit,saved);
   } catch { /* Older or foreign stock is never asserted as user-confirmed. */ }
   return {source:'modules/engine-api.js:parseStoredData',readOnly:true,creationId:s.creationId,
-    setupJson:meta.setupJson,loadingInventory,snapshotSha256:sha256Utf8(rawSnapshot),
+    setupJson:meta.setupJson,loadingInventory,loadingCandidates:nativeStackCandidates(saved),
+    snapshotSha256:sha256Utf8(rawSnapshot),
     program:projectCanonicalSavedProgram(rawSnapshot,s.programId,sha256Utf8(rawSnapshot))};
 }

@@ -52,8 +52,14 @@ class CanonicalWorkoutStorePersistence(
     }
     private data class Pending(val session: JournalSessionKey, val origin: String,
         val startRevision: Long, val slots: List<JournalSetSlot>,val issuedWorkout: String?=null)
+    private data class RestoreUndo(
+        val operationId: String, val priorSnapshot: String,
+        val priorReceipt: CanonicalWorkoutHistoryReceipt?, val installedSha256: String
+    )
+    private data class RestoreUndoAck(val operationId: String,val restoredSha256: String)
     private data class State(val snapshot: String, val pending: Pending?,
-        val receipt: CanonicalWorkoutHistoryReceipt?)
+        val receipt: CanonicalWorkoutHistoryReceipt?,
+        val undo: RestoreUndo?=null, val undoAck: RestoreUndoAck?=null)
     private val guard=Any()
     private val listeners=CopyOnWriteArraySet<() -> Unit>()
     private val hashPattern=Regex("^[0-9a-f]{64}$")
@@ -131,9 +137,21 @@ class CanonicalWorkoutStorePersistence(
                 .put("exerciseIndex",s.exerciseIndex).put("setIndex",s.setIndex).put("exerciseId",s.exerciseId)) } })
             .apply { if(p.issuedWorkout!=null)put("issuedWorkout",p.issuedWorkout) } }
             ?: JSONObject.NULL
-        val payload=JSONObject().put("snapshot",state.snapshot).put("pending",pending)
-            .put("receipt",receiptJson(state.receipt)).toString()
-        val encoded=JSONObject().put("format",1).put("payload",payload).put("sha256",sha(payload))
+        val extended=state.undo!=null || state.undoAck!=null
+        val body=JSONObject().put("snapshot",state.snapshot).put("pending",pending)
+            .put("receipt",receiptJson(state.receipt))
+        if(extended) {
+            val undo=state.undo?.let { JSONObject()
+                .put("operationId",it.operationId).put("priorSnapshot",it.priorSnapshot)
+                .put("priorReceipt",receiptJson(it.priorReceipt))
+                .put("installedSha256",it.installedSha256) } ?: JSONObject.NULL
+            val undoAck=state.undoAck?.let { JSONObject()
+                .put("operationId",it.operationId).put("restoredSha256",it.restoredSha256) }
+                ?: JSONObject.NULL
+            body.put("restoreUndo",undo).put("restoreUndoAck",undoAck)
+        }
+        val payload=body.toString()
+        val encoded=JSONObject().put("format",if(extended)2 else 1).put("payload",payload).put("sha256",sha(payload))
             .toString().toByteArray(Charsets.UTF_8)
         try {
             require(encoded.size in 1..MAX_STORE_BYTES)
@@ -149,10 +167,13 @@ class CanonicalWorkoutStorePersistence(
             require(!decoded.startsWith('\uFEFF'))
             val envelope=JSONObject(decoded)
             exact(envelope,"format","payload","sha256")
-            require(number(envelope,"format")==1L)
+            val format=number(envelope,"format")
+            require(format==1L || format==2L)
             val payload=text(envelope,"payload")
             require(text(envelope,"sha256")==sha(payload))
-            val data=JSONObject(payload); exact(data,"snapshot","pending","receipt")
+            val data=JSONObject(payload)
+            if(format==1L) exact(data,"snapshot","pending","receipt")
+            else exact(data,"snapshot","pending","receipt","restoreUndo","restoreUndoAck")
             val snapshot=boundedSnapshot(text(data,"snapshot"))
             val receipt=if (data.isNull("receipt")) null else readReceipt(data.getJSONObject("receipt"))
             require(receipt==null || receipt.savedSnapshotSha256==sha(snapshot))
@@ -180,7 +201,32 @@ class CanonicalWorkoutStorePersistence(
                 }
                 Pending(s,origin,revision,slots,issued)
             }
-            return State(snapshot,pending,receipt)
+            val undo=if(format==2L && !data.isNull("restoreUndo")) {
+                val details=data.getJSONObject("restoreUndo")
+                exact(details,"operationId","priorSnapshot","priorReceipt","installedSha256")
+                val op=text(details,"operationId")
+                require(op.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")))
+                val original=boundedSnapshot(text(details,"priorSnapshot"))
+                val priorReceipt=if(details.isNull("priorReceipt"))null
+                    else readReceipt(details.getJSONObject("priorReceipt"))
+                require(priorReceipt==null || priorReceipt.savedSnapshotSha256==sha(original))
+                val installed=text(details,"installedSha256")
+                require(hashPattern.matches(installed) && installed==sha(snapshot) &&
+                    pending==null && installed!=sha(original))
+                RestoreUndo(op,original,priorReceipt,installed)
+            } else null
+            val ack=if(format==2L && !data.isNull("restoreUndoAck")) {
+                val details=data.getJSONObject("restoreUndoAck")
+                exact(details,"operationId","restoredSha256")
+                val op=text(details,"operationId")
+                val restored=text(details,"restoredSha256")
+                require(op.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")) &&
+                    hashPattern.matches(restored) && restored==sha(snapshot) &&
+                    pending==null)
+                RestoreUndoAck(op,restored)
+            } else null
+            require(undo==null || ack==null)
+            return State(snapshot,pending,receipt,undo,ack)
         } finally { raw.fill(0) }
     }
     private fun changed() { listeners.forEach { listener -> runCatching { listener() } } }
@@ -225,7 +271,8 @@ class CanonicalWorkoutStorePersistence(
             if (sha(current.snapshot)!=session.programRevision.snapshotSha256 ||
                 journal.recover()!=null || current.receipt?.session?.workoutId==session.workoutId)
                 return@synchronized false
-            save(current.copy(pending=Pending(session,current.snapshot,revision,proposed.slots,issued))); true
+            save(current.copy(pending=Pending(session,current.snapshot,revision,proposed.slots,issued),
+                undo=null,undoAck=null)); true
         }
         return if (pinned) journal.begin(session,proposed.slots,revision) else null
     }

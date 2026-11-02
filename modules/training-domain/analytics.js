@@ -7,6 +7,7 @@ import { historyNumber, convertHistoryLoad, observedHistoryRIR, completedHistory
 import { cycleBlockMetadata, editableProgramWeeks } from "../program-duration.js";
 import { SUPPORTED_PHASES, phaseLabel } from '../next-engine/phase-policy.js';
 import { ENGINE_COMPATIBLE_VERSIONS } from "../next-engine/config.js";
+import { isSchemeDeloadWeek } from "../next-engine/percentage-protocols.js";
 import { ALL_EQUIP_IDS, ENGINE_V, EXERCISES, EX_BY_ID, SESSIONS, SPLITS, expandEquipment } from './catalog.js';
 import { GYM_PRESETS, LOWER_PARTS, SECONDARY, SUB_LANDMARKS, blockPhase, exerciseAt, cellRepRange, clamp, compositeMrv, computeCell, effortBounds, goalForDay, isBarLike, isMachineLike, landmarkFor, lastSetTech, loadStep, movePattern, roundTo, secondaryOf, weeksOf } from './records.js';
 import { GYM_LIMITS, INVENTORY_KEYS, PART_LABEL, anchorPerfFor, effortCalibration, gymRackFor, gzPlanFor, gzTierOf, muscleRecovery, parseRIRNum, personalRecoveryHours, prescribeSets, prescribedRIRof, progressionHistoryForProgram, sessionSuggestion, setsOf, toUnit } from './prescriptions.js';
@@ -1590,6 +1591,10 @@ function weekIntent(program, weekIndex) {
     const isoRir = isoCell ? String(isoCell.rir) : null;
     const primRange = String(primCell.range || "").split("-");
     const savedPhase = program.nextEngine?.program?.phase;
+    if (!isDeload && isSchemeDeloadWeek(program.config?.percentScheme, weekIndex, weeks)) {
+        // The method's own deload week (5/3/1 week 4): light sets well under the training max, no top set.
+        return { label: "Deload", detail: `${primary.name}: ${primCell.sets} sets of ${String(primCell.reps).replace("+", "")} at 40\u201360% of training max \u2014 the wave's built-in deload, no top set`, deload: true };
+    }
     if (!isDeload && SUPPORTED_PHASES.includes(savedPhase)) {
         const detail = `${primary.name}: ${primCell.sets} sets of ${primCell.reps} at ${primRir} RIR`
             + (isoEx ? ` · ${isoEx.name}: ${isoCell.sets} sets of ${isoCell.reps} at ${isoRir} RIR` : '');
@@ -2467,7 +2472,7 @@ const PHASES = {
 
 function phaseFor(program, weekIndex) {
     const weeks = weeksOf(program);
-    if (program.config?.deload && weekIndex > weeks)
+    if (program.config?.deload && weekIndex > weeks || isSchemeDeloadWeek(program.config?.percentScheme, weekIndex, weeks))
         return PHASES.deload;
     const phase = program.nextEngine?.program?.phase;
     if (SUPPORTED_PHASES.includes(phase)) {
@@ -3110,7 +3115,7 @@ function workoutPlanCoachFact(program, day, weekIndex) {
         return null;
     const cfg = program.config || {};
     const phaseRaw = String(program.nextEngine?.phase || program.nextEngine?.program?.phase || "").replace(/_/g, " ").toLowerCase();
-    if (cfg.deload && weekIndex > weeksOf(program) || phaseRaw.includes("deload") || phaseRaw.includes("recovery")) {
+    if (cfg.deload && weekIndex > weeksOf(program) || isSchemeDeloadWeek(cfg.percentScheme, weekIndex, weeksOf(program)) || phaseRaw.includes("deload") || phaseRaw.includes("recovery")) {
         return { icon: "plan", short: "Today: recover", title: "Today is a recovery session", text: "Keep the work easy, leave plenty in reserve, and finish feeling better than you started." };
     }
     if (phaseRaw.includes("peak")) {

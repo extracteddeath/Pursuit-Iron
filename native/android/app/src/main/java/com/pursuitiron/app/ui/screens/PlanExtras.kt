@@ -76,7 +76,7 @@ fun VolumeWaveCard(vm: AppViewModel, programId: String, selected: Int, onPick: (
     PiCard(radius = 28.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Volume wave", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            if (sel != null) Text((if (sel.b("deload")) "Deload" else "Week $selected") + " · ${sel.i("sets")} sets", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            if (sel != null) Text("Week $selected" + (if (sel.b("deload")) " · deload" else "") + " · ${sel.i("sets")} sets", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         }
         Row(Modifier.fillMaxWidth().height(118.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
             weeks.forEach { wk ->
@@ -85,7 +85,7 @@ fun VolumeWaveCard(vm: AppViewModel, programId: String, selected: Int, onPick: (
                 val r by animateDpAsState(if (on) 12.dp else 8.dp, Motion.spring(), label = "bar")
                 Column(
                     Modifier.weight(1f).clickable { onPick(w) }
-                        .clearAndSetSemantics { contentDescription = (if (dl) "Deload week" else "Week $w") + ": $n sets" + if (on) ", showing" else "" },
+                        .clearAndSetSemantics { contentDescription = "Week $w" + (if (dl) ", deload" else "") + ": $n sets" + if (on) ", showing" else "" },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text("$n", style = MaterialTheme.typography.labelSmall, color = if (on) cs.primary else cs.onSurfaceVariant)
@@ -161,7 +161,7 @@ fun WeekByWeekSheet(vm: AppViewModel, programId: String, onClose: () -> Unit) {
                 if (shown.isEmpty()) Text("No lift matches that.", color = cs.onSurfaceVariant, modifier = Modifier.fillMaxWidth().background(cs.surfaceContainerLow).padding(16.dp))
                 shown.forEach { r ->
                     val cells = r.list("cells")
-                    val desc = r.s("name") + ", " + r.s("dayLabel") + ": " + shownCols.joinToString("; ") { c -> val x = cells[c]; "week ${x.i("w")} ${x.i("sets")} sets of ${x.s("range")}" + (x.s("rir").takeIf { it.isNotBlank() }?.let { " at $it reps in reserve" } ?: "") }
+                    val desc = r.s("name") + ", " + r.s("dayLabel") + ": " + shownCols.joinToString("; ") { c -> val x = cells[c]; "week ${x.i("w")} ${x.i("sets")} sets of ${x.s("range")}" + (x.s("rir").takeIf { it.isNotBlank() }?.let { " at $it reps in reserve" } ?: "") + (x.s("load").takeIf { it.isNotBlank() }?.let { " at $it of training max" } ?: "") + (if (x.b("deload")) ", deload" else "") }
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).padding(horizontal = 14.dp, vertical = 10.dp).semantics(mergeDescendants = true) { contentDescription = desc },
                         verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f).padding(end = 8.dp)) {
@@ -170,18 +170,18 @@ fun WeekByWeekSheet(vm: AppViewModel, programId: String, onClose: () -> Unit) {
                         }
                         shownCols.forEach { c ->
                             val x = cells[c]; val prev = cells.getOrNull(c - 1)
-                            val step = prev != null && !x.b("deload") && (x.i("sets") != prev.i("sets") || x.s("rir") != prev.s("rir"))
+                            val step = prev != null && !x.b("deload") && (x.i("sets") != prev.i("sets") || x.s("rir") != prev.s("rir") || x.s("range") != prev.s("range"))
                             val bg = when { x.b("deload") -> cs.surfaceContainerHigh; step -> cs.primaryContainer; else -> cs.surfaceContainerLow }
                             val fg = if (step) cs.onPrimaryContainer else cs.onSurface
                             Column(Modifier.width(76.dp).clip(RoundedCornerShape(14.dp)).background(bg).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("${x.i("sets")} × ${x.s("range")}", style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
-                                x.s("rir").takeIf { it.isNotBlank() }?.let { Text("@$it", style = MaterialTheme.typography.labelSmall, color = if (step) cs.onPrimaryContainer else cs.onSurfaceVariant) }
+                                (x.s("rir").takeIf { it.isNotBlank() }?.let { "@$it" } ?: x.s("load").takeIf { it.isNotBlank() })?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = if (step) cs.onPrimaryContainer else cs.onSurfaceVariant, maxLines = 1) }
                             }
                         }
                     }
                 }
             }
-            if (d.b("percent")) Text("Percentage lifts take their loads from your training maxes; sets and reps here are the method's own.",
+            if (d.b("percent")) Text("Main lifts show the method's sets and reps, with each week's share of your training max.",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         }
     }

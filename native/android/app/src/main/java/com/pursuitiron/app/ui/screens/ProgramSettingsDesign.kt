@@ -180,7 +180,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
                 PsCap("BARBELL MOVEMENTS PER SESSION")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("none" to "No limit", "1" to "1", "2" to "2", "3" to "3").forEach { (id, l) -> PsChip(l, cap == id) { cap = id } } }
                 Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    PsToggle("Deload week", if (endless) "Endless blocks deload on their own" else "Week ${weeks + 1} · reduced volume & load", deload && !endless) { if (!endless) deload = it }
+                    PsToggle("Deload week", if (endless) "Endless blocks deload on their own" else if (p.b("waveDeload")) "Week 4 of the wave is already a deload; this adds a second one after the block" else "Week ${weeks + 1} · reduced volume & load", deload && !endless) { if (!endless) deload = it }
                     PsToggle("Skip bodyweight exercises", "No push-ups, planks, bodyweight squats — only loaded movements", noBw) { noBw = it }
                     PsToggle("No supersets", "Every exercise gets its own rest; nothing is paired", noSs) { noSs = it }
                 }

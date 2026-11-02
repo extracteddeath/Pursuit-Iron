@@ -358,7 +358,7 @@ export function programDetails({ programId } = {}) {
         (cfg.reduce || []).length ? ['Less', cfg.reduce.map(label).join(', ')] : null,
         ['Split', E.SPLITS?.[cfg.split]?.name || cfg.split], ['Days', `${p.days.length}/week`], sess ? ['Session', sess.label] : null, ['Goal', goal],
         cfg.experience ? ['Level', cfg.experience.charAt(0).toUpperCase() + cfg.experience.slice(1)] : null,
-        ['Block', `${E.weeksOf(p)} weeks`], ['Deload', cfg.deload ? `Yes · week ${E.weeksOf(p) + 1}` : 'No'],
+        ['Block', `${E.weeksOf(p)} weeks`], ['Deload', cfg.deload ? `Yes · week ${E.weeksOf(p) + 1}` : E.isSchemeDeloadWeek(cfg.percentScheme, 4, E.weeksOf(p)) ? 'Built in · week 4' : 'No'],
     ].filter(Boolean).map(([k, v]) => ({ k, v, accent: k === 'More' }));
     const c = p.cycleId ? cycles().find((cy) => cy.id === p.cycleId) : null;
     let cycleLine = null;
@@ -369,7 +369,7 @@ export function programDetails({ programId } = {}) {
     const priorities = [...focus.map(([k, v]) => ({ label: `${label(k)} · Focus ×${v}`, sets: setsOf(k) })), ...(cfg.reduce || []).map((k) => ({ label: `${label(k)} · Reduced`, sets: setsOf(k) }))];
     const B = blockWeeks(p), start = Number(p.createdAt) || now();
     const plan = B.list.map((w) => { let wi = null; try { wi = E.weekIntent(p, w); } catch { wi = null; } let pw = null; try { pw = E.plannedWeek(p, w); } catch { pw = null; }
-        return { w, deload: w === B.deloadWeek, date: (() => { const d = new Date(start); d.setDate(d.getDate() + (w - 1) * 7); return d.getTime(); })(), note: wi ? (wi.deload ? 'Deload · ' : '') + wi.label : '', sets: pw?.sets || 0, current: w === wk }; });
+        return { w, deload: B.isDeload(w), date: (() => { const d = new Date(start); d.setDate(d.getDate() + (w - 1) * 7); return d.getTime(); })(), note: wi ? (wi.deload && wi.label !== 'Deload' ? 'Deload · ' : '') + wi.label : '', sets: pw?.sets || 0, current: w === wk }; });
     return { programId: p.id, name: p.name, week: wk, chips, cycleLine, priorities, plan };
 }
 export function sessionReview({ programId, dayId, weekIndex } = {}) {
@@ -430,7 +430,7 @@ export function home() {
         unit: unit(), empty: !saved().length,
         next: nx ? {
             programId: nx.program.id, programName: nx.program.name, dayId: nx.day.id, dayLabel: nx.day.label,
-            weekIndex: nx.weekIndex, weeksTotal: E.weeksOf(nx.program), endless: !!nx.program.config?.endless, deloadWeek: nx.weekIndex > E.weeksOf(nx.program), minutes: est, exercises: dayPreview(nx.program, nx.day, nx.weekIndex),
+            weekIndex: nx.weekIndex, weeksTotal: E.weeksOf(nx.program), endless: !!nx.program.config?.endless, deloadWeek: nx.weekIndex > E.weeksOf(nx.program) || E.isSchemeDeloadWeek(nx.program.config?.percentScheme, nx.weekIndex, E.weeksOf(nx.program)), minutes: est, exercises: dayPreview(nx.program, nx.day, nx.weekIndex),
             // The design's Plateau card: the next session's stalled lifts, the longest stall first, with any choice already made.
             plateaus: S.live ? [] : nx.day.exercises.map((id) => { const pl = plateauFor(nx.program, nx.day, id); return pl && pl.high ? { id, name: exName(id), ...pl,
                 last: lastTop(id), choice: plateauQueue()[`${nx.program.id}:${nx.day.id}`]?.[id] || null, percent: !!nx.program.config?.percentScheme } : null; }).filter(Boolean).sort((a, b) => b.since - a.since).slice(0, 1)
@@ -493,8 +493,10 @@ function todayDesign(nx, H, weekStart) {
     let block = null, days = [], coach = [];
     if (nx) {
         const p = nx.program, weeks = E.weeksOf(p);
-        block = { weekIndex: nx.weekIndex, weeksTotal: weeks, deload: !!p.config?.deload, endless: !!p.config?.endless, inDeload: nx.weekIndex > weeks,
-            goal: GOAL_LABEL[p.config?.goal] || null, phase: (() => { try { return String(E.phaseFor(p, nx.weekIndex) || '').replace(/_/g, ' ') || null; } catch { return null; } })() };
+        block = { weekIndex: nx.weekIndex, weeksTotal: weeks, deload: !!p.config?.deload, endless: !!p.config?.endless, inDeload: nx.weekIndex > weeks || E.isSchemeDeloadWeek(p.config?.percentScheme, nx.weekIndex, weeks),
+            // The week the bar marks as the deload: the week after the block, or a method's own in-wave deload (5/3/1 week 4).
+            deloadAt: p.config?.deload ? weeks + 1 : (E.isSchemeDeloadWeek(p.config?.percentScheme, 4, weeks) ? 4 : null),
+            goal: GOAL_LABEL[p.config?.goal] || null, phase: (() => { try { return E.phaseFor(p, nx.weekIndex)?.label || null; } catch { return null; } })() };
         const doneIds = new Set(H.filter((h) => h.programId === p.id && Number(h.date) >= weekStart).map((h) => h.dayId));
         const wdOf = (id) => { const k = Object.keys(sched).find((x) => sched[x] === id); return k == null ? null : Number(k); };
         days = p.days.map((d) => {
@@ -1847,6 +1849,8 @@ export function plan({ programId, weekIndex } = {}) {
     return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), current: nx?.program.id === p.id ? nx.weekIndex : null,
         nextDayId: nx?.program.id === p.id ? nx.day.id : null, split: p.config?.split || null, goal: p.config?.goal || null, endless: !!p.config?.endless,
         deload: !!p.config?.deload,
+        // In-block deload weeks (5/3/1's week 4), beside the separate one after the block.
+        waveDeloads: Array.from({ length: E.weeksOf(p) }, (_, i) => i + 1).filter((w) => E.isSchemeDeloadWeek(p.config?.percentScheme, w, E.weeksOf(p))),
         days: (() => {
             // The design's day cards: weekday badge from the schedule, and this week's status when the week shown is the current one.
             const sched = p.schedule || {}, isCur = nx?.program.id === p.id && wk === nx.weekIndex;
@@ -1873,7 +1877,29 @@ export function plan({ programId, weekIndex } = {}) {
 const UPPER_PARTS = new Set(['chest', 'lats', 'upper_back', 'shoulders', 'biceps', 'triceps', 'forearms', 'traps', 'neck']);
 function blockWeeks(p) {
     const weeks = E.weeksOf(p), deloadWeek = p.config?.deload ? weeks + 1 : null;
-    return { weeks, deloadWeek, list: Array.from({ length: weeks }, (_, i) => i + 1).concat(deloadWeek ? [deloadWeek] : []) };
+    // 5/3/1's fourth week is the method's own deload, inside the block.
+    const isDeload = (w) => w === deloadWeek || E.isSchemeDeloadWeek(p.config?.percentScheme, w, weeks);
+    return { weeks, deloadWeek, isDeload, list: Array.from({ length: weeks }, (_, i) => i + 1).concat(deloadWeek ? [deloadWeek] : []) };
+}
+/* A percentage lift's week, as the workout prescribes it: the method's own reps and the share of training
+   max, not computeCell's generic rep bracket (which a 5/3/1 main lift never runs). Read with a nominal max
+   when none is set yet, since reps and percentages don't depend on it. */
+function pctCell(p, d, ex, slot, w, c) {
+    const scheme = p.config?.percentScheme; if (!scheme) return null;
+    const tier = slot === d.primaryIndex ? 't1' : d.t2Index != null && slot === d.t2Index ? 't2' : null; if (!tier) return null;
+    // A nominal 1000 max (fine enough that plate rounding doesn't show): each set's load is then its share of training max, weekly creep and deload scaling included.
+    let plan = null, nominal = false;
+    if (scheme === 'gzclp') { try { plan = E.percentagePlanFor(p, d, ex, slot, w, unit(), history()); } catch { plan = null; } }
+    else { try { plan = E.adaptPercentageSetBudget(E.pctSetsFor(scheme, 1000, w, E.weeksOf(p), unit(), ex, d.type, tier, p.config.assistance ?? null), Number(c.sets)); nominal = true; } catch { plan = null; } }
+    const sets = plan?.sets || []; if (!sets.length) return null;
+    const reps = sets.map((x) => String(x.reps).replace('+', '')), amrap = sets.some((x) => x.amrap);
+    const uniq = [...new Set(reps)], falling = uniq.every((r, i) => i === 0 || Number(r) < Number(uniq[i - 1]));
+    // 5s, 3s, 5/3/1: name the wave. A pyramid (nSuns) reads by its heaviest set instead.
+    const top = sets.reduce((b, x) => (Number(x.weight) > Number(b.weight) ? x : b), sets[0]);
+    const range = uniq.length === 1 ? reps[0] + (amrap ? '+' : '') : falling ? uniq.join('/') + (amrap ? '+' : '') : String(top.reps);
+    const pcts = (nominal ? sets.map((x) => Number(x.weight) / 1000) : sets.map((x) => Number(x.pct))).filter((x) => x > 0).map((x) => Math.round(x * 100));
+    const load = pcts.length ? (Math.min(...pcts) === Math.max(...pcts) ? `${pcts[0]}%` : `${Math.min(...pcts)}–${Math.max(...pcts)}%`) : null;
+    return { sets: sets.length, range, load };
 }
 export function weekByWeek({ programId } = {}) {
     const nx = upNext();
@@ -1885,8 +1911,10 @@ export function weekByWeek({ programId } = {}) {
         rows.push({ exId, name: ex.name, part: ex.part, upper: UPPER_PARTS.has(ex.part), dayId: d.id, dayLabel: d.label, primary: slot === d.primaryIndex,
             cells: B.list.map((w) => {
                 const c = E.computeCell(p, d, exId, slot, w);
+                const pct = pctCell(p, d, ex, slot, w, c);
+                if (pct) return { w, ...pct, rir: null, tech: null, deload: B.isDeload(w) };
                 const rir = c.rir != null ? c.rir : (c.targetRIR != null ? c.targetRIR : null);
-                return { w, sets: Number(c.sets) || 0, range: String(c.range ?? c.reps ?? ''), rir: rir == null ? null : String(rir), tech: c.tech ? String(c.tech) : null, deload: w === B.deloadWeek };
+                return { w, sets: Number(c.sets) || 0, range: String(c.range ?? c.reps ?? ''), rir: rir == null ? null : String(rir), tech: c.tech ? String(c.tech) : null, deload: B.isDeload(w) };
             }) });
     }));
     return { programId: p.id, name: p.name, weeks: B.weeks, deloadWeek: B.deloadWeek, current: nx?.program.id === p.id ? nx.weekIndex : null, percent: !!p.config?.percentScheme, rows };
@@ -1973,7 +2001,7 @@ export function volumeWave({ programId } = {}) {
     const p = programId ? programById(programId) : nx?.program;
     if (!p) return null;
     const B = blockWeeks(p);
-    const weeks = B.list.map((w) => ({ w, deload: w === B.deloadWeek, ...E.plannedWeek(p, w) }));
+    const weeks = B.list.map((w) => ({ w, deload: B.isDeload(w), ...E.plannedWeek(p, w) }));
     return { programId: p.id, weeks, current: nx?.program.id === p.id ? nx.weekIndex : null };
 }
 export function pinProgram({ id }) { if (!programById(id)) return { ok: false }; S.store.pinnedId = id; markStore(); return { ok: true }; }
@@ -2929,7 +2957,7 @@ export function editor({ programId, weekIndex = 1 } = {}) {
     const weekTotals = (w) => p.days.reduce((acc, d) => { d.exercises.forEach((id, slot) => { let c = null; try { c = E.computeCell(p, d, id, slot, w); } catch { c = null; } acc.sets += Number(c?.sets) || 0; });
         try { acc.minutes += E.estimateMinutes(p, d, w) || 0; } catch { /* unknown */ } return acc; }, { sets: 0, minutes: 0 });
     const lastWeek = E.weeksOf(p) + (p.config?.deload && !p.config?.endless ? 1 : 0);
-    const weeks = Array.from({ length: Math.max(1, lastWeek) }, (_, k) => k + 1).map((w) => { const t = weekTotals(w); return { week: w, deload: w > E.weeksOf(p), sets: Math.round(t.sets), minutes: Math.round(t.minutes) }; });
+    const weeks = Array.from({ length: Math.max(1, lastWeek) }, (_, k) => k + 1).map((w) => { const t = weekTotals(w); return { week: w, deload: w > E.weeksOf(p) || E.isSchemeDeloadWeek(p.config?.percentScheme, w, E.weeksOf(p)), sets: Math.round(t.sets), minutes: Math.round(t.minutes) }; });
     const strip = Object.keys(sched).length ? [1, 2, 3, 4, 5, 6, 0].map((k) => ({ weekday: WD[k], dayId: sched[k] || null, label: sched[k] ? (p.days.find((d) => d.id === sched[k])?.label || null) : null })) : [];
     return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null, percent: !!p.config?.percentScheme, weeks, strip,
         currentWeek: (() => { const nx = upNext(); return nx && nx.program.id === p.id ? nx.weekIndex : null; })(),
@@ -3112,7 +3140,7 @@ export function programSettings({ programId }) {
     const c = p.config || {};
     const owner = p.cycleId ? cycles().find((x) => x.id === p.cycleId) : null;
     return { programId: p.id, engine: p.engineSource || null, cycleOwned: !!owner, custom: p.custom === true,
-        goal: c.goal || 'both', weeks: E.weeksOf(p), endless: !!c.endless, deload: !!c.deload, session: c.session || 's60', progression: c.progression === 'manual' ? 'manual' : 'auto',
+        goal: c.goal || 'both', weeks: E.weeksOf(p), endless: !!c.endless, deload: !!c.deload, waveDeload: E.isSchemeDeloadWeek(c.percentScheme, 4, 4), session: c.session || 's60', progression: c.progression === 'manual' ? 'manual' : 'auto',
         barbellCap: c.barbellCap ?? null, noBodyweight: !!c.noBodyweight, noSupersets: !!c.noSupersets, volumeApproach: c.volumeApproach || 'standard',
         folder: p.folder || '', description: p.description || '', seed: p.seed ?? null,
         rolls: (p.rolls || []).map((r) => ({ seed: r.seed, at: r.at, lifts: r.lifts || [] })),
@@ -3365,7 +3393,7 @@ export function trainingMaxes({ programId, weekIndex = null }) {
         weekIndex: wk, current, deloadWeek: bw.deloadWeek,
         weeks: percent ? bw.list.map((w) => {
             const pl = firstMain && (E.trainingMaxForUnit(p, firstMain, u) || 0) > 0 ? planOf(firstMain, w) : null;
-            return { w, deload: w === bw.deloadWeek || /deload/i.test(pl?.label || ''), label: pl?.label || null, now: w === current };
+            return { w, deload: bw.isDeload(w) || /deload/i.test(pl?.label || ''), label: pl?.label || null, now: w === current };
         }) : [],
         lifts: percent ? mainLifts(p).map((id) => {
             const ex = EX_BY_ID[id], tm = E.trainingMaxForUnit(p, id, u) || 0;

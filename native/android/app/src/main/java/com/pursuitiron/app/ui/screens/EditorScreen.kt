@@ -155,7 +155,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                         items(e.list("weeks"), key = { "w" + it.i("week") }) { w ->
                             val on = w.i("week") == e.i("weekIndex")
                             val r by animateDpAsState(if (on) 16.dp else 28.dp, Motion.spatialFast(), label = "wk")
-                            val label = if (w.b("deload")) "Deload" else "Week ${w.i("week")}"
+                            val label = if (w.b("deload")) (if (w.i("week") <= e.i("weeksTotal")) "Week ${w.i("week")} · DL" else "Deload") else "Week ${w.i("week")}"
                             Column(Modifier.widthIn(min = 104.dp).height(56.dp).clip(RoundedCornerShape(r)).background(if (on) cs.primary else androidx.compose.ui.graphics.Color.Transparent)
                                 .then(if (on) Modifier else Modifier.border(1.5.dp, cs.outlineVariant, RoundedCornerShape(r)))
                                 .clickable { vm.editWeek(w.i("week")) }

@@ -306,7 +306,7 @@ fun BlockProgressContent(vm: AppViewModel, h: JSONObject) {
     val days = h.list("weekDays"); val doneFrac = if (days.isEmpty()) 0f else days.count { it.s("status") == "done" } / days.size.toFloat()
     val title = when {
         b.b("endless") -> if (b.b("inDeload")) "Continuous · deload" else "Continuous · week $wk"
-        b.b("inDeload") -> "Deload week"
+        b.b("inDeload") -> if (wk <= total) "Week $wk of $total · deload" else "Deload week"
         else -> "Week $wk of $total" + (b.s("goal").takeIf { it.isNotBlank() }?.let { " · $it block" } ?: "")
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = "Open Plan") { vm.goTab(com.pursuitiron.app.Tab.Plan) }.padding(horizontal = 4.dp, vertical = 2.dp),
@@ -319,7 +319,7 @@ fun BlockProgressContent(vm: AppViewModel, h: JSONObject) {
         if (segs > 0) Row(Modifier.fillMaxWidth().height(10.dp).semantics { contentDescription = "$title, ${Math.round(doneFrac * 100)} percent of this week done" },
             horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             (1..segs).forEach { w ->
-                val dl = b.b("deload") && w == segs
+                val dl = w == b.i("deloadAt")
                 val fill = when { w < wk -> 1f; w == wk -> doneFrac.coerceAtLeast(0.08f); else -> 0f }
                 Box(Modifier.weight(1f).fillMaxSize().clip(RoundedCornerShape(999.dp)).background(if (dl) cs.tertiaryContainer else cs.surfaceContainerHighest)) {
                     if (fill > 0f) Box(Modifier.fillMaxWidth(fill).fillMaxHeight().clip(RoundedCornerShape(999.dp)).background(cs.primary))

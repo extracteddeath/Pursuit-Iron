@@ -125,6 +125,7 @@ fun PlanScreen(vm: AppViewModel) {
         return
     }
     val wk = p.i("weekIndex"); val weeks = p.i("weeksTotal").coerceAtLeast(1)
+    val waveDl = p.optJSONArray("waveDeloads")?.let { a -> (0 until a.length()).map { a.optInt(it) }.toSet() } ?: emptySet()
     var openCycle by remember { mutableStateOf<String?>(null) }
     var confirmNext by remember { mutableStateOf(false) }
     var compareOpen by remember { mutableStateOf(false) }
@@ -163,7 +164,7 @@ fun PlanScreen(vm: AppViewModel) {
             Column(Modifier.padding(top = 20.dp, start = 4.dp)) {
                 Text("Plan", style = MaterialTheme.typography.displayMedium)
                 PlanProgramHeader(p, onIcon = { iconFor = p.s("programId") }) { programsOpen = true }
-                Text((if (p.b("endless")) (if (wk > weeks) "continuous · deload" else "continuous · week $wk of the wave") else if (wk > weeks) "deload week" else "week $wk of $weeks") +
+                Text((if (p.b("endless")) (if (wk > weeks) "continuous · deload" else "continuous · week $wk of the wave") else if (wk > weeks) "deload week" else "week $wk of $weeks" + (if (waveDl.contains(wk)) " · deload" else "")) +
                     p.list("days").let { ds -> val done = ds.count { it.s("status") == "done" }; if (ds.any { !it.isNull("status") }) " · $done/${ds.size} this week" else "" },
                     style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                 PlanActions(p, onEdit = { vm.openEditor(p.s("programId")) }, onReview = { reviewOpen = true }, onSchedule = { scheduleOpen = true },
@@ -177,9 +178,9 @@ fun PlanScreen(vm: AppViewModel) {
             val cur = p.i("current"); val list = (1..weeks).toList() + if (p.b("deload")) listOf(weeks + 1) else emptyList()
             // On a tablet the chips share the row, as in the design; on a phone they scroll.
             if (wide) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                list.forEach { n -> PlanWeekChip(n, n > weeks, n == wk, cur, { vm.loadPlan(p.s("programId"), n) }, Modifier.weight(1f)) }
+                list.forEach { n -> PlanWeekChip(n, n > weeks || waveDl.contains(n), n == wk, cur, { vm.loadPlan(p.s("programId"), n) }, Modifier.weight(1f)) }
             } else LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(list) { n -> PlanWeekChip(n, n > weeks, n == wk, cur, { vm.loadPlan(p.s("programId"), n) }) }
+                items(list) { n -> PlanWeekChip(n, n > weeks || waveDl.contains(n), n == wk, cur, { vm.loadPlan(p.s("programId"), n) }) }
             }
         }}
         item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }}
@@ -283,7 +284,7 @@ private fun PlanWeekChip(n: Int, deload: Boolean, selected: Boolean, current: In
     val bg = when { selected -> cs.primary; deload -> cs.tertiaryContainer; else -> cs.surfaceContainerHigh }
     val fg = when { selected -> cs.onPrimary; deload -> cs.onTertiaryContainer; else -> cs.onSurface }
     androidx.compose.material3.Surface(onClick = onClick, shape = RoundedCornerShape(r), color = bg, contentColor = fg,
-        modifier = modifier.height(52.dp).widthIn(min = 56.dp).semantics { contentDescription = (if (deload) "Deload week" else "Week $n") + (if (tag == "NOW") ", current" else if (tag == "DONE") ", done" else ""); this.selected = selected }) {
+        modifier = modifier.height(52.dp).widthIn(min = 56.dp).semantics { contentDescription = "Week $n" + (if (deload) ", deload" else "") + (if (tag == "NOW") ", current" else if (tag == "DONE") ", done" else ""); this.selected = selected }) {
         Column(Modifier.padding(horizontal = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text("W$n", style = MaterialTheme.typography.titleSmall)
             if (tag.isNotEmpty()) Text(tag, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, letterSpacing = 0.4.sp))

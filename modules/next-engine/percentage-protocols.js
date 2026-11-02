@@ -178,6 +178,16 @@ export const SUPPLEMENTAL_PROTOCOLS = {
         deload: { label: "Deload · light supplemental", sets: [[0.40, "5"], [0.40, "5"], [0.40, "5"], [0.40, "5"], [0.40, "5"]] } }
 };
 
+/* A method whose wave carries its own deload (5/3/1's fourth week): true for that week inside the block.
+   A separate deload week after the block would be a second one in a row, so templates of these methods
+   leave config.deload off and every surface reads the in-wave week through this one test. */
+export function isSchemeDeloadWeek(scheme, weekIndex, weeksTotal) {
+    const S = PCT_SCHEMES[scheme];
+    if (!S || !Number.isInteger(S.deloadWeek) || !Number.isInteger(weekIndex) || weekIndex < 1 || weekIndex > weeksTotal)
+        return false;
+    return (weekIndex - 1) % S.weeks.length === S.deloadWeek;
+}
+
 export function percentageProtocolFor({ scheme, tm, weekIndex, weeksTotal, dayType, tier = "t1", snapLoad = value => value, assistance = null }) {
     const S = PCT_SCHEMES[scheme];
     if (!S || !Number.isFinite(tm) || !(tm > 0) || !Number.isInteger(weekIndex) || weekIndex < 1

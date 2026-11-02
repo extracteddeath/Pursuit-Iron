@@ -1081,4 +1081,17 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(s.active && s.exercises.map((e) => e.id).join() === 'cable-curl,bb-bench', 'quick workout opens with the picked lifts in order (' + s.exercises.map((e) => e.id).join() + ')');
   C.discardSession(); ok(C.startQuick().active && C.session().exercises.length === 0, 'nothing picked still opens an empty quick workout'); C.discardSession(); }
 
+// 5/3/1 templates: the wave's week 4 is the deload, so no second deload week follows the block.
+for (const id of ['p531', 'p531beg', 'p531bbb']) {
+  C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id });
+  const d = C.programDetails({ programId: r.programId }), wb = C.weekByWeek({ programId: r.programId }), main = wb.rows.find((x) => x.primary);
+  ok(d.plan.length === 4 && d.plan[3].deload && d.plan[3].note === 'Deload' && d.chips.find((c) => c.k === 'Deload')?.v === 'Built in · week 4',
+    id + ': four weeks, week 4 the built-in deload, no week 5 (' + d.plan.map((w) => w.w + (w.deload ? 'D' : '')).join() + ')');
+  ok(main.cells.length === 4 && main.cells[3].deload && main.cells[3].load === '40–60%' && /^5/.test(main.cells[0].range),
+    id + ': week by week shows the method\'s reps and share of training max (' + main.cells.map((c) => c.range + ' ' + c.load).join(' | ') + ')');
+  ok(C.plan({ programId: r.programId }).waveDeloads.join() === '4', id + ': the plan marks week 4 as a deload');
+}
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id: 'madcow' }); const d = C.programDetails({ programId: r.programId });
+  ok(d.plan.length === 7 && d.plan[6].deload && d.plan[6].note === 'Deload', 'a linear method keeps its deload week after the block, labelled once (' + d.plan[6].note + ')'); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

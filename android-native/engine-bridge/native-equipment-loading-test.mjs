@@ -31,6 +31,17 @@ const inventory={unit:'lb',
  exerciseOverrides:{}};
 const modified=JSON.parse(original);modified.saved[0].config.loadingInventory=inventory;
 const explicit=JSON.stringify(modified);
+const barbell=inspect(explicit,null,'160');
+assert.equal(barbell.review.mode,'barbell_total');
+assert.equal(barbell.review.confirmed,true);
+assert.equal(barbell.review.family,'barbell_plates');
+assert.equal(barbell.review.exact,true);
+assert.equal(barbell.review.previous,155);
+assert.equal(barbell.review.next,165);
+const missingPairs=JSON.parse(original);
+missingPairs.saved[0].config.loadingInventory={unit:'lb',barbell:{barWeight:45}};
+assert.equal(inspect(JSON.stringify(missingPairs),null,'160').review.confirmed,false,
+  'No real barbell stepping without an actual inventory of matched plate pairs');
 const row=base.plan.rows[0],override={...inventory,exerciseOverrides:{[row.id]:{minimum:0,increment:5,maximum:250}}};
 const withOverride=JSON.parse(original);withOverride.saved[0].config.loadingInventory=override;
 const result=inspect(JSON.stringify(withOverride),rows=>rows.find(r=>r.id===row.id),'159.5');

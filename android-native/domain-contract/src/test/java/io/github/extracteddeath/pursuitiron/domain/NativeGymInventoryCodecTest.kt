@@ -81,6 +81,34 @@ class NativeGymInventoryCodecTest {
         }.isFailure)
     }
 
+    @Test fun clearingOnlyOneVerifiedMovementRetainsOtherVerifiedEquipment() {
+        val known=setOf("leg-ext","lat-pulldown")
+        val physical=checkNotNull(NativeGymInventoryCodec.fromDraft(
+            mapOf("cable" to "5, 5, 150",
+                "override:leg-ext" to "exact: 12.5, 17.5, 22.5",
+                "override:lat-pulldown" to "range: 5, 7.5, 200"),
+            "lb",known,setOf("leg-ext")).json)
+        val draft=NativeGymInventoryCodec.toDraft(physical)
+        assertEquals("exact: 12.5, 17.5, 22.5",draft["override:leg-ext"])
+        val cleared=checkNotNull(NativeGymInventoryCodec.fromDraft(
+            draft+("override:leg-ext" to ""),"lb",known,setOf("leg-ext")).json)
+        val original=JSONObject(physical)
+        val updated=JSONObject(cleared)
+        assertEquals(original.getJSONObject("cable").toString(),
+            updated.getJSONObject("cable").toString())
+        assertEquals(original.getJSONObject("exerciseOverrides").getJSONObject("lat-pulldown").toString(),
+            updated.getJSONObject("exerciseOverrides").getJSONObject("lat-pulldown").toString())
+        assertFalse(updated.getJSONObject("exerciseOverrides").has("leg-ext"))
+        // The form prepares a candidate; the persisted physical setting has
+        // not been changed by a blank input or a navigation event.
+        assertTrue(original.getJSONObject("exerciseOverrides").has("leg-ext"))
+        assertEquals(setOf("lat-pulldown"),
+            NativeGymInventoryCodec.verifiedOverrideIds(cleared,"lb",known,setOf("leg-ext")))
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            draft+("override:leg-ext" to "range: 5, 5, 250"),
+            "lb",known,setOf("leg-ext")).valid)
+    }
+
     @Test fun specialtyMachinesRequireUserVerifiedExactLoggedValues() {
         val eligible=setOf("leg-ext","lat-pulldown")
         val specialty=setOf("leg-ext")

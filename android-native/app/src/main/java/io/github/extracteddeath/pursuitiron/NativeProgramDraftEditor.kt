@@ -39,13 +39,14 @@ internal fun NativeProgramDraftEditor(
     onSave: (NativeProgramEditDraft)->Unit,
     lookupNames: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>?,
     onClose: () -> Unit,
-    onOpenGym: () -> Unit,
+    onOpenGym: (String?) -> Unit,
     verifiedEquipmentExerciseIds: Set<String>
 ) {
     var confirmSave by remember { mutableStateOf(false) }
     var pendingRemoval by remember { mutableStateOf<Pair<String,Int>?>(null) }
     var confirmClose by remember { mutableStateOf(false) }
     var confirmOpenGym by remember { mutableStateOf(false) }
+    var requestedGymExerciseId by remember { mutableStateOf<String?>(null) }
     val approved=verified.program
     val draftSaver=remember(approved.reference) { Saver<NativeProgramEditDraft,String>(
         save={NativeProgramEditCodec.workspaceJson(it)},
@@ -84,6 +85,12 @@ internal fun NativeProgramDraftEditor(
     }
     val invalidInputs = nameInput != draft.name ||
         draft.days.any { dayLabelsInput[it.id] != it.label }
+    fun requestGymEdit(exerciseId: String?) {
+        if(draft.isChanged || invalidInputs) {
+            requestedGymExerciseId=exerciseId
+            confirmOpenGym=true
+        } else onOpenGym(exerciseId)
+    }
     SectionLabel("Program editor", if(saving) "Saving changes…" else "Review and save your changes")
     PursuitCard(highlighted=true) {
         Text("Organize your existing training days",style=MaterialTheme.typography.titleLarge)
@@ -172,12 +179,19 @@ internal fun NativeProgramDraftEditor(
                             !protectedLoad
                     ) { Text("Remove") }
                 }
-                if(protectedLoad) Text(
-                    "Verified machine loading is saved for this movement. Clear its individual " +
-                        "weight setting before removing the last occurrence.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if(protectedLoad) {
+                    Text(
+                        "This is the last occurrence with a verified machine loading profile. " +
+                            "Clear the specific weight setting and save before removing it.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedButton(
+                        onClick={requestGymEdit(id)},
+                        enabled=allowEditing && !saving,
+                        modifier=Modifier.fillMaxWidth()
+                    ) { Text("Edit this movement's verified weights") }
+                }
                 if(index<day.exerciseIds.lastIndex) HorizontalDivider()
             }
         }
@@ -203,9 +217,8 @@ internal fun NativeProgramDraftEditor(
                 if(draft.isChanged || invalidInputs)confirmClose=true else onClose()
             },enabled=!saving) { Text("Close editor") }
         }
-        OutlinedButton(onClick={
-            if(draft.isChanged || invalidInputs) confirmOpenGym=true else onOpenGym()
-        },enabled=!saving,modifier=Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick={requestGymEdit(null)},
+            enabled=allowEditing && !saving,modifier=Modifier.fillMaxWidth()) {
             Text("Edit verified gym weights")
         }
     }
@@ -244,7 +257,12 @@ internal fun NativeProgramDraftEditor(
         onDismissRequest={confirmOpenGym=false},
         title={Text("Leave program editor?")},
         text={Text("Unsaved program changes will be discarded. Your saved plan stays unchanged while you edit verified gym weights.")},
-        confirmButton={Button(onClick={confirmOpenGym=false;onOpenGym()}) {Text("Discard and edit gym weights")}},
+        confirmButton={Button(onClick={
+            val requested=requestedGymExerciseId
+            requestedGymExerciseId=null
+            confirmOpenGym=false
+            onOpenGym(requested)
+        }) {Text("Discard and edit gym weights")}},
         dismissButton={OutlinedButton(onClick={confirmOpenGym=false}) {Text("Keep editing program")}}
     )
 }

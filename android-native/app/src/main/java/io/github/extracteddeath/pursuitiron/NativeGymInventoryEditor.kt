@@ -45,7 +45,8 @@ internal fun NativeGymInventoryEditor(
     validation: NativeGymInventoryDraftResult,
     enabled: Boolean,
     candidates: List<NativeStackCandidate> = emptyList(),
-    initiallyExpanded: Boolean = false
+    initiallyExpanded: Boolean = false,
+    focusExerciseId: String? = null
 ) {
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded || draft.values.any { it.isNotBlank() }) }
     SectionLabel("Your actual gym weights")
@@ -58,7 +59,30 @@ internal fun NativeGymInventoryEditor(
         Text(if (expanded) "Hide weight setup" else "Add verified weight setup")
     }
     if (!expanded) return
+    val focused=candidates.firstOrNull { it.id==focusExerciseId }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if(focused!=null) {
+            Text("Linked exercise: ${focused.name}",style=MaterialTheme.typography.titleMedium)
+            Text(
+                "This movement's verified loading profile must be cleared and saved before " +
+                    "its final occurrence can be removed from the program.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            NativeGymLoadField(unit,draft,onChange,enabled,"override:${focused.id}",
+                focused.name,
+                if(focused.mode=="external_load")
+                    "Only exact logged total weights; do not assume a sled or plate-per-side basis"
+                else "Exact verified weights or a checked minimum, increment and maximum")
+            OutlinedButton(
+                onClick={onChange("override:${focused.id}","")},
+                enabled=enabled && !draft["override:${focused.id}"].isNullOrBlank(),
+                modifier=Modifier.fillMaxWidth()
+            ) { Text("Clear this movement's verified weight setting") }
+            Text("This clears the draft only. Review and save the gym settings to apply it.",
+                style=MaterialTheme.typography.labelSmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         NativeGymLoadField(unit, draft, onChange, enabled, "bar", "Empty bar weight", "Enter only if known; pair with your actual plates below.")
         NativeGymLoadField(unit, draft, onChange, enabled, "plates", "Plate pairs", "Weight x number of matching pairs, e.g. 2.5x2, 5x2, 25x1")
         NativeGymLoadField(unit, draft, onChange, enabled, "dumbbells", "Dumbbells per hand", "Exact available weights, e.g. 15, 20, 25, 30")
@@ -66,9 +90,11 @@ internal fun NativeGymInventoryEditor(
         NativeGymLoadField(unit, draft, onChange, enabled, "machine", "Machine stack", "Only if this same stack applies: min, increment, max")
         NativeGymLoadField(unit, draft, onChange, enabled, "smith", "Smith TOTAL loads", "Actual selectable total loads, not assumed empty-bar weight")
         if(candidates.isNotEmpty()) {
-            var showSpecific by rememberSaveable { mutableStateOf(draft.keys.any {
-                it.startsWith("override:") && draft[it]?.isNotBlank()==true
-            }) }
+            var showSpecific by rememberSaveable(focusExerciseId) { mutableStateOf(
+                focused!=null || draft.keys.any {
+                    it.startsWith("override:") && draft[it]?.isNotBlank()==true
+                }
+            ) }
             OutlinedButton(onClick={showSpecific=!showSpecific},enabled=enabled) {
                 Text(if(showSpecific) "Hide individual machine settings" else "Set individual machine weights")
             }
@@ -76,7 +102,7 @@ internal fun NativeGymInventoryEditor(
                 Text("Enter only verified weights. Cable/standard stacks can use exact: 5, 10, 15 or range: 5, 5, 150. Specialty machines require exact: weights AS LOGGED, not plates-per-side, assumed sled loads or inferred increments. If the log basis is uncertain, leave it blank.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-                candidates.forEach { candidate ->
+                candidates.filter { it.id!=focused?.id }.forEach { candidate ->
                     NativeGymLoadField(unit,draft,onChange,enabled,"override:${candidate.id}",
                         candidate.name,
                         when(candidate.mode) {

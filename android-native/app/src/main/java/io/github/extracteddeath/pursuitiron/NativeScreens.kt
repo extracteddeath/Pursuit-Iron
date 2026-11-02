@@ -418,6 +418,9 @@ internal fun PlanScreen(
         // draft may never be presented as an editable CURRENT program.
         var editingDraft by rememberSaveable(currentPlan.program.reference) { mutableStateOf(false) }
         var gymOnly by rememberSaveable(currentPlan.program.reference) { mutableStateOf(false) }
+        var gymFocusExerciseId by rememberSaveable(currentPlan.program.reference) {
+            mutableStateOf<String?>(null)
+        }
         if(gymOnly) {
             SectionLabel("Verified gym weights", "Physical loading settings for this saved program")
             matchingSaved?.let { saved ->
@@ -432,10 +435,11 @@ internal fun PlanScreen(
                     message=runtimeState.gymInventoryMessage,
                     onSave=onSaveGymInventory,
                     initiallyEditing=true,
-                    onClose={gymOnly=false})
+                    focusExerciseId=gymFocusExerciseId,
+                    onClose={gymOnly=false;gymFocusExerciseId=null})
             } ?: run {
                 Text("Verified gym settings are unavailable until the current saved program is loaded.")
-                OutlinedButton(onClick={gymOnly=false}) { Text("Back to program") }
+                OutlinedButton(onClick={gymOnly=false;gymFocusExerciseId=null}) { Text("Back to program") }
             }
         } else if(editingDraft) {
             NativeProgramDraftEditor(
@@ -448,7 +452,13 @@ internal fun PlanScreen(
                     runtimeState?.historyBusy!=true && runtimeState?.busy!=true &&
                     runtimeState?.backupExportBusy!=true && runtimeState?.shortPreviewBusy!=true && runtimeState?.blocked!=true,
                 onClose={ editingDraft=false },
-                onOpenGym={ editingDraft=false;gymOnly=true },
+                onOpenGym={ id ->
+                    if(id==null || id in verifiedPhysicalIds) {
+                        gymFocusExerciseId=id
+                        editingDraft=false
+                        gymOnly=true
+                    }
+                },
                 verifiedEquipmentExerciseIds=verifiedPhysicalIds
             )
         } else {

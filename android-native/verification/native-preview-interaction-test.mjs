@@ -7,6 +7,7 @@ const screens = fs.readFileSync(root + 'NativeScreens.kt', 'utf8');
 const shell = fs.readFileSync(root + 'NativePreviewApp.kt', 'utf8');
 const gymEditor = fs.readFileSync(root + 'NativeSavedGymInventoryPanel.kt', 'utf8');
 const programEditor = fs.readFileSync(root + 'NativeProgramDraftEditor.kt', 'utf8');
+const inventoryEditor = fs.readFileSync(root + 'NativeGymInventoryEditor.kt', 'utf8');
 assert.ok(programEditor.includes('draft.wouldOrphanVerifiedLoading(') &&
   programEditor.includes('!protectedLoad') &&
   screens.includes('verifiedEquipmentExerciseIds=verifiedPhysicalIds') &&
@@ -14,8 +15,17 @@ assert.ok(programEditor.includes('draft.wouldOrphanVerifiedLoading(') &&
   'Only authenticated saved equipment can proactively block orphaned physical stock');
 assert.ok(gymEditor.includes('draft=HashMap(original)') &&
   gymEditor.includes('Discard unsaved gym changes?') &&
-  screens.includes('onClose={gymOnly=false}'),
+  screens.includes('onClose={gymOnly=false;gymFocusExerciseId=null}'),
   'Cancel discards equipment edits; leaving a dirty equipment editor asks permission');
+assert.ok(programEditor.includes('requestGymEdit(id)') &&
+  programEditor.includes('onOpenGym(requested)') &&
+  screens.includes('gymFocusExerciseId=id') &&
+  screens.includes('focusExerciseId=gymFocusExerciseId') &&
+  gymEditor.includes('focusExerciseId=focusExerciseId?.takeIf') &&
+  inventoryEditor.includes('Clear this movement\'s verified weight setting') &&
+  inventoryEditor.includes('onChange("override:${focused.id}","")') &&
+  inventoryEditor.includes('candidates.filter { it.id!=focused?.id }'),
+  'The blocked movement must open its exact saved physical field without duplicate controls or an implicit write');
 
 // A feature-first UI must not destroy working drafts when switching context.
 assert.match(shell, /rememberSaveableStateHolder\(\)/);

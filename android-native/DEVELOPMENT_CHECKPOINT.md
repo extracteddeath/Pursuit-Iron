@@ -1434,3 +1434,22 @@ Cancel in the physical inventory editor now discards the uncommitted draft.
 Leaving for Plan with unsaved edits explicitly asks whether to discard them,
 rather than silently losing settings. No invented equipment, formulas, history
 writes, APK, or changes to production web and other native branches.
+
+## 2026-11-02 — Contextual equipment-profile reconciliation
+
+A protected exercise in the saved native Plan editor can now open exactly its
+verified per-exercise machine weight profile, instead of sending the user into
+an undifferentiated gym form. The original current-store revision determines
+which movement may be targeted; a dirty program draft must be explicitly
+discarded to proceed. The target profile appears first, its normal row is
+deduplicated, and a Clear button empties only this particular *draft* value.
+Nothing is deleted until the user reviews and confirms the existing atomic
+gym-inventory save; other verified machine profiles, barbell plates and racks
+remain unchanged.
+
+The native Kotlin regression validates clearing one specialty profile while
+preserving a separate cable profile and shared cable hardware. Specialty
+machine range guesses remain disallowed. Interaction gates require focus
+propagation, explicit clearing and absence of duplicated profile fields.
+This is targeted equipment editing, not a progression formula rewrite.
+No APK, production web release or other native branch is touched.

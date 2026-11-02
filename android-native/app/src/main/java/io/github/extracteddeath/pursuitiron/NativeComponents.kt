@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.extracteddeath.pursuitiron.domain.NativeSetEntryPolicy
 
 /**
  * Shared native presentation components. Domain/state ownership stays outside UI.
@@ -71,25 +72,60 @@ internal fun NativeSetEditSheet(busy: Boolean,onDismiss: ()->Unit,content: @Comp
     NativeEditSheet(busy,onDismiss,content=content)
 }
 
+/**
+ * All set-entry surfaces share these bounded, keyboard-editable controls.
+ * Intentionally no load +/-: bar, machine and dumbbell increments differ by
+ * exercise and must come from the canonical engine before offering steps.
+ */
 @Composable
 internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: String,enabled: Boolean,
-    onLoad: (String)->Unit,onReps: (String)->Unit,onRir: (String)->Unit) {
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(value=load,onValueChange={ input ->
-            if(input.length<=10 && input.all { it.isDigit() || it=='.' })onLoad(input)
-        },label={Text("Load ($unit)")},modifier=Modifier.weight(1f),singleLine=true,enabled=enabled,
-            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
-        OutlinedTextField(value=reps,onValueChange={ input ->
+    onLoad: (String)->Unit,onReps: (String)->Unit,onRir: (String)->Unit,
+    allowFailedAttempt: Boolean=false) {
+    OutlinedTextField(value=load,onValueChange={input->
+        if(input.length<=10 && input.all {it.isDigit() || it=='.'})onLoad(input)
+    },label={Text("Load ($unit)")},modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=enabled,
+        keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
+    NativeSetCounterField("Reps",reps,enabled,
+        onValueChange={input->
             if(input.length<=3 && input.all(Char::isDigit))onReps(input)
-        },label={Text("Reps")},modifier=Modifier.weight(1f),singleLine=true,enabled=enabled,
-            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
+        },
+        decrement={NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)?.let(onReps)},
+        increment={NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)?.let(onReps)},
+        canDecrement=NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)!=null,
+        canIncrement=NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)!=null)
+    NativeSetCounterField("Actual RIR (optional)",rir,enabled,
+        onValueChange={input->
+            if(input.length<=2 && input.all(Char::isDigit))onRir(input)
+        },
+        decrement={NativeSetEntryPolicy.stepRir(rir,-1)?.let(onRir)},
+        increment={NativeSetEntryPolicy.stepRir(rir,1)?.let(onRir)},
+        canDecrement=NativeSetEntryPolicy.stepRir(rir,-1)!=null,
+        canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null)
+    Text("RIR = reps remaining. Leave empty if unknown. Use 0 load for bodyweight.",
+        style=MaterialTheme.typography.bodySmall,
+        color=MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** Matching accessible touch targets, while keeping a full keyboard field. */
+@Composable
+private fun NativeSetCounterField(
+    label:String,value:String,enabled:Boolean,onValueChange:(String)->Unit,
+    decrement:()->Unit,increment:()->Unit,canDecrement:Boolean,canIncrement:Boolean
+) {
+    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(value=value,onValueChange=onValueChange,
+            label={Text(label)},modifier=Modifier.weight(1f),singleLine=true,
+            enabled=enabled,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
+        FilledTonalIconButton(onClick=decrement,enabled=enabled && canDecrement,
+            modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp)) {
+            Icon(Icons.Outlined.Remove,contentDescription="Decrease $label")
+        }
+        FilledTonalIconButton(onClick=increment,enabled=enabled && canIncrement,
+            modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp)) {
+            Icon(Icons.Outlined.Add,contentDescription="Increase $label")
+        }
     }
-    OutlinedTextField(value=rir,onValueChange={ input ->
-        if(input.length<=2 && input.all(Char::isDigit))onRir(input)
-    },label={Text("Actual RIR · optional")},
-        supportingText={Text("Reps you could still have done. Use 0 load for bodyweight.")},
-        modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=enabled,
-        keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
 }
 
 @Composable

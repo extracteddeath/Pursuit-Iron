@@ -367,14 +367,13 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
             }
             NativeActiveSetCorrection(session,set,commit,busy,error,onCorrect)
         } else {
-            NativeSetValueFields(session.unit,load,reps,rir,!busy,{load=it},{reps=it},{rir=it})
-            val validLoad=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$"))
+            NativeSetValueFields(session.unit,load,reps,rir,!busy,{load=it},{reps=it},{rir=it},
+                allowFailedAttempt=set.allowFailedAttempt)
+            val validLoad=NativeSetEntryPolicy.accepts(load,reps,rir,set.allowFailedAttempt)
             val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
             Button(onClick={onRecord(set.slot,JournalSetDisposition.COMPLETED,
                 JournalSetValues(load,session.unit,checkNotNull(repCount),effort))},
-                enabled=!busy && validLoad && repCount!=null && repCount in (if(set.allowFailedAttempt)0 else 1)..100 &&
-                    (repCount>0 || load.toBigDecimalOrNull()?.signum()==1) &&
-                    (rir.isEmpty() || effort!=null && effort in 0..10),modifier=Modifier.fillMaxWidth()) {
+                enabled=!busy && validLoad,modifier=Modifier.fillMaxWidth()) {
                 Text(if(set.isExtension)"Complete extension" else if(repCount==0)"Record failed attempt" else "Complete set")
             }
             TextButton(onClick={showSkipConfirmation=true},enabled=!busy) { Text(if(set.isExtension)"Skip extension" else "Skip set") }

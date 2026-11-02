@@ -31,11 +31,10 @@ internal fun NativeActiveSetCorrection(session: JournalSessionKey,set: NativeWor
                 else "Set ${set.slot.setIndex+1}",style=MaterialTheme.typography.titleMedium)
             NativeSetValueFields(session.unit,load,reps,rir,!busy,
                 {load=it;operation=null;pendingDisposition=null},{reps=it;operation=null;pendingDisposition=null},
-                {rir=it;operation=null;pendingDisposition=null})
+                {rir=it;operation=null;pendingDisposition=null},
+                allowFailedAttempt=set.allowFailedAttempt)
             val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
-            val valid=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")) &&
-                repCount!=null && repCount in (if(set.allowFailedAttempt)0 else 1)..100 &&
-                (repCount>0 || load.toBigDecimalOrNull()?.signum()==1) && (rir.isEmpty() || effort!=null && effort in 0..10)
+            val valid=NativeSetEntryPolicy.accepts(load,reps,rir,set.allowFailedAttempt)
             val changed=commit.intent.disposition==JournalSetDisposition.SKIPPED ||
                 load.toBigDecimalOrNull()?.compareTo(actual?.load?.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO)!=0 ||
                 repCount!=actual?.reps || effort!=actual?.rir

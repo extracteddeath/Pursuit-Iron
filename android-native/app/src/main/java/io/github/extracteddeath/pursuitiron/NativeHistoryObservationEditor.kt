@@ -33,11 +33,10 @@ internal fun NativeHistoryObservationEditor(history: NativeWorkoutHistory,row: N
     Text("Exercise ${row.slot.exerciseIndex+1} in workout",style=MaterialTheme.typography.bodySmall)
     Text("Enter what you performed. Records and future workouts use the corrected values.")
     NativeSetValueFields(history.unit,load,reps,rir,!busy,
-        {load=it;command=null},{reps=it;command=null},{rir=it;command=null})
+        {load=it;command=null},{reps=it;command=null},{rir=it;command=null},
+        allowFailedAttempt=row.allowFailedAttempt)
     val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
-    val valid=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")) &&
-        repCount!=null && repCount in (if(row.allowFailedAttempt)0 else 1)..100 &&
-        (repCount>0 || load.toBigDecimalOrNull()?.signum()==1) && (rir.isEmpty() || effort!=null && effort in 0..10)
+    val valid=NativeSetEntryPolicy.accepts(load,reps,rir,row.allowFailedAttempt)
     if(row.allowFailedAttempt)Text("0 reps records a failed attempt.",style=MaterialTheme.typography.bodySmall)
     val entered=load.toBigDecimalOrNull();val previous=actual?.load?.toBigDecimalOrNull()
     val changed=skipped || entered==null || previous==null || entered.compareTo(previous)!=0 ||

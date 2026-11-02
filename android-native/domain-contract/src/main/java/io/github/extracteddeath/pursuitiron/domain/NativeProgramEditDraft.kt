@@ -120,8 +120,8 @@ class NativeProgramEditDraft private constructor(
 
     /** 
      * Individual swapping across a linked pair corrupts the group's adjacency.
-     * Until atomic group moves are supported, neither end of a pair may be
-     * individually swapped. Original source positions survive draft reorders.
+     * Instead, use moveLinkedBlock for an entire group.
+     * Original source positions survive draft reorders.
      */
     fun canMoveWithoutSplittingPair(dayId: String,index: Int,delta: Int,
         protectedSlots: List<NativeProtectedProgramSlot>): Boolean {
@@ -137,6 +137,61 @@ class NativeProgramEditDraft private constructor(
             }
         }
         return !paired(index) && !paired(target)
+    }
+
+    /**
+     * A maximal contiguous block of paired source slots may move together.
+     * Adjacent pairs are deliberately treated as one larger block; that is
+     * conservative and preserves EVERY original canonical linked neighbor.
+     * These are current draft display positions, never inferred from IDs.
+     */
+    fun linkedBlock(dayId: String,index: Int,
+        protectedSlots: List<NativeProtectedProgramSlot>): IntRange? {
+        val order=slotOrders[dayId] ?: return null
+        if(index !in order.indices)return null
+        val linked=protectedSlots.asSequence()
+            .filter { it.dayId==dayId && it.reason in setOf("paired","primary_paired") }
+            .map { it.sourceIndex }.toSet()
+        if(order[index] !in linked)return null
+        var start=index
+        var end=index
+        while(start>0 && order[start-1] in linked)start--
+        while(end+1<order.size && order[end+1] in linked)end++
+        return start..end
+    }
+
+    fun canMoveLinkedBlock(dayId: String,index: Int,delta: Int,
+        protectedSlots: List<NativeProtectedProgramSlot>): Boolean {
+        if(delta !in listOf(-1,1))return false
+        val block=linkedBlock(dayId,index,protectedSlots) ?: return false
+        val order=slotOrders[dayId] ?: return false
+        val neighbor=if(delta<0)block.first-1 else block.last+1
+        return neighbor in order.indices
+    }
+
+    /** Swap a linked BLOCK past one unpaired neighbor; never move one member. */
+    fun moveLinkedBlock(dayId: String,index: Int,delta: Int,
+        protectedSlots: List<NativeProtectedProgramSlot>): NativeProgramEditDraft? {
+        if(!canMoveLinkedBlock(dayId,index,delta,protectedSlots))return null
+        val block=linkedBlock(dayId,index,protectedSlots) ?: return null
+        val dayIndex=days.indexOfFirst { it.id==dayId }
+        if(dayIndex<0)return null
+        val exercises=days[dayIndex].exerciseIds.toMutableList()
+        val sources=slotOrders.getValue(dayId).toMutableList()
+        fun <T> shiftOne(list: MutableList<T>) {
+            if(delta<0) {
+                val before=list.removeAt(block.first-1)
+                list.add(block.last,before)
+            } else {
+                val after=list.removeAt(block.last+1)
+                list.add(block.first,after)
+            }
+        }
+        shiftOne(exercises)
+        shiftOne(sources)
+        val changed=days.toMutableList()
+        changed[dayIndex]=changed[dayIndex].copy(exerciseIds=exercises)
+        return next(days=changed,orders=slotOrders+(dayId to sources))
     }
 
     /** UI preflight; the canonical save separately refuses orphaned physical stock. */

@@ -1490,3 +1490,20 @@ canonical writer parity. The existing editor still independently rejects
 split pairing writes. Kotlin + source interaction regressions cover both
 pair members, neighboring movements, standalone primary slots, invalid
 indices, and state-preserving local reorder cases. No native APK.
+
+## 2026-11-02 — Safe atomic linked-group moves in saved Plan
+
+The native program draft now supports moving the full contiguous block of
+linked exercise slots up or down past a standalone neighbor. The block carries
+original source positions and corresponding exercise IDs in the same order.
+If adjacent linked pair groups cannot be distinguished, they move together
+as one contiguous block: no canonical pair is silently separated. The UI
+shows group controls only at the first row of a linked block. Individual
+Up/Down swaps across linked slots remain disabled.
+
+The Kotlin regression exercises the move, boundary conditions, round-trip
+back to original positions, immutable drafts, and serialized canonical
+slot indices. Source interaction checks require wired group controls. The
+canonical JS save planner still owns the final verification; this pass does
+not alter the existing training engine, exercise prescriptions or log data.
+No APK is generated; no live web or other developer branch is modified.

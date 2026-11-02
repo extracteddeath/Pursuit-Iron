@@ -23,6 +23,17 @@ assert.ok(programEditor.includes('draft.canMoveWithoutSplittingPair(') &&
   savedCodec.includes('"primary_paired"') &&
   onboardingSource.includes("protectedBySource.set(sourceIndex,'primary_paired')"),
   'Linked primary and partner must never be individually swapped or split during Plan reordering');
+const programDraftSource=fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeProgramEditDraft.kt','utf8');
+assert.ok(programEditor.includes('draft.moveLinkedBlock(') &&
+  programEditor.includes('draft.canMoveLinkedBlock(') &&
+  programEditor.includes('linkedBlock.first==index') &&
+  programEditor.includes('Text("Group up")') &&
+  programEditor.includes('Text("Group down")') &&
+  programDraftSource.includes('fun moveLinkedBlock(') &&
+  programDraftSource.includes('fun linkedBlock('),
+  'Linked movements must move together from one header action, never by individual swaps');
+
 assert.ok(programEditor.includes('draft.wouldOrphanVerifiedLoading(') &&
   programEditor.includes('!protectedLoad') &&
   screens.includes('verifiedEquipmentExerciseIds=verifiedPhysicalIds') &&

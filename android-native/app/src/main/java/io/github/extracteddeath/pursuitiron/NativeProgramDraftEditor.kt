@@ -96,7 +96,7 @@ internal fun NativeProgramDraftEditor(
     PursuitCard(highlighted=true) {
         Text("Organize your existing training days",style=MaterialTheme.typography.titleLarge)
         Text("Rename, reorder or remove movements. Retained slot settings follow the movement. " +
-            "Key lifts and linked pairs cannot be removed. Linked groups stay together; " +
+            "Key lifts and linked pairs cannot be removed. Linked groups move as one; " +
             "individual moves across a pair are disabled.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -184,6 +184,25 @@ internal fun NativeProgramDraftEditor(
                         enabled=allowEditing && !saving && day.exerciseIds.size>1 &&
                             !protectedLoad && protectedRole==null
                     ) { Text("Remove") }
+                }
+                val linkedBlock=draft.linkedBlock(day.id,index,protectedSourceSlots)
+                if(linkedBlock!=null && linkedBlock.first==index) {
+                    Row(modifier=Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick={
+                            draft.moveLinkedBlock(day.id,index,-1,protectedSourceSlots)?.let { draft=it }
+                        },enabled=allowEditing && !saving && draft.canMoveLinkedBlock(
+                            day.id,index,-1,protectedSourceSlots),
+                            modifier=Modifier.weight(1f)) { Text("Group up") }
+                        OutlinedButton(onClick={
+                            draft.moveLinkedBlock(day.id,index,1,protectedSourceSlots)?.let { draft=it }
+                        },enabled=allowEditing && !saving && draft.canMoveLinkedBlock(
+                            day.id,index,1,protectedSourceSlots),
+                            modifier=Modifier.weight(1f)) { Text("Group down") }
+                    }
+                    Text("Move all ${linkedBlock.last-linkedBlock.first+1} linked movements together.",
+                        style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if(protectedRole!=null) Text(
                     when(protectedRole) {

@@ -143,6 +143,41 @@ class NativeProgramEditDraftTest {
         assertFalse(original.isChanged)
     }
 
+    @Test fun fullLinkedBlockMovesTogetherAndRetainsOriginalSlotIdentity() {
+        val structure=verified()
+        val original=NativeProgramEditDraft.from(structure)
+        // Start with a standalone movement, a two-member linked group,
+        // and a second unpaired movement. Then move the entire group across
+        // its neighbor without changing member adjacency or source identity.
+        val linked=listOf(NativeProtectedProgramSlot("day-1",1,"primary_paired"),
+            NativeProtectedProgramSlot("day-1",2,"paired"))
+        assertEquals(1..2,original.linkedBlock("day-1",1,linked))
+        assertEquals(1..2,original.linkedBlock("day-1",2,linked))
+        assertNull(original.linkedBlock("day-1",0,linked))
+        assertFalse(original.canMoveLinkedBlock("day-1",0,1,linked))
+        assertTrue(original.canMoveLinkedBlock("day-1",1,-1,linked))
+        assertFalse(original.canMoveLinkedBlock("day-1",1,1,linked))
+        assertFalse(original.canMoveLinkedBlock("day-1",1,0,linked))
+        val up=checkNotNull(original.moveLinkedBlock("day-1",1,-1,linked))
+        assertEquals(listOf("curl","row","bench"),up.days.first().exerciseIds)
+        assertEquals(listOf(1,2,0),up.originalSlots("day-1"))
+        assertEquals(0..1,up.linkedBlock("day-1",0,linked))
+        assertEquals(0..1,up.linkedBlock("day-1",1,linked))
+        assertTrue(up.canMoveLinkedBlock("day-1",1,1,linked))
+        val restored=checkNotNull(up.moveLinkedBlock("day-1",1,1,linked))
+        assertEquals(original.days,restored.days)
+        assertEquals(original.originalSlots("day-1"),restored.originalSlots("day-1"))
+        assertFalse(original.isChanged)
+        assertNull(original.moveLinkedBlock("day-1",0,-1,linked))
+        // The canonical save request serializes the same intact source indices.
+        val request=org.json.JSONObject(NativeProgramEditCodec.editJson(up,"linked-group",30))
+        assertEquals("[1,2,0]",request.getJSONArray("days").getJSONObject(0)
+            .getJSONArray("slots").toString())
+        val second=NativeProgramEditDraft.from(structure)
+        assertNull(second.linkedBlock("missing",0,linked))
+        assertNull(second.linkedBlock("day-1",20,linked))
+    }
+
     @Test fun linkedPairsCannotBeSplitByIndividualExerciseMoves() {
         val base=verified()
         val draft=NativeProgramEditDraft.from(base)

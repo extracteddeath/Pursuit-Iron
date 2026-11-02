@@ -1363,3 +1363,32 @@ stale equipment metadata. Multiple named gyms and cross-unit migration
 are not enabled. Keep the no-APK gate until the full journey and physical
 device tests pass. No live web files, training formulas or other native
 developer branches were changed.
+
+
+## 2026-11-02 — Specialty-machine logged-weight accuracy gate
+
+In `native-loading-catalog.mjs`, a saved plan can now expose its exact
+specialty machine movements (leg extension/curl, leg press, hack squat, calf
+machines and recognized independent specialty machine families) as
+`external_load`. Each movement must be a real issued-domain `EX_BY_ID`
+exercise, owned by a current program day, and explicitly supported by the
+saved gym's equipment list. These are **not** automatic machine-stack or
+barbell/plate modes. Unknown machines, unsupported gear and different
+resistance mechanisms do not inherit generic factory equipment.
+
+Only **exact selectable weights measured in the same unit and meaning as
+the native set logger** may be saved on a specialty movement. For example,
+`exact: 12.5, 17.5, 22.5`. Unlike an explicitly verified cable or
+standard stack, `range: minimum, increment, maximum` is intentionally
+blocked for specialty movements because the step and mechanical advantage
+cannot be safely inferred. Values are explicit user-supplied logged loads;
+they do NOT establish a sled base weight, paired plates, per-side plate
+math, counterbalance or measured effective resistance. Users of those
+methods must continue manual set entry until the recording basis can be
+made explicit and validated separately.
+
+Kotlin form/transaction validation and canonical JS edit/inspection are
+kept separate. New tests reject fake modes, missing equipment, disallowed
+candidate IDs, ambiguous machine ranges and invented increments while
+retaining the same atomic revision pin and original workout history.
+The training engine and deployed web app remain untouched; no APK is built.

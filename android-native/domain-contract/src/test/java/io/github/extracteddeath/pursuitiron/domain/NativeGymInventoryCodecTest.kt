@@ -59,6 +59,37 @@ class NativeGymInventoryCodecTest {
             mapOf("override:back-squat" to "exact: 45, 50"),"lb",allowed).valid)
     }
 
+    @Test fun specialtyMachinesRequireUserVerifiedExactLoggedValues() {
+        val eligible=setOf("leg-ext","lat-pulldown")
+        val specialty=setOf("leg-ext")
+        val known=NativeGymInventoryCodec.fromDraft(
+            mapOf("override:leg-ext" to "exact: 12.5, 17.5, 22.5"),
+            "lb",eligible,specialty)
+        assertTrue(known.error.orEmpty(),known.valid)
+        val raw=checkNotNull(known.json)
+        assertEquals("exact: 12.5, 17.5, 22.5",
+            NativeGymInventoryCodec.toDraft(raw)["override:leg-ext"])
+        assertEquals(raw,NativeGymInventoryCodec.validate(raw,"lb",eligible,specialty))
+        val unsafe=JSONObject(raw)
+        unsafe.getJSONObject("exerciseOverrides").put("leg-ext",JSONObject()
+            .put("minimum",5).put("increment",5).put("maximum",250))
+        assertTrue(runCatching {
+            NativeGymInventoryCodec.validate(unsafe.toString(),"lb",eligible,specialty)
+        }.isFailure)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:leg-ext" to "range: 5, 5, 250"),
+            "lb",eligible,specialty).valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:leg-ext" to "exact: 20, 20"),
+            "lb",eligible,specialty).valid)
+        assertTrue(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:lat-pulldown" to "range: 5, 7.5, 200"),
+            "lb",eligible,specialty).valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            mapOf("override:leg-ext" to "exact: 20, 25"),
+            "lb",setOf("lat-pulldown"),specialty).valid)
+    }
+
     @Test fun noUnitConversionAndNoUnknownHardware() {
         val stock=checkNotNull(NativeGymInventoryCodec.fromDraft(mapOf("dumbbells" to "20, 25"),"lb").json)
         assertTrue(runCatching { NativeGymInventoryCodec.validate(stock,"kg") }.isFailure)

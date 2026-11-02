@@ -20,6 +20,19 @@ assert.equal(nativeIssuedLoadMode('machine-press',equipment),null,
   'Dedicated selectorized machines cannot inherit a generic machine carrier');
 assert.equal(nativeIssuedLoadMode('back-squat',equipment),'barbell_total');
 assert.equal(nativeIssuedLoadMode('lat-pulldown',[]),null);
+assert.equal(nativeIssuedLoadMode('leg-ext',equipment),null,
+  'Specialty machine load is ambiguous without explicit physical settings');
+const specialtySample=nativeStackCandidates({days:[{exercises:[
+  'leg-ext','lying-curl','leg-press','hack-squat','lat-pulldown','back-squat']}],
+  config:{equipment}});
+for(const id of ['leg-ext','lying-curl','leg-press','hack-squat']) {
+  assert.deepEqual(specialtySample.find(row=>row.id===id)?.mode,'external_load',
+    'Only explicit logged-load values are eligible for these machines');
+}
+assert.equal(specialtySample.find(row=>row.id==='lat-pulldown')?.mode,'cable_stack');
+assert.equal(specialtySample.some(row=>row.id==='back-squat'),false);
+assert.equal(nativeStackCandidates({days:[{exercises:['leg-ext','leg-press']}],
+  config:{equipment:['barbell']}}).length,0,'Absent hardware cannot be configured as present');
 assert.deepEqual(nativeStackCandidates({days:[{exercises:['lat-pulldown','lat-pulldown','back-squat']}],
  config:{equipment}}),[{id:'lat-pulldown',name:'Lat Pulldown',mode:'cable_stack'}]);
 
@@ -42,6 +55,28 @@ assert.ok(saved.program.program.days.some(day=>day.exerciseIds.includes(candidat
 assert.equal(candidate.mode,'cable_stack');
 assert.equal(inspectNativeProgram(snapshot).loadingInventory,null,
   'Unconfigured gym cannot claim a factory load');
+const specialty=saved.loadingCandidates.find(row=>row.mode==='external_load');
+assert.ok(specialty,'A saved PPL program must expose at least one actual specialty machine movement');
+const actualLogged={unit:'lb',exerciseOverrides:{
+  [specialty.id]:{availableLoads:[12.5,17.5,22.5]}}};
+const loggedEdit={version:1,operationId:'specialty-logged',
+  reference:saved.program.reference,editedAt:2400,loadingInventory:actualLogged};
+const physical=prepareNativeGymInventoryEdit(snapshot,JSON.stringify(loggedEdit));
+assert.deepEqual(inspectNativeProgram(physical.candidateSnapshot).loadingInventory,actualLogged);
+assert.equal(JSON.parse(worker(JSON.stringify({protocolVersion:1,id:'specialty-wire',
+  method:'prepareNativeGymInventoryEdit',
+  params:{currentSnapshot:snapshot,editJson:JSON.stringify(loggedEdit)}}))).ok,true);
+for(const incorrect of [
+  {minimum:5,increment:5,maximum:250},
+  {availableLoads:[12.5,12.5]},
+  {availableLoads:[10.001,15]},
+  {mode:'external_load',availableLoads:[10,15]}
+]) {
+  assert.throws(()=>prepareNativeGymInventoryEdit(snapshot,JSON.stringify({
+    ...loggedEdit,loadingInventory:{unit:'lb',exerciseOverrides:{[specialty.id]:incorrect}}
+  })),'Specialty machines never inherit a guessed range or mislabeled load basis');
+}
+
 
 const override={unit:'lb',exerciseOverrides:{[candidate.id]:{
   minimum:5,increment:7.5,maximum:200}}};

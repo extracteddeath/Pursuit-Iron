@@ -351,3 +351,23 @@ assert.ok(screens.includes('currentStoreChangeKey = runtimeState?.storeChangeKey
   host.includes('now.storeChangeKey==before.storeChangeKey') &&
   host.includes('source.contentEquals(fresh)'),
   'Backup review must be revision-bound in Compose and reject stale source during comparison');
+
+const backupReviewGate=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeBackupReviewVerification.kt','utf8');
+assert.ok(activity.includes('onVerifyBackupMerge=runtime::verifyBackupMergeSelection') &&
+  shell.includes('onVerifyBackupMerge=onVerifyBackupMerge') &&
+  screens.includes('onVerifyBackupMerge = if (hasSavedProgram) onVerifyBackupMerge else null') &&
+  backupScreening.includes('Select same backup again · verify only') &&
+  backupScreening.includes('ReselectionVerified') &&
+  backupScreening.includes('ReselectionMismatch') &&
+  backupScreening.includes('screening.bytes.fill(0)') &&
+  host.includes('private var backupReviewTicket: NativeBackupReviewTicket?=null') &&
+  host.includes('backupReviewEpoch.incrementAndGet()') &&
+  host.includes('backupReviewTicket=null') &&
+  host.includes('first.matchesReselection(fresh,second)') &&
+  backupReviewGate.includes('freshPreview==preview') &&
+  backupReviewGate.includes('freshSelection.sha256Hex==preview.incomingSha256') &&
+  backupReviewGate.includes('A preview by itself cannot bind') &&
+  !backupReviewGate.includes('commitAtomically') &&
+  !host.includes('installApprovedBackupMerge') &&
+  !backupScreening.includes('installApprovedBackupMerge'),
+  'Second selection must fully recheck current owner and exact selected bytes without import authority');

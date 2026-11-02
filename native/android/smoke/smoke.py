@@ -352,6 +352,16 @@ if tap(r"^Focus mode", "focus-mode"):
         if lows and c[1] > min(lows) - 60:
             FAILS.append(f"focus mode: log control at y={c[1]} is under the rest card or dock ({min(lows)})")
     tap(r"^Focus mode")
+# Discard moved off the header into the workout menu (it sat one icon from Focus)
+if find(r"^Discard workout", timeout=1):
+    FAILS.append("Discard workout is still a header button")
+if tap(r"^Workout options", "workout-menu", required=False):
+    if not find(r"Discard workout", timeout=3):
+        FAILS.append("workout menu has no Discard workout")
+    back()
+    time.sleep(0.8)
+else:
+    FAILS.append("no Workout options menu in the workout header")
 if tap(r"^All exercises", "exercise-list"):
     if not find(r"Today's exercises", timeout=4):
         FAILS.append("exercise list sheet did not open")

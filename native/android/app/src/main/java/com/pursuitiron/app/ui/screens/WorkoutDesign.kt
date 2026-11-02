@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.prGlow
 import com.pursuitiron.app.ui.common.chipIn
 import com.pursuitiron.app.ui.common.popIn
 import com.pursuitiron.app.ui.common.DrawnCheck
@@ -105,7 +106,7 @@ fun liveElapsedSec(s: JSONObject, now: Long): Long {
 }
 
 @Composable
-fun WorkoutHeader(vm: AppViewModel, s: JSONObject, wide: Boolean, focus: Boolean, onFocus: () -> Unit, onNote: () -> Unit, onTime: () -> Unit, onDiscard: () -> Unit, onFinish: () -> Unit) {
+fun WorkoutHeader(vm: AppViewModel, s: JSONObject, wide: Boolean, focus: Boolean, onFocus: () -> Unit, onNote: () -> Unit, onTime: () -> Unit, onMenu: () -> Unit, onFinish: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val elapsed = liveElapsedSec(s, vm.now)
     val est = s.i("estimateMin")
@@ -137,7 +138,8 @@ fun WorkoutHeader(vm: AppViewModel, s: JSONObject, wide: Boolean, focus: Boolean
             .semantics { contentDescription = "Focus mode"; role = Role.Switch; stateDescription = if (focus) "On" else "Off" }, contentAlignment = Alignment.Center) {
             Icon(PiIcons.Focus, null, tint = if (focus) cs.onPrimaryContainer else cs.onSurfaceVariant, modifier = Modifier.size(22.dp))
         }
-        androidx.compose.material3.IconButton(onClick = onDiscard) { Icon(PiIcons.Trash, "Discard workout", tint = cs.onSurfaceVariant) }
+        // Discard lives in the workout menu, a step away from Focus: one icon over from the most-used header button it was an easy mis-tap mid-set.
+        androidx.compose.material3.IconButton(onClick = onMenu) { Icon(PiIcons.More, "Workout options", tint = cs.onSurfaceVariant) }
         if (wide) Button(onClick = onFinish, modifier = Modifier.height(44.dp)) { Text("Finish") }
     }
 }
@@ -423,7 +425,7 @@ fun FocusCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifier: Modifie
                 }
             }
         }
-        LiftDemo(ex.s("name"), ex.s("part"))
+        LiftDemo(ex.s("name"), ex.s("part"), ex.s("pattern"))
         Row(verticalAlignment = Alignment.Bottom) {
             // The design's ticker: the load rolls digit by digit as the set changes.
             com.pursuitiron.app.ui.common.RollingText(if (tag) ex.s("loadTag") else x.s("weight").ifBlank { "—" },
@@ -543,7 +545,7 @@ private fun LiftDoneCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifi
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.popIn().size(56.dp).clip(RoundedCornerShape(18.dp)).background(cs.primary), contentAlignment = Alignment.Center) { DrawnCheck(cs.onPrimary, Modifier.size(28.dp)) }
         Text("${ex.s("short").ifBlank { ex.s("name") }} done", style = MaterialTheme.typography.headlineMedium, color = cs.onPrimaryContainer)
-        if (pr) Text("NEW e1RM PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.popIn(delayMs = 120).clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
+        if (pr) Text("NEW e1RM PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.popIn(delayMs = 120).prGlow(cs.primary, 16.dp).clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Sets" to "${work.size}", "Top set" to (top?.let { "${it.s("weight")}×${it.s("reps")}" } ?: "—"), "e1RM" to if (e1 > 0) fmtNum(Math.round(e1 * 2) / 2.0) else "—").forEach { (k, v) ->
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surface).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -566,29 +568,42 @@ private val DEMO_CUES = mapOf(
     "curl" to ("Elbows still, curl to full flexion" to "Tempo 2-0-1"),
     "squat" to ("Sit between the hips, knees track toes" to "Tempo 3-0-1"),
     "pull" to ("Drive elbows down to the ribs" to "Tempo 2-1-1"),
+    "fwd" to ("Press forward to lockout, ribs down" to "Tempo 2-0-1"),
+    "row" to ("Pull the elbows back, squeeze the shoulder blades" to "Tempo 2-1-1"),
+    "hinge" to ("Hips back, flat back, bar close to the legs" to "Tempo 3-0-1"),
 )
 
-fun demoPattern(name: String, part: String): String {
+fun demoPattern(name: String, part: String, pattern: String = ""): String {
     val n = name.lowercase()
     return when {
         Regex("pushdown|extension").containsMatchIn(n) -> "push"
         n.contains("curl") -> "curl"
+        n.contains("calf") -> "squat"
         Regex("lateral|upright|reverse pec|raise").containsMatchIn(n) -> "raise"
-        Regex("overhead|seated db press|shoulder press").containsMatchIn(n) -> "over"
-        Regex("pull-up|pulldown|row").containsMatchIn(n) -> "pull"
-        Regex("squat|lunge|leg press|deadlift").containsMatchIn(n) -> "squat"
-        Regex("bench|press|push-up|fly").containsMatchIn(n) -> "press"
-        else -> when (part) { "chest" -> "press"; "lats", "upper_back", "traps", "lower_back" -> "pull"; "quads", "hamstrings", "glutes", "calves", "adductors", "abductors" -> "squat"
-            "shoulders", "side_delts", "front_delts", "rear_delts" -> "over"; "biceps", "triceps", "forearms" -> "curl"; else -> "press" }
+        Regex("overhead|seated db press|shoulder press|military|arnold|push press").containsMatchIn(n) -> "over"
+        Regex("row|face pull").containsMatchIn(n) -> "row"
+        Regex("pull-up|chin-up|pulldown").containsMatchIn(n) -> "pull"
+        Regex("deadlift|rdl|romanian|good morning|hip thrust|glute bridge|swing|hinge|back extension|hyper").containsMatchIn(n) -> "hinge"
+        Regex("squat|lunge|leg press|split|step-up").containsMatchIn(n) -> "squat"
+        // A press is only the lying bench demo when it is done lying down; standing and machine presses push forward.
+        Regex("bench|floor press|push-up|dip|fly|incline|decline").containsMatchIn(n) -> "press"
+        Regex("press|crossover").containsMatchIn(n) -> "fwd"
+        else -> when (pattern) {
+            "horizontal-push" -> "fwd"; "horizontal-pull" -> "row"; "vertical-push" -> "over"; "vertical-pull" -> "pull"
+            "hinge" -> "hinge"; "squat", "lunge" -> "squat"
+            else -> when (part) { "chest" -> "press"; "lats", "upper_back", "traps" -> "pull"; "lower_back", "hamstrings", "glutes" -> "hinge"
+                "quads", "calves", "adductors", "abductors" -> "squat"
+                "shoulders", "side_delts", "front_delts", "rear_delts" -> "over"; "biceps", "triceps", "forearms" -> "curl"; else -> "press" }
+        }
     }
 }
 
 @Composable
-fun LiftDemo(name: String, part: String) {
+fun LiftDemo(name: String, part: String, pattern: String = "") {
     val cs = MaterialTheme.colorScheme
-    val p = demoPattern(name, part)
+    val p = demoPattern(name, part, pattern)
     val (cue, tempo) = DEMO_CUES.getValue(p)
-    val dur = when (p) { "push", "curl" -> 2400; "squat" -> 2800; else -> 2600 }
+    val dur = when (p) { "push", "curl" -> 2400; "squat", "hinge" -> 2800; else -> 2600 }
     val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "demo")
     val tLoop by inf.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(
         tween(dur / 2, easing = androidx.compose.animation.core.CubicBezierEasing(0.45f, 0f, 0.3f, 1f)), androidx.compose.animation.core.RepeatMode.Reverse), label = "t")
@@ -597,7 +612,16 @@ fun LiftDemo(name: String, part: String) {
     val ink = cs.onSurface; val acc = cs.primary
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surface).padding(start = 6.dp, top = 6.dp, bottom = 6.dp, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        androidx.compose.foundation.Canvas(Modifier.width(92.dp).height(74.dp).semantics { contentDescription = "Animated demo of $name" }) {
+        androidx.compose.foundation.Canvas(Modifier.width(92.dp).height(74.dp).semantics { contentDescription = "Animated demo of $name" }) { drawDemo(p, t, ink, acc) }
+        Column(Modifier.weight(1f)) {
+            Text(cue, style = MaterialTheme.typography.labelLarge, color = cs.onSurface)
+            Text(tempo, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+        }
+    }
+}
+
+/** The demo figure in pose [t] (0 start, 1 the far end of the rep) on the prototype's 120×96 grid, scaled to fit. */
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDemo(p: String, t: Float, ink: Color, acc: Color) {
             val k = minOf(size.width / 120f, size.height / 96f)
             fun lerp(a: Float, b: Float) = a + (b - a) * t
             fun o(x: Float, y: Float) = androidx.compose.ui.geometry.Offset(x * k, y * k)
@@ -647,6 +671,23 @@ fun LiftDemo(name: String, part: String) {
                         line(34f, 25f, 86f, 25f, 4f, acc); plate(31f, 18f, 5f, 14f); plate(84f, 18f, 5f, 14f)
                     }
                 }
+                // Standing cable/machine press and row, side on: the arm reaches and returns along the cable.
+                "fwd", "row" -> {
+                    val reach = if (p == "fwd") lerp(0.35f, 1f) else lerp(1f, 0.35f)
+                    val hand = 46f + 40f * reach
+                    val anchor = if (p == "fwd") 10f else 112f
+                    line(anchor, 8f, anchor, 90f, 3f, alpha = 0.3f)
+                    line(anchor, 31f, hand, 31f, 2f, acc, 0.6f)
+                    head(44f, 16f); line(44f, 24f, 44f, 58f, 7f); poly(36f, 90f, 44f, 58f, 52f, 90f)
+                    line(46f, 31f, hand, 31f, 5f); plate(hand - 2f, 25f, 5f, 12f)
+                }
+                "hinge" -> {
+                    poly(38f, 90f, 44f, 58f, 50f, 90f)
+                    rot(lerp(0f, 68f), 44f, 58f) {
+                        head(44f, 16f); line(44f, 24f, 44f, 58f, 7f); line(46f, 30f, 50f, 54f, 5f)
+                        line(34f, 56f, 66f, 56f, 4f, acc); plate(31f, 49f, 5f, 14f); plate(64f, 49f, 5f, 14f)
+                    }
+                }
                 else -> {
                     line(26f, 8f, 94f, 8f, 4f, acc)
                     val s = lerp(1.73f, 1f)
@@ -655,9 +696,10 @@ fun LiftDemo(name: String, part: String) {
                 }
             }
         }
-        Column(Modifier.weight(1f)) {
-            Text(cue, style = MaterialTheme.typography.labelLarge, color = cs.onSurface)
-            Text(tempo, style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-        }
-    }
+
+/** The library's lift tile: the demo figure held mid-rep, so the row shows the movement, not the name's first letter. */
+@Composable
+fun DemoGlyph(name: String, part: String, pattern: String, ink: Color, acc: Color, modifier: Modifier) {
+    val p = demoPattern(name, part, pattern)
+    androidx.compose.foundation.Canvas(modifier) { drawDemo(p, 0.5f, ink, acc) }
 }

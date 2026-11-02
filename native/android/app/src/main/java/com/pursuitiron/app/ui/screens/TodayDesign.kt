@@ -184,7 +184,14 @@ fun PlanChangesSheet(vm: AppViewModel, review: JSONObject, onUpdated: (JSONObjec
 fun CheckInCard(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
     val c = checkInOf(vm)
-    val effect = if (c.answers.isEmpty()) "Optional" else (if (c.mod > 0) "+" else if (c.mod < 0) "−" else "±") + "${kotlin.math.abs(c.mod)}% readiness"
+    // The chip states what the check-in actually moved: readiness is capped at 100, so +6 on fresh muscles moves nothing.
+    val base = vm.home?.o("readiness")?.i("today", 100) ?: 100
+    val applied = (base + c.mod).coerceIn(0, 100) - base
+    val effect = when {
+        c.answers.isEmpty() -> "Optional"
+        c.mod != 0 && applied == 0 -> if (c.mod > 0) "Already fully fresh" else "Readiness already at 0"
+        else -> (if (applied > 0) "+" else if (applied < 0) "−" else "±") + "${kotlin.math.abs(applied)}% readiness"
+    }
     if (c.done) {
         Surface(onClick = { saveCheckIn(vm, c.copy(done = false)) }, color = cs.surfaceContainerLow, shape = CircleShape,
             modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Edit today's check-in" }) {

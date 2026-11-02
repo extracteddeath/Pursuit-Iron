@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.wrapContentWidth
 import com.pursuitiron.app.ui.common.chipIn
 import com.pursuitiron.app.ui.common.popIn
@@ -178,7 +179,7 @@ fun WorkoutScreen(vm: AppViewModel) {
     Box(Modifier.fillMaxSize().background(cs.surface)) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             WorkoutHeader(vm, s, wide, vm.prefs.focus, onFocus = { vm.prefs.changeFocus(!vm.prefs.focus) }, onNote = { sheet = WSheet.SessionNote },
-                onTime = { sheet = WSheet.Time }, onDiscard = { confirmDiscard = true }, onFinish = tryFinish)
+                onTime = { sheet = WSheet.Time }, onMenu = { sheet = WSheet.SessionMenu }, onFinish = tryFinish)
             ProgressBar(if (total > 0) done.toFloat() / total else 0f, Modifier.padding(horizontal = 16.dp))
             if (wide) {
                 Row(Modifier.fillMaxSize()) {
@@ -252,7 +253,8 @@ fun WorkoutScreen(vm: AppViewModel) {
         WSheet.Exercises -> ExercisesSheet(vm, s, onAdd = { sheet = WSheet.AddLift }) { sheet = null }
         WSheet.Time -> TimeSheet(vm, s) { sheet = null }
         is WSheet.History -> LiftDetailSheet(vm, sh.id) { sheet = null }
-        WSheet.SessionMenu -> SessionMenu(vm, s, onNote = { sheet = WSheet.SessionNote }, onAdd = { sheet = WSheet.AddLift }, onSuperset = { sheet = WSheet.Superset }) { sheet = null }
+        WSheet.SessionMenu -> SessionMenu(vm, s, onNote = { sheet = WSheet.SessionNote }, onAdd = { sheet = WSheet.AddLift }, onSuperset = { sheet = WSheet.Superset },
+            onTime = { sheet = WSheet.Time }, onDiscard = { sheet = null; confirmDiscard = true }) { sheet = null }
         WSheet.AddLift -> AddLiftSheet(vm) { sheet = null }
         WSheet.Finish -> FinishPage(vm, s) { sheet = null }
         null -> {}
@@ -354,7 +356,15 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
     // Focus mode puts the set itself at the top of the screen: the card and its log control are in view at once,
     // above the rest card and the dock (it used to sit under the lift's details, a scroll away).
     LaunchedEffect(focus, ei) { if (focus) listState.animateScrollToItem(if (warmShown) 2 else 1) }
-    LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = 190.dp),
+    // The list ends clear of what floats over it: the dock and the navigation bar, and the rest card while it shows
+    // (a fixed 190 dp left the session totals half under the rest card on phones with a navigation bar).
+    val navBottom = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val resting = vm.restEndsAt() != null
+    val bottomPad by animateDpAsState(navBottom + when {
+        wide -> if (resting) 24.dp + 84.dp + 16.dp else 32.dp
+        else -> if (resting) 96.dp + 84.dp + 16.dp else (if (vm.prefs.grip) 86.dp else 78.dp) + 16.dp
+    }, Motion.spatial(), label = "listBottom")
+    LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = bottomPad),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (warmShown) item { WarmupCard(warm!!) { warmHidden = true } }
         item {
@@ -423,7 +433,11 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
         if (focus) item(key = "focus") {
             FocusCard(vm, s, ex, Modifier.widthIn(max = 780.dp), onAdjust = { si -> open(WSheet.Edit(ei, si)) }, onNextLift = { if (ei < s.list("exercises").size - 1) vm.act("select", "ei" to ei + 1) })
         }
-        item { SessionTotals(s) }
+        // On phones the rest card floats where the totals card ends up, which left it peeking out half covered:
+        // it steps aside while resting and comes back with the next set.
+        item {
+            androidx.compose.animation.AnimatedVisibility(wide || !resting, enter = Motion.expandIn, exit = Motion.shrinkOut) { SessionTotals(s) }
+        }
     }
 }
 

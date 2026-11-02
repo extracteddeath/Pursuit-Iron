@@ -317,7 +317,9 @@ private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int,
         }
         // The design's "Hits …" line: the engine's weekly volume for this day, direct plus secondary shares
         d.list("hits").takeIf { it.isNotEmpty() }?.let { hs ->
-            Text("Hits " + hs.joinToString(" · ") { "${it.s("label")} ${com.pursuitiron.app.ui.common.fmtNum(it.d("sets"))}" },
+            // Helper muscles get part credit; say so whenever a count is fractional, or "Biceps 4.5" reads like a typo.
+            Text("Hits " + hs.joinToString(" · ") { "${it.s("label")} ${com.pursuitiron.app.ui.common.fmtNum(it.d("sets"))}" } +
+                (if (hs.any { it.d("sets") % 1.0 != 0.0 }) " (helper work counts as part sets)" else ""),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = if (today) cs.onPrimaryContainer else cs.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp))
         }

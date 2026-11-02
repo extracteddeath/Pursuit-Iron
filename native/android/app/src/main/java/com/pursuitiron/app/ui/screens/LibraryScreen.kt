@@ -157,7 +157,8 @@ fun LibraryScreen(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(40.dp).clip(tileShape).background(tileBg).clearAndSetSemantics { }, contentAlignment = Alignment.Center) { // decoration: the row reads its name
-                    Text(x.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleSmall, color = tileFg)
+                    // The movement held mid-rep (the focus demo's figure), not the name's first letter, which said nothing.
+                    DemoGlyph(x.s("name"), x.s("part"), x.s("pattern"), tileFg, tileFg.copy(alpha = 0.7f), Modifier.size(30.dp, 24.dp))
                 }
                 Column(Modifier.weight(1f)) {
                     Text(x.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -195,8 +196,8 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Box(Modifier.size(56.dp).clip(listOf(CircleShape, RoundedCornerShape(16.dp), RoundedCornerShape(16.dp, 16.dp, 16.dp, 5.dp))[g])
                     .background(listOf(cs.tertiaryContainer, cs.primaryContainer, cs.secondaryContainer)[g]).clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
-                    Text(e.s("name").firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                        color = listOf(cs.onTertiaryContainer, cs.onPrimaryContainer, cs.onSecondaryContainer)[g])
+                    val fg = listOf(cs.onTertiaryContainer, cs.onPrimaryContainer, cs.onSecondaryContainer)[g]
+                    DemoGlyph(e.s("name"), e.s("part"), e.s("pattern"), fg, fg.copy(alpha = 0.7f), Modifier.size(42.dp, 34.dp))
                 }
                 Column(Modifier.weight(1f)) {
                     Text(e.s("name"), style = MaterialTheme.typography.headlineSmall)

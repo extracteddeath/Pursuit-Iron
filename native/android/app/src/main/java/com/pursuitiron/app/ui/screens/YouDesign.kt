@@ -285,8 +285,9 @@ fun ProfBodyweightCard(vm: AppViewModel, onOpenBody: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f)) {
                 Text("Bodyweight", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
-                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    AnimatedContent(bw?.let { fmt1(it) } ?: "—", transitionSpec = { com.pursuitiron.app.ui.theme.Motion.tick() }, label = "bw") {
+                if (bw == null) Text("Not logged yet", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 2.dp))
+                else Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AnimatedContent(bw.let { fmt1(it) }, transitionSpec = { com.pursuitiron.app.ui.theme.Motion.tick() }, label = "bw") {
                         Text(it, style = MaterialTheme.typography.displaySmall.copy(fontSize = 32.sp))
                     }
                     Text(u, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp), modifier = Modifier.padding(bottom = 5.dp))
@@ -316,7 +317,12 @@ fun ProfBodyweightCard(vm: AppViewModel, onOpenBody: () -> Unit) {
                 drawPath(path, line, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
         }
-        Text("8 weeks · every ratio above recalculates when you log", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        // Each state says what it means: an empty card used to show "— kg" with copy about recalculating ratios.
+        Text(when {
+            bw == null -> "Your strength-to-bodyweight ratios use this. Log it once to start."
+            log.size < 2 -> "Log it again over the next weeks and an 8-week line appears here."
+            else -> "8 weeks · strength ratios update when you log"
+        }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
     }
 }
 

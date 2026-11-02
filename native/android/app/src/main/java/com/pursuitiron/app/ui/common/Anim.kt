@@ -29,6 +29,9 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -95,5 +98,25 @@ fun RollingText(text: String, style: TextStyle, color: Color = Color.Unspecified
                 }, label = "tick") { c -> Text(c.toString(), style = style, color = color) }
             }
         }
+    }
+}
+
+/** .hbar: a horizontal bar revealed from its start, without overshooting the value it shows. */
+fun Modifier.growX(delayMs: Int = 0): Modifier = composed {
+    val a = remember { Animatable(if (Motion.reduced) 1f else 0f) }
+    LaunchedEffect(Unit) { if (a.value < 1f) a.animateTo(1f, Motion.data(500, delayMs)) }
+    drawWithContent { clipRect(right = size.width * a.value) { this@drawWithContent.drawContent() } }
+}
+
+/** .prglow: one ring of the colour spreading out and fading, once, when a record appears. */
+fun Modifier.prGlow(color: Color, radius: Dp): Modifier = composed {
+    val a = remember { Animatable(if (Motion.reduced) 1f else 0f) }
+    LaunchedEffect(Unit) { if (a.value < 1f) a.animateTo(1f, tween(1200, 0, Motion.EmphasizedDecelerate)) }
+    drawBehind {
+        val t = a.value; if (t >= 1f) return@drawBehind
+        val spread = 22.dp.toPx() * t
+        drawRoundRect(color.copy(alpha = 0.6f * (1 - t)), topLeft = androidx.compose.ui.geometry.Offset(-spread, -spread),
+            size = androidx.compose.ui.geometry.Size(size.width + 2 * spread, size.height + 2 * spread),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius.toPx() + spread))
     }
 }

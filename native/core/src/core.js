@@ -389,7 +389,8 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
         const kind = pr ? 'pr' : x.protocol.type !== 'straight' ? 'technique' : estimate ? 'estimate'
             : x.category === 'Progression' ? 'up' : x.category === 'Load adjustment' ? 'down' : x.category === 'Programmed targets' ? 'plan' : 'trend';
         return { id: x.id, slot: x.slot, name: x.name, kind, title: pr ? `PR chance · ${x.name}` : x.name,
-            dose: targetsText(x.effective, u), guidance: `${targetsText(x.effective, u)} · ${tech || why}` };
+            // With no load to show yet the reason already says to choose one; leading with "Choose load × 8" repeated it.
+            dose: targetsText(x.effective, u), guidance: (x.effective || []).every((t) => t?.weight === '' || t?.weight == null) ? (tech || why) : `${targetsText(x.effective, u)} · ${tech || why}` };
     });
     const changes = r.changes.map((x) => {
         const prev = x.change.previous, prop = x.proposed;
@@ -417,7 +418,7 @@ export function planChoice({ programId, dayId, weekIndex, exerciseId, slot = nul
 export function home() {
     const nx = upNext();
     const H = history();
-    const weekStart = (() => { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); return d.getTime() - day * 86400000; })();
+    const weekStart = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); })();
     const thisWeek = H.filter((h) => Number(h.date) >= weekStart);
     let est = null; if (nx) { try { est = E.estimateMinutes(nx.program, nx.day, nx.weekIndex); } catch { est = null; } }
     const rd = readiness();
@@ -482,7 +483,8 @@ function todayDesign(nx, H, weekStart) {
     const sched = nx?.program.schedule || {};
     const today0 = new Date(); today0.setHours(0, 0, 0, 0);
     const strip = Array.from({ length: 7 }, (_, i) => {
-        const t = weekStart + i * DAY, d = new Date(t), end = t + DAY;
+        // Calendar days, not 24-hour steps: a week that crosses a clock change keeps every day on its own midnight.
+        const d = new Date(weekStart); d.setDate(d.getDate() + i); const t = d.getTime(); const e1 = new Date(t); e1.setDate(e1.getDate() + 1); const end = e1.getTime();
         const done = H.some((h) => Number(h.date) >= t && Number(h.date) < end);
         return { dow: 'MTWTFSS'[i], date: d.getDate(), done, today: t === today0.getTime(), past: t < today0.getTime(), scheduled: !!sched[d.getDay()] };
     });
@@ -657,7 +659,7 @@ export function liftDetail({ id }) {
     let lvl = null; try { lvl = t && bw > 0 && sex ? E.strengthLevel(id, t.prBest, t.unit, bw, u, sex, a) : null; } catch { lvl = null; }
     const conv = (v, from) => (from && from !== u ? (u === 'lb' ? v * 2.20462 : v / 2.20462) : v);
     return {
-        id, name: ex.name, part: ex.part, partLabel: E.PART_LABEL[ex.part] || ex.part, unit: u, goal: Number(S.store.goals?.[id]) || null,
+        id, name: ex.name, part: ex.part, partLabel: E.PART_LABEL[ex.part] || ex.part, pattern: ex.pattern || '', unit: u, goal: Number(S.store.goals?.[id]) || null,
         sessions: t ? t.sessionsCount : 0,
         best: t ? { e1rm: Math.round(conv(t.prBest, t.unit) * 10) / 10, topWeight: Math.round(conv(t.prTopW, t.unit) * 10) / 10 } : null,
         delta: t ? Math.round(conv(t.delta, t.unit) * 10) / 10 : 0,
@@ -1071,7 +1073,7 @@ return setView(s, i, ex, best, isW ? E.previousWorkoutSet(lastPerf[e.id], workId
                 text: E.startingEstimateText(estSet.target.estimate, u) } : null;
             return { ei, id: e.id, name: ex.name || e.id, short: shortName(ex.name || e.id), line: (() => { try { return liftLine(e, ex); } catch { return ''; } })(), bar, cur, loadTag: loadTag(ex), estimate,
                 plates: (() => { try { return plateRef ? platesFor(parseFloat(plateRef.weight), bar, u) : null; } catch { return null; } })(),
-                platesFor: plateRef ? e.sets.indexOf(plateRef) : -1, addRules: addRules(e, ex, style), part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
+                platesFor: plateRef ? e.sets.indexOf(plateRef) : -1, addRules: addRules(e, ex, style), part: ex.part || '', partLabel: E.PART_LABEL?.[ex.part] || ex.part || '', pattern: ex.pattern || '', equip: ex.equip || null, slot: e.slot, primary: e.slot === ctx.day.primaryIndex,
                 superset: !!e.superset, supplemental: ctx.program.overrides?.[`${ctx.day.id}:${e.slot}`]?.supplemental ? (SUPP_LABEL[ctx.program.overrides[`${ctx.day.id}:${e.slot}`].supplemental] || 'Supplemental') : null, note: e.note || '', lastNote: ctx.P[e.id]?.note || '', lastNoteDate: ctx.P[e.id]?.note && ctx.P[e.id]?.date ? (typeof ctx.P[e.id].date === 'number' ? ctx.P[e.id].date : Date.parse(ctx.P[e.id].date) || null) : null, pinNote: S.store.exNotes?.[e.id] || '', injuryAdjusted: e.injuryAdjusted || null, freestyle: !!e.freestyle,
                 done: work(e).length > 0 && work(e).every((s) => s.done), sets,
                 hasWarm: e.sets.some((s) => s.warm), hasDrop: e.sets.some((s) => s.sub && s.kind === 'drop'), hasMyo: e.sets.some((s) => s.sub && s.kind === 'myo'),
@@ -1704,9 +1706,10 @@ const SORE_LABEL = { sore: 'Too much', ontime: 'About right', fresh: 'Too easy' 
 function isoWeek(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); const w1 = new Date(d.getFullYear(), 0, 4); return 1 + Math.round(((d - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7); }
 export function progressCharts() {
     const H = history(), u = unit(), DAY = 86400000;
-    const ws = (() => { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); return d.getTime() - day * DAY; })();
+    const ws = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); })();
     const weeks = Array.from({ length: 8 }, (_, k) => {
-        const start = ws - (7 - k) * 7 * DAY, end = start + 7 * DAY, hs = H.filter((h) => Number(h.date) >= start && Number(h.date) < end);
+        const sd = new Date(ws); sd.setDate(sd.getDate() - (7 - k) * 7); const ed = new Date(sd); ed.setDate(ed.getDate() + 7);
+        const start = sd.getTime(), end = ed.getTime(), hs = H.filter((h) => Number(h.date) >= start && Number(h.date) < end);
         let vol = 0; hs.forEach((h) => { try { vol += E.historyVolumeIn(h, u) || 0; } catch { /* unreadable entry */ } });
         return { label: 'W' + isoWeek(start), start, now: k === 7, volume: Math.round(vol), sessions: hs.length };
     });
@@ -1775,7 +1778,9 @@ export function profileBoard() {
     const prsBlock = Number.isFinite(blockStart) ? trends.filter((t) => { const r = recOf(t, 'e1rm'); return r && Number(r.x.date) >= blockStart && (t.sessions || []).length > 1; }).length : prs30;
     // The design's training calendar: twelve Monday-first weeks ending this week, each day shaded by working sets.
     const today0 = new Date(); today0.setHours(0, 0, 0, 0);
-    const wk0 = today0.getTime() - ((today0.getDay() + 6) % 7) * DAY - 11 * 7 * DAY;
+    // Step back by calendar days, not 24-hour blocks: across a daylight-saving change the fixed-ms version landed an
+    // hour off midnight, so no day matched its sessions (or today) for the twelve weeks after the clocks moved.
+    const wk0d = new Date(today0); wk0d.setDate(wk0d.getDate() - ((today0.getDay() + 6) % 7) - 11 * 7); const wk0 = wk0d.getTime();
     const dayKey = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
     const perDay = {};
     H.forEach((h) => { const k = dayKey(Number(h.date)); if (!(k >= wk0)) return;
@@ -1980,7 +1985,7 @@ export function library({ q = '', part = null, equip = null } = {}) {
     (S.live?.data || []).forEach((e) => { if (e.sets.some((x) => x.done)) recent.add(e.id); });
     const goals = S.store.goals || {};
     return EXERCISES.filter((x) => (!part || x.part === part || groupOf(x) === part) && (!equip || libEquipOf(x) === equip) && (!needle || x.name.toLowerCase().includes(needle)))
-        .slice(0, 400).map((x) => ({ id: x.id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, equip: x.equip, type: x.type,
+        .slice(0, 400).map((x) => ({ id: x.id, name: x.name, part: x.part, partLabel: E.PART_LABEL?.[x.part] || x.part, pattern: x.pattern || '', equip: x.equip, type: x.type,
             equipLabel: { barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine', kettlebell: 'Kettlebell', band: 'Bands', bodyweight: 'Bodyweight' }[libEquipOf(x)] || EQUIP_LABEL[(x.equip || [])[0]] || 'Other',
             group: groupOf(x), banned: banned.has(x.id), today: today.has(x.id), custom: !!x.custom, recent: recent.has(x.id), goal: Number(goals[x.id]) > 0 }));
 }

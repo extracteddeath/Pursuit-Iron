@@ -65,12 +65,16 @@ fun rememberProgressCharts(vm: AppViewModel): JSONObject? {
 /** Volume / Sessions for the last eight weeks: the headline is this week against the one before. */
 @Composable
 fun VolumeChartCard(g: JSONObject) {
-    val weeks = g.list("weeks"); if (weeks.size < 2) return
+    val all = g.list("weeks"); if (all.size < 2) return
+    // Weeks before the first workout are not "zero weeks", they are before you started: the chart opens at the first
+    // logged week (at least four bars, so one week of history is not a single full-width slab).
+    val first = all.indexOfFirst { it.i("sessions") > 0 || it.i("volume") > 0 }.let { if (it < 0) all.size - 1 else it }
+    val weeks = all.drop(minOf(first, (all.size - 4).coerceAtLeast(0)))
     val cs = MaterialTheme.colorScheme
     var mode by remember { mutableStateOf("volume") }
     val u = g.s("unit", "kg")
     val v = { w: JSONObject -> if (mode == "volume") w.i("volume") / 1000.0 else w.i("sessions").toDouble() }
-    val now = weeks.last(); val prev = weeks[weeks.size - 2]
+    val now = weeks.last(); val prev = all[all.size - 2]
     val max = weeks.maxOf { v(it) }.takeIf { it > 0 } ?: 1.0
     val unitLabel = if (mode == "volume") volUnit(u) else if (now.i("sessions") == 1) "session" else "sessions"
     PiCard(radius = 28.dp) {
@@ -79,7 +83,8 @@ fun VolumeChartCard(g: JSONObject) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(fmt1(v(now)) + " " + unitLabel, style = MaterialTheme.typography.displaySmall)
             val dl = v(now) - v(prev)
-            if (v(prev) > 0 || v(now) > 0) Surface(color = if (dl >= 0) cs.primaryContainer else cs.tertiaryContainer, shape = CircleShape) {
+            // Nothing to compare against before the first logged week: "+0.7 vs last week" against zero says nothing.
+            if (v(prev) > 0) Surface(color = if (dl >= 0) cs.primaryContainer else cs.tertiaryContainer, shape = CircleShape) {
                 Text((if (dl >= 0) "+" else "−") + fmt1(kotlin.math.abs(dl)) + " vs last week", style = MaterialTheme.typography.labelMedium,
                     color = if (dl >= 0) cs.onPrimaryContainer else cs.onTertiaryContainer, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
             }
@@ -87,8 +92,10 @@ fun VolumeChartCard(g: JSONObject) {
         Row(Modifier.fillMaxWidth().height(140.dp).semantics(mergeDescendants = true) {
             contentDescription = (if (mode == "volume") "Weekly volume in ${volUnit(u)}: " else "Workouts per week: ") + weeks.joinToString(", ") { "${it.s("label")} ${fmt1(v(it))}" }
         }, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
-            weeks.forEach { w ->
-                val h by animateDpAsState((8 + 104 * (v(w) / max)).dp, Motion.data(), label = "bar")
+            val start = all.size - weeks.size
+            weeks.forEachIndexed { k, w ->
+                val before = start + k < first
+                val h by animateDpAsState(if (before) 0.dp else (8 + 104 * (v(w) / max)).dp, Motion.data(), label = "bar")
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.fillMaxWidth().height(h).clip(RoundedCornerShape(if (w.b("now")) 12.dp else 999.dp)).background(if (w.b("now")) cs.primary else cs.primaryContainer))
                     Text(w.s("label"), style = MaterialTheme.typography.labelSmall, color = if (w.b("now")) cs.onSurface else cs.onSurfaceVariant)

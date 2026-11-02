@@ -1,5 +1,6 @@
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.prGlow
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -51,6 +52,7 @@ import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -117,7 +119,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                 val u = x.s("unit", "kg")
                 val ids = (0 until (x.optJSONArray("routineIds")?.length() ?: 0)).map { x.getJSONArray("routineIds").optString(it) }
                 val prs = x.list("prs")
-                if (prs.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(20.dp)).background(cs.primary).padding(horizontal = 16.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (prs.isNotEmpty()) Column(Modifier.prGlow(cs.primary, 20.dp).clip(RoundedCornerShape(20.dp)).background(cs.primary).padding(horizontal = 16.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${prs.size} new e1RM ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), color = cs.onPrimary)
                     Text(prs.joinToString(" · ") { it.s("name") }, style = MaterialTheme.typography.labelMedium, color = cs.onPrimary.copy(alpha = 0.9f), textAlign = TextAlign.Center)
                 }
@@ -252,14 +254,22 @@ private fun FinishHero() {
     LaunchedEffect(Unit) { pop.animateTo(1f, com.pursuitiron.app.ui.theme.Motion.spatialFast()) }
     LaunchedEffect(Unit) { draw.animateTo(1f, com.pursuitiron.app.ui.theme.Motion.enter(400, 150)) }
     LaunchedEffect(Unit) { burst.animateTo(1f, com.pursuitiron.app.ui.theme.Motion.enter(900)) }
-    val colors = listOf(cs.primary, cs.tertiary, cs.secondary, cs.onPrimaryContainer)
+    val colors = listOf(cs.primary, cs.tertiaryContainer, cs.onPrimaryContainer, cs.secondaryContainer)
     Box(Modifier.size(130.dp).semantics { contentDescription = "Workout done" }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(130.dp)) {
+            // The prototype's burst: sixteen pieces in four shapes and sizes fly out from the centre, growing and
+            // spinning, and fade over the last 30%.
             val t = burst.value
             if (t < 1f) for (k in 0 until 16) {
-                val a = Math.toRadians(k * 22.5 + 8).toFloat()
-                val r = size.minDimension / 2 * (0.4f + 0.9f * t)
-                drawCircle(colors[k % colors.size].copy(alpha = 1f - t), (if (k % 2 == 0) 5f else 3.5f).dp.toPx(), Offset(center.x + cos(a) * r, center.y + sin(a) * r))
+                val a = (k / 16.0 * Math.PI * 2 + if (k % 2 == 1) 0.2 else 0.0).toFloat()
+                val d = (105 + (k % 3) * 30).dp.toPx(); val sz = (10 + (k % 4) * 4).dp.toPx() * t
+                val c = colors[k % colors.size].copy(alpha = if (t < 0.7f) 1f else ((1f - t) / 0.3f).coerceIn(0f, 1f))
+                val p = Offset(center.x + cos(a) * d * t, center.y + sin(a) * d * t)
+                withTransform({ rotate((if (k % 2 == 1) 260f else -220f) * t, p) }) {
+                    val r = when (k % 4) { 0 -> sz / 2; 1 -> 4.dp.toPx() * t; 2 -> sz * 0.4f; else -> sz / 2 }
+                    val h = if (k % 4 == 3) sz * 0.6f else sz
+                    drawRoundRect(c, Offset(p.x - sz / 2, p.y - h / 2), androidx.compose.ui.geometry.Size(sz, h), androidx.compose.ui.geometry.CornerRadius(r))
+                }
             }
         }
         Box(Modifier.fillMaxSize().graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = ((pop.value - 0.6f) / 0.4f).coerceIn(0f, 1f) }) {

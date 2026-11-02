@@ -448,7 +448,7 @@ fun SessionNoteSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
 
 /* The workout's overflow: things about the session rather than one lift. */
 @Composable
-fun SessionMenu(vm: AppViewModel, s: JSONObject, onNote: () -> Unit, onAdd: () -> Unit, onSuperset: () -> Unit, onClose: () -> Unit) {
+fun SessionMenu(vm: AppViewModel, s: JSONObject, onNote: () -> Unit, onAdd: () -> Unit, onSuperset: () -> Unit, onTime: () -> Unit, onDiscard: () -> Unit, onClose: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp)) {
@@ -457,7 +457,12 @@ fun SessionMenu(vm: AppViewModel, s: JSONObject, onNote: () -> Unit, onAdd: () -
                 MenuRow(PiIcons.Plus, "Add a lift", "Extra work for today", cs.primaryContainer, cs.onPrimaryContainer, onClick = onAdd)
                 MenuRow(PiIcons.List, "Workout note", s.s("sessionNote").ifBlank { "Anything about today" }, cs.secondaryContainer, cs.onSecondaryContainer, onClick = onNote)
                 if (s.list("exercises").size > 1) MenuRow(PiIcons.Swap, "Superset", "Pair the current lift with another", cs.secondaryContainer, cs.onSecondaryContainer, onClick = onSuperset)
+                MenuRow(PiIcons.Timer, "Short on time?", "Fit the rest of the session to the time you have", cs.secondaryContainer, cs.onSecondaryContainer, onClick = onTime)
                 MenuRow(PiIcons.Timer, "Reset workout timer", "Start the clock from now", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("resetTimer"); vm.toast("Timer reset"); onClose() }
+            }
+            Spacer(Modifier.height(12.dp))
+            Column(Modifier.clip(RoundedCornerShape(20.dp))) {
+                MenuRow(PiIcons.Trash, "Discard workout", "Nothing logged today is kept", cs.errorContainer, cs.onErrorContainer, onClick = onDiscard)
             }
         }
     }

@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.growX
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,7 +64,7 @@ fun LandmarksCard(d: JSONObject) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.surfaceContainerLow).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column {
             Text("Weekly sets vs landmarks", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.semantics { heading() })
-            Text("This week: solid bar is done so far, faint bar is the plan. The band runs from MEV (least that grows) to MRV (most you recover from).",
+            Text("This week: solid bar is done so far, faint bar is the plan. The band runs from MEV (least that grows) to MRV (most you recover from). A muscle that only helps on a lift gets part of a set, so counts can be fractional.",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
         }
         // Fifteen bars every visit buried the few that matter: muscles off their range lead, then the rest behind Show all.
@@ -87,8 +88,9 @@ fun LandmarksCard(d: JSONObject) {
                 BoxWithConstraints(Modifier.fillMaxWidth().height(14.dp).clip(CircleShape).background(cs.surfaceContainerHighest)) {
                     val w = maxWidth
                     Box(Modifier.offset(x = w * pos(mev)).width(w * (pos(mrv) - pos(mev))).fillMaxHeight().clip(CircleShape).background(cs.primaryContainer))
-                    Box(Modifier.padding(3.dp).width(maxOf(8.dp, w * pos(planned) - 6.dp)).fillMaxHeight().clip(CircleShape).background(col.copy(alpha = 0.28f)))
-                    Box(Modifier.padding(3.dp).width(maxOf(8.dp, w * fill - 6.dp)).fillMaxHeight().clip(CircleShape).background(col))
+                    // .hbar: the plan and the done bars grow in from the left.
+                    Box(Modifier.padding(3.dp).width(maxOf(8.dp, w * pos(planned) - 6.dp)).fillMaxHeight().growX().clip(CircleShape).background(col.copy(alpha = 0.28f)))
+                    Box(Modifier.padding(3.dp).width(maxOf(8.dp, w * fill - 6.dp)).fillMaxHeight().growX(80).clip(CircleShape).background(col))
                     Box(Modifier.offset(x = w * pos(mev)).width(2.dp).fillMaxHeight().background(cs.onSurface.copy(alpha = 0.5f)))
                     Box(Modifier.offset(x = w * pos(mrv) - 2.dp).width(2.dp).fillMaxHeight().background(cs.onSurface.copy(alpha = 0.5f)))
                 }

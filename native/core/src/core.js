@@ -1939,7 +1939,12 @@ function volumeZoneOf(part, sets, program) {
     const mav = E.mavFor(part, program);
     if (sets < mev) return { label: 'below MEV', sub: 'under the volume that reliably drives growth', tone: 'muted' };
     if (sets <= mav) return { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' };
-    if (sets <= mrv + E.MRV_GRAIN) return { label: 'above MAV', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
+    /* An engine-built program's MAV is its own planned target for this session length (lats: 4 of a 16.8 MRV on a
+       40-minute plan), not the population's MAV, so 5 sets read "above MAV — more than most need", which said the
+       wrong thing. Past its target it's "above target". */
+    if (sets <= mrv + E.MRV_GRAIN) return program?.engineSource === 'pursuit-next'
+        ? { label: 'above target', sub: 'a little past what this program aims for; fine while you recover from it', tone: 'good' }
+        : { label: 'above MAV', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
     return { label: 'over MRV', sub: 'past what this app budgets to recover from', tone: 'warn' };
 }
 function partZoneOf(part, sets, sub, program) {

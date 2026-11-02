@@ -156,7 +156,7 @@ fun RecapCard(vm: AppViewModel, h: JSONObject) {
     val title = if (planned > 0 && count <= planned) "$count of $planned sessions" + (if (count == planned) " — a full week" else "")
         else if (planned > 0) "${plural(count, "session")} — more than the $planned planned" else plural(count, "session")
     val mins = r.i("minutes")
-    val stats = listOf("${r.i("sets")}" to "sets", "${fmt1(r.d("vol") / 1000.0)} ${volUnit(u)}" to "volume", "${r.i("prs")}" to if (r.i("prs") == 1) "PR" else "PRs", "${mins / 60}:${(mins % 60).toString().padStart(2, '0')}" to "hours")
+    val stats = listOf("${r.i("sets")}" to "sets", "${fmt1(r.d("vol") / 1000.0)} ${volUnit(u)}" to "volume", "${r.i("prs")}" to if (r.i("prs") == 1) "PR" else "PRs", com.pursuitiron.app.ui.common.minutesLabel(mins) to "trained")
     val line = buildString {
         r.o("best")?.let { b -> append("Best: ${b.s("name")} ${fmtNum(b.d("w"))} $u × ${b.i("r")}" + (if (!b.isNull("rir")) " @${fmtNum(b.d("rir"))}" else "") + ", e1RM ${fmtNum(b.d("e1rm"))} $u.") }
         if (r.d("prevVol") > 0) { val pct = Math.round((r.d("vol") / r.d("prevVol") - 1) * 100); append((if (isNotEmpty()) " " else "") + "Volume ${if (pct >= 0) "+" else "−"}${kotlin.math.abs(pct)}% on the week before.") }

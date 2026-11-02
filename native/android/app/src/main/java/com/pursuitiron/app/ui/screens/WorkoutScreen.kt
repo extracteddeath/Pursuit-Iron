@@ -3,6 +3,7 @@
 package com.pursuitiron.app.ui.screens
 
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.wrapContentWidth
 import com.pursuitiron.app.ui.common.chipIn
 import com.pursuitiron.app.ui.common.popIn

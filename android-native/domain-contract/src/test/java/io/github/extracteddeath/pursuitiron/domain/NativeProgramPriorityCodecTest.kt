@@ -43,7 +43,7 @@ class NativeProgramPriorityCodecTest {
                 .put("days",JSONArray().put(3).put(4)))
         }
         val muscles=JSONArray()
-        listOf("chest","lats","upper_back","shoulders","biceps","triceps",
+        listOf("chest","back","shoulders","biceps","triceps",
             "quads","hamstrings","glutes","calves","abs","traps","forearms",
             "adductors","abductors","lower_back","neck").forEach { id ->
             muscles.put(JSONObject().put("id",id).put("label",id))
@@ -55,7 +55,7 @@ class NativeProgramPriorityCodecTest {
             .put("equipment",JSONArray().put("barbell")).put("muscles",muscles)
         val result=checkNotNull(NativeProgramSetupCodec.decodeOptions(
             response(valid),"muscle-options"))
-        assertEquals(17,result.muscles.size)
+        assertEquals(16,result.muscles.size)
         assertEquals("Chest",result.muscles.first().label.replaceFirstChar { it.uppercase() })
         assertEquals("neck",result.muscles.last().id)
         assertTrue(runCatching {

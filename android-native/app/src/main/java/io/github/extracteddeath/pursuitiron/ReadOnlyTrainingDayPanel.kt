@@ -3,14 +3,21 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDayView
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 
 /**
  * Real program structure, but intentionally NOT a generated workout. Exercise
@@ -20,13 +27,27 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDayView
 @Composable
 internal fun ReadOnlyTrainingDayPanel(
     day: ReadOnlyTrainingDayView,
-    returnToPlan: () -> Unit
+    returnToPlan: () -> Unit,
+    openWorkout: () -> Unit = {},
+    reference: ReadOnlyProgramReference? = null,
+    lookupNames: suspend (ReadOnlyProgramReference,List<String>)->Map<String,String>? = {_,_->null}
 ) {
-    PageHeading("VERIFIED PLAN STRUCTURE", "Your selected day",
-        "Program and exercise identity only; this is not a prescribed or loggable workout.")
+    PageHeading("YOUR PROGRAM", "Training day details",
+        "Review your saved exercises. The live workout starts from Train.")
     if (day is ReadOnlyTrainingDayView.Structure) {
+        var names by remember(reference,day.exerciseIds) {
+            mutableStateOf<Map<String,String>>(emptyMap())
+        }
+        LaunchedEffect(reference,day.exerciseIds) {
+            names=if(reference==null || day.exerciseIds.isEmpty()) emptyMap()
+            else try {
+                lookupNames(reference,day.exerciseIds.distinct()).orEmpty()
+            } catch(cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch(_: Exception) { emptyMap() }
+        }
         PursuitCard(highlighted = true) {
-            PreviewLabel("CURRENT PROGRAM · READ ONLY", emphasis = true)
+            PreviewLabel("SAVED TRAINING DAY", emphasis = true)
             Text(day.programName, style = MaterialTheme.typography.titleMedium)
             Text(day.dayLabel, style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold)
@@ -34,19 +55,22 @@ internal fun ReadOnlyTrainingDayPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        SectionLabel("Saved movement IDs", "Not prescriptions")
+        SectionLabel("Exercises", "${day.exerciseIds.size} movements")
         day.exerciseIds.forEachIndexed { index, exerciseId ->
             PursuitCard {
                 ReadOnlyMovementIdentityRow(
                     ordinal = index,
-                    canonicalExerciseId = exerciseId
+                    canonicalExerciseId = exerciseId,
+                    displayName = names[exerciseId]
                 )
             }
         }
-        PursuitCard {
-            Text("Workout execution is not connected",
-                style = MaterialTheme.typography.titleMedium)
-            Text("The canonical engine must approve live sets, loads, RIR, rest and session recovery before a workout can start.")
+        Text("This is the saved day structure, not a session prescription. " +
+            "Train opens the next scheduled workout with engine-issued sets and targets.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(onClick=openWorkout,modifier=Modifier.fillMaxWidth()) {
+            Text("Go to Train")
         }
     } else {
         PursuitCard {
@@ -56,6 +80,6 @@ internal fun ReadOnlyTrainingDayPanel(
         }
     }
     FilledTonalButton(onClick = returnToPlan, modifier = Modifier.fillMaxWidth()) {
-        Text("Return to Plan")
+        Text("Back to program")
     }
 }

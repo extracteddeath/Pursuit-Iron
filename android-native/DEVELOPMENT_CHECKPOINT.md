@@ -1518,3 +1518,17 @@ Android-device success, completion acceptance, engine rewrite or production
 release. Normal source CI remains no-APK and the instrumentation-device
 workflow remains disabled. The existing web and other native branches are
 untouched.
+
+## 2026-11-02 — Post-device-feedback usability pass and APK re-freeze
+
+The first native tester APK built successfully, but it remains an early
+technical preview. The next APK is held until onboarding, actual set logging,
+completion, resume, history and coherent Material 3 Expressive interactions
+meet a real acceptance pass. The dedicated preview workflow is disabled
+again. The current source-only pass moves day detail into Plan; Train always
+shows actual logging for a saved program. Authenticated day previews may
+fetch canonical exercise names. Saved-user chrome no longer displays the
+prototype capability catalog or preview banner; backup tools are collapsed
+under a real user action, and the current workout defaults to one actionable
+set while retaining Show all. No training formulas, history, production web
+or other developer's Android branch are modified.

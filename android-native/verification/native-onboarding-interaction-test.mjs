@@ -580,3 +580,6 @@ assert.ok(activity.includes('onSaveExerciseNote=runtime::saveExerciseNote') &&
   pinnedDomain.includes('verifyOrigin(') && pinnedDomain.includes('verifyPublication(') &&
   !pinnedUi.includes('commitAtomically') && !pinnedDomain.includes('prescribeSets('),
   'Pinned exercise facts must use verified contexts, shared edit controls, durable independent edits and exact acknowledgements in both workout modes');
+
+assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(true) }'),
+  'A real workout starts on the next actionable set while preserving the Show all mode');

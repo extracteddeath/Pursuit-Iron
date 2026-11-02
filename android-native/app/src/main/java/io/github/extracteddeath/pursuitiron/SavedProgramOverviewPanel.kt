@@ -17,9 +17,9 @@ internal fun SavedProgramOverviewPanel(
     onPreviewDay: (String) -> Unit
 ) {
     val program = presentation.program
-    SectionLabel("Saved program", "Read-only structure")
+    SectionLabel("Your program", "Training structure")
     PursuitCard(highlighted = true) {
-        PreviewLabel("SAVED PROGRAM · READ ONLY", emphasis = true)
+        PreviewLabel("SAVED PROGRAM", emphasis = true)
         Text(program.name, style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold)
         val goal = program.goal.replaceFirstChar { it.uppercase() }
@@ -29,8 +29,8 @@ internal fun SavedProgramOverviewPanel(
             style = MaterialTheme.typography.bodyMedium
         )
         Text(
-            "Training structure only. Weights, prescribed sets, RIR and changes " +
-                "require the certified workout engine and current history.",
+            "This is your weekly exercise structure. Open Train for issued workout " +
+                "sets and targets; edit the plan to change exercise order.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -43,7 +43,7 @@ internal fun SavedProgramOverviewPanel(
                 exerciseCount = day.exerciseIds.size
             )
             androidx.compose.material3.TextButton(onClick = { onPreviewDay(day.id) }) {
-                Text("View day in Train")
+                Text("View exercises")
             }
         }
     }

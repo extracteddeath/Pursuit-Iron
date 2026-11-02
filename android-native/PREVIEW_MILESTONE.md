@@ -1,13 +1,14 @@
 # Native preview build milestones
 
-**ONBOARDING-TO-TRAIN DEBUG APK MILESTONE — authorized (2026-11-02).**
-The user now permits a tester APK once real onboarding, program save, and
-workout start are connected. The existing source and Kotlin/Compose gates
-have passed. A one-off branch-isolated workflow will build the verified
-debug APK with the engine assets. This is not device acceptance, training
-correctness certification or production-release approval. Normal source
-commits do not trigger APKs; instrumentation-device builds remain disabled.
-See `android-native/verification/no-apk-before-end-to-end-test.mjs`.
+**APK BUILD FREEZE — active.** Historical milestones below are retained as
+development records, not triggers. Neither editing this file nor manually
+dispatching the workflow can create an APK until the same native revision
+passes real onboarding -> program generation -> personalized workout ->
+transactional logging -> interruption/resume -> completed session ->
+correct history/progression acceptance. See
+`android-native/verification/no-apk-before-end-to-end-test.mjs`.
+The preview and device workflows are explicitly disabled, and routine
+sandbox CI compiles tests without assembling instrumentation APKs.
 
 Edit this file **only when the native preview has a significant user-facing change or a toolchain validation milestone**. Routine engine-contract and Compose UI commits should not create a new APK.
 
@@ -63,12 +64,14 @@ No native workout prescriptions, history restoration, program adoption,
 live data synchronization or production web changes. Future normal source
 commits should not trigger another preview APK.
 
-## M4 — User-requested onboarding-to-Train tester APK
+## M4 — historical onboarding-to-Train proof and the usability re-freeze
 
-On the isolated Compose branch, first-run onboarding saves a real generated
-program and opens a canonical-issued workout through the native Train view.
-The milestone builds the separate `.preview` application, packages verified
-canonical JS source/manifest assets, and runs the source bridge and native
-interaction checks before assembly. It does **not** claim hardware proof,
-completed workouts, engine correctness or production readiness. APK builds
-are confined to this dedicated workflow and are not run for ordinary changes.
+The user authorized one installable debug test once onboarding, canonical
+program save and real workout start were wired. GitHub Actions successfully
+built that APK from `9c4df320`. Initial device feedback confirmed the
+native UI is still a technical preview and not a usable release.
+
+**APK FREEZE — active again.** The next build requires a coherent real
+onboarding -> workout logging -> finish -> history/resume journey, plus
+material improvement to actual native UX. Ordinary source checks do not
+assemble APKs; the dedicated preview and device jobs are disabled.

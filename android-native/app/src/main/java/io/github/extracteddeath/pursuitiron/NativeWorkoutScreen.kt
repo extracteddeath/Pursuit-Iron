@@ -64,7 +64,8 @@ internal fun NativeWorkoutScreen(
     var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showSkipExercise by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showLast by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
-    var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
+    // A session opens on one actionable set. Show all remains available.
+    var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(true) }
     val lastSetReceiptId=journal.events.lastOrNull()?.intent?.operationId
     // The event observed at first composition is a baseline, not a new set.
     // Keep this saveable through rotation, navigation and ordinary recovery.

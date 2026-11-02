@@ -327,7 +327,8 @@ internal fun ReadOnlyTrainingDayRow(
 @Composable
 internal fun ReadOnlyMovementIdentityRow(
     ordinal: Int,
-    canonicalExerciseId: String
+    canonicalExerciseId: String,
+    displayName: String? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -348,14 +349,14 @@ internal fun ReadOnlyMovementIdentityRow(
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                canonicalExerciseId,
+                displayName ?: canonicalExerciseId,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                "Canonical exercise ID · targets not connected",
+                "Saved movement · $canonicalExerciseId",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

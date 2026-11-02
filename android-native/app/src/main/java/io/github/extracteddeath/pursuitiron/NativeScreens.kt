@@ -489,25 +489,30 @@ internal fun PlanScreen(
         // Unconnected Plan remains illustrative and cannot prescribe a workout.
         WorkoutOutlinePanel(outline = null)
     }
-    // Fingerprint-only document chooser never unlocks personal program display.
-    BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading,
-        onPreviewBackupMerge = if (hasSavedProgram) onPreviewBackupMerge else null,
-        onVerifyBackupMerge = if (hasSavedProgram) onVerifyBackupMerge else null,
-        onDiscardBackupReview = onDiscardBackupReview,
-        currentStoreChangeKey = runtimeState?.storeChangeKey ?: 0L)
-    if(runtimeState?.saved!=null)NativeBackupExportPanel(runtimeState,onExportBackup,onResetBackupExport)
-    SectionLabel("Plan essentials")
-    PursuitCard {
-        Text("Equipment and exercise choice", style = MaterialTheme.typography.titleMedium)
-        Text("Gym inventory, increments, bar weights, allowed movements, focus/reduced muscles and exercise variants stay first-class.")
-    }
-    PursuitCard {
-        Text("Adaptive cycles", style = MaterialTheme.typography.titleMedium)
-        Text("Hypertrophy → Strength → Peak, plus custom program support and user-approved split/exercise adaptation.")
-    }
-    PursuitCard {
-        Text("Schedule and volume", style = MaterialTheme.typography.titleMedium)
-        Text("Days, hard/long sessions, MEV/MAV/MRV guardrails, session length and safe exercise ordering are preserved as behavior.")
+    // Backup is a real optional action, not the primary planning surface.
+    // Its independent canonical checker and document pickers are unchanged.
+    if(currentPlan is ReadOnlyProgramPresentation.Structure && runtimeState?.saved!=null) {
+        var showBackupTools by rememberSaveable(currentPlan.program.reference) {
+            mutableStateOf(false)
+        }
+        PursuitCard {
+            Text("Your training data",style=MaterialTheme.typography.titleMedium)
+            Text("Export a backup or review an existing copy when you need it.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick={showBackupTools=!showBackupTools},
+                modifier=Modifier.fillMaxWidth()) {
+                Text(if(showBackupTools)"Hide backup tools" else "Backup and restore")
+            }
+        }
+        if(showBackupTools) {
+            BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading,
+                onPreviewBackupMerge = if (hasSavedProgram) onPreviewBackupMerge else null,
+                onVerifyBackupMerge = if (hasSavedProgram) onVerifyBackupMerge else null,
+                onDiscardBackupReview = onDiscardBackupReview,
+                currentStoreChangeKey = runtimeState?.storeChangeKey ?: 0L)
+            NativeBackupExportPanel(runtimeState,onExportBackup,onResetBackupExport)
+        }
     }
 }
 

@@ -144,20 +144,16 @@ internal fun NativePreviewApp(
     // Program/day navigation intent is transient, never saved or interpreted
     // as a workout session, set log or persistence permission.
     var selectedTrainingDay by remember { mutableStateOf<ReadOnlyTrainingDaySelection?>(null) }
-    // Changing destinations clears any previously approved personal Plan view.
+    // The verified program stays on the Plan tab; Train is a real workout.
     val currentPlan = rememberNativeCurrentPlanPresentation(
         selectedProgramId = if (section == NativeDestination.PLAN.ordinal)
-            activeProgramId
-        else if (section == NativeDestination.TRAIN.ordinal &&
-            selectedTrainingDay?.reference?.programId == activeProgramId)
             activeProgramId else null,
         source = currentPlanSource,
         storeChangeKey = canonicalStoreChangeKey
     )
     // Crossfade retains the outgoing destination temporarily. Never carry its
     // personal Plan structure beyond the selected destination.
-    val visiblePlan = if (section == NativeDestination.PLAN.ordinal ||
-        (section == NativeDestination.TRAIN.ordinal && selectedTrainingDay != null))
+    val visiblePlan = if (section == NativeDestination.PLAN.ordinal)
         currentPlan else ReadOnlyProgramPresentation.Unavailable
 
     BoxWithConstraints {
@@ -169,13 +165,13 @@ internal fun NativePreviewApp(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Pursuit Iron", style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold)
-                            Text("NATIVE EXPERIENCE PREVIEW",
+                            if(onboarding?.saved==null) Text("NATIVE EXPERIENCE PREVIEW",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                     actions = {
-                        IconButton(onClick = { sheet = 2 }) {
+                        if(onboarding?.saved==null) IconButton(onClick = { sheet = 2 }) {
                             Icon(Icons.Outlined.Apps, contentDescription = "Explore retained features")
                         }
                     }
@@ -221,7 +217,10 @@ internal fun NativePreviewApp(
                         val scrollContext=if(current==NativeDestination.INSIGHTS.ordinal)
                             onboarding?.history?.historyId?.let { "workout:$it" }
                                 ?: onboarding?.historyCalendarQuery?.let { "history-calendar-$it" }
-                                ?: "history-page-${onboarding?.historyFilter}-${onboarding?.historyPage?.offset ?: 0}" else "destination"
+                                ?: "history-page-${onboarding?.historyFilter}-${onboarding?.historyPage?.offset ?: 0}"
+                            else if(current==NativeDestination.PLAN.ordinal && selectedTrainingDay!=null)
+                                "plan-day-${selectedTrainingDay?.dayId}-${selectedTrainingDay?.reference?.snapshotSha256}"
+                            else "destination"
                         val pageScroll=key(scrollContext) { rememberScrollState() }
                         Box(Modifier.fillMaxSize()) {
                         Column(
@@ -242,16 +241,21 @@ internal fun NativePreviewApp(
                                     setupProgram={exploreDemo=false},
                                     previewShorterSession=onPreviewShortSession,
                                     startShortWorkout=onStartShortWorkout)
-                                NativeDestination.TRAIN -> if(onboarding?.saved!=null && selectedTrainingDay==null)
+                                NativeDestination.TRAIN -> if(onboarding?.saved!=null)
                                     NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet,onSkipExercise,onInspectMuscles,onSkipAffectedMuscle,onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote,onInspectEquipmentLoad)
                                 else TrainScreen(
                                     openTools = { sheet = 3 },
-                                    syntheticOutlineReader = syntheticOutlineReader,
-                                    selectedDay = selectedTrainingDay,
-                                    currentPlan = visiblePlan,
-                                    returnToPlan = { selectedTrainingDay = null; section = 2 }
+                                    syntheticOutlineReader = syntheticOutlineReader
                                 )
-                                NativeDestination.PLAN -> PlanScreen(
+                                NativeDestination.PLAN -> if(selectedTrainingDay!=null) {
+                                    ReadOnlyTrainingDayPanel(
+                                        day=ReadOnlyTrainingDayJourney.inspect(visiblePlan,selectedTrainingDay),
+                                        returnToPlan={ selectedTrainingDay=null },
+                                        openWorkout={ selectedTrainingDay=null;section=NativeDestination.TRAIN.ordinal },
+                                        reference=selectedTrainingDay?.reference,
+                                        lookupNames=onLookupProgramExercises
+                                    )
+                                } else PlanScreen(
                                     currentPlan = visiblePlan,
                                     hasSavedProgram=onboarding?.saved!=null,
                                     schemaVerifier = schemaVerifier,
@@ -265,7 +269,6 @@ internal fun NativePreviewApp(
                                     onSaveGymInventory=onSaveGymInventory,
                                     onPreviewDay = { day ->
                                         selectedTrainingDay = day
-                                        section = NativeDestination.TRAIN.ordinal
                                     }
                                 )
                                 NativeDestination.INSIGHTS -> InsightsScreen(onboarding,onCorrectHistory,onReloadHistory,

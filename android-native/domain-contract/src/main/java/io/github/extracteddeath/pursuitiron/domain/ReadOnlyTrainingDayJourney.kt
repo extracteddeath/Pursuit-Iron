@@ -21,8 +21,8 @@ sealed interface ReadOnlyTrainingDayView {
 }
 
 /**
- * The Train tab must re-resolve an exact selected revision against the *current*
- * approved Plan presentation, not copy arbitrary old program data across tabs.
+ * A Plan day drill-down must re-resolve an exact selected revision against the
+ * *current* approved Plan, never copy cached data across tabs.
  * A changed snapshot, program revision or removed day invalidates selection.
  */
 object ReadOnlyTrainingDayJourney {

@@ -136,7 +136,8 @@ assert.ok(currentPlanHost.includes('LocalLifecycleOwner.current') &&
   'Personal Plan structure must be ephemeral and cleared after lifecycle changes');
 assert.ok(shell.includes('UnconnectedCurrentReadOnlyPlanSource') &&
   shell.includes('selectedProgramId = if (section == NativeDestination.PLAN.ordinal)') &&
-  shell.includes('selectedTrainingDay?.reference?.programId == activeProgramId') &&
+  !shell.includes('selectedTrainingDay?.reference?.programId == activeProgramId') &&
+  shell.includes('NativeDestination.PLAN -> if(selectedTrainingDay!=null) {') &&
   shell.includes('storeChangeKey = canonicalStoreChangeKey') &&
   shell.includes('currentPlan = visiblePlan') &&
   shell.includes('else ReadOnlyProgramPresentation.Unavailable'),
@@ -271,7 +272,7 @@ assert.ok(screens.includes('currentPlan: ReadOnlyProgramPresentation = ReadOnlyP
 assert.ok(screens.includes('currentPlan is ReadOnlyProgramPresentation.Structure') &&
   screens.includes('SavedProgramOverviewPanel(currentPlan) { dayId ->'),
   'Native Plan accepts only approved read-only structure');
-assert.ok(shell.includes('NativeDestination.PLAN -> PlanScreen(') &&
+assert.ok(shell.includes('} else PlanScreen(') &&
   shell.includes('schemaVerifierLoading = schemaVerifierLoading'),
   'The installable preview must not supply an unverified personal backup');
 const dayJourney = fs.readFileSync(
@@ -286,13 +287,16 @@ assert.ok(dayJourney.includes('selection.reference != program.reference') &&
   shell.includes('var selectedTrainingDay by remember {') &&
   !shell.includes('rememberSaveable { mutableStateOf<ReadOnlyTrainingDaySelection') &&
   selectedDayUi.includes('ReadOnlyTrainingDayView.Structure') &&
-  selectedDayUi.includes('Workout execution is not connected') &&
+  selectedDayUi.includes('Train opens the next scheduled workout') &&
+  selectedDayUi.includes('lookupNames(reference,day.exerciseIds.distinct())') &&
+  selectedDayUi.includes('Go to Train') &&
+  shell.includes('day=ReadOnlyTrainingDayJourney.inspect(visiblePlan,selectedTrainingDay)') &&
   selectedDayUi.includes('ReadOnlyMovementIdentityRow(') &&
   components.includes('internal fun ReadOnlyMovementIdentityRow(') &&
   !selectedDayUi.includes('exerciseCount = 0') &&
   !selectedDayUi.includes('onCompleteSet') &&
   !selectedDayUi.includes('logSet('),
-  'Read-only Plan to Train journey must require the same approved revision and disable workout logging');
+  'Plan day detail must remain revision-authenticated and separate from the real Train workout');
 assert.ok(savedPlan.includes('presentation: ReadOnlyProgramPresentation.Structure'),
   'Shared saved-program composable must accept only policy-approved structure');
 const sourceContract = fs.readFileSync(
@@ -412,3 +416,12 @@ assert.ok(journalBytes.includes('AtomicFile(') &&
   !shell.includes('WorkoutJournalPersistence(') &&
   !activity.includes('WorkoutJournalPersistence('),
   'Private workout journal cannot bypass canonical engine and history certification');
+
+assert.ok(shell.includes('NativeDestination.TRAIN -> if(onboarding?.saved!=null)') &&
+  shell.includes('if(onboarding?.saved==null) IconButton(') &&
+  shell.includes('if(onboarding?.saved==null) Text("NATIVE EXPERIENCE PREVIEW"') &&
+  screens.includes('if(showBackupTools) {') &&
+  screens.includes('Text(if(showBackupTools)"Hide backup tools" else "Backup and restore")') &&
+  !screens.includes('SectionLabel("Plan essentials")') &&
+  !shell.includes('section = NativeDestination.TRAIN.ordinal\n                                    }'),
+  'Saved journeys should expose real Train controls, keep day preview in Plan and hide demo/backup clutter');

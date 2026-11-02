@@ -114,8 +114,10 @@ internal fun BackupCopyScreeningPanel(
                                 when (val screening = ReadOnlyBackupCandidateReader.screen(
                                     source, checkActive = { job.ensureActive() }
                                 )) {
-                                    is ReadOnlyDocumentScreening.FingerprintOnly ->
+                                    is ReadOnlyDocumentScreening.FingerprintOnly -> {
+                                        if(inspectReselection) onDiscardBackupReview()
                                         BackupScreeningStage.TooLargeForSchema(screening.fingerprint)
+                                    }
                                     is ReadOnlyDocumentScreening.SmallCandidate -> try {
                                         if (inspectReselection) {
                                             val matched=previous!=null &&
@@ -147,6 +149,8 @@ internal fun BackupCopyScreeningPanel(
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (_: Exception) {
+                        // Incomplete second-source reads never leave the old ticket active.
+                        if(inspectReselection) onDiscardBackupReview()
                         // Never expose raw parser/provider exceptions or record data.
                         BackupScreeningStage.Rejected
                     }

@@ -11,7 +11,7 @@ export function programToText(program, loadMode = 'rir', unit = 'kg', weekIndex 
     const cfg = program.config || {}, weeks = weeksOf(program);
     const days = daysInWeek(program, weekIndex);
     const lines = [program.name || 'My Program',
-        `${SPLITS[cfg.split]?.name || cfg.split || 'Custom'} · ${days.length} ${days.length === 1 ? 'day' : 'days'}/week${cfg.goal ? ' · ' + cfg.goal : ''} · ${weeks}-week block`,
+        `${SPLITS[cfg.split]?.name || cfg.split || 'Custom'} · ${days.length} ${days.length === 1 ? 'day' : 'days'}/week${cfg.goal ? ' · ' + ({ hypertrophy: 'Hypertrophy', strength: 'Strength', both: 'Strength & Size' }[cfg.goal] || cfg.goal) : ''} · ${weeks}-week block`,
         `${weekIndex > weeks ? `Deload after ${weeks} training weeks` : `Week ${weekIndex} of ${weeks}`} — saved plan snapshot`];
     if (program.description?.trim()) lines.push(program.description.trim());
     lines.push('');

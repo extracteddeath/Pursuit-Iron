@@ -611,7 +611,7 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   ok(wb.rows.every((r) => r.cells.every((c) => c.sets > 0)), 'every cell prescribes sets (no week-0 "missing" cell)');
   const p0 = JSON.parse(C.exportStore()).saved.find((x) => x.id === wb.programId), d0 = p0.days[0];
   const cc = E.computeCell(p0, d0, d0.exercises[0], 0, 1), first = wb.rows.find((r) => r.dayLabel === d0.label && r.exId === d0.exercises[0]);
-  ok(first.cells[0].sets === Number(cc.sets) && first.cells[0].range === String(cc.range), 'week 1 cell equals computeCell(week 1): ' + cc.sets + ' × ' + cc.range);
+  ok(first.cells[0].sets === Number(cc.sets) && first.cells[0].range === String(cc.range).replace('-', '–'), 'week 1 cell equals computeCell(week 1): ' + cc.sets + ' × ' + cc.range);
   ok(wb.rows.some((r) => r.primary) && wb.rows.some((r) => r.upper) && wb.rows.some((r) => !r.upper), 'rows carry main/upper/lower for the filters');
   const vw = C.volumeWave({});
   ok(vw.weeks.length === wb.weeks + 1 && vw.weeks.every((w) => w.sets > 0) && vw.weeks[wb.weeks].deload, 'volume wave has every week plus the deload');
@@ -1119,5 +1119,14 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
     'percentage sets show % of max and an AMRAP top set (' + main.line + ' · top ' + top.target.reps + ' @' + top.target.pct + '%)');
   ok(main.progression.locked && !acc.progression.locked, 'only the method lift is locked to the method; accessories progress normally');
   C.discardSession(); }
+
+// Block review: a block that ends on its deload week is not a block where every lift went backwards.
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) }); const r = C.createFromTemplate({ id: 'p531' });
+  C.trainingMaxes({ programId: r.programId }).lifts.forEach((l) => C.setTrainingMax({ programId: r.programId, exId: l.id, value: 100 }));
+  for (let k = 0; k < 16; k++) { const s = C.startSession({}); s.exercises.forEach((e) => e.sets.forEach((st) => { if (st.warm || st.sub) return;
+      if (!(Number(st.weight) > 0)) C.act({ type: 'edit', ei: e.ei, si: st.i, field: 'weight', value: '40' }); C.act({ type: 'edit', ei: e.ei, si: st.i, field: 'reps', value: '5' }); C.act({ type: 'toggle', ei: e.ei, si: st.i }); }));
+    C.finishSession({}); }
+  const rv = C.reviewBlock({ id: r.programId, index: 0 }), ohp = rv.lifts.find((l) => l.id === 'ohp');
+  ok(ohp && ohp.state !== 'regressed' && ohp.end >= ohp.start, 'a 5/3/1 block ending on its deload reads the main lifts by their working weeks (' + (ohp && ohp.state + ' ' + ohp.start + '→' + ohp.end) + ' · ' + rv.headline + ')'); }
 
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

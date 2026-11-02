@@ -293,7 +293,7 @@ function dayPreview(program, day, weekIndex) {
         // generic RIR bracket; everything else shows its effort in the lifter's own scale (RIR or RPE).
         const pc = cell && EX_BY_ID[id] ? pctCell(program, day, EX_BY_ID[id], slot, weekIndex, cell) : null;
         if (pc) return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, supplemental: supp, sets: pc.sets, reps: pc.range, rir: null, effort: pc.load, sub: exSub(EX_BY_ID[id]), rest };
-        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, supplemental: supp, sets: cell?.sets ?? null, reps: cell?.reps ?? null, rir: cell?.rir ?? null, effort: effortShort(cell?.rir), sub: exSub(EX_BY_ID[id]), rest };
+        return { id, name: exName(id), part: EX_BY_ID[id]?.part || '', primary: slot === day.primaryIndex, supplemental: supp, sets: cell?.sets ?? null, reps: cell?.reps != null ? String(cell.reps).replace('-', '–') : null, rir: cell?.rir ?? null, effort: effortShort(cell?.rir), sub: exSub(EX_BY_ID[id]), rest };
     });
 }
 /* The engine's weekly volume (analytics weeklyVolume): direct sets plus fractional secondary shares, per day. */
@@ -1885,6 +1885,8 @@ export function profileBoard() {
     ];
     const badges = BD.map(([id, short, name, desc, v, target, st]) => {
         const prog = target > 0 ? Math.max(0, Math.min(1, v / target)) : 0;
+        // The bodyweight badges can't be measured without a bodyweight ("now 0.00× · NaN kg to go").
+        if (['bench1', 'squat15', 'pull2', 'bench15'].includes(id) && !(bw > 0)) return { id, short, name, desc, progress: 0, done: false, status: 'Log your bodyweight to track this' };
         return { id, short, name, desc, progress: prog, done: prog >= 1, status: (prog >= 1 ? 'Earned · ' : `${Math.round(prog * 100)}% · `) + st(v) };
     });
     return { unit: u, bodyweight: bw > 0 ? bw : null,
@@ -1971,7 +1973,7 @@ export function weekByWeek({ programId } = {}) {
                 const pct = pctCell(p, d, ex, slot, w, c);
                 if (pct) return { w, ...pct, rir: null, tech: null, deload: B.isDeload(w) };
                 const rir = c.rir != null ? c.rir : (c.targetRIR != null ? c.targetRIR : null);
-                return { w, sets: Number(c.sets) || 0, range: String(c.range ?? c.reps ?? ''), rir: rir == null ? null : String(rir), effort: effortShort(rir), tech: c.tech ? String(c.tech) : null, deload: B.isDeload(w) };
+                return { w, sets: Number(c.sets) || 0, range: String(c.range ?? c.reps ?? '').replace('-', '–'), rir: rir == null ? null : String(rir), effort: effortShort(rir), tech: c.tech ? String(c.tech) : null, deload: B.isDeload(w) };
             }) });
     }));
     return { programId: p.id, name: p.name, weeks: B.weeks, deloadWeek: B.deloadWeek, current: nx?.program.id === p.id ? nx.weekIndex : null, percent: !!p.config?.percentScheme, rows };
@@ -2488,14 +2490,17 @@ export function reviewBlock({ id, index }) {
     const c = cycles().find((x) => x.id === id) || (prog ? { id, name: prog.name, blockIds: [prog.id], blockMeta: [{ id: prog.id, label: 'Block' }] } : null);
     if (!c) return null;
     const bi = prog ? 0 : index;
-    let r = null; try { r = E.blockReview(history(), c, bi); } catch { r = null; }
+    let r = null; try { r = E.blockReview(history(), c, bi, programById(c.blockIds?.[bi])); } catch { r = null; }
     if (!r) return null;
     // The design's review: each lift's e1RM at the start and end of the block, and sessions against the plan.
     const blockId = c.blockIds[bi], bp = programById(blockId), u = unit();
     const hs = history().filter((h) => h && h.programId === blockId && h.date).sort((a, b) => Number(a.date) - Number(b.date));
     const conv = (v, from) => (from && from !== u ? (u === 'lb' ? v * 2.20462 : v / 2.20462) : v);
     const ends = {};
-    hs.forEach((h) => Object.entries(h.perf || {}).forEach(([id, pf]) => {
+    // Start and end as the trend reads them: deload-week sessions are not where a lift ended up.
+    const bw = bp ? E.weeksOf(bp) : 0;
+    const isDl = (h) => bp && h.weekIndex != null && (((bp.config?.deload || bp.config?.endless) && h.weekIndex > bw) || E.isSchemeDeloadWeek(bp.config?.percentScheme, h.weekIndex, bw));
+    hs.filter((h) => !isDl(h)).forEach((h) => Object.entries(h.perf || {}).forEach(([id, pf]) => {
         let rows = []; try { rows = E.completedHistorySets(pf) || []; } catch { rows = []; }
         const best = rows.filter((x) => !x.warm && Number(x.r) > 0 && Number(x.w) > 0).reduce((m, x) => Math.max(m, E.e1rm(Number(x.w), Number(x.r))), 0);
         if (best > 0) { const v = conv(best, h.unit); const e = ends[id] || (ends[id] = { start: v, end: v, flatSince: v, flat: 0 }); e.end = v; }
@@ -3497,7 +3502,7 @@ export function programText({ programId, weekIndex = null }) {
     const wk = Math.max(1, Number(weekIndex) || (nx?.program.id === p.id ? nx.weekIndex : 1));
     const days = E.daysInWeek(p, wk), H = history();
     const lines = [p.name || 'My Program',
-        `${E.SPLITS?.[cfg.split]?.name || cfg.split || 'Custom'} · ${days.length} ${days.length === 1 ? 'day' : 'days'}/week${cfg.goal ? ' · ' + cfg.goal : ''} · ${weeks}-week block`,
+        `${E.SPLITS?.[cfg.split]?.name || cfg.split || 'Custom'} · ${days.length} ${days.length === 1 ? 'day' : 'days'}/week${cfg.goal ? ' · ' + (GOAL_LABEL[cfg.goal] || cfg.goal) : ''} · ${weeks}-week block`,
         `${wk > weeks ? `Deload after ${weeks} training weeks` : `Week ${wk} of ${weeks}`} — saved plan snapshot`];
     if (p.description?.trim()) lines.push(p.description.trim());
     lines.push('');
@@ -3626,7 +3631,7 @@ export function finishPreview() {
             const wrap = i + 1 >= program.days.length, nd = program.days[(i + 1) % program.days.length], nw = wrap ? wk + 1 : wk;
             if (nw > E.weeksOf(program) + (program.config?.deload ? 1 : 0) && !program.config?.endless) return null;
             const sched = program.schedule || {}, wd = Object.keys(sched).find((k) => sched[k] === nd.id);
-            const rows = dayPreview(program, nd, nw).map((x) => ({ name: x.name, rx: [x.sets ? x.sets + ' sets' : null, x.reps ? String(x.reps) : null].filter(Boolean).join(' · ') }));
+            const rows = dayPreview(program, nd, nw).map((x) => ({ name: x.name, rx: [x.sets ? x.sets + (Number(x.sets) === 1 ? ' set' : ' sets') : null, x.reps ? String(x.reps).replace('-', '–') + ' reps' : null].filter(Boolean).join(' · ') }));
             return { label: nd.label, weekday: wd == null ? null : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][Number(wd)], rows };
         })(),
         pumpChoices: [['flat', 'Flat'], ['good', 'Good'], ['huge', 'Huge']], soreChoices: [['sore', 'Sore'], ['ontime', 'On time'], ['fresh', 'Fresh']],

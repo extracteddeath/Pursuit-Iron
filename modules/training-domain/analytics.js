@@ -3759,6 +3759,8 @@ function blockRetro(history, opts = {}) {
     // Per-lift e1RM series within the window
     const byLift = {};
     for (const h of [...win].sort((a, b) => a.date - b.date)) {
+        if (opts.trendExclude?.(h))
+            continue;
         for (const [id, p] of Object.entries(h.perf || {})) {
             const ex = EX_BY_ID[id];
             if (!ex)
@@ -3815,10 +3817,12 @@ function blockRetro(history, opts = {}) {
         return { part, avgSets: r1(avgWk), mev: L.mev, mav: r1(mav), mavPersonal: Math.abs(mav - gmav) > 0.05, mrv: L.mrv, zone, trend, drove, rec };
     }).sort((a, b) => ({ regressed: 0, flat: 1, unknown: 2, progressed: 3 }[a.trend] - { regressed: 0, flat: 1, unknown: 2, progressed: 3 }[b.trend]) || a.avgSets - b.avgSets);
     const gained = lifts.filter(l => l.state === "progressed").length;
-    const stalled = lifts.filter(l => l.state === "flat" || l.state === "regressed").length;
+    const flat = lifts.filter(l => l.state === "flat").length, down = lifts.filter(l => l.state === "regressed").length;
+    const stalled = flat + down;
+    // Regressed lifts were counted as "flat": "4 lifts up, 18 flat" over a list where 14 had gone down.
     return {
         ok: true, weeks: Math.round(spanWeeks), sessions: win.length,
-        headline: `${win.length} sessions over ~${Math.round(spanWeeks)} wk · ${gained} lift${gained !== 1 ? "s" : ""} up, ${stalled} flat`,
+        headline: `${win.length} sessions over ~${Math.round(spanWeeks)} wk · ${gained} lift${gained !== 1 ? "s" : ""} up` + (down ? `, ${down} down` : "") + (flat ? `, ${flat} flat` : ""),
         lifts: lifts.sort((a, b) => b.deltaPct - a.deltaPct),
         muscles,
         recs: muscles.filter(m => m.rec).map(m => ({ part: m.part, trend: m.trend, rec: m.rec }))
@@ -5358,7 +5362,7 @@ function cycleProgress(cycle, saved = [], history = [], cycleInfo = null) {
     };
 }
 
-function blockReview(history, cycle, i) {
+function blockReview(history, cycle, i, program = null) {
     const meta = (cycle?.blockMeta || [])[i] || null;
     const id = (cycle?.blockIds || [])[i] || meta?.id || null;
     const hs = (history || []).filter(h => h && h.programId === id && h.date);
@@ -5366,7 +5370,14 @@ function blockReview(history, cycle, i) {
         return { ok: false, block: meta, sessions: hs.length, reason: hs.length ? `Only ${hs.length} session${hs.length === 1 ? "" : "s"} logged in this block — not enough to say anything honest about it.` : "No sessions were logged against this block." };
     const dates = hs.map(h => h.date);
     const from = Math.min(...dates), to = Math.max(...dates);
-    const r = blockRetro(hs, { sinceDate: from - 1, untilDate: to + 1 });
+    /* ⚠ A DELOAD IS NOT A REGRESSION. Each lift's trend ran first session → last, and a block that ends on its
+       deload week (the standard block's week n+1, 5/3/1's week 4) ended on its lightest loads — every lift read
+       "regressed" in the review of a block that went exactly to plan. With the program in hand, deload-week
+       sessions still count as sessions but stay out of the lift trends. */
+    const weeks = program ? weeksOf(program) : null;
+    const deloadEntry = program ? (h => h.weekIndex != null && ((program.config?.deload || program.config?.endless) && h.weekIndex > weeks
+        || isSchemeDeloadWeek(program.config?.percentScheme, h.weekIndex, weeks))) : null;
+    const r = blockRetro(hs, { sinceDate: from - 1, untilDate: to + 1, trendExclude: deloadEntry });
     return { ...r, block: meta, from, to };
 }
 

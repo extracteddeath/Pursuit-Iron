@@ -1553,3 +1553,14 @@ Source interaction contracts verify single-set first presentation,
 optional warm-ups and continuing visibility of real recovery and safety
 controls. The full native Kotlin/Compose validation must pass before
 calling this revision integrated.
+
+## 2026-11-02 — Today-first training decision
+
+On a verified saved program, Today now places the actual Start/Resume
+workout action before View program, and presents a compact coherent
+session summary. The existing source-backed shorter-session comparison
+is preserved behind an explicit expandable action rather than taking
+over the default Today view. Expansion is saveable per program identity.
+Canonical engine issuance, preview safety, held revisions and workout
+state/journal are unchanged. Source interaction tests verify CTA ordering
+and guarded opt-in preview. No APK is built.

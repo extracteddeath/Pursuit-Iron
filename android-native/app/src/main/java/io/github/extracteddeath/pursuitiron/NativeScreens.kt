@@ -60,22 +60,41 @@ internal fun TodayScreen(
     startShortWorkout: (Int) -> Unit = {}
 ) {
     if(savedProgram!=null) {
-        PageHeading("YOUR TRAINING",if(workoutState?.workout!=null)"Your workout is waiting" else "Your program is ready",savedProgram.program.name)
+        val activeWorkout=workoutState?.workout!=null
+        PageHeading("YOUR TRAINING",
+            if(activeWorkout)"Continue your workout" else "Ready for your next workout",
+            savedProgram.program.name)
         PursuitCard(highlighted=true) {
-            Text("${savedProgram.program.days.size} days per week",style=MaterialTheme.typography.headlineSmall)
-            Text("${savedProgram.program.weeks}-week starting block · ${savedProgram.profile.unit}")
-            Button(onClick=openPlan,modifier=Modifier.fillMaxWidth()){Text("View your program")}
-            if(workoutState?.completion!=null)Text("Your last workout is saved in your training history.")
-            Button(onClick={if(workoutState?.workout==null)startWorkout();openTrain()},
-                enabled=workoutState?.ready==true && !workoutState.workoutBusy && !workoutState.backupExportBusy && !workoutState.workoutBlocked,
+            Text("${savedProgram.program.days.size} days per week · " +
+                "${savedProgram.program.weeks}-week starting block · ${savedProgram.profile.unit}",
+                style=MaterialTheme.typography.bodyMedium)
+            Button(onClick={if(!activeWorkout)startWorkout();openTrain()},
+                enabled=workoutState?.ready==true && !workoutState.workoutBusy &&
+                    !workoutState.backupExportBusy && !workoutState.workoutBlocked,
                 modifier=Modifier.fillMaxWidth()) {
-                Text(if(workoutState?.backupExportBusy==true)"Saving backup…" else if(workoutState?.workoutBusy==true)"Opening workout…" else if(workoutState?.workout!=null)"Resume workout" else "Start next workout")
+                Text(if(workoutState?.backupExportBusy==true)"Saving backup…"
+                    else if(workoutState?.workoutBusy==true)"Opening workout…"
+                    else if(activeWorkout)"Resume workout" else "Start next workout")
             }
+            OutlinedButton(onClick=openPlan,modifier=Modifier.fillMaxWidth()) {
+                Text("View your program")
+            }
+            if(workoutState?.completion!=null)
+                Text("Your last workout is saved in training history.",
+                    style=MaterialTheme.typography.bodySmall)
             workoutState?.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         }
-        if(workoutState?.workout==null) {
-            SectionLabel("Shorter session", "Canonical engine preview")
-            PursuitCard {
+        if(!activeWorkout) {
+            var showShorterSession by rememberSaveable(savedProgram.program.id) {
+                mutableStateOf(false)
+            }
+            OutlinedButton(onClick={showShorterSession=!showShorterSession},
+                modifier=Modifier.fillMaxWidth()) {
+                Text(if(showShorterSession)"Hide shorter session options" else "Need a shorter session?")
+            }
+            if(showShorterSession) {
+                SectionLabel("Shorter session", "Canonical engine preview")
+                PursuitCard {
                 Text("Available time",style=MaterialTheme.typography.titleMedium)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -118,9 +137,10 @@ internal fun TodayScreen(
                         Text("Your full workout already fits; use Start next workout.")
                     }
                 }
-                Text("Preview only — not applied. Starting a shortened workout requires a separate confirmation above.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Review first. No workout is shortened until you choose Start.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
         return

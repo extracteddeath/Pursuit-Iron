@@ -596,3 +596,17 @@ assert.ok(workingSetAt>0 && timerAt>workingSetAt &&
   workoutLayout.includes('journal.warmups.any { it.slot.exerciseIndex==exercise.index }') &&
   workoutLayout.includes('var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(true) }'),
   'The real workout must prioritize the current set, retain its rest timer, make warm-ups optional and keep safety adjustments reachable');
+
+const todayStart=screens.indexOf('if(savedProgram!=null) {');
+const nextWorkoutCta=screens.indexOf('Button(onClick={if(!activeWorkout)startWorkout();openTrain()}');
+const programSecondary=screens.indexOf('OutlinedButton(onClick=openPlan,modifier=Modifier.fillMaxWidth())');
+const shortenToggle=screens.indexOf('var showShorterSession by rememberSaveable(savedProgram.program.id)');
+const shortenPanel=screens.indexOf('if(showShorterSession) {');
+assert.ok(todayStart>=0 && nextWorkoutCta>todayStart &&
+  programSecondary>nextWorkoutCta && shortenToggle>programSecondary &&
+  shortenPanel>shortenToggle &&
+  screens.includes('Text(if(showShorterSession)"Hide shorter session options" else "Need a shorter session?")') &&
+  screens.includes('previewShorterSession(minutes)') &&
+  screens.includes('startShortWorkout(preview.minutes)') &&
+  screens.includes('if(!activeWorkout) {'),
+  'Today must lead with real Start/Resume and keep canonical shorter-session options opt-in');

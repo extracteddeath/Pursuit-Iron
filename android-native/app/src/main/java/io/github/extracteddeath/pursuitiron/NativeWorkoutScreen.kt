@@ -91,15 +91,130 @@ internal fun NativeWorkoutScreen(
     var confirmAffectedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
     var confirmReducedPart by rememberSaveable(plan.session.workoutId) { mutableStateOf("") }
     var showAffectedTools by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
-    if(!showAffectedTools) {
-        OutlinedCard(onClick={showAffectedTools=true},modifier=Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(horizontal=16.dp,vertical=12.dp),
-                verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                Text("Adjust for discomfort",style=MaterialTheme.typography.titleSmall)
-                Text("Review affected muscles · Reduce or skip work",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+    if(plan.shortenedMinutes!=null) {
+        Text("Shortened workout · ${plan.shortenedMinutes} min selected · ${plan.shortenedEstimatedMinutes} min estimated",
+            style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)
+        Text("Your logged dose will be marked time-limited; reductions are not failed sets.",
+            style=MaterialTheme.typography.bodySmall)
+    }
+    val skippedSetCount=journal.completed.count {
+        it.intent.disposition==JournalSetDisposition.SKIPPED
+    }
+    Text("${journal.completed.size} / ${plan.slots.size} sets resolved · " +
+        "${journal.completed.size-skippedSetCount} logged · $skippedSetCount skipped",
+        style=MaterialTheme.typography.titleSmall)
+    LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size},
+        modifier=Modifier.fillMaxWidth())
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        plan.exercises.forEachIndexed { index,ex->
+            val completed=ex.sets.count { it.slot in committedSlots }
+            FilterChip(selected=index==exerciseIndex,onClick={exerciseIndex=index},
+                label={Text("${index+1}. ${ex.name} · $completed/${ex.sets.size}")})
+        }
+    }
+    var showWarmups by rememberSaveable(plan.session.workoutId,exercise.index) {
+        mutableStateOf(false)
+    }
+    Text(exercise.name,style=MaterialTheme.typography.headlineSmall)
+    if(exercise.superset)Text("Superset pairing",style=MaterialTheme.typography.labelMedium)
+    if(exercise.warmupTargets.isNotEmpty() ||
+        journal.warmups.any { it.slot.exerciseIndex==exercise.index }) {
+        OutlinedButton(onClick={showWarmups=!showWarmups},
+            modifier=Modifier.fillMaxWidth()) {
+            Text(if(showWarmups)"Hide warm-ups" else
+                "Warm-ups · ${exercise.warmupTargets.size} suggested")
+        }
+    } else if(!showWarmups) {
+        TextButton(onClick={showWarmups=true}) { Text("Add a warm-up") }
+    }
+    if(showWarmups) NativeWarmupPanel(
+        progress,exercise,state.workoutBusy || state.historyBusy,
+        state.warmupError,onSaveWarmup)
+
+    if(showSkipExercise) {
+        AlertDialog(
+            onDismissRequest={showSkipExercise=false},
+            title={Text("Skip the rest of ${exercise.name}?")},
+            text={Text("$exercisePending unfinished sets will each be saved as skipped. Completed sets stay unchanged. This does not automatically modify other exercises or your future program.")},
+            confirmButton={Button(onClick={showSkipExercise=false;onSkipExercise(exercise.index)},
+                enabled=exercisePending>0 && !state.workoutBusy && !state.historyBusy && !journal.isFinished) {
+                Text("Skip remaining sets")
+            }},
+            dismissButton={TextButton(onClick={showSkipExercise=false}) { Text("Keep training") }}
+        )
+    }
+    val pinnedNote=NativeExerciseNotePolicy.resolved(plan,journal.exerciseNotes,exercise.id)
+    var showPinnedNote by rememberSaveable(plan.session.workoutId,exercise.id) {mutableStateOf(false)}
+    if(showPinnedNote)NativeExerciseNoteSheet(progress,exercise,state.workoutBusy || state.historyBusy,
+        state.exerciseNoteError,onSaveExerciseNote) {showPinnedNote=false}
+    if(showNote)NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote) {showNote=false}
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        IconButton(onClick={showNote=true},enabled=!journal.isFinished && !state.workoutBusy) {
+            Icon(Icons.Outlined.Edit,contentDescription=if(journal.note?.text.isNullOrEmpty())"Add session note" else "Edit session note",
+                tint=if(journal.note?.text.isNullOrEmpty())MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
+        }
+        if(pinnedNote!=null)IconButton(onClick={showPinnedNote=true},
+            enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy) {
+            Icon(Icons.Outlined.PushPin,contentDescription="Edit pinned note and setup for ${exercise.name}",
+                tint=if(pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})
+                    MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})
+        FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
+        Spacer(Modifier.weight(1f))
+        FilterChip(selected=focusMode,onClick={focusMode=!focusMode},
+            label={Text(if(focusMode)"Show all" else "Focus")})
+    }
+    if(pinnedNote!=null && (pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})) {
+        OutlinedCard(onClick={showPinnedNote=true},enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy,
+            modifier=Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                val setup=pinnedNote.fields.mapNotNull {field->pinnedNote.setup[field.key]?.takeIf {it.isNotEmpty()}
+                    ?.let {"${field.label} $it"}}.joinToString(" · ")
+                if(setup.isNotEmpty())Text(setup,style=MaterialTheme.typography.labelMedium)
+                if(pinnedNote.text.isNotEmpty())Text(pinnedNote.text,style=MaterialTheme.typography.bodyMedium)
             }
+        }
+    }
+    // Focus is a projection of the same durable set journal, never a
+    // different logger. It advances only after an acknowledged set receipt.
+    val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull {
+        it.slot !in committedSlots
+    } ?: exercise.sets.last()) else exercise.sets
+    visibleSets.forEach { set->
+        val commit=journal.completed.find { it.intent.slot==set.slot }
+        key(plan.session.workoutId,set.slot.exerciseIndex,set.slot.setIndex) {
+            setDraftStates.SaveableStateProvider(
+                "${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}"
+            ) {
+                NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord,
+                    onCorrect,state.workoutError,state,onInspectEquipmentLoad)
+            }
+        }
+    }
+    val activeExtension=if(focusMode)exercise.sets.firstOrNull {
+        it.slot !in committedSlots
+    }?.extensionRestSeconds else null
+    NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
+        enabled=!state.workoutBusy && !journal.isFinished,
+        latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId,
+        autoCue=NativeRestCuePolicy.latest(progress,exercise.index))
+    if(exercisePending>0 && !journal.isFinished) {
+        TextButton(onClick={showSkipExercise=true},
+            enabled=!state.workoutBusy && !state.historyBusy) {
+            Text("Skip remaining ${exercisePending} sets for this exercise")
+        }
+    }
+    nextPreview?.let { preview->
+        NativeUpNextPanel(preview,exerciseIndex,
+            enabled=!state.workoutBusy && !state.historyBusy,
+            unit=plan.session.unit,
+            onOpenExercise={ position ->exerciseIndex=position })
+    }
+    if(!showAffectedTools) {
+        TextButton(onClick={showAffectedTools=true},
+            enabled=!state.workoutBusy && !journal.isFinished) {
+            Text("Adjust workout for discomfort")
         }
     } else PursuitCard {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
@@ -197,112 +312,6 @@ internal fun NativeWorkoutScreen(
             },enabled=pendingCount>0 && !state.workoutBusy && !state.historyBusy &&
                 !journal.isFinished) { Text("Confirm related skips") }},
             dismissButton={TextButton(onClick={confirmAffectedPart=""}) { Text("Keep training") }})
-    }
-    if(plan.shortenedMinutes!=null) {
-        Text("Shortened workout · ${plan.shortenedMinutes} min selected · ${plan.shortenedEstimatedMinutes} min estimated",
-            style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)
-        Text("Your logged dose will be marked time-limited; reductions are not failed sets.",
-            style=MaterialTheme.typography.bodySmall)
-    }
-    Text("${journal.completed.size} of ${plan.slots.size} set steps saved · ${plan.session.unit}",
-        style=MaterialTheme.typography.titleMedium)
-    LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size},
-        modifier=Modifier.fillMaxWidth())
-    Text("Completed and skipped sets are saved on this device. You can leave and resume this workout.",
-        style=MaterialTheme.typography.bodySmall)
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        plan.exercises.forEachIndexed { index,ex->
-            val completed=ex.sets.count { it.slot in committedSlots }
-            FilterChip(selected=index==exerciseIndex,onClick={exerciseIndex=index},
-                label={Text("${index+1}. ${ex.name} · $completed/${ex.sets.size}")})
-        }
-    }
-    PursuitCard {
-        Text(exercise.name,style=MaterialTheme.typography.headlineSmall)
-        if(exercise.superset)Text("Superset pairing",style=MaterialTheme.typography.labelMedium)
-        val activeExtension=if(focusMode)exercise.sets.firstOrNull { it.slot !in committedSlots }
-            ?.extensionRestSeconds else null
-        NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,
-            enabled=!state.workoutBusy && !journal.isFinished,
-            latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId,
-            autoCue=NativeRestCuePolicy.latest(progress,exercise.index))
-        NativeWarmupPanel(progress,exercise,state.workoutBusy || state.historyBusy,state.warmupError,onSaveWarmup)
-        if(exercisePending>0 && !journal.isFinished) {
-            OutlinedButton(onClick={showSkipExercise=true},
-                enabled=!state.workoutBusy && !state.historyBusy,
-                modifier=Modifier.fillMaxWidth()) {
-                Text("Skip remaining exercise · $exercisePending sets")
-            }
-        }
-    }
-    if(showSkipExercise) {
-        AlertDialog(
-            onDismissRequest={showSkipExercise=false},
-            title={Text("Skip the rest of ${exercise.name}?")},
-            text={Text("$exercisePending unfinished sets will each be saved as skipped. Completed sets stay unchanged. This does not automatically modify other exercises or your future program.")},
-            confirmButton={Button(onClick={showSkipExercise=false;onSkipExercise(exercise.index)},
-                enabled=exercisePending>0 && !state.workoutBusy && !state.historyBusy && !journal.isFinished) {
-                Text("Skip remaining sets")
-            }},
-            dismissButton={TextButton(onClick={showSkipExercise=false}) { Text("Keep training") }}
-        )
-    }
-    val pinnedNote=NativeExerciseNotePolicy.resolved(plan,journal.exerciseNotes,exercise.id)
-    var showPinnedNote by rememberSaveable(plan.session.workoutId,exercise.id) {mutableStateOf(false)}
-    if(showPinnedNote)NativeExerciseNoteSheet(progress,exercise,state.workoutBusy || state.historyBusy,
-        state.exerciseNoteError,onSaveExerciseNote) {showPinnedNote=false}
-    if(showNote)NativeSessionNoteSheet(progress,state.workoutBusy,state.workoutError,onSaveSessionNote) {showNote=false}
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        IconButton(onClick={showNote=true},enabled=!journal.isFinished && !state.workoutBusy) {
-            Icon(Icons.Outlined.Edit,contentDescription=if(journal.note?.text.isNullOrEmpty())"Add session note" else "Edit session note",
-                tint=if(journal.note?.text.isNullOrEmpty())MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
-        }
-        if(pinnedNote!=null)IconButton(onClick={showPinnedNote=true},
-            enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy) {
-            Icon(Icons.Outlined.PushPin,contentDescription="Edit pinned note and setup for ${exercise.name}",
-                tint=if(pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})
-                    MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        FilterChip(selected=!showLast,onClick={showLast=false},label={Text("Targets")})
-        FilterChip(selected=showLast,onClick={showLast=true},label={Text("Last time")})
-        Spacer(Modifier.weight(1f))
-        FilterChip(selected=focusMode,onClick={focusMode=!focusMode},
-            label={Text(if(focusMode)"Show all" else "Focus")})
-    }
-    if(pinnedNote!=null && (pinnedNote.text.isNotEmpty() || pinnedNote.setup.values.any {it.isNotEmpty()})) {
-        OutlinedCard(onClick={showPinnedNote=true},enabled=!journal.isFinished && !state.workoutBusy && !state.historyBusy,
-            modifier=Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                val setup=pinnedNote.fields.mapNotNull {field->pinnedNote.setup[field.key]?.takeIf {it.isNotEmpty()}
-                    ?.let {"${field.label} $it"}}.joinToString(" · ")
-                if(setup.isNotEmpty())Text(setup,style=MaterialTheme.typography.labelMedium)
-                if(pinnedNote.text.isNotEmpty())Text(pinnedNote.text,style=MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-    // Focus is a projection of the same durable set journal, never a
-    // different logger. It advances only after an acknowledged set receipt.
-    val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull {
-        it.slot !in committedSlots
-    } ?: exercise.sets.last()) else exercise.sets
-    if(focusMode)Text("One set at a time · full controls remain available",
-        style=MaterialTheme.typography.bodySmall)
-    visibleSets.forEach { set->
-        val commit=journal.completed.find { it.intent.slot==set.slot }
-        key(plan.session.workoutId,set.slot.exerciseIndex,set.slot.setIndex) {
-            setDraftStates.SaveableStateProvider(
-                "${plan.session.workoutId}:${set.slot.exerciseIndex}:${set.slot.setIndex}"
-            ) {
-                NativeWorkingSet(plan.session,set,commit,state.workoutBusy || journal.isFinished,showLast,onRecord,
-                    onCorrect,state.workoutError,state,onInspectEquipmentLoad)
-            }
-        }
-    }
-    nextPreview?.let { preview->
-        NativeUpNextPanel(preview,exerciseIndex,
-            enabled=!state.workoutBusy && !state.historyBusy,
-            unit=plan.session.unit,
-            onOpenExercise={ position ->exerciseIndex=position })
     }
     state.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
     PursuitCard(highlighted=journal.unresolvedCount==0) {

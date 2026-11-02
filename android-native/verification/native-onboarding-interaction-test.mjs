@@ -149,8 +149,8 @@ assert.ok(train.includes('var observedFocusReceipt by rememberSaveable(plan.sess
   train.includes('if(!focusMode || journal.isFinished)observedFocusReceipt=lastSetReceiptId'),
   'Focus may cross exercise boundaries only after a fresh persisted receipt and must suppress replay after recovery');
 assert.ok(train.includes('var showAffectedTools by rememberSaveable(plan.session.workoutId)') &&
-  train.includes('OutlinedCard(onClick={showAffectedTools=true}') &&
-  train.includes('Text("Adjust for discomfort"') &&
+  train.includes('TextButton(onClick={showAffectedTools=true}') &&
+  train.includes('Text("Adjust workout for discomfort")') &&
   train.includes('TextButton(onClick={showAffectedTools=false})') &&
   train.includes('NativeSessionSkipPolicy.reduceAffected(journal,review,affectedPart)') &&
   train.includes('Confirm reduced work'),
@@ -190,7 +190,7 @@ assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId)') &&
 assert.ok(train.includes('set.isExtension') &&
   train.includes('set.extensionRestSeconds?.let') &&
   train.includes('if(set.isExtension)"Complete extension"') && train.includes('else "Complete set"') &&
-  train.includes('if(focusMode)exercise.sets.firstOrNull { it.slot !in committedSlots }') &&
+  train.includes('val activeExtension=if(focusMode)exercise.sets.firstOrNull {') &&
   train.includes('activeExtension ?: exercise.restSeconds'),
   'Myo/drop extensions must remain independently visible, loggable and rest-aware');
 assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCount),effort)') &&
@@ -201,7 +201,7 @@ assert.ok(train.includes('JournalSetValues(load,session.unit,checkNotNull(repCou
 // journal loop, not multiple optimistic UI taps or a training re-prescription.
 const skipPolicy=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeSessionSkipPolicy.kt','utf8');
 assert.ok(train.includes('var showSkipExercise by rememberSaveable(plan.session.workoutId)') &&
-  train.includes('Text("Skip remaining exercise · $exercisePending sets")') &&
+  train.includes('Text("Skip remaining ${exercisePending} sets for this exercise")') &&
   train.includes('onSkipExercise(exercise.index)') &&
   train.includes('Completed sets stay unchanged') &&
   train.includes('Skip remaining sets') &&
@@ -553,7 +553,7 @@ const warmupUi=fs.readFileSync(root+'NativeWarmupPanel.kt','utf8');
 const warmupDomain=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeWarmups.kt','utf8');
 assert.ok(activity.includes('onSaveWarmup=runtime::saveWarmup') &&
   shell.includes('onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote,onInspectEquipmentLoad)') &&
-  train.includes('NativeWarmupPanel(progress,exercise,') &&
+  train.includes('if(showWarmups) NativeWarmupPanel(') &&
   warmupUi.includes('rememberSaveableStateHolder()') &&
   warmupUi.includes('Add warm-up') && warmupUi.includes('Retry warm-up save') &&
   warmupUi.includes('journal.warmupEvents.any {it.operationId==awaiting}') &&
@@ -583,3 +583,16 @@ assert.ok(activity.includes('onSaveExerciseNote=runtime::saveExerciseNote') &&
 
 assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(true) }'),
   'A real workout starts on the next actionable set while preserving the Show all mode');
+
+const workoutLayout = fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
+const workingSetAt=workoutLayout.indexOf('visibleSets.forEach { set->');
+const timerAt=workoutLayout.indexOf('NativeRestTimer(plan.session.workoutId,');
+const discomfortAt=workoutLayout.indexOf('if(!showAffectedTools) {');
+assert.ok(workingSetAt>0 && timerAt>workingSetAt &&
+  discomfortAt>timerAt &&
+  workoutLayout.includes('var showWarmups by rememberSaveable(plan.session.workoutId,exercise.index)') &&
+  workoutLayout.includes('if(showWarmups) NativeWarmupPanel(') &&
+  workoutLayout.includes('Text(if(showWarmups)"Hide warm-ups" else') &&
+  workoutLayout.includes('journal.warmups.any { it.slot.exerciseIndex==exercise.index }') &&
+  workoutLayout.includes('var focusMode by rememberSaveable(plan.session.workoutId) { mutableStateOf(true) }'),
+  'The real workout must prioritize the current set, retain its rest timer, make warm-ups optional and keep safety adjustments reachable');

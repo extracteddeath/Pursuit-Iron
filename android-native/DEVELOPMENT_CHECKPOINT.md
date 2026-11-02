@@ -1532,3 +1532,24 @@ prototype capability catalog or preview banner; backup tools are collapsed
 under a real user action, and the current workout defaults to one actionable
 set while retaining Show all. No training formulas, history, production web
 or other developer's Android branch are modified.
+
+## 2026-11-02 — Native Train-first layout and Compile recovery
+
+Follow-up to the post-APK UX pass fixes a missing
+`ReadOnlyTrainingDayJourney` import detected by Android Compose CI;
+the earlier source-only Kotlin/domain and sandbox jobs were green.
+The real Train screen now prioritizes its current actionable working-set
+logger over its optional injury/muscle panel, timer and skip actions.
+Prescribed warm-ups stay available through an explicit expandable
+control, and can still add or edit confirmed entries using the same
+journal writer. A rest countdown remains session/receipt-bound but is
+positioned after the current working-set controls. The saved-progress
+label explicitly distinguishes logged, skipped and unresolved set slots.
+Workout starts in Focus while retaining Show all, full controls, Last,
+notes, skip confirmation, exercise switching, and canonical completion.
+No new training calculation, history conversion or device APK was made.
+
+Source interaction contracts verify single-set first presentation,
+optional warm-ups and continuing visibility of real recovery and safety
+controls. The full native Kotlin/Compose validation must pass before
+calling this revision integrated.

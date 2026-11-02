@@ -56,6 +56,7 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramEditDraft
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
+import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDayJourney
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramProfile
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery

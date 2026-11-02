@@ -110,6 +110,44 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         return request;
     }
 
+    /** Catalog-only alternatives; no personal store or writable commands. */
+    static JSONObject checkedAlternativesRequest(@NonNull String json) throws Exception {
+        if(json.getBytes(StandardCharsets.UTF_8).length>16384)
+            throw new IllegalArgumentException("Oversized alternatives request");
+        JSONObject request=new JSONObject(json);
+        if(request.length()!=4 || request.getInt("protocolVersion")!=1 ||
+            !"exerciseAlternatives".equals(request.getString("method")) ||
+            !(request.get("id") instanceof String) ||
+            request.getString("id").isEmpty() || request.getString("id").length()>128)
+            throw new IllegalArgumentException("Invalid alternatives envelope");
+        JSONObject params=request.getJSONObject("params");
+        if(params.length()!=4 || !(params.get("sourceId") instanceof String) ||
+            !params.getString("sourceId").matches("^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$") ||
+            !(params.get("allowBodyweight") instanceof Boolean))
+            throw new IllegalArgumentException("Invalid alternatives request");
+        JSONArray excludes=params.getJSONArray("excludeIds");
+        JSONArray equipment=params.getJSONArray("equipment");
+        if(excludes.length()>30 || equipment.length()<1 || equipment.length()>60)
+            throw new IllegalArgumentException("Unbounded alternatives");
+        java.util.HashSet<String> seen=new java.util.HashSet<>();
+        for(int i=0;i<excludes.length();i++) {
+            Object value=excludes.get(i);
+            if(!(value instanceof String) ||
+                !((String)value).matches("^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$") ||
+                !seen.add((String)value))
+                throw new IllegalArgumentException("Invalid alternative exclusion");
+        }
+        seen.clear();
+        for(int i=0;i<equipment.length();i++) {
+            Object value=equipment.get(i);
+            if(!(value instanceof String) ||
+                !((String)value).matches("^[a-z][a-z0-9_-]{0,39}$") ||
+                !seen.add((String)value))
+                throw new IllegalArgumentException("Invalid alternative equipment");
+        }
+        return request;
+    }
+
     /** No personal context can be supplied to this audited synthetic outline. */
     static JSONObject checkedSyntheticOutlineRequest(@NonNull String json) throws Exception {
         Objects.requireNonNull(json);
@@ -289,16 +327,17 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
                 result.getBoolean("engineCertified"))
             throw new SecurityException("Incompatible canonical engine identity");
         JSONArray methods = result.getJSONArray("capabilities");
-        boolean hasPreview = false, hasLookup = false, hasOutline = false, hasSchemaCheck = false, hasInventory = false, hasCurrent = false;
+        boolean hasPreview = false, hasLookup = false, hasAlternatives = false, hasOutline = false, hasSchemaCheck = false, hasInventory = false, hasCurrent = false;
         for (int i = 0; i < methods.length(); i++) {
             if ("progressionPreview".equals(methods.getString(i))) hasPreview = true;
             if ("exerciseLookup".equals(methods.getString(i))) hasLookup = true;
+            if ("exerciseAlternatives".equals(methods.getString(i))) hasAlternatives = true;
             if ("workoutOutline".equals(methods.getString(i))) hasOutline = true;
             if ("backupSchemaCheck".equals(methods.getString(i))) hasSchemaCheck = true;
             if ("backupProgramInventory".equals(methods.getString(i))) hasInventory = true;
             if ("currentProgramProjection".equals(methods.getString(i))) hasCurrent = true;
         }
-        if (!hasPreview || !hasLookup || !hasOutline || !hasSchemaCheck || !hasInventory || !hasCurrent)
+        if (!hasPreview || !hasLookup || !hasAlternatives || !hasOutline || !hasSchemaCheck || !hasInventory || !hasCurrent)
             throw new SecurityException("Canonical read-only bridge capabilities unavailable");
     }
 
@@ -336,6 +375,10 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
     /** Bounded canonical catalog metadata only; it cannot edit an exercise. */
     public CompletableFuture<String> lookupExercisesAsync(@NonNull String requestJson) {
         return submitReadOnly(requestJson, true);
+    }
+
+    public CompletableFuture<String> alternativeExercisesAsync(@NonNull String requestJson) {
+        return submitReadOnly(requestJson, 7);
     }
 
     public CompletableFuture<String> syntheticOutlineAsync(@NonNull String requestJson) {
@@ -384,7 +427,9 @@ public final class CanonicalJsReadOnlyService implements AutoCloseable {
         // A bad caller cannot poison an otherwise healthy canonical sandbox.
         final JSONObject validated;
         try {
-            validated = mode == 6
+            validated = mode == 7
+                    ? checkedAlternativesRequest(requestJson)
+                    : mode == 6
                     ? checkedWorkoutStoreRequest(requestJson)
                     : mode == 5
                     ? checkedCurrentProgramProjectionRequest(requestJson)

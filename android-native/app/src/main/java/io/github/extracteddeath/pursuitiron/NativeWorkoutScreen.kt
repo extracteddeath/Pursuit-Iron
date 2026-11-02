@@ -406,55 +406,9 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
         } else {
             NativeSetValueFields(session.unit,load,reps,rir,!busy,{load=it},{reps=it},{rir=it},
                 allowFailedAttempt=set.allowFailedAttempt)
-            val review=state.equipmentLoad?.takeIf {
-                it.workoutId==session.workoutId && it.slot==set.slot &&
-                it.unit==session.unit && it.inputLoad==load
-            }
-            if(load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$"))) {
-                OutlinedButton(onClick={onInspectEquipmentLoad(set.slot,load)},
-                    enabled=!busy && !state.equipmentLoadBusy &&
-                        !state.historyBusy,modifier=Modifier.fillMaxWidth()) {
-                    Text(if(state.equipmentLoadBusy)"Checking available loads…"
-                        else "Check equipment-aware weights")
-                }
-            }
-            if(review?.confirmed==true) {
-                val explanation=when(review.family) {
-                    "dumbbells_per_hand" -> "Verified dumbbell loads · per hand"
-                    "barbell_plates" -> "Verified bar weight and plate pairs · total load"
-                    "exercise_override" -> if(review.mode=="external_load")
-                        "Verified selectable logged values" else "Verified exercise-specific loading"
-                    "smith_confirmed_totals" -> "Verified Smith total load values"
-                    "machine_stack" -> "Verified machine rack"
-                    "cable_stack" -> "Verified cable stack"
-                    else -> "Verified equipment"
-                }
-                Text(explanation,style=MaterialTheme.typography.labelMedium)
-                if(review.family=="exercise_override" && review.mode=="external_load")
-                    Text("These are your verified logged machine values, not a measurement of " +
-                        "effective resistance. Use the same logging basis for every set.",
-                        style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                if(!review.exact)Text("This entered load is not selectable in the saved equipment list. Manual entry remains available.",
-                    style=MaterialTheme.typography.bodySmall)
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick={load=checkNotNull(review.previous)},
-                        enabled=!busy && review.previous!=null,modifier=Modifier.weight(1f)) {
-                        Text(review.previous?.let { "− $it ${session.unit}" } ?: "No lower load")
-                    }
-                    OutlinedButton(onClick={load=checkNotNull(review.next)},
-                        enabled=!busy && review.next!=null,modifier=Modifier.weight(1f)) {
-                        Text(review.next?.let { "+ $it ${session.unit}" } ?: "No higher load")
-                    }
-                }
-            } else if(review!=null) {
-                Text("Equipment not confirmed for this exercise. No assumed load increments are offered.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            state.equipmentLoadError?.let {
-                if(review==null)Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
-            }
+            NativeVerifiedLoadOptions(
+                session=session,set=set,load=load,state=state,enabled=!busy,
+                onLoad={load=it},onInspect=onInspectEquipmentLoad)
             val validLoad=NativeSetEntryPolicy.accepts(load,reps,rir,set.allowFailedAttempt)
             val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
             Button(onClick={onRecord(set.slot,JournalSetDisposition.COMPLETED,

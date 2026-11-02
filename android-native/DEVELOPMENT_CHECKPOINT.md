@@ -1621,3 +1621,22 @@ presentation. This prevents an editable actual value from being the
 only visible indication of the originally issued weight. No equipment
 weight guesses, progression rules or storage writes were introduced.
 The source interaction check pins this ordering; no APK.
+
+## 2026-11-02 — Compact, shared verified load controls in real Train
+
+The live working-set screen now delegates equipment-aware load options to
+`NativeVerifiedLoadOptions`, a reusable native Compose presentation
+component. The entry field is still manually editable, and no barbell,
+dumbbell, Smith, machine or cable increment is ever guessed. The exact
+canonical confirmation is checked against current workout ID, immutable
+set slot, entered load and unit before offering any adjacent load. Only
+available verified previous/next values become buttons; explanatory text
+is collapsed behind About these loads. Unconfirmed equipment explicitly
+offers no increments; a failed inspection leaves manual logging available.
+When a verified load is chosen, only the user's unsaved actual field is
+updated, and the previously verified result is hidden until rechecked.
+Canonical engine, persistence and progression math are unchanged.
+
+The shared source assertions now inspect the dedicated component rather
+than requiring loading-detail presentation code inside the workout screen.
+No APK is produced; the entire journey must pass before another device build.

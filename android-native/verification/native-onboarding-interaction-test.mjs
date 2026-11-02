@@ -124,16 +124,27 @@ assert.ok(train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy'
   controls.includes('minWidth=48.dp,minHeight=48.dp') &&
   !controls.includes('stepLoad('),
   'All set editors share bounded keyboard-and-stepper entry, touch targets and no made-up equipment increments');
+const verifiedLoadUi=fs.readFileSync(root+'NativeVerifiedLoadOptions.kt','utf8');
 assert.ok(train.includes('onInspectEquipmentLoad:(JournalSetSlot,String)->Unit') &&
-  train.includes('it.workoutId==session.workoutId && it.slot==set.slot') &&
-  train.includes('it.unit==session.unit && it.inputLoad==load') &&
-  train.includes('if(review?.confirmed==true)') &&
-  train.includes('No assumed load increments are offered') &&
+  train.includes('NativeVerifiedLoadOptions(') &&
+  train.includes('onLoad={load=it},onInspect=onInspectEquipmentLoad)') &&
+  verifiedLoadUi.includes('it.workoutId==session.workoutId && it.slot==set.slot') &&
+  verifiedLoadUi.includes('it.unit==session.unit && it.inputLoad==load') &&
+  verifiedLoadUi.includes('if(review?.confirmed==true)') &&
+  verifiedLoadUi.includes('if(review.previous!=null)') &&
+  verifiedLoadUi.includes('if(review.next!=null)') &&
+  verifiedLoadUi.includes('No assumed load increments are offered') &&
+  verifiedLoadUi.includes('if(!review.exact)') &&
+  verifiedLoadUi.includes('About these loads') &&
+  verifiedLoadUi.includes('onLoad(review.previous)') &&
+  verifiedLoadUi.includes('onLoad(review.next)') &&
+  !verifiedLoadUi.includes('stepLoad(') &&
+  !verifiedLoadUi.includes('commitAtomically') &&
   host.includes('NativeEquipmentLoadingCodec.matchesOrigin(snapshot,progress.plan)') &&
   host.includes('engine.inspectEquipmentLoad(snapshot,progress.plan.issuedJson,slot,input)') &&
   host.includes('latest.storeChangeKey==initial.storeChangeKey') &&
   activity.includes('onInspectEquipmentLoad=runtime::inspectEquipmentLoad'),
-  'Equipment-based load changes require canonical source identity, strict typed verification, unchanged saved revision, and genuinely confirmed hardware');
+  'Compact equipment options must use an exact canonical verified result for the current set, typed load and source revision; no inferred increments or writes');
 assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId)') &&
   train.includes('val visibleSets=if(focusMode)listOf(exercise.sets.firstOrNull') &&
   train.includes('it.slot !in committedSlots') &&

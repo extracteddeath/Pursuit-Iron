@@ -460,7 +460,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
         val request=try {
             NativeGymInventoryEditCodec.editJson(reference,current.saved.profile.unit,inventoryJson,
                 "gym-stock-"+UUID.randomUUID(),
-                maxOf(System.currentTimeMillis(),reference.storeSavedAt+1,reference.programUpdatedAt+1))
+                maxOf(System.currentTimeMillis(),reference.storeSavedAt+1,reference.programUpdatedAt+1),
+                current.saved.loadingCandidates.map { it.id }.toSet())
         } catch(_:Exception) {
             mutable.update { it.copy(gymInventoryError="Invalid physical weights. Check their units and counts.") }
             return

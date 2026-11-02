@@ -14,7 +14,7 @@ class NativeBackupReviewVerificationTest {
         candidateSha: String=merged, flags: List<String> = emptyList(),
         conflicts: Int=0
     )=NativeBackupMergePreview(currentSha,incomingSha,candidateSha,512,
-        empty,added,added,conflicts,0,0,0,0,flags)
+        empty,added,added,conflicts,0,0,0,0,0,0,flags)
     private fun picked(hash: String=selected,count: Long=100)=UnverifiedBackupFingerprint(count,hash)
 
     @Test fun identicalSecondSelectionAndCanonicalResultsMatchOnlyTheSameReview() {

@@ -56,6 +56,22 @@ const preferences=previewCanonicalBackupMerge(
 assert.equal(preferences.settingsChanged,1);
 assert.ok(preferences.flags.includes('SETTINGS_CHANGED'));
 assert.ok(!JSON.stringify(preferences).includes('"unit"'));
+const ghostDeletion=previewCanonicalBackupMerge(
+  JSON.stringify(store(100)),JSON.stringify(store(101,[],{ 'future-record': 55 })));
+assert.equal(ghostDeletion.ownedRecordsRemoved,0);
+assert.equal(ghostDeletion.deletionClocksChanged,1);
+assert.ok(ghostDeletion.flags.includes('DELETION_CLOCKS_CHANGED'));
+assert.ok(!JSON.stringify(ghostDeletion).includes('future-record'));
+const priorPerf=JSON.stringify({...store(100),perf:{bench:{weight:185,reps:8}}});
+const newerPerf=JSON.stringify({...store(101),perf:{bench:{weight:225,reps:8}}});
+const liftRisk=previewCanonicalBackupMerge(priorPerf,newerPerf);
+assert.equal(liftRisk.performanceChanged,1);
+assert.equal(liftRisk.settingsChanged,0);
+assert.ok(liftRisk.flags.includes('PERFORMANCE_CHANGED'));
+assert.ok(!JSON.stringify(liftRisk).includes('225'));
+assert.ok(!JSON.stringify(liftRisk).includes('bench'));
+assert.equal(preview.performanceChanged,0);
+assert.equal(preview.deletionClocksChanged,0);
 const restored = JSON.stringify(store(135, [history('old', 190, 40)], { old: 30 }));
 assert.equal(previewCanonicalBackupMerge(deleted, restored).counts.hypothetical.history, 1,
   'a later explicit edit may resurrect a deleted record');

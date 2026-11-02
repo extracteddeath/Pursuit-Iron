@@ -31,8 +31,12 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     onCalendar: (NativeHistoryCalendarQuery)->Unit) {
     val history=state.history
     val browserState=rememberSaveableStateHolder()
+    // History remains readable during a live workout, but respects the
+    // canonical reader's recovery and store-availability checks.
+    val enabled=state.ready && state.saved!=null && !state.blocked &&
+        !state.busy && !state.workoutBlocked && !state.historyBusy &&
+        !state.workoutBusy && !state.backupExportBusy
     if(history==null) {
-        val enabled=!state.historyBusy && !state.workoutBusy
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
             FilterChip(selected=state.historyCalendarQuery==null,onClick={onPage(0)},enabled=enabled,label={Text("List")})
             FilterChip(selected=state.historyCalendarQuery!=null,enabled=enabled,onClick={
@@ -47,14 +51,14 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
             return
         }
         val page=state.historyPage
-        NativeHistoryFilters(state.historyFilter,!state.historyBusy && !state.workoutBusy,onFilter)
+        NativeHistoryFilters(state.historyFilter,enabled,onFilter)
         if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
         if(page==null) {
             PursuitCard {
                 Text("Saved workouts",style=MaterialTheme.typography.titleMedium)
                 Text(if(state.completion!=null)"Your latest workout is saved. Load your history to review it."
                     else "Load the workouts saved on this device.")
-                TextButton(onClick={onPage(0)},enabled=!state.historyBusy && !state.workoutBusy) {
+                TextButton(onClick={onPage(0)},enabled=enabled) {
                     Text(if(state.historyBusy)"Loading…" else "Load workouts")
                 }
             }
@@ -78,13 +82,13 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
             Text("${page.offset+1}–${page.offset+page.entries.size} of ${page.total}",style=MaterialTheme.typography.bodySmall)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                 OutlinedButton(onClick={onPage((page.offset-NativeHistoryPageCodec.PAGE_SIZE).coerceAtLeast(0))},
-                    enabled=page.offset>0 && !state.historyBusy && !state.workoutBusy) { Text("Newer workouts") }
+                    enabled=page.offset>0 && enabled) { Text("Newer workouts") }
                 OutlinedButton(onClick={page.nextOffset?.let(onPage)},
-                    enabled=page.nextOffset!=null && !state.historyBusy && !state.workoutBusy) { Text("Older workouts") }
+                    enabled=page.nextOffset!=null && enabled) { Text("Older workouts") }
             }
         }
         state.historyError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
-        TextButton(onClick={onPage(0)},enabled=!state.historyBusy && !state.workoutBusy) { Text("Reload workouts") }
+        TextButton(onClick={onPage(0)},enabled=enabled) { Text("Reload workouts") }
         return
     }
     var selectedExercise by rememberSaveable(history.entrySha256) { mutableStateOf<String?>(null) }
@@ -195,7 +199,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     }
     state.historyError?.let { error ->
         Text(error,color=MaterialTheme.colorScheme.error)
-        TextButton(onClick=onReload,enabled=!state.historyBusy && !state.workoutBusy) { Text("Reload saved sets") }
+        TextButton(onClick=onReload,enabled=enabled) { Text("Reload saved sets") }
     }
     val exercise=history.exercises.firstOrNull { it.id==selectedExercise }
     val set=exercise?.sets?.firstOrNull { it.setIndex==selectedSet }

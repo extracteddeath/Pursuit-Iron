@@ -22,7 +22,9 @@ internal fun NativeHistoryCalendarPanel(state: NativeRuntimeState,onLoad: (Nativ
     onOpen: (String)->Unit,onReload: ()->Unit) {
     val query=checkNotNull(state.historyCalendarQuery)
     val calendar=state.historyCalendar?.takeIf { it.query==query }
-    val enabled=!state.historyBusy && !state.workoutBusy
+    val enabled=state.ready && state.saved!=null && !state.blocked &&
+        !state.busy && !state.workoutBlocked && !state.historyBusy &&
+        !state.workoutBusy && !state.backupExportBusy
     val zone=ZoneId.systemDefault()
     NativeHistoryFilters(query.filter,enabled,{onLoad(query.copy(search=it.search,zone=zone))},calendar=true)
     if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())

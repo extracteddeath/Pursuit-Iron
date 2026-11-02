@@ -323,11 +323,19 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             }
         }
     }
+    /** Read-only history remains available during an active workout but
+     * cannot overlap backup export, blocked recovery or store transactions.
+     */
+    private fun canReadHistory(current: NativeRuntimeState): Boolean =
+        current.ready && current.saved!=null && !current.blocked && !current.busy &&
+        !current.historyBusy && !current.workoutBusy && !current.backupExportBusy &&
+        !current.workoutBlocked
+
     fun filterHistory(filter: NativeHistoryFilter)=loadHistoryPage(0,filter)
     fun loadHistoryPage(offset: Int)=loadHistoryPage(offset,mutable.value.historyFilter)
     private fun loadHistoryPage(offset: Int,filter: NativeHistoryFilter) {
         val current=mutable.value
-        if(!current.ready || current.busy || current.saved==null || current.historyBusy || current.workoutBusy)return
+        if(!canReadHistory(current))return
         val prior=current.historyPage
         if(offset!=0 && (prior==null || prior.filter!=filter ||
             offset!=prior.nextOffset && offset!=(prior.offset-NativeHistoryPageCodec.PAGE_SIZE).coerceAtLeast(0)))return
@@ -349,7 +357,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     }
     fun loadHistoryCalendar(query: NativeHistoryCalendarQuery) {
         val current=mutable.value
-        if(!current.ready || current.busy || current.saved==null || current.historyBusy || current.workoutBusy)return
+        if(!canReadHistory(current))return
         val reader=historyReader ?: return
         mutable.update { it.copy(history=null,historyCalendarQuery=query,historyCalendar=null,historyBusy=true,historyError=null) }
         scope.launch {
@@ -378,7 +386,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     }
     private fun loadHistoryWorkout(historyId: String,expected: String?) {
         val current=mutable.value
-        if(!current.ready || current.busy || current.historyBusy || current.workoutBusy)return
+        if(!canReadHistory(current))return
         val reader=historyReader ?: return
         mutable.update { it.copy(historyBusy=true,historyError=null) }
         scope.launch {

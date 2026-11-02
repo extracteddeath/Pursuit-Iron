@@ -1876,3 +1876,13 @@ conditions. This matches the tighter canonical correction writer and
 avoids a Save button that can only be rejected. Current corrected
 observations, original targets, exact retry identity and saved data
 remain unchanged. Source-only validation and Compose compile required.
+
+## 2026-11-02 — History browser/Today shortcut availability parity
+
+The canonical read-only history page, calendar and detail entry points
+now share a fail-closed guard against unready or blocked recovery, store
+work, history I/O and backup export. The Insights list, filters, date
+picker, pagination and Today latest-workout shortcut reflect the same
+availability. Read-only history remains usable during an active workout,
+while corrections still require finishing it. No saved facts, journal,
+training engine calculation or backup files are changed. No APK.

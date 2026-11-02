@@ -861,3 +861,16 @@ assert.ok(historyUi.includes('val historyEditorBusy=state.historyBusy || state.w
   historyUi.split('NativeSetEditSheet(historyEditorBusy,').length-1===3 &&
   host.includes('if(!current.ready || current.blocked || current.busy || current.workoutBlocked ||'),
   'Saved-history corrections must be disabled when the runtime writer is unready or blocked, not just during active workout or backup');
+
+assert.ok(host.includes('private fun canReadHistory(current: NativeRuntimeState): Boolean =') &&
+  host.includes('current.ready && current.saved!=null && !current.blocked && !current.busy &&') &&
+  host.includes('!current.historyBusy && !current.workoutBusy && !current.backupExportBusy &&') &&
+  host.split('if(!canReadHistory(current))return').length-1===3 &&
+  historyUi.includes('val enabled=state.ready && state.saved!=null && !state.blocked &&') &&
+  historyUi.includes('!state.busy && !state.workoutBlocked && !state.historyBusy &&') &&
+  historyUi.includes('!state.workoutBusy && !state.backupExportBusy') &&
+  historyUi.includes('NativeHistoryFilters(state.historyFilter,enabled,onFilter)') &&
+  calendarUi.includes('val enabled=state.ready && state.saved!=null && !state.blocked &&') &&
+  screens.includes('enabled=workoutState.ready && !workoutState.blocked && !workoutState.busy &&') &&
+  screens.includes('!workoutState.backupExportBusy && !workoutState.workoutBlocked,'),
+  'History browsing and Today latest-workout shortcut must match reader availability while allowing live-workout read-only history');

@@ -85,8 +85,9 @@ internal fun TodayScreen(
             }
             if(workoutState?.completion!=null && !activeWorkout) {
                 TextButton(onClick=viewLatestHistory,
-                    enabled=workoutState.ready && !workoutState.historyBusy &&
-                        !workoutState.workoutBusy && !workoutState.backupExportBusy,
+                    enabled=workoutState.ready && !workoutState.blocked && !workoutState.busy &&
+                        !workoutState.historyBusy && !workoutState.workoutBusy &&
+                        !workoutState.backupExportBusy && !workoutState.workoutBlocked,
                     modifier=Modifier.fillMaxWidth()) {
                     Text("Review last workout")
                 }

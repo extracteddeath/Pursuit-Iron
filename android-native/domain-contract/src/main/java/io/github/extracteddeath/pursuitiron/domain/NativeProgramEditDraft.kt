@@ -18,6 +18,11 @@ class NativeProgramEditDraft private constructor(
     val days: List<ReadOnlyProgramDay>
 ) {
     companion object {
+        private fun freeze(days: List<ReadOnlyProgramDay>): List<ReadOnlyProgramDay> =
+            Collections.unmodifiableList(days.map { day ->
+                day.copy(exerciseIds=Collections.unmodifiableList(day.exerciseIds.toList()))
+            })
+
         fun from(verified: ReadOnlyProgramPresentation.Structure): NativeProgramEditDraft {
             val p=verified.program
             require(p.days.size in 1..7 && p.id==p.reference.programId)
@@ -34,16 +39,9 @@ class NativeProgramEditDraft private constructor(
 
     val isChanged: Boolean get() = name!=originalName || days!=originalDays
 
-    private fun next(name: String=this.name, days: List<ReadOnlyProgramDay>=this.days):
+    private fun next(name: String=this.name, days: List<ReadOnlyProgramDay> = this.days):
         NativeProgramEditDraft =
         NativeProgramEditDraft(reference,originalName,name,originalDays,freeze(days))
-
-    private companion object Work {
-        fun freeze(days: List<ReadOnlyProgramDay>): List<ReadOnlyProgramDay> =
-            Collections.unmodifiableList(days.map { day ->
-                day.copy(exerciseIds=Collections.unmodifiableList(day.exerciseIds.toList()))
-            })
-    }
 
     fun renameProgram(newName: String): NativeProgramEditDraft? =
         if(validLabel(newName,120)) next(name=newName) else null
@@ -69,7 +67,7 @@ class NativeProgramEditDraft private constructor(
         moved.add(target,value)
         val updated=days.toMutableList()
         updated[day]=updated[day].copy(exerciseIds=moved)
-        return copy(days=updated)
+        return next(days=updated)
     }
 
     fun reset(): NativeProgramEditDraft = next(

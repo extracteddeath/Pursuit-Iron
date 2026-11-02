@@ -36,6 +36,44 @@ class NativeProgramPriorityCodecTest {
         assertTrue(restored.reduced.isEmpty())
     }
 
+    @Test fun engineDeclaredMuscleOptionsAreStrictlyVerified() {
+        val splits=JSONArray()
+        listOf("full_body","upper_lower","ppl","ulppl").forEach { id ->
+            splits.put(JSONObject().put("id",id).put("label",id)
+                .put("days",JSONArray().put(3).put(4)))
+        }
+        val muscles=JSONArray()
+        listOf("chest","lats","upper_back","shoulders","biceps","triceps",
+            "quads","hamstrings","glutes","calves","abs","traps","forearms",
+            "adductors","abductors","lower_back","neck").forEach { id ->
+            muscles.put(JSONObject().put("id",id).put("label",id))
+        }
+        fun response(value: JSONObject)=JSONObject().put("protocolVersion",1)
+            .put("id","muscle-options").put("ok",true).put("result",value).toString()
+        val valid=JSONObject().put("source","modules/engine-api.js:splitSupportsTrainingDays")
+            .put("readOnly",true).put("splits",splits)
+            .put("equipment",JSONArray().put("barbell")).put("muscles",muscles)
+        val result=checkNotNull(NativeProgramSetupCodec.decodeOptions(
+            response(valid),"muscle-options"))
+        assertEquals(17,result.muscles.size)
+        assertEquals("Chest",result.muscles.first().label.replaceFirstChar { it.uppercase() })
+        assertEquals("neck",result.muscles.last().id)
+        assertTrue(runCatching {
+            NativeProgramSetupCodec.decodeOptions(response(
+                JSONObject(valid.toString()).apply { remove("muscles") }),"muscle-options")
+        }.isFailure)
+        val duplicate=JSONObject(valid.toString())
+        duplicate.getJSONArray("muscles").getJSONObject(0).put("id","biceps")
+        assertTrue(runCatching {
+            NativeProgramSetupCodec.decodeOptions(response(duplicate),"muscle-options")
+        }.isFailure)
+        val unknown=JSONObject(valid.toString())
+        unknown.getJSONArray("muscles").getJSONObject(0).put("id","made-up-part")
+        assertTrue(runCatching {
+            NativeProgramSetupCodec.decodeOptions(response(unknown),"muscle-options")
+        }.isFailure)
+    }
+
     @Test fun invalidPrioritiesAndOverlappingMusclesFailClosed() {
         val valid=JSONObject(NativeProgramSetupCodec.profileJson(NativeProgramProfile()))
         val invalid=listOf<(JSONObject)->Unit>(

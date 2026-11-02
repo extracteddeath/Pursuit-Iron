@@ -40,6 +40,7 @@ internal fun NativeBackupMergeReviewPanel(preview: NativeBackupMergePreview) {
         Text("Overlapping revisions: ${preview.conflicts} · history cap losses: ${preview.historyDropped}")
         Text("Records removed: ${preview.ownedRecordsRemoved} · replaced: ${preview.ownedRecordsReplaced}")
         Text("Settings changed: ${preview.settingsChanged}")
+        Text("Existing lift performance changed: ${preview.performanceChanged} · deletion clocks changed: ${preview.deletionClocksChanged}")
         if (preview.flags.isEmpty()) {
             Text("No known merge risks were flagged. This is not a guarantee that restoring is safe.",
                 color=MaterialTheme.colorScheme.onSurfaceVariant,
@@ -54,6 +55,8 @@ internal fun NativeBackupMergeReviewPanel(preview: NativeBackupMergePreview) {
                         "OWNED_RECORDS_REMOVED" -> "Existing training records would be removed."
                         "OWNED_RECORDS_REPLACED" -> "Existing training records would be replaced."
                         "SETTINGS_CHANGED" -> "Saved preferences or other settings would change."
+                        "PERFORMANCE_CHANGED" -> "Existing lift performance summaries would change."
+                        "DELETION_CLOCKS_CHANGED" -> "Newer deletion markers could remove records during later merges."
                         else -> "Additional differences require review."
                     },
                     color=MaterialTheme.colorScheme.error,

@@ -36,7 +36,7 @@ object NativeProgramSetupCodec {
     private val wire=WorkoutStoreRuntimeCodec
     private val baseFields=arrayOf("name","goal","experience","unit","split",
         "days","session","equipment","allowBodyweight","allowSupersets","barbellCap")
-    private val allowedMuscles=setOf("chest","lats","upper_back","shoulders","biceps",
+    private val allowedMuscles=setOf("chest","back","shoulders","biceps",
         "triceps","quads","hamstrings","glutes","calves","abs","traps","forearms",
         "adductors","abductors","lower_back","neck")
     fun profileJson(p: NativeProgramProfile)=JSONObject()

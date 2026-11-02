@@ -75,6 +75,7 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
       const oldId=day.exercises[change.sourceSlot],from=EX_BY_ID[oldId],to=EX_BY_ID[change.exerciseId];
       ensure(from && to && from.id!==to.id && from.part===to.part &&
         from.type===to.type && (!from.pattern || !to.pattern || from.pattern===to.pattern) &&
+        from.rep[0]===to.rep[0] && from.rep[1]===to.rep[1] &&
         !day.exercises.includes(to.id));
       const available=expandEquipment(original.config?.equipment);
       ensure(Array.isArray(original.config?.equipment) && to.equip.every(e=>available.has(e)) &&
@@ -90,17 +91,19 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
       ensure(original.config?.progression==='auto' && savedMeta &&
         exact(savedMeta,['nextEngine','nextExerciseId','legacyExerciseId']) &&
         savedMeta.nextEngine===true && savedMeta.legacyExerciseId===oldId);
-      // Engine-owned per-week role targets must remain executable: removing
-      // them turns Pursuit Next computeCell into zero sets. Retain ONLY a
-      // verified schedule whose reps fit the replacement and which has no
-      // exercise-specific techniques; old user overrides are cleared.
+      // Retain the original ENGINE-OWNED role/week dose only for an exercise
+      // with the same catalog rep window and stimulus; drop any former
+      // exercise-specific intensity technique. No user load or progression
+      // choice is carried. Without the role cells, computeCell emits 0 sets.
       const engineWeeks=original.nextWeekPrescriptions?.[sourceKey];
       ensure(object(engineWeeks) && Object.keys(engineWeeks).length>0 &&
         Object.values(engineWeeks).every(cell=>{
-          if(!object(cell) || !Number.isInteger(cell.sets) || cell.sets<1 || cell.tech!=null)return false;
+          if(!object(cell) || !Number.isInteger(cell.sets) || cell.sets<1)return false;
           const reps=canonicalRepRange(cell.reps);
-          return reps && reps[0]>=to.rep[0] && reps[1]<=to.rep[1];
+          return reps && reps[0]>=1 && reps[1]<=100;
         }));
+      const safeWeeks=Object.fromEntries(Object.entries(engineWeeks)
+        .map(([week,cell])=>[week,{...cell,tech:null}]));
       // Replacing the movement explicitly discards its *slot-local* loading,
       // progression, amplifier and alternate-week settings. Do not transfer
       // any source exercise targets to a different physical movement.
@@ -110,7 +113,7 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
         const store=original[field];
         ensure(object(store));
         if(field==='nextWeekPrescriptions') {
-          cleaned[field]=store; // verified immutable engine role schedule, not a user load
+          cleaned[field]={...store,[sourceKey]:safeWeeks};
           continue;
         }
         const without={...store};

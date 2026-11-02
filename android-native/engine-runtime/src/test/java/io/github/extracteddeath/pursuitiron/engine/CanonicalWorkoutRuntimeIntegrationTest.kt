@@ -93,6 +93,56 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             f.getLong("completedAt"),f.getLong("durationMs"))))
     }
 
+    @Test(timeout=60000) fun actualIssuedUpNextHonorsPersistedSkipCorrectionAndRecovery() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val program=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Verified next set",allowSupersets=false),
+                "next-create","next-program",1000,223)))
+            val stored=Drive();val owner=CanonicalWorkoutStorePersistence(stored,engine)
+            assertTrue(owner.initialize(program.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(program.snapshot,
+                NativeWorkoutCodec.startJson("next-program","next-workout",2000)))
+            val journalDisk=Drive();val journal=WorkoutJournalPersistence(journalDisk)
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            val first=plan.exercises.first()
+            assertTrue("Need two actual issued sets for navigation",first.sets.size>=2)
+            val initial=checkNotNull(NativeNextSetPolicy.inspect(progress,0))
+            assertEquals(first.sets.first().slot,initial.current?.set?.slot)
+            assertEquals(first.sets[1].slot,initial.upNext?.set?.slot)
+            assertEquals(first.sets[1].targetReps,initial.upNext?.set?.targetReps)
+            assertEquals(first.sets[1].load,initial.upNext?.set?.load)
+            val savedWrites=stored.writes
+            val observed=JournalSetValues("0",plan.session.unit,8,2)
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(
+                plan.session,progress.journal.revision,JournalSetIntent(
+                    "next-logged",first.sets.first().slot,
+                    JournalSetDisposition.COMPLETED,observed))))
+            val after=checkNotNull(NativeNextSetPolicy.inspect(progress,0))
+            assertEquals(first.sets[1].slot,after.current?.set?.slot)
+            assertEquals(first.sets.getOrNull(2)?.slot
+                ?:plan.exercises.getOrNull(1)?.sets?.firstOrNull()?.slot,
+                after.upNext?.set?.slot)
+            val recovery=checkNotNull(WorkoutJournalPersistence(journalDisk).recover())
+            assertEquals(after,NativeNextSetPolicy.inspect(NativeWorkoutProgress(plan,recovery),0))
+            assertEquals(savedWrites,stored.writes)
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(
+                plan.session,progress.journal.revision,JournalSetIntent(
+                    "next-skipped",first.sets[1].slot,JournalSetDisposition.SKIPPED,null))))
+            assertEquals(first.sets.getOrNull(2)?.slot,
+                NativeNextSetPolicy.inspect(progress,0)?.current?.set?.slot)
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(
+                plan.session,progress.journal.revision,JournalSetIntent(
+                    "next-corrected",first.sets.first().slot,
+                    JournalSetDisposition.COMPLETED,observed.copy(reps=9),
+                    replacesOperationId="next-logged"))))
+            val corrected=checkNotNull(NativeNextSetPolicy.inspect(progress,0))
+            assertNotEquals(first.sets.first().slot,corrected.current?.set?.slot)
+            assertEquals(plan.slots.size-2,corrected.remainingTotal)
+            assertEquals(savedWrites,stored.writes)
+        } }
+    }
+
     @Test(timeout=60000) fun acknowledgedCanonicalSetsTriggerOnlySafeRestCues() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

@@ -33,6 +33,8 @@ internal fun NativeOnboardingScreen(
     var bodyweight by rememberSaveable { mutableStateOf(initial.allowBodyweight) }
     var supersets by rememberSaveable { mutableStateOf(initial.allowSupersets) }
     var barbellCap by rememberSaveable { mutableStateOf<Int?>(initial.barbellCap) }
+    var focus by rememberSaveable { mutableStateOf(HashMap(initial.focus)) }
+    var reduced by rememberSaveable { mutableStateOf(ArrayList(initial.reduced)) }
     val splits=state.options?.splits ?: listOf(NativeProgramSplit("full_body","Full body",listOf(3,4,5,6)))
     val selected=splits.firstOrNull { it.id==split } ?: splits.first()
     LaunchedEffect(state.options) {
@@ -45,7 +47,7 @@ internal fun NativeOnboardingScreen(
         0->"Train your way";1->"Your equipment";else->"Review your program"
     },when(currentStep) {
         0->"Choose your goal and the week you can commit to."
-        1->"Your plan will use the equipment you select."
+        1->"Choose the equipment and muscles your plan should emphasize."
         else->"Check the generated plan before saving it on this device."
     })
     LinearProgressIndicator(progress={ (currentStep+1)/3f },modifier=Modifier.fillMaxWidth())
@@ -57,6 +59,14 @@ internal fun NativeOnboardingScreen(
             Text(proposal.program.name,style=MaterialTheme.typography.headlineSmall)
             Text("${proposal.program.days.size} training days · ${proposal.program.weeks}-week starting block")
             Text("${when(proposal.profile.goal){"strength"->"Strength";"hypertrophy"->"Muscle growth";else->"Strength & size"}} · ${proposal.profile.unit}")
+            if(proposal.profile.focus.isNotEmpty())
+                Text("Requested priorities: " +
+                    proposal.profile.focus.toSortedMap().entries.joinToString(", ") { (part,level) ->
+                        "${part.replace('_',' ')} ${if(level==2)"· specialize" else "· focus"}"
+                    })
+            if(proposal.profile.reduced.isNotEmpty())
+                Text("Requested reduced work: " +
+                    proposal.profile.reduced.joinToString(", ") { it.replace('_',' ') })
             proposal.program.days.forEachIndexed { index,day ->
                 ReadOnlyTrainingDayRow(index,day.label,day.exerciseIds.size)
             }
@@ -127,9 +137,24 @@ internal fun NativeOnboardingScreen(
                 PreviewChoice(cap?.toString() ?: "No limit",barbellCap==cap,!state.busy){barbellCap=cap}
             }
         }
+        SectionLabel("Muscle priorities")
+        NativeMusclePrioritySelector(
+            muscles=state.options?.muscles.orEmpty(),
+            focus=focus, reduced=reduced,
+            enabled=!state.busy
+        ) { muscle,mode ->
+            val nextFocus=HashMap(focus)
+            val nextReduced=ArrayList(reduced)
+            nextFocus.remove(muscle)
+            nextReduced.remove(muscle)
+            if(mode in 1..2 && nextFocus.size<3) nextFocus[muscle]=mode
+            else if(mode==-1 && nextReduced.size<3) nextReduced.add(muscle)
+            focus=nextFocus
+            reduced=nextReduced
+        }
         if(equipment.isEmpty()) Text("Choose at least one equipment option.",color=MaterialTheme.colorScheme.error)
         Button(onClick={onReview(NativeProgramProfile(name,goal,experience,unit,split,days,session,
-            equipment.toList(),bodyweight,supersets,barbellCap))},
+            equipment.toList(),bodyweight,supersets,barbellCap,focus.toMap(),reduced.toList()))},
             enabled=state.ready && !state.blocked && !state.busy && equipment.isNotEmpty() && name.isNotBlank(),
             modifier=Modifier.fillMaxWidth()) { Text(if(state.busy) "Building your program…" else "Review generated plan") }
         OutlinedButton(onClick={if(state.busy)onEdit() else step=0},modifier=Modifier.fillMaxWidth()) {

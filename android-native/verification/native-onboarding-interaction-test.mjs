@@ -360,10 +360,10 @@ assert.ok(activity.includes('onVerifyBackupMerge=runtime::verifyBackupMergeSelec
   backupScreening.includes('ReselectionVerified') &&
   backupScreening.includes('ReselectionMismatch') &&
   backupScreening.includes('screening.bytes.fill(0)') &&
-  host.includes('private var backupReviewTicket: NativeBackupReviewTicket?=null') &&
-  host.includes('backupReviewEpoch.incrementAndGet()') &&
-  host.includes('backupReviewTicket=null') &&
-  host.includes('first.matchesReselection(fresh,second)') &&
+  host.includes('private val backupReviewGate=NativeBackupReviewGate()') &&
+  host.includes('backupReviewGate.claimReselection()') &&
+  host.includes('backupReviewGate.abandonReselection(claimed)') &&
+  host.includes('backupReviewGate.completeReselection(claimed,fresh,second)') &&
   backupReviewGate.includes('freshPreview==preview') &&
   backupReviewGate.includes('freshSelection.sha256Hex==preview.incomingSha256') &&
   backupReviewGate.includes('A preview by itself cannot bind') &&

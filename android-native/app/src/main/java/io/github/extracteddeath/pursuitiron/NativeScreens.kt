@@ -34,6 +34,7 @@ import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupExportDocument
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
 
 /**
  * These are independently designed NATIVE journeys, not ports of React screens.
@@ -335,7 +336,8 @@ internal fun PlanScreen(
     schemaVerifier: CanonicalBackupSchemaVerifier? = null,
     schemaVerifierLoading: Boolean = false,
     runtimeState: NativeRuntimeState?=null,onExportBackup: (NativeBackupExportDocument)->Unit = {},onResetBackupExport: ()->Unit = {},
-    onPreviewDay: (ReadOnlyTrainingDaySelection) -> Unit = {}
+    onPreviewDay: (ReadOnlyTrainingDaySelection) -> Unit = {},
+    onPreviewBackupMerge: (suspend (ByteArray) -> NativeBackupMergePreview?)? = null
 ) {
     if(hasSavedProgram && currentPlan !is ReadOnlyProgramPresentation.Structure) {
         PageHeading("YOUR PROGRAM","Loading your program","Your saved plan is being loaded.")
@@ -396,7 +398,8 @@ internal fun PlanScreen(
         WorkoutOutlinePanel(outline = null)
     }
     // Fingerprint-only document chooser never unlocks personal program display.
-    BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading)
+    BackupCopyScreeningPanel(verifier = schemaVerifier, verifierLoading = schemaVerifierLoading,
+        onPreviewBackupMerge = if (hasSavedProgram) onPreviewBackupMerge else null)
     if(runtimeState?.saved!=null)NativeBackupExportPanel(runtimeState,onExportBackup,onResetBackupExport)
     SectionLabel("Plan essentials")
     PursuitCard {

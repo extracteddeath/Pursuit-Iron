@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeNextSetPreview
-import io.github.extracteddeath.pursuitiron.domain.NativePendingSet
 
 /** Shared M3 training preview: no private store, training math or mutations. */
 @Composable
@@ -14,6 +13,7 @@ internal fun NativeUpNextPanel(
     preview: NativeNextSetPreview,
     selectedPosition: Int,
     enabled: Boolean,
+    unit: String,
     onOpenExercise: (Int)->Unit
 ) {
     if(preview.remainingTotal==0)return
@@ -36,8 +36,8 @@ internal fun NativeUpNextPanel(
                 next.set.kind=="drop" -> "Drop set"
                 else -> "Set ${next.set.slot.setIndex+1}"
             }
-            Text("$"+"setLabel · ${next.set.load} · ${next.set.targetReps} target reps"+
-                (next.set.targetRir?.let { " · $"+"it RIR" } ?: ""),
+            Text("${setLabel} · ${next.set.load} ${unit} · ${next.set.targetReps} target reps"+
+                (next.set.targetRir?.let { " · ${it} RIR" } ?: ""),
                 style=MaterialTheme.typography.bodyMedium)
             Text("${preview.remainingTotal} unresolved set"+
                 (if(preview.remainingTotal==1)"" else "s")+" remaining",

@@ -15,7 +15,7 @@ import io.github.extracteddeath.pursuitiron.domain.*
  */
 /** Matching plates on each side; never a mechanical resistance estimate. */
 @Composable
-private fun VerifiedPlateSide(label: String,layout: NativeBarbellPlateBreakdown) {
+private fun RowScope.VerifiedPlateSide(label: String,layout: NativeBarbellPlateBreakdown) {
     OutlinedCard(modifier=Modifier.weight(1f)) {
         Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             Text(label,style=MaterialTheme.typography.labelLarge,

@@ -93,6 +93,58 @@ class CanonicalWorkoutRuntimeIntegrationTest {
             f.getLong("completedAt"),f.getLong("durationMs"))))
     }
 
+    @Test(timeout=60000) fun acknowledgedCanonicalSetsTriggerOnlySafeRestCues() {
+        NodeTransport().use { node -> runBlocking {
+            val engine=SandboxCanonicalWorkoutStoreEngine(node)
+            val setup=NativeProgramSetupCodec.setupJson(
+                NativeProgramProfile(name="Rest confirmation",allowSupersets=false),
+                "rest-create","rest-program",1000,223)
+            val program=checkNotNull(engine.prepareProgram(setup))
+            val storeDrive=Drive();val owner=CanonicalWorkoutStorePersistence(storeDrive,engine)
+            assertTrue(owner.initialize(program.snapshot))
+            val plan=checkNotNull(engine.prepareWorkout(program.snapshot,
+                NativeWorkoutCodec.startJson("rest-program","rest-workout",2000)))
+            val journalDrive=Drive();val journal=WorkoutJournalPersistence(journalDrive)
+            var progress=checkNotNull(owner.beginIssuedSession(plan,journal))
+            assertNull(NativeRestCuePolicy.latest(progress,0))
+            val eligible=plan.exercises.firstOrNull {
+                !it.superset && it.restSeconds in 1..3600 && it.sets.size>=2
+            } ?: error("Generated nonpaired workout must have multiple issued sets")
+            val first=eligible.sets.first().slot
+            val observation=JournalSetValues("0",plan.session.unit,8,2)
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,
+                progress.journal.revision,JournalSetIntent("rest-logged",first,
+                    JournalSetDisposition.COMPLETED,observation))))
+            val expected=eligible.sets.drop(1).firstOrNull()
+                ?.extensionRestSeconds ?: eligible.restSeconds
+            assertEquals(NativeRestCue("rest-logged",expected,eligible.index),
+                NativeRestCuePolicy.latest(progress,eligible.index))
+            assertNull(NativeRestCuePolicy.latest(progress,(eligible.index+1)%plan.exercises.size))
+            val writes=journalDrive.writes
+            val storeWrites=storeDrive.writes
+            // The cue is pure. Recovering durable journal bytes must not
+            // append a set or synthesize another training receipt.
+            val recovered=checkNotNull(WorkoutJournalPersistence(journalDrive).recover())
+            assertEquals(progress.journal.revision,recovered.revision)
+            assertEquals(NativeRestCue("rest-logged",expected,eligible.index),
+                NativeRestCuePolicy.latest(NativeWorkoutProgress(plan,recovered),eligible.index))
+            assertEquals(writes,journalDrive.writes)
+            assertEquals(storeWrites,storeDrive.writes)
+            val second=eligible.sets[1].slot
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,
+                progress.journal.revision,JournalSetIntent("rest-skipped",second,
+                    JournalSetDisposition.SKIPPED,null))))
+            assertNull(NativeRestCuePolicy.latest(progress,eligible.index))
+            progress=NativeWorkoutProgress(plan,checkNotNull(journal.recordSet(plan.session,
+                progress.journal.revision,JournalSetIntent("rest-correction",first,
+                    JournalSetDisposition.COMPLETED,observation.copy(reps=9),
+                    replacesOperationId="rest-logged"))))
+            assertNull("Correcting the same set cannot restart a rest timer",
+                NativeRestCuePolicy.latest(progress,eligible.index))
+            assertEquals(storeWrites,storeDrive.writes)
+        } }
+    }
+
     @Test(timeout=60000) fun packagedEnginePreviewsBackupConflictRiskWithoutWritingPersonalStore() {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)

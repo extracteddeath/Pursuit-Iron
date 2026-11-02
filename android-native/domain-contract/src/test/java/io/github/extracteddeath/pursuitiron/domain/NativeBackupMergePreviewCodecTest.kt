@@ -80,6 +80,20 @@ class NativeBackupMergePreviewCodecTest {
             }.isFailure)
         }
     }
+    @Test fun destructiveRecordAndSettingRisksCannotBeHidden() {
+        val changed=result().put("ownedRecordsRemoved",1).put("ownedRecordsReplaced",2)
+            .put("settingsChanged",3)
+            .put("flags",JSONArray().put("RECORD_CONFLICTS_REQUIRE_REVIEW")
+                .put("OWNED_RECORDS_REMOVED").put("OWNED_RECORDS_REPLACED")
+                .put("SETTINGS_CHANGED"))
+        val summary=checkNotNull(NativeBackupMergePreviewCodec.decode(
+            response(changed),"backup-1",current,incoming))
+        assertEquals(1,summary.ownedRecordsRemoved)
+        assertEquals(2,summary.ownedRecordsReplaced)
+        assertEquals(3,summary.settingsChanged)
+        assertTrue(summary.requiresIntervention)
+    }
+
     @Test fun anExplicitHistoryLossMustBeReportedAsRisk() {
         val withLoss=result().put("historyDropped",5)
             .put("flags",JSONArray().put("HISTORY_CAP_LOSS").put("RECORD_CONFLICTS_REQUIRE_REVIEW"))

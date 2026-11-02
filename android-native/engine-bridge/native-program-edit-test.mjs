@@ -153,6 +153,12 @@ const beforeRemovalWorkout=prepareNativeWorkout(removedSnapshot,JSON.stringify({
   programId:'program-edit',workoutId:'pre-removal',startedAt:7000}));
 const afterRemovalWorkout=prepareNativeWorkout(removalPrepared.candidateSnapshot,JSON.stringify({
   programId:'program-edit',workoutId:'post-removal',startedAt:8000}));
-assert.ok(afterRemovalWorkout.rows.length<beforeRemovalWorkout.rows.length);
-assert.equal(afterRemovalWorkout.rows[0].id,beforeRemovalWorkout.rows[0].id);
+assert.equal(afterRemovalWorkout.session.dayId,beforeRemovalWorkout.session.dayId);
+if(beforeRemovalWorkout.session.dayId===removedDay.id) {
+  assert.ok(afterRemovalWorkout.rows.length<beforeRemovalWorkout.rows.length);
+  assert.equal(afterRemovalWorkout.rows[0].id,beforeRemovalWorkout.rows[0].id);
+} else {
+  assert.deepEqual(afterRemovalWorkout.rows.map(x=>x.id),beforeRemovalWorkout.rows.map(x=>x.id),
+    'A changed future day must not alter the canonical next-day roster');
+}
 console.log('PASS native program edit: revision save, rich slot metadata, duplicate identity, pairings, retries, retained records and canonical issuance');

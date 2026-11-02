@@ -69,7 +69,7 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
       }));
       const change=r.replacement,day=original.days.find(d=>d.id===change.dayId);
       ensure(original.engineSource==='pursuit-next' && day &&
-        change.sourceSlot<day.exercises.length && change.sourceSlot!==day.primaryIndex &&
+        change.sourceSlot<day.exercises.length && change.sourceSlot!==(Number.isInteger(day.primaryIndex)?day.primaryIndex:0) &&
         !original.ss?.[`${day.id}:${change.sourceSlot}`] &&
         (change.sourceSlot===0 || !original.ss?.[`${day.id}:${change.sourceSlot-1}`]));
       const oldId=day.exercises[change.sourceSlot],from=EX_BY_ID[oldId],to=EX_BY_ID[change.exerciseId];

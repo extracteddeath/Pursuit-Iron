@@ -113,7 +113,7 @@ object NativeProgramEditCodec {
             value.get("candidateSnapshotSha256")==wire.sha(candidate) && value.get("alreadyPresent") is Boolean)
         val already=value.getBoolean("alreadyPresent")
         val format=wire.integer(request,"format")
-        require(format in 1..3)
+        require(format in 1L..3L)
         val c=JSONObject(candidate);val original=JSONObject(snapshot)
         val audit=c.getJSONObject("nativeProgramEdit")
         wire.exact(audit,"format","operationId","requestSha256","sourceSnapshotSha256","programId","editedAt")

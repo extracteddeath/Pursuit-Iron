@@ -9,17 +9,16 @@ class NativeSetEntryPolicyTest {
         assertTrue(NativeSetEntryPolicy.accepts("185.125","5","2",false))
         assertTrue(NativeSetEntryPolicy.accepts("200","0","",true))
         for((load,reps,rir,allow) in listOf(
-            listOf("0","0","",true),
-            listOf("200","0","",false),
-            listOf("-10","5","",false),
-            listOf("05","5","",false),
-            listOf("100.1234","5","",false),
-            listOf("100","101","",false),
-            listOf("100","3","11",false),
-            listOf("100","","",false),
-            listOf("100","5","-",false),
-            listOf("100","5","01",false).take(0)
-        ).filter { it.isNotEmpty() }) {
+            listOf("0","0","","true"),
+            listOf("200","0","","false"),
+            listOf("-10","5","","false"),
+            listOf("05","5","","false"),
+            listOf("100.1234","5","","false"),
+            listOf("100","101","","false"),
+            listOf("100","3","11","false"),
+            listOf("100","","","false"),
+            listOf("100","5","-","false")
+        )) {
             assertFalse("Rejected: $load $reps $rir",NativeSetEntryPolicy.accepts(
                 load,reps,rir,allow=="true"))
         }

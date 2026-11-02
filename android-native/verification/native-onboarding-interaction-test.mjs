@@ -327,3 +327,20 @@ assert.ok(restoreOwner.includes('private data class RestoreUndo(') &&
   !screens.includes('installApprovedBackupMerge') &&
   !backupScreening.includes('installApprovedBackupMerge'),
   'Atomic undo transaction remains private and unconnected until real consent, provider/recovery and Android acceptance');
+
+const restoreReviewUi=fs.readFileSync(root+'NativeBackupMergeReviewPanel.kt','utf8');
+assert.ok(backupScreening.includes('NativeBackupMergeReviewPanel(current.preview)') &&
+  restoreReviewUi.includes('BackupMergeCountRow("Workouts"') &&
+  restoreReviewUi.includes('BackupMergeCountRow("Programs"') &&
+  restoreReviewUi.includes('BackupMergeCountRow("Custom programs"') &&
+  restoreReviewUi.includes('BackupMergeCountRow("Training cycles"') &&
+  restoreReviewUi.includes('BackupMergeCountRow("Gyms"') &&
+  restoreReviewUi.includes('preview.ownedRecordsRemoved') &&
+  restoreReviewUi.includes('preview.ownedRecordsReplaced') &&
+  restoreReviewUi.includes('preview.settingsChanged') &&
+  restoreReviewUi.includes('Restore is not available yet') &&
+  restoreReviewUi.includes('A future restore will require a new source check') &&
+  !restoreReviewUi.includes('installApprovedBackupMerge') &&
+  !restoreReviewUi.includes('commitAtomically') &&
+  !restoreReviewUi.includes('CreateDocument('),
+  'Native M3 backup differences must cover every collection and preserve explicit non-import status');

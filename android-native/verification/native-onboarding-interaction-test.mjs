@@ -916,7 +916,7 @@ assert.ok(verifiedLoadUi.includes('if(review.family=="barbell_plates")') &&
   plateTest.includes('unlistedTotalsMissingStockOrWrongUnitsNeverProduceImaginaryPlates'),
   'Plate breakdown is read-only, exact and sourced solely from verified barbell inventory; no Smith/machine guessing or journal writes');
 
-assert.ok(plateUi.includes('private fun VerifiedPlateSide(') &&
+assert.ok(plateUi.includes('private fun RowScope.VerifiedPlateSide(') &&
   plateUi.includes('VerifiedPlateSide("LEFT",breakdown)') &&
   plateUi.includes('VerifiedPlateSide("RIGHT",breakdown)') &&
   plateUi.includes('Text("BAR"') &&

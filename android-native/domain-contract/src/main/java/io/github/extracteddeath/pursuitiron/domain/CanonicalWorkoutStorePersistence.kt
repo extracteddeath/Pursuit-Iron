@@ -214,7 +214,7 @@ class CanonicalWorkoutStorePersistence(
                 }
                 Pending(s,origin,revision,slots,issued)
             }
-            val undo=if(format==2L && !data.isNull("restoreUndo")) {
+            val undo=if(format>=2L && !data.isNull("restoreUndo")) {
                 val details=data.getJSONObject("restoreUndo")
                 exact(details,"operationId","priorSnapshot","priorReceipt","installedSha256")
                 val op=text(details,"operationId")
@@ -228,7 +228,7 @@ class CanonicalWorkoutStorePersistence(
                     pending==null && installed!=sha(original))
                 RestoreUndo(op,original,priorReceipt,installed)
             } else null
-            val ack=if(format==2L && !data.isNull("restoreUndoAck")) {
+            val ack=if(format>=2L && !data.isNull("restoreUndoAck")) {
                 val details=data.getJSONObject("restoreUndoAck")
                 exact(details,"operationId","restoredSha256")
                 val op=text(details,"operationId")

@@ -8,10 +8,16 @@ data class NativeProgramProfile(
     val unit: String="lb",val split: String="full_body",val days: Int=3,val session: String="s60",
     val equipment: List<String> = listOf("barbell","rack","bench","dumbbell","cable","machine",
         "smith","pullup","dip","legpress","hacksquat","legext","legcurl","calfmachine"),
-    val allowBodyweight: Boolean=true,val allowSupersets: Boolean=true,val barbellCap: Int?=3
+    val allowBodyweight: Boolean=true,val allowSupersets: Boolean=true,val barbellCap: Int?=3,
+    val focus: Map<String,Int> = emptyMap(),val reduced: List<String> = emptyList()
 )
 data class NativeProgramSplit(val id: String,val label: String,val days: List<Int>)
-data class NativeProgramOptions(val splits: List<NativeProgramSplit>,val equipment: List<String>)
+data class NativeProgramMuscle(val id: String,val label: String)
+data class NativeProgramOptions(
+    val splits: List<NativeProgramSplit>,
+    val equipment: List<String>,
+    val muscles: List<NativeProgramMuscle> = emptyList()
+)
 class NativeProgramProposal internal constructor(
     val creationId: String,val setupJson: String,val snapshot: String,val program: ReadOnlyProgramSummary,
     val profile: NativeProgramProfile
@@ -28,15 +34,24 @@ interface NativeProgramCreationEngine {
 /** Onboarding schemas and transport only; split validity and generation stay in JS. */
 object NativeProgramSetupCodec {
     private val wire=WorkoutStoreRuntimeCodec
+    private val baseFields=arrayOf("name","goal","experience","unit","split",
+        "days","session","equipment","allowBodyweight","allowSupersets","barbellCap")
+    private val allowedMuscles=setOf("chest","lats","upper_back","shoulders","biceps",
+        "triceps","quads","hamstrings","glutes","calves","abs","traps","forearms",
+        "adductors","abductors","lower_back","neck")
     fun profileJson(p: NativeProgramProfile)=JSONObject()
         .put("name",p.name).put("goal",p.goal).put("experience",p.experience).put("unit",p.unit)
         .put("split",p.split).put("days",p.days).put("session",p.session)
         .put("equipment",JSONArray(p.equipment.sorted())).put("allowBodyweight",p.allowBodyweight)
-        .put("allowSupersets",p.allowSupersets).put("barbellCap",p.barbellCap ?: JSONObject.NULL).toString()
+        .put("allowSupersets",p.allowSupersets).put("barbellCap",p.barbellCap ?: JSONObject.NULL)
+        .put("focus",JSONObject().apply { p.focus.toSortedMap().forEach { (key,level) -> put(key,level) } })
+        .put("reduced",JSONArray(p.reduced.sorted())).toString()
     fun readProfile(raw: String): NativeProgramProfile {
         wire.bounded(raw,16384);val p=JSONObject(raw)
-        wire.exact(p,"name","goal","experience","unit","split","days","session","equipment",
-            "allowBodyweight","allowSupersets","barbellCap")
+        // Old v1 saved native programs omitted priorities; preserve exact restore.
+        val hasPriorities=p.has("focus") || p.has("reduced")
+        if(hasPriorities)wire.exact(p,*baseFields,"focus","reduced")
+        else wire.exact(p,*baseFields)
         val name=wire.text(p,"name");val goal=wire.text(p,"goal");val experience=wire.text(p,"experience")
         val unit=wire.text(p,"unit");val split=wire.text(p,"split");val days=wire.integer(p,"days")
         val session=wire.text(p,"session")
@@ -48,8 +63,27 @@ object NativeProgramSetupCodec {
         val equipment=(0 until list.length()).map { val v=list.get(it);require(v is String && v.matches(Regex("^[a-z][a-z0-9_-]{0,39}$")));v }
         require(equipment.toSet().size==equipment.size && p.get("allowBodyweight") is Boolean && p.get("allowSupersets") is Boolean)
         val cap=if(p.isNull("barbellCap")) null else wire.integer(p,"barbellCap").also { require(it in 0..6) }.toInt()
+        val focus=if(hasPriorities) {
+            val obj=p.getJSONObject("focus")
+            require(obj.length()<=3)
+            obj.keys().asSequence().associateWith { key ->
+                require(key in allowedMuscles)
+                val level=wire.integer(obj,key)
+                require(level in 1..2)
+                level.toInt()
+            }
+        } else emptyMap()
+        val reduced=if(hasPriorities) {
+            val rows=p.getJSONArray("reduced")
+            require(rows.length()<=3)
+            (0 until rows.length()).map { i ->
+                val key=rows.get(i)
+                require(key is String && key in allowedMuscles && key !in focus)
+                key
+            }.also { require(it.size==it.distinct().size) }
+        } else emptyList()
         return NativeProgramProfile(name,goal,experience,unit,split,days.toInt(),session,equipment,
-            p.getBoolean("allowBodyweight"),p.getBoolean("allowSupersets"),cap)
+            p.getBoolean("allowBodyweight"),p.getBoolean("allowSupersets"),cap,focus,reduced)
     }
     fun setupJson(profile: NativeProgramProfile,creationId: String,programId: String,createdAt: Long,seed: Int): String {
         val p=readProfile(profileJson(profile))
@@ -65,7 +99,7 @@ object NativeProgramSetupCodec {
 
     fun decodeOptions(raw: String,id: String): NativeProgramOptions? {
         val value=wire.result(raw,id) ?: return null
-        wire.exact(value,"source","readOnly","splits","equipment")
+        wire.exact(value,"source","readOnly","splits","equipment","muscles")
         require(value.get("source")=="modules/engine-api.js:splitSupportsTrainingDays" && value.get("readOnly")==true)
         val rows=value.getJSONArray("splits");require(rows.length()==4)
         val splits=(0 until rows.length()).map { i ->
@@ -79,7 +113,18 @@ object NativeProgramSetupCodec {
         val eq=value.getJSONArray("equipment");require(eq.length() in 1..24)
         val equipment=(0 until eq.length()).map { val v=eq.get(it);require(v is String && v.length in 1..40);v }
         require(equipment.toSet().size==equipment.size)
-        return NativeProgramOptions(splits,equipment)
+        val muscleRows=value.getJSONArray("muscles")
+        require(muscleRows.length()==allowedMuscles.size)
+        val muscles=(0 until muscleRows.length()).map { i ->
+            val item=muscleRows.getJSONObject(i)
+            wire.exact(item,"id","label")
+            val key=wire.text(item,"id")
+            val label=wire.text(item,"label")
+            require(key in allowedMuscles && label.isNotBlank() && label.length<=36)
+            NativeProgramMuscle(key,label)
+        }
+        require(muscles.map { it.id }.toSet()==allowedMuscles)
+        return NativeProgramOptions(splits,equipment,muscles)
     }
     private fun summary(raw: JSONObject,snapshot: String,programId: String): ReadOnlyProgramSummary {
         val r=raw.getJSONObject("reference")

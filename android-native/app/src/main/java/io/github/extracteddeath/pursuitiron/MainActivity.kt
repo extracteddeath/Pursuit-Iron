@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
                     onVerifyBackupMerge=runtime::verifyBackupMergeSelection,
                     onDiscardBackupReview=runtime::discardBackupReview,
                     onSaveProgramEdits=runtime::saveProgramEdits,
+                    onSaveGymInventory=runtime::saveGymInventory,
                     onLookupProgramExercises=runtime::lookupProgramExerciseNames
                 )
             }

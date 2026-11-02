@@ -8,7 +8,7 @@
  */
 import { mergeStores, parseStoredData } from '../../modules/engine-api.js';
 import { canonicalBackupSchemaCheck } from './backup-schema-check.mjs';
-import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
+import { sha256Utf8, utf8ByteLength, equalJson } from './json-identity.mjs';
 
 export const MERGE_PREVIEW_LIMIT = 1024 * 1024;
 const COLLECTIONS = ['saved', 'history', 'cycles', 'custom', 'gyms'];
@@ -67,10 +67,32 @@ export function previewCanonicalBackupMerge(currentSnapshot, incomingSnapshot) {
       !Number.isSafeInteger(conflicts) || conflicts < 0)
     throw new TypeError('Invalid canonical merge summary');
   const capacityExceeded = candidateBytes > MERGE_PREVIEW_LIMIT;
+  let ownedRecordsRemoved=0, ownedRecordsReplaced=0;
+  for (const key of COLLECTIONS) {
+    const byId=new Map(merged[key].map(record=>[record.id,record]));
+    for (const record of current[key]) {
+      const next=byId.get(record.id);
+      if (!next) ownedRecordsRemoved++;
+      else if (!equalJson(record,next)) ownedRecordsReplaced++;
+    }
+  }
+  // Only count existing or explicitly incoming user-owned settings.
+  // Canonical merge adds default fields even when neither source supplies
+  // them; such defaults must not be mislabeled as a device preference change.
+  const structural=new Set([...COLLECTIONS,'v','savedAt','tombs','perf']);
+  const settings=new Set([...Object.keys(current),...Object.keys(incoming)]
+    .filter(key=>!structural.has(key)));
+  let settingsChanged=0;
+  for (const key of settings) {
+    if (!equalJson(current[key],merged[key])) settingsChanged++;
+  }
   const flags = [];
   if (historyDropped > 0) flags.push('HISTORY_CAP_LOSS');
   if (capacityExceeded) flags.push('NATIVE_STORE_CAPACITY');
   if (conflicts > 0) flags.push('RECORD_CONFLICTS_REQUIRE_REVIEW');
+  if (ownedRecordsRemoved > 0) flags.push('OWNED_RECORDS_REMOVED');
+  if (ownedRecordsReplaced > 0) flags.push('OWNED_RECORDS_REPLACED');
+  if (settingsChanged > 0) flags.push('SETTINGS_CHANGED');
   // A nonzero risk list is not an authorization policy: even a clean
   // summary is only a read-only estimate, never a consent or write receipt.
   return Object.freeze({
@@ -85,7 +107,8 @@ export function previewCanonicalBackupMerge(currentSnapshot, incomingSnapshot) {
     hypotheticalMergedSha256: sha256Utf8(candidateText),
     hypotheticalMergedBytes: candidateBytes,
     counts: { current: prior, incoming: selected, hypothetical: counts(merged) },
-    conflicts, historyDropped, flags
+    conflicts, historyDropped, ownedRecordsRemoved, ownedRecordsReplaced,
+    settingsChanged, flags
   });
 }
 

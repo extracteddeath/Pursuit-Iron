@@ -1688,8 +1688,11 @@ export function historyDetail({ id }) {
     });
     const muscleRows = Object.entries(muscles).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([part, n]) => ({ part, label: E.PART_LABEL?.[part] || part, sets: n }));
     const vol = Number(h.volume) || 0;
-    const shareText = [`${h.dayLabel || 'Workout'} — ${new Date(h.date).toDateString()}`,
-        [`${h.setsDone ?? 0} sets`, vol ? `${Math.round(vol / 100) / 10}k ${u}` : null, h.durationMin ? `${h.durationMin} min` : null].filter(Boolean).join(' · '),
+    // "Mon, Nov 2" and "7.2 t" / "15.9k lb" / "960 kg", as the app shows them ("Mon Nov 02 2026", "7.2k kg" read as debug output).
+    const dateTxt = new Date(h.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const volTxt = !vol ? null : vol < 1000 ? `${Math.round(vol)} ${u}` : u === 'lb' ? `${Math.round(vol / 100) / 10}k lb` : `${Math.round(vol / 100) / 10} t`;
+    const shareText = [`${h.dayLabel || 'Workout'} — ${dateTxt}`,
+        [`${h.setsDone ?? 0} ${h.setsDone === 1 ? 'set' : 'sets'}`, volTxt, h.durationMin ? `${h.durationMin} min` : null].filter(Boolean).join(' · '),
         ...lifts.filter((l) => l.top >= 0).slice(0, 4).map((l) => `${l.name}: ${l.sets[l.top].w} ${u} × ${l.sets[l.top].r}`),
         ...(prs.length ? [`New PRs: ${prs.join(', ')}`] : [])].join('\n');
     return { ...historyRow(h), note: h.sessionNote || '', prs, lifts, muscles: muscleRows, shareText };

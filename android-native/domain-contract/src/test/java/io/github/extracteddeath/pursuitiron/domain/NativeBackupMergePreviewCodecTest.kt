@@ -26,6 +26,7 @@ class NativeBackupMergePreviewCodecTest {
         .put("conflicts",1).put("historyDropped",0)
         .put("ownedRecordsRemoved",0).put("ownedRecordsReplaced",0)
         .put("settingsChanged",0)
+        .put("performanceChanged",0).put("deletionClocksChanged",0)
         .put("flags",JSONArray().put("RECORD_CONFLICTS_REQUIRE_REVIEW"))
     private fun response(value: JSONObject = result()) = JSONObject()
         .put("protocolVersion",1).put("id","backup-1").put("ok",true)
@@ -70,6 +71,8 @@ class NativeBackupMergePreviewCodecTest {
             { it.put("ownedRecordsRemoved",1) },
             { it.put("ownedRecordsReplaced",1) },
             { it.put("settingsChanged",1) },
+            { it.put("performanceChanged",1) },
+            { it.put("deletionClocksChanged",1) },
             { it.put("hypotheticalMergedBytes",1024*1024+1) },
             { it.put("flags",JSONArray().put("RECORD_CONFLICTS_REQUIRE_REVIEW").put("RECORD_CONFLICTS_REQUIRE_REVIEW")) },
             { it.getJSONObject("counts").getJSONObject("current").put("secret","bad") }
@@ -91,7 +94,25 @@ class NativeBackupMergePreviewCodecTest {
         assertEquals(1,summary.ownedRecordsRemoved)
         assertEquals(2,summary.ownedRecordsReplaced)
         assertEquals(3,summary.settingsChanged)
+        assertEquals(0,summary.performanceChanged)
+        assertEquals(0,summary.deletionClocksChanged)
         assertTrue(summary.requiresIntervention)
+    }
+
+    @Test fun changedPerformanceAndDeletionClocksMustHaveExplicitOrderedFlags() {
+        val altered=result().put("performanceChanged",2)
+            .put("deletionClocksChanged",1)
+            .put("flags",JSONArray().put("RECORD_CONFLICTS_REQUIRE_REVIEW")
+                .put("PERFORMANCE_CHANGED").put("DELETION_CLOCKS_CHANGED"))
+        val preview=checkNotNull(NativeBackupMergePreviewCodec.decode(
+            response(altered),"backup-1",current,incoming))
+        assertEquals(2,preview.performanceChanged)
+        assertEquals(1,preview.deletionClocksChanged)
+        assertTrue(preview.requiresIntervention)
+        val forged=JSONObject(altered.toString()).put("deletionClocksChanged",0)
+        assertTrue(runCatching {
+            NativeBackupMergePreviewCodec.decode(response(forged),"backup-1",current,incoming)
+        }.isFailure)
     }
 
     @Test fun anExplicitHistoryLossMustBeReportedAsRisk() {

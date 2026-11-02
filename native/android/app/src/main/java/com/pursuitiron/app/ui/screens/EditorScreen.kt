@@ -453,7 +453,7 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                     .semantics { role = Role.Button; contentDescription = if (ch == null) "Plateau for ${pl.i("since")} sessions. Tap to go about 10% lighter next session" else "Cancel the plateau choice for ${x.s("name")}" }
                     .padding(horizontal = 10.dp, vertical = 7.dp))
         }
-        val rir = x.s("rir").takeIf { it.isNotBlank() && it != "null" }?.let { "@ ${dash(it)} RIR" }
+        val rir = x.s("rir").takeIf { it.isNotBlank() && it != "null" }?.let { "@ " + com.pursuitiron.app.ui.common.effortOf(it, vm.settings.s("loadMode") == "rpe") }
         if (e.b("manual")) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.clip(CircleShape).background(cs.surfaceContainerHigh).padding(3.dp).semantics { contentDescription = "Sets for ${x.s("name")}" }, verticalAlignment = Alignment.CenterVertically) {
                 RoundBtn("−", "One fewer set") { vm.edit("override", "dayId" to dayId, "slot" to slot, "field" to "sets", "value" to (x.i("sets") - 1).coerceAtLeast(1)) }

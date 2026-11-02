@@ -356,7 +356,7 @@ fun WhyLiftSheet(vm: AppViewModel, programId: String, dayId: String, slot: Int, 
             Kicker("${x.s("dayLabel")} · slot ${x.i("slot")}")
             Text("Why ${x.s("name")}?", style = MaterialTheme.typography.headlineSmall)
             x.o("rx")?.let { r ->
-                Text("Week ${x.i("week")}: ${r.i("sets")} × ${r.s("range")}" + (r.s("rir").takeIf { it.isNotBlank() }?.let { " @ $it RIR" } ?: ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                Text("Week ${x.i("week")}: ${r.i("sets")} × ${r.s("range")}" + (r.s("rir").takeIf { it.isNotBlank() && it != "null" }?.let { " @ " + com.pursuitiron.app.ui.common.effortOf(it, vm.settings.s("loadMode") == "rpe") } ?: ""), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             }
             com.pursuitiron.app.ui.common.MuscleChips(x.strings("muscles").firstOrNull()?.replaceFirstChar { it.uppercase() } ?: x.s("part"), x.strings("muscles").drop(1).map { it.replaceFirstChar { c -> c.uppercase() } })
             when (x.s("source")) {

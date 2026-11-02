@@ -38,3 +38,11 @@ fun effortTail(e: org.json.JSONObject): String {
     val v = e.optString("effort").takeIf { it.isNotBlank() && it != "null" } ?: e.optString("rir").takeIf { it.isNotBlank() && it != "null" } ?: return ""
     return if (v.startsWith("RPE")) " · $v" else " @$v"
 }
+
+/** A RIR target ("2-3") in the lifter's scale: "2–3 RIR", or "RPE 7–8" when they log by RPE (RPE = 10 − RIR). */
+fun effortOf(rir: String, rpe: Boolean): String {
+    val parts = rir.replace('–', '-').split('-').mapNotNull { it.trim().toDoubleOrNull() }
+    if (!rpe || parts.isEmpty()) return rir.replace('-', '–') + " RIR"
+    val r = parts.map { fmtNum(10 - it) }.reversed().distinct()
+    return "RPE " + r.joinToString("–")
+}

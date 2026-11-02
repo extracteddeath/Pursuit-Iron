@@ -390,7 +390,7 @@ export function programDetails({ programId } = {}) {
         if (pc) return `${pc.range} reps` + (pc.load ? ` · ${pc.load} of max` : '');
         const delta = firstSets != null ? sets - firstSets : 0;
         const rir = c?.rir != null ? String(c.rir).replace('-', '–') : null;
-        return [w === 1 ? 'Base sets' : delta ? `Sets ${delta > 0 ? '+' : ''}${delta}` : 'Same sets', rir ? `${rir} RIR on main lifts` : null].filter(Boolean).join(' · ') || (wi?.label || '');
+        return [w === 1 ? 'Base sets' : delta ? `Sets ${delta > 0 ? '+' : ''}${delta}` : 'Same sets', rir ? `${S.store.loadMode === 'rpe' ? effortShort(c.rir) : rir + ' RIR'} on main lifts` : null].filter(Boolean).join(' · ') || (wi?.label || '');
     };
     const plan = B.list.map((w) => { let wi = null; try { wi = E.weekIntent(p, w); } catch { wi = null; } let pw = null; try { pw = E.plannedWeek(p, w); } catch { pw = null; }
         return { w, deload: B.isDeload(w), date: (() => { const d = new Date(start); d.setDate(d.getDate() + (w - 1) * 7); return d.getTime(); })(), note: weekNote(w, wi, pw?.sets || 0), phase: wi?.label || null, sets: pw?.sets || 0, current: w === wk }; });

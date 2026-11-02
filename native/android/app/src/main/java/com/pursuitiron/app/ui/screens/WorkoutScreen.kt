@@ -479,7 +479,7 @@ private fun SetRow(vm: AppViewModel, s: JSONObject, ex: JSONObject, ei: Int, si:
         // App.js set-to-set tuning badge: the engine's hint is a direction, not copy
         !done && set.s("hint") == "up" -> "Retuned ↑"
         !done && set.s("hint") == "down" -> "Retuned ↓"
-        done && !set.isNull("rir") -> "Rated ${set.i("rir").let { if (it >= 4) "4+" else "$it" }} RIR"
+        done && !set.isNull("rir") -> "Rated " + set.i("rir").let { if (vm.settings.s("loadMode") == "rpe") (if (it >= 4) "RPE ≤6" else "RPE ${10 - it}") else (if (it >= 4) "4+" else "$it") + " RIR" }
         vm.prefs.lastMode -> if (prev == null) "nothing logged" else "tap to use"
         warm -> "Warm-up"
         set.b("sub") -> if (set.s("kind") == "drop") "Drop · to failure" else "Myo mini"

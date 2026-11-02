@@ -273,7 +273,7 @@ assert.ok(controls.includes('internal fun NativeSetEditSheet(') &&
   controls.includes('confirmValueChange={it!=SheetValue.Hidden || !currentBusy && currentCanDismiss()}') &&
   controls.includes('NativeEditSheet(busy,onDismiss,content=content)') &&
   controls.includes('imePadding().verticalScroll(rememberScrollState())') &&
-  historyUi.includes('NativeSetEditSheet(state.historyBusy,') && activeEdit.includes('NativeSetEditSheet(busy,'),
+  historyUi.includes('NativeSetEditSheet(historyEditorBusy,') && activeEdit.includes('NativeSetEditSheet(busy,'),
   'Both correction sheets share keyboard layout and prevent drag-dismissal during an unacknowledged save');
 assert.ok(train.includes('NativeActiveSetCorrection(session,set,commit,busy,error,onCorrect)') &&
   activeEdit.includes('rememberSaveable(commit.intent.operationId)') &&
@@ -288,7 +288,7 @@ assert.ok(train.includes('NativeActiveSetCorrection(session,set,commit,busy,erro
   !activeEdit.includes('recordSet(') && !activeEdit.includes('commitAtomically'),
   'Active edits share controls, bind the prior receipt, preserve exact retry intent and wait for durable acknowledgement');
 assert.ok(historyUi.includes('NativeSetValueFields(history.unit,load,reps,rir,!busy') &&
-  historyUi.includes('val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy') &&
+  historyUi.includes('val canEdit=!historyEditorBusy') &&
   historyUi.includes('val exact=command ?: NativeHistoryCodec.correctionJson(') &&
   historyUi.includes('System.currentTimeMillis(),listOf(NativeHistoryChange(') &&
   historyUi.includes('onCorrect(exact)') && activity.includes('onCorrectHistory=runtime::correctHistory') &&
@@ -780,3 +780,19 @@ assert.ok(historyRow.includes('private fun NativeHistorySetRow(') &&
   historyRow.includes('if(value==null)"Skipped · no recorded reps"') &&
   historyRow.includes('canEdit,if(value==null)"Record" else "Edit"'),
   'Real history must show structured legible set values with accessible Edit/Record actions and preserve each exact correction identity');
+
+assert.ok(historyUi.includes('val historyEditorBusy=state.historyBusy || state.workoutBusy ||') &&
+  historyUi.includes('state.backupExportBusy || state.busy || state.workout!=null') &&
+  historyUi.includes('val canEdit=!historyEditorBusy') &&
+  historyUi.includes('LaunchedEffect(state.workout?.plan?.session?.workoutId)') &&
+  historyUi.includes('if(state.workout!=null) {') &&
+  historyUi.includes('selectedExercise=null') &&
+  historyUi.includes('selectedObservation=-1') &&
+  historyUi.includes('selectedWarmup=null') &&
+  historyUi.includes('NativeHistoryObservationEditor(history,observation,historyEditorBusy') &&
+  historyUi.includes('NativeHistorySetEditor(history,exercise,set,historyEditorBusy') &&
+  historyUi.includes('historyEditorBusy,state.historyError,canSkip=true') &&
+  historyUi.split('NativeSetEditSheet(historyEditorBusy,').length-1===3 &&
+  host.includes('current.workout!=null') &&
+  host.includes('current.backupExportBusy'),
+  'History corrections must be disabled during backup or active workout and close obsolete edit sheets when a workout starts');

@@ -91,7 +91,19 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     var selectedSet by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     var selectedObservation by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     var selectedWarmup by rememberSaveable(history.entrySha256) {mutableStateOf<String?>(null)}
-    val canEdit=state.workout==null && !state.workoutBusy && !state.historyBusy
+    val historyEditorBusy=state.historyBusy || state.workoutBusy ||
+        state.backupExportBusy || state.busy || state.workout!=null
+    val canEdit=!historyEditorBusy
+    // If a new active workout is started from another tab, stale history
+    // correction sheets must close instead of remaining seemingly editable.
+    LaunchedEffect(state.workout?.plan?.session?.workoutId) {
+        if(state.workout!=null) {
+            selectedExercise=null
+            selectedSet=-1
+            selectedObservation=-1
+            selectedWarmup=null
+        }
+    }
     TextButton(onClick=onList,enabled=!state.historyBusy) { Text(if(state.historyCalendarQuery!=null)"Back to calendar" else "Back to workouts") }
     Text(history.dayLabel,style=MaterialTheme.typography.headlineSmall)
     Text("${historyDateLabel(history.date)} · Week ${history.weekIndex}",style=MaterialTheme.typography.bodyMedium)
@@ -152,11 +164,11 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
         }
     }
     history.warmups.firstOrNull {"${it.slot.exerciseIndex}:${it.slot.warmupIndex}"==selectedWarmup}?.let {row->
-        NativeSetEditSheet(state.historyBusy,onDismiss={selectedWarmup=null}) {
+        NativeSetEditSheet(historyEditorBusy,onDismiss={selectedWarmup=null}) {
             Text("Correct warm-up ${row.slot.warmupIndex+1}",style=MaterialTheme.typography.headlineSmall)
             Text(row.name,style=MaterialTheme.typography.titleMedium)
             NativeWarmupFields(history.unit,row.targetLoad,row.targetReps,row.disposition,row.values,history.date,
-                state.historyBusy,state.historyError,canSkip=true,onSave={op,clock,disposition,values->
+                historyEditorBusy,state.historyError,canSkip=true,onSave={op,clock,disposition,values->
                     onCorrect(NativeWarmupHistoryCodec.correctionJson(history,op,clock,
                         listOf(NativeWarmupChange(row.slot,disposition,values))))
                 },onCancel={selectedWarmup=null})
@@ -187,13 +199,13 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     val exercise=history.exercises.firstOrNull { it.id==selectedExercise }
     val set=exercise?.sets?.firstOrNull { it.setIndex==selectedSet }
     val observation=history.editRows?.firstOrNull { it.slot.exerciseIndex*20+it.slot.setIndex==selectedObservation }
-    if(observation!=null)NativeSetEditSheet(state.historyBusy,onDismiss={selectedObservation=-1}) {
-        NativeHistoryObservationEditor(history,observation,state.historyBusy,state.historyError,onCorrect,
+    if(observation!=null)NativeSetEditSheet(historyEditorBusy,onDismiss={selectedObservation=-1}) {
+        NativeHistoryObservationEditor(history,observation,historyEditorBusy,state.historyError,onCorrect,
             onCancel={selectedObservation=-1})
     }
     if(exercise!=null && set!=null) {
-        NativeSetEditSheet(state.historyBusy,onDismiss={selectedExercise=null}) {
-            NativeHistorySetEditor(history,exercise,set,state.historyBusy,state.historyError,onCorrect,
+        NativeSetEditSheet(historyEditorBusy,onDismiss={selectedExercise=null}) {
+            NativeHistorySetEditor(history,exercise,set,historyEditorBusy,state.historyError,onCorrect,
                 onCancel={selectedExercise=null})
         }
     }

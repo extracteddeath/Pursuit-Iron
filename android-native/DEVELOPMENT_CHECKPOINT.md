@@ -1791,3 +1791,17 @@ history write. Training history remains the canonical read-only source;
 all edits still flow through the original revision-verified writer.
 Source checks cover shared row use and original correction identity.
 No APK.
+
+## 2026-11-02 — History correction busy-state parity
+
+The shared saved-history correction sheets now observe the same
+runtime busy conditions as the canonical history writer: active
+workout, workout I/O, backup export, history I/O, or broader
+store work. The visible Edit/Record actions and all three editor
+variants (working, observation/extension, and warm-up) use one
+`historyEditorBusy` value. If another tab starts a new active
+workout, any history correction sheet previously open is closed
+rather than leaving a stale editable form. This avoids no-op
+Save actions that the canonical owner correctly rejects, while
+preserving exact retry payloads, entry revisions, and all durable
+history. There is no new writer, and no APK.

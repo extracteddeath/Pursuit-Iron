@@ -74,7 +74,7 @@ reject({currentSnapshot:current,incomingSnapshot:conflicting,
   expectedCandidateSha256:conflicts.hypotheticalMergedSha256});
 const deleting=raw(130,[],{old:40});
 const deletion=previewCanonicalBackupMerge(current,deleting);
-assert.ok(deletion.flags.length===0, 'canonical tombstone can be clean yet destructive');
+assert.ok(deletion.flags.includes('OWNED_RECORDS_REMOVED'), 'canonical tombstone must report removed owned records');
 // Preflight conflict counts alone do NOT certify a non-destructive merge.
 reject({currentSnapshot:current,incomingSnapshot:deleting,
   expectedCandidateSha256:deletion.hypotheticalMergedSha256});

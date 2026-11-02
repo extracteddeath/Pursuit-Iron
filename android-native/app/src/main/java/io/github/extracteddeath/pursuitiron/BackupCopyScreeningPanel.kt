@@ -214,23 +214,7 @@ internal fun BackupCopyScreeningPanel(
             }
             is BackupScreeningStage.MergePreview -> {
                 BackupFingerprintText(current.fingerprint)
-                val preview = current.preview
-                Text("Read-only comparison with your saved data",style=MaterialTheme.typography.titleMedium)
-                Text("Saved workouts: currently ${preview.current.history} · selected copy ${preview.incoming.history} · hypothetical ${preview.hypothetical.history}")
-                Text("Saved programs: currently ${preview.current.saved} · selected copy ${preview.incoming.saved} · hypothetical ${preview.hypothetical.saved}")
-                Text("Record conflicts: ${preview.conflicts} · history cap losses: ${preview.historyDropped}")
-                Text("Existing records removed: ${preview.ownedRecordsRemoved} · replaced: ${preview.ownedRecordsReplaced} · settings changed: ${preview.settingsChanged}")
-                if(preview.flags.isNotEmpty()) Text(
-                    "Attention: " + preview.flags.map { flag -> when(flag) {
-                        "HISTORY_CAP_LOSS" -> "history records could be removed"
-                        "NATIVE_STORE_CAPACITY" -> "merged data would exceed supported storage"
-                        "OWNED_RECORDS_REMOVED" -> "existing saved records could be deleted"
-                        "OWNED_RECORDS_REPLACED" -> "existing records could be replaced"
-                        "SETTINGS_CHANGED" -> "personal settings could change"
-                        else -> "revisions require review"
-                    }}.joinToString("; "),color=MaterialTheme.colorScheme.error)
-                Text("Estimate only. Settings and other data need review. Nothing was imported, changed or approved for restoration.",
-                    style=MaterialTheme.typography.bodySmall)
+                NativeBackupMergeReviewPanel(current.preview)
             }
             is BackupScreeningStage.ProgramInventory -> {
                 BackupFingerprintText(current.fingerprint)

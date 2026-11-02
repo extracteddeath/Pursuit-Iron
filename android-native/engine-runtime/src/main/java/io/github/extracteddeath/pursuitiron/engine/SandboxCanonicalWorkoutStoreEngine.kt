@@ -2,6 +2,8 @@ package io.github.extracteddeath.pursuitiron.engine
 
 import io.github.extracteddeath.pursuitiron.domain.PinnedCanonicalWorkoutStoreEngine
 import io.github.extracteddeath.pursuitiron.domain.WorkoutStoreRuntimeCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
+import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreviewCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramCreationEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramSetupCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramOptions
@@ -51,6 +53,17 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
         }
     })
     private val sequence=AtomicLong(0)
+
+    /**
+     * Pure owner-agnostic dry-run. Callers must pin exact owned bytes and hold
+     * selected provider bytes only for this operation; no writer is exposed.
+     */
+    suspend fun previewBackupMerge(currentSnapshot: String, incomingSnapshot: String): NativeBackupMergePreview? {
+        val id="native-backup-preflight-${sequence.incrementAndGet()}"
+        val raw=transport.request(NativeBackupMergePreviewCodec.encode(id,currentSnapshot,incomingSnapshot))
+        currentCoroutineContext().ensureActive()
+        return NativeBackupMergePreviewCodec.decode(raw,id,currentSnapshot,incomingSnapshot)
+    }
 
     override suspend fun inspectHistoryPage(snapshot: String,queryJson: String): NativeHistoryPage? {
         val id="native-history-page-${sequence.incrementAndGet()}"

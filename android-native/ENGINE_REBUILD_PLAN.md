@@ -56,7 +56,7 @@ applies to the rebuilt engine before it becomes the app's training authority.
 | History and PRs | Owned history, corrections, records, filters, a complete local-month calendar and Last have source/JVM coverage; import/live-feedback and Android acceptance remain open |
 | Strength/volume trends | Required regional-volume/standards/chart outcomes still need complete real-data workflows |
 | Bodyweight/milestones | Required measurements, bodyweight and milestone workflows remain open |
-| Backup/restore | Read-only validation/inventory and exact validated export/readback are wired; approved import/merge, rollback/Undo, web-history migration and Android provider acceptance remain open |
+| Backup/restore | Read-only validation/inventory, exact validated export/readback and canonical two-snapshot merge-risk preflight are implemented; preflight is not wired to UI or publication. Approved import/merge, rollback/Undo, web-history migration and Android provider acceptance remain open |
 | Gyms/equipment | Onboarding equipment is persisted; complete gym/inventory/increment/bar-setting workflows remain open |
 | Profile/preferences | Initial profile settings are restored; full preference persistence and progress identity still need acceptance evidence |
 

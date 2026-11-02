@@ -24,7 +24,8 @@ class NativeProgramProposal internal constructor(
     val profile: NativeProgramProfile
 )
 class NativeSavedProgram internal constructor(
-    val creationId: String,val profile: NativeProgramProfile,val program: ReadOnlyProgramSummary
+    val creationId: String,val profile: NativeProgramProfile,val program: ReadOnlyProgramSummary,
+    val loadingInventory: String? = null
 )
 interface NativeProgramCreationEngine {
     suspend fun programOptions(): NativeProgramOptions?
@@ -154,11 +155,15 @@ object NativeProgramSetupCodec {
     }
     fun decodeSaved(raw: String,id: String,snapshot: String): NativeSavedProgram? {
         val value=wire.result(raw,id) ?: return null
-        wire.exact(value,"source","readOnly","creationId","setupJson","snapshotSha256","program")
+        if(value.has("loadingInventory"))wire.exact(value,"source","readOnly","creationId","setupJson","snapshotSha256","program","loadingInventory")
+        else wire.exact(value,"source","readOnly","creationId","setupJson","snapshotSha256","program")
         require(value.get("source")=="modules/engine-api.js:parseStoredData" && value.get("readOnly")==true &&
             value.get("snapshotSha256")==wire.sha(snapshot))
         val s=JSONObject(wire.text(value,"setupJson"));require(value.get("creationId")==s.get("creationId"))
         val p=readProfile(s.getJSONObject("profile").toString())
-        return NativeSavedProgram(s.getString("creationId"),p,summary(value.getJSONObject("program"),snapshot,s.getString("programId")))
+        val inventory=if(!value.has("loadingInventory") || value.isNull("loadingInventory"))null
+            else NativeGymInventoryCodec.validate(value.getJSONObject("loadingInventory").toString(),p.unit)
+        return NativeSavedProgram(s.getString("creationId"),p,
+            summary(value.getJSONObject("program"),snapshot,s.getString("programId")),inventory)
     }
 }

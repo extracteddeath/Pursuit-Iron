@@ -214,6 +214,19 @@ const withMetadata=structuredClone(replacementBase);
 withMetadata.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`]={userOwned:true};
 const metaSnapshot=JSON.stringify(withMetadata);
 const metaReq=structuredClone(substitution);metaReq.reference=inspectNativeProgram(metaSnapshot).program.reference;
-assert.throws(()=>prepareNativeProgramEdit(metaSnapshot,JSON.stringify(metaReq)),
-  'Explicit user prescription state must not be donated to a new exercise');
+const cleanedMeta=JSON.parse(prepareNativeProgramEdit(metaSnapshot,JSON.stringify(metaReq)).candidateSnapshot);
+assert.equal(cleanedMeta.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`],undefined,
+  'User prescriptions for the replaced movement are explicitly cleared, not transferred');
+const forgedReplacement=structuredClone(substitution);forgedReplacement.replacement.exerciseId='not-in-catalog';
+assert.throws(()=>prepareNativeProgramEdit(replacementSnapshot,JSON.stringify(forgedReplacement)));
+const fullMeta=structuredClone(replacementBase);
+for(const field of ['overrides','nextWeekPrescriptions','slotBias','progStyle','autoBias','weekOff','rounds','pairs'])
+  fullMeta.saved[0][field][`${replacementDay.id}:1:week-4`]={oldExerciseOwned:field};
+const fullMetaSnapshot=JSON.stringify(fullMeta);
+const fullMetaReq=structuredClone(substitution);
+fullMetaReq.reference=inspectNativeProgram(fullMetaSnapshot).program.reference;
+const clean=JSON.parse(prepareNativeProgramEdit(fullMetaSnapshot,JSON.stringify(fullMetaReq)).candidateSnapshot);
+for(const field of ['overrides','nextWeekPrescriptions','slotBias','progStyle','autoBias','weekOff','rounds','pairs'])
+  assert.equal(clean.saved[0][field][`${replacementDay.id}:1:week-4`],undefined,
+    'Suffix-specific custom metadata must not survive a physical exercise replacement');
 console.log('PASS native program edit: revision save, rich slot metadata, duplicate identity, pairings, retries, retained records and canonical issuance');

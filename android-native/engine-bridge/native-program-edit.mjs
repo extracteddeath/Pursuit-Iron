@@ -86,25 +86,24 @@ export function prepareNativeProgramEdit(currentSnapshot,editJson) {
         ensure(bars<=cap);
       }
       const sourceKey=`${day.id}:${change.sourceSlot}`;
-      const originalOverrides=original.overrides||{};
-      const metadata=originalOverrides[sourceKey];
-      ensure(!metadata || exact(metadata,['nextEngine','legacyExerciseId','nextExerciseId']) &&
-        metadata.nextEngine===true && metadata.legacyExerciseId===oldId);
-      // The former exercise must not silently donate user-authored dose,
-      // amplifiers, progression, or alternate-week prescriptions.
+      // Replacing the movement explicitly discards its *slot-local* loading,
+      // progression, amplifier and alternate-week settings. Do not transfer
+      // any source exercise targets to a different physical movement.
+      const cleaned={};
       for(const field of slotFields) {
-        const store=original[field]||{};
+        if(!Object.prototype.hasOwnProperty.call(original,field))continue;
+        const store=original[field];
         ensure(object(store));
-        for(const key of Object.keys(store)) {
-          if(key===sourceKey || key.startsWith(sourceKey+':'))
-            ensure(field==='overrides' && key===sourceKey);
-        }
+        const without={...store};
+        for(const key of Object.keys(without))
+          if(key===sourceKey || key.startsWith(sourceKey+':'))delete without[key];
+        cleaned[field]=without;
       }
       const engineId=nextExerciseIdForShellExercise(to);
       ensure(typeof engineId==='string' && engineId.length>0);
       const newDay={...day,exercises:day.exercises.map((id,i)=>i===change.sourceSlot?to.id:id)};
-      edited={...edited,edited:true,days:original.days.map(d=>d.id===day.id?newDay:d),
-        overrides:{...originalOverrides,[sourceKey]:{
+      edited={...edited,...cleaned,edited:true,days:original.days.map(d=>d.id===day.id?newDay:d),
+        overrides:{...(cleaned.overrides||{}),[sourceKey]:{
           nextEngine:true,legacyExerciseId:to.id,nextExerciseId:engineId
         }}};
     }

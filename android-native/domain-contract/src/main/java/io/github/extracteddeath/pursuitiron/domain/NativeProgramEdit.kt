@@ -280,13 +280,22 @@ object NativeProgramEditCodec {
         wire.exact(newMeta,"nextEngine","legacyExerciseId","nextExerciseId")
         require(newMeta.get("nextEngine")==true && newMeta.get("legacyExerciseId")==target &&
             wire.text(newMeta,"nextExerciseId").isNotBlank())
-        val priorOthers=JSONObject(prior.toString()).apply { remove(sourceKey) }
+        fun withoutOriginalSlot(map: JSONObject): JSONObject = JSONObject().also { kept->
+            map.keys().asSequence().forEach { key->
+                if(key!=sourceKey && !key.startsWith(sourceKey+":"))
+                    kept.put(key,map.get(key))
+            }
+        }
+        val priorOthers=withoutOriginalSlot(prior)
         val currentOthers=JSONObject(now.toString()).apply { remove(sourceKey) }
         require(equivalent(priorOthers,currentOthers))
         for(field in listOf("nextWeekPrescriptions","progStyle","slotBias","autoBias","rounds",
             "weekOff","pairs","ss")) {
             require(before.has(field)==after.has(field))
-            if(before.has(field)) require(equivalent(before.get(field),after.get(field)))
+            if(before.has(field)) {
+                val expected=withoutOriginalSlot(before.getJSONObject(field))
+                require(equivalent(expected,after.getJSONObject(field)))
+            }
         }
     }
 

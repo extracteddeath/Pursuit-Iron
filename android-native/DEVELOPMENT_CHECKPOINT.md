@@ -1047,3 +1047,46 @@ The unsafe accessory replacement attempt remains isolated at
 `feature/native-accessory-swap-prescription-gate`. No JS training formulas
 were changed, and the live web/other programmer's Android branch remain
 untouched.
+
+
+## 2026-11-02 — Actual issued Up Next navigation and Focus parity
+
+Native Train now presents a shared M3 **Up Next** card based exclusively on
+`NativeNextSetPolicy.inspect`, the issued `NativeWorkoutPlan` and the
+acknowledged private `WorkoutJournalState`. The policy refuses mismatched
+session identities or ordered slots. It does not calculate target load, rep
+ranges, RIR or next-workout progression; the text reproduces the precise
+engine-issued set targets and unit for each original slot.
+
+The card handles an unfinished set on the selected exercise, subsequent sets
+on another exercise, completing the selected exercise, wrapping back to
+unfinished earlier work, repeated instances of the same exercise ID, logged
+corrections and saved skips. It exposes an actual exercise-position navigation
+action only when needed. Focus continues to use the identical journal and
+preserves unsent per-set drafts; no second workout logger or hidden training
+mutation was introduced. When a single set remains, it is shown as the final
+set instead of suggesting a nonexistent next step.
+
+Synthetic Kotlin fixtures test issuance order, repeated movement IDs,
+skips, corrections, wraparound and refusal of mismatched session/slot
+identities. A packaged-runtime JVM integration test generates a real plan,
+issues and saves a workout, records a set, skips a subsequent set, corrects
+the original observation, recovers the journal and proves that Up Next always
+uses the remaining actual set identities without altering the canonical
+saved store.
+
+Verified checks: Kotlin domain
+[41429301722](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41429301722),
+Compose compilation
+[41429301698](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41429301698),
+Android source contracts
+[41429415526](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41429415526),
+and packaged sandbox JVM tests/instrumentation-source compilation
+[41429415636](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/41429415636)
+all passed. No APK was built, no training engine formulas changed, and
+neither the live web app nor the other native branch was touched.
+
+Device accessibility, animated transitions and true background/resume behavior
+remain a later real-device acceptance gate. The experimental exercise
+substitution implementation remains quarantined until canonical fresh
+prescription generation is available.

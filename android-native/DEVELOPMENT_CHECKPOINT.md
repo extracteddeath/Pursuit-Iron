@@ -1929,3 +1929,11 @@ bar weight, exact total and verified plates per side. It does not alter
 the set draft, training prescription, journal, history or inventory.
 Kotlin tests cover actual combinations, decimals, impossible totals,
 missing stock, wrong units and other equipment families. No APK.
+
+## 2026-11-02 — Two-sided Material plate schematic
+
+The verified barbell read-only dialog now renders two equal-width,
+Material-styled LEFT/RIGHT plate columns around a labeled BAR, each using
+the exact same validated per-side plate counts. The original numeric
+bar/total summary and no-write warning remain visible. Compact layout
+does not claim a mechanical force estimate or change the workout.

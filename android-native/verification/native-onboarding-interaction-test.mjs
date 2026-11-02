@@ -915,3 +915,10 @@ assert.ok(verifiedLoadUi.includes('if(review.family=="barbell_plates")') &&
   platePolicy.includes('longValueExact()') &&
   plateTest.includes('unlistedTotalsMissingStockOrWrongUnitsNeverProduceImaginaryPlates'),
   'Plate breakdown is read-only, exact and sourced solely from verified barbell inventory; no Smith/machine guessing or journal writes');
+
+assert.ok(plateUi.includes('private fun VerifiedPlateSide(') &&
+  plateUi.includes('VerifiedPlateSide("LEFT",breakdown)') &&
+  plateUi.includes('VerifiedPlateSide("RIGHT",breakdown)') &&
+  plateUi.includes('Text("BAR"') &&
+  plateUi.includes('OutlinedCard(modifier=Modifier.weight(1f))'),
+  'Small-screen plate breakdown must show the same verified per-side physical stock symmetrically without guessed weights');

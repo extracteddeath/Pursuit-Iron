@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.*
 
 /**
@@ -11,6 +13,22 @@ import io.github.extracteddeath.pursuitiron.domain.*
  * canonical barbell_plates loading for THIS issued session, set and load.
  * Does not change actual set entries, issued targets or future progression.
  */
+/** Matching plates on each side; never a mechanical resistance estimate. */
+@Composable
+private fun VerifiedPlateSide(label: String,layout: NativeBarbellPlateBreakdown) {
+    OutlinedCard(modifier=Modifier.weight(1f)) {
+        Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Text(label,style=MaterialTheme.typography.labelLarge,
+                color=MaterialTheme.colorScheme.primary)
+            if(layout.perSide.isEmpty())Text("Empty",style=MaterialTheme.typography.bodySmall)
+            layout.perSide.forEach { pair ->
+                Text("${pair.weight} ${layout.unit} × ${pair.pairs}",
+                    style=MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
 @Composable
 internal fun NativeVerifiedPlateBreakdown(
     state: NativeRuntimeState,session: JournalSessionKey,
@@ -45,14 +63,16 @@ internal fun NativeVerifiedPlateBreakdown(
         onDismissRequest={show=false},
         title={Text("Verified plate setup")},
         text={
-            Column(verticalArrangement=Arrangement.spacedBy(androidx.compose.ui.unit.Dp(8f))) {
+            Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("Total ${breakdown.totalLoad} ${breakdown.unit} · Bar ${breakdown.barWeight} ${breakdown.unit}")
-                if(breakdown.perSide.isEmpty())Text("Empty verified bar — no added plates.")
-                else {
-                    Text("Load the SAME plates on each side:",style=MaterialTheme.typography.titleSmall)
-                    breakdown.perSide.forEach { item ->
-                        Text("${item.weight} ${breakdown.unit} × ${item.pairs} per side")
-                    }
+                Text("Load the SAME plates on each side:",style=MaterialTheme.typography.titleSmall)
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(6.dp),
+                    verticalAlignment=Alignment.CenterVertically) {
+                    VerifiedPlateSide("LEFT",breakdown)
+                    Text("BAR",style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    VerifiedPlateSide("RIGHT",breakdown)
                 }
                 Text("Uses only saved physical plate pairs. Confirm collars, balance and safe loading yourself. This does not log or prescribe a weight.",
                     style=MaterialTheme.typography.bodySmall)

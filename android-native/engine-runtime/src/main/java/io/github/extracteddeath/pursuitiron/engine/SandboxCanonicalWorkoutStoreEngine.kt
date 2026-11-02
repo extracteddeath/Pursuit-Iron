@@ -6,6 +6,7 @@ import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreview
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreviewCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreparation
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupMergePreparationCodec
+import io.github.extracteddeath.pursuitiron.domain.PinnedCanonicalBackupMergeEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramCreationEngine
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramSetupCodec
 import io.github.extracteddeath.pursuitiron.domain.NativeProgramOptions
@@ -43,7 +44,8 @@ internal fun interface CanonicalWorkoutStoreTransport {
  */
 class SandboxCanonicalWorkoutStoreEngine internal constructor(
     private val transport: CanonicalWorkoutStoreTransport
-) : PinnedCanonicalWorkoutStoreEngine, NativeProgramCreationEngine, NativeWorkoutEngine, NativeHistoryEngine {
+) : PinnedCanonicalWorkoutStoreEngine, NativeProgramCreationEngine, NativeWorkoutEngine, NativeHistoryEngine,
+    PinnedCanonicalBackupMergeEngine {
     constructor(worker: CanonicalJsReadOnlyService) : this(CanonicalWorkoutStoreTransport { wire ->
         suspendCancellableCoroutine { continuation ->
             val future=worker.prepareWorkoutStoreAsync(wire)
@@ -60,7 +62,7 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
      * Exact, private, non-writing preparation. The returned candidate must
      * not be used outside a later independently certified atomic Undo owner.
      */
-    suspend fun prepareBackupMerge(
+    override suspend fun prepareBackupMerge(
         currentSnapshot: String,incomingSnapshot: String,expectedCandidateSha256: String
     ): NativeBackupMergePreparation? {
         val id="native-merge-preparation-${sequence.incrementAndGet()}"
@@ -75,7 +77,7 @@ class SandboxCanonicalWorkoutStoreEngine internal constructor(
      * Pure owner-agnostic dry-run. Callers must pin exact owned bytes and hold
      * selected provider bytes only for this operation; no writer is exposed.
      */
-    suspend fun previewBackupMerge(currentSnapshot: String, incomingSnapshot: String): NativeBackupMergePreview? {
+    override suspend fun previewBackupMerge(currentSnapshot: String, incomingSnapshot: String): NativeBackupMergePreview? {
         val id="native-backup-preflight-${sequence.incrementAndGet()}"
         val raw=transport.request(NativeBackupMergePreviewCodec.encode(id,currentSnapshot,incomingSnapshot))
         currentCoroutineContext().ensureActive()

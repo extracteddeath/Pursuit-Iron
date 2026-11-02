@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeGymInventoryDraftResult
+import io.github.extracteddeath.pursuitiron.domain.NativeStackCandidate
 
 @Composable
 private fun NativeGymLoadField(
@@ -42,7 +43,8 @@ internal fun NativeGymInventoryEditor(
     draft: Map<String, String>,
     onChange: (String, String) -> Unit,
     validation: NativeGymInventoryDraftResult,
-    enabled: Boolean
+    enabled: Boolean,
+    candidates: List<NativeStackCandidate> = emptyList()
 ) {
     var expanded by rememberSaveable { mutableStateOf(draft.values.any { it.isNotBlank() }) }
     SectionLabel("Your actual gym weights")
@@ -62,6 +64,24 @@ internal fun NativeGymInventoryEditor(
         NativeGymLoadField(unit, draft, onChange, enabled, "cable", "Cable stack", "Verified minimum, increment, maximum; e.g. 5, 5, 150")
         NativeGymLoadField(unit, draft, onChange, enabled, "machine", "Machine stack", "Only if this same stack applies: min, increment, max")
         NativeGymLoadField(unit, draft, onChange, enabled, "smith", "Smith TOTAL loads", "Actual selectable total loads, not assumed empty-bar weight")
+        if(candidates.isNotEmpty()) {
+            var showSpecific by rememberSaveable { mutableStateOf(draft.keys.any {
+                it.startsWith("override:") && draft[it]?.isNotBlank()==true
+            }) }
+            OutlinedButton(onClick={showSpecific=!showSpecific},enabled=enabled) {
+                Text(if(showSpecific) "Hide individual machine settings" else "Set individual machine weights")
+            }
+            if(showSpecific) {
+                Text("Use exact: 5, 10, 15 for confirmed selectable weights, or range: 5, 5, 150 for a confirmed minimum, step and maximum. Leave unknown machines blank.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                candidates.forEach { candidate ->
+                    NativeGymLoadField(unit,draft,onChange,enabled,"override:${candidate.id}",
+                        candidate.name,
+                        "Verified ${if(candidate.mode=="cable_stack") "cable" else "machine"} settings only; overrides its general category")
+                }
+            }
+        }
         if (!validation.valid) Text(
             validation.error ?: "Check equipment entries.",
             color = MaterialTheme.colorScheme.error,

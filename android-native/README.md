@@ -281,6 +281,35 @@ inspection; Plan reads current structure off the main thread. Late/cancelled
 generation results cannot replace a newer action. The issued-session flow now
 adds working-set logging and completion; no new APK has been generated.
 
+### Verified physical weights for first setup and saved programs
+
+Native onboarding now offers optional **user-authored** physical inventory:
+known barbell weight plus real matching plate pairs, exact dumbbell loads per
+hand, verified cable/machine range settings, and explicit Smith TOTAL loads.
+All entries are empty until the user supplies them; missing families never
+become factory-stock claims. Changing unit clears the unfinished form.
+
+A saved native program's Plan view can edit or clear only its physical stock,
+using the same bounded M3 fields. An explicit confirmation, current program
+reference and SHA-256 revision, canonical JS candidate, independent Kotlin
+candidate verification, atomic owned-store write, and lost-ack readback protect
+existing workouts. Pending workouts disable changes. The exact saved current
+stock is displayed after a confirmed read; prior onboarding selections are
+not mistaken for the active program revision. A changed inventory never
+automatically overwrites logged set values or issues revised prescriptions.
+
+Exercise compatibility still comes from the actual engine-issued catalog.
+In Train, available load steps require the exact source, exercise slot,
+physical loading mode, source unit and explicitly configured stock.
+Unknown hardware remains **manual-entry only**. A single generic machine
+range is appropriate only where that same stack applies to the equipment;
+other machines require future per-exercise configuration.
+
+Source, bundle and Kotlin contract tests are required before certification.
+No APK is produced by these changes. This is **physical accuracy support**,
+not the future adaptive progression engine rewrite, multi-gym management,
+or an Android real-device release claim.
+
 ### Canonical saved-set corrections
 
 `engine-bridge/native-history.mjs` projects the latest confirmed native history

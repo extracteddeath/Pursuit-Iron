@@ -30,7 +30,7 @@ const physicalDecimal=n=>typeof n==='number' && Number.isFinite(n) && n>=0 && n<
 const physicalLoads=v=>Array.isArray(v) && v.length>=1 && v.length<=250 && v.every(physicalDecimal) && new Set(v).size===v.length;
 const physicalRange=v=>exact(v,['minimum','increment','maximum']) && physicalDecimal(v.minimum) &&
   physicalDecimal(v.increment) && v.increment>0 && physicalDecimal(v.maximum) && v.maximum>=v.minimum;
-function authoredInventory(v,unit) {
+export function authoredInventory(v,unit) {
   ensure(object(v) && v.unit===unit && Object.keys(v).every(k=>
     ['unit','barbell','dumbbells','cable','machine','smith','exerciseOverrides'].includes(k)));
   let families=0;
@@ -139,7 +139,13 @@ export function inspectNativeProgram(rawSnapshot) {
     meta.schemaVersion===1);
   const s=setupFrom(meta.setupJson);
   ensure(s.creationId===meta.creationId && s.programId===meta.programId && s.createdAt===meta.createdAt);
+  const saved=store.saved.find(item=>item.id===s.programId);
+  ensure(saved && saved.config?.unit===s.profile.unit);
+  let loadingInventory=null;
+  try {if(saved.config.loadingInventory)
+    loadingInventory=authoredInventory(saved.config.loadingInventory,s.profile.unit);
+  } catch { /* Older or foreign stock is never asserted as user-confirmed. */ }
   return {source:'modules/engine-api.js:parseStoredData',readOnly:true,creationId:s.creationId,
-    setupJson:meta.setupJson,snapshotSha256:sha256Utf8(rawSnapshot),
+    setupJson:meta.setupJson,loadingInventory,snapshotSha256:sha256Utf8(rawSnapshot),
     program:projectCanonicalSavedProgram(rawSnapshot,s.programId,sha256Utf8(rawSnapshot))};
 }

@@ -633,9 +633,9 @@ assert.ok(todayStart>=0 && nextWorkoutCta>todayStart &&
 
 assert.ok(train.includes('onViewHistory: ()->Unit = {}') &&
   train.includes('if(state.completion!=null) {') &&
-  train.includes('Button(onClick=onViewHistory,modifier=Modifier.fillMaxWidth())') &&
+  train.includes('Button(onClick=onViewHistory,enabled=state.ready && !state.historyBusy &&') &&
   train.includes('Text("View saved workout")') &&
-  train.indexOf('Button(onClick=onViewHistory,modifier=Modifier.fillMaxWidth())') <
+  train.indexOf('Button(onClick=onViewHistory,enabled=state.ready && !state.historyBusy &&') <
     train.indexOf('OutlinedButton(onClick=onStart,enabled=canStart,') &&
   shell.includes('onOpenLatestHistory()') &&
   shell.includes('onViewHistory={') &&
@@ -750,3 +750,15 @@ assert.ok(train.includes('Button(onClick=onViewHistory,enabled=state.ready && !s
   host.includes('historyError="The latest saved workout could not be opened.') &&
   !host.includes('onOpenHistory(current.history?.historyId'),
   'The latest completion CTA must fetch the exact durable receipt, never show a stale previously browsed workout, and guard asynchronous history updates');
+
+assert.ok(screens.includes('viewLatestHistory: () -> Unit = {}') &&
+  screens.includes('if(workoutState?.completion!=null && !activeWorkout) {') &&
+  screens.includes('TextButton(onClick=viewLatestHistory,') &&
+  screens.includes('Text("Review last workout")') &&
+  screens.includes('!workoutState.historyBusy && !workoutState.busy') &&
+  shell.includes('viewLatestHistory={') &&
+  shell.includes('onOpenLatestHistory()') &&
+  shell.includes('section=NativeDestination.INSIGHTS.ordinal') &&
+  screens.indexOf('Button(onClick={if(!activeWorkout)startWorkout();openTrain()}') <
+    screens.indexOf('TextButton(onClick=viewLatestHistory,'),
+  'Today must keep Start/Resume first and route review of the last saved workout through the same guarded canonical receipt read as Train');

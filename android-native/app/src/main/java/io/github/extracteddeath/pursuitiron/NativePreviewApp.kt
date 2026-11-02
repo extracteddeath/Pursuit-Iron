@@ -254,7 +254,12 @@ internal fun NativePreviewApp(
                                     startWorkout=onStartWorkout,
                                     setupProgram={exploreDemo=false},
                                     previewShorterSession=onPreviewShortSession,
-                                    startShortWorkout=onStartShortWorkout)
+                                    startShortWorkout=onStartShortWorkout,
+                                    viewLatestHistory={
+                                        selectedTrainingDay=null
+                                        onOpenLatestHistory()
+                                        section=NativeDestination.INSIGHTS.ordinal
+                                    })
                                 NativeDestination.TRAIN -> if(onboarding?.saved!=null)
                                     NativeWorkoutScreen(onboarding,onStartWorkout,onRecordSet,onFinishWorkout,onCorrectSet,onSkipExercise,onInspectMuscles,onSkipAffectedMuscle,onReduceAffectedMuscle,onSaveSessionNote,onSaveWarmup,onSaveExerciseNote,onInspectEquipmentLoad,
                                         onViewHistory={

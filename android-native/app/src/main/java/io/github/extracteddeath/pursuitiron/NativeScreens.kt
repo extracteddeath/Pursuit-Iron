@@ -57,7 +57,8 @@ internal fun TodayScreen(
     startWorkout: () -> Unit = {},
     setupProgram: () -> Unit = {},
     previewShorterSession: (Int) -> Unit = {},
-    startShortWorkout: (Int) -> Unit = {}
+    startShortWorkout: (Int) -> Unit = {},
+    viewLatestHistory: () -> Unit = {}
 ) {
     if(savedProgram!=null) {
         val activeWorkout=workoutState?.workout!=null
@@ -70,7 +71,9 @@ internal fun TodayScreen(
                 style=MaterialTheme.typography.bodyMedium)
             Button(onClick={if(!activeWorkout)startWorkout();openTrain()},
                 enabled=workoutState?.ready==true && !workoutState.workoutBusy &&
-                    !workoutState.backupExportBusy && !workoutState.workoutBlocked,
+                    !workoutState.historyBusy && !workoutState.busy &&
+                    !workoutState.blocked && !workoutState.backupExportBusy &&
+                    !workoutState.workoutBlocked,
                 modifier=Modifier.fillMaxWidth()) {
                 Text(if(workoutState?.backupExportBusy==true)"Saving backup…"
                     else if(workoutState?.workoutBusy==true)"Opening workout…"
@@ -79,9 +82,14 @@ internal fun TodayScreen(
             OutlinedButton(onClick=openPlan,modifier=Modifier.fillMaxWidth()) {
                 Text("View your program")
             }
-            if(workoutState?.completion!=null)
-                Text("Your last workout is saved in training history.",
-                    style=MaterialTheme.typography.bodySmall)
+            if(workoutState?.completion!=null && !activeWorkout) {
+                TextButton(onClick=viewLatestHistory,
+                    enabled=workoutState.ready && !workoutState.historyBusy &&
+                        !workoutState.workoutBusy && !workoutState.backupExportBusy,
+                    modifier=Modifier.fillMaxWidth()) {
+                    Text("Review last workout")
+                }
+            }
             workoutState?.workoutError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         }
         if(!activeWorkout) {

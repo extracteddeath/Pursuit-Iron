@@ -1762,3 +1762,18 @@ No new history writer, cache, or training progression logic is added,
 and the active workout and any unsaved set drafts remain untouched.
 Source interaction tests verify the receipt identity, tab/action wiring,
 revision checks and fallback error path. No APK.
+
+## 2026-11-02 — Home shortcut to exact latest saved history
+
+Saved-program Today now exposes **Review last workout** when no
+workout is active and a durable completion receipt exists. It uses
+the very same `openLatestCompletedWorkout` canonical history read
+as Train's post-completion action, rather than trusting the
+last-visited Insights detail. Start/Resume remains the primary
+CTA, and review is disabled while state reads/writes are busy.
+The Today workout CTA was also aligned with runtime busy/blocked
+guards to avoid taps that the canonical host would reject.
+
+The source contract was corrected for the already-added busy-state
+guard on Train's history button. All changes remain isolated to the
+native Compose branch, source-only and no APK.

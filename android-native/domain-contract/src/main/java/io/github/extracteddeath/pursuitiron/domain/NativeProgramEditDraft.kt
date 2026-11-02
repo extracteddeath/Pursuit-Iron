@@ -55,6 +55,17 @@ class NativeProgramEditDraft private constructor(
         return next(days=updated)
     }
 
+    /** Reorder whole days locally without changing any day or movement identity. */
+    fun moveDay(from: Int, delta: Int): NativeProgramEditDraft? {
+        if (delta !in listOf(-1, 1)) return null
+        val target = from + delta
+        if (from !in days.indices || target !in days.indices) return null
+        val moved = days.toMutableList()
+        val value = moved.removeAt(from)
+        moved.add(target, value)
+        return next(days = moved)
+    }
+
     fun moveExercise(dayId: String, from: Int, delta: Int): NativeProgramEditDraft? {
         if(delta !in listOf(-1,1)) return null
         val day=days.indexOfFirst { it.id==dayId }

@@ -273,7 +273,7 @@ object NativeProgramEditCodec {
             }
         }
         require(replacements==1)
-        val sourceKey="$"+"{dayId}:$"+"{index}"
+        val sourceKey=dayId+":"+index
         val prior=before.optJSONObject("overrides") ?: JSONObject()
         val now=after.getJSONObject("overrides")
         val newMeta=now.getJSONObject(sourceKey)

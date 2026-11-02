@@ -118,6 +118,7 @@ internal fun NativePreviewApp(
     onVerifyBackupMerge: (suspend (ByteArray) -> Boolean)? = null,
     onDiscardBackupReview: () -> Unit = {},
     onSaveProgramEdits: (NativeProgramEditDraft)->Unit = {},
+    onSaveGymInventory: (ReadOnlyProgramReference,String?)->Unit = {_,_->},
     onLookupProgramExercises: suspend (ReadOnlyProgramReference,List<String>) -> Map<String,String>? = {_,_->null}
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
@@ -261,6 +262,7 @@ internal fun NativePreviewApp(
                                     onDiscardBackupReview=onDiscardBackupReview,
                                     onLookupProgramExercises=onLookupProgramExercises,
                                     onSaveProgramEdits=onSaveProgramEdits,
+                                    onSaveGymInventory=onSaveGymInventory,
                                     onPreviewDay = { day ->
                                         selectedTrainingDay = day
                                         section = NativeDestination.TRAIN.ordinal

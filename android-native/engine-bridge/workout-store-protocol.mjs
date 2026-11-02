@@ -1,5 +1,6 @@
 /** Dedicated, pure workout-store preparation channel. It never writes storage. */
 import { canonicalBackupSchemaCheck } from './backup-schema-check.mjs';
+import { previewCanonicalBackupMerge } from './backup-merge-preview.mjs';
 import { prepareCanonicalWorkoutHistory } from './workout-history-completion.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
@@ -30,7 +31,13 @@ export function dispatchWorkoutStoreJson(json) {
     if (request.protocolVersion!==1) return error(id,'UNSUPPORTED_VERSION');
     const p=request.params;
     let result;
-    if (request.method==='inspectNativeHistoryPage') {
+    if (request.method==='previewBackupMerge') {
+      if(!exact(p,['currentSnapshot','incomingSnapshot']) ||
+          !bounded(p.currentSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
+          !bounded(p.incomingSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes))
+        return error(id,'INVALID_REQUEST');
+      result=previewCanonicalBackupMerge(p.currentSnapshot,p.incomingSnapshot);
+    } else if (request.method==='inspectNativeHistoryPage') {
       if(!exact(p,['rawSnapshot','queryJson']) || !bounded(p.rawSnapshot,WORKOUT_STORE_LIMITS.snapshotBytes) ||
         !bounded(p.queryJson,1024))return error(id,'INVALID_REQUEST');
       result=inspectNativeHistoryPage(p.rawSnapshot,p.queryJson);

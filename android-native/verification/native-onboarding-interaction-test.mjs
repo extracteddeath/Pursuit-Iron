@@ -283,3 +283,25 @@ assert.ok(backupUi.includes('ActivityResultContracts.CreateDocument("application
   backupExport.includes('source?.fill(0)') && backupExport.includes('if(!saved)runCatching { document.discard() }') &&
   !backupExport.includes('commitAtomically') && !backupExport.includes('.initialize('),
   'Backup export uses a new user-selected destination, exact canonical-owned data, readback verification and cleanup without import or store writes');
+
+const backupScreening=fs.readFileSync(root+'BackupCopyScreeningPanel.kt','utf8');
+const mergeCodec=fs.readFileSync('android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeBackupMergePreview.kt','utf8');
+const mergePolicy=fs.readFileSync('android-native/engine-bridge/backup-merge-preview.mjs','utf8');
+const privateWire=fs.readFileSync('android-native/engine-bridge/workout-store-protocol.mjs','utf8');
+assert.ok(activity.includes('onPreviewBackupMerge=runtime::previewBackupMerge') &&
+  shell.includes('onPreviewBackupMerge=onPreviewBackupMerge') &&
+  screens.includes('onPreviewBackupMerge = if (hasSavedProgram) onPreviewBackupMerge else null') &&
+  backupScreening.includes('ActivityResultContracts.OpenDocument()') &&
+  backupScreening.includes('Compare backup with saved data · preview only') &&
+  backupScreening.includes('ReadOnlyBackupCandidateReader.screen(') &&
+  backupScreening.includes('screening.bytes.fill(0)') &&
+  backupScreening.includes('BackupScreeningStage.MergePreview') &&
+  host.includes('suspend fun previewBackupMerge(selected: ByteArray)') &&
+  host.includes('source.contentEquals(fresh)') &&
+  host.includes('first?.fill(0);latest?.fill(0)') &&
+  mergePolicy.includes("import { mergeStores, parseStoredData }") &&
+  privateWire.includes("request.method==='previewBackupMerge'") &&
+  mergeCodec.includes('result.get("approvedForImport") == false') &&
+  !mergePolicy.includes('commitAtomically') && !mergePolicy.includes('publishSnapshot') &&
+  !backupScreening.includes('commitAtomically'),
+  'Backup comparison requires explicit selected source, bounded in-memory canonical merge, stale-owner refusal, redacted results, and no import authority');

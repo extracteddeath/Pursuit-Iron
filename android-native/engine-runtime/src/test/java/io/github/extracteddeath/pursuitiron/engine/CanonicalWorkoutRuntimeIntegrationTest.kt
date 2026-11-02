@@ -298,15 +298,23 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 CurrentProgramEvidence(original.reference,CurrentProgramDeletionEvidence.CheckedAbsent))
                 as ReadOnlyProgramPresentation.Structure
             val verified=NativeProgramEditDraft.from(structure)
-            val known=original.days.flatMap { it.exerciseIds }.distinct()
             var selected: NativeProgramEditDraft?=null
             var acceptedRequest: String?=null
             scan@ for(day in original.days) {
                 for(slot in 1 until day.exerciseIds.size) {
-                    for(target in known) {
-                        val draft=verified.substituteExercise(day.id,slot,target) ?: continue
+                    val sourceId=day.exerciseIds[slot]
+                    val candidates=runCatching {
+                        val wire=ExerciseCatalogCodec.encodeAlternatives(
+                            "integration-alternatives",sourceId,day.exerciseIds,
+                            proposal.profile.equipment,proposal.profile.allowBodyweight)
+                        val decoded=ExerciseCatalogCodec.decodeAlternatives(
+                            node.request(wire),"integration-alternatives",sourceId,day.exerciseIds)
+                        checkNotNull((decoded as? EngineResponse.Success)?.result)
+                    }.getOrNull().orEmpty()
+                    for(ex in candidates) {
+                        val draft=verified.substituteExercise(day.id,slot,ex.id) ?: continue
                         val request=NativeProgramEditCodec.editJson(
-                            draft,"swap-test-${day.id}-${slot}-${target}",2000)
+                            draft,"swap-test-${day.id}-${slot}-${ex.id}",2000)
                         val candidate=runCatching {
                             engine.prepareProgramEdit(proposal.snapshot,request)
                         }.getOrNull() ?: continue
@@ -318,7 +326,7 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 }
             }
             val draft=checkNotNull(selected) {
-                "Canonical generated program needs one eligible cross-day accessory for the native picker"
+                "Canonical generated program needs one eligible catalog accessory replacement"
             }
             val request=checkNotNull(acceptedRequest)
             assertEquals(3,JSONObject(request).getInt("format"))

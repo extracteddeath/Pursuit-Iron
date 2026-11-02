@@ -111,14 +111,12 @@ class NativeProgramEditDraft private constructor(
     }
 
     /**
-     * A replacement is a separate, single-change operation. A known exercise
-     * from this exact verified program can be selected without transferring
+     * A replacement is a separate, single-change operation. An exercise confirmed by the canonical catalog can be selected without transferring
      * weights or slot-specific user prescriptions. Compatibility is verified
      * by the packaged canonical editor, never inferred by Kotlin.
      */
     fun substituteExercise(dayId: String,index: Int,toId: String): NativeProgramEditDraft? {
-        if(isChanged || !toId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) ||
-            originalDays.none { toId in it.exerciseIds }) return null
+        if(isChanged || !toId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"))) return null
         val dayIndex=days.indexOfFirst { it.id==dayId }
         if(dayIndex<0) return null
         val old=days[dayIndex].exerciseIds

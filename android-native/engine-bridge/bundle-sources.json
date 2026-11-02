@@ -5,6 +5,7 @@
   "workout-outline.mjs",
   "backup-schema-check.mjs",
   "backup-merge-preview.mjs",
+  "backup-merge-preparation.mjs",
   "current-program-projection.mjs",
   "json-identity.mjs",
   "canonical-snapshot-reference.mjs",

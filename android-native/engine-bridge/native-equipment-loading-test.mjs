@@ -58,11 +58,10 @@ assert.equal(inspect(JSON.stringify(missingPairs),null,'160').review.confirmed,f
 const row=base.plan.rows[0],override={...inventory,exerciseOverrides:{[row.id]:{minimum:0,increment:5,maximum:250}}};
 const withOverride=JSON.parse(original);withOverride.saved[0].config.loadingInventory=override;
 const result=inspect(JSON.stringify(withOverride),rows=>rows.find(r=>r.id===row.id),'159.5');
-assert.equal(result.review.confirmed,true);
-assert.equal(result.review.family,'exercise_override');
-assert.equal(result.review.previous,155);
-assert.equal(result.review.next,160);
-assert.equal(result.review.exact,false);
+assert.equal(result.review.confirmed,false,
+  'A forged barbell override without proven actual plates cannot authorize physical steps');
+assert.equal(result.review.next,null);
+assert.equal(result.review.previous,null);
 const wire=JSON.stringify({protocolVersion:1,id:'equipment-test',method:'inspectNativeEquipmentLoad',
  params:{rawSnapshot:JSON.stringify(withOverride),issuedWorkout:result.issued,slot:result.slot,inputLoad:'159.5'}});
 assert.deepEqual(JSON.parse(dispatchWorkoutStoreJson(wire)).result,result.review);

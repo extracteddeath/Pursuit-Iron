@@ -1277,3 +1277,44 @@ engine's flawed progression formulas. The full Kotlin engine rebuild remains
 scheduled only after the native feature journey is integrated and accepted.
 The live web application, production main, another developer's Android branch
 and the quarantined substitution experiment were not changed.
+
+
+## 2026-11-02 — First-program physical gym stock, explicitly authored
+
+Native onboarding now has an optional M3 physical inventory form with *blank*
+unconfirmed defaults. It captures a checked empty bar and actual matched
+plate-pair counts; exact dumbbell loads per hand; verified cable and machine
+minimum/increment/maximum ranges; and **selectable Smith total loads**, not
+an assumed effective Smith bar. The form never inserts sample or default
+stock into saved workouts. Changing units clears the loading form rather
+than auto-converting hardware. Invalid partial entries block review.
+
+The native Kotlin profile wire supports the optional `loadingInventory` object,
+while original saved v1 profiles and priority-only profiles continue to
+decode without it. Kotlin validates bounded numeric precision, uniqueness,
+family shapes, actual plate counts, unit identity and strict allowed keys.
+The isolated native JS creation bridge **independently revalidates** the
+same authored inventory before adding it to the canonical generated program
+configuration and atomically prepared first-store snapshot. No Kotlin
+prescription or new progression formula has been introduced.
+
+Regression coverage checks retained authored stock, old no-inventory
+behavior, duplicate/nonphysical plates or loads, conflicting units,
+unrecognized families and undeclared per-exercise overrides. Loading
+inspection still independently re-reads the exact pinned snapshot and
+remains read-only: editing equipment never changes a logged set. This does
+**not** mean the current adaptive weight progression is corrected.
+
+**Scope still open:** there is no post-save gym inventory editor, no
+exercise-specific override authoring, no multi-gym selection, and no safe
+stock migration when a user changes units. Existing saved users must not
+be given factory loads as if they owned them. Full custom/adaptive-cycle
+flows, safe substitution with canonical re-prescription, native backup
+restore, physical Android accessibility/interruption acceptance, and the
+later Kotlin engine rewrite are separate milestones. No APK is generated;
+the production web app and other native developer branch remain untouched.
+
+Verification for this checkpoint is complete only when the latest
+`architecture/android-compose-foundation` head passes the foundation,
+domain JVM, Compose compilation and packaged runtime workflows; an Actions
+success alone is not device acceptance.

@@ -125,6 +125,9 @@ assert.ok(train.includes('NativeSetValueFields(session.unit,load,reps,rir,!busy'
   !controls.includes('stepLoad('),
   'All set editors share bounded keyboard-and-stepper entry, touch targets and no made-up equipment increments');
 const verifiedLoadUi=fs.readFileSync(root+'NativeVerifiedLoadOptions.kt','utf8');
+assert.ok(verifiedLoadUi.includes(String.raw`(\\.[0-9]{1,3})?`) &&
+  !verifiedLoadUi.includes(String.raw`(\\\\.[0-9]{1,3})?`),
+  'Equipment load lookup must accept true fractional weights without permitting a literal-backslash input');
 assert.ok(train.includes('onInspectEquipmentLoad:(JournalSetSlot,String)->Unit') &&
   train.includes('NativeVerifiedLoadOptions(') &&
   train.includes('onLoad={load=it},onInspect=onInspectEquipmentLoad)') &&

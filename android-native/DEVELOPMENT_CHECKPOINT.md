@@ -1654,3 +1654,15 @@ machine logging scale values from effective mechanical resistance and
 keeps the detailed note available on demand. Source contracts were updated
 to follow the new shared component rather than incorrectly reading its
 copy from the old monolithic workout screen. No APK is authorized.
+
+## 2026-11-02 — Decimal equipment lookup input regression caught
+
+Audit of the extracted load-control component found an over-escaped
+decimal separator in the *presentation-side* preflight regex.
+This was corrected to the same source-level two-backslash decimal
+escape as the canonical load-input contract, so decimal weights such
+as 38.5 are eligible for a real engine-verified inspection. The
+actual adjustment values are still read exclusively from source-
+authenticated canonical inventory, not computed in the UI.
+A source assertion now guards against accidental over-escaping.
+This changed no issued prescriptions, logged sets or historical values.

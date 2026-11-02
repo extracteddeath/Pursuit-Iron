@@ -29,7 +29,7 @@ internal fun NativeVerifiedLoadOptions(
         it.workoutId==session.workoutId && it.slot==set.slot &&
             it.unit==session.unit && it.inputLoad==load
     }
-    val validInput=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\\\.[0-9]{1,3})?$"))
+    val validInput=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$"))
     var showExplanation by rememberSaveable(session.workoutId,set.slot.exerciseIndex,set.slot.setIndex) {
         mutableStateOf(false)
     }

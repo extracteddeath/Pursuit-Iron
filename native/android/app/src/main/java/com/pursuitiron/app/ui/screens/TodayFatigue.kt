@@ -1,5 +1,6 @@
 package com.pursuitiron.app.ui.screens
 
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -202,6 +203,7 @@ private fun BodyMap(ready: Map<String, Int>, modifier: Modifier = Modifier) {
 
 /** The design's readiness tile opened in place: today's muscles' readiness, the map, every trained muscle, and a light session when most are spent. */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 fun ReadinessPanel(vm: AppViewModel, h: JSONObject, onClose: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val rd = h.o("readiness") ?: JSONObject()
@@ -209,7 +211,11 @@ fun ReadinessPanel(vm: AppViewModel, h: JSONObject, onClose: () -> Unit) {
     val parts = rd.list("parts")
     val ready = parts.associate { it.s("part") to it.i("readiness") }
     val shown = parts.filter { it.i("readiness") < 100 || it.s("part") in today }.sortedWith(compareBy({ it.s("part") !in today }, { it.i("readiness") }))
-    Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth()) {
+    // Opening from the tile at the foot of the screen left the panel below the fold: it scrolls itself into view.
+    val reveal = androidx.compose.runtime.remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); reveal.bringIntoView() }
+    Surface(color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(32.dp),
+        modifier = Modifier.fillMaxWidth().bringIntoViewRequester(reveal)) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {

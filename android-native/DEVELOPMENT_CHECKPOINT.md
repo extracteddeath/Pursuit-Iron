@@ -1318,3 +1318,48 @@ Verification for this checkpoint is complete only when the latest
 `architecture/android-compose-foundation` head passes the foundation,
 domain JVM, Compose compilation and packaged runtime workflows; an Actions
 success alone is not device acceptance.
+
+
+## 2026-11-02 — Individually verified cable / machine load profiles
+
+An isolated, revision-bound extension to the native saved-gym editor now
+supports **physical settings per individual cable/machine movement**. Candidate
+IDs, names and carrier modes originate from the current canonical
+`EX_BY_ID` catalog and the actual saved program's exercise slots; they
+are not supplied as arbitrary user text. Both explicit selectable loads
+(`exact: 17.5, 22.5, 27.5`) and witnessed ranges
+(`range: 5, 7.5, 200`) use the canonical existing load solver.
+The shared M3 UI keeps this optional section collapsed until opened.
+
+The native first-program setup still does **not** accept user-created
+exercise overrides. Only the current, saved, revision-authenticated Plan
+editor offers them. Kotlin permits only listed candidate IDs and
+well-formed bounded profiles; the canonical JS editor separately checks
+every candidate against the original program and source catalog, disallows
+user-chosen carrier modes and preserves all noninventory history/plan
+fields. The independently validated atomic commit must find an unchanged
+store revision and no pending workout. After restart, native inspection
+retrieves the exact saved profile, not stale onboarding settings.
+
+A separate exercise-loading test runs real canonical program issuance,
+then confirms that the observed `159.5` weight shows verified
+`155` / `162.5` adjacent settings on a known 7.5-lb cable profile,
+and exercises an exact 17.5/22.5/27.5 list. Both the source dispatch and
+the checksum-pinned packaged bundle test reject wrong units, unknown or
+unowned IDs, forged modes, duplicate or fractional-precision-drifted loads,
+and stale save revisions. The shared loading inspector now reauthenticates
+the entire physically authored inventory before enabling any control;
+malformed legacy or injected overrides fail closed rather than borrowing
+factory inventory. Kotlin and JS restrict physical configuration to two
+decimal places because the unchanged canonical solver rounds to hundredths.
+
+**Not solved:** plate-loaded, selectorized specialty and ambiguous
+machines still need explicitly modeled equipment carriers and attachment
+variants. Per-exercise physical settings are informational and do not
+correct the existing adaptive weight/progression decisions. Removing an
+exercise that has a stored physical override requires explicit
+reconciliation in a future program-editor pass; the current loader refuses
+stale equipment metadata. Multiple named gyms and cross-unit migration
+are not enabled. Keep the no-APK gate until the full journey and physical
+device tests pass. No live web files, training formulas or other native
+developer branches were changed.

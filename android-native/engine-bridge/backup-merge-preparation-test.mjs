@@ -40,7 +40,8 @@ assert.equal(prepared.incomingSha256,sha(incoming));
 assert.equal(prepared.candidateSnapshotSha256,sha(prepared.candidateSnapshot));
 assert.equal(prepared.candidateSnapshotBytes,Buffer.byteLength(prepared.candidateSnapshot,'utf8'));
 assert.deepEqual(parseStoredData(prepared.candidateSnapshot),
-  mergeStores(parseStoredData(current),parseStoredData(incoming)).data);
+  JSON.parse(JSON.stringify(mergeStores(parseStoredData(current),
+    parseStoredData(incoming)).data)), 'canonical candidate round-trips serialized store');
 assert.equal(parseStoredData(prepared.candidateSnapshot).history.length,2);
 assert.deepEqual([current,incoming],before);
 assert.deepEqual(prepareCanonicalBackupMerge(params),prepared,

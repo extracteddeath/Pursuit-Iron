@@ -3,6 +3,8 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -85,23 +87,44 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
         if(input.length<=10 && input.all {it.isDigit() || it=='.'})onLoad(input)
     },label={Text("Load ($unit)")},modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=enabled,
         keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
-    NativeSetCounterField("Reps",reps,enabled,
-        onValueChange={input->
-            if(input.length<=3 && input.all(Char::isDigit))onReps(input)
-        },
-        decrement={NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)?.let(onReps)},
-        increment={NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)?.let(onReps)},
-        canDecrement=NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)!=null,
-        canIncrement=NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)!=null)
-    NativeSetCounterField("Actual RIR (optional)",rir,enabled,
-        onValueChange={input->
-            if(input.length<=2 && input.all(Char::isDigit))onRir(input)
-        },
-        decrement={NativeSetEntryPolicy.stepRir(rir,-1)?.let(onRir)},
-        increment={NativeSetEntryPolicy.stepRir(rir,1)?.let(onRir)},
-        canDecrement=NativeSetEntryPolicy.stepRir(rir,-1)!=null,
-        canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null)
-    Text("RIR = reps remaining. Leave empty if unknown. Use 0 load for bodyweight.",
+    // A wide phone can keep both independent controls on one line; narrow
+    // screens retain the full-width, accessible version instead of clipping.
+    // Neither presentation computes or mutates training targets.
+    val repsControl: @Composable () -> Unit = {
+        NativeSetCounterField("Reps",reps,enabled,
+            onValueChange={input->
+                if(input.length<=3 && input.all(Char::isDigit))onReps(input)
+            },
+            decrement={NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)?.let(onReps)},
+            increment={NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)?.let(onReps)},
+            canDecrement=NativeSetEntryPolicy.stepReps(reps,-1,allowFailedAttempt)!=null,
+            canIncrement=NativeSetEntryPolicy.stepReps(reps,1,allowFailedAttempt)!=null)
+    }
+    val rirControl: @Composable () -> Unit = {
+        NativeSetCounterField("RIR",rir,enabled,
+            onValueChange={input->
+                if(input.length<=2 && input.all(Char::isDigit))onRir(input)
+            },
+            decrement={NativeSetEntryPolicy.stepRir(rir,-1)?.let(onRir)},
+            increment={NativeSetEntryPolicy.stepRir(rir,1)?.let(onRir)},
+            canDecrement=NativeSetEntryPolicy.stepRir(rir,-1)!=null,
+            canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null)
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if(maxWidth>=368.dp) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) { repsControl() }
+                Box(Modifier.weight(1f)) { rirControl() }
+            }
+        } else {
+            Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                repsControl()
+                rirControl()
+            }
+        }
+    }
+    Text(if(load=="0")"0 load = bodyweight · RIR is optional (reps remaining)."
+        else "RIR is optional · leave blank if unknown.",
         style=MaterialTheme.typography.bodySmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant)
 }

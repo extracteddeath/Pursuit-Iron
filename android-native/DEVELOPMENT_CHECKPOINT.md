@@ -1666,3 +1666,16 @@ actual adjustment values are still read exclusively from source-
 authenticated canonical inventory, not computed in the UI.
 A source assertion now guards against accidental over-escaping.
 This changed no issued prescriptions, logged sets or historical values.
+
+## 2026-11-02 — Shared responsive set-entry controls
+
+The single Compose `NativeSetValueFields` now uses a responsive layout for
+Reps and optional actual RIR, sharing the existing bounded input validation,
+48dp step touch targets and the same policy-backed increments in every
+live set, saved correction, warm-up and history editor. The two counters
+can share a row where there is enough width and automatically stack
+on smaller screens without clipping. Typed load stays a separate field;
+equipment-dependent load steps are *not* inferred. A short contextual
+bodyweight hint appears only when actual load is zero, reducing repeated
+instructional text on normal weighted sets. Draft ownership, engine
+values and storage remain unchanged. No APK until end-to-end acceptance.

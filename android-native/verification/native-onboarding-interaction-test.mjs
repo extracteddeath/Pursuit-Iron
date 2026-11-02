@@ -680,3 +680,16 @@ assert.ok(toolbarStart>=0 && toolbarEnd>toolbarStart &&
   train.slice(toolbarStart,toolbarEnd).includes('FilterChip(selected=!showLast,onClick={showLast=false}') &&
   train.slice(toolbarStart,toolbarEnd).includes('FilterChip(selected=showLast,onClick={showLast=true}'),
   'The live note, setup, Focus and Last/Target controls must be visible without horizontal scroll on phones');
+
+assert.ok(controls.includes('val repsControl: @Composable () -> Unit') &&
+  controls.includes('val rirControl: @Composable () -> Unit') &&
+  controls.includes('BoxWithConstraints(Modifier.fillMaxWidth())') &&
+  controls.includes('if(maxWidth>=368.dp) {') &&
+  controls.includes('Box(Modifier.weight(1f)) { repsControl() }') &&
+  controls.includes('Box(Modifier.weight(1f)) { rirControl() }') &&
+  controls.includes('Column(verticalArrangement=Arrangement.spacedBy(8.dp))') &&
+  controls.includes('NativeSetCounterField("RIR",rir,enabled') &&
+  controls.includes('minWidth=48.dp,minHeight=48.dp') &&
+  controls.includes('if(load=="0")"0 load = bodyweight') &&
+  controls.includes('RIR is optional'),
+  'The one shared set-entry control must be compact on wide phones and remain unclipped, accessible and optional on narrow phones');

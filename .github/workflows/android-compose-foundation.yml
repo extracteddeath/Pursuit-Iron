@@ -34,6 +34,7 @@ jobs:
           node android-native/engine-bridge/native-failed-attempt-test.mjs
           node android-native/engine-bridge/native-history-page-test.mjs
           node android-native/engine-bridge/backup-schema-check-test.mjs
+          node android-native/engine-bridge/backup-merge-preview-test.mjs
           node android-native/engine-bridge/sandbox-compat-test.mjs
       - name: Verify fixed language-neutral progression fixtures and Kotlin routing contracts
         run: node android-native/engine-contract/contract-parity-test.mjs

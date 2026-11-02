@@ -86,6 +86,7 @@ export function canonicalExerciseAlternatives(params) {
   const choices=EXERCISES.filter(ex=>ex.id!==from.id && !excluded.has(ex.id) &&
     ex.part===from.part && ex.type===from.type &&
     (!ex.pattern || !from.pattern || ex.pattern===from.pattern) &&
+    ex.rep[0]===from.rep[0] && ex.rep[1]===from.rep[1] &&
     ex.equip.every(id=>equipped.has(id)) &&
     (ex.equip.length>0 || params.allowBodyweight) &&
     !!nextExerciseIdForShellExercise(ex))

@@ -295,9 +295,25 @@ object NativeProgramEditCodec {
             "weekOff","pairs","ss")) {
             require(before.has(field)==after.has(field))
             if(before.has(field)) {
-                val expected=if(field=="nextWeekPrescriptions")before.getJSONObject(field)
-                    else withoutOriginalSlot(before.getJSONObject(field))
-                require(equivalent(expected,after.getJSONObject(field)))
+                if(field=="nextWeekPrescriptions") {
+                    val previous=before.getJSONObject(field)
+                    val updated=after.getJSONObject(field)
+                    require(previous.keys().asSequence().toSet()==updated.keys().asSequence().toSet())
+                    previous.keys().asSequence().forEach { entry->
+                        if(entry!=sourceKey) require(equivalent(previous.get(entry),updated.get(entry)))
+                        else {
+                            val weeks=previous.getJSONObject(entry)
+                            val retained=updated.getJSONObject(entry)
+                            require(weeks.keys().asSequence().toSet()==retained.keys().asSequence().toSet())
+                            weeks.keys().asSequence().forEach { week->
+                                val oldCell=weeks.getJSONObject(week);val newCell=retained.getJSONObject(week)
+                                val expected=JSONObject(oldCell.toString()).put("tech",JSONObject.NULL)
+                                require(equivalent(expected,newCell))
+                            }
+                        }
+                    }
+                } else require(equivalent(withoutOriginalSlot(before.getJSONObject(field)),
+                    after.getJSONObject(field)))
             }
         }
     }

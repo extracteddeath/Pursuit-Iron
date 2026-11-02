@@ -172,8 +172,7 @@ const engineWeeks=replacementBase.saved[0].nextWeekPrescriptions[`${replacementD
 const replacementId=exerciseCatalog.find(ex=>ex.id!==existingId &&
   ex.part===originalExercise.part && ex.type===originalExercise.type &&
   (!ex.pattern || !originalExercise.pattern || ex.pattern===originalExercise.pattern) &&
-  Object.values(engineWeeks).every(cell=>cell.tech==null && cell.sets>0 &&
-    repPair(cell.reps)?.[0]>=ex.rep[0] && repPair(cell.reps)?.[1]<=ex.rep[1]) &&
+  ex.rep[0]===originalExercise.rep[0] && ex.rep[1]===originalExercise.rep[1] &&
   ex.equip.every(item=>allow.has(item)) &&
   (ex.equip.length>0 || !replacementBase.saved[0].config.noBodyweight) &&
   !replacementDay.exercises.includes(ex.id) && engineIdFor(ex) &&
@@ -218,9 +217,10 @@ withMetadata.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`]={userOwned
 const metaSnapshot=JSON.stringify(withMetadata);
 const metaReq=structuredClone(substitution);metaReq.reference=inspectNativeProgram(metaSnapshot).program.reference;
 const cleanedMeta=JSON.parse(prepareNativeProgramEdit(metaSnapshot,JSON.stringify(metaReq)).candidateSnapshot);
-assert.deepEqual(cleanedMeta.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`],
-  withMetadata.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`],
-  'Only the verified engine-owned weekly role template can survive replacement');
+for(const [week,cell] of Object.entries(
+  withMetadata.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`]))
+  assert.deepEqual(cleanedMeta.saved[0].nextWeekPrescriptions[`${replacementDay.id}:1`][week],
+    {...cell,tech:null},'Only the engine-owned weekly dose survives, without former techniques');
 
 const forgedReplacement=structuredClone(substitution);forgedReplacement.replacement.exerciseId='not-in-catalog';
 assert.throws(()=>prepareNativeProgramEdit(replacementSnapshot,JSON.stringify(forgedReplacement)));

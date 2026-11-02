@@ -362,8 +362,14 @@ class CanonicalWorkoutRuntimeIntegrationTest {
                 overrides.keys().asSequence().toSet())
             val originalProgram=before.getJSONArray("saved").getJSONObject(0)
             val originalWeek=originalProgram.getJSONObject("nextWeekPrescriptions").getJSONObject(key)
-            assertEquals(originalWeek.toString(),edited.getJSONObject("nextWeekPrescriptions")
-                .getJSONObject(key).toString())
+            val changedWeeks=edited.getJSONObject("nextWeekPrescriptions").getJSONObject(key)
+            assertEquals(originalWeek.keys().asSequence().toSet(),
+                changedWeeks.keys().asSequence().toSet())
+            originalWeek.keys().asSequence().forEach { week->
+                val expected=JSONObject(originalWeek.getJSONObject(week).toString())
+                    .put("tech",JSONObject.NULL)
+                assertEquals(expected.toString(),changedWeeks.getJSONObject(week).toString())
+            }
             for(field in listOf("progStyle","slotBias","autoBias",
                 "rounds","weekOff","pairs","ss")) {
                 val values=edited.optJSONObject(field) ?: continue

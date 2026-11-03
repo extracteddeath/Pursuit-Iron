@@ -49,6 +49,10 @@ assert.match(navigation,/onThemeSelected: \(String\)->Unit = \{\}/);
 assert.match(navigation,/Icon\(Icons\.Outlined\.Palette,contentDescription="Choose color theme"\)/);
 assert.match(picker,/PursuitThemes\.all\.filter \{it\.isLight==light\}/);
 assert.match(picker,/role=Role\.RadioButton/);
+assert.match(picker,/if\(selectedId==palette\.id\) Text\("Selected"/);
+assert.match(picker,/color=LocalPursuitPalette\.current\.accentInk/);
+assert.ok(!picker.includes('color=MaterialTheme.colorScheme.primary,'),
+  'Selected appearance label must use the original contrast-safe ink rather than the solid action fill');
 for (const file of ['NativeScreens.kt','NativeWorkoutScreen.kt','NativeHistoryPanel.kt']) {
   const text=fs.readFileSync(root+file,'utf8');
   assert.ok(text.includes('LocalPursuitPalette.current.accentInk'),

@@ -39,14 +39,11 @@ object NativeExerciseWeightEditorPolicy {
         if (exactOnly(candidate) || !existing.orEmpty().trimStart()
                 .startsWith("range:", ignoreCase = true)) "exact" else "range"
 
-    /**
-     * Raw list remains unchanged when the editor switches mode. No conversion
-     * or implicit default; only a user-supplied list can become a saved fact.
-     */
-    fun withKind(kind: String, raw: String): String {
-        require(kind == "exact" || kind == "range")
-        val input = raw.trim()
-        val body = input.substringAfter(':', input).trim()
+    /** The field edits numbers only. Type selection never converts a saved range. */
+    fun formatEntry(kind: String, values: String, exactOnly: Boolean): String {
+        require(kind in setOf("exact", "range") &&
+            !(exactOnly && kind == "range"))
+        val body = values.trim()
         return if (body.isEmpty()) "" else "$kind: $body"
     }
 

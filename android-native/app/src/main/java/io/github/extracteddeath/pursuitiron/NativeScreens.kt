@@ -151,7 +151,7 @@ internal fun TodayScreen(
                         style=MaterialTheme.typography.titleMedium)
                     Text(if(preview.fits)"Within the selected time budget"
                         else "Cannot safely fit ${preview.minutes} minutes without cutting protected work",
-                        color=if(preview.fits)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                        color=if(preview.fits)LocalPursuitPalette.current.accentInk else MaterialTheme.colorScheme.error)
                     if(preview.cuts.isEmpty())Text("No sets need to be removed.")
                     preview.cuts.forEach { cut ->
                         Text("${cut.name}: ${cut.fromSets} → ${cut.toSets} sets" +
@@ -450,7 +450,7 @@ internal fun PlanScreen(
         }
     }
     }
-    runtimeState?.programEditMessage?.let { Text(it,color=MaterialTheme.colorScheme.primary) }
+    runtimeState?.programEditMessage?.let { Text(it,color=LocalPursuitPalette.current.accentInk) }
     // Plan cannot authorize a raw backup or unchecked current program.
     if (currentPlan is ReadOnlyProgramPresentation.Structure) {
         // Only the authenticated, exact saved program authorizes a physical

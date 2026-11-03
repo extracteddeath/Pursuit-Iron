@@ -131,7 +131,7 @@ internal fun NativeWorkoutScreen(
     var showAffectedTools by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     if(plan.shortenedMinutes!=null) {
         Text("Shortened workout · ${plan.shortenedMinutes} min selected · ${plan.shortenedEstimatedMinutes} min estimated",
-            style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)
+            style=MaterialTheme.typography.titleMedium,color=LocalPursuitPalette.current.accentInk)
         Text("Your logged dose will be marked time-limited; reductions are not failed sets.",
             style=MaterialTheme.typography.bodySmall)
     }
@@ -180,7 +180,7 @@ internal fun NativeWorkoutScreen(
     }
     Text("Exercise ${exerciseIndex+1} of ${plan.exercises.size}",
         style=MaterialTheme.typography.labelLarge,
-        color=MaterialTheme.colorScheme.primary)
+        color=LocalPursuitPalette.current.accentInk)
     Text(exercise.name,modifier=Modifier.bringIntoViewRequester(exerciseAnchor),
         style=MaterialTheme.typography.headlineSmall)
     if(exercise.superset)Text("Superset pairing",style=MaterialTheme.typography.labelMedium)
@@ -221,7 +221,7 @@ internal fun NativeWorkoutScreen(
         horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         IconButton(onClick={showNote=true},enabled=!writeBlocked) {
             Icon(Icons.Outlined.Edit,contentDescription=if(journal.note?.text.isNullOrEmpty())"Add session note" else "Edit session note",
-                tint=if(journal.note?.text.isNullOrEmpty())MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
+                tint=if(journal.note?.text.isNullOrEmpty())MaterialTheme.colorScheme.onSurfaceVariant else LocalPursuitPalette.current.accentInk)
         }
         if(pinnedNote!=null)IconButton(onClick={showPinnedNote=true},
             enabled=!writeBlocked) {

@@ -49,5 +49,14 @@ assert.match(navigation,/onThemeSelected: \(String\)->Unit = \{\}/);
 assert.match(navigation,/Icon\(Icons\.Outlined\.Palette,contentDescription="Choose color theme"\)/);
 assert.match(picker,/PursuitThemes\.all\.filter \{it\.isLight==light\}/);
 assert.match(picker,/role=Role\.RadioButton/);
+for (const file of ['NativeScreens.kt','NativeWorkoutScreen.kt','NativeHistoryPanel.kt']) {
+  const text=fs.readFileSync(root+file,'utf8');
+  assert.ok(text.includes('LocalPursuitPalette.current.accentInk'),
+    file+' must use the original contrast-safe accent ink for real workout/status text');
+}
+assert.ok(colors.includes('val accentInk:Color') &&
+  colors.includes('primary=accent,onPrimary=onAccent'),
+  'On-surface accent ink must be distinct from the original solid button fill');
+
 assert.ok(!picker.includes('store.') && !picker.includes('journal.'));
 console.log('PASS native theme picker and 20 exact original palette inputs; no training-store coupling');

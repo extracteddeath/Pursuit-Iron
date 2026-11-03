@@ -2184,3 +2184,14 @@ mode, and vice versa. Uses AndroidX's window inset controller and Compose's
 SideEffect (no status-bar color hacks and no lifecycle leaks). The 20-theme
 parity gate also asserts the original 10 dark / 10 light split. The
 appearance setting remains independent from canonical training data. No APK.
+
+## 2026-11-02 — Preserve original theme contrast throughout core journeys
+
+Theme-sensitive on-surface copy in the real Today shorter-session preview,
+program-save feedback, active Train shortened-workout status, saved-workout
+record highlight and session-note affordance now uses the original
+contrast-derived `accentInk` rather than the filled-button `primary`
+accent. This is particularly important for Patrol's #2563EB fill,
+whose native text ink is lighter by design. No training, progression,
+program or history logic changed. Original theme inputs and UI choice
+persistence stay untouched; no APK.

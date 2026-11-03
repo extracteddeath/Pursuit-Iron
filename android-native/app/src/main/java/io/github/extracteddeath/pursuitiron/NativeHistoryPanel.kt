@@ -130,7 +130,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
             exercise.record?.let { record ->
                 val weight=java.math.BigDecimal.valueOf(record.load).stripTrailingZeros().toPlainString()
                 Text("Overall heaviest working set: $weight ${record.unit} × ${record.reps}",
-                    style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)
+                    style=MaterialTheme.typography.bodySmall,color=LocalPursuitPalette.current.accentInk)
             }
             val occurrences=exercise.sets.groupBy { it.exerciseIndex }
             occurrences.forEach { (exerciseIndex,sets) ->

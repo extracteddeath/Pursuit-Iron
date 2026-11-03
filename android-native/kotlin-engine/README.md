@@ -313,3 +313,22 @@ fatigue-aware prescription over the full set sequence, transitions between
 weeks, supervised deload/cycle decisions, authenticated data ownership,
 native UI integration, device verification and comparative coaching-quality
 acceptance against the old engine. A valid draft is not a certified coach.
+
+
+## Longitudinal coaching: effort-sensitive plateau review
+
+The new `LongitudinalCoachDomain.review` evaluates multiple chronological
+training weeks, requiring actual completed key-lift sets and separately
+reported recovery/readiness before discussing persistent fatigue, plateau,
+deload or requested phase transitions. It does not guess a deload percent,
+rewrite an existing block or issue sessions.
+
+Plateau checks now distinguish **equal reps at equal load but explicitly
+lower observed effort** (higher actual RIR) from stagnation. More reps
+also count as improvement. Missing actual RIR remains unknown rather than
+being replaced with issued target effort. Changing a rep band, mixed
+loads, gaps in history or partial work cannot invent comparable evidence.
+
+A deload or next phase remains a review recommendation and must next be
+expressed as an explicitly constrained, auditable **candidate week** before
+a user can approve any change. No automatic engine switch is implied.

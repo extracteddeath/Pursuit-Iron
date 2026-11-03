@@ -212,16 +212,26 @@ object LongitudinalCoachDomain {
                         it.actualLoad?.stripTrailingZeros()
                     }.distinct()
                     if(loads.size!=1)null
-                    else loads.single() to e.observations.sumOf {
-                        checkNotNull(it.actualReps)
+                    else {
+                        val reportedRir=e.observations.mapNotNull {it.actualRir}
+                        Triple(loads.single(),e.observations.sumOf {
+                            checkNotNull(it.actualReps)
+                        },if(reportedRir.size==e.expectedWorkingSets)
+                            reportedRir.sum() else null)
                     }
                 }
             }
             if(metrics.any {it==null})continue
             val safe=metrics.filterNotNull()
             val stableLoad=safe.all {it.first.compareTo(safe.first().first)==0}
-            val notImproving=safe.zipWithNext().all {
-                it.second.second<=it.first.second
+            val notImproving=safe.zipWithNext().all { (prior,current) ->
+                val moreReps=current.second>prior.second
+                // Equal completed work at explicitly reported LOWER effort
+                // (more actual reps in reserve) is also improvement.
+                val easierSameReps=current.second==prior.second &&
+                    current.third!=null && prior.third!=null &&
+                    current.third>prior.third
+                !moreReps && !easierSameReps
             }
             if(stableLoad && notImproving)stalled.add(exerciseId)
         }

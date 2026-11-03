@@ -258,4 +258,20 @@ class LongitudinalCoachDomainTest {
             changed.clear()
         }
     }
+
+    @Test fun sameRepsWithClearlyLowerReportedEffortIsNotAPlateau() {
+        val result=report(
+            week(1,rir=listOf(1,1,1)),
+            week(2,rir=listOf(2,2,2)),
+            week(3,rir=listOf(3,3,3))
+        )
+        assertEquals(BlockReviewDirection.CONTINUE_CURRENT_BLOCK,result.direction)
+        assertTrue(result.comparablePlateauExerciseIds.isEmpty())
+        val unknown=listOf(null,null,null)
+        val unreported=report(week(1,rir=unknown),
+            week(2,rir=unknown),week(3,rir=unknown))
+        assertEquals(BlockReviewDirection.REVIEW_STALLED_EXERCISES,unreported.direction)
+        assertEquals(CoachConfidence.LIMITED,unreported.confidence)
+    }
+
 }

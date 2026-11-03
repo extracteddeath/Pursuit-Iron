@@ -1,5 +1,5 @@
 /** Canonical native-issued IDs only; never infer carrier modes from newer IDs. */
-import { EX_BY_ID } from '../../modules/engine-api.js';
+import { EX_BY_ID, expandEquipment } from '../../modules/engine-api.js';
 
 const unsafe=new Set(['ezbar','trapbar','safetybar','landmine','kettlebell','bands',
   'legpress','hacksquat','legext','legcurl','pecdeck','machinerow','assisted',
@@ -16,8 +16,12 @@ const modes={barbell:'barbell_total',dumbbell:'dumbbell_per_hand',smith:'smith_t
   cable:'cable_stack',machine:'machine_stack'};
 export function nativeIssuedLoadMode(exerciseId,equipment) {
   const exercise=EX_BY_ID[exerciseId];
-  if(!exercise || !Array.isArray(exercise.equip) || !Array.isArray(equipment) ||
-    exercise.equip.some(key=>unsafe.has(key) || !equipment.includes(key))) return null;
+  if(!exercise || !Array.isArray(exercise.equip) || !Array.isArray(equipment)) return null;
+  // Use the canonical hardware implication model for *eligibility* only:
+  // barbell implies a rack unless explicitly disabled, and an incline bench
+  // also functions as a flat bench. This never invents physical load steps.
+  const available=expandEquipment(equipment);
+  if(exercise.equip.some(key=>unsafe.has(key) || !available.has(key))) return null;
   const carriers=exercise.equip.filter(key=>Object.hasOwn(modes,key));
   return carriers.length===1?modes[carriers[0]]:null;
 }
@@ -26,10 +30,11 @@ export function nativeStackCandidates(program) {
   if(!program || !Array.isArray(program.days) || !Array.isArray(program.config?.equipment))
     return [];
   const ids=[...new Set(program.days.flatMap(day=>Array.isArray(day.exercises)?day.exercises:[]))];
+  const available=expandEquipment(program.config.equipment);
   return ids.flatMap(id=>{
     const exercise=EX_BY_ID[id];
     if(!exercise || !Array.isArray(exercise.equip) ||
-        !exercise.equip.every(key=>program.config.equipment.includes(key)) ||
+        !exercise.equip.every(key=>available.has(key)) ||
         typeof exercise.name!=='string' || exercise.name.length<1 || exercise.name.length>120)
       return [];
     const nativeMode=nativeIssuedLoadMode(id,program.config.equipment);

@@ -1945,3 +1945,16 @@ and scrolls through long verified inventories within the existing Material
 3 confirmation sheet. This keeps the Done action accessible on compact
 phones and larger text sizes without truncating denominations or guessing
 missing plate stock. Source-only UI change; no APK.
+
+## 2026-11-02 — Nonblocking verified plate layout
+
+The read-only physical plate viewer now calculates potentially expensive
+bounded plate-pair combinations on a worker dispatcher rather than blocking
+the Compose UI thread. Loading is an explicit state. Each lookup is keyed to
+the exact saved physical inventory, issued workout ID, unit, selected load,
+verified exercise IDs and exactness; changing any input creates a fresh
+unavailable/loading state and cannot briefly show a prior plate setup. The
+confirmation dialog state also resets when stock or source verification
+changes. This is display-only, with no changes to engine-issued targets,
+journal, physical inventory, progression or saved history. Source contract
+and Compose compilation are required before acceptance. No APK.

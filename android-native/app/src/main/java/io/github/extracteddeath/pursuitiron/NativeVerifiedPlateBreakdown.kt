@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Read-only Material 3 physical plate viewer. The caller has confirmed
@@ -31,6 +33,13 @@ private fun RowScope.VerifiedPlateSide(label: String,layout: NativeBarbellPlateB
     }
 }
 
+/** A result belongs to the exact saved inventory and issued load lookup. */
+private sealed interface PlateLookup {
+    data object Loading : PlateLookup
+    data object Unavailable : PlateLookup
+    data class Verified(val layout: NativeBarbellPlateBreakdown) : PlateLookup
+}
+
 @Composable
 internal fun NativeVerifiedPlateBreakdown(
     state: NativeRuntimeState,session: JournalSessionKey,
@@ -41,11 +50,27 @@ internal fun NativeVerifiedPlateBreakdown(
     val allowed=saved?.loadingCandidates?.map { it.id }?.toSet().orEmpty()
     val exactOnly=saved?.loadingCandidates?.filter { it.mode=="external_load" }
         ?.map { it.id }?.toSet().orEmpty()
-    val breakdown=remember(inventory,session.unit,selectedLoad,allowed,exactOnly,exact) {
-        if(!exact)null else NativeBarbellPlateBreakdownPolicy.inspect(
-            inventory,session.unit,selectedLoad,allowed,exactOnly)
+    // Even a bounded physical-stock search can be expensive for an unusual
+    // inventory. Keep it off Compose's main thread; key both the job and its
+    // result to the exact persisted stock, session, unit and entered load.
+    // A new key gets Loading rather than briefly showing an old plate setup.
+    val lookup=remember(inventory,session.workoutId,session.unit,selectedLoad,allowed,exactOnly,exact) {
+        mutableStateOf<PlateLookup>(PlateLookup.Loading)
     }
-    var show by remember(session.workoutId,selectedLoad) { mutableStateOf(false) }
+    LaunchedEffect(lookup) {
+        val verified=if(!exact)null else withContext(Dispatchers.Default) {
+            NativeBarbellPlateBreakdownPolicy.inspect(
+                inventory,session.unit,selectedLoad,allowed,exactOnly)
+        }
+        lookup.value=when {
+            !exact || verified==null -> PlateLookup.Unavailable
+            else -> PlateLookup.Verified(verified)
+        }
+    }
+    val breakdown=(lookup.value as? PlateLookup.Verified)?.layout
+    var show by remember(session.workoutId,selectedLoad,inventory,allowed,exactOnly,exact) {
+        mutableStateOf(false)
+    }
     if(!exact) {
         Text("That load is not an exact selectable barbell total. No plate layout is assumed.",
             style=MaterialTheme.typography.bodySmall,
@@ -53,7 +78,8 @@ internal fun NativeVerifiedPlateBreakdown(
         return
     }
     if(breakdown==null) {
-        Text("An exact plate layout could not be verified for this load.",
+        Text(if(lookup.value==PlateLookup.Loading) "Checking saved physical plates…"
+            else "An exact plate layout could not be verified for this load.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         return

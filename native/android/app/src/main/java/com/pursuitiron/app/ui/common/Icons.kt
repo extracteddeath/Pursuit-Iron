@@ -60,6 +60,8 @@ object PiIcons {
     val Flame = icon("flame", "M12 22c4 0 7-3 7-7 0-4-3-6-4-9-1 2-2 3-3 3 0-3-1-5-3-7 0 4-4 7-4 13 0 4 3 7 7 7z")
     val Sparkle = icon("sparkle", "M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z")
     val Redo = icon("redo", "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5")
+    val History = icon("history", "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2")
+    val SkipNext = icon("skip-next", "M5 4l10 8-10 8zM19 5v14")
     val Focus = icon("focus", "M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z")
     val Trophy = icon("trophy", "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3")
     val Calendar = icon("calendar", "M4 5h16v16H4zM4 9h16M9 3v4M15 3v4M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01")

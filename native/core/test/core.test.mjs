@@ -495,6 +495,10 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   const part = s.exercises[0].part;
   C.act({ type: 'feedback', part, pump: 'good' }); C.act({ type: 'feedback', part, sore: 'fresh' });
   s.exercises.forEach((e, ei) => e.sets.forEach((x) => { if (!x.done && !x.warm) C.act({ type: 'toggle', ei, si: x.i }); }));
+  { s = C.session(); const n = s.exercises.length, ids = s.exercises.map((e) => e.id).join(), done1 = s.exercises[1].sets.filter((x) => x.done).length;
+    const sk = C.act({ type: 'skipExercise', ei: 1 }); ok(sk.exercises.length === n - 1, 'skip drops the lift from today');
+    const un = C.act({ type: 'unskipExercise' }); ok(un.exercises.map((e) => e.id).join() === ids && un.exIdx === 1 && un.exercises[1].sets.filter((x) => x.done).length === done1, 'undo puts it back in place with its sets');
+    ok(C.act({ type: 'unskipExercise' }).exercises.length === n, 'a second undo changes nothing'); }
   s = C.act({ type: 'skipExercise', ei: s.exercises.length - 1 });
   const pv = C.finishPreview();
   ok(pv && pv.doneSets > 0 && pv.parts.some((p) => p.part === part && p.pump === 'good' && p.sore === 'fresh'), 'finish preview carries sets and feedback');

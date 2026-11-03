@@ -367,7 +367,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
         wide -> if (resting) 24.dp + 84.dp + 16.dp else 32.dp
         else -> if (resting) 96.dp + 84.dp + 16.dp else (if (vm.prefs.grip) 86.dp else 78.dp) + 16.dp
     }, Motion.spatial(), label = "listBottom")
-    LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = bottomPad),
+    LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = if (wide) 16.dp else 12.dp, end = if (wide) 32.dp else 12.dp, top = 8.dp, bottom = bottomPad),
         // On a tablet the 780 dp column sits centred in its pane instead of hugging the rail with a gap on the right.
         verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         // Warmed up dismisses it for this workout; Hide turns the card off for good, as on the web (Settings brings it back).
@@ -376,9 +376,11 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
             vm.toast("Warm-up card hidden · Settings can bring it back") { vm.updateSetting("warmupCard", true); warmHidden = false }
         }) }
         item {
-            PiCard(Modifier.widthIn(max = 780.dp), radius = 32.dp, padding = 20.dp) {
+            ExerciseSurface(wide) {
                 ExerciseHead(s, ex, onInfo = { open(WSheet.Info(ex.s("id"))) }, onProg = { open(WSheet.Progression(ei)) },
-                    onSetup = { open(WSheet.Pin(ex.s("id"))) }, onMenu = { open(WSheet.Menu(ei)) })
+                    onSetup = { open(WSheet.Pin(ex.s("id"))) }, onMenu = { open(WSheet.Menu(ei)) },
+                    onHistory = { open(WSheet.History(ex.s("id"))) },
+                    onSkip = if (s.list("exercises").size > 1) ({ skipWithUndo(vm, ei, ex.s("name")) }) else null)
                 if (ex.b("superset")) Badge("Superset", cs.secondaryContainer, cs.onSecondaryContainer)
                 // Focus mode keeps only what bears on the set in hand; the notes and the why are a tap away in list mode.
                 if (!focus) {
@@ -408,6 +410,7 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                 // The header and the rows share one set of column widths, so KG and Reps sit over their cells; the
                 // rows sit closer together than the card's sections (6 dp, not 10).
                 val gripC = vm.prefs.grip
+                if (!wide) androidx.compose.material3.HorizontalDivider(Modifier.padding(top = 2.dp), color = cs.outlineVariant.copy(alpha = 0.5f))
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Set", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
@@ -447,6 +450,20 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
             androidx.compose.animation.AnimatedVisibility(wide || !resting, enter = Motion.expandIn, exit = Motion.shrinkOut) { SessionTotals(s) }
         }
     }
+}
+
+/* Phones get the web workout screen's full-screen exercise: no card inset, so the head has room for Info, History
+   and Skip beside the name and the set rows get the width. Tablets keep the card in their wider pane. */
+@Composable
+private fun ExerciseSurface(wide: Boolean, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    if (wide) PiCard(Modifier.widthIn(max = 780.dp), radius = 32.dp, padding = 20.dp, content = content)
+    else Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+}
+
+/** Skip a lift for today, with Undo (the core keeps the row and puts it back where it was). */
+private fun skipWithUndo(vm: AppViewModel, ei: Int, name: String) {
+    vm.act("skipExercise", "ei" to ei)
+    vm.toast("Skipped $name for today") { vm.act("unskipExercise") }
 }
 
 @Composable
@@ -823,7 +840,7 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                 MenuRow(PiIcons.Timer, "Rest, goal & setup", listOf(if (ex.i("restCustom") > 0) "Rest ${restLabel(ex.i("restCustom"))}" else "Rest for this lift", if (ex.d("goal") > 0) "goal ${com.pursuitiron.app.ui.common.fmtNum(ex.d("goal"))}" else "a goal weight", "machine step").joinToString(", "), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.LiftSettings(ei)) }
                 val pinned = (ex.list("setup").filter { it.s("value").isNotBlank() }.map { "${it.s("label")} ${it.s("value")}" } + listOf(ex.s("pinNote")).filter { it.isNotBlank() }).joinToString(" — ")
                 MenuRow(PiIcons.Pin, if (pinned.isBlank()) "Pin a note" else "Edit pinned note", pinned.ifBlank { "Setup per machine and a cue you’ll see every time" }, cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Pin(ex.s("id"))) }
-                MenuRow(PiIcons.Close, "Skip exercise", "Drop it from today's workout", cs.tertiaryContainer, cs.onTertiaryContainer) { vm.act("skipExercise", "ei" to ei); vm.toast("Skipped ${ex.s("name")}"); onPick(null) }
+                MenuRow(PiIcons.Close, "Skip exercise", "Drop it from today's workout", cs.tertiaryContainer, cs.onTertiaryContainer) { skipWithUndo(vm, ei, ex.s("name")); onPick(null) }
                 MenuRow(PiIcons.List, "Note for today", if (ex.s("note").isBlank()) "Only this workout; pinned notes stay with the lift" else ex.s("note"), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Note(ei)) }
                 if (ei > 0) MenuRow(PiIcons.ChevronLeft, "Move earlier", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei - 1); onPick(null) }
                 if (ei < count - 1) MenuRow(PiIcons.ChevronRight, "Move later", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei + 1); onPick(null) }

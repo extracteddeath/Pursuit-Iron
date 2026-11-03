@@ -251,50 +251,61 @@ fun TimeSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
     }
 }
 
-/** The design's exercise head: name (opens the lift), progression tag, the target line, the setup chip. */
+/** The exercise head, full width as on the web workout screen: the name, then Info, History and Skip one tap away
+   beside it (they used to sit in the menu), the menu for the rest; the progression tag, badges, target line and
+   pinned-note chip run underneath across the whole width. */
 @Composable
-fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -> Unit, onSetup: () -> Unit, onMenu: () -> Unit) {
+fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -> Unit, onSetup: () -> Unit, onMenu: () -> Unit,
+                 onHistory: () -> Unit = {}, onSkip: (() -> Unit)? = null) {
     val cs = MaterialTheme.colorScheme
-    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.weight(1f)) {
-            Row(Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onInfo).semantics { contentDescription = "${ex.s("name")}: how to do it"; role = Role.Button },
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(ex.s("name"), style = MaterialTheme.typography.headlineLarge)
-                Icon(PiIcons.Info, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
-            }
-            FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-                val prog = ex.o("progression")
-                if (prog != null && !prog.b("locked") && !s.b("quick")) {
-                    val st = prog.s("style", "auto")
-                    val name = if (st == "auto") "Auto · " + prog.s("auto").replaceFirstChar { it.uppercase() } else prog.list("options").firstOrNull { it.s("id") == st }?.s("label") ?: st
-                    Surface(onClick = onProg, color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(28.dp).semantics { contentDescription = "Progression: $name. Change how this lift progresses" }) {
-                        Row(Modifier.padding(start = 10.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(name, style = MaterialTheme.typography.labelMedium); Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(14.dp))
-                        }
+    Column {
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(ex.s("name"), style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
+                modifier = Modifier.weight(1f).padding(top = 4.dp, end = 6.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onInfo)
+                    .semantics { contentDescription = "${ex.s("name")}: how to do it"; role = Role.Button })
+            HeadIcon(PiIcons.Info, "How to do ${ex.s("name")}", onInfo)
+            HeadIcon(PiIcons.History, "History for ${ex.s("name")}", onHistory)
+            if (onSkip != null) HeadIcon(PiIcons.SkipNext, "Skip ${ex.s("name")} for today", onSkip)
+            Box(Modifier.padding(start = 2.dp).size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.secondaryContainer).clickable(onClick = onMenu)
+                .semantics { contentDescription = "Exercise actions"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.More, null, tint = cs.onSecondaryContainer) }
+        }
+        FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+            val prog = ex.o("progression")
+            if (prog != null && !prog.b("locked") && !s.b("quick")) {
+                val st = prog.s("style", "auto")
+                val name = if (st == "auto") "Auto · " + prog.s("auto").replaceFirstChar { it.uppercase() } else prog.list("options").firstOrNull { it.s("id") == st }?.s("label") ?: st
+                Surface(onClick = onProg, color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(28.dp).semantics { contentDescription = "Progression: $name. Change how this lift progresses" }) {
+                    Row(Modifier.padding(start = 10.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(name, style = MaterialTheme.typography.labelMedium); Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(14.dp))
                     }
                 }
-                if (prog != null && prog.b("locked") && ex.s("line").contains("of max")) com.pursuitiron.app.ui.common.Badge("% of max · set by the method", cs.tertiaryContainer, cs.onTertiaryContainer)
-                if (ex.b("primary")) com.pursuitiron.app.ui.common.Badge("Primary")
-                ex.s("supplemental").takeIf { it.isNotBlank() && it != "null" }?.let { com.pursuitiron.app.ui.common.Badge(it.replaceFirstChar { c -> c.uppercase() }, cs.secondaryContainer, cs.onSecondaryContainer) }
-                if (ex.b("assisted")) com.pursuitiron.app.ui.common.Badge("Assisted · less help is progress", cs.tertiaryContainer, cs.onTertiaryContainer)
-                if (ex.d("goal") > 0) com.pursuitiron.app.ui.common.Badge("Goal ${fmtNum(ex.d("goal"))} ${s.s("unit")}", cs.primaryContainer, cs.onPrimaryContainer)
-                if (ex.s("line").isNotBlank()) Text(ex.s("line"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                // The design's pinned-note chip: setup and cue, or an invitation to pin one (Main.dc.html setupText)
-                val setup = ex.list("setup").filter { it.s("value").isNotBlank() }.joinToString(" · ") { "${it.s("label")} ${it.s("value")}" }
-                val pinned = listOf(setup, ex.s("pinNote")).filter { it.isNotBlank() }.joinToString(" — ")
-                Surface(onClick = onSetup, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(28.dp).semantics { contentDescription = if (pinned.isBlank()) "Pin a note for ${ex.s("name")}" else "Pinned note for ${ex.s("name")}: $pinned. Edit" }) {
-                    Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(PiIcons.Pin, null, modifier = Modifier.size(14.dp))
-                        Text(pinned.ifBlank { "Pin a note · machine setup" }, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            color = if (pinned.isBlank()) cs.onSurfaceVariant else cs.onSurface)
-                    }
+            }
+            if (prog != null && prog.b("locked") && ex.s("line").contains("of max")) com.pursuitiron.app.ui.common.Badge("% of max · set by the method", cs.tertiaryContainer, cs.onTertiaryContainer)
+            if (ex.b("primary")) com.pursuitiron.app.ui.common.Badge("Primary")
+            ex.s("supplemental").takeIf { it.isNotBlank() && it != "null" }?.let { com.pursuitiron.app.ui.common.Badge(it.replaceFirstChar { c -> c.uppercase() }, cs.secondaryContainer, cs.onSecondaryContainer) }
+            if (ex.b("assisted")) com.pursuitiron.app.ui.common.Badge("Assisted · less help is progress", cs.tertiaryContainer, cs.onTertiaryContainer)
+            if (ex.d("goal") > 0) com.pursuitiron.app.ui.common.Badge("Goal ${fmtNum(ex.d("goal"))} ${s.s("unit")}", cs.primaryContainer, cs.onPrimaryContainer)
+            if (ex.s("line").isNotBlank()) Text(ex.s("line"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            // The design's pinned-note chip: setup and cue, or an invitation to pin one (Main.dc.html setupText)
+            val setup = ex.list("setup").filter { it.s("value").isNotBlank() }.joinToString(" · ") { "${it.s("label")} ${it.s("value")}" }
+            val pinned = listOf(setup, ex.s("pinNote")).filter { it.isNotBlank() }.joinToString(" — ")
+            Surface(onClick = onSetup, color = if (pinned.isBlank()) cs.surfaceContainerHigh else cs.primaryContainer, shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.height(28.dp).semantics { contentDescription = if (pinned.isBlank()) "Pin a note for ${ex.s("name")}" else "Pinned note for ${ex.s("name")}: $pinned. Edit" }) {
+                Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(PiIcons.Pin, null, modifier = Modifier.size(14.dp))
+                    Text(pinned.ifBlank { "Pin a note · machine setup" }, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = if (pinned.isBlank()) cs.onSurfaceVariant else cs.onPrimaryContainer)
                 }
             }
         }
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.secondaryContainer).clickable(onClick = onMenu)
-            .semantics { contentDescription = "Exercise actions"; role = Role.Button }, contentAlignment = Alignment.Center) { Icon(PiIcons.More, null, tint = cs.onSecondaryContainer) }
+    }
+}
+
+@Composable
+private fun HeadIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick).semantics { contentDescription = label; role = Role.Button }, contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
     }
 }
 

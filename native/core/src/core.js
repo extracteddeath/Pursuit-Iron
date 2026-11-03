@@ -1399,7 +1399,15 @@ const ACTIONS = {
     skipExercise({ ei }, ctx, d) {
         if (!d[ei]) return d;
         const out = d.filter((_, i) => i !== ei);
+        S.live.skipUndo = { ei, row: d[ei], exIdx: S.live.exIdx || 0 };
         S.live.exIdx = Math.max(0, (S.live.exIdx || 0) >= ei && (S.live.exIdx || 0) > 0 ? S.live.exIdx - 1 : (S.live.exIdx || 0));
+        return out;
+    },
+    // Undo for the skip above: the lift comes back where it was, with its sets as they were.
+    unskipExercise(_, ctx, d) {
+        const u = S.live.skipUndo; if (!u || !u.row || d.some((x) => x.id === u.row.id)) return d;
+        const out = [...d]; out.splice(Math.min(u.ei, out.length), 0, u.row);
+        S.live.exIdx = u.ei; S.live.skipUndo = null;
         return out;
     },
     // App.js addExerciseToSession: three user-owned rows at the bottom of the lift's rep range.

@@ -385,6 +385,22 @@ if tap(r"Weight 60(\.0)?, edit", "edit-logged-set"):
     if not find(r"^\|Set 1$", timeout=3) or find(r"^\|Save & log$", timeout=1):
         FAILS.append("a logged set's editor is not titled Set 1 with Save only")
     back()
+# Full-screen head (as on the web): History and Skip sit beside Info; Skip has Undo
+shot("workout-head")
+if tap(r"^History for ", "head-history", required=False):
+    time.sleep(1.2)
+    back()
+    time.sleep(0.8)
+else:
+    FAILS.append("no History button beside the exercise name")
+head_name = next((n.get("content-desc")[:-len(": how to do it")] for n in nodes() if (n.get("content-desc") or "").endswith(": how to do it")), None)
+if tap(r"^Skip .+ for today$", "head-skip", required=False):
+    if not tap(r"^\|?Undo$", "skip-undo", timeout=4, required=False):
+        FAILS.append("skipping a lift offers no Undo")
+    elif head_name and not find("^" + re.escape(head_name) + ": how to do it", timeout=4):
+        FAILS.append("Undo did not bring the skipped lift back")
+else:
+    FAILS.append("no Skip button beside the exercise name")
 tap(r"Exercise actions", "exercise-menu")
 # B903: change today's working-set count; the finish page asks whether the program keeps it
 if (find(r"One more working set", timeout=3) or scroll_to(r"One more working set", tries=3, step=400)):

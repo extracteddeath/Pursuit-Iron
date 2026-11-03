@@ -136,11 +136,42 @@ object StarterExerciseTranche {
             ComposerPattern.CORE,ComposerRole.ACCESSORY,all,
             null,null,emptySet(),10..40,
             "Legacy 'core' provisionally maps to ABS only; explicit bodyweight has no phantom zero-pound stock.",
-            direct(TrainingMuscle.ABS))
+            direct(TrainingMuscle.ABS)),
+        entry("barbell_row","barbell_row","standard-barbell",
+            ComposerPattern.HORIZONTAL_PULL,ComposerRole.SECONDARY,pull,
+            BAR,LoadBasis.BARBELL_TOTAL,emptySet(),3..15,
+            "Legacy broad back provisionally maps to upper back DIRECT and lats INDIRECT. This is a distinct barbell-total lift; loading is never transferred from dumbbell rows.",
+            direct(TrainingMuscle.UPPER_BACK),
+            indirect(TrainingMuscle.LATS,"0.5"),
+            indirect(TrainingMuscle.BICEPS,"0.5"),
+            indirect(TrainingMuscle.REAR_DELTS,"0.5")),
+        entry("rdl","hip_hinge","romanian-barbell",
+            ComposerPattern.HINGE,ComposerRole.PRIMARY,lower,
+            BAR,LoadBasis.BARBELL_TOTAL,emptySet(),3..15,
+            "Barbell Romanian deadlift stays distinct from dumbbell RDL. Legacy generic back credit is quarantined; no fictitious lat or lower-back credit.",
+            direct(TrainingMuscle.HAMSTRINGS),
+            indirect(TrainingMuscle.GLUTES,"0.5")),
+        entry("conventional_deadlift","hip_hinge","conventional-barbell",
+            ComposerPattern.HINGE,ComposerRole.PRIMARY,lower,
+            BAR,LoadBasis.BARBELL_TOTAL,emptySet(),1..8,
+            "Legacy hamstrings and glutes are separately direct. The generic back secondary credit is quarantined until anatomical review; fatigue and skill are NOT inferred from this metadata.",
+            direct(TrainingMuscle.HAMSTRINGS),
+            direct(TrainingMuscle.GLUTES)),
+        entry("db_rear_delt_raise","rear_delt_raise","dumbbell",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,pull,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),10..30,
+            "Rear delts direct. Unresolved legacy generic back minor credit is intentionally quarantined, not double-counted as lats and upper back.",
+            direct(TrainingMuscle.REAR_DELTS)),
+        entry("pullup","vertical_pull","unweighted-overhand",
+            ComposerPattern.VERTICAL_PULL,ComposerRole.PRIMARY,pull,
+            null,null,setOf("pullup-bar"),3..20,
+            "Only an unweighted bodyweight pull-up with a confirmed bar is represented. Weighted or assisted pull-ups require distinct loaded variants. Legacy broad back is provisionally mapped to lats; no invented load.",
+            direct(TrainingMuscle.LATS),
+            indirect(TrainingMuscle.BICEPS,"0.5"))
     )
 
     init {
-        require(definitions.size==13)
+        require(definitions.size==18)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

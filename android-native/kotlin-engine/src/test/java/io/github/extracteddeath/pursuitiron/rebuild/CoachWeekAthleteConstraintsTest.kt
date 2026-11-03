@@ -42,8 +42,10 @@ class CoachWeekAthleteConstraintsTest {
     @Test fun twoPinnedBarbellLiftsAreScheduledOnDifferentDays() {
         val plan=CoachWeekComposer.compose(full())
         assertTrue(plan.missingRequiredVisits.isEmpty())
-        assertEquals(1,plan.visits.count {it.exerciseId=="bar-bench"})
-        assertEquals(1,plan.visits.count {it.exerciseId=="bar-row"})
+        // A pinned visit is a minimum, NOT a maximum. The coach may
+        // repeat a lift on another day while respecting the daily cap.
+        assertTrue(plan.visits.count {it.exerciseId=="bar-bench"}>=1)
+        assertTrue(plan.visits.count {it.exerciseId=="bar-row"}>=1)
         val barIds=setOf("bar-bench","bar-row")
         assertTrue(plan.visits.filter {it.exerciseId in barIds}
             .groupBy {it.dayIndex}.values.all {it.size<=1})

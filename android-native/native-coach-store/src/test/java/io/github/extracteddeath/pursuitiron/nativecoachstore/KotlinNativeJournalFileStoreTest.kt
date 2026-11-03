@@ -88,6 +88,36 @@ class KotlinNativeJournalFileStoreTest {
         assertEquals(first.journal,ok(storage.open("owner-1",snapshot,identity)).journal)
     }
 
+    @Test fun concurrentStoreInstancesCannotBothCommitTheSameJournalRevision() {
+        val first=store()
+        ok(first.issue("owner-1",snapshot,identity))
+        val executor=java.util.concurrent.Executors.newFixedThreadPool(2)
+        val gate=java.util.concurrent.CountDownLatch(1)
+        try {
+            val jobs=listOf("event-a","event-b").map { eventId ->
+                executor.submit<NativeJournalFileResult> {
+                    gate.await()
+                    store().append("owner-1",snapshot,identity,
+                        completed(eventId,0,"set-1",10))
+                }
+            }
+            gate.countDown()
+            val results=jobs.map {it.get(10,java.util.concurrent.TimeUnit.SECONDS)}
+            assertEquals(1,results.count {it is NativeJournalFileResult.Durable})
+            assertEquals(1,results.count {
+                it==NativeJournalFileResult.Rejected(
+                    NativeJournalFileRefusal.JOURNAL_REJECTED,
+                    KotlinJournalRefusal.STALE_REVISION)
+            })
+            val reopened=ok(store().open("owner-1",snapshot,identity)).journal
+            assertEquals(1,reopened.revision)
+            assertEquals(1,reopened.receipts.size)
+            assertEquals(1,reopened.effectiveSets.size)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
     @Test fun correctionRetainsOriginalReceiptAcrossColdRecovery() {
         val storage=store()
         ok(storage.issue("owner-1",snapshot,identity))

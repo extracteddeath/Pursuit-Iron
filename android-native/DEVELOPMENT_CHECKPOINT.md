@@ -2275,3 +2275,16 @@ Source assertions cover the new compact breakpoint, equal-width touch
 actions, fallback and retained validated set-entry flow. Compose compilation
 and Android visual/large-text acceptance remain outstanding. No APK or
 training engine rewrite.
+
+## 2026-11-02 — Adaptive shared metrics for Android large text
+
+The single three-fact native metric strip shared by Today, active Train,
+history summaries and saved-workout review now has an accessibility layout:
+it keeps three compact columns at ordinary font scales and switches to
+readable label/value rows when Android font scale is at least 1.35 or the
+available width falls below 320dp. Values remain the precise caller-owned
+journal/history snapshot, not recomputed metrics or alternative counters.
+The original theme's contrast-safe first-value ink survives both layouts;
+there is no new mutable state, training rule, or data write. Source checks
+protect the shared adaptive rendering, with actual phone/large-font visual
+acceptance and latest Kotlin compilation still required. No APK.

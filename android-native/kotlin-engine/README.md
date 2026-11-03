@@ -110,3 +110,21 @@ and failed attempts are **not** translated into false fatigue curves.
 This is an observation module, not a validated fatigue prediction or
 exercise prescription. Its output cannot automatically lower a load,
 raise repetitions, invent effort or change current/next workouts.
+
+
+## Fifth domain: explicit muscle-volume accounting
+
+\`MuscleVolumeAccountingDomain.summarize\` stores independently
+identified **biceps** and **brachialis** exposures and separates **wrist
+flexion** from **wrist extension**. Direct and indirect fractional credits
+are tracked separately, as are ordinary working sets and amplifier/extension
+sets. Completed warm-ups, skips, failed attempts and missing records never
+become fabricated productive working sets. Duplicate stable set identities,
+missing exercise allocations, invalid fractions and duplicate muscle
+channels fail closed.
+
+The fractions are *declared inputs* from a future vetted exercise catalog,
+not universally validated physiological dose coefficients. The module does
+not yet enforce MEV/MAV/MRV, predict gains, issue prescriptions, or silently
+convert a myo/drop mini-set into a full working set. A future dose engine
+must add phase-specific thresholds and constraint feasibility evidence.

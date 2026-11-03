@@ -48,6 +48,8 @@ import com.pursuitiron.app.ui.common.Badge
 import com.pursuitiron.app.ui.common.Kicker
 import com.pursuitiron.app.ui.common.MorphChip
 import com.pursuitiron.app.ui.common.PiCard
+import com.pursuitiron.app.ui.common.PiIcons
+import androidx.compose.foundation.layout.size
 import com.pursuitiron.app.ui.common.Segmented
 import com.pursuitiron.app.ui.common.b
 import com.pursuitiron.app.ui.common.d
@@ -109,6 +111,11 @@ fun TrainingMaxPrompt(vm: AppViewModel) {
         Text(if (pct >= 100) "This program works in percentages of your 1-rep max. Type one for each main lift."
             else "This program works in percentages of a $lower. Type one, or enter a recent 1RM and the app uses $pct% of it.",
             style = MaterialTheme.typography.bodySmall, color = cs.onTertiaryContainer)
+        // The whole card opens the sheet; the action says so (it read as a notice with nothing to tap).
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Set ${if (n == 1) "it" else "them"} now", style = MaterialTheme.typography.labelLarge, color = cs.onTertiaryContainer)
+            Icon(PiIcons.ChevronRight, null, Modifier.size(18.dp), tint = cs.onTertiaryContainer)
+        }
     }
 }
 

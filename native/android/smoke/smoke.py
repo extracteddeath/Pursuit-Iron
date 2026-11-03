@@ -338,6 +338,15 @@ if tap(r"Weight not set, edit", "set-editor"):
     tap(r"^\|Save$", "set-editor-save")
 tap(r"^Set 1:", "set-logged")
 tap(r"^2 reps left", "set-rated")
+# The rest ring pauses and resumes the rest (App.js WorkoutRestActions)
+if tap(r"^Pause rest", required=False):
+    if not find(r"^Resume rest", timeout=3):
+        FAILS.append("pausing the rest does not offer Resume")
+    else:
+        shot("rest-paused")
+        tap(r"^Resume rest", required=False)
+else:
+    FAILS.append("rest card has no pause")
 # The design's Why opens in place on the card
 if tap(r"Why .* kg\?|Why .* reps\?|No suggestion yet", "why-inline"):
     tap(r"^Close explanation", required=False)
@@ -395,6 +404,14 @@ if scroll_to(r"Swap exercise", tries=3, step=400) and tap(r"Swap exercise", "swa
             break
     else:
         FAILS.append("the swap sheet does not close with Back")
+else:
+    back()
+# The superset sheet: the first lift is the main lift (no suggestion), but you can still pair it yourself (App.js "Pair with next anyway")
+tap(r"Exercise actions")
+if scroll_to(r"Suggested partners", tries=3, step=400) and tap(r"Suggested partners", "superset-sheet"):
+    if not find(r"Pair with next anyway", timeout=3):
+        FAILS.append("superset sheet has no Pair with next anyway")
+    close_sheet(r"Pair with next anyway")
 else:
     back()
 # The progression tag on the card opens the progression sheet (it is no longer in the menu)

@@ -1346,7 +1346,18 @@ const ACTIONS = {
     },
     sessionNote({ text, repeat }, ctx, d) { S.live.sessionNote = String(text || ''); S.live.sessionNoteRepeat = repeat || 'none'; return d; },
     restDone(_, ctx, d) { S.live.rest = null; return d; },
-    restAdjust({ delta }, ctx, d) { if (S.live.rest) S.live.rest = { ...S.live.rest, seconds: Math.max(0, S.live.rest.seconds + delta) }; return d; },
+    restAdjust({ delta }, ctx, d) {
+        const r = S.live.rest; if (!r) return d;
+        S.live.rest = r.paused ? { ...r, left: Math.max(0, (r.left || 0) + delta) } : { ...r, seconds: Math.max(0, r.seconds + delta) };
+        return d;
+    },
+    // App.js WorkoutRestActions pause: a paused rest keeps the seconds left; resuming restarts the clock from them.
+    restPause(_, ctx, d) {
+        const r = S.live.rest; if (!r) return d;
+        if (r.paused) S.live.rest = { ...r, paused: false, startedAt: now(), seconds: Math.max(0, r.left || 0), left: null };
+        else S.live.rest = { ...r, paused: true, left: Math.max(0, Math.ceil((r.startedAt + r.seconds * 1000 - now()) / 1000)) };
+        return d;
+    },
     tick({ elapsedMs }, ctx, d) { S.live.elapsedMs = Math.max(0, Number(elapsedMs) || 0); return d; },
     // App.js fbPump / fbSore: part -> "flat"|"good"|"huge" and "sore"|"ontime"|"fresh"; tapping the same value clears it.
     feedback({ part, pump, sore, diff }, ctx, d) {

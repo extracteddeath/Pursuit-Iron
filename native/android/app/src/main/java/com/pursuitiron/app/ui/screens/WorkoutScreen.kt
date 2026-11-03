@@ -59,6 +59,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -369,7 +370,11 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
     LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = if (wide) 16.dp else 16.dp, end = if (wide) 32.dp else 16.dp, top = 8.dp, bottom = bottomPad),
         // On a tablet the 780 dp column sits centred in its pane instead of hugging the rail with a gap on the right.
         verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (warmShown) item { WarmupCard(warm!!) { warmHidden = true } }
+        // Warmed up dismisses it for this workout; Hide turns the card off for good, as on the web (Settings brings it back).
+        if (warmShown) item { WarmupCard(warm!!, onDone = { warmHidden = true }, onHide = {
+            warmHidden = true; vm.updateSetting("warmupCard", false)
+            vm.toast("Warm-up card hidden · Settings can bring it back") { vm.updateSetting("warmupCard", true); warmHidden = false }
+        }) }
         item {
             PiCard(Modifier.widthIn(max = 780.dp), radius = 32.dp, padding = 20.dp) {
                 ExerciseHead(s, ex, onInfo = { open(WSheet.Info(ex.s("id"))) }, onProg = { open(WSheet.Progression(ei)) },
@@ -585,14 +590,20 @@ private fun RestCard(vm: AppViewModel, s: JSONObject, endAt: Long) {
     Surface(color = cs.primary, contentColor = cs.onPrimary, shape = RoundedCornerShape(32.dp), shadowElevation = 10.dp,
         modifier = Modifier.semantics { contentDescription = "Rest, ${mmss(left)} left" }) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Canvas(Modifier.size(44.dp)) {
-                val st = Stroke(5.dp.toPx(), cap = StrokeCap.Round)
-                val inset = 3.dp.toPx()
-                drawArc(cs.onPrimary.copy(alpha = 0.25f), 0f, 360f, false, Offset(inset, inset), Size(size.width - 2 * inset, size.height - 2 * inset), style = st)
-                drawArc(cs.onPrimary, -90f, 360f * frac.coerceIn(0f, 1f), false, Offset(inset, inset), Size(size.width - 2 * inset, size.height - 2 * inset), style = st)
+            // The ring pauses and resumes the rest (App.js WorkoutRestActions); paused, it shows play and the time holds.
+            val paused = r.b("paused")
+            Box(Modifier.size(48.dp).clip(CircleShape).clickable { vm.act("restPause") }
+                .semantics { contentDescription = if (paused) "Resume rest" else "Pause rest"; role = Role.Button }, contentAlignment = Alignment.Center) {
+                Canvas(Modifier.size(44.dp)) {
+                    val st = Stroke(5.dp.toPx(), cap = StrokeCap.Round)
+                    val inset = 3.dp.toPx()
+                    drawArc(cs.onPrimary.copy(alpha = 0.25f), 0f, 360f, false, Offset(inset, inset), Size(size.width - 2 * inset, size.height - 2 * inset), style = st)
+                    drawArc(cs.onPrimary, -90f, 360f * frac.coerceIn(0f, 1f), false, Offset(inset, inset), Size(size.width - 2 * inset, size.height - 2 * inset), style = st)
+                }
+                Icon(if (paused) PiIcons.Play else PiIcons.Pause, null, Modifier.size(16.dp), tint = cs.onPrimary)
             }
             Column(Modifier.weight(1f)) {
-                Text(when (r.s("kind")) { "mini" -> "Myo rest"; "warm" -> "Warm-up rest"; else -> "Rest" }, style = MaterialTheme.typography.labelMedium)
+                Text(when (r.s("kind")) { "mini" -> "Myo rest"; "warm" -> "Warm-up rest"; else -> "Rest" } + if (paused) " · paused" else "", style = MaterialTheme.typography.labelMedium)
                 com.pursuitiron.app.ui.common.RollingText(mmss(left), MaterialTheme.typography.headlineMedium)
             }
             listOf(-15 to "−15", 15 to "+15").forEach { (d, t) ->
@@ -660,7 +671,9 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
     }
     // The design's set editor: the lift and set, the set type with what it counts for, big − value + rows,
     // the plates per side, then Save or Save & log.
-    ModalBottomSheet(onDismissRequest = { commit(); onClose() }) {
+    // Fully open, so the keyboard can't hide Reps and Save; Next on the keyboard moves from the load to the reps (App.js workoutNumericEnter).
+    val repsFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    ModalBottomSheet(onDismissRequest = { commit(); onClose() }, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column {
                 Text(ex.s("name"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant)
@@ -685,14 +698,14 @@ private fun SetEditor(vm: AppViewModel, s: JSONObject, ei: Int, si: Int, onClose
                 Stepper("Help", "Assistance (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it) },
                     onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to assistStored(w)) },
                     onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) },
-                    minusLabel = "More assistance", plusLabel = "Less assistance")
+                    minusLabel = "More assistance", plusLabel = "Less assistance", next = repsFocus)
             } else Stepper(unitU, "Weight (${s.s("unit")})", w, KeyboardType.Decimal, onText = { w = com.pursuitiron.app.ui.common.decimalText(it) },
                 onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "weight", "value" to w) },
                 onMinus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to -1) }, onPlus = { vm.act("bumpWeight", "ei" to ei, "si" to si, "dir" to 1) },
-                minusLabel = "Less weight", plusLabel = "More weight")
+                minusLabel = "Less weight", plusLabel = "More weight", next = repsFocus)
             Stepper("Reps", "Reps", r, KeyboardType.Number, onText = { r = it.filter { c -> c.isDigit() }.take(3) }, onCommit = { vm.act("edit", "ei" to ei, "si" to si, "field" to "reps", "value" to r) },
                 onMinus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to -1) }, onPlus = { vm.act("bumpReps", "ei" to ei, "si" to si, "delta" to 1) },
-                minusLabel = "Fewer reps", plusLabel = "More reps")
+                minusLabel = "Fewer reps", plusLabel = "More reps", focusRequester = repsFocus)
             if (bar != null && !assisted) EditorPlates(vm, w, ex.s("bar").ifBlank { bar }, s.s("unit")) { commit(); plates = true }
             if (set.b("added")) TextButton(onClick = { vm.act("removeSet", "ei" to ei, "si" to si); onClose() }) { Text("Remove this set") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -747,7 +760,8 @@ private fun EditorPlates(vm: AppViewModel, w: String, bar: String, unit: String,
 
 @Composable
 private fun Stepper(tag: String, label: String, value: String, kb: KeyboardType, onText: (String) -> Unit, onCommit: () -> Unit, onMinus: () -> Unit, onPlus: () -> Unit,
-                    minusLabel: String = "Less $label", plusLabel: String = "More $label") {
+                    minusLabel: String = "Less $label", plusLabel: String = "More $label",
+                    next: androidx.compose.ui.focus.FocusRequester? = null, focusRequester: androidx.compose.ui.focus.FocusRequester? = null) {
     val cs = MaterialTheme.colorScheme
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -756,8 +770,9 @@ private fun Stepper(tag: String, label: String, value: String, kb: KeyboardType,
         androidx.compose.foundation.text.BasicTextField(value, onText, singleLine = true,
             textStyle = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp, textAlign = TextAlign.Center, color = cs.onSurface),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
-            keyboardOptions = KeyboardOptions(keyboardType = kb, imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { onCommit(); focus.clearFocus() }),
-            modifier = Modifier.weight(1f).semantics { contentDescription = "$label, tap to type" },
+            keyboardOptions = KeyboardOptions(keyboardType = kb, imeAction = if (next != null) ImeAction.Next else ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onCommit(); focus.clearFocus() }, onNext = { onCommit(); next?.requestFocus() }),
+            modifier = Modifier.weight(1f).then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier).semantics { contentDescription = "$label, tap to type" },
             decorationBox = { inner -> Box(contentAlignment = Alignment.Center) { if (value.isEmpty()) Text("—", style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp), color = cs.outline); inner() } })
         HoldStep(PiIcons.Plus, plusLabel, 56.dp, true, shape = CircleShape, onStep = onPlus)
     }
@@ -1047,7 +1062,7 @@ private fun assistStored(typed: String): String = typed.trim().let { t -> if (t.
 /* App.js warmupRoutine as the design's "Warm-up & mobility" card: a checklist for the day's first muscles,
    shown on the first lift until a set is logged. Ticks are only for you; nothing is recorded. */
 @Composable
-private fun WarmupCard(w: JSONObject, onDone: () -> Unit) {
+private fun WarmupCard(w: JSONObject, onDone: () -> Unit, onHide: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val moves = w.strings("moves")
     val ticked = remember(moves) { androidx.compose.runtime.mutableStateListOf<Int>() }
@@ -1058,7 +1073,7 @@ private fun WarmupCard(w: JSONObject, onDone: () -> Unit) {
                 Text("Warm-up & mobility", style = MaterialTheme.typography.titleMedium, color = cs.onPrimaryContainer)
                 Text("For ${w.strings("parts").joinToString(", ") { it.lowercase() }} · ${ticked.size} of ${moves.size}", style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer)
             }
-            TextButton(onClick = onDone) { Text("Hide") }
+            TextButton(onClick = onHide, modifier = Modifier.semantics { contentDescription = "Hide the warm-up card from now on" }) { Text("Hide") }
         }
         // On a tablet the moves sit two to a row: one long column pushed the first lift below the fold.
         val cols = if (LocalWide.current) 2 else 1

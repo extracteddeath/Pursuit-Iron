@@ -32,6 +32,9 @@ s.exercises.forEach((e) => e.sets.forEach((st) => {
 const r0 = C.act({ type: 'toggle', ei: 0, si: firstEx.sets.find((x) => !x.warm && !x.sub).i });
 ok(r0.exercises[0].sets.some((x) => x.done), 'toggle logs a set');
 ok(r0.rest && r0.rest.seconds > 0, 'logging a working set starts a rest of ' + (r0.rest && r0.rest.seconds) + 's');
+{ const p1 = C.act({ type: 'restPause' }).rest; ok(p1.paused && p1.left > 0 && p1.left <= r0.rest.seconds, 'pausing the rest keeps ' + p1.left + 's left');
+  const p2 = C.act({ type: 'restAdjust', delta: 15 }).rest; ok(p2.paused && p2.left === p1.left + 15, '+15 while paused adds to the time left');
+  const p3 = C.act({ type: 'restPause' }).rest; ok(!p3.paused && p3.seconds === p2.left && p3.left == null, 'resuming restarts the clock from what was left'); }
 const undoT = C.act({ type: 'toggle', ei: 0, si: firstEx.sets.find((x) => !x.warm && !x.sub).i });
 ok(!undoT.exercises[0].sets.some((x) => x.done) && !undoT.rest, 'toggling again unlogs it and clears rest');
 s = C.session();

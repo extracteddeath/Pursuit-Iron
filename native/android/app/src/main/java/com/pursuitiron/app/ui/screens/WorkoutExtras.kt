@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -379,7 +380,7 @@ fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
             if (partner == null && guard != null) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(horizontal = 14.dp, vertical = 12.dp)
                 .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(PiIcons.Shield, null, Modifier.size(18.dp), tint = cs.onTertiaryContainer)
-                Text("${guard.s("name")} is today’s ${if (guard.b("main")) "main" else "second"} lift. Alternating it with anything costs top-set strength, so the engine won’t suggest a partner. Pair two accessories instead.",
+                Text("${guard.s("name")} is today’s ${if (guard.b("main")) "main" else "second"} lift. Alternating it with anything costs top-set strength, so the engine won’t suggest a partner. You can still pair it yourself below.",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer)
             }
             val sug = if (partner == null && guard == null) s.list("supersetSuggestions") else emptyList()
@@ -401,6 +402,16 @@ fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                     }
                 }
             }
+            // App.js "Pair with next anyway": the engine only suggests; you can still pair this lift with the next one yourself.
+            val nextEx = exs.getOrNull(ei + 1)
+            if (partner == null && nextEx != null && !nextEx.b("superset")) Surface(onClick = { vm.act("pairWith", "ei" to ei, "partner" to ei + 1); vm.toast("Superset: ${ex.s("name")} + ${nextEx.s("name")} · rest after the pair"); onClose() },
+                color = androidx.compose.ui.graphics.Color.Transparent, contentColor = cs.onSurface, shape = androidx.compose.foundation.shape.CircleShape,
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, cs.outlineVariant), modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
+                    Text("Pair with next anyway · ${nextEx.s("name")}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            if (partner == null) Text("Pairing only rearranges this workout. Your saved program is unchanged.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             if (partner != null) Surface(onClick = { vm.act("superset", "ei" to pairOwner); vm.toast("Superset removed"); onClose() }, color = androidx.compose.ui.graphics.Color.Transparent,
                 contentColor = cs.onSurface, shape = androidx.compose.foundation.shape.CircleShape, border = androidx.compose.foundation.BorderStroke(1.5.dp, cs.outlineVariant), modifier = Modifier.fillMaxWidth().height(48.dp)) {
                 Box(contentAlignment = Alignment.Center) { Text("Remove superset", style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold)) }

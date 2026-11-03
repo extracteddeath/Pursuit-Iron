@@ -143,7 +143,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val s = session; val h = home
         val snap = when {
             s?.b("active") == true -> com.pursuitiron.app.widget.WidgetSnapshot("live", s.s("dayLabel"), s.s("programName"), s.i("doneSets"), s.i("totalSets"),
-                s.o("rest")?.let { it.optLong("startedAt") + it.optLong("seconds") * 1000 } ?: 0L)
+                s.o("rest")?.takeIf { !it.b("paused") }?.let { it.optLong("startedAt") + it.optLong("seconds") * 1000 } ?: 0L)
             h?.o("next") != null -> h.o("next")!!.let { n -> com.pursuitiron.app.widget.WidgetSnapshot("next", n.s("dayLabel"),
                 listOfNotNull(n.s("programName").ifBlank { null }, "${n.list("exercises").size} exercises", n.i("minutes").takeIf { it > 0 }?.let { "about $it min" }).joinToString(" · ")) }
             else -> com.pursuitiron.app.widget.WidgetSnapshot()
@@ -263,6 +263,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var lastCountdown = -1
     private fun checkRest() {
         val r = session?.o("rest") ?: return
+        if (r.b("paused")) return
         val end = r.optLong("startedAt") + r.optLong("seconds") * 1000
         val left = ((end - now + 999) / 1000).toInt()
         if (!restFired && left in 1..3 && left != lastCountdown && inForeground && !r.b("paused")) { lastCountdown = left; beep.countdown(prefs.cues, prefs.duck) }
@@ -275,7 +276,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun restEndsAt(): Long? = session?.o("rest")?.let { it.optLong("startedAt") + it.optLong("seconds") * 1000 }
+    /** A paused rest (App.js WorkoutRestActions) holds its seconds left, so its end keeps moving with the clock. */
+    fun restEndsAt(): Long? = session?.o("rest")?.let { if (it.b("paused")) now + it.optLong("left") * 1000 else it.optLong("startedAt") + it.optLong("seconds") * 1000 }
+    fun restPaused(): Boolean = session?.o("rest")?.b("paused") == true
 
     fun discard() = launchCore {
         call("discardSession"); session = obj("session"); screen = Screen.Tabs; rest.cancel(); publishWidget()
@@ -818,7 +821,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun onBackground() {
         inForeground = false
         val end = restEndsAt() ?: return
-        if (end <= System.currentTimeMillis()) return
+        if (restPaused() || end <= System.currentTimeMillis()) return
         val s = session ?: return
         val ex = s.list("exercises").getOrNull(s.i("exIdx"))
         val next = ex?.list("sets")?.firstOrNull { !it.b("done") }

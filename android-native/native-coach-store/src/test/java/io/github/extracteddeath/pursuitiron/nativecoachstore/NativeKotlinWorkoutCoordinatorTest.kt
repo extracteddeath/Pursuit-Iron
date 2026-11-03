@@ -167,6 +167,13 @@ class NativeKotlinWorkoutCoordinatorTest {
             {it.copy(currentSource=source.copy(gymRevision=4))},
             {it.copy(grant=grant.copy(dayIndex=1))},
             {it.copy(storageReceiptId="commit-2")},
+            // The selected strength day could stay identical while an
+            // approved OTHER day's hypertrophy targets silently change.
+            {it.copy(policies=it.policies.map {p->
+                if(p.exerciseId=="db-row" &&
+                    p.purpose==ComposerSessionPurpose.HYPERTROPHY)
+                    p.copy(targetRir=1) else p
+            })},
             {it.copy(policies=it.policies.filterNot{p->
                 p.exerciseId=="db-row" && p.purpose==ComposerSessionPurpose.HYPERTROPHY
             })}

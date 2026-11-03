@@ -113,8 +113,11 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     Text(history.dayLabel,style=MaterialTheme.typography.headlineSmall)
     Text("${historyDateLabel(history.date)} · Week ${history.weekIndex}",style=MaterialTheme.typography.bodyMedium)
     if(state.historyBusy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
-    Text("${history.setsDone} recorded · ${history.totalSets-history.setsDone} skipped · ${history.volume} ${history.unit} volume",
-        style=MaterialTheme.typography.bodyMedium)
+    PursuitMetricStrip(listOf(
+        "Recorded" to history.setsDone.toString(),
+        "Other sets" to (history.totalSets-history.setsDone).toString(),
+        "Volume" to "${history.volume} ${history.unit}"
+    ))
     history.sessionNote?.takeIf { it.isNotBlank() }?.let { note->
         PursuitCard {
             Text("Session note",style=MaterialTheme.typography.titleMedium)
@@ -245,8 +248,11 @@ internal fun NativeHistorySummaryCard(summary: NativeHistorySummary,enabled: Boo
         Text(summary.dayLabel,style=MaterialTheme.typography.titleMedium)
         Text(historyDateLabel(summary.date),style=MaterialTheme.typography.bodyMedium)
         Text("${summary.programName} · Week ${summary.weekIndex}",style=MaterialTheme.typography.bodySmall)
-        Text("${summary.setsDone} recorded · ${summary.totalSets-summary.setsDone} skipped · ${summary.volume} ${summary.unit} volume",
-            style=MaterialTheme.typography.bodySmall)
+        PursuitMetricStrip(listOf(
+            "Recorded" to summary.setsDone.toString(),
+            "Other sets" to (summary.totalSets-summary.setsDone).toString(),
+            "Volume" to "${summary.volume} ${summary.unit}"
+        ))
         if(summary.detailsAvailable)FilledTonalButton(onClick={onOpen(summary.historyId)},
             enabled=enabled,modifier=Modifier.fillMaxWidth()) { Text("Review workout") }
         else Text("Summary only · set details are unavailable",style=MaterialTheme.typography.bodySmall)
@@ -274,13 +280,15 @@ private fun NativeHistorySetEditor(history: NativeWorkoutHistory,exercise: Nativ
         repCount!=null && repCount in 1..100 && (rir.isEmpty() || effort!=null && effort in 0..10)
     val changed=load.toBigDecimalOrNull()?.compareTo(set.load.toBigDecimal())!=0 || repCount!=set.reps || effort!=set.rir
     error?.let { Text(it,color=MaterialTheme.colorScheme.error) }
-    Button(onClick={
-        val exact=command ?: NativeHistoryCodec.correctionJson(history,"correct-"+UUID.randomUUID(),
-            System.currentTimeMillis(),listOf(NativeHistoryChange(exercise.id,set.setIndex,load,checkNotNull(repCount),effort)))
-            .also { command=it }
-        onCorrect(exact)
-    },enabled=!busy && valid && (changed || command!=null),modifier=Modifier.fillMaxWidth()) {
-        Text(if(busy)"Saving correction…" else if(command!=null)"Retry correction" else "Save correction")
-    }
+    PursuitPrimaryAction(
+        onClick={
+            val exact=command ?: NativeHistoryCodec.correctionJson(history,"correct-"+UUID.randomUUID(),
+                System.currentTimeMillis(),listOf(NativeHistoryChange(exercise.id,set.setIndex,load,checkNotNull(repCount),effort)))
+                .also { command=it }
+            onCorrect(exact)
+        },
+        enabled=!busy && valid && (changed || command!=null),
+        label=if(busy)"Saving correction…" else if(command!=null)"Retry correction" else "Save correction"
+    )
     TextButton(onClick=onCancel,enabled=!busy,modifier=Modifier.fillMaxWidth()) { Text("Cancel") }
 }

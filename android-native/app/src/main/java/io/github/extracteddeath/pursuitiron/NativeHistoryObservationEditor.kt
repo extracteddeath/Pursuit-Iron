@@ -49,10 +49,12 @@ internal fun NativeHistoryObservationEditor(history: NativeWorkoutHistory,row: N
         onCorrect(exact)
     }
     error?.let { Text(it,color=MaterialTheme.colorScheme.error) }
-    Button(onClick={command?.let(onCorrect) ?: submit(JournalSetDisposition.COMPLETED)},
-        enabled=!busy && (command!=null || valid && changed),modifier=Modifier.fillMaxWidth()) {
-        Text(if(busy)"Saving correction…" else if(command!=null)"Retry correction" else if(skipped)"Record set" else "Save correction")
-    }
+    PursuitPrimaryAction(
+        onClick={command?.let(onCorrect) ?: submit(JournalSetDisposition.COMPLETED)},
+        enabled=!busy && (command!=null || valid && changed),
+        label=if(busy)"Saving correction…" else if(command!=null)"Retry correction"
+            else if(skipped)"Record set" else "Save correction"
+    )
     val otherWorking=history.editRows.orEmpty().any { it.slot.exerciseId==row.slot.exerciseId &&
         it.slot!=row.slot && it.retained && it.kind=="working" }
     val extensions=history.editRows.orEmpty().any { it.slot.exerciseId==row.slot.exerciseId && it.retained && it.kind!="working" }

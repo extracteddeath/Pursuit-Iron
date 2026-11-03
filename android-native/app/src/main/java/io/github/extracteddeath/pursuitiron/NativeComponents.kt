@@ -206,37 +206,47 @@ internal fun PursuitCard(
 }
 
 /**
- * Unified session progress, sourced only from the acknowledged native
- * workout journal. This is a visual summary, not a set-logging control.
+ * One compact native fact strip for active and saved workout summaries.
+ * Values come from exact caller-owned journal/history snapshots; this
+ * component computes no training facts and performs no writes.
  */
 @Composable
-internal fun PursuitSessionMetrics(logged:Int,skipped:Int,remaining:Int) {
-    require(logged>=0 && skipped>=0 && remaining>=0)
-    Surface(
-        modifier=Modifier.fillMaxWidth(),
+internal fun PursuitMetricStrip(metrics:List<Pair<String,String>>) {
+    require(metrics.size==3)
+    Surface(modifier=Modifier.fillMaxWidth(),
         shape=MaterialTheme.shapes.large,
-        color=MaterialTheme.colorScheme.surfaceContainer
-    ) {
+        color=MaterialTheme.colorScheme.surfaceContainer) {
         Row(
-            modifier=Modifier.fillMaxWidth().padding(vertical=PursuitSpace.md,horizontal=PursuitSpace.xs),
+            modifier=Modifier.fillMaxWidth().padding(
+                vertical=PursuitSpace.md,horizontal=PursuitSpace.xs),
             horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
         ) {
-            listOf(Triple("Logged",logged,true),Triple("Skipped",skipped,false),
-                Triple("Left",remaining,false)).forEach { (label,value,emphasize) ->
-                Column(
-                    modifier=Modifier.weight(1f),
+            metrics.forEachIndexed { index,(label,value) ->
+                Column(modifier=Modifier.weight(1f),
                     horizontalAlignment=Alignment.CenterHorizontally,
-                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)
-                ) {
-                    Text(value.toString(),style=MaterialTheme.typography.headlineSmall,
-                        color=if(emphasize) LocalPursuitPalette.current.accentInk
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                    Text(value,style=MaterialTheme.typography.titleLarge,
+                        maxLines=1,overflow=TextOverflow.Ellipsis,
+                        color=if(index==0) LocalPursuitPalette.current.accentInk
                             else MaterialTheme.colorScheme.onSurface)
                     Text(label,style=MaterialTheme.typography.labelMedium,
+                        maxLines=1,overflow=TextOverflow.Ellipsis,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
     }
+}
+
+/** Active state stays journal-derived and visually consistent with History. */
+@Composable
+internal fun PursuitSessionMetrics(logged:Int,skipped:Int,remaining:Int) {
+    require(logged>=0 && skipped>=0 && remaining>=0)
+    PursuitMetricStrip(listOf(
+        "Logged" to logged.toString(),
+        "Skipped" to skipped.toString(),
+        "Left" to remaining.toString()
+    ))
 }
 
 /** One reusable 52dp high primary action across the real native journeys. */

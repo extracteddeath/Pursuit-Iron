@@ -2209,3 +2209,16 @@ agreed sequence: coherent source-checked core -> developer APK and real
 device feedback -> independent Kotlin training-engine redesign ->
 advanced feature completion -> full release certification. Source-only
 CI is not treated as physical-device acceptance.
+
+## 2026-11-02 — One shared fact strip for active and saved workouts
+
+Today, real Train, paged Insights history summaries and saved-workout detail
+now share one compact Material 3 metric-strip surface and typography. Values
+are projected only from their respective immutable journal/history facts;
+no eager logging or recalculation was introduced. Saved history distinguishes
+`Recorded`, `Other sets` and `Volume` without claiming that unperformed
+or skipped target positions were all explicit skips. Historical correction
+sheets now use the same 52dp primary action as active logging while
+retaining exact retry-id operations and validation gates. All 20 original
+themes apply through semantic containers and the existing accent-ink role.
+No engine rewrite or APK in this pass.

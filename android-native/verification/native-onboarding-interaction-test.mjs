@@ -179,6 +179,14 @@ assert.ok(train.includes('val exerciseAnchor=remember { BringIntoViewRequester()
   train.includes('focusScrollTarget=destination') &&
   train.includes('modifier=Modifier.bringIntoViewRequester(exerciseAnchor)'),
   'Only a new durably acknowledged Focus movement should reveal the next exercise on compact screens, without scrolling during manual review or replay');
+assert.ok(controls.includes('internal fun PursuitMetricStrip(') &&
+  controls.includes('PursuitMetricStrip(listOf(') &&
+  historyUi.includes('PursuitMetricStrip(listOf(') &&
+  historyUi.includes('"Recorded" to history.setsDone.toString()') &&
+  historyUi.includes('"Other sets" to (summary.totalSets-summary.setsDone).toString()') &&
+  historyUi.includes('"Volume" to "${summary.volume} ${summary.unit}"') &&
+  historyUi.includes('PursuitPrimaryAction('),
+  'Active and saved workouts must use the same exact-data metric strip and confirmed edit controls, without labeling unresolved historical set positions as performed skips');
 assert.ok(controls.includes('internal fun PursuitSessionMetrics(') &&
   controls.includes('internal fun PursuitPrimaryAction(') &&
   controls.includes('MaterialTheme.colorScheme.surfaceContainerHigh') &&
@@ -439,6 +447,11 @@ assert.ok(historyUi.includes('NativeSetValueFields(history.unit,load,reps,rir,!b
   'History edits share input controls, retry exact operations and go through the owned canonical transaction');
 console.log('PASS native onboarding draft retention, canonical options, review/save separation, single-owner restore and logging gate, plus real-workout safe navigation, timer and confirmed history');
 const observationEditor=fs.readFileSync(root+'NativeHistoryObservationEditor.kt','utf8');
+assert.ok(observationEditor.includes('PursuitPrimaryAction(') &&
+  observationEditor.includes('command?.let(onCorrect) ?: submit(JournalSetDisposition.COMPLETED)') &&
+  observationEditor.includes('enabled=!busy && (command!=null || valid && changed)') &&
+  historyUi.includes('enabled=!busy && valid && (changed || command!=null)'),
+  'Saved history corrections must retain idempotent canonical retry and validation with the shared primary action');
 assert.ok(historyUi.includes('NativeHistoryObservationEditor(history,observation,') &&
   historyUi.includes('Skipped and other recorded sets') && historyUi.includes('history.editRows.orEmpty()') &&
   observationEditor.includes('mutableStateOf(actual?.load ?: "")') &&

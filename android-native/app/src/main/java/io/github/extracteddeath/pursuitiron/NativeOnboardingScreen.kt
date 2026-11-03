@@ -28,8 +28,7 @@ internal fun NativeOnboardingScreen(
     // For a NEW profile the absence of a rack is explicit. Older native
     // profiles without the no-rack flag retain their original implied rack.
     var rackAvailable by rememberSaveable {
-        mutableStateOf("rack" in initial.equipment ||
-            ("barbell" in initial.equipment && "no-rack" !in initial.equipment))
+        mutableStateOf(NativeEquipmentSelectionPolicy.initialRackAvailable(initial.equipment))
     }
     var bodyweight by rememberSaveable { mutableStateOf(initial.allowBodyweight) }
     var supersets by rememberSaveable { mutableStateOf(initial.allowSupersets) }
@@ -155,27 +154,19 @@ internal fun NativeOnboardingScreen(
         val hasAvailableEquipment = equipment.any { it in availableEquipment }
         // UI hardware groups remain the exact canonical 40. Rack availability
         // is a separate facility fact, not a fabricated 41st equipment item.
-        val equipmentForReview = equipment.filterNot {
-            it == "no-rack" || it == "rack"
-        }.toMutableList().apply {
-            if ("barbell" in this) {
-                if (rackAvailable) {
-                    // Preserve an old positive rack ID when re-reviewing it.
-                    if ("rack" in equipment) add("rack")
-                } else add("no-rack")
-            }
-        }
+        val equipmentForReview =
+            NativeEquipmentSelectionPolicy.forReview(equipment, rackAvailable)
         PursuitFormSection("Available equipment",
             "Choose what you can actually use. These choices constrain the program.") {
         NativeGroupedEquipmentPicker(
             available = availableEquipment,
-            selected = equipment.filterNot { it == "no-rack" || it == "rack" },
+            selected = NativeEquipmentSelectionPolicy.pickerSelections(equipment),
             enabled = !state.busy,
             onSelectionChanged = { chosen ->
                 // Rack flags are not visible catalog items; keep them until
                 // program review normalizes the explicit facility selection.
                 equipment = ArrayList(chosen + equipment.filter {
-                    it == "no-rack" || it == "rack"
+                    it == "no-rack" || (it == "rack" && "barbell" in equipment)
                 })
             }
         )

@@ -7,6 +7,28 @@ const host=fs.readFileSync(root+'NativeRuntimeHost.kt','utf8');
 const activity=fs.readFileSync(root+'MainActivity.kt','utf8');
 const shell=fs.readFileSync(root+'NativePreviewApp.kt','utf8');
 const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
+const equipmentPicker=fs.readFileSync(root+'NativeGroupedEquipmentPicker.kt','utf8');
+const equipmentPolicy=fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeEquipmentSelectionPolicy.kt','utf8');
+assert.ok(ui.includes('NativeGroupedEquipmentPicker(') &&
+  ui.includes('selected = equipment') &&
+  ui.includes('onSelectionChanged = { equipment = ArrayList(it) }') &&
+  equipmentPicker.includes('NativeEquipmentCatalog.supported(available)') &&
+  equipmentPicker.includes('rememberSaveable(group.title)') &&
+  equipmentPicker.includes('count = NativeEquipmentSelectionPolicy.selectedInGroup') &&
+  equipmentPicker.includes('Select group') &&
+  equipmentPicker.includes('Clear group') &&
+  equipmentPicker.includes('Other supported equipment') &&
+  equipmentPicker.includes('Previously selected') &&
+  equipmentPicker.includes('Rack (legacy)') &&
+  equipmentPolicy.includes('if (id in next) next.remove(id)') &&
+  equipmentPolicy.includes('else if (id in available) next.add(id)') &&
+  equipmentPolicy.includes('group.choices.map { it.id }.filter { it in permitted }'),
+  'The reusable picker must group real offered hardware, keep legacy removal and avoid inventing selected equipment');
+assert.ok(!equipmentPicker.includes('NativeGymInventoryCodec') &&
+  !equipmentPicker.includes('onSave(') &&
+  !equipmentPicker.includes('commitAtomically'),
+  'Selecting gym availability must not mutate verified weight inventory or program persistence');
 for (const field of ['name','goal','experience','unit','split','days','session','equipment','bodyweight','supersets','barbellCap'])
   assert.match(ui,new RegExp('var '+field+' by rememberSaveable'));
 const sharedOnboarding=fs.readFileSync(root+'NativeComponents.kt','utf8');

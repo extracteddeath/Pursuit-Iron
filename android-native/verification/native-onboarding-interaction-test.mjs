@@ -734,7 +734,7 @@ assert.ok(workingSetAt>0 && timerAt>workingSetAt &&
   'The real workout must prioritize the current set, retain its rest timer, make warm-ups optional and keep safety adjustments reachable');
 
 const todayStart=screens.indexOf('if(savedProgram!=null) {');
-const nextWorkoutCta=screens.indexOf('Button(onClick={if(!activeWorkout)startWorkout();openTrain()}');
+const nextWorkoutCta=screens.indexOf('PursuitPrimaryAction(\n                onClick={if(!activeWorkout)startWorkout();openTrain()}');
 const programSecondary=screens.indexOf('OutlinedButton(onClick=openPlan,modifier=Modifier.fillMaxWidth())');
 const shortenToggle=screens.indexOf('var showShorterSession by rememberSaveable(savedProgram.program.id)');
 const shortenPanel=screens.indexOf('if(showShorterSession) {');

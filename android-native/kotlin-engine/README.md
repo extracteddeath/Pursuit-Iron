@@ -44,3 +44,22 @@ specified, not copied from flawed current engine output.
    switch, preserving original targets and user history.
 
 **No automatic backend fallback, no migration and no release approval.**
+
+## Second implemented domain: immutable progression evidence (no load proposals)
+
+`DoubleProgressionEvidenceDomain.assess` examines the exact original
+working-set ordinals and the actual, separately recorded load/reps/RIR. It
+does not treat the prescribed RIR as a reported one; logged skips, unresolved
+sets and explicit zero-rep failed attempts have different meanings.
+
+The reported regression, **200×3 / 205×3 / 210×2 / 215×2 with 5–8 targets**,
+is independently classified as *below the rep floor*, not a reason to
+promote all subsequent sets to 215. A repeated 215×2 near failure likewise
+is not recognized as an earned increase. Meeting the ceiling at mixed loads
+does not prove that all sets can perform the heaviest load. Even uniform
+ceiling evidence means **review eligibility only**, never automatic load
+selection. Training rules, RIR thresholds and fatigue model still require
+additional independent specification before the Kotlin engine can prescribe.
+
+This phase cannot mutate existing training records or displace the canonical
+JavaScript engine, including for sessions already underway.

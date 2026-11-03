@@ -15,31 +15,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeJournalFileRefusal
-import java.math.BigDecimal
 
-/** Parses user-entered ACTUALS. Never replace missing observed RIR with target RIR. */
+/** Exact input validation belongs to the pure Kotlin engine, not Compose. */
 private fun performed(
     target:KotlinWorkoutTarget,
     weight:String,reps:String,rir:String,
     failed:Boolean=false
-):KotlinPerformedSet? {
-    val repetitions=if(failed)0 else reps.trim().toIntOrNull() ?:return null
-    if(repetitions !in 0..100 || (!failed && repetitions==0))return null
-    val effort=if(failed || rir.isBlank())null
-        else rir.trim().toIntOrNull() ?:return null
-    if(effort!=null && effort !in 0..10)return null
-    return when(val load=target.load) {
-        DraftSetLoad.ExplicitBodyweight ->
-            KotlinPerformedSet(null,null,repetitions,effort)
-        is DraftSetLoad.Verified -> {
-            val value=runCatching{BigDecimal(weight.trim())}.getOrNull()
-                ?:return null
-            if(value<BigDecimal.ZERO || value>BigDecimal("100000") ||
-                value.stripTrailingZeros().scale()>3)return null
-            KotlinPerformedSet(value,load.unit,repetitions,effort)
-        }
-    }
-}
+):KotlinPerformedSet? = (
+    KotlinWorkoutEntryDomain.parse(target,weight,reps,rir,failed)
+        as? KotlinSetEntryResult.Accepted
+    )?.performed
 
 private fun loadLabel(load:DraftSetLoad):String=when(load) {
     DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
@@ -274,6 +259,7 @@ private fun NativeKotlinSetCard(
     val actual=performed(target,weight,reps,effort)
     val failedActual=performed(target,weight,reps,effort,failed=true)
     val verifiedLoad=target.load as? DraftSetLoad.Verified
+    val entry=KotlinWorkoutEntryDomain.parse(target,weight,reps,effort)
     val working=target.type==DraftSetType.WORKING
     PursuitCard(highlighted=!set.isResolved && !finished) {
         Text(target.exerciseId,style=MaterialTheme.typography.headlineSmall)
@@ -310,6 +296,13 @@ private fun NativeKotlinSetCard(
                 label={Text("Actual RIR (optional)")},
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
                 singleLine=true,modifier=Modifier.weight(1f))
+        }
+        if(entry is KotlinSetEntryResult.Rejected &&
+            (reps.isNotBlank() || (verifiedLoad!=null && weight.isBlank()) ||
+                effort.isNotBlank())) {
+            Text("Check ${entry.reason.name.replace('_',' ').lowercase()}",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.error)
         }
         PursuitPrimaryAction(
             if(set.isResolved)"Save corrected set" else "Complete set",

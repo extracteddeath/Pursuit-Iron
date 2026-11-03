@@ -406,9 +406,60 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
         return NativeJournalFileResult.Durable(restored.journal,true)
     }
 
+    /**
+     * Authorized issue: persist immutable snapshot AND the empty journal in
+     * ONE atomic record. This is the production-shaped issuance API; the
+     * native host must implement authorizeCurrent using real signed-in state,
+     * accepted program/grant and current gym/catalog/rules revisions.
+     *
+     * We reject instead of creating a session when the owner is unknown.
+     * The app does not yet supply this authority; this is an isolated port.
+     */
+    fun issueAuthorized(
+        ownerKey: String,
+        snapshot: KotlinStagedWorkout,
+        identity: KotlinStoredWorkoutIdentity,
+        authorizeCurrent: (String,KotlinTrainingSourceRevision)->Boolean
+    ): NativeJournalFileResult {
+        if(!checkInputs(ownerKey,snapshot,identity))
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.INVALID_ARGUMENT)
+        return runCatching {
+            locked(ownerKey,identity.workoutId) { file ->
+                if(!runCatching {authorizeCurrent(ownerKey,snapshot.source)}
+                    .getOrDefault(false))
+                    return@locked NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.NOT_AUTHORIZED)
+                issueLocked(file,ownerKey,snapshot,identity)
+            }
+        }.getOrElse {
+            NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    private fun issueLocked(
+        file: Path,
+        ownerKey: String,
+        snapshot: KotlinStagedWorkout,
+        identity: KotlinStoredWorkoutIdentity
+    ): NativeJournalFileResult {
+        if(Files.exists(file)) {
+            val previous=recover(file,ownerKey,snapshot,identity)
+            if(previous is NativeJournalFileResult.Durable)return previous
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.ISSUE_CONFLICT)
+        }
+        val initial=KotlinWorkoutJournalDomain.begin(snapshot,identity)
+        val envelope=SavedReceipts(ownerKey,
+            NativeJournalBinary.snapshotHash(snapshot),snapshot,identity,
+            emptyList(),0,null)
+        atomicWrite(file,NativeJournalBinary.encode(envelope))
+        return NativeJournalFileResult.Durable(initial,false)
+    }
+
     /** Must only be called AFTER the native issuance owner authorizes and
      * pins the full snapshot in an independent durable transaction. */
-    fun issue(
+    internal fun issue(
         ownerKey:String,snapshot:KotlinStagedWorkout,
         identity:KotlinStoredWorkoutIdentity
     ): NativeJournalFileResult {
@@ -416,28 +467,14 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
             return NativeJournalFileResult.Rejected(NativeJournalFileRefusal.INVALID_ARGUMENT)
         return runCatching {
             locked(ownerKey,identity.workoutId) { file ->
-                if(Files.exists(file)) {
-                    val previous=recover(file,ownerKey,snapshot,identity)
-                    if(previous is NativeJournalFileResult.Durable)previous
-                    else if(previous is NativeJournalFileResult.Rejected &&
-                        previous.reason==NativeJournalFileRefusal.NOT_ISSUED)previous
-                    else NativeJournalFileResult.Rejected(
-                        NativeJournalFileRefusal.ISSUE_CONFLICT)
-                } else {
-                    val initial=KotlinWorkoutJournalDomain.begin(snapshot,identity)
-                    val envelope=SavedReceipts(ownerKey,
-                        NativeJournalBinary.snapshotHash(snapshot),snapshot,identity,
-                        emptyList(),0,null)
-                    atomicWrite(file,NativeJournalBinary.encode(envelope))
-                    NativeJournalFileResult.Durable(initial,false)
-                }
+                issueLocked(file,ownerKey,snapshot,identity)
             }
         }.getOrElse { NativeJournalFileResult.Rejected(
             NativeJournalFileRefusal.STORAGE_UNAVAILABLE) }
     }
 
     /** Cold-open an EXISTING journal; this never silently issues one. */
-    fun open(
+    internal fun open(
         ownerKey:String,snapshot:KotlinStagedWorkout,
         identity:KotlinStoredWorkoutIdentity
     ): NativeJournalFileResult {
@@ -452,7 +489,7 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
     }
 
     /** Atomic CAS, with receipt replay for lost acknowledgments. */
-    fun append(
+    internal fun append(
         ownerKey:String,snapshot:KotlinStagedWorkout,
         identity:KotlinStoredWorkoutIdentity,
         operation:KotlinJournalOperation

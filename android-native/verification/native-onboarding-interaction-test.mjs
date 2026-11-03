@@ -170,6 +170,13 @@ assert.ok(controls.includes('internal fun PursuitSessionMetrics(') &&
   train.includes('remaining=journal.unresolvedCount') &&
   train.includes('LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size}'),
   'Today and Train must reuse one neutral expressive progress component and first-class primary action based solely on saved journal values');
+assert.ok(train.includes('PursuitPrimaryAction(') &&
+  train.includes('onClick={if(journal.isFinished)onFinish() else showFinishReview=true}') &&
+  train.includes('onClick={onRecord(set.slot,JournalSetDisposition.COMPLETED,') &&
+  train.includes('enabled=!busy && validLoad,') &&
+  train.includes('if(repCount==0)"Record failed attempt" else "Complete set"') &&
+  train.includes('if(journal.isFinished)"Retry finishing workout" else "Review and finish"'),
+  'The actual working-set confirmation and Finish CTA must share the native primary action with Today, while retaining valid journal write gates');
 assert.ok(train.includes('val committedSlots=journal.completed.map { it.intent.slot }.toSet()') &&
   train.includes('val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)') &&
   train.includes('NativeUpNextPanel(preview,exerciseIndex,') &&

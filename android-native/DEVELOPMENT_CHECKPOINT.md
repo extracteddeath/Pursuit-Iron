@@ -2126,3 +2126,15 @@ No training decision or set mutation was moved into these components.
 Source tests pin the shared tokens and use on both journeys. The app still
 needs physical-device visual validation and user feedback before an APK
 is treated as accepted.
+
+## 2026-11-02 — Shared actual workout primary actions
+
+The real native Train screen now uses the same 52dp, Material 3 shaped
+primary action as Today for its confirmation-ready Finish and for the
+issued working-set logging control. The button remains disabled on invalid
+entered values and during canonical busy conditions, and zero-rep failed
+attempts and independently issued myo/drop extensions retain their exact
+labels. Finish still opens its existing explicit confirmation, and the
+Journal remains the only writer. This removes inconsistent primary button
+sizing without altering prescription, set validation, recovery or history.
+No APK.

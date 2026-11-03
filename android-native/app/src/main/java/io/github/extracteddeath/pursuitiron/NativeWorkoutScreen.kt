@@ -152,12 +152,12 @@ internal fun NativeWorkoutScreen(
             Text(if(journal.isFinished)"All sets saved · completion needs confirmation"
                 else "All working sets saved · ready to finish",
                 style=MaterialTheme.typography.titleMedium)
-            Button(onClick={if(journal.isFinished)onFinish() else showFinishReview=true},
+            PursuitPrimaryAction(
+                onClick={if(journal.isFinished)onFinish() else showFinishReview=true},
                 enabled=!operationBlocked,
-                modifier=Modifier.fillMaxWidth()) {
-                Text(if(state.workoutBusy)"Saving…" else
-                    if(journal.isFinished)"Retry finishing workout" else "Review and finish")
-            }
+                label=if(state.workoutBusy)"Saving…" else
+                    if(journal.isFinished)"Retry finishing workout" else "Review and finish"
+            )
             if(!journal.isFinished && focusMode) {
                 TextButton(onClick={focusMode=false},
                     enabled=!state.workoutBusy && !state.historyBusy,
@@ -465,11 +465,13 @@ private fun NativeWorkingSet(session: JournalSessionKey,set: NativeWorkoutSet,co
                 onLoad={load=it},onInspect=onInspectEquipmentLoad)
             val validLoad=NativeSetEntryPolicy.accepts(load,reps,rir,set.allowFailedAttempt)
             val repCount=reps.toIntOrNull();val effort=rir.toIntOrNull()
-            Button(onClick={onRecord(set.slot,JournalSetDisposition.COMPLETED,
-                JournalSetValues(load,session.unit,checkNotNull(repCount),effort))},
-                enabled=!busy && validLoad,modifier=Modifier.fillMaxWidth()) {
-                Text(if(set.isExtension)"Complete extension" else if(repCount==0)"Record failed attempt" else "Complete set")
-            }
+            PursuitPrimaryAction(
+                onClick={onRecord(set.slot,JournalSetDisposition.COMPLETED,
+                    JournalSetValues(load,session.unit,checkNotNull(repCount),effort))},
+                enabled=!busy && validLoad,
+                label=if(set.isExtension)"Complete extension" else
+                    if(repCount==0)"Record failed attempt" else "Complete set"
+            )
             TextButton(onClick={showSkipConfirmation=true},enabled=!busy) { Text(if(set.isExtension)"Skip extension" else "Skip set") }
         }
     }

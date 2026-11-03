@@ -77,7 +77,7 @@ class KotlinIssuedSnapshotStoreTest {
 
     @Test fun coldRestorationNeedsOnlyPrivateStorageAndCurrentOwnerApproval() {
         val first=store()
-        accepted(first.issue("owner-1",original,identity))
+        accepted(first.issueAuthorized("owner-1",original,identity,authorize))
         val before=accepted(store().openStored("owner-1","workout-1",authorize))
         assertEquals(original,before.journal.snapshot)
         assertEquals(identity,before.journal.storedIdentity)
@@ -103,8 +103,31 @@ class KotlinIssuedSnapshotStoreTest {
         assertEquals(4,replay.journal.revision)
     }
 
+    @Test fun unauthorizedIssueMustNotCreateAnyPersistentWorkout() {
+        val refused=store().issueAuthorized("owner-1",original,identity){
+            _,_ -> false
+        }
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_AUTHORIZED),refused)
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            store().openStored("owner-1","workout-1",authorize))
+        val issued=accepted(store().issueAuthorized(
+            "owner-1",original,identity,authorize))
+        assertFalse(issued.replayed)
+        val duplicate=accepted(store().issueAuthorized(
+            "owner-1",original,identity,authorize))
+        assertTrue(duplicate.replayed)
+        assertEquals(0,duplicate.journal.revision)
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_AUTHORIZED),
+            store().issueAuthorized("owner-1",original,identity){_,_ ->
+                throw SecurityException("auth expired")
+            })
+    }
+
     @Test fun wrongAthleteOrStaleCurrentSourceCannotReadOrAppend() {
-        accepted(store().issue("owner-1",original,identity))
+        accepted(store().issueAuthorized("owner-1",original,identity,authorize))
         assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_ISSUED),
             store().openStored("owner-2","workout-1",authorize))
         assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_AUTHORIZED),
@@ -127,7 +150,7 @@ class KotlinIssuedSnapshotStoreTest {
     }
 
     @Test fun snapshotTamperOrCorruptReceiptNeverSilentlyResetsWorkout() {
-        accepted(store().issue("owner-1",original,identity))
+        accepted(store().issueAuthorized("owner-1",original,identity,authorize))
         val bad=original.copy(targets=original.targets.mapIndexed { i,t ->
             if(i==1)t.copy(targetRir=0) else t
         })

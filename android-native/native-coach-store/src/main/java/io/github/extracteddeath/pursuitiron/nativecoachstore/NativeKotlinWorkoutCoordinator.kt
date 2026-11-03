@@ -69,12 +69,14 @@ sealed interface NativeKotlinIssueResult {
  * selected day, full plan and exact prescribed sets.
  *
  * No JS fallback, no UI-created issuance grant and no optimistic success.
- * Upstream app-owned source/approval writes still need a shared transaction or
- * explicit version fencing before this isolated module may ship.
+ * Every app-owned source/approval mutation and sign-out MUST also use the
+ * injected revision fence; otherwise this module cannot claim cross-store
+ * atomicity. The production native account/approval provider is not wired.
  */
 class NativeKotlinWorkoutCoordinator(
     private val store: KotlinNativeJournalFileStore,
-    private val authority: NativeKotlinWorkoutAuthority
+    private val authority: NativeKotlinWorkoutAuthority,
+    private val revisionFence: NativeKotlinApprovalRevisionFence
 ) {
     private fun stage(
         ownerKey: String,
@@ -97,7 +99,24 @@ class NativeKotlinWorkoutCoordinator(
         )
     }
 
-    fun issue(ownerKey: String, workoutId: String): NativeKotlinIssueResult {
+    /**
+     * The entire approved-program review and atomic journal issuance happen
+     * under the SAME owner revision fence used by native program/gym writers.
+     * Without this lock, a writer can change approval after our second review
+     * but before the workout file is atomically committed.
+     */
+    fun issue(ownerKey: String, workoutId: String): NativeKotlinIssueResult =
+        runCatching {
+            revisionFence.withOwnerTransaction(ownerKey) {
+                issueFenced(ownerKey,workoutId)
+            }
+        }.getOrElse {
+            NativeKotlinIssueResult.Rejected(NativeKotlinIssueRefusal.STORAGE_REJECTED,
+                storageReason=NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
+        }
+
+    private fun issueFenced(ownerKey: String, workoutId: String):
+        NativeKotlinIssueResult {
         val initialApproval=runCatching {
             authority.currentApprovedWorkout(ownerKey,workoutId)
         }.getOrNull()
@@ -150,16 +169,28 @@ class NativeKotlinWorkoutCoordinator(
      * exactly as issued and independently receipt-replayed from private disk.
      */
     fun open(ownerKey:String,workoutId:String):NativeJournalFileResult =
-        store.openStored(ownerKey,workoutId) { owner,source ->
-            runCatching {authority.canAccessIssuedWorkout(owner,source)}
-                .getOrDefault(false)
+        runCatching {
+            revisionFence.withOwnerTransaction(ownerKey) {
+                store.openStored(ownerKey,workoutId) { owner,source ->
+                    runCatching {authority.canAccessIssuedWorkout(owner,source)}
+                        .getOrDefault(false)
+                }
+            }
+        }.getOrElse {
+            NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
         }
 
     fun append(
         ownerKey:String,workoutId:String,operation:KotlinJournalOperation
     ):NativeJournalFileResult =
-        store.appendStored(ownerKey,workoutId,operation) { owner,source ->
-            runCatching {authority.canAccessIssuedWorkout(owner,source)}
-                .getOrDefault(false)
+        runCatching {
+            revisionFence.withOwnerTransaction(ownerKey) {
+                store.appendStored(ownerKey,workoutId,operation) { owner,source ->
+                    runCatching {authority.canAccessIssuedWorkout(owner,source)}
+                        .getOrDefault(false)
+                }
+            }
+        }.getOrElse {
+            NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
         }
 }

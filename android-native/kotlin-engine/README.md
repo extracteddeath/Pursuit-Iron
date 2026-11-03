@@ -20,6 +20,35 @@ the native app's training authority. The live web app is not being retired
 or modified as part of this branch.
 
 
+## Kotlin-only session staging (replacement engine, not yet issued)
+
+`KotlinWorkoutSnapshotDomain.stage` is the next S4 lifecycle boundary. It
+recomputes **the entire** independently reviewed week and set prescription
+from a Compose/native-owner-provided `ComposerRequest` and
+`ExercisePrescriptionPolicy` list. It then produces an immutable,
+one-day `KotlinStagedWorkout` with original exercise IDs, exact physically
+attainable weights and their load basis, bodyweight semantics, original
+warmup/working ordinals, rep bands, target RIR, active/rest seconds, day
+purpose and estimated session length. It deliberately never copies an
+untrusted “review-ready” draft from another layer.
+
+The owner must authenticate an explicit workout-selection grant (approved
+program, stable workout ID, athlete/gym/catalog/rules source revisions) against
+its **current** durable facts. The pure domain checks revision equality and
+the grant's fields and fails closed when other sessions of the week remain
+infeasible, targets are not physically verified, or a policy is missing.
+A staged snapshot is **not yet a committed or started workout**. It has
+`persisted=false` and `canModifyJournal=false`; only future native
+transactional storage can reserve a workout ID, commit a snapshot and issue
+actual receipts. No JS runtime is used, and there is no fallback.
+
+Still required for real engine replacement: source-authenticated native
+grant issuance, durable and idempotent set/skip/failure/correction receipts,
+restoration after crash or process death, real exercise variations, full
+superset/myo/drop prescriptions and corresponding UI, exact coach-selected
+weight progression (not merely reviewed eligibility), and native cutover
+acceptance on a physical device.
+
 ## Revision-bound verified machine weights (read-only Kotlin handoff)
 
 `CoachNativeVerifiedLoadHandoff` is a **standalone headless review**, not an

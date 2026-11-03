@@ -7,6 +7,26 @@
 
 These are living requirements, **not claims that the new engine is live or every feature is complete**.
 
+### First basic-engine foundation: athlete and gym setup review (E01–E06, partial)
+
+`CoachAthleteSetupDomain.review` adds a headless, deterministic profile-input
+validator. Every goal, experience, selected weekday, time-bucket and explicit
+hard-cap choice, gym load unit and physical inventory, bodyweight/superset
+and day-preference toggle must be **confirmed**; null is an unresolved input,
+not a guessed false or a synthetic default. Conflicting training/rest/locked
+days, ULPPL with too few sessions, impossible units/stock, and focus/reduced
+muscle overlap fail closed with field-specific reasons.
+
+An approved output is a defensively copied, versioned
+`ReviewedAthleteSetup` **for requesting a candidate review only**. It cannot
+save a program or issue training; exercise selection, profile persistence,
+actual strength policy, complete custom authoring and UI integration remain
+open. A real gym with zero loaded implements is allowed only if the athlete
+explicitly enables bodyweight. Working time buckets are preferences,
+not hard time caps.
+
+
+
 
 **Quality bar:** [PRODUCT_SUPERIORITY_GATE.md](../PRODUCT_SUPERIORITY_GATE.md) makes every feature and every new engine decision subject to independently verified improvements over the existing web app. Legacy parity is not an acceptance target. The latest independent Kotlin loading and evidence tests are passing, but the engine is not connected to active native training.
 

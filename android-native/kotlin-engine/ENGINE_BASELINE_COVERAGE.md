@@ -29,12 +29,12 @@ Inspected the independent Kotlin rebuild at fa2f2168 and the separate native Com
 Each numbered requirement needs independently specified outcomes, property/regression tests, persistence evidence and the relevant Android UI flow. Unspecified policy is **not** silently given a guessed default.
 
 ### A. Profile, programming inputs and gym (P0)
-- E01 **P** Versioned athlete context: goals hypertrophy/strength/powerbuilding, experience, training history, 3–6 days, split Full Body / Upper-Lower / PPL / ULPPL, calendar timezone, constraints and schedule changes.
-- E02 **P** Time buckets 40–60, 60–90, 120+ are *ranges*; distinct optional user hard-time ceiling; realistic warmups, work, rest, unilateral sides, movement/setup time.
-- E03 **P** Named gyms, verified exercise inventory, physical weights/plates and adjustable implements, attachments, lb/kg, per-hand versus total, barbell/Smith weight and correct plate count.
+- E01 **R (partial)** Versioned athlete setup input review now validates hypertrophy/strength/powerbuilding, experience, 3–6 weekday choices, four splits, timezone and revision. **P** Training-history calibration, durable profile ownership and full generator integration still required.
+- E02 **R (partial)** Explicit 40–60, 60–90 and 120+ preferences are distinct from an approved hard time cap; contradictory cap fails closed. **P** Real plan-level validated time estimates for warmups, rest, unilateral sides and setup.
+- E03 **R (partial)** Named gym setup confirms unit, stock, available fixtures and attachment IDs, with independent physical inventory validation and immutable snapshot. **P** Multi-gym management, UI editing and complete implement/plate/Smith options.
 - E04 **P** Bodyweight enabled/disabled; assisted/weighted bodyweight distinct identities; minimum loads/increments per exercise, not one global 5 lb rule.
-- E05 **P** User focus/reduced muscles, preferred/excluded movement, allowed triceps on lower day, per-day barbell cap, supersets allowed toggle, rest/hard/long/locked days.
-- E06 **P** Save, review, edit and cold restore setup with explicit user authorization and stable revision ownership; unknown context remains unknown.
+- E05 **R (partial)** Setup validator confirms all focus/reduced, exclusion IDs, triceps-on-lower, barbell/day limit, supersets and rest/hard/long/locked-day controls and detects conflicts. **P** Actual authoring, constraint-driven generator and Compose integration.
+- E06 **R (partial)** Setup review gives actionable missing/conflicting fields, stable revision and defensively frozen candidate input. **P** Persist/save/edit/restore and explicit profile ownership still required.
 
 ### B. Exercise and real equipment intelligence (P0)
 - E07 **R** Exact BigDecimal, plate pairing and physical stock inspection; **P** publish a complete verified loadability and override contract without 38.5/159.5 phantom loads.

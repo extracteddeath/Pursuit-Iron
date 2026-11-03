@@ -97,6 +97,37 @@ class NativeKotlinApprovalFileAuthorityTest {
         }
     }
 
+    @Test fun explicitBarbellPlatesAndMachineStackSurviveApprovalRoundtrip() {
+        // One pair of 2.5 and one pair of 5 lbs permits 20,25,30,35...
+        // It never invents impossible 38.5 lb suggestions.
+        val bar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("20"),
+            mapOf(n("2.5") to 1,n("5") to 1))
+        val machine=VerifiedLoadStock.Stack(LoadUnit.LB,
+            LoadBasis.MACHINE_STACK,n("20"),n("5"),n("40"))
+        val exerciseList=listOf(
+            press.copy(equipment=ComposerEquipment.Verified(LoadUnit.LB,
+                n("30"),bar)),
+            row.copy(equipment=ComposerEquipment.Verified(LoadUnit.LB,
+                n("30"),machine))
+        )
+        val changed=approval().copy(program=program().copy(exercises=exerciseList))
+        val roundtrip=NativeKotlinApprovalCodec.decode(
+            NativeKotlinApprovalCodec.encode(changed))
+        assertEquals(changed,roundtrip)
+        val restored=roundtrip.program.exercises
+        assertEquals(bar,(restored.first().equipment as ComposerEquipment.Verified).inventory)
+        assertEquals(machine,(restored.last().equipment as ComposerEquipment.Verified).inventory)
+        assertEquals(NativeApprovalWriteResult.Committed(1),
+            authority().publish("owner-1",0,changed))
+        val session=got(NativeKotlinWorkoutCoordinator(
+            KotlinNativeJournalFileStore(temp.root.toPath()),authority(),fence())
+            .issue("owner-1","workout-1")).journal.snapshot
+        assertEquals(LoadBasis.BARBELL_TOTAL,
+            (session.targets.first().load as DraftSetLoad.Verified).basis)
+        assertEquals(n("20"),
+            (session.targets.first().load as DraftSetLoad.Verified).value)
+    }
+
     @Test fun nativePersistentAuthorityPublishesAndIssuesRealKotlinWorkout() {
         val owner=authority()
         assertNull(owner.currentApprovedWorkout("owner-1","workout-1"))

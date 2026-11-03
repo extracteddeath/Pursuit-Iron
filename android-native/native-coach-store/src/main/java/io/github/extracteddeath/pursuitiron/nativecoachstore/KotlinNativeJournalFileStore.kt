@@ -100,8 +100,9 @@ private object NativeJournalBinary {
                         }
                     }
                     writeInt(t.reps.minimum);writeInt(t.reps.maximum)
-                    writeBoolean(t.targetRir != null)
-                    if(t.targetRir != null)writeInt(t.targetRir)
+                    val targetRir=t.targetRir
+                    writeBoolean(targetRir != null)
+                    if(targetRir != null)writeInt(targetRir)
                     writeInt(t.activeSeconds);writeInt(t.restSeconds)
                 }
             }
@@ -132,16 +133,18 @@ private object NativeJournalBinary {
                             writeByte(2)
                             writeUTF(op.setKey);writeUTF(op.outcome.name)
                             optional(op.correctsEventId)
-                            writeBoolean(op.performed != null)
-                            if(op.performed != null) {
-                                val performed=op.performed
-                                writeBoolean(performed.load!=null)
-                                if(performed.load!=null)
-                                    writeUTF(performed.load.stripTrailingZeros().toPlainString())
+                            val performed=op.performed
+                            writeBoolean(performed != null)
+                            if(performed != null) {
+                                val actualLoad=performed.load
+                                writeBoolean(actualLoad!=null)
+                                if(actualLoad!=null)
+                                    writeUTF(actualLoad.stripTrailingZeros().toPlainString())
                                 optional(performed.unit?.name)
                                 writeInt(performed.reps)
-                                writeBoolean(performed.actualRir!=null)
-                                if(performed.actualRir!=null)writeInt(performed.actualRir)
+                                val actualRir=performed.actualRir
+                                writeBoolean(actualRir!=null)
+                                if(actualRir!=null)writeInt(actualRir)
                             }
                         }
                     }

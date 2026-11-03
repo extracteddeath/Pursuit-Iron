@@ -1,5 +1,13 @@
 # Pursuit Iron — independent Kotlin training engine
 
+## Current feature completeness and native UX obligations
+
+- [Complete engine capability ledger](ENGINE_BASELINE_COVERAGE.md) tracks **all 14 native feature IDs, basic engine requirements E01–E41, review-only implementation gaps, and acceptance milestones**.
+- [Native Compose UX impact plan](NATIVE_ENGINE_UX_IMPACT.md) specifies the **screen and control changes required for each engine feature** with interaction and device gates.
+
+These are living requirements, **not claims that the new engine is live or every feature is complete**.
+
+
 **Quality bar:** [PRODUCT_SUPERIORITY_GATE.md](../PRODUCT_SUPERIORITY_GATE.md) makes every feature and every new engine decision subject to independently verified improvements over the existing web app. Legacy parity is not an acceptance target. The latest independent Kotlin loading and evidence tests are passing, but the engine is not connected to active native training.
 
 **Full coaching acceptance:** see

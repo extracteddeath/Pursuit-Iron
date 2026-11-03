@@ -1,5 +1,14 @@
 # Native integration, then a complete Kotlin engine rebuild
 
+## Detailed living scope and screen integration contract
+
+The full 14-feature and E01–E41 engine implementation ledger is in
+[kotlin-engine/ENGINE_BASELINE_COVERAGE.md](kotlin-engine/ENGINE_BASELINE_COVERAGE.md).
+The separate native Compose UI/UX impacts, data states and acceptance tests are
+recorded in [kotlin-engine/NATIVE_ENGINE_UX_IMPACT.md](kotlin-engine/NATIVE_ENGINE_UX_IMPACT.md).
+Both are documentation for future integration, not executable app features.
+
+
 ## User decision — 2026-11-01
 
 Build and test a polished functional native core, then replace the flawed

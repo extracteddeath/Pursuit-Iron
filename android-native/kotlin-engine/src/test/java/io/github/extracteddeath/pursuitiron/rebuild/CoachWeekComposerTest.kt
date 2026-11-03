@@ -17,7 +17,7 @@ class CoachWeekComposerTest {
     private val available=VerifiedLoadStock.Totals(LoadUnit.LB,
         LoadBasis.DUMBBELL_PER_HAND,listOf(n("25"),n("30"),n("35"),n("40")))
     private fun option(id:String,m:TrainingMuscle,pattern:ComposerPattern,
-        focus:Set<ComposerFocus>=setOf(ComposerFocus.FULL_BODY),
+        focus: Set<ComposerFocus> = setOf(ComposerFocus.FULL_BODY),
         equipment:ComposerEquipment=ComposerEquipment.Verified(
             LoadUnit.LB,n("30"),available),
         required:Int=0,visits:Int=3,gap:Int=2,priority:Int=1)=

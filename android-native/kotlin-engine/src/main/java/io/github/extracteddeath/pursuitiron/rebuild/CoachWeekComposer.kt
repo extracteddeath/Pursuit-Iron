@@ -212,7 +212,11 @@ object CoachWeekComposer {
             }
             val neededGap=when {
                 otherOption.exerciseId==option.exerciseId ->
-                    option.minimumCalendarDayGap
+                    // A shared reviewed recovery group is a floor even for
+                    // repeat visits of the very same exercise ID.
+                    maxOf(option.minimumCalendarDayGap,
+                        if(option.recoveryGroup!=null)
+                            option.minimumGroupCalendarDayGap else 1)
                 option.recoveryGroup!=null &&
                     option.recoveryGroup==otherOption.recoveryGroup ->
                     maxOf(option.minimumGroupCalendarDayGap,

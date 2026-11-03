@@ -265,6 +265,30 @@ class CoachWeekComposerTest {
         }
     }
 
+    @Test fun sharedRecoveryFloorAlsoProtectsRepeatsOfSameExercise() {
+        val grouped=chestOption.copy(
+            minimumCalendarDayGap=1,recoveryGroup="heavy-bench",
+            minimumGroupCalendarDayGap=2,
+            maximumVisits=3,requiredVisits=2)
+        val schedule=days(listOf(0,1,4),min=1,max=90)
+        val result=CoachWeekComposer.compose(base(
+            exerciseOptions=listOf(grouped,backOption,legOption,chestFly),
+            schedule=schedule,patterns=1,
+            bands=bounds(dose(chest,"4","8","10",1),
+                dose(lats,"2","6","8",1),dose(quads,"2","6","8",1))))
+        val groupedVisits=result.visits.filter {
+            it.exerciseId==grouped.exerciseId
+        }
+        assertTrue(groupedVisits.size>=2)
+        for(a in groupedVisits)for(b in groupedVisits) {
+            if(a.dayIndex==b.dayIndex)continue
+            val gap=kotlin.math.abs(schedule[a.dayIndex].calendarDay-
+                schedule[b.dayIndex].calendarDay)
+            assertTrue(minOf(gap,7-gap)>=2)
+        }
+        assertFalse(result.canIssueTargets)
+    }
+
     @Test fun relatedHeavyMovementsRespectSharedRecoveryAcrossExerciseIds() {
         val first=chestOption.copy(exerciseId="bench-a",
             requiredVisits=1,recoveryGroup="heavy-press",

@@ -906,7 +906,10 @@ const plateTest=fs.readFileSync(
 const plateUi=fs.readFileSync(root+'NativeVerifiedPlateBreakdown.kt','utf8');
 assert.ok(verifiedLoadUi.includes('if(review.family=="barbell_plates")') &&
   verifiedLoadUi.includes('NativeVerifiedPlateBreakdown(state,session,load,review.exact)') &&
-  plateUi.includes('if(!exact)null else NativeBarbellPlateBreakdownPolicy.inspect(') &&
+  plateUi.includes('if(!exact)null else withContext(Dispatchers.Default)') &&
+  plateUi.includes('NativeBarbellPlateBreakdownPolicy.inspect(') &&
+  plateUi.includes('LaunchedEffect(lookup)') &&
+  plateUi.includes('remember(inventory,session.workoutId,session.unit,selectedLoad,allowed,exactOnly,exact)') &&
   plateUi.includes('saved?.loadingInventory') &&
   plateUi.includes('Load the SAME plates on each side:') &&
   plateUi.includes('This does not log or prescribe a weight.') &&

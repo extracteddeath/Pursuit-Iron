@@ -25,6 +25,14 @@ assert.ok(ui.includes('NativeGroupedEquipmentPicker(') &&
   equipmentPolicy.includes('else if (id in available) next.add(id)') &&
   equipmentPolicy.includes('group.choices.map { it.id }.filter { it in permitted }'),
   'The reusable picker must group real offered hardware, keep legacy removal and avoid inventing selected equipment');
+assert.ok(ui.includes('var rackAvailable by rememberSaveable') &&
+  ui.includes('Squat rack available') &&
+  ui.includes('it == "no-rack" || it == "rack"') &&
+  ui.includes('if (rackAvailable)') &&
+  ui.includes('else add("no-rack")') &&
+  ui.includes('val hasAvailableEquipment = equipment.any { it in availableEquipment }') &&
+  ui.includes('equipmentForReview,bodyweight,supersets,barbellCap'),
+  'Rack availability must be explicit and cannot count as the only chosen hardware; legacy positive rack remains reviewable');
 assert.ok(!equipmentPicker.includes('NativeGymInventoryCodec') &&
   !equipmentPicker.includes('onSave(') &&
   !equipmentPicker.includes('commitAtomically'),
@@ -45,7 +53,7 @@ assert.ok(sharedOnboarding.includes('internal fun PursuitFormSection(') &&
   ui.includes('label=if(state.busy)"Building your program…" else "Review generated plan"') &&
   ui.includes('NativeGymInventoryEditor(unit,inventoryFields') &&
   ui.includes('NativeMusclePrioritySelector(') &&
-  ui.includes('enabled=state.ready && !state.blocked && !state.busy && equipment.isNotEmpty()'),
+  ui.includes('enabled=state.ready && !state.blocked && !state.busy && hasAvailableEquipment'),
   'Onboarding shares M3 form sections and primary buttons while keeping verified inventory, personalization and canonical review/save gates');
 assert.ok(ui.includes('state.options?.splits') && ui.includes('selected.days.forEach') &&
   ui.includes('if(days !in option.days)days=option.days.first()'),

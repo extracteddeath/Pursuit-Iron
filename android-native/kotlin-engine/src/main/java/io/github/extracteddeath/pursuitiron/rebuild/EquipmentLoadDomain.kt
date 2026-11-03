@@ -83,6 +83,12 @@ object EquipmentLoadDomain {
     private const val MAX_PAIRS_PER_SIZE = 24
     private const val MAX_ATTAINABLE_TOTALS = 100_000
 
+    // BigDecimal compares numeric values ignoring scale, but Kotlin/JUnit's
+    // equality does not. Canonical outputs avoid 115 vs 115.0 mismatches,
+    // including scientific-notation values like 1E+3.
+    private fun normalized(value: BigDecimal): BigDecimal =
+        BigDecimal(value.stripTrailingZeros().toPlainString())
+
     private fun validLoad(value: BigDecimal): Boolean =
         value >= zero && value <= maxLoad &&
             value.stripTrailingZeros().scale() <= 3
@@ -107,10 +113,10 @@ object EquipmentLoadDomain {
             return LoadInspection.Unavailable(LoadUnavailableReason.INVALID_STOCK)
         }
         return LoadInspection.Confirmed(
-            unit = enteredUnit, basis = stock.basis, entered = entered,
+            unit = enteredUnit, basis = stock.basis, entered = normalized(entered),
             exact = attainable.contains(entered),
-            atOrBelow = attainable.floor(entered),
-            nextAbove = attainable.higher(entered)
+            atOrBelow = attainable.floor(entered)?.let(::normalized),
+            nextAbove = attainable.higher(entered)?.let(::normalized)
         )
     }
 

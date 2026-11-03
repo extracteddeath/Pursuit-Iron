@@ -50,9 +50,9 @@ class EquipmentLoadDomainTest {
         val off = verified(cable, "23")
         assertFalse(off.exact)
         assertEquals(n("22.5"),off.atOrBelow)
-        assertEquals(n("25.0"),off.nextAbove)
+        assertEquals(n("25"),off.nextAbove)
         val high = verified(cable, "50")
-        assertEquals(n("40.0"),high.atOrBelow)
+        assertEquals(n("40"),high.atOrBelow)
         assertNull(high.nextAbove)
     }
 
@@ -84,6 +84,21 @@ class EquipmentLoadDomainTest {
             assertEquals(LoadInspection.Unavailable(LoadUnavailableReason.INVALID_STOCK),
                 EquipmentLoadDomain.inspect(stock,n("40"),LoadUnit.LB))
         }
+    }
+
+    @Test fun numericallyEqualVerifiedLoadsHaveStablePlainDecimalRepresentation() {
+        val bar=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45.0"),
+            mapOf(n("2.50") to 2,n("5") to 2,n("25.0") to 1))
+        val inspected=verified(bar,"115.00")
+        assertEquals(n("115"),inspected.entered)
+        assertEquals(n("115"),inspected.atOrBelow)
+        assertEquals(n("120"),inspected.nextAbove)
+        assertEquals("115",inspected.atOrBelow?.toPlainString())
+        val large=VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.SMITH_TOTAL,
+            listOf(n("1000.000"),n("1250.0")))
+        val nearest=verified(large,"1200")
+        assertEquals("1000",nearest.atOrBelow?.toPlainString())
+        assertEquals("1250",nearest.nextAbove?.toPlainString())
     }
 
     @Test fun everyReportedBracketIsPhysicallyAttainableAndMonotonic() {

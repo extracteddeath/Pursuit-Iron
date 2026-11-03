@@ -63,3 +63,13 @@ additional independent specification before the Kotlin engine can prescribe.
 
 This phase cannot mutate existing training records or displace the canonical
 JavaScript engine, including for sessions already underway.
+
+### Numeric-normalization regression
+
+The first independent CI identified two failed assertions caused by
+`BigDecimal.equals` scale distinctions (`115` versus `115.0`) despite
+equal physical weights. The loading-result boundary now normalizes to
+plain decimal, never scientific notation, and tests include a 1,000 lb
+value, trailing-zero inputs and monotonic feasibility. No stored workout
+weight is rewritten. This is an independently tested correctness fix,
+not a fallback to JS parity.

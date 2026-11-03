@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -15,6 +17,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeGymInventoryDraftResult
+import io.github.extracteddeath.pursuitiron.domain.NativeExerciseWeightEditorPolicy
 import io.github.extracteddeath.pursuitiron.domain.NativeGymLoadingFieldPolicy
 import io.github.extracteddeath.pursuitiron.domain.NativeStackCandidate
 
@@ -32,6 +35,73 @@ private fun NativeGymLoadField(
         supportingText = { Text(hint) },
         singleLine = true
     )
+}
+
+/**
+ * Edits a user-verified per-exercise profile without asking the athlete to
+ * type protocol prefixes. Switching modes is disabled while numeric values
+ * exist; the user must explicitly clear the values before changing basis.
+ */
+@Composable
+private fun NativeExerciseWeightField(
+    candidate: NativeStackCandidate,
+    unit: String,
+    draft: Map<String,String>,
+    onChange: (String,String) -> Unit,
+    enabled: Boolean
+) {
+    val policy=NativeExerciseWeightEditorPolicy
+    val key="override:${candidate.id}"
+    val raw=draft[key].orEmpty()
+    val exactOnly=policy.exactOnly(candidate)
+    var requestedKind by rememberSaveable(candidate.id) {
+        mutableStateOf(policy.preferredKind(candidate, raw))
+    }
+    val kind=if(raw.isNotBlank())policy.preferredKind(candidate,raw) else requestedKind
+    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        Text(candidate.name,style=MaterialTheme.typography.titleSmall)
+        if(!exactOnly) {
+            androidx.compose.foundation.layout.Row(
+                horizontalArrangement=Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected=kind=="exact",
+                    onClick={requestedKind="exact"},
+                    enabled=enabled && raw.isBlank(),
+                    label={Text("Exact loads")}
+                )
+                FilterChip(
+                    selected=kind=="range",
+                    onClick={requestedKind="range"},
+                    enabled=enabled && raw.isBlank(),
+                    label={Text("Verified range")}
+                )
+            }
+        }
+        OutlinedTextField(
+            value=policy.entryValues(raw),
+            onValueChange={values ->
+                if(values.length<=800) onChange(key,
+                    policy.formatEntry(kind,values,exactOnly))
+            },
+            modifier=Modifier.fillMaxWidth(),
+            enabled=enabled,
+            label={Text(if(kind=="exact")"Selectable logged weights ($unit)"
+                else "Min, increment, max ($unit)")},
+            supportingText={Text(
+                if(exactOnly) "Enter exact weights as recorded. Never assume sled, plate-side, or lever resistance."
+                else if(kind=="range")
+                    "Only use a range when the actual stack increment and limits are checked."
+                else "Enter each physical stack setting you have verified, separated by commas."
+            )},
+            singleLine=true
+        )
+        if(raw.isNotBlank()) {
+            TextButton(onClick={onChange(key,"")},enabled=enabled) {
+                Text("Clear this exercise's weights")
+            }
+        }
+    }
 }
 
 /**
@@ -73,17 +143,8 @@ internal fun NativeGymInventoryEditor(
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant
             )
-            NativeGymLoadField(unit,draft,onChange,enabled,"override:${focused.id}",
-                focused.name,
-                if(focused.mode=="external_load")
-                    "Use exact: 45, 55, 65. Values must match your real logged totals; never infer plate sides, sled weight or resistance"
-                else "Use exact: 5, 10, 15 or range: 5, 5, 150. Enter only physically checked selectable loads")
-            OutlinedButton(
-                onClick={onChange("override:${focused.id}","")},
-                enabled=enabled && !draft["override:${focused.id}"].isNullOrBlank(),
-                modifier=Modifier.fillMaxWidth()
-            ) { Text("Clear this movement's verified weight setting") }
-            Text("This clears the draft only. Review and save the gym settings to apply it.",
+            NativeExerciseWeightField(focused,unit,draft,onChange,enabled)
+            Text("A cleared entry remains saved until you review and confirm these changes.",
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -120,26 +181,40 @@ internal fun NativeGymInventoryEditor(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if(candidates.isNotEmpty()) {
+            val configured=NativeExerciseWeightEditorPolicy.configuredCount(candidates,draft)
             var showSpecific by rememberSaveable(focusExerciseId) { mutableStateOf(
-                focused!=null || draft.keys.any {
-                    it.startsWith("override:") && draft[it]?.isNotBlank()==true
-                }
+                focused!=null || configured>0
             ) }
             OutlinedButton(onClick={showSpecific=!showSpecific},enabled=enabled) {
-                Text(if(showSpecific) "Hide individual machine settings" else "Set individual machine weights")
+                Text(if(showSpecific) "Hide exercise weight settings"
+                    else "Set exercise weights ($configured configured)")
             }
             if(showSpecific) {
-                Text("Each exercise setting needs a prefix: exact: 5, 10, 15 or range: 5, 5, 150. Range is allowed only for checked cable/standard stacks. Specialty machines require exact: weights AS LOGGED, never assumed plate sides, sled loads or inferred increments. If the loading basis is uncertain, leave it blank.",
+                var search by rememberSaveable { mutableStateOf("") }
+                var configuredOnly by rememberSaveable { mutableStateOf(false) }
+                OutlinedTextField(
+                    value=search,
+                    onValueChange={if(it.length<=80)search=it},
+                    modifier=Modifier.fillMaxWidth(),
+                    enabled=enabled,
+                    label={Text("Find a program exercise")},
+                    singleLine=true
+                )
+                FilterChip(selected=configuredOnly,
+                    onClick={configuredOnly=!configuredOnly},
+                    enabled=enabled,
+                    label={Text("Configured only ($configured)")})
+                Text("Only exercises in your saved program appear. Verify each machine's actual selectable loads; no factory increments are assumed.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-                candidates.filter { it.id!=focused?.id }.forEach { candidate ->
-                    NativeGymLoadField(unit,draft,onChange,enabled,"override:${candidate.id}",
-                        candidate.name,
-                        when(candidate.mode) {
-                            "cable_stack" -> "Use exact: 5, 10, 15 or range: 5, 5, 150. Overrides the shared cable stack"
-                            "machine_stack" -> "Use exact: 5, 10, 15 or range: 5, 5, 150. Overrides the shared stack"
-                            else -> "Use exact: 45, 55, 65. Logged total values only; never assume side plates or resistance"
-                        })
+                val listed=NativeExerciseWeightEditorPolicy.eligible(
+                    candidates.filterNot { it.id==focused?.id },
+                    search,configuredOnly,draft)
+                if(listed.isEmpty()) Text("No matching exercises. Clear the search or filter to see more.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                listed.forEach { candidate ->
+                    NativeExerciseWeightField(candidate,unit,draft,onChange,enabled)
                 }
             }
         }

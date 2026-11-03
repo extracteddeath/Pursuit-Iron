@@ -463,7 +463,12 @@ and sanity gate, **not** independent exercise-science approval. A changed
 source envelope is also part of stable exercise identity during an adaptive
 block review. The week composer prioritizes the explicitly requested main
 lift ahead of other primary lifts, even when a different lift has a higher
-general catalog priority.
+general catalog priority. Both the weekly draft and exact set-level
+prescription audit now exclude *post-finish rest* from session time.
+Intra-session rests, declared warmups and setup/transition overhead remain
+counted. Target rest instructions and all source facts remain unchanged.
+This avoids false preferred-time coverage caused by treating rest after
+the final set as training time.
 
 The retained definitions include barbell/paused bench, squat, overhead
 press; incline dumbbell press, one-arm row, lateral raise, biceps curl,

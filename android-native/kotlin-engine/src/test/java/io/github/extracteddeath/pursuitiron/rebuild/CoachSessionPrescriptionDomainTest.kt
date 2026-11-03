@@ -125,6 +125,30 @@ class CoachSessionPrescriptionDomainTest {
             .any {it.type==DraftSetType.WARMUP})
     }
 
+    @Test fun finalRestIsNotCountedAsSessionTimeButTargetRemainsImmutable() {
+        val policies=policies()
+        val result=CoachSessionPrescriptionDomain.draft(request(),policies)
+        val audit=checkNotNull(result.finalAudit)
+        for(session in result.sessions) {
+            val actualSets=session.exercises.flatMap {it.sets}
+            assertTrue(actualSets.isNotEmpty())
+            val sum=actualSets.sumOf {it.activeSeconds.toLong()+it.restSeconds}
+            val last=actualSets.last()
+            val window=request().days[session.dayIndex].window
+            val expected=sum-last.restSeconds+window.declaredNonSetSeconds
+            assertEquals(expected,audit.sessions[session.dayIndex].declaredSeconds)
+            assertTrue(last.restSeconds>0)
+            assertEquals(audit.sessions[session.dayIndex].roundedMinutes,
+                session.estimatedMinutes)
+        }
+        // Rest targets remain part of the authored draft; not rewritten to
+        // zero to fit a time bucket or misinterpreted as user observations.
+        assertTrue(result.sessions.first().exercises.first().sets.any {
+            it.restSeconds==240
+        })
+        assertFalse(result.canIssueWorkout)
+    }
+
     @Test fun newSessionTimeIsAuditedAfterRestAndWarmupsNotCopiedFromComposer() {
         val report=CoachSessionPrescriptionDomain.draft(request(),policies())
         val first=checkNotNull(report.finalAudit).sessions.first()

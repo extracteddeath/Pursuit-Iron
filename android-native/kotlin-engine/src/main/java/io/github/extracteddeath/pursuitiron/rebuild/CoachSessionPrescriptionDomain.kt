@@ -219,12 +219,18 @@ object CoachSessionPrescriptionDomain {
             val exposures=sessions.flatMap {session->
                 session.exercises.flatMap {exercise->
                     val credits=checkNotNull(options[exercise.exerciseId]).credits
+                    val finalSetKey=session.exercises.lastOrNull()
+                        ?.sets?.lastOrNull()?.stableSetKey
                     exercise.sets.map {set->
+                        // The issued target remains untouched. Only the
+                        // session-duration estimate excludes post-finish rest.
+                        val estimatedRest=if(set.stableSetKey==finalSetKey)0
+                            else set.restSeconds
                         PlannedWorkingExposure(set.stableSetKey,session.dayIndex,
                             if(set.type==DraftSetType.WARMUP)
                                 ExposureSetKind.WARMUP else ExposureSetKind.WORKING,
                             if(set.type==DraftSetType.WARMUP)emptyList() else credits,
-                            set.activeSeconds,set.restSeconds)
+                            set.activeSeconds,estimatedRest)
                     }
                 }
             }

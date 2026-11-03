@@ -175,13 +175,20 @@ object CoachWeekComposer {
     private fun toWeek(request:ComposerRequest,
         visits:List<ComposerVisit>,
         options:Map<String,ComposerExerciseOption>):DeclaredTrainingWeek {
+        // A session ends after its last performed set. Counting a post-finish
+        // rest makes an underfilled workout appear artificially longer.
+        // Sequence is the actual prescribed sequence, not greedy insertion order.
+        val lastByDay=orderedSessions(request,visits,options)
+            .associate {it.dayIndex to it.orderedVisits.lastOrNull()?.exerciseId}
         val sets=visits.flatMap {visit ->
             val option=checkNotNull(options[visit.exerciseId])
             (0 until visit.sets).map {ordinal ->
+                val isFinal=lastByDay[visit.dayIndex]==visit.exerciseId &&
+                    ordinal==visit.sets-1
                 PlannedWorkingExposure(
                     option.exerciseId+":d"+visit.dayIndex+":s"+ordinal,
                     visit.dayIndex,ExposureSetKind.WORKING,option.credits,
-                    option.workSeconds,option.restSeconds)
+                    option.workSeconds,if(isFinal)0 else option.restSeconds)
             }
         }
         return DeclaredTrainingWeek(request.phase,request.days.size,

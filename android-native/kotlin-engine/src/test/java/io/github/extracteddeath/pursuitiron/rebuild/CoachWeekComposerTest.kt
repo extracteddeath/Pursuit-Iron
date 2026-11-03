@@ -79,6 +79,27 @@ class CoachWeekComposerTest {
         assertTrue(output.week.exposures.all {it.kind==ExposureSetKind.WORKING})
     }
 
+    @Test fun plannedDurationDoesNotInventARecoveryPeriodAfterWorkoutEnds() {
+        val request=base()
+        val result=CoachWeekComposer.compose(request)
+        val byDay=result.week.exposures.groupBy {it.dayIndex}
+        for(session in result.sessions) {
+            val finalVisit=checkNotNull(session.orderedVisits.lastOrNull())
+            val finalKey=finalVisit.exerciseId+":d"+session.dayIndex+
+                ":s"+(finalVisit.sets-1)
+            val exposures=checkNotNull(byDay[session.dayIndex])
+            assertEquals(0,exposures.single {it.setKey==finalKey}.restSeconds)
+            assertTrue(exposures.filter {it.setKey!=finalKey}.all {
+                it.restSeconds==180
+            })
+            val expected=exposures.sumOf {
+                it.activeSeconds.toLong()+it.restSeconds
+            }+request.days[session.dayIndex].window.declaredNonSetSeconds
+            assertEquals(expected,result.audit.sessions[session.dayIndex].declaredSeconds)
+        }
+        assertFalse(result.canIssueTargets)
+    }
+
     @Test fun identicalInputsYieldIdenticalWeekWithoutWritingWorkoutTargets() {
         val request=base()
         val first=CoachWeekComposer.compose(request)

@@ -15,7 +15,7 @@ class MuscleVolumeAccountingDomainTest {
         MuscleCreditRole.INDIRECT)
     private fun row(id:String,kind:ExposureSetKind=ExposureSetKind.WORKING,
         outcome:SetOutcome=SetOutcome.COMPLETED,
-        credits:List<DeclaredMuscleCredit>=listOf(biceps,brachialis))=
+        credits: List<DeclaredMuscleCredit> = listOf(biceps,brachialis))=
         ObservedMuscleSet(id,kind,outcome,credits)
 
     @Test fun bicepsBrachialisAndWristFunctionsNeverMerge() {
@@ -106,8 +106,8 @@ class MuscleVolumeAccountingDomainTest {
         val summary=MuscleVolumeAccountingDomain.summarize(listOf(row("finished:0")))
         assertThrows(UnsupportedOperationException::class.java) {
             @Suppress("UNCHECKED_CAST")
-            (summary.totals as MutableMap<TrainingMuscle,MuscleVolumeTotals>)
-                [TrainingMuscle.BICEPS]=MuscleVolumeTotals(n("0"),n("0"),n("0"),n("0"))
+            val writable=summary.totals as MutableMap<TrainingMuscle,MuscleVolumeTotals>
+            writable[TrainingMuscle.BICEPS]=MuscleVolumeTotals(n("0"),n("0"),n("0"),n("0"))
         }
     }
 }

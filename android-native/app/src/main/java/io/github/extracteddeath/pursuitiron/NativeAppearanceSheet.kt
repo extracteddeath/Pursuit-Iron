@@ -69,7 +69,7 @@ internal fun NativeAppearanceSheet(selectedId:String,onSelect:(String)->Unit,onD
                             Text(palette.name,modifier=Modifier.weight(1f),
                                 style=MaterialTheme.typography.titleMedium)
                             if(selectedId==palette.id) Text("Selected",
-                                color=MaterialTheme.colorScheme.primary,
+                                color=LocalPursuitPalette.current.accentInk,
                                 style=MaterialTheme.typography.labelMedium)
                         }
                     }

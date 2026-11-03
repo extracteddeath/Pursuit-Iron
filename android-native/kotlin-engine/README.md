@@ -260,3 +260,24 @@ being invented from the training phase.
 This ordering is only a provisional draft; actual warmups, technique
 work, rep targets, effort, supersets and exercise-to-exercise fatigue
 must still be prescribed, validated and approved before issue.
+
+
+## Ninth domain: safe within-workout next-set review
+
+\`InWorkoutCoachDomain.review\` distinguishes a missed rep floor,
+effort near failure, a completed rep ceiling, an authored top/backoff
+change, uncertain RIR, a user-edited upcoming target, incomplete
+earlier work and an already logged future set. It can propose one
+*smaller, physically verified* load for **human review on the next
+unlogged set only**—never a blanket weight change to every set.
+No available increment, incompatible unit or an overlarge step means
+the recommendation is unavailable, not silently rounded.
+
+The user-owned next target and all completed sets are returned/retained
+unchanged; \`canApplyAutomatically\` is always false. Unknown RIR stays
+unknown; low readiness and movement restrictions trigger session review
+rather than a false performance failure.
+
+This is an isolated coaching-review component. Actual rest prescriptions,
+recovery validation, personalized effort and exercise-specific target
+ownership still need integration and independent certification.

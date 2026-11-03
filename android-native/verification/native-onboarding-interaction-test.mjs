@@ -808,7 +808,7 @@ assert.ok(controls.includes('val repsControl: @Composable () -> Unit') &&
 
 const finishReadyAt=train.indexOf('    if(journal.unresolvedCount==0) {\n        PursuitCard(highlighted=true)');
 const progressAt=train.indexOf('LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size}');
-const movementAt=train.indexOf('Text(exercise.name,style=MaterialTheme.typography.headlineSmall)');
+const movementAt=train.indexOf('Text(exercise.name,modifier=Modifier.bringIntoViewRequester(exerciseAnchor)');
 const loggerAt=train.indexOf('visibleSets.forEach { set->');
 const injuryReviewAt=train.indexOf('if(!showAffectedTools) {');
 assert.ok(progressAt>0 && finishReadyAt>progressAt &&

@@ -930,6 +930,15 @@ if scroll_to(r"^\|Data & storage$", tries=6):
         FAILS.append("Data & storage has no spreadsheet export")
     if tap(r"Review Banned exercises", required=False):
         shot("banned-sheet"); back()
+    # Health Connect: the opt-in row, and Android's own permission screen when it's switched on (dismissed unanswered).
+    if scroll_to(r"Send to Health Connect", tries=3, step=400):
+        shot("health-connect-row")
+        if tap(r"^Send to Health Connect\|", required=False):
+            time.sleep(3); shot("health-connect-permission"); back(); time.sleep(1.5)
+            if not find(r"Data & storage", timeout=4):
+                back()
+    else:
+        FAILS.append("Data & storage has no Health Connect option")
     back()
 else:
     FAILS.append("no Data & storage row")

@@ -159,6 +159,32 @@ fun ManageDataCard(vm: AppViewModel) {
             MenuRow(PiIcons.Download, "Body CSV", "Bodyweight and measurements", cs.secondaryContainer, cs.onSecondaryContainer) {
                 csvKind = "body"; saveCsv.launch("pursuit-iron-body-$day.csv") }
         }
+        // Health Connect: finished workouts and bodyweight go to the phone's health app, after Android's own permission.
+        cap("HEALTH CONNECT")
+        val hcAvailable = remember { vm.health.available }
+        val hcScope = androidx.compose.runtime.rememberCoroutineScope()
+        val askHealth = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.health.connect.client.PermissionController.createRequestPermissionResultContract()) { got ->
+            val ok = got.isNotEmpty()
+            vm.prefs.changeHealthSync(ok)
+            vm.toast(if (ok) "Workouts will appear in Health Connect" else "Health Connect access wasn't given")
+        }
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("Send to Health Connect", style = MaterialTheme.typography.titleSmall)
+                Text(if (!hcAvailable) "Health Connect isn't on this phone. Install it from the Play Store to use this."
+                    else "Each finished workout as strength training, and the bodyweight you log. Nothing is read back.",
+                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+            androidx.compose.material3.Switch(vm.prefs.healthSync && hcAvailable, { on ->
+                if (!on) { vm.prefs.changeHealthSync(false); vm.toast("Stopped sending to Health Connect · past entries stay there") }
+                else hcScope.launch {
+                    if (vm.health.granted().containsAll(com.pursuitiron.app.data.HealthSync.PERMISSIONS)) { vm.prefs.changeHealthSync(true); vm.toast("Workouts will appear in Health Connect") }
+                    else askHealth.launch(com.pursuitiron.app.data.HealthSync.PERMISSIONS)
+                }
+            }, enabled = hcAvailable, modifier = Modifier.semantics { contentDescription = "Send to Health Connect" })
+        }
         cap("IMPORT · FROM ANOTHER APP")
         androidx.compose.material3.FilledTonalButton(onClick = { openCsv.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain", "application/octet-stream")) },
             modifier = Modifier.fillMaxWidth().height(48.dp)) { Icon(PiIcons.Upload, null, Modifier.size(18.dp)); Text("  Choose a CSV") }

@@ -39,6 +39,7 @@ data class Snack(val text: String, val undo: (() -> Unit)? = null, val id: Long 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     val prefs = Prefs(app)
     val haptics = Haptics(app)
+    val health = com.pursuitiron.app.data.HealthSync(app)
     val rest = RestNotifier(app)
     private val beep = com.pursuitiron.app.ui.common.Beep(app)
     private var core: Core? = null
@@ -289,6 +290,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!r.b("ok")) { toast(r.s("error", "Couldn't save the workout")); return@launchCore }
         rest.cancel()
         hap(Hap.Done)
+        // Health Connect, when the person turned it on: the workout as a strength-training session.
+        if (prefs.healthSync) viewModelScope.launch {
+            val u = r.s("unit", "kg")
+            health.writeWorkout(r.s("entryId"), r.optLong("endedAt", System.currentTimeMillis()), r.i("durationMin", 1),
+                r.s("title", "Strength training"), "${r.i("setsDone")} sets · ${r.i("volume")} $u lifted · logged in Pursuit Iron")
+        }
         val quick = session?.b("quick") == true
         session = obj("session")
         // The design: Save session goes straight back to Today with what changed in a toast.
@@ -707,7 +714,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /* ---------------------------------------------------------------- body + settings */
-    fun logBodyweight(v: Double) = launchCore { call("logBodyweight", jsonOf("value" to v)); body = obj("body"); profile = obj("profile"); hap(Hap.Log); toast("Bodyweight logged") }
+    fun logBodyweight(v: Double) = launchCore { call("logBodyweight", jsonOf("value" to v)); body = obj("body"); profile = obj("profile"); hap(Hap.Log)
+        if (prefs.healthSync) health.writeWeight(if (settings.s("unit", "kg") == "lb") v / 2.2046226 else v, System.currentTimeMillis()); toast("Bodyweight logged") }
     fun logMeasurement(key: String, v: Double) = launchCore { call("logMeasurement", jsonOf("key" to key, "value" to v)); body = obj("body") }
     /** The design's cm / in for measurements, independent of kg / lb. */
     fun setLengthUnit(u: String) = launchCore { call("setLengthUnit", jsonOf("unit" to u)); body = obj("body") }

@@ -116,6 +116,7 @@ private val WHATS_NEW = listOf(
     "Quick workouts: log off-plan, then save the session as a routine.",
     "Today suggests a fresher day, a deload when fatigue builds, or a lighter session.",
     "Tap any lift in Progress for its full chart, records and where it stands.",
+    "Send finished workouts and your bodyweight to Health Connect (You → Settings → Data & storage).",
 )
 
 @Composable

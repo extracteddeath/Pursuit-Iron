@@ -76,6 +76,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.javascriptengine:javascriptengine:1.1.1")
     implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.health.connect:connect-client:1.1.0")
     implementation("androidx.glance:glance-material3:1.1.1")
     implementation("androidx.concurrent:concurrent-futures-ktx:1.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")

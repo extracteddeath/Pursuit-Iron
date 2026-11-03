@@ -47,6 +47,11 @@ class Prefs(context: Context) {
     })
         private set
 
+    /** Send finished workouts and bodyweight to Health Connect (opt-in; the permission itself lives with Android). */
+    var healthSync by mutableStateOf(sp.getBoolean("healthSync", false))
+        private set
+    fun changeHealthSync(v: Boolean) { healthSync = v; sp.edit().putBoolean("healthSync", v).apply() }
+
     fun changeSeed(v: Seed) { seed = v; sp.edit().putString("seed", v.name).apply() }
     fun changeBlack(v: Boolean) { black = v; sp.edit().putBoolean("black", v).apply() }
     fun changeDark(v: Boolean?) { dark = v; sp.edit().apply { if (v == null) remove("dark") else putBoolean("dark", v) }.apply() }

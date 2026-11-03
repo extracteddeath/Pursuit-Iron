@@ -1625,7 +1625,9 @@ export function finishSession({ keep = null } = {}) {
     // The design's finish page answers "keep in the program?" per change; unanswered ones stay this workout only.
     let keptChanges = null;
     if (keep && entry.programUpdateStatus === 'pending') keptChanges = settleProgramUpdate(entry.id, keep);
+    // Health Connect gets the session as it was trained: when it ran, what it was called, and its sets and volume.
     return { ok: true, entryId: entry.id, kept: keptChanges, unit: u, setsDone: doneSets, totalSets, volume: Math.round(volume), durationMin: log.durationMin,
+        endedAt: Number(entry.date) || now(), title: [entry.dayLabel, entry.programName].filter(Boolean).join(' · ') || 'Strength training',
         achievements: fresh.map((m) => ({ id: m.id, label: m.label })), prs: summaryPRs(entry, H), switchedTo };
 }
 

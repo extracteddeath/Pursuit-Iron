@@ -181,3 +181,25 @@ estimate happens to fall within a preferred window. Every declared set
 must have strictly positive active work time; a nonexistent zero-duration
 set cannot be used to satisfy the dose or scheduling audit. Empty plans
 remain auditable but cannot appear preliminarily ready.
+
+
+## Coach-quality review: individualized, explainable, not merely restrictive
+
+The provisional \`CoachExerciseDecisionDomain\` interprets actual sessions in
+chronological order and produces a concise **exercise-level** explanation:
+build reps, stabilize inconsistent set loads, repeat success, review a small
+equipment-valid increase, review failed/below-floor work, confirm unknown
+loading semantics, or adjust for user-reported low readiness/restrictions.
+
+This avoids the earlier prototype's rigid all-set-RIR gate: if performance
+is repeatable but RIR is missing, it **does not invent effort** or stop
+progress entirely. It offers a possible increase **for review** with limited
+confidence and explicitly asks to confirm effort. Reported near-failure,
+skips/failed attempts, unverified equipment and oversize increments still
+block a load jump. No user-entered value or workout is changed.
+
+These are not certified prescriptions or evidence that all personalization,
+fatigue, recovery and phase decisions are solved. Next milestones include
+exercise context/variants, objective-specific rep and set schemes, validated
+fatigue response and multi-week cycle decisions, and human-comparable
+programming quality scenarios.

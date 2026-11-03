@@ -1,9 +1,15 @@
 name: Native Android preview APK (milestone only)
 
-# No push-triggered builds. This workflow is intentionally disabled even
-# for manual dispatch until onboarding -> logging -> workout completion passes.
+# Routine pushes and manual dispatches never build an APK. The sole M5
+# milestone marker + explicit commit prefix authorize one development device
+# test candidate after the continuous native-source journey check passed.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - architecture/android-compose-foundation
+    paths:
+      - 'android-native/M5_DEVICE_TEST_APK.md'
 
 concurrency:
   group: native-android-preview-${{ github.ref }}
@@ -14,9 +20,9 @@ permissions:
 
 jobs:
   assemble-preview:
-    # Hard stop, including manually requested runs. Release only after the
-    # complete athlete journey is independently certified on the same revision.
-    if: ${{ false }}
+    # M5 is a *development* device test, never an app release. Only a named
+    # one-off marker change with the explicit commit prefix can build here.
+    if: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'milestone(android): M5 ') }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -31,6 +37,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify the continuous source-checked native training core
+        run: |
+          node android-native/verification/native-core-journey-test.mjs
+          node android-native/verification/native-onboarding-interaction-test.mjs
+          node android-native/verification/native-original-theme-parity-test.mjs
+          node android-native/verification/no-apk-before-end-to-end-test.mjs
       - name: Android SDK
         uses: android-actions/setup-android@v4
       - name: Install Android API 37
@@ -60,6 +72,9 @@ jobs:
           mkdir -p android-native/app/src/debug/assets
           cp "$snapshot/canonical-readonly-engine.js" android-native/app/src/debug/assets/
           cp "$snapshot/canonical-readonly-manifest.json" android-native/app/src/debug/assets/
+      - name: Verify Kotlin journal, restore and correction contracts
+        working-directory: android-native
+        run: gradle :domain-contract:testDebugUnitTest --no-daemon --stacktrace
       - name: Compile preview APK
         working-directory: android-native
         run: gradle :app:assembleDebug --no-daemon --stacktrace

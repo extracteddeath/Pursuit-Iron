@@ -48,8 +48,10 @@ assert.ok(!device.includes('  push:') &&
   'APK-producing device proof must remain disabled until the full E2E milestone');
 assert.ok(!device.includes("'android-native/engine-runtime/**'"),
   'Routine sandbox source commits cannot trigger an emulator');
-assert.ok(apk.includes('if: ${{ false }}') && !apk.includes('  push:'),
-  'Preview APK job must remain disabled even for manual workflow dispatch');
+assert.ok(apk.includes("'android-native/M5_DEVICE_TEST_APK.md'") &&
+  apk.includes("github.event_name == 'push'") &&
+  apk.includes("startsWith(github.event.head_commit.message, 'milestone(android): M5 ')"),
+  'Only the deliberately marked M5 development-device build may assemble an APK');
 assert.doesNotMatch(apk, /'android-native\/\*\*'/, 'Routine native commits must not generate APKs');
 assert.match(bundle, /canonical-export\.mjs/);
 assert.match(bundle, /verify-snapshot\.mjs/);

@@ -1,14 +1,17 @@
 # Native preview build milestones
 
-**APK BUILD FREEZE — active.** Historical milestones below are retained as
-development records, not triggers. Neither editing this file nor manually
-dispatching the workflow can create an APK until the same native revision
-passes real onboarding -> program generation -> personalized workout ->
-transactional logging -> interruption/resume -> completed session ->
-correct history/progression acceptance. See
+**APK BUILD FREEZE — active for routine changes.** Historical milestones below
+are development records, not recurring build triggers. M5 authorizes exactly
+one named, source-checked debug device-testing candidate: only a push changing
+`android-native/M5_DEVICE_TEST_APK.md` with an explicit M5 commit prefix can
+run preview APK assembly. Manual dispatches, normal Android/UI commits, and
+the separate device-proof workflow stay disabled. CI must repeat the actual
+canonical training-journey source checks and Kotlin domain tests before
+assembling that candidate. The APK will *enable* on-device interruption,
+focus, large text and end-to-end acceptance; it is not a release-ready app or
+a corrected training engine. See
 `android-native/verification/no-apk-before-end-to-end-test.mjs`.
-The preview and device workflows are explicitly disabled, and routine
-sandbox CI compiles tests without assembling instrumentation APKs.
+Routine sandbox CI compiles tests without assembling instrumentation APKs.
 
 Edit this file **only when the native preview has a significant user-facing change or a toolchain validation milestone**. Routine engine-contract and Compose UI commits should not create a new APK.
 
@@ -75,3 +78,20 @@ native UI is still a technical preview and not a usable release.
 onboarding -> workout logging -> finish -> history/resume journey, plus
 material improvement to actual native UX. Ordinary source checks do not
 assemble APKs; the dedicated preview and device jobs are disabled.
+
+## M5 — source-checked native core development APK
+
+This is a **single M5 development APK** to verify real Android onboarding,
+program review/save, Today/Train, acknowledged set logging and corrections,
+Finish, history, interruption/resume and the original theme system. The
+canonical bridge now passes a continuous two-unit lifecycle test from
+onboarding through correction and next training day; the native UI compiled
+on the same Kotlin source and the existing isolated domain/journal tests
+remain required. M5's build job reruns the source checks and domain tests
+against the exact marker commit before packaging.
+
+The code still relies on the existing training engine and has unimplemented
+advanced features. A passing APK job is not physical-device acceptance,
+Kotlin-engine correctness, a production rollout or a reason to merge into
+`main`. The other developer's native branch and active web app are untouched.
+Keep ordinary builds frozen after this single marker-triggered candidate.

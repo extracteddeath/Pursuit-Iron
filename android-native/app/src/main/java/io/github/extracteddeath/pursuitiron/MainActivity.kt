@@ -88,6 +88,6 @@ fun PursuitIronTheme(content: @Composable () -> Unit) {
     // Brand-consistent graphite surfaces and an accessible violet accent.
     // Respect system light/dark without adopting unrelated wallpaper hues.
     val scheme = if(isSystemInDarkTheme()) PursuitDarkColors else PursuitLightColors
-    MaterialTheme(colorScheme=scheme,motionScheme=MotionScheme.expressive(),
+    MaterialTheme(colorScheme=scheme, motionScheme = MotionScheme.expressive(),
         typography=PursuitTypography,shapes=PursuitShapes,content=content)
 }

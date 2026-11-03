@@ -54,7 +54,8 @@ object StarterExerciseTranche {
             permittedFocus=focus,equipmentId=implement,
             expectedLoadBasis=basis,credits=credits.toList(),
             creditStatus=CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL,
-            creditReviewReference=REVIEW,requiredFacilityIds=facilities)
+            creditReviewReference=REVIEW,requiredFacilityIds=facilities,
+            sourcePracticalReps=RepBand(reps.first,reps.last))
         return StarterCatalogEntry(legacyId,movement,
             RepBand(reps.first,reps.last),note)
     }

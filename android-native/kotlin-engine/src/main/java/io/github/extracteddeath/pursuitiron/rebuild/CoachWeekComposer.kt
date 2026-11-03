@@ -54,7 +54,9 @@ data class ComposerExerciseOption(
     val recoveryGroup:String?=null,
     /** Minimum gap BETWEEN days, not a restriction within one session. */
     val minimumGroupCalendarDayGap:Int=1,
-    val role:ComposerRole=ComposerRole.SECONDARY
+    val role:ComposerRole=ComposerRole.SECONDARY,
+    /** Historical source's practical rep envelope; NOT clinical certification. */
+    val sourcePracticalReps:RepBand?=null
 )
 data class ComposerDay(val calendarDay:Int,val focus:ComposerFocus,
     val window:DeclaredSessionWindow)
@@ -234,7 +236,10 @@ object CoachWeekComposer {
         request.days.indices.map {day ->
             val intent=request.sessionIntents.firstOrNull {it.dayIndex==day}
             val priority=compareBy<ComposerVisit> {
-                when(options.getValue(it.exerciseId).role) {
+                // The athlete's explicit main lift starts first, even when
+                // another primary has a higher general catalog priority.
+                if(intent?.requiredPrimaryExerciseId==it.exerciseId)-1
+                else when(options.getValue(it.exerciseId).role) {
                     ComposerRole.PRIMARY -> 0
                     ComposerRole.SECONDARY -> 1
                     ComposerRole.ACCESSORY -> 2

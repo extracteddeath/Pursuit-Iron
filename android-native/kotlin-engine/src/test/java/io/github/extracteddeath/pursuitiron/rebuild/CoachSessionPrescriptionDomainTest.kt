@@ -160,6 +160,36 @@ class CoachSessionPrescriptionDomainTest {
         })
     }
 
+    @Test fun historicalPracticalRepEnvelopeRejectsImpossibleWorkingAndBackoffPolicy() {
+        val sourced=press.copy(sourcePracticalReps=RepBand(5,12))
+        val exerciseRequest=request(options=listOf(sourced,row))
+        val below=CoachSessionPrescriptionDomain.draft(exerciseRequest,policies())
+        assertEquals(PrescriptionDraftStatus.UNRESOLVED,below.status)
+        assertNull(below.finalAudit)
+        assertTrue(below.unresolvedExerciseVisits.any {
+            it=="db-press:d0:source-rep-envelope"
+        })
+        val adjusted=policies().map {policy->
+            if(policy.exerciseId=="db-press" &&
+                policy.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                policy.copy(workingReps=RepBand(5,6)) else policy
+        }
+        val inside=CoachSessionPrescriptionDomain.draft(exerciseRequest,adjusted)
+        assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,inside.status)
+        val brokenBackoff=adjusted.map {policy->
+            if(policy.exerciseId=="db-press" &&
+                policy.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                policy.copy(backoffReps=RepBand(2,4)) else policy
+        }
+        val invalid=CoachSessionPrescriptionDomain.draft(
+            exerciseRequest,brokenBackoff)
+        assertTrue(invalid.unresolvedExerciseVisits.any {
+            it=="db-press:d0:source-rep-envelope"
+        })
+        assertNull(invalid.finalAudit)
+        assertFalse(invalid.canIssueWorkout)
+    }
+
     @Test fun unverifiedWarmupWeightFailsClosedWithoutRounding() {
         val invalid=policies().map {
             if(it.exerciseId=="db-press" &&

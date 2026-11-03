@@ -188,6 +188,17 @@ object CoachSessionPrescriptionDomain {
                     conflicts+=visit.exerciseId+":d"+session.dayIndex+":missing-policy"
                     return@mapNotNull null
                 }
+                val sourceBand=option.sourcePracticalReps
+                fun outsideSourceReps(band:RepBand?)=band!=null &&
+                    sourceBand!=null &&
+                    (band.minimum<sourceBand.minimum ||
+                        band.maximum>sourceBand.maximum)
+                if(outsideSourceReps(policy.workingReps) ||
+                    outsideSourceReps(policy.backoffReps)) {
+                    conflicts+=visit.exerciseId+":d"+session.dayIndex+
+                        ":source-rep-envelope"
+                    return@mapNotNull null
+                }
                 val sets=plannedSets(option,visit,policy)
                 if(sets==null) {
                     conflicts+=visit.exerciseId+":d"+session.dayIndex+":unverified-scheme"

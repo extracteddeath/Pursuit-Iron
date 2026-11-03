@@ -284,6 +284,31 @@ class CoachWeekComposerTest {
     }
 
 
+    @Test fun authoredMainLiftStartsBeforeHigherPriorityOtherPrimary() {
+        val required=chestOption.copy(exerciseId="main-bench",
+            role=ComposerRole.PRIMARY,priority=1,
+            requiredVisits=3,maximumVisits=3,minimumCalendarDayGap=1)
+        val other=chestOption.copy(exerciseId="other-bench",
+            role=ComposerRole.PRIMARY,priority=10,
+            requiredVisits=3,maximumVisits=3,minimumCalendarDayGap=1)
+        val schedule=days(calendar=listOf(0,2,4),min=1,max=90)
+        val request=base(
+            exerciseOptions=listOf(required,other,backOption,legOption),
+            schedule=schedule,patterns=1,maxPerDay=4,
+            bands=bounds(dose(chest,"12","20","24",1),
+                dose(lats,"2","8","12",1),dose(quads,"2","8","12",1)))
+            .copy(sessionIntents=listOf(
+                ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL,
+                    "main-bench")))
+        val result=CoachWeekComposer.compose(request)
+        assertTrue(result.missingRequiredVisits.isEmpty())
+        val first=result.sessions.first()
+        assertTrue(first.requiredPrimaryScheduled)
+        assertEquals("main-bench",first.orderedVisits.first().exerciseId)
+        assertTrue(first.orderedVisits.any {it.exerciseId=="other-bench"})
+        assertFalse(result.canIssueTargets)
+    }
+
     @Test fun strengthDayPreservesExplicitMainLiftAndPlacesItBeforeAccessories() {
         val heavy=chestOption.copy(exerciseId="bench-primary",
             role=ComposerRole.PRIMARY,priority=8,

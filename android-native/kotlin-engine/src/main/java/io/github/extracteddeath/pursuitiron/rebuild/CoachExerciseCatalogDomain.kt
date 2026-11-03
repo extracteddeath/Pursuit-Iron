@@ -29,7 +29,9 @@ data class CatalogMovement(
     /** Must identify the documented coefficients version, not just a name. */
     val creditReviewReference: String?,
     /** Required physical fixtures beyond the loaded implement (bench, rack). */
-    val requiredFacilityIds: Set<String> = emptySet()
+    val requiredFacilityIds: Set<String> = emptySet(),
+    /** Legacy practical rep limit, not independently validated physiological truth. */
+    val sourcePracticalReps: RepBand? = null
 )
 
 data class CatalogExerciseChoice(
@@ -238,7 +240,8 @@ object CoachExerciseCatalogDomain {
                 choice.maximumSetsPerVisit,choice.maximumVisits,
                 choice.requiredVisits,choice.minimumCalendarDayGap,
                 choice.priority,choice.recoveryGroup,
-                choice.minimumGroupCalendarDayGap,spec.role)
+                choice.minimumGroupCalendarDayGap,spec.role,
+                spec.sourcePracticalReps)
         }
         val missingPrimary=request.template.sessionIntents.mapNotNull {intent->
             val required=intent.requiredPrimaryExerciseId ?:return@mapNotNull null

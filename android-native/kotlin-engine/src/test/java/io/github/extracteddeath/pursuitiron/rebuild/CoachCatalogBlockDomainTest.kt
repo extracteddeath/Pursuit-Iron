@@ -166,6 +166,20 @@ class CoachCatalogBlockDomainTest {
         })
     }
 
+    @Test fun changingSourceRepEnvelopeUnderSameMovementIdRequiresExplicitIdentityReview() {
+        val before=bench.copy(sourcePracticalReps=RepBand(5,12))
+        val after=before.copy(sourcePracticalReps=RepBand(1,20))
+        val r=review(input(
+            baseline=candidate(catalog=listOf(before,row,squat)),
+            proposed=candidate(cap=4,catalog=listOf(after,row,squat)),
+            permission=BlockAdaptPermissions(adaptExercises=true)))
+        assertEquals(CatalogBlockStatus.EXERCISE_IDENTITY_CHANGED,r.status)
+        assertNull(r.fullPrescription)
+        assertTrue(r.problems.any {
+            it.contains("stable ID bench") && it.contains("source rep envelope")
+        })
+    }
+
     @Test fun changedCatalogMuscleCreditsRequireExerciseAdaptationPermission() {
         val altered=bench.copy(
             credits=listOf(DeclaredMuscleCredit(TrainingMuscle.CHEST,

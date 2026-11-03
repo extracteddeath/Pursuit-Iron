@@ -47,6 +47,12 @@ class StarterExerciseTrancheTest {
         })
         assertTrue(data.all {it.mappingNotes.isNotBlank()})
         assertTrue(data.none {it.mayTransferPreviousLoad})
+        assertTrue(data.all {
+            it.practicalRepBand==it.movement.sourcePracticalReps
+        })
+        assertEquals(RepBand(1,8),data.first {
+            it.legacyCuratedId=="conventional_deadlift"
+        }.movement.sourcePracticalReps)
     }
 
     @Test fun allRealGymMovementsRequireCorrectLoadBasis() {

@@ -455,6 +455,16 @@ The legacy source is independently checked by
 `verification/starter-catalog-parity.mjs` in CI, including exact IDs,
 movement families, equipment requirements and practical rep ranges.
 
+Each real catalog option now transports its recorded historical practical
+rep envelope into the headless prescription draft. A proposed working or
+backoff rep range outside that *source* envelope remains unresolved rather
+than being treated as a valid exercise prescription. This is a provenance
+and sanity gate, **not** independent exercise-science approval. A changed
+source envelope is also part of stable exercise identity during an adaptive
+block review. The week composer prioritizes the explicitly requested main
+lift ahead of other primary lifts, even when a different lift has a higher
+general catalog priority.
+
 The retained definitions include barbell/paused bench, squat, overhead
 press; incline dumbbell press, one-arm row, lateral raise, biceps curl,
 overhead triceps extension, split squat, Romanian deadlift, calf raise

@@ -2,6 +2,12 @@
 
 **Quality bar:** [PRODUCT_SUPERIORITY_GATE.md](../PRODUCT_SUPERIORITY_GATE.md) makes every feature and every new engine decision subject to independently verified improvements over the existing web app. Legacy parity is not an acceptance target. The latest independent Kotlin loading and evidence tests are passing, but the engine is not connected to active native training.
 
+**Full coaching acceptance:** see
+[COACHING_QUALITY_STANDARD.md](../COACHING_QUALITY_STANDARD.md).
+Its independently specified whole-program and Android workout scenarios
+are required before engine ownership is switched. Individual progression
+review results are not equivalent to a complete coached program.
+
 This module is a **headless engine-rebuild laboratory** on the isolated
 `architecture/kotlin-engine-rebuild` branch. It is **not connected** to
 Compose, the existing canonical JavaScript training engine, the web app,

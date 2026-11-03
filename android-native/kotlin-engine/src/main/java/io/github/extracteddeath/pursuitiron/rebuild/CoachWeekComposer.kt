@@ -92,9 +92,10 @@ data class ComposerDraft(
 }
 
 /**
- * Bounded greedy search: prefer repairing dose/frequency, required visits
- * and empty days; then improve MAV, time and pattern variety. The search
- * is not proof that an alternative feasible program is impossible.
+ * Bounded two-stage candidate search: greedily establish a feasible week,
+ * then deterministically rebalance by moving or swapping visits without
+ * pretending that more volume is always better. A local result is not proof
+ * that no better training plan exists; never issues live workout targets.
  */
 object CoachWeekComposer {
     private val zero=BigDecimal.ZERO
@@ -102,6 +103,8 @@ object CoachWeekComposer {
     private const val MAX_OPTIONS=32
     private const val MAX_VISITS=60
     private const val MAX_ITERATIONS=140
+    private const val MAX_REPAIR_PASSES=8
+    private const val MAX_REPAIR_EVALUATIONS_PER_PASS=1200
 
     private fun allowedSplit(request:ComposerRequest):Boolean {
         val focus=request.days.map {it.focus}.toSet()
@@ -297,6 +300,114 @@ object CoachWeekComposer {
         return Cost(hard,mavGap*2L+short*180L+long*250L+
             patternGap*400L+visits.sumOf {it.sets}*100L-priority*6L)
     }
+    /**
+     * Read-only local refinement. Keep session positions, equipment, pinned
+     * appearances and cross-week recovery verifiable at every accepted move.
+     * Swaps can recover from a fully occupied day; relocations can rescue an
+     * empty day or move work to a more suitable session.
+     *
+     * Only STRICT cost improvements are accepted, so results are deterministic
+     * and the bounded search terminates even when preferences conflict.
+     */
+    private fun refine(
+        request:ComposerRequest,
+        seed:List<ComposerVisit>,
+        eligible:List<ComposerExerciseOption>
+    ):List<ComposerVisit> {
+        val options=eligible.associateBy {it.exerciseId}
+        var chosen=seed
+        var audit=WeeklyDoseFeasibilityDomain.audit(toWeek(request,chosen,options))
+        repeat(MAX_REPAIR_PASSES) {
+            val current=cost(request,chosen,audit,options)
+            var best=current
+            var bestVisits:List<ComposerVisit>?=null
+            var bestAudit:WeeklyDoseFeasibilityReport?=null
+            var evaluated=0
+            fun consider(trial:List<ComposerVisit>) {
+                if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)return
+                evaluated++
+                val check=WeeklyDoseFeasibilityDomain.audit(
+                    toWeek(request,trial,options))
+                if(check.muscles.values.any {it.finding==DoseFinding.ABOVE_MRV} ||
+                    check.sessions.any {
+                        it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT
+                    })return
+                if(current.hard==0L && check.muscles.values.any {finding ->
+                    finding.effectiveWorkingSets >
+                        request.bounds.first {it.muscle==finding.muscle}.mav
+                })return
+                val trialCost=cost(request,trial,check,options)
+                if(trialCost<best) {
+                    best=trialCost
+                    bestVisits=trial
+                    bestAudit=check
+                }
+            }
+            for(index in chosen.indices) {
+                if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                val original=chosen[index]
+                val remaining=chosen.filterIndexed {i,_->i!=index}
+                // A full day may still accept a better EXCHANGE, not another
+                // exercise. Never silently change the authored exercise ID.
+                for(alternative in eligible) {
+                    if(alternative.exerciseId==original.exerciseId)continue
+                    if(!mayStart(alternative,original.dayIndex,request,remaining))
+                        continue
+                    val replacement=ComposerVisit(original.dayIndex,
+                        alternative.exerciseId,alternative.pattern,
+                        alternative.minimumSetsPerVisit)
+                    consider(chosen.toMutableList().apply {this[index]=replacement})
+                    if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                }
+                val selected=checkNotNull(options[original.exerciseId])
+                // No new exposure is needed when an existing visit can be
+                // moved to the day that needs it.
+                for(newDay in request.days.indices) {
+                    if(newDay==original.dayIndex)continue
+                    if(!mayStart(selected,newDay,request,remaining))continue
+                    consider(chosen.toMutableList().apply {
+                        this[index]=original.copy(dayIndex=newDay)
+                    })
+                    if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                }
+            }
+            if(bestVisits==null)return chosen
+            chosen=checkNotNull(bestVisits)
+            audit=checkNotNull(bestAudit)
+        }
+        return chosen
+    }
+
+    /**
+     * Diagnostic seam for custom-program tests. No persistence and no
+     * unsanctioned exercise insertion: input must already be a lawful week
+     * of verified, authored catalog options.
+     */
+    internal fun rebalanceForReview(
+        request:ComposerRequest,
+        authoredVisits:List<ComposerVisit>
+    ):List<ComposerVisit> {
+        validate(request)
+        require(authoredVisits.size<=MAX_VISITS)
+        val eligible=request.exercises.filter(::verified).sortedWith(
+            compareByDescending<ComposerExerciseOption> {it.priority}
+                .thenBy {it.exerciseId})
+        val options=eligible.associateBy {it.exerciseId}
+        val accepted=mutableListOf<ComposerVisit>()
+        for(visit in authoredVisits) {
+            val option=options[visit.exerciseId]
+                ?:throw IllegalArgumentException("Unverified or unknown movement")
+            require(visit.pattern==option.pattern &&
+                visit.dayIndex in request.days.indices &&
+                visit.sets in option.minimumSetsPerVisit..option.maximumSetsPerVisit &&
+                accepted.none {it.dayIndex==visit.dayIndex &&
+                    it.exerciseId==visit.exerciseId} &&
+                mayStart(option,visit.dayIndex,request,accepted))
+            accepted+=visit
+        }
+        return Collections.unmodifiableList(refine(request,accepted,eligible))
+    }
+
     fun compose(request:ComposerRequest):ComposerDraft {
         validate(request)
         val eligible=request.exercises.filter(::verified).sortedWith(
@@ -355,6 +466,15 @@ object CoachWeekComposer {
             chosen=bestChoice
             audit=checkNotNull(bestAudit)
             week=toWeek(request,chosen,map)
+        }
+        // The greedy phase cannot replace occupied slots or relocate a
+        // useful lift. Reconsider those decisions without violating verified
+        // equipment, recovery spacing, dose or athlete hard-time limits.
+        val improved=refine(request,chosen,eligible)
+        if(improved!=chosen) {
+            chosen=improved
+            week=toWeek(request,chosen,map)
+            audit=WeeklyDoseFeasibilityDomain.audit(week)
         }
         val unmet=request.exercises.filter {missing(it,chosen)>0}
             .associate {it.exerciseId to missing(it,chosen)}

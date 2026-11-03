@@ -470,6 +470,18 @@ counted. Target rest instructions and all source facts remain unchanged.
 This avoids false preferred-time coverage caused by treating rest after
 the final set as training time.
 
+The week composer now adds a bounded, deterministic repair phase after
+its initial greedy construction. It may exchange an occupied exercise slot
+or relocate an existing visit when that strictly improves the entire week's
+declared dose, required appearances, training-day coverage, time preference
+or movement variety. Every trial is reaudited for MRV, real hard-time limits,
+physical equipment eligibility, day focus, visit counts and circular recovery.
+It never fabricates new exercise identities or creates live targets. A
+read-only, validated `rebalanceForReview` diagnostic path also supports
+regression tests of custom-program repair, including pin preservation and
+unverified equipment exclusion. This remains a bounded local search,
+not a global optimizer or individual coaching certification.
+
 The starter catalog now declares provisional shared recovery identities for
 barbell/paused bench and barbell RDL/conventional deadlift, with a conservative
 two-calendar-day separation *between distinct training days*. The weekly

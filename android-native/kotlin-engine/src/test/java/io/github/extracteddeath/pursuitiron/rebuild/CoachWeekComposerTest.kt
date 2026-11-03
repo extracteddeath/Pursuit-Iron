@@ -100,6 +100,88 @@ class CoachWeekComposerTest {
         assertFalse(result.canIssueTargets)
     }
 
+    @Test fun rebalanceExchangesOccupiedExerciseSlotToRepairMissingMuscleDose() {
+        val original=base(
+            exerciseOptions=listOf(chestOption,backOption,legOption),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            bands=bounds(dose(chest,"2","4","6",1),
+                dose(lats,"2","4","6",1),dose(quads,"2","4","6",1)),
+            patterns=1,maxPerDay=1)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
+        val before=WeeklyDoseFeasibilityDomain.audit(
+            DeclaredTrainingWeek(original.phase,3,
+                original.days.map {it.window},
+                authored.flatMap {visit ->
+                    (0 until visit.sets).map {ordinal ->
+                        val option=original.exercises.first {
+                            it.exerciseId==visit.exerciseId
+                        }
+                        PlannedWorkingExposure(
+                            visit.exerciseId+":d"+visit.dayIndex+":s"+ordinal,
+                            visit.dayIndex,ExposureSetKind.WORKING,
+                            option.credits,option.workSeconds,option.restSeconds)
+                    }
+                },original.bounds))
+        assertEquals(DoseFinding.BELOW_MEV,
+            before.muscles[quads]?.finding)
+        val repaired=CoachWeekComposer.rebalanceForReview(original,authored)
+        assertEquals(3,repaired.size)
+        assertTrue(repaired.any {it.exerciseId=="goblet-squat"})
+        assertEquals(1,repaired.count {it.exerciseId=="db-press"})
+        assertEquals(1,repaired.count {it.exerciseId=="db-row"})
+        assertEquals(authored,authored.toList())
+        assertEquals(repaired,CoachWeekComposer.rebalanceForReview(original,authored))
+    }
+
+    @Test fun rebalanceMovesVisitIntoEmptyDayWithoutInventingSets() {
+        val schedule=days(listOf(0,2,4),min=1,max=90)
+        val request=base(
+            exerciseOptions=listOf(chestOption,backOption,legOption),
+            schedule=schedule,
+            bands=bounds(dose(chest,"2","4","6",1),
+                dose(lats,"2","4","6",1),dose(quads,"2","4","6",1)),
+            patterns=1,maxPerDay=2)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(1,"goblet-squat",ComposerPattern.SQUAT,2))
+        val repaired=CoachWeekComposer.rebalanceForReview(request,authored)
+        assertEquals(3,repaired.map {it.dayIndex}.distinct().size)
+        assertEquals(authored.map {it.exerciseId}.toSet(),
+            repaired.map {it.exerciseId}.toSet())
+        assertEquals(6,repaired.sumOf {it.sets})
+        assertTrue(repaired.all {it.dayIndex in 0..2})
+        assertEquals(3,authored.size)
+    }
+
+    @Test fun rebalanceCannotRemovePinnedVisitsOrInventEquipment() {
+        val required=chestOption.copy(requiredVisits=2,maximumVisits=2,
+            minimumCalendarDayGap=2)
+        val unavailable=legOption.copy(
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n("32.5"),available))
+        val request=base(
+            exerciseOptions=listOf(required,backOption,unavailable),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            bands=bounds(dose(chest,"4","6","8",2),
+                dose(lats,"2","4","6",1),dose(quads,"2","4","6",1)),
+            patterns=1,maxPerDay=1)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
+        val repaired=CoachWeekComposer.rebalanceForReview(request,authored)
+        assertEquals(2,repaired.count {it.exerciseId=="db-press"})
+        assertTrue(repaired.none {it.exerciseId=="goblet-squat"})
+        assertTrue(repaired.any {it.exerciseId=="db-row"})
+        assertThrows(IllegalArgumentException::class.java) {
+            CoachWeekComposer.rebalanceForReview(request,
+                authored+ComposerVisit(0,"goblet-squat",ComposerPattern.SQUAT,2))
+        }
+    }
+
     @Test fun identicalInputsYieldIdenticalWeekWithoutWritingWorkoutTargets() {
         val request=base()
         val first=CoachWeekComposer.compose(request)

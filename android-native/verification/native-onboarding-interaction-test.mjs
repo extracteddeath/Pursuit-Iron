@@ -71,6 +71,19 @@ assert.ok(host.includes('fun skipAffectedMuscle(part: String)') &&
   train.includes('Completed work is preserved.') &&
   train.includes('it.exerciseIndex in relatedIndices && it !in committedSlots'),
   'Muscle-wide skipping must be explicitly confirmed and only save unresolved issued slots');
+assert.ok(host.includes('private fun canInspectIssuedWorkout(current: NativeRuntimeState): Boolean') &&
+  host.includes('current.ready && !current.blocked && !current.busy &&') &&
+  host.includes('!current.workoutBusy && !current.historyBusy &&') &&
+  host.includes('!current.backupExportBusy && !current.workoutBlocked &&') &&
+  host.includes('current.workout?.journal?.isFinished==false') &&
+  host.includes('if(!canInspectIssuedWorkout(initial) ||') &&
+  host.includes('if(!canInspectIssuedWorkout(current) ||') &&
+  host.includes('latest.equipmentLoadRequest!=request -> latest') &&
+  host.includes('canInspectIssuedWorkout(latest) &&') &&
+  host.includes('equipmentLoadError=null,muscleReviewBusy=false,muscleReviewError=null,') &&
+  host.includes('else latest.copy(muscleReview=null,muscleReviewBusy=false,') &&
+  host.includes('else latest.copy(muscleReviewBusy=false,muscleReviewError=null)'),
+  'Physical loading and muscle involvement lookups must share runtime guards and suppress stale feedback across backup, recovery, store mutation and Finish');
 // An injury-related dose reduction has a stable original-issued-set boundary.
 assert.ok(host.includes('fun reduceAffectedMuscle(part: String)') &&
   host.includes('NativeSessionSkipPolicy.reduceAffected(it,review,part)') &&

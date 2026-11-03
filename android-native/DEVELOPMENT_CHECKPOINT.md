@@ -2086,3 +2086,16 @@ durable write. The weight-unit confirmation dialog owns its own Back
 handling and preserves user-entered verified stock. A stale source-test
 assertion for the Focus auto-scroll refactor was also updated to the
 new acknowledged-navigation block. No APK or engine rewrite.
+
+## 2026-11-02 — Shared read-only workout inspection gate
+
+The runtime now has one fail-closed gate for the physical loading and
+muscle-involvement inspection flows: no requests while the source is not
+ready, canonical writes or history reads are in progress, backup export
+is active, recovery is blocked, or the journal has reached Finish. Both
+readers also check this gate before installing asynchronous results or
+errors. On canonical store changes, the cached muscle/weight inspection
+and in-flight busy/error labels are invalidated together. Stale inspect
+failures cannot paint errors on a subsequent workout. Existing confirmed
+journal writes, exercise prescriptions and actual logged values are
+unchanged. Source and Compose checks required; no APK.

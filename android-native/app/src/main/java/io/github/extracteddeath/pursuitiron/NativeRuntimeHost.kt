@@ -85,7 +85,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                     backupReviewGate.discard()
                     mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null,muscleReview=null,
                         equipmentLoad=null,equipmentLoadRequest=null,equipmentLoadBusy=false,
-                        equipmentLoadError=null,historyCalendar=null) }
+                        equipmentLoadError=null,muscleReviewBusy=false,muscleReviewError=null,
+                        historyCalendar=null) }
                 }
                 synchronized(lifetime) {
                     if(closed) { watching.close();throw CancellationException("Runtime closed") }
@@ -646,11 +647,21 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     /** Inspect one literal user-entered load against the exact saved issue.
      * No state changes to the training engine, gym, or workout journal.
      */
+    /** One shared fail-closed boundary for read-only issued-workout tools.
+     * A visible button or a cached snapshot is not authorization to inspect
+     * during backup export, store writes or blocked recovery.
+     */
+    private fun canInspectIssuedWorkout(current: NativeRuntimeState): Boolean =
+        current.ready && !current.blocked && !current.busy &&
+        !current.workoutBusy && !current.historyBusy &&
+        !current.backupExportBusy && !current.workoutBlocked &&
+        current.workout?.journal?.isFinished==false
+
     fun inspectEquipmentLoad(slot:JournalSetSlot,input:String) {
         val initial=mutable.value
         val progress=initial.workout ?: return
-        if(!initial.ready || initial.workoutBusy || initial.historyBusy || initial.busy ||
-            initial.equipmentLoadBusy || progress.journal.isFinished ||
+        if(!canInspectIssuedWorkout(initial) ||
+            initial.equipmentLoadBusy ||
             slot !in progress.journal.slots ||
             progress.journal.completed.any {it.intent.slot==slot} ||
             !input.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")))return
@@ -670,7 +681,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 mutable.update { latest ->
                     when {
                         latest.equipmentLoadRequest!=request -> latest
-                        latest.workout?.plan?.issuedJson==progress.plan.issuedJson &&
+                        canInspectIssuedWorkout(latest) &&
+                            latest.workout?.plan?.issuedJson==progress.plan.issuedJson &&
                             latest.workout?.journal?.completed?.none {it.intent.slot==slot}==true &&
                             latest.storeChangeKey==initial.storeChangeKey ->
                             latest.copy(equipmentLoad=result,equipmentLoadBusy=false,equipmentLoadError=null)
@@ -684,6 +696,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
               catch(_:Exception) {
                 mutable.update { latest ->
                     if(latest.equipmentLoadRequest==request &&
+                        canInspectIssuedWorkout(latest) &&
                         latest.workout?.plan?.session?.workoutId==request.workoutId &&
                         latest.storeChangeKey==initial.storeChangeKey)
                         latest.copy(equipmentLoad=null,equipmentLoadBusy=false,
@@ -698,7 +711,7 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     fun inspectWorkoutMuscles() {
         val current=mutable.value
         val plan=current.workout?.plan ?: return
-        if(!current.ready || current.workoutBusy || current.historyBusy ||
+        if(!canInspectIssuedWorkout(current) ||
             current.muscleReviewBusy || current.muscleReview?.workoutId==plan.session.workoutId)return
         val owner=store ?: return;val engine=current.verifier?.programEngine ?: return
         mutable.update { it.copy(muscleReviewBusy=true,muscleReviewError=null) }
@@ -712,16 +725,23 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 } finally { bytes.fill(0) }
                 ensureActive()
                 mutable.update { latest ->
-                    if(latest.workout?.plan?.issuedJson==plan.issuedJson &&
+                    if(canInspectIssuedWorkout(latest) &&
+                        latest.workout?.plan?.issuedJson==plan.issuedJson &&
                         latest.storeChangeKey==current.storeChangeKey)
                         latest.copy(muscleReview=view,muscleReviewBusy=false,muscleReviewError=null)
                     else latest.copy(muscleReview=null,muscleReviewBusy=false,
-                        muscleReviewError="Workout changed. Reopen the exercise review.")
+                        muscleReviewError=null)
                 }
             } catch(cancelled: CancellationException) { throw cancelled }
               catch(_: Exception) {
-                mutable.update { it.copy(muscleReviewBusy=false,
-                    muscleReviewError="Muscle involvement could not be checked. Your workout is unchanged.") }
+                mutable.update { latest ->
+                    if(canInspectIssuedWorkout(latest) &&
+                        latest.workout?.plan?.session?.workoutId==plan.session.workoutId &&
+                        latest.storeChangeKey==current.storeChangeKey)
+                        latest.copy(muscleReviewBusy=false,
+                            muscleReviewError="Muscle involvement could not be checked. Your workout is unchanged.")
+                    else latest.copy(muscleReviewBusy=false,muscleReviewError=null)
+                }
             }
         }
     }

@@ -20,6 +20,35 @@ the native app's training authority. The live web app is not being retired
 or modified as part of this branch.
 
 
+## Kotlin-only journal state machine (proposed receipts, not yet persisted)
+
+`KotlinWorkoutJournalDomain` models the next JS-retirement lifecycle seam:
+begin from a native-verified committed snapshot identity, separately record
+completed/skipped/zero-rep failed sets, make explicit prior-event corrections,
+and finish only after every original set has a resolution. The reducer
+preserves the immutable prescribed load/reps/RIR/rest and tracks actual
+reported RIR independently; missing actual RIR stays unknown. Unweighted
+bodyweight is distinct from a logged numerical zero. Honest manual actuals
+are recorded without rounding them into an invented gym increment.
+
+Every mutation carries an event ID and expected journal revision. Exact
+replays of previously recorded events are idempotent (including after
+subsequent edits or finish); conflicting event IDs, stale new writes,
+unauthorized overwrites, wrong correction predecessors, invalid set values
+and premature/duplicate finish are rejected. A correction adds a new
+receipt; it never deletes the old factual history. The returned state and
+collections are immutable **proposals**, not disk acknowledgments. A
+native-owned store must verify real persisted issuance, enforce
+transactional compare-and-swap and durably acknowledge receipts before UI
+completion, then reconstruct state and historical correction semantics on
+resume. The independent Kotlin rules neither import nor call JavaScript.
+
+Pending: native storage bridge and crash/rotation/process-death replay,
+warmup/amplifier/superset event variants and accurate rest session timeline,
+history correction after session finish with deterministic PR/progression
+recalculation, complete program- and load-policy authoring, full Coach
+implementation and device proof.
+
 ## Kotlin-only session staging (replacement engine, not yet issued)
 
 `KotlinWorkoutSnapshotDomain.stage` is the next S4 lifecycle boundary. It

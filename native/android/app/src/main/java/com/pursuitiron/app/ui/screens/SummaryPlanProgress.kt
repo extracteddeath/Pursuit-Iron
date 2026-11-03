@@ -335,7 +335,7 @@ private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int,
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(e.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(e.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         val line = listOfNotNull("Key lift".takeIf { e.b("primary") }, e.s("supplemental").takeIf { it.isNotBlank() && it != "null" }?.replaceFirstChar { it.uppercase() }, e.s("sub").takeIf { it.isNotBlank() },
                             e.i("rest").takeIf { it > 0 }?.let { "rest ${it / 60}:${(it % 60).toString().padStart(2, '0')}" }).joinToString(" · ")
                         if (line.isNotBlank()) Text(line, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)

@@ -1532,7 +1532,7 @@ export function swapOptions({ ei }) {
     const gym = E.gymById(E.normalizeGyms(S.store.gyms, S.store.activeGymId).gyms, S.store.activeGymId);
     const kit = E.expandEquipment(new Set(gym?.equipment || ctx.program.config?.equipment || []));
     const banned = new Set(S.store.banned || []);
-    const pool = E.availableFor(cur.part, kit).filter((x) => x.id !== cur.id && !banned.has(x.id) && !l.data.some((r) => r.id === x.id));
+    const pool = E.availableFor(cur.part, kit, [...banned], !!ctx.program.config?.noBodyweight).filter((x) => x.id !== cur.id && !banned.has(x.id) && !l.data.some((r) => r.id === x.id));
     let ranked = pool; try { ranked = E.rankSwapAlts(cur, pool, null, l.data.map((r) => r.id), ctx.program, ctx.day) || pool; } catch { ranked = pool; }
     return ranked.slice(0, 12).map((x) => ({ id: x.id, name: x.name, equip: x.equip, equipLabel: equipLabelOf(x), part: x.part, type: x.type }));
 }

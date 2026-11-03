@@ -853,7 +853,7 @@ private fun SwapSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
                             .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(x.s("name"), style = MaterialTheme.typography.titleSmall)
-                                Text((x.optJSONArray("equip")?.let { a -> (0 until a.length()).joinToString(", ") { a.optString(it) } } ?: "").replaceFirstChar { it.uppercase() },
+                                Text(x.s("equipLabel").ifBlank { (x.optJSONArray("equip")?.let { a -> (0 until a.length()).joinToString(", ") { a.optString(it) } } ?: "").replaceFirstChar { it.uppercase() } },
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Icon(PiIcons.Swap, null, modifier = Modifier.size(18.dp))

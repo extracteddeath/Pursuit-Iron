@@ -383,6 +383,15 @@ if (find(r"One more working set", timeout=3) or scroll_to(r"One more working set
 else:
     FAILS.append("exercise menu has no working-set count")
 back()
+# The in-workout swap: alternatives for this lift at this gym (it threw in the core and always read "No alternatives").
+tap(r"Exercise actions")
+if scroll_to(r"Swap exercise", tries=3, step=400) and tap(r"Swap exercise", "swap-sheet"):
+    time.sleep(1.5)
+    if find(r"No alternatives with your equipment", timeout=2):
+        FAILS.append("in-workout swap lists no alternatives")
+    back()
+else:
+    back()
 # The progression tag on the card opens the progression sheet (it is no longer in the menu)
 if tap(r"^Progression: ", "progression-sheet"):
     if not find(r"Auto \(recommended\)", timeout=4):

@@ -118,7 +118,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun call(method: String, args: JSONObject = JSONObject()): Any? {
         val c = core ?: return null
         // A screen that leaves (or restarts its effect) cancels its own read; that is not an error to show.
-        return try { c.call(method, args) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { toast(e.message ?: "Something went wrong"); null }
+        return try { c.call(method, args) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            // Logged so the device check sees it (a core throw only ever showed as a toast, and the in-workout swap
+            // failed that way unnoticed); the person gets a plain line, not the engine's stack trace.
+            android.util.Log.e("PICore", "CoreException in $method: ${e.message}")
+            // A message the core meant for the person ("Error: That block…") is shown as written; a programming
+            // fault (TypeError and kin) gets a plain line instead of the engine's internals.
+            val first = (e.message ?: "").lineSequence().firstOrNull().orEmpty()
+            toast(if (first.isBlank() || Regex("^(TypeError|ReferenceError|RangeError|SyntaxError|InternalError)").containsMatchIn(first)) "Something went wrong — that didn't load. Your data is safe."
+                else first.removePrefix("Error: ").removePrefix("CycleError: ")); null }
     }
     private suspend fun obj(method: String, args: JSONObject = JSONObject()) = call(method, args) as? JSONObject
     private fun arr(v: Any?): List<JSONObject> = (v as? JSONArray)?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList()

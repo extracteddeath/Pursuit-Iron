@@ -81,10 +81,13 @@ fun LandmarksCard(d: JSONObject) {
             val fill by animateFloatAsState(pos(done), Motion.data(), label = "lm")
             Column(Modifier.semantics(mergeDescendants = true) { contentDescription = "${r.s("label")}: ${sets(done)} done, ${sets(planned)} planned, $status. MEV ${fmtNum(mev)}, MRV ${fmtNum(mrv)}" },
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row {
-                    Text(r.s("label").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
-                    Text("${sets(done)}", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
-                    Text(" done · ${sets(planned)} planned · $status", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                // Wraps as a whole: at large text the figures move under the name instead of splitting it ("Shoul / ders").
+                androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(r.s("label").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), softWrap = false, modifier = Modifier.padding(end = 8.dp))
+                    Row {
+                        Text("${sets(done)}", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+                        Text(" done · ${sets(planned)} planned · $status", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                    }
                 }
                 BoxWithConstraints(Modifier.fillMaxWidth().height(14.dp).clip(CircleShape).background(cs.surfaceContainerHighest)) {
                     val w = maxWidth

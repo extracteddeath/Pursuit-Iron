@@ -1129,4 +1129,8 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   const rv = C.reviewBlock({ id: r.programId, index: 0 }), ohp = rv.lifts.find((l) => l.id === 'ohp');
   ok(ohp && ohp.state !== 'regressed' && ohp.end >= ohp.start, 'a 5/3/1 block ending on its deload reads the main lifts by their working weeks (' + (ohp && ohp.state + ' ' + ohp.start + '→' + ohp.end) + ' · ' + rv.headline + ')'); }
 
+// The in-workout swap lists alternatives (availableFor was called without its banned list and threw).
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) }); C.createFromTemplate({ id: 'ul4' }); C.startSession({});
+  const o = C.swapOptions({ ei: 0 }); ok(Array.isArray(o) && o.length > 0 && o.every((x) => x.equipLabel), 'in-workout swap lists alternatives with equipment labels (' + (o?.length || 0) + ')'); C.discardSession(); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

@@ -7,6 +7,10 @@ const host=fs.readFileSync(root+'NativeRuntimeHost.kt','utf8');
 const activity=fs.readFileSync(root+'MainActivity.kt','utf8');
 const shell=fs.readFileSync(root+'NativePreviewApp.kt','utf8');
 const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
+assert.ok(ui.includes('mutableStateOf(ArrayList(state.proposal?.profile?.equipment.orEmpty()))') &&
+  !ui.includes('mutableStateOf(ArrayList(initial.equipment))') &&
+  ui.includes('hasAvailableEquipment &&'),
+  'A fresh gym starts without invented equipment; a reviewed profile restores previously confirmed selections');
 const equipmentPicker=fs.readFileSync(root+'NativeGroupedEquipmentPicker.kt','utf8');
 const equipmentPolicy=fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeEquipmentSelectionPolicy.kt','utf8');

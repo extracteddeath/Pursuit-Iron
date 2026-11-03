@@ -7,6 +7,23 @@
 
 These are living requirements, **not claims that the new engine is live or every feature is complete**.
 
+### Authored goal and experience policy matching (E12/E13, partial)
+
+`CoachGoalProgramPolicyDomain.review` gates the full athlete plan status on
+a **versioned, profile-specific and phase-specific** coaching proposal.
+The supplied policy must match goal, experience, athlete revision, training
+frequency and split. It must exactly support all 16 declared muscle
+MEV/MAV/MRV and direct-day frequency bounds. For focused/reduced muscles,
+the changed dose must differ in the intended direction from an explicitly
+authored baseline; a toggle without changed programming fails review.
+The authored day-purpose minimums must actually occur, and strength/peak
+blocks require an explicitly named skill lift.
+
+The catalog composer still exposes a technical draft with no policy, but
+its athlete-facing status is **unresolved**. This does NOT invent or endorse
+universal scientific volume thresholds; actual evidenced coaching presets
+and longitudinal individualization remain open. No app ownership switch.
+
 ### Confirmed athlete setup to actual catalog-week candidate (E11, partial)
 
 `CoachAthleteCatalogCandidateDomain.review` now derives the candidate's

@@ -22,12 +22,14 @@ data class AthleteCatalogCandidateRequest(
     val catalog:List<CatalogMovement>,
     val choices:List<CatalogExerciseChoice>,
     val maximumExercisesPerDay:Int,
-    val preferredPatternsPerDay:Int
+    val preferredPatternsPerDay:Int,
+    /** Versioned authored policy; null means a mechanically inspected week only. */
+    val goalPolicy:AuthoredGoalProgramPolicy?=null
 )
 enum class AthleteCandidateIssueKind {
     SETUP_UNRESOLVED, SCHEDULE_MISMATCH, POLICY_UNRESOLVED,
     EXCLUDED_EXERCISE, BODYWEIGHT_DISABLED, BARBELL_LIMIT,
-    LOWER_DAY_RESTRICTION, CATALOG_UNRESOLVED
+    LOWER_DAY_RESTRICTION, CATALOG_UNRESOLVED, GOAL_POLICY_UNRESOLVED
 }
 data class AthleteCandidateIssue(
     val field:String,
@@ -173,14 +175,16 @@ object CoachAthleteCatalogCandidateDomain {
                     AthleteCandidateIssueKind.LOWER_DAY_RESTRICTION,
                     "Direct triceps training on lower day is disabled.")
         }
-        // Athletic barbell/day and direct-triceps/lower restrictions are
-        // enforced during candidate selection and repair. These remaining
-        // goal/volume/day-intensity settings still have no issuing policy;
-        // report them instead of claiming a personalized program.
-        if(profile.focusedMuscles.isNotEmpty() ||
-            profile.reducedMuscles.isNotEmpty())
-            add("musclePriorities",AthleteCandidateIssueKind.POLICY_UNRESOLVED,
-                "A phase-specific priority-to-dose policy is still required.")
+        // This mechanical draft cannot be called goal/experience aware
+        // without a matching authored, revision-bound coaching policy.
+        val policyReview=CoachGoalProgramPolicyDomain.review(
+            profile,request.phase,request.bounds,request.intents,
+            request.goalPolicy)
+        for(item in policyReview.issues)
+            add(item.field,AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED,
+                item.explanation)
+        // Barbell and lower-day restrictions are already enforced by the
+        // composer; hard/long day intensity remains a future policy.
         if(profile.hardTrainingDays.isNotEmpty() ||
             profile.longTrainingDays.isNotEmpty())
             add("dayIntensity",AthleteCandidateIssueKind.POLICY_UNRESOLVED,

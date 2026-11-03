@@ -4,6 +4,32 @@
 owner, and NOT the final end-to-end Kotlin cutover.** The Android app does not
 depend on this module. The legacy JavaScript runtime remains unchanged.
 
+## Kotlin-issued workout Compose candidate (not live navigation)
+
+A new `NativeKotlinWorkoutCandidateScreen` uses the **existing
+Material 3 Expressive components and preserved original theme system**,
+but gets all actual training data from the independent Kotlin
+`NativeKotlinSessionController` and pure
+`KotlinWorkoutPresentationDomain`. It supports an ordered exercise
+overview, single-set focus and full set list, explicit target-versus-actual
+weights/reps/RIR, corrected receipts, skipped/failed sets, revision conflict
+refresh, and confirmation before Finish. All actions dispatch through
+`NativeKotlinCandidateHost.recordWorkoutOperation` on IO threads; the
+controller never displays optimistic completion as a committed event.
+
+`KotlinWorkoutEntryDomain` owns typed actual input validation, so no
+UI formula assumes the athlete performed a coach-recommended load or
+mistakes target RIR for observed RIR. A failed attempt logs the **actual
+attempted** weight entered by the athlete; it does not copy the planned
+weight. Projection tests cover unknown actual RIR, correction ordering,
+skips/failures and finished read-only state.
+
+The screen and process-scoped controller are **compiled but not routed**
+from `MainActivity`. They cannot enroll an athlete, create an approved
+program or silently migrate old JS-issued workouts. No user-visible
+full cutover, backups, or APK until current native program/coach/athlete
+ownership and history migration are complete.
+
 ## Isolated Android application host (compile-only integration)
 
 The **Android app module now compiles** the pure Kotlin engine and native store

@@ -24,7 +24,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.unit.dp
 
 /**
- * Original 20 native theme choices (including the 7 light themes).
+ * Original 20 native theme choices (10 light and 10 dark).
  * Color selections are UI preferences only, never training-store writes.
  */
 @OptIn(ExperimentalMaterial3Api::class)

@@ -10,12 +10,14 @@ import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +37,15 @@ class MainActivity : ComponentActivity() {
             var themeId by remember {
                 mutableStateOf(appearance.getString("theme_id",PursuitThemes.DEFAULT_ID)
                     ?.takeIf { PursuitThemes.find(it)!=null } ?: PursuitThemes.DEFAULT_ID)
+            }
+            val themeUsesLightBars=PursuitThemes.resolve(themeId).isLight
+            // The OS may be dark while a user selects Mint/Clay/etc. Status
+            // and navigation icon contrast must follow the ORIGINAL chosen
+            // palette rather than the Android wallpaper/system preference.
+            SideEffect {
+                val bars=WindowCompat.getInsetsController(window,window.decorView)
+                bars.isAppearanceLightStatusBars=themeUsesLightBars
+                bars.isAppearanceLightNavigationBars=themeUsesLightBars
             }
             PursuitIronTheme(themeId=themeId) {
                 NativePreviewApp(

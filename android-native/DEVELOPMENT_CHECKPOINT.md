@@ -2173,3 +2173,14 @@ bounded, consistent swatch width for compact phones. The older foundation
 source assertion no longer expects a fabricated two-theme palette;
 a dedicated exact-hex comparison covers all 20 original inputs in CI.
 No training writes or engine changes, and no APK.
+
+## 2026-11-02 — System-bar contrast follows the selected original theme
+
+Native edge-to-edge status and navigation icon lightness now follow the
+user-selected original Pursuit theme rather than the phone's OS light/dark
+setting. This matters for a light Mint, Clay, Stone, Slate, Lilac, Sage,
+Ochre, Rosewater, Ocean or Citrus theme selected while Android is in dark
+mode, and vice versa. Uses AndroidX's window inset controller and Compose's
+SideEffect (no status-bar color hacks and no lifecycle leaks). The 20-theme
+parity gate also asserts the original 10 dark / 10 light split. The
+appearance setting remains independent from canonical training data. No APK.

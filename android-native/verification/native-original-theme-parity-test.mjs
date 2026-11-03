@@ -15,6 +15,8 @@ const themes=[...original.matchAll(/^\s*(\w+): \{ name: "([^"]+)", base: "(dark|
     return {id,name,base,accent,p};
   });
 assert.equal(themes.length,20,'Require every shipped canonical theme, not a curated subset.');
+assert.equal(themes.filter(theme=>theme.base==='light').length,10,
+  'Preserve every original light theme alongside the dark choices.');
 const native=[...colors.matchAll(/^\s*PursuitPalette\("(\w+)", "([^"]+)", (true|false), (.+)\),?$/gm)]
   .map(([,id,name,light,args])=>({id,name,light:light==='true',
     hex:[...args.matchAll(/Color\(0xFF([A-Fa-f0-9]{6})\)/g)].map(m=>'#'+m[1].toUpperCase())}));
@@ -36,6 +38,9 @@ assert.match(colors,/surfaceContainerLow=tint,surfaceContainer=card/);
 assert.match(colors,/primary=accent,onPrimary=onAccent/);
 assert.match(colors,/val accentInk:Color/);
 assert.match(main,/PursuitIronTheme\(themeId=themeId\)/);
+assert.match(main,/val themeUsesLightBars=PursuitThemes.resolve\(themeId\).isLight/);
+assert.match(main,/bars\.isAppearanceLightStatusBars=themeUsesLightBars/);
+assert.match(main,/bars\.isAppearanceLightNavigationBars=themeUsesLightBars/);
 assert.match(main,/getSharedPreferences\("pursuit_native_appearance",MODE_PRIVATE\)/);
 assert.match(main,/appearance\.edit\(\)\.putString\("theme_id",requested\)\.apply\(\)/);
 assert.match(main,/MaterialTheme\(colorScheme=palette\.scheme, motionScheme = MotionScheme\.expressive\(\)/);

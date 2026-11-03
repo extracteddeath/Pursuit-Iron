@@ -8,6 +8,7 @@ import {inspectNativeEquipmentLoad} from './native-equipment-loading.mjs';
 import {dispatchWorkoutStoreJson} from './workout-store-protocol.mjs';
 import {dispatchEngineJson,dispatchBackupSchemaJson} from './protocol.mjs';
 import {sha256Utf8} from './json-identity.mjs';
+import {EX_BY_ID} from '../../modules/engine-api.js';
 
 let packagedDispatch=dispatchWorkoutStoreJson;
 if(process.argv[2]) {
@@ -15,8 +16,16 @@ if(process.argv[2]) {
   vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),context,{timeout:10000});
   packagedDispatch=context.PursuitIronBridge.dispatchWorkoutStoreJson;
 }
+// This is a barbell loading regression fixture, not a test of every gym item.
+// Keep the historic choice set so adding a machine does not redirect the
+// program's primary exercise away from the barbell we need to inspect.
+const loadingFixtureEquipment=[
+  'barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip',
+  'legpress','hacksquat','legext','legcurl','calfmachine','ezbar','kettlebell','bands'
+];
+assert.ok(loadingFixtureEquipment.every(id=>id==='rack'||nativeProgramOptions().equipment.includes(id)));
 const profile={name:'Own gym',goal:'both',experience:'intermediate',unit:'lb',
-  split:'full_body',days:3,session:'s60',equipment:nativeProgramOptions().equipment,
+  split:'full_body',days:3,session:'s60',equipment:loadingFixtureEquipment,
   allowBodyweight:true,allowSupersets:false,barbellCap:3,focus:{},reduced:[]};
 const first=prepareNativeProgram(JSON.stringify({
   creationId:'gym-create',programId:'gym-program',createdAt:1000,seed:223,profile})).snapshot;
@@ -55,7 +64,9 @@ assert.equal(inspectNativeProgram(prepared.candidateSnapshot).loadingInventory.u
 assert.equal(inspectNativeProgram(exactSource).loadingInventory,null);
 const plan=prepareNativeWorkout(prepared.candidateSnapshot,
   JSON.stringify({programId:'gym-program',workoutId:'next-workout',startedAt:3000}));
-const row=plan.rows.find(x=>x.id && x.sets?.some(set=>!set.warm));
+const row=plan.rows.find(x=>EX_BY_ID[x.id]?.equip?.includes('barbell') &&
+  x.sets?.some(set=>!set.warm));
+assert.ok(row,'Fixture must issue a real barbell exercise for exact plate-weight inspection');
 const slot={exerciseIndex:row.slot,exerciseId:row.id,setIndex:0};
 const review=inspectNativeEquipmentLoad(prepared.candidateSnapshot,JSON.stringify(plan),slot,'160');
 assert.equal(review.confirmed,true,'Actual saved stock must be used by native loading inspection');

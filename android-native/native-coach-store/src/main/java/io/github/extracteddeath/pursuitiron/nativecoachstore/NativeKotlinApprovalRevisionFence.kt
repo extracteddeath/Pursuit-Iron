@@ -25,6 +25,10 @@ import java.security.MessageDigest
 class NativeKotlinApprovalRevisionFence(private val appPrivateDirectory: Path) {
     companion object {
         private val processMutex=Any()
+        // The coordinator already holds this file lock when it queries the
+        // persistent native authority. Reentrant acquisition of a JVM file
+        // lock throws OverlappingFileLockException; nesting must reuse it.
+        private val ownedPaths=ThreadLocal.withInitial { mutableSetOf<String>() }
         private val validOwner=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     }
     fun <T> withOwnerTransaction(ownerKey:String,operation:()->T):T {
@@ -37,9 +41,20 @@ class NativeKotlinApprovalRevisionFence(private val appPrivateDirectory: Path) {
         return synchronized(processMutex) {
             Files.createDirectories(appPrivateDirectory)
             val lock=appPrivateDirectory.resolve("coach-approval-$hash.lock")
-            FileChannel.open(lock,
-                StandardOpenOption.CREATE,StandardOpenOption.WRITE).use { channel ->
-                channel.lock().use { operation() }
+                .toAbsolutePath().normalize()
+            val key=lock.toString()
+            val held=ownedPaths.get()
+            if(key in held) {
+                operation()
+            } else {
+                FileChannel.open(lock,
+                    StandardOpenOption.CREATE,StandardOpenOption.WRITE).use { channel ->
+                    channel.lock().use {
+                        held.add(key)
+                        try { operation() }
+                        finally { held.remove(key) }
+                    }
+                }
             }
         }
     }

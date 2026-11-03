@@ -19,7 +19,7 @@ class EquipmentLoadDomainTest {
         assertEquals(LoadBasis.BARBELL_TOTAL, full.basis)
         assertTrue(full.exact)
         assertEquals(n("115"), full.atOrBelow)
-        assertNull(full.nextAbove)
+        assertEquals(n("120"), full.nextAbove)
 
         val odd = verified(bar, "47")
         assertFalse(odd.exact)

@@ -2222,3 +2222,19 @@ sheets now use the same 52dp primary action as active logging while
 retaining exact retry-id operations and validation gates. All 20 original
 themes apply through semantic containers and the existing accent-ink role.
 No engine rewrite or APK in this pass.
+
+## 2026-11-02 — One fail-closed Plan editing authority
+
+The real Plan workspace now uses a single guard for saved-program entry,
+program editing, gym-only editing, and opening the gym from an exercise.
+This guard requires the exact owned saved program matching the current
+read-only Plan revision, ready/recovered runtime, and no active workout,
+canonical mutation, history read, backup export, shortened-session preview
+or blocked recovery. The old Edit button could remain enabled while some
+of these conditions were false; the editor would reject writes later but
+mislead the user. The common gate blocks such entry and disables existing
+open edit controls when runtime ownership changes. This is native UI
+authorization only; canonical write validation and every old target remain
+intact. It also establishes a stable UI/engine boundary for the Kotlin
+replacement, rather than trusting a stale presentation as an owner.
+No APK or training engine rewrite.

@@ -656,7 +656,14 @@ assert.ok(
   screens.includes('NativeProgramDraftEditor(') &&
   screens.includes('rememberSaveable(currentPlan.program.reference)') &&
   screens.includes('Edit saved program') &&
-  screens.includes('runtimeState?.workout==null') &&
+  screens.includes('val canEditCurrentProgram=matchingSaved!=null && runtimeState?.let { active ->') &&
+  screens.includes('active.ready && !active.blocked && !active.busy &&') &&
+  screens.includes('!active.workoutBlocked && active.workout==null &&') &&
+  screens.includes('!active.workoutBusy && !active.historyBusy &&') &&
+  screens.includes('!active.backupExportBusy && !active.shortPreviewBusy') &&
+  screens.includes('allowEditing=canEditCurrentProgram') &&
+  screens.includes('if(canEditCurrentProgram && (id==null || id in verifiedPhysicalIds))') &&
+  screens.includes('enabled=canEditCurrentProgram'),
   nativeDraftContract.includes('fun from(verified: ReadOnlyProgramPresentation.Structure)') &&
   nativeDraftContract.includes('fun matchesCurrent(') &&
   nativeDraftContract.includes('Collections.unmodifiableList(') &&

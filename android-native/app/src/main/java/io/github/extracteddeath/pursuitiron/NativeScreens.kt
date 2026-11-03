@@ -459,6 +459,15 @@ internal fun PlanScreen(
             it.program.id==currentPlan.program.id &&
                 it.program.reference==currentPlan.program.reference
         }
+        // One authority check for every way into a saved-program edit.
+        // A read-only Plan projection or stale backup can never start a
+        // mutation, even if a Compose button was visible before recovery.
+        val canEditCurrentProgram=matchingSaved!=null && runtimeState?.let { active ->
+            active.ready && !active.blocked && !active.busy &&
+                !active.workoutBlocked && active.workout==null &&
+                !active.workoutBusy && !active.historyBusy &&
+                !active.backupExportBusy && !active.shortPreviewBusy
+        }==true
         val verifiedPhysicalIds=remember(matchingSaved?.loadingInventory,matchingSaved?.loadingCandidates) {
             matchingSaved?.let { saved ->
                 NativeGymInventoryCodec.verifiedOverrideIds(
@@ -479,10 +488,7 @@ internal fun PlanScreen(
             matchingSaved?.let { saved ->
                 NativeSavedGymInventoryPanel(
                     saved=saved,reference=currentPlan.program.reference,
-                    enabled=runtimeState.workout==null && !runtimeState.workoutBusy &&
-                        !runtimeState.historyBusy && !runtimeState.busy &&
-                        !runtimeState.backupExportBusy && !runtimeState.shortPreviewBusy &&
-                        !runtimeState.blocked,
+                    enabled=canEditCurrentProgram,
                     busy=runtimeState.busy,
                     error=runtimeState.gymInventoryError,
                     message=runtimeState.gymInventoryMessage,
@@ -501,12 +507,10 @@ internal fun PlanScreen(
                 onSave=onSaveProgramEdits,
                 saving=runtimeState?.busy==true,
                 saveError=runtimeState?.programEditError,
-                allowEditing=runtimeState?.workout==null && runtimeState?.workoutBusy!=true &&
-                    runtimeState?.historyBusy!=true && runtimeState?.busy!=true &&
-                    runtimeState?.backupExportBusy!=true && runtimeState?.shortPreviewBusy!=true && runtimeState?.blocked!=true,
+                allowEditing=canEditCurrentProgram,
                 onClose={ editingDraft=false },
                 onOpenGym={ id ->
-                    if(id==null || id in verifiedPhysicalIds) {
+                    if(canEditCurrentProgram && (id==null || id in verifiedPhysicalIds)) {
                         gymFocusExerciseId=id
                         editingDraft=false
                         gymOnly=true
@@ -521,17 +525,13 @@ internal fun PlanScreen(
             }
             OutlinedButton(
                 onClick={ editingDraft=true },
-                enabled=hasSavedProgram && runtimeState?.workout==null &&
-                    runtimeState?.workoutBusy!=true && runtimeState?.historyBusy!=true,
+                enabled=canEditCurrentProgram,
                 modifier=Modifier.fillMaxWidth()
             ) { Text("Edit saved program") }
             matchingSaved?.let { saved ->
                 NativeSavedGymInventoryPanel(
                     saved=saved,reference=currentPlan.program.reference,
-                    enabled=runtimeState.workout==null && !runtimeState.workoutBusy &&
-                        !runtimeState.historyBusy && !runtimeState.busy &&
-                        !runtimeState.backupExportBusy && !runtimeState.shortPreviewBusy &&
-                        !runtimeState.blocked,
+                    enabled=canEditCurrentProgram,
                     busy=runtimeState.busy,
                     error=runtimeState.gymInventoryError,
                     message=runtimeState.gymInventoryMessage,

@@ -3,6 +3,8 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
@@ -83,6 +85,16 @@ internal fun NativeWorkoutScreen(
     val committedSlots=journal.completed.map { it.intent.slot }.toSet()
     val exercisePending=exercise.sets.count { it.slot !in committedSlots }
     val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)
+    val exerciseAnchor=remember { BringIntoViewRequester() }
+    // This cue is transient, not training history: only a freshly confirmed
+    // Focus advance may scroll. Manually reviewing exercises never does.
+    var focusScrollTarget by remember(plan.session.workoutId) { mutableIntStateOf(-1) }
+    LaunchedEffect(exerciseIndex,focusScrollTarget) {
+        if(focusScrollTarget==exerciseIndex) {
+            exerciseAnchor.bringIntoView()
+            focusScrollTarget=-1
+        }
+    }
     var showNote by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showFinishReview by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
     var showSkipExercise by rememberSaveable(plan.session.workoutId) { mutableStateOf(false) }
@@ -102,7 +114,10 @@ internal fun NativeWorkoutScreen(
                 val destination=NativeNextSetPolicy.advanceAfterAcknowledged(
                     progress,exerciseIndex,observedFocusReceipt)
                 observedFocusReceipt=lastSetReceiptId
-                if(destination!=null)exerciseIndex=destination
+                if(destination!=null) {
+                    exerciseIndex=destination
+                    focusScrollTarget=destination
+                }
             }
         }
     }
@@ -165,7 +180,8 @@ internal fun NativeWorkoutScreen(
     Text("Exercise ${exerciseIndex+1} of ${plan.exercises.size}",
         style=MaterialTheme.typography.labelLarge,
         color=MaterialTheme.colorScheme.primary)
-    Text(exercise.name,style=MaterialTheme.typography.headlineSmall)
+    Text(exercise.name,modifier=Modifier.bringIntoViewRequester(exerciseAnchor),
+        style=MaterialTheme.typography.headlineSmall)
     if(exercise.superset)Text("Superset pairing",style=MaterialTheme.typography.labelMedium)
     if(exercise.warmupTargets.isNotEmpty() ||
         journal.warmups.any { it.slot.exerciseIndex==exercise.index }) {

@@ -121,6 +121,15 @@ assert.ok(shell.includes('import androidx.activity.compose.BackHandler') &&
   !shell.includes('onFinishWorkout()') &&
   !shell.includes('clearAtomically()'),
   'Android system Back from a real workout must confirm safe navigation to Today without logging, finishing or deleting the recovery journal');
+assert.ok(train.includes('val exerciseAnchor=remember { BringIntoViewRequester() }') &&
+  train.includes('var focusScrollTarget by remember(plan.session.workoutId)') &&
+  train.includes('LaunchedEffect(exerciseIndex,focusScrollTarget)') &&
+  train.includes('if(focusScrollTarget==exerciseIndex) {') &&
+  train.includes('exerciseAnchor.bringIntoView()') &&
+  train.includes('focusScrollTarget=-1') &&
+  train.includes('focusScrollTarget=destination') &&
+  train.includes('modifier=Modifier.bringIntoViewRequester(exerciseAnchor)'),
+  'Only a new durably acknowledged Focus movement should reveal the next exercise on compact screens, without scrolling during manual review or replay');
 assert.ok(train.includes('val committedSlots=journal.completed.map { it.intent.slot }.toSet()') &&
   train.includes('val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)') &&
   train.includes('NativeUpNextPanel(preview,exerciseIndex,') &&

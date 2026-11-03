@@ -2059,3 +2059,16 @@ propagation into a subsequent workout. The engine remains the only source
 of confirmed adjacent load values; this pass adds no inferred increments,
 training writes or new persistence. Source and Compose checks required,
 no APK.
+
+## 2026-11-02 — Reveal the next actual exercise after Focus auto-advance
+
+Focus now requests scroll-into-view of the next issued exercise header
+only when a freshly acknowledged, completed set moves the selection to
+a different exercise. This uses Compose's standard relocation requester
+inside the existing scroll container, without a hard-coded pixel offset,
+new horizontal layout, or global scroll reset. Manual exercise selection,
+restored sessions, prior receipts and saved corrections do not trigger
+an automatic scroll. The request is transient UI state; no journal,
+engine-issued target, persistence or history behavior changed. Source
+and Compose compile are required; device scroll/keyboard acceptance
+remains outstanding. No APK.

@@ -228,6 +228,92 @@ class CoachAthleteCatalogCandidateDomainTest {
         assertEquals(original.goalPolicy,null)
     }
 
+    @Test fun authoredPrimaryFrequencyMustBeDeliveredByActualVisits() {
+        val original=request()
+        val athlete=checkNotNull(original.setup.reviewed)
+        val policy=AuthoredGoalProgramPolicy(
+            "program-quality","v2","Athlete-specific reviewed lift frequency.",
+            athlete.athleteProfileId,athlete.profileRevision,
+            athlete.goal,athlete.experience,athlete.split,
+            original.phase,athlete.trainingWeekdays.size,
+            original.bounds,original.bounds,
+            mapOf(ComposerSessionPurpose.HYPERTROPHY to 1),
+            primaryLiftMinimumDays=mapOf("press" to 3))
+        val heldToOne=original.copy(goalPolicy=policy,choices=
+            original.choices.map {
+                if(it.exerciseId=="press")it.copy(maximumVisits=1)
+                else it
+            })
+        val result=CoachAthleteCatalogCandidateDomain.review(heldToOne)
+        val realization=checkNotNull(result.realization)
+        assertEquals(GoalRealizationStatus.UNRESOLVED,realization.status)
+        assertEquals(3,realization.primaryFrequencies.single().requiredDays)
+        assertTrue(realization.primaryFrequencies.single().deliveredDays<=1)
+        assertTrue(realization.issues.any {
+            it.kind==GoalRealizationIssueKind.LIFT_FREQUENCY_UNMET
+        })
+        assertTrue(result.issues.any {
+            it.kind==AthleteCandidateIssueKind.REALIZATION_UNRESOLVED
+        })
+        assertFalse(result.mayIssueWorkout)
+        assertFalse(result.maySaveProgram)
+    }
+
+    @Test fun strengthPhaseCannotPassWithoutAuthoredMainLiftFrequency() {
+        val original=request()
+        val athlete=checkNotNull(original.setup.reviewed)
+        val purposes=original.intents.map {
+            it.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                requiredPrimaryExerciseId=if(it.weekday==0)"press"else null)
+        }
+        val p=AuthoredGoalProgramPolicy(
+            "strength-program","v1","Coach-reviewed strength skill day.",
+            athlete.athleteProfileId,athlete.profileRevision,
+            athlete.goal,athlete.experience,athlete.split,
+            TrainingPhase.STRENGTH,athlete.trainingWeekdays.size,
+            original.bounds,original.bounds,
+            mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 1))
+        val r=CoachAthleteCatalogCandidateDomain.review(original.copy(
+            phase=TrainingPhase.STRENGTH,intents=purposes,goalPolicy=p))
+        assertTrue(r.issues.none {
+            it.kind==AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED
+        })
+        val checked=checkNotNull(r.realization)
+        assertEquals(GoalRealizationStatus.UNRESOLVED,checked.status)
+        assertTrue(checked.issues.any {
+            it.kind==GoalRealizationIssueKind.LIFT_FREQUENCY_MISSING
+        })
+        assertTrue(checked.issues.any {
+            it.kind==GoalRealizationIssueKind.LIFT_NOT_PRIMARY
+        })
+    }
+
+    @Test fun actualFrequencyIsAuditedEvenWhenPolicyMetadataMatches() {
+        val original=request()
+        val athlete=checkNotNull(original.setup.reviewed)
+        val policy=AuthoredGoalProgramPolicy(
+            "matched-program","v1","Coach-reviewed program for this profile.",
+            athlete.athleteProfileId,athlete.profileRevision,
+            athlete.goal,athlete.experience,athlete.split,
+            original.phase,athlete.trainingWeekdays.size,
+            original.bounds,original.bounds,
+            mapOf(ComposerSessionPurpose.HYPERTROPHY to 1),
+            primaryLiftMinimumDays=mapOf("press" to 1))
+        val result=CoachAthleteCatalogCandidateDomain.review(
+            original.copy(goalPolicy=policy))
+        assertTrue(result.issues.none {
+            it.kind==AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED
+        })
+        val checked=checkNotNull(result.realization)
+        val visits=checkNotNull(result.catalogReview?.draft).visits
+        assertEquals(visits.filter {it.exerciseId=="press"}
+            .map {it.dayIndex}.distinct().size,
+            checked.primaryFrequencies.single().deliveredDays)
+        assertEquals("press",checked.primaryFrequencies.single().exerciseId)
+        assertFalse(checked.mayIssueWorkout)
+        assertFalse(checked.maySaveProgram)
+    }
+
     @Test fun candidateReviewIsDeterministicAndNeverAltersAuthoring() {
         val input=request()
         val a=CoachAthleteCatalogCandidateDomain.review(input)

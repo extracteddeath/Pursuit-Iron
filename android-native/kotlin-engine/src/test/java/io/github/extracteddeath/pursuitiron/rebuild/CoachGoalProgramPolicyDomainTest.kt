@@ -212,6 +212,23 @@ class CoachGoalProgramPolicyDomainTest {
         })
     }
 
+    @Test fun impossibleOrAmbiguousPrimaryFrequencyIsNotSilentlyClamped() {
+        val a=athlete()
+        val p=policy(a)
+        for(map in listOf(
+            mapOf("bench" to 0),
+            mapOf("bench" to 4),
+            mapOf("bad id" to 1))) {
+            val review=CoachGoalProgramPolicyDomain.review(
+                a,TrainingPhase.HYPERTROPHY,bounds(),intents(),
+                p.copy(primaryLiftMinimumDays=map))
+            assertTrue(review.issues.any {
+                it.kind==GoalPolicyIssueKind.INVALID_LIFT_FREQUENCY
+            })
+            assertEquals(GoalPolicyStatus.UNRESOLVED,review.status)
+        }
+    }
+
     @Test fun returnedFindingsCannotBeMutatedAndAreRepeatable() {
         val a=athlete()
         val a1=CoachGoalProgramPolicyDomain.review(

@@ -2156,7 +2156,7 @@ export function setupOptions() {
     return { splits: Object.entries(E.SPLITS || {}).map(([id, s]) => ({ id, name: s.name || id, days: s.days || null, blurb: s.blurb || '',
             minSession: s.minSession || null, maxSession: s.maxSession || null, minBarbells: s.minBarbells || null })),
         sessions: (E.SESSIONS || []).map((s) => (typeof s === 'string' ? { id: s, label: s } : { id: s.id, label: s.label || s.id })),
-        equipment: (E.EQUIPMENT || []).map((e) => ({ id: e.id, label: e.label || e.name || e.id, cat: e.cat || 'Other' })),
+        equipment: E.equipmentGroups().flatMap((g) => g.items.map((e) => ({ id: e.id, label: e.label || e.name || e.id, cat: g.name }))),
         goals: ['strength', 'hypertrophy', 'both'], experience: Object.keys(E.EXP || { novice: 1, intermediate: 1, advanced: 1 }),
         injuryAreas: INJURY_AREAS, injuryImpacts: INJURY_IMPACTS,
         parts: (E.PART_ORDER || []).filter((p) => E.PART_LABEL?.[p]).map((p) => ({ id: p, label: E.PART_LABEL[p] })) };
@@ -2762,7 +2762,6 @@ export function oneRm({ weight, reps } = {}) {
 /* ------------------------------------------------------------------ gyms + loading (App.js GymsSheet, Settings plates / increments) */
 export function gyms() {
     const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId), u = unit();
-    const cats = [...new Set(E.EQUIPMENT.map((e) => e.cat || 'Free Weights'))];
     return {
         unit: u, activeGymId: g.activeGymId,
         gyms: g.gyms.map((x) => ({ ...x, limitKeys: E.GYM_LIMIT_KEYS.filter((k) => k.match(x.equipment)).map((k) => ({ key: k.key, label: k.label, sub: k.sub })),
@@ -2772,7 +2771,8 @@ export function gyms() {
         presets: E.GYM_PRESETS.map((p) => ({ key: p.key, name: p.name, equipment: p.equipment })),
         // The design's available-weights presets (App.js RACK_PRESETS), each tagged with the unit it was made in.
         rackPresets: E.RACK_PRESETS || {},
-        equipment: cats.map((c) => ({ cat: c, items: E.EQUIPMENT.filter((e) => (e.cat || 'Free Weights') === c).map((e) => ({ id: e.id, label: e.label })).sort((a, b) => a.label.localeCompare(b.label)) })),
+        // Grouped by what it trains, related machines together (Hip Abduction beside Hip Adduction): the engine's own layout.
+        equipment: E.equipmentGroups().map((g) => ({ cat: g.name, items: g.items.map((e) => ({ id: e.id, label: e.label })) })),
         plates: { all: E.ALL_PLATES[u], on: (S.store.plates?.[u] || E.PLATES[u]) },
         minInc: S.store.minInc || { v: 0, unit: null },
         // Web Settings → Smallest jump: kg 1 / 0.5, lb 2.5 / 1.

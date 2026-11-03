@@ -60,6 +60,30 @@ const EQUIPMENT = [
 
 const ALL_EQUIP_IDS = EQUIPMENT.map(e => e.id);
 
+/* How equipment is SHOWN when someone sets up a gym or a program: grouped by what it trains, related machines side
+   by side. EQUIPMENT's own order is append-only (program codes index into it) and its `cat` drives engine
+   predicates (isMachineLike), so neither can carry this. Alphabetical inside one "Machines" bucket of 26 left
+   Hip Abduction and Hip Adduction apart in the setup list (array order) and buried the leg machines among
+   the rest; here each group reads in the order a lifter thinks of it. Every id appears exactly once; an id
+   added to EQUIPMENT and not placed here still shows, under "Other". */
+const EQUIP_GROUPS = [
+    { name: "Free weights", ids: ["dumbbell", "kettlebell", "bands"] },
+    { name: "Bars", ids: ["barbell", "ezbar", "trapbar", "safetybar", "landmine"] },
+    { name: "Benches & stations", ids: ["bench", "inclinebench", "declinebench", "preacher", "pullup", "dip", "ghd", "reversehyper"] },
+    { name: "Cables & general machines", ids: ["cable", "smith", "machine", "assisted"] },
+    { name: "Leg machines", ids: ["legpress", "hacksquat", "beltsquat", "legext", "legcurl", "calfmachine"] },
+    { name: "Hip & glute machines", ids: ["hipthrustmachine", "kickback", "abduction", "adduction"] },
+    { name: "Upper-body machines", ids: ["machinepress", "pecdeck", "machineshoulder", "machinelatraise", "machinerow", "machinepullover", "machineshrug"] },
+    { name: "Arm & core machines", ids: ["machinecurl", "machineext", "machinecrunch"] },
+];
+function equipmentGroups() {
+    const byId = new Map(EQUIPMENT.map(e => [e.id, e])), placed = new Set();
+    const groups = EQUIP_GROUPS.map(g => ({ name: g.name, items: g.ids.filter(id => byId.has(id) && !placed.has(id)).map(id => { placed.add(id); return byId.get(id); }) }))
+        .filter(g => g.items.length);
+    const rest = EQUIPMENT.filter(e => !placed.has(e.id));
+    return rest.length ? [...groups, { name: "Other", items: rest }] : groups;
+}
+
 const RAW = [
     ["bb-bench", "Barbell Bench Press", "chest", "compound", ["barbell", "bench", "rack"], 5, 10],
     ["inc-db-press", "Incline Dumbbell Press", "chest", "compound", ["dumbbell", "inclinebench"], 8, 12],
@@ -874,4 +898,4 @@ function expandEquipment(list) {
 
 setShellEquipmentExpander(expandEquipment);
 
-export { ALL_EQUIP_IDS, ENGINES, ENGINE_V, EQUIPMENT, EQUIP_IMPLIES, EXERCISES, EXP, EX_BY_ID, PATTERN_BY_ID, RAW, SESSIONS, SPLITS, TEMPLATES, engineInfo, expandEquipment };
+export { ALL_EQUIP_IDS, ENGINES, ENGINE_V, EQUIPMENT, EQUIP_GROUPS, EQUIP_IMPLIES, equipmentGroups, EXERCISES, EXP, EX_BY_ID, PATTERN_BY_ID, RAW, SESSIONS, SPLITS, TEMPLATES, engineInfo, expandEquipment };

@@ -1133,4 +1133,14 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
 { C.init({ store: JSON.stringify({ unit: 'kg' }) }); C.createFromTemplate({ id: 'ul4' }); C.startSession({});
   const o = C.swapOptions({ ei: 0 }); ok(Array.isArray(o) && o.length > 0 && o.every((x) => x.equipLabel), 'in-workout swap lists alternatives with equipment labels (' + (o?.length || 0) + ')'); C.discardSession(); }
 
+// Equipment reads by what it trains: every id once, related machines side by side, on the gym sheet and in setup alike.
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) }); const g = C.gyms(), o = C.setupOptions();
+  const ids = g.equipment.flatMap((c) => c.items.map((x) => x.id)), hip = g.equipment.find((c) => c.items.some((x) => x.id === 'abduction'));
+  const at = (id) => hip.items.findIndex((x) => x.id === id);
+  ok(ids.length === E.EQUIPMENT.length && new Set(ids).size === ids.length && Math.abs(at('abduction') - at('adduction')) === 1,
+    'gym equipment: all ' + ids.length + ' once, Hip Abduction beside Hip Adduction (' + hip.cat + ')');
+  const sa = o.equipment.map((x) => x.id);
+  ok(Math.abs(sa.indexOf('abduction') - sa.indexOf('adduction')) === 1 && o.equipment.find((x) => x.id === 'legpress').cat === 'Leg machines',
+    'setup equipment follows the same groups'); }
+
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

@@ -25,9 +25,11 @@ import java.security.MessageDigest
  * SHA-256 detects accidental corruption; it does NOT authenticate a caller
  * or protect against a malicious actor who can modify private app files.
  *
- * The snapshot and identity are supplied by the native issuance authority;
- * the journal file contains only immutable receipt events and their scope
- * fingerprint. Native-issued snapshot persistence is a SEPARATE cutover gate.
+ * The snapshot and identity are supplied by the native issuance authority.
+ * From v2 the same atomic envelope stores the WHOLE immutable issued snapshot
+ * and all receipts, so cold recovery never needs the old JavaScript engine.
+ * Authentication of a current athlete and approved plan is still a separate
+ * app-owner cutover gate.
  */
 enum class NativeJournalFileRefusal {
     INVALID_ARGUMENT, NOT_ISSUED, ISSUE_CONFLICT, SOURCE_CONFLICT,
@@ -49,6 +51,7 @@ sealed interface NativeJournalFileResult {
 private data class SavedReceipts(
     val ownerKey: String,
     val snapshotHash: String,
+    val snapshot: KotlinStagedWorkout,
     val identity: KotlinStoredWorkoutIdentity,
     val receipts: List<KotlinJournalReceipt>,
     val revision: Long,
@@ -56,8 +59,8 @@ private data class SavedReceipts(
 )
 
 private object NativeJournalBinary {
-    private const val MAGIC = 0x50494A31 // "PIJ1"
-    private const val VERSION = 1
+    private const val MAGIC = 0x50494A32 // "PIJ2" (not a legacy JS journal)
+    private const val VERSION = 2
     private const val MAX_BYTES = 2_000_000
     private const val MAX_EVENTS = 2048
 
@@ -73,42 +76,9 @@ private object NativeJournalBinary {
     private fun DataInputStream.optional(): String? =
         if(readBoolean()) readUTF() else null
 
-    /** Hash ALL immutable issued target fields so targets cannot drift silently. */
-    fun snapshotHash(snapshot: KotlinStagedWorkout): String {
-        val buffer=ByteArrayOutputStream()
-        DataOutputStream(buffer).use { out ->
-            with(out) {
-                val s=snapshot.source
-                writeUTF(s.athleteId);writeLong(s.athleteRevision)
-                writeUTF(s.programId);writeLong(s.programRevision)
-                writeUTF(s.gymId);writeLong(s.gymRevision)
-                writeUTF(s.catalogRevision);writeUTF(s.coachingRulesRevision)
-                writeUTF(snapshot.grantId);writeUTF(snapshot.workoutId)
-                writeInt(snapshot.calendarDay);writeInt(snapshot.dayIndex)
-                writeUTF(snapshot.purpose.name);writeLong(snapshot.estimatedMinutes)
-                writeInt(snapshot.targets.size)
-                for(t in snapshot.targets) {
-                    writeUTF(t.exerciseId);writeUTF(t.role.name)
-                    writeUTF(t.purpose.name);writeUTF(t.setKey)
-                    writeUTF(t.type.name);writeInt(t.ordinal)
-                    when(val load=t.load) {
-                        DraftSetLoad.ExplicitBodyweight -> writeBoolean(false)
-                        is DraftSetLoad.Verified -> {
-                            writeBoolean(true)
-                            writeUTF(load.unit.name);writeUTF(load.basis.name)
-                            writeUTF(load.value.stripTrailingZeros().toPlainString())
-                        }
-                    }
-                    writeInt(t.reps.minimum);writeInt(t.reps.maximum)
-                    val targetRir=t.targetRir
-                    writeBoolean(targetRir != null)
-                    if(targetRir != null)writeInt(targetRir)
-                    writeInt(t.activeSeconds);writeInt(t.restSeconds)
-                }
-            }
-        }
-        return hash(buffer.toByteArray())
-    }
+    /** Hash EVERY issued set field using the strict snapshot codec. */
+    fun snapshotHash(snapshot: KotlinStagedWorkout): String =
+        hash(KotlinIssuedSnapshotCodec.encode(snapshot))
 
     fun encode(saved: SavedReceipts): ByteArray {
         require(saved.receipts.size<=MAX_EVENTS)
@@ -117,6 +87,9 @@ private object NativeJournalBinary {
             with(out) {
                 writeInt(MAGIC);writeInt(VERSION)
                 writeUTF(saved.ownerKey);writeUTF(saved.snapshotHash)
+                val snapshotBytes=KotlinIssuedSnapshotCodec.encode(saved.snapshot)
+                require(saved.snapshotHash==hash(snapshotBytes))
+                writeInt(snapshotBytes.size);write(snapshotBytes)
                 writeUTF(saved.identity.storageReceiptId)
                 writeUTF(saved.identity.workoutId)
                 writeLong(saved.identity.storedRevision)
@@ -163,7 +136,7 @@ private object NativeJournalBinary {
         }.toByteArray()
     }
 
-    fun decode(raw: ByteArray, source: KotlinTrainingSourceRevision): SavedReceipts {
+    fun decode(raw: ByteArray): SavedReceipts {
         if(raw.size !in 40..MAX_BYTES)throw IOException("invalid journal size")
         DataInputStream(ByteArrayInputStream(raw)).use { stream ->
             val size=stream.readInt()
@@ -182,6 +155,14 @@ private object NativeJournalBinary {
                         throw IOException("unknown journal encoding")
                     val ownerKey=readUTF()
                     val snapshotHash=readUTF()
+                    val snapshotSize=readInt()
+                    if(snapshotSize !in 8..250_000 || snapshotSize>available())
+                        throw IOException("invalid embedded snapshot length")
+                    val snapshotBytes=ByteArray(snapshotSize)
+                    readFully(snapshotBytes)
+                    val snapshot=KotlinIssuedSnapshotCodec.decode(snapshotBytes)
+                    if(snapshotHash!=hash(snapshotBytes))
+                        throw IOException("embedded snapshot hash mismatch")
                     val receiptId=readUTF()
                     val workoutId=readUTF()
                     val issuedRevision=readLong()
@@ -223,9 +204,9 @@ private object NativeJournalBinary {
                         receipts.add(KotlinJournalReceipt(applied,operation))
                     }
                     if(available()!=0)throw IOException("trailing journal bytes")
-                    return SavedReceipts(ownerKey,snapshotHash,
-                        KotlinStoredWorkoutIdentity(receiptId,workoutId,source,
-                            issuedRevision),receipts,revision,finishId)
+                    return SavedReceipts(ownerKey,snapshotHash,snapshot,
+                        KotlinStoredWorkoutIdentity(receiptId,workoutId,
+                            snapshot.source,issuedRevision),receipts,revision,finishId)
                 }
             }
         }
@@ -305,12 +286,13 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
             return NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_ISSUED)
         val envelope=try {
             if(Files.size(file)>2_000_000L)throw IOException("oversize journal")
-            NativeJournalBinary.decode(Files.readAllBytes(file),snapshot.source)
+            NativeJournalBinary.decode(Files.readAllBytes(file))
         } catch(_:Exception) {
             return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.CORRUPT_RECEIPTS)
         }
         if(envelope.ownerKey!=ownerKey || envelope.identity!=identity ||
+            envelope.snapshot!=snapshot ||
             envelope.snapshotHash!=NativeJournalBinary.snapshotHash(snapshot))
             return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.SOURCE_CONFLICT)
@@ -342,7 +324,7 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
                 } else {
                     val initial=KotlinWorkoutJournalDomain.begin(snapshot,identity)
                     val envelope=SavedReceipts(ownerKey,
-                        NativeJournalBinary.snapshotHash(snapshot),identity,
+                        NativeJournalBinary.snapshotHash(snapshot),snapshot,identity,
                         emptyList(),0,null)
                     atomicWrite(file,NativeJournalBinary.encode(envelope))
                     NativeJournalFileResult.Durable(initial,false)
@@ -387,7 +369,7 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
                 if(!decision.replayed) {
                     val next=decision.state
                     val envelope=SavedReceipts(ownerKey,
-                        NativeJournalBinary.snapshotHash(snapshot),identity,
+                        NativeJournalBinary.snapshotHash(snapshot),snapshot,identity,
                         next.receipts,next.revision,next.finishedByEventId)
                     atomicWrite(file,NativeJournalBinary.encode(envelope))
                 }

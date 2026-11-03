@@ -15,6 +15,10 @@ import java.text.DateFormat
 import java.time.YearMonth
 import java.time.ZoneId
 
+// Exact composite identity: avoid integer collisions in long/custom workouts.
+private fun historyObservationKey(exerciseIndex: Int,setIndex: Int): String =
+    "$exerciseIndex:$setIndex"
+
 private fun historyDateLabel(date: Long)=DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT).format(Date(date))
 
 private fun historySetLabel(exercise: NativeHistoryExercise,set: NativeHistorySet): String {
@@ -93,7 +97,8 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
     }
     var selectedExercise by rememberSaveable(history.entrySha256) { mutableStateOf<String?>(null) }
     var selectedSet by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
-    var selectedObservation by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
+    var selectedObservation by rememberSaveable(history.entrySha256) { mutableStateOf<String?>(null) }
+    var selectedOccurrence by rememberSaveable(history.entrySha256) { mutableIntStateOf(-1) }
     var selectedWarmup by rememberSaveable(history.entrySha256) {mutableStateOf<String?>(null)}
     val historyEditorBusy=state.historyBusy || state.workoutBusy ||
         state.backupExportBusy || state.busy || state.workout!=null ||
@@ -105,7 +110,8 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
         if(state.workout!=null) {
             selectedExercise=null
             selectedSet=-1
-            selectedObservation=-1
+            selectedOccurrence=-1
+            selectedObservation=null
             selectedWarmup=null
         }
     }
@@ -148,9 +154,10 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
                             (set.rir?.let { " · $it RIR" } ?: ""),
                         canEdit,"Edit") {
                         if(observation!=null)
-                            selectedObservation=observation.slot.exerciseIndex*20+observation.slot.setIndex
+                            selectedObservation=historyObservationKey(observation.slot.exerciseIndex,observation.slot.setIndex)
                         else {
                             selectedExercise=exercise.id
+                            selectedOccurrence=set.exerciseIndex
                             selectedSet=set.setIndex
                         }
                     }
@@ -195,7 +202,7 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
                     else "${value.load} ${history.unit} × ${value.reps} reps" +
                         (value.rir?.let { " · $it RIR" } ?: ""),
                     canEdit,if(value==null)"Record" else "Edit") {
-                    selectedObservation=exerciseIndex*20+row.slot.setIndex
+                    selectedObservation=historyObservationKey(row.slot.exerciseIndex,row.slot.setIndex)
                 }
             }
         }
@@ -205,11 +212,15 @@ internal fun NativeHistoryPanel(state: NativeRuntimeState,onCorrect: (String)->U
         TextButton(onClick=onReload,enabled=enabled) { Text("Reload saved sets") }
     }
     val exercise=history.exercises.firstOrNull { it.id==selectedExercise }
-    val set=exercise?.sets?.firstOrNull { it.setIndex==selectedSet }
-    val observation=history.editRows?.firstOrNull { it.slot.exerciseIndex*20+it.slot.setIndex==selectedObservation }
-    if(observation!=null)NativeSetEditSheet(historyEditorBusy,onDismiss={selectedObservation=-1}) {
+    val set=exercise?.sets?.firstOrNull {
+        it.exerciseIndex==selectedOccurrence && it.setIndex==selectedSet
+    }
+    val observation=history.editRows?.firstOrNull {
+        historyObservationKey(it.slot.exerciseIndex,it.slot.setIndex)==selectedObservation
+    }
+    if(observation!=null)NativeSetEditSheet(historyEditorBusy,onDismiss={selectedObservation=null}) {
         NativeHistoryObservationEditor(history,observation,historyEditorBusy,state.historyError,onCorrect,
-            onCancel={selectedObservation=-1})
+            onCancel={selectedObservation=null})
     }
     if(exercise!=null && set!=null) {
         NativeSetEditSheet(historyEditorBusy,onDismiss={selectedExercise=null}) {

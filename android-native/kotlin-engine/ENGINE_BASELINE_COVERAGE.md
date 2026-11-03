@@ -43,7 +43,7 @@ Each numbered requirement needs independently specified outcomes, property/regre
 - E10 **P** Exercise setup hints and attachment imagery/choices; distinct rope/straight/V/dual rope and lateral/curl variants where actually supported by gym stock.
 
 ### C. Program and week composer (P0)
-- E11 **R** Deterministic candidate weeks across four splits, primary-lift ordering, pinned visits, circular calendar recovery, dose/time feasibility and local repair; **P** independently justified real program issuance.
+- E11 **R (partial)** Candidate weeks across all four splits, verified source catalog, ordered primaries, recovery/dose/time audit and local repair. Confirmed athlete setup now controls calendar, split, physical gym and time preferences; all dose/focus/intents must be explicitly authored. Exclusions, bodyweight and barbell permissions fail closed, while unimplemented muscle-priority and hard/long day policy stays unresolved. **P** Real goal-specific generator, per-day permission optimization and actual program issuance.
 - E12 **P** Per-phase and individual MEV/MAV/MRV/frequency bands (all 16 muscles), direct/indirect accounting, separate biceps/brachialis and wrist-flexion/extension.
 - E13 **P** Balanced strength/size/movement patterns, day-level purpose, meaningful main-lift frequency, muscle-group exposure, individualized exercise rotation and recovery, not greedy week-only artifacts.
 - E14 **P** Realistic session-duration allocation for 40–60/60–90/120+; no junk/filler sets to satisfy minimum time, no lower-bound hugging with underdosed advanced training.

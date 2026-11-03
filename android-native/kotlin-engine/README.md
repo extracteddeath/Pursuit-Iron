@@ -7,6 +7,22 @@
 
 These are living requirements, **not claims that the new engine is live or every feature is complete**.
 
+### Confirmed athlete setup to actual catalog-week candidate (E11, partial)
+
+`CoachAthleteCatalogCandidateDomain.review` now derives the candidate's
+weekdays, split, session-time preferences and physical gym solely from a
+confirmed `ReviewedAthleteSetup`. It requires explicitly authored phase,
+all sixteen dose targets, split-day focus, day purpose and real non-set
+minutes; missing or malformed policies cannot produce a fabricated week.
+It refuses excluded exercises, unapproved bodyweight and zero-barbell
+profiles. After composition it checks barbell counts and disabled lower-day
+triceps. Unimplemented focused/reduced muscle and hard/long day policies
+remain visible unresolved constraints, not falsely honored preferences.
+
+The result stays **review-only**: no target issuance, save, persistence or
+native authority switch. The composer still needs actual goal-specific policy
+and optimization for per-day athlete restrictions.
+
 ### First basic-engine foundation: athlete and gym setup review (E01–E06, partial)
 
 `CoachAthleteSetupDomain.review` adds a headless, deterministic profile-input

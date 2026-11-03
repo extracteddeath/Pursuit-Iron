@@ -204,6 +204,10 @@ object CoachWeekComposer {
     private fun mayStart(option:ComposerExerciseOption,dayIndex:Int,
         request:ComposerRequest,visits:List<ComposerVisit>):Boolean {
         if(request.days[dayIndex].focus !in option.allowedFocus)return false
+        // A visit is unique by exercise AND training day. Replacement and
+        // relocation searches must not create duplicate stable set keys.
+        if(visits.any {it.exerciseId==option.exerciseId &&
+                it.dayIndex==dayIndex})return false
         if(visits.count {it.exerciseId==option.exerciseId}>=option.maximumVisits)return false
         if(visits.count {it.dayIndex==dayIndex}>=
             request.maximumDifferentExercisesPerDay)return false

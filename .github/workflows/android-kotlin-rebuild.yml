@@ -31,6 +31,8 @@ jobs:
           gradle-version: '9.3.1'
       - name: Verify Kotlin engine cannot alter native workouts
         run: node android-native/kotlin-engine/verification/offline-only-test.mjs
+      - name: Verify entire engine feature scope and native UX documentation
+        run: node android-native/kotlin-engine/verification/feature-scope-contract.mjs
       - name: Stage legacy web exercise catalog as unreviewed source inventory
         run: node android-native/kotlin-engine/verification/legacy-catalog-ingest.mjs --write-report
       - name: Verify first curated starter tranche provenance

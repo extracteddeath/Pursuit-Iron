@@ -24,7 +24,25 @@ new-issuance approval. Original issued targets and receipts remain frozen.
 Logout or another athlete's session must deny access. The authorization
 provider is a required production host dependency **not implemented here**;
 test doubles prove the contract, not actual Android sign-in security.
-Cross-store version fencing/transactional program ownership and device
+### Approval-to-commit transaction fence (independent native implementation)
+
+`NativeKotlinApprovalRevisionFence.withOwnerTransaction` now holds a
+**per-owner cross-process OS file lock** (plus JVM process mutex) throughout
+the approved-week review, revalidation and durable journal issuance.
+`NativeKotlinWorkoutCoordinator` REQUIRES an injected fence: there is no
+constructor that silently runs without it. Cold-open and append also use
+the fence so app-owned sign-out and ownership changes can be serialized.
+Lock ordering is always **owner approval fence -> workout journal lock**.
+
+A separate concurrent-writer test proves that a compliant approved-program
+writer cannot change the source revision between the last approval review and
+the workout commit. **This is a working fence, not full integration:** every
+real athlete/profile/program/gym/grant mutation and sign-out MUST also use
+this SAME app-private fence directory and owner key. Existing live Compose
+program writers do not do that yet, and using an unrelated DB transaction,
+different directory or uncoordinated mutation would bypass the protection.
+It does not authenticate the caller or make separate files/SQLite transactions
+atomically recoverable. Actual Android owner/session persistence and device
 instrumentation are still mandatory before production integration.
 
 ## What exists
@@ -91,7 +109,8 @@ Regression cases include cold reopen after process restart **without a
 caller-supplied snapshot**, exact load/RIR/bodyweight and full target
 roundtrips, denied authorization, complete-workout receipt replay,
 idempotent issuance/finish, revision conflicts, corrections, concurrent
-writers, different athlete scopes, altered targets and corrupt bytes. These results are necessary but
+writers, in-flight program edits blocked through the shared owner fence,
+different athlete scopes, altered targets and corrupt bytes. These results are necessary but
 not proof of Android device crash/power-loss acceptance.
 
 See [complete JS replacement contract](../kotlin-engine/FULL_REPLACEMENT_CONTRACT.md).

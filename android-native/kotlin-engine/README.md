@@ -158,3 +158,17 @@ phase-specific volume ranges, time-estimation validation, selecting/scheduling
 exercises and sets to resolve actual constraint conflicts, and proving
 the chosen prescription over longitudinal histories. This is a **feasibility
 checker for submitted plans, not yet a generated workout program**.
+
+### Preliminary quality review is separate from safety feasibility
+
+The dose audit now explicitly reports days outside preferred session-time
+ranges, and whether the plan contains extensions whose fatigue/working-set
+conversion has not yet been certified. `satisfiesDeclaredHardConstraints`
+does **not** imply the program is good or ready for release.
+`preliminaryReviewNeeded` stays true when those concerns are unresolved
+even if the hard bounds are satisfied.
+
+An additional regression recreates the reported ~30-set hypertrophy to
+11-set strength collapse. The new checker raises muscle-specific dose gaps
+**only against the caller's actual phase requirements**, rather than
+declaring every strength phase should match hypertrophy volume.

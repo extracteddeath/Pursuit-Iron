@@ -79,7 +79,13 @@ data class WeeklyDoseFeasibilityReport(
     val phase: TrainingPhase,
     val muscles: Map<TrainingMuscle, WeeklyMuscleDoseFinding>,
     val sessions: List<DayTimeFinding>,
-    val satisfiesDeclaredHardConstraints: Boolean
+    val satisfiesDeclaredHardConstraints: Boolean,
+    /** Soft ranges still require review; a preferred max is NOT a hard stop. */
+    val daysOutsidePreferredWindow: Set<Int>,
+    /** Extensions have no certified regular-set conversion rule yet. */
+    val requiresExtensionDosePolicy: Boolean,
+    /** A triage signal only, never permission to publish a program. */
+    val preliminaryReviewNeeded: Boolean
 )
 
 /** Read-only feasibility report. Not a trained/validated program generator. */
@@ -195,13 +201,24 @@ object WeeklyDoseFeasibilityDomain {
             }
             DayTimeFinding(index,total,minutes,timeStatus)
         }
+        val hardConstraintsPass=muscleFindings.values.all {
+            it.finding==DoseFinding.WITHIN_BOUNDS && it.missingDirectDays==0
+        } && sessions.none {it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT}
+        val outsidePreference=sessions.filter {
+            it.finding!=TimeWindowFinding.WITHIN_PREFERENCE
+        }.map {it.dayIndex}.toSet()
+        val unconvertedExtensions=week.exposures.any {
+            it.kind==ExposureSetKind.EXTENSION
+        }
         return WeeklyDoseFeasibilityReport(
             phase=week.phase,
             muscles=Collections.unmodifiableMap(muscleFindings),
             sessions=Collections.unmodifiableList(sessions),
-            satisfiesDeclaredHardConstraints=muscleFindings.values.all {
-                it.finding==DoseFinding.WITHIN_BOUNDS && it.missingDirectDays==0
-            } && sessions.none {it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT}
+            satisfiesDeclaredHardConstraints=hardConstraintsPass,
+            daysOutsidePreferredWindow=Collections.unmodifiableSet(outsidePreference),
+            requiresExtensionDosePolicy=unconvertedExtensions,
+            preliminaryReviewNeeded=!hardConstraintsPass ||
+                outsidePreference.isNotEmpty() || unconvertedExtensions
         )
     }
 }

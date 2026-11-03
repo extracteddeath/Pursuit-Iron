@@ -180,4 +180,73 @@ class WeeklyDoseFeasibilityDomainTest {
             writable.clear()
         }
     }
+
+    @Test fun historicalThirtyToElevenSetCollapseIsFlaggedAgainstDeclaredPhaseDose() {
+        // This independently checks the user's custom-cycle regression.
+        // An 11-set strength week is NOT universally wrong: it is wrong
+        // here because this explicitly authored phase requests >=8 sets
+        // for three independently tracked muscle groups.
+        val quads=TrainingMuscle.QUADS
+        val lats=TrainingMuscle.LATS
+        val limits=bands(
+            band(chest,"8","10","12",2),
+            band(quads,"8","10","12",2),
+            band(lats,"8","10","12",2))
+        val old=(0 until 30).map {i->
+            val muscle=when {
+                i<10 -> chest
+                i<20 -> quads
+                else -> lats
+            }
+            row("hypertrophy-$i",i%3,listOf(c(muscle)))
+        }
+        val replacement=(0 until 11).map {i->
+            val muscle=when {
+                i<4 -> chest
+                i<8 -> quads
+                else -> lats
+            }
+            row("strength-$i",i%3,listOf(c(muscle)))
+        }
+        val previous=WeeklyDoseFeasibilityDomain.audit(week(old,limits))
+        val short=WeeklyDoseFeasibilityDomain.audit(week(replacement,limits)
+            .copy(phase=TrainingPhase.STRENGTH))
+        assertTrue(previous.satisfiesDeclaredHardConstraints)
+        assertFalse(short.satisfiesDeclaredHardConstraints)
+        assertTrue(short.preliminaryReviewNeeded)
+        assertEquals(TrainingPhase.STRENGTH,short.phase)
+        assertEquals(n("4"),short.muscles[chest]?.gapToMev)
+        assertEquals(n("4"),short.muscles[quads]?.gapToMev)
+        assertEquals(n("5"),short.muscles[lats]?.gapToMev)
+    }
+
+    @Test fun directFrequencyMustBeMetEvenIfIndirectSetsReachMev() {
+        val report=WeeklyDoseFeasibilityDomain.audit(week(listOf(
+            row("pull-0",0,listOf(c(biceps,"0.5",MuscleCreditRole.INDIRECT))),
+            row("pull-1",1,listOf(c(biceps,"0.5",MuscleCreditRole.INDIRECT)))
+        ),bands(band(biceps,"1","1","2",1))))
+        assertEquals(DoseFinding.WITHIN_BOUNDS,report.muscles[biceps]?.finding)
+        assertEquals(1,report.muscles[biceps]?.missingDirectDays)
+        assertFalse(report.satisfiesDeclaredHardConstraints)
+    }
+
+    @Test fun extensionAndPreferredTimeWarningsCannotBeMistakenForQualityApproval() {
+        val proposed=week(listOf(
+            row("bench",0,listOf(c(chest))),
+            row("drop-1",0,listOf(c(chest,"0.25")),ExposureSetKind.EXTENSION)
+        ),bands(band(chest,"1","1","2",1)))
+        val report=WeeklyDoseFeasibilityDomain.audit(proposed)
+        assertTrue(report.satisfiesDeclaredHardConstraints)
+        assertTrue(report.preliminaryReviewNeeded)
+        assertTrue(report.requiresExtensionDosePolicy)
+        assertEquals(setOf(0,1,2),report.daysOutsidePreferredWindow)
+        // Meeting preferred duration alone does not certify amplifier
+        // credit; extension policy remains separately unresolved.
+        val filled=proposed.copy(windows=windows(min=1,max=60))
+        val filledReview=WeeklyDoseFeasibilityDomain.audit(filled)
+        assertTrue(filledReview.daysOutsidePreferredWindow.isEmpty())
+        assertTrue(filledReview.preliminaryReviewNeeded)
+    }
+
+
 }

@@ -73,6 +73,26 @@ assert.equal(inspectNativeProgram(focused.snapshot).setupJson,focusedSetup,
   'Authored muscle priorities survive exact saved-program restore');
 assert.equal(JSON.parse(first.snapshot).nativeOnboarding.setupJson,JSON.stringify(base),
   'Older native profiles without priorities remain intact');
+// Lack of a rack is an explicit, safe facility fact, NOT a 41st visible
+// equipment item. The canonical engine must never prescribe rack-only lifts
+// when the athlete owns only a barbell (and other non-rack gear).
+const noRackSetup=JSON.stringify({...base,profile:{
+  ...base.profile,equipment:[...options.equipment,'no-rack']
+}});
+const noRackProposal=prepareNativeProgram(noRackSetup);
+const noRackStore=parseStoredData(noRackProposal.snapshot);
+assert.ok(noRackStore.saved[0].config.equipment.includes('no-rack'));
+assert.ok(noRackStore.saved[0].days.every(day=>day.exercises.every(id=>
+  !(EX_BY_ID[id]?.equip||[]).includes('rack'))),
+  'No rack-dependent exercise may appear when the athlete explicitly has no rack');
+assert.equal(inspectNativeProgram(noRackProposal.snapshot).setupJson,noRackSetup);
+for(const badEquipment of [
+  ['barbell','rack','no-rack'],
+  ['dumbbell','no-rack']
+]) assert.throws(()=>prepareNativeProgram(JSON.stringify({...base,profile:{
+  ...base.profile,equipment:badEquipment
+}})), 'Contradictory or orphaned rack facility flags must fail closed');
+
 // Older saved Android profiles may still carry "rack", even though the
 // canonical equipment picker now shows 40 real hardware choices.
 const oldRackSetup=JSON.stringify({...base,profile:{

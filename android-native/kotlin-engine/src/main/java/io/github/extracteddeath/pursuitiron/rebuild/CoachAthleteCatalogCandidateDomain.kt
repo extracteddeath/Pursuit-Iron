@@ -162,7 +162,7 @@ object CoachAthleteCatalogCandidateDomain {
                 add("day."+day.calendarDay+".barbell",
                     AthleteCandidateIssueKind.BARBELL_LIMIT,
                     "The proposed day exceeds the athlete's barbell limit.")
-            if(day.focus==ComposerFocus.LOWER &&
+            if(day.focus in setOf(ComposerFocus.LOWER,ComposerFocus.LEGS) &&
                 !profile.allowTricepsOnLower && movements.any {movement ->
                     movement.credits.any {credit ->
                         credit.muscle==TrainingMuscle.TRICEPS &&

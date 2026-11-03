@@ -16,7 +16,8 @@ all sixteen dose targets, split-day focus, day purpose and real non-set
 minutes; missing or malformed policies cannot produce a fabricated week.
 It refuses excluded exercises, unapproved bodyweight and zero-barbell
 profiles. The weekly search now **actively enforces each athlete's maximum
-barbell exercise visits per day and disabled direct-triceps on lower days**,
+barbell exercise visits per day and disabled direct-triceps on lower-body
+days (both UPPER/LOWER and PPL LEGS)**,
 including additions, replacements, relocations, and seeded custom-program
 rebalancing. These constraints apply before a candidate is accepted, not
 only in post-composition reports. Required visits that cannot fit are

@@ -230,7 +230,8 @@ object CoachWeekComposer {
         if(visits.count {it.dayIndex==dayIndex}>=
             request.maximumDifferentExercisesPerDay)return false
         // Reject before scoring, not after an infeasible week is built.
-        if(request.days[dayIndex].focus==ComposerFocus.LOWER &&
+        if(request.days[dayIndex].focus in setOf(
+                ComposerFocus.LOWER,ComposerFocus.LEGS) &&
             !request.allowDirectTricepsOnLower && directTriceps(option))
             return false
         val barbellCap=request.maximumBarbellExercisesPerDay

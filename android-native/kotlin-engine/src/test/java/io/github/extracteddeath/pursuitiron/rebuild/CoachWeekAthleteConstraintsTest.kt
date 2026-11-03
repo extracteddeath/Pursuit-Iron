@@ -151,6 +151,42 @@ class CoachWeekAthleteConstraintsTest {
         assertFalse(plan.visits.any {it.exerciseId=="bar-bench"})
     }
 
+    @Test fun pplLegsDayAlsoRespectsDisabledDirectTriceps() {
+        val push=option("ppl-push",TrainingMuscle.CHEST,
+            ComposerPattern.HORIZONTAL_PRESS,
+            allowed=setOf(ComposerFocus.PUSH),
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n("25"),dumbbells))
+        val pull=option("ppl-pull",TrainingMuscle.LATS,
+            ComposerPattern.HORIZONTAL_PULL,
+            allowed=setOf(ComposerFocus.PULL),
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n("25"),dumbbells))
+        val legs=option("ppl-squat",TrainingMuscle.QUADS,
+            ComposerPattern.SQUAT,
+            allowed=setOf(ComposerFocus.LEGS),
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n("25"),dumbbells))
+        val triceps=option("ppl-triceps",TrainingMuscle.TRICEPS,
+            ComposerPattern.ISOLATION,
+            allowed=setOf(ComposerFocus.LEGS),
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n("25"),dumbbells))
+        val focuses=listOf(ComposerFocus.PUSH,ComposerFocus.PULL,
+            ComposerFocus.LEGS)
+        val request=ComposerRequest(ComposerSplit.PUSH_PULL_LEGS,
+            TrainingPhase.HYPERTROPHY,
+            focuses.mapIndexed {day,focus ->
+                ComposerDay(day*2,focus,DeclaredSessionWindow(1,100,null,0))
+            },bounds(),listOf(push,pull,legs,triceps),2,1,
+            allowDirectTricepsOnLower=false)
+        val forbidden=CoachWeekComposer.compose(request)
+        assertEquals(1,forbidden.missingRequiredVisits["ppl-triceps"])
+        assertTrue(forbidden.visits.none {it.exerciseId=="ppl-triceps"})
+        assertEquals(ComposerStatus.CONSTRAINTS_UNRESOLVED,forbidden.status)
+        val allowed=CoachWeekComposer.compose(
+            request.copy(allowDirectTricepsOnLower=true))
+        assertTrue(allowed.visits.any {it.exerciseId=="ppl-triceps"})
+        assertTrue(allowed.missingRequiredVisits["ppl-triceps"]==null)
+        assertFalse(allowed.canIssueTargets)
+    }
+
     @Test fun invalidPerDayCapsFailFastInsteadOfSilentlyClamping() {
         assertThrows(IllegalArgumentException::class.java) {
             CoachWeekComposer.compose(full(cap=-1))

@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -310,10 +311,10 @@ private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int,
             }
             when {
                 today -> androidx.compose.material3.Button(onClick = { vm.openPreview(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp),
-                    modifier = Modifier.semantics { contentDescription = "Start ${d.s("label")}" }) { Text("Start") }
+                    modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Start ${d.s("label")}" }) { Text("Start") }
                 done -> Badge("Done", cs.surfaceContainerHighest, cs.onSurfaceVariant)
                 else -> FilledTonalButton(onClick = { vm.openPreview(p.s("programId"), d.s("id"), wk) }, contentPadding = PaddingValues(horizontal = 14.dp),
-                    modifier = Modifier.semantics { contentDescription = "Start ${d.s("label")}" }) { Text("Start") }
+                    modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Start ${d.s("label")}" }) { Text("Start") }
             }
         }
         // The design's "Hits …" line: the engine's weekly volume for this day, direct plus secondary shares

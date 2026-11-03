@@ -123,9 +123,10 @@ class NativeKotlinWorkoutCoordinator(
             val rerun=runCatching {
                 stage(underLockOwner,workoutId,second)
             }.getOrNull()
-            val remainsSame=second!=null &&
-                second.storageReceiptId==approval.storageReceiptId &&
-                second.storageRevision==approval.storageRevision &&
+            // Check the ENTIRE approved week and all policy records, not just
+            // the selected day's re-staged targets. Editing a different day
+            // is still a change in this approved-program transaction.
+            val remainsSame=second==approval &&
                 underLockSource==snapshot.source &&
                 rerun is KotlinWorkoutSnapshotResult.Staged &&
                 rerun.snapshot==snapshot

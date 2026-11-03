@@ -2033,3 +2033,15 @@ app-level modal sheet keeps its own Back handling and no history write is
 issued. At Today, Plan overview and Insights list, default Android Back
 remains available; no global interception traps the user in the app. Physical
 predictive Back gestures still need device testing. No APK.
+
+## 2026-11-02 — Protect physical inventory on weight unit changes
+
+Onboarding now asks for an explicit confirmation before clearing any
+nonblank verified bar, plate-pair, dumbbell, cable, Smith or machine
+inventory entry when toggling lb/kg. Cancel and system Back preserve the
+exact original unit and the full draft. Confirmation switches units and
+atomically resets old-unit loading entries, avoiding silent data loss and
+unsafe invented unit conversions. Empty drafts can switch without an
+unnecessary dialog. No changes to the engine's physical load verification,
+completed training data or persisted program. Source and Compose checks
+required; no APK.

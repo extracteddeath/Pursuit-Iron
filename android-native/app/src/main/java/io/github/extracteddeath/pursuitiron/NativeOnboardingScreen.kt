@@ -38,6 +38,23 @@ internal fun NativeOnboardingScreen(
     var inventoryFields by rememberSaveable {
         mutableStateOf(HashMap(NativeGymInventoryCodec.toDraft(initial.loadingInventory)))
     }
+    // Unit changes do not reinterpret physical plates, bars, dumbbells or
+    // machine stacks. An accidental toggle must not erase a checked gym setup.
+    var pendingUnit by rememberSaveable { mutableStateOf<String?>(null) }
+    if(pendingUnit!=null) AlertDialog(
+        onDismissRequest={pendingUnit=null},
+        title={Text("Change weight units?")},
+        text={Text("Your verified gym weights are recorded in $unit. Switching to $pendingUnit will clear those entries because converting plate stock and machine settings could give incorrect selectable loads.")},
+        confirmButton={Button(onClick={
+            val next=pendingUnit
+            if(next in listOf("lb","kg") && next!=unit) {
+                unit=checkNotNull(next)
+                inventoryFields=HashMap()
+            }
+            pendingUnit=null
+        }) { Text("Change units and clear weights") }},
+        dismissButton={TextButton(onClick={pendingUnit=null}) { Text("Keep my weights") }}
+    )
     val inventoryValidation = NativeGymInventoryCodec.fromDraft(inventoryFields, unit)
     val splits=state.options?.splits ?: listOf(NativeProgramSplit("full_body","Full body",listOf(3,4,5,6)))
     val selected=splits.firstOrNull { it.id==split } ?: splits.first()
@@ -128,7 +145,10 @@ internal fun NativeOnboardingScreen(
         SectionLabel("Weight units")
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             listOf("lb","kg").forEach { id -> PreviewChoice(id,unit==id,!state.busy){
-                if(unit!=id) { unit=id; inventoryFields=HashMap() }
+                if(unit!=id) {
+                    if(inventoryFields.values.any { it.isNotBlank() }) pendingUnit=id
+                    else { unit=id; inventoryFields=HashMap() }
+                }
             } }
         }
         NativeGymInventoryEditor(unit,inventoryFields,{ key,value ->

@@ -14,6 +14,17 @@ assert.ok(ui.includes('state.options?.splits') && ui.includes('selected.days.for
   'Split/day compatibility must be canonical option data, not a second Kotlin topology engine');
 assert.ok(ui.includes('Review generated plan') && ui.includes('Save program') && ui.includes('Edit choices') &&
   ui.includes('if (proposal!=null)') && ui.includes('ReadOnlyTrainingDayRow('));
+assert.ok(ui.includes('var pendingUnit by rememberSaveable') &&
+  ui.includes('if(pendingUnit!=null) AlertDialog(') &&
+  ui.includes('title={Text("Change weight units?")}') &&
+  ui.includes('inventoryFields.values.any { it.isNotBlank() }') &&
+  ui.includes('pendingUnit=id') &&
+  ui.includes('Text("Change units and clear weights")') &&
+  ui.includes('Text("Keep my weights")') &&
+  ui.includes('onDismissRequest={pendingUnit=null}') &&
+  ui.includes('if(next in listOf("lb","kg") && next!=unit)') &&
+  ui.includes('inventoryFields=HashMap()'),
+  'Switching units must not silently delete verified physical weights; acceptance clears old-unit stock instead of converting or reusing it');
 assert.ok(!ui.includes('.initialize(') && !ui.includes('generateNextProgramForShell') &&
   !ui.includes('commitAtomically') && !ui.includes('Complete set'));
 assert.ok(host.includes('owner.initialize(proposal.snapshot)') &&

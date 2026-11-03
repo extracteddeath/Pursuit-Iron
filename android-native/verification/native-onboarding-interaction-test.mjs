@@ -93,9 +93,13 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
 // set or publish a workout directly from an unconfirmed tap.
 const controls=fs.readFileSync(root+'NativeComponents.kt','utf8');
 assert.ok(shell.includes('import androidx.activity.compose.BackHandler') &&
-  shell.includes('BackHandler(enabled=activeWorkoutId!=null &&') &&
-  shell.includes('section==NativeDestination.TRAIN.ordinal && sheet==0 &&') &&
-  shell.includes('!confirmLeaveActiveWorkout)') &&
+  shell.includes('BackHandler(enabled=sheet==0 && !confirmLeaveActiveWorkout &&') &&
+  shell.includes('section==NativeDestination.TRAIN.ordinal && activeWorkoutId!=null ->') &&
+  shell.includes('confirmLeaveActiveWorkout=true') &&
+  shell.includes('showingPlanDay -> selectedTrainingDay=null') &&
+  shell.includes('showingHistoryDetail -> onHistoryList()') &&
+  shell.includes('onboarding?.history!=null && onboarding.historyBusy.not()') &&
+  shell.includes('section=NativeDestination.TODAY.ordinal') &&
   shell.includes('onDismissRequest={confirmLeaveActiveWorkout=false}') &&
   shell.includes('title={Text("Leave active workout?")}') &&
   shell.includes('Unsubmitted values are not logged.') &&

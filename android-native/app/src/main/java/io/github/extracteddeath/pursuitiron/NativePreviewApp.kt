@@ -190,10 +190,23 @@ internal fun NativePreviewApp(
         if(activeWorkoutId==null || section!=NativeDestination.TRAIN.ordinal)
             confirmLeaveActiveWorkout=false
     }
-    BackHandler(enabled=activeWorkoutId!=null &&
-        section==NativeDestination.TRAIN.ordinal && sheet==0 &&
-        !confirmLeaveActiveWorkout) {
-        confirmLeaveActiveWorkout=true
+    val showingPlanDay=section==NativeDestination.PLAN.ordinal &&
+        selectedTrainingDay!=null
+    val showingHistoryDetail=section==NativeDestination.INSIGHTS.ordinal &&
+        onboarding?.history!=null && onboarding.historyBusy.not()
+    BackHandler(enabled=sheet==0 && !confirmLeaveActiveWorkout &&
+        (section==NativeDestination.TRAIN.ordinal ||
+            showingPlanDay || showingHistoryDetail)) {
+        when {
+            section==NativeDestination.TRAIN.ordinal && activeWorkoutId!=null ->
+                confirmLeaveActiveWorkout=true
+            section==NativeDestination.TRAIN.ordinal -> {
+                selectedTrainingDay=null
+                section=NativeDestination.TODAY.ordinal
+            }
+            showingPlanDay -> selectedTrainingDay=null
+            showingHistoryDetail -> onHistoryList()
+        }
     }
     if(confirmLeaveActiveWorkout && activeWorkoutId!=null &&
         section==NativeDestination.TRAIN.ordinal) AlertDialog(

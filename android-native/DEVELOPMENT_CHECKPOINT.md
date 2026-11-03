@@ -2021,3 +2021,15 @@ saved-program destinations; blocked source errors still remain visible in
 the existing onboarding recovery surface. No new persistence/engine API,
 new training data or source-web change. Source and Compose checks required;
 physical launch acceptance remains outstanding. No APK.
+
+## 2026-11-02 — Hierarchical system Back for native tabs
+
+Expanded the workout-aware system Back handler to honor Android's internal
+navigation hierarchy. Train with no active workout returns to Today; with
+an active issued workout it retains the explicit confirmation before leaving.
+Plan day detail returns to the Plan overview, and an idle saved-history detail
+returns to its list through the existing history navigation callback. An
+app-level modal sheet keeps its own Back handling and no history write is
+issued. At Today, Plan overview and Insights list, default Android Back
+remains available; no global interception traps the user in the app. Physical
+predictive Back gestures still need device testing. No APK.

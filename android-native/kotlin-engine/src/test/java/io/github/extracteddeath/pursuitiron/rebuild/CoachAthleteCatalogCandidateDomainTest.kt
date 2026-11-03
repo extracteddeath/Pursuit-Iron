@@ -154,7 +154,10 @@ class CoachAthleteCatalogCandidateDomainTest {
     @Test fun focusAndHardDayWithoutPrescribedPoliciesRemainUnresolved() {
         val focus=CoachAthleteCatalogCandidateDomain.review(request().copy(
             setup=setup(focus=true)))
-        assertTrue(focus.issues.any {it.field=="musclePriorities"})
+        assertTrue(focus.issues.any {
+            it.field=="goalPolicy" &&
+                it.kind==AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED
+        })
         assertEquals(AthleteCandidateStatus.CONSTRAINTS_UNRESOLVED,focus.status)
         val hard=CoachAthleteCatalogCandidateDomain.review(request().copy(
             setup=setup(hard=true)))
@@ -192,6 +195,37 @@ class CoachAthleteCatalogCandidateDomainTest {
         assertFalse(outcome.maySaveProgram)
         assertEquals(input,original.copy(
             setup=input.setup,catalog=input.catalog,choices=input.choices))
+    }
+
+    @Test fun matchingGoalPolicyRemovesOnlyItsSpecificUnresolvedFinding() {
+        val original=request()
+        val athlete=checkNotNull(original.setup.reviewed)
+        val policy=AuthoredGoalProgramPolicy(
+            "explicit-coaching-review","v1","Confirmed training targets.",
+            athlete.athleteProfileId,athlete.profileRevision,
+            athlete.goal,athlete.experience,athlete.split,
+            TrainingPhase.HYPERTROPHY,athlete.trainingWeekdays.size,
+            original.bounds,original.bounds,
+            mapOf(ComposerSessionPurpose.HYPERTROPHY to 1))
+        val without=CoachAthleteCatalogCandidateDomain.review(original)
+        assertTrue(without.issues.any {
+            it.kind==AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED
+        })
+        val with=CoachAthleteCatalogCandidateDomain.review(
+            original.copy(goalPolicy=policy))
+        assertTrue(with.issues.none {
+            it.kind==AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED
+        })
+        assertNotNull(with.catalogReview)
+        assertFalse(with.maySaveProgram)
+        assertFalse(with.mayIssueWorkout)
+        val wrong=CoachAthleteCatalogCandidateDomain.review(
+            original.copy(goalPolicy=policy.copy(
+                experience=AthleteExperience.BEGINNER)))
+        assertTrue(wrong.issues.any {
+            it.kind==AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED
+        })
+        assertEquals(original.goalPolicy,null)
     }
 
     @Test fun candidateReviewIsDeterministicAndNeverAltersAuthoring() {

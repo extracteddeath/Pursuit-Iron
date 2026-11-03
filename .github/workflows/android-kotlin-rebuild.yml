@@ -6,6 +6,10 @@ on:
     paths:
       - 'android-native/kotlin-engine/**'
       - 'android-native/native-coach-store/**'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/AppPrivateKotlinLocalAthlete.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitIronApplication.kt'
+      - 'android-native/app/build.gradle.kts'
       - 'android-native/settings.gradle.kts'
       - '.github/workflows/android-kotlin-rebuild.yml'
   workflow_dispatch:
@@ -44,6 +48,9 @@ jobs:
       - name: Test isolated native journal persistence and offline crash recovery
         working-directory: android-native
         run: gradle :native-coach-store:testDebugUnitTest --no-daemon --stacktrace
+      - name: Compile Android application with isolated Kotlin host, without building an APK
+        working-directory: android-native
+        run: gradle :app:compileDebugKotlin --no-daemon --stacktrace
       - name: Attach legacy migration review inventory (not coaching-approved)
         if: always()
         uses: actions/upload-artifact@v4

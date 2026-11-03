@@ -49,6 +49,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeSetEntryPolicy
@@ -216,25 +218,51 @@ internal fun PursuitCard(
 @Composable
 internal fun PursuitMetricStrip(metrics:List<Pair<String,String>>) {
     require(metrics.size==3)
+    val largeText=LocalDensity.current.fontScale>=1.35f
     Surface(modifier=Modifier.fillMaxWidth(),
         shape=MaterialTheme.shapes.large,
         color=MaterialTheme.colorScheme.surfaceContainer) {
-        Row(
-            modifier=Modifier.fillMaxWidth().padding(
-                vertical=PursuitSpace.md,horizontal=PursuitSpace.xs),
-            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
-        ) {
-            metrics.forEachIndexed { index,(label,value) ->
-                Column(modifier=Modifier.weight(1f),
-                    horizontalAlignment=Alignment.CenterHorizontally,
-                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
-                    Text(value,style=MaterialTheme.typography.titleLarge,
-                        maxLines=1,overflow=TextOverflow.Ellipsis,
-                        color=if(index==0) LocalPursuitPalette.current.accentInk
-                            else MaterialTheme.colorScheme.onSurface)
-                    Text(label,style=MaterialTheme.typography.labelMedium,
-                        maxLines=1,overflow=TextOverflow.Ellipsis,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // A forced 3-column, one-line strip clips real workout facts in
+            // Android's large-text mode. Present the SAME values as rows
+            // whenever accessibility scaling or narrow widths require it.
+            if(largeText || maxWidth<320.dp) {
+                Column(Modifier.fillMaxWidth().padding(PursuitSpace.md),
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
+                    metrics.forEachIndexed { index,(label,value) ->
+                        Row(Modifier.fillMaxWidth(),
+                            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm),
+                            verticalAlignment=Alignment.CenterVertically) {
+                            Text(label,modifier=Modifier.weight(1f),
+                                style=MaterialTheme.typography.labelLarge,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(value,modifier=Modifier.weight(1f),
+                                style=MaterialTheme.typography.titleMedium,
+                                textAlign=TextAlign.End,
+                                color=if(index==0) LocalPursuitPalette.current.accentInk
+                                    else MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier=Modifier.fillMaxWidth().padding(
+                        vertical=PursuitSpace.md,horizontal=PursuitSpace.xs),
+                    horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
+                ) {
+                    metrics.forEachIndexed { index,(label,value) ->
+                        Column(modifier=Modifier.weight(1f),
+                            horizontalAlignment=Alignment.CenterHorizontally,
+                            verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                            Text(value,style=MaterialTheme.typography.titleLarge,
+                                maxLines=1,overflow=TextOverflow.Ellipsis,
+                                color=if(index==0) LocalPursuitPalette.current.accentInk
+                                    else MaterialTheme.colorScheme.onSurface)
+                            Text(label,style=MaterialTheme.typography.labelMedium,
+                                maxLines=1,overflow=TextOverflow.Ellipsis,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
         }

@@ -14,7 +14,11 @@ if(process.argv[2]) {
   vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),context,{timeout:10000});
   worker=context.PursuitIronBridge.dispatchWorkoutStoreJson;
 }
-const equipment=nativeProgramOptions().equipment;
+// Fixed machine/cable loading fixture: adding other gym equipment must not
+// unpredictably redirect the sampled workout to unrelated specialty hardware.
+const equipment=['barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip',
+  'legpress','hacksquat','legext','legcurl','calfmachine','ezbar','kettlebell','bands'];
+assert.ok(equipment.every(id=>id==='rack'||nativeProgramOptions().equipment.includes(id)));
 assert.equal(nativeIssuedLoadMode('lat-pulldown',equipment),'cable_stack');
 assert.equal(nativeIssuedLoadMode('machine-press',equipment),null,
   'Dedicated selectorized machines cannot inherit a generic machine carrier');
@@ -46,7 +50,8 @@ for(const seed of [223,7,71,1122,2026,4929,99,1201,805,1782]) {
   const saved=inspectNativeProgram(snapshot);
   const workout=prepareNativeWorkout(snapshot,JSON.stringify({
     programId:'stack-program',workoutId:'stack-before',startedAt:2000}));
-  const candidate=saved.loadingCandidates.find(c=>workout.rows.some(r=>r.id===c.id));
+  const candidate=saved.loadingCandidates.find(c=>
+    c.mode==='cable_stack' && workout.rows.some(r=>r.id===c.id));
   if(candidate) {entry={snapshot,saved,workout,candidate};break;}
 }
 assert.ok(entry,'An actual issued cable exercise must be available for source-pinned physical testing');

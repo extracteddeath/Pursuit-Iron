@@ -29,7 +29,7 @@ Inspected the independent Kotlin rebuild at fa2f2168 and the separate native Com
 Each numbered requirement needs independently specified outcomes, property/regression tests, persistence evidence and the relevant Android UI flow. Unspecified policy is **not** silently given a guessed default.
 
 ### A. Profile, programming inputs and gym (P0)
-- E01 **R (partial)** Versioned athlete setup input review now validates hypertrophy/strength/powerbuilding, experience, 3–6 weekday choices, four splits, timezone and revision. **P** Training-history calibration, durable profile ownership and full generator integration still required.
+- E01 **R (partial)** Versioned athlete setup input review now validates hypertrophy/strength/powerbuilding, experience, 3–6 weekday choices, all four splits (Full Body, Upper-Lower, PPL, ULPPL), timezone and revision. **P** Training-history calibration, durable profile ownership and full generator integration still required.
 - E02 **R (partial)** Explicit 40–60, 60–90 and 120+ preferences are distinct from an approved hard time cap; contradictory cap fails closed. **P** Real plan-level validated time estimates for warmups, rest, unilateral sides and setup.
 - E03 **R (partial)** Named gym setup confirms unit, stock, available fixtures and attachment IDs, with independent physical inventory validation and immutable snapshot. **P** Multi-gym management, UI editing and complete implement/plate/Smith options.
 - E04 **P** Bodyweight enabled/disabled; assisted/weighted bodyweight distinct identities; minimum loads/increments per exercise, not one global 5 lb rule.

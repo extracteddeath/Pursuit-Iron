@@ -99,7 +99,8 @@ object CoachNativeVerifiedLoadHandoff {
     fun review(
         evidence: CoachNativeLoadEvidence,
         current: CoachCanonicalLoadRevision,
-        candidates: List<CoachEligibleLoadCandidate>
+        candidates: List<CoachEligibleLoadCandidate>,
+        expectedUnit: LoadUnit
     ): CoachLoadHandoffReview {
         if (!validRevision(current) || !validRevision(evidence.reference))
             return CoachLoadHandoffReview.Rejected(CoachLoadHandoffRejection.INVALID_REVISION)
@@ -121,9 +122,10 @@ object CoachNativeVerifiedLoadHandoff {
         for (fact in evidence.facts) {
             val candidate = known[fact.exerciseId]
                 ?: return CoachLoadHandoffReview.Rejected(CoachLoadHandoffRejection.INVALID_EVIDENCE)
-            if (candidate.name != fact.name || fact.unit !in setOf("lb", "kg"))
+            if (candidate.name != fact.name ||
+                fact.unit != (if (expectedUnit == LoadUnit.LB) "lb" else "kg"))
                 return CoachLoadHandoffReview.Rejected(CoachLoadHandoffRejection.INVALID_EVIDENCE)
-            val unit = if (fact.unit == "lb") LoadUnit.LB else LoadUnit.KG
+            val unit = expectedUnit
             val physical = when (fact) {
                 is CoachNativeExerciseLoadFact.Exact -> {
                     if (fact.loads.size !in 1..250 || fact.loads.any { !validNumber(it) } ||

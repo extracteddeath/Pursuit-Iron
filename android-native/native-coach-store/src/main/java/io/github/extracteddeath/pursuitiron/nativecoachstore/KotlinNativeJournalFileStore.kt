@@ -235,6 +235,13 @@ private object NativeJournalBinary {
  * error returns a refusal, never an optimistic success animation.
  */
 class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
+    companion object {
+        // JVM file locks are process-wide: two threads otherwise receive an
+        // OverlappingFileLockException instead of waiting for their turn.
+        // One short in-process mutex plus the OS lock also serializes writers
+        // created from different KotlinNativeJournalFileStore instances.
+        private val processMutex=Any()
+    }
     private val ownerId=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
     private fun path(ownerKey:String,workoutId:String): Path {
@@ -251,10 +258,12 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
         Files.createDirectories(privateDirectory)
         val file=path(ownerKey,workoutId)
         val lock=file.resolveSibling(file.fileName.toString()+".lock")
-        FileChannel.open(lock,StandardOpenOption.CREATE,StandardOpenOption.WRITE)
-            .use { channel ->
-                channel.lock().use { return action(file) }
-            }
+        return synchronized(processMutex) {
+            FileChannel.open(lock,StandardOpenOption.CREATE,StandardOpenOption.WRITE)
+                .use { channel ->
+                    channel.lock().use { action(file) }
+                }
+        }
     }
 
     private fun atomicWrite(file:Path,bytes:ByteArray) {

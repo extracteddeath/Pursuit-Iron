@@ -196,9 +196,9 @@ private object NativeJournalBinary {
                             1 -> KotlinJournalOperation.Finish(eventId,expectedRevision)
                             2 -> {
                                 val setKey=readUTF()
+                                val outcomeName=readUTF()
                                 val outcome=KotlinJournalSetOutcome.entries
-                                    .firstOrNull { it.name==readUTF() }
-                                // readUTF exactly once: the enum is source data.
+                                    .firstOrNull { it.name==outcomeName }
                                 if(outcome==null)throw IOException("unknown set outcome")
                                 val corrects=optional()
                                 val performed=if(readBoolean()) {
@@ -292,6 +292,7 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
         if(!Files.exists(file))
             return NativeJournalFileResult.Rejected(NativeJournalFileRefusal.NOT_ISSUED)
         val envelope=try {
+            if(Files.size(file)>2_000_000L)throw IOException("oversize journal")
             NativeJournalBinary.decode(Files.readAllBytes(file),snapshot.source)
         } catch(_:Exception) {
             return NativeJournalFileResult.Rejected(

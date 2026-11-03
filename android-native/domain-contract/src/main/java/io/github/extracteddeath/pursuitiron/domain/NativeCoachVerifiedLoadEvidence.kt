@@ -50,7 +50,7 @@ data class NativeCoachVerifiedLoadReview(
 object NativeCoachVerifiedLoadEvidence {
     private fun number(value: Any): BigDecimal {
         require(value is Number)
-        return BigDecimal(value.toString()).stripTrailingZeros()
+        return BigDecimal(BigDecimal(value.toString()).stripTrailingZeros().toPlainString())
     }
 
     /**

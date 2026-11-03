@@ -50,4 +50,37 @@ class NativeEquipmentSelectionPolicyTest {
         assertEquals(listOf("rack"),
             policy.setGroup(start, hips, available, include = false))
     }
+
+    @Test fun rackFacilityDefaultsAndOldProgramsStayIntentionallyDistinct() {
+        val fresh = listOf("barbell", "no-rack", "dumbbell")
+        assertFalse(policy.initialRackAvailable(fresh))
+        assertEquals(fresh, policy.forReview(fresh, rackAvailable = false))
+        assertEquals(listOf("barbell", "dumbbell"),
+            policy.forReview(fresh, rackAvailable = true))
+        val old = listOf("barbell", "dumbbell")
+        assertTrue(policy.initialRackAvailable(old))
+        assertEquals(old, policy.forReview(old, rackAvailable = true))
+        val oldExplicit = listOf("barbell", "rack", "dumbbell")
+        assertTrue(policy.initialRackAvailable(oldExplicit))
+        assertEquals(oldExplicit, policy.forReview(oldExplicit, rackAvailable = true))
+        assertEquals(listOf("barbell", "dumbbell", "no-rack"),
+            policy.forReview(oldExplicit, rackAvailable = false))
+    }
+
+    @Test fun rackCannotExistWithoutBarbellAndOrphanLegacyChoiceIsRemovable() {
+        val initial = listOf("rack", "dumbbell")
+        assertFalse(policy.initialRackAvailable(initial))
+        assertEquals(initial, policy.pickerSelections(initial))
+        // The legacy chip stays visible when no barbell can expose its switch.
+        assertEquals(listOf("dumbbell"), policy.toggle(
+            policy.pickerSelections(initial), "rack", listOf("dumbbell")))
+        assertEquals(listOf("dumbbell"), policy.forReview(initial, rackAvailable = true))
+        assertEquals(listOf("dumbbell"),
+            policy.forReview(listOf("dumbbell", "no-rack"), rackAvailable = false))
+        val oldBarbell = listOf("barbell", "rack", "dumbbell")
+        assertEquals(listOf("barbell", "dumbbell"),
+            policy.pickerSelections(oldBarbell))
+        assertEquals(listOf("barbell", "dumbbell"),
+            policy.pickerSelections(listOf("barbell", "no-rack", "dumbbell")))
+    }
 }

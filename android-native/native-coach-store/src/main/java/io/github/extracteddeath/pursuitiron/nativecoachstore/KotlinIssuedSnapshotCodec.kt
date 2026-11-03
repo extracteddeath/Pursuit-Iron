@@ -31,8 +31,9 @@ internal object KotlinIssuedSnapshotCodec {
     private fun validNumber(value:BigDecimal):Boolean=
         value>=BigDecimal.ZERO && value<=MAX_LOAD &&
             value.stripTrailingZeros().scale()<=3
-    private fun norm(value:BigDecimal):String=
-        value.stripTrailingZeros().toPlainString()
+    // Retain exact decimal scale: BigDecimal("65.0") must cold-reopen as
+    // precisely "65.0", not merely the numerically equal "65".
+    private fun decimal(value:BigDecimal):String=value.toPlainString()
 
     fun validate(snapshot:KotlinStagedWorkout) {
         val s=snapshot.source
@@ -83,7 +84,7 @@ internal object KotlinIssuedSnapshotCodec {
                     is DraftSetLoad.Verified -> {
                         out.writeBoolean(true)
                         out.writeUTF(load.unit.name);out.writeUTF(load.basis.name)
-                        out.writeUTF(norm(load.value))
+                        out.writeUTF(decimal(load.value))
                     }
                 }
                 out.writeInt(t.reps.minimum);out.writeInt(t.reps.maximum)

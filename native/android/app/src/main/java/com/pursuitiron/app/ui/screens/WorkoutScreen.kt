@@ -838,7 +838,8 @@ private fun SwapSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
     var scope by remember { mutableStateOf("session") }
     val quick = vm.session?.b("quick") == true
     LaunchedEffect(ei) { opts = vm.swapOptions(ei) }
-    ModalBottomSheet(onDismissRequest = onClose) {
+    // Opens full height: half-open, Back only lowered it and the list sat over the workout.
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Swap exercise", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
             Text("Same muscle, ranked for this slot, from the gym you're in. Banned lifts are hidden.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))

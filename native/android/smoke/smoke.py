@@ -389,7 +389,12 @@ if scroll_to(r"Swap exercise", tries=3, step=400) and tap(r"Swap exercise", "swa
     time.sleep(1.5)
     if find(r"No alternatives with your equipment", timeout=2):
         FAILS.append("in-workout swap lists no alternatives")
-    back()
+    for _ in range(3):
+        back()
+        if not find(r"^\|?Swap exercise$", timeout=2):
+            break
+    else:
+        FAILS.append("the swap sheet does not close with Back")
 else:
     back()
 # The progression tag on the card opens the progression sheet (it is no longer in the menu)

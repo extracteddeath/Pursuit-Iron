@@ -12,11 +12,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeGymInventoryCodec
+import io.github.extracteddeath.pursuitiron.domain.NativeCoachVerifiedLoadEvidence
 import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramReference
 
@@ -35,6 +37,14 @@ internal fun NativeSavedGymInventoryPanel(
     focusExerciseId: String? = null
 ) {
     val unit=saved.profile.unit
+    // Evidence is read-only and source-bound to the authenticated saved
+    // program shown here. It does not select weights or approve progression.
+    val reviewedLoads=remember(saved.loadingInventory,saved.loadingCandidates,unit) {
+        runCatching {
+            NativeCoachVerifiedLoadEvidence.review(
+                saved.loadingInventory,unit,saved.loadingCandidates)
+        }.getOrNull()
+    }
     val original=NativeGymInventoryCodec.toDraft(saved.loadingInventory)
     var editing by rememberSaveable(reference.snapshotSha256) { mutableStateOf(initiallyEditing) }
     var pending by rememberSaveable(reference.snapshotSha256) { mutableStateOf(false) }
@@ -50,6 +60,15 @@ internal fun NativeSavedGymInventoryPanel(
             if(saved.loadingInventory==null) "No verified weight inventory. Enter your sets manually."
             else "Your confirmed weight settings are saved with this program.",
             style=MaterialTheme.typography.bodyMedium
+        )
+        if(reviewedLoads==null) Text(
+            "Machine loading evidence could not be verified. Use manual weight entry until your gym settings are reviewed.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.error
+        ) else if(reviewedLoads.candidateCount>0) Text(
+            "${reviewedLoads.facts.size} of ${reviewedLoads.candidateCount} eligible program exercises have individually verified weight settings. Unverified exercises remain manual.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant
         )
         error?.let { Text(it,color=MaterialTheme.colorScheme.error) }
         message?.let { Text(it,color=MaterialTheme.colorScheme.primary) }

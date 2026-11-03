@@ -11,8 +11,9 @@ const equipmentPicker=fs.readFileSync(root+'NativeGroupedEquipmentPicker.kt','ut
 const equipmentPolicy=fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeEquipmentSelectionPolicy.kt','utf8');
 assert.ok(ui.includes('NativeGroupedEquipmentPicker(') &&
-  ui.includes('selected = equipment') &&
-  ui.includes('onSelectionChanged = { equipment = ArrayList(it) }') &&
+  ui.includes('selected = equipment.filterNot') &&
+  ui.includes('onSelectionChanged = { chosen ->') &&
+  ui.includes('equipment = ArrayList(chosen + equipment.filter {') &&
   equipmentPicker.includes('NativeEquipmentCatalog.supported(available)') &&
   equipmentPicker.includes('rememberSaveable(group.title)') &&
   equipmentPicker.includes('count = NativeEquipmentSelectionPolicy.selectedInGroup') &&

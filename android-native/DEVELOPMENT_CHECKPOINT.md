@@ -2238,3 +2238,25 @@ authorization only; canonical write validation and every old target remain
 intact. It also establishes a stable UI/engine boundary for the Kotlin
 replacement, rather than trusting a stale presentation as an owner.
 No APK or training engine rewrite.
+
+## 2026-11-02 — Exact history editor selection and original-theme picker contrast
+
+The saved-workout correction UI now selects observation rows by an explicit
+exercise-index/set-index key instead of encoding both as an integer with an
+implicit 20-set width. Legacy merged history selection additionally binds to
+its originating exercise occurrence, while preserving the original canonical
+correction protocol, revision checks, confirmed changes and observed values.
+The current observation protocol already bounds individual occurrence slots;
+this is defensive UI identity hardening for custom-program evolution and
+prevents the presentation from relying on that implicit width. A source
+regression now asserts distinct keys, stable repeated-exercise selection and
+the absence of packed-index matching. No existing logged data were modified.
+
+The Appearance selector's chosen-theme label now uses the exact original
+contrast-safe accent ink rather than the solid action-button accent. This
+preserves readable selection feedback across the 20 existing palettes,
+including Patrol. The original theme values, saved appearance choice, native
+M3 Expressive components and canonical program/workout logic are unchanged.
+The isolated source-contract job passed on the history fix; final checks and
+Compose compilation remain separately verified CI gates. No APK built and no
+Kotlin training engine rewritten in this pass.

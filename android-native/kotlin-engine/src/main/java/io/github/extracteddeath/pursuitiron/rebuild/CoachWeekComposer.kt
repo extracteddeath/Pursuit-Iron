@@ -319,6 +319,10 @@ object CoachWeekComposer {
         var audit=WeeklyDoseFeasibilityDomain.audit(toWeek(request,chosen,options))
         repeat(MAX_REPAIR_PASSES) {
             val current=cost(request,chosen,audit,options)
+            val originalPinnedGaps=request.exercises.associate {
+                it.exerciseId to missing(it,chosen)
+            }
+            val originalUnmetPrimary=unmetPrimaryDays(request,chosen)
             var best=current
             var bestVisits:List<ComposerVisit>?=null
             var bestAudit:WeeklyDoseFeasibilityReport?=null
@@ -326,8 +330,27 @@ object CoachWeekComposer {
             fun consider(trial:List<ComposerVisit>) {
                 if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)return
                 evaluated++
+                // Hard athlete-owned promises are not interchangeable
+                // numeric penalties. Never sacrifice any previously
+                // scheduled pin or named main lift to improve another goal.
+                if(request.exercises.any {
+                    missing(it,trial)>checkNotNull(
+                        originalPinnedGaps[it.exerciseId])
+                })return
+                if(!originalUnmetPrimary.containsAll(
+                    unmetPrimaryDays(request,trial)))return
                 val check=WeeklyDoseFeasibilityDomain.audit(
                     toWeek(request,trial,options))
+                // Preserve each muscle's already-satisfied minimum dose
+                // AND direct-day frequency while repairing other gaps.
+                if(audit.muscles.values.any {before ->
+                    before.finding==DoseFinding.WITHIN_BOUNDS &&
+                        before.missingDirectDays==0 &&
+                        check.muscles.getValue(before.muscle).let {after ->
+                            after.finding!=DoseFinding.WITHIN_BOUNDS ||
+                                after.missingDirectDays>0
+                        }
+                })return
                 if(check.muscles.values.any {it.finding==DoseFinding.ABOVE_MRV} ||
                     check.sessions.any {
                         it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT

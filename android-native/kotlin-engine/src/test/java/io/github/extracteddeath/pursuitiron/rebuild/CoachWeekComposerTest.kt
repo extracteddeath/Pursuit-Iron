@@ -157,6 +157,48 @@ class CoachWeekComposerTest {
         assertEquals(3,authored.size)
     }
 
+    @Test fun repairingAnotherMuscleNeverTradesAwayAlreadyMetPinnedAppearances() {
+        val primary=chestOption.copy(requiredVisits=2,maximumVisits=2)
+        val rowPinned=backOption.copy(requiredVisits=1,maximumVisits=1)
+        val request=base(
+            exerciseOptions=listOf(primary,rowPinned,legOption),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            bands=bounds(dose(chest,"0","4","8",0),
+                dose(lats,"0","2","8",0),
+                dose(quads,"2","2","5",1)),
+            patterns=1,maxPerDay=1)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
+        val repaired=CoachWeekComposer.rebalanceForReview(request,authored)
+        assertEquals(2,repaired.count {it.exerciseId=="db-press"})
+        assertEquals(1,repaired.count {it.exerciseId=="db-row"})
+        assertEquals(0,repaired.count {it.exerciseId=="goblet-squat"})
+        assertEquals(authored,repaired)
+        assertEquals(3,authored.size)
+    }
+
+    @Test fun repairDoesNotBreakAlreadySatisfiedDirectMuscleTargets() {
+        val noPin=chestOption.copy(requiredVisits=0,maximumVisits=2)
+        val rowNoPin=backOption.copy(requiredVisits=0,maximumVisits=1)
+        val request=base(
+            exerciseOptions=listOf(noPin,rowNoPin,legOption),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            bands=bounds(dose(chest,"4","4","8",2),
+                dose(lats,"0","0","8",0),
+                dose(quads,"2","2","5",1)),
+            patterns=1,maxPerDay=1)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
+        val repaired=CoachWeekComposer.rebalanceForReview(request,authored)
+        assertEquals(2,repaired.count {it.exerciseId=="db-press"})
+        assertEquals(0,repaired.count {it.exerciseId=="goblet-squat"})
+        assertEquals(3,repaired.size)
+    }
+
     @Test fun rebalanceCannotRemovePinnedVisitsOrInventEquipment() {
         val required=chestOption.copy(requiredVisits=2,maximumVisits=2,
             minimumCalendarDayGap=2)

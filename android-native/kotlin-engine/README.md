@@ -476,7 +476,10 @@ or relocate an existing visit when that strictly improves the entire week's
 declared dose, required appearances, training-day coverage, time preference
 or movement variety. Every trial is reaudited for MRV, real hard-time limits,
 physical equipment eligibility, day focus, visit counts and circular recovery.
-It never fabricates new exercise identities or creates live targets. A
+It never fabricates new exercise identities or creates live targets.
+The repair phase never worsens any pinned exercise appearance, erases a
+previously scheduled named main lift, or breaks a muscle's already-met MEV
+and direct-frequency constraints just to improve a competing score. A
 read-only, validated `rebalanceForReview` diagnostic path also supports
 regression tests of custom-program repair, including pin preservation and
 unverified equipment exclusion. This remains a bounded local search,

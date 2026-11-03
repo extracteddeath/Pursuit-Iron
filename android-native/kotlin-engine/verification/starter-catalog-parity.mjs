@@ -22,7 +22,12 @@ const baseline=[
   ['db_split_squat','squat',[6,20],['dumbbell']],
   ['db_rdl','hip_hinge',[5,20],['dumbbell']],
   ['db_calf_raise','calf',[8,30],['dumbbell']],
-  ['bodyweight_crunch','core',[10,40],['bodyweight']]
+  ['bodyweight_crunch','core',[10,40],['bodyweight']],
+  ['barbell_row','horizontal_pull',[3,15],['barbell']],
+  ['rdl','hip_hinge',[3,15],['barbell']],
+  ['conventional_deadlift','hip_hinge',[1,8],['barbell']],
+  ['db_rear_delt_raise','rear_delt',[10,30],['dumbbell']],
+  ['pullup','vertical_pull',[3,20],['pullup_bar','bodyweight']]
 ];
 const indexed=new Map(CURATED_EXERCISES.map(x=>[x.id,x]));
 assert.deepEqual(declared,baseline.map(x=>x[0]),
@@ -37,13 +42,16 @@ for(const [id,family,reps,equipment] of baseline) {
   assert.equal(EXERCISE_MAP.get(id),record,
     'Curated definition no longer wins canonical web catalog: '+id);
 }
-for(const id of ['one_arm_db_row','db_rdl']) {
+for(const id of ['one_arm_db_row','db_rdl','barbell_row','rdl','conventional_deadlift','db_rear_delt_raise','pullup']) {
   assert.ok(Object.hasOwn(indexed.get(id).muscles,'back'),
     'Broad-back source changed; explicit Kotlin credit remap must be reviewed');
 }
 assert.ok(Object.hasOwn(indexed.get('bodyweight_crunch').muscles,'core'),
   'Core label changed; Kotlin ABS mapping needs review');
 assert.ok(source.includes('engineering-provisional-v1'));
+assert.ok(source.includes('setOf("pullup-bar")'),
+  'An unweighted pull-up needs an independently confirmed physical bar');
+assert.ok(source.includes('direct(TrainingMuscle.GLUTES)),'), 'Conventional deadlift keeps direct glute credit; do not silently remap broad back');
 assert.ok(source.includes('indirect(TrainingMuscle.REAR_DELTS,"0.25")'));
 assert.ok(source.includes('mayTransferPreviousLoad:Boolean=false'));
 console.log('PASS',declared.length,'source-linked provisional starter exercises; no automatic transfer or source credit certification');

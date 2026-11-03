@@ -257,4 +257,42 @@ class CoachExerciseCatalogDomainTest {
                 "invalid"))
         }
     }
+
+    @Test fun aBarbellBenchNeedsConfirmedRackAndFlatBenchNotJustAvailablePlates() {
+        val barbell=spec("barbell-bench",TrainingMuscle.CHEST,
+            role=ComposerRole.PRIMARY,equipmentId="straight-bar",
+            basis=LoadBasis.BARBELL_TOTAL).copy(
+            requiredFacilityIds=setOf("flat-bench","rack"))
+        val barStock=VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),
+            mapOf(n("10") to 2,n("5") to 2))
+        val withBars=CatalogGym(gym.confirmedStock+("straight-bar" to barStock),
+            gym.availableAttachmentIds,setOf("rack"))
+        val selection=choices+choice("barbell-bench",n("65"))
+        val blocked=CoachExerciseCatalogDomain.review(request(
+            movements=catalog+barbell,selections=selection,gym=withBars))
+        assertEquals(CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,blocked.status)
+        assertTrue(blocked.issues.any {
+            it.exerciseId=="barbell-bench" &&
+                it.kind==CatalogIssueType.FACILITY_UNAVAILABLE
+        })
+        val available=CoachExerciseCatalogDomain.review(request(
+            movements=catalog+barbell,selections=selection,
+            gym=withBars.copy(availableFacilityIds=setOf("rack","flat-bench"))))
+        assertFalse(available.issues.any {
+            it.kind==CatalogIssueType.FACILITY_UNAVAILABLE
+        })
+    }
+
+    @Test fun facilityIdentifiersMustNotAcceptEmptyOrInventedStrings() {
+        val invalid=press.copy(requiredFacilityIds=setOf("my rack"))
+        assertThrows(IllegalArgumentException::class.java) {
+            CoachExerciseCatalogDomain.review(request(
+                movements=listOf(invalid,row,squat)))
+        }
+        val malformed=gym.copy(availableFacilityIds=setOf("rack / bench"))
+        assertThrows(IllegalArgumentException::class.java) {
+            CoachExerciseCatalogDomain.review(request(gym=malformed))
+        }
+    }
+
 }

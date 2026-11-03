@@ -27,7 +27,9 @@ data class CatalogMovement(
     val credits: List<DeclaredMuscleCredit>,
     val creditStatus: CatalogCreditStatus,
     /** Must identify the documented coefficients version, not just a name. */
-    val creditReviewReference: String?
+    val creditReviewReference: String?,
+    /** Required physical fixtures beyond the loaded implement (bench, rack). */
+    val requiredFacilityIds: Set<String> = emptySet()
 )
 
 data class CatalogExerciseChoice(
@@ -49,7 +51,8 @@ data class CatalogExerciseChoice(
 data class CatalogGym(
     /** Exact implement identifiers, not generic free-text equipment names. */
     val confirmedStock: Map<String,VerifiedLoadStock>,
-    val availableAttachmentIds: Set<String>
+    val availableAttachmentIds: Set<String>,
+    val availableFacilityIds: Set<String> = emptySet()
 )
 
 data class CatalogWeekRequest(
@@ -66,7 +69,8 @@ data class CatalogWeekRequest(
 enum class CatalogIssueType {
     UNKNOWN_EXERCISE, CREDIT_REVIEW_MISSING, ATTACHMENT_UNAVAILABLE,
     EQUIPMENT_UNAVAILABLE, EQUIPMENT_BASIS_MISMATCH, LOAD_UNVERIFIED,
-    MISSING_PRIMARY_MOVEMENT, INCOMPATIBLE_EXERCISE_IDENTITY
+    MISSING_PRIMARY_MOVEMENT, INCOMPATIBLE_EXERCISE_IDENTITY,
+    FACILITY_UNAVAILABLE
 }
 
 data class CatalogIssue(
@@ -128,6 +132,8 @@ object CoachExerciseCatalogDomain {
         require(request.gym.confirmedStock.keys.all(::validId))
         require(request.gym.availableAttachmentIds.size<=128)
         require(request.gym.availableAttachmentIds.all(::validId))
+        require(request.gym.availableFacilityIds.size<=128)
+        require(request.gym.availableFacilityIds.all(::validId))
         for(spec in request.catalog) {
             require(validId(spec.exerciseId) && validId(spec.familyId) &&
                 validId(spec.variantId) &&
@@ -135,6 +141,8 @@ object CoachExerciseCatalogDomain {
             require((spec.equipmentId==null)==(spec.expectedLoadBasis==null))
             require(spec.equipmentId==null || validId(spec.equipmentId))
             require(spec.permittedFocus.isNotEmpty())
+            require(spec.requiredFacilityIds.size<=8)
+            require(spec.requiredFacilityIds.all(::validId))
             require(spec.credits.isNotEmpty() &&
                 spec.credits.size<=TrainingMuscle.entries.size)
             require(spec.credits.map {it.muscle}.distinct().size==spec.credits.size)
@@ -177,6 +185,10 @@ object CoachExerciseCatalogDomain {
                 spec.creditReviewReference==null) {
                 issues+=CatalogIssue(spec.exerciseId,CatalogIssueType.CREDIT_REVIEW_MISSING,
                     "Muscle credit coefficients lack a traceable catalog review.")
+            }
+            if(!request.gym.availableFacilityIds.containsAll(spec.requiredFacilityIds)) {
+                issues+=CatalogIssue(spec.exerciseId,CatalogIssueType.FACILITY_UNAVAILABLE,
+                    "The supporting bench, rack, or other required fixture is not confirmed.")
             }
             if(spec.attachmentId!=null &&
                 spec.attachmentId !in request.gym.availableAttachmentIds) {

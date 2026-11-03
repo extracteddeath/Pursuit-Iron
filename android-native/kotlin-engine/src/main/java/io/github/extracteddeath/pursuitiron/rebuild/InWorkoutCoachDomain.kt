@@ -108,12 +108,13 @@ object InWorkoutCoachDomain {
         if(planned !is LoadInspection.Confirmed || !planned.exact)
             return result(InWorkoutDirection.VERIFY_PLANNED_EQUIPMENT,
                 "The planned next weight is not confirmed as physically available.")
-        val actual=checkNotNull(last?.actualLoad)
+        val previous=checkNotNull(last)
+        val actual=checkNotNull(previous.actualLoad)
         if(actual.compareTo(zero)==0 || kept.compareTo(zero)==0)
             return result(InWorkoutDirection.CONFIRM_ZERO_LOAD_SEMANTICS,
                 "Confirm whether zero represents bodyweight, assistance, or another loading setup.")
-        val lastReps=checkNotNull(last.actualReps)
-        if(last.actualLoad.compareTo(kept)!=0)
+        val lastReps=checkNotNull(previous.actualReps)
+        if(actual.compareTo(kept)!=0)
             return result(InWorkoutDirection.REVIEW_AUTHORED_LOAD_CHANGE,
                 "The planned next set uses a different load. Review the intended top/backoff scheme rather than replacing it automatically.")
         if(lastReps<request.repBand.minimum) {
@@ -129,7 +130,7 @@ object InWorkoutCoachDomain {
             return result(InWorkoutDirection.NO_SAFE_SMALLER_LOAD,
                 "The set missed its rep floor, but no smaller load meets the verified equipment and approved step limits.")
         }
-        if(last.actualRir!=null && last.actualRir<=1)
+        if(previous.actualRir!=null && previous.actualRir<=1)
             return result(InWorkoutDirection.REVIEW_MORE_RECOVERY,
                 "The set met the rep floor but was very demanding. Review rest and readiness before continuing.",
                 CoachConfidence.MODERATE)

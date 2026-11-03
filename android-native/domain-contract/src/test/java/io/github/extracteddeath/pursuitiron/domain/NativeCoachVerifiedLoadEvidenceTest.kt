@@ -6,6 +6,7 @@ import org.junit.Test
 import java.math.BigDecimal
 
 class NativeCoachVerifiedLoadEvidenceTest {
+    private val reference=ReadOnlyProgramReference("coach-program",1000,1000,13,"a".repeat(64))
     private val eligible=listOf(
         NativeStackCandidate("leg-ext","Leg Extension","external_load"),
         NativeStackCandidate("hack-squat","Hack Squat","external_load"),
@@ -22,8 +23,9 @@ class NativeCoachVerifiedLoadEvidenceTest {
             "override:standard-row" to "exact: 10, 20, 30"
         ),"lb",eligible.map {it.id}.toSet(),
             setOf("leg-ext","hack-squat")).json)
-        val review=NativeCoachVerifiedLoadEvidence.review(raw,"lb",eligible)
+        val review=NativeCoachVerifiedLoadEvidence.review(raw,"lb",eligible,reference)
         assertEquals(4,review.candidateCount)
+        assertEquals(reference,review.reference)
         assertEquals(3,review.facts.size)
         assertEquals(1,review.remainingManual)
         assertEquals(listOf("leg-ext","lat-pulldown","standard-row"),
@@ -52,15 +54,15 @@ class NativeCoachVerifiedLoadEvidenceTest {
         // invented exercise-specific loading facts.
         val onlyShared=checkNotNull(NativeGymInventoryCodec.fromDraft(
             mapOf("cable" to "5, 5, 150","machine" to "10,10,200"),"lb").json)
-        assertEquals(0,NativeCoachVerifiedLoadEvidence.review(onlyShared,"lb",eligible).facts.size)
-        assertEquals(4,NativeCoachVerifiedLoadEvidence.review(onlyShared,"lb",eligible).remainingManual)
+        assertEquals(0,NativeCoachVerifiedLoadEvidence.review(onlyShared,"lb",eligible,reference).facts.size)
+        assertEquals(4,NativeCoachVerifiedLoadEvidence.review(onlyShared,"lb",eligible,reference).remainingManual)
     }
 
     @Test fun noInventoryMeansUnknownNotFactoryOrMinimumLoading() {
-        val result=NativeCoachVerifiedLoadEvidence.review(null,"kg",eligible)
+        val result=NativeCoachVerifiedLoadEvidence.review(null,"kg",eligible,reference)
         assertEquals(4,result.remainingManual)
         assertTrue(result.facts.isEmpty())
-        assertEquals(0,NativeCoachVerifiedLoadEvidence.review(null,"lb",emptyList()).remainingManual)
+        assertEquals(0,NativeCoachVerifiedLoadEvidence.review(null,"lb",emptyList(),reference).remainingManual)
     }
 
     @Test fun maliciousUnknownOrRangeSpecialtyMachineIsRejected() {
@@ -69,7 +71,7 @@ class NativeCoachVerifiedLoadEvidenceTest {
             mapOf("override:leg-ext" to "exact: 12.5,17.5"),"lb",allowed,
             setOf("leg-ext","hack-squat")).json)
         fun rejected(raw:String) = assertTrue(runCatching {
-            NativeCoachVerifiedLoadEvidence.review(raw,"lb",eligible)
+            NativeCoachVerifiedLoadEvidence.review(raw,"lb",eligible,reference)
         }.isFailure)
         rejected(JSONObject(valid).apply {
             getJSONObject("exerciseOverrides").put("unknown-move",
@@ -85,11 +87,15 @@ class NativeCoachVerifiedLoadEvidenceTest {
                 .put("availableLoads",org.json.JSONArray().put(20).put(20))
         }.toString())
         assertTrue(runCatching { NativeCoachVerifiedLoadEvidence.review(
-            valid,"lb",eligible+eligible[0]) }.isFailure)
+            valid,"lb",eligible+eligible[0],reference) }.isFailure)
         assertTrue(runCatching { NativeCoachVerifiedLoadEvidence.review(
-            valid,"kg",eligible) }.isFailure)
+            valid,"kg",eligible,reference) }.isFailure)
         assertTrue(runCatching { NativeCoachVerifiedLoadEvidence.review(
-            valid,"lb",eligible+NativeStackCandidate("bodyweight","Bodyweight","bodyweight")) }
+            valid,"lb",eligible+NativeStackCandidate("bodyweight","Bodyweight","bodyweight"),reference) }
             .isFailure)
+        assertTrue(runCatching { NativeCoachVerifiedLoadEvidence.review(
+            valid,"lb",eligible,reference.copy(snapshotSha256="not-a-digest")) }
+            .isFailure)
+
     }
 }

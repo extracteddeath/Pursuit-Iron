@@ -864,7 +864,10 @@ assert.ok(toolbarStart>=0 && toolbarEnd>toolbarStart &&
 assert.ok(controls.includes('val repsControl: @Composable () -> Unit') &&
   controls.includes('val rirControl: @Composable () -> Unit') &&
   controls.includes('BoxWithConstraints(Modifier.fillMaxWidth())') &&
-  controls.includes('if(maxWidth>=560.dp) {') &&
+  controls.includes('if(maxWidth>=340.dp) {') &&
+  controls.includes('Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp))') &&
+  controls.includes('modifier=Modifier.weight(1f).sizeIn(minWidth=48.dp,minHeight=48.dp)') &&
+  !controls.includes('if(maxWidth>=560.dp) {') &&
   controls.includes('Box(Modifier.weight(1f)) { repsControl() }') &&
   controls.includes('Box(Modifier.weight(1f)) { rirControl() }') &&
   controls.includes('Column(verticalArrangement=Arrangement.spacedBy(8.dp))') &&
@@ -872,7 +875,7 @@ assert.ok(controls.includes('val repsControl: @Composable () -> Unit') &&
   controls.includes('minWidth=48.dp,minHeight=48.dp') &&
   controls.includes('if(load=="0")"0 load = bodyweight') &&
   controls.includes('RIR is optional'),
-  'The one shared set-entry control must be compact on wide phones and remain unclipped, accessible and optional on narrow phones');
+  'Shared Reps/RIR controls must fit normal phones side-by-side, retain equal 48dp touch targets and stack safely on very narrow screens');
 
 const finishReadyAt=train.indexOf('    if(journal.unresolvedCount==0) {\n        PursuitCard(highlighted=true)');
 const progressAt=train.indexOf('LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size}');

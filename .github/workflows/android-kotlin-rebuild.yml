@@ -1,0 +1,36 @@
+name: Independent Kotlin engine rules — tests only
+on:
+  push:
+    branches:
+      - architecture/kotlin-engine-rebuild
+    paths:
+      - 'android-native/kotlin-engine/**'
+      - 'android-native/settings.gradle.kts'
+      - '.github/workflows/android-kotlin-rebuild.yml'
+  workflow_dispatch:
+concurrency:
+  group: kotlin-engine-rebuild-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  test-independent-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Android API 37
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Verify Kotlin engine cannot alter native workouts
+        run: node android-native/kotlin-engine/verification/offline-only-test.mjs
+      - name: Test independent equipment feasibility without an APK
+        working-directory: android-native
+        run: gradle :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace

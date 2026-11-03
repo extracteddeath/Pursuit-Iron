@@ -1995,3 +1995,16 @@ finished identity. Lost-ack Finish replay performs no additional write;
 late set writes and a competing workout begin remain rejected. This is
 fault-isolated domain verification, not an Android device test or an APK
 acceptance result. No engine or production changes.
+
+## 2026-11-02 — Android Back protection for real Train
+
+The native host now intercepts Android system Back only on the Train
+destination while a genuine issued native workout exists and no app-level
+sheet is open. It offers explicit Keep training or Go to Today actions,
+with an accurate warning that confirmed sets/notes stay in the private
+journal while unsubmitted values are not logged. The latter simply changes
+the destination; there is no silent Finish, discarded recovery file,
+new prescription, or history write. Standard Dialog/ModalBottomSheet Back
+remains owned by the top layer. The confirmation resets if workout identity
+changes or Train closes. Source contract and Compose compiler gates apply;
+physical predictive Back and gesture behavior remain unverified. No APK.

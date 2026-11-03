@@ -85,6 +85,20 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
 // Real Train controls are journal-driven; UI must never manufacture a persisted
 // set or publish a workout directly from an unconfirmed tap.
 const controls=fs.readFileSync(root+'NativeComponents.kt','utf8');
+assert.ok(shell.includes('import androidx.activity.compose.BackHandler') &&
+  shell.includes('BackHandler(enabled=activeWorkoutId!=null &&') &&
+  shell.includes('section==NativeDestination.TRAIN.ordinal && sheet==0 &&') &&
+  shell.includes('!confirmLeaveActiveWorkout)') &&
+  shell.includes('onDismissRequest={confirmLeaveActiveWorkout=false}') &&
+  shell.includes('title={Text("Leave active workout?")}') &&
+  shell.includes('Unsubmitted values are not logged.') &&
+  shell.includes('section=NativeDestination.TODAY.ordinal') &&
+  shell.includes('Text("Keep training")') &&
+  shell.includes('val activeWorkoutId=onboarding?.workout?.plan?.session?.workoutId') &&
+  shell.includes('LaunchedEffect(activeWorkoutId,section)') &&
+  !shell.includes('onFinishWorkout()') &&
+  !shell.includes('clearAtomically()'),
+  'Android system Back from a real workout must confirm safe navigation to Today without logging, finishing or deleting the recovery journal');
 assert.ok(train.includes('val committedSlots=journal.completed.map { it.intent.slot }.toSet()') &&
   train.includes('val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)') &&
   train.includes('NativeUpNextPanel(preview,exerciseIndex,') &&

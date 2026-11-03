@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.automirrored.outlined.EventNote
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +36,7 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -126,6 +129,7 @@ internal fun NativePreviewApp(
 ) {
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
+    var confirmLeaveActiveWorkout by rememberSaveable { mutableStateOf(false) }
     var readiness by rememberSaveable { mutableStateOf("Normal") }
     var length by rememberSaveable { mutableIntStateOf(0) }
     var injuryFlag by rememberSaveable { mutableStateOf(false) }
@@ -158,6 +162,35 @@ internal fun NativePreviewApp(
     // personal Plan structure beyond the selected destination.
     val visiblePlan = if (section == NativeDestination.PLAN.ordinal)
         currentPlan else ReadOnlyProgramPresentation.Unavailable
+
+    // System Back is an explicit navigation action, never a hidden Finish,
+    // discarded journal or regenerated prescription. In Train, confirm
+    // leaving the active workflow; Android Back in a sheet/dialog belongs
+    // to that top layer and is not intercepted here.
+    val activeWorkoutId=onboarding?.workout?.plan?.session?.workoutId
+    LaunchedEffect(activeWorkoutId,section) {
+        if(activeWorkoutId==null || section!=NativeDestination.TRAIN.ordinal)
+            confirmLeaveActiveWorkout=false
+    }
+    BackHandler(enabled=activeWorkoutId!=null &&
+        section==NativeDestination.TRAIN.ordinal && sheet==0 &&
+        !confirmLeaveActiveWorkout) {
+        confirmLeaveActiveWorkout=true
+    }
+    if(confirmLeaveActiveWorkout && activeWorkoutId!=null &&
+        section==NativeDestination.TRAIN.ordinal) AlertDialog(
+        onDismissRequest={confirmLeaveActiveWorkout=false},
+        title={Text("Leave active workout?")},
+        text={Text("Recorded sets and notes remain saved. An unfinished workout stays ready to resume. Unsubmitted values are not logged.")},
+        confirmButton={Button(onClick={
+            confirmLeaveActiveWorkout=false
+            selectedTrainingDay=null
+            section=NativeDestination.TODAY.ordinal
+        }) { Text("Go to Today") }},
+        dismissButton={TextButton(onClick={confirmLeaveActiveWorkout=false}) {
+            Text("Keep training")
+        }}
+    )
 
     BoxWithConstraints {
         val expanded = maxWidth >= 840.dp

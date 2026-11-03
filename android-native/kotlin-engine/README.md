@@ -7,6 +7,25 @@
 
 These are living requirements, **not claims that the new engine is live or every feature is complete**.
 
+### Opt-in verified exercise selection (E09/E11/E12, partial)
+
+`CoachAthleteExerciseSelectionDomain.review` now selects from a potentially
+larger **offered** catalog of explicitly load-authored movements. It
+checks each variant's physical implement stock, exact load, credit review,
+attachments/facilities, split eligibility, exclusions, barbell preference
+and basic working-set bounds. All pinned required visits and coach-named
+priority lifts are retained, or the entire selection fails closed.
+Remaining candidates are selected deterministically using optimistic
+MEV/direct-day capacity and desired movement-pattern variety, with each
+rejected choice and coverage gap available for native UI diagnostics.
+
+The actual composer still decides whether working sets, recovery,
+training frequency and duration are truly feasible; this shortlist does
+not certify them. Crucially, `selectFromOfferedCatalog=false` remains
+the default, preserving all explicitly authored/custom exercise choices.
+Automatic pruning is **opt-in only** and never manufactures a load, new
+exercise, dose threshold, workout or save operation.
+
 ### First automated split, session-purpose and lift-placement generator
 
 `CoachAthleteProgramGenerator.generate` now **actually constructs** a

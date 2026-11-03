@@ -23,14 +23,21 @@ data class AthleteProgramGenerationRequest(
      * needs one UPPER or LOWER choice; ULPPL for 6 needs one extra focus.
      * Empty for 4-day UL, 3/6-day PPL, 5-day ULPPL and Full Body.
      */
-    val extraFocuses:List<ComposerFocus> = emptyList()
+    val extraFocuses:List<ComposerFocus> = emptyList(),
+    /**
+     * Default preserves authored/custom exercise selections byte-for-byte.
+     * Only explicit opt-in permits pruning unpinned offered catalog options.
+     */
+    val selectFromOfferedCatalog:Boolean=false,
+    val maximumSelectedOptions:Int=32
 )
 enum class AthleteGenerationStatus {
     INPUTS_UNRESOLVED, PLACEMENTS_UNRESOLVED, GENERATED_FOR_REVIEW
 }
 enum class AthleteGenerationIssueKind {
     SETUP_UNRESOLVED, POLICY_UNRESOLVED, FOCUS_DISTRIBUTION_INVALID,
-    PRIMARY_EXERCISE_UNAVAILABLE, SCHEDULE_CONFLICT, COMPOSED_WEEK_UNRESOLVED
+    PRIMARY_EXERCISE_UNAVAILABLE, SCHEDULE_CONFLICT, COMPOSED_WEEK_UNRESOLVED,
+    EXERCISE_SELECTION_UNRESOLVED
 }
 data class AthleteGenerationIssue(
     val field:String,
@@ -42,7 +49,8 @@ data class AthleteProgramGenerationReview(
     val issues:List<AthleteGenerationIssue>,
     val focusByWeekday:Map<Int,ComposerFocus>,
     val intents:List<AthleteCalendarIntent>,
-    val candidate:AthleteCatalogCandidateReview?
+    val candidate:AthleteCatalogCandidateReview?,
+    val exerciseSelection:AthleteExerciseSelectionReview?=null
 ) {
     val mayIssueWorkout:Boolean get()=false
     val maySaveProgram:Boolean get()=false
@@ -222,11 +230,12 @@ object CoachAthleteProgramGenerator {
         fun result(status:AthleteGenerationStatus,
             focuses:Map<Int,ComposerFocus> =emptyMap(),
             intents:List<AthleteCalendarIntent> =emptyList(),
-            candidate:AthleteCatalogCandidateReview?=null
+            candidate:AthleteCatalogCandidateReview?=null,
+            selection:AthleteExerciseSelectionReview?=null
         )=AthleteProgramGenerationReview(status,
             Collections.unmodifiableList(issues.toList()),
             Collections.unmodifiableMap(LinkedHashMap(focuses)),
-            Collections.unmodifiableList(intents.toList()),candidate)
+            Collections.unmodifiableList(intents.toList()),candidate,selection)
 
         val athlete=input.setup.reviewed?.takeIf {
             input.setup.mayReviewProgramCandidate
@@ -279,16 +288,36 @@ object CoachAthleteProgramGenerator {
                 "Strength and peak phases must name primary lifts and skill-day counts.")
             return result(AthleteGenerationStatus.INPUTS_UNRESOLVED)
         }
+        // Non-destructive choice mode is the default: custom authoring
+        // remains authoritative until the athlete explicitly opts into
+        // screening a larger, source-backed offer pool.
+        val selection=if(input.selectFromOfferedCatalog)
+            CoachAthleteExerciseSelectionDomain.review(
+                AthleteExerciseSelectionRequest(input.setup,policy,
+                    input.catalog,input.choices,counts.keys,
+                    input.preferredPatternsPerDay,
+                    input.maximumSelectedOptions))
+        else null
+        if(selection!=null &&
+            selection.status!=AthleteSelectionStatus.SHORTLIST_FOR_REVIEW) {
+            fail("exerciseSelection",
+                AthleteGenerationIssueKind.EXERCISE_SELECTION_UNRESOLVED,
+                "The offered catalog cannot reliably cover the author's direct-muscle and split-day requirements.")
+            return result(AthleteGenerationStatus.INPUTS_UNRESOLVED,
+                selection=selection)
+        }
+        val chosen=selection?.choices ?:input.choices
         val catalog=input.catalog.associateBy {it.exerciseId}
-        val choices=input.choices.associateBy {it.exerciseId}
+        val choices=chosen.associateBy {it.exerciseId}
         val ids=policy.primaryLiftMinimumDays.keys
         if(catalog.size!=input.catalog.size ||
-            choices.size!=input.choices.size ||
+            choices.size!=chosen.size ||
             ids.any {!validPrimary(it,athlete,catalog,choices)}) {
             fail("primaryLifts",
                 AthleteGenerationIssueKind.PRIMARY_EXERCISE_UNAVAILABLE,
                 "A named primary is not a reviewed, selected, physically loadable movement in this gym.")
-            return result(AthleteGenerationStatus.INPUTS_UNRESOLVED)
+            return result(AthleteGenerationStatus.INPUTS_UNRESOLVED,
+                selection=selection)
         }
         val phaseCount=if(input.phase==TrainingPhase.HYPERTROPHY)
             ComposerSessionPurpose.HYPERTROPHY else
@@ -340,13 +369,13 @@ object CoachAthleteProgramGenerator {
                 AthleteCatalogCandidateRequest(
                     input.setup,input.phase,byDay,
                     policy.selectedBounds,input.nonSetSecondsByWeekday,plans,
-                    input.catalog,input.choices,input.maximumExercisesPerDay,
+                    input.catalog,chosen,input.maximumExercisesPerDay,
                     input.preferredPatternsPerDay,policy))
             val actual=proposal.realization
             if(proposal.status==AthleteCandidateStatus.CANDIDATE_FOR_REVIEW &&
                 actual?.status==GoalRealizationStatus.DELIVERED_FOR_REVIEW)
                 return result(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
-                    byDay,plans,proposal)
+                    byDay,plans,proposal,selection)
 
             // Rank actual unresolved drafts by unmet authored promises
             // before soft time preferences. A locally incomplete first
@@ -372,10 +401,11 @@ object CoachAthleteProgramGenerator {
             fail("composedWeek",AthleteGenerationIssueKind.COMPOSED_WEEK_UNRESOLVED,
                 "The closest checked week still needs coach review of muscle dose, recovery, exercise distribution, time or gym constraints.")
             return result(AthleteGenerationStatus.PLACEMENTS_UNRESOLVED,
-                closest.focuses,closest.intents,closest.review)
+                closest.focuses,closest.intents,closest.review,selection)
         }
         fail("weekdays",AthleteGenerationIssueKind.SCHEDULE_CONFLICT,
             "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules.")
-        return result(AthleteGenerationStatus.PLACEMENTS_UNRESOLVED)
+        return result(AthleteGenerationStatus.PLACEMENTS_UNRESOLVED,
+            selection=selection)
     }
 }

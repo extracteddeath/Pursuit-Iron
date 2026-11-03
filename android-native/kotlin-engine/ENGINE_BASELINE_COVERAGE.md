@@ -39,7 +39,7 @@ Each numbered requirement needs independently specified outcomes, property/regre
 ### B. Exercise and real equipment intelligence (P0)
 - E07 **R** Exact BigDecimal, plate pairing and physical stock inspection; **P** publish a complete verified loadability and override contract without 38.5/159.5 phantom loads.
 - E08 **R** 20 provisional source-linked IDs, credited muscles, allowed focus, rep provenance and equipment fixtures; **P** complete independently reviewed attachment/variant/unilateral/machine catalog.
-- E09 **P** Substitution engine: compatible stimulus and intent, facility, recovery, attachment and load basis; new prescriptions for replacement, no transferred old per-exercise weights, progression cells or PRs.
+- E09 **P** Substitution engine: compatible stimulus and intent, facility, recovery, attachment and load basis; new prescriptions for replacement, no transferred old per-exercise weights, progression cells or PRs. The opt-in source-verified selector now filters gym-incompatible offers and preserves required/custom movements, but catalog breadth and independent exercise effects remain unresolved.
 - E10 **P** Exercise setup hints and attachment imagery/choices; distinct rope/straight/V/dual rope and lateral/curl variants where actually supported by gym stock.
 
 ### C. Program and week composer (P0)

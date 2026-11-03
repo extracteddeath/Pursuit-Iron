@@ -54,7 +54,8 @@ class NativeEquipmentSelectionPolicyTest {
     @Test fun rackFacilityDefaultsAndOldProgramsStayIntentionallyDistinct() {
         val fresh = listOf("barbell", "no-rack", "dumbbell")
         assertFalse(policy.initialRackAvailable(fresh))
-        assertEquals(fresh, policy.forReview(fresh, rackAvailable = false))
+        assertEquals(listOf("barbell", "dumbbell", "no-rack"),
+            policy.forReview(fresh, rackAvailable = false))
         assertEquals(listOf("barbell", "dumbbell"),
             policy.forReview(fresh, rackAvailable = true))
         val old = listOf("barbell", "dumbbell")

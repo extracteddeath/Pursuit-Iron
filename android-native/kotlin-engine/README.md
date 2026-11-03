@@ -78,6 +78,25 @@ superset/myo/drop prescriptions and corresponding UI, exact coach-selected
 weight progression (not merely reviewed eligibility), and native cutover
 acceptance on a physical device.
 
+## Kotlin-only workout recovery: verified receipt replay
+
+`KotlinWorkoutJournalReplayDomain` reconstructs a workout's effective set
+outcomes **only from the original immutable Kotlin-issued snapshot, authenticated
+native storage identity, and the complete ordered committed receipt stream**.
+It does not trust a cached `effectiveSets` map, finish flag, revision number,
+or replayed duplicate event. It rejects missing, duplicated, reordered,
+forged, invalid, or noncontiguous operations, plus an inconsistent finished
+status. Corrections preserve original receipts; retries cannot create
+additional working sets. A verified replay is a *pure recovered candidate*,
+not proof that anything was durably written.
+
+This is a concrete step toward fully retiring the JavaScript workout path,
+but **the native storage owner, crash-safe transaction/commit protocol,
+authentication, backup migration, cross-process cold restoration, and
+Kotlin-owned workout issuance remain separate integration gates**. Do not
+show a success confirmation before the native store commits the receipt.
+Do not use the JavaScript journal as a fallback.
+
 ## Revision-bound verified machine weights (read-only Kotlin handoff)
 
 `CoachNativeVerifiedLoadHandoff` is a **standalone headless review**, not an

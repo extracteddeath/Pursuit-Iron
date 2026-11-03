@@ -98,7 +98,8 @@ object KotlinWorkoutSnapshotDomain {
 
     private fun verifiedTarget(
         option: ComposerExerciseOption, target: DraftPrescribedSet
-    ): Boolean = when(val equipment=option.equipment) {
+    ): Boolean {
+        return when(val equipment=option.equipment) {
         ComposerEquipment.Bodyweight ->
             target.load == DraftSetLoad.ExplicitBodyweight
         is ComposerEquipment.Verified -> {
@@ -110,6 +111,7 @@ object KotlinWorkoutSnapshotDomain {
                 equipment.inventory,weight.value,equipment.unit)
             inspection is LoadInspection.Confirmed && inspection.exact &&
                 inspection.basis == weight.basis
+        }
         }
     }
 

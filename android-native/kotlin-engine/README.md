@@ -446,7 +446,7 @@ in Kotlin. This import is intentionally NOT proof of coaching quality.
 
 ## Sixteenth domain: first real starter exercises (provisional engineering review)
 
-`StarterExerciseTranche` provides 13 **actual stable IDs from the curated
+`StarterExerciseTranche` provides 18 **actual stable IDs from the curated
 web exercise database**, with source-linked movement families, explicit
 per-hand vs barbell-total equipment loading, supporting fixtures, muscle
 credits, and practical rep bounds. Selection still requires the athlete's
@@ -458,7 +458,12 @@ movement families, equipment requirements and practical rep ranges.
 The retained definitions include barbell/paused bench, squat, overhead
 press; incline dumbbell press, one-arm row, lateral raise, biceps curl,
 overhead triceps extension, split squat, Romanian deadlift, calf raise
-and bodyweight crunch. Broad source labels require an **explicit and
+and bodyweight crunch. Five additional exact IDs cover barbell row,
+barbell Romanian deadlift, conventional deadlift, dumbbell rear-delt
+raise and unweighted pull-up. The latter requires a separately verified
+pull-up bar, without invented machine assistance or a zero-pound load.
+Barbell variants remain separate from per-hand dumbbell variants;
+no previous load is silently carried across them. Broad source labels require an **explicit and
 provisional engineering mapping**: the one-arm dumbbell row's old
 `back` bucket is provisionally allocated to upper back directly and
 lats indirectly, with reported biceps/rear delts secondary credits.
@@ -471,7 +476,7 @@ Importantly, this is an **engineering-authored provisional catalog**,
 not exercise-science certification by an independent qualified coach.
 The credit values remain assumptions subject to scientific review,
 especially the legacy broad-back remapping. Likewise, this limited
-13-exercise tranche is not a complete equipment-balanced 3–6 day
+18-exercise tranche is not a complete equipment-balanced 3–6 day
 catalog; the rest of the 402 historical records remain unreviewed.
 
 A regression discovered that the prior catalog did not validate a
@@ -480,7 +485,9 @@ now verifies `requiredFacilityIds` against the athlete's available
 fixtures; the identity gate also treats fixture requirements as part
 of stable exercise meaning. A missing incline bench cannot be replaced
 silently by a flat bench, and removing a rack requirement from a
-same-ID exercise is refused across block transitions.
+same-ID exercise is refused across block transitions. Changing a
+movement's authorized day focuses under the same exercise ID is also
+rejected, even when exercise-adaptation permission is otherwise enabled.
 
 This tranche can feed isolated, actual composed candidate weeks in
 Kotlin unit tests, **not active user workouts**. Independent muscle

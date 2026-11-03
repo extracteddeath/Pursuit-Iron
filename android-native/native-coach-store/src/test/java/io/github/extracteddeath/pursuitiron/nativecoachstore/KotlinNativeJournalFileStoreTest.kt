@@ -119,13 +119,9 @@ class KotlinNativeJournalFileStoreTest {
         assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.SOURCE_CONFLICT),
             storage.open("owner-1",snapshot,
                 identity.copy(storedRevision=2)))
-        assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.SOURCE_CONFLICT),
+        assertEquals(NativeJournalFileResult.Rejected(NativeJournalFileRefusal.ISSUE_CONFLICT),
             storage.issue("owner-1",snapshot.copy(
-                estimatedMinutes=36),identity).let {
-                    if(it==NativeJournalFileResult.Rejected(NativeJournalFileRefusal.ISSUE_CONFLICT))
-                        NativeJournalFileResult.Rejected(NativeJournalFileRefusal.SOURCE_CONFLICT)
-                    else it
-                })
+                estimatedMinutes=36),identity))
         assertEquals(0,ok(storage.open("owner-1",snapshot,identity)).journal.revision)
     }
 

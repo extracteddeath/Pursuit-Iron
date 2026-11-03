@@ -1,6 +1,5 @@
 package io.github.extracteddeath.pursuitiron
 
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,15 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
@@ -92,14 +85,9 @@ private val PursuitShapes = Shapes(
 
 @Composable
 fun PursuitIronTheme(content: @Composable () -> Unit) {
-    val context = LocalContext.current
-    val dark = isSystemInDarkTheme()
-    val scheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dark -> dynamicDarkColorScheme(context)
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
-        dark -> darkColorScheme()
-        else -> lightColorScheme()
-    }
-    MaterialTheme(colorScheme = scheme, motionScheme = MotionScheme.expressive(),
-        typography = Typography(), shapes = PursuitShapes, content = content)
+    // Brand-consistent graphite surfaces and an accessible violet accent.
+    // Respect system light/dark without adopting unrelated wallpaper hues.
+    val scheme = if(isSystemInDarkTheme()) PursuitDarkColors else PursuitLightColors
+    MaterialTheme(colorScheme=scheme,motionScheme=MotionScheme.expressive(),
+        typography=PursuitTypography,shapes=PursuitShapes,content=content)
 }

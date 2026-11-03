@@ -2099,3 +2099,17 @@ and in-flight busy/error labels are invalidated together. Stale inspect
 failures cannot paint errors on a subsequent workout. Existing confirmed
 journal writes, exercise prescriptions and actual logged values are
 unchanged. Source and Compose checks required; no APK.
+
+## 2026-11-02 — Native design-system foundation (graphite + one expressive accent)
+
+Replaced the wallpaper-driven/default color/typography combination with a
+shared native-only light/dark token layer. Graphite/neutral semantic
+Material 3 surfaces use one violet accent and readable on-color roles,
+while respecting the Android light/dark setting. The existing M3 Expressive
+motion scheme and asymmetric shape family remain intact. Centralized
+headline/title/body/label typography and a consistent spacing scale; the
+shared PageHeading, SectionLabel and PursuitCard now consume those tokens.
+Every real Today, Train, Plan and Insights surface using these components
+adopts the system without a competing per-screen style or training-write
+change. No new engine logic, preset loads, web styling or APK. Compose and
+source checks must pass before accepting the foundation.

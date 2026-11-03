@@ -169,12 +169,13 @@ internal fun PreviewLabel(label: String, emphasis: Boolean = false) {
 
 @Composable
 internal fun PageHeading(eyebrow: String, title: String, subtitle: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary)
-        Text(title, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
+        Text(eyebrow.uppercase(),style=MaterialTheme.typography.labelMedium,
+            color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold)
+        Text(title,style=MaterialTheme.typography.headlineLarge,
+            color=MaterialTheme.colorScheme.onSurface)
+        if(subtitle.isNotBlank()) Text(subtitle,style=MaterialTheme.typography.bodyMedium,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -194,18 +195,18 @@ internal fun PursuitCard(
                 else MaterialTheme.colorScheme.onSurface
         )
     ) {
-        Column(modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+        Column(modifier=Modifier.padding(PursuitSpace.lg),
+            verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm),content=content)
     }
 }
 
 @Composable
 internal fun SectionLabel(title: String, detail: String? = null) {
-    Row(modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(title, modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+    Row(modifier=Modifier.fillMaxWidth(),
+        verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.SpaceBetween) {
+        Text(title,modifier=Modifier.weight(1f),
+            style=MaterialTheme.typography.titleLarge,color=MaterialTheme.colorScheme.onSurface)
         if (detail != null) {
             Text(detail, modifier = Modifier.padding(start = 10.dp).widthIn(max = 148.dp),
                 maxLines = 1, overflow = TextOverflow.Ellipsis,

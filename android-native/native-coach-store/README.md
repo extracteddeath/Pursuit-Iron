@@ -45,6 +45,41 @@ It does not authenticate the caller or make separate files/SQLite transactions
 atomically recoverable. Actual Android owner/session persistence and device
 instrumentation are still mandatory before production integration.
 
+## Durable Kotlin-owned approval record (integration candidate)
+
+`NativeKotlinApprovalFileAuthority` is a real independent native
+implementation of `NativeKotlinWorkoutAuthority` with a **versioned binary
+record for the complete accepted plan**, explicit confirmed gym stock, muscle
+bounds, schedule, warmups, rep/RIR/rest policies, athlete/source revisions,
+workout grant and monotonically increasing approval revision. It uses
+`NativeKotlinApprovalCodec` for bounded, lossless, versioned serialization,
+checksum-checked app-private atomic file replacement, and the SAME
+`NativeKotlinApprovalRevisionFence` used by workout issuance. There is no
+`ObjectOutputStream`, JavaScript engine, cross-language bridge or invented
+equipment load.
+
+An authenticated native host must supply `NativeKotlinCurrentIdentity`
+from its real sign-in/account session. `publish(ownerKey,
+expectedRevision,approval)` does a fenced compare-and-swap (zero for first
+approval), rejects malformed or incomplete programs and refuses to overwrite
+corrupt or foreign account data. `revokeCurrentGrant` commits a revisioned
+tombstone, not file deletion. A revoked or modified *current* grant cannot
+issue new workouts; already-issued work remains accessible to the same
+authenticated athlete with unchanged frozen prescriptions.
+
+Nested owner-fence acquisition is safely reentrant: the workout coordinator
+already holds the fence when it queries this authority inside the storage
+transaction. Revocation and all compliant program mutations acquire the
+same file lock and cannot race that commit.
+
+**Integration limit:** the real Compose app is not yet wired to this
+approval store or a trusted sign-in identity provider. It still uses
+legacy JS-backed program storage. Native session sign-out/account switching,
+other profile/gym/grant writers, production backup and migration must adopt
+the same revision fence. Application root directory access must be private,
+and Android device power-loss testing is outstanding. Local JVM tests are
+not a substitute for these gates.
+
 ## What exists
 
 `KotlinNativeJournalFileStore` provides a **private-directory, per-athlete,

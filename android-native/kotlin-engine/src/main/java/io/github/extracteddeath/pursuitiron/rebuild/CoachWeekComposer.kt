@@ -70,7 +70,15 @@ data class ComposerRequest(
     /** A user-supplied preference, NOT a universal training rule. */
     val preferredPatternsPerDay:Int=2,
     /** Missing entries are unassigned, not inferred from phase. */
-    val sessionIntents:List<ComposerSessionIntent> = emptyList()
+    val sessionIntents:List<ComposerSessionIntent> = emptyList(),
+    /**
+     * Athlete-owned cap on distinct BARBELL_TOTAL exercise visits each day.
+     * Null means this legacy/unbound composer caller declared no cap.
+     * Zero is an explicit prohibition, not an absent preference.
+     */
+    val maximumBarbellExercisesPerDay:Int?=null,
+    /** An explicit restriction on direct triceps credit during LOWER days. */
+    val allowDirectTricepsOnLower:Boolean=true
 )
 data class ComposerVisit(val dayIndex:Int,val exerciseId:String,
     val pattern:ComposerPattern,val sets:Int)
@@ -138,6 +146,8 @@ object CoachWeekComposer {
         require(request.exercises.size in 1..MAX_OPTIONS)
         require(request.maximumDifferentExercisesPerDay in 1..12)
         require(request.preferredPatternsPerDay in 1..4)
+        require(request.maximumBarbellExercisesPerDay==null ||
+            request.maximumBarbellExercisesPerDay in 0..12)
         require(request.exercises.map {it.exerciseId}.distinct().size==
             request.exercises.size)
         require(request.sessionIntents.size<=request.days.size)
@@ -201,6 +211,14 @@ object CoachWeekComposer {
         visits:List<ComposerVisit>)=(option.requiredVisits-
         visits.count {it.exerciseId==option.exerciseId}).coerceAtLeast(0)
 
+    private fun isBarbell(option:ComposerExerciseOption):Boolean =
+        (option.equipment as? ComposerEquipment.Verified)?.inventory?.basis==
+            LoadBasis.BARBELL_TOTAL
+
+    private fun directTriceps(option:ComposerExerciseOption):Boolean =
+        option.credits.any {it.muscle==TrainingMuscle.TRICEPS &&
+            it.role==MuscleCreditRole.DIRECT}
+
     private fun mayStart(option:ComposerExerciseOption,dayIndex:Int,
         request:ComposerRequest,visits:List<ComposerVisit>):Boolean {
         if(request.days[dayIndex].focus !in option.allowedFocus)return false
@@ -211,6 +229,18 @@ object CoachWeekComposer {
         if(visits.count {it.exerciseId==option.exerciseId}>=option.maximumVisits)return false
         if(visits.count {it.dayIndex==dayIndex}>=
             request.maximumDifferentExercisesPerDay)return false
+        // Reject before scoring, not after an infeasible week is built.
+        if(request.days[dayIndex].focus==ComposerFocus.LOWER &&
+            !request.allowDirectTricepsOnLower && directTriceps(option))
+            return false
+        val barbellCap=request.maximumBarbellExercisesPerDay
+        if(barbellCap!=null && isBarbell(option) &&
+            visits.count {existing ->
+                existing.dayIndex==dayIndex &&
+                    isBarbell(request.exercises.first {
+                        it.exerciseId==existing.exerciseId
+                    })
+            }>=barbellCap)return false
         val day=request.days[dayIndex].calendarDay
         return visits.all {otherVisit ->
             if(otherVisit.dayIndex==dayIndex)return@all true
@@ -518,6 +548,12 @@ object CoachWeekComposer {
             notes+="Some exercise options have no verified usable loading setup."
         if(unmet.isNotEmpty())
             notes+="Pinned exercise appearances could not all be scheduled."
+        if(request.maximumBarbellExercisesPerDay!=null && unmet.isNotEmpty() &&
+            request.exercises.any {missing(it,chosen)>0 && isBarbell(it)})
+            notes+="The authored barbell-day limit may prevent some requested barbell appearances."
+        if(!request.allowDirectTricepsOnLower && unmet.isNotEmpty() &&
+            request.exercises.any {missing(it,chosen)>0 && directTriceps(it)})
+            notes+="A requested direct-triceps exercise may need an eligible upper day."
         if(!audit.satisfiesDeclaredHardConstraints)
             notes+="The candidate has muscle dose, frequency or hard-time conflicts."
         if(audit.daysWithoutWorkingSets.isNotEmpty())

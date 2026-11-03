@@ -15,9 +15,14 @@ confirmed `ReviewedAthleteSetup`. It requires explicitly authored phase,
 all sixteen dose targets, split-day focus, day purpose and real non-set
 minutes; missing or malformed policies cannot produce a fabricated week.
 It refuses excluded exercises, unapproved bodyweight and zero-barbell
-profiles. After composition it checks barbell counts and disabled lower-day
-triceps. Unimplemented focused/reduced muscle and hard/long day policies
-remain visible unresolved constraints, not falsely honored preferences.
+profiles. The weekly search now **actively enforces each athlete's maximum
+barbell exercise visits per day and disabled direct-triceps on lower days**,
+including additions, replacements, relocations, and seeded custom-program
+rebalancing. These constraints apply before a candidate is accepted, not
+only in post-composition reports. Required visits that cannot fit are
+reported as unresolved; they are never silently dropped. Unimplemented
+focused/reduced muscle and hard/long day policies remain visible unresolved
+constraints, not falsely honored preferences.
 
 The result stays **review-only**: no target issuance, save, persistence or
 native authority switch. The composer still needs actual goal-specific policy

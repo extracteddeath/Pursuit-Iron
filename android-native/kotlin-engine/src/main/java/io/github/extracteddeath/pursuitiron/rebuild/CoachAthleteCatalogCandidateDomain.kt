@@ -133,7 +133,9 @@ object CoachAthleteCatalogCandidateDomain {
         }
         val template=ComposerRequest(profile.split,request.phase,days,
             request.bounds,emptyList(),request.maximumExercisesPerDay,
-            request.preferredPatternsPerDay,intents)
+            request.preferredPatternsPerDay,intents,
+            maximumBarbellExercisesPerDay=profile.maxBarbellExercisesPerDay,
+            allowDirectTricepsOnLower=profile.allowTricepsOnLower)
         val plan=runCatching {
             CoachExerciseCatalogDomain.review(
                 CatalogWeekRequest(template,request.catalog,request.choices,
@@ -171,8 +173,10 @@ object CoachAthleteCatalogCandidateDomain {
                     AthleteCandidateIssueKind.LOWER_DAY_RESTRICTION,
                     "Direct triceps training on lower day is disabled.")
         }
-        // These user preferences are *not yet used* by an issuing policy.
-        // Keep the usable week draft available but do not claim compliance.
+        // Athletic barbell/day and direct-triceps/lower restrictions are
+        // enforced during candidate selection and repair. These remaining
+        // goal/volume/day-intensity settings still have no issuing policy;
+        // report them instead of claiming a personalized program.
         if(profile.focusedMuscles.isNotEmpty() ||
             profile.reducedMuscles.isNotEmpty())
             add("musclePriorities",AthleteCandidateIssueKind.POLICY_UNRESOLVED,

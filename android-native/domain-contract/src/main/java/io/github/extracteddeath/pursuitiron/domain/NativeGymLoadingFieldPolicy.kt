@@ -30,9 +30,12 @@ object NativeGymLoadingFieldPolicy {
     ): List<String> {
         if (availableEquipment == null) return standardFields
         val available = availableEquipment.toSet()
+        val hasBarbellDraft = !draft["bar"].isNullOrBlank() ||
+            !draft["plates"].isNullOrBlank()
         return standardFields.filter { key ->
             fieldEquipment.getValue(key) in available ||
-                !draft[key].isNullOrBlank()
+                !draft[key].isNullOrBlank() ||
+                (key in setOf("bar", "plates") && hasBarbellDraft)
         }
     }
 
@@ -42,9 +45,12 @@ object NativeGymLoadingFieldPolicy {
     ): List<String> {
         if (availableEquipment == null) return emptyList()
         val available = availableEquipment.toSet()
+        val hasBarbellDraft = !draft["bar"].isNullOrBlank() ||
+            !draft["plates"].isNullOrBlank()
         return standardFields.filter { key ->
             fieldEquipment.getValue(key) !in available &&
-                !draft[key].isNullOrBlank()
+                (!draft[key].isNullOrBlank() ||
+                    (key in setOf("bar", "plates") && hasBarbellDraft))
         }
     }
 

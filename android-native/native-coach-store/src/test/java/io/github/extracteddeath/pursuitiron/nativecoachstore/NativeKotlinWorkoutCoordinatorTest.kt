@@ -82,9 +82,11 @@ class NativeKotlinWorkoutCoordinatorTest {
             ownerKey:String,source:KotlinTrainingSourceRevision
         )=signedIn && ownerKey=="owner-1" && source.athleteId=="athlete-1"
     }
+    private fun fence()=NativeKotlinApprovalRevisionFence(
+        temporary.root.toPath())
     private fun coordinator(auth:NativeKotlinWorkoutAuthority)=
         NativeKotlinWorkoutCoordinator(
-            KotlinNativeJournalFileStore(temporary.root.toPath()),auth)
+            KotlinNativeJournalFileStore(temporary.root.toPath()),auth,fence())
     private fun issued(result:NativeKotlinIssueResult):NativeKotlinIssueResult.Committed {
         assertTrue(result.toString(),result is NativeKotlinIssueResult.Committed)
         return result as NativeKotlinIssueResult.Committed

@@ -9,7 +9,8 @@ class CoachAthleteCatalogCandidateDomainTest {
     private val stock=VerifiedLoadStock.Totals(LoadUnit.LB,
         LoadBasis.DUMBBELL_PER_HAND,listOf(n("20"),n("25"),n("30")))
     private fun setup(excluded:Set<String> = emptySet(),
-        body:Boolean=false,focus:Boolean=false,hard:Boolean=false)=
+        body:Boolean=false,focus:Boolean=false,hard:Boolean=false,
+        barbellCap:Int=0,barbellAvailable:Boolean=false)=
         CoachAthleteSetupDomain.review(AthleteSetupDraft(
             profileRevision="rev1",athleteProfileId="athlete1",
             goal=AthleteTrainingGoal.HYPERTROPHY,
@@ -19,10 +20,14 @@ class CoachAthleteCatalogCandidateDomainTest {
             timezoneId="America/New_York",
             sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
             hardSessionLimit=HardSessionLimit.NO_HARD_LIMIT,
-            gym=GymProfileDraft("home",LoadUnit.LB,mapOf("db" to stock),
+            gym=GymProfileDraft("home",LoadUnit.LB,
+                mapOf<String,VerifiedLoadStock>("db" to stock)+
+                    if(barbellAvailable)mapOf("bar" to
+                        VerifiedLoadStock.Barbell(LoadUnit.LB,n("45"),
+                            mapOf(n("10") to 2)))else emptyMap(),
                 emptySet(),emptySet()),
             allowBodyweight=body,allowSupersets=false,
-            allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
+            allowTricepsOnLower=false,maxBarbellExercisesPerDay=barbellCap,
             focusedMuscles=if(focus)setOf(TrainingMuscle.CHEST)else emptySet(),
             reducedMuscles=emptySet(),excludedExerciseIds=excluded,
             lockedTrainingDays=setOf(0),
@@ -155,6 +160,38 @@ class CoachAthleteCatalogCandidateDomainTest {
             setup=setup(hard=true)))
         assertTrue(hard.issues.any {it.field=="dayIntensity"})
         assertEquals(AthleteCandidateStatus.CONSTRAINTS_UNRESOLVED,hard.status)
+    }
+
+    @Test fun confirmedBarbellLimitTravelsThroughCatalogIntoActualWeekSearch() {
+        val benchBar=chest.copy(exerciseId="bar-bench",
+            familyId="bar-bench",variantId="barbell",
+            equipmentId="bar",expectedLoadBasis=LoadBasis.BARBELL_TOTAL)
+        val rowBar=lats.copy(exerciseId="bar-row",
+            familyId="bar-row",variantId="barbell",
+            equipmentId="bar",expectedLoadBasis=LoadBasis.BARBELL_TOTAL)
+        val options=listOf(benchBar,rowBar)
+        val original=request()
+        val input=original.copy(
+            setup=setup(barbellCap=1,barbellAvailable=true),
+            catalog=catalog+options,
+            choices=original.choices+options.map {
+                choice(it.exerciseId).copy(selectedLoad=n("65"))
+            })
+        val outcome=CoachAthleteCatalogCandidateDomain.review(input)
+        val catalogDraft=checkNotNull(outcome.catalogReview)
+        val proposed=checkNotNull(catalogDraft.composedRequest)
+        assertEquals(1,proposed.maximumBarbellExercisesPerDay)
+        assertFalse(proposed.allowDirectTricepsOnLower)
+        val visits=checkNotNull(catalogDraft.draft).visits
+        val barbellIds=setOf("bar-bench","bar-row")
+        assertTrue(visits.any {it.exerciseId=="bar-bench"})
+        assertTrue(visits.any {it.exerciseId=="bar-row"})
+        assertTrue(visits.filter {it.exerciseId in barbellIds}
+            .groupBy {it.dayIndex}.values.all {it.size<=1})
+        assertFalse(outcome.mayIssueWorkout)
+        assertFalse(outcome.maySaveProgram)
+        assertEquals(input,original.copy(
+            setup=input.setup,catalog=input.catalog,choices=input.choices))
     }
 
     @Test fun candidateReviewIsDeterministicAndNeverAltersAuthoring() {

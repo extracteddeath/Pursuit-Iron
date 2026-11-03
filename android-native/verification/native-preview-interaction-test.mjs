@@ -10,7 +10,8 @@ const programEditor = fs.readFileSync(root + 'NativeProgramDraftEditor.kt', 'utf
 const coachEvidenceSource = fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeCoachVerifiedLoadEvidence.kt','utf8');
 assert.ok(gymEditor.includes('NativeCoachVerifiedLoadEvidence.review(') &&
-  gymEditor.includes('saved.loadingInventory,unit,saved.loadingCandidates') &&
+  gymEditor.includes('saved.loadingInventory,unit,saved.loadingCandidates,reference') &&
+  coachEvidenceSource.includes('ReadOnlyProgramReferenceGate.sameActiveRevision(reference,reference,null)') &&
   gymEditor.includes('Unverified exercises remain manual.') &&
   coachEvidenceSource.includes('NativeGymInventoryCodec.validate(raw,unit,allowed,exactOnly)') &&
   coachEvidenceSource.includes('require(candidate.mode!="external_load")') &&

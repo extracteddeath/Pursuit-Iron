@@ -16,6 +16,20 @@ yet. This contract applies to both isolated branches:
 `architecture/kotlin-engine-rebuild`. Neither branch may modify the
 production web app or the other developer's native work.
 
+## Coach-quality programming is an independent release gate
+
+[COACHING_QUALITY_STANDARD.md](COACHING_QUALITY_STANDARD.md) defines the
+non-negotiable programming standard: every microcycle, exercise prescription,
+progression change, deload and phase transition must be defensible as something
+a skilled coach would prescribe for the **whole individual**, not merely
+numerically valid. The 14 scenario families and their rejection criteria
+also apply to native UX: surface decisions concisely and keep active set
+logging fast and free of repetitive banners.
+
+A headless training-rule unit test is only *technical evidence*, never
+a substitute for real-program quality, longitudinal review or device
+acceptance. The current Kotlin coaching-review outputs remain provisional.
+
 ## Every-feature comparison is mandatory
 
 For **each** of the 14 feature IDs in `FeatureCatalog.kt`, maintain:

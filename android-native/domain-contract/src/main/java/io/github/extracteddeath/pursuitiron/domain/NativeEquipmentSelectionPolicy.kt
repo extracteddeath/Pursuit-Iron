@@ -34,6 +34,37 @@ object NativeEquipmentSelectionPolicy {
         return next
     }
 
+    /**
+     * Legacy profiles without an explicit no-rack flag historically derived a
+     * rack from barbell equipment. Do not reinterpret those saved choices.
+     * Fresh profiles must explicitly carry no-rack until the athlete confirms
+     * the facility in onboarding.
+     */
+    fun initialRackAvailable(selected: Collection<String>): Boolean =
+        "barbell" in selected &&
+            ("rack" in selected || "no-rack" !in selected)
+
+    /**
+     * For a newly reviewed candidate, use the supplied rack confirmation.
+     * Keep all other selected IDs for canonical validation; do not silently
+     * drop unknown legacy IDs or invent loading inventory. A positive old
+     * rack token is only retained when it already existed in the profile.
+     */
+    fun forReview(selected: List<String>, rackAvailable: Boolean): List<String> {
+        val base = selected.distinct().filterNot { it == "rack" || it == "no-rack" }
+        if ("barbell" !in base) return base
+        return when {
+            !rackAvailable -> base + "no-rack"
+            "rack" in selected -> base + "rack"
+            else -> base
+        }
+    }
+
+    /** The rack setting is its own facility switch, not a 41st catalog chip. */
+    fun pickerSelections(selected: List<String>): List<String> =
+        selected.distinct().filterNot { it == "no-rack" ||
+            (it == "rack" && "barbell" in selected) }
+
     fun selectedCount(
         selected: Collection<String>,
         available: Collection<String>

@@ -41,6 +41,7 @@ sealed interface NativeCoachVerifiedLoadFact {
 }
 
 data class NativeCoachVerifiedLoadReview(
+    val reference: ReadOnlyProgramReference,
     val candidateCount: Int,
     val facts: List<NativeCoachVerifiedLoadFact>
 ) {
@@ -62,15 +63,19 @@ object NativeCoachVerifiedLoadEvidence {
     fun review(
         raw: String?,
         unit: String,
-        candidates: List<NativeStackCandidate>
+        candidates: List<NativeStackCandidate>,
+        reference: ReadOnlyProgramReference
     ): NativeCoachVerifiedLoadReview {
+        // The caller independently checks the reference against the current
+        // owned snapshot. This validation only rejects malformed identities.
+        require(ReadOnlyProgramReferenceGate.sameActiveRevision(reference,reference,null))
         require(unit=="lb" || unit=="kg")
         require(candidates.size<=48)
         require(candidates.map { it.id }.distinct().size==candidates.size)
         require(candidates.all { it.id.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")) &&
             it.name.isNotBlank() && it.name.length<=120 &&
             it.mode in setOf("external_load","cable_stack","machine_stack") })
-        if(raw==null)return NativeCoachVerifiedLoadReview(candidates.size,emptyList())
+        if(raw==null)return NativeCoachVerifiedLoadReview(reference,candidates.size,emptyList())
         val allowed=candidates.map { it.id }.toSet()
         val exactOnly=candidates.filter { it.mode=="external_load" }.map { it.id }.toSet()
         val validated=NativeGymInventoryCodec.validate(raw,unit,allowed,exactOnly)
@@ -91,7 +96,7 @@ object NativeCoachVerifiedLoadEvidence {
                     number(value.get("maximum")))
             }
         }
-        return NativeCoachVerifiedLoadReview(candidates.size,
+        return NativeCoachVerifiedLoadReview(reference,candidates.size,
             Collections.unmodifiableList(facts))
     }
 }

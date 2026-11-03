@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "PursuitIronNative"
-include(":app", ":domain-contract", ":engine-runtime", ":kotlin-engine")
+include(":app", ":domain-contract", ":engine-runtime", ":kotlin-engine", ":native-coach-store")

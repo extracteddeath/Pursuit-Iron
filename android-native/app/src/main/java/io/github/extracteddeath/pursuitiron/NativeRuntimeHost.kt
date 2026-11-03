@@ -51,7 +51,16 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
     fun start() {
         if (!started.compareAndSet(false,true)) return
         scope.launch {
-            val loaded=PackagedReadOnlySchemaVerifier.openIfPackaged(context)
+            // A corrupt or unreadable packaged engine must never strand the
+            // entire native UI in its initial loading state. Preserve the
+            // private journal and canonical store untouched and fail closed.
+            val loaded=try { PackagedReadOnlySchemaVerifier.openIfPackaged(context) }
+            catch(cancelled: CancellationException) { throw cancelled }
+            catch(_: Exception) {
+                mutable.update { it.copy(loading=false,ready=false,blocked=true,
+                    error="The packaged training engine could not be opened. Your saved workouts were not changed.") }
+                return@launch
+            }
             synchronized(lifetime) {
                 if (closed || !isActive) { loaded?.close();return@launch }
                 if (loaded!=null) mutable.update { it.copy(verifier=loaded) }

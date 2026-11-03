@@ -180,6 +180,12 @@ assert.ok(train.includes('val view=LocalView.current') &&
   train.includes('if(progress!=null)view.keepScreenOn=true') &&
   train.includes('onDispose { view.keepScreenOn=prior }'),
   'Keep screen awake only while a real workout is rendered and restore the original view setting');
+const runtimeStartup=fs.readFileSync(root+'NativeRuntimeHost.kt','utf8');
+assert.ok(runtimeStartup.includes('val loaded=try { PackagedReadOnlySchemaVerifier.openIfPackaged(context) }') &&
+  runtimeStartup.includes('catch(cancelled: CancellationException) { throw cancelled }') &&
+  runtimeStartup.includes('loading=false,ready=false,blocked=true') &&
+  runtimeStartup.includes('Your saved workouts were not changed.'),
+  'Broken packaged engine assets must end startup loading and fail closed without overwriting private workout recovery');
 const rest=fs.readFileSync(root+'NativeRestTimer.kt','utf8');
 assert.ok(train.includes('NativeRestTimer(plan.session.workoutId, activeExtension ?: exercise.restSeconds,') &&
   rest.includes('rememberSaveable(workoutId)') &&
@@ -206,6 +212,15 @@ assert.ok(rest.includes('var startedElapsed by rememberSaveable(workoutId)') &&
   train.includes('autoCue=NativeRestCuePolicy.latestAcknowledged(progress)') &&
   train.includes('latestReceiptOperationId=journal.events.lastOrNull()?.intent?.operationId'),
   'Rest countdown must use the issued duration after a new durable set receipt, not a pending save, and must not replay after recovery');
+assert.ok(!rest.includes('if (prescribedSeconds <= 0) return') &&
+  rest.includes('val manualRestTarget=prescribedSeconds in 1..3600') &&
+  rest.includes('if(!manualRestTarget && (!valid || remaining==0L)) return') &&
+  rest.includes('!manualRestTarget -> "Rest from last saved set') &&
+  rest.includes('else Modifier.fillMaxWidth().heightIn(min = 64.dp)') &&
+  rest.includes('if(!manualRestTarget && enabled) TextButton(onClick = {') &&
+  rest.includes('Text("Clear rest")') &&
+  rest.includes('begin(autoCue.seconds)'),
+  'An acknowledged rest survives Focus switching to an exercise with zero prescribed seconds; no inert manual-start action');
 
 assert.ok(train.includes('set.isExtension') &&
   train.includes('set.extensionRestSeconds?.let') &&

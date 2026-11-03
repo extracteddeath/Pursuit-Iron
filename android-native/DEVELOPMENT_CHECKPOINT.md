@@ -1958,3 +1958,15 @@ confirmation dialog state also resets when stock or source verification
 changes. This is display-only, with no changes to engine-issued targets,
 journal, physical inventory, progression or saved history. Source contract
 and Compose compilation are required before acceptance. No APK.
+
+## 2026-11-02 — Rest across zero-target Focus and cold-start recovery safety
+
+Fixed two native interruption cases without altering the engine or journal.
+An acknowledged previous exercise's rest remains visible as Focus advances
+to a zero-rest exercise. The zero-target view does not offer a misleading
+restart duration; it provides an explicit Clear action while the active
+elapsed timer remains workout-scoped, and receipt effects remain mounted.
+An exception opening the packaged engine now exits the startup loading
+state with a blocked, non-writing recovery message instead of leaving a
+perpetual spinner. Cancellation still propagates. Source regression gates
+cover both cases; Compose and domain checks required. No APK.

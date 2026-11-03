@@ -8,6 +8,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -36,7 +37,10 @@ internal fun NativeRestTimer(
     latestReceiptOperationId: String? = null,
     autoCue: NativeRestCue? = null
 ) {
-    if (prescribedSeconds <= 0) return
+    // A verified receipt may start rest from the previous exercise even if
+    // the currently selected exercise has zero rest. Never unmount the timer
+    // before observing that receipt or while its elapsed countdown is active.
+    val manualRestTarget=prescribedSeconds in 1..3600
     var deadline by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
     var startedElapsed by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
     var startedWall by rememberSaveable(workoutId) { mutableLongStateOf(0L) }
@@ -100,14 +104,19 @@ internal fun NativeRestTimer(
         remaining > 0L -> "Rest · $time left"
         else -> "Rest complete"
     }
-    // If the user switches exercises mid-countdown, the active rest period
-    // remains unchanged; the next tap uses the currently selected target.
-    val supporting = if(valid)
-        "Tap to restart at $prescribedSeconds s · Hold to clear"
-    else "Tap to start $prescribedSeconds s · Hold to clear"
-
-    Surface(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).combinedClickable(
+    // Manual restart follows the CURRENT exercise's issued rest target,
+    // not an invented fallback borrowed from the last completed movement.
+    // A zero-rest exercise can still DISPLAY the preceding saved set's timer.
+    val supporting = when {
+        !manualRestTarget -> "Rest from last saved set · No rest target on this exercise"
+        valid -> "Tap to restart at $prescribedSeconds s · Hold to clear"
+        else -> "Tap to start $prescribedSeconds s · Hold to clear"
+    }
+    // Keep saveable state and receipt effects mounted even when no rest is
+    // currently displayed. Never expose an inert tap action for a zero target.
+    if(!manualRestTarget && (!valid || remaining==0L)) return
+    val timerModifier=if(manualRestTarget)
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).combinedClickable(
             enabled = enabled,
             onClickLabel = "Start or restart rest timer",
             onLongClickLabel = "Reset rest timer",
@@ -116,7 +125,10 @@ internal fun NativeRestTimer(
                 deadline = 0L
                 activeSeconds = 0
             }
-        ),
+        ) else Modifier.fillMaxWidth().heightIn(min = 64.dp)
+
+    Surface(
+        modifier = timerModifier,
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
@@ -132,6 +144,10 @@ internal fun NativeRestTimer(
             }
             Text(supporting, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer)
+            if(!manualRestTarget && enabled) TextButton(onClick = {
+                deadline = 0L
+                activeSeconds = 0
+            }) { Text("Clear rest") }
         }
     }
 }

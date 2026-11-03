@@ -2260,3 +2260,18 @@ M3 Expressive components and canonical program/workout logic are unchanged.
 The isolated source-contract job passed on the history fix; final checks and
 Compose compilation remain separately verified CI gates. No APK built and no
 Kotlin training engine rewritten in this pass.
+
+## 2026-11-02 — Compact native set-entry controls on phone widths
+
+The shared Reps/RIR editor now uses two balanced fields with their matching
+48dp minimum hit-target minus/plus actions directly underneath. A normal
+phone width (340dp of available content) keeps both independent values on
+one row; very narrow layouts use the previous stacked fallback. The load
+field, optional actual RIR, failed-attempt rules, user-owned values and
+canonical quantization/verification remain untouched. This shared component
+also updates warm-up logging, active corrections and saved-history edits
+without adding any separate per-screen styling or app-owned progression.
+Source assertions cover the new compact breakpoint, equal-width touch
+actions, fallback and retained validated set-entry flow. Compose compilation
+and Android visual/large-text acceptance remain outstanding. No APK or
+training engine rewrite.

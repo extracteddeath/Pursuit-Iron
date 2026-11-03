@@ -22,7 +22,7 @@ jobs:
   assemble-preview:
     # M5 is a *development* device test, never an app release. Only a named
     # one-off marker change with the explicit commit prefix can build here.
-    if: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'milestone(android): M5 ') }}
+    if: "${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'milestone(android): M5 ') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

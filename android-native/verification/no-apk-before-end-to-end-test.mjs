@@ -13,8 +13,9 @@ const doc=read('android-native/PREVIEW_MILESTONE.md');
 const marker=read('android-native/M5_DEVICE_TEST_APK.md');
 assert.match(preview,/^on:\n  workflow_dispatch:\n  push:\n    branches:\n      - architecture\/android-compose-foundation\n    paths:\n      - 'android-native\/M5_DEVICE_TEST_APK\.md'/m,
   'APK source pushes must be scoped to the single M5 milestone marker');
-assert.match(preview,/if: \$\{\{ github\.event_name == 'push' && startsWith\(github\.event\.head_commit\.message, 'milestone\(android\): M5 '\) \}\}/,
-  'A manual run or unrelated marker edit cannot assemble a device APK');
+assert.ok(preview.includes('    if: "') &&
+  preview.includes("github.event_name == 'push' && startsWith(github.event.head_commit.message, 'milestone(android): M5 ')"),
+  'Manual runs and ordinary pushes must remain unable to assemble a device APK');
 for(const script of [
   'native-core-journey-test.mjs',
   'native-onboarding-interaction-test.mjs',

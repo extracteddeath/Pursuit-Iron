@@ -26,3 +26,5 @@ rotation/background/restart -> exact Resume -> confirmed Finish ->
 corrected History -> next day; inspect original theme choices, large text,
 keyboard, equipment-aware loads and user-facing interaction polish.
 Report gaps before replacing the legacy engine with independent Kotlin logic.
+
+**Workflow retry:** This milestone retry quotes the conditional YAML scalar so GitHub can parse it. No native training data or user-facing app logic were changed.

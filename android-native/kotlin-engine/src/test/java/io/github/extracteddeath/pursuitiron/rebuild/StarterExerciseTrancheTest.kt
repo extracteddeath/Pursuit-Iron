@@ -36,8 +36,8 @@ class StarterExerciseTrancheTest {
         choice("one_arm_db_row",n("30")),choice("back_squat",n("135")))
 
     @Test fun exactSourceIdsAreStableAndNoVariantsShareIdentity() {
-        assertEquals(13,data.size)
-        assertEquals(13,data.map {it.legacyCuratedId}.distinct().size)
+        assertEquals(18,data.size)
+        assertEquals(18,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
         assertEquals(13,data.map {
             it.movement.familyId to it.movement.variantId
@@ -163,6 +163,72 @@ class StarterExerciseTrancheTest {
         assertTrue(invalid.issues.any {
             it.kind==CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY
         })
+    }
+
+    @Test fun newlyMappedPullAndHingeMovementsPreservePhysicalSemantics() {
+        val byId=StarterExerciseTranche.movements().associateBy {it.exerciseId}
+        assertEquals(LoadBasis.BARBELL_TOTAL,byId.getValue("barbell_row").expectedLoadBasis)
+        assertEquals(LoadBasis.BARBELL_TOTAL,byId.getValue("rdl").expectedLoadBasis)
+        assertEquals(LoadBasis.BARBELL_TOTAL,
+            byId.getValue("conventional_deadlift").expectedLoadBasis)
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,
+            byId.getValue("db_rear_delt_raise").expectedLoadBasis)
+        assertNotEquals(byId.getValue("db_rdl").variantId,byId.getValue("rdl").variantId)
+        assertNull(byId.getValue("pullup").equipmentId)
+        assertEquals(setOf("pullup-bar"),byId.getValue("pullup").requiredFacilityIds)
+        assertTrue(byId.getValue("pullup").credits.any {
+            it.muscle==TrainingMuscle.LATS && it.role==MuscleCreditRole.DIRECT
+        })
+        assertEquals(setOf(TrainingMuscle.HAMSTRINGS,TrainingMuscle.GLUTES),
+            byId.getValue("conventional_deadlift").credits
+                .filter {it.role==MuscleCreditRole.DIRECT}.map {it.muscle}.toSet())
+        assertFalse(byId.getValue("conventional_deadlift").credits.any {
+            it.muscle==TrainingMuscle.LATS || it.muscle==TrainingMuscle.UPPER_BACK
+        })
+        assertFalse(byId.getValue("db_rear_delt_raise").credits.any {
+            it.muscle==TrainingMuscle.LATS || it.muscle==TrainingMuscle.UPPER_BACK
+        })
+    }
+
+    @Test fun unweightedPullupRequiresActualBarAndCannotAcceptFictitiousLoad() {
+        val noBar=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),
+                listOf(choice("pullup",null)),gym()))
+        assertEquals(CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,noBar.status)
+        assertTrue(noBar.issues.any {
+            it.exerciseId=="pullup" &&
+                it.kind==CatalogIssueType.FACILITY_UNAVAILABLE
+        })
+        val loaded=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),
+                listOf(choice("pullup",n("0"))),
+                gym(facilities=setOf("pullup-bar"))))
+        assertTrue(loaded.issues.any {
+            it.exerciseId=="pullup" &&
+                it.kind==CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY
+        })
+        val available=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),
+                listOf(choice("pullup",null)),
+                gym(facilities=setOf("pullup-bar"))))
+        assertTrue(available.issues.none {
+            it.kind==CatalogIssueType.FACILITY_UNAVAILABLE ||
+                it.kind==CatalogIssueType.INCOMPATIBLE_EXERCISE_IDENTITY
+        })
+        assertFalse(available.mayIssueWorkout)
+    }
+
+    @Test fun newRealLiftsFailClosedWhenPhysicalLoadNotAvailable() {
+        val invalid=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),listOf(
+                choice("barbell_row",n("159.5")),
+                choice("db_rear_delt_raise",n("38.5"))
+            ),gym()))
+        assertEquals(CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,invalid.status)
+        assertEquals(setOf("barbell_row","db_rear_delt_raise"),
+            invalid.issues.filter {it.kind==CatalogIssueType.LOAD_UNVERIFIED}
+                .map {it.exerciseId}.toSet())
+        assertNull(invalid.composedRequest)
     }
 
     @Test fun returnedTrancheAndSourceChoicesCannotMutateProgramState() {

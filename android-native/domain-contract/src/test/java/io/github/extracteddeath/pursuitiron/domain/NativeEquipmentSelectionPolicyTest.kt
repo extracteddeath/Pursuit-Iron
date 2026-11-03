@@ -62,7 +62,8 @@ class NativeEquipmentSelectionPolicyTest {
         assertEquals(old, policy.forReview(old, rackAvailable = true))
         val oldExplicit = listOf("barbell", "rack", "dumbbell")
         assertTrue(policy.initialRackAvailable(oldExplicit))
-        assertEquals(oldExplicit, policy.forReview(oldExplicit, rackAvailable = true))
+        assertEquals(listOf("barbell", "dumbbell", "rack"),
+            policy.forReview(oldExplicit, rackAvailable = true))
         assertEquals(listOf("barbell", "dumbbell", "no-rack"),
             policy.forReview(oldExplicit, rackAvailable = false))
     }

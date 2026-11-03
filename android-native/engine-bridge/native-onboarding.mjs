@@ -98,7 +98,10 @@ function setupFrom(raw) {
     (p.barbellCap===null || Number.isInteger(p.barbellCap) && p.barbellCap>=0 && p.barbellCap<=6) &&
     Array.isArray(p.equipment) && p.equipment.length>0 &&
     new Set(p.equipment).size===p.equipment.length &&
-    p.equipment.every(eq=>NATIVE_SETUP_EQUIPMENT.includes(eq) || eq==='rack')); // Legacy native saves only: rack is auto-implied by a barbell.
+    p.equipment.every(eq=>NATIVE_SETUP_EQUIPMENT.includes(eq) ||
+      eq==='rack' || eq==='no-rack') &&
+    !(p.equipment.includes('rack') && p.equipment.includes('no-rack')) &&
+    (!p.equipment.includes('no-rack') || p.equipment.includes('barbell')));
   if(priorities) {
     ensure(object(p.focus) && Object.keys(p.focus).length<=3 &&
       Object.entries(p.focus).every(([part,level])=>

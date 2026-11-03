@@ -90,9 +90,11 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
         if(input.length<=10 && input.all {it.isDigit() || it=='.'})onLoad(input)
     },label={Text("Load ($unit)")},modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=enabled,
         keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
-    // A wide phone can keep both independent controls on one line; narrow
-    // screens retain the full-width, accessible version instead of clipping.
-    // Neither presentation computes or mutates training targets.
+    // Reps and RIR share a compact row on normal phones. Their +/- buttons
+    // sit below each input so touch targets remain 48dp without stealing
+    // space from the editable number. Very narrow devices stack safely.
+    // The same component is reused in active sets, warm-ups and corrections;
+    // presentation never computes or changes a training target.
     val repsControl: @Composable () -> Unit = {
         NativeSetCounterField("Reps",reps,enabled,
             onValueChange={input->
@@ -114,9 +116,9 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
             canIncrement=NativeSetEntryPolicy.stepRir(rir,1)!=null)
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // Each column contains a text field and two 48dp steppers.
-        // Small phones need the stacked layout rather than tiny text fields.
-        if(maxWidth>=560.dp) {
+        // Each column owns its field plus a 48dp-high two-button row.
+        // No squeezed 3-column rows or offscreen steppers on typical phones.
+        if(maxWidth>=340.dp) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) { repsControl() }
                 Box(Modifier.weight(1f)) { rirControl() }
@@ -140,18 +142,19 @@ private fun NativeSetCounterField(
     label:String,value:String,enabled:Boolean,onValueChange:(String)->Unit,
     decrement:()->Unit,increment:()->Unit,canDecrement:Boolean,canIncrement:Boolean
 ) {
-    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
-        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
         OutlinedTextField(value=value,onValueChange=onValueChange,
-            label={Text(label)},modifier=Modifier.weight(1f),singleLine=true,
+            label={Text(label)},modifier=Modifier.fillMaxWidth(),singleLine=true,
             enabled=enabled,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number))
-        FilledTonalIconButton(onClick=decrement,enabled=enabled && canDecrement,
-            modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp)) {
-            Icon(Icons.Outlined.Remove,contentDescription="Decrease $label")
-        }
-        FilledTonalIconButton(onClick=increment,enabled=enabled && canIncrement,
-            modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp)) {
-            Icon(Icons.Outlined.Add,contentDescription="Increase $label")
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            FilledTonalIconButton(onClick=decrement,enabled=enabled && canDecrement,
+                modifier=Modifier.weight(1f).sizeIn(minWidth=48.dp,minHeight=48.dp)) {
+                Icon(Icons.Outlined.Remove,contentDescription="Decrease $label")
+            }
+            FilledTonalIconButton(onClick=increment,enabled=enabled && canIncrement,
+                modifier=Modifier.weight(1f).sizeIn(minWidth=48.dp,minHeight=48.dp)) {
+                Icon(Icons.Outlined.Add,contentDescription="Increase $label")
+            }
         }
     }
 }

@@ -75,3 +75,24 @@ plain decimal, never scientific notation, and tests include a 1,000 lb
 value, trailing-zero inputs and monotonic feasibility. No stored workout
 weight is rewritten. This is an independently tested correctness fix,
 not a fallback to JS parity.
+
+
+## Third domain: physically valid, conservative load-increase reviews
+
+\`ConservativeProgressionReview.assess\` combines independent observations
+from **two comparable sessions** with the independently verified loading
+catalog. It produces a candidate *for review*, never an issued target.
+
+Eligibility requires all working sets completed at the rep ceiling in both
+sessions, an unchanged observed baseline load, actual (not target) RIR at
+least 2 on every set, confirmed exact loading stock, an attainable next
+increment and a bounded user-authorized maximum step. Missing RIR, near
+failure, incomplete/skipped/failed work, mixed loads, zero-load/bodyweight
+ambiguity and fabricated equipment all block auto-promotion. It never
+silently changes the athlete's loads, reduces an unachieved load, issues
+a new program, or implies a user-approved change.
+
+This is a deliberately narrow, provisional safety gate for the reported
+double-progression regressions. It is **not yet the full training progression
+engine**: a tested longitudinal fatigue model, actual exercise prescription
+and adaptation policy must exist before any workout issuance can use it.

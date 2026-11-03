@@ -7,6 +7,18 @@ const screens = fs.readFileSync(root + 'NativeScreens.kt', 'utf8');
 const shell = fs.readFileSync(root + 'NativePreviewApp.kt', 'utf8');
 const gymEditor = fs.readFileSync(root + 'NativeSavedGymInventoryPanel.kt', 'utf8');
 const programEditor = fs.readFileSync(root + 'NativeProgramDraftEditor.kt', 'utf8');
+const coachEvidenceSource = fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeCoachVerifiedLoadEvidence.kt','utf8');
+assert.ok(gymEditor.includes('NativeCoachVerifiedLoadEvidence.review(') &&
+  gymEditor.includes('saved.loadingInventory,unit,saved.loadingCandidates') &&
+  gymEditor.includes('Unverified exercises remain manual.') &&
+  coachEvidenceSource.includes('NativeGymInventoryCodec.validate(raw,unit,allowed,exactOnly)') &&
+  coachEvidenceSource.includes('require(candidate.mode!="external_load")') &&
+  coachEvidenceSource.includes('val facts=candidates.mapNotNull') &&
+  !coachEvidenceSource.includes('nextAvailableLoad(') &&
+  !coachEvidenceSource.includes('commitAtomically'),
+  'Verified machine facts remain read-only, candidate-bound and exact-only for specialty gear, without writing or prescribing load steps');
+
 const inventoryEditor = fs.readFileSync(root + 'NativeGymInventoryEditor.kt', 'utf8');
 const onboardingSource = fs.readFileSync(
   'android-native/engine-bridge/native-onboarding.mjs','utf8');

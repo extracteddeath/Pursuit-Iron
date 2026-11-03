@@ -234,4 +234,36 @@ class CoachBlockCandidateDomainTest {
             mutable.add("false")
         }
     }
+
+    @Test fun reducingPinnedRequiredVisitsNeedsSameSpecialPermissionAsRemoval() {
+        val reduced=all.map {
+            if(it.exerciseId=="press")it.copy(requiredVisits=0) else it
+        }
+        val proposal=plan(max=4,sessions=intents(),exercises=reduced)
+        val result=CoachBlockCandidateDomain.review(deload(
+            proposed=proposal,
+            permissions=BlockAdaptPermissions(adaptExercises=true)))
+        assertEquals(BlockCandidateStatus.CHANGE_REQUIRES_PERMISSION,result.status)
+        assertEquals(setOf("press"),result.change.pinnedExercisesRemoved)
+    }
+
+    @Test fun globalDeloadCannotIncreaseOneMuscleToMaskReductionsElsewhere() {
+        val old=plan()
+        val shifted=plan(max=4,sessions=intents()).copy(
+            bounds=TrainingMuscle.entries.map {m ->
+                when(m) {
+                    chest -> DeclaredMuscleDoseBounds(m,n(10),n(10),n(10),1)
+                    lats,quads -> DeclaredMuscleDoseBounds(m,n(2),n(2),n(2),1)
+                    else -> DeclaredMuscleDoseBounds(m,n(0),n(0),n(0),0)
+                }
+            })
+        val proposed=CoachBlockCandidateDomain.review(deload(
+            proposed=shifted,limit=20))
+        assertEquals(BlockCandidateStatus.PROGRAM_QUALITY_UNRESOLVED,proposed.status)
+        assertTrue(proposed.unmetConstraints.any {
+            it.contains("increase a muscle")
+        })
+        assertEquals(old.phase,proposed.baselineDraft.week.phase)
+    }
+
 }

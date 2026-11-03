@@ -332,3 +332,30 @@ loads, gaps in history or partial work cannot invent comparable evidence.
 A deload or next phase remains a review recommendation and must next be
 expressed as an explicitly constrained, auditable **candidate week** before
 a user can approve any change. No automatic engine switch is implied.
+
+
+## Twelfth domain: coach-reviewed next-block candidates
+
+`CoachBlockCandidateDomain.review` accepts the real chronological
+`LongitudinalCoachDomain` evidence and builds both baseline and proposed
+week drafts with `CoachWeekComposer`. A deload requires sustained observed
+difficulty **and separately reported recovery concerns**. It also requires
+an *explicitly authored* maximum number of working sets for the specific
+recovery week; it cannot invent a universal 50% volume reduction, leave
+the week unchanged or quietly increase another muscle's dose. A strength
+phase transition requires documented performance, a requested next phase,
+and an explicit main strength-skill lift in the proposed week.
+
+User controls remain independent: adapting split, calendar schedule,
+exercise catalog, loading equipment and dropping/reducing a pinned
+custom exercise each require their own authorization. Missing permissions,
+infeasible candidate dose/time/recovery, unspecified session purpose,
+missing phase evidence or an unverified source keep the change unresolved.
+
+Both draft requests are recomputed from caller-provided inputs and all
+result sets are read-only. **A reviewable proposal does not authorize a
+workout issue, modify history or change the active program.** The module
+does not attest the source request belongs to the real logged-in athlete.
+Recovery week policies, movement-to-muscle catalog, cycle persistence,
+approval provenance and Android end-to-end tests are still required
+before it can become a training authority.

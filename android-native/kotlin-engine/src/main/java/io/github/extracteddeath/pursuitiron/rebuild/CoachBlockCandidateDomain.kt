@@ -85,7 +85,9 @@ object CoachBlockCandidateDomain {
             originalById.getValue(id).equipment != proposedById.getValue(id).equipment
         }
         val removedPinned=oldIds.filter {id ->
-            originalById.getValue(id).requiredVisits>0 && id !in newIds
+            val oldRequired=originalById.getValue(id).requiredVisits
+            oldRequired>0 && (id !in newIds ||
+                proposedById.getValue(id).requiredVisits<oldRequired)
         }.toSet()
         val splitChanged=request.baseline.split!=request.proposed.split
         val scheduleChanged=request.baseline.days.map {it.calendarDay to it.focus}!=
@@ -138,6 +140,11 @@ object CoachBlockCandidateDomain {
             (after>=before ||
                 after>checkNotNull(request.maxDeloadWorkingSets)))
             issues+="The deload candidate must have fewer working sets and satisfy the explicitly authored deload maximum."
+        if(request.kind==BlockCandidateKind.RECOVERY_DELOAD &&
+            TrainingMuscle.entries.any {muscle ->
+                next.audit.muscles.getValue(muscle).effectiveWorkingSets>
+                    original.audit.muscles.getValue(muscle).effectiveWorkingSets
+            })issues+="A deload cannot silently increase a muscle's working-set dose."
         if(original.status!=ComposerStatus.FEASIBLE_DRAFT_FOR_REVIEW)
             issues+="The baseline program has unresolved constraints; do not compare an unreliable source."
         if(next.status!=ComposerStatus.FEASIBLE_DRAFT_FOR_REVIEW)

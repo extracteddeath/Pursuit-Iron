@@ -6,7 +6,7 @@ import org.json.JSONObject
 data class NativeProgramProfile(
     val name: String="My program", val goal: String="both", val experience: String="intermediate",
     val unit: String="lb",val split: String="full_body",val days: Int=3,val session: String="s60",
-    val equipment: List<String> = listOf("barbell","rack","bench","dumbbell","cable","machine",
+    val equipment: List<String> = listOf("barbell","bench","dumbbell","cable","machine",
         "smith","pullup","dip","legpress","hacksquat","legext","legcurl","calfmachine"),
     val allowBodyweight: Boolean=true,val allowSupersets: Boolean=true,val barbellCap: Int?=3,
     val focus: Map<String,Int> = emptyMap(),val reduced: List<String> = emptyList(),

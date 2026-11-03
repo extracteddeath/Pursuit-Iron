@@ -283,4 +283,72 @@ class CoachWeekComposerTest {
         }
     }
 
+
+    @Test fun strengthDayPreservesExplicitMainLiftAndPlacesItBeforeAccessories() {
+        val heavy=chestOption.copy(exerciseId="bench-primary",
+            role=ComposerRole.PRIMARY,priority=8,
+            requiredVisits=0,minimumCalendarDayGap=1,
+            maximumVisits=1)
+        val accessory=chestFly.copy(role=ComposerRole.ACCESSORY,priority=10)
+        val request=base(exerciseOptions=listOf(heavy,accessory,backOption,legOption),
+            patterns=1).copy(sessionIntents=listOf(
+                ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL,
+                    "bench-primary")))
+        val result=CoachWeekComposer.compose(request)
+        assertEquals(emptySet<Int>(),result.daysWithUnmetPrimary)
+        val monday=result.sessions.first()
+        assertEquals(ComposerSessionPurpose.STRENGTH_SKILL,monday.purpose)
+        assertEquals("bench-primary",monday.primaryExerciseId)
+        assertTrue(monday.requiredPrimaryScheduled)
+        assertEquals("bench-primary",monday.orderedVisits.first().exerciseId)
+        assertFalse(result.canIssueTargets)
+    }
+
+    @Test fun unavailableMainLiftCannotBeSilentlyReplacedByAnotherPress() {
+        val heavy=chestOption.copy(exerciseId="bench-primary",
+            role=ComposerRole.PRIMARY,
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n("32.5"),available))
+        val substitute=chestFly.copy(role=ComposerRole.ACCESSORY)
+        val report=CoachWeekComposer.compose(base(
+            exerciseOptions=listOf(heavy,substitute,backOption,legOption),
+            patterns=1).copy(sessionIntents=listOf(
+                ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL,
+                    "bench-primary"))))
+        assertEquals(setOf(0),report.daysWithUnmetPrimary)
+        assertEquals(ComposerStatus.CONSTRAINTS_UNRESOLVED,report.status)
+        assertFalse(report.sessions.first().requiredPrimaryScheduled)
+        assertTrue("bench-primary" in report.excludedUnverifiedExerciseIds)
+        assertTrue(report.explanations.any {it.contains("main lift")})
+    }
+
+    @Test fun dayIntentMustReferToRealPrimaryWithCompatibleDayFocus() {
+        val valid=base(exerciseOptions=listOf(
+            chestOption.copy(role=ComposerRole.PRIMARY),backOption,legOption))
+        val bad=listOf(
+            valid.copy(sessionIntents=listOf(
+                ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL,"db-row"))),
+            valid.copy(sessionIntents=listOf(
+                ComposerSessionIntent(0,ComposerSessionPurpose.HYPERTROPHY,"not-a-lift"))),
+            valid.copy(sessionIntents=listOf(
+                ComposerSessionIntent(4,ComposerSessionPurpose.STRENGTH_SKILL,"db-press"))),
+            valid.copy(sessionIntents=listOf(
+                ComposerSessionIntent(0,ComposerSessionPurpose.HYPERTROPHY),
+                ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL)))
+        )
+        bad.forEach {request ->
+            assertThrows(IllegalArgumentException::class.java) {
+                CoachWeekComposer.compose(request)
+            }
+        }
+    }
+
+    @Test fun ordinaryDaysKeepPurposeUnknownWithoutFakingStrengthIntent() {
+        val result=CoachWeekComposer.compose(base())
+        assertEquals(4,result.sessions.size)
+        assertTrue(result.sessions.all {
+            it.purpose==ComposerSessionPurpose.UNSPECIFIED &&
+                it.primaryExerciseId==null && it.requiredPrimaryScheduled
+        })
+    }
+
 }

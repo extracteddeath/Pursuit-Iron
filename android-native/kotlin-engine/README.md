@@ -242,3 +242,21 @@ warmup and amplifier semantics, relative strength priorities and adjacent-
 week recovery, advanced session duration estimates, personalized volume
 thresholds, progression/deload policy and real-device workflow acceptance.
 One feasible week does not yet constitute a coach-quality multiweek program.
+
+
+### Intent-led session design (first pass)
+
+The composer now accepts **explicit day-specific session intents**.
+A caller may mark a strength-skill or hypertrophy day and require a
+specific catalog-declared primary movement. The search gives that
+day's missing main lift a hard scheduling priority, reports it as
+unresolved if the lift cannot be placed or verified in the gym, and
+never silently substitutes an accessory or another press. Each day
+also emits an ordered review sequence: main movements, secondary
+movements, then accessories (with declared priority and stable IDs).
+Days without an explicit purpose remain **UNSPECIFIED** rather than
+being invented from the training phase.
+
+This ordering is only a provisional draft; actual warmups, technique
+work, rep targets, effort, supersets and exercise-to-exercise fatigue
+must still be prescribed, validated and approved before issue.

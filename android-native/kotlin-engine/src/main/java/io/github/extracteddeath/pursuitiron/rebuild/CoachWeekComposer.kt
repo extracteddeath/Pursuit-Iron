@@ -11,6 +11,24 @@ enum class ComposerPattern {
     HORIZONTAL_PRESS, VERTICAL_PRESS, HORIZONTAL_PULL, VERTICAL_PULL,
     SQUAT, HINGE, ISOLATION, CORE
 }
+/** Catalog-authored exercise role, never guessed from movement name. */
+enum class ComposerRole { PRIMARY, SECONDARY, ACCESSORY }
+enum class ComposerSessionPurpose {
+    UNSPECIFIED, STRENGTH_SKILL, HYPERTROPHY, GENERAL_PREPARATION
+}
+/** Explicit day-specific intent. Null primary means the caller did not set one. */
+data class ComposerSessionIntent(
+    val dayIndex:Int,
+    val purpose:ComposerSessionPurpose,
+    val requiredPrimaryExerciseId:String?=null
+)
+data class ComposerSessionPlan(
+    val dayIndex:Int,
+    val purpose:ComposerSessionPurpose,
+    val orderedVisits:List<ComposerVisit>,
+    val primaryExerciseId:String?,
+    val requiredPrimaryScheduled:Boolean
+)
 sealed interface ComposerEquipment {
     data class Verified(val unit:LoadUnit,val plannedLoad:BigDecimal,
         val inventory:VerifiedLoadStock?):ComposerEquipment
@@ -35,7 +53,8 @@ data class ComposerExerciseOption(
     /** Optional caller-defined heavy movement recovery group. */
     val recoveryGroup:String?=null,
     /** Minimum gap BETWEEN days, not a restriction within one session. */
-    val minimumGroupCalendarDayGap:Int=1
+    val minimumGroupCalendarDayGap:Int=1,
+    val role:ComposerRole=ComposerRole.SECONDARY
 )
 data class ComposerDay(val calendarDay:Int,val focus:ComposerFocus,
     val window:DeclaredSessionWindow)
@@ -47,7 +66,9 @@ data class ComposerRequest(
     val exercises:List<ComposerExerciseOption>,
     val maximumDifferentExercisesPerDay:Int,
     /** A user-supplied preference, NOT a universal training rule. */
-    val preferredPatternsPerDay:Int=2
+    val preferredPatternsPerDay:Int=2,
+    /** Missing entries are unassigned, not inferred from phase. */
+    val sessionIntents:List<ComposerSessionIntent> = emptyList()
 )
 data class ComposerVisit(val dayIndex:Int,val exerciseId:String,
     val pattern:ComposerPattern,val sets:Int)
@@ -60,6 +81,8 @@ data class ComposerDraft(
     val excludedUnverifiedExerciseIds:Set<String>,
     val missingRequiredVisits:Map<String,Int>,
     val daysBelowPatternPreference:Set<Int>,
+    val sessions:List<ComposerSessionPlan>,
+    val daysWithUnmetPrimary:Set<Int>,
     val explanations:List<String>
 ) {
     /** A reviewed candidate is NOT user-approved or executable. */
@@ -112,6 +135,18 @@ object CoachWeekComposer {
         require(request.preferredPatternsPerDay in 1..4)
         require(request.exercises.map {it.exerciseId}.distinct().size==
             request.exercises.size)
+        require(request.sessionIntents.size<=request.days.size)
+        require(request.sessionIntents.map {it.dayIndex}.distinct().size==
+            request.sessionIntents.size)
+        require(request.sessionIntents.all {intent ->
+            intent.dayIndex in request.days.indices &&
+                (intent.requiredPrimaryExerciseId==null ||
+                    request.exercises.any {option ->
+                        option.exerciseId==intent.requiredPrimaryExerciseId &&
+                            option.role==ComposerRole.PRIMARY &&
+                            request.days[intent.dayIndex].focus in option.allowedFocus
+                    })
+        })
         require(request.exercises.all {option ->
             idPattern.matches(option.exerciseId) &&
             option.allowedFocus.isNotEmpty() &&
@@ -184,6 +219,35 @@ object CoachWeekComposer {
         override fun compareTo(other:Cost):Int=compareValuesBy(
             this,other,{it.hard},{it.soft})
     }
+    private fun unmetPrimaryDays(request:ComposerRequest,
+        visits:List<ComposerVisit>):Set<Int> =
+        request.sessionIntents.filter {intent ->
+            val id=intent.requiredPrimaryExerciseId
+            id!=null && visits.none {
+                it.dayIndex==intent.dayIndex && it.exerciseId==id
+            }
+        }.map {it.dayIndex}.toSet()
+
+    private fun orderedSessions(request:ComposerRequest,
+        visits:List<ComposerVisit>,
+        options:Map<String,ComposerExerciseOption>):List<ComposerSessionPlan> =
+        request.days.indices.map {day ->
+            val intent=request.sessionIntents.firstOrNull {it.dayIndex==day}
+            val priority=compareBy<ComposerVisit> {
+                when(options.getValue(it.exerciseId).role) {
+                    ComposerRole.PRIMARY -> 0
+                    ComposerRole.SECONDARY -> 1
+                    ComposerRole.ACCESSORY -> 2
+                }
+            }.thenByDescending {options.getValue(it.exerciseId).priority}
+                .thenBy {it.exerciseId}
+            val ordered=visits.filter {it.dayIndex==day}.sortedWith(priority)
+            val primary=intent?.requiredPrimaryExerciseId
+            ComposerSessionPlan(day,intent?.purpose ?: ComposerSessionPurpose.UNSPECIFIED,
+                Collections.unmodifiableList(ordered),primary,
+                primary==null || ordered.any {it.exerciseId==primary})
+        }
+
     private fun cost(request:ComposerRequest,visits:List<ComposerVisit>,
         audit:WeeklyDoseFeasibilityReport,
         options:Map<String,ComposerExerciseOption>):Cost {
@@ -193,7 +257,8 @@ object CoachWeekComposer {
         val hard=mevGap*10L+
             audit.muscles.values.sumOf {it.missingDirectDays}*3000L+
             audit.daysWithoutWorkingSets.size*3500L+
-            request.exercises.sumOf {missing(it,visits)}*10000L
+            request.exercises.sumOf {missing(it,visits)}*10000L+
+            unmetPrimaryDays(request,visits).size*20000L
         val mavGap=audit.muscles.values.sumOf {
             it.gapToMav.multiply(BigDecimal("1000")).toLong()
         }
@@ -281,7 +346,11 @@ object CoachWeekComposer {
             chosen.filter {it.dayIndex==day}.map {it.pattern}.distinct().size<
                 request.preferredPatternsPerDay
         }.toSet()
+        val unmetPrimary=unmetPrimaryDays(request,chosen)
+        val sessions=orderedSessions(request,chosen,map)
         val notes=mutableListOf<String>()
+        if(unmetPrimary.isNotEmpty())
+            notes+="The requested main lift is missing on one or more days; the day purpose remains unresolved."
         if(rejected.isNotEmpty())
             notes+="Some exercise options have no verified usable loading setup."
         if(unmet.isNotEmpty())
@@ -296,7 +365,8 @@ object CoachWeekComposer {
             notes+="Some days have less movement-pattern variety than requested."
         if(notes.isEmpty())
             notes+="Declared constraints pass; the complete program still requires coaching review."
-        val feasible=audit.satisfiesDeclaredHardConstraints && unmet.isEmpty() &&
+        val feasible=audit.satisfiesDeclaredHardConstraints &&
+            unmet.isEmpty() && unmetPrimary.isEmpty() &&
             audit.daysWithoutWorkingSets.isEmpty() &&
             audit.daysOutsidePreferredWindow.isEmpty() &&
             missingPatterns.isEmpty() && !audit.requiresExtensionDosePolicy
@@ -307,6 +377,8 @@ object CoachWeekComposer {
             Collections.unmodifiableSet(rejected),
             Collections.unmodifiableMap(unmet),
             Collections.unmodifiableSet(missingPatterns),
+            Collections.unmodifiableList(sessions),
+            Collections.unmodifiableSet(unmetPrimary),
             Collections.unmodifiableList(notes))
     }
 }

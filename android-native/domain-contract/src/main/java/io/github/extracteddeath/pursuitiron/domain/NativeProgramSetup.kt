@@ -72,7 +72,7 @@ object NativeProgramSetupCodec {
             goal in listOf("both","strength","hypertrophy") && experience in listOf("beginner","intermediate","advanced") &&
             unit in listOf("lb","kg") && split in listOf("full_body","upper_lower","ppl","ulppl") &&
             days in 3..6 && session in listOf("s60","s90","s120p"))
-        val list=p.getJSONArray("equipment");require(list.length() in 1..17)
+        val list=p.getJSONArray("equipment");require(list.length() in 1..41) // 40 canonical items + legacy rack
         val equipment=(0 until list.length()).map { val v=list.get(it);require(v is String && v.matches(Regex("^[a-z][a-z0-9_-]{0,39}$")));v }
         require(equipment.toSet().size==equipment.size && p.get("allowBodyweight") is Boolean && p.get("allowSupersets") is Boolean)
         val cap=if(p.isNull("barbellCap")) null else wire.integer(p,"barbellCap").also { require(it in 0..6) }.toInt()
@@ -124,7 +124,7 @@ object NativeProgramSetupCodec {
             NativeProgramSplit(wire.text(r,"id"),wire.text(r,"label"),choices)
         }
         require(splits.map { it.id }.toSet()==setOf("full_body","upper_lower","ppl","ulppl"))
-        val eq=value.getJSONArray("equipment");require(eq.length() in 1..24)
+        val eq=value.getJSONArray("equipment");require(eq.length() in 1..40)
         val equipment=(0 until eq.length()).map { val v=eq.get(it);require(v is String && v.length in 1..40);v }
         require(equipment.toSet().size==equipment.size)
         val muscleRows=value.getJSONArray("muscles")

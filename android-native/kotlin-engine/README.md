@@ -128,3 +128,33 @@ not universally validated physiological dose coefficients. The module does
 not yet enforce MEV/MAV/MRV, predict gains, issue prescriptions, or silently
 convert a myo/drop mini-set into a full working set. A future dose engine
 must add phase-specific thresholds and constraint feasibility evidence.
+
+
+## Sixth domain: explicit weekly dose and session feasibility
+
+`WeeklyDoseFeasibilityDomain.audit` evaluates the **whole submitted week**
+of 3–6 planned training days. Every one of the 16 tracked muscle groups has an
+explicit caller-authored MEV/MAV/MRV band and minimum direct-training frequency;
+the engine provides **no invented universal threshold preset**. Dose below
+MEV, above MRV, below direct frequency, or beyond an explicitly entered hard
+time limit causes a **non-feasible report for this proposed plan**. MAV is
+reported as a target gap, not treated as a binary guarantee of gains.
+
+- Preserve the distinction between direct/indirect fractional work and
+  extension/amplifier sets. A myo/drop extension cannot silently satisfy a
+  regular working-set minimum, and warmups never count as normal working sets.
+- Return exact deficits, excess and missing direct-training days rather than
+  quietly reducing custom-program volume when changing from hypertrophy to
+  strength/peak, or treating biceps and brachialis as the same muscle.
+- Account for caller-supplied active exercise time, rest and transitions.
+  A preferred 40–60 or 60–90 minute *range* is not an implicit hard cap.
+  120+ minutes has no invented maximum; a real user hard stop is separate.
+- Validate all declared bounds, complete muscle coverage, unique set IDs,
+  bounded precision and every physical planned session position. No plan or
+  training record is changed by an audit.
+
+**Open work:** trustworthy movement-to-muscle credit definitions, sourced
+phase-specific volume ranges, time-estimation validation, selecting/scheduling
+exercises and sets to resolve actual constraint conflicts, and proving
+the chosen prescription over longitudinal histories. This is a **feasibility
+checker for submitted plans, not yet a generated workout program**.

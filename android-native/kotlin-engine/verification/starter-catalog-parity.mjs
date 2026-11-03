@@ -15,7 +15,7 @@ const baseline=[
   ['back_squat','squat',[1,12],['barbell','rack']],
   ['barbell_ohp','vertical_press',[1,12],['barbell','rack']],
   ['incline_db_press','horizontal_press',[5,20],['dumbbell','bench']],
-  ['one_arm_db_row','horizontal_pull',[5,20],['dumbbell','bench']],
+  ['one_arm_db_row','horizontal_pull',[6,20],['dumbbell','bench']],
   ['db_lateral_raise','lateral_raise',[8,35],['dumbbell']],
   ['db_curl','elbow_flexion',[6,25],['dumbbell']],
   ['db_overhead_triceps','elbow_extension',[8,25],['dumbbell']],

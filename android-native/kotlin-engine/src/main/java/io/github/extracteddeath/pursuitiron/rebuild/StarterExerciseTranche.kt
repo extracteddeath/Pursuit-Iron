@@ -95,7 +95,7 @@ object StarterExerciseTranche {
             indirect(TrainingMuscle.FRONT_DELTS,"0.5")),
         entry("one_arm_db_row","dumbbell_row","one-arm",
             ComposerPattern.HORIZONTAL_PULL,ComposerRole.SECONDARY,pull,
-            DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("flat-bench"),5..20,
+            DBS,LoadBasis.DUMBBELL_PER_HAND,setOf("flat-bench"),6..20,
             "Legacy broad back mapped provisionally to upper back direct and lats indirect; biceps/rear delts remain indirect. Requires independent physiology review.",
             direct(TrainingMuscle.UPPER_BACK),
             indirect(TrainingMuscle.LATS,"0.5"),

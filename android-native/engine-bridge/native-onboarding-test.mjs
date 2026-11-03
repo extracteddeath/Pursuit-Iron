@@ -1,11 +1,30 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram } from './native-onboarding.mjs';
+import { nativeProgramOptions,prepareNativeProgram,inspectNativeProgram,NATIVE_SETUP_EQUIPMENT } from './native-onboarding.mjs';
+import { readFileSync } from 'node:fs';
 import { dispatchWorkoutStoreJson } from './workout-store-protocol.mjs';
 import { dispatchBackupSchemaJson,dispatchEngineJson } from './protocol.mjs';
-import { parseStoredData,splitSupportsTrainingDays,EX_BY_ID } from '../../modules/engine-api.js';
+import { parseStoredData,splitSupportsTrainingDays,EX_BY_ID,EQUIPMENT } from '../../modules/engine-api.js';
 const hash=raw=>createHash('sha256').update(raw,'utf8').digest('hex');
 const options=nativeProgramOptions();
+assert.deepEqual(options.equipment,EQUIPMENT.map(item=>item.id),
+  'Native equipment options must mirror the canonical exercise catalog, not a partial copied allowlist');
+assert.deepEqual(options.equipment,NATIVE_SETUP_EQUIPMENT);
+assert.equal(options.equipment.length,40);
+assert.equal(new Set(options.equipment).size,40);
+assert.ok(!options.equipment.includes('rack'),
+  'Legacy rack is implied by barbell; it is not a separate available catalog item');
+const nativeGroups=readFileSync(new URL('../domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeEquipmentCatalog.kt',import.meta.url),'utf8');
+const groupedIds=[...nativeGroups.matchAll(/NativeEquipmentChoice\("([^"]+)",\s*"[^"]+"\)/g)].map(match=>match[1]);
+assert.deepEqual([...groupedIds].sort(),[...options.equipment].sort(),
+  'All canonical IDs must appear exactly once across native UI groups');
+const groupNames=[...nativeGroups.matchAll(/NativeEquipmentGroup\("([^"]+)", listOf\(/g)].map(match=>match[1]);
+assert.deepEqual(groupNames,[
+  'Free weights','Bars','Benches & stations','Cables & general machines',
+  'Leg machines','Hip & glute machines','Upper-body machines','Arm & core machines'
+]);
+assert.equal(groupedIds.indexOf('adduction'),groupedIds.indexOf('abduction')+1,
+  'Hip adduction must sit directly beside hip abduction');
 for(const split of options.splits)
   assert.deepEqual(split.days,[3,4,5,6].filter(days=>splitSupportsTrainingDays(split.id,days)));
 assert.equal(options.muscles.length,16);
@@ -54,6 +73,14 @@ assert.equal(inspectNativeProgram(focused.snapshot).setupJson,focusedSetup,
   'Authored muscle priorities survive exact saved-program restore');
 assert.equal(JSON.parse(first.snapshot).nativeOnboarding.setupJson,JSON.stringify(base),
   'Older native profiles without priorities remain intact');
+// Older saved Android profiles may still carry "rack", even though the
+// canonical equipment picker now shows 40 real hardware choices.
+const oldRackSetup=JSON.stringify({...base,profile:{
+  ...base.profile,equipment:[...options.equipment,'rack']
+}});
+const oldRackProposal=prepareNativeProgram(oldRackSetup);
+assert.equal(inspectNativeProgram(oldRackProposal.snapshot).setupJson,oldRackSetup);
+assert.ok(JSON.parse(oldRackProposal.snapshot).saved[0].config.equipment.includes('rack'));
 const original=Date.now;Date.now=()=>999999;
 try { assert.deepEqual(prepareNativeProgram(JSON.stringify(base)),first); }
 finally { Date.now=original; }

@@ -31,7 +31,11 @@ data class ComposerExerciseOption(
     val requiredVisits:Int,
     /** Real calendar separation, including Sunday to next Monday. */
     val minimumCalendarDayGap:Int,
-    val priority:Int=1
+    val priority:Int=1,
+    /** Optional caller-defined heavy movement recovery group. */
+    val recoveryGroup:String?=null,
+    /** Minimum gap BETWEEN days, not a restriction within one session. */
+    val minimumGroupCalendarDayGap:Int=1
 )
 data class ComposerDay(val calendarDay:Int,val focus:ComposerFocus,
     val window:DeclaredSessionWindow)
@@ -123,7 +127,9 @@ object CoachWeekComposer {
             option.maximumVisits in 1..request.days.size &&
             option.requiredVisits in 0..option.maximumVisits &&
             option.minimumCalendarDayGap in 1..6 &&
-            option.priority in 1..10
+            option.priority in 1..10 &&
+            (option.recoveryGroup==null || idPattern.matches(option.recoveryGroup)) &&
+            option.minimumGroupCalendarDayGap in 1..6
         })
         WeeklyDoseFeasibilityDomain.audit(DeclaredTrainingWeek(
             request.phase,request.days.size,request.days.map {it.window},
@@ -155,10 +161,23 @@ object CoachWeekComposer {
         if(visits.count {it.dayIndex==dayIndex}>=
             request.maximumDifferentExercisesPerDay)return false
         val day=request.days[dayIndex].calendarDay
-        return visits.filter {it.exerciseId==option.exerciseId}.all {
-            val other=request.days[it.dayIndex].calendarDay
-            val gap=abs(day-other)
-            minOf(gap,7-gap)>=option.minimumCalendarDayGap
+        return visits.all {otherVisit ->
+            if(otherVisit.dayIndex==dayIndex)return@all true
+            val otherOption=request.exercises.first {
+                it.exerciseId==otherVisit.exerciseId
+            }
+            val neededGap=when {
+                otherOption.exerciseId==option.exerciseId ->
+                    option.minimumCalendarDayGap
+                option.recoveryGroup!=null &&
+                    option.recoveryGroup==otherOption.recoveryGroup ->
+                    maxOf(option.minimumGroupCalendarDayGap,
+                        otherOption.minimumGroupCalendarDayGap)
+                else ->1
+            }
+            val otherDay=request.days[otherVisit.dayIndex].calendarDay
+            val gap=abs(day-otherDay)
+            minOf(gap,7-gap)>=neededGap
         }
     }
     private data class Cost(val hard:Long,val soft:Long):Comparable<Cost> {

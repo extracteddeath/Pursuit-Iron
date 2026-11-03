@@ -209,3 +209,36 @@ fatigue, recovery and phase decisions are solved. Next milestones include
 exercise context/variants, objective-specific rep and set schemes, validated
 fatigue response and multi-week cycle decisions, and human-comparable
 programming quality scenarios.
+
+## Seventh domain: first full-week candidate composer
+
+`CoachWeekComposer.compose` is the first *actual candidate generator* rather
+than another passive validator. It constructs deterministic, provisional
+3–6-day Full Body, Upper/Lower, PPL and ULPPL weeks from **explicitly
+declared** exercise IDs, allowed day focuses, physical gym availability,
+per-set work/rest estimates, working-set ranges, exercise appearance
+requirements, calendar-day recovery gaps and the complete 16-muscle volume
+bounds. It calls the independent weekly dose/time checker after each
+candidate move, never accepting known MRV or user hard-time violations.
+
+The search first repairs unmet minimum dose, frequency, empty days and
+required authored exercise appearances. Only then does it improve preferred
+time, MAV and movement-pattern variety. It does **not** inflate a completed
+training week beyond declared MAV just to make a time bucket look full.
+Recovery checks are circular across Sunday/Monday; optional caller-defined
+shared heavy-movement recovery groups prevent changing to another variant
+solely to bypass recovery. Compatible variations can still be clustered
+within a single training session.
+
+The result contains exact, stable working-set keys, proposed movement visits,
+an independent feasibility report, unverified-equipment exclusions, unresolved
+required visits and short explanations. The draft explicitly cannot issue
+workout targets and cannot mutate authored programs or logged history.
+
+**Remaining before coaching certification:** independently validated exercise
+catalog and per-muscle coefficients, actual athlete and block context,
+selection/repair beyond bounded greedy search, per-set loading/reps/RIR,
+warmup and amplifier semantics, relative strength priorities and adjacent-
+week recovery, advanced session duration estimates, personalized volume
+thresholds, progression/deload policy and real-device workflow acceptance.
+One feasible week does not yet constitute a coach-quality multiweek program.

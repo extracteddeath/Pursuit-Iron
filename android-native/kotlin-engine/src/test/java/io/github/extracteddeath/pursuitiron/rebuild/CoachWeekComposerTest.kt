@@ -243,4 +243,44 @@ class CoachWeekComposerTest {
             }
         }
     }
+
+    @Test fun relatedHeavyMovementsRespectSharedRecoveryAcrossExerciseIds() {
+        val first=chestOption.copy(exerciseId="bench-a",
+            requiredVisits=1,recoveryGroup="heavy-press",
+            minimumGroupCalendarDayGap=2)
+        val second=chestOption.copy(exerciseId="bench-b",
+            requiredVisits=1,recoveryGroup="heavy-press",
+            minimumGroupCalendarDayGap=2)
+        val schedule=days(calendar=listOf(0,1,4))
+        val report=CoachWeekComposer.compose(base(
+            exerciseOptions=listOf(first,second,backOption,legOption),
+            schedule=schedule,patterns=1,
+            bands=bounds(dose(chest,"4","8","10",1),
+                dose(lats,"2","6","8",1),dose(quads,"2","6","8",1))))
+        assertTrue(report.visits.any {it.exerciseId=="bench-a"})
+        assertTrue(report.visits.any {it.exerciseId=="bench-b"})
+        assertTrue(report.missingRequiredVisits.isEmpty())
+        val heavy=report.visits.filter {
+            it.exerciseId=="bench-a" || it.exerciseId=="bench-b"
+        }
+        for(a in heavy)for(b in heavy) {
+            if(a.dayIndex==b.dayIndex)continue
+            val gap=kotlin.math.abs(schedule[a.dayIndex].calendarDay-
+                schedule[b.dayIndex].calendarDay)
+            assertTrue(minOf(gap,7-gap)>=2)
+        }
+    }
+
+    @Test fun malformedRecoveryGroupsCannotBypassTheScheduleAudit() {
+        for(bad in listOf(
+            chestOption.copy(recoveryGroup="Invalid Group!"),
+            chestOption.copy(recoveryGroup="heavy-press",minimumGroupCalendarDayGap=0),
+            chestOption.copy(recoveryGroup="heavy-press",minimumGroupCalendarDayGap=7)
+        )) {
+            assertThrows(IllegalArgumentException::class.java) {
+                CoachWeekComposer.compose(base(exerciseOptions=listOf(bad,backOption,legOption)))
+            }
+        }
+    }
+
 }

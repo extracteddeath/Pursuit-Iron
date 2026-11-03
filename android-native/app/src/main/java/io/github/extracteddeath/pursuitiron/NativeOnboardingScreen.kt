@@ -198,7 +198,8 @@ internal fun NativeOnboardingScreen(
         }
         NativeGymInventoryEditor(unit,inventoryFields,{ key,value ->
             inventoryFields=HashMap(inventoryFields).apply { put(key,value) }
-        },inventoryValidation,!state.busy)
+        },inventoryValidation,!state.busy,
+            availableEquipment=equipmentForReview)
         }
         PursuitFormSection("Training preferences",
             "Personalize exercise selection without changing your verified gym weights.") {

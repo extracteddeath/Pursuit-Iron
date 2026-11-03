@@ -186,7 +186,7 @@ class CoachWeekComposerTest {
             exerciseOptions=listOf(noPin,rowNoPin,legOption),
             schedule=days(listOf(0,2,4),min=1,max=90),
             bands=bounds(dose(chest,"4","4","8",2),
-                dose(lats,"0","0","8",0),
+                dose(lats,"2","2","8",1),
                 dose(quads,"2","2","5",1)),
             patterns=1,maxPerDay=1)
         val authored=listOf(

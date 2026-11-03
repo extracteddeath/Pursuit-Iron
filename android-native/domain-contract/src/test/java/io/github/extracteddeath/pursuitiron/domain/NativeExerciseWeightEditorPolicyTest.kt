@@ -47,6 +47,29 @@ class NativeExerciseWeightEditorPolicyTest {
         }
     }
 
+    @Test fun typedExerciseEntriesRoundTripThroughAuthoritativeInventoryCodec() {
+        val external=policy.formatEntry("exact","12.5, 17.5, 22.5",true)
+        val cable=policy.formatEntry("range","5, 7.5, 200",false)
+        val entries=mapOf("override:leg-ext" to external,
+            "override:cable-fly" to cable)
+        val known=setOf("leg-ext","cable-fly")
+        val result=NativeGymInventoryCodec.fromDraft(entries,"lb",known,setOf("leg-ext"))
+        assertTrue(result.error.orEmpty(),result.valid)
+        val parsed=checkNotNull(result.json)
+        assertEquals(entries,NativeGymInventoryCodec.toDraft(parsed))
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            entries+("override:leg-ext" to "range: 5, 5, 100"),"lb",known,
+            setOf("leg-ext")).valid)
+        assertFalse(NativeGymInventoryCodec.fromDraft(
+            entries+("override:cable-fly" to "range: 5, 0, 200"),"lb",known,
+            setOf("leg-ext")).valid)
+        assertTrue(NativeGymInventoryCodec.fromDraft(
+            entries+("override:cable-fly" to ""), "lb", known,
+            setOf("leg-ext")).valid)
+        assertEquals(entries, mapOf("override:leg-ext" to external,
+            "override:cable-fly" to cable))
+    }
+
     @Test fun fieldNeverInventsWeightsAndLeavesExistingValuesIntact() {
         assertEquals("",policy.formatEntry("exact"," ",true))
         assertEquals("",policy.formatEntry("range"," ",false))

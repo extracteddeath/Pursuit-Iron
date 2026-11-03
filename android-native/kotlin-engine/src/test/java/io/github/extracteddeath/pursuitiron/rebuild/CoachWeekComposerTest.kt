@@ -32,6 +32,10 @@ class CoachWeekComposerTest {
     private val chestOption=option("db-press",chest,ComposerPattern.HORIZONTAL_PRESS)
     private val backOption=option("db-row",lats,ComposerPattern.HORIZONTAL_PULL)
     private val legOption=option("goblet-squat",quads,ComposerPattern.SQUAT)
+    // A fourth compatible pattern makes 2-pattern days possible across
+    // Monday/Sunday without violating repeated-exercise recovery gaps.
+    private val chestFly=option("chest-fly",chest,ComposerPattern.ISOLATION,
+        gap=1)
     private fun days(calendar:List<Int> = listOf(0,2,4,6),
         focuses:List<ComposerFocus> = List(calendar.size){ComposerFocus.FULL_BODY},
         min:Int=18,max:Int?=50,hard:Int?=null,overhead:Int=600)=
@@ -41,7 +45,7 @@ class CoachWeekComposerTest {
         }
     private fun base(
         exerciseOptions:List<ComposerExerciseOption> =
-            listOf(chestOption,backOption,legOption),
+            listOf(chestOption,backOption,legOption,chestFly),
         bands:List<DeclaredMuscleDoseBounds> =
             bounds(dose(chest,"4","8","9",2),dose(lats,"4","8","9",2),
                 dose(quads,"4","8","9",2)),
@@ -83,7 +87,7 @@ class CoachWeekComposerTest {
         assertEquals(first.week,second.week)
         assertEquals(first.audit,second.audit)
         assertFalse(first.canIssueTargets)
-        assertEquals(3,request.exercises.size)
+        assertEquals(4,request.exercises.size)
     }
 
     @Test fun requiredAuthoredExercisesAreNeverSilentlyDropped() {

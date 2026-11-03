@@ -11,7 +11,7 @@ const equipmentPicker=fs.readFileSync(root+'NativeGroupedEquipmentPicker.kt','ut
 const equipmentPolicy=fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeEquipmentSelectionPolicy.kt','utf8');
 assert.ok(ui.includes('NativeGroupedEquipmentPicker(') &&
-  ui.includes('selected = equipment.filterNot') &&
+  ui.includes('selected = NativeEquipmentSelectionPolicy.pickerSelections(equipment)') &&
   ui.includes('onSelectionChanged = { chosen ->') &&
   ui.includes('equipment = ArrayList(chosen + equipment.filter {') &&
   equipmentPicker.includes('NativeEquipmentCatalog.supported(available)') &&
@@ -28,9 +28,10 @@ assert.ok(ui.includes('NativeGroupedEquipmentPicker(') &&
   'The reusable picker must group real offered hardware, keep legacy removal and avoid inventing selected equipment');
 assert.ok(ui.includes('var rackAvailable by rememberSaveable') &&
   ui.includes('Squat rack available') &&
-  ui.includes('it == "no-rack" || it == "rack"') &&
-  ui.includes('if (rackAvailable)') &&
-  ui.includes('else add("no-rack")') &&
+  ui.includes('NativeEquipmentSelectionPolicy.initialRackAvailable(initial.equipment)') &&
+  ui.includes('NativeEquipmentSelectionPolicy.forReview(equipment, rackAvailable)') &&
+  equipmentPolicy.includes('!rackAvailable -> base + "no-rack"') &&
+  equipmentPolicy.includes('"rack" in selected -> base + "rack"') &&
   ui.includes('val hasAvailableEquipment = equipment.any { it in availableEquipment }') &&
   ui.includes('equipmentForReview,bodyweight,supersets,barbellCap'),
   'Rack availability must be explicit and cannot count as the only chosen hardware; legacy positive rack remains reviewable');

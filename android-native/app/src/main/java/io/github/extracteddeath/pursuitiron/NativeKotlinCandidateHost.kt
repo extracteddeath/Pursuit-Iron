@@ -35,13 +35,17 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * Native onboarding's explicit confirmation must precede local enrolment.
      * A review-only draft grants NO write access.
      */
-    fun activateReviewedSetup(review:AthleteSetupReview):
+    fun activateReviewedSetup(draft:AthleteSetupDraft):
         AppPrivateKotlinLocalAthlete.Enrollment {
+        // Never trust an externally supplied AthleteSetupReview object. The
+        // native engine revalidates the actual onboarding inputs at commit.
+        val review=CoachAthleteSetupDomain.review(draft)
+        val reviewed=review.reviewed
         if(review.status!=AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW ||
-            review.reviewed==null)
+            reviewed==null)
             return AppPrivateKotlinLocalAthlete.Enrollment.Rejected(
                 "Resolve onboarding requirements before creating an athlete")
-        return localAthlete.activateReviewed(review.reviewed)
+        return localAthlete.activateReviewed(reviewed)
     }
 
     /** Deliberately clears only in-memory activation; training files stay. */

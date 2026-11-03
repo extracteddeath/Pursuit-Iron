@@ -217,6 +217,52 @@ class NativeKotlinWorkoutCoordinatorTest {
             service.open("owner-1","session-1"))
     }
 
+    @Test fun competingApprovedProgramUpdateCannotCommitDuringWorkoutIssuance() {
+        val auth=FakeAuthority(approval())
+        val enteredIssue=java.util.concurrent.CountDownLatch(1)
+        val finishReview=java.util.concurrent.CountDownLatch(1)
+        val attemptedUpdate=java.util.concurrent.CountDownLatch(1)
+        auth.afterFirstQuery={
+            enteredIssue.countDown()
+            check(finishReview.await(10,java.util.concurrent.TimeUnit.SECONDS))
+        }
+        val executor=java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val issuing=executor.submit<NativeKotlinIssueResult> {
+                coordinator(auth).issue("owner-1","session-1")
+            }
+            assertTrue(enteredIssue.await(10,java.util.concurrent.TimeUnit.SECONDS))
+            val modifying=executor.submit {
+                attemptedUpdate.countDown()
+                // This is the REQUIRED production approval-write protocol.
+                // It must use the SAME lock root as workout issuance.
+                fence().withOwnerTransaction("owner-1") {
+                    auth.approved=approval().copy(
+                        currentSource=source.copy(programRevision=9))
+                }
+            }
+            assertTrue(attemptedUpdate.await(10,java.util.concurrent.TimeUnit.SECONDS))
+            assertThrows(java.util.concurrent.TimeoutException::class.java) {
+                modifying.get(100,java.util.concurrent.TimeUnit.MILLISECONDS)
+            }
+            finishReview.countDown()
+            val original=issued(issuing.get(20,java.util.concurrent.TimeUnit.SECONDS))
+            assertEquals(source,original.journal.snapshot.source)
+            modifying.get(20,java.util.concurrent.TimeUnit.SECONDS)
+            assertEquals(9,auth.approved?.currentSource?.programRevision)
+            // The old frozen workout remains valid for its owner. Reissuing
+            // under a revoked source may not create a new target.
+            assertEquals(original.journal,
+                durable(coordinator(auth).open("owner-1","session-1")).journal)
+            assertEquals(NativeKotlinIssueResult.Rejected(
+                NativeKotlinIssueRefusal.NOT_AUTHORIZED),
+                coordinator(auth).issue("owner-1","session-1"))
+        } finally {
+            finishReview.countDown()
+            executor.shutdownNow()
+        }
+    }
+
     @Test fun oldFrozenWorkoutCanResumeAfterPlanEditButNeverAfterLogout() {
         val auth=FakeAuthority(approval())
         val service=coordinator(auth)

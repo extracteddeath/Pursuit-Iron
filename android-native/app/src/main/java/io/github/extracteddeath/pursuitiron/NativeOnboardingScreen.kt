@@ -25,6 +25,12 @@ internal fun NativeOnboardingScreen(
     var days by rememberSaveable { mutableIntStateOf(initial.days) }
     var session by rememberSaveable { mutableStateOf(initial.session) }
     var equipment by rememberSaveable { mutableStateOf(ArrayList(initial.equipment)) }
+    // For a NEW profile the absence of a rack is explicit. Older native
+    // profiles without the no-rack flag retain their original implied rack.
+    var rackAvailable by rememberSaveable {
+        mutableStateOf("rack" in initial.equipment ||
+            ("barbell" in initial.equipment && "no-rack" !in initial.equipment))
+    }
     var bodyweight by rememberSaveable { mutableStateOf(initial.allowBodyweight) }
     var supersets by rememberSaveable { mutableStateOf(initial.allowSupersets) }
     var barbellCap by rememberSaveable { mutableStateOf<Int?>(initial.barbellCap) }
@@ -145,15 +151,42 @@ internal fun NativeOnboardingScreen(
         PursuitPrimaryAction(label="Continue",enabled=name.isNotBlank() && !state.busy,
             onClick={step=1})
     } else {
+        val availableEquipment = state.options?.equipment ?: NativeEquipmentCatalog.allIds
+        val hasAvailableEquipment = equipment.any { it in availableEquipment }
+        // UI hardware groups remain the exact canonical 40. Rack availability
+        // is a separate facility fact, not a fabricated 41st equipment item.
+        val equipmentForReview = equipment.filterNot {
+            it == "no-rack" || it == "rack"
+        }.toMutableList().apply {
+            if ("barbell" in this) {
+                if (rackAvailable) {
+                    // Preserve an old positive rack ID when re-reviewing it.
+                    if ("rack" in equipment) add("rack")
+                } else add("no-rack")
+            }
+        }
         PursuitFormSection("Available equipment",
             "Choose what you can actually use. These choices constrain the program.") {
         NativeGroupedEquipmentPicker(
-            available = state.options?.equipment ?: NativeEquipmentCatalog.allIds,
-            selected = equipment,
+            available = availableEquipment,
+            selected = equipment.filterNot { it == "no-rack" || it == "rack" },
             enabled = !state.busy,
-            onSelectionChanged = { equipment = ArrayList(it) }
+            onSelectionChanged = { chosen ->
+                // Rack flags are not visible catalog items; keep them until
+                // program review normalizes the explicit facility selection.
+                equipment = ArrayList(chosen + equipment.filter {
+                    it == "no-rack" || it == "rack"
+                })
+            }
         )
-        if(equipment.isEmpty()) Text("Choose at least one equipment option.",
+        if("barbell" in equipment) {
+            PreviewSettingSwitch(
+                "Squat rack available",
+                "Confirm separately. Owning a barbell does not mean you have a rack.",
+                rackAvailable, enabled = !state.busy
+            ) { rackAvailable = it }
+        }
+        if(!hasAvailableEquipment) Text("Choose at least one equipment option.",
             color=MaterialTheme.colorScheme.error)
         }
         PursuitFormSection("Verified loading",
@@ -204,9 +237,9 @@ internal fun NativeOnboardingScreen(
         PursuitPrimaryAction(
             label=if(state.busy)"Building your program…" else "Review generated plan",
             onClick={onReview(NativeProgramProfile(name,goal,experience,unit,split,days,session,
-                equipment.toList(),bodyweight,supersets,barbellCap,focus.toMap(),reduced.toList(),
+                equipmentForReview,bodyweight,supersets,barbellCap,focus.toMap(),reduced.toList(),
                 inventoryValidation.json))},
-            enabled=state.ready && !state.blocked && !state.busy && equipment.isNotEmpty() &&
+            enabled=state.ready && !state.blocked && !state.busy && hasAvailableEquipment &&
                 name.isNotBlank() && inventoryValidation.valid
         )
         OutlinedButton(onClick={if(state.busy)onEdit() else step=0},modifier=Modifier.fillMaxWidth()) {

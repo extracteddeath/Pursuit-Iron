@@ -24,7 +24,12 @@ internal fun NativeOnboardingScreen(
     var split by rememberSaveable { mutableStateOf(initial.split) }
     var days by rememberSaveable { mutableIntStateOf(initial.days) }
     var session by rememberSaveable { mutableStateOf(initial.session) }
-    var equipment by rememberSaveable { mutableStateOf(ArrayList(initial.equipment)) }
+    // New athletes must confirm what their gym actually has. Do not treat
+    // the program-profile compatibility defaults as observed gym inventory.
+    // Saved/reviewed programs still restore their exact prior choices.
+    var equipment by rememberSaveable {
+        mutableStateOf(ArrayList(state.proposal?.profile?.equipment.orEmpty()))
+    }
     // For a NEW profile the absence of a rack is explicit. Older native
     // profiles without the no-rack flag retain their original implied rack.
     var rackAvailable by rememberSaveable {

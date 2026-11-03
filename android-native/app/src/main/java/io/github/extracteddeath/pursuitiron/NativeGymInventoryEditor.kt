@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.extracteddeath.pursuitiron.domain.NativeGymInventoryDraftResult
+import io.github.extracteddeath.pursuitiron.domain.NativeGymLoadingFieldPolicy
 import io.github.extracteddeath.pursuitiron.domain.NativeStackCandidate
 
 @Composable
@@ -46,7 +47,8 @@ internal fun NativeGymInventoryEditor(
     enabled: Boolean,
     candidates: List<NativeStackCandidate> = emptyList(),
     initiallyExpanded: Boolean = false,
-    focusExerciseId: String? = null
+    focusExerciseId: String? = null,
+    availableEquipment: Collection<String>? = null
 ) {
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded || draft.values.any { it.isNotBlank() }) }
     SectionLabel("Your actual gym weights")
@@ -60,6 +62,8 @@ internal fun NativeGymInventoryEditor(
     }
     if (!expanded) return
     val focused=candidates.firstOrNull { it.id==focusExerciseId }
+    val relevantFields=NativeGymLoadingFieldPolicy.visibleFields(availableEquipment,draft).toSet()
+    val retainedFields=NativeGymLoadingFieldPolicy.retainedUnselectedFields(availableEquipment,draft)
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if(focused!=null) {
             Text("Linked exercise: ${focused.name}",style=MaterialTheme.typography.titleMedium)
@@ -83,12 +87,33 @@ internal fun NativeGymInventoryEditor(
                 style=MaterialTheme.typography.labelSmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        NativeGymLoadField(unit, draft, onChange, enabled, "bar", "Empty bar weight", "Enter only if known; pair with your actual plates below.")
-        NativeGymLoadField(unit, draft, onChange, enabled, "plates", "Plate pairs", "Weight x number of matching pairs, e.g. 2.5x2, 5x2, 25x1")
-        NativeGymLoadField(unit, draft, onChange, enabled, "dumbbells", "Dumbbells per hand", "Exact available weights, e.g. 15, 20, 25, 30")
-        NativeGymLoadField(unit, draft, onChange, enabled, "cable", "Cable stack", "Verified minimum, increment, maximum; e.g. 5, 5, 150")
-        NativeGymLoadField(unit, draft, onChange, enabled, "machine", "Machine stack", "Only if this same stack applies: min, increment, max")
-        NativeGymLoadField(unit, draft, onChange, enabled, "smith", "Smith TOTAL loads", "Actual selectable total loads, not assumed empty-bar weight")
+        if (relevantFields.isEmpty() && candidates.isEmpty()) {
+            Text("Choose equipment above before adding actual weight settings.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (retainedFields.isNotEmpty()) {
+            Text("Previously entered weights for unselected equipment remain editable. They do not make that equipment available in your program.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if ("bar" in relevantFields) NativeGymLoadField(unit, draft, onChange, enabled,
+            "bar", "Empty bar weight", "Enter only if known; pair with your actual plates below.")
+        if ("plates" in relevantFields) NativeGymLoadField(unit, draft, onChange, enabled,
+            "plates", "Plate pairs", "Weight x number of matching pairs, e.g. 2.5x2, 5x2, 25x1")
+        if ("dumbbells" in relevantFields) NativeGymLoadField(unit, draft, onChange, enabled,
+            "dumbbells", "Dumbbells per hand", "Exact available weights, e.g. 15, 20, 25, 30")
+        if ("cable" in relevantFields) NativeGymLoadField(unit, draft, onChange, enabled,
+            "cable", "Cable stack", "Verified minimum, increment, maximum; e.g. 5, 5, 150")
+        if ("machine" in relevantFields) NativeGymLoadField(unit, draft, onChange, enabled,
+            "machine", "Machine stack", "Only if this same stack applies: min, increment, max")
+        if ("smith" in relevantFields) NativeGymLoadField(unit, draft, onChange, enabled,
+            "smith", "Smith TOTAL loads", "Actual selectable total loads, not assumed empty-bar weight")
+        if (NativeGymLoadingFieldPolicy.hasSpecialtyMachine(availableEquipment)) {
+            Text("For specialty machines, verify the exact weights AS LOGGED for each movement after the program is generated. A generic machine stack cannot establish leg press, hack squat, hip, or other specialty-machine increments.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if(candidates.isNotEmpty()) {
             var showSpecific by rememberSaveable(focusExerciseId) { mutableStateOf(
                 focused!=null || draft.keys.any {

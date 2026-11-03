@@ -132,7 +132,7 @@ internal fun NativeSetValueFields(unit: String,load: String,reps: String,rir: St
             }
         }
     }
-    Text(if(load=="0")"0 load = bodyweight · RIR is optional (reps remaining)."
+    Text(if(load=="0")"0 load is not automatically bodyweight · check this exercise’s loading. RIR is optional."
         else "RIR is optional · leave blank if unknown.",
         style=MaterialTheme.typography.bodySmall,
         color=MaterialTheme.colorScheme.onSurfaceVariant)

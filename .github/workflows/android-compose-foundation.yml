@@ -74,6 +74,8 @@ jobs:
         run: |
           node android-native/verification/native-preview-interaction-test.mjs
           node android-native/verification/native-onboarding-interaction-test.mjs
+      - name: Verify continuous canonical onboarding-to-history training journey
+        run: node android-native/verification/native-core-journey-test.mjs
       - name: Verify original Pursuit Iron theme palette parity
         run: node android-native/verification/native-original-theme-parity-test.mjs
       - name: Verify preview Material 3 Expressive dependency and motion contract

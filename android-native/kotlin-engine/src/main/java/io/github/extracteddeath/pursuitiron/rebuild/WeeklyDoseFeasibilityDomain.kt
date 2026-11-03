@@ -82,6 +82,8 @@ data class WeeklyDoseFeasibilityReport(
     val satisfiesDeclaredHardConstraints: Boolean,
     /** Soft ranges still require review; a preferred max is NOT a hard stop. */
     val daysOutsidePreferredWindow: Set<Int>,
+    /** A nominal training day without a real working set needs revision. */
+    val daysWithoutWorkingSets: Set<Int>,
     /** Extensions have no certified regular-set conversion rule yet. */
     val requiresExtensionDosePolicy: Boolean,
     /** A triage signal only, never permission to publish a program. */
@@ -123,7 +125,7 @@ object WeeklyDoseFeasibilityDomain {
         require(week.exposures.all {set ->
             validKey.matches(set.setKey) &&
             set.dayIndex in 0 until week.days &&
-            set.activeSeconds in 0..3600 && set.restSeconds in 0..3600 &&
+            set.activeSeconds in 1..3600 && set.restSeconds in 0..3600 &&
             (set.kind==ExposureSetKind.WARMUP || set.credits.isNotEmpty()) &&
             set.credits.size<=TrainingMuscle.entries.size &&
             set.credits.map {it.muscle}.distinct().size==set.credits.size &&
@@ -210,15 +212,23 @@ object WeeklyDoseFeasibilityDomain {
         val unconvertedExtensions=week.exposures.any {
             it.kind==ExposureSetKind.EXTENSION
         }
+        val activeTrainingDays=week.exposures.asSequence()
+            .filter {it.kind==ExposureSetKind.WORKING}
+            .map {it.dayIndex}.toSet()
+        val missingWorkDays=(0 until week.days).filter {
+            it !in activeTrainingDays
+        }.toSet()
         return WeeklyDoseFeasibilityReport(
             phase=week.phase,
             muscles=Collections.unmodifiableMap(muscleFindings),
             sessions=Collections.unmodifiableList(sessions),
             satisfiesDeclaredHardConstraints=hardConstraintsPass,
             daysOutsidePreferredWindow=Collections.unmodifiableSet(outsidePreference),
+            daysWithoutWorkingSets=Collections.unmodifiableSet(missingWorkDays),
             requiresExtensionDosePolicy=unconvertedExtensions,
             preliminaryReviewNeeded=!hardConstraintsPass ||
-                outsidePreference.isNotEmpty() || unconvertedExtensions
+                outsidePreference.isNotEmpty() ||
+                missingWorkDays.isNotEmpty() || unconvertedExtensions
         )
     }
 }

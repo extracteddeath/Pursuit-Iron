@@ -172,3 +172,12 @@ An additional regression recreates the reported ~30-set hypertrophy to
 11-set strength collapse. The new checker raises muscle-specific dose gaps
 **only against the caller's actual phase requirements**, rather than
 declaring every strength phase should match hypertrophy volume.
+
+### No hidden empty days or zero-duration workouts
+
+A plan containing a nominal training day without any regular working sets
+now reports `daysWithoutWorkingSets` and requires review, even if a time
+estimate happens to fall within a preferred window. Every declared set
+must have strictly positive active work time; a nonexistent zero-duration
+set cannot be used to satisfy the dose or scheduling audit. Empty plans
+remain auditable but cannot appear preliminarily ready.

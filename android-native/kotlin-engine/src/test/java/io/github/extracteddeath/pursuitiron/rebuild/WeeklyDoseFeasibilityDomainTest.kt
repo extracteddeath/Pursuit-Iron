@@ -119,6 +119,8 @@ class WeeklyDoseFeasibilityDomainTest {
         assertTrue(report.satisfiesDeclaredHardConstraints)
         assertEquals(130L,report.sessions[0].roundedMinutes)
         assertEquals(TimeWindowFinding.WITHIN_PREFERENCE,report.sessions[0].finding)
+        assertEquals(setOf(0,1,2),report.daysWithoutWorkingSets)
+        assertTrue(report.preliminaryReviewNeeded)
     }
 
     @Test fun warmupsHaveTimeButNeverEarnWorkingSetCredit() {
@@ -156,7 +158,8 @@ class WeeklyDoseFeasibilityDomainTest {
             row("x",0,listOf(c(chest),c(chest))),
             row("x",0,emptyList()),
             row("x",3,listOf(c(chest))),
-            row("x",0,listOf(c(chest)),active=3601)
+            row("x",0,listOf(c(chest)),active=3601),
+            row("x",0,listOf(c(chest)),active=0)
         )
         bad.forEach {assertThrows(IllegalArgumentException::class.java) {
             WeeklyDoseFeasibilityDomain.audit(week(listOf(it),bands()))
@@ -248,5 +251,17 @@ class WeeklyDoseFeasibilityDomainTest {
         assertTrue(filledReview.preliminaryReviewNeeded)
     }
 
+
+
+    @Test fun hiddenEmptyTrainingDaysNeedReviewEvenWhenTimePreferenceIsFilled() {
+        val all=week(listOf(row("only-real-set",0,listOf(c(chest)))),
+            bands(band(chest,"1","1","2",1)),
+            time=windows(min=40,max=60,extra=40*60))
+        val result=WeeklyDoseFeasibilityDomain.audit(all)
+        assertTrue(result.satisfiesDeclaredHardConstraints)
+        assertEquals(setOf(1,2),result.daysWithoutWorkingSets)
+        assertTrue(result.preliminaryReviewNeeded)
+        assertTrue(result.daysOutsidePreferredWindow.isEmpty())
+    }
 
 }

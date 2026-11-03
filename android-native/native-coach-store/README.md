@@ -11,18 +11,24 @@ per-workout atomic compare-and-swap** boundary for the already-developed
 immutable `KotlinStagedWorkout`, `KotlinStoredWorkoutIdentity`,
 `KotlinJournalOperation` and `KotlinWorkoutJournalReplayDomain`.
 
-- A new session requires an independently authenticated, already pinned
-  immutable Kotlin-issued workout snapshot and identity. `issue` is
-  idempotent for identical source; conflicting snapshots refuse to overwrite.
+- A new session uses `issueAuthorized`: the native session owner must
+  approve the current athlete, source revision and grant while the storage
+  lock is held. The **entire immutable Kotlin-issued snapshot and empty
+  receipt journal are committed together in one atomic v2 envelope**.
+  Duplicate identical issuance is idempotent; conflicting snapshots refuse
+  to overwrite. The old ungated `issue/open/append` paths are internal
+  compatibility and unit-test methods, not production integration APIs.
 - `append` obtains a cross-process file lock, reloads and checksum-verifies
   current bytes, replays **all original receipts**, checks the expected
   journal revision and deduplicates event IDs, then writes an atomically
   replaced file after flushing file contents. It never alters a target.
 - A retry after a lost acknowledgment finds the previous receipt and returns
   `replayed=true`, rather than producing a duplicate set or finish.
-- `open` never creates a missing workout. It detects invalid source,
-  mismatched storage identity, incomplete/corrupt receipt history and
-  contradictory finished state.
+- `openStored` reconstructs the complete original Kotlin workout directly
+  from private disk, without caller-supplied targets or JS. It verifies the
+  current owner and replays stored receipts, refusing missing/corrupt
+  workouts. `appendStored` repeats that owner check under the lock before
+  an atomic write. Neither API silently creates a missing workout.
 - The binary protocol uses a fixed magic/version, bounded receipt count and
   length, SHA-256 checksum, and snapshot fingerprint covering **all immutable
   issued targets**. It is a corruption check, **not a cryptographic signature**.
@@ -35,10 +41,12 @@ immutable `KotlinStagedWorkout`, `KotlinStoredWorkoutIdentity`,
    athlete's current private `filesDir` may supply `ownerKey`. Neither this
    stand-alone module nor the SHA checksum authenticates that identity. The
    owner must protect files from untrusted/symlink paths and scope requests.
-2. **Native-issued snapshot storage**: the full Kotlin-approved immutable
-   snapshot and grant must be durably stored and checked before `issue`.
-   Passing a caller-constructed snapshot directly to `issue` without that
-   verification is forbidden. The module persists journal receipts only.
+2. **Approved workout grant**: the v2 file now atomically persists the
+   complete Kotlin-issued snapshot **together with** receipts, but the
+   injected native owner callback must independently authenticate the
+   current approved program, workout grant and gym/catalog/rules revisions.
+   A caller-constructed snapshot alone must never authorize issuance.
+   That real app-side ownership authority is not connected yet.
 3. **Power-loss durability**: the journal temp file is flushed and atomically
    renamed, but parent directory metadata flush behavior differs on Android
    filesystems. Validate it on real supported devices and choose an
@@ -56,9 +64,11 @@ immutable `KotlinStagedWorkout`, `KotlinStoredWorkoutIdentity`,
 The `android-kotlin-rebuild.yml` workflow runs the entire Kotlin coaching
 suite and `:native-coach-store:testDebugUnitTest` (local JVM tests of the
 Android-compatible java.nio implementation, not instrumentation tests).
-Regression cases include cold reopen after process restart, idempotent replay,
-revision conflicts, correction history, different athlete scopes, altered
-issued targets and corrupted on-disk bytes. These results are necessary but
+Regression cases include cold reopen after process restart **without a
+caller-supplied snapshot**, exact load/RIR/bodyweight and full target
+roundtrips, denied authorization, complete-workout receipt replay,
+idempotent issuance/finish, revision conflicts, corrections, concurrent
+writers, different athlete scopes, altered targets and corrupt bytes. These results are necessary but
 not proof of Android device crash/power-loss acceptance.
 
 See [complete JS replacement contract](../kotlin-engine/FULL_REPLACEMENT_CONTRACT.md).

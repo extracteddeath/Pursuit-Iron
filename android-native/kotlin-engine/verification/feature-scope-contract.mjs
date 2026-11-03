@@ -7,6 +7,8 @@ const scope=read('android-native/kotlin-engine/ENGINE_BASELINE_COVERAGE.md');
 const ux=read('android-native/kotlin-engine/NATIVE_ENGINE_UX_IMPACT.md');
 const index=read('android-native/kotlin-engine/README.md');
 const plan=read('android-native/ENGINE_REBUILD_PLAN.md');
+const replacement=read('android-native/kotlin-engine/FULL_REPLACEMENT_CONTRACT.md');
+
 
 const ids=[...catalog.matchAll(/FeatureCapability\("([^"]+)"/g)].map(match=>match[1]);
 assert.equal(ids.length,14,'14 stable native product capabilities required');
@@ -48,4 +50,21 @@ assert.ok(plan.includes('ENGINE_BASELINE_COVERAGE.md') &&
     plan.includes('NATIVE_ENGINE_UX_IMPACT.md'));
 assert.ok(scope.includes('not certification')||scope.includes('not a completed'));
 assert.ok(ux.includes('documentation')||ux.includes('Documented'));
-console.log('PASS scope: '+ids.length+' features, E01–E41 engine requirements, U01–U13 native UX tests and explicit incomplete statuses.');
+// Replacement is a binding finish-line requirement, NOT a claim of readiness.
+// Keep a gate for retiring the JS runtime alongside the 14 feature and UX gates.
+for(const term of [
+    'Kotlin-only', 'JavaScript', 'No JS as hidden fallback',
+    '14 capability ledger', 'migration', 'complete logger',
+    'in-progress JS', 'engine-runtime', 'release APK',
+    'separate explicit product decision'
+]) {
+    assert.ok(replacement.toLowerCase().includes(term.toLowerCase()),
+        'Missing full JS replacement / decommissioning requirement: '+term);
+}
+assert.ok(index.includes('FULL_REPLACEMENT_CONTRACT.md'),
+    'Kotlin engine index must explicitly point to the full replacement requirement');
+const app=read('android-native/app/build.gradle.kts');
+const stillJs=app.includes('implementation(project(":engine-runtime"))');
+assert.ok(stillJs,
+    'This isolated research branch should NOT silently switch the app engine. Cutover needs a separately approved integration pass.');
+console.log('PASS scope: '+ids.length+' features, E01–E41 engine requirements, U01–U13 native UX tests, and mandatory Kotlin-only final runtime cutover (currently pending).');

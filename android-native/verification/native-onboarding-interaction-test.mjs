@@ -20,6 +20,13 @@ assert.ok(host.includes('owner.initialize(proposal.snapshot)') &&
   host.includes('saved.creationId==proposal.creationId') &&
   host.includes('finally { bytes.fill(0) }') && host.includes('blocked=true') &&
   host.includes('actionVersion.get()==version'));
+assert.ok(shell.includes('if(onboarding?.loading==true) {') &&
+  shell.includes('PageHeading("OPENING TRAINING","Checking saved training"') &&
+  shell.includes('Verifying the native engine, saved program and any unfinished workout.') &&
+  shell.indexOf('if(onboarding?.loading==true) {') <
+    shell.indexOf('if (onboarding!=null && onboarding.saved==null && !exploreDemo) {') &&
+  shell.includes('Your saved sets are not changed while loading.'),
+  'Cold start must not show an editable new-program form before canonical program and pending journal recovery are checked');
 assert.ok(activity.includes('onReviewProgram=runtime::review') && activity.includes('onSaveProgram=runtime::save') &&
   activity.includes('activeProgramId=state.saved?.program?.id') && shell.includes('onboarding.saved==null'));
 assert.ok(shell.includes('UnconnectedEngineGateway().status'),

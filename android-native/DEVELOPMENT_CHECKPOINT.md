@@ -2008,3 +2008,16 @@ new prescription, or history write. Standard Dialog/ModalBottomSheet Back
 remains owned by the top layer. The confirmation resets if workout identity
 changes or Train closes. Source contract and Compose compiler gates apply;
 physical predictive Back and gesture behavior remain unverified. No APK.
+
+## 2026-11-02 — Dedicated cold-start restoration state
+
+The native root now shows a read-only Material 3 initialization screen
+while the canonical worker, saved program and private workout journal are
+being opened. It no longer briefly presents an editable new-program
+onboarding wizard to athletes who already have a saved program or pending
+session, nor exposes the demo navigation during that same transient phase.
+Once initialization finishes it routes to existing onboarding or the actual
+saved-program destinations; blocked source errors still remain visible in
+the existing onboarding recovery surface. No new persistence/engine API,
+new training data or source-web change. Source and Compose checks required;
+physical launch acceptance remains outstanding. No APK.

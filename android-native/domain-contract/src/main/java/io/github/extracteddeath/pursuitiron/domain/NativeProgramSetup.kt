@@ -6,7 +6,7 @@ import org.json.JSONObject
 data class NativeProgramProfile(
     val name: String="My program", val goal: String="both", val experience: String="intermediate",
     val unit: String="lb",val split: String="full_body",val days: Int=3,val session: String="s60",
-    val equipment: List<String> = listOf("barbell","bench","dumbbell","cable","machine",
+    val equipment: List<String> = listOf("barbell","no-rack","bench","dumbbell","cable","machine",
         "smith","pullup","dip","legpress","hacksquat","legext","legcurl","calfmachine"),
     val allowBodyweight: Boolean=true,val allowSupersets: Boolean=true,val barbellCap: Int?=3,
     val focus: Map<String,Int> = emptyMap(),val reduced: List<String> = emptyList(),
@@ -74,7 +74,10 @@ object NativeProgramSetupCodec {
             days in 3..6 && session in listOf("s60","s90","s120p"))
         val list=p.getJSONArray("equipment");require(list.length() in 1..41) // 40 canonical items + legacy rack
         val equipment=(0 until list.length()).map { val v=list.get(it);require(v is String && v.matches(Regex("^[a-z][a-z0-9_-]{0,39}$")));v }
-        require(equipment.toSet().size==equipment.size && p.get("allowBodyweight") is Boolean && p.get("allowSupersets") is Boolean)
+        require(equipment.toSet().size==equipment.size &&
+            !("rack" in equipment && "no-rack" in equipment) &&
+            ("no-rack" !in equipment || "barbell" in equipment) &&
+            p.get("allowBodyweight") is Boolean && p.get("allowSupersets") is Boolean)
         val cap=if(p.isNull("barbellCap")) null else wire.integer(p,"barbellCap").also { require(it in 0..6) }.toInt()
         val focus=if(hasPriorities) {
             val obj=p.getJSONObject("focus")

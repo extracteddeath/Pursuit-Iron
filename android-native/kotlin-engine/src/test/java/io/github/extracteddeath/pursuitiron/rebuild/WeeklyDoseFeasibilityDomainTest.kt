@@ -242,7 +242,7 @@ class WeeklyDoseFeasibilityDomainTest {
         assertEquals(setOf(0,1,2),report.daysOutsidePreferredWindow)
         // Meeting preferred duration alone does not certify amplifier
         // credit; extension policy remains separately unresolved.
-        val filled=proposed.copy(windows=windows(min=1,max=60))
+        val filled=proposed.copy(windows=windows(min=1,max=60,extra=60))
         val filledReview=WeeklyDoseFeasibilityDomain.audit(filled)
         assertTrue(filledReview.daysOutsidePreferredWindow.isEmpty())
         assertTrue(filledReview.preliminaryReviewNeeded)

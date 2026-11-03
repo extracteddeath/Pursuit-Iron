@@ -91,7 +91,7 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
         assertFalse(history.canPublishHistory)
         assertFalse(history.canApplyProgression)
         assertEquals(5L, history.journalRevision)
-        assertEquals(5, j.receipts.size) // four sets/corrections plus Finish
+        assertEquals(4, j.receipts.size) // uncommitted Finish is not in this journal
     }
 
     @Test fun missingActualRirRemainsMissingWhenPrescribedRirExists() {

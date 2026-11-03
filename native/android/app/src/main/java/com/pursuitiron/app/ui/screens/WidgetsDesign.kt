@@ -46,7 +46,7 @@ fun WidgetsSheet(vm: AppViewModel, onClose: () -> Unit) {
     val canPin = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mgr.isRequestPinAppWidgetSupported
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Widgets & watch", style = MaterialTheme.typography.headlineSmall)
+            Text("Home-screen widget", style = MaterialTheme.typography.headlineSmall)
             Text("HOME-SCREEN WIDGET", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.primaryContainer).padding(18.dp)
                 .semantics(mergeDescendants = true) { contentDescription = "Widget preview: " + (next?.s("dayLabel") ?: "no session planned") },

@@ -1,5 +1,11 @@
 # Native integration, then a complete Kotlin engine rebuild
 
+**North star:** [PRODUCT_SUPERIORITY_GATE.md](PRODUCT_SUPERIORITY_GATE.md)
+requires demonstrably better outcomes than the web app, not a layout port
+or a JS parity rewrite. M5 development APK source checks passed; device
+superiority is not yet verified. The Kotlin rebuild has started on isolated
+`architecture/kotlin-engine-rebuild`, with no active engine switch.
+
 ## User decision — 2026-11-01
 
 Build and test a polished functional native core, then replace the flawed

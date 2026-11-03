@@ -1,5 +1,10 @@
 # Pursuit Iron Native — feature-first redesign contract
 
+**Release standard:** [PRODUCT_SUPERIORITY_GATE.md](PRODUCT_SUPERIORITY_GATE.md)
+makes all 14 feature outcomes, superior independent training correctness
+and measured native interaction/reliability improvements mandatory.
+Web screenshots and output parity alone cannot satisfy this gate.
+
 ## Product decision
 
 The user has scheduled a complete Kotlin engine rebuild after native integration

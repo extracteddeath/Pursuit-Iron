@@ -2299,3 +2299,14 @@ exercise-specific interpretation to the authoritative engine/loading
 contract. Existing actual load values, validation, warm-up rules and journal
 receipts are unchanged. The shared wording applies consistently to active
 sets and corrections. No APK or engine rewrite.
+
+## 2026-11-02/03 — Product superiority is the release standard
+
+The existing web app is the required feature floor, **not** the target for
+design, usability or engine accuracy. The new
+[PRODUCT_SUPERIORITY_GATE.md](PRODUCT_SUPERIORITY_GATE.md) defines an
+explicit 14-capability improvement matrix; new Kotlin training rules must
+be independently certified, not copied; actual Android tasks must be
+compared with the web on matched scenarios. The M5 debug APK has built
+successfully, but no device comparison or release acceptance has passed.
+The separate Kotlin lab branch is not wired into the live native runtime.

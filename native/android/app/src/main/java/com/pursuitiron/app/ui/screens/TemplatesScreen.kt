@@ -130,7 +130,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
     ModalBottomSheet(onDismissRequest = { vm.tmFor = null }, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(data)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Percentage program", style = MaterialTheme.typography.headlineSmall)
-            val d = data ?: run { Text("Loading…"); return@Column }
+            val d = data ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             val u = d.s("unit", "kg")
             d.o("method")?.let { m ->
                 Surface(onClick = { methodsOpen = !methodsOpen }, color = cs.surfaceContainerHigh, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
@@ -145,7 +145,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                 }
                 if (methodsOpen) {
                     val ms = methods
-                    if (ms == null) Text("Loading…", color = cs.onSurfaceVariant)
+                    if (ms == null) com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp))
                     else Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         ms.list("methods").forEach { x ->
                             val on = x.b("current")

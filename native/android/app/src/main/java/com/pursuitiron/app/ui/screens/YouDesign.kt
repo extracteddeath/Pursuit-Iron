@@ -154,7 +154,8 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
     val u = board.s("unit", "kg")
     val club = vm.profile?.o("clubE1rm")
     val ratio = big.d("ratio")
-    val ringTo by animateFloatAsState(((club?.i("pct") ?: 0) / 100f).coerceIn(0.02f, 1f).let { if (club?.b("maxedOut") == true) 1f else it }, com.pursuitiron.app.ui.theme.Motion.data(600), label = "ring")
+    // .ring: sweeps in from empty when the card appears (animateFloatAsState started at its value, so it never moved).
+    val ringTo = com.pursuitiron.app.ui.common.ringSweep(((club?.i("pct") ?: 0) / 100f).coerceIn(0.02f, 1f).let { if (club?.b("maxedOut") == true) 1f else it })
     val tier = club?.let { c ->
         val cur = c.s("current").takeIf { it.isNotBlank() && it != "null" } ?: "No club yet"
         if (c.b("maxedOut") || c.s("next").let { it.isBlank() || it == "null" }) "$cur · every club cleared"
@@ -480,7 +481,7 @@ fun ProfBadges(board: JSONObject) {
                     row.forEach { m ->
                         val on = open == m.s("id"); val done = m.b("done")
                         val bg by animateColorAsState(if (on) cs.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "bdc")
-                        val prog by animateFloatAsState(m.d("progress").toFloat(), com.pursuitiron.app.ui.theme.Motion.data(600), label = "bdp")
+                        val prog = com.pursuitiron.app.ui.common.ringSweep(m.d("progress").toFloat())
                         Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(bg).clickable { open = if (on) null else m.s("id") }
                             .semantics(mergeDescendants = true) { role = Role.Button; selected = on; contentDescription = m.s("name") + if (done) ", earned" else ", ${(m.d("progress") * 100).toInt()} percent" }
                             .padding(vertical = 8.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {

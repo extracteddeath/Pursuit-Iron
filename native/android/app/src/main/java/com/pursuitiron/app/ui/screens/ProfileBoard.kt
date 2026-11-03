@@ -75,10 +75,11 @@ fun Big3Card(b: JSONObject) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             if (ratio > 0) Box(Modifier.size(84.dp).semantics(mergeDescendants = true) { contentDescription = "Total is ${fmtNum(ratio)} times bodyweight" }, contentAlignment = Alignment.Center) {
                 val ring = cs.primary; val track = cs.onPrimaryContainer.copy(alpha = 0.15f)
+                val sweep = com.pursuitiron.app.ui.common.ringSweep((ratio / 8.0).toFloat().coerceIn(0.03f, 1f))
                 Canvas(Modifier.fillMaxSize()) {
                     val st = 8.dp.toPx()
                     drawArc(track, 0f, 360f, false, style = Stroke(st))
-                    drawArc(ring, -90f, 360f * (ratio / 8.0).toFloat().coerceIn(0.03f, 1f), false, style = Stroke(st, cap = StrokeCap.Round))
+                    drawArc(ring, -90f, 360f * sweep, false, style = Stroke(st, cap = StrokeCap.Round))
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${fmtNum(ratio)}×", style = MaterialTheme.typography.titleMedium, color = cs.onPrimaryContainer)

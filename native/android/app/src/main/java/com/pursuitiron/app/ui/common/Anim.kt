@@ -20,6 +20,12 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -118,5 +124,41 @@ fun Modifier.prGlow(color: Color, radius: Dp): Modifier = composed {
         drawRoundRect(color.copy(alpha = 0.6f * (1 - t)), topLeft = androidx.compose.ui.geometry.Offset(-spread, -spread),
             size = androidx.compose.ui.geometry.Size(size.width + 2 * spread, size.height + 2 * spread),
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius.toPx() + spread))
+    }
+}
+
+/** .ring: a progress ring sweeps to its value (600 ms, emphasized decelerate) when it first appears, and glides to a
+    new value after. Multiply the arc's sweep by the returned fraction of its target. */
+@Composable
+fun ringSweep(target: Float): Float {
+    val a = remember { Animatable(if (Motion.reduced) target else 0f) }
+    LaunchedEffect(target) { a.animateTo(target, Motion.data(600)) }
+    return a.value
+}
+
+/** .bars .bar: a vertical bar revealed from its base, each one 20 ms after the one before (barGrow). */
+fun Modifier.growY(index: Int = 0): Modifier = composed {
+    val a = remember { Animatable(if (Motion.reduced) 1f else 0f) }
+    LaunchedEffect(Unit) { if (a.value < 1f) a.animateTo(1f, Motion.data(500, minOf(index, 7) * 20)) }
+    drawWithContent { clipRect(top = size.height * (1 - a.value)) { this@drawWithContent.drawContent() } }
+}
+
+/** In place of "Loading…": nothing for the first 250 ms (most reads land sooner, so nothing flashes), then three soft
+    placeholder lines breathing gently until the content arrives. */
+@Composable
+fun LoadingSkeleton(modifier: Modifier = Modifier) {
+    val shown = remember { Animatable(0f) }
+    val pulse = remember { Animatable(0.45f) }
+    LaunchedEffect(Unit) {
+        delay(250); shown.animateTo(1f, Motion.enter(200))
+        if (!Motion.reduced) while (true) { pulse.animateTo(0.8f, tween(700)); pulse.animateTo(0.45f, tween(700)) }
+    }
+    val c = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest
+    androidx.compose.foundation.layout.Column(modifier.graphicsLayer { alpha = shown.value }.semantics { contentDescription = "Loading" },
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+        listOf(0.9f, 0.7f, 0.5f).forEach { w ->
+            Box(Modifier.fillMaxWidth(w).height(16.dp).graphicsLayer { alpha = pulse.value }
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(c))
+        }
     }
 }

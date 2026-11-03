@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.growY
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,7 +90,7 @@ fun VolumeWaveCard(vm: AppViewModel, programId: String, selected: Int, onPick: (
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text("$n", style = MaterialTheme.typography.labelSmall, color = if (on) cs.primary else cs.onSurfaceVariant)
-                    Box(Modifier.fillMaxWidth().height((16 + 62 * frac).dp).clip(RoundedCornerShape(r))
+                    Box(Modifier.fillMaxWidth().height((16 + 62 * frac).dp).growY(weeks.indexOf(wk)).clip(RoundedCornerShape(r))
                         .background(when { on -> cs.primary; dl -> cs.tertiaryContainer; else -> cs.primaryContainer }))
                     Text(if (dl) "DL" else "W$w", style = MaterialTheme.typography.labelSmall, color = if (on) cs.primary else cs.onSurfaceVariant)
                 }
@@ -119,7 +120,7 @@ fun WeekByWeekSheet(vm: AppViewModel, programId: String, onClose: () -> Unit) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Week by week", style = MaterialTheme.typography.headlineMedium)
             val d = data
-            if (d == null) { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
+            if (d == null) { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             val rows = d.list("rows")
             val total = rows.firstOrNull()?.list("cells")?.size ?: 0
             if (total == 0) { Text("This program has no weeks to show.", color = cs.onSurfaceVariant); return@Column }
@@ -352,7 +353,7 @@ fun WhyLiftSheet(vm: AppViewModel, programId: String, dayId: String, slot: Int, 
     val cs = MaterialTheme.colorScheme
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            val x = d ?: run { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
+            val x = d ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             Kicker("${x.s("dayLabel")} · slot ${x.i("slot")}")
             Text("Why ${x.s("name")}?", style = MaterialTheme.typography.headlineSmall)
             x.o("rx")?.let { r ->

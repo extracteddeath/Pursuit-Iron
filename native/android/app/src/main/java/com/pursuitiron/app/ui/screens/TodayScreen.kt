@@ -222,10 +222,11 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
                 val done = wkDays.count { it.s("status") == "done" }
                 Box(Modifier.align(Alignment.TopEnd).padding(16.dp).size(60.dp).semantics(mergeDescendants = true) { contentDescription = "$done of ${wkDays.size} sessions this week" },
                     contentAlignment = Alignment.Center) {
+                    val sweep = com.pursuitiron.app.ui.common.ringSweep(if (wkDays.isEmpty()) 0f else done.toFloat() / wkDays.size)
                     androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
                         val st = 6.dp.toPx()
                         drawArc(cs.onPrimaryContainer.copy(alpha = 0.15f), 0f, 360f, false, style = androidx.compose.ui.graphics.drawscope.Stroke(st))
-                        drawArc(cs.primary, -90f, 360f * done / wkDays.size, false, style = androidx.compose.ui.graphics.drawscope.Stroke(st, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                        drawArc(cs.primary, -90f, 360f * sweep, false, style = androidx.compose.ui.graphics.drawscope.Stroke(st, cap = androidx.compose.ui.graphics.StrokeCap.Round))
                     }
                     Text("$done/${wkDays.size}", style = MaterialTheme.typography.labelLarge)
                 }
@@ -294,7 +295,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         val d = detail
         Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            if (d == null) { Text("Loading…"); return@Column }
+            if (d == null) { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             val u = d.s("unit", "kg")
             val date = java.util.Date(d.optLong("date"))
             val isToday = android.text.format.DateUtils.isToday(d.optLong("date"))

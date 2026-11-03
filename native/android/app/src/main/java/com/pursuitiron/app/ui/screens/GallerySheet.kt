@@ -58,7 +58,7 @@ fun GallerySheet(vm: AppViewModel, onClose: () -> Unit) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Shared programs", style = MaterialTheme.typography.headlineSmall)
             Text("Built on the generator for your gym. Importing adds a program; nothing changes until you switch to it.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-            val all = rows ?: run { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
+            val all = rows ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             // Three rows each led by "All" read as one repeated word; each says what it leaves open.
             @Composable fun Filter(sel: String, any: String, vals: List<Pair<String, String>>, pick: (String) -> Unit) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

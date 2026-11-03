@@ -236,10 +236,11 @@ private fun AchievementTile(m: JSONObject, modifier: Modifier, onClick: () -> Un
         .padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val ring = cs.primary; val track = cs.surfaceContainerHighest
         Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+            val sweep = com.pursuitiron.app.ui.common.ringSweep(if (done) 1f else m.d("progress").toFloat())
             Canvas(Modifier.size(36.dp)) {
                 val w = 4.dp.toPx()
                 drawArc(track, 0f, 360f, false, style = Stroke(w))
-                drawArc(ring, -90f, 360f * (if (done) 1f else m.d("progress").toFloat()), false, style = Stroke(w, cap = StrokeCap.Round))
+                drawArc(ring, -90f, 360f * sweep, false, style = Stroke(w, cap = StrokeCap.Round))
             }
             if (done) Icon(PiIcons.Check, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(16.dp))
         }

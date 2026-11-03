@@ -2,6 +2,7 @@
 
 package com.pursuitiron.app.ui.screens
 
+import com.pursuitiron.app.ui.common.growY
 import com.pursuitiron.app.ui.common.d
 import com.pursuitiron.app.ui.common.has
 import androidx.compose.ui.unit.sp
@@ -97,7 +98,7 @@ fun VolumeChartCard(g: JSONObject) {
                 val before = start + k < first
                 val h by animateDpAsState(if (before) 0.dp else (8 + 104 * (v(w) / max)).dp, Motion.data(), label = "bar")
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.fillMaxWidth().height(h).clip(RoundedCornerShape(if (w.b("now")) 12.dp else 999.dp)).background(if (w.b("now")) cs.primary else cs.primaryContainer))
+                    Box(Modifier.fillMaxWidth().height(h).growY(k).clip(RoundedCornerShape(if (w.b("now")) 12.dp else 999.dp)).background(if (w.b("now")) cs.primary else cs.primaryContainer))
                     Text(w.s("label"), style = MaterialTheme.typography.labelSmall, color = if (w.b("now")) cs.onSurface else cs.onSurfaceVariant)
                 }
             }

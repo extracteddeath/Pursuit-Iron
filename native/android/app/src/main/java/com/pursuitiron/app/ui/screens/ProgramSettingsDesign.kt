@@ -149,7 +149,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(p)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 18.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Program settings", style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 32.sp))
-            if (p == null) { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
+            if (p == null) { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             val summary = listOf(GOAL_SHORT[p.s("goal")] ?: p.s("goal"), SESSION_SHORT[p.s("session")] ?: p.s("session"),
                 (if (p.s("volumeApproach") == "minimalist") "minimalist" else "standard") + " volume",
                 if (locked) "block length set by the cycle" else if (p.b("endless")) "endless" else "${p.i("weeks")} weeks" + if (p.b("deload")) " + deload" else "").joinToString(" · ")

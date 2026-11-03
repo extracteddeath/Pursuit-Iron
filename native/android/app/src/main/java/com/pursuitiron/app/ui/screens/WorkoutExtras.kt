@@ -119,7 +119,7 @@ fun FinishSheet(vm: AppViewModel, onClose: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            val x = p ?: run { Text("Loading…"); return@Column }
+            val x = p ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             val u = x.s("unit")
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(PiIcons.Trophy, null, tint = cs.primary)

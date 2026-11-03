@@ -190,7 +190,7 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         val e = x
         Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (e == null) { Text("Loading…"); return@Column }
+            if (e == null) { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             val u = e.s("unit", "kg")
             val g = (listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core").indexOf(e.s("group")).coerceAtLeast(0)) % 3
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {

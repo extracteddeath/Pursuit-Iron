@@ -65,7 +65,7 @@ fun InjuryJournalSheet(vm: AppViewModel) {
     val cs = MaterialTheme.colorScheme
     ModalBottomSheet(onDismissRequest = { vm.injuryLogOpen = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            val l = log ?: run { Text("Loading…"); return@Column }
+            val l = log ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             val e = editing
             if (e != null) {
                 InjuryForm(l, e, onCancel = { editing = null }) { entry ->

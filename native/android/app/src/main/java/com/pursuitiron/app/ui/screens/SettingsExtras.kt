@@ -277,7 +277,7 @@ fun WeeklyScheduleSheet(vm: AppViewModel, programId: String, onClose: () -> Unit
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Weekly schedule", style = MaterialTheme.typography.headlineSmall)
-            val x = sc ?: run { Text("Loading…"); return@Column }
+            val x = sc ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             Text("Tap a day to assign a workout. ${x.i("trainingDays")} training day${if (x.i("trainingDays") == 1) "" else "s"} a week.",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             x.list("week").forEachIndexed { k, d ->

@@ -1316,6 +1316,36 @@ def a11y_pass():
     if not scanned:
         FAILS.append("large-text pass reached no tabs")
     print("a11y issues:", len(uniq), flush=True)
+# Performance probe: cold start and frame pacing while scrolling each tab. The emulator renders in software, so these
+# are a trend line between runs (and a catch for something an order of magnitude off), not real-phone numbers.
+def perf_pass():
+    out = []
+    starts = []
+    for _ in range(3):
+        adb("shell", "am", "force-stop", PKG); time.sleep(1.5)
+        r = adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.MainActivity", timeout=90)
+        m = re.search(r"TotalTime: (\d+)", r)
+        if m: starts.append(int(m.group(1)))
+        time.sleep(4)
+    out.append("cold start ms: " + ", ".join(map(str, starts)) + (f" (median {sorted(starts)[len(starts)//2]})" if starts else ""))
+    for t in ["Today", "Plan", "Progress", "Exercises", "You"]:
+        tap(rf"^\|{t}$|^{t}\|", required=False); time.sleep(1.5)
+        adb("shell", "dumpsys", "gfxinfo", PKG, "reset")
+        for _ in range(3):
+            adb("shell", "input", "swipe", "540", "1900", "540", "500", "180"); time.sleep(0.9)
+        for _ in range(3):
+            adb("shell", "input", "swipe", "540", "500", "540", "1900", "180"); time.sleep(0.9)
+        g = adb("shell", "dumpsys", "gfxinfo", PKG, timeout=60)
+        pick = lambda k: (re.search(k + r"[^\n]*", g) or [""])[0]
+        out.append(f"{t}: " + " | ".join(x for x in [pick(r"Total frames rendered: \d+"), pick(r"Janky frames: \d+ \([\d.]+%\)"),
+                   pick(r"50th percentile: \d+ms"), pick(r"90th percentile: \d+ms"), pick(r"99th percentile: \d+ms")] if x))
+    with open(os.path.join(OUT, "perf.txt"), "w") as f:
+        f.write("\n".join(out) + "\n")
+    print("\n".join(out), flush=True)
+try:
+    perf_pass()
+except Exception as e:  # a review aid; never lose the rest of the run to it
+    print("perf pass failed", e, flush=True)
 try:
     a11y_pass()
 except Exception as e:  # a review aid; never lose the rest of the run to it

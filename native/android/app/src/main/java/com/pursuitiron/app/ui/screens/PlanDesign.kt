@@ -140,7 +140,7 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
                     Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("New", style = MaterialTheme.typography.labelLarge) }
                 }
             }
-            val x = d ?: run { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
+            val x = d ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             Text("${x.i("count")} program${if (x.i("count") == 1) "" else "s"} · tap one for its options", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             x.list("programs").forEach { pr ->
                 val id = pr.s("id"); val active = pr.b("active"); val queued = pr.b("queued"); val open = sel == id
@@ -266,7 +266,7 @@ fun ProgramDetailsSheet(vm: AppViewModel, programId: String, onSettings: () -> U
     ModalBottomSheet(onDismissRequest = onClose, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(d)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Program details", style = MaterialTheme.typography.headlineSmall)
-            val x = d ?: run { Text("Loading…", color = cs.onSurfaceVariant); return@Column }
+            val x = d ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(vertical = 8.dp)); return@Column }
             Text(x.s("name"), style = MaterialTheme.typography.titleMedium)
             Kicker("How this was built")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -365,7 +365,7 @@ fun IconPickerSheet(vm: AppViewModel, key: String, onClose: () -> Unit) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val save = { icon: String?, color: String?, shape: String? -> scope.launch { cur = vm.setProgramIcon(key, icon, color, shape) }; Unit }
     ModalBottomSheet(onDismissRequest = onClose, sheetState = com.pursuitiron.app.ui.common.rememberSettlingSheet(cur)) {
-        val c = cur ?: run { Text("Loading…", modifier = Modifier.padding(20.dp)); return@ModalBottomSheet }
+        val c = cur ?: run { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(20.dp)); return@ModalBottomSheet }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 com.pursuitiron.app.ui.common.IconTile(c, 88.dp)

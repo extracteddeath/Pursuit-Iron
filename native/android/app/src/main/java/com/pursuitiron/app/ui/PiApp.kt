@@ -260,19 +260,30 @@ fun PageOverlays(bottom: androidx.compose.ui.unit.Dp = 24.dp) {
 
 @Composable
 private fun SnackHost(vm: AppViewModel, modifier: Modifier, pageBottom: androidx.compose.ui.unit.Dp? = null) {
-    val sn = vm.snack ?: return
-    LaunchedEffect(sn.id) { delay(if (sn.undo != null) 6000 else 3500); vm.clearSnack() }
+    // .snack: it rises 16 dp and fades in (300 ms), and leaves the same way, instead of popping on and off.
+    // The last message is held so it can still be drawn while it leaves.
+    val live = vm.snack
+    val held = remember { arrayOfNulls<Any>(1) }
+    if (live != null) held[0] = live
+    live?.let { s -> LaunchedEffect(s.id) { delay(if (s.undo != null) 6000 else 3500); vm.clearSnack() } }
+    val sn = (held[0] as? com.pursuitiron.app.Snack) ?: return
     val wide = LocalWide.current
     val bottom = pageBottom ?: when {
         vm.screen == Screen.Workout && !wide -> if (vm.session?.o("rest") != null) 176.dp else 96.dp
         vm.screen == Screen.Tabs && !wide -> 96.dp
         else -> 24.dp
     }
-    Snackbar(
-        modifier = modifier.padding(start = 12.dp, end = 12.dp, bottom = bottom).navigationBarsPadding().widthIn(max = 480.dp),
-        shape = RoundedCornerShape(16.dp),
-        action = sn.undo?.let { u -> { TextButton(onClick = { vm.clearSnack(); u() }) { Text("Undo") } } },
-    ) { Text(sn.text) }
+    androidx.compose.animation.AnimatedVisibility(live != null, modifier,
+        enter = androidx.compose.animation.slideInVertically(com.pursuitiron.app.ui.theme.Motion.enter(300)) { it / 3 } +
+            androidx.compose.animation.fadeIn(com.pursuitiron.app.ui.theme.Motion.enter(300)),
+        exit = androidx.compose.animation.slideOutVertically(com.pursuitiron.app.ui.theme.Motion.exit(200)) { it / 3 } +
+            androidx.compose.animation.fadeOut(com.pursuitiron.app.ui.theme.Motion.exit(200))) {
+        Snackbar(
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = bottom).navigationBarsPadding().widthIn(max = 480.dp),
+            shape = RoundedCornerShape(16.dp),
+            action = sn.undo?.let { u -> { TextButton(onClick = { vm.clearSnack(); u() }) { Text("Undo") } } },
+        ) { Text(sn.text) }
+    }
 }
 
 @Composable

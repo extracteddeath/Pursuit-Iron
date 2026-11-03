@@ -50,7 +50,7 @@ internal object NativeKotlinApprovalCodec {
         if(readBoolean())RepBand(readInt(),readInt()) else null
 
     private fun DataOutputStream.writeEnum(value:Enum<*>)=string(value.name)
-    private inline fun <reified T:Enum<T>> DataInputStream.writeEnum():T {
+    private inline fun <reified T:Enum<T>> DataInputStream.readEnum():T {
         val raw=readUTF()
         return enumValues<T>().firstOrNull{it.name==raw}
             ?:throw IOException("unknown approval enum")

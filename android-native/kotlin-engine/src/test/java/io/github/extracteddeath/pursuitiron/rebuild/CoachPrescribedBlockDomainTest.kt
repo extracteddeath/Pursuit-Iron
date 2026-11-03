@@ -229,4 +229,30 @@ class CoachPrescribedBlockDomainTest {
             writable.add("invented")
         }
     }
+
+    @Test fun deloadCannotArtificiallyShortenRecoveryBetweenRemainingSets() {
+        val shorter=review(candidate=policies(rest=0))
+        assertEquals(PrescribedBlockStatus.RECOVERY_COMPARISON_UNRESOLVED,
+            shorter.status)
+        assertTrue(shorter.unresolvedReasons.any {
+            it.contains("rest was shortened")
+        })
+        val longer=review(candidate=policies(rest=200))
+        assertEquals(PrescribedBlockStatus.READY_FOR_HUMAN_REVIEW,
+            longer.status)
+    }
+
+    @Test fun noUserEditOrCustomProgramIsEverAppliedByReadyReview() {
+        val input=PrescribedBlockRequest(deload(),policies(),policies())
+        val r=CoachPrescribedBlockDomain.review(input)
+        assertEquals(PrescribedBlockStatus.READY_FOR_HUMAN_REVIEW,r.status)
+        assertFalse(r.mayIssueWorkout)
+        assertFalse(r.mayModifyHistory)
+        assertFalse(r.mayApplyAutomatically)
+        assertEquals(3,input.block.baseline.exercises.size)
+        assertEquals(n(30),
+            (input.block.baseline.exercises.first().equipment as
+                ComposerEquipment.Verified).plannedLoad)
+    }
+
 }

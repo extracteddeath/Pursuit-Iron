@@ -98,6 +98,8 @@ object CoachPrescribedBlockDomain {
                     notes+="Deload target effort became harder for $exerciseId."
                 if(old.targetRir!=null && next.targetRir==null)
                     notes+="The proposed deload removed the previous effort target for $exerciseId."
+                if(next.restSeconds<old.restSeconds)
+                    notes+="Deload rest was shortened for $exerciseId; reduced volume alone does not justify shorter recovery."
                 // A smaller rep range alone is not proof of reduced fatigue,
                 // especially when actual RIR is missing.
                 if(next.targetReps.maximum<old.targetReps.minimum &&

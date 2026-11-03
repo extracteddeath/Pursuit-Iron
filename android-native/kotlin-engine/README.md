@@ -359,3 +359,27 @@ does not attest the source request belongs to the real logged-in athlete.
 Recovery week policies, movement-to-muscle catalog, cycle persistence,
 approval provenance and Android end-to-end tests are still required
 before it can become a training authority.
+
+
+## Thirteenth domain: fully prescribed deload and phase candidates
+
+CoachPrescribedBlockDomain.review joins longitudinal performance evidence,
+custom-program permissions and both fully prescribed candidate weeks.
+Unlike merely comparing weekly set counts, this recomputes warmups, working
+sets, physical load basis and units, goal-specific rep ranges, RIR targets,
+rest durations, session-time feasibility and every muscle's prescribed dose.
+
+A phase transition cannot reach the human-review gate with a missing
+strength-day exercise policy or invalid equipment weight. A purported deload
+also cannot claim recovery by increasing an exercise's load, lowering the
+planned RIR target, erasing a previous effort target, shortening rest,
+increasing a muscle's dose while reducing total sets, or changing to an
+incomparable bodyweight setup without separate review. Missing baseline
+data is unresolved rather than permission for unsupported adaptation.
+
+READY_FOR_HUMAN_REVIEW means feasibility checks completed, not that the
+program has been certified by qualified coaches or independently validated
+for training outcomes. Neither this status nor any returned candidate can
+issue a workout, alter a custom program or modify training history.
+Exercise-science validation, engine ownership, explicit approval provenance,
+migration/rollback and Android device acceptance remain outstanding.

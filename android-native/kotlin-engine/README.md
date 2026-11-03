@@ -20,8 +20,12 @@ circular recovery gaps (including the Sunday–Monday boundary).
 The generator asks for explicit extra-focus choices when an odd UL/PPL
 schedule or six-day ULPPL schedule is ambiguous. It never makes up
 unreviewed weekly muscle doses or leftover day purposes, and exposes
-infeasible calendars instead of disregarding a lift. Each resulting week
-passes through the existing **catalog, equipment, dose and whole-program**
+infeasible calendars instead of disregarding a lift. It reviews multiple
+calendar alternatives within a **bounded 32-candidate search**, returning
+the first independently feasible draft or the best inspectable unresolved
+draft (prioritizing required visits and actual dose over softer time
+preferences), not an arbitrary first failing arrangement. Each resulting
+week passes through the existing **catalog, equipment, dose and whole-program**
 checks. This is an isolated, bounded first generation layer—not a trained
 exercise selector, issued workout, persisted program or validated dose preset.
 

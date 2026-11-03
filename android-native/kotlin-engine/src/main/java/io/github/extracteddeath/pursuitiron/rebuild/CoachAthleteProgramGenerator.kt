@@ -49,6 +49,8 @@ data class AthleteProgramGenerationReview(
 }
 object CoachAthleteProgramGenerator {
     private const val MAX_ASSIGNMENTS=16000
+    /** Do not turn a bounded candidate review into an unbounded search. */
+    private const val MAX_COMPOSED_CANDIDATES=32
 
     private fun focusCounts(split:ComposerSplit,days:Int,
         extra:List<ComposerFocus>):Map<ComposerFocus,Int>? {
@@ -309,42 +311,71 @@ object CoachAthleteProgramGenerator {
             compareBy<List<ComposerSessionPurpose>> {
                 spacingPenalty(weekdays,it.map {p ->p.name})
             }.thenBy {it.joinToString(",") {p ->p.name}})
+        data class ViablePlacement(
+            val focuses:Map<Int,ComposerFocus>,
+            val intents:List<AthleteCalendarIntent>,
+            val review:AthleteCatalogCandidateReview,
+            val score:List<Int>
+        )
+        fun better(a:List<Int>,b:List<Int>):Boolean {
+            for(i in a.indices)if(a[i]!=b[i])return a[i]<b[i]
+            return false
+        }
         var evaluated=0
-        for(focus in focuses)for(purpose in purposes) {
-            if(++evaluated>MAX_ASSIGNMENTS)break
+        var drafted=0
+        var best:ViablePlacement?=null
+        search@ for(focus in focuses)for(purpose in purposes) {
+            if(++evaluated>MAX_ASSIGNMENTS || drafted>=MAX_COMPOSED_CANDIDATES)
+                break@search
             val plans=placements(weekdays,focus,purpose,policy,catalog,choices)
                 ?:continue
-            // Validate generated intentions against the exact authored
-            // athlete policy. The phase, dose and provenance are not guessed.
+            // Reject unverified phase-specific policy before composing sets.
             val policyReview=CoachGoalProgramPolicyDomain.review(
                 athlete,input.phase,policy.selectedBounds,plans,policy)
             if(policyReview.status!=GoalPolicyStatus.MATCHED_FOR_REVIEW)
                 continue
+            drafted++
+            val byDay=weekdays.indices.associate {weekdays[it] to focus[it]}
             val proposal=CoachAthleteCatalogCandidateDomain.review(
                 AthleteCatalogCandidateRequest(
-                    input.setup,input.phase,
-                    weekdays.indices.associate {weekdays[it] to focus[it]},
+                    input.setup,input.phase,byDay,
                     policy.selectedBounds,input.nonSetSecondsByWeekday,plans,
                     input.catalog,input.choices,input.maximumExercisesPerDay,
                     input.preferredPatternsPerDay,policy))
-            // A mechanical draft may be unresolved due to exercise, hard
-            // time or dose constraints. Preserve it for human diagnosis.
             val actual=proposal.realization
-            val resultStatus=if(proposal.status==
-                    AthleteCandidateStatus.CANDIDATE_FOR_REVIEW &&
+            if(proposal.status==AthleteCandidateStatus.CANDIDATE_FOR_REVIEW &&
                 actual?.status==GoalRealizationStatus.DELIVERED_FOR_REVIEW)
-                AthleteGenerationStatus.GENERATED_FOR_REVIEW
-            else AthleteGenerationStatus.PLACEMENTS_UNRESOLVED
-            if(resultStatus!=AthleteGenerationStatus.GENERATED_FOR_REVIEW)
-                fail("composedWeek",
-                    AthleteGenerationIssueKind.COMPOSED_WEEK_UNRESOLVED,
-                    "The scheduled candidate needs real coach review of volume, recovery, time, equipment or constraints.")
-            return result(resultStatus,
-                weekdays.indices.associate {weekdays[it] to focus[it]},
-                plans,proposal)
+                return result(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
+                    byDay,plans,proposal)
+
+            // Rank actual unresolved drafts by unmet authored promises
+            // before soft time preferences. A locally incomplete first
+            // arrangement must not hide another materially better option.
+            val draft=proposal.catalogReview?.draft
+            val score=listOf(
+                if(draft==null)1 else 0,
+                draft?.missingRequiredVisits?.values?.sum() ?: 1000,
+                draft?.daysWithUnmetPrimary?.size ?: 1000,
+                draft?.audit?.muscles?.values?.count {
+                    it.gapToMev.signum()>0 || it.missingDirectDays>0 ||
+                        it.excessAboveMrv.signum()>0
+                } ?: 1000,
+                draft?.audit?.daysWithoutWorkingSets?.size ?: 1000,
+                draft?.audit?.daysOutsidePreferredWindow?.size ?: 1000,
+                proposal.issues.size
+            )
+            if(best==null || better(score,checkNotNull(best).score))
+                best=ViablePlacement(byDay,plans,proposal,score)
+        }
+        val closest=best
+        if(closest!=null) {
+            fail("composedWeek",AthleteGenerationIssueKind.COMPOSED_WEEK_UNRESOLVED,
+                "The closest checked week still needs coach review of muscle dose, recovery, exercise distribution, time or gym constraints.")
+            return result(AthleteGenerationStatus.PLACEMENTS_UNRESOLVED,
+                closest.focuses,closest.intents,closest.review)
         }
         fail("weekdays",AthleteGenerationIssueKind.SCHEDULE_CONFLICT,
-            "No bounded split/day/primary-lift placement meets the confirmed calendar, movement eligibility and circular recovery rules.")
+            "No bounded split/day/priority-lift placement meets the confirmed calendar, eligibility and circular recovery rules.")
         return result(AthleteGenerationStatus.PLACEMENTS_UNRESOLVED)
     }
 }

@@ -410,3 +410,36 @@ adaptation is enabled. Genuine substitutions need distinct exercise IDs,
 the user's adaptation permissions and a complete, physically valid block
 review. Neither the catalog gate nor the block gate can issue workouts,
 modify saved training history, or replace the active engine.
+
+
+## Fifteenth domain: real legacy catalog ingestion and reconciliation inventory
+
+The native Kotlin rebuild has a **reproducible source staging pass**:
+`node android-native/kotlin-engine/verification/legacy-catalog-ingest.mjs --write-report`.
+
+This imports the *actual* curated and extended web exercise definitions
+from the repository without copying their conclusions into the Kotlin
+prescription engine. The generated `reports/legacy-exercise-inventory.json`
+retains all historical IDs (including entries suppressed by canonical
+name/ID deduplication), the effective-winner identity, source location,
+equipment combinations and alternatives, original muscle coefficients,
+rep ranges and canonical ordering. It includes source-file SHA-256 digests.
+
+Every record is **UNREVIEWED** and excluded from training authority.
+The report exposes ambiguous broad muscle buckets such as `back`,
+unspecified attachment variants, mixed equipment alternatives and missing
+independent physiological credit review. Curated-source membership and old
+`metadataConfidence` fields are historical evidence only, not permission
+to approve coefficients, infer machine loading, or auto-swap exercises.
+
+CI checks that every staged record is unreviewed and that all live
+built-in IDs have a traceable winner. The full report is attached as a
+short-lived **unreviewed** GitHub Actions artifact so migration work
+can audit individual source records without modifying the production
+catalog or hiding lost aliases.
+
+Next, an actual human-reviewed manifest must resolve each exercise's
+muscles (including separate biceps/brachialis/wrist flexors/extensors),
+attachment, exercise-specific load convention and supported equipment
+combinations before any selected tranche can become catalog-authoritative
+in Kotlin. This import is intentionally NOT proof of coaching quality.

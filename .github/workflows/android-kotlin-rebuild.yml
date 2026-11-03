@@ -31,6 +31,16 @@ jobs:
           gradle-version: '9.3.1'
       - name: Verify Kotlin engine cannot alter native workouts
         run: node android-native/kotlin-engine/verification/offline-only-test.mjs
+      - name: Stage legacy web exercise catalog as unreviewed source inventory
+        run: node android-native/kotlin-engine/verification/legacy-catalog-ingest.mjs --write-report
       - name: Test headless Kotlin training decisions and weekly composer without an APK
         working-directory: android-native
         run: gradle :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace
+      - name: Attach legacy migration review inventory (not coaching-approved)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-exercise-inventory-unreviewed
+          path: android-native/kotlin-engine/reports/legacy-exercise-inventory.json
+          if-no-files-found: warn
+          retention-days: 7

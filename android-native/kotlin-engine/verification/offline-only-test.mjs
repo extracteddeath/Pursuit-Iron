@@ -21,9 +21,12 @@ const legacyRuntime=read(appRoot+'NativeRuntimeHost.kt');
 const application=read(appRoot+'PursuitIronApplication.kt');
 const candidate=read(appRoot+'NativeKotlinCandidateHost.kt');
 const localAthlete=read(appRoot+'AppPrivateKotlinLocalAthlete.kt');
+const candidateScreen=read(appRoot+'NativeKotlinWorkoutCandidateScreen.kt');
+const sessionController=read(appRoot+'NativeKotlinSessionController.kt');
 assert.ok(application.includes('by lazy { NativeKotlinCandidateHost(applicationContext) }'),
   'Kotlin candidate must not start or enroll anyone at Application startup');
-assert.doesNotMatch(mainActivity, /KotlinCandidateHost|kotlinCandidate|kotlin-engine|nativecoachstore/,
+assert.doesNotMatch(mainActivity,
+  /KotlinCandidateHost|kotlinCandidate|kotlinWorkoutSession|NativeKotlinWorkoutCandidateScreen|kotlin-engine|nativecoachstore/,
   'No Compose screen may switch workout ownership before native cutover');
 assert.doesNotMatch(legacyRuntime, /KotlinCandidateHost|kotlinCandidate|nativecoachstore/,
   'The active legacy workout runtime must not change its owner or journal');
@@ -38,6 +41,18 @@ assert.ok(candidate.includes('CoachAthleteSetupDomain.review') &&
   candidate.includes('NativeKotlinWorkoutCoordinator') &&
   localAthlete.includes('explicitlyActivated=false'),
   'Native onboarding must require explicit reviewed local athlete activation');
+assert.doesNotMatch(candidateScreen+sessionController,
+  /CanonicalJsSandboxProbe|PackagedReadOnlySchemaVerifier|io\\.github\\.extracteddeath\\.pursuitiron\\.domain/,
+  'Kotlin workout screen/controller must not import the live JS-backed runtime');
+assert.ok(candidateScreen.includes('PursuitCard') &&
+  candidateScreen.includes('PursuitPrimaryAction') &&
+  candidateScreen.includes('KotlinWorkoutEntryDomain.parse') &&
+  sessionController.includes('KotlinWorkoutPresentationDomain.inspect') &&
+  sessionController.includes('NativeJournalFileResult.Durable'),
+  'Kotlin workout candidate must share M3E controls and render only acknowledged native receipts');
+assert.ok(!legacyRuntime.includes('NativeKotlinSessionController') &&
+  !mainActivity.includes('NativeKotlinSessionController'),
+  'Independent Kotlin session controller must not switch live workout ownership');
 const storeBuild=read('android-native/native-coach-store/build.gradle.kts');
 assert.ok(nativeSettings.includes('":native-coach-store"') &&
   storeBuild.includes('project(":kotlin-engine")') &&

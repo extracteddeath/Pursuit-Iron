@@ -151,6 +151,21 @@ class CoachCatalogBlockDomainTest {
         assertTrue(result.problems.any {it.contains("stable ID bench")})
     }
 
+    @Test fun sameExerciseIdCannotSilentlyChangeItsEligibleTrainingDays() {
+        val expanded=bench.copy(permittedFocus=setOf(
+            ComposerFocus.FULL_BODY,ComposerFocus.UPPER,ComposerFocus.PUSH))
+        // Both before/after still compose on FULL_BODY. The identity gate,
+        // not an incidental composer failure, must catch the drift.
+        val proposed=candidate(cap=4,catalog=listOf(expanded,row,squat))
+        val result=review(input(proposed=proposed,
+            permission=BlockAdaptPermissions(adaptExercises=true)))
+        assertEquals(CatalogBlockStatus.EXERCISE_IDENTITY_CHANGED,result.status)
+        assertNull(result.fullPrescription)
+        assertTrue(result.problems.any {
+            it.contains("stable ID bench") && it.contains("allowed day focus")
+        })
+    }
+
     @Test fun changedCatalogMuscleCreditsRequireExerciseAdaptationPermission() {
         val altered=bench.copy(
             credits=listOf(DeclaredMuscleCredit(TrainingMuscle.CHEST,

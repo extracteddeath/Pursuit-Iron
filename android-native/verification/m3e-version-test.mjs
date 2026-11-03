@@ -15,9 +15,11 @@ assert.match(gradle, /compileSdk = 37/);
 assert.match(domainGradle, /compileSdk = 37/);
 assert.match(buildWorkflow, /gradle-version: '9\.3\.1'/);
 assert.ok(buildWorkflow.includes('platforms;android-37.0'), 'SDK manager must use the published 37.0 package identifier');
-assert.ok(buildWorkflow.includes('if: ${{ false }}') &&
-  !buildWorkflow.includes('  push:'),
-  'The native preview APK workflow remains frozen until the complete workout journey');
+assert.ok(buildWorkflow.includes("'android-native/M5_DEVICE_TEST_APK.md'") &&
+  buildWorkflow.includes('if: "${{') &&
+  buildWorkflow.includes("github.event_name == 'push'") &&
+  buildWorkflow.includes("startsWith(github.event.head_commit.message, 'milestone(android): M5 ')"),
+  'Routine preview APK builds must remain frozen except for the one guarded M5 development milestone');
 assert.match(gradle, /compose-bom:2026\.09\.00/);
 assert.match(gradle, /androidx\.compose\.material3:material3:1\.5\.0-beta02/);
 assert.match(theme, /motionScheme = MotionScheme\.expressive\(\)/);

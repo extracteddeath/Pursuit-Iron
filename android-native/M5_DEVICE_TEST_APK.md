@@ -28,3 +28,5 @@ keyboard, equipment-aware loads and user-facing interaction polish.
 Report gaps before replacing the legacy engine with independent Kotlin logic.
 
 **Workflow retry:** This milestone retry quotes the conditional YAML scalar so GitHub can parse it. No native training data or user-facing app logic were changed.
+
+**Final source-gate update:** The M3 Expressive verification now recognizes the narrowly guarded M5 development-build exception. The same original Material 3 dependency, 20 themes, and app source remain unchanged.

@@ -2045,3 +2045,17 @@ unsafe invented unit conversions. Empty drafts can switch without an
 unnecessary dialog. No changes to the engine's physical load verification,
 completed training data or persisted program. Source and Compose checks
 required; no APK.
+
+## 2026-11-02 — Exact-source equipment loading messages
+
+The read-only equipment load inspection now retains a typed request
+identity (workout ID, issued set slot and the literal entered load). The
+checking label and failure message render only beside that matching
+set/load, never on other exercises or after typing a different value.
+Asynchronous results and failures are rejected when a different request,
+workout or canonical snapshot is current. Canonical store changes clear
+the in-flight display identity, preventing obsolete spinner and error
+propagation into a subsequent workout. The engine remains the only source
+of confirmed adjacent load values; this pass adds no inferred increments,
+training writes or new persistence. Source and Compose checks required,
+no APK.

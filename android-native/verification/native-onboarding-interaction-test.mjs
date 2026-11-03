@@ -186,6 +186,20 @@ assert.ok(train.includes('onInspectEquipmentLoad:(JournalSetSlot,String)->Unit')
   host.includes('latest.storeChangeKey==initial.storeChangeKey') &&
   activity.includes('onInspectEquipmentLoad=runtime::inspectEquipmentLoad'),
   'Compact equipment options must use an exact canonical verified result for the current set, typed load and source revision; no inferred increments or writes');
+assert.ok(host.includes('internal data class NativeEquipmentLoadRequest(') &&
+  host.includes('val equipmentLoadRequest:NativeEquipmentLoadRequest?=null') &&
+  host.includes('val request=NativeEquipmentLoadRequest(progress.plan.session.workoutId,slot,input)') &&
+  host.includes('equipmentLoadRequest=request,') &&
+  host.includes('latest.equipmentLoadRequest!=request -> latest') &&
+  host.includes('latest.equipmentLoadRequest==request &&') &&
+  host.includes('latest.storeChangeKey==initial.storeChangeKey') &&
+  verifiedLoadUi.includes('val request=state.equipmentLoadRequest?.takeIf {') &&
+  verifiedLoadUi.includes('it.workoutId==session.workoutId && it.slot==set.slot && it.inputLoad==load') &&
+  verifiedLoadUi.includes('val checking=state.equipmentLoadBusy && request!=null') &&
+  verifiedLoadUi.includes('checking -> "Checking available loads…"') &&
+  verifiedLoadUi.includes('if(review==null && request!=null)state.equipmentLoadError?.let {'),
+  'Equipment-check progress and errors must belong to the exact issued workout, set and entered load, not other visible sets or obsolete requests');
+
 assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workoutId)') &&
   train.includes('val visibleSets=if(focusMode && (journal.unresolvedCount==0 || exercisePending==0))') &&
   train.includes('else if(focusMode)listOfNotNull(exercise.sets.firstOrNull') &&

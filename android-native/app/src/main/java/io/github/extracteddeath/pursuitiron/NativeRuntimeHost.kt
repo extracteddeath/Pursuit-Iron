@@ -9,6 +9,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.random.Random
 
+/** Source-bound identity for the one in-flight read-only loading lookup. */
+internal data class NativeEquipmentLoadRequest(
+    val workoutId:String,val slot:JournalSetSlot,val inputLoad:String
+)
+
 internal data class NativeRuntimeState(
     val loading: Boolean=true,val ready: Boolean=false,val busy: Boolean=false,val blocked: Boolean=false,
     val verifier: PackagedReadOnlySchemaVerifier?=null,val options: NativeProgramOptions?=null,
@@ -28,6 +33,7 @@ internal data class NativeRuntimeState(
     val muscleReview: NativeWorkoutMuscleReview?=null,
     val muscleReviewBusy: Boolean=false,val muscleReviewError: String?=null,
     val equipmentLoad: NativeEquipmentLoading?=null,
+    val equipmentLoadRequest:NativeEquipmentLoadRequest?=null,
     val equipmentLoadBusy:Boolean=false,val equipmentLoadError:String?=null
 )
 
@@ -78,7 +84,8 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 val watching=owner.subscribeCommittedChanges {
                     backupReviewGate.discard()
                     mutable.update { it.copy(storeChangeKey=it.storeChangeKey+1,shortPreview=null,muscleReview=null,
-                        equipmentLoad=null,equipmentLoadError=null,historyCalendar=null) }
+                        equipmentLoad=null,equipmentLoadRequest=null,equipmentLoadBusy=false,
+                        equipmentLoadError=null,historyCalendar=null) }
                 }
                 synchronized(lifetime) {
                     if(closed) { watching.close();throw CancellationException("Runtime closed") }
@@ -648,7 +655,9 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
             progress.journal.completed.any {it.intent.slot==slot} ||
             !input.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$")))return
         val owner=store ?: return;val engine=initial.verifier?.programEngine ?: return
-        mutable.update {it.copy(equipmentLoad=null,equipmentLoadBusy=true,equipmentLoadError=null)}
+        val request=NativeEquipmentLoadRequest(progress.plan.session.workoutId,slot,input)
+        mutable.update {it.copy(equipmentLoad=null,equipmentLoadRequest=request,
+            equipmentLoadBusy=true,equipmentLoadError=null)}
         scope.launch {
             try {
                 val bytes=checkNotNull(owner.readOwnedCurrentStoreBytes())
@@ -659,17 +668,29 @@ internal class NativeRuntimeHost(context: Context) : AutoCloseable {
                 } finally { bytes.fill(0) }
                 ensureActive()
                 mutable.update { latest ->
-                    if(latest.workout?.plan?.issuedJson==progress.plan.issuedJson &&
-                        latest.workout?.journal?.completed?.none {it.intent.slot==slot}==true &&
-                        latest.storeChangeKey==initial.storeChangeKey)
-                        latest.copy(equipmentLoad=result,equipmentLoadBusy=false,equipmentLoadError=null)
-                    else latest.copy(equipmentLoad=null,equipmentLoadBusy=false,
-                        equipmentLoadError="The workout changed. Check equipment again.")
+                    when {
+                        latest.equipmentLoadRequest!=request -> latest
+                        latest.workout?.plan?.issuedJson==progress.plan.issuedJson &&
+                            latest.workout?.journal?.completed?.none {it.intent.slot==slot}==true &&
+                            latest.storeChangeKey==initial.storeChangeKey ->
+                            latest.copy(equipmentLoad=result,equipmentLoadBusy=false,equipmentLoadError=null)
+                        // No error from a previous workout or changed source
+                        // may be painted next to a newly selected set.
+                        else -> latest.copy(equipmentLoad=null,equipmentLoadBusy=false,
+                            equipmentLoadError=null)
+                    }
                 }
             } catch(cancelled:CancellationException) {throw cancelled}
               catch(_:Exception) {
-                mutable.update {it.copy(equipmentLoad=null,equipmentLoadBusy=false,
-                    equipmentLoadError="Cannot verify selectable weights. Use manual entry; nothing was changed.")}
+                mutable.update { latest ->
+                    if(latest.equipmentLoadRequest==request &&
+                        latest.workout?.plan?.session?.workoutId==request.workoutId &&
+                        latest.storeChangeKey==initial.storeChangeKey)
+                        latest.copy(equipmentLoad=null,equipmentLoadBusy=false,
+                            equipmentLoadError="Cannot verify selectable weights. Use manual entry; nothing was changed.")
+                    else latest.takeIf {it.equipmentLoadRequest!=request}
+                        ?: latest.copy(equipmentLoad=null,equipmentLoadBusy=false,equipmentLoadError=null)
+                }
             }
         }
     }

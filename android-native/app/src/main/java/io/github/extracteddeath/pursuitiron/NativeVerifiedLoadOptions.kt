@@ -29,6 +29,10 @@ internal fun NativeVerifiedLoadOptions(
         it.workoutId==session.workoutId && it.slot==set.slot &&
             it.unit==session.unit && it.inputLoad==load
     }
+    val request=state.equipmentLoadRequest?.takeIf {
+        it.workoutId==session.workoutId && it.slot==set.slot && it.inputLoad==load
+    }
+    val checking=state.equipmentLoadBusy && request!=null
     val validInput=load.matches(Regex("^(0|[1-9][0-9]{0,4})(\\.[0-9]{1,3})?$"))
     var showExplanation by rememberSaveable(session.workoutId,set.slot.exerciseIndex,set.slot.setIndex) {
         mutableStateOf(false)
@@ -38,7 +42,7 @@ internal fun NativeVerifiedLoadOptions(
             enabled=enabled && !state.equipmentLoadBusy,
             modifier=Modifier.fillMaxWidth()) {
             Text(when {
-                state.equipmentLoadBusy -> "Checking available loads…"
+                checking -> "Checking available loads…"
                 review?.confirmed==true -> "Refresh equipment load options"
                 else -> "Check equipment load options"
             })
@@ -105,7 +109,7 @@ internal fun NativeVerifiedLoadOptions(
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    if(review==null)state.equipmentLoadError?.let {
+    if(review==null && request!=null)state.equipmentLoadError?.let {
         Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
     }
 }

@@ -52,14 +52,17 @@ class CoachSessionPrescriptionDomainTest {
         rest:Int=150,
         scheme:SetLoadScheme=SetLoadScheme.STRAIGHT,
         backoff:BigDecimal?=null,
-        warmups:List<DeclaredWarmupStep> = emptyList()
+        warmups:List<DeclaredWarmupStep> = emptyList(),
+        backoffReps:RepBand?=null,
+        backoffRir:Int?=null
     )=ExercisePrescriptionPolicy(id,purpose,reps,rir,90,rest,scheme,
-        backoff,warmups)
+        backoff,warmups,backoffReps,backoffRir)
     private fun policies()=listOf(
         policy("db-press",ComposerSessionPurpose.STRENGTH_SKILL,
             reps=RepBand(3,5),rir=3,rest=240,
             scheme=SetLoadScheme.LAST_SET_BACKOFF,
-            backoff=n("5"),warmups=listOf(warm)),
+            backoff=n("5"),warmups=listOf(warm),
+            backoffReps=RepBand(6,8),backoffRir=2),
         policy("db-press",ComposerSessionPurpose.HYPERTROPHY,
             reps=RepBand(8,12),rir=2,rest=120),
         policy("db-row",ComposerSessionPurpose.STRENGTH_SKILL,
@@ -84,9 +87,14 @@ class CoachSessionPrescriptionDomainTest {
         assertNull(warmup.targetRir)
         val sets=primary.sets.filter {it.type==DraftSetType.WORKING}
         assertTrue(sets.size>=2)
-        assertTrue(sets.all {it.targetReps==RepBand(3,5) && it.targetRir==3 &&
-            it.restSeconds==240})
+        assertTrue(sets.dropLast(1).all {
+            it.targetReps==RepBand(3,5) && it.targetRir==3 &&
+                it.restSeconds==240
+        })
+        assertEquals(240,sets.last().restSeconds)
         assertEquals(n("25"),(sets.last().load as DraftSetLoad.Verified).value)
+        assertEquals(RepBand(6,8),sets.last().targetReps)
+        assertEquals(2,sets.last().targetRir)
         assertTrue(sets.dropLast(1).all {
             (it.load as DraftSetLoad.Verified).value==n("30")
         })
@@ -183,7 +191,8 @@ class CoachSessionPrescriptionDomainTest {
             if(it.exerciseId=="db-press" &&
                 it.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
                 it.copy(scheme=SetLoadScheme.STRAIGHT,
-                    maximumAuthorizedBackoff=null,warmups=emptyList())
+                    maximumAuthorizedBackoff=null,warmups=emptyList(),
+                    backoffReps=null,backoffRir=null)
             else it
         }
         val valid=CoachSessionPrescriptionDomain.draft(
@@ -206,7 +215,12 @@ class CoachSessionPrescriptionDomainTest {
             policies().map {it.copy(warmups=listOf(warm.copy(load=n("-5"))))},
             policies().map {it.copy(
                 scheme=SetLoadScheme.LAST_SET_BACKOFF,
-                maximumAuthorizedBackoff=null)}
+                maximumAuthorizedBackoff=null)},
+            policies().map {it.copy(
+                scheme=SetLoadScheme.LAST_SET_BACKOFF,backoffReps=null)},
+            policies().map {it.copy(backoffRir=11)},
+            policies().map {it.copy(scheme=SetLoadScheme.STRAIGHT,
+                backoffReps=RepBand(6,8))}
         )
         bad.forEach {p->
             assertThrows(IllegalArgumentException::class.java) {

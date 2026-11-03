@@ -35,7 +35,10 @@ data class ExercisePrescriptionPolicy(
     val restSecondsPerSet:Int,
     val scheme:SetLoadScheme,
     val maximumAuthorizedBackoff:BigDecimal?=null,
-    val warmups:List<DeclaredWarmupStep> = emptyList()
+    val warmups:List<DeclaredWarmupStep> = emptyList(),
+    /** Backoff targets are authored separately; never copy top-set targets. */
+    val backoffReps:RepBand?=null,
+    val backoffRir:Int?=null
 )
 
 data class DraftPrescribedSet(
@@ -94,13 +97,17 @@ object CoachSessionPrescriptionDomain {
         require(policies.all {p->
             p.exerciseId in ids &&
                 (p.targetRir==null || p.targetRir in 0..10) &&
+                (p.backoffRir==null || p.backoffRir in 0..10) &&
                 p.activeSecondsPerSet in 1..3600 && p.restSecondsPerSet in 0..3600 &&
                 p.warmups.size<=12 &&
                 (p.maximumAuthorizedBackoff==null ||
                     (p.maximumAuthorizedBackoff>zero &&
                         validLoad(p.maximumAuthorizedBackoff))) &&
                 (p.scheme!=SetLoadScheme.LAST_SET_BACKOFF ||
-                    p.maximumAuthorizedBackoff!=null) &&
+                    (p.maximumAuthorizedBackoff!=null && p.backoffReps!=null)) &&
+                (p.scheme!=SetLoadScheme.STRAIGHT ||
+                    (p.backoffReps==null && p.backoffRir==null &&
+                        p.maximumAuthorizedBackoff==null)) &&
                 p.warmups.all {w->
                     validLoad(w.load) && w.reps in 1..100 &&
                         w.activeSeconds in 1..3600 && w.restSeconds in 0..3600
@@ -157,7 +164,9 @@ object CoachSessionPrescriptionDomain {
             DraftPrescribedSet(option.exerciseId+":d"+visit.dayIndex+":s"+i,
                 DraftSetType.WORKING,i,
                 if(i==visit.sets-1 && smaller!=null)smaller else workLoad,
-                p.workingReps,p.targetRir,
+                if(i==visit.sets-1 && smaller!=null)
+                    checkNotNull(p.backoffReps) else p.workingReps,
+                if(i==visit.sets-1 && smaller!=null)p.backoffRir else p.targetRir,
                 p.activeSecondsPerSet,p.restSecondsPerSet)
         }
         return warmups+working

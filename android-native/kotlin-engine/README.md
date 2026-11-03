@@ -281,3 +281,35 @@ rather than a false performance failure.
 This is an isolated coaching-review component. Actual rest prescriptions,
 recovery validation, personalized effort and exercise-specific target
 ownership still need integration and independent certification.
+
+
+## Tenth domain: purpose-driven exercise prescription drafts
+
+\`CoachSessionPrescriptionDomain.draft\` now takes an independently recomputed
+\`CoachWeekComposer\` candidate and **explicitly authored** exercise policies
+keyed to both the exercise ID and session purpose. It preserves strength-skill
+versus hypertrophy differences for rep envelopes, target RIR and rest without
+using universal guesswork or presuming a phase implies an arbitrary intensity.
+
+For each exercise visit, the draft produces stable original working-set IDs,
+a separate warm-up series with explicitly verified physical loads, and optional
+one-last-set backoffs using the **next exact available implement load below
+the authored top weight**. Backoff reps and effort are independently declared,
+rather than copied from the top set. RIR is a proposed target, never a
+fabricated log of actual exertion. Explicit bodyweight is not represented as
+a spurious 0 lb; no physical load or warm-up is invented for it.
+
+The final audit is recomputed from the actual proposed set-work durations,
+warm-ups and rest. Unverified or impossible loads, missing purpose-specific
+policies, invalid backoff steps and excess hard-time requirements keep the
+result **UNRESOLVED**. Partial results have no complete audit. Neither a
+valid draft nor an unresolved draft may issue workouts or change saved
+programs. Reviews and explanations are exercise-level rather than
+per-set banners.
+
+**Still unresolved before the engine owns real training:** independently
+vetted phase/exercise templates, athlete-specific programming targets,
+fatigue-aware prescription over the full set sequence, transitions between
+weeks, supervised deload/cycle decisions, authenticated data ownership,
+native UI integration, device verification and comparative coaching-quality
+acceptance against the old engine. A valid draft is not a certified coach.

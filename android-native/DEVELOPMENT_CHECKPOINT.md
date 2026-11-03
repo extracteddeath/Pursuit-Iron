@@ -2288,3 +2288,14 @@ The original theme's contrast-safe first-value ink survives both layouts;
 there is no new mutable state, training rule, or data write. Source checks
 protect the shared adaptive rendering, with actual phone/large-font visual
 acceptance and latest Kotlin compilation still required. No APK.
+
+## 2026-11-02 — Exercise-specific zero-load copy
+
+The shared set-entry field no longer labels all entered zero loads as
+"bodyweight". The prior generic explanation was inaccurate for machines,
+assistance and other verified equipment contexts. The replacement explicitly
+warns that zero load does not automatically imply bodyweight and leaves
+exercise-specific interpretation to the authoritative engine/loading
+contract. Existing actual load values, validation, warm-up rules and journal
+receipts are unchanged. The shared wording applies consistently to active
+sets and corrections. No APK or engine rewrite.

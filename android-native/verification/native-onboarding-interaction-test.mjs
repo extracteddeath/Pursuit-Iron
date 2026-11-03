@@ -11,6 +11,25 @@ assert.ok(ui.includes('mutableStateOf(ArrayList(state.proposal?.profile?.equipme
   !ui.includes('mutableStateOf(ArrayList(initial.equipment))') &&
   ui.includes('hasAvailableEquipment &&'),
   'A fresh gym starts without invented equipment; a reviewed profile restores previously confirmed selections');
+const gymEditor=fs.readFileSync(root+'NativeGymInventoryEditor.kt','utf8');
+const savedGymEditor=fs.readFileSync(root+'NativeSavedGymInventoryPanel.kt','utf8');
+const gymFieldPolicy=fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeGymLoadingFieldPolicy.kt','utf8');
+assert.ok(ui.includes('availableEquipment=equipmentForReview') &&
+  gymEditor.includes('availableEquipment: Collection<String>? = null') &&
+  gymEditor.includes('NativeGymLoadingFieldPolicy.visibleFields(availableEquipment,draft)') &&
+  gymEditor.includes('NativeGymLoadingFieldPolicy.retainedUnselectedFields(availableEquipment,draft)') &&
+  gymEditor.includes('NativeGymLoadingFieldPolicy.hasSpecialtyMachine(availableEquipment)') &&
+  gymEditor.includes('if ("bar" in relevantFields) NativeGymLoadField') &&
+  gymEditor.includes('if ("plates" in relevantFields) NativeGymLoadField') &&
+  gymEditor.includes('if ("smith" in relevantFields) NativeGymLoadField') &&
+  gymEditor.includes('if ("machine" in relevantFields) NativeGymLoadField') &&
+  gymEditor.includes('Previously entered weights for unselected equipment remain editable') &&
+  gymEditor.includes('A generic machine stack cannot establish') &&
+  !savedGymEditor.includes('availableEquipment=') &&
+  gymFieldPolicy.includes('if (availableEquipment == null) return standardFields') &&
+  gymFieldPolicy.includes('!draft[key].isNullOrBlank()'),
+  'Only relevant new-gym loading fields are suggested, unselected confirmed stock stays editable, and saved profiles remain fully editable');
 const equipmentPicker=fs.readFileSync(root+'NativeGroupedEquipmentPicker.kt','utf8');
 const equipmentPolicy=fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeEquipmentSelectionPolicy.kt','utf8');

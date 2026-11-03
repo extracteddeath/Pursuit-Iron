@@ -49,8 +49,8 @@ internal object NativeKotlinApprovalCodec {
     private fun DataInputStream.optionalBand():RepBand?=
         if(readBoolean())RepBand(readInt(),readInt()) else null
 
-    private fun DataOutputStream.enum(value:Enum<*>)=string(value.name)
-    private inline fun <reified T:Enum<T>> DataInputStream.enum():T {
+    private fun DataOutputStream.writeEnum(value:Enum<*>)=string(value.name)
+    private inline fun <reified T:Enum<T>> DataInputStream.writeEnum():T {
         val raw=readUTF()
         return enumValues<T>().firstOrNull{it.name==raw}
             ?:throw IOException("unknown approval enum")
@@ -80,17 +80,17 @@ internal object NativeKotlinApprovalCodec {
         when(stock) {
             null -> writeByte(0)
             is VerifiedLoadStock.Totals -> {
-                writeByte(1);enum(stock.unit);enum(stock.basis)
+                writeByte(1);writeEnum(stock.unit);writeEnum(stock.basis)
                 items(stock.loads){decimal(it)}
             }
             is VerifiedLoadStock.Barbell -> {
-                writeByte(2);enum(stock.unit);decimal(stock.barWeight)
+                writeByte(2);writeEnum(stock.unit);decimal(stock.barWeight)
                 items(stock.pairedPlates.entries){(plate,count)->
                     decimal(plate);writeInt(count)
                 }
             }
             is VerifiedLoadStock.Stack -> {
-                writeByte(3);enum(stock.unit);enum(stock.basis)
+                writeByte(3);writeEnum(stock.unit);writeEnum(stock.basis)
                 decimal(stock.minimum);decimal(stock.increment)
                 decimal(stock.maximum)
             }
@@ -98,16 +98,16 @@ internal object NativeKotlinApprovalCodec {
     }
     private fun DataInputStream.stock():VerifiedLoadStock?=when(readUnsignedByte()) {
         0 -> null
-        1 -> VerifiedLoadStock.Totals(enum<LoadUnit>(),enum<LoadBasis>(),
+        1 -> VerifiedLoadStock.Totals(readEnum<LoadUnit>(),readEnum<LoadBasis>(),
             items(512){decimal()})
         2 -> {
-            val unit=enum<LoadUnit>();val bar=decimal()
+            val unit=readEnum<LoadUnit>();val bar=decimal()
             val entries=items(32){decimal() to readInt()}
             if(entries.map{it.first}.distinct().size!=entries.size)
                 throw IOException("duplicate plate denomination")
             VerifiedLoadStock.Barbell(unit,bar,entries.toMap())
         }
-        3 -> VerifiedLoadStock.Stack(enum<LoadUnit>(),enum<LoadBasis>(),
+        3 -> VerifiedLoadStock.Stack(readEnum<LoadUnit>(),readEnum<LoadBasis>(),
             decimal(),decimal(),decimal())
         else -> throw IOException("unknown equipment inventory")
     }
@@ -116,22 +116,22 @@ internal object NativeKotlinApprovalCodec {
         when(e) {
             ComposerEquipment.Bodyweight -> writeByte(0)
             is ComposerEquipment.Verified -> {
-                writeByte(1);enum(e.unit);decimal(e.plannedLoad);stock(e.inventory)
+                writeByte(1);writeEnum(e.unit);decimal(e.plannedLoad);stock(e.inventory)
             }
         }
     }
     private fun DataInputStream.equipment():ComposerEquipment=when(readUnsignedByte()) {
         0 -> ComposerEquipment.Bodyweight
-        1 -> ComposerEquipment.Verified(enum<LoadUnit>(),decimal(),stock())
+        1 -> ComposerEquipment.Verified(readEnum<LoadUnit>(),decimal(),stock())
         else -> throw IOException("unknown equipment")
     }
 
     private fun DataOutputStream.exercise(e:ComposerExerciseOption) {
-        string(e.exerciseId);enum(e.pattern)
-        items(e.allowedFocus.sortedBy{it.ordinal}){enum(it)}
+        string(e.exerciseId);writeEnum(e.pattern)
+        items(e.allowedFocus.sortedBy{it.ordinal}){writeEnum(it)}
         equipment(e.equipment)
         items(e.credits){c->
-            enum(c.muscle);enum(c.role);decimal(c.fractionalSet)
+            writeEnum(c.muscle);writeEnum(c.role);decimal(c.fractionalSet)
         }
         writeInt(e.workSeconds);writeInt(e.restSeconds)
         writeInt(e.minimumSetsPerVisit);writeInt(e.maximumSetsPerVisit)
@@ -139,31 +139,31 @@ internal object NativeKotlinApprovalCodec {
         writeInt(e.minimumCalendarDayGap);writeInt(e.priority)
         optionalString(e.recoveryGroup)
         writeInt(e.minimumGroupCalendarDayGap)
-        enum(e.role)
+        writeEnum(e.role)
         optionalBand(e.sourcePracticalReps)
     }
     private fun DataInputStream.exercise():ComposerExerciseOption {
         val exerciseId=readUTF()
-        val pattern=enum<ComposerPattern>()
-        val allowedFocus=items(6){enum<ComposerFocus>()}
+        val pattern=readEnum<ComposerPattern>()
+        val allowedFocus=items(6){readEnum<ComposerFocus>()}
         if(allowedFocus.distinct().size!=allowedFocus.size)
             throw IOException("duplicate allowed focus")
         val equipment=equipment()
         val credits=items(16){
-            DeclaredMuscleCredit(enum<TrainingMuscle>(),
-                enum<MuscleCreditRole>(),decimal())
+            DeclaredMuscleCredit(readEnum<TrainingMuscle>(),
+                readEnum<MuscleCreditRole>(),decimal())
         }
         return ComposerExerciseOption(
             exerciseId,pattern,allowedFocus.toSet(),equipment,credits,
             readInt(),readInt(),readInt(),readInt(),readInt(),readInt(),
-            readInt(),readInt(),optionalString(),readInt(),enum<ComposerRole>(),
+            readInt(),readInt(),optionalString(),readInt(),readEnum<ComposerRole>(),
             optionalBand()
         )
     }
     private fun DataOutputStream.program(p:ComposerRequest) {
-        enum(p.split);enum(p.phase)
+        writeEnum(p.split);writeEnum(p.phase)
         items(p.days){day->
-            writeInt(day.calendarDay);enum(day.focus)
+            writeInt(day.calendarDay);writeEnum(day.focus)
             val window=day.window
             writeInt(window.preferredMinimumMinutes)
             optionalInt(window.preferredMaximumMinutes)
@@ -171,35 +171,35 @@ internal object NativeKotlinApprovalCodec {
             writeInt(window.declaredNonSetSeconds)
         }
         items(p.bounds){b->
-            enum(b.muscle);decimal(b.mev);decimal(b.mav);decimal(b.mrv)
+            writeEnum(b.muscle);decimal(b.mev);decimal(b.mav);decimal(b.mrv)
             writeInt(b.minimumDirectDays)
         }
         items(p.exercises){exercise(it)}
         writeInt(p.maximumDifferentExercisesPerDay)
         writeInt(p.preferredPatternsPerDay)
         items(p.sessionIntents){i->
-            writeInt(i.dayIndex);enum(i.purpose)
+            writeInt(i.dayIndex);writeEnum(i.purpose)
             optionalString(i.requiredPrimaryExerciseId)
         }
         optionalInt(p.maximumBarbellExercisesPerDay)
         writeBoolean(p.allowDirectTricepsOnLower)
     }
     private fun DataInputStream.program():ComposerRequest {
-        val split=enum<ComposerSplit>();val phase=enum<TrainingPhase>()
+        val split=readEnum<ComposerSplit>();val phase=readEnum<TrainingPhase>()
         val days=items(6){
-            ComposerDay(readInt(),enum<ComposerFocus>(),
+            ComposerDay(readInt(),readEnum<ComposerFocus>(),
                 DeclaredSessionWindow(readInt(),optionalInt(),
                     optionalInt(),readInt()))
         }
         val bounds=items(16){
-            DeclaredMuscleDoseBounds(enum<TrainingMuscle>(),decimal(),
+            DeclaredMuscleDoseBounds(readEnum<TrainingMuscle>(),decimal(),
                 decimal(),decimal(),readInt())
         }
         val exercises=items(32){exercise()}
         val maxDifferent=readInt()
         val preferred=readInt()
         val intents=items(6){
-            ComposerSessionIntent(readInt(),enum<ComposerSessionPurpose>(),
+            ComposerSessionIntent(readInt(),readEnum<ComposerSessionPurpose>(),
                 optionalString())
         }
         return ComposerRequest(split,phase,days,bounds,exercises,maxDifferent,
@@ -208,11 +208,11 @@ internal object NativeKotlinApprovalCodec {
 
     private fun DataOutputStream.policies(policies:List<ExercisePrescriptionPolicy>) {
         items(policies){p->
-            string(p.exerciseId);enum(p.purpose)
+            string(p.exerciseId);writeEnum(p.purpose)
             writeInt(p.workingReps.minimum);writeInt(p.workingReps.maximum)
             optionalInt(p.targetRir)
             writeInt(p.activeSecondsPerSet);writeInt(p.restSecondsPerSet)
-            enum(p.scheme);optionalDecimal(p.maximumAuthorizedBackoff)
+            writeEnum(p.scheme);optionalDecimal(p.maximumAuthorizedBackoff)
             items(p.warmups){w->
                 decimal(w.load);writeInt(w.reps)
                 writeInt(w.activeSeconds);writeInt(w.restSeconds)
@@ -222,9 +222,9 @@ internal object NativeKotlinApprovalCodec {
     }
     private fun DataInputStream.policies():List<ExercisePrescriptionPolicy> =
         items(128){
-            ExercisePrescriptionPolicy(readUTF(),enum<ComposerSessionPurpose>(),
+            ExercisePrescriptionPolicy(readUTF(),readEnum<ComposerSessionPurpose>(),
                 RepBand(readInt(),readInt()),optionalInt(),
-                readInt(),readInt(),enum<SetLoadScheme>(),optionalDecimal(),
+                readInt(),readInt(),readEnum<SetLoadScheme>(),optionalDecimal(),
                 items(12){
                     DeclaredWarmupStep(decimal(),readInt(),readInt(),readInt())
                 },optionalBand(),optionalInt())

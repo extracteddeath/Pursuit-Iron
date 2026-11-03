@@ -249,7 +249,7 @@ class NativeKotlinWorkoutCoordinatorTest {
             val original=issued(issuing.get(20,java.util.concurrent.TimeUnit.SECONDS))
             assertEquals(source,original.journal.snapshot.source)
             modifying.get(20,java.util.concurrent.TimeUnit.SECONDS)
-            assertEquals(9,auth.approved?.currentSource?.programRevision)
+            assertEquals(9L,auth.approved?.currentSource?.programRevision)
             // The old frozen workout remains valid for its owner. Reissuing
             // under a revoked source may not create a new target.
             assertEquals(original.journal,

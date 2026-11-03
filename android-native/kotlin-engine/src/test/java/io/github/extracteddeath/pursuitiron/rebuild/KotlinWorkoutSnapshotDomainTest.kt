@@ -154,7 +154,9 @@ class KotlinWorkoutSnapshotDomainTest {
             KotlinSnapshotRejection.PROGRAM_UNRESOLVED),
             KotlinWorkoutSnapshotDomain.stage(
                 request(approved=hard,authoredPolicies=impossible)))
-        val malformed=program().copy(days=emptyList())
+        val existing=program()
+        val malformed=existing.copy(days=listOf(
+            existing.days[0],existing.days[0],existing.days[2]))
         assertEquals(KotlinWorkoutSnapshotResult.Rejected(
             KotlinSnapshotRejection.INVALID_PROGRAM),
             KotlinWorkoutSnapshotDomain.stage(

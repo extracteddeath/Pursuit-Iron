@@ -4,6 +4,29 @@
 owner, and NOT the final end-to-end Kotlin cutover.** The Android app does not
 depend on this module. The legacy JavaScript runtime remains unchanged.
 
+## Native Kotlin issuance coordinator — approval-checked integration
+
+`NativeKotlinWorkoutCoordinator` joins the **actual independent Kotlin
+`KotlinWorkoutSnapshotDomain.stage`** with the already tested atomic
+`KotlinNativeJournalFileStore.issueAuthorized` path, rather than importing
+any JavaScript training engine. An injected `NativeKotlinWorkoutAuthority`
+must read an authenticated user's **current** accepted program, exercise
+policies, workout-day grant, revisions and trusted storage identity from the
+app's own data/authentication layer. No UI text or caller-provided boolean is
+an approval. The coordinator stages a fully audited week and workout first,
+then **re-reads and re-stages the trusted approval inside the file lock**
+before committing; revoked grants, gym revisions, changed policy/targets
+or invalid physical loads refuse without writing a partial workout.
+
+A pre-existing workout can still be opened and finished after a plan edit:
+`canAccessIssuedWorkout` checks current account ownership separately from
+new-issuance approval. Original issued targets and receipts remain frozen.
+Logout or another athlete's session must deny access. The authorization
+provider is a required production host dependency **not implemented here**;
+test doubles prove the contract, not actual Android sign-in security.
+Cross-store version fencing/transactional program ownership and device
+instrumentation are still mandatory before production integration.
+
 ## What exists
 
 `KotlinNativeJournalFileStore` provides a **private-directory, per-athlete,

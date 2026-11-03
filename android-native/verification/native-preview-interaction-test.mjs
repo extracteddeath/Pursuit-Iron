@@ -48,9 +48,10 @@ assert.ok(programEditor.includes('requestGymEdit(id)') &&
   screens.includes('gymFocusExerciseId=id') &&
   screens.includes('focusExerciseId=gymFocusExerciseId') &&
   gymEditor.includes('focusExerciseId=focusExerciseId?.takeIf') &&
-  inventoryEditor.includes('Clear this movement\'s verified weight setting') &&
-  inventoryEditor.includes('onChange("override:${focused.id}","")') &&
-  inventoryEditor.includes('candidates.filter { it.id!=focused?.id }'),
+  inventoryEditor.includes('NativeExerciseWeightField(focused,unit,draft,onChange,enabled)') &&
+  inventoryEditor.includes('Text("Clear this exercise\'s weights")') &&
+  inventoryEditor.includes('onClick={onChange(key,"")}') &&
+  inventoryEditor.includes('candidates.filterNot { it.id==focused?.id }'),
   'The blocked movement must open its exact saved physical field without duplicate controls or an implicit write');
 const plateViewer=fs.readFileSync(root + 'NativeVerifiedPlateBreakdown.kt','utf8');
 assert.ok(plateViewer.includes('withContext(Dispatchers.Default)') &&
@@ -60,7 +61,9 @@ assert.ok(plateViewer.includes('withContext(Dispatchers.Default)') &&
   plateViewer.includes('remember(session.workoutId,selectedLoad,inventory,allowed,exactOnly,exact)'),
   'Verified plate solving must run off the main thread with session/stock-bound loading, no stale plate layouts');
 const verifiedLoad=fs.readFileSync(root + 'NativeVerifiedLoadOptions.kt','utf8');
-assert.ok(inventoryEditor.includes('Values must match your real logged totals; never infer plate sides, sled weight or resistance') &&
+assert.ok(inventoryEditor.includes('Enter exact weights as recorded. Never assume sled, plate-side, or lever resistance.') &&
+  inventoryEditor.includes('val exactOnly=policy.exactOnly(candidate)') &&
+  inventoryEditor.includes('enabled=enabled && raw.isBlank()') &&
   verifiedLoad.includes('Verified selectable logged values') &&
   verifiedLoad.includes('not a measurement of') &&
   verifiedLoad.includes('review.mode=="external_load"') &&

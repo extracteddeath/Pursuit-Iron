@@ -97,7 +97,8 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)
             val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
-                NativeProgramProfile(name="Verified gym weight",allowSupersets=false),
+                NativeProgramProfile(name="Verified gym weight",allowSupersets=false,
+                    equipment=NativeProgramProfile().equipment.filterNot { it=="no-rack" }+"rack"),
                 "load-create","load-program",1000,223)))
             val start=NativeWorkoutCodec.startJson("load-program","load-workout",2000)
             val original=checkNotNull(engine.prepareWorkout(proposal.snapshot,start))
@@ -339,7 +340,9 @@ class CanonicalWorkoutRuntimeIntegrationTest {
         NodeTransport().use { node -> runBlocking {
             val engine=SandboxCanonicalWorkoutStoreEngine(node)
             val proposal=checkNotNull(engine.prepareProgram(NativeProgramSetupCodec.setupJson(
-                NativeProgramProfile(name="Editable plan",unit="kg"),"create-edit","program-edit",1000,223)))
+                NativeProgramProfile(name="Editable plan",unit="kg",
+                    equipment=NativeProgramProfile().equipment.filterNot { it=="no-rack" }+"rack"),
+                    "create-edit","program-edit",1000,223)))
             val drive=Drive();var store=CanonicalWorkoutStorePersistence(drive,engine)
             assertTrue(store.initialize(proposal.snapshot))
             fun verified(summary: ReadOnlyProgramSummary)=ReadOnlyProgramPresentationPolicy.inspect(summary,

@@ -1982,3 +1982,16 @@ no optimistic set completion, alternative writer, new app state or program
 mutation was added. The CTA still routes to the real Train confirmation and
 publication workflow. Source contracts and Compose compile gate this pass.
 No APK and no production web changes.
+
+## 2026-11-02 — Cross-restart workout receipt acceptance case
+
+Added a deterministic domain JVM regression covering three distinct native
+journal owner lifetimes: two original saved working sets, an interruption,
+a replacement correction to the first set, an explicitly skipped final set,
+and a fully acknowledged Finish. The final cold-start reader checks the
+exact corrected values, preserved second set, original slot ordering, one
+skipped set, four ordered events, zero unresolved slots, and a single
+finished identity. Lost-ack Finish replay performs no additional write;
+late set writes and a competing workout begin remain rejected. This is
+fault-isolated domain verification, not an Android device test or an APK
+acceptance result. No engine or production changes.

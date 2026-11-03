@@ -108,6 +108,56 @@ class WorkoutJournalPersistenceTest {
         assertEquals(attempts,drive.attempts)
     }
 
+    @Test fun interruptionAfterMultipleSetsKeepsCorrectionsAndFinishesOnlyOnce() {
+        val drive=MemoryBytes()
+        val first=WorkoutJournalPersistence(drive)
+        assertEquals(4,checkNotNull(first.begin(session,slots,4)).revision)
+        assertEquals(5,checkNotNull(first.recordSet(session,4,done("saved-bench",a))).revision)
+        val secondSet=done("saved-row",b).copy(
+            values=observation.copy(load="120",reps=7,rir=3))
+        assertEquals(6,checkNotNull(first.recordSet(session,5,secondSet)).revision)
+
+        // Treat the Activity/worker as gone. Only the saved private bytes
+        // and a NEW persistence owner may determine current training facts.
+        val resumed=WorkoutJournalPersistence(drive)
+        val pending=checkNotNull(resumed.recover())
+        assertFalse(pending.isFinished)
+        assertEquals(1,pending.unresolvedCount)
+        assertEquals(slots,pending.slots)
+        assertEquals(observation,pending.completed.first {it.intent.slot==a}.intent.values)
+        assertEquals(secondSet.values,pending.completed.first {it.intent.slot==b}.intent.values)
+
+        // The athlete corrects the FIRST set after recovery, without
+        // replacing or renumbering the second set's recorded observation.
+        val correction=done("correct-bench",a).copy(
+            values=observation.copy(load="180",reps=6,rir=1),
+            replacesOperationId="saved-bench")
+        assertEquals(7,checkNotNull(resumed.recordSet(session,6,correction)).revision)
+        assertEquals(8,checkNotNull(resumed.recordSet(session,7,skip("skip-final",c))).revision)
+        val finish=JournalFinishIntent("finish-after-restart",61000,60000)
+        assertEquals(9,checkNotNull(resumed.finish(session,8,finish)).revision)
+
+        // Simulate losing the finish acknowledgement and cold starting again:
+        // the durable finished session is exact, and retry is a read, not
+        // a second journal transaction or a new workout.
+        val again=WorkoutJournalPersistence(drive)
+        val saved=checkNotNull(again.recover())
+        assertTrue(saved.isFinished)
+        assertEquals(0,saved.unresolvedCount)
+        assertEquals(3,saved.completed.size)
+        assertEquals(4,saved.events.size)
+        assertEquals(correction,saved.completed.first {it.intent.slot==a}.intent)
+        assertEquals(secondSet,saved.completed.first {it.intent.slot==b}.intent)
+        assertEquals(JournalSetDisposition.SKIPPED,
+            saved.completed.first {it.intent.slot==c}.intent.disposition)
+        val beforeReplay=drive.attempts
+        assertEquals(9,checkNotNull(again.finish(session,8,finish)).revision)
+        assertEquals(beforeReplay,drive.attempts)
+        assertNull(again.recordSet(session,9,done("late-set",c)))
+        assertNull(again.begin(session.copy(workoutId="wrong-workout"),slots,4))
+        assertEquals(9,checkNotNull(again.begin(session,slots,4)).revision)
+    }
+
     @Test fun finishingRequiresEverySetDurablyCompletedOrSkipped() {
         val drive=MemoryBytes()
         val journal=WorkoutJournalPersistence(drive)

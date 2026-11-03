@@ -39,10 +39,10 @@ internal fun NativeSavedGymInventoryPanel(
     val unit=saved.profile.unit
     // Evidence is read-only and source-bound to the authenticated saved
     // program shown here. It does not select weights or approve progression.
-    val reviewedLoads=remember(saved.loadingInventory,saved.loadingCandidates,unit) {
+    val reviewedLoads=remember(saved.loadingInventory,saved.loadingCandidates,unit,reference) {
         runCatching {
             NativeCoachVerifiedLoadEvidence.review(
-                saved.loadingInventory,unit,saved.loadingCandidates)
+                saved.loadingInventory,unit,saved.loadingCandidates,reference)
         }.getOrNull()
     }
     val original=NativeGymInventoryCodec.toDraft(saved.loadingInventory)

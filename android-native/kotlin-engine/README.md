@@ -1,5 +1,25 @@
 # Pursuit Iron — independent Kotlin training engine
 
+## End state: full native replacement, not a permanent JavaScript bridge
+
+The agreed destination is a **Kotlin-only training engine and fully native
+Jetpack Compose Android successor** to Pursuit Iron's JavaScript/web product.
+During development the JS implementation remains an isolated reference and
+migration source. After gated cutover, the Android production workout path
+must have **no JavaScript runtime, WebView, bundled JS training engine or
+JavaScript fallback**. Kotlin owns every coaching decision; native-owned
+storage preserves the user's actual sets, history and revisions. All 14
+product capabilities, E01–E41 requirements and documented UX are mandatory,
+and decisions must demonstrably improve over the web engine's known bugs.
+Existing in-progress JS-issued sessions must never be silently rewritten.
+
+**Authoritative release plan:** [Complete JavaScript replacement and
+sunset gates](FULL_REPLACEMENT_CONTRACT.md). This is the target state;
+the current headless Kotlin branch is NOT production-ready and is not yet
+the native app's training authority. The live web app is not being retired
+or modified as part of this branch.
+
+
 ## Revision-bound verified machine weights (read-only Kotlin handoff)
 
 `CoachNativeVerifiedLoadHandoff` is a **standalone headless review**, not an

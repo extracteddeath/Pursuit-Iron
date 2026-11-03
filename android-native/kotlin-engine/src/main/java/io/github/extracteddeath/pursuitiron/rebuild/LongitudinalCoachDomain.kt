@@ -228,9 +228,11 @@ object LongitudinalCoachDomain {
                 val moreReps=current.second>prior.second
                 // Equal completed work at explicitly reported LOWER effort
                 // (more actual reps in reserve) is also improvement.
+                val priorActualRir=prior.third
+                val currentActualRir=current.third
                 val easierSameReps=current.second==prior.second &&
-                    current.third!=null && prior.third!=null &&
-                    current.third>prior.third
+                    currentActualRir!=null && priorActualRir!=null &&
+                    currentActualRir>priorActualRir
                 !moreReps && !easierSameReps
             }
             if(stableLoad && notImproving)stalled.add(exerciseId)

@@ -394,7 +394,7 @@ if tap(r"^History for ", "head-history", required=False):
 else:
     FAILS.append("no History button beside the exercise name")
 head_name = next((n.get("content-desc")[:-len(": how to do it")] for n in nodes() if (n.get("content-desc") or "").endswith(": how to do it")), None)
-if tap(r"^Skip .+ for today$", "head-skip", required=False):
+if tap(r"^Skip .+ for today\|?$", "head-skip", required=False):
     if not tap(r"^\|?Undo$", "skip-undo", timeout=4, required=False):
         FAILS.append("skipping a lift offers no Undo")
     elif head_name and not find("^" + re.escape(head_name) + ": how to do it", timeout=4):

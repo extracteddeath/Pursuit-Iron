@@ -2072,3 +2072,17 @@ an automatic scroll. The request is transient UI state; no journal,
 engine-issued target, persistence or history behavior changed. Source
 and Compose compile are required; device scroll/keyboard acceptance
 remains outstanding. No APK.
+
+## 2026-11-02 — Hierarchical Android Back during program onboarding
+
+The first-time native setup wizard now handles system Back for its
+second equipment step and the generated-program review. Equipment Back
+returns to preferences without losing the draft. Review Back invokes the
+existing explicit proposal-edit action and returns to the initial step.
+If generation is still running, Back uses the same supported cancellation
+as the visible Cancel control. During an actual canonical program save,
+Back is consumed rather than cancelling the worker after an uncertain
+durable write. The weight-unit confirmation dialog owns its own Back
+handling and preserves user-entered verified stock. A stale source-test
+assertion for the Focus auto-scroll refactor was also updated to the
+new acknowledged-navigation block. No APK or engine rewrite.

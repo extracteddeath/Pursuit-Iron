@@ -14,6 +14,13 @@ assert.ok(ui.includes('state.options?.splits') && ui.includes('selected.days.for
   'Split/day compatibility must be canonical option data, not a second Kotlin topology engine');
 assert.ok(ui.includes('Review generated plan') && ui.includes('Save program') && ui.includes('Edit choices') &&
   ui.includes('if (proposal!=null)') && ui.includes('ReadOnlyTrainingDayRow('));
+assert.ok(ui.includes('import androidx.activity.compose.BackHandler') &&
+  ui.includes('BackHandler(enabled=pendingUnit==null && (proposal!=null || step>0))') &&
+  ui.includes('state.busy && proposal==null -> onEdit()') &&
+  ui.includes('state.busy -> Unit') &&
+  ui.includes('proposal!=null -> { onEdit();step=0 }') &&
+  ui.includes('else -> step=0'),
+  'Android Back should reverse onboarding navigation, allow cancelling only a pending generation, and never interrupt a durable program save');
 assert.ok(ui.includes('var pendingUnit by rememberSaveable') &&
   ui.includes('if(pendingUnit!=null) AlertDialog(') &&
   ui.includes('title={Text("Change weight units?")}') &&
@@ -224,7 +231,9 @@ assert.ok(train.includes('var focusMode by rememberSaveable(plan.session.workout
 assert.ok(train.includes('var observedFocusReceipt by rememberSaveable(plan.session.workoutId)') &&
   train.includes('LaunchedEffect(lastSetReceiptId,focusMode,state.workoutBusy,state.historyBusy,exerciseIndex)') &&
   train.includes('NativeNextSetPolicy.advanceAfterAcknowledged(') &&
-  train.includes('if(destination!=null)exerciseIndex=destination') &&
+  train.includes('if(destination!=null) {') &&
+  train.includes('exerciseIndex=destination') &&
+  train.includes('focusScrollTarget=destination') &&
   train.includes('if(!focusMode || journal.isFinished)observedFocusReceipt=lastSetReceiptId'),
   'Focus may cross exercise boundaries only after a fresh persisted receipt and must suppress replay after recovery');
 assert.ok(train.includes('var showAffectedTools by rememberSaveable(plan.session.workoutId)') &&

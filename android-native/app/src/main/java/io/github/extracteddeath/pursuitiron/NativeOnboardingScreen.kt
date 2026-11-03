@@ -1,5 +1,6 @@
 package io.github.extracteddeath.pursuitiron
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -63,6 +64,18 @@ internal fun NativeOnboardingScreen(
         if (days !in selected.days) days=selected.days.first()
     }
     val proposal=state.proposal
+    // Back navigates onboarding steps rather than unexpectedly closing the
+    // app. Cancel an in-flight preview build; never cancel an in-flight
+    // canonical program save that might already be committing to disk.
+    // A visible unit-change dialog receives Back through its own window.
+    BackHandler(enabled=pendingUnit==null && (proposal!=null || step>0)) {
+        when {
+            state.busy && proposal==null -> onEdit()
+            state.busy -> Unit
+            proposal!=null -> { onEdit();step=0 }
+            else -> step=0
+        }
+    }
     val currentStep=if(proposal!=null) 2 else step
     PageHeading("STEP ${currentStep+1} OF 3",when(currentStep) {
         0->"Train your way";1->"Your equipment";else->"Review your program"

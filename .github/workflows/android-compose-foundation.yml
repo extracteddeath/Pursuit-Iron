@@ -74,6 +74,8 @@ jobs:
         run: |
           node android-native/verification/native-preview-interaction-test.mjs
           node android-native/verification/native-onboarding-interaction-test.mjs
+      - name: Verify original Pursuit Iron theme palette parity
+        run: node android-native/verification/native-original-theme-parity-test.mjs
       - name: Verify preview Material 3 Expressive dependency and motion contract
         run: node android-native/verification/m3e-version-test.mjs
       - name: Protect existing feature behavior with canonical regression fixtures

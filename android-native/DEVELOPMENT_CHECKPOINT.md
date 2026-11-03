@@ -2138,3 +2138,26 @@ labels. Finish still opens its existing explicit confirmation, and the
 Journal remains the only writer. This removes inconsistent primary button
 sizing without altering prescription, set validation, recovery or history.
 No APK.
+
+## 2026-11-02 — Restore the complete original theme identity
+
+Reverted the newly invented graphite/violet theme color scheme. Native
+Material 3 now derives from all **20 literal Pursuit Iron themes** in the
+production web source `modules/App.js` (Lime, Ember, Ice, Rose, Forest,
+Mint, Clay, Graphite, Amethyst, Stone, Patrol, Slate, Lilac, Emerald,
+Gold, Sage, Ochre, Rosewater, Ocean and Citrus). Each preset carries its
+original background, tinted background, both card surfaces, text, muted
+inks, accent, on-accent, warning and danger. Readable muted/accent/danger
+inks were precomputed with the exact original `TOK` contrast algorithm.
+The native M3 tonal roles retain each original surface and filled-button
+accent, rather than substituting an OS-generated or designer-invented
+palette. Patrol separately retains its contrast-corrected accent ink.
+The first-install default is the original Lime; any of the 20 themes is
+selectable through the native Appearance sheet in onboarding, startup and
+the top app bar. Native selection persists in a private *appearance-only*
+preference, without altering the canonical training snapshot or claiming
+existing web theme settings have been imported. Shared M3 Expressive
+components, motion, typography and layouts are retained. An explicit
+source-parity test compares all 20 original palette inputs by exact hex
+and guards the picker and saved choice. No APK, production web change or
+engine rewrite.

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.automirrored.outlined.EventNote
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -95,6 +96,8 @@ internal fun NativePreviewApp(
     currentPlanSource: CurrentReadOnlyPlanSource = UnconnectedCurrentReadOnlyPlanSource,
     canonicalStoreChangeKey: Long = 0L,
     onboarding: NativeRuntimeState? = null,
+    themeId: String = PursuitThemes.DEFAULT_ID,
+    onThemeSelected: (String)->Unit = {},
     onReviewProgram: (NativeProgramProfile)->Unit = {},
     onSaveProgram: ()->Unit = {},
     onEditProgram: ()->Unit = {},
@@ -131,12 +134,18 @@ internal fun NativePreviewApp(
     var section by rememberSaveable { mutableIntStateOf(0) }
     var sheet by rememberSaveable { mutableIntStateOf(0) }
     var confirmLeaveActiveWorkout by rememberSaveable { mutableStateOf(false) }
+    var showAppearance by rememberSaveable { mutableStateOf(false) }
     var readiness by rememberSaveable { mutableStateOf("Normal") }
     var length by rememberSaveable { mutableIntStateOf(0) }
     var injuryFlag by rememberSaveable { mutableStateOf(false) }
     val status = UnconnectedEngineGateway().status
     val destinationStates = rememberSaveableStateHolder()
     var exploreDemo by rememberSaveable { mutableStateOf(false) }
+    // A themed startup and onboarding remain accessible without mutating
+    // program or journal ownership. A picker cannot imply a program change.
+    if(showAppearance && (onboarding?.loading==true ||
+        onboarding?.saved==null && !exploreDemo))
+        NativeAppearanceSheet(themeId,onThemeSelected) { showAppearance=false }
     // A process cold start must never briefly show editable onboarding for
     // an existing saved program. Wait for canonical engine/store + pending
     // journal recovery to settle before choosing either real destination.
@@ -147,6 +156,7 @@ internal fun NativePreviewApp(
                 PageHeading("OPENING TRAINING","Checking saved training",
                     "Verifying the native engine, saved program and any unfinished workout.")
                 LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+                TextButton(onClick={showAppearance=true}) { Text("Appearance") }
                 Text("Your saved sets are not changed while loading.",
                     style=MaterialTheme.typography.bodyMedium,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -158,6 +168,7 @@ internal fun NativePreviewApp(
         Scaffold { padding ->
             Column(Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState())
                 .padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                TextButton(onClick={showAppearance=true}) { Text("Appearance") }
                 destinationStates.SaveableStateProvider("onboarding") {
                     NativeOnboardingScreen(onboarding,onReviewProgram,onSaveProgram,onEditProgram,
                         onExplore={exploreDemo=true})
@@ -238,6 +249,9 @@ internal fun NativePreviewApp(
                         }
                     },
                     actions = {
+                        IconButton(onClick={showAppearance=true}) {
+                            Icon(Icons.Outlined.Palette,contentDescription="Choose color theme")
+                        }
                         if(onboarding?.saved==null) IconButton(onClick = { sheet = 2 }) {
                             Icon(Icons.Outlined.Apps, contentDescription = "Explore retained features")
                         }
@@ -368,6 +382,9 @@ internal fun NativePreviewApp(
                     }
                 }
             }
+        }
+        if (showAppearance) NativeAppearanceSheet(themeId,onThemeSelected) {
+            showAppearance=false
         }
         if (sheet != 0) ModalBottomSheet(onDismissRequest = { sheet = 0 }) {
             Column(

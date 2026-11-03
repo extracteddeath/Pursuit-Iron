@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
@@ -31,6 +33,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -187,16 +190,62 @@ internal fun PursuitCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = if (highlighted) MaterialTheme.colorScheme.primaryContainer
+        shape=MaterialTheme.shapes.extraLarge,
+        // A subtle expressive outline, not a large distracting violet fill.
+        border=if(highlighted) BorderStroke(1.dp,MaterialTheme.colorScheme.primary.copy(alpha=0.45f))
+            else null,
+        colors=CardDefaults.cardColors(
+            containerColor=if(highlighted) MaterialTheme.colorScheme.surfaceContainerHigh
                 else MaterialTheme.colorScheme.surfaceContainerLow,
-            contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurface
+            contentColor=MaterialTheme.colorScheme.onSurface
         )
     ) {
         Column(modifier=Modifier.padding(PursuitSpace.lg),
             verticalArrangement=Arrangement.spacedBy(PursuitSpace.sm),content=content)
+    }
+}
+
+/**
+ * Unified session progress, sourced only from the acknowledged native
+ * workout journal. This is a visual summary, not a set-logging control.
+ */
+@Composable
+internal fun PursuitSessionMetrics(logged:Int,skipped:Int,remaining:Int) {
+    require(logged>=0 && skipped>=0 && remaining>=0)
+    Surface(
+        modifier=Modifier.fillMaxWidth(),
+        shape=MaterialTheme.shapes.large,
+        color=MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Row(
+            modifier=Modifier.fillMaxWidth().padding(vertical=PursuitSpace.md,horizontal=PursuitSpace.xs),
+            horizontalArrangement=Arrangement.spacedBy(PursuitSpace.xs)
+        ) {
+            listOf(Triple("Logged",logged,true),Triple("Skipped",skipped,false),
+                Triple("Left",remaining,false)).forEach { (label,value,emphasize) ->
+                Column(
+                    modifier=Modifier.weight(1f),
+                    horizontalAlignment=Alignment.CenterHorizontally,
+                    verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)
+                ) {
+                    Text(value.toString(),style=MaterialTheme.typography.headlineSmall,
+                        color=if(emphasize) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface)
+                    Text(label,style=MaterialTheme.typography.labelMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+/** One reusable 52dp high primary action across the real native journeys. */
+@Composable
+internal fun PursuitPrimaryAction(label:String,enabled:Boolean=true,onClick:()->Unit) {
+    Button(onClick=onClick,enabled=enabled,
+        modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),
+        shape=MaterialTheme.shapes.large) {
+        Text(label,style=MaterialTheme.typography.titleSmall)
     }
 }
 

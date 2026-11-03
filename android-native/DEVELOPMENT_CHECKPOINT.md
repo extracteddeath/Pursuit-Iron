@@ -2113,3 +2113,16 @@ Every real Today, Train, Plan and Insights surface using these components
 adopts the system without a competing per-screen style or training-write
 change. No new engine logic, preset loads, web styling or APK. Compose and
 source checks must pass before accepting the foundation.
+
+## 2026-11-02 — Shared session metrics and high-priority action
+
+The real Today and Train surfaces now show the same compact, accessible
+three-column logged/skipped/remaining summary sourced directly from the
+acknowledged workout journal, not another optimistic counter. A reusable
+52dp primary action presents Start/Resume from Today. The shared hero card
+uses a neutral M3 tonal container with a restrained violet outline rather
+than a full-screen colored block; its content remains semantic onSurface.
+No training decision or set mutation was moved into these components.
+Source tests pin the shared tokens and use on both journeys. The app still
+needs physical-device visual validation and user feedback before an APK
+is treated as accepted.

@@ -82,9 +82,7 @@ internal fun TodayScreen(
                 val skippedSets=journal.completed.count {
                     it.intent.disposition==JournalSetDisposition.SKIPPED
                 }
-                Text("$savedSets recorded · $skippedSets skipped · ${journal.unresolvedCount} remaining",
-                    style=MaterialTheme.typography.titleSmall,
-                    color=MaterialTheme.colorScheme.primary)
+                PursuitSessionMetrics(savedSets,skippedSets,journal.unresolvedCount)
                 Text(when {
                     journal.isFinished -> "Finish acknowledged on device · saving to history"
                     journal.unresolvedCount==0 -> "All issued sets resolved · review and confirm Finish in Train"
@@ -92,18 +90,18 @@ internal fun TodayScreen(
                 },style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Button(onClick={if(!activeWorkout)startWorkout();openTrain()},
+            PursuitPrimaryAction(
+                onClick={if(!activeWorkout)startWorkout();openTrain()},
                 enabled=workoutState?.ready==true && !workoutState.workoutBusy &&
                     !workoutState.historyBusy && !workoutState.busy &&
                     !workoutState.blocked && !workoutState.backupExportBusy &&
                     !workoutState.workoutBlocked,
-                modifier=Modifier.fillMaxWidth()) {
-                Text(if(workoutState?.backupExportBusy==true)"Saving backup…"
+                label=if(workoutState?.backupExportBusy==true)"Saving backup…"
                     else if(workoutState?.workoutBusy==true)"Opening workout…"
                     else if(activeJournal?.isFinished==true)"Review pending Finish"
                     else if(activeJournal?.unresolvedCount==0)"Review and finish workout"
-                    else if(activeWorkout)"Resume workout" else "Start next workout")
-            }
+                    else if(activeWorkout)"Resume workout" else "Start next workout"
+            )
             OutlinedButton(onClick=openPlan,modifier=Modifier.fillMaxWidth()) {
                 Text("View your program")
             }

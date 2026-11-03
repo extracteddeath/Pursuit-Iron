@@ -138,9 +138,10 @@ internal fun NativeWorkoutScreen(
     val skippedSetCount=journal.completed.count {
         it.intent.disposition==JournalSetDisposition.SKIPPED
     }
-    Text("${journal.completed.size} / ${plan.slots.size} sets resolved · " +
-        "${journal.completed.size-skippedSetCount} logged · $skippedSetCount skipped",
-        style=MaterialTheme.typography.titleSmall)
+    PursuitSessionMetrics(
+        logged=journal.completed.size-skippedSetCount,
+        skipped=skippedSetCount,
+        remaining=journal.unresolvedCount)
     LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size},
         modifier=Modifier.fillMaxWidth())
     // Acknowledged completion is the primary Focus action, not a footer

@@ -122,6 +122,16 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
   'Shorter session UI must show a revision-checked canonical preview without changing the workout');
 // Real Train controls are journal-driven; UI must never manufacture a persisted
 // set or publish a workout directly from an unconfirmed tap.
+const tokens=fs.readFileSync(root+'NativeDesignTokens.kt','utf8');
+assert.ok(tokens.includes('internal val PursuitDarkColors=darkColorScheme(') &&
+  tokens.includes('internal val PursuitLightColors=lightColorScheme(') &&
+  tokens.includes('internal val PursuitTypography=Typography(') &&
+  tokens.includes('internal object PursuitSpace') &&
+  activity.includes('MotionScheme.expressive()') &&
+  activity.includes('PursuitDarkColors else PursuitLightColors') &&
+  activity.includes('typography=PursuitTypography,shapes=PursuitShapes') &&
+  !activity.includes('dynamicDarkColorScheme(context)'),
+  'The shared native theme must keep deliberate expressive color, type and shapes rather than inheriting wallpaper hues or default typography');
 const controls=fs.readFileSync(root+'NativeComponents.kt','utf8');
 assert.ok(shell.includes('import androidx.activity.compose.BackHandler') &&
   shell.includes('BackHandler(enabled=sheet==0 && !confirmLeaveActiveWorkout &&') &&
@@ -150,6 +160,16 @@ assert.ok(train.includes('val exerciseAnchor=remember { BringIntoViewRequester()
   train.includes('focusScrollTarget=destination') &&
   train.includes('modifier=Modifier.bringIntoViewRequester(exerciseAnchor)'),
   'Only a new durably acknowledged Focus movement should reveal the next exercise on compact screens, without scrolling during manual review or replay');
+assert.ok(controls.includes('internal fun PursuitSessionMetrics(') &&
+  controls.includes('internal fun PursuitPrimaryAction(') &&
+  controls.includes('MaterialTheme.colorScheme.surfaceContainerHigh') &&
+  controls.includes('BorderStroke(1.dp,MaterialTheme.colorScheme.primary.copy(alpha=0.45f))') &&
+  screens.includes('PursuitSessionMetrics(savedSets,skippedSets,journal.unresolvedCount)') &&
+  screens.includes('PursuitPrimaryAction(') &&
+  train.includes('PursuitSessionMetrics(') &&
+  train.includes('remaining=journal.unresolvedCount') &&
+  train.includes('LinearProgressIndicator(progress={journal.completed.size.toFloat()/plan.slots.size}'),
+  'Today and Train must reuse one neutral expressive progress component and first-class primary action based solely on saved journal values');
 assert.ok(train.includes('val committedSlots=journal.completed.map { it.intent.slot }.toSet()') &&
   train.includes('val nextPreview=NativeNextSetPolicy.inspect(progress,exerciseIndex)') &&
   train.includes('NativeUpNextPanel(preview,exerciseIndex,') &&
@@ -865,7 +885,7 @@ assert.ok(screens.includes('viewLatestHistory: () -> Unit = {}') &&
   shell.includes('viewLatestHistory={') &&
   shell.includes('onOpenLatestHistory()') &&
   shell.includes('section=NativeDestination.INSIGHTS.ordinal') &&
-  screens.indexOf('Button(onClick={if(!activeWorkout)startWorkout();openTrain()}') <
+  screens.indexOf('PursuitPrimaryAction(\n                onClick={if(!activeWorkout)startWorkout();openTrain()}') <
     screens.indexOf('TextButton(onClick=viewLatestHistory,'),
   'Today must keep Start/Resume first and route review of the last saved workout through the same guarded canonical receipt read as Train');
 

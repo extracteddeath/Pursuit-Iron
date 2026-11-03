@@ -191,7 +191,7 @@ object CoachAthleteProgramGenerator {
             }.sortedWith(compareByDescending<String> {
                 policy.primaryLiftMinimumDays.getValue(it)-used[it].orEmpty().size
             }.thenBy {it})
-            val options:List<String?>=if(skill)available else
+            val options:List<String?> = if(skill)available else
                 listOf(null)+available
             for(id in options) {
                 assigned+=AthleteCalendarIntent(day,purpose[index],id)

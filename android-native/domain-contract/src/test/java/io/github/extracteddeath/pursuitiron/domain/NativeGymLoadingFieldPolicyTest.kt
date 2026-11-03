@@ -32,6 +32,18 @@ class NativeGymLoadingFieldPolicyTest {
         assertTrue(policy.retainedUnselectedFields(null, fields).isEmpty())
     }
 
+    @Test fun partiallyEnteredBarbellStockAlwaysKeepsBothFieldsEditable() {
+        val onlyBar = mapOf("bar" to "45", "plates" to "")
+        val onlyPlates = mapOf("bar" to "", "plates" to "2.5x2")
+        for (draft in listOf(onlyBar, onlyPlates)) {
+            assertEquals(listOf("bar", "plates"),
+                policy.visibleFields(listOf("dumbbell"), draft)
+                    .filter { it in setOf("bar", "plates") })
+            assertEquals(listOf("bar", "plates"),
+                policy.retainedUnselectedFields(listOf("dumbbell"), draft))
+        }
+    }
+
     @Test fun specialtyMachinesRequireTheirOwnPostGenerationProfiles() {
         val specific = listOf("legpress", "hacksquat", "legext", "legcurl",
             "hipthrustmachine", "kickback", "abduction", "adduction",

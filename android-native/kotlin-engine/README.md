@@ -96,3 +96,17 @@ This is a deliberately narrow, provisional safety gate for the reported
 double-progression regressions. It is **not yet the full training progression
 engine**: a tested longitudinal fatigue model, actual exercise prescription
 and adaptation policy must exist before any workout issuance can use it.
+
+
+## Fourth domain: set-level fatigue observations (no next-set prediction)
+
+\`SessionFatigueEvidenceDomain.inspect\` compares working-set reps only
+when every set was actually completed at an equal recorded load. It
+distinguishes declining, stable, increasing and nonmonotonic performance,
+retains observed RIR differences only where genuinely reported, and
+identifies rep-floor misses. Mixed load sessions, skips, missing ordinals
+and failed attempts are **not** translated into false fatigue curves.
+
+This is an observation module, not a validated fatigue prediction or
+exercise prescription. Its output cannot automatically lower a load,
+raise repetitions, invent effort or change current/next workouts.

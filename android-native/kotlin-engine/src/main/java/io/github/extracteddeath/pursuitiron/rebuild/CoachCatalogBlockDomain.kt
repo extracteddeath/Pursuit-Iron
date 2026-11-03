@@ -46,8 +46,8 @@ data class CatalogBlockReview(
 object CoachCatalogBlockDomain {
     private fun identity(spec:CatalogMovement):List<Any?> = listOf(
         spec.familyId,spec.variantId,spec.attachmentId,
-        spec.pattern,spec.role,spec.equipmentId,spec.expectedLoadBasis,
-        spec.requiredFacilityIds
+        spec.pattern,spec.role,spec.permittedFocus,
+        spec.equipmentId,spec.expectedLoadBasis,spec.requiredFacilityIds
     )
 
     fun review(input:CatalogBlockRequest):CatalogBlockReview {
@@ -78,7 +78,7 @@ object CoachCatalogBlockDomain {
             val before=checkNotNull(beforeById[id])
             val after=checkNotNull(afterById[id])
             if(identity(before)!=identity(after))
-                problems+="The stable ID $id changed movement family, variant, attachment, role, equipment meaning, or required facilities. Use a new exercise ID and explicit substitution review."
+                problems+="The stable ID $id changed movement family, variant, attachment, role, allowed day focus, equipment meaning, or required facilities. Use a new exercise ID and explicit substitution review."
         }
         if(problems.isNotEmpty())
             return result(CatalogBlockStatus.EXERCISE_IDENTITY_CHANGED)

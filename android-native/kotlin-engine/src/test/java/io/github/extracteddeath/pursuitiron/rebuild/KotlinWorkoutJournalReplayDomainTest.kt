@@ -62,7 +62,7 @@ class KotlinWorkoutJournalReplayDomainTest {
         assertEquals(KotlinJournalReplayRefusal.NONCONTIGUOUS_REVISION,
             rejected(listOf(two,one,finish),3).reason)
         assertEquals(KotlinJournalReplayRefusal.INVALID_OPERATION,
-            rejected(listOf(one,one.copy(appliedRevision=2),finish),3).reason)
+            rejected(listOf(one,one.copy(appliedRevision=2,operation=record("e1",1,"set-1",10)),finish),3).reason)
         val collision=two.copy(operation=record("e1",1,"set-2",9))
         assertEquals(KotlinJournalReplayRefusal.INVALID_OPERATION,
             rejected(listOf(one,collision,finish),3).reason)

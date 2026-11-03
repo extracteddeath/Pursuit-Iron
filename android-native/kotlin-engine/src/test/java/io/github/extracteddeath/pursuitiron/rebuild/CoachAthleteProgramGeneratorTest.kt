@@ -225,6 +225,40 @@ class CoachAthleteProgramGeneratorTest {
         assertTrue(generated.intents.isEmpty())
     }
 
+    @Test fun optedInSelectorPrunesUnknownOfferButPreservesPinnedLifts() {
+        val original=request()
+        val extra=choice("unknown-machine",visits=2)
+        val authored=original.choices.map {
+            if(it.exerciseId=="bench")it.copy(requiredVisits=1)
+            else it.copy(requiredVisits=0)
+        }
+        val optIn=original.copy(
+            choices=authored+extra,selectFromOfferedCatalog=true,
+            maximumSelectedOptions=3)
+        val review=CoachAthleteProgramGenerator.generate(optIn)
+        val selected=checkNotNull(review.exerciseSelection)
+        assertEquals(AthleteSelectionStatus.SHORTLIST_FOR_REVIEW,
+            selected.status)
+        assertEquals(setOf("bench","row","squat"),
+            selected.choices.map {it.exerciseId}.toSet())
+        assertTrue(selected.excluded.any {
+            it.exerciseId=="unknown-machine"
+        })
+        assertNotNull(review.candidate)
+        assertTrue(review.candidate?.catalogReview?.requestedExerciseIds
+            ?.contains("unknown-machine")==false)
+        assertFalse(review.maySaveProgram)
+    }
+
+    @Test fun defaultSelectionModeNeverSilentlyPrunesUnknownAuthoredChoice() {
+        val original=request()
+        val offered=original.choices+choice("unknown-machine")
+        val noOptIn=CoachAthleteProgramGenerator.generate(
+            original.copy(choices=offered))
+        assertNull(noOptIn.exerciseSelection)
+        assertTrue(noOptIn.status!=AthleteGenerationStatus.GENERATED_FOR_REVIEW)
+    }
+
     @Test fun generationIsDeterministicAndDoesNotMutateCallerInputs() {
         val input=request()
         val a=CoachAthleteProgramGenerator.generate(input)

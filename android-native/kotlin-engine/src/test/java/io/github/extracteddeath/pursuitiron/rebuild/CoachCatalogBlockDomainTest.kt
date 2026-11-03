@@ -180,6 +180,22 @@ class CoachCatalogBlockDomainTest {
         })
     }
 
+    @Test fun sameExerciseIdentityCannotSilentlyLoseItsRecoveryPolicy() {
+        val grouped=bench.copy(recoveryGroupId="heavy-press",
+            minimumRecoveryGroupDayGap=2)
+        val baseline=candidate(catalog=listOf(grouped,row,squat))
+        val proposed=candidate(cap=4,catalog=listOf(
+            grouped.copy(recoveryGroupId=null,
+                minimumRecoveryGroupDayGap=1),row,squat))
+        val result=review(input(baseline=baseline,proposed=proposed,
+            permission=BlockAdaptPermissions(adaptExercises=true)))
+        assertEquals(CatalogBlockStatus.EXERCISE_IDENTITY_CHANGED,result.status)
+        assertNull(result.fullPrescription)
+        assertTrue(result.problems.any {
+            it.contains("stable ID bench") && it.contains("recovery policy")
+        })
+    }
+
     @Test fun changedCatalogMuscleCreditsRequireExerciseAdaptationPermission() {
         val altered=bench.copy(
             credits=listOf(DeclaredMuscleCredit(TrainingMuscle.CHEST,

@@ -240,6 +240,54 @@ class CoachExerciseCatalogDomainTest {
         }
     }
 
+    @Test fun catalogRecoveryGroupCannotBeSilentlyOverriddenByExerciseChoice() {
+        val protected=press.copy(recoveryGroupId="heavy-press",
+            minimumRecoveryGroupDayGap=2)
+        val valid=CoachExerciseCatalogDomain.review(request(
+            movements=listOf(protected,row,squat)))
+        val option=checkNotNull(valid.composedRequest).exercises.first {
+            it.exerciseId=="press"
+        }
+        assertEquals("heavy-press",option.recoveryGroup)
+        assertEquals(2,option.minimumGroupCalendarDayGap)
+        val stricter=CoachExerciseCatalogDomain.review(request(
+            movements=listOf(protected,row,squat),
+            selections=choices.map {
+                if(it.exerciseId=="press")
+                    it.copy(recoveryGroup="heavy-press",
+                        minimumGroupCalendarDayGap=3) else it
+            }))
+        assertEquals(3,checkNotNull(stricter.composedRequest)
+            .exercises.first {it.exerciseId=="press"}
+            .minimumGroupCalendarDayGap)
+        val incompatible=CoachExerciseCatalogDomain.review(request(
+            movements=listOf(protected,row,squat),
+            selections=choices.map {
+                if(it.exerciseId=="press")
+                    it.copy(recoveryGroup="unrelated") else it
+            }))
+        assertEquals(CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,
+            incompatible.status)
+        assertTrue(incompatible.issues.any {
+            it.kind==CatalogIssueType.RECOVERY_POLICY_CONFLICT
+        })
+        assertNull(incompatible.composedRequest)
+        assertFalse(incompatible.mayIssueWorkout)
+    }
+
+    @Test fun malformedCatalogRecoveryRulesFailClosed() {
+        for(bad in listOf(
+            press.copy(recoveryGroupId="group with spaces"),
+            press.copy(minimumRecoveryGroupDayGap=2),
+            press.copy(recoveryGroupId="heavy-press",
+                minimumRecoveryGroupDayGap=7))) {
+            assertThrows(IllegalArgumentException::class.java) {
+                CoachExerciseCatalogDomain.review(request(
+                    movements=listOf(bad,row,squat)))
+            }
+        }
+    }
+
     @Test fun composedResultsHaveStableIdsAndRepeatableAudit() {
         val original=request()
         val a=CoachExerciseCatalogDomain.review(original)

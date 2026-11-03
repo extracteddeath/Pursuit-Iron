@@ -304,6 +304,57 @@ class StarterExerciseTrancheTest {
         assertNull(invalid.composedRequest)
     }
 
+    @Test fun relatedHeavyVariantsRespectReviewedRecoveryAcrossCalendarDays() {
+        val byId=StarterExerciseTranche.movements().associateBy {it.exerciseId}
+        for(group in listOf(listOf("barbell_bench","paused_bench"),
+            listOf("rdl","conventional_deadlift"))) {
+            val a=byId.getValue(group[0])
+            val b=byId.getValue(group[1])
+            assertNotNull(a.recoveryGroupId)
+            assertEquals(a.recoveryGroupId,b.recoveryGroupId)
+            assertEquals(2,a.minimumRecoveryGroupDayGap)
+            assertEquals(2,b.minimumRecoveryGroupDayGap)
+        }
+        assertNull(byId.getValue("db_curl").recoveryGroupId)
+        val choices=listOf("barbell_bench","paused_bench").map {
+            choice(it,n("135")).copy(requiredVisits=1,maximumVisits=1)
+        }+listOf(choice("back_squat",n("135")),
+            choice("one_arm_db_row",n("30")))
+        val schedule=template().copy(
+            days=listOf(0,1,4).map {day ->
+                ComposerDay(day,ComposerFocus.FULL_BODY,
+                    DeclaredSessionWindow(1,90,null,60))
+            },
+            sessionIntents=listOf(
+                ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL,
+                    "barbell_bench"),
+                ComposerSessionIntent(1,ComposerSessionPurpose.STRENGTH_SKILL,
+                    "paused_bench")))
+        val result=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(schedule,choices,gym()))
+        val composed=checkNotNull(result.composedRequest)
+        val benchOptions=composed.exercises.filter {
+            it.exerciseId=="barbell_bench" || it.exerciseId=="paused_bench"
+        }
+        assertTrue(benchOptions.all {
+            it.recoveryGroup=="heavy-bench" &&
+                it.minimumGroupCalendarDayGap==2
+        })
+        assertEquals(CatalogWeekStatus.WEEK_CONSTRAINTS_UNRESOLVED,
+            result.status)
+        assertTrue(checkNotNull(result.draft).daysWithUnmetPrimary.isNotEmpty())
+        val visits=checkNotNull(result.draft).visits.filter {
+            it.exerciseId in setOf("barbell_bench","paused_bench")
+        }
+        for(a in visits)for(b in visits) {
+            if(a.dayIndex==b.dayIndex)continue
+            val gap=kotlin.math.abs(schedule.days[a.dayIndex].calendarDay-
+                schedule.days[b.dayIndex].calendarDay)
+            assertTrue(minOf(gap,7-gap)>=2)
+        }
+        assertFalse(result.mayIssueWorkout)
+    }
+
     @Test fun returnedTrancheAndSourceChoicesCannotMutateProgramState() {
         val entries=StarterExerciseTranche.entries()
         assertThrows(UnsupportedOperationException::class.java) {

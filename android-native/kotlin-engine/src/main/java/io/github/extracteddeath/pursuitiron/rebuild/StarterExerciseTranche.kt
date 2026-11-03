@@ -38,6 +38,14 @@ object StarterExerciseTranche {
     private val lower=setOf(ComposerFocus.FULL_BODY,ComposerFocus.LOWER,
         ComposerFocus.LEGS)
     private val all=ComposerFocus.entries.toSet()
+    // Conservative, provisional coaching guard for closely related heavy
+    // variants. Never infer this group from a display name or old JS scores.
+    private val reviewedRecoveryGroups=mapOf(
+        "barbell_bench" to ("heavy-bench" to 2),
+        "paused_bench" to ("heavy-bench" to 2),
+        "rdl" to ("heavy-barbell-hinge" to 2),
+        "conventional_deadlift" to ("heavy-barbell-hinge" to 2)
+    )
 
     private fun direct(m:TrainingMuscle)=DeclaredMuscleCredit(
         m,MuscleCreditRole.DIRECT,BigDecimal.ONE)
@@ -51,6 +59,7 @@ object StarterExerciseTranche {
         note:String,vararg credits:DeclaredMuscleCredit
     ):StarterCatalogEntry {
         require(note.isNotBlank())
+        val recovery=reviewedRecoveryGroups[legacyId]
         val movement=CatalogMovement(
             exerciseId=legacyId,familyId=family,variantId=variant,
             attachmentId=null,pattern=pattern,role=role,
@@ -58,7 +67,9 @@ object StarterExerciseTranche {
             expectedLoadBasis=basis,credits=credits.toList(),
             creditStatus=CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL,
             creditReviewReference=REVIEW,requiredFacilityIds=facilities,
-            sourcePracticalReps=RepBand(reps.first,reps.last))
+            sourcePracticalReps=RepBand(reps.first,reps.last),
+            recoveryGroupId=recovery?.first,
+            minimumRecoveryGroupDayGap=recovery?.second ?:1)
         return StarterCatalogEntry(legacyId,movement,
             RepBand(reps.first,reps.last),note)
     }
@@ -191,6 +202,9 @@ object StarterExerciseTranche {
         require(definitions.all {
             it.legacyCuratedId==it.movement.exerciseId &&
                 it.movement.creditReviewReference==REVIEW
+        })
+        require(reviewedRecoveryGroups.keys.all {id ->
+            definitions.any {it.legacyCuratedId==id}
         })
     }
 

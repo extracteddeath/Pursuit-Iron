@@ -31,7 +31,11 @@ data class CatalogMovement(
     /** Required physical fixtures beyond the loaded implement (bench, rack). */
     val requiredFacilityIds: Set<String> = emptySet(),
     /** Legacy practical rep limit, not independently validated physiological truth. */
-    val sourcePracticalReps: RepBand? = null
+    val sourcePracticalReps: RepBand? = null,
+    /** Provisional catalog-authored shared recovery identity across variants. */
+    val recoveryGroupId: String? = null,
+    /** Circular calendar gap, measured between training days, not elapsed hours. */
+    val minimumRecoveryGroupDayGap: Int = 1
 )
 
 data class CatalogExerciseChoice(
@@ -72,7 +76,7 @@ enum class CatalogIssueType {
     UNKNOWN_EXERCISE, CREDIT_REVIEW_MISSING, ATTACHMENT_UNAVAILABLE,
     EQUIPMENT_UNAVAILABLE, EQUIPMENT_BASIS_MISMATCH, LOAD_UNVERIFIED,
     MISSING_PRIMARY_MOVEMENT, INCOMPATIBLE_EXERCISE_IDENTITY,
-    FACILITY_UNAVAILABLE
+    FACILITY_UNAVAILABLE, RECOVERY_POLICY_CONFLICT
 }
 
 data class CatalogIssue(
@@ -145,6 +149,10 @@ object CoachExerciseCatalogDomain {
             require(spec.permittedFocus.isNotEmpty())
             require(spec.requiredFacilityIds.size<=8)
             require(spec.requiredFacilityIds.all(::validId))
+            require(spec.recoveryGroupId==null || validId(spec.recoveryGroupId))
+            require(spec.minimumRecoveryGroupDayGap in 1..6 &&
+                (spec.recoveryGroupId!=null ||
+                    spec.minimumRecoveryGroupDayGap==1))
             require(spec.credits.isNotEmpty() &&
                 spec.credits.size<=TrainingMuscle.entries.size)
             require(spec.credits.map {it.muscle}.distinct().size==spec.credits.size)
@@ -191,6 +199,12 @@ object CoachExerciseCatalogDomain {
             if(!request.gym.availableFacilityIds.containsAll(spec.requiredFacilityIds)) {
                 issues+=CatalogIssue(spec.exerciseId,CatalogIssueType.FACILITY_UNAVAILABLE,
                     "The supporting bench, rack, or other required fixture is not confirmed.")
+            }
+            if(spec.recoveryGroupId!=null && choice.recoveryGroup!=null &&
+                spec.recoveryGroupId!=choice.recoveryGroup) {
+                issues+=CatalogIssue(spec.exerciseId,
+                    CatalogIssueType.RECOVERY_POLICY_CONFLICT,
+                    "An authored recovery group conflicts with this movement's reviewed catalog recovery identity.")
             }
             if(spec.attachmentId!=null &&
                 spec.attachmentId !in request.gym.availableAttachmentIds) {
@@ -239,9 +253,12 @@ object CoachExerciseCatalogDomain {
                 choice.restSecondsPerSet,choice.minimumSetsPerVisit,
                 choice.maximumSetsPerVisit,choice.maximumVisits,
                 choice.requiredVisits,choice.minimumCalendarDayGap,
-                choice.priority,choice.recoveryGroup,
-                choice.minimumGroupCalendarDayGap,spec.role,
-                spec.sourcePracticalReps)
+                choice.priority,spec.recoveryGroupId ?: choice.recoveryGroup,
+                if(spec.recoveryGroupId!=null)
+                    maxOf(spec.minimumRecoveryGroupDayGap,
+                        choice.minimumGroupCalendarDayGap)
+                else choice.minimumGroupCalendarDayGap,
+                spec.role,spec.sourcePracticalReps)
         }
         val missingPrimary=request.template.sessionIntents.mapNotNull {intent->
             val required=intent.requiredPrimaryExerciseId ?:return@mapNotNull null

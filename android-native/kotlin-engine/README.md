@@ -470,6 +470,17 @@ counted. Target rest instructions and all source facts remain unchanged.
 This avoids false preferred-time coverage caused by treating rest after
 the final set as training time.
 
+The starter catalog now declares provisional shared recovery identities for
+barbell/paused bench and barbell RDL/conventional deadlift, with a conservative
+two-calendar-day separation *between distinct training days*. The weekly
+composer already audits the circular Sunday-to-Monday boundary, so renaming
+the lift no longer bypasses the grouping. A custom group cannot silently
+replace a declared catalog group; a more conservative gap can be requested.
+Group identity is pinned during adaptive block review. These are provisional
+scheduling protections, not medical recovery guarantees or a universal
+48-hour rule. Same-day scheduling, advanced mixed-intensity prescriptions
+and individual recovery remain subjects for independent coaching review.
+
 The retained definitions include barbell/paused bench, squat, overhead
 press; incline dumbbell press, one-arm row, lateral raise, biceps curl,
 overhead triceps extension, split squat, Romanian deadlift, calf raise

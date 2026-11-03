@@ -188,6 +188,13 @@ assert.ok(controls.includes('internal fun PursuitMetricStrip(') &&
   historyLayout.includes('"Volume" to "${summary.volume} ${summary.unit}"') &&
   historyLayout.includes('PursuitPrimaryAction('),
   'Active and saved workouts must use the same exact-data metric strip and confirmed edit controls, without labeling unresolved historical set positions as performed skips');
+assert.ok(controls.includes('val largeText=LocalDensity.current.fontScale>=1.35f') &&
+  controls.includes('if(largeText || maxWidth<320.dp) {') &&
+  controls.includes('textAlign=TextAlign.End') &&
+  controls.includes('metrics.forEachIndexed { index,(label,value) ->') &&
+  controls.includes('require(metrics.size==3)'),
+  'Journal and history metric strips must retain all three real values and adapt to Android large-text or narrow phones');
+
 assert.ok(controls.includes('internal fun PursuitSessionMetrics(') &&
   controls.includes('internal fun PursuitPrimaryAction(') &&
   controls.includes('MaterialTheme.colorScheme.surfaceContainerHigh') &&

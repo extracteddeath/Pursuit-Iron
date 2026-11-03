@@ -11,6 +11,16 @@ const kotlinFiles=fs.readdirSync(root).filter(filename=>filename.endsWith('.kt')
 assert.ok(nativeSettings.includes('":kotlin-engine"'));
 assert.ok(!app.includes('project(":kotlin-engine")'),
   'New independent engine cannot issue or alter an active native workout');
+assert.ok(!app.includes('project(":native-coach-store")'),
+  'Uncertified native storage prototype cannot change the production journal');
+const storeBuild=read('android-native/native-coach-store/build.gradle.kts');
+assert.ok(nativeSettings.includes('":native-coach-store"') &&
+  storeBuild.includes('project(":kotlin-engine")') &&
+  !storeBuild.includes('project(":engine-runtime")'),
+  'Native journal storage must use Kotlin engine receipts with no JS runtime');
+const storeSrc=read('android-native/native-coach-store/src/main/java/io/github/extracteddeath/pursuitiron/nativecoachstore/KotlinNativeJournalFileStore.kt');
+assert.doesNotMatch(storeSrc, /\\b(?:WebView|CanonicalJsSandboxProbe|engine-runtime|androidx.compose)\\b/,
+  'Storage layer must remain native, JS-free and independent of Compose UI');
 assert.ok(kotlinFiles.length>=6,'Require all current independent Kotlin rule domains');
 
 for(const name of kotlinFiles) {

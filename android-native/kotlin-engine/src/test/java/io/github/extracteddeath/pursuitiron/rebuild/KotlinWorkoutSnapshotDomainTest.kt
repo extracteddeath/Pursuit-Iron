@@ -177,4 +177,40 @@ class KotlinWorkoutSnapshotDomainTest {
             it.reps==RepBand(10,15) && it.targetRir==null
         })
     }
+
+    @Test fun kotlinProgramToWorkoutToCompletedJournalRunsWithoutJavaScript() {
+        val staged=(KotlinWorkoutSnapshotDomain.stage(request()) as
+            KotlinWorkoutSnapshotResult.Staged).snapshot
+        val stored=KotlinStoredWorkoutIdentity(
+            "local-commit-1",staged.workoutId,staged.source,1)
+        var journal=KotlinWorkoutJournalDomain.begin(staged,stored)
+        assertEquals(staged.targets.size,journal.unresolvedSetCount)
+        for(target in staged.targets) {
+            val physical=target.load as? DraftSetLoad.Verified
+            val performed=if(physical==null)
+                KotlinPerformedSet(null,null,target.reps.minimum,
+                    if(target.type==DraftSetType.WARMUP)null else 2)
+            else KotlinPerformedSet(physical.value,physical.unit,target.reps.minimum,
+                if(target.type==DraftSetType.WARMUP)null else 2)
+            val operation=KotlinJournalOperation.RecordSet(
+                "receipt-${journal.revision}",journal.revision,target.setKey,
+                KotlinJournalSetOutcome.COMPLETED,performed)
+            val proposal=KotlinWorkoutJournalDomain.reduce(journal,operation)
+            assertTrue(proposal.toString(),proposal is KotlinJournalDecision.Proposed)
+            journal=(proposal as KotlinJournalDecision.Proposed).state
+            assertFalse(journal.persisted)
+        }
+        assertEquals(0,journal.unresolvedSetCount)
+        assertTrue(journal.canProposeFinish)
+        val finish=KotlinJournalOperation.Finish("finish-complete",journal.revision)
+        val result=KotlinWorkoutJournalDomain.reduce(journal,finish)
+        val completed=(result as KotlinJournalDecision.Proposed).state
+        assertEquals(staged.targets.size+1,completed.revision.toInt())
+        assertEquals("finish-complete",completed.finishedByEventId)
+        assertFalse(completed.canProposeFinish)
+        assertEquals(staged.targets,completed.snapshot.targets)
+        assertEquals(KotlinJournalDecision.Proposed(completed,true),
+            KotlinWorkoutJournalDomain.reduce(completed,finish))
+    }
+
 }

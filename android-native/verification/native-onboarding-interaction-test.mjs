@@ -946,14 +946,27 @@ assert.ok(historyRow.includes('private fun NativeHistorySetRow(') &&
   historyRow.includes('trailingContent={') &&
   historyRow.includes('contentDescription="$action $label"') &&
   historyRow.includes('if(observation!=null)') &&
-  historyRow.includes('selectedObservation=observation.slot.exerciseIndex*20+observation.slot.setIndex') &&
+  historyRow.includes('selectedObservation=historyObservationKey(observation.slot.exerciseIndex,observation.slot.setIndex)') &&
   historyRow.includes('selectedExercise=exercise.id') &&
   historyRow.includes('selectedSet=set.setIndex') &&
+  historyRow.includes('selectedOccurrence=set.exerciseIndex') &&
+  historyRow.includes('it.exerciseIndex==selectedOccurrence && it.setIndex==selectedSet') &&
   historyRow.includes('selectedWarmup="${row.slot.exerciseIndex}:${row.slot.warmupIndex}"') &&
-  historyRow.includes('selectedObservation=exerciseIndex*20+row.slot.setIndex') &&
+  historyRow.includes('selectedObservation=historyObservationKey(row.slot.exerciseIndex,row.slot.setIndex)') &&
   historyRow.includes('if(value==null)"Skipped · no recorded reps"') &&
   historyRow.includes('canEdit,if(value==null)"Record" else "Edit"'),
   'Real history must show structured legible set values with accessible Edit/Record actions and preserve each exact correction identity');
+
+// Never alias (exercise 0, set 20) with (exercise 1, set 0).
+assert.ok(historyRow.includes('private fun historyObservationKey(exerciseIndex: Int,setIndex: Int): String =') &&
+  historyRow.includes('"$exerciseIndex:$setIndex"') &&
+  historyRow.includes('mutableStateOf<String?>(null)') &&
+  historyRow.includes('historyObservationKey(it.slot.exerciseIndex,it.slot.setIndex)==selectedObservation') &&
+  !historyRow.includes('exerciseIndex*20') && !historyRow.includes('setIndex*20'),
+  'History correction selection has exact composite identity without an arbitrary set-count limit');
+const identitySamples=[[0,20],[1,0],[1,23],[2,3],[0,0],[0,100]];
+assert.equal(new Set(identitySamples.map(([ex,set])=>`${ex}:${set}`)).size,identitySamples.length,
+  'Repeated exercises and 20+ sets must remain distinct');
 
 assert.ok(historyUi.includes('val historyEditorBusy=state.historyBusy || state.workoutBusy ||') &&
   historyUi.includes('state.backupExportBusy || state.busy || state.workout!=null') &&
@@ -961,7 +974,7 @@ assert.ok(historyUi.includes('val historyEditorBusy=state.historyBusy || state.w
   historyUi.includes('LaunchedEffect(state.workout?.plan?.session?.workoutId)') &&
   historyUi.includes('if(state.workout!=null) {') &&
   historyUi.includes('selectedExercise=null') &&
-  historyUi.includes('selectedObservation=-1') &&
+  historyUi.includes('selectedObservation=null') &&
   historyUi.includes('selectedWarmup=null') &&
   historyUi.includes('NativeHistoryObservationEditor(history,observation,historyEditorBusy') &&
   historyUi.includes('NativeHistorySetEditor(history,exercise,set,historyEditorBusy') &&

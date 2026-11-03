@@ -1,15 +1,14 @@
 /** Canonical first-program creation. Pure preparation; the native owner saves. */
-import { generateNextProgramForShell, EXERCISES, parseStoredData,
+import { generateNextProgramForShell, EXERCISES, EQUIPMENT, parseStoredData,
   splitSupportsTrainingDays, STORE_VERSION } from '../../modules/engine-api.js';
 import { projectCanonicalSavedProgram } from './current-program-projection.mjs';
 import { sha256Utf8, utf8ByteLength } from './json-identity.mjs';
 import { nativeStackCandidates } from './native-loading-catalog.mjs';
 
 const SPLITS={full_body:'Full body',upper_lower:'Upper / Lower',ppl:'Push / Pull / Legs',ulppl:'Upper / Lower / Push / Pull / Legs'};
-export const NATIVE_SETUP_EQUIPMENT=Object.freeze([
-  'barbell','rack','bench','dumbbell','cable','machine','smith','pullup','dip',
-  'legpress','hacksquat','legext','legcurl','calfmachine','ezbar','kettlebell','bands'
-]);
+// IDs come from the same append-only exercise/equipment catalog as the
+// production engine. Grouping and labels belong to the Compose UI only.
+export const NATIVE_SETUP_EQUIPMENT=Object.freeze(EQUIPMENT.map(({id})=>id));
 export const NATIVE_MUSCLE_PRIORITIES=Object.freeze([
   ['chest','Chest'],['back','Back · lats and upper back'],
   ['shoulders','Shoulders'],['biceps','Biceps'],['triceps','Triceps'],
@@ -99,7 +98,7 @@ function setupFrom(raw) {
     (p.barbellCap===null || Number.isInteger(p.barbellCap) && p.barbellCap>=0 && p.barbellCap<=6) &&
     Array.isArray(p.equipment) && p.equipment.length>0 &&
     new Set(p.equipment).size===p.equipment.length &&
-    p.equipment.every(eq=>NATIVE_SETUP_EQUIPMENT.includes(eq)));
+    p.equipment.every(eq=>NATIVE_SETUP_EQUIPMENT.includes(eq) || eq==='rack')); // Legacy native saves only: rack is auto-implied by a barbell.
   if(priorities) {
     ensure(object(p.focus) && Object.keys(p.focus).length<=3 &&
       Object.entries(p.focus).every(([part,level])=>

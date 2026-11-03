@@ -9,10 +9,35 @@ const workflow=read('.github/workflows/android-kotlin-rebuild.yml');
 const root='android-native/kotlin-engine/src/main/java/io/github/extracteddeath/pursuitiron/rebuild';
 const kotlinFiles=fs.readdirSync(root).filter(filename=>filename.endsWith('.kt'));
 assert.ok(nativeSettings.includes('":kotlin-engine"'));
-assert.ok(!app.includes('project(":kotlin-engine")'),
-  'New independent engine cannot issue or alter an active native workout');
-assert.ok(!app.includes('project(":native-coach-store")'),
-  'Uncertified native storage prototype cannot change the production journal');
+// The app MAY now compile the isolated Kotlin candidate, but its LIVE
+// runtime and Compose screens must still own only the unchanged JS-backed
+// canonical store until the explicit full-runtime cutover gate is met.
+assert.ok(app.includes('project(":kotlin-engine")') &&
+  app.includes('project(":native-coach-store")'),
+  'The isolated Android Kotlin candidate must compile against native source');
+const appRoot='android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/';
+const mainActivity=read(appRoot+'MainActivity.kt');
+const legacyRuntime=read(appRoot+'NativeRuntimeHost.kt');
+const application=read(appRoot+'PursuitIronApplication.kt');
+const candidate=read(appRoot+'NativeKotlinCandidateHost.kt');
+const localAthlete=read(appRoot+'AppPrivateKotlinLocalAthlete.kt');
+assert.ok(application.includes('by lazy { NativeKotlinCandidateHost(applicationContext) }'),
+  'Kotlin candidate must not start or enroll anyone at Application startup');
+assert.doesNotMatch(mainActivity, /KotlinCandidateHost|kotlinCandidate|kotlin-engine|nativecoachstore/,
+  'No Compose screen may switch workout ownership before native cutover');
+assert.doesNotMatch(legacyRuntime, /KotlinCandidateHost|kotlinCandidate|nativecoachstore/,
+  'The active legacy workout runtime must not change its owner or journal');
+assert.ok(legacyRuntime.includes('CanonicalWorkoutStorePersistence') &&
+  legacyRuntime.includes('WorkoutJournalPersistence'),
+  'Active runtime must keep existing canonical storage while Kotlin is isolated');
+assert.doesNotMatch(candidate+localAthlete,
+  /CanonicalJsSandboxProbe|PackagedReadOnlySchemaVerifier|engine-runtime|io\\.github\\.extracteddeath\\.pursuitiron\\.domain/,
+  'Isolated Kotlin-only host cannot depend on the JS runtime or canonical bridge');
+assert.ok(candidate.includes('CoachAthleteSetupDomain.review') &&
+  candidate.includes('NativeKotlinApprovalFileAuthority') &&
+  candidate.includes('NativeKotlinWorkoutCoordinator') &&
+  localAthlete.includes('explicitlyActivated=false'),
+  'Native onboarding must require explicit reviewed local athlete activation');
 const storeBuild=read('android-native/native-coach-store/build.gradle.kts');
 assert.ok(nativeSettings.includes('":native-coach-store"') &&
   storeBuild.includes('project(":kotlin-engine")') &&

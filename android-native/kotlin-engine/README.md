@@ -383,3 +383,30 @@ for training outcomes. Neither this status nor any returned candidate can
 issue a workout, alter a custom program or modify training history.
 Exercise-science validation, engine ownership, explicit approval provenance,
 migration/rollback and Android device acceptance remain outstanding.
+
+
+## Fourteenth domain: stable, provenance-aware exercise catalog
+
+CoachExerciseCatalogDomain is a new fail-closed bridge from an explicit
+exercise catalog and the athlete's exact gym inventory to the independent
+weekly composer. Stable exercise, movement-family, variant and attachment
+identities are preserved. The caller must supply documented, provisionally
+reviewed muscle credits; biceps/brachialis and wrist flexor/extensor effects
+stay independently identified. Missing review provenance, unavailable rope
+or straight-bar attachments, wrong load-basis equipment, phantom increments,
+and numeric bodyweight interpretations block composition.
+
+An author-reviewed coefficient is NOT proof of scientific or independent
+physiological validation. A complete authoritative catalog, evidence review
+and exercise-specific coefficients are still substantial unfinished work.
+The rules cannot synthesize an approved exercise definition from a name.
+
+CoachCatalogBlockDomain connects catalog verification for both baseline and
+proposed plans through CoachPrescribedBlockDomain. A phase/deload proposal
+cannot smuggle raw ComposerExerciseOption values past catalog checks.
+Reusing a stable exercise ID for a different movement family, variant,
+attachment, role or implement meaning is rejected even when generic exercise
+adaptation is enabled. Genuine substitutions need distinct exercise IDs,
+the user's adaptation permissions and a complete, physically valid block
+review. Neither the catalog gate nor the block gate can issue workouts,
+modify saved training history, or replace the active engine.

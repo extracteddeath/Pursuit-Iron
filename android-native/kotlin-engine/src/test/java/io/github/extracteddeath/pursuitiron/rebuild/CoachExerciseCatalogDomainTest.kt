@@ -247,9 +247,12 @@ class CoachExerciseCatalogDomainTest {
         assertEquals(a,b)
         val ids=a.draft!!.week.exposures.map {it.setKey}
         assertEquals(ids.size,ids.distinct().size)
+        val unresolved=CoachExerciseCatalogDomain.review(request(
+            selections=listOf(choice("missing-id"),choice("row"),choice("squat"))))
+        assertTrue(unresolved.issues.isNotEmpty())
         assertThrows(UnsupportedOperationException::class.java) {
             @Suppress("UNCHECKED_CAST")
-            val mutable=a.issues as MutableList<CatalogIssue>
+            val mutable=unresolved.issues as MutableList<CatalogIssue>
             mutable.add(CatalogIssue("invented",CatalogIssueType.UNKNOWN_EXERCISE,
                 "invalid"))
         }

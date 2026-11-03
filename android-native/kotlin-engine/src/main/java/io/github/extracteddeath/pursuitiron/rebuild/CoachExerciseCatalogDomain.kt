@@ -110,6 +110,10 @@ object CoachExerciseCatalogDomain {
         require(request.template.exercises.isEmpty()) {
             "Exercise choices must come from the catalog only"
         }
+        // Validate authored primary references before indexing day/focus.
+        require(request.template.sessionIntents.all {
+            it.dayIndex in request.template.days.indices
+        })
         require(request.catalog.size in 1..256)
         require(request.chosen.size in 1..32)
         require(request.catalog.map {it.exerciseId}.distinct().size==

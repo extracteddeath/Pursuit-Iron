@@ -33,7 +33,8 @@ import java.security.MessageDigest
  */
 enum class NativeJournalFileRefusal {
     INVALID_ARGUMENT, NOT_ISSUED, ISSUE_CONFLICT, SOURCE_CONFLICT,
-    CORRUPT_RECEIPTS, JOURNAL_REJECTED, STORAGE_UNAVAILABLE
+    CORRUPT_RECEIPTS, JOURNAL_REJECTED, STORAGE_UNAVAILABLE,
+    NOT_AUTHORIZED
 }
 
 sealed interface NativeJournalFileResult {
@@ -302,6 +303,107 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
             return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.CORRUPT_RECEIPTS)
         return NativeJournalFileResult.Durable(recovered.journal,true)
+    }
+
+    /**
+     * Restore a complete issued Kotlin workout directly from private native
+     * bytes. The authorization callback MUST be implemented by the native
+     * authenticated account/session owner, not the caller or the coach engine.
+     * It is checked while holding the store lock against the SAVED source.
+     * A stale or untrusted callback must deny even if the checksum is valid.
+     *
+     * Old `open(ownerKey,snapshot,identity)` remains a lower-level migration
+     * test API; production UI must use this owner-verified cold-open path.
+     */
+    fun openStored(
+        ownerKey: String,
+        workoutId: String,
+        authorizeCurrent: (String,KotlinTrainingSourceRevision)->Boolean
+    ): NativeJournalFileResult {
+        if(!ownerId.matches(ownerKey) || !ownerId.matches(workoutId))
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.INVALID_ARGUMENT)
+        return runCatching {
+            locked(ownerKey,workoutId) { file ->
+                recoverSaved(file,ownerKey,workoutId,authorizeCurrent)
+            }
+        }.getOrElse {
+            NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Append from an authenticated cold-open without receiving caller-made
+     * targets, thereby avoiding any source/target drift at the UI boundary.
+     * This path still has no access to the production app or to JavaScript.
+     */
+    fun appendStored(
+        ownerKey: String,
+        workoutId: String,
+        operation: KotlinJournalOperation,
+        authorizeCurrent: (String,KotlinTrainingSourceRevision)->Boolean
+    ): NativeJournalFileResult {
+        if(!ownerId.matches(ownerKey) || !ownerId.matches(workoutId))
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.INVALID_ARGUMENT)
+        return runCatching {
+            locked(ownerKey,workoutId) { file ->
+                val prior=recoverSaved(file,ownerKey,workoutId,authorizeCurrent)
+                if(prior !is NativeJournalFileResult.Durable)return@locked prior
+                val decision=KotlinWorkoutJournalDomain.reduce(prior.journal,operation)
+                if(decision is KotlinJournalDecision.Rejected)
+                    return@locked NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.JOURNAL_REJECTED,decision.reason)
+                decision as KotlinJournalDecision.Proposed
+                if(!decision.replayed) {
+                    val next=decision.state
+                    val source=next.snapshot
+                    val envelope=SavedReceipts(ownerKey,
+                        NativeJournalBinary.snapshotHash(source),source,
+                        next.storedIdentity,next.receipts,next.revision,
+                        next.finishedByEventId)
+                    atomicWrite(file,NativeJournalBinary.encode(envelope))
+                }
+                NativeJournalFileResult.Durable(decision.state,decision.replayed)
+            }
+        }.getOrElse {
+            NativeJournalFileResult.Rejected(NativeJournalFileRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    private fun recoverSaved(
+        file: Path,
+        ownerKey: String,
+        workoutId: String,
+        authorizeCurrent: (String,KotlinTrainingSourceRevision)->Boolean
+    ): NativeJournalFileResult {
+        if(!Files.exists(file))return NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED)
+        val saved=try {
+            if(Files.size(file)>2_000_000L)throw IOException("oversize journal")
+            NativeJournalBinary.decode(Files.readAllBytes(file))
+        } catch(_:Exception) {
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.CORRUPT_RECEIPTS)
+        }
+        if(saved.ownerKey!=ownerKey ||
+            saved.identity.workoutId!=workoutId ||
+            saved.snapshot.workoutId!=workoutId ||
+            saved.identity.source!=saved.snapshot.source)
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.SOURCE_CONFLICT)
+        if(!runCatching {
+            authorizeCurrent(ownerKey,saved.snapshot.source)
+        }.getOrDefault(false))
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.NOT_AUTHORIZED)
+        val restored=KotlinWorkoutJournalReplayDomain.replay(
+            saved.snapshot,saved.identity,saved.receipts,
+            saved.revision,saved.finishId)
+        if(restored !is KotlinJournalReplayResult.Recovered)
+            return NativeJournalFileResult.Rejected(
+                NativeJournalFileRefusal.CORRUPT_RECEIPTS)
+        return NativeJournalFileResult.Durable(restored.journal,true)
     }
 
     /** Must only be called AFTER the native issuance owner authorizes and

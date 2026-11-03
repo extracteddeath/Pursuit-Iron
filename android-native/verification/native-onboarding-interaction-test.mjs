@@ -179,19 +179,20 @@ assert.ok(train.includes('val exerciseAnchor=remember { BringIntoViewRequester()
   train.includes('focusScrollTarget=destination') &&
   train.includes('modifier=Modifier.bringIntoViewRequester(exerciseAnchor)'),
   'Only a new durably acknowledged Focus movement should reveal the next exercise on compact screens, without scrolling during manual review or replay');
+const historyLayout=fs.readFileSync(root+'NativeHistoryPanel.kt','utf8');
 assert.ok(controls.includes('internal fun PursuitMetricStrip(') &&
   controls.includes('PursuitMetricStrip(listOf(') &&
-  historyUi.includes('PursuitMetricStrip(listOf(') &&
-  historyUi.includes('"Recorded" to history.setsDone.toString()') &&
-  historyUi.includes('"Other sets" to (summary.totalSets-summary.setsDone).toString()') &&
-  historyUi.includes('"Volume" to "${summary.volume} ${summary.unit}"') &&
-  historyUi.includes('PursuitPrimaryAction('),
+  historyLayout.includes('PursuitMetricStrip(listOf(') &&
+  historyLayout.includes('"Recorded" to history.setsDone.toString()') &&
+  historyLayout.includes('"Other sets" to (summary.totalSets-summary.setsDone).toString()') &&
+  historyLayout.includes('"Volume" to "${summary.volume} ${summary.unit}"') &&
+  historyLayout.includes('PursuitPrimaryAction('),
   'Active and saved workouts must use the same exact-data metric strip and confirmed edit controls, without labeling unresolved historical set positions as performed skips');
 assert.ok(controls.includes('internal fun PursuitSessionMetrics(') &&
   controls.includes('internal fun PursuitPrimaryAction(') &&
   controls.includes('MaterialTheme.colorScheme.surfaceContainerHigh') &&
   controls.includes('BorderStroke(1.dp,LocalPursuitPalette.current.accentInk.copy(alpha=0.45f))') &&
-  controls.includes('color=if(emphasize) LocalPursuitPalette.current.accentInk') &&
+  controls.includes('color=if(index==0) LocalPursuitPalette.current.accentInk') &&
   screens.includes('PursuitSessionMetrics(savedSets,skippedSets,journal.unresolvedCount)') &&
   screens.includes('PursuitPrimaryAction(') &&
   train.includes('PursuitSessionMetrics(') &&

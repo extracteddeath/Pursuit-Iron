@@ -178,7 +178,8 @@ try {
         await page.waitForSelector('[data-testid="set-0-0"]');
         const check=await page.$('.wpb-backdrop button[data-wpb-system-back]');if(check)await check.click();
     };
-    for (const [template,unit,week] of [['p531','lb',1],['p531','kg',1],['p531','lb',5],['gzclp','lb',1]]) {
+    // The 5/3/1 deload is the wave's own week 4: the template no longer adds a week 5 after the block.
+    for (const [template,unit,week] of [['p531','lb',1],['p531','kg',1],['p531','lb',4],['gzclp','lb',1]]) {
         await open(`template=${template}&unit=${unit}&week=${week}`);
         const p=fixtures[template],d=p.days[0],ex=EX_BY_ID[d.exercises[0]],preview=percentagePlanFor(p,d,ex,0,week,unit);
         const shared=programToText(p,'rir',unit,week);

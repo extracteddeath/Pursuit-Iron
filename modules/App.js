@@ -63,7 +63,7 @@ import {
     SUBMUSCLE_LABEL, subRegionOf, summarizeSession, summarizeSets, swapNextSlotPrescriptions, swapOverlapNames,
     syncSubSets, techExplain, techSetTag, TEMPLATE_CATS, templateConfig, templateIntent, TEMPLATES, tempoFor,
     todayISO, TOTAL_WEEKS, toUnit, trainingMaxForUnit, uid, underRecoveredWeekly, userOwnsRuntimeSet, VIEW_DEPTH,
-    volumeAudit, volumeVerdicts, warmupRoutine, warmupSets, weekIntent, weeklyBodyweightTrend, weeklyRecap, weekKeyOf,
+    volumeAudit, volumeVerdicts, warmupRoutine, warmupSets, weekIntent, weeklyBodyweightTrend, weeklyRecap, weekKeyOf, isSchemeDeloadWeek,
     weeklySubVolume, weeklyVolume, weekMuscleBreakdown, weeksOf, withTrainingMax, workoutCsvToStore,
     workoutPlanCoachFact,
 } from './engine-api.js';
@@ -6749,10 +6749,12 @@ function NextWorkoutView({ program, day: sourceDay, weekIndex, unit = "kg", perf
     const activeCount = summary.exCount;
     const mins = summary.minutes;
     const total = weeksOf(program);
-    const isDeload = weekIndex > total;
+    // 5/3/1's week 4 is the wave's own deload, inside the block (isSchemeDeloadWeek).
+    const waveDeload = isSchemeDeloadWeek(program.config?.percentScheme, weekIndex, total);
+    const isDeload = weekIndex > total || waveDeload;
     const weekLabel = program.config?.endless
         ? (isDeload ? "Continuous · Deload" : `Continuous · Week ${weekIndex}`)
-        : (isDeload ? "Deload week" : `Week ${weekIndex} of ${total + (program.config?.deload ? 1 : 0)}`);
+        : (waveDeload ? `Week ${weekIndex} of ${total} · Deload` : isDeload ? "Deload week" : `Week ${weekIndex} of ${total + (program.config?.deload ? 1 : 0)}`);
     const workingSets = summary.sets;
     const mv = dayMuscleVolume(program, day, weekIndex);
     return (_jsxs("div", { className: "wpb-next-workout-shell", children: [_jsxs("div", { className: "wpb-scroll wpb-next-workout-view", children: [_jsx("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "10px 0 2px" }, children: _jsxs("button", { onClick: onBack, "aria-label": "Back", className: "pressable hit", style: { background: "none", border: "none", color: C.text, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: "8px 6px 8px 0", fontSize: 15, fontWeight: 600 }, children: [_jsx(ChevronLeft, { size: 20 }), " Back"] }) }), _jsxs("div", { style: { fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: C.accentInk, textTransform: "uppercase" }, children: ["Next workout \u00B7 ", weekLabel] }), cycleInfo && (_jsxs("div", { style: { display: "inline-flex", alignItems: "center", gap: 4, marginTop: 8, padding: "4px 9px", borderRadius: 999, background: C.accentDim, border: `1px solid ${C.accent}33`, fontSize: 11, fontWeight: 700, color: C.accentInk }, children: [_jsx(Layers, { size: 11 }), " ", cycleInfo.cycle.blockMeta?.[cycleInfo.blockIdx]?.label, " \u00B7 Block ", cycleInfo.blockIdx + 1, "/", cycleInfo.cycle.blockMeta?.length] })), _jsx("h1", { style: { fontSize: 28, fontWeight: 700, letterSpacing: -0.6, margin: "8px 0 0", lineHeight: 1.1 }, "aria-label": day.label, children: displayDayName(day.label, program) }), _jsxs("div", { style: { fontSize: 13, color: C.muted, marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }, children: [_jsx("span", { className: "wpb-preview-program-name", children: program.name }), _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsx(Clock, { size: 12 }), " ~", mins, " min", _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), activeCount, " exercises", _jsx("span", { style: { color: C.faint }, children: "\u00B7" }), workingSets, " working sets", freshness != null && (_jsxs(_Fragment, { children: [_jsx("span", { style: { color: C.faint }, children: "\u00B7" }), _jsxs("span", { children: [freshness, "% fresh"] })] }))] }), day.note && (_jsxs("div", { style: { display: "flex", gap: 8, alignItems: "flex-start", background: C.accentDim, borderRadius: 12, padding: "10px 12px", marginTop: 12 }, children: [_jsx(Info, { size: 14, color: C.accentInk, style: { flexShrink: 0, marginTop: 1 } }), _jsx("span", { style: { fontSize: 13, color: C.text, lineHeight: 1.45 }, children: day.note })] })), _jsx(PlanChangeBanner, { review, onClick: () => setPlanChangesOpen(true) }),
@@ -7962,7 +7964,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                     position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 41, minWidth: 208, maxHeight: 320, overflowY: "auto",
                                                     background: C.bg2, borderRadius: 16, padding: 6,
                                                     boxShadow: "0 12px 32px rgba(0,0,0,.4)", animation: "popIn .16s cubic-bezier(.2,.7,.3,1) backwards", transformOrigin: "top left"
-                                                }, children: [_jsx("div", { style: { ...eyebrow(), padding: "6px 9px 7px" }, children: activeWeek === deloadWeek ? "Deload week" : `Week ${activeWeek}` }), program.days.map((d, i) => {
+                                                }, children: [_jsx("div", { style: { ...eyebrow(), padding: "6px 9px 7px" }, children: activeWeek === deloadWeek ? "Deload week" : isSchemeDeloadWeek(program.config?.percentScheme, activeWeek, totalWeeks) ? `Week ${activeWeek} · Deload` : `Week ${activeWeek}` }), program.days.map((d, i) => {
                                                         const dn = isDayDone(d.id, activeWeek); // per SELECTED week
                                                         const isNx = viewingCurrentWeek && !dn && d.id === nextDayId; // "next up" only means anything on the current week
                                                         const sel = openDay === d.id;
@@ -8182,7 +8184,7 @@ function ProgramView({ program, setProgram, gymEquipment = null, banned, addBan,
                                                                     // The Plan preview reads the same Pursuit Next RIR cell used by the live
                                                                     // workout. The shell no longer invents a week-2-to-failure overlay.
                                                                     const weeksT = weeksOf(program);
-                                                                    const isDeloadWk = program.config?.deload && activeWeek > weeksT;
+                                                                    const isDeloadWk = program.config?.deload && activeWeek > weeksT || isSchemeDeloadWeek(program.config?.percentScheme, activeWeek, weeksT);
                                                                     const lse = lastSetEffort(cell, EX_BY_ID[exerciseAt(program, day, slot, activeWeek)], isPrimary, activeWeek, weeksT);
                                                                     const baseR = Math.round(parseRIRNum(cell.rir));
                                                                     const lastFailure = lse.failure;
@@ -18447,8 +18449,9 @@ function CycleDetail({ cycle, saved = [], history = [], cycleInfo = null, onBack
  * IT REFUSES TO GUESS. Under three logged sessions it says so and stops, rather than reporting a trend
  * from two points — the whole value of a retrospective is that you can act on it, and advice built on
  * a thin window is worse than no advice because you cannot tell it apart from the real thing. */
-function BlockReviewView({ cycle, blockIdx, history = [], onBack }) {
-    const R = useMemo(() => blockReview(history, cycle, blockIdx), [history, cycle, blockIdx]);
+function BlockReviewView({ cycle, blockIdx, history = [], program = null, onBack }) {
+    // The block's program lets the review leave deload-week sessions out of each lift's trend (a deload is not a regression).
+    const R = useMemo(() => blockReview(history, cycle, blockIdx, program), [history, cycle, blockIdx, program]);
     const meta = R.block || {};
     const fmtD = ms => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
     const tone = t => t === "progressed" ? C.accent : t === "regressed" ? C.danger : C.muted;
@@ -21930,7 +21933,7 @@ function App() {
                                         if (!rc) {
                                             return _jsx("div", { style: { padding: 24, color: C.muted }, children: "That cycle is gone." });
                                         }
-                                        return _jsx(BlockReviewView, { cycle: rc, blockIdx: reviewOf.blockIdx, history: history, onBack: goBack });
+                                        return _jsx(BlockReviewView, { cycle: rc, blockIdx: reviewOf.blockIdx, history: history, program: saved.find(p => p.id === rc.blockIds?.[reviewOf.blockIdx]) || null, onBack: goBack });
                                     })())
                                         : view === "cycleWizard" ? (_jsx(Wizard, { buildTask: generationTask, onCancelBuild: () => generationTask?.controller.abort(), initialEquipment: gymEquipment, initialExperience: experience, initialUnit: unit, skipUnits: unitChosen, cycleMode: true, onCancel: goBack, onDone: (cfg) => buildCycle(rememberExperience(rememberEquipment(cfg))) })) : view === "wizard" ? (_jsx(Wizard, { buildTask: generationTask, onCancelBuild: () => generationTask?.controller.abort(), initialEquipment: gymEquipment, initialExperience: experience, initialUnit: unit, skipUnits: unitChosen, allowModeChoice: true, onCancel: goBack, onDone: (cfg) => { rememberEquipment(cfg); rememberExperience(cfg); return cfg.cycleTemplate ? buildCycle(cfg) : handleGenerate(cfg); } })) : view === "nextWorkout" && (previewTarget || (program && upNext)) ? (() => {
                                             /* A preview target wins over the computed Up Next, so one screen serves both "what's
@@ -22100,7 +22103,7 @@ function App() {
                                     ? `"${c.name}" will be marked complete. Your blocks stay in the library.`
                                     : `You'll move on to ${c.blockMeta[active + 1]?.label || "the next block"}. Any un-trained days left in ${c.blockMeta[active]?.label || "this block"} are skipped — this can't be undone.`;
                             return (_jsx("div", { onClick: () => setConfirmAdvance(null), className: "wpb-backdrop", style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 95, padding: 24, animation: "fadeIn .2s both" }, children: _jsxs("div", { onClick: e => e.stopPropagation(), className: "wpb-pop", style: { width: "100%", maxWidth: 340, background: C.bg2, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }, children: [_jsx("div", { style: { width: 38, height: 38, borderRadius: 12, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }, children: _jsx(Layers, { size: 18, color: C.accentInk }) }), _jsx("div", { style: { fontSize: 18, fontWeight: 700 }, children: title })] }), _jsx("div", { style: { fontSize: 15, color: C.muted, lineHeight: 1.5, marginBottom: 12 }, children: body }), (() => {
-                                            const R = blockReview(history, c, active);
+                                            const R = blockReview(history, c, active, saved.find(p => p.id === c.blockIds?.[active]) || null);
                                             if (!R.ok)
                                                 return null;
                                             return (_jsxs("button", { "data-review-cta": true, onClick: () => { setConfirmAdvance(null); setReviewOf({ cycleId: c.id, blockIdx: active }); pushView("blockReview", view); }, className: "pressable", style: { width: "100%", textAlign: "left", padding: "11px 12px", borderRadius: 12, border: `1px solid ${C.accent}33`, background: C.accentDim, color: C.text, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }, children: [_jsx(Milestone, { size: 15, color: C.accentInk, style: { flexShrink: 0 } }), _jsxs("span", { style: { flex: 1, minWidth: 0 }, children: [_jsx("span", { style: { display: "block", fontSize: 13, fontWeight: 700 }, children: "See how this block went" }), _jsx("span", { style: { display: "block", fontSize: 11, color: C.muted }, children: R.headline })] }), _jsx(ChevronRight, { size: 15, color: C.muted, style: { flexShrink: 0 } })] }));

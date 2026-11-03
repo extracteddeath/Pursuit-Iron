@@ -227,7 +227,7 @@ class CoachAthleteProgramGeneratorTest {
 
     @Test fun optedInSelectorPrunesUnknownOfferButPreservesPinnedLifts() {
         val original=request()
-        val extra=choice("unknown-machine",visits=2)
+        val extra=choice("unknown-machine",visits=2).copy(requiredVisits=0)
         val authored=original.choices.map {
             if(it.exerciseId=="bench")it.copy(requiredVisits=1)
             else it.copy(requiredVisits=0)

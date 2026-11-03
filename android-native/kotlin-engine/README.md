@@ -443,3 +443,47 @@ muscles (including separate biceps/brachialis/wrist flexors/extensors),
 attachment, exercise-specific load convention and supported equipment
 combinations before any selected tranche can become catalog-authoritative
 in Kotlin. This import is intentionally NOT proof of coaching quality.
+
+## Sixteenth domain: first real starter exercises (provisional engineering review)
+
+`StarterExerciseTranche` provides 13 **actual stable IDs from the curated
+web exercise database**, with source-linked movement families, explicit
+per-hand vs barbell-total equipment loading, supporting fixtures, muscle
+credits, and practical rep bounds. Selection still requires the athlete's
+actual gym stock and explicit working loads. No weight is synthesized.
+The legacy source is independently checked by
+`verification/starter-catalog-parity.mjs` in CI, including exact IDs,
+movement families, equipment requirements and practical rep ranges.
+
+The retained definitions include barbell/paused bench, squat, overhead
+press; incline dumbbell press, one-arm row, lateral raise, biceps curl,
+overhead triceps extension, split squat, Romanian deadlift, calf raise
+and bodyweight crunch. Broad source labels require an **explicit and
+provisional engineering mapping**: the one-arm dumbbell row's old
+`back` bucket is provisionally allocated to upper back directly and
+lats indirectly, with reported biceps/rear delts secondary credits.
+The RDL's old generic `back` contribution is quarantined, not
+reassigned to lats. `core` on a crunch is provisionally constrained to
+abs; an ordinary supinated dumbbell curl does NOT automatically credit
+brachialis or wrist flexors.
+
+Importantly, this is an **engineering-authored provisional catalog**,
+not exercise-science certification by an independent qualified coach.
+The credit values remain assumptions subject to scientific review,
+especially the legacy broad-back remapping. Likewise, this limited
+13-exercise tranche is not a complete equipment-balanced 3–6 day
+catalog; the rest of the 402 historical records remain unreviewed.
+
+A regression discovered that the prior catalog did not validate a
+required bench/rack when the bar and plates were present. The catalog
+now verifies `requiredFacilityIds` against the athlete's available
+fixtures; the identity gate also treats fixture requirements as part
+of stable exercise meaning. A missing incline bench cannot be replaced
+silently by a flat bench, and removing a rack requirement from a
+same-ID exercise is refused across block transitions.
+
+This tranche can feed isolated, actual composed candidate weeks in
+Kotlin unit tests, **not active user workouts**. Independent muscle
+mapping review, a broader true gym catalog, goal-specific full-week
+quality, history-linked state ownership and real APK acceptance still
+gate release.

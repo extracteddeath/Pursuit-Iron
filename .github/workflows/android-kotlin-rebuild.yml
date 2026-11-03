@@ -33,6 +33,8 @@ jobs:
         run: node android-native/kotlin-engine/verification/offline-only-test.mjs
       - name: Stage legacy web exercise catalog as unreviewed source inventory
         run: node android-native/kotlin-engine/verification/legacy-catalog-ingest.mjs --write-report
+      - name: Verify first curated starter tranche provenance
+        run: node android-native/kotlin-engine/verification/starter-catalog-parity.mjs
       - name: Test headless Kotlin training decisions and weekly composer without an APK
         working-directory: android-native
         run: gradle :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace

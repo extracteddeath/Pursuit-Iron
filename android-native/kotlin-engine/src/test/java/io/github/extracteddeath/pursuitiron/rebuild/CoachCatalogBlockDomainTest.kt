@@ -207,4 +207,17 @@ class CoachCatalogBlockDomainTest {
             mutable.add("unverified")
         }
     }
+
+    @Test fun sameExerciseIdCannotSilentlyDropItsRequiredRack() {
+        val baseline=candidate(catalog=listOf(
+            bench.copy(requiredFacilityIds=setOf("rack")),row,squat),
+            gym=gym.copy(availableFacilityIds=setOf("rack")))
+        val proposed=candidate(cap=4,catalog=listOf(bench,row,squat),
+            gym=gym.copy(availableFacilityIds=setOf("rack")))
+        val r=review(input(baseline=baseline,proposed=proposed,
+            permission=BlockAdaptPermissions(adaptExercises=true)))
+        assertEquals(CatalogBlockStatus.EXERCISE_IDENTITY_CHANGED,r.status)
+        assertTrue(r.problems.any {it.contains("required facilities")})
+    }
+
 }

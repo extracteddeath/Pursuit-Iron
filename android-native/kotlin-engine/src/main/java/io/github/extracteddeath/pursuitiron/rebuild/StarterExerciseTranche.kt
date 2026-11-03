@@ -100,7 +100,7 @@ object StarterExerciseTranche {
             direct(TrainingMuscle.UPPER_BACK),
             indirect(TrainingMuscle.LATS,"0.5"),
             indirect(TrainingMuscle.BICEPS,"0.5"),
-            indirect(TrainingMuscle.REAR_DELTS,"0.5")),
+            indirect(TrainingMuscle.REAR_DELTS,"0.25")),
         entry("db_lateral_raise","lateral_raise","dumbbell",
             ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,press,
             DBS,LoadBasis.DUMBBELL_PER_HAND,emptySet(),8..35,

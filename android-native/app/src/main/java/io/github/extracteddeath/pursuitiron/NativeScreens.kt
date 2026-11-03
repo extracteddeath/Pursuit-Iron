@@ -33,6 +33,7 @@ import io.github.extracteddeath.pursuitiron.domain.ReadOnlyProgramPresentation
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDayJourney
 import io.github.extracteddeath.pursuitiron.domain.ReadOnlyTrainingDaySelection
 import io.github.extracteddeath.pursuitiron.domain.NativeSavedProgram
+import io.github.extracteddeath.pursuitiron.domain.JournalSetDisposition
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryFilter
 import io.github.extracteddeath.pursuitiron.domain.NativeHistoryCalendarQuery
 import io.github.extracteddeath.pursuitiron.domain.NativeBackupExportDocument
@@ -63,6 +64,10 @@ internal fun TodayScreen(
 ) {
     if(savedProgram!=null) {
         val activeWorkout=workoutState?.workout!=null
+        // This is the owned recovery journal, not a reconstructed or
+        // optimistically logged UI draft. A process restart can present
+        // exactly the same confirmed set/skip/Finish provenance.
+        val activeJournal=workoutState?.workout?.journal
         PageHeading("YOUR TRAINING",
             if(activeWorkout)"Continue your workout" else "Ready for your next workout",
             savedProgram.program.name)
@@ -70,6 +75,23 @@ internal fun TodayScreen(
             Text("${savedProgram.program.days.size} days per week · " +
                 "${savedProgram.program.weeks}-week starting block · ${savedProgram.profile.unit}",
                 style=MaterialTheme.typography.bodyMedium)
+            activeJournal?.let { journal ->
+                val savedSets=journal.completed.count {
+                    it.intent.disposition==JournalSetDisposition.COMPLETED
+                }
+                val skippedSets=journal.completed.count {
+                    it.intent.disposition==JournalSetDisposition.SKIPPED
+                }
+                Text("$savedSets recorded · $skippedSets skipped · ${journal.unresolvedCount} remaining",
+                    style=MaterialTheme.typography.titleSmall,
+                    color=MaterialTheme.colorScheme.primary)
+                Text(when {
+                    journal.isFinished -> "Finish acknowledged on device · saving to history"
+                    journal.unresolvedCount==0 -> "All issued sets resolved · review and confirm Finish in Train"
+                    else -> "Resume your saved session without losing completed sets"
+                },style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Button(onClick={if(!activeWorkout)startWorkout();openTrain()},
                 enabled=workoutState?.ready==true && !workoutState.workoutBusy &&
                     !workoutState.historyBusy && !workoutState.busy &&
@@ -78,6 +100,8 @@ internal fun TodayScreen(
                 modifier=Modifier.fillMaxWidth()) {
                 Text(if(workoutState?.backupExportBusy==true)"Saving backup…"
                     else if(workoutState?.workoutBusy==true)"Opening workout…"
+                    else if(activeJournal?.isFinished==true)"Review pending Finish"
+                    else if(activeJournal?.unresolvedCount==0)"Review and finish workout"
                     else if(activeWorkout)"Resume workout" else "Start next workout")
             }
             OutlinedButton(onClick=openPlan,modifier=Modifier.fillMaxWidth()) {

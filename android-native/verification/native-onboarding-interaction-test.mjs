@@ -646,6 +646,16 @@ assert.ok(todayStart>=0 && nextWorkoutCta>todayStart &&
   screens.includes('if(!activeWorkout) {'),
   'Today must lead with real Start/Resume and keep canonical shorter-session options opt-in');
 
+assert.ok(screens.includes('val activeJournal=workoutState?.workout?.journal') &&
+  screens.includes('it.intent.disposition==JournalSetDisposition.COMPLETED') &&
+  screens.includes('it.intent.disposition==JournalSetDisposition.SKIPPED') &&
+  screens.includes('journal.unresolvedCount') &&
+  screens.includes('journal.isFinished -> "Finish acknowledged on device') &&
+  screens.includes('else if(activeJournal?.isFinished==true)"Review pending Finish"') &&
+  screens.includes('else if(activeJournal?.unresolvedCount==0)"Review and finish workout"') &&
+  screens.includes('Resume your saved session without losing completed sets'),
+  'Today must show the exact durable resume/provisional-Finish state, not draft or assumed completed work');
+
 assert.ok(train.includes('onViewHistory: ()->Unit = {}') &&
   train.includes('if(state.completion!=null) {') &&
   train.includes('Button(onClick=onViewHistory,enabled=state.ready && !state.historyBusy &&') &&

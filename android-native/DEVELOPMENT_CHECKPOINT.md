@@ -1970,3 +1970,15 @@ An exception opening the packaged engine now exits the startup loading
 state with a blocked, non-writing recovery message instead of leaving a
 perpetual spinner. Cancellation still propagates. Source regression gates
 cover both cases; Compose and domain checks required. No APK.
+
+## 2026-11-02 — Owned resume summary on Today
+
+Today now distinguishes the actual native journal's recorded, skipped and
+unresolved sets after navigation, rotation or process recovery. It also
+separately labels a zero-unresolved session awaiting explicit Finish, and
+a durably acknowledged Finish awaiting canonical history publication.
+All counts and labels are sourced from the runtime-owned, persisted journal;
+no optimistic set completion, alternative writer, new app state or program
+mutation was added. The CTA still routes to the real Train confirmation and
+publication workflow. Source contracts and Compose compile gate this pass.
+No APK and no production web changes.

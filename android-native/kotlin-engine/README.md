@@ -1,5 +1,41 @@
 # Pursuit Iron — independent Kotlin training engine
 
+## Revision-bound verified machine weights (read-only Kotlin handoff)
+
+`CoachNativeVerifiedLoadHandoff` is a **standalone headless review**, not an
+Android/Compose import or live workout engine. Its typed DTOs mirror the native
+`NativeCoachVerifiedLoadEvidence` projection on the separate Android
+foundation branch: program ID, `programUpdatedAt`, `storeSavedAt`, v13 store
+version and exact SHA-256; candidate count; exercise ID and display name;
+unit; and either *exact logged selectable loads* or an expressly verified
+minimum/increment/maximum range. A future owner must obtain and authenticate
+those facts against the **CURRENT** saved-program snapshot and gym profile
+before constructing these DTOs. This module cannot authenticate or parse
+canonical JS snapshots by itself.
+
+The handoff rejects stale or malformed program revisions, mismatched gym
+units, duplicate or unknown exercise IDs, conflicting names/modes, malformed
+stock, specialty-machine ranges and infeasible increments. Exact-only
+`external_load` specialty gear is never given an inferred mechanical load.
+Verified facts become immutable, per-exercise `VerifiedLoadStock` with the
+`EXERCISE_OVERRIDE` basis; absent facts stay manual. Generic bar/plate,
+dumbbell, Smith, cable or machine-family stock is **not** silently
+converted to an exercise-specific fact. A separate, authenticated future
+bridge will be required for those implement-level loading families.
+
+`inspect` uses the existing independent `EquipmentLoadDomain` and
+`progressionReview` uses `ConservativeProgressionReview`, which requires
+two comparable all-set completed sessions, actual reported RIR and a
+user-approved maximum step. Both fail closed for mismatched revisions.
+Even a qualified increase is a **review candidate**, not a changed training
+target. No persistence, issuance, program edits, workout writes, migration,
+or engine authority change is permitted by this code.
+
+Full end-to-end integration remains outstanding: Compose-owned reference
+checks at the call boundary, real source inventory transport, parity tests
+against canonical native inspection, independently audited Kotlin
+exercise selection/progression, and physical-device acceptance.
+
 ## Current feature completeness and native UX obligations
 
 - [Complete engine capability ledger](ENGINE_BASELINE_COVERAGE.md) tracks **all 14 native feature IDs, basic engine requirements E01–E41, review-only implementation gaps, and acceptance milestones**.

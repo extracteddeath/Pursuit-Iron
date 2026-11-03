@@ -147,56 +147,12 @@ internal fun NativeOnboardingScreen(
     } else {
         PursuitFormSection("Available equipment",
             "Choose what you can actually use. These choices constrain the program.") {
-        // A group changes only ordering and labels, never canonical equipment
-        // IDs, availability or the verified physical loading inventory.
-        val available = state.options?.equipment ?: NativeEquipmentCatalog.allIds
-        val known = NativeEquipmentCatalog.allIds.toSet()
-        val selected = equipment.toSet()
-        NativeEquipmentCatalog.supported(available).forEach { group ->
-            SectionLabel(group.title)
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                group.choices.forEach { choice ->
-                    PreviewChoice(choice.label,choice.id in selected,!state.busy) {
-                        equipment=ArrayList(equipment).apply {
-                            if(choice.id in this) remove(choice.id) else add(choice.id)
-                        }
-                    }
-                }
-            }
-        }
-        // New catalog entries remain accessible if the engine adds a new ID
-        // before the native presentation catalog is updated.
-        val other = available.filterNot { it in known }.distinct()
-        if(other.isNotEmpty()) {
-            SectionLabel("Other supported equipment")
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                other.forEach { id ->
-                    PreviewChoice(id.replace('_',' '),id in selected,!state.busy) {
-                        equipment=ArrayList(equipment).apply {
-                            if(id in this) remove(id) else add(id)
-                        }
-                    }
-                }
-            }
-        }
-        // Preserve old native profiles (notably the former "rack" ID).
-        // A saved value is visible and removable, but is not falsely offered
-        // as a newly supported equipment option.
-        val retained = equipment.filterNot { it in available }.distinct()
-        if(retained.isNotEmpty()) {
-            SectionLabel("Previously selected")
-            Text("Legacy selections are preserved until you remove them.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                retained.forEach { id ->
-                    PreviewChoice(if(id=="rack") "Rack (legacy)" else id.replace('_',' '),
-                        true,!state.busy) {
-                        equipment=ArrayList(equipment).apply { remove(id) }
-                    }
-                }
-            }
-        }
+        NativeGroupedEquipmentPicker(
+            available = state.options?.equipment ?: NativeEquipmentCatalog.allIds,
+            selected = equipment,
+            enabled = !state.busy,
+            onSelectionChanged = { equipment = ArrayList(it) }
+        )
         if(equipment.isEmpty()) Text("Choose at least one equipment option.",
             color=MaterialTheme.colorScheme.error)
         }

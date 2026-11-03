@@ -2,6 +2,7 @@ package io.github.extracteddeath.pursuitiron.domain
 
 import org.json.JSONObject
 import java.math.BigDecimal
+import java.util.Collections
 
 /**
  * Read-only evidence boundary for the independent Kotlin coaching rewrite.
@@ -80,7 +81,8 @@ object NativeCoachVerifiedLoadEvidence {
             if(value.has("availableLoads")) {
                 val loads=value.getJSONArray("availableLoads")
                 NativeCoachVerifiedLoadFact.Exact(candidate.id,candidate.name,unit,
-                    (0 until loads.length()).map { index->number(loads.get(index)) })
+                    Collections.unmodifiableList(
+                        (0 until loads.length()).map { index->number(loads.get(index)) }))
             } else {
                 require(candidate.mode!="external_load")
                 NativeCoachVerifiedLoadFact.Range(candidate.id,candidate.name,unit,
@@ -89,6 +91,7 @@ object NativeCoachVerifiedLoadEvidence {
                     number(value.get("maximum")))
             }
         }
-        return NativeCoachVerifiedLoadReview(candidates.size,facts)
+        return NativeCoachVerifiedLoadReview(candidates.size,
+            Collections.unmodifiableList(facts))
     }
 }

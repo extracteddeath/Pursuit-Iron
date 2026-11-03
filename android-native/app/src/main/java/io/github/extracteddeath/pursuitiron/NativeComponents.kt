@@ -174,7 +174,7 @@ internal fun PreviewLabel(label: String, emphasis: Boolean = false) {
 internal fun PageHeading(eyebrow: String, title: String, subtitle: String) {
     Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xs)) {
         Text(eyebrow.uppercase(),style=MaterialTheme.typography.labelMedium,
-            color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold)
+            color=LocalPursuitPalette.current.accentInk,fontWeight=FontWeight.Bold)
         Text(title,style=MaterialTheme.typography.headlineLarge,
             color=MaterialTheme.colorScheme.onSurface)
         if(subtitle.isNotBlank()) Text(subtitle,style=MaterialTheme.typography.bodyMedium,
@@ -192,7 +192,7 @@ internal fun PursuitCard(
         modifier = modifier.fillMaxWidth(),
         shape=MaterialTheme.shapes.extraLarge,
         // A subtle expressive outline, not a large distracting violet fill.
-        border=if(highlighted) BorderStroke(1.dp,MaterialTheme.colorScheme.primary.copy(alpha=0.45f))
+        border=if(highlighted) BorderStroke(1.dp,LocalPursuitPalette.current.accentInk.copy(alpha=0.45f))
             else null,
         colors=CardDefaults.cardColors(
             containerColor=if(highlighted) MaterialTheme.colorScheme.surfaceContainerHigh
@@ -229,7 +229,7 @@ internal fun PursuitSessionMetrics(logged:Int,skipped:Int,remaining:Int) {
                     verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)
                 ) {
                     Text(value.toString(),style=MaterialTheme.typography.headlineSmall,
-                        color=if(emphasize) MaterialTheme.colorScheme.primary
+                        color=if(emphasize) LocalPursuitPalette.current.accentInk
                             else MaterialTheme.colorScheme.onSurface)
                     Text(label,style=MaterialTheme.typography.labelMedium,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)

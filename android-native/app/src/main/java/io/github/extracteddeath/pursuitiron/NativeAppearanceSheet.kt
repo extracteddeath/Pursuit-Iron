@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,7 +56,8 @@ internal fun NativeAppearanceSheet(selectedId:String,onSelect:(String)->Unit,onD
                         Row(modifier=Modifier.fillMaxWidth().padding(PursuitSpace.sm),
                             verticalAlignment=Alignment.CenterVertically,
                             horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
-                            Surface(color=palette.background,shape=MaterialTheme.shapes.medium) {
+                            Surface(color=palette.background,shape=MaterialTheme.shapes.medium,
+                                modifier=Modifier.width(76.dp)) {
                                 Row(horizontalArrangement=Arrangement.spacedBy(4.dp),
                                     modifier=Modifier.padding(8.dp)) {
                                     Surface(color=palette.accent,shape=MaterialTheme.shapes.small,

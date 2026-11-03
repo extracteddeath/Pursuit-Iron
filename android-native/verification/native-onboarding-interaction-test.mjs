@@ -123,15 +123,18 @@ assert.ok(screens.includes('SectionLabel("Shorter session", "Canonical engine pr
 // Real Train controls are journal-driven; UI must never manufacture a persisted
 // set or publish a workout directly from an unconfirmed tap.
 const tokens=fs.readFileSync(root+'NativeDesignTokens.kt','utf8');
-assert.ok(tokens.includes('internal val PursuitDarkColors=darkColorScheme(') &&
-  tokens.includes('internal val PursuitLightColors=lightColorScheme(') &&
+assert.ok(tokens.includes('internal object PursuitThemes {') &&
+  tokens.includes('const val DEFAULT_ID="lime"') &&
+  tokens.includes('val all:List<PursuitPalette> = listOf(') &&
   tokens.includes('internal val PursuitTypography=Typography(') &&
   tokens.includes('internal object PursuitSpace') &&
   activity.includes('MotionScheme.expressive()') &&
-  activity.includes('PursuitDarkColors else PursuitLightColors') &&
+  activity.includes('PursuitIronTheme(themeId=themeId)') &&
+  activity.includes('colorScheme=palette.scheme') &&
   activity.includes('typography=PursuitTypography,shapes=PursuitShapes') &&
-  !activity.includes('dynamicDarkColorScheme(context)'),
-  'The shared native theme must keep deliberate expressive color, type and shapes rather than inheriting wallpaper hues or default typography');
+  !activity.includes('dynamicDarkColorScheme(context)') &&
+  !activity.includes('PursuitDarkColors else PursuitLightColors'),
+  'Material 3 expressive colors, typography and spacing must use the original 20 user-selectable Pursuit Iron themes, not a synthetic pair or wallpaper');
 const controls=fs.readFileSync(root+'NativeComponents.kt','utf8');
 assert.ok(shell.includes('import androidx.activity.compose.BackHandler') &&
   shell.includes('BackHandler(enabled=sheet==0 && !confirmLeaveActiveWorkout &&') &&
@@ -163,7 +166,8 @@ assert.ok(train.includes('val exerciseAnchor=remember { BringIntoViewRequester()
 assert.ok(controls.includes('internal fun PursuitSessionMetrics(') &&
   controls.includes('internal fun PursuitPrimaryAction(') &&
   controls.includes('MaterialTheme.colorScheme.surfaceContainerHigh') &&
-  controls.includes('BorderStroke(1.dp,MaterialTheme.colorScheme.primary.copy(alpha=0.45f))') &&
+  controls.includes('BorderStroke(1.dp,LocalPursuitPalette.current.accentInk.copy(alpha=0.45f))') &&
+  controls.includes('color=if(emphasize) LocalPursuitPalette.current.accentInk') &&
   screens.includes('PursuitSessionMetrics(savedSets,skippedSets,journal.unresolvedCount)') &&
   screens.includes('PursuitPrimaryAction(') &&
   train.includes('PursuitSessionMetrics(') &&

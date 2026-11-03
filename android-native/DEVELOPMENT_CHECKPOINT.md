@@ -2161,3 +2161,15 @@ components, motion, typography and layouts are retained. An explicit
 source-parity test compares all 20 original palette inputs by exact hex
 and guards the picker and saved choice. No APK, production web change or
 engine rewrite.
+
+## 2026-11-02 — Use the original contrast-safe accent ink in native UI
+
+The shared PageHeading, outlined hero card and Today/Train journal metrics
+now use the original theme's `TOK`-derived accentInk role when drawing
+foreground lines/text. This preserves Patrol's duty-blue action fill while
+keeping its lighter blue readable on the dark card; all 20 established
+palettes retain their own surface colors. The Appearance picker has a
+bounded, consistent swatch width for compact phones. The older foundation
+source assertion no longer expects a fabricated two-theme palette;
+a dedicated exact-hex comparison covers all 20 original inputs in CI.
+No training writes or engine changes, and no APK.

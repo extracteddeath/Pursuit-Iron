@@ -31,6 +31,13 @@ class NativeCoachVerifiedLoadEvidenceTest {
         val leg=review.facts[0] as NativeCoachVerifiedLoadFact.Exact
         assertEquals(listOf(BigDecimal("12.5"),BigDecimal("17.5"),
             BigDecimal("22.5")),leg.loads)
+        assertTrue(runCatching {
+            (leg.loads as MutableList<BigDecimal>).add(BigDecimal("999"))
+        }.isFailure)
+        assertTrue(runCatching {
+            (review.facts as MutableList<NativeCoachVerifiedLoadFact>).clear()
+        }.isFailure)
+        assertEquals(3,review.facts.size)
         assertEquals("Leg Extension",leg.name)
         assertEquals("lb",leg.unit)
         val cable=review.facts[1] as NativeCoachVerifiedLoadFact.Range

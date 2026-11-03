@@ -1142,14 +1142,22 @@ assert.ok(acknowledgedRest.includes('fun latestAcknowledged(progress: NativeWork
   'Focus must preserve the correct canonical rest cue when navigation advances to a new exercise after a durable receipt');
 
 const gymEntryHelp=fs.readFileSync(root+'NativeGymInventoryEditor.kt','utf8');
-assert.ok(gymEntryHelp.includes('Each exercise setting needs a prefix: exact:') &&
-  gymEntryHelp.includes('Range is allowed only for checked cable/standard stacks') &&
-  gymEntryHelp.includes('Use exact: 45, 55, 65. Values must match your real logged totals') &&
-  gymEntryHelp.includes('Use exact: 5, 10, 15 or range: 5, 5, 150') &&
+const exerciseWeightPolicy=fs.readFileSync(
+  'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeExerciseWeightEditorPolicy.kt','utf8');
+assert.ok(gymEntryHelp.includes('NativeExerciseWeightEditorPolicy.eligible(') &&
+  gymEntryHelp.includes('Find a program exercise') &&
+  gymEntryHelp.includes('Configured only ($configured)') &&
+  gymEntryHelp.includes('NativeExerciseWeightField(candidate,unit,draft,onChange,enabled)') &&
+  gymEntryHelp.includes('NativeExerciseWeightField(focused,unit,draft,onChange,enabled)') &&
+  gymEntryHelp.includes('val exactOnly=policy.exactOnly(candidate)') &&
+  gymEntryHelp.includes('enabled=enabled && raw.isBlank()') &&
+  gymEntryHelp.includes('policy.formatEntry(kind,values,exactOnly)') &&
+  exerciseWeightPolicy.includes('fun eligible(') &&
+  exerciseWeightPolicy.includes('fun formatEntry(') &&
   verifiedLoadUi.includes('if(review.mode=="bodyweight")') &&
   verifiedLoadUi.includes('no verified external weight steps') &&
   verifiedLoadUi.includes('No assumed load increments are offered.'),
-  'Equipment setup must explain exact/range syntax and never imply bodyweight or specialty-machine increments that were not inventoried');
+  'Exercise weight editing must use verified candidate IDs, searchable source data, exact-only specialty values and no silent changes to loaded stock');
 
 const platePolicy=fs.readFileSync(
   'android-native/domain-contract/src/main/java/io/github/extracteddeath/pursuitiron/domain/NativeBarbellPlateBreakdown.kt','utf8');

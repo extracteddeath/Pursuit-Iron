@@ -7,6 +7,24 @@
 
 These are living requirements, **not claims that the new engine is live or every feature is complete**.
 
+### First automated split, session-purpose and lift-placement generator
+
+`CoachAthleteProgramGenerator.generate` now **actually constructs** a
+calendar-aware candidate from confirmed athlete setup and a versioned
+goal/experience/phase policy. It distributes Full Body, Upper/Lower, PPL and
+ULPPL sessions over the chosen weekdays, separates related sessions where
+possible, assigns the coach's exact session-purpose counts, and places named
+primary lifts only on compatible days with verified gym equipment and
+circular recovery gaps (including the Sunday–Monday boundary).
+
+The generator asks for explicit extra-focus choices when an odd UL/PPL
+schedule or six-day ULPPL schedule is ambiguous. It never makes up
+unreviewed weekly muscle doses or leftover day purposes, and exposes
+infeasible calendars instead of disregarding a lift. Each resulting week
+passes through the existing **catalog, equipment, dose and whole-program**
+checks. This is an isolated, bounded first generation layer—not a trained
+exercise selector, issued workout, persisted program or validated dose preset.
+
 ### Whole-week goal-policy realization and primary lift frequency (E12/E13, partial)
 
 `CoachGoalProgramRealizationDomain.review` now audits the **actual

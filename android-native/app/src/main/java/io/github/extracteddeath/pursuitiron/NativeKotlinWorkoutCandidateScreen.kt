@@ -96,7 +96,9 @@ internal fun NativeKotlinWorkoutCandidateScreen(
 
     var showFinishConfirm by rememberSaveable(workoutId){mutableStateOf(false)}
     var pendingSkip by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
-    var pendingFail by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
+    var pendingFail by remember(workoutId) {
+        mutableStateOf<Pair<String,KotlinPerformedSet>?>(null)
+    }
     var selectedKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var showAll by rememberSaveable(workoutId){mutableStateOf(false)}
     LaunchedEffect(presentation?.revision) {
@@ -193,7 +195,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         controller.record(set.target.setKey,outcome,actual)
                     },
                     onSkip={pendingSkip=set.target.setKey},
-                    onFail={pendingFail=set.target.setKey})
+                    onFail={attempt->pendingFail=set.target.setKey to attempt})
             }
         }
         if(!showAll && selected!=null) {
@@ -234,19 +236,15 @@ internal fun NativeKotlinWorkoutCandidateScreen(
         },enabled=!state.busy){Text("Skip set")}},
         dismissButton={TextButton(onClick={pendingSkip=null}){Text("Cancel")}})
     if(pendingSkip!=null && skip==null)LaunchedEffect(pendingSkip){pendingSkip=null}
-    val failed=allSets.firstOrNull{it.target.setKey==pendingFail}
+    val failed=allSets.firstOrNull{it.target.setKey==pendingFail?.first}
     if(failed!=null)AlertDialog(onDismissRequest={pendingFail=null},
         title={Text("Log a failed attempt?")},
         text={Text("This records zero completed reps, not a successful set or a progression signal.")},
         confirmButton={Button(onClick={
-            val planned=failed.target.load
-            val attempted=when(planned){
-                DraftSetLoad.ExplicitBodyweight -> KotlinPerformedSet(null,null,0,null)
-                is DraftSetLoad.Verified ->
-                    KotlinPerformedSet(planned.value,planned.unit,0,null)
-            }
+            // The user explicitly entered the attempted load. Never
+            // fabricate an actual by copying the coach's target weight.
             controller.record(failed.target.setKey,
-                KotlinJournalSetOutcome.FAILED_ATTEMPT,attempted)
+                KotlinJournalSetOutcome.FAILED_ATTEMPT,pendingFail?.second)
             pendingFail=null
         },enabled=!state.busy){Text("Log failed attempt")}},
         dismissButton={TextButton(onClick={pendingFail=null}){Text("Cancel")}})
@@ -259,7 +257,7 @@ private fun NativeKotlinSetCard(
     busy:Boolean,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit,
     onSkip:()->Unit,
-    onFail:()->Unit
+    onFail:(KotlinPerformedSet)->Unit
 ) {
     val target=set.target
     val existing=set.actual
@@ -274,6 +272,8 @@ private fun NativeKotlinSetCard(
         mutableStateOf(existing?.actualRir?.toString().orEmpty())
     }
     val actual=performed(target,weight,reps,effort)
+    val failedActual=performed(target,weight,reps,effort,failed=true)
+    val verifiedLoad=target.load as? DraftSetLoad.Verified
     val working=target.type==DraftSetType.WORKING
     PursuitCard(highlighted=!set.isResolved && !finished) {
         Text(target.exerciseId,style=MaterialTheme.typography.headlineSmall)
@@ -294,9 +294,9 @@ private fun NativeKotlinSetCard(
                 style=MaterialTheme.typography.bodyMedium)
         }
         if(finished) return@PursuitCard
-        if(target.load is DraftSetLoad.Verified) {
+        if(verifiedLoad!=null) {
             OutlinedTextField(value=weight,onValueChange={weight=it},
-                label={Text("Actual load · ${target.load.unit.name} · ${target.load.basis.name.lowercase().replace('_',' ')}")},
+                label={Text("Actual load · ${verifiedLoad.unit.name} · ${verifiedLoad.basis.name.lowercase().replace('_',' ')}")},
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 singleLine=true,modifier=Modifier.fillMaxWidth())
         }
@@ -317,7 +317,8 @@ private fun NativeKotlinSetCard(
         ) {onRecord(KotlinJournalSetOutcome.COMPLETED,actual)}
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
             TextButton(onClick=onSkip,enabled=!busy){Text("Skip")}
-            TextButton(onClick=onFail,enabled=!busy){Text("Failed attempt")}
+            TextButton(onClick={failedActual?.let(onFail)},
+                enabled=!busy && failedActual!=null){Text("Failed attempt")}
         }
     }
 }

@@ -88,9 +88,14 @@ internal fun NativeGymInventoryEditor(
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (relevantFields.isEmpty() && candidates.isEmpty()) {
-            Text("Choose equipment above before adding actual weight settings.",
+            Text(
+                if (availableEquipment?.isEmpty() == true)
+                    "Choose equipment above before adding actual weight settings."
+                else
+                    "These equipment choices have no shared weight field. Verify each exercise's actual loading after the program is generated.",
                 style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                color=MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         if (retainedFields.isNotEmpty()) {
             Text("Previously entered weights for unselected equipment remain editable. They do not make that equipment available in your program.",

@@ -1,0 +1,39 @@
+name: Native APK branch
+# Copies the debug APK of the latest passing Native Android run (build + smoke) to the scratch branch native-apk,
+# so it can be fetched with plain git where artifact storage isn't reachable.
+on:
+  workflow_run:
+    workflows: [Native Android]
+    types: [completed]
+    branches: [native-app]
+  push:
+    branches: [native-app]
+    paths: ['.github/workflows/native-apk.yml']
+
+permissions:
+  contents: write   # only to force-push the APK to the scratch branch native-apk
+  actions: read
+
+jobs:
+  apk:
+    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Fetch the APK and push it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh run list -R "$REPO" -w "Native Android" -b native-app -s success -L 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          NUM=$(gh run view "$RUN_ID" -R "$REPO" --json number --jq .number)
+          SHA=$(gh run view "$RUN_ID" -R "$REPO" --json headSha --jq .headSha)
+          mkdir out && gh run download "$RUN_ID" -R "$REPO" -n "pursuit-iron-native-$NUM" -D out
+          mkdir apk && cp "$(find out -name '*-debug.apk' | head -1)" "apk/pursuit-iron-$NUM-debug.apk"
+          cd apk && printf 'run %s\ncommit %s\n' "$NUM" "$SHA" > info.txt
+          git init -q && git checkout -q -b native-apk
+          git add -A && git -c user.name=pi-ci -c user.email=pi-ci@users.noreply.github.com commit -qm "Debug APK, run $NUM ($SHA)"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" native-apk

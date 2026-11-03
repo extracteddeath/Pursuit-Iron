@@ -4,6 +4,39 @@
 owner, and NOT the final end-to-end Kotlin cutover.** The Android app does not
 depend on this module. The legacy JavaScript runtime remains unchanged.
 
+## Isolated Android application host (compile-only integration)
+
+The **Android app module now compiles** the pure Kotlin engine and native store
+directly on the dedicated `architecture/kotlin-engine-rebuild` branch.
+`PursuitIronApplication.kotlinCandidate` lazily provides
+`NativeKotlinCandidateHost`, which composes:
+
+- `AppPrivateKotlinLocalAthlete`: a versioned, checksummed
+  Android `AtomicFile` identity record under `noBackupFilesDir`, created
+  only after a **complete Kotlin-reviewed onboarding profile** is explicitly
+  activated. It refuses corrupt records and different-athlete re-enrollment,
+  does not auto-activate on process restart, and retains history on deactivate.
+- `NativeKotlinApprovalFileAuthority`, `NativeKotlinApprovalRevisionFence`,
+  `KotlinNativeJournalFileStore` and `NativeKotlinWorkoutCoordinator`,
+  all rooted in a separate private `kotlin-coach-v1` directory.
+- `reviewSetup`, `activateReviewedSetup`, `publishReviewedProgram`,
+  `issueWorkout`, `recoverWorkout`, `recordWorkoutOperation`, and
+  `revokeCurrentApproval` as Kotlin-native lifecycle entry points.
+
+**Security scope:** This is a *single-device, explicitly activated local
+athlete*, not remote login or identity-proofing. The existing application has
+no Kotlin account provider, so claiming this record represents a signed-in
+server account would be incorrect. The program-publish API is **R&D only**
+until the upstream native program/gym/catalog source-revision owners have
+been integrated. JavaScript outputs do not authorize native issuance.
+
+**Active runtime unchanged:** `MainActivity` and `NativeRuntimeHost` still
+use their original JS-backed store and workout routes; the new host is
+never activated or selected by a screen. The new CI task
+`:app:compileDebugKotlin` checks app module integration **without
+assembling or publishing an APK**. Actual native onboarding and Compose
+navigation remain to be implemented and validated on real devices.
+
 ## Native Kotlin issuance coordinator — approval-checked integration
 
 `NativeKotlinWorkoutCoordinator` joins the **actual independent Kotlin

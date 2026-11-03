@@ -28,6 +28,9 @@ object StarterExerciseTranche {
     private const val REVIEW="engineering-provisional-v1"
     private const val BAR="straight-bar"
     private const val DBS="dumbbell-rack"
+    // Different machines must NEVER share an invented generic stack.
+    private const val LEG_EXTENSION="leg-extension-machine"
+    private const val SEATED_LEG_CURL="seated-leg-curl-machine"
     private val press=setOf(ComposerFocus.FULL_BODY,ComposerFocus.UPPER,
         ComposerFocus.PUSH)
     private val pull=setOf(ComposerFocus.FULL_BODY,ComposerFocus.UPPER,
@@ -168,11 +171,21 @@ object StarterExerciseTranche {
             null,null,setOf("pullup-bar"),3..20,
             "Only an unweighted bodyweight pull-up with a confirmed bar is represented. Weighted or assisted pull-ups require distinct loaded variants. Legacy broad back is provisionally mapped to lats; no invented load.",
             direct(TrainingMuscle.LATS),
-            indirect(TrainingMuscle.BICEPS,"0.5"))
+            indirect(TrainingMuscle.BICEPS,"0.5")),
+        entry("leg_extension","knee_extension","seated-machine",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            LEG_EXTENSION,LoadBasis.EXERCISE_OVERRIDE,emptySet(),8..30,
+            "The exact leg-extension machine uses its own verified selectable logged loads. No global machine stack, lever weight, mechanical advantage or increment is presumed.",
+            direct(TrainingMuscle.QUADS)),
+        entry("seated_leg_curl","knee_flexion","seated-machine",
+            ComposerPattern.ISOLATION,ComposerRole.ACCESSORY,lower,
+            SEATED_LEG_CURL,LoadBasis.EXERCISE_OVERRIDE,emptySet(),6..25,
+            "The seated leg curl uses its own independent verified machine loads. Machine labels or adjacent gym inventory never imply equivalent resistance.",
+            direct(TrainingMuscle.HAMSTRINGS))
     )
 
     init {
-        require(definitions.size==18)
+        require(definitions.size==20)
         require(definitions.map {it.legacyCuratedId}.distinct().size==
             definitions.size)
         require(definitions.all {

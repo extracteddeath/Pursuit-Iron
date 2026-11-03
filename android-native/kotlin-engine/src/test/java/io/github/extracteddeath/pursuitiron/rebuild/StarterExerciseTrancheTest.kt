@@ -36,10 +36,10 @@ class StarterExerciseTrancheTest {
         choice("one_arm_db_row",n("30")),choice("back_squat",n("135")))
 
     @Test fun exactSourceIdsAreStableAndNoVariantsShareIdentity() {
-        assertEquals(18,data.size)
-        assertEquals(18,data.map {it.legacyCuratedId}.distinct().size)
+        assertEquals(20,data.size)
+        assertEquals(20,data.map {it.legacyCuratedId}.distinct().size)
         assertTrue(data.all {it.legacyCuratedId==it.movement.exerciseId})
-        assertEquals(18,data.map {
+        assertEquals(20,data.map {
             it.movement.familyId to it.movement.variantId
         }.distinct().size)
         assertTrue(data.all {
@@ -234,6 +234,73 @@ class StarterExerciseTrancheTest {
         assertEquals(setOf("barbell_row","db_rear_delt_raise"),
             invalid.issues.filter {it.kind==CatalogIssueType.LOAD_UNVERIFIED}
                 .map {it.exerciseId}.toSet())
+        assertNull(invalid.composedRequest)
+    }
+
+    @Test fun separateMachinesRequireSeparateActualSelectableLoads() {
+        val leg=StarterExerciseTranche.movements().first {
+            it.exerciseId=="leg_extension"
+        }
+        val curl=StarterExerciseTranche.movements().first {
+            it.exerciseId=="seated_leg_curl"
+        }
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,leg.expectedLoadBasis)
+        assertEquals(LoadBasis.EXERCISE_OVERRIDE,curl.expectedLoadBasis)
+        assertNotEquals(leg.equipmentId,curl.equipmentId)
+        assertEquals(listOf(TrainingMuscle.QUADS),leg.credits.map {it.muscle})
+        assertEquals(listOf(TrainingMuscle.HAMSTRINGS),curl.credits.map {it.muscle})
+        assertEquals(RepBand(8,30),leg.sourcePracticalReps)
+        assertEquals(RepBand(6,25),curl.sourcePracticalReps)
+
+        val legMachine=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("40"),n("50")))
+        val curlMachine=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("35"),n("60")))
+        val selections=listOf(choice("leg_extension",n("50")),
+            choice("seated_leg_curl",n("60")))
+        val separate=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),selections,
+                gym(stock=mapOf(
+                    "leg-extension-machine" to legMachine,
+                    "seated-leg-curl-machine" to curlMachine))))
+        assertTrue(separate.issues.isEmpty())
+        assertNotNull(separate.composedRequest)
+        assertFalse(separate.mayIssueWorkout)
+
+        val missingCurl=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),selections,
+                gym(stock=mapOf("leg-extension-machine" to legMachine))))
+        assertEquals(CatalogWeekStatus.CATALOG_OR_GYM_UNRESOLVED,
+            missingCurl.status)
+        assertTrue(missingCurl.issues.any {
+            it.exerciseId=="seated_leg_curl" &&
+                it.kind==CatalogIssueType.EQUIPMENT_UNAVAILABLE
+        })
+        val wrongBasis=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),selections,
+                gym(stock=mapOf(
+                    "leg-extension-machine" to legMachine,
+                    "seated-leg-curl-machine" to
+                        VerifiedLoadStock.Totals(LoadUnit.LB,
+                            LoadBasis.MACHINE_STACK,listOf(n("60")))))))
+        assertTrue(wrongBasis.issues.any {
+            it.exerciseId=="seated_leg_curl" &&
+                it.kind==CatalogIssueType.EQUIPMENT_BASIS_MISMATCH
+        })
+        assertNull(wrongBasis.composedRequest)
+    }
+
+    @Test fun missingMachineIncrementNeverBecomesAnInventedHalfStep() {
+        val stock=VerifiedLoadStock.Totals(LoadUnit.LB,
+            LoadBasis.EXERCISE_OVERRIDE,listOf(n("40"),n("50")))
+        val invalid=CoachExerciseCatalogDomain.review(
+            StarterExerciseTranche.forGym(template(),
+                listOf(choice("leg_extension",n("45"))),
+                gym(stock=mapOf("leg-extension-machine" to stock))))
+        assertTrue(invalid.issues.any {
+            it.exerciseId=="leg_extension" &&
+                it.kind==CatalogIssueType.LOAD_UNVERIFIED
+        })
         assertNull(invalid.composedRequest)
     }
 

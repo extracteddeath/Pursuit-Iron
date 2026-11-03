@@ -27,7 +27,9 @@ const baseline=[
   ['rdl','hip_hinge',[3,15],['barbell']],
   ['conventional_deadlift','hip_hinge',[1,8],['barbell']],
   ['db_rear_delt_raise','rear_delt',[10,30],['dumbbell']],
-  ['pullup','vertical_pull',[3,20],['pullup_bar','bodyweight']]
+  ['pullup','vertical_pull',[3,20],['pullup_bar','bodyweight']],
+  ['leg_extension','knee_extension',[8,30],['machine']],
+  ['seated_leg_curl','knee_flexion',[6,25],['machine']]
 ];
 const indexed=new Map(CURATED_EXERCISES.map(x=>[x.id,x]));
 assert.deepEqual(declared,baseline.map(x=>x[0]),
@@ -49,6 +51,8 @@ for(const id of ['one_arm_db_row','db_rdl','barbell_row','rdl','conventional_dea
 assert.ok(Object.hasOwn(indexed.get('bodyweight_crunch').muscles,'core'),
   'Core label changed; Kotlin ABS mapping needs review');
 assert.ok(source.includes('engineering-provisional-v1'));
+assert.ok(source.includes('LEG_EXTENSION,LoadBasis.EXERCISE_OVERRIDE'));
+assert.ok(source.includes('SEATED_LEG_CURL,LoadBasis.EXERCISE_OVERRIDE'));
 assert.ok(source.includes('setOf("pullup-bar")'),
   'An unweighted pull-up needs an independently confirmed physical bar');
 assert.ok(source.includes('direct(TrainingMuscle.GLUTES)),'), 'Conventional deadlift keeps direct glute credit; do not silently remap broad back');

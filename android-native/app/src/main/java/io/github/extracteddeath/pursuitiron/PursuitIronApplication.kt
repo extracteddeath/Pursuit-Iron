@@ -8,6 +8,11 @@ class PursuitIronApplication : Application() {
     // Separate Kotlin-only lifecycle. No implicit owner enrollment, JS import,
     // screen selection or mutation of the existing canonical store.
     internal val kotlinCandidate by lazy { NativeKotlinCandidateHost(applicationContext) }
+    // One isolated off-main-thread Kotlin workout controller per app process;
+    // NOT wired to MainActivity, so no live engine or journal switch occurs.
+    internal val kotlinWorkoutSession by lazy {
+        NativeKotlinSessionController(kotlinCandidate)
+    }
     override fun onTerminate() {
         nativeRuntime.close()
         super.onTerminate()

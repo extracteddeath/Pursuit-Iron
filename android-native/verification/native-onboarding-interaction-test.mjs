@@ -9,6 +9,22 @@ const shell=fs.readFileSync(root+'NativePreviewApp.kt','utf8');
 const train=fs.readFileSync(root+'NativeWorkoutScreen.kt','utf8');
 for (const field of ['name','goal','experience','unit','split','days','session','equipment','bodyweight','supersets','barbellCap'])
   assert.match(ui,new RegExp('var '+field+' by rememberSaveable'));
+const sharedOnboarding=fs.readFileSync(root+'NativeComponents.kt','utf8');
+assert.ok(sharedOnboarding.includes('internal fun PursuitFormSection(') &&
+  sharedOnboarding.includes('content:@Composable ColumnScope.()->Unit') &&
+  sharedOnboarding.includes('color=MaterialTheme.colorScheme.surfaceContainerLow') &&
+  ui.includes('PursuitFormSection("Program identity"') &&
+  ui.includes('PursuitFormSection("Your training week"') &&
+  ui.includes('PursuitFormSection("Available equipment"') &&
+  ui.includes('PursuitFormSection("Verified loading"') &&
+  ui.includes('PursuitFormSection("Training preferences"') &&
+  ui.includes('PursuitPrimaryAction(label="Continue"') &&
+  ui.includes('PursuitPrimaryAction(label=if(state.busy)"Saving…" else "Save program"') &&
+  ui.includes('label=if(state.busy)"Building your program…" else "Review generated plan"') &&
+  ui.includes('NativeGymInventoryEditor(unit,inventoryFields') &&
+  ui.includes('NativeMusclePrioritySelector(') &&
+  ui.includes('enabled=state.ready && !state.blocked && !state.busy && equipment.isNotEmpty()'),
+  'Onboarding shares M3 form sections and primary buttons while keeping verified inventory, personalization and canonical review/save gates');
 assert.ok(ui.includes('state.options?.splits') && ui.includes('selected.days.forEach') &&
   ui.includes('if(days !in option.days)days=option.days.first()'),
   'Split/day compatibility must be canonical option data, not a second Kotlin topology engine');

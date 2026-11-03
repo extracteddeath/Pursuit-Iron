@@ -249,6 +249,31 @@ internal fun PursuitPrimaryAction(label:String,enabled:Boolean=true,onClick:()->
     }
 }
 
+/**
+ * Shared expressive form section: visual grouping without new data owners.
+ * Its child composables retain all actual engine choice and validation logic.
+ */
+@Composable
+internal fun PursuitFormSection(
+    title:String,description:String,content:@Composable ColumnScope.()->Unit
+) {
+    Surface(modifier=Modifier.fillMaxWidth(),
+        shape=MaterialTheme.shapes.extraLarge,
+        color=MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(modifier=Modifier.padding(PursuitSpace.lg),
+            verticalArrangement=Arrangement.spacedBy(PursuitSpace.md)) {
+            Column(verticalArrangement=Arrangement.spacedBy(PursuitSpace.xxs)) {
+                Text(title,style=MaterialTheme.typography.titleLarge,
+                    color=MaterialTheme.colorScheme.onSurface)
+                if(description.isNotBlank()) Text(description,
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            content()
+        }
+    }
+}
+
 @Composable
 internal fun SectionLabel(title: String, detail: String? = null) {
     Row(modifier=Modifier.fillMaxWidth(),

@@ -2,8 +2,9 @@
 
 ## User decision — 2026-11-01
 
-Finish and certify the integrated native system, then replace the whole training
-engine in Kotlin. The existing engine has reported calculation and programming
+Build and test a polished functional native core, then replace the flawed
+training engine in Kotlin before integrating remaining advanced features and
+certifying the complete release. The existing engine has reported calculation and programming
 defects. Matching its output establishes migration compatibility; it does not
 establish that a training decision is correct. The replacement must be designed
 from explicit requirements and independent expected results.
@@ -11,8 +12,9 @@ from explicit requirements and independent expected results.
 The web app and the other developer's native branches remain independent.
 Continue committing integration work only to
 `architecture/android-compose-foundation`. Preserve the APK freeze and current
-user data. Start the engine rebuild on its own branch after the integration gate
-below has evidence; do not silently replace an active workout's issued targets.
+user data. Start the engine rebuild on its own isolated branch after the core native
+workflow has a credible testing APK and initial device findings; do not
+silently replace an active workout's issued targets.
 
 ## Integrated-system acceptance gate
 
@@ -63,7 +65,7 @@ applies to the rebuilt engine before it becomes the app's training authority.
 This table prevents source-only progress from being mistaken for a fully
 integrated system. Close the actual workflow gaps before the rebuild gate is met.
 
-### Remaining work before starting the rebuild
+### Remaining work before full release acceptance (not all prerequisites to the rebuild)
 
 | Workstream | What still needs a complete native workflow |
 | --- | --- |
@@ -74,10 +76,34 @@ integrated system. Close the actual workflow gaps before the rebuild gate is met
 | Personal settings | Gyms/inventory/increments, complete preferences, profile/progress identity and cold restore |
 | Final acceptance | Complete journeys with real saved data on Android; rotation/background/process death, keyboard, TalkBack/large text, phone/foldable layouts and document providers; pin the accepted baseline and a recoverable copy |
 
-Keep the APK freeze while implementation/source acceptance is incomplete. Device
-acceptance is a separate later step that will need a test build; no device result
-can be inferred from JVM tests or source compilation. The current export is a
-saved-data copy, not a restore/merge implementation or active-workout journal backup.
+## Updated milestone order — real core, testing APK, Kotlin engine, advanced features
+
+The next milestone is a coherent original-theme Material 3 Expressive native
+core: onboarding, generated and saved program, Today, workout, actual set logging
+and correction, Finish, history, and interruption/resume. No dead controls or
+optimistic training facts. Run the relevant source/JVM/Compose checks before a
+**development APK**, then test the real journey on the Android phone. Device
+acceptance cannot happen without that installable test build. A development
+APK is not a release candidate or engine correctness certificate.
+
+Once the core workflow and device feedback establish usable native contracts,
+make the headless **Kotlin training engine redesign** the primary workstream.
+Do not require importing every advanced old interface before starting the
+rewrite. Correct loading, progression, RIR, dose, recovery, custom/cycle
+adaptation and fatigue using new independent expected outcomes. Keep old
+issued workouts pinned to their original targets; preserve legacy exercise
+IDs, custom details, journal facts, history and correction semantics.
+
+Integrate the advanced features around the new native engine contracts:
+custom and adaptive cycles, amplifiers, supersets, swaps, equipment variants,
+full analytics, backup/restore/Undo and user preferences. Their complete
+integration and adversarial device verification are **release gates**, not
+preconditions for the first development APK or the engine rewrite.
+
+An APK remains gated on credible automated **core source readiness**; it
+cannot be gated on the physical-device acceptance that requires an APK.
+Current export is a saved-data copy, not a restore/merge implementation or
+active-workout journal backup.
 
 ## Replacement architecture
 
@@ -119,9 +145,9 @@ unexpected rep jumps; missing/stale RIR; custom amplifiers disappearing; and
 unexplained custom-cycle dose collapse. Do not encode a guessed final prescription
 for these examples before the corresponding rules are specified.
 
-## Rebuild sequence after integration certification
+## Rebuild sequence after the tested core and stable native contracts
 
-1. Pin the accepted native integration revision and preserve a recoverable data copy.
+1. Pin the working native core and preserve a recoverable data copy before switching engine ownership.
 2. Write the domain specification and independent regression/invariant corpus.
 3. Implement the Kotlin domains behind stable app contracts, including the complete
    program -> issuance -> actual logging -> correction -> next-session lifecycle.

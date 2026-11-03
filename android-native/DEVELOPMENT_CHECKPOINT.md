@@ -2195,3 +2195,17 @@ accent. This is particularly important for Patrol's #2563EB fill,
 whose native text ink is lighter by design. No training, progression,
 program or history logic changed. Original theme inputs and UI choice
 persistence stay untouched; no APK.
+
+## 2026-11-02 — Native onboarding grouping and explicit Kotlin-engine milestone
+
+First-time program setup is reorganized into reusable Material 3 form
+sections (identity, training week, equipment, verified loading, and
+preferences), retaining every real option, validated gym inventory,
+recovery and authorizations. Continue, canonical program review and
+explicit Save use the shared 52dp primary action, like real workout
+logging. This changes presentation only, not generated prescriptions or
+persisted training facts. The engine roadmap now explicitly tracks the
+agreed sequence: coherent source-checked core -> developer APK and real
+device feedback -> independent Kotlin training-engine redesign ->
+advanced feature completion -> full release certification. Source-only
+CI is not treated as physical-device acceptance.

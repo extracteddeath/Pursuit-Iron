@@ -105,9 +105,8 @@ internal fun NativeOnboardingScreen(
                 ReadOnlyTrainingDayRow(index,day.label,day.exerciseIds.size)
             }
         }
-        Button(onClick=onSave,enabled=!state.busy && !state.blocked,modifier=Modifier.fillMaxWidth()) {
-            Text(if(state.busy) "Saving…" else "Save program")
-        }
+        PursuitPrimaryAction(label=if(state.busy)"Saving…" else "Save program",
+            enabled=!state.busy && !state.blocked,onClick=onSave)
         OutlinedButton(onClick={onEdit();step=0},enabled=!state.busy,modifier=Modifier.fillMaxWidth()) {
             Text("Edit choices")
         }
@@ -115,6 +114,7 @@ internal fun NativeOnboardingScreen(
     }
 
     if (step==0) {
+        PursuitFormSection("Program identity","Name your program and choose its main goal.") {
         OutlinedTextField(value=name,onValueChange={if(it.length<=60)name=it},enabled=!state.busy,
             label={Text("Program name")},singleLine=true,modifier=Modifier.fillMaxWidth())
         SectionLabel("Goal")
@@ -123,6 +123,8 @@ internal fun NativeOnboardingScreen(
                 PreviewChoice(label,goal==id,!state.busy){goal=id}
             }
         }
+        }
+        PursuitFormSection("Your training week","Choose a manageable schedule and training structure.") {
         SectionLabel("Training experience")
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             listOf("beginner" to "Beginner","intermediate" to "Intermediate","advanced" to "Advanced").forEach { (id,label) ->
@@ -145,9 +147,12 @@ internal fun NativeOnboardingScreen(
                 PreviewChoice(label,session==id,!state.busy){session=id}
             }
         }
-        Button(onClick={step=1},enabled=name.isNotBlank() && !state.busy,modifier=Modifier.fillMaxWidth()) { Text("Continue") }
+        }
+        PursuitPrimaryAction(label="Continue",enabled=name.isNotBlank() && !state.busy,
+            onClick={step=1})
     } else {
-        SectionLabel("Available equipment")
+        PursuitFormSection("Available equipment",
+            "Choose what you can actually use. These choices constrain the program.") {
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             (state.options?.equipment ?: equipmentLabels.keys.toList()).forEach { id ->
                 PreviewChoice(equipmentLabels[id] ?: id,id in equipment,!state.busy) {
@@ -155,6 +160,11 @@ internal fun NativeOnboardingScreen(
                 }
             }
         }
+        if(equipment.isEmpty()) Text("Choose at least one equipment option.",
+            color=MaterialTheme.colorScheme.error)
+        }
+        PursuitFormSection("Verified loading",
+            "Optional bars, plates and selectable weights prevent impossible loading suggestions.") {
         SectionLabel("Weight units")
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             listOf("lb","kg").forEach { id -> PreviewChoice(id,unit==id,!state.busy){
@@ -167,6 +177,9 @@ internal fun NativeOnboardingScreen(
         NativeGymInventoryEditor(unit,inventoryFields,{ key,value ->
             inventoryFields=HashMap(inventoryFields).apply { put(key,value) }
         },inventoryValidation,!state.busy)
+        }
+        PursuitFormSection("Training preferences",
+            "Personalize exercise selection without changing your verified gym weights.") {
         PreviewSettingSwitch("Bodyweight exercises","Include movements such as push-ups and pull-ups.",bodyweight,enabled=!state.busy) {
             if(!state.busy)bodyweight=it
         }
@@ -194,12 +207,15 @@ internal fun NativeOnboardingScreen(
             focus=nextFocus
             reduced=nextReduced
         }
-        if(equipment.isEmpty()) Text("Choose at least one equipment option.",color=MaterialTheme.colorScheme.error)
-        Button(onClick={onReview(NativeProgramProfile(name,goal,experience,unit,split,days,session,
-            equipment.toList(),bodyweight,supersets,barbellCap,focus.toMap(),reduced.toList(),
-            inventoryValidation.json))},
-            enabled=state.ready && !state.blocked && !state.busy && equipment.isNotEmpty() && name.isNotBlank() && inventoryValidation.valid,
-            modifier=Modifier.fillMaxWidth()) { Text(if(state.busy) "Building your program…" else "Review generated plan") }
+        }
+        PursuitPrimaryAction(
+            label=if(state.busy)"Building your program…" else "Review generated plan",
+            onClick={onReview(NativeProgramProfile(name,goal,experience,unit,split,days,session,
+                equipment.toList(),bodyweight,supersets,barbellCap,focus.toMap(),reduced.toList(),
+                inventoryValidation.json))},
+            enabled=state.ready && !state.blocked && !state.busy && equipment.isNotEmpty() &&
+                name.isNotBlank() && inventoryValidation.valid
+        )
         OutlinedButton(onClick={if(state.busy)onEdit() else step=0},modifier=Modifier.fillMaxWidth()) {
             Text(if(state.busy) "Cancel" else "Back")
         }

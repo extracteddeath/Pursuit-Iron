@@ -7,6 +7,21 @@
 
 These are living requirements, **not claims that the new engine is live or every feature is complete**.
 
+### Whole-week goal-policy realization and primary lift frequency (E12/E13, partial)
+
+`CoachGoalProgramRealizationDomain.review` now audits the **actual
+composed week** against authored intentions rather than relying on goal
+labels. It checks achieved muscle dose and frequency, active training
+days, time windows, pinned exercises, movement variety, and day purpose.
+An authored policy can also set the minimum number of distinct days for
+each stable, catalog-verified PRIMARY lift. Strength and peak drafts
+must explicitly provide those targets and name the primary on each
+strength-skill day. A bench-frequency goal that the week fails to
+deliver remains unresolved, with the observed day count exposed.
+
+All changes are non-authoritative headless reviews. No fabricated
+exercise prescription, applied program or implied scientific preset.
+
 ### Authored goal and experience policy matching (E12/E13, partial)
 
 `CoachGoalProgramPolicyDomain.review` gates the full athlete plan status on

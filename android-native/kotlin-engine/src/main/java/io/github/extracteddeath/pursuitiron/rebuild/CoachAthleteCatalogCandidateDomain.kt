@@ -29,7 +29,8 @@ data class AthleteCatalogCandidateRequest(
 enum class AthleteCandidateIssueKind {
     SETUP_UNRESOLVED, SCHEDULE_MISMATCH, POLICY_UNRESOLVED,
     EXCLUDED_EXERCISE, BODYWEIGHT_DISABLED, BARBELL_LIMIT,
-    LOWER_DAY_RESTRICTION, CATALOG_UNRESOLVED, GOAL_POLICY_UNRESOLVED
+    LOWER_DAY_RESTRICTION, CATALOG_UNRESOLVED, GOAL_POLICY_UNRESOLVED,
+    REALIZATION_UNRESOLVED
 }
 data class AthleteCandidateIssue(
     val field:String,
@@ -42,7 +43,8 @@ enum class AthleteCandidateStatus {
 data class AthleteCatalogCandidateReview(
     val status:AthleteCandidateStatus,
     val issues:List<AthleteCandidateIssue>,
-    val catalogReview:CatalogWeekReview?
+    val catalogReview:CatalogWeekReview?,
+    val realization:GoalRealizationReview?=null
 ) {
     val mayIssueWorkout:Boolean get()=false
     val maySaveProgram:Boolean get()=false
@@ -55,9 +57,10 @@ object CoachAthleteCatalogCandidateDomain {
             issues+=AthleteCandidateIssue(field,kind,reason)
         }
         fun result(status:AthleteCandidateStatus,
-            catalog:CatalogWeekReview?=null):AthleteCatalogCandidateReview =
+            catalog:CatalogWeekReview?=null,
+            realization:GoalRealizationReview?=null):AthleteCatalogCandidateReview =
             AthleteCatalogCandidateReview(status,
-                Collections.unmodifiableList(issues.toList()),catalog)
+                Collections.unmodifiableList(issues.toList()),catalog,realization)
 
         val profile=request.setup.reviewed?.takeIf {
             request.setup.mayReviewProgramCandidate
@@ -183,6 +186,17 @@ object CoachAthleteCatalogCandidateDomain {
         for(item in policyReview.issues)
             add(item.field,AthleteCandidateIssueKind.GOAL_POLICY_UNRESOLVED,
                 item.explanation)
+        // An authored policy's metadata is not enough: inspect the emitted
+        // whole week and actual frequency of each priority lift.
+        val realization=if(policyReview.status==GoalPolicyStatus.MATCHED_FOR_REVIEW &&
+            request.goalPolicy!=null)
+            CoachGoalProgramRealizationDomain.review(
+                profile,request.phase,request.intents,request.goalPolicy,plan)
+        else null
+        for(item in realization?.issues.orEmpty())
+            add("realization."+item.field,
+                AthleteCandidateIssueKind.REALIZATION_UNRESOLVED,
+                item.explanation)
         // Barbell and lower-day restrictions are already enforced by the
         // composer; hard/long day intensity remains a future policy.
         if(profile.hardTrainingDays.isNotEmpty() ||
@@ -191,6 +205,6 @@ object CoachAthleteCatalogCandidateDomain {
                 "Explicit hard/long day intensity and time policies are still required.")
         return result(
             if(issues.isEmpty())AthleteCandidateStatus.CANDIDATE_FOR_REVIEW
-            else AthleteCandidateStatus.CONSTRAINTS_UNRESOLVED,plan)
+            else AthleteCandidateStatus.CONSTRAINTS_UNRESOLVED,plan,realization)
     }
 }

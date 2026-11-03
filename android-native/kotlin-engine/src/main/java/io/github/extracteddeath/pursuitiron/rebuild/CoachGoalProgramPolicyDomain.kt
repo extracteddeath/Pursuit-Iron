@@ -20,11 +20,14 @@ data class AuthoredGoalProgramPolicy(
     val trainingDays:Int,
     val baselineBounds:List<DeclaredMuscleDoseBounds>,
     val selectedBounds:List<DeclaredMuscleDoseBounds>,
-    val minimumPurposeDays:Map<ComposerSessionPurpose,Int>
+    val minimumPurposeDays:Map<ComposerSessionPurpose,Int>,
+    /** Per-lift days required by a coach; never guessed from the goal. */
+    val primaryLiftMinimumDays:Map<String,Int> = emptyMap()
 )
 enum class GoalPolicyIssueKind {
     POLICY_MISSING, INVALID_PROVENANCE, CONTEXT_MISMATCH, INVALID_DOSE,
-    PRIORITY_NOT_APPLIED, DAY_PURPOSE_MISSING, PRIMARY_SKILL_MISSING
+    PRIORITY_NOT_APPLIED, DAY_PURPOSE_MISSING, PRIMARY_SKILL_MISSING,
+    INVALID_LIFT_FREQUENCY
 }
 data class GoalPolicyIssue(
     val field:String,
@@ -134,6 +137,12 @@ object CoachGoalProgramPolicyDomain {
                         "The selected policy did not actually reduce this muscle's planned dose or frequency.")
             }
         }
+        if(policy.primaryLiftMinimumDays.size>16 ||
+            policy.primaryLiftMinimumDays.any { (lift,days) ->
+                !id.matches(lift) || days !in 1..count
+            })
+            fail("goalPolicy.primaryFrequency",GoalPolicyIssueKind.INVALID_LIFT_FREQUENCY,
+                "The policy needs valid stable primary exercise IDs and attainable weekday frequencies.")
         val counted=intents.groupingBy {it.purpose}.eachCount()
         if(policy.minimumPurposeDays.isEmpty() ||
             policy.minimumPurposeDays.any { (purpose,needed) ->

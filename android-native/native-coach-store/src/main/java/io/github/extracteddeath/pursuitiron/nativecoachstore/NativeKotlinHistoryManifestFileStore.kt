@@ -50,6 +50,12 @@ sealed interface NativeHistoryWriteIntent {
         override val workoutId: String,
         val operation: CustomWorkoutJournalOperation.Finish
     ) : NativeHistoryWriteIntent
+
+    /** Durable post-Finish correction of one factual custom visit. */
+    data class CustomCorrect(
+        override val workoutId: String,
+        val operation: CustomSavedVisitCorrection
+    ) : NativeHistoryWriteIntent
 }
 
 data class NativeHistoryLedger(
@@ -134,6 +140,17 @@ private object NativeHistoryLedgerBinary {
                     state.completions.any { it.workoutId == intent.workoutId &&
                         it.savedCorrectionRevision == intent.operation.expectedCorrectionRevision }
             )
+            is NativeHistoryWriteIntent.CustomCorrect -> require(
+                validId(intent.workoutId) &&
+                    validId(intent.operation.eventId) &&
+                    validId(intent.operation.correctsEventId) &&
+                    intent.operation.visit.setKey.length in 1..160 &&
+                    state.completions.any {
+                        it.workoutId == intent.workoutId &&
+                        it.storedReceiptId.startsWith("custom-v2-") &&
+                        it.savedCorrectionRevision == intent.operation.expectedCorrectionRevision
+                    }
+            )
         }
     }
 
@@ -207,6 +224,18 @@ private object NativeHistoryLedgerBinary {
                     out.writeUTF(op.outcome.name)
                     out.actual(op.actual)
                 }
+                is NativeHistoryWriteIntent.CustomCorrect -> {
+                    out.writeByte(4)
+                    out.writeUTF(intent.workoutId)
+                    val op = intent.operation
+                    out.writeUTF(op.eventId)
+                    out.writeLong(op.expectedCorrectionRevision)
+                    out.writeUTF(op.visit.setKey)
+                    out.writeUTF(op.visit.part.name)
+                    out.writeUTF(op.correctsEventId)
+                    out.writeUTF(op.outcome.name)
+                    out.actual(op.performed)
+                }
             }
         }
         val data = body.toByteArray()
@@ -271,6 +300,25 @@ private object NativeHistoryLedgerBinary {
                         CustomWorkoutJournalOperation.Finish(
                             data.readUTF(),data.readLong())
                     )
+                    4 -> {
+                        val workout = data.readUTF()
+                        val event = data.readUTF()
+                        val revision = data.readLong()
+                        val setKey = data.readUTF()
+                        val partName = data.readUTF()
+                        val part = CustomWorkoutVisitPart.entries.singleOrNull {
+                            it.name == partName
+                        } ?: throw IOException("invalid custom visit part")
+                        val predecessor = data.readUTF()
+                        val outcomeName = data.readUTF()
+                        val outcome = KotlinJournalSetOutcome.entries.singleOrNull {
+                            it.name == outcomeName
+                        } ?: throw IOException("invalid custom outcome")
+                        NativeHistoryWriteIntent.CustomCorrect(workout,
+                            CustomSavedVisitCorrection(event, revision,
+                                CustomWorkoutVisitKey(setKey, part),
+                                predecessor, outcome, data.actual()))
+                    }
                     else -> throw IOException("unknown intent kind")
                 }
                 if (data.available() != 0) throw IOException("trailing ledger bytes")
@@ -485,6 +533,19 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
             is NativeHistoryWriteIntent.Correct -> {
                 val existing = old.completions.singleOrNull {
                     it.workoutId == intent.workoutId
+                } ?: return@transition NativeHistoryLedgerResult.Rejected(
+                    NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
+                if (resolved.copy(savedCorrectionRevision = existing.savedCorrectionRevision) !=
+                    existing ||
+                    resolved.savedCorrectionRevision != existing.savedCorrectionRevision + 1)
+                    return@transition NativeHistoryLedgerResult.Rejected(
+                        NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
+                old.completions.map { if (it.workoutId == resolved.workoutId) resolved else it }
+            }
+            is NativeHistoryWriteIntent.CustomCorrect -> {
+                val existing = old.completions.singleOrNull {
+                    it.workoutId == intent.workoutId &&
+                        it.storedReceiptId.startsWith("custom-v2-")
                 } ?: return@transition NativeHistoryLedgerResult.Rejected(
                     NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
                 if (resolved.copy(savedCorrectionRevision = existing.savedCorrectionRevision) !=

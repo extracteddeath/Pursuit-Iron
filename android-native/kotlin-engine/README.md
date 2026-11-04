@@ -794,3 +794,33 @@ Kotlin unit tests, **not active user workouts**. Independent muscle
 mapping review, a broader true gym catalog, goal-specific full-week
 quality, history-linked state ownership and real APK acceptance still
 gate release.
+
+
+## Kotlin journal to factual history evidence (candidate only)
+
+The new `KotlinWorkoutHistoryEvidenceDomain` accepts a **finished** workout
+journal only after `KotlinWorkoutJournalReplayDomain.verifyStoredState`
+reconstructs the ordered receipt chain. It projects each original issued set
+into one factual row, preserving warmups, original targets, actual values,
+skips, failed attempts and the current correction receipt ID. Older correction
+events remain in the immutable audit stream and never become duplicate sets.
+Issued RIR never populates unreported actual RIR.
+
+For weighted working sets, it may produce a **read-only**
+`DoubleProgressionEvidenceDomain` review, keyed by original working-set
+ordinal. A mixed rep-band/backoff prescription, mismatched load basis, invalid
+ordinals, unweighted bodyweight, or more than 32 working sets cannot masquerade
+as uniform comparable double-progression evidence. Those workouts retain
+their facts with an explicit unreviewable reason; no observations are discarded
+to make the review appear stronger. Warmups do not count as working-set
+performance. Skips and failures remain separate from missing observations.
+
+The projector deliberately cannot publish a history record, authenticate
+storage ownership, correct a saved workout, authorize progression, determine
+future set loads or switch the Android app off the JS runtime. It is the
+**factual, Kotlin-only read model** needed before separately implementing
+atomic native history ownership and audited longitudinal progression. Tests
+cover corrections, unknown actual RIR, failed attempts, skipped work,
+backoff rep bands, bodyweight and forged denormalized journal state. CI
+verification must still pass for the new branch head; no APK or app integration
+is asserted by this addition.

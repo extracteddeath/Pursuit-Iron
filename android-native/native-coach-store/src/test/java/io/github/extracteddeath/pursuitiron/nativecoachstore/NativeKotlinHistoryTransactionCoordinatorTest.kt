@@ -258,4 +258,38 @@ class NativeKotlinHistoryTransactionCoordinatorTest {
                 as NativeHistoryTransactionResult.Rejected).reason)
         assertArrayEquals(original, Files.readAllBytes(bins.single()))
     }
+
+    @Test fun committedManifestFeedsRealPrivateHistoryReaderAndPendingBlocksIt() {
+        enroll()
+        issueResolved(1)
+        finished(1)
+        val sourceAuthority = NativeKotlinHistoryManifestFileAuthority(
+            ledger(), { owner, athlete ->
+                allowed && owner == "owner-1" && athlete == "athlete-1"
+            })
+        fun read() = NativeKotlinGlobalHistoryReadCoordinator(
+            journal(), corrections(), auth, sourceAuthority, fence()
+        ).read("owner-1", "athlete-1")
+
+        val initial = read() as NativeKotlinHistoryReadResult.Review
+        assertEquals(2L, initial.index.manifestRevision)
+        assertEquals(8, initial.index.lastByExercise
+            .getValue("bench").workingSets.last().actual?.reps)
+        val firstFingerprint = initial.index.contentFingerprint
+
+        val intent = NativeHistoryWriteIntent.Correct("workout-1", edit(1))
+        val prepared = ledger().prepare("owner-1", "athlete-1", 2, intent)
+        assertTrue(prepared is NativeHistoryLedgerResult.Durable)
+        assertTrue(read() is NativeKotlinHistoryReadResult.Rejected)
+        assertEquals(3L, accepted(coordinator().recover(
+            "owner-1", "athlete-1")).manifest.revision)
+        val revised = read() as NativeKotlinHistoryReadResult.Review
+        assertEquals(3L, revised.index.manifestRevision)
+        assertEquals(3, revised.index.lastByExercise
+            .getValue("bench").workingSets.last().actual?.reps)
+        assertNotEquals(firstFingerprint, revised.index.contentFingerprint)
+        assertFalse(revised.index.canPublishPr)
+        assertFalse(revised.index.canIssueProgression)
+    }
+
 }

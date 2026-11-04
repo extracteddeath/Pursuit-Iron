@@ -337,7 +337,7 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
     }
 
     /** MUST be explicitly called after authenticating real native ownership. */
-    fun enroll(
+    internal fun enroll(
         owner: String, athlete: String,
         authorizeCurrent: (String, String) -> Boolean
     ): NativeHistoryLedgerResult {
@@ -353,6 +353,51 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
                 if (Files.exists(file)) return@locked read(file)
                 val initial = NativeHistoryLedger(owner, athlete, 1,
                     emptyList(), null)
+                atomicWrite(file, NativeHistoryLedgerBinary.encode(initial))
+                NativeHistoryLedgerResult.Durable(initial)
+            }
+        }.getOrElse {
+            NativeHistoryLedgerResult.Rejected(
+                NativeHistoryLedgerRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Only the authenticated full-inventory migration coordinator may call
+     * this source-level write. The caller must replay-verify EVERY existing
+     * workout and saved correction under the shared owner fence first.
+     * This operation never overwrites an already-created empty manifest.
+     */
+    internal fun enrollVerifiedSnapshot(
+        owner: String, athlete: String,
+        completions: List<KotlinHistoryManifestEntry>,
+        authorizeCurrent: (String, String) -> Boolean
+    ): NativeHistoryLedgerResult {
+        if (!NativeHistoryLedgerBinary.validId(owner) ||
+            !NativeHistoryLedgerBinary.validId(athlete))
+            return NativeHistoryLedgerResult.Rejected(
+                NativeHistoryLedgerRefusal.INVALID_ARGUMENT)
+        return runCatching {
+            locked(owner, athlete) { file ->
+                if (!authorizeCurrent(owner, athlete))
+                    return@locked NativeHistoryLedgerResult.Rejected(
+                        NativeHistoryLedgerRefusal.NOT_AUTHORIZED)
+                val initial = NativeHistoryLedger(
+                    owner, athlete, 1, Collections.unmodifiableList(
+                        completions.toList()), null)
+                if (runCatching { NativeHistoryLedgerBinary.check(initial) }.isFailure)
+                    return@locked NativeHistoryLedgerResult.Rejected(
+                        NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
+                if (Files.exists(file)) {
+                    val found = read(file)
+                    if (found !is NativeHistoryLedgerResult.Durable)
+                        return@locked found
+                    // Never interpret an existing manifest as replaceable.
+                    return@locked if (found.ledger == initial)
+                        NativeHistoryLedgerResult.Durable(initial, true)
+                    else NativeHistoryLedgerResult.Rejected(
+                        NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
+                }
                 atomicWrite(file, NativeHistoryLedgerBinary.encode(initial))
                 NativeHistoryLedgerResult.Durable(initial)
             }

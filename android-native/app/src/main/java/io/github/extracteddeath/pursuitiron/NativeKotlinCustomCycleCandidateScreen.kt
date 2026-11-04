@@ -197,15 +197,34 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             Text("${pretty(day.purpose)} · ${day.slots.size} exercises",
                                 style = MaterialTheme.typography.bodySmall)
                             if (day.slots.isNotEmpty()) {
-                                day.slots.forEach { slot ->
+                                day.slots.forEachIndexed { slotIndex, slot ->
                                     Text("${slot.exerciseId} · ${slot.sets.size} authored sets" +
                                         if (slot.pinned) " · Pinned" else "",
                                         style = MaterialTheme.typography.bodyMedium)
-                                    TextButton(
-                                        onClick = { exerciseEditor = Triple(
-                                            block.blockId, day.weekday, slot.slotId) },
-                                        enabled = !busy
-                                    ) { Text("Edit sets") }
+                                    Row(Modifier.fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(
+                                            onClick = { exerciseEditor = Triple(
+                                                block.blockId, day.weekday, slot.slotId) },
+                                            enabled = !busy
+                                        ) { Text("Edit sets") }
+                                        TextButton(onClick = {
+                                            controller.moveExercise(
+                                                block.blockId, day.weekday,
+                                                slot.slotId, -1)
+                                        }, enabled = !busy && slotIndex > 0) {
+                                            Text("Earlier")
+                                        }
+                                        TextButton(onClick = {
+                                            controller.moveExercise(
+                                                block.blockId, day.weekday,
+                                                slot.slotId, 1)
+                                        }, enabled = !busy &&
+                                            slotIndex < day.slots.lastIndex) {
+                                            Text("Later")
+                                        }
+                                    }
                                 }
                             } else {
                                 Text("No exercises yet. This day is an unfinished draft.",

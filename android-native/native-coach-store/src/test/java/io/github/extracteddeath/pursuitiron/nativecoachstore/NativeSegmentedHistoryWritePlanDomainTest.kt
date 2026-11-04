@@ -160,6 +160,23 @@ class NativeSegmentedHistoryWritePlanDomainTest {
                 prior.copy(savedCorrectionRevision = 1)))
     }
 
+    @Test fun correctionCannotSwapWorkoutBetweenPrepareAndFinalize() {
+        val h = head(150)
+        val intent = correction(10)
+        val staged = prepared(h, intent, entry(10))
+        val oldPage = segment(h, 1, 128)
+        val wrong = entry(9)
+        assertEquals(rejected(NativeSegmentedWriteRefusal.TARGET_CONFLICT),
+            NativeSegmentedHistoryWritePlanDomain.finalize(
+                staged, intent, wrong, oldPage,
+                wrong.copy(savedCorrectionRevision = 1)))
+        val revisionChanged = entry(10, edits = 1)
+        assertEquals(rejected(NativeSegmentedWriteRefusal.TARGET_CONFLICT),
+            NativeSegmentedHistoryWritePlanDomain.finalize(
+                staged, intent, revisionChanged, oldPage,
+                revisionChanged.copy(savedCorrectionRevision = 2)))
+    }
+
     @Test fun rejectsMismatchedCustomAndComposerCorrectionKinds() {
         val h = head(150)
         val custom = entry(10, custom = true)

@@ -175,6 +175,27 @@ object NativeSegmentedHistoryWritePlanDomain {
             return denied(NativeSegmentedWriteRefusal.REVISION_CONFLICT)
 
         val isAppend = isFinish(intent)
+        // Never let a caller swap a different historical target between
+        // prepare and finalize, even if it belongs to the same segment.
+        if (!isAppend) {
+            if (target == null || !validEntry(target) ||
+                target.workoutId != intent.workoutId ||
+                target.completionOrder > prepared.completionCount)
+                return denied(NativeSegmentedWriteRefusal.TARGET_CONFLICT)
+            when (intent) {
+                is NativeHistoryWriteIntent.Correct ->
+                    if (target.storedReceiptId.startsWith("custom-") ||
+                        target.savedCorrectionRevision !=
+                            intent.operation.expectedCorrectionRevision)
+                        return denied(NativeSegmentedWriteRefusal.TARGET_CONFLICT)
+                is NativeHistoryWriteIntent.CustomCorrect ->
+                    if (!target.storedReceiptId.startsWith("custom-v2-") ||
+                        target.savedCorrectionRevision !=
+                            intent.operation.expectedCorrectionRevision)
+                        return denied(NativeSegmentedWriteRefusal.TARGET_CONFLICT)
+                else -> return denied(NativeSegmentedWriteRefusal.INVALID_INTENT)
+            }
+        }
         val ordinal = if (isAppend) prepared.completionCount + 1
             else target?.completionOrder ?: return denied(
                 NativeSegmentedWriteRefusal.TARGET_CONFLICT)

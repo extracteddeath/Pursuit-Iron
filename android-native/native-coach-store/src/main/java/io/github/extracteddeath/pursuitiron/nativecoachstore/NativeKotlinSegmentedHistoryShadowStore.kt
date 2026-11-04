@@ -77,7 +77,8 @@ class NativeKotlinSegmentedHistoryShadowStore(
         private const val VERSION = 1
         private const val SEGMENT_SIZE = 128
         private const val MAX_INDEX_BYTES = 65_536
-        // 128 legal 80-character IDs per field can exceed 32 KiB.\n        private const val MAX_SEGMENT_BYTES = 65_536
+        // 128 legal 80-character IDs per field can exceed 32 KiB.
+        private const val MAX_SEGMENT_BYTES = 65_536
         private const val MAX_REVISION = 9_007_199_254_740_991L
     }
 

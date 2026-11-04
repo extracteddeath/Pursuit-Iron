@@ -232,6 +232,10 @@ class NativeKotlinHistoryTransactionCoordinator(
                     intent.operation.eventId, result.revision, 0
                 )
             }
+            is NativeHistoryWriteIntent.CustomCorrect -> {
+                // The Composer coordinator must never replay custom corrections.
+                return denied(NativeHistoryTransactionRefusal.HISTORY_NOT_READY)
+            }
             is NativeHistoryWriteIntent.CustomFinish -> {
                 // The composer-only history coordinator must NOT consume a
                 // pending custom journal intent with a lossy Composer snapshot.

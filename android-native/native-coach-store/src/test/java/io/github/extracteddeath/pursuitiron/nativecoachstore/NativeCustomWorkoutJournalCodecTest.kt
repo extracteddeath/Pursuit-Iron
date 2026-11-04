@@ -93,7 +93,7 @@ class NativeCustomWorkoutJournalCodecTest {
             NativeCustomWorkoutJournalCodec.encode(record(
                 amp.copy(receipts=amp.receipts.reversed())))
         }
-        assertThrows(IOException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             NativeCustomWorkoutJournalCodec.encode(record(
                 amp.copy(effectiveVisits=emptyMap())))
         }

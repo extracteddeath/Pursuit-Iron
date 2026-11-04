@@ -40,11 +40,13 @@ data class KotlinExerciseHistoryEvidence(
     val exerciseId: String,
     val workingSets: List<KotlinHistoricalSetFact>,
     val progressionGate: KotlinHistoryProgressionGate,
-    val progressionReview: ProgressionEvidence?
+    val progressionReview: ProgressionEvidence?,
+    /** Factual, comparable session input for the separate longitudinal coach. */
+    val progressionWorkout: ProgressionWorkoutEvidence?
 ) {
     init {
         require((progressionGate == KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW) ==
-            (progressionReview != null))
+            (progressionReview != null && progressionWorkout != null))
     }
 }
 
@@ -119,11 +121,13 @@ object KotlinWorkoutHistoryEvidenceDomain {
                     KotlinHistoryProgressionGate.MIXED_REP_BANDS
                 else -> KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW
             }
-            val progression = if (gate == KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW) {
+            val workout = if (gate == KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW) {
                 val ordered = working.sortedBy { it.originalOrdinal }
-                DoubleProgressionEvidenceDomain.assess(
+                val unit = (ordered.first().issuedLoad as DraftSetLoad.Verified).unit
+                ProgressionWorkoutEvidence(
+                    journal.snapshot.workoutId, exerciseId, unit,
                     ordered.first().issuedReps, ordered.size,
-                    ordered.map { fact ->
+                    Collections.unmodifiableList(ordered.map { fact ->
                         val issued = fact.issuedLoad as DraftSetLoad.Verified
                         WorkingSetFact(
                             fact.originalOrdinal,
@@ -135,11 +139,15 @@ object KotlinWorkoutHistoryEvidenceDomain {
                             fact.actual?.load, fact.actual?.reps, fact.actual?.actualRir,
                             issued.value, fact.issuedRir
                         )
-                    }
+                    })
                 )
             } else null
+            val progression = workout?.let {
+                DoubleProgressionEvidenceDomain.assess(
+                    it.targetReps, it.expectedWorkingSets, it.observations)
+            }
             KotlinExerciseHistoryEvidence(exerciseId,
-                Collections.unmodifiableList(working.toList()), gate, progression)
+                Collections.unmodifiableList(working.toList()), gate, progression, workout)
         }
         return KotlinHistoryProjectionResult.Candidate(KotlinWorkoutHistoryEvidence(
             journal.snapshot.source, journal.snapshot.workoutId, finishId,

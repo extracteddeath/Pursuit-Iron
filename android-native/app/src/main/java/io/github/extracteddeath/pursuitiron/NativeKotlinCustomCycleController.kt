@@ -208,6 +208,26 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
+    /** Accessible alternative to drag gestures, stable slot identity intact. */
+    fun moveExercise(
+        blockId: String, weekday: Int, slotId: String, direction: Int
+    ) = edit { draft ->
+        val day = draft.blocks.firstOrNull { it.blockId == blockId }
+            ?.days?.firstOrNull { it.weekday == weekday }
+        val order = day?.slots?.map { it.slotId }?.toMutableList()
+        val index = order?.indexOf(slotId) ?: -1
+        val target = index + direction
+        if (order == null || index < 0 || target !in order.indices)
+            CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.SLOT_ORDER_CONFLICT)
+        else {
+            val chosen = order.removeAt(index)
+            order.add(target, chosen)
+            CustomCycleBuilderDomain.reorderSlots(
+                draft, draft.revision, blockId, weekday, order)
+        }
+    }
+
     fun editReviewedExerciseSets(
         blockId: String, weekday: Int, slotId: String,
         sets: List<CustomAuthoredSet>

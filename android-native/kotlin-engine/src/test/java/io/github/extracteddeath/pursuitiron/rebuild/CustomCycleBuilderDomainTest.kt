@@ -344,4 +344,55 @@ class CustomCycleBuilderDomainTest {
                 as CustomCycleBuilderResult.Rejected).reason)
     }
 
+
+    @Test fun authorMayRenameProgramAndEditBlockWithoutTouchingIndividualSets() {
+        val input = draft()
+        val first = accepted(CustomCycleBuilderDomain.editCycleMetadata(
+            input, 1, "Custom powerbuilding", "Keep my selected movements"))
+        val changed = accepted(CustomCycleBuilderDomain.editBlockMetadata(
+            first.draft, 2, "base", "My strength phase",
+            TrainingPhase.STRENGTH, CustomBlockPurpose.TRAINING, 5,
+            CustomSplitIdentity.Freeform("Power day / Hypertrophy day")))
+        val block = changed.draft.blocks.single()
+        assertEquals("My strength phase", block.label)
+        assertEquals(TrainingPhase.STRENGTH, block.phase)
+        assertEquals(5, block.weeks)
+        assertEquals("Custom powerbuilding", changed.draft.title)
+        assertEquals("Keep my selected movements", changed.draft.authorNote)
+        assertEquals(input.blocks.single().days, block.days)
+        assertEquals(input.weekOverrides, changed.draft.weekOverrides)
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (CustomCycleBuilderDomain.editBlockMetadata(
+                first.draft, 2, "base", "Invalid",
+                TrainingPhase.STRENGTH, CustomBlockPurpose.TRAINING, 2,
+                CustomSplitIdentity.Freeform("My split"))
+                as CustomCycleBuilderResult.Rejected).reason)
+        val reversed = accepted(CustomCycleBuilderDomain.undo(
+            changed.draft, changed.receipt))
+        assertEquals(first.draft.blocks, reversed.draft.blocks)
+        assertEquals(first.draft.weekOverrides, reversed.draft.weekOverrides)
+    }
+
+    @Test fun firstCustomPhaseAndSessionPurposeAreExplicitlyAuthored() {
+        val blank = CustomCycleBuilderDomain.blank(
+            "new-cycle", "athlete", AthleteTrainingGoal.POWERBUILDING,
+            "My unique split", "first", 6, TrainingPhase.HYPERTROPHY,
+            CustomSplitIdentity.Freeform("Chest and back"),
+            firstBlockLabel = "My foundational block")!!
+        assertEquals("My foundational block", blank.blocks.single().label)
+        val added = accepted(CustomCycleBuilderDomain.addDay(
+            blank, 1, "first", CustomTrainingDay(
+                4, "Friday power", ComposerSessionPurpose.HYPERTROPHY,
+                emptyList())))
+        val changed = accepted(CustomCycleBuilderDomain.changeDayPurpose(
+            added.draft, 2, "first", 4, ComposerSessionPurpose.STRENGTH_SKILL))
+        assertEquals(ComposerSessionPurpose.STRENGTH_SKILL,
+            changed.draft.blocks.single().days.single().purpose)
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (CustomCycleBuilderDomain.changeDayPurpose(
+                changed.draft, 3, "first", 4,
+                ComposerSessionPurpose.UNSPECIFIED)
+                as CustomCycleBuilderResult.Rejected).reason)
+    }
+
 }

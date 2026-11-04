@@ -419,4 +419,39 @@ class NativeKotlinCustomHistoryTransactionTest {
             mixedReader().read("owner-1","athlete-1"))
         // A forged/copied or deleted custom file must never yield partial history.
     }
+
+    @Test fun mixedReaderRejectsTamperedCustomJournalInsteadOfDroppingWorkout() {
+        logged()
+        assertTrue(transactions.complete(
+            "owner-1","athlete-1","workout-2",finish())
+            is NativeCustomFinishResult.Committed)
+        finishGenerated()
+        val file=java.nio.file.Files.list(temp.root.toPath()).use{paths->
+            paths.filter{it.fileName.toString().startsWith("issued-custom-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val bytes=java.nio.file.Files.readAllBytes(file)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(file,bytes)
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM),
+            mixedReader().read("owner-1","athlete-1"))
+    }
+
+    @Test fun mixedReaderDistinguishesMissingEnrollmentFromCorruptLedger() {
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.NOT_ENROLLED),
+            mixedReader().read("owner-1","athlete-1"))
+        enroll()
+        val ledgerFile=java.nio.file.Files.list(temp.root.toPath()).use{paths->
+            paths.filter{it.fileName.toString().startsWith("history-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val bytes=java.nio.file.Files.readAllBytes(ledgerFile)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(ledgerFile,bytes)
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.INVALID_MANIFEST),
+            mixedReader().read("owner-1","athlete-1"))
+    }
 }

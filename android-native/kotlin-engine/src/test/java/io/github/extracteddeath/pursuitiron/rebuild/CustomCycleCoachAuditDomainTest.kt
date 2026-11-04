@@ -35,8 +35,8 @@ class CustomCycleCoachAuditDomainTest {
             ComposerRole.ACCESSORY,listOf(authoredSet()))))
     private fun cycle(
         weeks:Int=3,
-        days:List<CustomTrainingDay>=listOf(0,2,4).map(::authoredDay),
-        overrides:Map<String,List<CustomWeekSlotOverride>>=emptyMap()
+        days:List<CustomTrainingDay> = listOf(0,2,4).map(::authoredDay),
+        overrides:Map<String,List<CustomWeekSlotOverride>> = emptyMap()
     )=CustomTrainingCycle("cycle-1",4,"athlete-1",
         AthleteTrainingGoal.HYPERTROPHY,"My fully custom plan",
         listOf(CustomTrainingBlock("block-1","Foundation",

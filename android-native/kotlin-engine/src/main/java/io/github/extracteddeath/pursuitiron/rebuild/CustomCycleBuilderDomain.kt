@@ -89,15 +89,18 @@ object CustomCycleBuilderDomain {
         firstBlockId: String,
         firstBlockWeeks: Int,
         phase: TrainingPhase,
-        split: CustomSplitIdentity
+        split: CustomSplitIdentity,
+        firstBlockLabel: String = firstBlockId
     ): CustomTrainingCycle? {
+        if (firstBlockLabel.isBlank() || firstBlockLabel.length > 120)
+            return null
         if (!id.matches(cycleId) || !id.matches(athleteId) ||
             !id.matches(firstBlockId) || title.isBlank() ||
             title.length > 120 || firstBlockWeeks !in 1..52)
             return null
         return freeze(CustomTrainingCycle(
             cycleId, 1, athleteId, goal, title,
-            listOf(CustomTrainingBlock(firstBlockId, firstBlockId,
+            listOf(CustomTrainingBlock(firstBlockId, firstBlockLabel,
                 phase, CustomBlockPurpose.TRAINING, firstBlockWeeks,
                 split, emptyList()))
         ))
@@ -475,6 +478,85 @@ object CustomCycleBuilderDomain {
                 if (candidate.blockId != blockId) candidate else candidate.copy(
                     days = candidate.days.map {
                         if (it.weekday == weekday) it.copy(label = newLabel)
+                        else it
+                    })
+            })
+        }
+    }
+
+    /** Rename the athlete's cycle or update their notes; do not reinterpret training. */
+    fun editCycleMetadata(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        title: String,
+        authorNote: String
+    ): CustomCycleBuilderResult {
+        if (title.isBlank() || title.length > 120 || authorNote.length > 2000)
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current, expectedRevision, "edit-cycle-metadata") {
+            current.copy(title = title, authorNote = authorNote)
+        }
+    }
+
+    /**
+     * The athlete can name their phase and change its declared duration,
+     * purpose and split without replacing ANY authored exercise or override.
+     * Shortening a block below an existing week override is rejected.
+     */
+    fun editBlockMetadata(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        blockId: String,
+        label: String,
+        phase: TrainingPhase,
+        purpose: CustomBlockPurpose,
+        weeks: Int,
+        split: CustomSplitIdentity
+    ): CustomCycleBuilderResult {
+        val block = current.blocks.firstOrNull { it.blockId == blockId }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        val otherWeeks = current.blocks.filterNot { it.blockId == blockId }
+            .sumOf { it.weeks }
+        if (label.isBlank() || label.length > 120 ||
+            weeks !in 1..52 || weeks + otherWeeks > 104 ||
+            (split is CustomSplitIdentity.Freeform &&
+                (split.label.isBlank() || split.label.length > 80)) ||
+            current.weekOverrides[blockId].orEmpty().any { it.weekInBlock > weeks })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current, expectedRevision, "edit-block-metadata") {
+            current.copy(blocks = current.blocks.map {
+                if (it.blockId != blockId) it else block.copy(
+                    label = label, phase = phase, purpose = purpose,
+                    weeks = weeks, split = split)
+            })
+        }
+    }
+
+    /** Change a day's purpose without modifying its exercises or set targets. */
+    fun changeDayPurpose(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        blockId: String,
+        weekday: Int,
+        purpose: ComposerSessionPurpose
+    ): CustomCycleBuilderResult {
+        if (purpose == ComposerSessionPurpose.UNSPECIFIED)
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        val block = current.blocks.firstOrNull { it.blockId == blockId }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        if (block.days.none { it.weekday == weekday })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        return edit(current, expectedRevision, "change-day-purpose") {
+            current.copy(blocks = current.blocks.map { candidate ->
+                if (candidate.blockId != blockId) candidate else candidate.copy(
+                    days = candidate.days.map {
+                        if (it.weekday == weekday) it.copy(purpose = purpose)
                         else it
                     })
             })

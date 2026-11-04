@@ -302,6 +302,9 @@ if find(r"How are you today\?", timeout=3) or scroll_to(r"How are you today\?", 
     tap(r"^How are you today\? Optional check-in", "check-in-open", required=False)
     tap(r"^Sleep: Great", "check-in")
     tap(r"^Energy: High")
+    # Save sits at the foot of the open check-in, below the fold on a short screen
+    if not find(r"^\|Save$|^\|Done$", timeout=2):
+        scroll_to(r"^\|Save$|^\|Done$", tries=3, step=400)
     tap(r"^\|Save$|^\|Done$")
     if not find(r"^Edit today's check-in", timeout=4):
         FAILS.append("check-in did not fold into its chip")
@@ -740,7 +743,8 @@ if scroll_to(r"Fresher today|A deload looks due|Muscle recovery|This week|Streng
 # The design's weekly recap: the last seven days, four figures and Share recap
 # The insights scroll above can stop below the recap (it sits above This week), so look both ways.
 RECAP = r"^\|LAST 7 DAYS · |^Hide the weekly recap"
-if scroll_to(RECAP, tries=6, step=500) or scroll_up_to(RECAP, tries=12):
+# A slow accessibility dump (animations on Today) can miss it on one pass: go back to the top and look again, slower.
+if scroll_to(RECAP, tries=6, step=500) or scroll_up_to(RECAP, tries=12) or (time.sleep(2) or scroll_to(RECAP, tries=8, step=350)):
     if not find(r"^\|Share recap$", timeout=2) and not scroll_to(r"^\|Share recap$", tries=2, step=300):
         FAILS.append("weekly recap has no Share recap")
     shot("today-recap")

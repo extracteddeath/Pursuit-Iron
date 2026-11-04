@@ -217,3 +217,26 @@ Before production authority, build and test:
 In particular, do not conflate `READY_FOR_COACH_REVIEW` with a saved
 user-approved program or with successful issuance. Both result objects
 explicitly report that they cannot issue workouts or publish changes.
+
+
+### Post-Finish custom set corrections — headless candidate
+
+- CustomSavedHistoryCorrectionDomain is a separate Kotlin-only correction
+  reducer for **already finished** custom sessions. It holds exact original
+  journal and Finish immutable, uses revisioned event/corrects-event receipts
+  and replay validation, and reuses the original custom actual load/basis/RIR
+  rules instead of allowing a second, divergent weight validator.
+- MAIN and FOLLOW_UP corrections retain distinct visit identity and explicit
+  causal rules. To change a main set to skipped/failed, its recorded follow-up
+  must first be separately corrected to skipped; a skipped main with no original
+  follow-up cannot be retrospectively counted as a completed amplified set.
+- CustomSavedHistoryEvidenceDomain projects corrected *facts*, omitting
+  now-nonapplicable follow-up work from effective exposure while retaining all
+  immutable audit receipts. It never issues progressions, PRs or live history.
+- JVM source tests cover revised actuals with unknown RIR, physical load
+  mismatch, causal amplifier correction order, absent follow-up, revision and
+  predecessor conflicts, exact idempotent retries and forged replay caches.
+- **Unfinished:** durable owner-locked saved-custom-correction codec/store,
+  redo-backed ledger update, verified mixed-history correction read,
+  chronological lifetime history, UI editing and legacy import. Do not treat
+  this headless reducer as a completed workout editor.

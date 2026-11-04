@@ -895,3 +895,45 @@ edits with active completion, and prove crash/retry recovery. Program
 progression remains review-only, not a live change. The existing native web
 runtime and production web app are still untouched. All tests must pass
 on the latest branch head before treating this source pass as green.
+
+
+## Native saved-history correction persistence — isolated source candidate
+
+`native-coach-store/KotlinNativeSavedCorrectionFileStore` now implements
+a distinct app-private file for each owner/workout pair. The file contains
+the full ordered correction receipt stream, a bounded checksummed binary
+envelope, a version, and a fingerprint over the **entire original
+finished issued snapshot plus its original committed receipt stream**.
+Every open starts from the source-only Kotlin journal store's independently
+authenticated and replayed finished workout. A missing correction file
+opens as a clean zero-correction state; a corrupted, mismatched or
+unreplayable existing file is refused, never reset or overwritten.
+
+The correction writer locks the workout's correction file across read,
+CAS validation, and atomic temporary-file replacement. Successful returns
+mean that the correction file was written or that an exact existing
+event was replayed; edits do not rewrite the old workout journal.
+Actual decimal representation is preserved across cold restarts to make
+identical operation retries truly idempotent. Source JVM tests cover
+restart, simultaneous writers, corrupt files, sign-out/revocation,
+wrong predecessor, stale revision, and actual-RIR precision.
+
+`NativeKotlinSavedCorrectionCoordinator` also wraps this source-only
+port in the existing owner-scoped
+`NativeKotlinApprovalRevisionFence` and
+`NativeKotlinWorkoutAuthority.canAccessIssuedWorkout`, so it cannot
+circumvent the same owner lock used for the separate Kotlin issuance
+prototype. The application must provide authentic current ownership,
+and ALL other writes/account switches must honor that same fence.
+
+**Still a release blocker:** this is per-workout correction persistence,
+NOT the atomic global history owner. The product has no committed,
+complete, globally versioned Kotlin history index tying corrections to
+Last, PR records, volume charts, future coaching and backups. A deleted
+per-workout correction file has no independent historical ledger to
+prove that edits previously existed. Cross-workout history revision,
+cache invalidation, history browsing and backup/export must be built
+and transactionally tested before user-facing saved-history correction
+or engine cutover. The isolated Compose candidate is not connected
+to these edits; the live web and original JS-authoritative workout remain
+unchanged. An APK is not built by the source-only workflow.

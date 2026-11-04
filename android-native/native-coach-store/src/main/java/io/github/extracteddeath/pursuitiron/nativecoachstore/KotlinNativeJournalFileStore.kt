@@ -34,7 +34,7 @@ import java.security.MessageDigest
 enum class NativeJournalFileRefusal {
     INVALID_ARGUMENT, NOT_ISSUED, ISSUE_CONFLICT, SOURCE_CONFLICT,
     CORRUPT_RECEIPTS, JOURNAL_REJECTED, STORAGE_UNAVAILABLE,
-    NOT_AUTHORIZED
+    NOT_AUTHORIZED, HISTORY_NOT_READY
 }
 
 sealed interface NativeJournalFileResult {

@@ -124,8 +124,9 @@ class NativeKotlinCustomCycleSignoffFileStore(
                         throw IOException("Invalid policy reference count")
                     val policies=buildMap {
                         repeat(count){
+                            val phaseName=input.readUTF()
                             val phase=TrainingPhase.entries.firstOrNull {
-                                it.name==input.readUTF()
+                                it.name==phaseName
                             } ?:throw IOException("Invalid policy phase")
                             val label=input.readUTF()
                             if(label.isBlank() || label.length>80 ||

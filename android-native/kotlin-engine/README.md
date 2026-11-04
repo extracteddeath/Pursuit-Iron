@@ -824,3 +824,38 @@ cover corrections, unknown actual RIR, failed attempts, skipped work,
 backoff rep bands, bodyweight and forged denormalized journal state. CI
 verification must still pass for the new branch head; no APK or app integration
 is asserted by this addition.
+
+
+## Chronological Kotlin progression timeline — revision-bound review, not issuance
+
+`KotlinProgressionTimelineDomain` closes a headless source gap between an
+individual finished workout and a multiworkout coach review. An authenticated
+native history owner must read **all** retained completions in order and
+provide a current store history revision, an athlete identity and independently
+verified inventory. The Kotlin domain checks revision agreement, chronological
+completion ordinals, duplicate IDs, athlete ownership, and full journal replay
+before inspecting the most recent **two appearances of the exercise**. A recent
+failed, skipped or below-floor session cannot be skipped to cherry-pick two
+older successful workouts.
+
+Comparison fails closed when either workout has incompatible working-set
+structure, a different rep band, unit/load basis, training purpose, gym
+revision, catalog identity, program identity or coaching-rules version.
+The existing conservative two-workout DP policy still requires real all-set
+performance, reported actual RIR and physically attainable inventory. The
+timeline also returns an independent within-workout fatigue description, not
+an instruction to automatically cut weight.
+
+History-read revisions must be advanced **transactionally by the future
+native storage owner** whenever saved workout facts change. The projector
+does not authenticate disk bytes by itself, prove that the supplied list is a
+complete history read, or implement post-Finish history corrections. Current
+tests model corrections made *inside* an active workout before Finish. A
+separate authenticated saved-history correction ledger is required before
+claims about correction-driven PR/Last/next-session recalculation are valid.
+
+`VERIFIED_REVIEW` means the supplied input passed the headless historical
+review rules, **not** that a workout, future load or program is approved or
+that the data has been proven committed to disk. `canIssueTargets` and
+`canChangeProgram` always remain false. No Compose, active JS runtime,
+production website or APK is changed by this engine-only pass.

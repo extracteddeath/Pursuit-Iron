@@ -183,4 +183,18 @@ class NativeKotlinSegmentedHistoryShadowStoreTest {
             shadow().sync(owner, athlete))
         assertArrayEquals(bytes, Files.readAllBytes(index))
     }
+    @Test fun maximumLengthValidIdsFitWholeImmutableSegmentWithoutTruncation() {
+        fun longId(prefix: String, index: Int) =
+            (prefix + index.toString().padStart(5, '0')).padEnd(80, 'x')
+        val source = (1..128).map { i -> KotlinHistoryManifestEntry(
+            i.toLong(), longId("w", i), longId("s", i),
+            longId("f", i), 3, 0) }
+        assertTrue(v2().enrollVerifiedSnapshot(owner, athlete,
+            source, ::permitted) is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeSegmentedHistoryResult.Indexed(1, 128, false),
+            shadow().sync(owner, athlete))
+        assertEquals(source.reversed(), readPage(0, 128).completionsNewestFirst)
+        assertEquals(1, partFiles(".seg").size)
+    }
+
 }

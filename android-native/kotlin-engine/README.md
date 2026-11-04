@@ -859,3 +859,39 @@ review rules, **not** that a workout, future load or program is approved or
 that the data has been proven committed to disk. `canIssueTargets` and
 `canChangeProgram` always remain false. No Compose, active JS runtime,
 production website or APK is changed by this engine-only pass.
+
+
+## Saved-workout correction ledger: independent Kotlin source pass
+
+`KotlinSavedHistoryCorrectionDomain` now models post-Finish edits as a
+**separate append-only event stream**, never as a reopened workout journal.
+A requested edit supplies an original set key, the current effective prior
+event ID, a unique correction event ID, an expected correction revision and
+explicitly reported actual facts. The original issued targets, original
+receipts and Finish identity remain unchanged. It reuses the SAME strict
+actual-value validator as the workout journal; blank actual RIR stays unknown.
+
+The domain replays all saved-edit receipts from the fully verified original
+journal, rejects stale/duplicate/conflicting edits, and refuses cached maps
+that disagree with committed receipt order. Lost-ack retries are idempotent
+for exact event identity. `KotlinWorkoutHistoryEvidenceDomain.projectSaved`
+recalculates all working-set progression evidence from the latest effective
+corrected actuals; corrected warmups never count as working sets.
+
+`KotlinProgressionTimelineDomain` can now consume a corrected historical
+entry **only when its correction ledger belongs to that exact finished
+journal and independently replays**. Its caller-supplied history revision
+must be current, and the two newest exercise appearances (including failures)
+determine whether the next conservative progression is reviewable. A falsely
+high old set, once corrected to below the rep floor, cannot still earn a
+weight increase. This is regression-tested with both uncorrected and
+corrected historical projections.
+
+**Important uncompleted integration:** the Kotlin correction ledger currently
+returns *pure proposed states*, not storage acknowledgments. A private
+Android owner must atomically persist these receipts with CAS, bind their
+global history revision to other data/PR/Last caches, serialize historical
+edits with active completion, and prove crash/retry recovery. Program
+progression remains review-only, not a live change. The existing native web
+runtime and production web app are still untouched. All tests must pass
+on the latest branch head before treating this source pass as green.

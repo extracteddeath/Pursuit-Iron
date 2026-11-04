@@ -57,6 +57,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)
+    private val segmentedHistoryHandoff=NativeKotlinSegmentedHistoryHandoffGate(
+        historyStore,segmentedHistoryShadow,mixedHistoryReader,
+        revisionFence,localAthlete)
     private val coordinator=NativeKotlinWorkoutCoordinator(
         journalStore,approvalStore,revisionFence)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
@@ -318,6 +321,22 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return segmentedHistoryShadow.readPage(
             signedIn.ownerKey,signedIn.athleteId,expectedSourceRevision,
             offsetFromNewest,pageSize)
+    }
+
+    /**
+     * Explicit, read-only migration readiness DIAGNOSTIC. The shadow must
+     * match the entire v2 manifest AND every Composer/custom journal and
+     * saved correction must replay under the same owner approval fence.
+     * A successful review still cannot transfer write authority, publish
+     * PRs, switch Compose navigation, or certify legacy JS import.
+     * Run off the Android main thread.
+     */
+    fun reviewCandidateSegmentedHistoryHandoff():
+        NativeSegmentedHistoryHandoffResult {
+        val owner=localAthlete.signedInIdentity()
+            ?: return NativeSegmentedHistoryHandoffResult.Rejected(
+                NativeSegmentedHistoryHandoffRefusal.NOT_AUTHORIZED)
+        return segmentedHistoryHandoff.review(owner.ownerKey,owner.athleteId)
     }
 
     /**

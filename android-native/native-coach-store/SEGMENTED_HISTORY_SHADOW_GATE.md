@@ -46,3 +46,29 @@ cross-process crashes, device power loss, and full Compose navigation.
 
 Nothing in the legacy JavaScript web engine, `main`, other native branches,
 or APK pipeline was intentionally changed.
+
+## Full replay and handoff safety review (candidate only)
+
+`NativeKotlinSegmentedHistoryShadowStore.auditParity` verifies **all**
+immutable segments, not merely those touched by a requested page, against
+every authoritative version-2 manifest entry. It detects stale corrections,
+missing older segments, and changed records even when page 1 still renders.
+
+`NativeKotlinSegmentedHistoryHandoffGate.review` adds one mandatory further
+step under the **same owner transaction fence**: fully replay the original
+Composer and custom workout journals (including post-Finish saved edits),
+then recheck all completion entries and current owner identity. A segment
+index with fabricated completion receipts fails even if its hashes, index,
+manifest ordinal and revision all agree. Pending Finish/correction intents,
+revoked owner, and corrupt shards fail closed.
+
+The inactive `NativeKotlinCandidateHost` exposes
+`reviewCandidateSegmentedHistoryHandoff()` strictly as an off-main-thread
+engineering diagnostic. It DOES NOT switch writers or grant permission to
+use segment pages as training decisions. A successful review is a snapshot
+at one manifest revision; it becomes stale after any Finish/correction.
+
+Future authority transfer still requires authenticated backup,
+proof of no unmigrated legacy JS history, an explicit sole-writer handoff
+protocol with crash recovery, durable segmented redo, cross-device restore,
+device acceptance, and no artificial 4,096-workout ceiling.

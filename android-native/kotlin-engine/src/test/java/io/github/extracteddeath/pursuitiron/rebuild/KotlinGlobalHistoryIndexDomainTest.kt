@@ -241,4 +241,50 @@ class KotlinGlobalHistoryIndexDomainTest {
         assertEquals(6L, firstProjection.manifestRevision)
         assertTrue(index(snapshot()).completedWorkoutIds.isEmpty())
     }
+
+    @Test fun supersededAuditFactChangeInvalidatesFingerprintEvenWithSameEffectiveLast() {
+        val first = completed(1)
+        val second = completed(2)
+        fun corrected(initialReps: Int): KotlinSavedHistoryCorrectionState {
+            val pristine = KotlinSavedHistoryCorrectionDomain.begin(second)
+            val earlier = (KotlinSavedHistoryCorrectionDomain.reduce(pristine,
+                KotlinSavedSetCorrection("edit-a", 0, "set-2-1", "event-2-1",
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(n(200), LoadUnit.LB, initialReps, 1)))
+                as KotlinSavedCorrectionDecision.Proposed).state
+            return (KotlinSavedHistoryCorrectionDomain.reduce(earlier,
+                KotlinSavedSetCorrection("edit-b", 1, "set-2-1", "edit-a",
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(n(200), LoadUnit.LB, 8, 2)))
+                as KotlinSavedCorrectionDecision.Proposed).state
+        }
+        val a = index(snapshot(item(first, 1),
+            KotlinChronologicalWorkout(2, second, corrected(6)), revision = 9))
+        val b = index(snapshot(item(first, 1),
+            KotlinChronologicalWorkout(2, second, corrected(5)), revision = 9))
+        assertEquals(a.lastByExercise, b.lastByExercise)
+        assertEquals(a.mostRepsAtLoad, b.mostRepsAtLoad)
+        assertNotEquals(a.contentFingerprint, b.contentFingerprint)
+
+        val originalChanged = completed(2, actualReps = listOf(8, 6))
+        val before = KotlinSavedHistoryCorrectionDomain.begin(originalChanged)
+        val fixed = (KotlinSavedHistoryCorrectionDomain.reduce(before,
+            KotlinSavedSetCorrection("fix-original", 0, "set-2-1", "event-2-1",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n(200), LoadUnit.LB, 8, 2)))
+            as KotlinSavedCorrectionDecision.Proposed).state
+        val originalUnchanged = KotlinSavedHistoryCorrectionDomain.begin(second)
+        val alsoFixed = (KotlinSavedHistoryCorrectionDomain.reduce(originalUnchanged,
+            KotlinSavedSetCorrection("fix-original", 0, "set-2-1", "event-2-1",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n(200), LoadUnit.LB, 8, 2)))
+            as KotlinSavedCorrectionDecision.Proposed).state
+        val changedRead = index(snapshot(item(first, 1),
+            KotlinChronologicalWorkout(2, originalChanged, fixed), revision = 11))
+        val unchangedRead = index(snapshot(item(first, 1),
+            KotlinChronologicalWorkout(2, second, alsoFixed), revision = 11))
+        assertEquals(changedRead.lastByExercise, unchangedRead.lastByExercise)
+        assertNotEquals(changedRead.contentFingerprint, unchangedRead.contentFingerprint)
+    }
+
 }

@@ -131,7 +131,7 @@ class CustomWorkoutSnapshotDomainTest {
         assertEquals(CustomWorkoutSnapshotResult.Rejected(
             CustomWorkoutSnapshotRefusal.INVALID_DAY),preview(weekday=1))
         assertEquals(CustomWorkoutSnapshotResult.Rejected(
-            CustomWorkoutSnapshotRefusal.INVALID_CYCLE),preview(setup=setup(
+            CustomWorkoutSnapshotRefusal.UNREVIEWED_ATHLETE),preview(setup=setup(
                 bodyweight=false)))
         val base=cycle()
         val wrong=base.copy(blocks=listOf(base.blocks.single().copy(

@@ -72,6 +72,31 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * import of legacy JS choices and NOT an athlete program approval.
      * Native onboarding and curated catalog ownership still need activation.
      */
+    /**
+     * Explicit first-time NATIVE setup handoff. These 20 movements have
+     * documented engineering-provisional muscle-credit reviews; they contain
+     * NO user gym or target weights and do not make a workout executable.
+     * Caller must present reviewed athlete inputs and obtain user approval.
+     *
+     * A source already on disk is NEVER reset by onboarding. Enrollment
+     * cannot replace an existing different local athlete.
+     */
+    fun activateReviewedStarterAuthoringSource(
+        draft:AthleteSetupDraft
+    ):NativeAuthoringSourceWrite {
+        val review=CoachAthleteSetupDomain.review(draft)
+        if(review.status!=AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW ||
+            review.reviewed==null)
+            return NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.INVALID_SOURCE)
+        val enrollment=activateReviewedSetup(draft)
+        if(enrollment !is AppPrivateKotlinLocalAthlete.Enrollment.Activated)
+            return NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        return publishCustomAuthoringSource(draft,
+            StarterExerciseTranche.movements(),expectedRevision=0)
+    }
+
     fun readCustomAuthoringSource():NativeAuthoringSourceRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAuthoringSourceRead.Rejected(

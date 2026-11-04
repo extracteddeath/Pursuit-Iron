@@ -87,7 +87,7 @@ internal class NativeKotlinGymSourceController(
         }
         when(val result=host.activateReviewedStarterAuthoringSource(draft)) {
             is NativeAuthoringSourceWrite.Committed ->
-                load("Native reviewed athlete and provisional starter catalog saved · revision ${result.revision}. Confirm physical equipment before selecting loaded exercises.")
+                load("Native athlete confirmed; reviewed gym/catalog revision ${result.revision} opened or created without replacing existing stock. Confirm physical equipment before selecting loaded exercises.")
             is NativeAuthoringSourceWrite.Rejected -> {
                 load()
                 current.value=current.value.copy(

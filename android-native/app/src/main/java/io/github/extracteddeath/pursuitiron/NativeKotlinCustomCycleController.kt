@@ -25,7 +25,8 @@ internal data class NativeKotlinCustomCycleState(
     val busy: Boolean = false,
     val message: String? = null,
     val refusal: NativeCustomDraftRefusal? = null,
-    val canUndo: Boolean = false
+    val canUndo: Boolean = false,
+    val authoringRefusal: CustomAuthoringRefusal? = null
 )
 
 /**
@@ -49,7 +50,8 @@ internal class NativeKotlinCustomCycleController(
 
     private fun run(action: () -> Unit) {
         if (!pending.compareAndSet(false, true)) return
-        current.value = current.value.copy(busy = true, refusal = null, message = null)
+        current.value = current.value.copy(busy = true, refusal = null,
+            authoringRefusal = null, message = null)
         scope.launch {
             try {
                 action()
@@ -116,8 +118,9 @@ internal class NativeKotlinCustomCycleController(
         val result = command(saved)
         when (result) {
             is CustomCycleBuilderResult.Rejected ->
-                current.value = current.value.copy(
-                    message = "Edit refused: ${result.reason.name.replace('_', ' ').lowercase()}.")
+                if (current.value.authoringRefusal == null)
+                    current.value = current.value.copy(
+                        message = "Edit refused: ${result.reason.name.replace('_', ' ').lowercase()}.")
             is CustomCycleBuilderResult.Proposed -> {
                 val write = host.saveCustomCycleDraft(result.draft, saved.revision)
                 when (write) {
@@ -157,19 +160,23 @@ internal class NativeKotlinCustomCycleController(
     private fun editReviewed(
         command: (CustomTrainingCycle, AthleteSetupReview,
             List<CatalogMovement>) -> CustomAuthoringResult
-    ) {
+    ) = edit { draft ->
+        // Resolve the source on IO inside this commit, never while rendering
+        // Compose or before a pending older revision has been read.
         val source = runCatching { authoringSource?.snapshot() }.getOrNull()
         if (source == null) {
             current.value = current.value.copy(
-                message = "Verified native gym and exercise catalog are required before editing exercise prescriptions.")
-            return
-        }
-        edit { draft ->
+                message = "Reviewed native gym and exercise catalog required. No draft change saved.",
+                authoringRefusal = CustomAuthoringRefusal.SETUP_UNRESOLVED)
+            CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        } else {
             when (val reviewed = command(draft, source.first, source.second)) {
                 is CustomAuthoringResult.Accepted -> reviewed.proposal
                 is CustomAuthoringResult.Rejected -> {
                     current.value = current.value.copy(
-                        message = "Exercise edit refused: ${reviewed.reason.name.replace('_', ' ').lowercase()}.")
+                        message = "Exercise edit refused: ${reviewed.reason.name.replace('_', ' ').lowercase()}. No draft change saved.",
+                        authoringRefusal = reviewed.reason)
                     CustomCycleBuilderResult.Rejected(
                         CustomCycleBuilderRefusal.INVALID_INPUT)
                 }

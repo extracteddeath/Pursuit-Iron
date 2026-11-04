@@ -197,4 +197,69 @@ class NativeKotlinSegmentedHistoryShadowStoreTest {
         assertEquals(1, partFiles(".seg").size)
     }
 
+    @Test fun fullParityAuditsEveryImmutableShardNotJustTheLatestPage() {
+        enroll(512)
+        assertTrue(shadow().sync(owner, athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val first = shadow().auditParity(owner, athlete)
+        assertTrue(first.toString(), first is NativeSegmentedHistoryResult.Parity)
+        val audit = (first as NativeSegmentedHistoryResult.Parity).audit
+        assertEquals(512, audit.verifiedCompletionCount)
+        assertEquals(4, audit.verifiedSegmentCount)
+        assertEquals(1L, audit.sourceRevision)
+        assertFalse(audit.canCutover)
+        assertFalse(audit.canIssueProgression)
+
+        val damaged = partFiles(".seg").first()
+        val bytes = Files.readAllBytes(damaged)
+        bytes[bytes.size - 2] = (bytes[bytes.size - 2].toInt() xor 1).toByte()
+        Files.write(damaged, bytes)
+        // The normal latest page may not touch this shard, but handoff must.
+        assertEquals(NativeSegmentedHistoryResult.Rejected(
+            NativeSegmentedHistoryRefusal.CORRUPT_INDEX),
+            shadow().auditParity(owner, athlete))
+    }
+
+    @Test fun parityIsInvalidatedByHistoricalCorrectionUntilRefresh() {
+        enroll(300)
+        assertTrue(shadow().sync(owner, athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val old = (shadow().auditParity(owner, athlete)
+            as NativeSegmentedHistoryResult.Parity).audit
+        val revision = correctionAt(160)
+        assertEquals(NativeSegmentedHistoryResult.Rejected(
+            NativeSegmentedHistoryRefusal.STALE_SOURCE),
+            shadow().auditParity(owner, athlete))
+        assertEquals(NativeSegmentedHistoryResult.Indexed(revision, 300, false),
+            shadow().sync(owner, athlete))
+        val changed = (shadow().auditParity(owner, athlete)
+            as NativeSegmentedHistoryResult.Parity).audit
+        assertEquals(revision, changed.sourceRevision)
+        assertEquals(300, changed.verifiedCompletionCount)
+        assertEquals(3, changed.verifiedSegmentCount)
+        assertNotEquals(old.sourceFingerprint, changed.sourceFingerprint)
+        assertEquals(entry(160, 1), readPage(140, 1, revision)
+            .completionsNewestFirst.single())
+    }
+
+    @Test fun noIndexPendingWriteAndRevokedAccountCannotBeAudited() {
+        enroll(129)
+        assertEquals(NativeSegmentedHistoryResult.Rejected(
+            NativeSegmentedHistoryRefusal.NOT_INDEXED),
+            shadow().auditParity(owner, athlete))
+        assertTrue(shadow().sync(owner, athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val intent = NativeHistoryWriteIntent.Finish(
+            "workout-130", KotlinJournalOperation.Finish("finish-130", 0))
+        assertTrue(v2().prepare(owner, athlete, 1, intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeSegmentedHistoryResult.Rejected(
+            NativeSegmentedHistoryRefusal.SOURCE_NOT_READY),
+            shadow().auditParity(owner, athlete))
+        signedIn = null
+        assertEquals(NativeSegmentedHistoryResult.Rejected(
+            NativeSegmentedHistoryRefusal.NOT_AUTHORIZED),
+            shadow().auditParity(owner, athlete))
+    }
+
 }

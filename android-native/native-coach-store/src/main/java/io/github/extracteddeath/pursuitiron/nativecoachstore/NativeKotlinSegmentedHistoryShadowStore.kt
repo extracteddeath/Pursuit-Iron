@@ -42,6 +42,20 @@ data class NativeSegmentedHistoryPage(
     val nextOffsetFromNewest: Int?
 )
 
+/**
+ * Complete manifest parity is a handoff prerequisite, NOT authentication
+ * of the workout journals or permission to switch history writers.
+ */
+data class NativeSegmentedHistoryParityAudit(
+    val sourceRevision: Long,
+    val sourceFingerprint: String,
+    val verifiedCompletionCount: Int,
+    val verifiedSegmentCount: Int
+) {
+    val canCutover: Boolean get() = false
+    val canIssueProgression: Boolean get() = false
+}
+
 enum class NativeSegmentedHistoryRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, SOURCE_NOT_READY, NOT_INDEXED,
     STALE_SOURCE, INVALID_PAGE, CORRUPT_INDEX, STORAGE_UNAVAILABLE
@@ -51,6 +65,8 @@ sealed interface NativeSegmentedHistoryResult {
     data class Indexed(val revision: Long, val count: Int, val replayed: Boolean) :
         NativeSegmentedHistoryResult
     data class Page(val page: NativeSegmentedHistoryPage) :
+        NativeSegmentedHistoryResult
+    data class Parity(val audit: NativeSegmentedHistoryParityAudit) :
         NativeSegmentedHistoryResult
     data class Rejected(val reason: NativeSegmentedHistoryRefusal) :
         NativeSegmentedHistoryResult
@@ -361,6 +377,45 @@ class NativeKotlinSegmentedHistoryShadowStore(
             NativeSegmentedHistoryResult.Indexed(
                 ledger.revision, ledger.completions.size, false)
         }
+
+    /**
+     * One owner-fenced, complete exact manifest comparison. The normal page
+     * API intentionally reads only touched segments; this audit instead
+     * verifies EVERY original receipt, ordinal and correction revision against
+     * the current authoritative version-2 manifest. Unlike a hash-only
+     * comparison, a validly rechecksummed but different shard also fails.
+     *
+     * No journal evidence is replayed here. An independent full owner-verified
+     * Composer/custom history replay is mandatory before any future cutover.
+     */
+    fun auditParity(
+        owner: String, athlete: String
+    ): NativeSegmentedHistoryResult = guarded(owner, athlete) {
+        val ledger = currentLedger(owner, athlete)
+            ?: return@guarded rejected(NativeSegmentedHistoryRefusal.SOURCE_NOT_READY)
+        val index = try { parseIndex(owner, athlete) }
+            catch (_: Exception) {
+                return@guarded rejected(NativeSegmentedHistoryRefusal.CORRUPT_INDEX)
+            } ?: return@guarded rejected(NativeSegmentedHistoryRefusal.NOT_INDEXED)
+        val fingerprint = sourceFingerprint(ledger)
+        if (ledger.revision != index.sourceRevision ||
+            ledger.completions.size != index.count ||
+            fingerprint != index.fingerprint)
+            return@guarded rejected(NativeSegmentedHistoryRefusal.STALE_SOURCE)
+        try {
+            for (ref in index.segments) {
+                val actual = parseSegment(owner, athlete, ref)
+                val start = (ref.firstOrdinal - 1).toInt()
+                if (actual != ledger.completions.subList(start, start + ref.count))
+                    return@guarded rejected(NativeSegmentedHistoryRefusal.STALE_SOURCE)
+            }
+        } catch (_: Exception) {
+            return@guarded rejected(NativeSegmentedHistoryRefusal.CORRUPT_INDEX)
+        }
+        NativeSegmentedHistoryResult.Parity(NativeSegmentedHistoryParityAudit(
+            index.sourceRevision, index.fingerprint, index.count,
+            index.segments.size))
+    }
 
     /**
      * Newest-first exact page. Only selected segment payloads are opened, but

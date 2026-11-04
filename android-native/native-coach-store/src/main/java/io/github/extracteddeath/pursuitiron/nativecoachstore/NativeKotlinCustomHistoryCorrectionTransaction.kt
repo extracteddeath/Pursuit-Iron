@@ -66,8 +66,8 @@ class NativeKotlinCustomHistoryCorrectionTransaction(
             it.correctionRevision == expectedRevision &&
             (expectedRevision == 0L || opened.hasCorrectionFile) &&
             (expectedRevision != 0L || !opened.hasCorrectionFile) &&
-            CustomSavedHistoryEvidenceDomain.projectSaved(it)
-                is CustomSavedHistoryProjectionResult.Candidate
+            (CustomSavedHistoryEvidenceDomain.projectSaved(it)
+                is CustomSavedHistoryProjectionResult.Candidate)
         }
     }
 

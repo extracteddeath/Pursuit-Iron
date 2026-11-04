@@ -105,7 +105,12 @@ internal class NativeKotlinSessionController(
                     NativeJournalFileResult.Durable(result.journal,result.replayed)
                 is NativeKotlinIssueResult.Rejected ->
                     NativeJournalFileResult.Rejected(
-                        result.storageReason ?: NativeJournalFileRefusal.NOT_AUTHORIZED)
+                        when(result.reason) {
+                            NativeKotlinIssueRefusal.HISTORY_NOT_READY ->
+                                NativeJournalFileRefusal.HISTORY_NOT_READY
+                            else -> result.storageReason
+                                ?: NativeJournalFileRefusal.NOT_AUTHORIZED
+                        })
             }
         })
     }

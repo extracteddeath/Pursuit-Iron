@@ -26,6 +26,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete)
     private val customDraftStore=NativeCustomCycleDraftFileStore(
         root,revisionFence,localAthlete)
+    private val authoringSourceStore=NativeKotlinCustomAuthoringSourceFileStore(
+        root,revisionFence,localAthlete)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
@@ -61,6 +63,79 @@ internal class NativeKotlinCandidateHost(context:Context) {
     /** Deliberately clears only in-memory activation; training files stay. */
     fun deactivateLocalAthlete() {
         localAthlete.deactivate()
+    }
+
+    /**
+     * These methods are a candidate native gym/catalog repository, NOT an
+     * import of legacy JS choices and NOT an athlete program approval.
+     * Native onboarding and curated catalog ownership still need activation.
+     */
+    fun readCustomAuthoringSource():NativeAuthoringSourceRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAuthoringSourceRead.Rejected(
+                NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        return authoringSourceStore.read(owner.ownerKey)
+    }
+
+    fun publishCustomAuthoringSource(
+        setupDraft:AthleteSetupDraft,
+        curatedCatalog:List<CatalogMovement>,
+        expectedRevision:Long
+    ):NativeAuthoringSourceWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        val reviewed=CoachAthleteSetupDomain.review(setupDraft)
+        if (reviewed.status!=AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW ||
+            reviewed.reviewed?.athleteProfileId!=owner.athleteId)
+            return NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.INVALID_SOURCE)
+        return authoringSourceStore.publish(owner.ownerKey,expectedRevision,
+            NativeCustomAuthoringSnapshot(owner.ownerKey,owner.athleteId,
+                expectedRevision+1,reviewed,curatedCatalog))
+    }
+
+    fun revokeCustomAuthoringSource(
+        expectedRevision:Long
+    ):NativeAuthoringSourceWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        return authoringSourceStore.revoke(owner.ownerKey,expectedRevision)
+    }
+
+    /**
+     * Save one new authored cycle revision only if the SAME reviewed gym and
+     * catalog source revision remains on disk under the owner issuance fence.
+     * The outer owner lock spans source re-read and draft CAS commit.
+     */
+    fun saveReviewedCustomCycleDraft(
+        draft:CustomTrainingCycle,
+        expectedDraftRevision:Long,
+        expectedSourceRevision:Long
+    ):NativeCustomDraftWriteResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.NOT_AUTHORIZED)
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val now=localAthlete.signedInIdentity()
+                if(now!=owner || draft.athleteId!=owner.athleteId)
+                    return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                        NativeCustomDraftRefusal.NOT_AUTHORIZED)
+                val source=authoringSourceStore.read(owner.ownerKey)
+                if(source !is NativeAuthoringSourceRead.Found ||
+                    source.source.revision!=expectedSourceRevision ||
+                    source.source.athleteId!=owner.athleteId)
+                    return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
+                        NativeCustomDraftRefusal.STALE_REVISION)
+                customDraftStore.save(owner.ownerKey,draft.cycleId,
+                    expectedDraftRevision,draft)
+            }
+        }.getOrElse {
+            NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
+        }
     }
 
     /**

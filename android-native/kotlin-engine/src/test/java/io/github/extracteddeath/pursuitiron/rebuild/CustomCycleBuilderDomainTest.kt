@@ -223,4 +223,108 @@ class CustomCycleBuilderDomainTest {
                 as CustomCycleBuilderResult.Rejected).reason)
     }
 
+
+    @Test fun crossDayMoveKeepsEveryAuthoredFieldAndWeekOverride() {
+        val starting = draft()
+        val expanded = accepted(CustomCycleBuilderDomain.addDay(
+            starting, 1, "base", CustomTrainingDay(
+                2, "Pull", ComposerSessionPurpose.HYPERTROPHY, emptyList())))
+        val moved = accepted(CustomCycleBuilderDomain.moveSlots(
+            expanded.draft, 2, "base", 0, 2, listOf("bench-a"), 0))
+        val days = moved.draft.blocks.single().days
+        assertEquals(listOf("bench-b"), days.first().slots.map { it.slotId })
+        val movedSlot = days.last().slots.single()
+        assertEquals("bench-a", movedSlot.slotId)
+        assertTrue(movedSlot.pinned)
+        assertEquals("straight-bar", movedSlot.attachmentId)
+        assertEquals("Athlete-specific cue", movedSlot.coachNote)
+        assertEquals(CustomAmplifierKind.DROP_SET,
+            movedSlot.sets.last().amplifier?.kind)
+        assertEquals(2, moved.draft.weekOverrides["base"]!!.single().weekday)
+        assertEquals("bench-a", moved.draft.weekOverrides["base"]!!.single().slotId)
+        assertEquals(3L, moved.draft.revision)
+        assertEquals(0, starting.weekOverrides["base"]!!.single().weekday)
+        val undo = accepted(CustomCycleBuilderDomain.undo(
+            moved.draft, moved.receipt))
+        assertEquals(expanded.draft.blocks, undo.draft.blocks)
+        assertEquals(expanded.draft.weekOverrides, undo.draft.weekOverrides)
+    }
+
+    @Test fun supersetCannotBeSeparatedOrMergedByCrossDayMove() {
+        val original = draft()
+        val joined = original.copy(blocks = original.blocks.map { block ->
+            block.copy(days = block.days.map { day ->
+                day.copy(slots = day.slots.map {
+                    it.copy(supersetGroup = "pair")
+                })
+            } + CustomTrainingDay(3, "Another day",
+                ComposerSessionPurpose.HYPERTROPHY, emptyList()))
+        })
+        val bad = CustomCycleBuilderDomain.moveSlots(
+            joined, 1, "base", 0, 3, listOf("bench-a"), 0)
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (bad as CustomCycleBuilderResult.Rejected).reason)
+        val valid = accepted(CustomCycleBuilderDomain.moveSlots(
+            joined, 1, "base", 0, 3, listOf("bench-b", "bench-a"), 0))
+        assertTrue(valid.draft.blocks.single().days.first().slots.isEmpty())
+        assertEquals(listOf("bench-a", "bench-b"),
+            valid.draft.blocks.single().days.last().slots.map { it.slotId })
+        assertEquals(setOf("pair"), valid.draft.blocks.single()
+            .days.last().slots.mapNotNull { it.supersetGroup }.toSet())
+        val duplicateInDestination = joined.copy(blocks =
+            joined.blocks.map { block ->
+                block.copy(days = block.days.map { day ->
+                    if (day.weekday == 3) day.copy(slots =
+                        listOf(original.blocks.single().days.single()
+                            .slots.first().copy(supersetGroup = null)))
+                    else day
+                })
+            })
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (CustomCycleBuilderDomain.moveSlots(
+                duplicateInDestination, 1, "base", 0, 3,
+                listOf("bench-a", "bench-b"), 0)
+                as CustomCycleBuilderResult.Rejected).reason)
+    }
+
+    @Test fun blockTimelineCanBeExtendedAndReorderedWithoutDroppingEdits() {
+        val first = draft()
+        val nextBlock = CustomTrainingBlock(
+            "strength-block", "Strength phase", TrainingPhase.STRENGTH,
+            CustomBlockPurpose.TRAINING, 5,
+            CustomSplitIdentity.Freeform("Bench priority"), emptyList())
+        val inserted = accepted(CustomCycleBuilderDomain.insertBlock(
+            first, 1, nextBlock, 0))
+        assertEquals(listOf("strength-block", "base"),
+            inserted.draft.blocks.map { it.blockId })
+        assertEquals(first.weekOverrides, inserted.draft.weekOverrides)
+        val reordered = accepted(CustomCycleBuilderDomain.reorderBlocks(
+            inserted.draft, 2, listOf("base", "strength-block")))
+        assertEquals(first.blocks.single(), reordered.draft.blocks.first())
+        assertEquals(first.weekOverrides, reordered.draft.weekOverrides)
+        assertEquals(CustomCycleBuilderRefusal.BLOCK_ID_CONFLICT,
+            (CustomCycleBuilderDomain.reorderBlocks(
+                reordered.draft, 3, listOf("base", "base"))
+                as CustomCycleBuilderResult.Rejected).reason)
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (CustomCycleBuilderDomain.insertBlock(
+                reordered.draft, 3, nextBlock)
+                as CustomCycleBuilderResult.Rejected).reason)
+    }
+
+    @Test fun dayNamesCanChangeButScheduleAndOverridesCannotSilentlyChange() {
+        val first = draft()
+        val edited = accepted(CustomCycleBuilderDomain.renameDay(
+            first, 1, "base", 0, "Chest & Triceps"))
+        assertEquals("Chest & Triceps",
+            edited.draft.blocks.single().days.single().label)
+        assertEquals(first.weekOverrides, edited.draft.weekOverrides)
+        assertEquals(first.blocks.single().days.single().slots,
+            edited.draft.blocks.single().days.single().slots)
+        assertEquals(CustomCycleBuilderRefusal.STALE_REVISION,
+            (CustomCycleBuilderDomain.renameDay(
+                edited.draft, 1, "base", 0, "Old edit")
+                as CustomCycleBuilderResult.Rejected).reason)
+    }
+
 }

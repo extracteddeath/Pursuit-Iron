@@ -253,7 +253,10 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                         NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
                 val ledger=history.open(ownerKey,current.athleteId)
                 if(ledger !is NativeHistoryLedgerResult.Durable ||
-                    !ledger.ledger.readyForHistoryReads)
+                    !ledger.ledger.readyForHistoryReads ||
+                    ledger.ledger.ownerKey!=ownerKey ||
+                    ledger.ledger.athleteId!=current.athleteId ||
+                    ledger.ledger.completions.any{it.workoutId==workoutId})
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.HISTORY_NOT_READY)
                 // An ID cannot be claimed both by custom and composer journals.

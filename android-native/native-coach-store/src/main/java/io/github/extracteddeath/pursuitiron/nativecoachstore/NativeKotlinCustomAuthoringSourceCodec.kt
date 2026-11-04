@@ -234,6 +234,10 @@ internal object NativeKotlinCustomAuthoringSourceCodec {
             record.catalog.size)
         require(record.catalog.all {it.exerciseId.matches(id) &&
             it.familyId.matches(id) && it.variantId.matches(id)})
+        require(NativeKotlinGymCatalogEditingDomain.replaceCuratedCatalog(
+            record,record.revision,record.catalog) is NativeGymCatalogEdit.Proposed) {
+            "Catalog must carry reviewed, bounded variant identities and credits"
+        }
         // Revalidate the entire athlete, including physical inventory, on write.
         val output=ByteArrayOutputStream()
         DataOutputStream(output).use { o ->

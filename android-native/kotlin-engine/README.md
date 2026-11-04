@@ -1204,3 +1204,48 @@ a versioned, bounded, replay-verified saved-custom-correction file and
 redo-backed *same-owner-fence* manifest transaction, then mixed-history
 re-projection, lossless migration, tests and real-device acceptance. No JS
 fallback, production switch or APK is enabled.
+
+
+## Crash-recoverable custom saved corrections (isolated candidate)
+
+A finished athlete-authored custom workout now has a distinct, versioned
+NativeCustomSavedCorrectionCodec and owner-scoped
+NativeKotlinCustomSavedCorrectionFileStore. The binary stores the exact
+ordered factual MAIN/FOLLOW_UP correction events and binds them to the complete
+custom-v2 original Finish receipt. Its SHA-256 envelope detects accidental
+corruption and tampering, but is not cryptographic owner authentication.
+Decode refuses unknown format, checksum changes, scope collisions, invalid
+visit/outcome fields and non-replayable revisions. The original prescribed
+session and Finish journal are never replaced with corrected observations.
+
+NativeKotlinCustomHistoryCorrectionTransaction now joins corrections to the
+SAME already-enrolled shared history ledger used for generated and custom
+workouts: prepare a distinct CustomCorrect manifest intent (binary tag 4),
+atomically commit the saved-correction file, replay-check factual evidence,
+then finalize only the saved-correction manifest revision. On process death
+after prepare or after the saved-file write, a fresh owner-fenced recover
+replays the identical event without duplicating a set/correction. A pending
+intent blocks mixed history reads; a foreign Composer or CustomFinish intent
+cannot be consumed by this coordinator. Original workout receipt IDs,
+chronological order, actual original journals and issued targets remain exact.
+
+The candidate native host exposes explicit correction/recovery entry points.
+NativeKotlinMixedHistoryReadCoordinator now includes corrected custom facts
+ONLY after the exact original journal, saved correction receipts, manifest
+revision and signed-in owner have all been verified under the shared fence.
+Missing/corrupt custom edits refuse the entire mixed read, rather than
+showing out-of-date Last or a falsely derived PR.
+
+Regression source tests cover a committed correction, immutable original
+Finish, cold reopen, manifest redo at both interruption boundaries, exact
+replay idempotency, corrupt file, wrong expected revision, unauthorized owner,
+foreign pending intent and a corrected mixed factual timeline. No
+CI/device-success claim is implied solely by committing tests.
+
+**Still blocked for production:** the candidate correction route is not a
+Compose history editor; no authenticated web-history migration or cross-device
+backup/restore has been certified; PR and progression policies remain
+review-only; and the current native history manifest hard-limits chronology to
+128 workouts. Full Android source compilation, JVM gates, device tests,
+power-loss endurance and access-control acceptance must pass before any APK,
+native cutover or JavaScript retirement.

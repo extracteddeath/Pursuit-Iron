@@ -80,6 +80,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var editingBlock by remember { mutableStateOf<String?>(null) }
     var editingDay by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var deleteConfirm by remember { mutableStateOf(false) }
+    // Slot identity is stable and separate from the exercise catalog ID.
+    // Null slot ID denotes authoring a genuinely new exercise visit.
+    var exerciseEditor by remember {
+        mutableStateOf<Triple<String, Int, String?>?>(null)
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp, vertical = 20.dp),
@@ -196,14 +201,28 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                     Text("${slot.exerciseId} · ${slot.sets.size} authored sets" +
                                         if (slot.pinned) " · Pinned" else "",
                                         style = MaterialTheme.typography.bodyMedium)
+                                    TextButton(
+                                        onClick = { exerciseEditor = Triple(
+                                            block.blockId, day.weekday, slot.slotId) },
+                                        enabled = !busy
+                                    ) { Text("Edit sets") }
                                 }
                             } else {
                                 Text("No exercises yet. This day is an unfinished draft.",
                                     style = MaterialTheme.typography.bodySmall)
                             }
-                            TextButton(onClick = {
-                                editingDay = block.blockId to day.weekday
-                            }, enabled = !busy) { Text("Edit day") }
+                            Row(Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(onClick = {
+                                    editingDay = block.blockId to day.weekday
+                                }, enabled = !busy) { Text("Edit day") }
+                                TextButton(onClick = {
+                                    exerciseEditor = Triple(
+                                        block.blockId, day.weekday, null)
+                                }, enabled = !busy && day.slots.size < 32) {
+                                    Text("Add exercise")
+                                }
+                            }
                         }
                         OutlinedButton(onClick = { addingDayFor = block.blockId },
                             enabled = !busy && block.days.size < 7,
@@ -230,6 +249,34 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
 
     val current = draft
     if (current != null) {
+        exerciseEditor?.let { target ->
+            val (blockId, weekday, slotId) = target
+            val selectedSlot = current.blocks.firstOrNull {
+                it.blockId == blockId
+            }?.days?.firstOrNull {
+                it.weekday == weekday
+            }?.slots?.firstOrNull { it.slotId == slotId }
+            if (slotId == null || selectedSlot != null) {
+                key(target) {
+                    NativeKotlinCustomExerciseSheet(
+                        busy = busy,
+                        available = controller.availableExerciseChoices(),
+                        existing = selectedSlot,
+                        onSave = { exerciseId, sets, note ->
+                            if (slotId == null)
+                                controller.addReviewedExercise(
+                                    blockId, weekday, exerciseId, sets, note)
+                            else
+                                controller.editReviewedExerciseSets(
+                                    blockId, weekday, slotId, sets)
+                            exerciseEditor = null
+                        },
+                        onDismiss = { exerciseEditor = null }
+                    )
+                }
+            }
+        }
+
         if (editingCycle) {
             var editedTitle by remember(current.cycleId, editingCycle) {
                 mutableStateOf(current.title)

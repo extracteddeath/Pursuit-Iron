@@ -64,7 +64,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
     }
     private fun DataInputStream.load():DraftSetLoad=when(readUnsignedByte()) {
         0->DraftSetLoad.ExplicitBodyweight
-        1->DraftSetLoad.Verified(decimal(),kind(),kind())
+        1->DraftSetLoad.Verified(kind(),kind(),decimal())
         else->throw IOException("unknown authored load")
     }
     private fun DataOutputStream.authored(set:CustomAuthoredSet) {

@@ -32,7 +32,10 @@ internal data class NativeKotlinCustomCycleState(
     val coachingAudit: CustomCoachAudit? = null,
     val auditSourceRevision: Long? = null,
     val signoff: NativeCustomSignoffRead? = null,
-    val signoffRefusal: NativeCustomSignoffRefusal? = null
+    val signoffRefusal: NativeCustomSignoffRefusal? = null,
+    val authoredPreview: CustomWorkoutDaySnapshot? = null,
+    val authoredPreviewRefusal: CustomWorkoutSnapshotRefusal? = null,
+    val consentBoundPreview: NativeCustomPreflightResult.ReviewedPreview? = null
 )
 
 /**
@@ -167,6 +170,9 @@ internal class NativeKotlinCustomCycleController(
                             auditSourceRevision = null,
                             signoff = host.readCustomCycleConsent(result.draft.cycleId),
                             signoffRefusal = null,
+                            authoredPreview = null,
+                            authoredPreviewRefusal = null,
+                            consentBoundPreview = null,
                             canUndo = true,
                             message = "Saved revision ${write.revision} · ${result.receipt.operation.replace('-', ' ')}.")
                     }
@@ -299,6 +305,80 @@ internal class NativeKotlinCustomCycleController(
                     signoffRefusal=result.reason,
                     message="Consent revocation was not saved; refreshed authoritative record.")
             }
+        }
+    }
+
+    /**
+     * Display ONLY a lossless authored-week preview. A structurally valid
+     * athlete draft is not a consent, grant, or workout.
+     */
+    fun previewAuthoredDay(absoluteWeek:Int,weekday:Int) = run {
+        val draft=current.value.draft ?:return@run
+        val durable=host.readCustomCycleDraft(draft.cycleId)
+        val source=runCatching{authoringSource.snapshot()}.getOrNull()
+        if(durable !is NativeCustomDraftReadResult.Found ||
+            durable.draft!=draft ||
+            source==null || source.athleteId!=draft.athleteId) {
+            applyRead(draft.cycleId,durable)
+            current.value=current.value.copy(
+                message="The saved cycle or gym changed. Reloaded; choose the week again.")
+            return@run
+        }
+        val result=CustomWorkoutSnapshotDomain.preview(
+            draft,source.setup,source.catalog,source.revision,
+            absoluteWeek,weekday)
+        val freshSource=runCatching{authoringSource.snapshot()}.getOrNull()
+        val latest=host.readCustomCycleDraft(draft.cycleId)
+        if(freshSource?.revision!=source.revision ||
+            latest !is NativeCustomDraftReadResult.Found ||
+            latest.draft!=draft) {
+            applyRead(draft.cycleId,latest)
+            current.value=current.value.copy(
+                message="Gym or program changed during preview. Reloaded authoritative draft.")
+            return@run
+        }
+        current.value=when(result) {
+            is CustomWorkoutSnapshotResult.Preview ->
+                current.value.copy(authoredPreview=result.snapshot,
+                    authoredPreviewRefusal=null,
+                    consentBoundPreview=null,
+                    message="Showing exact week ${absoluteWeek}, day ${weekday} authored prescriptions. Preview only; nothing issued.")
+            is CustomWorkoutSnapshotResult.Rejected ->
+                current.value.copy(authoredPreview=null,
+                    authoredPreviewRefusal=result.reason,
+                    consentBoundPreview=null,
+                    message="Cannot preview: ${result.reason.name.replace('_',' ').lowercase()}.")
+        }
+    }
+
+    /**
+     * Consent-bound preview performs a complete read and coach re-audit
+     * under the owner lock. It intentionally does not issue a journal.
+     */
+    fun verifyConsentBoundDay(absoluteWeek:Int,weekday:Int) = run {
+        val draft=current.value.draft ?:return@run
+        val inputs=auditedInputs
+        if(inputs==null) {
+            current.value=current.value.copy(
+                consentBoundPreview=null,
+                message="Run the fully policy-backed coach audit before checking athlete consent.")
+            return@run
+        }
+        val result=host.previewConsentBoundCustomWorkout(
+            draft.cycleId,absoluteWeek,weekday,inputs)
+        current.value=when(result) {
+            is NativeCustomPreflightResult.ReviewedPreview ->
+                current.value.copy(
+                    authoredPreview=result.session,
+                    authoredPreviewRefusal=null,
+                    consentBoundPreview=result,
+                    signoff=NativeCustomSignoffRead.Found(result.receipt,true),
+                    message="Exact consent and selected workout prescription independently verified. Preview only; no workout started.")
+            is NativeCustomPreflightResult.Rejected ->
+                current.value.copy(
+                    consentBoundPreview=null,
+                    authoredPreview=null,
+                    message="Custom workout preflight rejected: ${result.reason.name.replace('_',' ').lowercase()}.")
         }
     }
 
@@ -482,6 +562,9 @@ internal class NativeKotlinCustomCycleController(
                     coachingAudit = null, auditSourceRevision = null,
                     signoff = host.readCustomCycleConsent(result.draft.cycleId),
                     signoffRefusal = null,
+                    authoredPreview = null,
+                    authoredPreviewRefusal = null,
+                    consentBoundPreview = null,
                     message = "Undo saved · revision ${write.revision}")
             is NativeCustomDraftWriteResult.Rejected -> {
                 applyRead(saved.cycleId, host.readCustomCycleDraft(saved.cycleId))

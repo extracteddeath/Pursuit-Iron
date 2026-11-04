@@ -24,8 +24,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val revisionFence=NativeKotlinApprovalRevisionFence(root)
     private val approvalStore=NativeKotlinApprovalFileAuthority(
         root,revisionFence,localAthlete)
+    private val journalStore=KotlinNativeJournalFileStore(root)
+    private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
+    private val historyStore=NativeKotlinHistoryManifestFileStore(root)
     private val coordinator=NativeKotlinWorkoutCoordinator(
-        KotlinNativeJournalFileStore(root),approvalStore,revisionFence)
+        journalStore,approvalStore,revisionFence)
+    private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
+        historyStore,journalStore,correctionStore,approvalStore,revisionFence)
+    private val trackedWorkout=NativeKotlinTrackedWorkoutGateway(
+        coordinator,historyTransactions,historyStore,correctionStore,
+        approvalStore,revisionFence)
 
     /** The Kotlin engine owns readiness validation, never the JS runtime. */
     fun reviewSetup(draft:AthleteSetupDraft):AthleteSetupReview =
@@ -92,14 +100,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinIssueResult.Rejected(
                 NativeKotlinIssueRefusal.NOT_AUTHORIZED)
-        return coordinator.issue(owner.ownerKey,workoutId)
+        return trackedWorkout.issue(owner.ownerKey,owner.athleteId,workoutId)
     }
 
     fun recoverWorkout(workoutId:String):NativeJournalFileResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.NOT_AUTHORIZED)
-        return coordinator.open(owner.ownerKey,workoutId)
+        return trackedWorkout.open(owner.ownerKey,owner.athleteId,workoutId)
     }
 
     fun recordWorkoutOperation(
@@ -108,7 +116,42 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.NOT_AUTHORIZED)
-        return coordinator.append(owner.ownerKey,workoutId,operation)
+        return trackedWorkout.append(
+            owner.ownerKey,owner.athleteId,workoutId,operation)
+    }
+
+    /**
+     * Read-only access to the independent Kotlin history index. Unenrolled,
+     * pending or incomplete manifests are rejected, never replaced by empty
+     * history. This does not publish PRs to the JS runtime.
+     */
+    fun reviewNativeHistory():NativeKotlinHistoryReadResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeKotlinHistoryReadResult.Rejected(
+                NativeKotlinHistoryReadRefusal.NOT_AUTHORIZED)
+        val authority=NativeKotlinHistoryManifestFileAuthority(historyStore) {
+                ownerKey,athleteId ->
+            val current=localAthlete.signedInIdentity()
+            current!=null && current.ownerKey==ownerKey &&
+                current.athleteId==athleteId
+        }
+        return NativeKotlinGlobalHistoryReadCoordinator(
+            journalStore,correctionStore,approvalStore,authority,revisionFence
+        ).read(owner.ownerKey,owner.athleteId)
+    }
+
+    /**
+     * Source-only saved-history edit. Never bypasses global manifest
+     * preparation/finalization or assumes target RIR is performed RIR.
+     */
+    fun correctSavedKotlinWorkout(
+        workoutId:String,operation:KotlinSavedSetCorrection
+    ):NativeSavedCorrectionFileResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeSavedCorrectionFileResult.Rejected(
+                NativeSavedCorrectionRefusal.NOT_AUTHORIZED)
+        return trackedWorkout.correct(
+            owner.ownerKey,owner.athleteId,workoutId,operation)
     }
 
     fun revokeCurrentApproval(expectedRevision:Long):NativeApprovalWriteResult {

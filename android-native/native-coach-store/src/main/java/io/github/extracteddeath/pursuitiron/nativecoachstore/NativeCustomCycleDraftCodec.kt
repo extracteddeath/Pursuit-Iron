@@ -81,7 +81,7 @@ internal object NativeCustomCycleDraftCodec {
             writeInt(amplifier.followUpReps)
             writeInt(amplifier.followUpRestSeconds)
             writeBoolean(amplifier.followUpLoad != null)
-            amplifier.followUpLoad?.let(::load)
+            amplifier.followUpLoad?.let { load(it) }
         }
     }
     private fun DataInputStream.set(): CustomAuthoredSet {
@@ -155,13 +155,13 @@ internal object NativeCustomCycleDraftCodec {
         CustomTrainingBlock(readUTF(), readUTF(), enum<TrainingPhase>(),
             enum<CustomBlockPurpose>(), readInt(), split(), items(7) { day() })
 
-    private fun DataOutputStream.override(value: CustomWeekSlotOverride) {
+    private fun DataOutputStream.writeOverride(value: CustomWeekSlotOverride) {
         writeInt(value.weekInBlock)
         writeInt(value.weekday)
         writeUTF(value.slotId)
         items(value.sets) { set(it) }
     }
-    private fun DataInputStream.override(): CustomWeekSlotOverride =
+    private fun DataInputStream.readOverride(): CustomWeekSlotOverride =
         CustomWeekSlotOverride(readInt(), readInt(), readUTF(), items(20) { set() })
 
     /**
@@ -231,7 +231,7 @@ internal object NativeCustomCycleDraftCodec {
                 writeUTF(value.title); writeUTF(value.authorNote)
                 items(value.blocks) { block(it) }
                 items(value.weekOverrides.toSortedMap().entries) { (key, edits) ->
-                    writeUTF(key); items(edits) { override(it) }
+                    writeUTF(key); items(edits) { writeOverride(it) }
                 }
             }
         }
@@ -254,7 +254,7 @@ internal object NativeCustomCycleDraftCodec {
                     val note = readUTF()
                     val blocks = items(26) { block() }
                     val entries = items(26) {
-                        readUTF() to items(3000) { override() }
+                        readUTF() to items(3000) { readOverride() }
                     }
                     if (entries.map { it.first }.distinct().size != entries.size ||
                         available() != 0)

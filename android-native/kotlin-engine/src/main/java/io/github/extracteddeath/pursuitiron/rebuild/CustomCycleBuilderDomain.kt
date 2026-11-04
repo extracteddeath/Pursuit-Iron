@@ -535,6 +535,37 @@ object CustomCycleBuilderDomain {
         }
     }
 
+    /** One atomic author edit for a calendar day's visible name and purpose. */
+    fun editDayMetadata(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        blockId: String,
+        weekday: Int,
+        label: String,
+        purpose: ComposerSessionPurpose
+    ): CustomCycleBuilderResult {
+        if (label.isBlank() || label.length > 80 ||
+            purpose == ComposerSessionPurpose.UNSPECIFIED)
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        val block = current.blocks.firstOrNull { it.blockId == blockId }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        if (block.days.none { it.weekday == weekday })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        return edit(current, expectedRevision, "edit-day-metadata") {
+            current.copy(blocks = current.blocks.map { candidate ->
+                if (candidate.blockId != blockId) candidate else candidate.copy(
+                    days = candidate.days.map { day ->
+                        if (day.weekday == weekday)
+                            day.copy(label = label, purpose = purpose)
+                        else day
+                    })
+            })
+        }
+    }
+
     /** Change a day's purpose without modifying its exercises or set targets. */
     fun changeDayPurpose(
         current: CustomTrainingCycle,

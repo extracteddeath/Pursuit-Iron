@@ -30,6 +30,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete)
     private val customAuthoringCoordinator=NativeKotlinCustomAuthoringDraftCoordinator(
         authoringSourceStore,customDraftStore,revisionFence,localAthlete)
+    private val customCycleSignoffs=NativeKotlinCustomCycleSignoffFileStore(
+        root,revisionFence,localAthlete,customDraftStore,authoringSourceStore)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
@@ -116,6 +118,44 @@ internal class NativeKotlinCandidateHost(context:Context) {
             is NativeAuthoringSourceRead.Rejected ->
                 NativeAuthoringSourceWrite.Rejected(existing.reason)
         }
+    }
+
+    /**
+     * Separate custom cycle CONSENT, not an accepted ComposerRequest.
+     * No static global 'approved' boolean; a full review and fingerprint
+     * are recalculated under the owner lock on every acknowledgement.
+     */
+    fun confirmCustomCycleConsent(
+        cycleId:String,expectedCycleRevision:Long,
+        expectedSourceRevision:Long,expectedConsentRevision:Long,
+        inputs:CustomCoachAuditInputs,athleteConfirmed:Boolean
+    ):NativeCustomSignoffWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomSignoffWrite.Rejected(
+                NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+        return customCycleSignoffs.confirm(
+            owner.ownerKey,cycleId,expectedCycleRevision,
+            expectedSourceRevision,expectedConsentRevision,
+            inputs,athleteConfirmed)
+    }
+
+    fun readCustomCycleConsent(
+        cycleId:String,inputs:CustomCoachAuditInputs?=null
+    ):NativeCustomSignoffRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomSignoffRead.Rejected(
+                NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+        return customCycleSignoffs.read(owner.ownerKey,cycleId,inputs)
+    }
+
+    fun revokeCustomCycleConsent(
+        cycleId:String,expectedConsentRevision:Long
+    ):NativeCustomSignoffWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomSignoffWrite.Rejected(
+                NativeCustomSignoffRefusal.NOT_AUTHORIZED)
+        return customCycleSignoffs.revoke(
+            owner.ownerKey,cycleId,expectedConsentRevision)
     }
 
     fun readCustomAuthoringSource():NativeAuthoringSourceRead {

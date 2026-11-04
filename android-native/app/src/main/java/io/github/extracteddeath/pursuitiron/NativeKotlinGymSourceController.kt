@@ -21,7 +21,8 @@ internal data class NativeKotlinGymSourceState(
     val source: NativeCustomAuthoringSnapshot? = null,
     val busy: Boolean = false,
     val message: String? = null,
-    val refusal: NativeAuthoringSourceRefusal? = null
+    val refusal: NativeAuthoringSourceRefusal? = null,
+    val savedAthleteId: String? = null
 )
 
 internal class NativeKotlinGymSourceController(
@@ -48,19 +49,24 @@ internal class NativeKotlinGymSourceController(
     }
 
     private fun load(message:String?=null) {
+        val previousAthlete=host.savedAthleteIdForExplicitResume()
         val result=host.readCustomAuthoringSource()
         current.value=when(result) {
             is NativeAuthoringSourceRead.Found ->
                 NativeKotlinGymSourceState(source=result.source,
+                    savedAthleteId=previousAthlete,
                     message=message ?: "Verified native gym and catalog restored · revision ${result.source.revision}")
             NativeAuthoringSourceRead.Missing ->
-                NativeKotlinGymSourceState(message=
+                NativeKotlinGymSourceState(savedAthleteId=previousAthlete,
+                    message=
                     "No native reviewed gym/catalog source yet. Complete Kotlin onboarding and curate the exercise catalog first.")
             is NativeAuthoringSourceRead.Revoked ->
-                NativeKotlinGymSourceState(message=
+                NativeKotlinGymSourceState(savedAthleteId=previousAthlete,
+                    message=
                     "Native gym/catalog source was revoked at revision ${result.revision}.")
             is NativeAuthoringSourceRead.Rejected ->
                 NativeKotlinGymSourceState(refusal=result.reason,
+                    savedAthleteId=previousAthlete,
                     message="Native equipment could not be verified; nothing was replaced.")
         }
     }

@@ -74,7 +74,8 @@ private fun parseIds(text:String):Set<String>? {
  */
 @Composable
 internal fun NativeKotlinGymSourceCandidateScreen(
-    controller:NativeKotlinGymSourceController
+    controller:NativeKotlinGymSourceController,
+    reviewedSetupDraft:AthleteSetupDraft?=null
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val source=state.source
@@ -114,6 +115,20 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                 Text("Complete native onboarding and catalog review",
                     style=MaterialTheme.typography.titleMedium)
                 Text("No default gym is created. A reviewed athlete and a curated exercise catalog must be explicitly published to the isolated Kotlin repository before physical equipment can be edited.")
+                if(reviewedSetupDraft!=null) {
+                    HorizontalDivider()
+                    Text("First-time native setup",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("Approve the explicitly completed Kotlin athlete setup and the 20 engineering-reviewed provisional starter movements. Those movement definitions carry no gym weights, targets or automatic workout approval.")
+                    Text("This is not a conversion of the JavaScript engine. Nothing will replace an existing different athlete or previously saved source.",
+                        style=MaterialTheme.typography.bodySmall)
+                    Button(
+                        onClick={controller.activateReviewedStarter(reviewedSetupDraft)},
+                        enabled=!state.busy,
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Confirm native setup and starter catalog")
+                    }
+                }
                 OutlinedButton(onClick={controller.open()},enabled=!state.busy) {
                     Text("Reload native gym")
                 }

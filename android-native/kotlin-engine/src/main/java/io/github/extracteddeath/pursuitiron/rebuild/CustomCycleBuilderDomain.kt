@@ -103,6 +103,96 @@ object CustomCycleBuilderDomain {
         ))
     }
 
+    /** Add an entirely user-authored day to a blank or existing block. */
+    fun addDay(
+        current: CustomTrainingCycle, expectedRevision: Long,
+        blockId: String, day: CustomTrainingDay
+    ): CustomCycleBuilderResult {
+        val block = current.blocks.firstOrNull { it.blockId == blockId }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        if (day.weekday !in 0..6 || day.label.isBlank() ||
+            day.label.length > 80 || block.days.size >= 7 ||
+            block.days.any { it.weekday == day.weekday })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current, expectedRevision, "add-training-day") {
+            current.copy(blocks = current.blocks.map {
+                if (it.blockId == blockId) it.copy(days = it.days + day)
+                else it
+            })
+        }
+    }
+
+    /**
+     * Add an athlete-selected exercise at an explicit position. The user
+     * owns both the slot ID and the chosen variant; no fallback replacement.
+     * An empty set list may exist while editing but will fail final review.
+     */
+    fun addSlot(
+        current: CustomTrainingCycle, expectedRevision: Long,
+        blockId: String, weekday: Int, slot: CustomExerciseSlot,
+        position: Int? = null
+    ): CustomCycleBuilderResult {
+        val block = current.blocks.firstOrNull { it.blockId == blockId }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        val day = block.days.firstOrNull { it.weekday == weekday }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        val index = position ?: day.slots.size
+        if (!id.matches(slot.slotId) || !id.matches(slot.exerciseId) ||
+            day.slots.size >= 32 || index !in 0..day.slots.size ||
+            day.slots.any { it.slotId == slot.slotId })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current, expectedRevision, "add-exercise-slot") {
+            current.copy(blocks = current.blocks.map { candidate ->
+                if (candidate.blockId != blockId) candidate else candidate.copy(
+                    days = candidate.days.map { existing ->
+                        if (existing.weekday != weekday) existing else existing.copy(
+                            slots = existing.slots.toMutableList().also {
+                                it.add(index, slot)
+                            })
+                    })
+            })
+        }
+    }
+
+    /** Optional destructive action; pin removal needs separate confirmation. */
+    fun removeSlot(
+        current: CustomTrainingCycle, expectedRevision: Long,
+        blockId: String, weekday: Int, slotId: String,
+        confirmPinned: Boolean = false
+    ): CustomCycleBuilderResult {
+        val day = current.blocks.firstOrNull { it.blockId == blockId }
+            ?.days?.firstOrNull { it.weekday == weekday }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        val chosen = day.slots.firstOrNull { it.slotId == slotId }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        if (chosen.pinned && !confirmPinned)
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        // Dangling week-specific edits must never migrate to a different
+        // exercise with the same array position.
+        return edit(current, expectedRevision, "remove-exercise-slot") {
+            current.copy(blocks = current.blocks.map { candidate ->
+                if (candidate.blockId != blockId) candidate else candidate.copy(
+                    days = candidate.days.map { existing ->
+                        if (existing.weekday != weekday) existing else
+                            existing.copy(slots = existing.slots.filterNot {
+                                it.slotId == slotId
+                            })
+                    })
+            }, weekOverrides = current.weekOverrides +
+                (blockId to current.weekOverrides[blockId].orEmpty().filterNot {
+                    it.weekday == weekday && it.slotId == slotId
+                }))
+        }
+    }
+
     /**
      * Duplicate the entire actual block, including warmups, every set,
      * pinned identities, attachments and all per-week overrides. Refuse

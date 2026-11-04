@@ -28,7 +28,9 @@ internal data class NativeKotlinCustomCycleState(
     val canUndo: Boolean = false,
     val authoringRefusal: CustomAuthoringRefusal? = null,
     val availableChoices: List<CustomExercisePickerOption> = emptyList(),
-    val sourceRevision: Long? = null
+    val sourceRevision: Long? = null,
+    val coachingAudit: CustomCoachAudit? = null,
+    val auditSourceRevision: Long? = null
 )
 
 /**
@@ -156,6 +158,8 @@ internal class NativeKotlinCustomCycleController(
                         current.value = current.value.copy(
                             draft = result.draft,
                             cycleId = result.draft.cycleId,
+                            coachingAudit = null,
+                            auditSourceRevision = null,
                             canUndo = true,
                             message = "Saved revision ${write.revision} · ${result.receipt.operation.replace('-', ' ')}.")
                     }
@@ -172,6 +176,50 @@ internal class NativeKotlinCustomCycleController(
                 }
             }
         }
+    }
+
+    /**
+     * Read-only, full-cycle coaching audit. Source and draft are read from
+     * durable storage on IO; a second read refuses stale concurrent updates.
+     * No default dose policy or transition time is supplied, and passing
+     * the review NEVER creates an approved workout or a storage grant.
+     */
+    fun auditFullCycle(
+        inputs: CustomCoachAuditInputs = CustomCoachAuditInputs()
+    ) = run {
+        val requested = current.value.draft ?: return@run
+        val disk = host.readCustomCycleDraft(requested.cycleId)
+        if(disk !is NativeCustomDraftReadResult.Found ||
+            disk.draft.revision != requested.revision ||
+            disk.draft != requested) {
+            applyRead(requested.cycleId,disk)
+            current.value=current.value.copy(
+                message="The saved cycle changed. Reloaded before review; run the audit again.")
+            return@run
+        }
+        val source=runCatching {authoringSource.snapshot()}.getOrNull()
+        if(source==null || source.athleteId!=disk.draft.athleteId) {
+            current.value=current.value.copy(
+                coachingAudit=null,auditSourceRevision=null,
+                message="No current owner-reviewed native gym and catalog. Complete setup before coach review.")
+            return@run
+        }
+        val result=CustomCycleCoachAuditDomain.review(
+            disk.draft,source.setup,source.catalog,inputs)
+        val currentSource=runCatching{authoringSource.snapshot()}.getOrNull()
+        val latest=host.readCustomCycleDraft(disk.draft.cycleId)
+        if(currentSource==null ||
+            currentSource.revision!=source.revision ||
+            latest !is NativeCustomDraftReadResult.Found ||
+            latest.draft!=disk.draft) {
+            applyRead(disk.draft.cycleId,latest)
+            current.value=current.value.copy(
+                message="Saved gym or program changed during audit; nothing accepted. Run a fresh review.")
+            return@run
+        }
+        current.value=current.value.copy(
+            coachingAudit=result,auditSourceRevision=source.revision,
+            message="Whole-cycle coach audit: ${result.issues.size} actionable issues across ${result.weeks.size} evaluated weeks. No workout approved.")
     }
 
     /** Read-only options; absent trusted gym/catalog means NO made-up choices. */
@@ -351,6 +399,7 @@ internal class NativeKotlinCustomCycleController(
             is NativeCustomDraftWriteResult.Committed ->
                 current.value = current.value.copy(
                     draft = result.draft, canUndo = false,
+                    coachingAudit = null, auditSourceRevision = null,
                     message = "Undo saved · revision ${write.revision}")
             is NativeCustomDraftWriteResult.Rejected -> {
                 applyRead(saved.cycleId, host.readCustomCycleDraft(saved.cycleId))

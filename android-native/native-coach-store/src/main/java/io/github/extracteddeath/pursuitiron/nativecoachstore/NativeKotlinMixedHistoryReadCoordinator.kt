@@ -48,6 +48,20 @@ sealed interface NativeKotlinMixedHistoryReadResult {
 }
 
 /**
+ * Factual working-set projection produced ONLY by the complete owner-verified,
+ * revision-checked native history read, with the same transaction lock held.
+ * This is not a cache validity guarantee after the lock is released.
+ */
+sealed interface NativeKotlinMixedFactsReadResult {
+    data class Review(val facts: NativeKotlinMixedHistoryFacts) :
+        NativeKotlinMixedFactsReadResult
+    data class HistoryRejected(val reason: NativeKotlinMixedHistoryRefusal) :
+        NativeKotlinMixedFactsReadResult
+    data class FactsRejected(val reason: NativeMixedFactsRefusal) :
+        NativeKotlinMixedFactsReadResult
+}
+
+/**
  * Owner-fenced, exhaustively re-opened disk projection. The shared ledger
  * decides WHICH workouts exist and their chronological order. Each workout's
  * own independently verified storage decides WHAT actually happened.
@@ -84,6 +98,37 @@ class NativeKotlinMixedHistoryReadCoordinator(
             fence.withOwnerTransaction(owner) { readFenced(owner, athlete) }
         }.getOrElse {
             rejected(NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Safe factual bridge: verification and projection both occur under the
+     * SAME owner fence. Do not project a caller-constructed timeline as a
+     * replacement for this path. A UI must still reject async/stale results
+     * when the manifest revision changes after this method returns.
+     */
+    fun readFacts(owner: String, athlete: String): NativeKotlinMixedFactsReadResult {
+        if (!id.matches(owner) || !id.matches(athlete))
+            return NativeKotlinMixedFactsReadResult.HistoryRejected(
+                NativeKotlinMixedHistoryRefusal.INVALID_SCOPE)
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                when (val original = readFenced(owner, athlete)) {
+                    is NativeKotlinMixedHistoryReadResult.Rejected ->
+                        NativeKotlinMixedFactsReadResult.HistoryRejected(original.reason)
+                    is NativeKotlinMixedHistoryReadResult.Review ->
+                        when (val projected =
+                            NativeKotlinMixedHistoryFactsDomain.project(original.timeline)) {
+                            is NativeMixedFactsResult.Rejected ->
+                                NativeKotlinMixedFactsReadResult.FactsRejected(projected.reason)
+                            is NativeMixedFactsResult.Review ->
+                                NativeKotlinMixedFactsReadResult.Review(projected.facts)
+                        }
+                }
+            }
+        }.getOrElse {
+            NativeKotlinMixedFactsReadResult.HistoryRejected(
+                NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
         }
     }
 

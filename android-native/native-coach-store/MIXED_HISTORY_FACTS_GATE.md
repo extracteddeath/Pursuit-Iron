@@ -23,9 +23,16 @@ It does not verify who constructed a timeline; authentication, full durable
 receipt replay, revision gating and storage reads must remain with the
 existing mixed-history read coordinator.
 
-Local Kotlin compilation with API-matching stubs and six focused synthetic
-projection tests passed before publication. This is *not* the entire
-Android Gradle or device acceptance suite.
+Six focused synthetic projection tests are committed and the
+Kotlin/Android GitHub CI is the source of truth for execution results.
+No prior local compilation or test success is claimed.
+The app-private candidate host now exposes
+`reviewVerifiedKotlinWorkingSetFacts()`: it calls the native reader's
+`readFacts` under the owner transaction fence and rejects unauthenticated,
+stale, incomplete or non-replayable factual history. Projection cannot be
+invoked as production evidence from a UI-constructed timeline. Clients must
+still guard against a newer manifest revision before rendering a delayed
+result. It does not activate the native workout screen or engine cutover.
 
 Still blocked: 128-session lifetime-history limit; lossless web/JS history
 migration and cross-device reconciliation; separate longitudinal coach

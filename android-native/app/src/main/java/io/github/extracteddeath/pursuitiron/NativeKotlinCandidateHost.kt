@@ -274,6 +274,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
     }
 
     /**
+     * Owner-verified generated + custom MAIN working-set facts. It reads
+     * actual journal outcomes, corrections and physical loads while holding
+     * the same native history transaction fence. Still read-only: NO
+     * automatic PR, progression, training change, or UI cutover.
+     */
+    fun reviewVerifiedKotlinWorkingSetFacts(): NativeKotlinMixedFactsReadResult {
+        val owner = localAthlete.signedInIdentity()
+            ?: return NativeKotlinMixedFactsReadResult.HistoryRejected(
+                NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
+        return mixedHistoryReader.readFacts(owner.ownerKey, owner.athleteId)
+    }
+
+    /**
      * Separate custom cycle CONSENT, not an accepted ComposerRequest.
      * No static global 'approved' boolean; a full review and fingerprint
      * are recalculated under the owner lock on every acknowledgement.

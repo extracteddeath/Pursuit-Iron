@@ -294,4 +294,129 @@ class NativeKotlinCustomHistoryTransactionTest {
             transactions.complete("owner-1","athlete-1",
                 "workout-2",finish()))
     }
+
+    private val generatedAuthority=object:NativeKotlinWorkoutAuthority {
+        override fun currentApprovedWorkout(
+            ownerKey:String,workoutId:String
+        ):NativeKotlinWorkoutApproval?=null
+        override fun canAccessIssuedWorkout(
+            ownerKey:String,source:KotlinTrainingSourceRevision
+        ):Boolean=ownerKey=="owner-1" && source.athleteId=="athlete-1" &&
+            current==NativeKotlinOwnerIdentity("owner-1","athlete-1")
+    }
+
+    private fun mixedReader()=NativeKotlinMixedHistoryReadCoordinator(
+        history,composerJournal,
+        KotlinNativeSavedCorrectionFileStore(temp.root.toPath(),composerJournal),
+        issued,generatedAuthority,identity,fence)
+
+    private fun finishGenerated() {
+        val src=KotlinTrainingSourceRevision(
+            "athlete-1",1,"generated-1",1,"gym-1",1,"catalog-1","policy-1")
+        val target=KotlinWorkoutTarget(
+            "bench",ComposerRole.PRIMARY,ComposerSessionPurpose.HYPERTROPHY,
+            "generated-set",DraftSetType.WORKING,0,
+            DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.SMITH_TOTAL,n("200")),
+            RepBand(5,8),2,60,90)
+        val snapshot=KotlinStagedWorkout(
+            src,"grant-generated","generated-1",0,0,
+            ComposerSessionPurpose.HYPERTROPHY,40,listOf(target))
+        val identity=KotlinStoredWorkoutIdentity(
+            "stored-generated","generated-1",src,1)
+        assertTrue(composerJournal.issue("owner-1",snapshot,identity)
+            is NativeJournalFileResult.Durable)
+        assertTrue(composerJournal.appendStored("owner-1","generated-1",
+            KotlinJournalOperation.RecordSet(
+                "generated-set-event",0,"generated-set",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("200"),LoadUnit.LB,8,2)
+            ),{owner,revision->
+                generatedAuthority.canAccessIssuedWorkout(owner,revision)
+            }) is NativeJournalFileResult.Durable)
+        val result=NativeKotlinHistoryTransactionCoordinator(
+            history,composerJournal,
+            KotlinNativeSavedCorrectionFileStore(temp.root.toPath(),composerJournal),
+            generatedAuthority,fence
+        ).complete("owner-1","athlete-1","generated-1",
+            KotlinJournalOperation.Finish("finish-generated",1))
+        assertTrue(result.toString(),result is NativeHistoryTransactionResult.Durable)
+    }
+
+    @Test fun mixedTimelineIncludesCustomAndGeneratedInExactFinishOrder() {
+        logged()
+        assertTrue(transactions.complete(
+            "owner-1","athlete-1","workout-2",finish())
+            is NativeCustomFinishResult.Committed)
+        finishGenerated()
+        val result=mixedReader().read("owner-1","athlete-1")
+        assertTrue(result.toString(),result is NativeKotlinMixedHistoryReadResult.Review)
+        val view=(result as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(listOf("workout-2","generated-1"),
+            view.completions.map{it.manifest.workoutId})
+        val custom=view.completions[0] as NativeKotlinMixedHistoryCompletion.Custom
+        assertEquals(16,custom.evidence.visits.single().actual?.reps)
+        assertEquals(1,custom.evidence.visits.single().actual?.actualRir)
+        val generated=view.completions[1] as NativeKotlinMixedHistoryCompletion.Composer
+        assertEquals(8,generated.evidence.sets.single().actual?.reps)
+        assertEquals("generated-set-event",
+            generated.evidence.sets.single().effectiveEventId)
+        assertFalse(view.canPublishPr)
+        assertFalse(view.canApplyProgression)
+        // The old Composer-only Last/PR path stays blocked, not half-correct.
+        assertNull(NativeKotlinHistoryManifestFileAuthority(
+            history,{_,_->true}
+        ).currentHistoryManifest("owner-1","athlete-1"))
+    }
+
+    @Test fun mixedHistoryRecomputesGeneratedSavedCorrectionsWithoutInventingCustomPr() {
+        logged()
+        finishGenerated()
+        val corrections=KotlinNativeSavedCorrectionFileStore(
+            temp.root.toPath(),composerJournal)
+        val result=NativeKotlinHistoryTransactionCoordinator(
+            history,composerJournal,corrections,generatedAuthority,fence
+        ).correct("owner-1","athlete-1","generated-1",
+            KotlinSavedSetCorrection(
+                "generated-correction",0,"generated-set",
+                "generated-set-event",KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("195"),LoadUnit.LB,4,null)))
+        assertTrue(result.toString(),result is NativeHistoryTransactionResult.Durable)
+        assertTrue(transactions.complete(
+            "owner-1","athlete-1","workout-2",finish())
+            is NativeCustomFinishResult.Committed)
+        val timeline=(mixedReader().read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review).timeline
+        assertEquals(listOf("generated-1","workout-2"),
+            timeline.completions.map{it.manifest.workoutId})
+        val generated=timeline.completions.first()
+            as NativeKotlinMixedHistoryCompletion.Composer
+        assertEquals(4,generated.evidence.sets.single().actual?.reps)
+        assertNull(generated.evidence.sets.single().actual?.actualRir)
+        assertEquals("generated-correction",
+            generated.evidence.sets.single().effectiveEventId)
+    }
+
+    @Test fun mixedReaderFailsClosedForPendingRedoRevocationAndCorruption() {
+        logged()
+        assertTrue(transactions.complete(
+            "owner-1","athlete-1","workout-2",finish())
+            is NativeCustomFinishResult.Committed)
+        assertTrue(mixedReader().read("owner-1","athlete-1")
+            is NativeKotlinMixedHistoryReadResult.Review)
+        current=NativeKotlinOwnerIdentity("other","athlete-1")
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED),
+            mixedReader().read("owner-1","athlete-1"))
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val ledger=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        val pending=NativeHistoryWriteIntent.Finish(
+            "missing",KotlinJournalOperation.Finish("missing-finish",0))
+        assertTrue(history.prepare("owner-1","athlete-1",ledger.revision,pending)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION),
+            mixedReader().read("owner-1","athlete-1"))
+        // A forged/copied or deleted custom file must never yield partial history.
+    }
 }

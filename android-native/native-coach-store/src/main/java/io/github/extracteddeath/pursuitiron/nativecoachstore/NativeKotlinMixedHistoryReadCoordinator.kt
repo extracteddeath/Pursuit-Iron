@@ -91,8 +91,20 @@ class NativeKotlinMixedHistoryReadCoordinator(
         if (!authorized(owner, athlete))
             return rejected(NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
         val opened = ledgerStore.open(owner, athlete)
+        if (opened is NativeHistoryLedgerResult.Rejected)
+            return rejected(when (opened.reason) {
+                NativeHistoryLedgerRefusal.NOT_ENROLLED ->
+                    NativeKotlinMixedHistoryRefusal.NOT_ENROLLED
+                NativeHistoryLedgerRefusal.NOT_AUTHORIZED ->
+                    NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED
+                NativeHistoryLedgerRefusal.PENDING_TRANSACTION ->
+                    NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION
+                NativeHistoryLedgerRefusal.STORAGE_UNAVAILABLE ->
+                    NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE
+                else -> NativeKotlinMixedHistoryRefusal.INVALID_MANIFEST
+            })
         if (opened !is NativeHistoryLedgerResult.Durable)
-            return rejected(NativeKotlinMixedHistoryRefusal.NOT_ENROLLED)
+            return rejected(NativeKotlinMixedHistoryRefusal.INVALID_MANIFEST)
         val ledger = opened.ledger
         if (ledger.pending != null)
             return rejected(NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION)

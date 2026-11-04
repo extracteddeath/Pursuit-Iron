@@ -85,6 +85,13 @@ future, authenticated policy**; this pass always returns review-only.
   separate athlete-origin and coach-origin semantics and explicit
   `CustomCycleCoachPermissions`. Every proposal remains review-only.
 
+### Candidate native draft persistence (source-only, not a live editor)
+
+- `NativeCustomCycleDraftCodec` serializes full athlete-owned blocks, custom splits, stable exercise slots, ordered sets, physical load basis, warmups, RIR, rest, attachments, pinned status, superset groups, set-linked amplifiers, coaching notes and individual week overrides without JavaScript or Java object serialization. It also permits explicitly **unfinished** drafts such as blank cycles.
+- `NativeCustomCycleDraftFileStore` stores a private, versioned, checksum-checked draft by authenticated owner + cycle ID, sharing the approval/issuance transaction fence. Save requires the exact prior revision, uses temporary-file atomic replacement and rejects corrupted existing bytes. Delete retains a revision tombstone so queued old autosaves cannot silently resurrect the program.
+- The isolated `NativeKotlinCandidateHost` now exposes read/save/delete entry points, but the production Compose program editor does not call them. These APIs do **not** authenticate training policy, approve coaching, issue workouts, mutate JS workouts or migrate existing web programs.
+- JVM tests cover complete custom-cycle roundtrip, blank draft roundtrip, cold restoration, CAS conflicts, deletion, owner/athlete isolation, metadata refusal and corruption. Passing JVM CI is not yet Android device power-loss, Compose auto-save, user acceptance, or coaching approval proof.
+
 ### Release gates not yet implemented
 
 These source-domain constructs are NOT a completed native program workflow.
@@ -94,9 +101,7 @@ Before production authority, build and test:
   as reusable M3 Expressive components, persistent onboarding-to-program
   navigation, responsive phone/foldable layout, accessible drag alternatives,
   animation, draft auto-save, undo and crash recovery.
-- A native durable, revision-checked custom blueprint repository; diff receipts,
-  optimistic concurrency, migration/export, and a separate explicit author
-  approval -> Kotlin workout issuance handoff. No JS object is an approval.
+- Connect the candidate native revision-checked draft repository to real Compose authoring with diff receipts, persistent autosave/undo, crash-device proof, catalog/gym/source freshness, migration/export, and a **separate explicit author approval -> Kotlin workout issuance** handoff. No JS object or saved draft is an approval.
 - Full catalog-backed variant/attachment filtering and per-gym physical stock,
   correct training-dose/recovery/periodization coaching, efficient cloning of
   all authored fields between blocks, athlete-approved adaptation,

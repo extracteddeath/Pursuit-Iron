@@ -312,6 +312,11 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 val existing=read(ownerKey,workoutId,current)
                 if(existing !is NativeCustomJournalResult.Durable)
                     return@withOwnerTransaction existing
+                val ledger=history.open(ownerKey,current.athleteId)
+                if(ledger !is NativeHistoryLedgerResult.Durable ||
+                    !ledger.ledger.readyForHistoryReads)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.HISTORY_NOT_READY)
                 val decision=CustomWorkoutJournalDomain.reduce(
                     existing.issued.journal,operation)
                 if(decision !is CustomWorkoutJournalDecision.Proposed)
@@ -329,4 +334,53 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         }.getOrElse {NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
     }
+    /**
+     * Internal HALF of a redo-backed Finish. The shared ledger must ALREADY
+     * contain this exact CustomFinish intent, written under the same owner
+     * fence. This cannot be called as an ordinary UI Finish action.
+     *
+     * A process death after the journal commit but before manifest finalize
+     * leaves the durable intent, and retrying the identical event returns the
+     * identical journal. Other set edits refuse while history is pending.
+     */
+    internal fun applyPendingFinish(
+        ownerKey:String,workoutId:String,
+        operation:CustomWorkoutJournalOperation.Finish
+    ):NativeCustomJournalResult {
+        if(!id.matches(workoutId))
+            return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.INVALID_ID)
+        return runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val current=owner(ownerKey)
+                    ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val ledger=history.open(ownerKey,current.athleteId)
+                if(ledger !is NativeHistoryLedgerResult.Durable ||
+                    ledger.ledger.pending!=NativeHistoryWriteIntent.CustomFinish(
+                        workoutId,operation))
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.HISTORY_NOT_READY)
+                val previous=read(ownerKey,workoutId,current)
+                if(previous !is NativeCustomJournalResult.Durable)
+                    return@withOwnerTransaction previous
+                val decision=CustomWorkoutJournalDomain.reduce(
+                    previous.issued.journal,operation)
+                if(decision !is CustomWorkoutJournalDecision.Proposed)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.STALE_OR_INVALID_SET,
+                        (decision as CustomWorkoutJournalDecision.Rejected).reason)
+                if(decision.replayed)
+                    return@withOwnerTransaction previous
+                if(owner(ownerKey)!=current)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                val saved=previous.issued.copy(journal=decision.draft)
+                atomic(path(ownerKey,workoutId),encode(saved))
+                NativeCustomJournalResult.Durable(saved,false)
+            }
+        }.getOrElse {NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
+    }
+
 }

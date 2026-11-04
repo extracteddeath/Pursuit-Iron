@@ -115,8 +115,9 @@ private object SavedCorrectionBinary {
                             out.optional(actual.load?.stripTrailingZeros()?.toPlainString())
                             out.optional(actual.unit?.name)
                             out.writeInt(actual.reps)
-                            out.writeBoolean(actual.actualRir != null)
-                            if (actual.actualRir != null) out.writeInt(actual.actualRir)
+                            val actualRir = actual.actualRir
+                            out.writeBoolean(actualRir != null)
+                            if (actualRir != null) out.writeInt(actualRir)
                         }
                     }
                 }
@@ -150,8 +151,9 @@ private object SavedCorrectionBinary {
                     out.optional(actual.load?.toString())
                     out.optional(actual.unit?.name)
                     out.writeInt(actual.reps)
-                    out.writeBoolean(actual.actualRir != null)
-                    if (actual.actualRir != null) out.writeInt(actual.actualRir)
+                    val actualRir = actual.actualRir
+                    out.writeBoolean(actualRir != null)
+                    if (actualRir != null) out.writeInt(actualRir)
                 }
             }
         }

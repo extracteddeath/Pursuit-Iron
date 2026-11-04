@@ -119,7 +119,8 @@ object CustomWorkoutJournalDomain {
             emptyList(),emptyMap(),null)
     }
 
-    private fun actualValid(
+    /** Shared physical/effort validation for active and saved custom observations. */
+    internal fun actualValid(
         target:DraftSetLoad,
         outcome:KotlinJournalSetOutcome,
         performed:KotlinPerformedSet?

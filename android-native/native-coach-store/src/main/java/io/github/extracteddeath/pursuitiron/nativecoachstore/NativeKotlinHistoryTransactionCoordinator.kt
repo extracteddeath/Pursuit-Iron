@@ -64,8 +64,12 @@ class NativeKotlinHistoryTransactionCoordinator(
             ledger.completions.toList()
         )
 
-    /** Explicit owner-approved enrollment; not a migration from old JS files. */
-    fun enroll(
+    /**
+     * Legacy source-test seam only. NEVER call from the app: it cannot
+     * inspect native journal files or independently certify legacy history.
+     * Product enrollment must use NativeKotlinHistoryEnrollmentCoordinator.
+     */
+    internal fun enroll(
         owner: String, athlete: String,
         authorizeCurrentOwner: (String, String) -> Boolean
     ): NativeHistoryTransactionResult = fenced(owner, athlete) {

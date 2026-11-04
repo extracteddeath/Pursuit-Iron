@@ -464,8 +464,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /* ---------------------------------------------------------------- cycles */
-    fun createCycle(config: JSONObject, templateId: String, blocks: JSONArray?, adapt: Boolean) = launchCore {
-        val r = working("Building your training cycle") { obj("createCycle", jsonOf("config" to config, "templateId" to templateId, "blocks" to blocks, "adapt" to adapt)) } ?: return@launchCore
+    fun createCycle(config: JSONObject, templateId: String, blocks: JSONArray?, adapt: Boolean, adaptSplit: Boolean = false) = launchCore {
+        val r = working("Building your training cycle") { obj("createCycle", jsonOf("config" to config, "templateId" to templateId, "blocks" to blocks, "adapt" to adapt, "adaptSplit" to adaptSplit)) } ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "The cycle couldn't be built. Nothing was saved.")); return@launchCore }
         prefs.putSetupDraft(null)
         hap(Hap.Done)
@@ -499,12 +499,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         else if (adapt != null) toast(if (adapt) "Later blocks adapt their exercises" else "Later blocks keep today's exercises")
     }
     /* The design's "Turn into training cycle": this program stays block 1. */
-    fun convertToCycle(programId: String, name: String, blocks: JSONArray, adapt: Boolean, after: (String) -> Unit = {}) = launchCore {
-        val r = working("Building your training cycle") { obj("convertToCycle", jsonOf("programId" to programId, "templateId" to "custom", "name" to name, "blocks" to blocks, "adapt" to adapt)) } ?: return@launchCore
+    fun convertToCycle(programId: String, name: String, blocks: JSONArray, adapt: Boolean, adaptSplit: Boolean = false, after: (String) -> Unit = {}) = launchCore {
+        val r = working("Building your training cycle") { obj("convertToCycle", jsonOf("programId" to programId, "templateId" to "custom", "name" to name, "blocks" to blocks, "adapt" to adapt, "adaptSplit" to adaptSplit)) } ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "The training cycle couldn't be built. Your program is unchanged.")); return@launchCore }
         prefs.putConvDraft(null)
         hap(Hap.Done); refreshHomeSide(); after(r.s("cycleId"))
         toast("Training cycle created · ${r.i("blocks")} blocks · this program kept as block 1")
+    }
+    /** App.js upgradeAdaptiveCycle: rebuild the blocks after the current one as adaptive, for the gym you're in. */
+    suspend fun refreshCycle(id: String, quiet: Boolean = false): Boolean {
+        val r = working("Refreshing future blocks for your gym") { obj("refreshCycle", jsonOf("id" to id)) } ?: return false
+        if (!r.b("ok")) { toast(r.s("error", "Unable to refresh the cycle. Nothing was changed.")); return false }
+        refreshHomeSide(); cycles = obj("cyclesView") ?: cycles
+        if (!quiet) { hap(Hap.Done); toast("Future blocks refreshed for this gym. Current training and logged workouts are kept.") }
+        return true
     }
     fun leaveCycle(id: String, after: () -> Unit = {}) = launchCore {
         val r = obj("leaveCycle", jsonOf("id" to id)) ?: return@launchCore
@@ -516,7 +524,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val r = working("Preparing your next block") { obj("nextBlock", jsonOf("programId" to programId)) } ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "The next block couldn't be created. Your program is unchanged.")); return@launchCore }
         hap(Hap.Done); refreshHomeSide(); plan = obj("plan")
-        toast("${r.s("name")} is ready, built from your completed workouts")
+        toast(if (r.b("own")) "${r.s("name")} is ready: your lifts carry on into a fresh block" else "${r.s("name")} is ready, built from your completed workouts")
     }
 
     /* ---------------------------------------------------------------- program editor */

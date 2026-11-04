@@ -1079,6 +1079,14 @@ if tap(r"^\|New$", "cycle-setup"):
     if tap(r"Open cycle", "cycle-sheet"):
         if not find(r"NOW · WEEK", timeout=8):
             FAILS.append("cycle page has no current block")
+        # Web parity: the cycle's icon changes from its page, and later blocks can be rebuilt as adaptive for this gym
+        if not find(r"^Change cycle icon", timeout=3):
+            FAILS.append("cycle page has no Change cycle icon")
+        if not seek(r"(Refresh|Upgrade) future blocks"):
+            FAILS.append("cycle page offers no Refresh/Upgrade future blocks")
+        else:
+            shot("cycle-refresh")
+        scroll_up_to(r"NOW · WEEK", tries=8)
         # The design's cycle editor: add a block after the current one and save; the later blocks are rebuilt
         if tap(r"^\|?Edit$", "cycle-edit", required=False):
             if scroll_to(r"Add a block", tries=6, step=600):

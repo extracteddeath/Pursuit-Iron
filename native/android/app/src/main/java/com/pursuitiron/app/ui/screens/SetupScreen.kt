@@ -154,15 +154,16 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     var deload by remember { mutableStateOf(d0.b("deload")) }
     var template by remember { mutableStateOf(d0.s("template").ifBlank { vm.cycles.list("templates").firstOrNull()?.s("id") ?: "powerbuilding" }) }
     val custom = remember { mutableStateListOf<CustomBlock>().apply {
-        val saved = d0.list("custom").map { CustomBlock(it.s("phase"), it.i("weeks", 4)) }
+        val saved = d0.list("custom").map { customBlockOf(it) }
         addAll(saved.ifEmpty { listOf(CustomBlock("hypertrophy_accumulation", 6), CustomBlock("strength_accumulation", 5), CustomBlock("peak", 3)) }) } }
     var adapt by remember { mutableStateOf(d0.b("adapt")) }
+    var adaptSplit by remember { mutableStateOf(d0?.optBoolean("adaptSplit", true) ?: true) }
     // Every answer of an unfinished cycle setup is written as it changes, so closing or a restart picks it up again
     val draftJson = if (full || !cyc || !seen) null else JSONObject().put("chose", chose).put("step", step).put("unit", unit).put("name", name).put("experience", exp)
         .put("goal", goal).put("approach", approach).put("days", days).put("split", split ?: "").put("session", session).put("noRack", noRack)
         .put("noBodyweight", noBodyweight).put("noSupersets", noSupersets).put("barbellCap", barbellCap ?: JSONObject.NULL)
         .put("focus", JSONObject().apply { focus.forEach { (k, v) -> put(k, v) } }).put("reduce", JSONArray(reduce.toList())).put("deload", deload)
-        .put("template", template).put("custom", JSONArray().apply { custom.forEach { put(JSONObject().put("phase", it.phase).put("weeks", it.weeks)) } }).put("adapt", adapt).toString()
+        .put("template", template).put("custom", customBlocksJson(custom)).put("adapt", adapt).put("adaptSplit", adaptSplit).toString()
     LaunchedEffect(draftJson) { if (draftJson != null) vm.prefs.putSetupDraft(draftJson) else if (seen && !cyc) vm.prefs.putSetupDraft(null) }
     var revOpen by remember { mutableStateOf(false) }
     var pick by remember { mutableStateOf<String?>(null) }
@@ -209,7 +210,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     fun finish() {
         if (!nameOk) { step = steps.indexOf("name"); vm.toast("Name it first — it’s the one required answer"); return }
         val c = config().put("split", chosenSplit).put("session", effSession)
-        if (cyc) vm.createCycle(c, template, if (template == "custom") customBlocksJson(custom) else null, adapt) else vm.createProgram(c)
+        if (cyc) vm.createCycle(c, template, if (template == "custom") customBlocksJson(custom) else null, adapt, adapt && adaptSplit) else vm.createProgram(c)
     }
     fun next() {
         if (!canNext) return
@@ -316,7 +317,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                             }
                         }
                     }
-                    "cycletype" -> CycleTemplatePicker(vm, template, { template = it }, custom, adapt, { adapt = it })
+                    "cycletype" -> CycleTemplatePicker(vm, template, { template = it }, custom, adapt, { adapt = it }, adaptSplit, { adaptSplit = it }, days)
                     "name" -> OutlinedTextField(name, { name = it.take(60) }, Modifier.fillMaxWidth().semantics { contentDescription = if (cyc) "Cycle name" else "Program name" }, singleLine = true,
                         placeholder = { Text(if (cyc) "e.g. Summer Training Cycle" else "e.g. Summer Hypertrophy Block") }, shape = RoundedCornerShape(18.dp),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp), keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words))

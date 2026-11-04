@@ -1169,4 +1169,38 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   const ss = C.session();
   ok(ss.exercises.every((e) => e.progression && e.progression.auto && e.sets.some((x) => x.target && x.target.reps)), 'every lift gets an auto progression and targets in the workout');
   C.discard?.(); }
+// Your own program in cycles and blocks (web parity and past it)
+{ C.init({ store: JSON.stringify({ unit: 'lb' }) });
+  const own = () => { const b = C.buildOwnProgram({ name: 'Sekufit', days: 2 }), ds = C.editor({ programId: b.programId }).days.map((d) => d.id);
+    [['bb-bench', 'neutral-pulldown', 'cable-fly'], ['rdl', 'leg-ext']].forEach((ids, i) => ids.forEach((id) => C.editAct({ programId: b.programId, type: 'add', dayId: ds[i], exId: id })));
+    C.saveEdits({ programId: b.programId }); return b.programId; };
+  const pid = own();
+  const nb = C.nextBlock({ programId: pid });
+  const nbe = nb.ok && C.editor({ programId: nb.programId });
+  ok(nb.ok && nb.own && nb.name === 'Sekufit · Block 2' && nbe.days.map((d) => d.exercises.map((e) => e.id).join('/')).join('|') === 'bb-bench/neutral-pulldown/cable-fly|rdl/leg-ext',
+    'Build next block on your own program carries your days and lifts into a fresh block (' + (nb.error || nb.name) + ')');
+  ok(C.home().next?.programId === nb.programId && C.home().next?.weekIndex === 1, 'the new block is active from week 1');
+  for (const t of ['powerbuilding', 'custom']) {
+    const p2 = own();
+    const r = C.convertToCycle({ programId: p2, templateId: t, blocks: t === 'custom' ? [{ phase: 'strength_accumulation', weeks: 4 }, { phase: 'peak', weeks: 3 }] : undefined, adapt: true, adaptSplit: true });
+    const cd = r.ok && C.cycleDetail({ id: r.cycleId });
+    ok(r.ok && cd.blocks.length === 3 && cd.currentProgramId === p2 && C.editor({ programId: p2 }).days[0].exercises.map((e) => e.id).join('/') === 'bb-bench/neutral-pulldown/cable-fly',
+      'your own program turns into a ' + t + ' cycle and stays block 1 unchanged (' + (r.error || r.blocks + ' blocks') + ')');
+    ok(r.ok && C.advanceCycle({ id: r.cycleId }).ok, t + ' cycle from your own program advances to its next block');
+  }
+  const emp = C.buildOwnProgram({ name: 'Empty', days: 1 });
+  ok(!C.convertToCycle({ programId: emp.programId, templateId: 'powerbuilding' }).ok, 'a program with no lifts cannot become a cycle');
+  const cfg = { name: 'Cyc', unit: 'kg', goal: 'both', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] };
+  const cc = C.createCycle({ config: cfg, templateId: 'custom', adapt: true, adaptSplit: true,
+    blocks: [{ phase: 'hypertrophy_accumulation', weeks: 4, days: 3, split: 'full_body' }, { phase: 'strength_accumulation', weeks: 4, priorityLift: 'bench_press', frequency: 2 }] });
+  const ccd = cc.ok && C.cycleDetail({ id: cc.cycleId });
+  ok(cc.ok && ccd.blocks[0].days === 3, 'a custom cycle block can set its own training days and split (' + (cc.error || ccd.blocks.map((b) => b.days).join(',')) + ')');
+  ok(C.cyclesView().blockSplits.find((x) => x.id === 'upper_lower').days.join() === '2,4,6' && C.cyclesView().priorityLifts.length === 4, 'the composer offers splits by the days they support and four priority lifts');
+  ok(ccd.canRefresh && /Refresh future blocks/.test(ccd.refreshLabel), 'an adaptive cycle offers Refresh future blocks for this gym');
+  const plain = C.createCycle({ config: cfg, templateId: 'powerbuilding', adapt: false });
+  const pd2 = C.cycleDetail({ id: plain.cycleId });
+  ok(/Upgrade future blocks to adaptive/.test(pd2.refreshLabel), 'a fixed cycle offers Upgrade future blocks to adaptive');
+  const rf = C.refreshCycle({ id: plain.cycleId });
+  ok(rf.ok && /Refresh future blocks/.test(C.cycleDetail({ id: plain.cycleId }).refreshLabel) && C.cycleDetail({ id: plain.cycleId }).blocks.length === pd2.blocks.length, 'upgrading rebuilds the later blocks as adaptive and keeps the cycle shape (' + (rf.error || rf.blocks) + ')');
+  ok(C.setProgramIcon({ key: plain.cycleId, icon: 'flame' }) && C.cycleDetail({ id: plain.cycleId }).icon.icon === 'flame', 'a cycle takes its own icon'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

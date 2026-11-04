@@ -2326,9 +2326,14 @@ function cycleCard(c, info) {
             state: b.state, sessions: b.sessions, exists: b.exists, days: b.days, split: b.split, range: b.range, dates: b.dates })),
         live: info && info.cycle.id === c.id ? { blockIdx: info.blockIdx, weekIndex: info.weekIndex, weeksTotal: info.weeksTotal, isDeload: info.isDeload, dayIndex: info.dayIndex, dayLabel: info.dayLabel, daysPerWeek: info.daysPerWeek } : null };
 }
+const CYCLE_BLOCK_SPLITS = [['full_body', 'Full Body'], ['upper_lower', 'Upper / Lower'], ['ulppl', 'Upper / Lower / PPL'], ['ppl', 'Push / Pull / Legs'],
+    ['phul', 'Power Hypertrophy UL'], ['hybrid', 'Hybrid'], ['strength_fb', 'Strength Full Body']];
 export function cyclesView() {
     const info = liveCycleInfo();
-    return { templates: E.nextCycleTemplatesForShell(), phases: E.CUSTOM_CYCLE_PHASES, cycles: cycles().map((c) => cycleCard(c, info)).reverse(), liveId: info?.cycle.id || null };
+    return { templates: E.nextCycleTemplatesForShell(), phases: E.CUSTOM_CYCLE_PHASES, cycles: cycles().map((c) => cycleCard(c, info)).reverse(), liveId: info?.cycle.id || null,
+        // App.js CustomCycleComposer: each block may change its weekly split, training days and one priority lift's frequency.
+        blockSplits: CYCLE_BLOCK_SPLITS.map(([id, label]) => ({ id, label, days: [2, 3, 4, 5, 6].filter((n) => { try { return E.splitSupportsTrainingDays(id, n); } catch { return false; } }) })),
+        priorityLifts: [['bench_press', 'Bench press'], ['back_squat', 'Squat'], ['deadlift', 'Deadlift'], ['overhead_press', 'Overhead press']].map(([id, label]) => ({ id, label })) };
 }
 /* The design's "Preview week 1" on a cycle block: each day with its first three lifts and their week-1 targets. */
 function cyclePreview(p) {
@@ -2346,16 +2351,46 @@ export function cycleDetail({ id }) {
         nextLabel: next ? (next.blockLabel || next.name) : null, final: !c.done && active >= c.blockIds.length - 1,
         phases: E.CUSTOM_CYCLE_PHASES, templates: E.nextCycleTemplatesForShell().map((t) => ({ id: t.id, name: t.name, blocks: (t.blocks || []).map((b) => ({ label: b.label, weeks: b.weeks, phase: b.phase })) })),
         reshapable: c.engineSource === 'pursuit-next' && !c.done && !!c.nextEngineCycle?.plannedBlocks,
+        // App.js CycleDetail options: rebuild the blocks after this one as adaptive, for the gym you're in.
+        canRefresh: !c.done && active < c.blockIds.length - 1 && c.engineSource === 'pursuit-next' && !!c.nextEngineCycle,
+        refreshLabel: c.adaptExercises && c.adaptTrainingSplit ? 'Refresh future blocks for this gym' : 'Upgrade future blocks to adaptive',
+        needsRefresh: needsCyclePreviewRefresh(c),
         icon: iconFor(c.id, null, true),
         previews: Object.fromEntries(c.blockIds.map((bid) => [bid, cyclePreview(programById(bid))])),
         currentProgramId: current?.id || null };
 }
+function activeGymEquipment() {
+    const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId), gym = E.gymById(g.gyms, g.activeGymId);
+    return gym?.equipment?.length ? [...gym.equipment] : (S.store.activeGymId ? [] : [...E.ALL_EQUIP_IDS]);
+}
+/* App.js needsCyclePreviewRefresh: an adaptive cycle's future previews were built for other equipment (or before
+   previews were revisioned), so opening a future block rebuilds them first. */
+function needsCyclePreviewRefresh(c) {
+    if (c.done || !c.adaptExercises || !c.adaptTrainingSplit) return false;
+    const eq = (a) => JSON.stringify([...(a || [])].sort());
+    return c.nextEngineCycle?.previewRevision !== 1 || (!!S.store.activeGymId && eq(c.nextEngineCycle?.baseConfig?.equipment) !== eq(activeGymEquipment()));
+}
+/* App.js upgradeAdaptiveCycle: rebuild the blocks after the current one as adaptive for this gym. The current block
+   and every logged workout stay exactly as they are. */
+export function refreshCycle({ id }) {
+    const c = cycles().find((x) => x.id === id); if (!c) return { ok: false, error: 'That cycle no longer exists.' };
+    try {
+        const future = new Set(c.blockIds.slice(Number(c.activeBlock) + 1));
+        if ([...future].some((bid) => S.store.drafts?.[bid])) throw new Error('Save or discard future-block drafts before refreshing previews.');
+        const r = E.refreshAdaptiveCyclePreviews({ cycle: c, saved: saved(), history: history(), equipment: activeGymEquipment(), banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid });
+        const byId = new Map(r.blocks.map((p) => [p.id, p]));
+        const nextSaved = saved().map((p) => byId.get(p.id) || p);
+        requireCompleteCycleShell(r.cycle, nextSaved, { expectedCycleId: c.id });
+        setList('saved', nextSaved); setList('cycles', cycles().map((x) => (x.id === id ? r.cycle : x))); markStore();
+        return { ok: true, blocks: r.blocks.length };
+    } catch (err) { return { ok: false, error: String(err?.message || 'Unable to refresh the cycle. Nothing was changed.') }; }
+}
 /* App.js buildCycle. */
-export function createCycle({ config, templateId, blocks, adapt = false } = {}) {
+export function createCycle({ config, templateId, blocks, adapt = false, adaptSplit = false } = {}) {
     const cfg = programConfig(config);
     const tmplId = templateId || E.nextCycleTemplatesForShell()[0]?.id || 'powerbuilding';
     try {
-        const built = E.generateNextCycleForShell({ templateId: tmplId, blocks: tmplId === 'custom' ? blocks : undefined, config: cfg, banned: S.store.banned || [], legacyExercises: EXERCISES, adaptBetweenBlocks: !!adapt, makeId: E.uid });
+        const built = E.generateNextCycleForShell({ templateId: tmplId, blocks: tmplId === 'custom' ? blocks : undefined, config: cfg, banned: S.store.banned || [], legacyExercises: EXERCISES, adaptBetweenBlocks: !!adapt, adaptTrainingSplit: !!adapt && !!adaptSplit, makeId: E.uid });
         const cycle = built?.cycle; const progs = Array.isArray(built?.blocks) ? built.blocks : [];
         const { meta, ids } = requireCompleteCycleShell(cycle, progs);
         if (progs.length !== ids.length || progs.some((b, i) => !b?.id || ids[i] !== b.id)) throw new CycleError('The cycle builder returned an incomplete cycle. Nothing was saved.');
@@ -2477,17 +2512,32 @@ export function editCycle({ id, name, blocks, adapt } = {}) {
     markStore();
     return { ok: true, name: cy.name, blocks: cy.blockIds.length };
 }
-/* App.js confirmCycleConversion (Pursuit programs): the design's "Turn into training cycle". The program stays as
-   block 1, untouched; the blocks after it are built from it. */
-export function convertToCycle({ programId, templateId = 'custom', name, blocks, adapt = true } = {}) {
+/* App.js confirmCycleConversion: the design's "Turn into training cycle". The program stays as block 1; the blocks
+   after it are built from it. A Pursuit program converts through its engine snapshot; any other program (your own
+   build, a template, an older or imported one) goes the web app's standalone route: the cycle is generated from the
+   program's own config and the program is merged in as its first block. Both build for the gym you're in. */
+export function convertToCycle({ programId, templateId = 'custom', name, blocks, adapt = true, adaptSplit = false } = {}) {
     const p = programById(programId); if (!p) return { ok: false, error: 'That program is no longer in your library.' };
     if (S.live) return { ok: false, error: 'Finish or discard the workout in progress first.' };
+    if (p.cycleId) return { ok: false, error: 'That program already belongs to a training cycle.' };
+    if (p.config?.endless) return { ok: false, error: 'Endless programs have no block boundary. Set a fixed length in Program settings first.' };
+    if (!p.days?.some((d) => d.exercises?.length)) return { ok: false, error: 'Add lifts to this program before turning it into a cycle.' };
+    const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId), gym = E.gymById(g.gyms, g.activeGymId);
+    const equipment = gym?.equipment?.length ? gym.equipment : (p.config?.equipment?.length ? p.config.equipment : E.ALL_EQUIP_IDS);
+    const nm = name || `${p.name} cycle`;
     try {
-        if (p.engineSource !== 'pursuit-next' || !p.nextEngine) throw new CycleError('This older program can\'t become a cycle. Build a new cycle instead.');
-        const built = E.convertProgramToNextCycleForShell({ program: p, templateId, name: name || `${p.name} cycle`, blocks, adaptBetweenBlocks: !!adapt, adaptTrainingSplit: false,
-            banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid });
+        const built = (p.engineSource === 'pursuit-next' && p.nextEngine?.program)
+            ? E.convertProgramToNextCycleForShell({ program: p, templateId, name: nm, blocks, adaptBetweenBlocks: !!adapt, adaptTrainingSplit: !!adaptSplit,
+                equipment: [...equipment], banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid })
+            : E.mergeStandaloneIntoGeneratedCycle(p, E.generateNextCycleForShell({
+                templateId, blocks, existingBlockWeeks: templateId === 'custom' ? E.programWorkingWeeks(p) : undefined,
+                config: { ...E.cycleConfigForStandaloneProgram(p, nm), equipment: [...equipment] },
+                previousShell: p, replaceEntryWithPreviousShell: templateId !== 'custom',
+                banned: S.store.banned || [], legacyExercises: EXERCISES, adaptBetweenBlocks: !!adapt, adaptTrainingSplit: !!adaptSplit, makeId: E.uid }),
+                { appendAll: templateId === 'custom' });
         requireCompleteCycleShell(built.cycle, built.allBlocks);
-        built.cycle.generationRoute = E.GENERATION_ROUTE; built.currentProgram.generationRoute = E.GENERATION_ROUTE;
+        built.cycle.generationRoute = E.GENERATION_ROUTE;
+        if (built.currentProgram.engineSource === 'pursuit-next') built.currentProgram.generationRoute = E.GENERATION_ROUTE;
         built.blocks.forEach((b) => { b.generationRoute = E.GENERATION_ROUTE; });
         const fut = new Set(built.blocks.map((b) => b.id));
         setList('saved', [...saved().filter((x) => !fut.has(x.id)).map((x) => (x.id === p.id ? built.currentProgram : x)), ...built.blocks]);
@@ -2544,6 +2594,13 @@ export function reviewBlock({ id, index }) {
         stronger: lifts.filter((l) => l.state === 'progressed').length, judged: lifts.filter((l) => l.state !== 'thin').length };
 }
 /* App.js startNextBlock for a standalone program (cycle blocks advance through their cycle). */
+function ownNextBlock(p) {
+    const np = JSON.parse(JSON.stringify(p));
+    np.id = 'p-' + E.uid(); np.createdAt = now();
+    delete np.buildOwn; delete np.cycleId; delete np.blockIndex; delete np.edited;
+    delete np.nextWeekPrescriptions; delete np.plateauChoices; delete np.layoutHistory; delete np.revisions;
+    return np;
+}
 export function nextBlock({ programId }) {
     const p = programById(programId); if (!p) return { ok: false, error: 'That program no longer exists.' };
     const owner = p.cycleId ? cycles().find((c) => c.id === p.cycleId) : null;
@@ -2551,13 +2608,16 @@ export function nextBlock({ programId }) {
     try {
         let np;
         if (p.engineSource === 'pursuit-next') np = E.generateNextBlockFromShellHistory({ program: p, history: history(), legacyExercises: EXERCISES, makeId: E.uid }).program;
+        // Your own program (custom split) has no generator to rebuild it from: the next block carries your days and
+        // lifts forward as a fresh block (week 1), and each lift keeps progressing from what you logged.
+        else if (p.config?.split === 'custom') np = ownNextBlock(p);
         else np = E.generateNextProgramForShell({ config: p.config, banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: E.uid }).program;
         np = E.carryTrainingMaxes(p, np, history(), unit()); // the next cycle keeps working from training maxes, moved by the last AMRAP
         const m = (p.name || '').match(/^(.*?)\s*·\s*Block\s*(\d+)\s*$/);
         np.name = m ? `${m[1]} · Block ${Number(m[2]) + 1}` : `${p.name} · Block 2`;
         np.folder = p.folder; np.description = p.description; np.generationRoute = E.GENERATION_ROUTE;
         setList('saved', [...saved(), np]); S.store.pinnedId = np.id; markStore();
-        return { ok: true, programId: np.id, name: np.name };
+        return { ok: true, programId: np.id, name: np.name, own: p.config?.split === 'custom' };
     } catch (err) { return cycleFail(err, 'The next block could not be created safely. Your current program is unchanged.'); }
 }
 

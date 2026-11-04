@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -107,6 +108,11 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
     var confirmLeave by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var review by remember { mutableStateOf<Int?>(null) }
+    // Turning a program into a cycle: the same two choices as the web app's conversion sheet.
+    var convAdapt by remember { mutableStateOf(true) }
+    var convAdaptSplit by remember { mutableStateOf(false) }
+    var iconOpen by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val c = d
     val converting = cycleId == null
 
@@ -168,7 +174,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                 FilledTonalButton(onClick = { if (converting) discardConv() else editing = false }, modifier = Modifier.weight(1f).height(54.dp)) { Text("Cancel", fontWeight = FontWeight.Bold) }
                 Button(onClick = {
                     val fut = JSONArray(); blocks.filter { !it.fixed }.forEach { b -> fut.put(JSONObject().put("phase", b.phase).put("weeks", b.weeks).put("label", b.label ?: PHASE_NAMES[b.phase])) }
-                    if (converting) { val pid = programId ?: p.s("programId"); vm.convertToCycle(pid, name.trim(), fut, true) { newId -> cycleId = newId; editing = false } }
+                    if (converting) { val pid = programId ?: p.s("programId"); vm.convertToCycle(pid, name.trim(), fut, convAdapt, convAdapt && convAdaptSplit) { newId -> cycleId = newId; editing = false } }
                     else c?.let { cc ->
                         val orig = cc.list("blocks").filter { it.s("state") == "upcoming" }.map { Triple(it.s("phase"), it.i("weeks"), it.s("label")) }
                         val now = blocks.filter { !it.fixed }.map { Triple(it.phase, it.weeks, it.label ?: PHASE_NAMES[it.phase] ?: "") }
@@ -195,7 +201,8 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
         }
         if (!editing && c == null) return@DesignPage
         if (!editing && c != null) Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            IconTile(c.o("icon"), 56.dp)
+            // The cycle's icon, as on the web's Cycle options: tap to change it.
+            Box(Modifier.clip(RoundedCornerShape(18.dp)).clickable { iconOpen = true }.semantics { role = Role.Button; contentDescription = "Change cycle icon" }) { IconTile(c.o("icon"), 56.dp) }
             Column(Modifier.weight(1f)) {
                 Text(c.s("name"), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold))
                 Text(blocks.joinToString(" → ") { it.label ?: PHASE_NAMES[it.phase].orEmpty() }, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), modifier = Modifier.padding(top = 2.dp))
@@ -232,6 +239,10 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                 }
             }
             Text("A template replaces the blocks after this one. The block you’re in keeps running.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+            if (converting) {
+                ConvSwitch("Adapt exercises between blocks", "Real block history may change compatible exercises at the next phase while protecting successful lifts. Off: your exercises carry on and only the prescription changes.", convAdapt) { convAdapt = it }
+                if (convAdapt) ConvSwitch("Adapt training split", "Compare safe weekly structures for each block’s goal. Your training days and session limits are kept.", convAdaptSplit) { convAdaptSplit = it }
+            }
         }
         // Strip: each block's share of the cycle; the current one fills to this week.
         Row(Modifier.fillMaxWidth().semantics { contentDescription = blocks.joinToString(" → ") { it.label ?: PHASE_NAMES[it.phase].orEmpty() } }, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -272,7 +283,10 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                     Text(info.third, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = fg.copy(alpha = 0.85f))
                     if (!editing && b.state == "upcoming" && b.id != null) {
                         val open = preview == k
-                        Box(Modifier.height(36.dp).clip(CircleShape).border(1.5.dp, cs.outlineVariant, CircleShape).clickable { preview = if (open) null else k }
+                        // App.js openCycleBlock: an adaptive cycle built for other equipment refreshes its future previews first.
+                        Box(Modifier.height(36.dp).clip(CircleShape).border(1.5.dp, cs.outlineVariant, CircleShape).clickable {
+                            if (!open && c?.b("needsRefresh") == true) scope.launch { val cid = c!!.s("id"); if (vm.refreshCycle(cid, quiet = true)) { d = vm.cycleDetail(cid); preview = k } }
+                            else preview = if (open) null else k }
                             .semantics { role = Role.Button; stateDescription = if (open) "Expanded" else "Collapsed" }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                             Text(if (open) "Hide week 1" else "Preview week 1", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = fg)
                         }
@@ -340,12 +354,16 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                 Text(if (adapt) "The next block reads this one’s workouts: lifts that responded stay, stalled ones may get a fresh variation."
                     else "Each block keeps today’s exercises; only the prescription changes for its phase.",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+                if (c.b("canRefresh")) OutlinedButton(onClick = { scope.launch { if (vm.refreshCycle(c.s("id"))) d = vm.cycleDetail(c.s("id")) } }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                    Text(c.s("refreshLabel"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = cs.onSurface)
+                }
                 OutlinedButton(onClick = { confirmEnd = true }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("End this block early", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = cs.onSurface) }
                 TextButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Leave the cycle", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = cs.onTertiaryContainer) }
             } else OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Delete cycle", fontWeight = FontWeight.Bold) }
         }
     }
     review?.let { idx -> BlockReviewSheet(vm, cycleId ?: return@let, idx) { review = null } }
+    if (iconOpen && cycleId != null) IconPickerSheet(vm, cycleId!!) { iconOpen = false; scope.launch { d = cycleId?.let { vm.cycleDetail(it) } } }
     if (confirmEnd && c != null) {
         val cur = blocks.getOrNull(actIdx)
         AlertDialog(onDismissRequest = { confirmEnd = false }, title = { Text("End this block now?") },
@@ -387,3 +405,17 @@ private fun IconBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc:
         Icon(icon, null, Modifier.size(18.dp))
     }
 
+
+
+@Composable
+private fun ConvSwitch(title: String, sub: String, on: Boolean, onChange: (Boolean) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold))
+            Text(sub, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+        }
+        androidx.compose.material3.Switch(on, onChange, modifier = Modifier.semantics { contentDescription = title })
+    }
+}

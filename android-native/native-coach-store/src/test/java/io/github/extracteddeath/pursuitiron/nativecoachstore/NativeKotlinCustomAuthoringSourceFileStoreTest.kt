@@ -143,4 +143,16 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
             store().publish("owner-1",0,bad))
         assertEquals(NativeAuthoringSourceRead.Missing,store().read("owner-1"))
     }
+    @Test fun fakeReviewedProfileCannotBePersistedAsValidGymSnapshot() {
+        val valid=source()
+        val reviewed=checkNotNull(valid.setup.reviewed)
+        val forged=valid.copy(setup=AthleteSetupReview(
+            AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,emptyList(),
+            reviewed.copy(trainingWeekdays=setOf(0,9))))
+        assertEquals(NativeAuthoringSourceWrite.Rejected(
+            NativeAuthoringSourceRefusal.INVALID_SOURCE),
+            store().publish("owner-1",0,forged))
+        assertEquals(NativeAuthoringSourceRead.Missing,store().read("owner-1"))
+    }
+
 }

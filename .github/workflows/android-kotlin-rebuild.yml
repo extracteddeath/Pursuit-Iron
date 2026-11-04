@@ -8,6 +8,7 @@ on:
       - 'android-native/native-coach-store/**'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/AppPrivateKotlinLocalAthlete.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt'
+      - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCustomCycle*.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinSessionController.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinWorkoutCandidateScreen.kt'
       - 'android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/PursuitIronApplication.kt'

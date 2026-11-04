@@ -317,23 +317,17 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 ComposerSessionPurpose.entries.filter {
                                     it != ComposerSessionPurpose.UNSPECIFIED
                                 }, purpose, ::pretty) { purpose = it }
-                            Text("Save the name and purpose individually. Existing sets are never silently rewritten.",
+                            Text("Both fields save together. Existing exercise slots, week overrides and prescribed sets stay unchanged.",
                                 style = MaterialTheme.typography.bodySmall)
                         }
                     },
                     confirmButton = {
-                        Column {
-                            TextButton(onClick = {
-                                controller.renameDay(blockId, weekday, label.trim())
-                                editingDay = null
-                            }, enabled = !busy && label.isNotBlank() &&
-                                label != day.label) { Text("Save name") }
-                            TextButton(onClick = {
-                                controller.changeDayPurpose(blockId, weekday, purpose)
-                                editingDay = null
-                            }, enabled = !busy && purpose != day.purpose) {
-                                Text("Save purpose")
-                            }
+                        Button(onClick = {
+                            controller.editDay(blockId, weekday, label.trim(), purpose)
+                            editingDay = null
+                        }, enabled = !busy && label.isNotBlank() &&
+                            (label != day.label || purpose != day.purpose)) {
+                            Text("Save day")
                         }
                     },
                     dismissButton = { TextButton(onClick = { editingDay = null }) {

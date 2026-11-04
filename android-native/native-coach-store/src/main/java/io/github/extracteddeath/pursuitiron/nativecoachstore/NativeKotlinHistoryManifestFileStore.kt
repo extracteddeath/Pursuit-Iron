@@ -86,9 +86,10 @@ sealed interface NativeHistoryLedgerResult {
 
 private object NativeHistoryLedgerBinary {
     private const val MAGIC = 0x50494831 // PIH1
-    private const val VERSION = 1
-    const val MAX_SESSIONS = 128
-    private const val MAX_BYTES = 96_000
+    private const val LEGACY_VERSION = 1
+    private const val VERSION = 2
+    const val MAX_SESSIONS = KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS
+    private const val MAX_BYTES = KotlinHistoryCapacityPolicy.MAX_LEDGER_BYTES
     private val validId = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private const val MAX_REV = 9_007_199_254_740_991L
 
@@ -262,13 +263,18 @@ private object NativeHistoryLedgerBinary {
             if (!MessageDigest.isEqual(hash(bytes), expected))
                 throw IOException("ledger checksum mismatch")
             return DataInputStream(ByteArrayInputStream(bytes)).use { data ->
-                if (data.readInt() != MAGIC || data.readInt() != VERSION)
-                    throw IOException("unsupported ledger")
+                if (data.readInt() != MAGIC) throw IOException("unsupported ledger magic")
+                val format = data.readInt()
+                if (format != LEGACY_VERSION && format != VERSION)
+                    throw IOException("unsupported ledger version")
                 val owner = data.readUTF()
                 val athlete = data.readUTF()
                 val revision = data.readLong()
                 val count = data.readInt()
-                if (count !in 0..MAX_SESSIONS) throw IOException("invalid count")
+                val maximum = if (format == LEGACY_VERSION)
+                    KotlinHistoryCapacityPolicy.LEGACY_FORMAT_MAX_COMPLETIONS
+                else MAX_SESSIONS
+                if (count !in 0..maximum) throw IOException("invalid count")
                 val entries = (0 until count).map {
                     KotlinHistoryManifestEntry(
                         data.readLong(), data.readUTF(), data.readUTF(),
@@ -378,7 +384,8 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
         if (!Files.exists(file)) return NativeHistoryLedgerResult.Rejected(
             NativeHistoryLedgerRefusal.NOT_ENROLLED)
         return try {
-            if (Files.size(file) > 96_000L) throw IOException("oversize history")
+            if (Files.size(file) > KotlinHistoryCapacityPolicy.MAX_LEDGER_BYTES.toLong())
+                throw IOException("oversize history")
             NativeHistoryLedgerResult.Durable(
                 NativeHistoryLedgerBinary.decode(Files.readAllBytes(file)))
         } catch (_: Exception) {

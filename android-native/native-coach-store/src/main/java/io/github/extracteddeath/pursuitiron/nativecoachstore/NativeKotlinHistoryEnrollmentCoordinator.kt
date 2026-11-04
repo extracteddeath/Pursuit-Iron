@@ -99,7 +99,8 @@ class NativeKotlinHistoryEnrollmentCoordinator(
 
         // An explicitly ordered empty list is valid ONLY when the physical
         // inventory confirms that no completed Kotlin journal exists.
-        if (chronology.size > 128 || chronology.any { !id.matches(it) } ||
+        if (chronology.size > KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS ||
+            chronology.any { !id.matches(it) } ||
             chronology.distinct().size != chronology.size)
             return denied(NativeHistoryEnrollmentRefusal.INCOMPLETE_OR_DUPLICATE_CHRONOLOGY)
 

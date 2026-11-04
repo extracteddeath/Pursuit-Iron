@@ -84,7 +84,8 @@ class NativeKotlinGlobalHistoryReadCoordinator(
             manifestAuthority.currentHistoryManifest(ownerKey, athleteId)
         }.getOrNull() ?: return denied(NativeKotlinHistoryReadRefusal.NOT_AUTHORIZED)
         if (manifest.ownerKey != ownerKey || manifest.athleteId != athleteId ||
-            manifest.revision < 1 || manifest.completions.size > 128)
+            manifest.revision < 1 ||
+            manifest.completions.size > KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS)
             return denied(NativeKotlinHistoryReadRefusal.NOT_AUTHORIZED)
         val frozen = manifest.copy(completions = manifest.completions.toList())
         val recovered = ArrayList<KotlinChronologicalWorkout>(

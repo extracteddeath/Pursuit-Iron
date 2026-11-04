@@ -157,7 +157,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
             return rejected(NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION)
         if (!ledger.readyForHistoryReads ||
             ledger.ownerKey != owner || ledger.athleteId != athlete ||
-            ledger.revision < 1 || ledger.completions.size > 128 ||
+            ledger.revision < 1 ||
+            ledger.completions.size > KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS ||
             ledger.completions.map { it.workoutId }.distinct().size !=
                 ledger.completions.size ||
             ledger.completions.withIndex().any { (index, item) ->

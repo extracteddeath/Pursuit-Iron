@@ -70,7 +70,7 @@ object KotlinProgressionTimelineDomain {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val zero = BigDecimal.ZERO
     private val maxStep = BigDecimal("100000")
-    private const val MAX_COMPLETIONS = 128
+    private const val MAX_COMPLETIONS = KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS
 
     fun review(request: KotlinProgressionTimelineRequest): KotlinProgressionTimelineReview {
         fun rejected(

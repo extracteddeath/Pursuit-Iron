@@ -89,7 +89,7 @@ sealed interface KotlinGlobalHistoryResult {
 
 object KotlinGlobalHistoryIndexDomain {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private const val MAX_SESSIONS = 128
+    private const val MAX_SESSIONS = KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS
     private const val MAX_REVISION = 9_007_199_254_740_991L
 
     private fun canonical(value: BigDecimal): BigDecimal =

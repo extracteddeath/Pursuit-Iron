@@ -66,6 +66,33 @@ internal class NativeKotlinGymSourceController(
     }
     fun open()=run {load()}
 
+    /**
+     * ONLY a direct first-time native onboarding confirmation may call this.
+     * Review all explicit athlete facts again, activate the matching local
+     * athlete and publish the provisional curated catalog with no guessed stock.
+     */
+    fun activateReviewedStarter(draft:AthleteSetupDraft) = run {
+        val reviewed=host.reviewSetup(draft)
+        if(reviewed.status!=AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW) {
+            current.value=current.value.copy(
+                message="Native athlete or gym setup is incomplete. Resolve review issues before enrollment.",
+                refusal=NativeAuthoringSourceRefusal.INVALID_SOURCE)
+            return@run
+        }
+        when(val result=host.activateReviewedStarterAuthoringSource(draft)) {
+            is NativeAuthoringSourceWrite.Committed ->
+                load("Native reviewed athlete and provisional starter catalog saved · revision ${result.revision}. Confirm physical equipment before selecting loaded exercises.")
+            is NativeAuthoringSourceWrite.Rejected -> {
+                load()
+                current.value=current.value.copy(
+                    refusal=result.reason,
+                    message="Initial native setup not published: ${result.reason.name.replace('_',' ').lowercase()}. Existing source was not overwritten.")
+            }
+        }
+    }
+
+
+
     private fun change(
         operation:(Long)->NativeAuthoringSourceWrite
     )=run {

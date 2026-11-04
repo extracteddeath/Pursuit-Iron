@@ -63,7 +63,9 @@ class NativeKotlinMixedHistoryReadCoordinator(
     private val customStore: NativeKotlinCustomWorkoutJournalFileStore,
     private val workoutAuthority: NativeKotlinWorkoutAuthority,
     private val identity: NativeKotlinCurrentIdentity,
-    private val fence: NativeKotlinApprovalRevisionFence
+    private val fence: NativeKotlinApprovalRevisionFence,
+    /** Null means custom saved edits remain deliberately unavailable. */
+    private val customCorrections: NativeKotlinCustomSavedCorrectionFileStore? = null
 ) {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -122,8 +124,6 @@ class NativeKotlinMixedHistoryReadCoordinator(
             ledger.completions.size)
         for (entry in ledger.completions) {
             if (entry.storedReceiptId.startsWith("custom-")) {
-                if (entry.savedCorrectionRevision != 0L)
-                    return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM)
                 val stored = customStore.open(owner, entry.workoutId)
                 val journal = (stored as? NativeCustomJournalResult.Durable)
                     ?.issued?.journal
@@ -135,10 +135,27 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     NativeCustomFinishReceipt.compute(owner, athlete, journal) !=
                         entry.storedReceiptId)
                     return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM)
-                val projection = CustomWorkoutHistoryEvidenceDomain.project(journal)
-                val evidence = (projection as? CustomHistoryEvidenceResult.Candidate)
-                    ?.evidence ?: return rejected(
-                        NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM)
+                val edits = customCorrections?.open(owner, entry.workoutId)
+                if (edits != null && edits !is NativeCustomSavedCorrectionResult.Opened)
+                    return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM)
+                val currentEdits = edits as? NativeCustomSavedCorrectionResult.Opened
+                if ((currentEdits == null && entry.savedCorrectionRevision != 0L) ||
+                    (currentEdits != null &&
+                        (currentEdits.state.originalFinishedJournal != journal ||
+                         currentEdits.state.correctionRevision !=
+                            entry.savedCorrectionRevision ||
+                         currentEdits.hasCorrectionFile !=
+                            (entry.savedCorrectionRevision > 0))))
+                    return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM)
+                val evidence = if (entry.savedCorrectionRevision > 0L) {
+                    val projected = CustomSavedHistoryEvidenceDomain.projectSaved(
+                        checkNotNull(currentEdits).state)
+                    (projected as? CustomSavedHistoryProjectionResult.Candidate)
+                        ?.corrected?.evidence
+                } else {
+                    (CustomWorkoutHistoryEvidenceDomain.project(journal)
+                        as? CustomHistoryEvidenceResult.Candidate)?.evidence
+                } ?: return rejected(NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM)
                 values.add(NativeKotlinMixedHistoryCompletion.Custom(entry, evidence))
             } else {
                 val access: (String, KotlinTrainingSourceRevision) -> Boolean =

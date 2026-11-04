@@ -1083,3 +1083,60 @@ enrollment/migration, long-lived history storage beyond the current
 128-completion test limit, approved native program authority, full
 Compose UX parity, PR policy and additional crash tests before an
 APK or eventual JavaScript engine retirement.
+
+
+## Native-history enrollment: exhaustive, fail-closed, no JS import
+
+`NativeKotlinHistoryEnrollmentCoordinator.enrollNativeOnly` is now the
+production-shaped entrypoint to enroll **already persisted Kotlin-native**
+workouts in the versioned native history manifest. It is not a JavaScript
+backup converter and does not assume a newly enrolled user has no workouts.
+It holds the existing per-owner transaction fence and requires two
+independent facts from the *trusted* current account/migration owner:
+
+- Authentication of the current owner/athlete; **and**
+- A checked declaration that there is no unimported legacy history for that
+  athlete. Unknown legacy status, failure or exception blocks enrollment.
+
+The native journal store now scans **every** private Kotlin journal file,
+including unfinished workouts, and replays the immutable issued snapshot
+plus all journal receipts. Filenames must match the exact owner/workout
+digest; symlinks, malformed/corrupt/oversized records, wrong athlete,
+unapproved stored owners, and leftover incomplete write artifacts block
+the entire scan. The saved-correction store independently inventories
+**every** correction file, checks its filename binding, checksum and
+owner, and refuses orphaned or malformed correction data. Corrupt foreign
+files also prevent a supposedly complete global inventory rather than
+being silently ignored. Neither inventory uses an arbitrary UI list of
+selected workouts as its scope.
+
+For finished Kotlin sessions, the caller must additionally supply
+authenticated **chronological** workout IDs from a separate owner-controlled
+history/migration source: original journal envelopes do not encode a
+reliable completion ordinal. The supplied list must exactly equal the
+set of verified finished workout IDs, with no omissions or duplicates.
+Each edited workout is independently opened, every saved-correction
+receipt replayed against the original journal, and the full ordered
+chronology is revalidated by `KotlinGlobalHistoryIndexDomain`.
+
+Only after those checks does the store atomically enroll the complete
+manifest with the original Finish identity and correction revision for
+each completion. An existing non-identical manifest, even a previously
+created empty one, is never overwritten; an identical retry is
+idempotent. The older unverified empty-enrollment methods have been
+restricted to **internal test/source seams** and are not callable from
+the Android app module. The Compose candidate remains blocked without
+a separately approved migration/enrollment flow.
+
+**Unfinished migration work and release gates:** the native-only enrollment
+port deliberately refuses any athlete with unresolved existing JS/web
+history. Production needs a properly audited source-to-Kotlin migration,
+with accurate original set outcomes, loads, RIR, exercise IDs, units,
+physical load basis, chronological completion order and corrected history;
+a backup/export reconciliation; and tests for interrupted imports and
+cross-device history. It cannot truthfully claim a complete legacy import
+just because a UI checkbox or callback returns true. The bounded
+128-completion manifest and index remain an explicit lifetime-history
+blocker, along with authoritative signed-in account enforcement and
+the full user-facing coach/Compose experience. No JS fallback, live
+workout authority switch, or APK release is authorized by this pass.

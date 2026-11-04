@@ -28,8 +28,18 @@ internal data class NativeKotlinCustomCycleState(
     val canUndo: Boolean = false
 )
 
+/**
+ * Source must be supplied by a future trusted native gym/catalog owner.
+ * No default stock, exercise inventory or legacy JS fallback is fabricated.
+ * The picker is therefore intentionally empty until this is integrated.
+ */
+internal fun interface NativeKotlinCustomAuthoringSource {
+    fun snapshot(): Pair<AthleteSetupReview, List<CatalogMovement>>?
+}
+
 internal class NativeKotlinCustomCycleController(
-    private val host: NativeKotlinCandidateHost
+    private val host: NativeKotlinCandidateHost,
+    private val authoringSource: NativeKotlinCustomAuthoringSource? = null
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val pending = AtomicBoolean(false)
@@ -132,6 +142,71 @@ internal class NativeKotlinCustomCycleController(
                 }
             }
         }
+    }
+
+    /** Read-only options; absent trusted gym/catalog means NO made-up choices. */
+    fun availableExerciseChoices(): List<CustomExercisePickerOption> {
+        val source = runCatching { authoringSource?.snapshot() }.getOrNull()
+            ?: return emptyList()
+        val draft = current.value.draft ?: return emptyList()
+        if (source.first.reviewed?.athleteProfileId != draft.athleteId)
+            return emptyList()
+        return CustomExerciseAuthoringDomain.picker(source.first, source.second)
+    }
+
+    private fun editReviewed(
+        command: (CustomTrainingCycle, AthleteSetupReview,
+            List<CatalogMovement>) -> CustomAuthoringResult
+    ) {
+        val source = runCatching { authoringSource?.snapshot() }.getOrNull()
+        if (source == null) {
+            current.value = current.value.copy(
+                message = "Verified native gym and exercise catalog are required before editing exercise prescriptions.")
+            return
+        }
+        edit { draft ->
+            when (val reviewed = command(draft, source.first, source.second)) {
+                is CustomAuthoringResult.Accepted -> reviewed.proposal
+                is CustomAuthoringResult.Rejected -> {
+                    current.value = current.value.copy(
+                        message = "Exercise edit refused: ${reviewed.reason.name.replace('_', ' ').lowercase()}.")
+                    CustomCycleBuilderResult.Rejected(
+                        CustomCycleBuilderRefusal.INVALID_INPUT)
+                }
+            }
+        }
+    }
+
+    fun addReviewedExercise(
+        blockId: String, weekday: Int, exerciseId: String,
+        sets: List<CustomAuthoredSet>, coachNote: String = ""
+    ) = editReviewed { draft, setup, catalog ->
+        val selected = CustomExerciseAuthoringDomain.picker(
+            setup, catalog).firstOrNull { it.exerciseId == exerciseId }
+        if (selected == null)
+            CustomAuthoringResult.Rejected(
+                CustomAuthoringRefusal.EXERCISE_UNAVAILABLE)
+        else {
+            val slot = CustomExerciseSlot(
+                slotId = "slot-" + UUID.randomUUID().toString().replace("-", ""),
+                exerciseId = selected.exerciseId,
+                role = catalog.first { it.exerciseId == exerciseId }.role,
+                sets = sets,
+                attachmentId = selected.attachmentId,
+                pinned = true,
+                coachNote = coachNote
+            )
+            CustomExerciseAuthoringDomain.addSelected(
+                draft, draft.revision, blockId, weekday, slot, setup, catalog)
+        }
+    }
+
+    fun editReviewedExerciseSets(
+        blockId: String, weekday: Int, slotId: String,
+        sets: List<CustomAuthoredSet>
+    ) = editReviewed { draft, setup, catalog ->
+        CustomExerciseAuthoringDomain.replaceSelectedSets(
+            draft, draft.revision, blockId, weekday, slotId, sets, setup, catalog)
     }
 
     fun editMetadata(title: String, note: String) = edit { draft ->

@@ -40,6 +40,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
+    private val customIssuedStore=NativeKotlinCustomWorkoutJournalFileStore(
+        root,revisionFence,localAthlete,customPreparedStore,
+        customWorkoutPreflight,historyStore,journalStore)
     private val coordinator=NativeKotlinWorkoutCoordinator(
         journalStore,approvalStore,revisionFence)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
@@ -162,6 +165,41 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomPreflightRefusal.NOT_AUTHORIZED)
         return customWorkoutPreflight.inspect(owner.ownerKey,cycleId,
             absoluteWeek,weekday,inputs)
+    }
+
+    /**
+     * Candidate-only Kotlin CUSTOM workout issuance. First issue requires
+     * authenticated, enrolled history, exact durable prepared targets and
+     * CURRENT coach-reviewed consent. A prepared preview by itself cannot
+     * issue, log or finish a workout.
+     */
+    fun issueReviewedCustomWorkout(
+        workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.issue(owner.ownerKey,workoutId,cycleId,
+            absoluteWeek,weekday,inputs)
+    }
+
+    /** Past committed prescriptions remain independently cold-recoverable. */
+    fun openIssuedCustomWorkout(workoutId:String):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.open(owner.ownerKey,workoutId)
+    }
+
+    /** Actual observations, never suggestions or virtual completed sets. */
+    fun recordIssuedCustomSet(
+        workoutId:String,operation:CustomWorkoutJournalOperation.Record
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.record(owner.ownerKey,workoutId,operation)
     }
 
     /**

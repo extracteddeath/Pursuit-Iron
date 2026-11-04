@@ -177,7 +177,7 @@ object NativeKotlinGymCatalogEditingDomain {
                 move.equipmentId!=null && move.expectedLoadBasis==null ||
                 move.creditStatus!=CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL ||
                 move.creditReviewReference.isNullOrBlank() ||
-                !id.matches(move.creditReviewReference) ||
+                move.creditReviewReference?.let{id.matches(it)} != true ||
                 move.credits.isEmpty() ||
                 move.credits.size>TrainingMuscle.entries.size ||
                 move.credits.map{it.muscle}.distinct().size!=move.credits.size ||
@@ -191,10 +191,10 @@ object NativeKotlinGymCatalogEditingDomain {
                 (move.recoveryGroupId==null &&
                     move.minimumRecoveryGroupDayGap!=1) ||
                 (move.recoveryGroupId!=null && !id.matches(move.recoveryGroupId)) ||
-                (move.sourcePracticalReps!=null &&
-                    (move.sourcePracticalReps.minimum !in 1..100 ||
-                     move.sourcePracticalReps.maximum !in
-                        move.sourcePracticalReps.minimum..100))
+                (move.sourcePracticalReps?.let { reps ->
+                    reps.minimum !in 1..100 ||
+                        reps.maximum !in reps.minimum..100
+                } == true)
             })
             return NativeGymCatalogEdit.Rejected(
                 NativeGymCatalogEditRefusal.INVALID_CATALOG)

@@ -92,9 +92,93 @@ internal class NativeKotlinCandidateHost(context:Context) {
             reviewed.reviewed?.athleteProfileId!=owner.athleteId)
             return NativeAuthoringSourceWrite.Rejected(
                 NativeAuthoringSourceRefusal.INVALID_SOURCE)
-        return authoringSourceStore.publish(owner.ownerKey,expectedRevision,
-            NativeCustomAuthoringSnapshot(owner.ownerKey,owner.athleteId,
-                expectedRevision+1,reviewed,curatedCatalog))
+        val initial=NativeCustomAuthoringSnapshot(
+            owner.ownerKey,owner.athleteId,expectedRevision+1,
+            reviewed,curatedCatalog)
+        // Never publish a metadata-only legacy exercise list as an
+        // author-reviewed movement catalog with fabricated muscle credits.
+        if(NativeKotlinGymCatalogEditingDomain.replaceCuratedCatalog(
+                initial,initial.revision,curatedCatalog)
+            !is NativeGymCatalogEdit.Proposed)
+            return NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.INVALID_SOURCE)
+        return authoringSourceStore.publish(
+            owner.ownerKey,expectedRevision,initial)
+    }
+
+    /**
+     * The native gym editor changes exactly one inventory fact at a time.
+     * Read + source CAS together prevent silently overwriting another edit.
+     * An invalid athlete, gym or catalog proposal never touches the disk.
+     */
+    private fun editCustomAuthoringSource(
+        expectedRevision:Long,
+        operation:(NativeCustomAuthoringSnapshot)->NativeGymCatalogEdit
+    ):NativeAuthoringSourceWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+        if(expectedRevision < 1)
+            return NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.STALE_REVISION)
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(localAthlete.signedInIdentity()!=owner)
+                    return@withOwnerTransaction NativeAuthoringSourceWrite.Rejected(
+                        NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+                val existing=authoringSourceStore.read(owner.ownerKey)
+                val current=(existing as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction NativeAuthoringSourceWrite.Rejected(
+                        if(existing is NativeAuthoringSourceRead.Rejected &&
+                            existing.reason==NativeAuthoringSourceRefusal.CORRUPT_RECORD)
+                            NativeAuthoringSourceRefusal.CORRUPT_RECORD
+                        else NativeAuthoringSourceRefusal.STALE_REVISION)
+                if(current.revision!=expectedRevision ||
+                    current.athleteId!=owner.athleteId)
+                    return@withOwnerTransaction NativeAuthoringSourceWrite.Rejected(
+                        NativeAuthoringSourceRefusal.STALE_REVISION)
+                when(val edited=operation(current)) {
+                    is NativeGymCatalogEdit.Rejected ->
+                        NativeAuthoringSourceWrite.Rejected(
+                            NativeAuthoringSourceRefusal.INVALID_SOURCE)
+                    is NativeGymCatalogEdit.Proposed ->
+                        authoringSourceStore.publish(
+                            owner.ownerKey,expectedRevision,edited.source)
+                }
+            }
+        }.getOrElse {
+            NativeAuthoringSourceWrite.Rejected(
+                NativeAuthoringSourceRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    fun upsertNativeGymStock(
+        expectedRevision:Long,equipmentId:String,stock:VerifiedLoadStock
+    ):NativeAuthoringSourceWrite = editCustomAuthoringSource(expectedRevision) {
+        NativeKotlinGymCatalogEditingDomain.upsertStock(
+            it,expectedRevision,equipmentId,stock)
+    }
+
+    fun removeNativeGymStock(
+        expectedRevision:Long,equipmentId:String
+    ):NativeAuthoringSourceWrite = editCustomAuthoringSource(expectedRevision) {
+        NativeKotlinGymCatalogEditingDomain.removeStock(
+            it,expectedRevision,equipmentId)
+    }
+
+    fun updateNativeGymFixtures(
+        expectedRevision:Long,facilities:Set<String>,attachments:Set<String>
+    ):NativeAuthoringSourceWrite = editCustomAuthoringSource(expectedRevision) {
+        NativeKotlinGymCatalogEditingDomain.setFacilitiesAndAttachments(
+            it,expectedRevision,facilities,attachments)
+    }
+
+    /** Catalog metadata requires a human-reviewed provisional credit source. */
+    fun publishNativeCuratedCatalog(
+        expectedRevision:Long,catalog:List<CatalogMovement>
+    ):NativeAuthoringSourceWrite = editCustomAuthoringSource(expectedRevision) {
+        NativeKotlinGymCatalogEditingDomain.replaceCuratedCatalog(
+            it,expectedRevision,catalog)
     }
 
     fun revokeCustomAuthoringSource(

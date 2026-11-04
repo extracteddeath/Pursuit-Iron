@@ -295,7 +295,7 @@ class NativeKotlinSegmentedHistoryShadowStore(
                 it.readyForHistoryReads && it.revision in 1..MAX_REVISION &&
                 it.completions.size <= KotlinHistoryCapacityPolicy.MAX_MANIFEST_COMPLETIONS }
 
-    private fun <T> guarded(
+    private fun guarded(
         owner: String, athlete: String,
         work: () -> NativeSegmentedHistoryResult
     ): NativeSegmentedHistoryResult {

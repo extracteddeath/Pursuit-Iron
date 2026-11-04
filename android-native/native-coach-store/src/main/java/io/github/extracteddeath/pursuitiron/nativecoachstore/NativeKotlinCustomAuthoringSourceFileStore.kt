@@ -81,6 +81,9 @@ class NativeKotlinCustomAuthoringSourceFileStore(
             o.writeBoolean(record.snapshot != null)
             record.snapshot?.let {
                 val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(it)
+                // Independently re-review persisted athlete/gym input.
+                // Caller-supplied "READY" cannot forge accepted stock.
+                require(NativeKotlinCustomAuthoringSourceCodec.decode(bytes)==it)
                 o.writeInt(bytes.size);o.write(bytes)
             }
         }

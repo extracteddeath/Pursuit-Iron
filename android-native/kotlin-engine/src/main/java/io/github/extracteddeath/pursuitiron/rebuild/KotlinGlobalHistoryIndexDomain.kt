@@ -118,6 +118,59 @@ object KotlinGlobalHistoryIndexDomain {
             )
         }
 
+    private fun writeActual(out: DataOutputStream, actual: KotlinPerformedSet?) {
+        out.writeBoolean(actual != null)
+        if (actual == null) return
+        val load = actual.load
+        out.writeBoolean(load != null)
+        if (load != null) out.writeUTF(load.toPlainString())
+        val unit = actual.unit
+        out.writeBoolean(unit != null)
+        if (unit != null) out.writeUTF(unit.name)
+        out.writeInt(actual.reps)
+        val rir = actual.actualRir
+        out.writeBoolean(rir != null)
+        if (rir != null) out.writeInt(rir)
+    }
+
+    /**
+     * Source audit receipt values matter even if a newer correction replaces
+     * their effective result. A fixed event ID is not a contents checksum.
+     */
+    private fun writeOriginalReceipt(
+        out: DataOutputStream, receipt: KotlinJournalReceipt
+    ) {
+        out.writeLong(receipt.appliedRevision)
+        val operation = receipt.operation
+        out.writeUTF(operation.eventId)
+        out.writeLong(operation.expectedJournalRevision)
+        when (operation) {
+            is KotlinJournalOperation.Finish -> out.writeByte(1)
+            is KotlinJournalOperation.RecordSet -> {
+                out.writeByte(2)
+                out.writeUTF(operation.setKey)
+                out.writeUTF(operation.outcome.name)
+                val previous = operation.correctsEventId
+                out.writeBoolean(previous != null)
+                if (previous != null) out.writeUTF(previous)
+                writeActual(out, operation.performed)
+            }
+        }
+    }
+
+    private fun writeSavedCorrection(
+        out: DataOutputStream, receipt: KotlinSavedSetCorrectionReceipt
+    ) {
+        out.writeLong(receipt.appliedCorrectionRevision)
+        val correction = receipt.correction
+        out.writeUTF(correction.eventId)
+        out.writeLong(correction.expectedCorrectionRevision)
+        out.writeUTF(correction.setKey)
+        out.writeUTF(correction.correctsEventId)
+        out.writeUTF(correction.outcome.name)
+        writeActual(out, correction.actual)
+    }
+
     /**
      * This digest protects a transient projection against *accidental stale
      * cache reuse*. It is NOT a cryptographic signature or ownership proof.
@@ -150,17 +203,40 @@ object KotlinGlobalHistoryIndexDomain {
                 out.writeUTF(journal.snapshot.purpose.name)
                 out.writeInt(journal.snapshot.calendarDay)
                 out.writeInt(journal.snapshot.dayIndex)
+                out.writeLong(history.source.athleteRevision)
+                out.writeUTF(journal.snapshot.grantId)
+                out.writeLong(journal.snapshot.estimatedMinutes)
+                out.writeInt(journal.snapshot.targets.size)
+                for (target in journal.snapshot.targets) {
+                    out.writeUTF(target.exerciseId)
+                    out.writeUTF(target.setKey)
+                    out.writeUTF(target.type.name)
+                    out.writeUTF(target.role.name)
+                    out.writeUTF(target.purpose.name)
+                    out.writeInt(target.ordinal)
+                    when (val issued = target.load) {
+                        is DraftSetLoad.Verified -> {
+                            out.writeBoolean(true)
+                            out.writeUTF(issued.unit.name)
+                            out.writeUTF(issued.basis.name)
+                            out.writeUTF(issued.value.toPlainString())
+                        }
+                        DraftSetLoad.ExplicitBodyweight -> out.writeBoolean(false)
+                    }
+                    out.writeInt(target.reps.minimum)
+                    out.writeInt(target.reps.maximum)
+                    val targetRir = target.targetRir
+                    out.writeBoolean(targetRir != null)
+                    if (targetRir != null) out.writeInt(targetRir)
+                    out.writeInt(target.activeSeconds)
+                    out.writeInt(target.restSeconds)
+                }
                 out.writeInt(journal.receipts.size)
-                for (receipt in journal.receipts) {
-                    out.writeLong(receipt.appliedRevision)
-                    out.writeUTF(receipt.operation.eventId)
-                }
+                for (receipt in journal.receipts)
+                    writeOriginalReceipt(out, receipt)
                 out.writeInt(edits?.receipts?.size ?: 0)
-                for (receipt in edits?.receipts.orEmpty()) {
-                    out.writeLong(receipt.appliedCorrectionRevision)
-                    out.writeUTF(receipt.correction.eventId)
-                    out.writeUTF(receipt.correction.correctsEventId)
-                }
+                for (receipt in edits?.receipts.orEmpty())
+                    writeSavedCorrection(out, receipt)
                 out.writeInt(history.sets.size)
                 for (fact in history.sets) {
                     out.writeUTF(fact.exerciseId)
@@ -186,18 +262,7 @@ object KotlinGlobalHistoryIndexDomain {
                     val predecessor = fact.correctsEventId
                     out.writeBoolean(predecessor != null)
                     if (predecessor != null) out.writeUTF(predecessor)
-                    val actual = fact.actual
-                    out.writeBoolean(actual != null)
-                    if (actual != null) {
-                        out.writeBoolean(actual.load != null)
-                        if (actual.load != null) out.writeUTF(actual.load.toPlainString())
-                        out.writeBoolean(actual.unit != null)
-                        if (actual.unit != null) out.writeUTF(actual.unit.name)
-                        out.writeInt(actual.reps)
-                        val rir = actual.actualRir
-                        out.writeBoolean(rir != null)
-                        if (rir != null) out.writeInt(rir)
-                    }
+                    writeActual(out, fact.actual)
                 }
             }
         }

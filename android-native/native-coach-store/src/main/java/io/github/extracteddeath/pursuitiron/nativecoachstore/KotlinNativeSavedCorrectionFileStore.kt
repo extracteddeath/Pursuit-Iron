@@ -50,6 +50,16 @@ sealed interface NativeSavedCorrectionFileResult {
     ) : NativeSavedCorrectionFileResult
 }
 
+/**
+ * Identify every existing Kotlin saved-edit file before enrolling history.
+ * These identities still require independent original-journal replay.
+ */
+sealed interface NativeSavedCorrectionInventoryResult {
+    data class Verified(val workoutIds: Set<String>) :
+        NativeSavedCorrectionInventoryResult
+    data object Rejected : NativeSavedCorrectionInventoryResult
+}
+
 private data class SavedCorrectionEnvelope(
     val ownerKey: String,
     val workoutId: String,
@@ -312,6 +322,54 @@ class KotlinNativeSavedCorrectionFileStore(
             return NativeSavedCorrectionFileResult.Rejected(
                 NativeSavedCorrectionRefusal.CORRUPT_OR_CONFLICTING_FILE)
         return NativeSavedCorrectionFileResult.Opened(replay.state, true)
+    }
+
+    /**
+     * Scan the entire physical correction inventory. Cannot silently omit a
+     * correction for a workout not named by a caller. Corrupt foreign files
+     * block the inventory because their owner cannot be established.
+     */
+    fun inventoryOwner(ownerKey: String): NativeSavedCorrectionInventoryResult {
+        if (!id.matches(ownerKey)) return NativeSavedCorrectionInventoryResult.Rejected
+        return runCatching {
+            Files.createDirectories(directory)
+            val files = Files.list(directory).use { stream ->
+                stream.filter { file ->
+                    file.fileName.toString().startsWith("correction-") &&
+                        file.fileName.toString().endsWith(".bin")
+                }.toList()
+            }
+            if (files.size > 2048) return@runCatching
+                NativeSavedCorrectionInventoryResult.Rejected
+            val pending = Files.list(directory).use { stream ->
+                stream.anyMatch { file ->
+                    file.fileName.toString().startsWith("correction-") &&
+                        file.fileName.toString().endsWith(".pending")
+                }
+            }
+            if (pending) return@runCatching
+                NativeSavedCorrectionInventoryResult.Rejected
+            val ids = linkedSetOf<String>()
+            for (file in files) {
+                val envelope = runCatching {
+                    if (Files.isSymbolicLink(file) || !Files.isRegularFile(file) ||
+                        Files.size(file) > 256_000L)
+                        throw IOException("unsafe saved correction file")
+                    SavedCorrectionBinary.decode(Files.readAllBytes(file))
+                }.getOrNull() ?: return@runCatching
+                    NativeSavedCorrectionInventoryResult.Rejected
+                if (!id.matches(envelope.ownerKey) ||
+                    !id.matches(envelope.workoutId) ||
+                    envelope.workoutId.isEmpty() ||
+                    file.fileName.toString() !=
+                        fileFor(envelope.ownerKey, envelope.workoutId)
+                            .fileName.toString())
+                    return@runCatching NativeSavedCorrectionInventoryResult.Rejected
+                if (envelope.ownerKey == ownerKey)
+                    ids.add(envelope.workoutId)
+            }
+            NativeSavedCorrectionInventoryResult.Verified(ids)
+        }.getOrElse { NativeSavedCorrectionInventoryResult.Rejected }
     }
 
     fun openStored(

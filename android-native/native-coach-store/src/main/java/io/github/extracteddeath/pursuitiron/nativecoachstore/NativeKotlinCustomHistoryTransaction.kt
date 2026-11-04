@@ -10,9 +10,9 @@ import java.security.MessageDigest
  * durable shared history manifest entry.
  *
  * Replays recover the identical pending event after process death. The
- * composer-only history reader refuses entries with custom- receipt IDs
- * until the unified custom-aware history projector is implemented; no
- * invented Last/PR/progression data may be published in the meantime.
+ * Composer-only Last/PR views reject custom receipts. The separate verified
+ * mixed-history reader exposes factual chronology, never implicit PRs or
+ * progression from incomplete custom policies.
  */
 enum class NativeCustomFinishRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, NOT_ENROLLED, FOREIGN_PENDING_INTENT,
@@ -34,7 +34,13 @@ internal object NativeCustomFinishReceipt {
             hash.update(raw)
         }
         hash.update(bytes)
-        return "custom-"+hash.digest().joinToString("") {
+        // Version two binds EVERY observed set, amplifier and Finish receipt,
+        // not only the issued target snapshot. Equal targets with different
+        // performed sets must never share a global history receipt identity.
+        hash.update("custom-receipt-v2".toByteArray(Charsets.UTF_8))
+        hash.update(NativeCustomWorkoutJournalCodec.encode(
+            NativeCustomWorkoutJournalRecord(owner,journal)))
+        return "custom-v2-"+hash.digest().joinToString("") {
             "%02x".format(it.toInt() and 255)
         }
     }

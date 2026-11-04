@@ -92,6 +92,13 @@ future, authenticated policy**; this pass always returns review-only.
 - The isolated `NativeKotlinCandidateHost` now exposes read/save/delete entry points, but the production Compose program editor does not call them. These APIs do **not** authenticate training policy, approve coaching, issue workouts, mutate JS workouts or migrate existing web programs.
 - JVM tests cover complete custom-cycle roundtrip, blank draft roundtrip, cold restoration, CAS conflicts, deletion, owner/athlete isolation, metadata refusal and corruption. Passing JVM CI is not yet Android device power-loss, Compose auto-save, user acceptance, or coaching approval proof.
 
+### First Compose custom-cycle editor (candidate-only)
+
+- `NativeKotlinCustomCycleController` performs all native draft reads/writes on an IO coroutine. It reopens only acknowledged records, rejects stale revisions, and presents refused saves without treating the proposed UI state as durable. Undo is a new revision-checked saved operation, not a rollback of historical training facts.
+- `NativeKotlinCustomCycleCandidateScreen` uses shared Material 3 components and the original theme palette to create a fully blank custom cycle, open an existing cycle by ID, edit its name/notes, add named training days, change a day's name and purpose **atomically**, insert/duplicate/reorder blocks and edit phase duration/split/purpose. Destructive deletion requires confirmation and writes a tombstone. The editor makes no working-set prescription, program approval, or JS runtime call.
+- This is a meaningful functional UI slice, but **not a completed custom-program builder or production navigation**. It is not selected by MainActivity, and no release APK is built. Existing authenticated local athlete enrolment is required. Draft enumeration/reopen selection, exercise/attachment/verified-load picker, full per-set editor, drag and accessible move alternatives, per-week overrides, background autosave/debounce, cross-process activity restoration, migration, full coach audits, and athlete-approved handoff to Kotlin-issued workouts are **unfinished**. The existing workout path stays unchanged.
+- The CI workflow now includes both candidate editor files in the isolated Kotlin branch's Android compilation gate. A passing compile alone does not establish device-level interaction, screen-reader/foldable acceptance, or production readiness.
+
 ### Release gates not yet implemented
 
 These source-domain constructs are NOT a completed native program workflow.

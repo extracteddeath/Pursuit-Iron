@@ -195,8 +195,9 @@ private object SavedCorrectionBinary {
                     val expectedRevision = input.readLong()
                     val key = input.readUTF()
                     val predecessor = input.readUTF()
+                    val outcomeName = input.readUTF()
                     val outcome = KotlinJournalSetOutcome.entries.firstOrNull {
-                        it.name == input.readUTF()
+                        it.name == outcomeName
                     } ?: throw IOException("bad correction outcome")
                     val actual = if (input.readBoolean()) {
                         val load = input.optional()?.let { BigDecimal(it) }

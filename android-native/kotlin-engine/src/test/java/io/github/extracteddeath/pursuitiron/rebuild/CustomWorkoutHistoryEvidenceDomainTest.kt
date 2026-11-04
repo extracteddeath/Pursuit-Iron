@@ -28,7 +28,7 @@ class CustomWorkoutHistoryEvidenceDomainTest {
                 null,null,true,"Strict",
                 listOf(CustomWorkoutSetSnapshot(
                     mainKey,"slot-1",1,work)))),
-            225,180)
+            165,180)
         return CustomWorkoutJournalDomain.begin(
             "workout-1",snapshot,"a".repeat(64))
     }

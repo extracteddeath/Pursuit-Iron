@@ -255,10 +255,61 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                 Text("Add a training block")
             }
+            PursuitCard(highlighted = true) {
+                Text("Audit your full cycle",
+                    style = MaterialTheme.typography.titleLarge)
+                Text("Review every scheduled week and every authored override against your actual gym and confirmed training constraints. Missing coach-authored dose and time policies are shown as blockers—not invented targets.",
+                    style = MaterialTheme.typography.bodyMedium)
+                Button(
+                    onClick = { controller.auditFullCycle() },
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Run full Kotlin coach audit") }
+                state.coachingAudit?.let { audit ->
+                    HorizontalDivider()
+                    Text("Result · ${pretty(audit.status)}",
+                        style = MaterialTheme.typography.titleMedium)
+                    Text("${audit.weeks.size} weeks inspected · ${audit.issues.size} unresolved items · audited revision ${audit.auditedCycleRevision}",
+                        style = MaterialTheme.typography.bodyMedium)
+                    Text("This review never approves a program or issues a workout. An athlete sign-off, revision-bound coach policy and distinct native workout issuance are required.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (audit.issues.isEmpty()) {
+                        Text("No issues found in the supplied policies, but this is still a review-only draft.",
+                            style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        audit.issues.take(18).forEach { issue ->
+                            Text(pretty(issue.kind) + " · " + issue.location,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.error)
+                            Text(issue.explanation,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (audit.issues.size > 18)
+                            Text("${audit.issues.size - 18} more issues. Resolve the displayed prerequisites and rerun the audit.",
+                                style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (audit.weeks.isNotEmpty()) {
+                        HorizontalDivider()
+                        Text("Actual authored weekly workload",
+                            style = MaterialTheme.typography.titleMedium)
+                        audit.weeks.take(8).forEach { week ->
+                            Text("Week ${week.absoluteWeek} · ${week.phase.name.lowercase().replace('_',' ')} · ${week.workingSets} working sets",
+                                style = MaterialTheme.typography.bodyMedium)
+                            Text("Known set/rest seconds: " +
+                                week.knownSecondsByDay.entries.joinToString(" · ") {
+                                    "${customWeekdays.getOrElse(it.key) { "Day" }} ${it.value}s"
+                                },style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (audit.weeks.size > 8)
+                            Text("Showing the first eight weeks here; all ${audit.weeks.size} were audited.",
+                                style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
             PursuitCard {
-                Text("Coaching approval is a separate step",
+                Text("Approval and issuance remain separate",
                     style = MaterialTheme.typography.titleMedium)
-                Text("Your authored program is preserved, but missing exercise prescriptions, unverified gym equipment, or unmet volume/recovery requirements must be resolved before any Kotlin workout can be issued.",
+                Text("Your entire custom program—including supersets, amplifiers and week-specific overrides—must be preserved through a separately validated athlete sign-off and Kotlin-only workout issuer. The old composer snapshot cannot silently replace your authored sets.",
                     style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = { deleteConfirm = true },
                     enabled = !busy) { Text("Delete this saved draft") }

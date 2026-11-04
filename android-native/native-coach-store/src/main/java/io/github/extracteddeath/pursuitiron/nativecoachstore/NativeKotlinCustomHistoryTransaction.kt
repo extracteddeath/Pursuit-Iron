@@ -20,6 +20,27 @@ enum class NativeCustomFinishRefusal {
     HISTORY_NOT_READY, JOURNAL_UNAVAILABLE, MANIFEST_REJECTED,
     STORAGE_UNAVAILABLE
 }
+internal object NativeCustomFinishReceipt {
+    fun compute(
+        owner:String,athlete:String,journal:CustomWorkoutJournalDraft
+    ):String {
+        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(journal.snapshot)
+        val hash=MessageDigest.getInstance("SHA-256")
+        listOf(owner,athlete,journal.workoutId,
+            journal.preparedConsentFingerprint).forEach {
+            val raw=it.toByteArray(Charsets.UTF_8)
+            hash.update((raw.size ushr 8).toByte())
+            hash.update(raw.size.toByte())
+            hash.update(raw)
+        }
+        hash.update(bytes)
+        return "custom-"+hash.digest().joinToString("") {
+            "%02x".format(it.toInt() and 255)
+        }
+    }
+
+}
+
 sealed interface NativeCustomFinishResult {
     data class Committed(
         val completion:KotlinHistoryManifestEntry,
@@ -48,23 +69,6 @@ class NativeKotlinCustomHistoryTransaction(
             it.ownerKey==owner && it.athleteId==athlete
         }==true
 
-    private fun receipt(
-        owner:String,athlete:String,journal:CustomWorkoutJournalDraft
-    ):String {
-        val bytes=NativeKotlinCustomWorkoutSnapshotCodec.encode(journal.snapshot)
-        val hash=MessageDigest.getInstance("SHA-256")
-        listOf(owner,athlete,journal.workoutId,
-            journal.preparedConsentFingerprint).forEach {
-            val raw=it.toByteArray(Charsets.UTF_8)
-            hash.update((raw.size ushr 8).toByte())
-            hash.update(raw.size.toByte())
-            hash.update(raw)
-        }
-        hash.update(bytes)
-        return "custom-"+hash.digest().joinToString("") {
-            "%02x".format(it.toInt() and 255)
-        }
-    }
 
     private fun committed(
         owner:String,athlete:String,
@@ -83,7 +87,7 @@ class NativeKotlinCustomHistoryTransaction(
         if(evidence !is CustomHistoryEvidenceResult.Candidate ||
             journal.finishedByEventId!=item.finishEventId ||
             journal.revision!=item.originalJournalRevision ||
-            item.storedReceiptId!=receipt(owner,athlete,journal))
+            item.storedReceiptId!=NativeCustomFinishReceipt.compute(owner,athlete,journal))
             return NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.FINISH_EVENT_MISMATCH)
         return NativeCustomFinishResult.Committed(
@@ -115,7 +119,7 @@ class NativeKotlinCustomHistoryTransaction(
         val entry=KotlinHistoryManifestEntry(
             ledger.completions.size.toLong()+1,
             intent.workoutId,
-            receipt(owner,athlete,journal),
+            NativeCustomFinishReceipt.compute(owner,athlete,journal),
             intent.operation.eventId,journal.revision,0)
         val saved=history.finalize(owner,athlete,intent,entry)
         if(saved !is NativeHistoryLedgerResult.Durable)

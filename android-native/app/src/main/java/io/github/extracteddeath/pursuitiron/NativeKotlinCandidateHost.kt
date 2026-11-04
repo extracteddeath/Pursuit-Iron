@@ -93,8 +93,24 @@ internal class NativeKotlinCandidateHost(context:Context) {
         if(enrollment !is AppPrivateKotlinLocalAthlete.Enrollment.Activated)
             return NativeAuthoringSourceWrite.Rejected(
                 NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
-        return publishCustomAuthoringSource(draft,
-            StarterExerciseTranche.movements(),expectedRevision=0)
+        // Explicitly restoring this SAME device-local athlete is safe, but
+        // never overwrite its previously curated catalog or verified stock.
+        return when(val existing=authoringSourceStore.read(
+            enrollment.identity.ownerKey)) {
+            is NativeAuthoringSourceRead.Found ->
+                if(existing.source.athleteId==review.reviewed.athleteProfileId)
+                    NativeAuthoringSourceWrite.Committed(existing.source.revision)
+                else NativeAuthoringSourceWrite.Rejected(
+                    NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
+            NativeAuthoringSourceRead.Missing ->
+                publishCustomAuthoringSource(draft,
+                    StarterExerciseTranche.movements(),expectedRevision=0)
+            is NativeAuthoringSourceRead.Revoked ->
+                NativeAuthoringSourceWrite.Rejected(
+                    NativeAuthoringSourceRefusal.STALE_REVISION)
+            is NativeAuthoringSourceRead.Rejected ->
+                NativeAuthoringSourceWrite.Rejected(existing.reason)
+        }
     }
 
     fun readCustomAuthoringSource():NativeAuthoringSourceRead {

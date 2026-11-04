@@ -24,6 +24,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val revisionFence=NativeKotlinApprovalRevisionFence(root)
     private val approvalStore=NativeKotlinApprovalFileAuthority(
         root,revisionFence,localAthlete)
+    private val customDraftStore=NativeCustomCycleDraftFileStore(
+        root,revisionFence,localAthlete)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
@@ -59,6 +61,38 @@ internal class NativeKotlinCandidateHost(context:Context) {
     /** Deliberately clears only in-memory activation; training files stay. */
     fun deactivateLocalAthlete() {
         localAthlete.deactivate()
+    }
+
+    /**
+     * Athlete-owned custom-program drafts: save/reopen/erase independent of
+     * workout approval. This is a candidate native API, NOT yet called by
+     * the production Compose screens. No draft is an issuance grant.
+     * The store re-authenticates the owner and enforces revision CAS.
+     */
+    fun readCustomCycleDraft(cycleId:String):NativeCustomDraftReadResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomDraftReadResult.Rejected(
+                NativeCustomDraftRefusal.NOT_AUTHORIZED)
+        return customDraftStore.read(owner.ownerKey,cycleId)
+    }
+
+    fun saveCustomCycleDraft(
+        draft:CustomTrainingCycle, expectedRevision:Long
+    ):NativeCustomDraftWriteResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.NOT_AUTHORIZED)
+        return customDraftStore.save(owner.ownerKey,draft.cycleId,
+            expectedRevision,draft)
+    }
+
+    fun deleteCustomCycleDraft(
+        cycleId:String, expectedRevision:Long
+    ):NativeCustomDraftWriteResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.NOT_AUTHORIZED)
+        return customDraftStore.delete(owner.ownerKey,cycleId,expectedRevision)
     }
 
     /**

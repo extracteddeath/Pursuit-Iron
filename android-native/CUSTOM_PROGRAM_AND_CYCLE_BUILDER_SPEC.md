@@ -240,3 +240,24 @@ explicitly report that they cannot issue workouts or publish changes.
   redo-backed ledger update, verified mixed-history correction read,
   chronological lifetime history, UI editing and legacy import. Do not treat
   this headless reducer as a completed workout editor.
+
+
+### Durable post-Finish custom history correction — isolated native integration
+
+- Custom saved corrections now have their own binary codec and owner-scoped
+  private file, separate from a custom workout's original Finish and immutable
+  prescribed snapshot. Every disk read independently replays saved event
+  order, current event IDs, load basis, RIR and amplifier-causality rules.
+- The existing shared native history ledger carries a distinct CustomCorrect
+  redo intent, not the Composer correction format. The owner-fenced
+  transaction uses prepare → durable correction file → manifest finalize.
+  Recovery resumes after either write boundary without duplicating events.
+- The verified mixed Composer/custom history reader accepts corrected custom
+  facts only when the original custom-v2 receipt, owner identity, journal,
+  saved correction revision and shared chronological manifest agree. A
+  mismatch fails closed for all historical completions.
+- The isolated candidate host exposes correct/recover methods. Production
+  MainActivity, Last/PR and the Compose history editing UI remain unchanged.
+- Kotlin regressions exercise cold restart, idempotent retries, foreign
+  pending redo, corrupt correction files and mixed-history recomputation.
+  JVM/Android compile and device acceptance remain unverified release gates.

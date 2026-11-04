@@ -84,7 +84,7 @@ class NativeCustomCycleDraftFileStoreTest {
             CustomExerciseAvailability("pullup", null, true)
         )).canIssueWorkout)
         assertThrows(UnsupportedOperationException::class.java) {
-            (roundtrip.blocks as MutableList).clear()
+            (roundtrip.blocks as MutableList<*>).clear()
         }
         val blank = CustomCycleBuilderDomain.blank(
             "empty", "athlete-1", AthleteTrainingGoal.STRENGTH,

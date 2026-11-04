@@ -313,6 +313,31 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         modifier=Modifier.fillMaxWidth()
                     ) {Text("Verify exact consent and session")}
                 }
+                if(validWeek && state.consentBoundPreview?.session?.absoluteWeek==weekNumber &&
+                    state.consentBoundPreview?.session?.weekday==inspectedWeekday) {
+                    OutlinedButton(
+                        onClick={
+                            if(weekNumber!=null)
+                                controller.prepareConsentBoundDay(
+                                    weekNumber,inspectedWeekday)
+                        },
+                        enabled=!busy,
+                        modifier=Modifier.fillMaxWidth()
+                    ) {Text("Save immutable workout preparation")}
+                    Text("This stores the exact reviewed sets for future native issuance. It cannot start, log or finish a workout yet.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                state.preparationRefusal?.let {
+                    Text("Preparation not saved: ${pretty(it)}",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                state.preparedWorkout?.let { prepared ->
+                    Text("Prepared ID: ${prepared.workoutId}",
+                        style=MaterialTheme.typography.bodySmall)
+                    Text("Cold-recoverable exact targets; still not issued. No training journal was written.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
                 state.authoredPreviewRefusal?.let {
                     Text("Cannot preview · ${pretty(it)}",
                         color=MaterialTheme.colorScheme.error,

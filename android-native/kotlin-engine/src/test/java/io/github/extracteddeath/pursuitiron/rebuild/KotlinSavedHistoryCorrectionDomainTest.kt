@@ -205,7 +205,7 @@ class KotlinSavedHistoryCorrectionDomainTest {
         assertEquals(KotlinTimelineReviewStatus.STALE_HISTORY, stale.status)
         assertEquals(KotlinTimelineReviewStatus.UNVERIFIED_JOURNAL,
             inspect(revised.mapIndexed { idx, item ->
-                if (idx == 0) item.copy(journal = newer) else item
+                if (idx == 0) item.copy(journal = workout(3)) else item
             }, 8).status)
     }
 }

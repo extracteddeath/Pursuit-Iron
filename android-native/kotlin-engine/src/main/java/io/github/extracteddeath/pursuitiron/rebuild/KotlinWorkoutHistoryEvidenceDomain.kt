@@ -82,8 +82,8 @@ object KotlinWorkoutHistoryEvidenceDomain {
      * as a second set. No target RIR can become an observed actual RIR.
      */
     fun project(journal: KotlinWorkoutJournalState): KotlinHistoryProjectionResult {
-        val finishId = journal.finishedByEventId
-            ?: return KotlinHistoryProjectionResult.Rejected(
+        if (journal.finishedByEventId == null)
+            return KotlinHistoryProjectionResult.Rejected(
                 KotlinHistoryProjectionRefusal.NOT_FINISHED)
         val verified = KotlinWorkoutJournalReplayDomain.verifyStoredState(journal)
         if (verified !is KotlinJournalReplayResult.Recovered)

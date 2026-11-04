@@ -1176,3 +1176,31 @@ workout kinds, migrate legacy JS history losslessly, replace the current
 every production navigation/Finish/edit/Last route to the Kotlin authority,
 and complete Android device validation. The web engine and the other native
 branch remain untouched. No APK or production switch is approved here.
+
+
+## Finished custom workout saved-correction rules (pure Kotlin, not live)
+
+CustomSavedHistoryCorrectionDomain now provides an independent append-only,
+revision-CAS **proposal** for correcting individual factual MAIN and FOLLOW_UP
+visits after a custom workout has already been Finish-committed. The original
+issued snapshot, approved load basis, original event stream, prescribed
+rep/RIR/rest and Finish receipt remain immutable. The saved-correction replay
+checks the complete previously finished journal, contiguous correction
+receipts, real predecessor event IDs, collision-free event IDs, and the same
+physical-load/actual-RIR validation used by the ordinary custom journal.
+
+A completed main set cannot be reclassified as skipped/failed while its
+follow-up is still reported as completed; the athlete must explicitly correct
+that follow-up to skipped first. A previously skipped main cannot be invented
+as completed if its authored follow-up was never recorded. The read-only
+CustomSavedHistoryEvidenceDomain separates corrected factual visits from
+immutable raw audit receipts and does not credit a follow-up to a now-skipped main.
+
+**Not yet durable or issued:** the new correction state is a headless Kotlin
+candidate. It is not written by the owner-scoped native store, is not reflected
+in the shared history manifest, cannot acknowledge a history edit, does not
+change PR/progression calculations, and is not wired into Compose. Next gate:
+a versioned, bounded, replay-verified saved-custom-correction file and
+redo-backed *same-owner-fence* manifest transaction, then mixed-history
+re-projection, lossless migration, tests and real-device acceptance. No JS
+fallback, production switch or APK is enabled.

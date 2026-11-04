@@ -121,7 +121,7 @@ class NativeKotlinGlobalHistoryReadCoordinator(
             return denied(NativeKotlinHistoryReadRefusal.MANIFEST_CHANGED)
         val result = KotlinGlobalHistoryIndexDomain.project(
             KotlinGlobalHistoryRead(
-                athleteId, frozen.revision, refreshed.revision,
+                athleteId, frozen.revision, frozen.revision,
                 frozen.completions, recovered
             )
         )

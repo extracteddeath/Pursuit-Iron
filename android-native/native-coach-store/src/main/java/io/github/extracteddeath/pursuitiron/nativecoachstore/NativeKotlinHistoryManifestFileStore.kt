@@ -44,6 +44,12 @@ sealed interface NativeHistoryWriteIntent {
         override val workoutId: String,
         val operation: KotlinSavedSetCorrection
     ) : NativeHistoryWriteIntent
+
+    /** Separate lossless custom journal; not a ComposerRequest workout. */
+    data class CustomFinish(
+        override val workoutId: String,
+        val operation: CustomWorkoutJournalOperation.Finish
+    ) : NativeHistoryWriteIntent
 }
 
 data class NativeHistoryLedger(
@@ -114,6 +120,12 @@ private object NativeHistoryLedgerBinary {
                     intent.operation.expectedJournalRevision >= 0 &&
                     state.completions.none { it.workoutId == intent.workoutId }
             )
+            is NativeHistoryWriteIntent.CustomFinish -> require(
+                validId(intent.workoutId) &&
+                    validId(intent.operation.eventId) &&
+                    intent.operation.expectedRevision >= 0 &&
+                    state.completions.none { it.workoutId == intent.workoutId }
+            )
             is NativeHistoryWriteIntent.Correct -> require(
                 validId(intent.workoutId) &&
                     validId(intent.operation.eventId) &&
@@ -177,6 +189,12 @@ private object NativeHistoryLedgerBinary {
                     out.writeUTF(intent.workoutId)
                     out.writeUTF(intent.operation.eventId)
                     out.writeLong(intent.operation.expectedJournalRevision)
+                }
+                is NativeHistoryWriteIntent.CustomFinish -> {
+                    out.writeByte(3)
+                    out.writeUTF(intent.workoutId)
+                    out.writeUTF(intent.operation.eventId)
+                    out.writeLong(intent.operation.expectedRevision)
                 }
                 is NativeHistoryWriteIntent.Correct -> {
                     out.writeByte(2)
@@ -248,6 +266,11 @@ private object NativeHistoryLedgerBinary {
                             KotlinSavedSetCorrection(event, expectedRevision,
                                 setKey, predecessor, outcome, data.actual()))
                     }
+                    3 -> NativeHistoryWriteIntent.CustomFinish(
+                        data.readUTF(),
+                        CustomWorkoutJournalOperation.Finish(
+                            data.readUTF(),data.readLong())
+                    )
                     else -> throw IOException("unknown intent kind")
                 }
                 if (data.available() != 0) throw IOException("trailing ledger bytes")
@@ -446,6 +469,19 @@ class NativeKotlinHistoryManifestFileStore(private val directory: Path) {
                         NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
                 old.completions + resolved
             }
+            is NativeHistoryWriteIntent.CustomFinish -> {
+                val ordinal=old.completions.size.toLong()+1
+                if(resolved.completionOrder!=ordinal ||
+                    resolved.workoutId!=intent.workoutId ||
+                    resolved.finishEventId!=intent.operation.eventId ||
+                    !resolved.storedReceiptId.startsWith("custom-") ||
+                    resolved.savedCorrectionRevision!=0L ||
+                    resolved.originalJournalRevision!=
+                        intent.operation.expectedRevision+1)
+                    return@transition NativeHistoryLedgerResult.Rejected(
+                        NativeHistoryLedgerRefusal.INVALID_MANIFEST_TRANSITION)
+                old.completions + resolved
+            }
             is NativeHistoryWriteIntent.Correct -> {
                 val existing = old.completions.singleOrNull {
                     it.workoutId == intent.workoutId
@@ -514,7 +550,10 @@ class NativeKotlinHistoryManifestFileAuthority(
             return null
         val opened = store.open(ownerKey, athleteId)
         if (opened !is NativeHistoryLedgerResult.Durable ||
-            !opened.ledger.readyForHistoryReads)
+            !opened.ledger.readyForHistoryReads ||
+            opened.ledger.completions.any {
+                it.storedReceiptId.startsWith("custom-")
+            })
             return null
         return NativeKotlinHistoryManifest(
             ownerKey, athleteId, opened.ledger.revision,

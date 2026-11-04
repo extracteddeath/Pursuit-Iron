@@ -305,10 +305,27 @@ class NativeKotlinCustomHistoryTransactionTest {
             current==NativeKotlinOwnerIdentity("owner-1","athlete-1")
     }
 
+    private val customSaved by lazy {
+        NativeKotlinCustomSavedCorrectionFileStore(
+            temp.root.toPath(),fence,identity,issued,history)
+    }
+    private val customEdits by lazy {
+        NativeKotlinCustomHistoryCorrectionTransaction(
+            history,issued,customSaved,fence,identity)
+    }
+    private fun correction(
+        event:String="correct-1",revision:Long=0,
+        predecessor:String="set-1",reps:Int=15,
+        actualRir:Int?=null
+    )=CustomSavedVisitCorrection(
+        event,revision,CustomWorkoutVisitKey(
+            "cycle-1:w2:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN),
+        predecessor,KotlinJournalSetOutcome.COMPLETED,
+        KotlinPerformedSet(null,null,reps,actualRir))
     private fun mixedReader()=NativeKotlinMixedHistoryReadCoordinator(
         history,composerJournal,
         KotlinNativeSavedCorrectionFileStore(temp.root.toPath(),composerJournal),
-        issued,generatedAuthority,identity,fence)
+        issued,generatedAuthority,identity,fence,customSaved)
 
     private fun finishGenerated() {
         val src=KotlinTrainingSourceRevision(
@@ -477,5 +494,158 @@ class NativeKotlinCustomHistoryTransactionTest {
         assertNotEquals(NativeCustomFinishReceipt.compute(
             "owner-1","athlete-1",one),
             NativeCustomFinishReceipt.compute("owner-1","athlete-1",two))
+    }
+
+    @Test fun savedCustomEditCommitsExactHistoryAndColdReopensInMixedReader() {
+        logged()
+        assertTrue(transactions.complete("owner-1","athlete-1",
+            "workout-2",finish()) is NativeCustomFinishResult.Committed)
+        val original=(issued.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal
+        val initial=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.revision
+        val op=correction()
+        val result=customEdits.correct("owner-1","athlete-1","workout-2",op)
+        assertTrue(result.toString(),
+            result is NativeCustomCorrectionTransactionResult.Committed)
+        val committed=result as NativeCustomCorrectionTransactionResult.Committed
+        assertFalse(committed.replayed)
+        assertEquals(1L,committed.correctionRevision)
+        assertEquals(initial+1,committed.manifestRevision)
+        assertEquals(15,committed.evidence.evidence.visits.single().actual?.reps)
+        assertNull(committed.evidence.evidence.visits.single().actual?.actualRir)
+        assertEquals(original,(issued.open("owner-1","workout-2")
+            as NativeCustomJournalResult.Durable).issued.journal)
+        val ledger=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        assertNull(ledger.pending)
+        assertEquals(1L,ledger.completions.single().savedCorrectionRevision)
+        assertEquals(NativeCustomFinishReceipt.compute(
+            "owner-1","athlete-1",original),
+            ledger.completions.single().storedReceiptId)
+
+        val reopened=NativeKotlinCustomSavedCorrectionFileStore(
+            temp.root.toPath(),NativeKotlinApprovalRevisionFence(
+                temp.root.toPath()),identity,issued,history)
+        val edits=reopened.open("owner-1","workout-2")
+            as NativeCustomSavedCorrectionResult.Opened
+        assertEquals(1L,edits.state.correctionRevision)
+        assertEquals(1,edits.state.receipts.size)
+        assertTrue(edits.hasCorrectionFile)
+        val timeline=mixedReader().read("owner-1","athlete-1")
+        assertTrue(timeline.toString(),timeline is NativeKotlinMixedHistoryReadResult.Review)
+        val custom=((timeline as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.single()
+            as NativeKotlinMixedHistoryCompletion.Custom)
+        assertEquals(15,custom.evidence.visits.single().actual?.reps)
+        assertEquals("correct-1",custom.evidence.visits.single().effectiveEventId)
+        val retry=customEdits.correct("owner-1","athlete-1","workout-2",op)
+        assertEquals(committed.copy(replayed=true),retry)
+        assertEquals(ledger,(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger)
+    }
+
+    @Test fun interruptionBeforeCustomCorrectionFileIsRecoverable() {
+        logged()
+        assertTrue(transactions.complete("owner-1","athlete-1",
+            "workout-2",finish()) is NativeCustomFinishResult.Committed)
+        val ledger=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        val op=correction()
+        val intent=NativeHistoryWriteIntent.CustomCorrect("workout-2",op)
+        assertTrue(history.prepare("owner-1","athlete-1",ledger.revision,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION),
+            mixedReader().read("owner-1","athlete-1"))
+        val recovered=NativeKotlinCustomHistoryCorrectionTransaction(
+            NativeKotlinHistoryManifestFileStore(temp.root.toPath()),
+            issued,customSaved,NativeKotlinApprovalRevisionFence(
+                temp.root.toPath()),identity).recover("owner-1","athlete-1")
+        assertTrue(recovered.toString(),
+            recovered is NativeCustomCorrectionTransactionResult.Committed)
+        val after=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        assertNull(after.pending)
+        assertEquals(1L,after.completions.single().savedCorrectionRevision)
+    }
+
+    @Test fun interruptionAfterSavedFileBeforeManifestFinalizeReplaysSameReceipt() {
+        logged()
+        assertTrue(transactions.complete("owner-1","athlete-1",
+            "workout-2",finish()) is NativeCustomFinishResult.Committed)
+        val base=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        val op=correction()
+        val intent=NativeHistoryWriteIntent.CustomCorrect("workout-2",op)
+        assertTrue(history.prepare("owner-1","athlete-1",base.revision,intent)
+            is NativeHistoryLedgerResult.Durable)
+        val written=customSaved.appendPending("owner-1","workout-2",op)
+        assertTrue(written.toString(),
+            written is NativeCustomSavedCorrectionResult.Durable)
+        assertFalse((written as NativeCustomSavedCorrectionResult.Durable).replayed)
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.PENDING_TRANSACTION),
+            mixedReader().read("owner-1","athlete-1"))
+        val recovered=customEdits.recover("owner-1","athlete-1")
+        assertTrue(recovered.toString(),
+            recovered is NativeCustomCorrectionTransactionResult.Committed)
+        val after=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        assertEquals(1L,after.completions.single().savedCorrectionRevision)
+        assertEquals(null,after.pending)
+        assertEquals(1,(customSaved.open("owner-1","workout-2")
+            as NativeCustomSavedCorrectionResult.Opened).state.receipts.size)
+    }
+
+    @Test fun corruptCustomSavedFileBlocksEntireHistoryInsteadOfOldLast() {
+        logged()
+        assertTrue(transactions.complete("owner-1","athlete-1",
+            "workout-2",finish()) is NativeCustomFinishResult.Committed)
+        assertTrue(customEdits.correct("owner-1","athlete-1",
+            "workout-2",correction())
+            is NativeCustomCorrectionTransactionResult.Committed)
+        val file=java.nio.file.Files.list(temp.root.toPath()).use { paths ->
+            paths.filter { it.fileName.toString().startsWith("corrected-custom-") &&
+                it.fileName.toString().endsWith(".bin") }.findFirst().orElseThrow()
+        }
+        val bytes=java.nio.file.Files.readAllBytes(file)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(file,bytes)
+        assertEquals(NativeCustomSavedCorrectionResult.Rejected(
+            NativeCustomSavedCorrectionRefusal.CORRUPT_FILE),
+            customSaved.open("owner-1","workout-2"))
+        assertEquals(NativeKotlinMixedHistoryReadResult.Rejected(
+            NativeKotlinMixedHistoryRefusal.UNVERIFIED_CUSTOM),
+            mixedReader().read("owner-1","athlete-1"))
+        assertEquals(NativeCustomCorrectionTransactionResult.Rejected(
+            NativeCustomCorrectionTransactionRefusal.HISTORY_RECEIPT_MISMATCH),
+            customEdits.correct("owner-1","athlete-1","workout-2",
+                correction(event="other",revision=1,
+                    predecessor="correct-1",reps=16)))
+    }
+
+    @Test fun customCorrectionRefusesWrongRevisionAndForeignPendingWriter() {
+        logged()
+        assertTrue(transactions.complete("owner-1","athlete-1",
+            "workout-2",finish()) is NativeCustomFinishResult.Committed)
+        assertEquals(NativeCustomCorrectionTransactionResult.Rejected(
+            NativeCustomCorrectionTransactionRefusal.CORRECTION_REJECTED),
+            customEdits.correct("owner-1","athlete-1",
+                "workout-2",correction(revision=8)))
+        val ledger=(history.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger
+        assertTrue(history.prepare("owner-1","athlete-1",ledger.revision,
+            NativeHistoryWriteIntent.Finish("other",
+                KotlinJournalOperation.Finish("other-finish",0)))
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeCustomCorrectionTransactionResult.Rejected(
+            NativeCustomCorrectionTransactionRefusal.FOREIGN_PENDING_INTENT),
+            customEdits.correct("owner-1","athlete-1",
+                "workout-2",correction()))
+        current=NativeKotlinOwnerIdentity("foreign-owner","athlete-1")
+        assertEquals(NativeCustomCorrectionTransactionResult.Rejected(
+            NativeCustomCorrectionTransactionRefusal.NOT_AUTHORIZED),
+            customEdits.recover("owner-1","athlete-1"))
     }
 }

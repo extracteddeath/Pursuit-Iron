@@ -173,8 +173,8 @@ class NativeKotlinCustomAuthoringSourceFileStore(
             NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
         return try {
             fence.withOwnerTransaction(ownerKey) {
-                val owner=active(ownerKey) ?:return@withOwnerTransaction
-                    NativeAuthoringSourceRead.Rejected(
+                val owner=active(ownerKey)
+                    ?: return@withOwnerTransaction NativeAuthoringSourceRead.Rejected(
                         NativeAuthoringSourceRefusal.NOT_AUTHORIZED)
                 val record=try {decode(path(ownerKey))} catch(_:Exception) {
                     return@withOwnerTransaction NativeAuthoringSourceRead.Rejected(

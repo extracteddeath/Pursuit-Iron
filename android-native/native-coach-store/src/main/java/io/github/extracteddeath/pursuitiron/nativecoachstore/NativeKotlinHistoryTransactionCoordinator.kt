@@ -232,6 +232,13 @@ class NativeKotlinHistoryTransactionCoordinator(
                     intent.operation.eventId, result.revision, 0
                 )
             }
+            is NativeHistoryWriteIntent.CustomFinish -> {
+                // The composer-only history coordinator must NOT consume a
+                // pending custom journal intent with a lossy Composer snapshot.
+                // Keep it on disk for NativeKotlinCustomHistoryTransaction
+                // to replay and finalize. All reads remain blocked.
+                return denied(NativeHistoryTransactionRefusal.HISTORY_NOT_READY)
+            }
             is NativeHistoryWriteIntent.Correct -> {
                 val existing = prepared.completions.singleOrNull {
                     it.workoutId == intent.workoutId

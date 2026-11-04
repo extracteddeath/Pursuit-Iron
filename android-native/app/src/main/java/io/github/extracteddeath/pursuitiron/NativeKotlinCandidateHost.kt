@@ -89,8 +89,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         draft:AthleteSetupDraft
     ):NativeAuthoringSourceWrite {
         val review=CoachAthleteSetupDomain.review(draft)
+        val verified=review.reviewed
         if(review.status!=AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW ||
-            review.reviewed==null)
+            verified==null)
             return NativeAuthoringSourceWrite.Rejected(
                 NativeAuthoringSourceRefusal.INVALID_SOURCE)
         val enrollment=activateReviewedSetup(draft)
@@ -102,7 +103,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return when(val existing=authoringSourceStore.read(
             enrollment.identity.ownerKey)) {
             is NativeAuthoringSourceRead.Found ->
-                if(existing.source.athleteId==review.reviewed.athleteProfileId)
+                if(existing.source.athleteId==verified.athleteProfileId)
                     NativeAuthoringSourceWrite.Committed(existing.source.revision)
                 else NativeAuthoringSourceWrite.Rejected(
                     NativeAuthoringSourceRefusal.NOT_AUTHORIZED)

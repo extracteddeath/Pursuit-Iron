@@ -147,7 +147,7 @@ private object SavedCorrectionBinary {
                 val actual = op.actual
                 out.writeBoolean(actual != null)
                 if (actual != null) {
-                    out.optional(actual.load?.stripTrailingZeros()?.toPlainString())
+                    out.optional(actual.load?.toString())
                     out.optional(actual.unit?.name)
                     out.writeInt(actual.reps)
                     out.writeBoolean(actual.actualRir != null)

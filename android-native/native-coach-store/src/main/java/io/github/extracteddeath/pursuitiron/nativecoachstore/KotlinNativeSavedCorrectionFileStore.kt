@@ -337,7 +337,7 @@ class KotlinNativeSavedCorrectionFileStore(
                 stream.filter { file ->
                     file.fileName.toString().startsWith("correction-") &&
                         file.fileName.toString().endsWith(".bin")
-                }.toList()
+                }.iterator().asSequence().toList()
             }
             if (files.size > 2048) return@runCatching
                 NativeSavedCorrectionInventoryResult.Rejected

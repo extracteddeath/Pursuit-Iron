@@ -331,7 +331,7 @@ class KotlinNativeSavedCorrectionFileStore(
      */
     fun inventoryOwner(ownerKey: String): NativeSavedCorrectionInventoryResult {
         if (!id.matches(ownerKey)) return NativeSavedCorrectionInventoryResult.Rejected
-        return runCatching {
+        return runCatching<NativeSavedCorrectionInventoryResult> {
             Files.createDirectories(directory)
             val files = Files.list(directory).use { stream ->
                 stream.filter { file ->
@@ -339,16 +339,16 @@ class KotlinNativeSavedCorrectionFileStore(
                         file.fileName.toString().endsWith(".bin")
                 }.iterator().asSequence().toList()
             }
-            if (files.size > 2048) return@runCatching
-                NativeSavedCorrectionInventoryResult.Rejected
+            if (files.size > 2048)
+                return@runCatching NativeSavedCorrectionInventoryResult.Rejected
             val pending = Files.list(directory).use { stream ->
                 stream.anyMatch { file ->
                     file.fileName.toString().startsWith("correction-") &&
                         file.fileName.toString().endsWith(".pending")
                 }
             }
-            if (pending) return@runCatching
-                NativeSavedCorrectionInventoryResult.Rejected
+            if (pending)
+                return@runCatching NativeSavedCorrectionInventoryResult.Rejected
             val ids = linkedSetOf<String>()
             for (file in files) {
                 val envelope = runCatching {
@@ -356,8 +356,7 @@ class KotlinNativeSavedCorrectionFileStore(
                         Files.size(file) > 256_000L)
                         throw IOException("unsafe saved correction file")
                     SavedCorrectionBinary.decode(Files.readAllBytes(file))
-                }.getOrNull() ?: return@runCatching
-                    NativeSavedCorrectionInventoryResult.Rejected
+                }.getOrNull() ?: return@runCatching NativeSavedCorrectionInventoryResult.Rejected
                 if (!id.matches(envelope.ownerKey) ||
                     !id.matches(envelope.workoutId) ||
                     envelope.workoutId.isEmpty() ||

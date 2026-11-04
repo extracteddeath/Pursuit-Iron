@@ -199,4 +199,44 @@ class NativeKotlinTrackedWorkoutGatewayTest {
         } as NativeJournalFileResult.Durable
         return durable.journal.revision
     }
+
+    @Test fun foreignAthleteApprovalIsRejectedBeforeAnyJournalIsIssued() {
+        enroll()
+        val foreign = source.copy(athleteId = "another-athlete")
+        val fake = object : NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(
+                ownerKey: String, workoutId: String
+            ): NativeKotlinWorkoutApproval? =
+                NativeKotlinWorkoutApproval(
+                    "owner-1", "another-athlete", foreign, foreign,
+                    KotlinWorkoutSelectionGrant(
+                        "foreign-grant", "foreign-workout", foreign, 0),
+                    ComposerRequest(
+                        ComposerSplit.FULL_BODY, TrainingPhase.HYPERTROPHY,
+                        emptyList(), emptyList(), emptyList(), 1),
+                    emptyList(), "foreign-storage", 1L
+                )
+
+            override fun canAccessIssuedWorkout(
+                ownerKey: String, source: KotlinTrainingSourceRevision
+            ) = ownerKey == "owner-1"
+        }
+        val facade = NativeKotlinTrackedWorkoutGateway(
+            NativeKotlinWorkoutCoordinator(journal(), fake, fence()),
+            NativeKotlinHistoryTransactionCoordinator(
+                ledger(), journal(), correction(), fake, fence()),
+            ledger(), correction(), fake, fence()
+        )
+        assertEquals(NativeKotlinIssueResult.Rejected(
+            NativeKotlinIssueRefusal.NOT_AUTHORIZED),
+            facade.issue("owner-1", "athlete-1", "foreign-workout"))
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            journal().openStored("owner-1", "foreign-workout") {
+                    _, _ -> true
+            })
+        assertTrue((ledger().open("owner-1", "athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.completions.isEmpty())
+    }
+
 }

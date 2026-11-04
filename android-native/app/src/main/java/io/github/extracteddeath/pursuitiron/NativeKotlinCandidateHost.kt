@@ -54,6 +54,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val mixedHistoryReader=NativeKotlinMixedHistoryReadCoordinator(
         historyStore,journalStore,correctionStore,customIssuedStore,
         approvalStore,localAthlete,revisionFence,customSavedCorrections)
+    // Read-only indexed candidate; version-2 ledger remains the sole owner.
+    private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
+        root,historyStore,revisionFence,localAthlete)
     private val coordinator=NativeKotlinWorkoutCoordinator(
         journalStore,approvalStore,revisionFence)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
@@ -284,6 +287,37 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?: return NativeKotlinMixedFactsReadResult.HistoryRejected(
                 NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
         return mixedHistoryReader.readFacts(owner.ownerKey, owner.athleteId)
+    }
+
+    /**
+     * Explicit R&D refresh of immutable 128-record history segments.
+     * Only works after the real native history has been enrolled and committed.
+     * Never treats a missing ledger or unproven web migration as empty history.
+     * Disk-bound: call on an IO dispatcher, never the Compose main thread.
+     */
+    fun refreshCandidateSegmentedHistory(): NativeSegmentedHistoryResult {
+        val signedIn=localAthlete.signedInIdentity()
+            ?: return NativeSegmentedHistoryResult.Rejected(
+                NativeSegmentedHistoryRefusal.NOT_AUTHORIZED)
+        return segmentedHistoryShadow.sync(signedIn.ownerKey,signedIn.athleteId)
+    }
+
+    /**
+     * Candidate history pagination only, not Last/PR/progression authority.
+     * A stale source revision refuses instead of showing an earlier result.
+     * Explicit refresh is separate: never rebuild a corrupt shadow on read.
+     */
+    fun readCandidateSegmentedHistoryPage(
+        expectedSourceRevision:Long,
+        offsetFromNewest:Int,
+        pageSize:Int
+    ): NativeSegmentedHistoryResult {
+        val signedIn=localAthlete.signedInIdentity()
+            ?: return NativeSegmentedHistoryResult.Rejected(
+                NativeSegmentedHistoryRefusal.NOT_AUTHORIZED)
+        return segmentedHistoryShadow.readPage(
+            signedIn.ownerKey,signedIn.athleteId,expectedSourceRevision,
+            offsetFromNewest,pageSize)
     }
 
     /**

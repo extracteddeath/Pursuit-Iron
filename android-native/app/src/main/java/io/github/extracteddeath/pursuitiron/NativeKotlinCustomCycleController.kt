@@ -26,7 +26,9 @@ internal data class NativeKotlinCustomCycleState(
     val message: String? = null,
     val refusal: NativeCustomDraftRefusal? = null,
     val canUndo: Boolean = false,
-    val authoringRefusal: CustomAuthoringRefusal? = null
+    val authoringRefusal: CustomAuthoringRefusal? = null,
+    val availableChoices: List<CustomExercisePickerOption> = emptyList(),
+    val sourceRevision: Long? = null
 )
 
 /**
@@ -35,12 +37,16 @@ internal data class NativeKotlinCustomCycleState(
  * The picker is therefore intentionally empty until this is integrated.
  */
 internal fun interface NativeKotlinCustomAuthoringSource {
-    fun snapshot(): Pair<AthleteSetupReview, List<CatalogMovement>>?
+    fun snapshot(): NativeCustomAuthoringSnapshot?
 }
 
 internal class NativeKotlinCustomCycleController(
     private val host: NativeKotlinCandidateHost,
-    private val authoringSource: NativeKotlinCustomAuthoringSource? = null
+    private val authoringSource: NativeKotlinCustomAuthoringSource =
+        NativeKotlinCustomAuthoringSource {
+            (host.readCustomAuthoringSource() as? NativeAuthoringSourceRead.Found)
+                ?.source
+        }
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val pending = AtomicBoolean(false)
@@ -67,11 +73,18 @@ internal class NativeKotlinCustomCycleController(
 
     private fun applyRead(cycleId: String, result: NativeCustomDraftReadResult) {
         lastUndo = null
+        val latest = runCatching { authoringSource.snapshot() }.getOrNull()
+        val found = (result as? NativeCustomDraftReadResult.Found)?.draft
+        val source = latest?.takeIf { it.athleteId == found?.athleteId }
+        val choices = if (source == null) emptyList() else
+            CustomExerciseAuthoringDomain.picker(source.setup,source.catalog)
         current.value = when (result) {
             is NativeCustomDraftReadResult.Found ->
                 NativeKotlinCustomCycleState(
                     draft = result.draft,
                     cycleId = result.draft.cycleId,
+                    availableChoices = choices,
+                    sourceRevision = source?.revision,
                     message = "Saved custom cycle restored · revision ${result.draft.revision}")
             NativeCustomDraftReadResult.Missing ->
                 NativeKotlinCustomCycleState(cycleId = cycleId,
@@ -112,7 +125,8 @@ internal class NativeKotlinCustomCycleController(
     }
 
     private fun edit(
-        command: (CustomTrainingCycle) -> CustomCycleBuilderResult
+        command: (CustomTrainingCycle) -> CustomCycleBuilderResult,
+        reviewedSourceRevision: () -> Long? = { null }
     ) = run {
         val saved = current.value.draft ?: return@run
         val result = command(saved)
@@ -122,7 +136,11 @@ internal class NativeKotlinCustomCycleController(
                     current.value = current.value.copy(
                         message = "Edit refused: ${result.reason.name.replace('_', ' ').lowercase()}.")
             is CustomCycleBuilderResult.Proposed -> {
-                val write = host.saveCustomCycleDraft(result.draft, saved.revision)
+                val sourceRevision = reviewedSourceRevision()
+                val write = if (sourceRevision == null)
+                    host.saveCustomCycleDraft(result.draft,saved.revision)
+                else host.saveReviewedCustomCycleDraft(
+                    result.draft,saved.revision,sourceRevision)
                 when (write) {
                     is NativeCustomDraftWriteResult.Committed -> {
                         lastUndo = result.receipt
@@ -148,40 +166,38 @@ internal class NativeKotlinCustomCycleController(
     }
 
     /** Read-only options; absent trusted gym/catalog means NO made-up choices. */
-    fun availableExerciseChoices(): List<CustomExercisePickerOption> {
-        val source = runCatching { authoringSource?.snapshot() }.getOrNull()
-            ?: return emptyList()
-        val draft = current.value.draft ?: return emptyList()
-        if (source.first.reviewed?.athleteProfileId != draft.athleteId)
-            return emptyList()
-        return CustomExerciseAuthoringDomain.picker(source.first, source.second)
-    }
+    fun availableExerciseChoices(): List<CustomExercisePickerOption> =
+        current.value.availableChoices
 
     private fun editReviewed(
         command: (CustomTrainingCycle, AthleteSetupReview,
             List<CatalogMovement>) -> CustomAuthoringResult
-    ) = edit { draft ->
-        // Resolve the source on IO inside this commit, never while rendering
-        // Compose or before a pending older revision has been read.
-        val source = runCatching { authoringSource?.snapshot() }.getOrNull()
-        if (source == null) {
-            current.value = current.value.copy(
-                message = "Reviewed native gym and exercise catalog required. No draft change saved.",
-                authoringRefusal = CustomAuthoringRefusal.SETUP_UNRESOLVED)
-            CustomCycleBuilderResult.Rejected(
-                CustomCycleBuilderRefusal.INVALID_INPUT)
-        } else {
-            when (val reviewed = command(draft, source.first, source.second)) {
-                is CustomAuthoringResult.Accepted -> reviewed.proposal
-                is CustomAuthoringResult.Rejected -> {
-                    current.value = current.value.copy(
-                        message = "Exercise edit refused: ${reviewed.reason.name.replace('_', ' ').lowercase()}. No draft change saved.",
-                        authoringRefusal = reviewed.reason)
-                    CustomCycleBuilderResult.Rejected(
-                        CustomCycleBuilderRefusal.INVALID_INPUT)
+    ) {
+        var checkedSourceRevision: Long? = null
+        edit({ draft ->
+            // Read inside IO. The subsequent write atomically checks that
+            // exactly this same source revision remains under owner lock.
+            val source = runCatching { authoringSource.snapshot() }.getOrNull()
+            if (source == null || source.athleteId != draft.athleteId) {
+                current.value = current.value.copy(
+                    message = "Reviewed native gym and exercise catalog required. Nothing saved.",
+                    authoringRefusal = CustomAuthoringRefusal.SETUP_UNRESOLVED)
+                CustomCycleBuilderResult.Rejected(
+                    CustomCycleBuilderRefusal.INVALID_INPUT)
+            } else {
+                checkedSourceRevision = source.revision
+                when (val reviewed = command(draft,source.setup,source.catalog)) {
+                    is CustomAuthoringResult.Accepted -> reviewed.proposal
+                    is CustomAuthoringResult.Rejected -> {
+                        current.value = current.value.copy(
+                            message = "Exercise edit refused: ${reviewed.reason.name.replace('_', ' ').lowercase()}. Nothing saved.",
+                            authoringRefusal = reviewed.reason)
+                        CustomCycleBuilderResult.Rejected(
+                            CustomCycleBuilderRefusal.INVALID_INPUT)
+                    }
                 }
             }
-        }
+        }, { checkedSourceRevision })
     }
 
     fun addReviewedExercise(

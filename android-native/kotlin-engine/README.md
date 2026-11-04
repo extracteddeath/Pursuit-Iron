@@ -1042,3 +1042,44 @@ not a sufficient lifetime history policy; archival/pagination must be built
 before production. The exact signed-in authority, existing-user migration,
 complete historical ledger, PR policy, backup/export, native Compose screen
 integration and JavaScript retirement remain separate release gates.
+
+
+## Kotlin candidate lifecycle now uses the tracked-history gateway
+
+The isolated `NativeKotlinCandidateHost` now instantiates the same owner
+fence, manifest store, workout journal, correction store, and the
+`NativeKotlinTrackedWorkoutGateway`. Candidate
+`recordWorkoutOperation(Finish)` no longer calls bare
+`NativeKotlinWorkoutCoordinator.append`; it must complete through
+`NativeKotlinHistoryTransactionCoordinator`, then re-open the
+authenticated journal and prove that the matching Finish receipt was
+included in the committed global history revision. Saved-history edits
+follow the same transaction gateway. Ordinary in-session set receipts
+stay on the underlying locked journal path but require ready history
+ownership, current athlete access and no unresolved pending transaction.
+
+The gateway also guards **issuance before write**: the owner's current
+approved athlete, source identity and workout grant must match the
+authenticated athlete, not merely the journal returned *after* issue.
+The candidate session controller and Compose screen surface the explicit
+`HISTORY_NOT_READY` refusal instead of promising a saved Finish or
+silently creating a new empty history. An interrupted Finish intent can
+be replayed on cold open, and repeated identical Finish/correction events
+are idempotent.
+
+A dedicated JVM regression suite checks unenrolled-blocked issue/open/
+set/Finish/correction; manifest revision advancement; cold recovery;
+repeated receipts; corrected Last recomputation; revoked owners; and
+out-of-band Finishes that cannot be silently absorbed.
+
+**Cutover gate remains intentionally closed.** The host DOES NOT
+automatically enroll a preexisting athlete with an empty manifest.
+Safe account enrollment requires proven complete legacy and native
+history (or proven absence of existing history). Direct storage APIs
+remain for isolated low-level tests and must not become alternate
+product/Compose write routes. Production MainActivity still uses the
+existing web-backed path. The candidate needs verified first-use
+enrollment/migration, long-lived history storage beyond the current
+128-completion test limit, approved native program authority, full
+Compose UX parity, PR policy and additional crash tests before an
+APK or eventual JavaScript engine retirement.

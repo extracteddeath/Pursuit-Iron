@@ -13,6 +13,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.rebuild.*
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomSignoffRead
 
 private val customWeekdays = listOf(
     "Monday", "Tuesday", "Wednesday", "Thursday",
@@ -80,6 +81,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var editingBlock by remember { mutableStateOf<String?>(null) }
     var editingDay by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var deleteConfirm by remember { mutableStateOf(false) }
+    var confirmConsent by remember { mutableStateOf(false) }
     // Slot identity is stable and separate from the exercise catalog ID.
     // Null slot ID denotes authoring a genuinely new exercise visit.
     var exerciseEditor by remember {
@@ -307,6 +309,45 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 }
             }
             PursuitCard {
+                Text("Your exact-program consent",
+                    style = MaterialTheme.typography.titleLarge)
+                when(val consent=state.signoff) {
+                    is NativeCustomSignoffRead.Found ->
+                        Text(
+                            if(consent.isCurrent)
+                                "Athlete consent is current for this exact cycle, gym and reviewed coaching policy."
+                            else "A previous athlete consent exists, but its content is not currently verified. Re-audit before relying on it.",
+                            style = MaterialTheme.typography.bodyMedium)
+                    is NativeCustomSignoffRead.Revoked ->
+                        Text("Previous athlete consent revoked at receipt revision ${consent.recordRevision}.",
+                            style = MaterialTheme.typography.bodyMedium)
+                    NativeCustomSignoffRead.Missing, null ->
+                        Text("No athlete consent saved for this custom cycle.",
+                            style = MaterialTheme.typography.bodyMedium)
+                    is NativeCustomSignoffRead.Rejected ->
+                        Text("Native consent record could not be verified.",
+                            color = MaterialTheme.colorScheme.error)
+                }
+                Text("A full coach-authored dose policy and actual session-time evidence are required first. Consent is not authorization to start a workout.",
+                    style = MaterialTheme.typography.bodySmall)
+                val ready = state.coachingAudit?.status ==
+                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+                    state.coachingAudit?.issues?.isEmpty()==true &&
+                    state.auditSourceRevision != null &&
+                    state.coachingAudit?.auditedCycleRevision == draft.revision
+                Button(onClick = { confirmConsent=true },
+                    enabled = !busy && ready,
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text("Review and sign this exact cycle")
+                }
+                if(state.signoff is NativeCustomSignoffRead.Found)
+                    OutlinedButton(onClick = { controller.revokeAthleteConsent() },
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text("Revoke my saved cycle consent")
+                    }
+            }
+            PursuitCard {
                 Text("Approval and issuance remain separate",
                     style = MaterialTheme.typography.titleMedium)
                 Text("Your entire custom program—including supersets, amplifiers and week-specific overrides—must be preserved through a separately validated athlete sign-off and Kotlin-only workout issuer. The old composer snapshot cannot silently replace your authored sets.",
@@ -315,6 +356,29 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     enabled = !busy) { Text("Delete this saved draft") }
             }
         }
+    }
+
+    if(confirmConsent && draft!=null) {
+        AlertDialog(
+            onDismissRequest={if(!busy)confirmConsent=false},
+            title={Text("Confirm your exact custom program")},
+            text={
+                Text("You're consenting to the reviewed version of ${draft.title}, revision ${draft.revision}. The complete gym/catalog and authored coaching policy are rechecked before saving. This does not issue, begin, or approve a workout.")
+            },
+            confirmButton={
+                Button(onClick={
+                    confirmConsent=false
+                    controller.confirmAthleteConsent(true)
+                },enabled=!busy) {
+                    Text("I approve this reviewed cycle")
+                }
+            },
+            dismissButton={
+                TextButton(onClick={confirmConsent=false},enabled=!busy) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     val current = draft

@@ -82,6 +82,12 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
         assertEquals(KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW,
             review.progressionGate)
         val progression = checkNotNull(review.progressionReview)
+        val chronologicalInput = checkNotNull(review.progressionWorkout)
+        assertEquals("workout-1", chronologicalInput.workoutId)
+        assertEquals("press", chronologicalInput.exerciseId)
+        assertEquals(listOf(0, 1), chronologicalInput.observations.map { it.workingOrdinal })
+        assertEquals(listOf(8, null), chronologicalInput.observations.map { it.actualReps })
+        assertEquals(listOf(1, null), chronologicalInput.observations.map { it.actualRir })
         assertEquals(1, progression.completedWorkingSets)
         assertEquals(setOf(1), progression.skippedOrdinals)
         assertEquals(setOf(0), progression.nearFailureOrdinals)
@@ -120,6 +126,7 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
         assertEquals(KotlinHistoryProgressionGate.MIXED_REP_BANDS,
             mixed.progressionGate)
         assertNull(mixed.progressionReview)
+        assertNull(mixed.progressionWorkout)
         assertEquals(2, mixed.workingSets.size)
 
         var unweighted = start(target("chin-a", 0, load = body, exercise = "chinup"))
@@ -129,6 +136,7 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
         assertEquals(KotlinHistoryProgressionGate.UNWEIGHTED_BODYWEIGHT,
             reviewed.progressionGate)
         assertNull(reviewed.progressionReview)
+        assertNull(reviewed.progressionWorkout)
         assertNull(reviewed.workingSets.single().actual?.load)
     }
 
@@ -176,6 +184,8 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
         assertTrue(review.mixedActualLoads)
         assertEquals(setOf(1), review.nearFailureOrdinals)
         assertFalse(history.canApplyProgression)
+        assertEquals(listOf(BigDecimal("200"), BigDecimal("215")),
+            history.exerciseReviews.single().progressionWorkout?.observations?.map { it.actualLoad })
         assertEquals(listOf(BigDecimal("200"), BigDecimal("215")),
             history.exerciseReviews.single().workingSets.map { it.actual?.load })
         assertTrue(history.sets.all {

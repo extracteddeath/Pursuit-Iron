@@ -82,6 +82,8 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var editingDay by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var deleteConfirm by remember { mutableStateOf(false) }
     var confirmConsent by remember { mutableStateOf(false) }
+    var inspectedWeek by rememberSaveable { mutableStateOf("1") }
+    var inspectedWeekday by rememberSaveable { mutableIntStateOf(0) }
     // Slot identity is stable and separate from the exercise catalog ID.
     // Null slot ID denotes authoring a genuinely new exercise visit.
     var exerciseEditor by remember {
@@ -256,6 +258,114 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
             OutlinedButton(onClick = { addingBlock = true },
                 enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                 Text("Add a training block")
+            }
+            PursuitCard {
+                Text("Exact native week and workout preview",
+                    style = MaterialTheme.typography.titleLarge)
+                Text("Inspect the actual authored day, including individual sets and week overrides. No generic workout composer changes your exercises or weight. This is preview only.",
+                    style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    inspectedWeek,{ inspectedWeek=it.take(3) },
+                    label={Text("Absolute week in cycle (1–${draft.blocks.sumOf {it.weeks}})")},
+                    singleLine=true,
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
+                    modifier=Modifier.fillMaxWidth()
+                )
+                val weekNumber=inspectedWeek.toIntOrNull()
+                var relative=weekNumber ?: -1
+                val block= if(relative<1) null else
+                    draft.blocks.firstOrNull{
+                        if(relative>it.weeks){relative-=it.weeks;false}
+                        else true
+                    }
+                val validDays=block?.days?.map {it.weekday}?.sorted().orEmpty()
+                if(block!=null) {
+                    Text("Resolved block: ${block.label} · week ${relative}",
+                        style=MaterialTheme.typography.bodySmall)
+                    CycleChoiceRow("Workout day",
+                        validDays,inspectedWeekday,
+                        {customWeekdays.getOrElse(it){"Day"}}) {
+                        inspectedWeekday=it
+                    }
+                }
+                val validWeek=weekNumber!=null &&
+                    weekNumber in 1..draft.blocks.sumOf {it.weeks} &&
+                    inspectedWeekday in validDays
+                Button(
+                    onClick={
+                        val week=weekNumber
+                        if(week!=null)controller.previewAuthoredDay(
+                            week,inspectedWeekday)
+                    },
+                    enabled=!busy && validWeek,
+                    modifier=Modifier.fillMaxWidth()
+                ) {Text("Preview exact authored workout")}
+                if(state.coachingAudit?.status ==
+                    CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+                    state.signoff is NativeCustomSignoffRead.Found) {
+                    OutlinedButton(
+                        onClick={
+                            val week=weekNumber
+                            if(week!=null) controller.verifyConsentBoundDay(
+                                week,inspectedWeekday)
+                        },
+                        enabled=!busy && validWeek,
+                        modifier=Modifier.fillMaxWidth()
+                    ) {Text("Verify exact consent and session")}
+                }
+                state.authoredPreviewRefusal?.let {
+                    Text("Cannot preview · ${pretty(it)}",
+                        color=MaterialTheme.colorScheme.error,
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+                state.authoredPreview?.let { session ->
+                    HorizontalDivider()
+                    Text("Week ${session.absoluteWeek} · ${customWeekdays.getOrElse(session.weekday){"Day"}} · ${session.dayLabel}",
+                        style=MaterialTheme.typography.titleMedium)
+                    Text("Block: ${session.blockId} · ${pretty(session.phase)} · ${pretty(session.sessionPurpose)}",
+                        style=MaterialTheme.typography.bodySmall)
+                    Text("Exact known set/rest: ${session.knownSetAndRestSeconds}s · non-set time: ${session.declaredNonSetSeconds?.toString()?.plus("s") ?: "not declared"}",
+                        style=MaterialTheme.typography.bodySmall)
+                    Text(if(state.consentBoundPreview!=null)
+                        "Consent-bound preflight passed; this is STILL NOT an issued workout."
+                        else "Draft preview: NOT a reviewed workout grant.",
+                        style=MaterialTheme.typography.bodySmall)
+                    session.slots.forEach { slot ->
+                        HorizontalDivider()
+                        Text("${slot.exerciseId} · ${slot.variantId}",
+                            style=MaterialTheme.typography.titleSmall)
+                        Text("Slot ${slot.slotId} · ${pretty(slot.role)}" +
+                            (slot.attachmentId?.let{" · Attachment $it"} ?: "") +
+                            (slot.supersetGroup?.let{" · Superset $it"} ?: "") +
+                            (if(slot.pinned)" · Pinned" else ""),
+                            style=MaterialTheme.typography.bodySmall)
+                        if(slot.coachNote.isNotBlank())
+                            Text(slot.coachNote,
+                                style=MaterialTheme.typography.bodySmall)
+                        slot.sets.forEach { set ->
+                            val target=set.prescription
+                            val load=when(val weight=target.load) {
+                                DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
+                                is DraftSetLoad.Verified ->
+                                    "${weight.value.toPlainString()} ${weight.unit} · ${pretty(weight.basis)}"
+                            }
+                            Text("Set ${set.ordinalInSlot} · ${pretty(target.type)} · $load · ${target.reps.minimum}–${target.reps.maximum} reps · RIR ${target.targetRir?.toString() ?: "not set"}",
+                                style=MaterialTheme.typography.bodyMedium)
+                            Text("${target.activeSeconds}s work · ${target.restSeconds}s rest",
+                                style=MaterialTheme.typography.bodySmall)
+                            target.amplifier?.let {amp ->
+                                Text("${pretty(amp.kind)} · ${amp.followUpReps} follow-up reps · ${amp.followUpRestSeconds}s intra-set rest · " +
+                                    (when(val extra=amp.followUpLoad) {
+                                        null -> "Same confirmed load"
+                                        DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
+                                        is DraftSetLoad.Verified ->
+                                            "${extra.value.toPlainString()} ${extra.unit} · ${pretty(extra.basis)}"
+                                    }),
+                                    style=MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
             }
             PursuitCard(highlighted = true) {
                 Text("Audit your full cycle",

@@ -35,6 +35,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs)
+    private val customPreparedStore=NativeKotlinCustomWorkoutPreparedStore(
+        root,revisionFence,localAthlete,customWorkoutPreflight)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
@@ -121,6 +123,29 @@ internal class NativeKotlinCandidateHost(context:Context) {
             is NativeAuthoringSourceRead.Rejected ->
                 NativeAuthoringSourceWrite.Rejected(existing.reason)
         }
+    }
+
+    /**
+     * Durable, still NON-ISSUED custom session preparation. Must come from
+     * a full current athlete-consent re-audit under the shared owner lock.
+     * Cannot record sets or finish a workout; not a ComposerRequest journal.
+     */
+    fun prepareReviewedCustomWorkout(
+        workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs
+    ):NativeCustomPrepareResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPrepareResult.Rejected(
+                NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.prepare(owner.ownerKey,workoutId,
+            cycleId,absoluteWeek,weekday,inputs)
+    }
+
+    fun openPreparedCustomWorkout(workoutId:String):NativeCustomPreparedRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPreparedRead.Rejected(
+                NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.open(owner.ownerKey,workoutId)
     }
 
     /**

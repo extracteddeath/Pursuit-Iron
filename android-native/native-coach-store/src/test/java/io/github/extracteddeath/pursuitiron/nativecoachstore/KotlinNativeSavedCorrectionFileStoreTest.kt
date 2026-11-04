@@ -215,4 +215,40 @@ class KotlinNativeSavedCorrectionFileStoreTest {
                 correction(event = "stale", expectedRevision = 0), allow)
                 as NativeSavedCorrectionFileResult.Rejected).correctionReason)
     }
+
+    @Test fun coordinatorUsesExistingOwnerFenceAndRevokedAccessFailsClosed() {
+        issueAndFinish()
+        var permitted = false
+        val authority = object : NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(
+                ownerKey: String, workoutId: String
+            ): NativeKotlinWorkoutApproval? = null
+
+            override fun canAccessIssuedWorkout(
+                ownerKey: String, source: KotlinTrainingSourceRevision
+            ): Boolean = permitted && ownerKey == "owner-1" &&
+                source.athleteId == "athlete-1"
+        }
+        val service = NativeKotlinSavedCorrectionCoordinator(
+            corrections(), authority,
+            NativeKotlinApprovalRevisionFence(filesDir())
+        )
+        assertEquals(NativeSavedCorrectionFileResult.Rejected(
+            NativeSavedCorrectionRefusal.NOT_AUTHORIZED),
+            service.correct("owner-1", "workout-1", correction()))
+        permitted = true
+        val committed = stored(service.correct(
+            "owner-1", "workout-1", correction()))
+        assertEquals(1L, committed.state.correctionRevision)
+        permitted = false
+        assertEquals(NativeSavedCorrectionFileResult.Rejected(
+            NativeSavedCorrectionRefusal.NOT_AUTHORIZED),
+            service.open("owner-1", "workout-1"))
+        permitted = true
+        assertEquals(committed.state,
+            opened(service.open("owner-1", "workout-1")).state)
+        assertTrue(stored(service.correct(
+            "owner-1", "workout-1", correction())).replayed)
+    }
+
 }

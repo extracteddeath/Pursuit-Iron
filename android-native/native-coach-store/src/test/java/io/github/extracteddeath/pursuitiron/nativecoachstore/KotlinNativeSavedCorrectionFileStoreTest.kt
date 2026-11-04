@@ -251,4 +251,21 @@ class KotlinNativeSavedCorrectionFileStoreTest {
             "owner-1", "workout-1", correction())).replayed)
     }
 
+
+    @Test fun decimalScaleAndExactLostAckIdentitySurviveColdRestart() {
+        issueAndFinish()
+        val scaled = correction().copy(actual =
+            KotlinPerformedSet(n("200.000"), LoadUnit.LB, 4, null))
+        val committed = stored(corrections().appendStored(
+            "owner-1", "workout-1", scaled, allow))
+        assertEquals(n("200.000"),
+            committed.state.receipts.single().correction.actual?.load)
+        val recovered = opened(corrections().openStored(
+            "owner-1", "workout-1", allow))
+        assertEquals(n("200.000"),
+            recovered.state.receipts.single().correction.actual?.load)
+        assertTrue(stored(corrections().appendStored(
+            "owner-1", "workout-1", scaled, allow)).replayed)
+    }
+
 }

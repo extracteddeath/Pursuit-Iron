@@ -937,3 +937,52 @@ and transactionally tested before user-facing saved-history correction
 or engine cutover. The isolated Compose candidate is not connected
 to these edits; the live web and original JS-authoritative workout remain
 unchanged. An APK is not built by the source-only workflow.
+
+
+## Versioned global Kotlin history index — read only, still gated
+
+`KotlinGlobalHistoryIndexDomain` now recomputes factual Last and load records
+from the complete chronological **Kotlin** history presented by a future
+authenticated manifest owner. Each manifest row binds completion order,
+workout ID, immutable storage receipt ID, original Finish receipt, full
+journal revision and the expected **post-Finish correction revision**.
+Every workout and edit ledger is replay-verified. A missing edited file
+cannot silently masquerade as an uncorrected session when the owner manifest
+still requires correction receipts. Duplicate/missing/reordered sessions,
+cross-athlete inputs, stale manifest revisions, forged maps and mismatched
+original Finish receipts fail closed.
+
+Last is the ACTUAL most recent exercise occurrence, including failed or
+skipped sets; it does not skip backwards to show a better workout. The
+independent load-record projection only counts completed **working** sets
+with an explicit positive external load, and distinguishes Smith total,
+dumbbell per hand, cables and other load bases. Warmups, failed attempts,
+skips and unweighted bodyweight never become heavier-load records.
+A corrected historical actual can therefore remove an old record. These
+are factual "highest completed external load" / "most reps at this load"
+observations, not automatically labeled certified PRs or exercise-strength
+estimates. An immutable digest of the entire effective read also helps
+detect stale derived UI caches, but neither a hash nor this code authenticates
+the source or authorizes progression.
+
+`NativeKotlinGlobalHistoryReadCoordinator` is an isolated Android-storage
+read integration. Under the SAME owner revision fence used for issuance,
+it obtains a current complete manifest from a dedicated native history
+authority, independently opens each real stored workout and saved-correction
+file, rechecks owner authorization, and refuses changed manifests or
+unrecoverable history before invoking the Kotlin index. Its result remains
+a **review-only** projection. There is no UI issuance, correction publication,
+or existing web/JS fallback.
+
+**Mandatory next production gate:** a trusted durable native history manifest
+and Finish/edit transaction protocol do NOT YET exist. Every completion and
+post-finish edit must atomically update its manifest revision / expected
+correction revision with the journal event, and the app must serialize all
+history consumers (Last, PRs, charts, progressive overload, backups) through
+that owner. The isolated source-only read coordinator cannot protect a
+manifest that was never updated or prove that a UI-owned manifest is complete.
+Crash/retry tests must include the window between correction file replacement
+and manifest update; there must be no permanently misleading success/PR.
+Full PR policy, exercise-variant semantic parity, custom plans, the final
+Kotlin coach and native Compose feature parity remain independent blockers
+before any JavaScript retirement or release APK.

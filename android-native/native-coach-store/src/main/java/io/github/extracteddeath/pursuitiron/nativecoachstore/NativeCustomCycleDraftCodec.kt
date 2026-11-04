@@ -181,18 +181,16 @@ internal object NativeCustomCycleDraftCodec {
                 block.label.isNotBlank() && block.label.length <= 120 &&
                 block.weeks in 1..52 && block.days.size <= 7 &&
                 block.days.map { it.weekday }.distinct().size == block.days.size &&
-                (block.split !is CustomSplitIdentity.Freeform ||
-                    block.split.label.length in 1..80) &&
+                ((block.split as? CustomSplitIdentity.Freeform)?.label?.length
+                    ?.let { it in 1..80 } ?: true) &&
                 block.days.all { day ->
                     day.weekday in 0..6 && day.label.length in 1..80 &&
                         day.slots.size <= 32 &&
                         day.slots.map { it.slotId }.distinct().size == day.slots.size &&
                         day.slots.all { slot ->
                             id.matches(slot.slotId) && id.matches(slot.exerciseId) &&
-                                (slot.attachmentId == null ||
-                                    id.matches(slot.attachmentId)) &&
-                                (slot.supersetGroup == null ||
-                                    id.matches(slot.supersetGroup)) &&
+                                (slot.attachmentId?.let { id.matches(it) } ?: true) &&
+                                (slot.supersetGroup?.let { id.matches(it) } ?: true) &&
                                 slot.coachNote.length <= 1000 &&
                                 slot.sets.size <= 20
                         }

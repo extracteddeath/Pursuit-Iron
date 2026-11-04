@@ -30,7 +30,9 @@ internal data class NativeKotlinCustomCycleState(
     val availableChoices: List<CustomExercisePickerOption> = emptyList(),
     val sourceRevision: Long? = null,
     val coachingAudit: CustomCoachAudit? = null,
-    val auditSourceRevision: Long? = null
+    val auditSourceRevision: Long? = null,
+    val signoff: NativeCustomSignoffRead? = null,
+    val signoffRefusal: NativeCustomSignoffRefusal? = null
 )
 
 /**
@@ -55,6 +57,7 @@ internal class NativeKotlinCustomCycleController(
     private val current = MutableStateFlow(NativeKotlinCustomCycleState())
     val state: StateFlow<NativeKotlinCustomCycleState> = current.asStateFlow()
     private var lastUndo: CustomCycleDraftReceipt? = null
+    private var auditedInputs: CustomCoachAuditInputs? = null
 
     private fun run(action: () -> Unit) {
         if (!pending.compareAndSet(false, true)) return
@@ -75,6 +78,7 @@ internal class NativeKotlinCustomCycleController(
 
     private fun applyRead(cycleId: String, result: NativeCustomDraftReadResult) {
         lastUndo = null
+        auditedInputs = null
         val latest = runCatching { authoringSource.snapshot() }.getOrNull()
         val found = (result as? NativeCustomDraftReadResult.Found)?.draft
         val source = latest?.takeIf { it.athleteId == found?.athleteId }
@@ -87,6 +91,7 @@ internal class NativeKotlinCustomCycleController(
                     cycleId = result.draft.cycleId,
                     availableChoices = choices,
                     sourceRevision = source?.revision,
+                    signoff = host.readCustomCycleConsent(result.draft.cycleId),
                     message = "Saved custom cycle restored · revision ${result.draft.revision}")
             NativeCustomDraftReadResult.Missing ->
                 NativeKotlinCustomCycleState(cycleId = cycleId,
@@ -160,6 +165,8 @@ internal class NativeKotlinCustomCycleController(
                             cycleId = result.draft.cycleId,
                             coachingAudit = null,
                             auditSourceRevision = null,
+                            signoff = host.readCustomCycleConsent(result.draft.cycleId),
+                            signoffRefusal = null,
                             canUndo = true,
                             message = "Saved revision ${write.revision} · ${result.receipt.operation.replace('-', ' ')}.")
                     }
@@ -217,9 +224,82 @@ internal class NativeKotlinCustomCycleController(
                 message="Saved gym or program changed during audit; nothing accepted. Run a fresh review.")
             return@run
         }
+        auditedInputs=inputs
         current.value=current.value.copy(
             coachingAudit=result,auditSourceRevision=source.revision,
+            signoff=host.readCustomCycleConsent(disk.draft.cycleId,inputs),
+            signoffRefusal=null,
             message="Whole-cycle coach audit: ${result.issues.size} actionable issues across ${result.weeks.size} evaluated weeks. No workout approved.")
+    }
+
+    /**
+     * Only direct UI consent after a fresh, policy-complete audit.
+     * The store checks both current source and draft AGAIN under owner lock.
+     * This never calls Composer approval or workout issuance.
+     */
+    fun confirmAthleteConsent(confirmed:Boolean) = run {
+        val value=current.value
+        val draft=value.draft ?: return@run
+        val audit=value.coachingAudit ?: return@run
+        val inputs=auditedInputs
+        if(!confirmed || inputs==null ||
+            audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+            audit.issues.isNotEmpty() || audit.auditedCycleRevision!=draft.revision ||
+            value.auditSourceRevision==null) {
+            current.value=current.value.copy(
+                message="Athlete confirmation and a complete reviewed coaching policy are required. No approval saved.",
+                signoffRefusal=NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED)
+            return@run
+        }
+        val previous=host.readCustomCycleConsent(draft.cycleId,inputs)
+        val expected=when(previous) {
+            NativeCustomSignoffRead.Missing -> 0L
+            is NativeCustomSignoffRead.Found -> previous.receipt.recordRevision
+            is NativeCustomSignoffRead.Revoked -> previous.recordRevision
+            is NativeCustomSignoffRead.Rejected -> {
+                current.value=current.value.copy(
+                    signoff=previous,
+                    message="Existing consent could not be verified. Nothing overwritten.")
+                return@run
+            }
+        }
+        val saved=host.confirmCustomCycleConsent(draft.cycleId,draft.revision,
+            value.auditSourceRevision,expected,inputs,true)
+        val now=host.readCustomCycleConsent(draft.cycleId,inputs)
+        when(saved) {
+            is NativeCustomSignoffWrite.Committed -> {
+                current.value=current.value.copy(
+                    signoff=now,signoffRefusal=null,
+                    message="Your custom cycle review and explicit consent were saved. This is not a workout approval or an issued session.")
+            }
+            is NativeCustomSignoffWrite.Rejected -> {
+                current.value=current.value.copy(
+                    signoff=now,signoffRefusal=saved.reason,
+                    message="Consent was not saved: ${saved.reason.name.replace('_',' ').lowercase()}. Recheck your gym, program and policy.")
+            }
+        }
+    }
+
+    fun revokeAthleteConsent() = run {
+        val draft=current.value.draft ?:return@run
+        val previous=host.readCustomCycleConsent(draft.cycleId)
+        val receipt=(previous as? NativeCustomSignoffRead.Found)?.receipt
+            ?:return@run
+        when(val result=host.revokeCustomCycleConsent(
+            draft.cycleId,receipt.recordRevision)) {
+            is NativeCustomSignoffWrite.Committed -> {
+                current.value=current.value.copy(
+                    signoff=host.readCustomCycleConsent(draft.cycleId),
+                    signoffRefusal=null,
+                    message="Athlete consent revoked. Saved custom program and workout history were not modified.")
+            }
+            is NativeCustomSignoffWrite.Rejected -> {
+                current.value=current.value.copy(
+                    signoff=host.readCustomCycleConsent(draft.cycleId),
+                    signoffRefusal=result.reason,
+                    message="Consent revocation was not saved; refreshed authoritative record.")
+            }
+        }
     }
 
     /** Read-only options; absent trusted gym/catalog means NO made-up choices. */
@@ -400,6 +480,8 @@ internal class NativeKotlinCustomCycleController(
                 current.value = current.value.copy(
                     draft = result.draft, canUndo = false,
                     coachingAudit = null, auditSourceRevision = null,
+                    signoff = host.readCustomCycleConsent(result.draft.cycleId),
+                    signoffRefusal = null,
                     message = "Undo saved · revision ${write.revision}")
             is NativeCustomDraftWriteResult.Rejected -> {
                 applyRead(saved.cycleId, host.readCustomCycleDraft(saved.cycleId))

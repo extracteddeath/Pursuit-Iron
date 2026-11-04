@@ -56,9 +56,9 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             DraftSetLoad.ExplicitBodyweight->writeByte(0)
             is DraftSetLoad.Verified -> {
                 writeByte(1)
-                decimal(value.value)
                 kind(value.unit)
                 kind(value.basis)
+                decimal(value.value)
             }
         }
     }

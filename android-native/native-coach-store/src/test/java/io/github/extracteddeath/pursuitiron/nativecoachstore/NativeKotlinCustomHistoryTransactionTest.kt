@@ -454,4 +454,28 @@ class NativeKotlinCustomHistoryTransactionTest {
             NativeKotlinMixedHistoryRefusal.INVALID_MANIFEST),
             mixedReader().read("owner-1","athlete-1"))
     }
+
+    @Test fun customManifestReceiptChangesWhenActualPerformanceChanges() {
+        ready()
+        val issued=issueWeek().issued.journal
+        val base=CustomWorkoutJournalDomain.begin(
+            issued.workoutId,issued.snapshot,issued.preparedConsentFingerprint)
+        fun finished(reps:Int):CustomWorkoutJournalDraft {
+            val recorded=CustomWorkoutJournalDomain.reduce(
+                base,recordSet("identical-event",0,reps))
+                as CustomWorkoutJournalDecision.Proposed
+            return (CustomWorkoutJournalDomain.reduce(
+                recorded.draft,
+                CustomWorkoutJournalOperation.Finish("identical-finish",1))
+                as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        val one=finished(16)
+        val two=finished(17)
+        assertEquals(one.snapshot,two.snapshot)
+        assertEquals(one.finishedByEventId,two.finishedByEventId)
+        assertEquals(one.revision,two.revision)
+        assertNotEquals(NativeCustomFinishReceipt.compute(
+            "owner-1","athlete-1",one),
+            NativeCustomFinishReceipt.compute("owner-1","athlete-1",two))
+    }
 }

@@ -106,6 +106,7 @@ object KotlinWorkoutHistoryEvidenceDomain {
         journal: KotlinWorkoutJournalState,
         facts: List<KotlinHistoricalSetFact>
     ): KotlinWorkoutHistoryEvidence {
+        val finishId = checkNotNull(journal.finishedByEventId)
         val grouped = linkedMapOf<String, MutableList<KotlinHistoricalSetFact>>()
         for (fact in facts) {
             grouped.getOrPut(fact.exerciseId) { mutableListOf() }

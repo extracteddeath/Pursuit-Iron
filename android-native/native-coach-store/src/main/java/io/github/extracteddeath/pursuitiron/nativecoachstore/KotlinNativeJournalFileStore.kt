@@ -343,7 +343,7 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
                 stream.filter { file ->
                     val name = file.fileName.toString()
                     name.startsWith("journal-") && name.endsWith(".bin")
-                }.toList()
+                }.iterator().asSequence().toList()
             }
             if (records.size > 2048)
                 return@runCatching reject(

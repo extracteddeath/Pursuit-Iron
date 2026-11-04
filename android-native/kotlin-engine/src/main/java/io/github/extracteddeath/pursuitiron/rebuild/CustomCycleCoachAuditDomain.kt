@@ -94,7 +94,6 @@ object CustomCycleCoachAuditDomain {
         val profile = setup.reviewed?.takeIf {
             setup.status == AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW
         }
-        val emptyReview = CustomCycleCoachAuditDomain::class
         if (profile == null) {
             add(CustomCoachIssueKind.SETUP_UNRESOLVED, "setup",
                 "Finish reviewed native onboarding and verify actual gym stock.")
@@ -112,12 +111,14 @@ object CustomCycleCoachAuditDomain {
         // by returning an empty subset of candidate exercise options.
         if (catalog.isEmpty() || catalog.size > 256 ||
             catalog.map { it.exerciseId }.distinct().size != catalog.size ||
-            catalog.map { it.familyId to it.variantId }.distinct().size !=
-                catalog.size ||
-            options.size != catalog.count { m ->
-                m.exerciseId in options.map { it.exerciseId }
-            } && options.any { opt ->
-                catalog.none { it.exerciseId == opt.exerciseId }
+            catalog.map { it.familyId to it.variantId }.distinct().size != catalog.size ||
+            catalog.any { m ->
+                m.creditStatus != CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL ||
+                    m.creditReviewReference.isNullOrBlank() ||
+                    m.credits.isEmpty() ||
+                    m.credits.map { it.muscle }.distinct().size!=m.credits.size ||
+                    m.credits.any { it.fractionalSet <= zero ||
+                        it.fractionalSet>BigDecimal.ONE }
             }) {
             add(CustomCoachIssueKind.CATALOG_UNVERIFIED, "catalog",
                 "The current reviewed catalog cannot be authenticated as a valid native selection set.")

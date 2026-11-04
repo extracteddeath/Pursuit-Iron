@@ -80,6 +80,7 @@ future, authenticated policy**; this pass always returns review-only.
 - `week()` projects the **exact** authored week and only its explicitly
   modified exercise slots. It never runs a searching composer to quietly
   replace exercise order or changed volume.
+- `CustomCycleBuilderDomain`: revision-checked blank-cycle creation, day and slot insertion, set-level edits, block cloning and exact weekly overrides; undo requires the precise prior receipt. The week-canvas domain now also moves complete exercise/superset groups between existing days while preserving stable slot IDs, pinned status, notes, attachments, amplifiers, and migrating matching per-week overrides to the destination weekday. It supports inserting and reordering blocks and renaming a day without changing its schedule. These are **headless proposed draft changes**, not a Compose drag-and-drop editor, persisted autosave or workout approval.
 - `CustomCycleTransitionDomain`: granular field-level change review with
   separate athlete-origin and coach-origin semantics and explicit
   `CustomCycleCoachPermissions`. Every proposal remains review-only.

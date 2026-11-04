@@ -125,8 +125,8 @@ internal class NativeKotlinCustomCycleController(
     }
 
     private fun edit(
-        command: (CustomTrainingCycle) -> CustomCycleBuilderResult,
-        reviewedSourceRevision: () -> Long? = { null }
+        reviewedSourceRevision: () -> Long? = { null },
+        command: (CustomTrainingCycle) -> CustomCycleBuilderResult
     ) = run {
         val saved = current.value.draft ?: return@run
         val result = command(saved)
@@ -174,7 +174,7 @@ internal class NativeKotlinCustomCycleController(
             List<CatalogMovement>) -> CustomAuthoringResult
     ) {
         var checkedSourceRevision: Long? = null
-        edit({ draft ->
+        edit(reviewedSourceRevision = { checkedSourceRevision }) { draft ->
             // Read inside IO. The subsequent write atomically checks that
             // exactly this same source revision remains under owner lock.
             val source = runCatching { authoringSource.snapshot() }.getOrNull()
@@ -197,7 +197,7 @@ internal class NativeKotlinCustomCycleController(
                     }
                 }
             }
-        }, { checkedSourceRevision })
+        }
     }
 
     fun addReviewedExercise(

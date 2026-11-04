@@ -333,6 +333,154 @@ object CustomCycleBuilderDomain {
         }
     }
 
+
+    /**
+     * Move an athlete's exact exercise slots between authored weekdays.
+     * The original slot identities, pins, per-set loads, amplifiers and notes
+     * remain intact. Week-specific prescriptions follow the same slot, never
+     * the old list position. A grouped superset moves atomically or not at all.
+     *
+     * A deliberately incomplete source day stays an editable draft but
+     * cannot pass the later full cycle review until exercises are restored.
+     */
+    fun moveSlots(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        blockId: String,
+        fromWeekday: Int,
+        toWeekday: Int,
+        slotIds: List<String>,
+        destinationIndex: Int
+    ): CustomCycleBuilderResult {
+        val block = current.blocks.firstOrNull { it.blockId == blockId }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        val source = block.days.firstOrNull { it.weekday == fromWeekday }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        val destination = block.days.firstOrNull { it.weekday == toWeekday }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        val movingIds = slotIds.toSet()
+        if (fromWeekday == toWeekday || movingIds.isEmpty() ||
+            movingIds.size != slotIds.size ||
+            !source.slots.map { it.slotId }.toSet().containsAll(movingIds) ||
+            destinationIndex !in 0..destination.slots.size ||
+            destination.slots.size + movingIds.size > 32 ||
+            destination.slots.any { it.slotId in movingIds })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+
+        val moving = source.slots.filter { it.slotId in movingIds }
+        val groupIds = moving.mapNotNull { it.supersetGroup }.toSet()
+        // No orphaned or accidentally merged superset groups.
+        if (source.slots.any {
+                it.supersetGroup in groupIds && it.slotId !in movingIds
+            } || destination.slots.any {
+                it.supersetGroup != null && it.supersetGroup in groupIds
+            })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+
+        return edit(current, expectedRevision, "move-exercise-slots") {
+            current.copy(
+                blocks = current.blocks.map { candidate ->
+                    if (candidate.blockId != blockId) candidate else
+                        candidate.copy(days = candidate.days.map { day ->
+                            when (day.weekday) {
+                                fromWeekday -> day.copy(slots =
+                                    day.slots.filterNot { it.slotId in movingIds })
+                                toWeekday -> day.copy(slots =
+                                    day.slots.toMutableList().also {
+                                        it.addAll(destinationIndex, moving)
+                                    })
+                                else -> day
+                            }
+                        })
+                },
+                weekOverrides = current.weekOverrides +
+                    (blockId to current.weekOverrides[blockId].orEmpty().map {
+                        if (it.weekday == fromWeekday && it.slotId in movingIds)
+                            it.copy(weekday = toWeekday)
+                        else it
+                    })
+            )
+        }
+    }
+
+    /**
+     * Add a blank or explicitly authored phase at an exact timeline position.
+     * Existing week overrides remain keyed to their stable block IDs.
+     */
+    fun insertBlock(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        block: CustomTrainingBlock,
+        index: Int = current.blocks.size
+    ): CustomCycleBuilderResult {
+        if (!id.matches(block.blockId) ||
+            current.blocks.any { it.blockId == block.blockId } ||
+            current.weekOverrides.containsKey(block.blockId) ||
+            block.label.isBlank() || block.label.length > 120 ||
+            block.weeks !in 1..52 || current.blocks.size >= 26 ||
+            current.blocks.sumOf { it.weeks } + block.weeks > 104 ||
+            index !in 0..current.blocks.size ||
+            block.days.size > 7 ||
+            block.days.map { it.weekday }.distinct().size != block.days.size)
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        return edit(current, expectedRevision, "insert-training-block") {
+            current.copy(blocks = current.blocks.toMutableList().also {
+                it.add(index, block)
+            })
+        }
+    }
+
+    /** Rearrange phases without relabeling or discarding their authored weeks. */
+    fun reorderBlocks(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        orderedBlockIds: List<String>
+    ): CustomCycleBuilderResult {
+        if (orderedBlockIds.size != current.blocks.size ||
+            orderedBlockIds.distinct().size != orderedBlockIds.size ||
+            orderedBlockIds.toSet() != current.blocks.map { it.blockId }.toSet())
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.BLOCK_ID_CONFLICT)
+        return edit(current, expectedRevision, "reorder-training-blocks") {
+            val byId = current.blocks.associateBy { it.blockId }
+            current.copy(blocks = orderedBlockIds.map { byId.getValue(it) })
+        }
+    }
+
+    /** Rename one author's day without changing its stable schedule or slots. */
+    fun renameDay(
+        current: CustomTrainingCycle,
+        expectedRevision: Long,
+        blockId: String,
+        weekday: Int,
+        newLabel: String
+    ): CustomCycleBuilderResult {
+        if (newLabel.isBlank() || newLabel.length > 80)
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.INVALID_INPUT)
+        val block = current.blocks.firstOrNull { it.blockId == blockId }
+            ?: return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_BLOCK)
+        if (block.days.none { it.weekday == weekday })
+            return CustomCycleBuilderResult.Rejected(
+                CustomCycleBuilderRefusal.MISSING_SLOT)
+        return edit(current, expectedRevision, "rename-training-day") {
+            current.copy(blocks = current.blocks.map { candidate ->
+                if (candidate.blockId != blockId) candidate else candidate.copy(
+                    days = candidate.days.map {
+                        if (it.weekday == weekday) it.copy(label = newLabel)
+                        else it
+                    })
+            })
+        }
+    }
+
     /**
      * Undo only if the current draft still matches the exact accepted
      * result. Prior receipts cannot revert someone else's newer author edit.

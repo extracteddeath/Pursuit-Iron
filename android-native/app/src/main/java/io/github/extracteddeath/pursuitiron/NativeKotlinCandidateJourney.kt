@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -33,7 +35,14 @@ internal fun NativeKotlinCandidateJourney() {
             cycleController.close()
         }
     }
-    var destination by remember {mutableStateOf(KotlinCandidateDestination.ONBOARD)}
+    var destination by rememberSaveable {
+        mutableStateOf(KotlinCandidateDestination.ONBOARD)
+    }
+    val savedScreens=rememberSaveableStateHolder()
+    LaunchedEffect(destination) {
+        if(destination==KotlinCandidateDestination.PROGRAM)
+            cycleController.refresh()
+    }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(0.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp)
             .horizontalScroll(rememberScrollState()),
@@ -46,13 +55,15 @@ internal fun NativeKotlinCandidateJourney() {
         }
         HorizontalDivider()
         Box(Modifier.fillMaxSize()) {
-            when(destination) {
-                KotlinCandidateDestination.ONBOARD ->
-                    NativeKotlinOnboardingCandidateScreen(gymController)
-                KotlinCandidateDestination.GYM ->
-                    NativeKotlinGymSourceCandidateScreen(gymController)
-                KotlinCandidateDestination.PROGRAM ->
-                    NativeKotlinCustomCycleCandidateScreen(cycleController)
+            savedScreens.SaveableStateProvider(destination.name) {
+                when(destination) {
+                    KotlinCandidateDestination.ONBOARD ->
+                        NativeKotlinOnboardingCandidateScreen(gymController)
+                    KotlinCandidateDestination.GYM ->
+                        NativeKotlinGymSourceCandidateScreen(gymController)
+                    KotlinCandidateDestination.PROGRAM ->
+                        NativeKotlinCustomCycleCandidateScreen(cycleController)
+                }
             }
         }
     }

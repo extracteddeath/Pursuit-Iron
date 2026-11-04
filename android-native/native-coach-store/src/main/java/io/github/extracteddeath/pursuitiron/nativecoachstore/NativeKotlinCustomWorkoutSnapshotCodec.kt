@@ -152,7 +152,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 require(set.slotId==slot.slotId)
                 require(set.ordinalInSlot==index+1)
                 require(set.setKey=="${stamp.cycleId}:w${snapshot.absoluteWeek}:d${snapshot.weekday}:${slot.slotId}:s${index+1}")
-                require(set.setKey.length<=160 && seen.add(set.setKey))
+                require(set.setKey.length<=256 && seen.add(set.setKey))
                 val p=set.prescription
                 require(p.reps.minimum in 1..100 &&
                     p.reps.maximum in p.reps.minimum..100)

@@ -1,0 +1,415 @@
+package io.github.extracteddeath.pursuitiron
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.extracteddeath.pursuitiron.rebuild.*
+
+private val customWeekdays = listOf(
+    "Monday", "Tuesday", "Wednesday", "Thursday",
+    "Friday", "Saturday", "Sunday"
+)
+
+@Composable
+private fun <T> CycleChoiceRow(
+    label: String, values: List<T>, selected: T,
+    caption: (T) -> String, onSelect: (T) -> Unit
+) {
+    Text(label, style = MaterialTheme.typography.labelLarge)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        values.forEach { option ->
+            FilterChip(selected = option == selected,
+                onClick = { onSelect(option) }, label = { Text(caption(option)) })
+        }
+    }
+}
+
+private fun pretty(value: Enum<*>) =
+    value.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+
+private fun splitLabel(split: CustomSplitIdentity): String = when (split) {
+    is CustomSplitIdentity.Freeform -> split.label
+    is CustomSplitIdentity.Named -> pretty(split.split)
+}
+
+/**
+ * Preview of the genuinely athlete-authored, offline native custom cycle
+ * workflow. Uses ONLY NativeKotlinCustomCycleController and its verified
+ * durable drafts. This screen is deliberately NOT connected to the legacy
+ * MainActivity route or the existing JavaScript engine.
+ *
+ * Training decisions and exercise prescriptions are not created from this
+ * UI. A saved draft cannot issue a session or change history.
+ */
+@Composable
+internal fun NativeKotlinCustomCycleCandidateScreen(
+    controller: NativeKotlinCustomCycleController,
+    initialCycleId: String? = null
+) {
+    val state by controller.state.collectAsStateWithLifecycle()
+    val draft = state.draft
+    val busy = state.busy
+    var openId by rememberSaveable { mutableStateOf(initialCycleId.orEmpty()) }
+    LaunchedEffect(initialCycleId) {
+        if (!initialCycleId.isNullOrBlank()) controller.open(initialCycleId)
+    }
+    LaunchedEffect(draft?.cycleId) {
+        if (draft != null) openId = draft.cycleId
+    }
+
+    var title by rememberSaveable { mutableStateOf("") }
+    var split by rememberSaveable { mutableStateOf("") }
+    var phaseTitle by rememberSaveable { mutableStateOf("") }
+    var weeks by rememberSaveable { mutableStateOf("4") }
+    var goal by rememberSaveable { mutableStateOf(AthleteTrainingGoal.POWERBUILDING) }
+    var phase by rememberSaveable { mutableStateOf(TrainingPhase.HYPERTROPHY) }
+
+    var editingCycle by remember { mutableStateOf(false) }
+    var addingDayFor by remember { mutableStateOf<String?>(null) }
+    var addingBlock by remember { mutableStateOf(false) }
+    var editingBlock by remember { mutableStateOf<String?>(null) }
+    var editingDay by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    var deleteConfirm by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        .padding(horizontal = 16.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        PageHeading("KOTLIN COACH · ISOLATED",
+            if (draft == null) "Build your program" else draft.title,
+            "Custom programs and cycles · saved privately on this device")
+        Text("Draft only · not coaching-approved · no workout issued",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.secondary)
+        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        state.message?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall,
+                color = if (state.refusal == null)
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.error)
+        }
+
+        if (draft == null) {
+            PursuitCard(highlighted = true) {
+                Text("Start from blank", style = MaterialTheme.typography.titleLarge)
+                Text("Choose your own split, phases, and training days. No template will overwrite your selections.",
+                    style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(title, { title = it },
+                    label = { Text("Program name") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                CycleChoiceRow("Training goal", AthleteTrainingGoal.entries,
+                    goal, ::pretty) { goal = it }
+                OutlinedTextField(split, { split = it },
+                    label = { Text("Your split name") },
+                    placeholder = { Text("Chest / Back / Legs") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(phaseTitle, { phaseTitle = it },
+                    label = { Text("First block name") },
+                    placeholder = { Text("Foundation") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                CycleChoiceRow("First phase", TrainingPhase.entries,
+                    phase, ::pretty) { phase = it }
+                OutlinedTextField(weeks, { weeks = it },
+                    label = { Text("Weeks in first block (1–52)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                Button(
+                    onClick = {
+                        controller.create(title.trim(), goal,
+                            weeks.toIntOrNull() ?: 0, phase,
+                            phaseTitle.trim(), split.trim())
+                    },
+                    enabled = !busy && title.isNotBlank() &&
+                        phaseTitle.isNotBlank() && split.isNotBlank() &&
+                        (weeks.toIntOrNull() in 1..52),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Create and save my draft") }
+            }
+            PursuitCard {
+                Text("Open an existing saved draft",
+                    style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(openId, { openId = it },
+                    label = { Text("Cycle ID") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedButton(onClick = { controller.open(openId.trim()) },
+                    enabled = !busy && openId.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()) { Text("Open saved draft") }
+            }
+        } else {
+            PursuitCard(highlighted = true) {
+                Text("Custom authoring", style = MaterialTheme.typography.titleMedium)
+                Text("${draft.blocks.size} blocks · ${draft.blocks.sumOf { it.weeks }} scheduled weeks · revision ${draft.revision}",
+                    style = MaterialTheme.typography.bodyMedium)
+                Text("Cycle ID: ${draft.cycleId}",
+                    style = MaterialTheme.typography.bodySmall)
+                Text(draft.authorNote.ifBlank { "No author notes" },
+                    style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { editingCycle = true },
+                        enabled = !busy) { Text("Name & notes") }
+                    OutlinedButton(onClick = { controller.undo() },
+                        enabled = !busy && state.canUndo) { Text("Undo last edit") }
+                    OutlinedButton(onClick = { controller.open(draft.cycleId) },
+                        enabled = !busy) { Text("Reload") }
+                }
+            }
+            draft.blocks.forEachIndexed { index, block ->
+                key(block.blockId) {
+                    PursuitCard {
+                        Text("${index + 1}. ${block.label}",
+                            style = MaterialTheme.typography.titleLarge)
+                        Text("${pretty(block.phase)} · ${block.weeks} weeks · ${splitLabel(block.split)}",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Text("${block.days.size} scheduled days · ${pretty(block.purpose)}",
+                            style = MaterialTheme.typography.bodySmall)
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { editingBlock = block.blockId },
+                                enabled = !busy) { Text("Edit block") }
+                            TextButton(onClick = { controller.duplicateBlock(block.blockId) },
+                                enabled = !busy) { Text("Duplicate") }
+                            TextButton(onClick = { controller.reorderBlock(block.blockId, -1) },
+                                enabled = !busy && index > 0) { Text("Earlier") }
+                            TextButton(onClick = { controller.reorderBlock(block.blockId, 1) },
+                                enabled = !busy && index < draft.blocks.lastIndex) {
+                                Text("Later")
+                            }
+                        }
+                        block.days.sortedBy { it.weekday }.forEach { day ->
+                            HorizontalDivider()
+                            Text("${customWeekdays.getOrElse(day.weekday) { "Day" }} · ${day.label}",
+                                style = MaterialTheme.typography.titleMedium)
+                            Text("${pretty(day.purpose)} · ${day.slots.size} exercises",
+                                style = MaterialTheme.typography.bodySmall)
+                            if (day.slots.isNotEmpty()) {
+                                day.slots.forEach { slot ->
+                                    Text("${slot.exerciseId} · ${slot.sets.size} authored sets" +
+                                        if (slot.pinned) " · Pinned" else "",
+                                        style = MaterialTheme.typography.bodyMedium)
+                                }
+                            } else {
+                                Text("No exercises yet. This day is an unfinished draft.",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            TextButton(onClick = {
+                                editingDay = block.blockId to day.weekday
+                            }, enabled = !busy) { Text("Edit day") }
+                        }
+                        OutlinedButton(onClick = { addingDayFor = block.blockId },
+                            enabled = !busy && block.days.size < 7,
+                            modifier = Modifier.fillMaxWidth()) {
+                            Text("Add a custom training day")
+                        }
+                    }
+                }
+            }
+            OutlinedButton(onClick = { addingBlock = true },
+                enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                Text("Add a training block")
+            }
+            PursuitCard {
+                Text("Coaching approval is a separate step",
+                    style = MaterialTheme.typography.titleMedium)
+                Text("Your authored program is preserved, but missing exercise prescriptions, unverified gym equipment, or unmet volume/recovery requirements must be resolved before any Kotlin workout can be issued.",
+                    style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = { deleteConfirm = true },
+                    enabled = !busy) { Text("Delete this saved draft") }
+            }
+        }
+    }
+
+    val current = draft
+    if (current != null) {
+        if (editingCycle) {
+            var editedTitle by remember(current.cycleId, editingCycle) {
+                mutableStateOf(current.title)
+            }
+            var editedNote by remember(current.cycleId, editingCycle) {
+                mutableStateOf(current.authorNote)
+            }
+            AlertDialog(onDismissRequest = { if (!busy) editingCycle = false },
+                title = { Text("Program name and notes") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(editedTitle, { editedTitle = it },
+                            label = { Text("Program name") })
+                        OutlinedTextField(editedNote, { editedNote = it },
+                            label = { Text("Your coaching instructions") },
+                            minLines = 2)
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        controller.editMetadata(editedTitle.trim(), editedNote)
+                        editingCycle = false
+                    }, enabled = !busy && editedTitle.isNotBlank()) {
+                        Text("Save changes")
+                    }
+                },
+                dismissButton = { TextButton(onClick = { editingCycle = false }) {
+                    Text("Cancel")
+                } })
+        }
+
+        addingDayFor?.let { blockId ->
+            val block = current.blocks.firstOrNull { it.blockId == blockId }
+            if (block != null) {
+                var weekday by remember(blockId) {
+                    mutableIntStateOf((0..6).firstOrNull { n ->
+                        block.days.none { it.weekday == n }
+                    } ?: 0)
+                }
+                var label by remember(blockId) { mutableStateOf("") }
+                var purpose by remember(blockId) {
+                    mutableStateOf(ComposerSessionPurpose.HYPERTROPHY)
+                }
+                AlertDialog(onDismissRequest = { if (!busy) addingDayFor = null },
+                    title = { Text("Add training day") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CycleChoiceRow("Weekday", (0..6).toList(), weekday,
+                                { customWeekdays[it] }) { weekday = it }
+                            OutlinedTextField(label, { label = it },
+                                label = { Text("Name your day") },
+                                placeholder = { Text("Upper A / Arms") })
+                            CycleChoiceRow("Session purpose",
+                                ComposerSessionPurpose.entries.filter {
+                                    it != ComposerSessionPurpose.UNSPECIFIED
+                                }, purpose, ::pretty) { purpose = it }
+                        }
+                    },
+                    confirmButton = { Button(onClick = {
+                        controller.addDay(blockId, weekday, label.trim(), purpose)
+                        addingDayFor = null
+                    }, enabled = !busy && label.isNotBlank() &&
+                        block.days.none { it.weekday == weekday }) {
+                        Text("Save day")
+                    } },
+                    dismissButton = { TextButton(onClick = { addingDayFor = null }) {
+                        Text("Cancel")
+                    } })
+            }
+        }
+
+        editingDay?.let { (blockId, weekday) ->
+            val day = current.blocks.firstOrNull { it.blockId == blockId }
+                ?.days?.firstOrNull { it.weekday == weekday }
+            if (day != null) {
+                var label by remember(blockId, weekday) { mutableStateOf(day.label) }
+                var purpose by remember(blockId, weekday) { mutableStateOf(day.purpose) }
+                AlertDialog(onDismissRequest = { if (!busy) editingDay = null },
+                    title = { Text(customWeekdays[weekday]) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(label, { label = it },
+                                label = { Text("Training day name") })
+                            CycleChoiceRow("Purpose",
+                                ComposerSessionPurpose.entries.filter {
+                                    it != ComposerSessionPurpose.UNSPECIFIED
+                                }, purpose, ::pretty) { purpose = it }
+                            Text("Save the name and purpose individually. Existing sets are never silently rewritten.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    },
+                    confirmButton = {
+                        Column {
+                            TextButton(onClick = {
+                                controller.renameDay(blockId, weekday, label.trim())
+                                editingDay = null
+                            }, enabled = !busy && label.isNotBlank() &&
+                                label != day.label) { Text("Save name") }
+                            TextButton(onClick = {
+                                controller.changeDayPurpose(blockId, weekday, purpose)
+                                editingDay = null
+                            }, enabled = !busy && purpose != day.purpose) {
+                                Text("Save purpose")
+                            }
+                        }
+                    },
+                    dismissButton = { TextButton(onClick = { editingDay = null }) {
+                        Text("Close")
+                    } })
+            }
+        }
+
+        if (addingBlock || editingBlock != null) {
+            val existing = current.blocks.firstOrNull { it.blockId == editingBlock }
+            var blockName by remember(editingBlock, addingBlock) {
+                mutableStateOf(existing?.label.orEmpty())
+            }
+            var phaseSelected by remember(editingBlock, addingBlock) {
+                mutableStateOf(existing?.phase ?: TrainingPhase.HYPERTROPHY)
+            }
+            var purposeSelected by remember(editingBlock, addingBlock) {
+                mutableStateOf(existing?.purpose ?: CustomBlockPurpose.TRAINING)
+            }
+            var numWeeks by remember(editingBlock, addingBlock) {
+                mutableStateOf(existing?.weeks?.toString() ?: "4")
+            }
+            var customSplit by remember(editingBlock, addingBlock) {
+                mutableStateOf(existing?.split?.let(::splitLabel).orEmpty())
+            }
+            AlertDialog(onDismissRequest = {
+                if (!busy) { addingBlock = false; editingBlock = null }
+            }, title = { Text(if (existing == null) "Add training block" else "Edit training block") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(blockName, { blockName = it },
+                            label = { Text("Block name") })
+                        CycleChoiceRow("Phase", TrainingPhase.entries,
+                            phaseSelected, ::pretty) { phaseSelected = it }
+                        CycleChoiceRow("Block purpose", CustomBlockPurpose.entries,
+                            purposeSelected, ::pretty) { purposeSelected = it }
+                        OutlinedTextField(numWeeks, { numWeeks = it },
+                            label = { Text("Weeks") },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number))
+                        OutlinedTextField(customSplit, { customSplit = it },
+                            label = { Text("Custom split") })
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        if (existing != null) controller.editBlock(
+                            existing.blockId, blockName.trim(), phaseSelected,
+                            purposeSelected, numWeeks.toIntOrNull() ?: 0,
+                            customSplit.trim())
+                        else controller.addBlock(blockName.trim(),
+                            phaseSelected, numWeeks.toIntOrNull() ?: 0,
+                            customSplit.trim())
+                        editingBlock = null
+                        addingBlock = false
+                    }, enabled = !busy && blockName.isNotBlank() &&
+                        customSplit.isNotBlank() &&
+                        (numWeeks.toIntOrNull() in 1..52)) { Text("Save block") }
+                },
+                dismissButton = { TextButton(onClick = {
+                    editingBlock = null; addingBlock = false
+                }) { Text("Cancel") } })
+        }
+
+        if (deleteConfirm) AlertDialog(
+            onDismissRequest = { if (!busy) deleteConfirm = false },
+            title = { Text("Delete this draft?") },
+            text = { Text("This removes the saved custom draft only. Historical workouts and any separately approved program remain unchanged. Stale autosaves cannot restore it.") },
+            confirmButton = {
+                Button(onClick = {
+                    controller.delete(); deleteConfirm = false
+                }, enabled = !busy) { Text("Delete draft") }
+            },
+            dismissButton = { TextButton(onClick = { deleteConfirm = false }) {
+                Text("Keep draft")
+            } })
+    }
+}

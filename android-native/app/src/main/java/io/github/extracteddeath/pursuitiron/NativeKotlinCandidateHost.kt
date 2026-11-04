@@ -69,6 +69,27 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * the production Compose screens. No draft is an issuance grant.
      * The store re-authenticates the owner and enforces revision CAS.
      */
+    fun createBlankCustomCycleDraft(
+        cycleId:String,
+        goal:AthleteTrainingGoal,
+        title:String,
+        firstBlockId:String,
+        firstBlockLabel:String,
+        firstBlockWeeks:Int,
+        phase:TrainingPhase,
+        split:CustomSplitIdentity
+    ):NativeCustomDraftWriteResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.NOT_AUTHORIZED)
+        val candidate=CustomCycleBuilderDomain.blank(
+            cycleId,owner.athleteId,goal,title,firstBlockId,
+            firstBlockWeeks,phase,split,firstBlockLabel)
+            ?:return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.INVALID_DRAFT)
+        return customDraftStore.save(owner.ownerKey,cycleId,0,candidate)
+    }
+
     fun readCustomCycleDraft(cycleId:String):NativeCustomDraftReadResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomDraftReadResult.Rejected(

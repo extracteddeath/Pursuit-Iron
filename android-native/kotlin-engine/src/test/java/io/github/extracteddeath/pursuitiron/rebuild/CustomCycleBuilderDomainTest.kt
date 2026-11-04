@@ -244,6 +244,23 @@ class CustomCycleBuilderDomainTest {
         assertEquals("bench-a", moved.draft.weekOverrides["base"]!!.single().slotId)
         assertEquals(3L, moved.draft.revision)
         assertEquals(0, starting.weekOverrides["base"]!!.single().weekday)
+        val availability = listOf(CustomExerciseAvailability(
+            "bench", VerifiedLoadStock.Totals(
+                LoadUnit.LB, LoadBasis.SMITH_TOTAL,
+                listOf(n(135), n(155), n(185), n(200))),
+            false, attachmentIds = setOf("straight-bar")))
+        val reviewed = CustomTrainingCycleDomain.review(moved.draft, availability)
+        assertEquals(CustomCycleReviewStatus.READY_FOR_COACH_REVIEW, reviewed.status)
+        val thirdWeek = CustomTrainingCycleDomain.week(reviewed, 3)!!
+        val scheduledSlot = thirdWeek.days.first { it.weekday == 2 }
+            .slots.single()
+        assertEquals("bench-a", scheduledSlot.slotId)
+        assertEquals(n(200),
+            (scheduledSlot.sets.single().load as DraftSetLoad.Verified).value)
+        val secondWeek = CustomTrainingCycleDomain.week(reviewed, 2)!!
+        assertEquals(CustomAmplifierKind.DROP_SET,
+            secondWeek.days.first { it.weekday == 2 }.slots.single()
+                .sets.last().amplifier?.kind)
         val undo = accepted(CustomCycleBuilderDomain.undo(
             moved.draft, moved.receipt))
         assertEquals(expanded.draft.blocks, undo.draft.blocks)

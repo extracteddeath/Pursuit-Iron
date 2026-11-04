@@ -127,6 +127,15 @@ internal class AppPrivateKotlinLocalAthlete(context: Context) :
         }
     }
 
+    /**
+     * Display-only local identifier for EXPLICIT same-athlete restoration.
+     * This never activates the owner, authorizes reading gym/workouts, or
+     * bypasses a newly reviewed setup. A corrupt existing record is NEVER
+     * replaced with a new account just because this lookup returns null.
+     */
+    @Synchronized fun savedAthleteIdForExplicitResume():String? =
+        runCatching { read()?.athleteId }.getOrNull()
+
     /** Never claim a previous login on cold startup without native activation. */
     override fun signedInIdentity():NativeKotlinOwnerIdentity? =
         if(explicitlyActivated)runCatching {read()}.getOrNull() else null

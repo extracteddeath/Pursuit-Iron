@@ -155,4 +155,26 @@ class NativeKotlinCustomAuthoringSourceFileStoreTest {
         assertEquals(NativeAuthoringSourceRead.Missing,store().read("owner-1"))
     }
 
+    @Test fun provisionalStarterCatalogPersistsWithoutAssumingAnyMissingGymWeights() {
+        val starter=source().copy(catalog=StarterExerciseTranche.movements())
+        assertEquals(20,starter.catalog.size)
+        val bytes=NativeKotlinCustomAuthoringSourceCodec.encode(starter)
+        val restored=NativeKotlinCustomAuthoringSourceCodec.decode(bytes)
+        assertEquals(starter,restored)
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            store().publish("owner-1",0,starter))
+        val saved=(store().read("owner-1")
+            as NativeAuthoringSourceRead.Found).source
+        val eligible=CustomExerciseAuthoringDomain.picker(
+            saved.setup,saved.catalog)
+        assertTrue(eligible.any{
+            it.exerciseId=="bodyweight_crunch" && it.bodyweight
+        })
+        assertFalse(eligible.any {it.exerciseId=="barbell_bench"})
+        assertFalse(eligible.any {it.exerciseId=="leg_extension"})
+        assertEquals(setOf("cable-1"),
+            saved.setup.reviewed!!.gym.confirmedStock.keys)
+        assertFalse(saved.mayIssueWorkout)
+    }
+
 }

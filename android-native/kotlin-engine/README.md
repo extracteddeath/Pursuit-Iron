@@ -1140,3 +1140,39 @@ just because a UI checkbox or callback returns true. The bounded
 blocker, along with authoritative signed-in account enforcement and
 the full user-facing coach/Compose experience. No JS fallback, live
 workout authority switch, or APK release is authorized by this pass.
+
+
+## Native mixed-history factual reader (isolated candidate)
+
+The native candidate host now exposes `reviewVerifiedKotlinHistory()`. It
+uses `NativeKotlinMixedHistoryReadCoordinator` to open the entire enrolled,
+ordered owner-fenced manifest and independently reopen every completed
+generated/Composer or custom-cycle workout and every saved Composer
+correction. It replays the factual receipt streams, checks the exact
+stored history receipt, Finish identity, chronological ordinal and athlete,
+and re-reads the durable manifest under the same transaction fence.
+
+Mixed authored/generated sessions can therefore be reviewed in one factual
+timeline with the correct original sets, actually observed reps/loads/RIR,
+separate amplifier follow-ups, and corrected Composer history. It refuses
+the *entire* read for pending redo, missing enrollment, revoked owner,
+corrupt manifest, missing workout or mismatched receipts. Missing enrollment
+and corrupt history have distinct refusal codes.
+
+Custom history receipts now use the `custom-v2-` prefix and bind to the
+**complete replay-verified custom journal**, not just issued targets. A
+different actual set or amplifier outcome produces a different digest even
+when targets, Finish ID and journal revision happen to match. This native
+prototype format is not a backward-compatible migration format for older
+test manifests; old custom receipt records must be verified/migrated rather
+than silently accepted.
+
+The previous Composer-only history reader deliberately stays closed for
+any mixed custom history. The new timeline is **review-only**, never an
+automatic PR or double-progression decision. Before product cutover: build
+the consented and tested authoritative PR/coaching policies for both
+workout kinds, migrate legacy JS history losslessly, replace the current
+128-session bounded ledger with proven lifetime history storage, wire
+every production navigation/Finish/edit/Last route to the Kotlin authority,
+and complete Android device validation. The web engine and the other native
+branch remain untouched. No APK or production switch is approved here.

@@ -386,7 +386,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                     style=MaterialTheme.typography.bodyMedium)
                 OutlinedTextField(dumbbells,{dumbbells=it.take(900);
                     gymConfirmed=false},
-                    label={Text("Dumbbells per hand · exact ${unit.ifBlank{"selected-unit"}"} values")},
+                    label={Text("Dumbbells per hand · exact " + unit.ifBlank { "selected unit" } + " values")},
                     placeholder={Text("Only your real values, comma-separated")},
                     modifier=Modifier.fillMaxWidth())
                 OutlinedTextField(cable,{cable=it.take(100);gymConfirmed=false},

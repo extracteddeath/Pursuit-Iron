@@ -343,7 +343,7 @@ class NativeKotlinCustomSavedCorrectionFileStore(
                 val after = load(owner, workoutId, who)
                 val persisted = (after as? NativeCustomSavedCorrectionResult.Opened)
                     ?.state
-                if (persisted != proposal.state)
+                if (persisted == null || persisted != proposal.state)
                     NativeCustomSavedCorrectionResult.Rejected(
                         NativeCustomSavedCorrectionRefusal.STORAGE_UNAVAILABLE)
                 else NativeCustomSavedCorrectionResult.Durable(persisted, false)

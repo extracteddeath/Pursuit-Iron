@@ -91,7 +91,7 @@ object KotlinWorkoutJournalDomain {
     private val max=BigDecimal("100000")
     private const val MAX_RECEIPTS=2048
 
-    private fun validPerformed(
+    internal fun validPerformed(
         target: KotlinWorkoutTarget,
         outcome: KotlinJournalSetOutcome,
         performed: KotlinPerformedSet?

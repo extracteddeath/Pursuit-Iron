@@ -171,8 +171,8 @@ object NativeKotlinGymCatalogEditingDomain {
             catalog.any { move ->
                 !id.matches(move.exerciseId) ||
                 !id.matches(move.familyId) || !id.matches(move.variantId) ||
-                (move.attachmentId!=null && !id.matches(move.attachmentId)) ||
-                (move.equipmentId!=null && !id.matches(move.equipmentId)) ||
+                (move.attachmentId?.let { !id.matches(it) } == true) ||
+                (move.equipmentId?.let { !id.matches(it) } == true) ||
                 move.equipmentId==null && move.expectedLoadBasis!=null ||
                 move.equipmentId!=null && move.expectedLoadBasis==null ||
                 move.creditStatus!=CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL ||
@@ -190,7 +190,7 @@ object NativeKotlinGymCatalogEditingDomain {
                 move.minimumRecoveryGroupDayGap !in 1..6 ||
                 (move.recoveryGroupId==null &&
                     move.minimumRecoveryGroupDayGap!=1) ||
-                (move.recoveryGroupId!=null && !id.matches(move.recoveryGroupId)) ||
+                (move.recoveryGroupId?.let { !id.matches(it) } == true) ||
                 (move.sourcePracticalReps?.let { reps ->
                     reps.minimum !in 1..100 ||
                         reps.maximum !in reps.minimum..100

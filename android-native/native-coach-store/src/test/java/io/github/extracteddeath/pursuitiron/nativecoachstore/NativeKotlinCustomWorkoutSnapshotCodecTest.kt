@@ -8,7 +8,7 @@ import org.junit.Test
 
 class NativeKotlinCustomWorkoutSnapshotCodecTest {
     private fun weight(value:String)=DraftSetLoad.Verified(
-        BigDecimal(value),LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)
+        LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,BigDecimal(value))
     private fun set(
         slot:String,ordinal:Int,type:DraftSetType,load:DraftSetLoad,
         amplifier:CustomSetAmplifier?=null

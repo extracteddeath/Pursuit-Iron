@@ -40,6 +40,8 @@ private fun loadLabel(load:DraftSetLoad):String=when(load) {
             }
 }
 private fun humanStatus(reason:NativeJournalFileRefusal?):String=when(reason) {
+    NativeJournalFileRefusal.HISTORY_NOT_READY ->
+        "Native history ownership is not verified yet. Workout changes and Finish are blocked until existing history is safely enrolled or recovered. Nothing was overwritten."
     NativeJournalFileRefusal.NOT_AUTHORIZED -> "Activate your approved local athlete before opening this workout."
     NativeJournalFileRefusal.NOT_ISSUED -> "No saved Kotlin workout exists for this selection."
     NativeJournalFileRefusal.SOURCE_CONFLICT,NativeJournalFileRefusal.ISSUE_CONFLICT ->

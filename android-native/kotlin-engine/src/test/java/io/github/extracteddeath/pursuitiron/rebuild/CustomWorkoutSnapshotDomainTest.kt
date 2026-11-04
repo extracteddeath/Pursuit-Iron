@@ -151,4 +151,65 @@ class CustomWorkoutSnapshotDomainTest {
         assertEquals(CustomWorkoutSnapshotResult.Rejected(
             CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED),missing)
     }
+    @Test fun exactDumbbellLoadAndReducedDropSetSurviveWithoutFictitiousIncrement() {
+        val reviewed=CoachAthleteSetupDomain.review(AthleteSetupDraft(
+            profileRevision="setup-1",athleteProfileId="athlete-1",
+            goal=AthleteTrainingGoal.HYPERTROPHY,
+            experience=AthleteExperience.ADVANCED,
+            split=ComposerSplit.FULL_BODY,
+            trainingWeekdays=setOf(0,2,4),timezoneId="America/New_York",
+            sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
+            hardSessionLimit=HardSessionLimit.NO_HARD_LIMIT,
+            gym=GymProfileDraft("gym-1",LoadUnit.LB,
+                mapOf("dumbbell-rack" to VerifiedLoadStock.Totals(
+                    LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                    listOf(java.math.BigDecimal("10"),
+                        java.math.BigDecimal("15"),
+                        java.math.BigDecimal("20")))),
+                emptySet(),emptySet()),
+            allowBodyweight=true,allowSupersets=false,
+            allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
+            focusedMuscles=emptySet(),reducedMuscles=emptySet(),
+            excludedExerciseIds=emptySet(),lockedTrainingDays=emptySet(),
+            hardTrainingDays=emptySet(),longTrainingDays=emptySet(),
+            declaredRestDays=setOf(1,3,5,6)))
+        assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,reviewed.status)
+        val twenty=DraftSetLoad.Verified(java.math.BigDecimal("20"),
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)
+        val fifteen=DraftSetLoad.Verified(java.math.BigDecimal("15"),
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)
+        fun day(day:Int)=CustomTrainingDay(day,"Delts",
+            ComposerSessionPurpose.HYPERTROPHY,listOf(CustomExerciseSlot(
+                "lateral-$day","db_lateral_raise",ComposerRole.ACCESSORY,
+                listOf(CustomAuthoredSet(DraftSetType.WORKING,twenty,
+                    RepBand(12,15),2,55,75,
+                    CustomSetAmplifier(CustomAmplifierKind.DROP_SET,
+                        8,15,fifteen))))))
+        val custom=CustomTrainingCycle(
+            "cycle-dumbbells",1,"athlete-1",AthleteTrainingGoal.HYPERTROPHY,
+            "Exact weights",listOf(CustomTrainingBlock("base","Hypertrophy",
+                TrainingPhase.HYPERTROPHY,CustomBlockPurpose.TRAINING,3,
+                CustomSplitIdentity.Freeform("My delts"),
+                listOf(day(0),day(2),day(4)))))
+        val first=CustomWorkoutSnapshotDomain.preview(custom,reviewed,
+            StarterExerciseTranche.movements(),1,1,0)
+        assertTrue(first.toString(),first is CustomWorkoutSnapshotResult.Preview)
+        val prescribed=(first as CustomWorkoutSnapshotResult.Preview)
+            .snapshot.slots.single().sets.single().prescription
+        assertEquals(twenty,prescribed.load)
+        assertEquals(fifteen,prescribed.amplifier?.followUpLoad)
+        assertEquals(145L,first.snapshot.knownSetAndRestSeconds)
+        val impossible=DraftSetLoad.Verified(java.math.BigDecimal("17.5"),
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)
+        val rejected=custom.copy(blocks=listOf(
+            custom.blocks.single().copy(days=listOf(
+                day(0).copy(slots=listOf(day(0).slots.single().copy(
+                    sets=listOf(prescribed.copy(load=impossible))))),
+                day(2),day(4)))))
+        assertEquals(CustomWorkoutSnapshotResult.Rejected(
+            CustomWorkoutSnapshotRefusal.INVALID_CYCLE),
+            CustomWorkoutSnapshotDomain.preview(rejected,reviewed,
+                StarterExerciseTranche.movements(),1,1,0))
+    }
+
 }

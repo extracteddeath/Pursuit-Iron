@@ -9,7 +9,9 @@ import java.math.BigDecimal
  */
 data class KotlinChronologicalWorkout(
     val completionOrder: Long,
-    val journal: KotlinWorkoutJournalState
+    val journal: KotlinWorkoutJournalState,
+    /** Optional separately verified, post-Finish correction journal. */
+    val savedCorrections: KotlinSavedHistoryCorrectionState? = null
 )
 
 /**
@@ -104,7 +106,12 @@ object KotlinProgressionTimelineDomain {
 
         val projected = ArrayList<Pair<KotlinChronologicalWorkout, KotlinWorkoutHistoryEvidence>>()
         for (session in sessions) {
-            val candidate = KotlinWorkoutHistoryEvidenceDomain.project(session.journal)
+            val edits = session.savedCorrections
+            if (edits != null && edits.originalFinishedJournal != session.journal)
+                return rejected(KotlinTimelineReviewStatus.UNVERIFIED_JOURNAL)
+            val candidate = if (edits == null)
+                KotlinWorkoutHistoryEvidenceDomain.project(session.journal)
+            else KotlinWorkoutHistoryEvidenceDomain.projectSaved(edits)
             if (candidate !is KotlinHistoryProjectionResult.Candidate)
                 return rejected(KotlinTimelineReviewStatus.UNVERIFIED_JOURNAL)
             projected.add(session to candidate.evidence)

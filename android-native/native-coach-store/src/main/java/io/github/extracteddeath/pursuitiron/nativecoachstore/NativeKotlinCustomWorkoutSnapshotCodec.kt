@@ -81,7 +81,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             writeInt(amp.followUpReps)
             writeInt(amp.followUpRestSeconds)
             writeBoolean(amp.followUpLoad!=null)
-            amp.followUpLoad?.let(::load)
+            amp.followUpLoad?.let { load(it) }
         }
     }
     private fun DataInputStream.authored():CustomAuthoredSet {
@@ -136,9 +136,9 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         require(snapshot.slots.sumOf{it.sets.size} in 1..MAX_TARGETS)
         require(snapshot.knownSetAndRestSeconds in 1..10_000_000L)
         require(snapshot.declaredNonSetSeconds?.let { it in 0..21600 } != false)
-        if(snapshot.split is CustomSplitIdentity.Freeform)
-            require(snapshot.split.label.isNotBlank() &&
-                snapshot.split.label.length<=80)
+        (snapshot.split as? CustomSplitIdentity.Freeform)?.let { split ->
+            require(split.label.isNotBlank() && split.label.length<=80)
+        }
         var duration=0L
         val seen=mutableSetOf<String>()
         for(slot in snapshot.slots) {

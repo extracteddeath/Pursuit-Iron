@@ -32,6 +32,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         authoringSourceStore,customDraftStore,revisionFence,localAthlete)
     private val customCycleSignoffs=NativeKotlinCustomCycleSignoffFileStore(
         root,revisionFence,localAthlete,customDraftStore,authoringSourceStore)
+    private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(
+        revisionFence,localAthlete,customDraftStore,authoringSourceStore,
+        customCycleSignoffs)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
@@ -118,6 +121,22 @@ internal class NativeKotlinCandidateHost(context:Context) {
             is NativeAuthoringSourceRead.Rejected ->
                 NativeAuthoringSourceWrite.Rejected(existing.reason)
         }
+    }
+
+    /**
+     * PRE-ISSUANCE, read-only, owner-rechecked custom session projection.
+     * Not backed by an issued-workout grant and cannot write journal sets.
+     * New custom-workout issuer must re-run this under the history lock.
+     */
+    fun previewConsentBoundCustomWorkout(
+        cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs
+    ):NativeCustomPreflightResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPreflightResult.Rejected(
+                NativeCustomPreflightRefusal.NOT_AUTHORIZED)
+        return customWorkoutPreflight.inspect(owner.ownerKey,cycleId,
+            absoluteWeek,weekday,inputs)
     }
 
     /**

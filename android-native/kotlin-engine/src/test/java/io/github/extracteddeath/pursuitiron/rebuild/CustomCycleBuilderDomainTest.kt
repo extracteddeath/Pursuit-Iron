@@ -395,4 +395,27 @@ class CustomCycleBuilderDomainTest {
                 as CustomCycleBuilderResult.Rejected).reason)
     }
 
+
+    @Test fun oneDayMetadataReceiptAtomicallyKeepsEveryCustomSetAndOverride() {
+        val original = draft()
+        val changed = accepted(CustomCycleBuilderDomain.editDayMetadata(
+            original, 1, "base", 0, "Upper power",
+            ComposerSessionPurpose.STRENGTH_SKILL))
+        val before = original.blocks.single().days.single()
+        val after = changed.draft.blocks.single().days.single()
+        assertEquals("Upper power", after.label)
+        assertEquals(ComposerSessionPurpose.STRENGTH_SKILL, after.purpose)
+        assertEquals(before.slots, after.slots)
+        assertEquals(original.weekOverrides, changed.draft.weekOverrides)
+        assertEquals(2L, changed.draft.revision)
+        assertEquals(CustomCycleBuilderRefusal.STALE_REVISION,
+            (CustomCycleBuilderDomain.editDayMetadata(
+                changed.draft, 1, "base", 0, "Stale",
+                ComposerSessionPurpose.HYPERTROPHY)
+                as CustomCycleBuilderResult.Rejected).reason)
+        val undone = accepted(CustomCycleBuilderDomain.undo(
+            changed.draft, changed.receipt))
+        assertEquals(before, undone.draft.blocks.single().days.single())
+    }
+
 }

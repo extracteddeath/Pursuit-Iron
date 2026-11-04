@@ -147,6 +147,14 @@ internal class NativeKotlinCustomCycleController(
             CustomTrainingDay(weekday, label, purpose, emptyList()))
     }
 
+    fun editDay(
+        blockId: String, weekday: Int, label: String,
+        purpose: ComposerSessionPurpose
+    ) = edit { draft ->
+        CustomCycleBuilderDomain.editDayMetadata(
+            draft, draft.revision, blockId, weekday, label, purpose)
+    }
+
     fun renameDay(blockId: String, weekday: Int, label: String) = edit { draft ->
         CustomCycleBuilderDomain.renameDay(
             draft, draft.revision, blockId, weekday, label)

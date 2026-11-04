@@ -163,4 +163,35 @@ class KotlinWorkoutHistoryEvidenceDomainTest {
             KotlinWorkoutHistoryEvidenceDomain.project(modifiedFinish))
         assertEquals(1, evidence(completed).sets.size)
     }
+
+    @Test fun mixedActualLoadsNeverAuthorizeAllSetPromotion() {
+        var j = start(target("first", 0), target("second", 1))
+        j = record(j, "event-a", "first", KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("200"), LoadUnit.LB, 12, 3))
+        j = record(j, "event-b", "second", KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("215"), LoadUnit.LB, 12, 0))
+        val history = evidence(finish(j))
+        val review = checkNotNull(history.exerciseReviews.single().progressionReview)
+        assertEquals(ProgressionEvidenceSignal.MIXED_LOAD_CEILING, review.signal)
+        assertTrue(review.mixedActualLoads)
+        assertEquals(setOf(1), review.nearFailureOrdinals)
+        assertFalse(history.canApplyProgression)
+        assertEquals(listOf(BigDecimal("200"), BigDecimal("215")),
+            history.exerciseReviews.single().workingSets.map { it.actual?.load })
+        assertTrue(history.sets.all {
+            (it.issuedLoad as DraftSetLoad.Verified).value == BigDecimal("30")
+        })
+    }
+
+    @Test fun duplicatedWorkingOrdinalsRetainFactsButBlockProgression() {
+        var j = start(target("first", 0), target("second", 0))
+        j = record(j, "event-a", "first", KotlinJournalSetOutcome.COMPLETED, actual(9))
+        j = record(j, "event-b", "second", KotlinJournalSetOutcome.COMPLETED, actual(9))
+        val review = evidence(finish(j)).exerciseReviews.single()
+        assertEquals(KotlinHistoryProgressionGate.DUPLICATE_OR_GAPPED_ORDINALS,
+            review.progressionGate)
+        assertEquals(2, review.workingSets.size)
+        assertNull(review.progressionReview)
+    }
+
 }

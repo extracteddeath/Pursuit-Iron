@@ -49,6 +49,22 @@ sealed interface NativeJournalFileResult {
     ) : NativeJournalFileResult
 }
 
+/**
+ * Complete physical native-journal inventory. This is NOT a chronology:
+ * journal files have no authenticated completion timestamp or order.
+ * All discovered files are replayed, including unfinished sessions.
+ */
+sealed interface NativeKotlinJournalInventoryResult {
+    data class Verified(val journals: List<KotlinWorkoutJournalState>) :
+        NativeKotlinJournalInventoryResult
+    data class Rejected(val reason: NativeKotlinJournalInventoryRefusal) :
+        NativeKotlinJournalInventoryResult
+}
+enum class NativeKotlinJournalInventoryRefusal {
+    INVALID_OWNER, UNREADABLE_OR_UNEXPECTED_FILE, UNAUTHORIZED_WORKOUT,
+    WRONG_ATHLETE, TOO_MANY_FILES
+}
+
 private data class SavedReceipts(
     val ownerKey: String,
     val snapshotHash: String,
@@ -303,6 +319,80 @@ class KotlinNativeJournalFileStore(private val privateDirectory: Path) {
             return NativeJournalFileResult.Rejected(
                 NativeJournalFileRefusal.CORRUPT_RECEIPTS)
         return NativeJournalFileResult.Durable(recovered.journal,true)
+    }
+
+    /**
+     * Inventory EVERY physical Kotlin-native journal, not caller-picked IDs.
+     * The surrounding owner fence must prevent concurrent writers; direct
+     * low-level writers outside that fence remain a release blocker.
+     *
+     * Corrupt files belonging to another owner also block the scan because
+     * their true owner cannot be proven from their bytes. No silent omission.
+     */
+    fun inventoryOwner(
+        ownerKey: String, athleteId: String,
+        authorizeCurrent: (String, KotlinTrainingSourceRevision) -> Boolean
+    ): NativeKotlinJournalInventoryResult {
+        fun reject(reason: NativeKotlinJournalInventoryRefusal) =
+            NativeKotlinJournalInventoryResult.Rejected(reason)
+        if (!ownerId.matches(ownerKey) || !ownerId.matches(athleteId))
+            return reject(NativeKotlinJournalInventoryRefusal.INVALID_OWNER)
+        return runCatching {
+            Files.createDirectories(privateDirectory)
+            val records = Files.list(privateDirectory).use { stream ->
+                stream.filter { file ->
+                    val name = file.fileName.toString()
+                    name.startsWith("journal-") && name.endsWith(".bin")
+                }.toList()
+            }
+            if (records.size > 2048)
+                return@runCatching reject(
+                    NativeKotlinJournalInventoryRefusal.TOO_MANY_FILES)
+            // Unreconciled atomic-writing artifacts cannot be ignored.
+            val pending = Files.list(privateDirectory).use { stream ->
+                stream.anyMatch { file ->
+                    val name = file.fileName.toString()
+                    name.startsWith("native-journal-") &&
+                        name.endsWith(".pending")
+                }
+            }
+            if (pending) return@runCatching reject(
+                NativeKotlinJournalInventoryRefusal.UNREADABLE_OR_UNEXPECTED_FILE)
+            val found = ArrayList<KotlinWorkoutJournalState>()
+            for (file in records.sortedBy { it.fileName.toString() }) {
+                val saved = runCatching {
+                    if (Files.isSymbolicLink(file) || !Files.isRegularFile(file) ||
+                        Files.size(file) > 2_000_000L)
+                        throw IOException("unsafe journal inventory file")
+                    NativeJournalBinary.decode(Files.readAllBytes(file))
+                }.getOrNull() ?: return@runCatching reject(
+                    NativeKotlinJournalInventoryRefusal.UNREADABLE_OR_UNEXPECTED_FILE)
+                val workoutId = saved.snapshot.workoutId
+                if (!ownerId.matches(saved.ownerKey) ||
+                    !ownerId.matches(workoutId) ||
+                    saved.identity.workoutId != workoutId ||
+                    saved.identity.source != saved.snapshot.source ||
+                    file.fileName.toString() !=
+                        path(saved.ownerKey, workoutId).fileName.toString())
+                    return@runCatching reject(
+                        NativeKotlinJournalInventoryRefusal.UNREADABLE_OR_UNEXPECTED_FILE)
+                if (saved.ownerKey != ownerKey) continue
+                if (saved.snapshot.source.athleteId != athleteId)
+                    return@runCatching reject(
+                        NativeKotlinJournalInventoryRefusal.WRONG_ATHLETE)
+                val restored = openStored(ownerKey, workoutId, authorizeCurrent)
+                if (restored !is NativeJournalFileResult.Durable)
+                    return@runCatching reject(
+                        if (restored is NativeJournalFileResult.Rejected &&
+                            restored.reason == NativeJournalFileRefusal.NOT_AUTHORIZED)
+                            NativeKotlinJournalInventoryRefusal.UNAUTHORIZED_WORKOUT
+                        else NativeKotlinJournalInventoryRefusal.UNREADABLE_OR_UNEXPECTED_FILE)
+                found.add(restored.journal)
+            }
+            NativeKotlinJournalInventoryResult.Verified(found.toList())
+        }.getOrElse {
+            reject(NativeKotlinJournalInventoryRefusal.UNREADABLE_OR_UNEXPECTED_FILE)
+        }
     }
 
     /**

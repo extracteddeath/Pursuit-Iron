@@ -45,7 +45,7 @@ data class NativeKotlinWorkoutApproval(
 
 enum class NativeKotlinIssueRefusal {
     NOT_AUTHORIZED, APPROVAL_CHANGED, WORKOUT_UNRESOLVED,
-    STORAGE_REJECTED
+    STORAGE_REJECTED, HISTORY_NOT_READY
 }
 
 sealed interface NativeKotlinIssueResult {

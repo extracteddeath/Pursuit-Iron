@@ -35,7 +35,9 @@ internal data class NativeKotlinCustomCycleState(
     val signoffRefusal: NativeCustomSignoffRefusal? = null,
     val authoredPreview: CustomWorkoutDaySnapshot? = null,
     val authoredPreviewRefusal: CustomWorkoutSnapshotRefusal? = null,
-    val consentBoundPreview: NativeCustomPreflightResult.ReviewedPreview? = null
+    val consentBoundPreview: NativeCustomPreflightResult.ReviewedPreview? = null,
+    val preparedWorkout: NativeCustomPreparedWorkout? = null,
+    val preparationRefusal: NativeCustomPrepareRefusal? = null
 )
 
 /**
@@ -173,6 +175,8 @@ internal class NativeKotlinCustomCycleController(
                             authoredPreview = null,
                             authoredPreviewRefusal = null,
                             consentBoundPreview = null,
+                            preparedWorkout = null,
+                            preparationRefusal = null,
                             canUndo = true,
                             message = "Saved revision ${write.revision} · ${result.receipt.operation.replace('-', ' ')}.")
                     }
@@ -382,6 +386,47 @@ internal class NativeKotlinCustomCycleController(
         }
     }
 
+    /** Keep an immutable, cold-recoverable custom prescription distinct
+     * from an issued session, actual set logging, or finished history. */
+    fun prepareConsentBoundDay(absoluteWeek:Int,weekday:Int) = run {
+        val draft=current.value.draft ?:return@run
+        val inputs=auditedInputs
+        if(inputs==null) {
+            current.value=current.value.copy(
+                message="No complete coach policy; prepare refused.",
+                preparationRefusal=NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            return@run
+        }
+        val inspected=current.value.consentBoundPreview
+        if(inspected==null ||
+            inspected.session.absoluteWeek!=absoluteWeek ||
+            inspected.session.weekday!=weekday ||
+            inspected.session.stamp.cycleRevision!=draft.revision) {
+            current.value=current.value.copy(
+                message="Verify consent for this exact week and day before preparation.",
+                preparationRefusal=NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            return@run
+        }
+        val workoutId="custom-"+UUID.randomUUID().toString().replace("-","")
+        when(val result=host.prepareReviewedCustomWorkout(
+            workoutId,draft.cycleId,absoluteWeek,weekday,inputs)) {
+            is NativeCustomPrepareResult.Prepared -> {
+                val restored=host.openPreparedCustomWorkout(workoutId)
+                current.value=current.value.copy(
+                    preparedWorkout=(restored as? NativeCustomPreparedRead.Found)?.workout,
+                    preparationRefusal=null,
+                    message=if(restored is NativeCustomPreparedRead.Found)
+                        "Exact custom workout prepared and cold-recovered as $workoutId. It is NOT issued; no set logging or Finish is enabled."
+                    else "Saved snapshot could not be independently reopened; issuance remains disabled."
+                )
+            }
+            is NativeCustomPrepareResult.Rejected ->
+                current.value=current.value.copy(
+                    preparedWorkout=null,preparationRefusal=result.reason,
+                    message="Custom preparation rejected: ${result.reason.name.replace('_',' ').lowercase()}. No workout issued.")
+        }
+    }
+
     /** Read-only options; absent trusted gym/catalog means NO made-up choices. */
     fun availableExerciseChoices(): List<CustomExercisePickerOption> =
         current.value.availableChoices
@@ -565,6 +610,8 @@ internal class NativeKotlinCustomCycleController(
                     authoredPreview = null,
                     authoredPreviewRefusal = null,
                     consentBoundPreview = null,
+                    preparedWorkout = null,
+                    preparationRefusal = null,
                     message = "Undo saved · revision ${write.revision}")
             is NativeCustomDraftWriteResult.Rejected -> {
                 applyRead(saved.cycleId, host.readCustomCycleDraft(saved.cycleId))

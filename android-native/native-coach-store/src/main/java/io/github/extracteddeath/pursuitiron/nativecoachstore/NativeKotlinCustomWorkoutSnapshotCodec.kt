@@ -135,8 +135,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
             snapshot.slots.size)
         require(snapshot.slots.sumOf{it.sets.size} in 1..MAX_TARGETS)
         require(snapshot.knownSetAndRestSeconds in 1..10_000_000L)
-        require(snapshot.declaredNonSetSeconds==null ||
-            snapshot.declaredNonSetSeconds in 0..21600)
+        require(snapshot.declaredNonSetSeconds?.let { it in 0..21600 } != false)
         if(snapshot.split is CustomSplitIdentity.Freeform)
             require(snapshot.split.label.isNotBlank() &&
                 snapshot.split.label.length<=80)
@@ -145,8 +144,8 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
         for(slot in snapshot.slots) {
             require(listOf(slot.slotId,slot.exerciseId,slot.familyId,
                 slot.variantId).all(id::matches))
-            require(slot.attachmentId==null || id.matches(slot.attachmentId))
-            require(slot.supersetGroup==null || id.matches(slot.supersetGroup))
+            require(slot.attachmentId?.let { id.matches(it) } != false)
+            require(slot.supersetGroup?.let { id.matches(it) } != false)
             require(slot.coachNote.length<=1000)
             require(slot.sets.isNotEmpty() && slot.sets.size<=20)
             for((index,set) in slot.sets.withIndex()) {
@@ -157,7 +156,7 @@ internal object NativeKotlinCustomWorkoutSnapshotCodec {
                 val p=set.prescription
                 require(p.reps.minimum in 1..100 &&
                     p.reps.maximum in p.reps.minimum..100)
-                require(p.targetRir==null || p.targetRir in 0..10)
+                require(p.targetRir?.let { it in 0..10 } != false)
                 require(p.activeSeconds in 1..3600 &&
                     p.restSeconds in 0..3600)
                 require(p.type!=DraftSetType.WARMUP || p.amplifier==null)

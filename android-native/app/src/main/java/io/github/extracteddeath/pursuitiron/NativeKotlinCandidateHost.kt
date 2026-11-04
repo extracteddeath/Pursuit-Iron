@@ -28,6 +28,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete)
     private val authoringSourceStore=NativeKotlinCustomAuthoringSourceFileStore(
         root,revisionFence,localAthlete)
+    private val customAuthoringCoordinator=NativeKotlinCustomAuthoringDraftCoordinator(
+        authoringSourceStore,customDraftStore,revisionFence,localAthlete)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
@@ -117,25 +119,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeCustomDraftWriteResult.Rejected(
                 NativeCustomDraftRefusal.NOT_AUTHORIZED)
-        return runCatching {
-            revisionFence.withOwnerTransaction(owner.ownerKey) {
-                val now=localAthlete.signedInIdentity()
-                if(now!=owner || draft.athleteId!=owner.athleteId)
-                    return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
-                        NativeCustomDraftRefusal.NOT_AUTHORIZED)
-                val source=authoringSourceStore.read(owner.ownerKey)
-                if(source !is NativeAuthoringSourceRead.Found ||
-                    source.source.revision!=expectedSourceRevision ||
-                    source.source.athleteId!=owner.athleteId)
-                    return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
-                        NativeCustomDraftRefusal.STALE_REVISION)
-                customDraftStore.save(owner.ownerKey,draft.cycleId,
-                    expectedDraftRevision,draft)
-            }
-        }.getOrElse {
-            NativeCustomDraftWriteResult.Rejected(
-                NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
-        }
+        return customAuthoringCoordinator.saveVerifiedExerciseEdit(
+            owner.ownerKey,draft,expectedDraftRevision,expectedSourceRevision)
     }
 
     /**

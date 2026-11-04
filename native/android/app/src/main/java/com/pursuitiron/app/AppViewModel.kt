@@ -551,6 +551,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!r.b("ok")) { toast(r.s("error", "Couldn't save")); return@launchCore }
         hap(Hap.Done); reloadEditor(); refreshHomeSide(); plan = obj("plan")
         val n = r.i("changes")
+        if (r.b("activated")) { toast("${editor?.s("name") ?: "Your program"} is now your active program"); return@launchCore }
         if (n == 0) toast("Nothing changed") else toast(if (n == 1) "Saved" else "Saved $n cycle blocks") { launchCore { val u = obj("undoSave", jsonOf("programId" to id)); if (u?.b("ok") == true) { reloadEditor(); refreshHomeSide(); plan = obj("plan"); toast("Save undone") } else toast(u?.s("error", "Couldn't undo") ?: "Couldn't undo") } }
     }
     /** The program the settings sheet works on: the one open in the editor, or the one the Plan shows (the design's Settings action). */
@@ -611,7 +612,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun searchExercises(q: String): List<JSONObject> = arr(call("library", jsonOf("q" to q)))
 
     fun discardEdits() = launchCore { val id = editor?.s("programId") ?: return@launchCore; call("discardEdits", jsonOf("programId" to id)); reloadEditor(); toast("Changes discarded") }
-    fun closeEditor() { screen = Screen.Tabs; editor = null }
+    fun closeEditor() {
+        val id = editor?.s("programId"); val own = editor?.b("buildOwn") == true
+        screen = Screen.Tabs; editor = null
+        // An empty build-your-own program you back out of is removed rather than left in your programs.
+        if (own && id != null) launchCore { if (obj("dropEmptyBuildOwn", jsonOf("programId" to id))?.b("removed") == true) refreshHomeSide() }
+    }
+    /** App.js buildOwnRoutine: empty days you fill with your own lifts in the editor; the engine runs the rest. */
+    fun buildOwn(name: String, days: Int) = launchCore {
+        val r = obj("buildOwnProgram", jsonOf("name" to name, "days" to days)) ?: return@launchCore
+        if (!r.b("ok")) { toast(r.s("error", "Couldn't start that program")); return@launchCore }
+        hap(Hap.Tick)
+        editWeek = 1
+        editor = obj("editor", jsonOf("programId" to r.s("programId"), "weekIndex" to 1)) ?: return@launchCore
+        screen = Screen.Editor
+    }
     fun deleteProgram(id: String) = launchCore {
         val r = obj("deleteProgram", jsonOf("id" to id)) ?: return@launchCore
         if (!r.b("ok")) { toast(r.s("error", "Couldn't delete that")); return@launchCore }

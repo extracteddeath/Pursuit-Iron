@@ -283,6 +283,20 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                     "mode" -> {
                         WzOption("Single program", "One training block built around your goal, schedule, and gym.", WZ.dumb, !cyc) { cyc = false }
                         WzOption("Training cycle", "Multiple blocks that progress from one phase to the next over time.", WZ.layers, cyc) { cyc = true }
+                        // App.js "Custom split · Build your own": you pick every lift; the engine coaches it.
+                        var ownOpen by remember { mutableStateOf(false) }
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).border(1.dp, cs.outlineVariant, RoundedCornerShape(18.dp)).clickable { ownOpen = true }
+                            .semantics(mergeDescendants = true) { role = Role.Button }.padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Icon(com.pursuitiron.app.ui.common.PiIcons.Pencil, null, tint = cs.primary)
+                            Column(Modifier.weight(1f)) {
+                                Text("Build your own", style = MaterialTheme.typography.titleMedium)
+                                Text("Pick every exercise yourself. The engine still sets loads and reps, progresses each lift, runs the deload and builds the next block.",
+                                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            }
+                            Icon(com.pursuitiron.app.ui.common.PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
+                        }
+                        if (ownOpen) BuildOwnDialog(onClose = { ownOpen = false }) { name, n -> ownOpen = false; vm.buildOwn(name, n) }
                         Box(Modifier.padding(top = 6.dp).height(44.dp).clip(CircleShape).background(cs.tertiaryContainer).clickable { tplOpen = !tplOpen }
                             .semantics { role = Role.Button }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
                             Text(if (tplOpen) "Hide templates" else "Start from a template · ${vm.templates?.list("items")?.size ?: 0}",
@@ -564,4 +578,36 @@ fun DraftBanner(text: String, onDiscard: () -> Unit) {
             Text("Discard", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = cs.onTertiaryContainer)
         }
     }
+}
+
+
+/** Build your own: a name and how many days a week; the days start empty and are filled in the editor. */
+@Composable
+private fun BuildOwnDialog(onClose: () -> Unit, onBuild: (String, Int) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var days by remember { mutableStateOf(3) }
+    androidx.compose.material3.AlertDialog(onDismissRequest = onClose,
+        title = { Text("Build your own") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                androidx.compose.material3.OutlinedTextField(name, { name = it.take(60) }, Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Program name") }, placeholder = { Text("My program") })
+                Text("Days a week", style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (1..6).forEach { n ->
+                        val on = n == days
+                        Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(14.dp))
+                            .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable { days = n }.semantics { role = Role.RadioButton; selected = on; contentDescription = "$n day${if (n == 1) "" else "s"} a week" },
+                            contentAlignment = Alignment.Center) {
+                            Text("$n", style = MaterialTheme.typography.titleMedium, color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+                Text("Each day starts empty. You add the lifts next, and can rename, add or remove days any time.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = { androidx.compose.material3.Button(onClick = { onBuild(name.trim().ifBlank { "My program" }, days) }) { Text("Start building") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text("Cancel") } })
 }

@@ -1050,6 +1050,23 @@ if tap(r"^\|New$", "draft-setup", required=False):
         back()
     scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
     row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+# Build your own (App.js buildOwnRoutine): you pick the lifts in the editor; backing out of an empty one leaves nothing
+if tap(r"^\|New$", "own-setup", required=False):
+    if tap(r"Build your own", "own-dialog", required=False) and tap(r"^\|Start building$", required=False):
+        if not find(r"Your lifts, the engine's coaching", timeout=8):
+            FAILS.append("build your own does not open the editor with its guide")
+        else:
+            shot("own-editor")
+            if not scroll_to(r"Add an exercise", tries=4, step=500):
+                FAILS.append("build your own editor has no Add an exercise")
+            tap(r"^Close editor")
+            time.sleep(1.5)
+    else:
+        FAILS.append("setup has no Build your own")
+    if find(r"^\|Continue$", timeout=2):
+        back()
+    scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
+    row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 if tap(r"^\|New$", "cycle-setup"):
     wizard("Smoke Cycle", cycle=True)
     time.sleep(8)

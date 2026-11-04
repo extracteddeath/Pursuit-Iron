@@ -205,8 +205,10 @@ export function setPlateauChoice({ programId, dayId, exId, choice = null }) {
 }
 function upNext() {
     // App.js upNext: pinned → most-recently-trained → live cycle block → newest.
-    if (!saved().length) return null;
-    const active = E.pickActiveProgram(saved(), history(), cycles(), S.store.pinnedId);
+    // A build-your-own program waits until it's saved with lifts (an empty day has no session to offer).
+    const pool = saved().filter((p) => !p.buildOwn);
+    if (!pool.length) return null;
+    const active = E.pickActiveProgram(pool, history(), cycles(), S.store.pinnedId);
     if (!active || !active.days?.length) return null;
     const c = E.nextSessionCursor(active, history());
     return { program: active, day: active.days[c.dayIndex], dayIndex: c.dayIndex, weekIndex: c.weekIndex || 1, scheduled: c.scheduled };
@@ -367,7 +369,7 @@ export function programDetails({ programId } = {}) {
     const chips = [
         focus.length ? ['More', focus.map(([k]) => label(k)).join(', ')] : null,
         (cfg.reduce || []).length ? ['Less', cfg.reduce.map(label).join(', ')] : null,
-        ['Split', E.SPLITS?.[cfg.split]?.name || cfg.split], ['Days', `${p.days.length}/week`], sess ? ['Session', sess.label] : null, ['Goal', goal],
+        ['Split', E.SPLITS?.[cfg.split]?.name || (cfg.split === 'custom' ? 'Your own' : cfg.split)], ['Days', `${p.days.length}/week`], sess ? ['Session', sess.label] : null, ['Goal', goal],
         cfg.experience ? ['Level', cfg.experience === 'none' || cfg.experience === 'novice' ? 'New to lifting' : cfg.experience.charAt(0).toUpperCase() + cfg.experience.slice(1)] : null,
         cfg.endless ? ['Block', 'Endless'] : null, cfg.endless ? ['Deload', 'Automatic · when you stall or tire'] : null,
         ...(cfg.endless ? [] : [['Block', `${E.weeksOf(p)} weeks`]]), cfg.endless ? null : ['Deload', cfg.deload ? `Yes · week ${E.weeksOf(p) + 1}` : E.isSchemeDeloadWeek(cfg.percentScheme, 4, E.weeksOf(p)) ? 'Built in · week 4' : 'No'],
@@ -3053,7 +3055,7 @@ export function editor({ programId, weekIndex = 1 } = {}) {
     const lastWeek = E.weeksOf(p) + (p.config?.deload && !p.config?.endless ? 1 : 0);
     const weeks = Array.from({ length: Math.max(1, lastWeek) }, (_, k) => k + 1).map((w) => { const t = weekTotals(w); return { week: w, deload: w > E.weeksOf(p) || E.isSchemeDeloadWeek(p.config?.percentScheme, w, E.weeksOf(p)), sets: Math.round(t.sets), minutes: Math.round(t.minutes) }; });
     const strip = Object.keys(sched).length ? [1, 2, 3, 4, 5, 6, 0].map((k) => ({ weekday: WD[k], dayId: sched[k] || null, label: sched[k] ? (p.days.find((d) => d.id === sched[k])?.label || null) : null })) : [];
-    return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null, percent: !!p.config?.percentScheme, weeks, strip,
+    return { programId: p.id, name: p.name, weekIndex: wk, weeksTotal: E.weeksOf(p), manual, cycleId: p.cycleId || null, percent: !!p.config?.percentScheme, weeks, strip, buildOwn: !!stored?.buildOwn,
         currentWeek: (() => { const nx = upNext(); return nx && nx.program.id === p.id ? nx.weekIndex : null; })(),
         dirty: !!(stored && S.store.drafts?.[programId] && !E.sameProgramContent(stored, p)),
         canUndoSave: !!(S.saveUndo && S.saveUndo.id === programId),
@@ -3118,9 +3120,22 @@ export function saveEdits({ programId, scope = 'program' }) {
     setList('saved', saved().map((p) => byId.get(p.id) || p));
     dropDraft(programId);
     S.saveUndo = { id: programId, changes };
-    return { ok: true, changes: changes.length };
+    // A build-your-own program goes live the first time it's saved with lifts in it.
+    const own = programById(programId); let activated = false;
+    if (own?.buildOwn && own.days.some((d) => d.exercises.length)) {
+        const { buildOwn, ...rest } = own; setList('saved', saved().map((p) => (p.id === programId ? rest : p)));
+        S.store.pinnedId = programId; markStore(); activated = true;
+    }
+    return { ok: true, changes: changes.length, activated };
 }
-export function discardEdits({ programId }) { dropDraft(programId); return { ok: true }; }
+export function discardEdits({ programId }) { dropDraft(programId); return { ok: true, ...dropEmptyBuildOwn({ programId }) }; }
+/* Backing out of a build-your-own program before adding a lift leaves nothing behind (a kept draft keeps it). */
+export function dropEmptyBuildOwn({ programId }) {
+    const own = programById(programId);
+    if (!own?.buildOwn || own.days.some((d) => d.exercises.length) || S.store.drafts?.[programId]) return { removed: false };
+    setList('saved', saved().filter((p) => p.id !== programId)); markStore();
+    return { removed: true };
+}
 /* App.js undoProgramSave: only while nothing has been edited since. */
 export function undoSave({ programId }) {
     const u = S.saveUndo; if (!u || u.id !== programId) return { ok: false };
@@ -3447,6 +3462,25 @@ export function changePercentMethod({ programId, templateId }) {
         message: `Now running ${E.PCT_SCHEMES[t.cfg.percentScheme]?.name}` + (need ? ` · set ${need} training max${need === 1 ? '' : 'es'}` : carried ? ' · training maxes kept' : '') };
 }
 /* The active gym decides what a template is built from; a template that pins its own kit still wins. */
+/* App.js buildOwnRoutine ("Custom split · Build your own"): a program with empty days for you to fill with your own
+   lifts. The engine still runs it: auto progression sets each lift's loads and reps from what you log, the block has
+   its weeks and deload, and Build next block carries it on. It goes live (pinned) the first time it's saved with lifts. */
+export function buildOwnProgram({ name = 'My program', days = 3 } = {}) {
+    const n = Math.max(1, Math.min(7, Number(days) || 1));
+    const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId), gym = E.gymById(g.gyms, g.activeGymId);
+    const equipment = gym?.equipment?.length ? gym.equipment : (S.store.activeGymId ? [] : E.ALL_EQUIP_IDS);
+    const nm = String(name || '').trim().slice(0, 60) || 'My program';
+    const p = {
+        id: 'p-' + E.uid(), name: nm, createdAt: now(), engineV: E.ENGINE_V, custom: true, buildOwn: true, weeks: 6,
+        config: { name: nm, experience: S.store.experience || 'intermediate', goal: 'both', split: 'custom', days: n, session: 's90', weeks: 6,
+            unit: unit(), equipment, focus: {}, focusList: [], reduce: [], progression: 'auto', deload: true, barbellCap: null, percentScheme: null },
+        days: Array.from({ length: n }, (_, i) => ({ id: E.uid(), label: `Day ${i + 1}`, type: 'custom', exercises: [], primaryIndex: 0 })),
+        overrides: {},
+    };
+    setList('saved', [...saved(), p]); markStore();
+    return { ok: true, programId: p.id, name: p.name, days: n };
+}
+
 export function createFromTemplate({ id }) {
     const t = E.TEMPLATES.find((x) => x.id === id); if (!t) return { ok: false, error: 'That template no longer exists.' };
     const g = E.normalizeGyms(S.store.gyms, S.store.activeGymId), gym = E.gymById(g.gyms, g.activeGymId);

@@ -125,7 +125,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
         Row(Modifier.padding(start = 12.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             IconButton(onClick = { if (dirty) leaving = true else vm.closeEditor() }) { Icon(PiIcons.Close, "Close editor") }
             Column(Modifier.weight(1f).clickable { sheet = ESheet.Rename }.semantics { contentDescription = "Edit program: ${e.s("name")}. Rename" }) {
-                Text("Edit program", style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold))
+                Text(if (e.b("buildOwn")) "Build your program" else "Edit program", style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold))
                 Text(e.s("name") + (e.optInt("currentWeek", 0).takeIf { it > 0 }?.let { " · week $it of ${e.i("weeksTotal")}" } ?: ""), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
                     color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -146,6 +146,15 @@ fun ProgramEditorScreen(vm: AppViewModel) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max = 760.dp).align(Alignment.CenterHorizontally), state = listState,
             contentPadding = PaddingValues(start = if (wide) 32.dp else 16.dp, end = if (wide) 32.dp else 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            // Build your own: what to do here, and what the engine does once it's saved.
+            if (e.b("buildOwn")) item(key = "own") {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.tertiaryContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Your lifts, the engine's coaching", style = MaterialTheme.typography.titleMedium, color = cs.onTertiaryContainer)
+                    Text("Add the exercises you want to each day, then Save. Day options renames a day or adds another. " +
+                        "From what you log, the engine sets each lift's loads and reps, moves it up with its own progression, runs the deload week and builds your next block.",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer)
+                }
+            }
             // The whole block: each week's sets and minutes; the targets below follow the week picked.
             item(key = "weeks") {
                 val cur = e.optInt("currentWeek", 0)

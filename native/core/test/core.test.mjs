@@ -1150,4 +1150,23 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   ok(Math.abs(sa.indexOf('abduction') - sa.indexOf('adduction')) === 1 && o.equipment.find((x) => x.id === 'legpress').cat === 'Leg machines',
     'setup equipment follows the same groups'); }
 
+// Build your own (App.js buildOwnRoutine): empty days you fill; the engine runs it once it's saved with lifts
+{ C.init({ store: JSON.stringify({ unit: 'lb' }) });
+  const b = C.buildOwnProgram({ name: 'Sekufit', days: 2 });
+  ok(b.ok && b.days === 2 && C.editor({ programId: b.programId }).days.length === 2, 'build your own makes a program with 2 empty days');
+  ok(C.home().next === null, 'an empty build-your-own program is not offered as the next session');
+  ok(C.discardEdits({ programId: b.programId }).removed && !C.programsList().programs.some((p) => p.id === b.programId), 'backing out before adding a lift leaves nothing behind');
+  const b2 = C.buildOwnProgram({ name: 'Sekufit', days: 2 }), [d1, d2] = C.editor({ programId: b2.programId }).days.map((d) => d.id);
+  ['bb-bench', 'neutral-pulldown', 'cable-fly'].forEach((id) => C.editAct({ programId: b2.programId, type: 'add', dayId: d1, exId: id }));
+  ['rdl', 'leg-ext'].forEach((id) => C.editAct({ programId: b2.programId, type: 'add', dayId: d2, exId: id }));
+  const sv = C.saveEdits({ programId: b2.programId });
+  ok(sv.ok && sv.activated, 'saving it with lifts makes it the active program');
+  const nx = C.home().next;
+  ok(nx && nx.programId === b2.programId && nx.exercises.map((e) => e.id).join() === 'bb-bench,neutral-pulldown,cable-fly', 'Today offers your own lifts, in your order');
+  const pd = C.programDetails({ programId: b2.programId });
+  ok(pd.chips.some((c) => c.k === 'Split' && c.v === 'Your own') && pd.chips.some((c) => c.k === 'Deload' && /week 7/.test(c.v)) && pd.plan.length === 7, 'the engine gives it a 6-week block with a deload week');
+  C.startSession({ programId: b2.programId, dayId: nx.dayId, weekIndex: 1 });
+  const ss = C.session();
+  ok(ss.exercises.every((e) => e.progression && e.progression.auto && e.sets.some((x) => x.target && x.target.reps)), 'every lift gets an auto progression and targets in the workout');
+  C.discard?.(); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

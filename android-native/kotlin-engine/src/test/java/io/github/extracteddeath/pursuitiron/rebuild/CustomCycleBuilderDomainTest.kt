@@ -156,4 +156,71 @@ class CustomCycleBuilderDomainTest {
         assertFalse(CustomTrainingCycleDomain.review(
             undo.draft, emptyList()).canIssueWorkout)
     }
+
+    @Test fun fullCustomProgramCanBeBuiltFromBlankWithoutAnyGeneratedWeek() {
+        val blank = CustomCycleBuilderDomain.blank(
+            "blank-cycle", "athlete", AthleteTrainingGoal.POWERBUILDING,
+            "Made from scratch", "phase-1", 4, TrainingPhase.HYPERTROPHY,
+            CustomSplitIdentity.Freeform("Chest / Back / Legs"))!!
+        val first = accepted(CustomCycleBuilderDomain.addDay(
+            blank, 1, "phase-1", CustomTrainingDay(
+                0, "Chest", ComposerSessionPurpose.HYPERTROPHY, emptyList())))
+        val exercise = CustomExerciseSlot(
+            "bench-main", "bench", ComposerRole.PRIMARY, listOf(set(185)),
+            pinned = true, coachNote = "Custom user instructions")
+        val second = accepted(CustomCycleBuilderDomain.addSlot(
+            first.draft, 2, "phase-1", 0, exercise))
+        val third = accepted(CustomCycleBuilderDomain.addSlot(
+            second.draft, 3, "phase-1", 0,
+            exercise.copy(slotId = "bench-second", pinned = false,
+                sets = listOf(set(155))), position = 0))
+        assertEquals(4L, third.draft.revision)
+        assertEquals(listOf("bench-second", "bench-main"),
+            third.draft.blocks.single().days.single().slots.map { it.slotId })
+        val available = listOf(CustomExerciseAvailability(
+            "bench", VerifiedLoadStock.Totals(LoadUnit.LB,
+                LoadBasis.SMITH_TOTAL, listOf(n(155), n(185))), false))
+        val review = CustomTrainingCycleDomain.review(third.draft, available)
+        assertEquals(CustomCycleReviewStatus.READY_FOR_COACH_REVIEW, review.status)
+        assertNotNull(review.verifiedDraft)
+        assertEquals("Chest / Back / Legs",
+            (review.verifiedDraft!!.blocks.single().split
+                as CustomSplitIdentity.Freeform).label)
+        assertFalse(review.canIssueWorkout)
+    }
+
+    @Test fun removingPinnedSlotNeedsConfirmationAndCleansOnlyDanglingOverride() {
+        val first = draft()
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (CustomCycleBuilderDomain.removeSlot(
+                first, 1, "base", 0, "bench-a")
+                as CustomCycleBuilderResult.Rejected).reason)
+        val after = accepted(CustomCycleBuilderDomain.removeSlot(
+            first, 1, "base", 0, "bench-a", confirmPinned = true))
+        assertEquals(listOf("bench-b"),
+            after.draft.blocks.single().days.single().slots.map { it.slotId })
+        assertEquals(emptyList<CustomWeekSlotOverride>(),
+            after.draft.weekOverrides["base"])
+        assertEquals(1, first.weekOverrides["base"]!!.size)
+        assertEquals(CustomCycleBuilderRefusal.MISSING_SLOT,
+            (CustomCycleBuilderDomain.removeSlot(
+                after.draft, 2, "base", 0, "bench-a", confirmPinned = true)
+                as CustomCycleBuilderResult.Rejected).reason)
+    }
+
+    @Test fun cannotAddDuplicateWeekdayOrSlot() {
+        val input = draft()
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (CustomCycleBuilderDomain.addDay(
+                input, 1, "base", CustomTrainingDay(
+                    0, "Duplicate", ComposerSessionPurpose.HYPERTROPHY,
+                    emptyList()))
+                as CustomCycleBuilderResult.Rejected).reason)
+        assertEquals(CustomCycleBuilderRefusal.INVALID_INPUT,
+            (CustomCycleBuilderDomain.addSlot(
+                input, 1, "base", 0, input.blocks.single()
+                    .days.single().slots.first())
+                as CustomCycleBuilderResult.Rejected).reason)
+    }
+
 }

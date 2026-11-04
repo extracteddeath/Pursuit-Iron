@@ -247,12 +247,40 @@ internal fun NativeKotlinCustomExerciseSheet(
                         }
                     }
                 }
-                TextButton(
-                    onClick = {
-                        forms = forms.toMutableList().also { it.removeAt(index) }
-                    },
-                    enabled = !busy && forms.size > 1) {
-                    Text("Remove set ${index + 1}")
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = {
+                            forms = forms.toMutableList().also {
+                                it.add(index + 1, fields.copy())
+                            }
+                        }, enabled = !busy && forms.size < 20) {
+                        Text("Duplicate")
+                    }
+                    TextButton(
+                        onClick = {
+                            forms = forms.toMutableList().also {
+                                val moved = it.removeAt(index)
+                                it.add(index - 1, moved)
+                            }
+                        }, enabled = !busy && index > 0) {
+                        Text("Earlier")
+                    }
+                    TextButton(
+                        onClick = {
+                            forms = forms.toMutableList().also {
+                                val moved = it.removeAt(index)
+                                it.add(index + 1, moved)
+                            }
+                        }, enabled = !busy && index < forms.lastIndex) {
+                        Text("Later")
+                    }
+                    TextButton(
+                        onClick = {
+                            forms = forms.toMutableList().also { it.removeAt(index) }
+                        }, enabled = !busy && forms.size > 1) {
+                        Text("Remove")
+                    }
                 }
             }
         }

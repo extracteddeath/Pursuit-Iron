@@ -142,7 +142,7 @@ class NativeKotlinSegmentedHistoryShadowStoreTest {
             NativeSegmentedHistoryRefusal.CORRUPT_INDEX), shadow().sync(owner, athlete))
         // A page touching BOTH segment files must detect either corruption.
         assertEquals(NativeSegmentedHistoryResult.Rejected(
-            NativeSegmentedHistoryRefusal.CORRUPT_INDEX), page(0, 128))
+            NativeSegmentedHistoryRefusal.CORRUPT_INDEX), page(64, 128))
 
     }
 

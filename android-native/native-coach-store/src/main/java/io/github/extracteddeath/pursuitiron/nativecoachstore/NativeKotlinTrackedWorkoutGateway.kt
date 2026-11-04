@@ -67,11 +67,25 @@ class NativeKotlinTrackedWorkoutGateway(
         if (!verifyHistory(owner, athlete))
             NativeKotlinIssueResult.Rejected(NativeKotlinIssueRefusal.HISTORY_NOT_READY)
         else {
-            val issued = workout.issue(owner, workoutId)
-            if (issued is NativeKotlinIssueResult.Committed &&
-                !authorized(owner, athlete, issued.journal))
+            // The authenticated caller's athlete must match the currently
+            // stored approval BEFORE the issuer can write a journal. Checking
+            // only the returned journal would reject too late.
+            val approved = runCatching {
+                ownerAuthority.currentApprovedWorkout(owner, workoutId)
+            }.getOrNull()
+            if (approved == null || approved.ownerKey != owner ||
+                approved.athleteId != athlete ||
+                approved.approvedSource.athleteId != athlete ||
+                approved.currentSource.athleteId != athlete ||
+                approved.grant.workoutId != workoutId)
                 NativeKotlinIssueResult.Rejected(NativeKotlinIssueRefusal.NOT_AUTHORIZED)
-            else issued
+            else {
+                val issued = workout.issue(owner, workoutId)
+                if (issued is NativeKotlinIssueResult.Committed &&
+                    !authorized(owner, athlete, issued.journal))
+                    NativeKotlinIssueResult.Rejected(NativeKotlinIssueRefusal.NOT_AUTHORIZED)
+                else issued
+            }
         }
     }
 

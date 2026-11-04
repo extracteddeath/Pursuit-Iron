@@ -65,7 +65,7 @@ data class KotlinWorkoutHistoryEvidence(
 }
 
 enum class KotlinHistoryProjectionRefusal {
-    NOT_FINISHED, INVALID_JOURNAL
+    NOT_FINISHED, INVALID_JOURNAL, INVALID_SAVED_CORRECTIONS
 }
 
 sealed interface KotlinHistoryProjectionResult {
@@ -98,6 +98,14 @@ object KotlinWorkoutHistoryEvidenceDomain {
                 record.performed, record.eventId, record.correctsEventId
             )
         }
+        return KotlinHistoryProjectionResult.Candidate(assemble(journal, facts))
+    }
+
+    /** Recompute all summaries from effective facts, not cached old PR metrics. */
+    private fun assemble(
+        journal: KotlinWorkoutJournalState,
+        facts: List<KotlinHistoricalSetFact>
+    ): KotlinWorkoutHistoryEvidence {
         val grouped = linkedMapOf<String, MutableList<KotlinHistoricalSetFact>>()
         for (fact in facts) {
             grouped.getOrPut(fact.exerciseId) { mutableListOf() }
@@ -149,10 +157,39 @@ object KotlinWorkoutHistoryEvidenceDomain {
             KotlinExerciseHistoryEvidence(exerciseId,
                 Collections.unmodifiableList(working.toList()), gate, progression, workout)
         }
-        return KotlinHistoryProjectionResult.Candidate(KotlinWorkoutHistoryEvidence(
+        return KotlinWorkoutHistoryEvidence(
             journal.snapshot.source, journal.snapshot.workoutId, finishId,
             journal.revision, Collections.unmodifiableList(facts),
             Collections.unmodifiableList(reviews)
-        ))
+        )
+    }
+
+    /**
+     * A saved correction never reopens the workout journal. It replaces only
+     * effective actual facts in this read-only projection, retaining original
+     * targets, set keys, finish identity and all historic correction receipts.
+     */
+    fun projectSaved(
+        state: KotlinSavedHistoryCorrectionState
+    ): KotlinHistoryProjectionResult {
+        if (KotlinSavedHistoryCorrectionDomain.verifyStoredState(state)
+            !is KotlinSavedCorrectionDecision.Proposed)
+            return KotlinHistoryProjectionResult.Rejected(
+                KotlinHistoryProjectionRefusal.INVALID_SAVED_CORRECTIONS)
+        val original = project(state.originalFinishedJournal)
+        if (original !is KotlinHistoryProjectionResult.Candidate)
+            return KotlinHistoryProjectionResult.Rejected(
+                KotlinHistoryProjectionRefusal.INVALID_JOURNAL)
+        val facts = original.evidence.sets.map { fact ->
+            val correction = state.effectiveCorrections[fact.setKey]?.correction
+            if (correction == null) fact else fact.copy(
+                outcome = correction.outcome,
+                actual = correction.actual,
+                effectiveEventId = correction.eventId,
+                correctsEventId = correction.correctsEventId
+            )
+        }
+        return KotlinHistoryProjectionResult.Candidate(
+            assemble(state.originalFinishedJournal, facts))
     }
 }

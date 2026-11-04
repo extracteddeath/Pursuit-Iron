@@ -173,4 +173,52 @@ class NativeKotlinSegmentedHistoryHandoffGateTest {
             NativeSegmentedHistoryHandoffRefusal.NOT_AUTHORIZED),
             gate.review(owner, athlete))
     }
+    @Test fun postFinishEditRequiresPendingRecoveryAndNewSegmentIndex() {
+        val recorded = recordRealWorkout()
+        assertTrue(ledger.enrollVerifiedSnapshot(
+            owner, athlete, listOf(recorded), ::permit)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeSegmentedHistoryResult.Indexed(1, 1, false),
+            shadow.sync(owner, athlete))
+        assertTrue(gate.review(owner, athlete)
+            is NativeSegmentedHistoryHandoffResult.Review)
+
+        val edit = KotlinSavedSetCorrection(
+            "saved-edit-1", 0, "set-1", "set-event-1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("195"), LoadUnit.LB, 6, 1))
+        val pending = NativeHistoryWriteIntent.Correct("workout-1", edit)
+        assertTrue(ledger.prepare(owner, athlete, 1, pending)
+            is NativeHistoryLedgerResult.Durable)
+        val notFinalized = NativeSegmentedHistoryHandoffResult.Rejected(
+            NativeSegmentedHistoryHandoffRefusal.SHADOW_NOT_VERIFIED,
+            shadowReason = NativeSegmentedHistoryRefusal.SOURCE_NOT_READY)
+        assertEquals(notFinalized, gate.review(owner, athlete))
+
+        val edited = corrections.appendStored(
+            owner, "workout-1", edit, ::canRead)
+        assertTrue(edited.toString(), edited is NativeSavedCorrectionFileResult.Durable)
+        // Even if the saved correction is durable, the manifest is still
+        // pending. A transaction may be interrupted at exactly this point.
+        assertEquals(notFinalized, gate.review(owner, athlete))
+        assertTrue(ledger.finalize(
+            owner, athlete, pending,
+            recorded.copy(savedCorrectionRevision = 1)
+        ) is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeSegmentedHistoryHandoffResult.Rejected(
+            NativeSegmentedHistoryHandoffRefusal.SHADOW_NOT_VERIFIED,
+            shadowReason = NativeSegmentedHistoryRefusal.STALE_SOURCE),
+            gate.review(owner, athlete))
+
+        assertEquals(NativeSegmentedHistoryResult.Indexed(2, 1, false),
+            shadow.sync(owner, athlete))
+        val recovered = gate.review(owner, athlete)
+        assertTrue(recovered.toString(),
+            recovered is NativeSegmentedHistoryHandoffResult.Review)
+        val review = (recovered as NativeSegmentedHistoryHandoffResult.Review).review
+        assertEquals(2L, review.manifestRevision)
+        assertEquals(1, review.completionCount)
+        assertFalse(review.canTransferWriteAuthority)
+    }
+
 }

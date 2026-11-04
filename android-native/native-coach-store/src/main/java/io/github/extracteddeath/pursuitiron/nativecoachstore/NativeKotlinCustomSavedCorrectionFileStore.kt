@@ -331,7 +331,7 @@ class NativeKotlinCustomSavedCorrectionFileStore(
                     return@withOwnerTransaction NativeCustomSavedCorrectionResult.Durable(
                         previous, true)
                 if (previous.correctionRevision != existing.savedCorrectionRevision ||
-                    !authorized(owner).let { it == who })
+                    authorized(owner) != who)
                     return@withOwnerTransaction NativeCustomSavedCorrectionResult.Rejected(
                         NativeCustomSavedCorrectionRefusal.JOURNAL_MISMATCH)
                 val bytes = NativeCustomSavedCorrectionCodec.encode(

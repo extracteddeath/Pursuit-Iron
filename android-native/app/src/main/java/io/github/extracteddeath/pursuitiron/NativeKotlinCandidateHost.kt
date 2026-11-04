@@ -45,6 +45,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         customWorkoutPreflight,historyStore,journalStore)
     private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
         historyStore,customIssuedStore,revisionFence,localAthlete)
+    private val mixedHistoryReader=NativeKotlinMixedHistoryReadCoordinator(
+        historyStore,journalStore,correctionStore,customIssuedStore,
+        approvalStore,localAthlete,revisionFence)
     private val coordinator=NativeKotlinWorkoutCoordinator(
         journalStore,approvalStore,revisionFence)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
@@ -226,6 +229,18 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomFinishRefusal.NOT_AUTHORIZED)
         return customHistoryTransactions.recover(
             owner.ownerKey,owner.athleteId)
+    }
+
+    /**
+     * Full mixed Composer/custom native history, reconstructed from committed
+     * private journals under the authenticated shared owner fence.
+     * Review-only: does not authorize PR banners or progression mutations.
+     */
+    fun reviewVerifiedKotlinHistory():NativeKotlinMixedHistoryReadResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeKotlinMixedHistoryReadResult.Rejected(
+                NativeKotlinMixedHistoryRefusal.NOT_AUTHORIZED)
+        return mixedHistoryReader.read(owner.ownerKey,owner.athleteId)
     }
 
     /**

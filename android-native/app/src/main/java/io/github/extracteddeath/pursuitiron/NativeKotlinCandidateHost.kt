@@ -43,6 +43,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val customIssuedStore=NativeKotlinCustomWorkoutJournalFileStore(
         root,revisionFence,localAthlete,customPreparedStore,
         customWorkoutPreflight,historyStore,journalStore)
+    private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
+        historyStore,customIssuedStore,revisionFence,localAthlete)
     private val coordinator=NativeKotlinWorkoutCoordinator(
         journalStore,approvalStore,revisionFence)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
@@ -200,6 +202,30 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?:return NativeCustomJournalResult.Rejected(
                 NativeCustomJournalRefusal.NOT_AUTHORIZED)
         return customIssuedStore.record(owner.ownerKey,workoutId,operation)
+    }
+
+    /**
+     * Custom Finish is committed ONLY by shared native history redo.
+     * No direct reducer Finish or misleading in-memory completion.
+     */
+    fun finishIssuedCustomWorkout(
+        workoutId:String,
+        operation:CustomWorkoutJournalOperation.Finish
+    ):NativeCustomFinishResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomFinishResult.Rejected(
+                NativeCustomFinishRefusal.NOT_AUTHORIZED)
+        return customHistoryTransactions.complete(
+            owner.ownerKey,owner.athleteId,workoutId,operation)
+    }
+
+    /** Recover an interrupted custom Finish after app cold-start. */
+    fun recoverPendingCustomHistory():NativeCustomFinishResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomFinishResult.Rejected(
+                NativeCustomFinishRefusal.NOT_AUTHORIZED)
+        return customHistoryTransactions.recover(
+            owner.ownerKey,owner.athleteId)
     }
 
     /**

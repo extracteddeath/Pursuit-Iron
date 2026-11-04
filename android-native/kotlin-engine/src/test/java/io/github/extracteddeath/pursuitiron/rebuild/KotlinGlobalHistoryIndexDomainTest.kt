@@ -287,4 +287,49 @@ class KotlinGlobalHistoryIndexDomainTest {
         assertNotEquals(changedRead.contentFingerprint, unchangedRead.contentFingerprint)
     }
 
+    @Test fun historyIndexVerifies130SessionsWithoutLosingSkippedLatestOrSavedCorrections() {
+        // 128 was the old manifest AND factual-index ceiling. Check the
+        // complete prefix, corrected historical facts, and latest failure.
+        val original = (1..130).map { number ->
+            val outcomes = if (number == 130)
+                listOf(KotlinJournalSetOutcome.SKIPPED,
+                    KotlinJournalSetOutcome.FAILED_ATTEMPT)
+            else listOf(KotlinJournalSetOutcome.COMPLETED,
+                KotlinJournalSetOutcome.COMPLETED)
+            completed(number,
+                actualLoads = listOf(if (number == 2) 250 else 200,
+                    if (number == 2) 250 else 200),
+                outcomes = outcomes)
+        }
+        val sessions = original.mapIndexed { index, journal ->
+            if (index == 1)
+                KotlinChronologicalWorkout((index + 1).toLong(), journal,
+                    correction(journal, reps = 3, load = 195))
+            else KotlinChronologicalWorkout((index + 1).toLong(), journal)
+        }
+        val full = snapshot(*sessions.toTypedArray(), revision = 131)
+        val projected = index(full)
+        assertEquals(130, projected.completedWorkoutIds.size)
+        assertEquals("workout-1", projected.completedWorkoutIds.first())
+        assertEquals("workout-130", projected.completedWorkoutIds.last())
+        assertEquals("workout-130",
+            projected.lastByExercise.getValue("bench").workoutId)
+        assertEquals(listOf(KotlinJournalSetOutcome.SKIPPED,
+                KotlinJournalSetOutcome.FAILED_ATTEMPT),
+            projected.lastByExercise.getValue("bench").workingSets.map { it.outcome })
+        assertEquals("saved-edit", projected.mostRepsAtLoad.single {
+            it.actualLoad == n(195) }.effectiveEventId)
+        assertEquals(n(250), projected.highestCompletedLoad.values.single().actualLoad)
+        assertFalse(projected.canPublishPr)
+        assertFalse(projected.canIssueProgression)
+
+        val missingOldCorrection = sessions.toMutableList().also {
+            it[1] = KotlinChronologicalWorkout(2, original[1])
+        }
+        val forged = full.copy(completedWorkouts = missingOldCorrection)
+        assertEquals(KotlinGlobalHistoryResult.Rejected(
+            KotlinGlobalHistoryRefusal.MANIFEST_RECEIPT_MISMATCH),
+            KotlinGlobalHistoryIndexDomain.project(forged))
+    }
+
 }

@@ -103,6 +103,15 @@ internal class NativeKotlinCustomCycleController(
         applyRead(cycleId, host.readCustomCycleDraft(cycleId))
     }
 
+    /** Re-open the verified disk state and CURRENT gym/catalog when returning
+     * from native equipment editing. A previously rendered choice cannot
+     * stand in for today's reviewed physical availability. */
+    fun refresh() {
+        val id=current.value.draft?.cycleId ?: current.value.cycleId
+        if(!id.isNullOrBlank()) open(id)
+    }
+
+
     fun create(
         title: String,
         goal: AthleteTrainingGoal,

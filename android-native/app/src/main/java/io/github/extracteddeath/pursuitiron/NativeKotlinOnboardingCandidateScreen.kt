@@ -127,6 +127,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     controller:NativeKotlinGymSourceController
 ) {
     val sourceState by controller.state.collectAsStateWithLifecycle()
+    LaunchedEffect(controller) { controller.open() }
     var step by rememberSaveable {mutableIntStateOf(0)}
     var athleteId by rememberSaveable {
         mutableStateOf("athlete-"+UUID.randomUUID().toString().replace("-",""))
@@ -256,8 +257,17 @@ internal fun NativeKotlinOnboardingCandidateScreen(
         if(step==0) {
             PursuitCard {
                 Text("Training identity",style=MaterialTheme.typography.titleLarge)
-                Text("The private ID distinguishes saved native athletes. Re-enter the original ID when explicitly restoring this device's athlete; an unknown ID cannot access someone else's data.",
+                Text("The private ID distinguishes saved native athletes. Reconfirm the saved local athlete after an app restart; no workouts or gym settings become readable until the complete setup is reviewed.",
                     style=MaterialTheme.typography.bodySmall)
+                sourceState.savedAthleteId?.takeIf { it != athleteId }?.let { prior ->
+                    OutlinedButton(
+                        onClick={ athleteId=prior;showIdentity=true },
+                        enabled=!sourceState.busy,
+                        modifier=Modifier.fillMaxWidth()
+                    ) { Text("Use saved local athlete ID") }
+                    Text("This selects an identifier only. You must still review and explicitly confirm your native settings before it opens protected data.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
                 TextButton(onClick={showIdentity=!showIdentity}) {
                     Text(if(showIdentity)"Hide IDs" else "Show / restore athlete ID")
                 }

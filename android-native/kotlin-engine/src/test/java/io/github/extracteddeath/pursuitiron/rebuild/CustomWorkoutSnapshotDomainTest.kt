@@ -174,10 +174,10 @@ class CustomWorkoutSnapshotDomainTest {
             hardTrainingDays=emptySet(),longTrainingDays=emptySet(),
             declaredRestDays=setOf(1,3,5,6)))
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,reviewed.status)
-        val twenty=DraftSetLoad.Verified(java.math.BigDecimal("20"),
-            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)
-        val fifteen=DraftSetLoad.Verified(java.math.BigDecimal("15"),
-            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)
+        val twenty=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+            java.math.BigDecimal("20"))
+        val fifteen=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+            java.math.BigDecimal("15"))
         fun day(day:Int)=CustomTrainingDay(day,"Delts",
             ComposerSessionPurpose.HYPERTROPHY,listOf(CustomExerciseSlot(
                 "lateral-$day","db_lateral_raise",ComposerRole.ACCESSORY,
@@ -199,8 +199,8 @@ class CustomWorkoutSnapshotDomainTest {
         assertEquals(twenty,prescribed.load)
         assertEquals(fifteen,prescribed.amplifier?.followUpLoad)
         assertEquals(145L,first.snapshot.knownSetAndRestSeconds)
-        val impossible=DraftSetLoad.Verified(java.math.BigDecimal("17.5"),
-            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND)
+        val impossible=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+            java.math.BigDecimal("17.5"))
         val rejected=custom.copy(blocks=listOf(
             custom.blocks.single().copy(days=listOf(
                 day(0).copy(slots=listOf(day(0).slots.single().copy(

@@ -986,3 +986,59 @@ and manifest update; there must be no permanently misleading success/PR.
 Full PR policy, exercise-variant semantic parity, custom plans, the final
 Kotlin coach and native Compose feature parity remain independent blockers
 before any JavaScript retirement or release APK.
+
+
+## Owner-fenced durable history manifest transaction (isolated native source)
+
+`NativeKotlinHistoryManifestFileStore` introduces an explicitly
+authenticated, checksum-validated, owner+athlete-scoped, versioned **Kotlin**
+manifest. It keeps the complete ordered Finish ledger with source workout
+identity, original receipt revision and saved-correction revision. It never
+discovers missing sessions from filenames or imports JavaScript history.
+Owner enrollment must be explicit; the production account owner must prove
+that historical data was completely migrated or that the account has no
+preceding native/JS sessions before making a new manifest authoritative.
+
+`NativeKotlinHistoryTransactionCoordinator` now owns a **two-file redo
+protocol** for an already-issued Kotlin workout:
+1. Acquire the existing owner revision fence and verify athlete access and
+   the original/edited journal.
+2. Atomically persist a unique pending Finish or saved-correction *intent*
+   in the manifest **before** touching the event file.
+3. Atomically append the original Finish receipt or the saved correction,
+   retaining its exact event ID and immutable issued snapshot.
+4. Verify the resulting committed journal or edited facts, then atomically
+   finalize and increment the manifest revision.
+5. Replaying a pending intent after restart uses the existing exact-event
+   idempotent native file stores, and does not duplicate a set, Finish or
+   saved edit. Committed exact retries do not increment global history.
+
+While an intent is pending, the file-backed
+`NativeKotlinHistoryManifestFileAuthority` refuses ordinary reads,
+preventing old Last/PR/progression snapshots from appearing complete. A
+corrupt original, revoked owner access, conflicting revision or missing
+correction leaves the intent outstanding instead of guessing/rolling it
+back. The read coordinator can recompute Last and load records directly
+from the finalized manifest plus original private workout/correction files,
+without needing the JavaScript engine.
+
+The source regression suite exercises process-style cold reinitialization,
+interrupted Finish before/after receipt commit, interrupted saved corrections,
+exact retries, unique completion ordering, denied owner, unregistered
+out-of-band Finish, corruption refusal and suppression of reads while
+the redo intent is pending. Existing Kotlin workout issuance still has its
+own verified owner transaction fence.
+
+**This is an isolated prototype, not permission to cut over:** every app
+Finish and saved-history edit must be routed through this coordinator;
+legacy/local app paths currently are NOT. The store's checksum detects
+corruption but does not authenticate files or prevent a malicious file
+replacement. A pending operation that cannot be replayed must surface an
+explicit repair/blocking state rather than release stale records. Two-file
+atomic rename + redo recovery does not, by itself, guarantee power-loss
+durability without the full platform database/filesystem and directory
+sync guarantees. The 128-session history cap is a deliberate test limit,
+not a sufficient lifetime history policy; archival/pagination must be built
+before production. The exact signed-in authority, existing-user migration,
+complete historical ledger, PR policy, backup/export, native Compose screen
+integration and JavaScript retirement remain separate release gates.

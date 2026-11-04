@@ -68,8 +68,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
     private val composerJournals: KotlinNativeJournalFileStore
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private const val MAGIC=0x50494349 // PICI
-    private const val VERSION=1
+    private val magic=0x50494349 // PICI
+    private val version=1
     private val MAX_BYTES=NativeCustomWorkoutJournalCodec.MAX_BYTES+4096
 
     private fun owner(ownerKey:String):NativeKotlinOwnerIdentity? {
@@ -90,7 +90,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             NativeCustomWorkoutJournalRecord(record.ownerKey,record.journal))
         val payload=ByteArrayOutputStream()
         DataOutputStream(payload).use{out->
-            out.writeInt(MAGIC);out.writeInt(VERSION)
+            out.writeInt(magic);out.writeInt(version)
             out.writeUTF(record.ownerKey);out.writeUTF(record.athleteId)
             out.writeLong(record.consentRevision)
             out.writeInt(contents.size);out.write(contents)
@@ -123,7 +123,7 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             throw IOException("issued custom journal checksum mismatch")
         return try {
             DataInputStream(ByteArrayInputStream(payload)).use{input->
-                if(input.readInt()!=MAGIC || input.readInt()!=VERSION)
+                if(input.readInt()!=magic || input.readInt()!=version)
                     throw IOException("unknown custom journal file version")
                 val owner=input.readUTF()
                 val athlete=input.readUTF()

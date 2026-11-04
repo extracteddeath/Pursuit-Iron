@@ -220,4 +220,60 @@ class CustomSavedHistoryCorrectionDomainTest {
             (original.effectiveVisits[follow]?.operation
                 as CustomWorkoutJournalOperation.Record).eventId)
     }
+
+    @Test fun duplicateExerciseSlotsRemainIndependentWhenCorrectingSavedHistory() {
+        val template = finished().snapshot
+        val originalSlot = template.slots.single()
+        val otherKey = "cycle-1:w1:d0:slot-2:s1"
+        val otherSlot = originalSlot.copy(
+            slotId = "slot-2",
+            sets = listOf(originalSlot.sets.single().copy(
+                setKey = otherKey, slotId = "slot-2")))
+        var journal = CustomWorkoutJournalDomain.begin(
+            "workout-duplicate", template.copy(
+                slots = listOf(originalSlot, otherSlot)), "a".repeat(64))
+        fun record(
+            event: String, visit: CustomWorkoutVisitKey,
+            outcome: KotlinJournalSetOutcome,
+            performed: KotlinPerformedSet?
+        ) {
+            val result = CustomWorkoutJournalDomain.reduce(journal,
+                CustomWorkoutJournalOperation.Record(event, journal.revision,
+                    visit, outcome, performed))
+            assertTrue(result is CustomWorkoutJournalDecision.Proposed)
+            journal = (result as CustomWorkoutJournalDecision.Proposed).draft
+        }
+        record("first-main", main, KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 12, 1))
+        record("first-follow", follow, KotlinJournalSetOutcome.SKIPPED, null)
+        record("second-main", CustomWorkoutVisitKey(
+            otherKey, CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 10, 2))
+        record("second-follow", CustomWorkoutVisitKey(
+            otherKey, CustomWorkoutVisitPart.FOLLOW_UP),
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(BigDecimal("15"), LoadUnit.LB, 6, 0))
+        val finish = CustomWorkoutJournalDomain.reduce(journal,
+            CustomWorkoutJournalOperation.Finish("finish-duplicate",
+                journal.revision))
+        assertTrue(finish is CustomWorkoutJournalDecision.Proposed)
+        val original = (finish as CustomWorkoutJournalDecision.Proposed).draft
+        val saved = accept(CustomSavedHistoryCorrectionDomain.begin(original),
+            correction("first-only", 0, main, "first-main",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(BigDecimal("20"), LoadUnit.LB, 14, 1)))
+        val facts = (CustomSavedHistoryEvidenceDomain.projectSaved(saved)
+            as CustomSavedHistoryProjectionResult.Candidate).corrected.evidence.visits
+        assertEquals(4, facts.size)
+        assertEquals(14, facts.single {
+            it.setKey == setKey && it.part == CustomWorkoutVisitPart.MAIN
+        }.actual?.reps)
+        assertEquals(10, facts.single {
+            it.setKey == otherKey && it.part == CustomWorkoutVisitPart.MAIN
+        }.actual?.reps)
+        assertEquals("second-main", facts.single {
+            it.setKey == otherKey && it.part == CustomWorkoutVisitPart.MAIN
+        }.effectiveEventId)
+    }
 }

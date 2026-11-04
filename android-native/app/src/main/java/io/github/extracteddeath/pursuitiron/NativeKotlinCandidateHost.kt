@@ -41,6 +41,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
         coordinator,historyTransactions,historyStore,correctionStore,
         approvalStore,revisionFence)
 
+    /** A displayed local ID is not a session nor access to gym/history. */
+    fun savedAthleteIdForExplicitResume():String? =
+        localAthlete.savedAthleteIdForExplicitResume()
+
     /** The Kotlin engine owns readiness validation, never the JS runtime. */
     fun reviewSetup(draft:AthleteSetupDraft):AthleteSetupReview =
         CoachAthleteSetupDomain.review(draft)

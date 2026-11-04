@@ -30,6 +30,10 @@ class NativeKotlinCustomWorkoutPreflightTest {
         NativeKotlinCustomWorkoutPreflight(
             fence,identity,drafts,sources,consent)
     }
+    private val prepared by lazy {
+        NativeKotlinCustomWorkoutPreparedStore(
+            temp.root.toPath(),fence,identity,preflight)
+    }
     private fun n(value:String)=BigDecimal(value)
     private fun setup()=CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="rev-1",athleteProfileId="athlete-1",
@@ -172,4 +176,89 @@ class NativeKotlinCustomWorkoutPreflightTest {
             NativeCustomPreflightRefusal.SESSION_UNAVAILABLE),
             preflight.inspect("owner-1","cycle-1",2,1,input()))
     }
+    @Test fun preparedExactCustomWeekIsColdRecoverableButNeverIssued() {
+        initialize();approve()
+        val first=prepared.prepare("owner-1","workout-2",
+            "cycle-1",2,0,input())
+        assertTrue(first.toString(),first is NativeCustomPrepareResult.Prepared)
+        val saved=(first as NativeCustomPrepareResult.Prepared).workout
+        assertFalse(first.replayed)
+        assertEquals("cycle-1:w2:d0:slot-0:s1",
+            saved.snapshot.slots.single().sets.single().setKey)
+        assertEquals(16,saved.snapshot.slots.single().sets.single()
+            .prescription.reps.minimum)
+        assertFalse(saved.isIssued)
+        assertFalse(saved.mayLog)
+        assertFalse(saved.mayFinish)
+        val restored=NativeKotlinCustomWorkoutPreparedStore(
+            temp.root.toPath(),
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),
+            identity,preflight)
+        assertEquals(NativeCustomPreparedRead.Found(saved),
+            restored.open("owner-1","workout-2"))
+        assertEquals(NativeCustomPrepareResult.Prepared(saved,true),
+            restored.prepare("owner-1","workout-2",
+                "cycle-1",2,0,input()))
+    }
+
+    @Test fun reusedIdCannotReplaceDifferentWeekOrChangedPrescriptions() {
+        initialize();approve()
+        assertTrue(prepared.prepare("owner-1","workout-1","cycle-1",
+            1,0,input()) is NativeCustomPrepareResult.Prepared)
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),
+            prepared.prepare("owner-1","workout-1","cycle-1",
+                2,0,input()))
+        val old=(prepared.open("owner-1","workout-1")
+            as NativeCustomPreparedRead.Found).workout
+        assertEquals(10,old.snapshot.slots.single().sets.single()
+            .prescription.reps.minimum)
+    }
+
+    @Test fun revokedConsentAndChangedGymPreventNewPreparationWithoutDestroyingOldFile() {
+        initialize();approve()
+        val previous=prepared.prepare("owner-1","workout-old",
+            "cycle-1",1,0,input())
+        assertTrue(previous is NativeCustomPrepareResult.Prepared)
+        assertTrue(consent.revoke("owner-1","cycle-1",1)
+            is NativeCustomSignoffWrite.Committed)
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepare("owner-1","workout-new",
+                "cycle-1",2,0,input()))
+        assertTrue(prepared.open("owner-1","workout-old")
+            is NativeCustomPreparedRead.Found)
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.publish("owner-1",1,source(2)))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepare("owner-1","workout-third",
+                "cycle-1",1,0,input()))
+    }
+
+    @Test fun identitySwitchAndChecksumCorruptionNeverExposePreparedContents() {
+        initialize();approve()
+        assertTrue(prepared.prepare("owner-1","workout-1",
+            "cycle-1",1,0,input()) is NativeCustomPrepareResult.Prepared)
+        current=NativeKotlinOwnerIdentity("other-owner","athlete-1")
+        assertEquals(NativeCustomPreparedRead.Rejected(
+            NativeCustomPrepareRefusal.NOT_AUTHORIZED),
+            prepared.open("owner-1","workout-1"))
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val file=java.nio.file.Files.list(temp.root.toPath()).use { files ->
+            files.filter { it.fileName.toString()
+                .startsWith("prepared-custom-") }.findFirst().orElseThrow()
+        }
+        val bytes=java.nio.file.Files.readAllBytes(file)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(file,bytes)
+        assertEquals(NativeCustomPreparedRead.Rejected(
+            NativeCustomPrepareRefusal.CORRUPT_RECORD),
+            prepared.open("owner-1","workout-1"))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.CORRUPT_RECORD),
+            prepared.prepare("owner-1","workout-1",
+                "cycle-1",1,0,input()))
+    }
+
 }

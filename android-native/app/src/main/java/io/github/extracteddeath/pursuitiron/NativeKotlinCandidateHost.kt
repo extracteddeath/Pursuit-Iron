@@ -45,9 +45,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
         customWorkoutPreflight,historyStore,journalStore)
     private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
         historyStore,customIssuedStore,revisionFence,localAthlete)
+    private val customSavedCorrections=NativeKotlinCustomSavedCorrectionFileStore(
+        root,revisionFence,localAthlete,customIssuedStore,historyStore)
+    private val customCorrectionTransactions=
+        NativeKotlinCustomHistoryCorrectionTransaction(
+            historyStore,customIssuedStore,customSavedCorrections,
+            revisionFence,localAthlete)
     private val mixedHistoryReader=NativeKotlinMixedHistoryReadCoordinator(
         historyStore,journalStore,correctionStore,customIssuedStore,
-        approvalStore,localAthlete,revisionFence)
+        approvalStore,localAthlete,revisionFence,customSavedCorrections)
     private val coordinator=NativeKotlinWorkoutCoordinator(
         journalStore,approvalStore,revisionFence)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
@@ -228,6 +234,30 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?:return NativeCustomFinishResult.Rejected(
                 NativeCustomFinishRefusal.NOT_AUTHORIZED)
         return customHistoryTransactions.recover(
+            owner.ownerKey,owner.athleteId)
+    }
+
+    /**
+     * Candidate-only saved custom corrections. The original issued
+     * session and Finish stay immutable; the shared history transaction
+     * must durably acknowledge before the screen can show edited facts.
+     */
+    fun correctFinishedCustomWorkout(
+        workoutId:String,operation:CustomSavedVisitCorrection
+    ):NativeCustomCorrectionTransactionResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomCorrectionTransactionResult.Rejected(
+                NativeCustomCorrectionTransactionRefusal.NOT_AUTHORIZED)
+        return customCorrectionTransactions.correct(
+            owner.ownerKey,owner.athleteId,workoutId,operation)
+    }
+
+    fun recoverPendingCustomCorrection():
+        NativeCustomCorrectionTransactionResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomCorrectionTransactionResult.Rejected(
+                NativeCustomCorrectionTransactionRefusal.NOT_AUTHORIZED)
+        return customCorrectionTransactions.recover(
             owner.ownerKey,owner.athleteId)
     }
 

@@ -412,6 +412,53 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             as NativeCandidateHistoryRootResult.Reviewed).replayed)
     }
 
+    @Test fun differentSameEventCorrectionWalCannotReplayAcknowledgmentOfCommittedCorrection() {
+        // Explicit engineering fault injection: replace WAL bytes with a
+        // different, independently checksummed staged record from the same
+        // candidate root. The older event-ID-only patch fingerprint would
+        // falsely acknowledge both corrections as the same committed edit.
+        val initial=boot()
+        stagedAppend(initial)
+        val committed=result(store().publishStagedForCandidateReview(owner,athlete))
+        assertEquals(1L,committed.head.completionCount)
+        val original=entry(1)
+        val walFile=candidateFiles(".wal").single {
+            it.fileName.toString().startsWith("candidate-segmented-redo-")
+        }
+        Files.delete(walFile) // test-only: simulated WAL namespace reset
+        fun stageVariant(reps:Int):ByteArray {
+            val correction=NativeHistoryWriteIntent.Correct("workout-1",
+                KotlinSavedSetCorrection("shared-edit",0,"set-1","set-event-1",
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(java.math.BigDecimal("200"),LoadUnit.LB,reps,2)))
+            assertTrue(wal().prepare(owner,athlete,committed.head,correction,original)
+                is NativeSegmentedRedoResult.Durable)
+            assertTrue(wal().stage(owner,athlete,
+                NativeSegmentedWriteSegment(committed.head.rootDigest,1,
+                    listOf(original)),original.copy(savedCorrectionRevision=1))
+                is NativeSegmentedRedoResult.Durable)
+            return Files.readAllBytes(walFile)
+        }
+        val sixReps=stageVariant(6)
+        Files.delete(walFile)
+        val fiveReps=stageVariant(5)
+        assertFalse(sixReps.contentEquals(fiveReps))
+        Files.write(walFile,sixReps)
+        val accepted=result(store().publishStagedForCandidateReview(owner,athlete))
+        assertEquals(3L,accepted.head.revision)
+        // A stale/conflicting WAL is not proof of a successful replay.
+        Files.write(walFile,fiveReps)
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.BASE_REVISION_CONFLICT),
+            store().publishStagedForCandidateReview(owner,athlete))
+        assertEquals(accepted,result(store().audit(owner,athlete)))
+        // The genuine WAL remains idempotently retryable after cold reopen.
+        Files.write(walFile,sixReps)
+        val genuine=store().publishStagedForCandidateReview(owner,athlete)
+        assertTrue(genuine is NativeCandidateHistoryRootResult.Reviewed)
+        assertTrue((genuine as NativeCandidateHistoryRootResult.Reviewed).replayed)
+        assertEquals(accepted,result(genuine))
+    }
+
     @Test fun lostAcknowledgementAfterRootSwapIsRecognizedOnRestart() {
         val initial = boot()
         stagedAppend(initial)

@@ -80,6 +80,11 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             root, fence, identity, v2, store())
     private fun pagedIndex() = NativeKotlinCandidatePagedIdentityFileStore(
         root, fence, identity, v2, store())
+    private fun pairedCheckpoint(
+        before: (() -> Unit)? = null,
+        after: (() -> Unit)? = null
+    ) = NativeKotlinCandidatePairedHistoryCheckpointFileStore(
+        root, fence, identity, store(), pagedIndex(), before, after)
     private fun result(r: NativeCandidateHistoryRootResult) =
         (r as NativeCandidateHistoryRootResult.Reviewed).view
     private fun rejection(reason: NativeCandidateHistoryRootRefusal) =
@@ -245,6 +250,124 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             identityIndex().findWorkout(owner, athlete, "workout-1"))
         // An independently proven Finish uses a fresh candidate root.
         // The synthetic candidate cannot be repaired by an index write.
+    }
+
+    @Test fun pairedCheckpointFailsClosedUntilBothCandidateArtifactsVerified() {
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.NOT_CHECKPOINTED),
+            pairedCheckpoint().review(owner, athlete))
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.UNVERIFIED_SOURCE),
+            pairedCheckpoint().checkpoint(owner, athlete))
+        val rootView = boot()
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.UNVERIFIED_SOURCE),
+            pairedCheckpoint().checkpoint(owner, athlete))
+        assertTrue(pagedIndex().build(owner, athlete)
+            is NativeCandidatePagedIdentityResult.Indexed)
+        val sealed = pairedCheckpoint().checkpoint(owner, athlete)
+            as NativeCandidatePairedHistoryResult.Verified
+        assertFalse(sealed.replayed)
+        assertEquals(rootView.head.rootDigest, sealed.checkpoint.rootDigest)
+        assertEquals(0L, sealed.checkpoint.completionCount)
+        assertEquals(1L, sealed.checkpoint.sourceRevision)
+        assertEquals(64, sealed.checkpoint.pagedDirectoryFileDigest.length)
+        assertFalse(sealed.checkpoint.canAuthorizeHistoryReads)
+        assertFalse(sealed.checkpoint.canAuthorizeWrites)
+        assertFalse(sealed.checkpoint.canIssueProgression)
+        assertFalse(sealed.checkpoint.canTransferAuthority)
+        assertTrue((pairedCheckpoint().review(owner, athlete)
+            as NativeCandidatePairedHistoryResult.Verified).replayed)
+        assertTrue((pairedCheckpoint().checkpoint(owner, athlete)
+            as NativeCandidatePairedHistoryResult.Verified).replayed)
+        assertEquals(1, candidateFiles(".cseal").size)
+        signedIn = null
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.NOT_AUTHORIZED),
+            pairedCheckpoint().review(owner, athlete))
+        signedIn = NativeKotlinOwnerIdentity(owner, athlete)
+        val bytes = Files.readAllBytes(candidateFiles(".cseal").single())
+        bytes[bytes.lastIndex] = (bytes.last().toInt() xor 1).toByte()
+        Files.write(candidateFiles(".cseal").single(), bytes)
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.CORRUPT_CHECKPOINT),
+            pairedCheckpoint().review(owner, athlete))
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.CORRUPT_CHECKPOINT),
+            pairedCheckpoint().checkpoint(owner, athlete))
+    }
+
+    @Test fun pairedCheckpointCrashBeforePublicationAndLostAckDoNotInventHistory() {
+        boot()
+        assertTrue(pagedIndex().build(owner, athlete)
+            is NativeCandidatePagedIdentityResult.Indexed)
+        val before = pairedCheckpoint(before = {
+            throw IllegalStateException("crash before seal")
+        })
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.STORAGE_UNAVAILABLE),
+            before.checkpoint(owner, athlete))
+        assertTrue(candidateFiles(".cseal").isEmpty())
+        val after = pairedCheckpoint(after = {
+            throw IllegalStateException("lost seal acknowledgement")
+        })
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.STORAGE_UNAVAILABLE),
+            after.checkpoint(owner, athlete))
+        assertEquals(1, candidateFiles(".cseal").size)
+        val recovered = pairedCheckpoint().checkpoint(owner, athlete)
+            as NativeCandidatePairedHistoryResult.Verified
+        assertTrue(recovered.replayed)
+        assertEquals(recovered.checkpoint,
+            (pairedCheckpoint().review(owner, athlete)
+                as NativeCandidatePairedHistoryResult.Verified).checkpoint)
+        assertEquals(0L, (v2.open(owner, athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())
+    }
+
+    @Test fun pairedCheckpointRefusesTornRootIndexAndCanSealExactNewCommit() {
+        val first = boot()
+        assertTrue(pagedIndex().build(owner, athlete)
+            is NativeCandidatePagedIdentityResult.Indexed)
+        val old = (pairedCheckpoint().checkpoint(owner, athlete)
+            as NativeCandidatePairedHistoryResult.Verified).checkpoint
+        val saved = realComposerCompletion()
+        val intent = finish(1)
+        assertTrue(wal().prepare(owner, athlete, first.head, intent, null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner, athlete,
+            NativeSegmentedWriteSegment(first.head.rootDigest, 1, emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner, athlete, 1, intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(v2.finalize(owner, athlete, intent, saved)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.UNVERIFIED_SOURCE),
+            pairedCheckpoint().review(owner, athlete))
+        assertTrue(store().publishReplayVerifiedV2Mirror(
+            owner, athlete, replay, receiptVerifier())
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertTrue(shadow.sync(owner, athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.UNVERIFIED_SOURCE),
+            pairedCheckpoint().checkpoint(owner, athlete))
+        assertTrue(pagedIndex().build(owner, athlete)
+            is NativeCandidatePagedIdentityResult.Indexed)
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.STALE_CHECKPOINT),
+            pairedCheckpoint().review(owner, athlete))
+        val next = pairedCheckpoint().checkpoint(owner, athlete)
+            as NativeCandidatePairedHistoryResult.Verified
+        assertFalse(next.replayed)
+        assertEquals(2L, next.checkpoint.sourceRevision)
+        assertEquals(1L, next.checkpoint.completionCount)
+        assertNotEquals(old.rootDigest, next.checkpoint.rootDigest)
+        assertNotEquals(old.pagedDirectoryFileDigest,
+            next.checkpoint.pagedDirectoryFileDigest)
+        assertTrue((pairedCheckpoint().review(owner, athlete)
+            as NativeCandidatePairedHistoryResult.Verified).replayed)
     }
 
     @Test fun pagedIndexColdReopenAndCorruptionNeverAuthorizeNewFinish() {

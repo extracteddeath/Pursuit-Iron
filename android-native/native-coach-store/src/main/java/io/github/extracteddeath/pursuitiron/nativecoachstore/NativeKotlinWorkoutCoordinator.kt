@@ -89,10 +89,16 @@ sealed interface NativeKotlinIssueResult {
  * injected revision fence; otherwise this module cannot claim cross-store
  * atomicity. The production native account/approval provider is not wired.
  */
+fun interface NativeKotlinAcceptedRepSnapshotVerifier {
+    /** Must re-open FULL corrected history under the SAME owner fence. */
+    fun rederive(ownerKey:String,approval:NativeKotlinWorkoutApproval):KotlinStagedWorkout?
+}
+
 class NativeKotlinWorkoutCoordinator(
     private val store: KotlinNativeJournalFileStore,
     private val authority: NativeKotlinWorkoutAuthority,
-    private val revisionFence: NativeKotlinApprovalRevisionFence
+    private val revisionFence: NativeKotlinApprovalRevisionFence,
+    private val repVerifier: NativeKotlinAcceptedRepSnapshotVerifier?=null
 ) {
     private fun stage(
         ownerKey: String,
@@ -107,12 +113,54 @@ class NativeKotlinWorkoutCoordinator(
             approval.approvedSource!=approval.currentSource ||
             approval.storageRevision<1)
             return null
-        return KotlinWorkoutSnapshotDomain.stage(
+        val baseline=KotlinWorkoutSnapshotDomain.stage(
             KotlinWorkoutSnapshotRequest(
                 approval.approvedSource,approval.currentSource,approval.grant,
                 approval.program,approval.policies
             )
         )
+        val proof=approval.acceptedRepTargets ?:return baseline
+        val base=(baseline as? KotlinWorkoutSnapshotResult.Staged)?.snapshot
+            ?:return baseline
+        // Never issue generic ranges for an approved adaptive prescription
+        // just because the optional history verifier is absent or failed.
+        val rebuilt=repVerifier?.rederive(ownerKey,approval)
+            ?:return KotlinWorkoutSnapshotResult.Rejected(
+                KotlinSnapshotRejection.UNVERIFIED_TARGET)
+        if(rebuilt.source!=base.source ||
+            rebuilt.grantId!=base.grantId ||
+            rebuilt.workoutId!=base.workoutId ||
+            rebuilt.dayIndex!=base.dayIndex ||
+            rebuilt.calendarDay!=base.calendarDay ||
+            rebuilt.purpose!=base.purpose ||
+            rebuilt.estimatedMinutes!=base.estimatedMinutes ||
+            rebuilt.targets.size!=base.targets.size ||
+            rebuilt.targets.map {it.setKey}!=base.targets.map {it.setKey})
+            return KotlinWorkoutSnapshotResult.Rejected(
+                KotlinSnapshotRejection.UNVERIFIED_TARGET)
+        val changed=rebuilt.targets.zip(base.targets).filter {(next,old)->
+            next!=old
+        }
+        val working=base.targets.filter {
+            it.exerciseId==proof.exerciseId && it.type==DraftSetType.WORKING
+        }.sortedBy {it.ordinal}
+        if(working.size!=proof.newRepTargets.size ||
+            proof.changedSetKey !in working.map {it.setKey} ||
+            changed.size!=working.size ||
+            changed.any {(next,old)->
+                next.copy(reps=old.reps)!=old ||
+                    old.exerciseId!=proof.exerciseId ||
+                    old.type!=DraftSetType.WORKING
+            } ||
+            working.indices.any {i->
+                val target=rebuilt.targets.singleOrNull {
+                    it.setKey==working[i].setKey
+                } ?:return@any true
+                target.reps!=RepBand(proof.newRepTargets[i],proof.newRepTargets[i])
+            })
+            return KotlinWorkoutSnapshotResult.Rejected(
+                KotlinSnapshotRejection.UNVERIFIED_TARGET)
+        return KotlinWorkoutSnapshotResult.Staged(rebuilt)
     }
 
     /**

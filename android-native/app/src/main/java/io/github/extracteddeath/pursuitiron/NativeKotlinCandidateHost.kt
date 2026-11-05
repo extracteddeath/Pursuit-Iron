@@ -292,6 +292,26 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * A separate, authenticated athlete approval is required to save a
      * changed program and to issue any subsequent training targets.
      */
+    /**
+     * Explicit candidate athlete acceptance. Never trust UI-provided
+     * workouts, plans or historical observations: the native coordinator
+     * replays complete history and the approved plan under the owner fence.
+     * Approval DOES NOT issue the newly approved workout.
+     */
+    fun acceptReviewedNativeLoad(
+        intent:NativeKotlinCoachLoadAcceptanceIntent,
+        maximumAuthorizedIncrease:java.math.BigDecimal,
+        readiness:CoachReadiness,
+        movementRestricted:Boolean
+    ):NativeKotlinCoachAcceptanceResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeKotlinCoachAcceptanceResult.Rejected(
+                NativeKotlinCoachAcceptanceRefusal.NOT_AUTHORIZED)
+        return mixedHistoryReader.acceptCurrentApprovedLoad(
+            owner.ownerKey,owner.athleteId,approvalStore,intent,
+            maximumAuthorizedIncrease,readiness,movementRestricted)
+    }
+
     fun reviewCurrentNativeLoad(
         exerciseId:String,
         maximumAuthorizedIncrease:java.math.BigDecimal,

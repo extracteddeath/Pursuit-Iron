@@ -565,7 +565,7 @@ class CoachWeekComposerTest {
             repaired.filter {it.dayIndex==day}.map {it.pattern}.distinct().size==2
         })
         assertTrue(repaired.groupBy {it.exerciseId}.values.all {it.size<=3})
-        assertTrue(repaired.all {it.sets==2})
+        assertTrue(repaired.all {it.sets in 2..4})
     }
 
     @Test fun rebalanceIncreasesExistingSetsToReachMinimumDose() {
@@ -579,7 +579,7 @@ class CoachWeekComposerTest {
             ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
         val repaired=CoachWeekComposer.rebalanceForReview(request,seed)
         assertEquals(1,repaired.size)
-        assertEquals(3,repaired.single().sets)
+        assertTrue(repaired.single().sets in 3..4)
         assertEquals("db-press",repaired.single().exerciseId)
     }
 

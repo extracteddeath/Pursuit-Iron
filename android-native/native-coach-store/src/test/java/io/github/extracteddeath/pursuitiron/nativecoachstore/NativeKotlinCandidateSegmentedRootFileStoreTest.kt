@@ -85,6 +85,12 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         after: (() -> Unit)? = null
     ) = NativeKotlinCandidatePairedHistoryCheckpointFileStore(
         root, fence, identity, store(), pagedIndex(), before, after)
+    private fun reconciler(
+        afterIndex: (() -> Unit)? = null,
+        afterCheckpoint: (() -> Unit)? = null
+    ) = NativeKotlinCandidateHistoryMirrorRecoveryCoordinator(
+        fence, identity, store(), pagedIndex(), pairedCheckpoint(),
+        afterIndex, afterCheckpoint)
     private fun result(r: NativeCandidateHistoryRootResult) =
         (r as NativeCandidateHistoryRootResult.Reviewed).view
     private fun rejection(reason: NativeCandidateHistoryRootRefusal) =
@@ -250,6 +256,125 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             identityIndex().findWorkout(owner, athlete, "workout-1"))
         // An independently proven Finish uses a fresh candidate root.
         // The synthetic candidate cannot be repaired by an index write.
+    }
+
+    @Test fun mirrorReconciliationCreatesOneVerifiedPairAndOnlyAcknowledgesExactRetry() {
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.UNVERIFIED_ROOT),
+            reconciler().reconcile(owner, athlete))
+        val original=boot()
+        val saved=reconciler().reconcile(owner, athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertFalse(saved.replayed)
+        assertEquals(original.head.rootDigest,saved.checkpoint.rootDigest)
+        assertEquals(0L,saved.checkpoint.completionCount)
+        assertFalse(saved.canAuthorizeWrites)
+        assertFalse(saved.canIssueProgression)
+        assertFalse(saved.canTransferAuthority)
+        assertEquals(1,candidateFiles(".pidx").size)
+        assertEquals(1,candidateFiles(".cseal").size)
+        val retry=reconciler().reconcile(owner, athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertTrue(retry.replayed)
+        assertEquals(saved.checkpoint,retry.checkpoint)
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.INVALID_SCOPE),
+            reconciler().reconcile("invalid/owner",athlete))
+        signedIn=null
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.NOT_AUTHORIZED),
+            reconciler().reconcile(owner,athlete))
+    }
+
+    @Test fun mirrorReconciliationRecoversCrashBetweenIndexAndCheckpoint() {
+        boot()
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.STORAGE_UNAVAILABLE),
+            reconciler(afterIndex={
+                throw IllegalStateException("process dies after index")
+            }).reconcile(owner,athlete))
+        assertEquals(1,candidateFiles(".pidx").size)
+        assertTrue(candidateFiles(".cseal").isEmpty())
+        val recovered=reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertFalse(recovered.replayed)
+        assertEquals(1L,recovered.checkpoint.sourceRevision)
+        assertEquals(1,candidateFiles(".cseal").size)
+        assertTrue((reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent).replayed)
+    }
+
+    @Test fun mirrorReconciliationRecoversLostAckButCannotReplaceCommittedIndex() {
+        boot()
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.STORAGE_UNAVAILABLE),
+            reconciler(afterCheckpoint={
+                throw IllegalStateException("acknowledgement lost")
+            }).reconcile(owner,athlete))
+        assertEquals(1,candidateFiles(".cseal").size)
+        assertTrue((reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent).replayed)
+        Files.delete(candidateFiles(".pidx").single())
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.LOST_COMMITTED_INDEX),
+            reconciler().reconcile(owner,athlete))
+        assertTrue(candidateFiles(".pidx").isEmpty())
+        assertEquals(1,candidateFiles(".cseal").size)
+    }
+
+    @Test fun mirrorReconciliationUpdatesRootIndexAndCheckpointAfterRealFinish() {
+        val initial=boot()
+        val before=reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        val saved=realComposerCompletion()
+        val intent=finish(1)
+        assertTrue(wal().prepare(owner,athlete,initial.head,intent,null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner,athlete,1,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(v2.finalize(owner,athlete,intent,saved)
+            is NativeHistoryLedgerResult.Durable)
+        // The candidate root cannot be inferred from a v2 commit alone.
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.UNVERIFIED_ROOT),
+            reconciler().reconcile(owner,athlete))
+        assertTrue(store().publishReplayVerifiedV2Mirror(
+            owner,athlete,replay,receiptVerifier())
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertTrue(shadow.sync(owner,athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val ready=reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertFalse(ready.replayed)
+        assertEquals(2L,ready.checkpoint.sourceRevision)
+        assertEquals(1L,ready.checkpoint.completionCount)
+        assertNotEquals(before.checkpoint.rootDigest,ready.checkpoint.rootDigest)
+        assertNotEquals(before.checkpoint.pagedDirectoryFileDigest,
+            ready.checkpoint.pagedDirectoryFileDigest)
+        assertEquals(1L,(pagedIndex().findWorkout(owner,athlete,"workout-1")
+            as NativeCandidatePagedIdentityResult.Lookup).row?.completionOrder)
+        assertTrue((reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent).replayed)
+        assertEquals(1L,(v2.open(owner,athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())
+    }
+
+    @Test fun mirrorReconciliationRefusesCorruptCheckpointAndIndexWithoutRepair() {
+        boot()
+        reconciler().reconcile(owner,athlete)
+        val page=candidateFiles(".pidx").single()
+        val bytes=Files.readAllBytes(page)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        Files.write(page,bytes)
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.CORRUPT_INDEX),
+            reconciler().reconcile(owner,athlete))
+        // Failed reconciliation did not clear a previously committed seal.
+        assertEquals(1,candidateFiles(".cseal").size)
+        assertEquals(1,candidateFiles(".pidx").size)
     }
 
     @Test fun pairedCheckpointFailsClosedUntilBothCandidateArtifactsVerified() {

@@ -153,7 +153,7 @@ internal fun NativeKotlinCandidateCoachScreen(
                                 label={Text("Day ${index+1} · ${day.focus.name.replace('_',' ')}")})
                         }
                     }
-                    Text("The approved program retains ${candidate.candidateProgram.exercises.size} exercises, with the reviewed load applied to each affected visit. The prior issued workout and saved results will remain unchanged.",
+                    Text("The approved program retains ${checkNotNull(candidate.candidateProgram).exercises.size} exercises, with the reviewed load applied to each affected visit. The prior issued workout and saved results will remain unchanged.",
                         style=MaterialTheme.typography.bodySmall)
                     Row(verticalAlignment=Alignment.CenterVertically) {
                         Checkbox(checked=checked,

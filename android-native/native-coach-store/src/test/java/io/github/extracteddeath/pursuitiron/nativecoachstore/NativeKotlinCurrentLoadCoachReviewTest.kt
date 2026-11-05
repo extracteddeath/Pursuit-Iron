@@ -104,7 +104,7 @@ class NativeKotlinCurrentLoadCoachReviewTest {
                 actual=fact.actual?.copy(load=historicalWeight))
         }
         val comparable=issued.distinct().size==1
-        val target=if(comparable) issued.single() else null
+        val target=if(comparable) issued.first() else null
         val originalFacts=checkNotNull(before.progressionWorkout)
         val workout=target?.let {originalFacts.copy(targetReps=it,
             observations=originalFacts.observations.map {

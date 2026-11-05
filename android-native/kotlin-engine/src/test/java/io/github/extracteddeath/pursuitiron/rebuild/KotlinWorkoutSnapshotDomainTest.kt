@@ -231,7 +231,7 @@ class KotlinWorkoutSnapshotDomainTest {
 
     private fun observed(
         id:String, loads:List<Int>, reps:List<Int>,
-        rir:List<Int?>=listOf(2,2)
+        rir:List<Int?> = listOf(2,2)
     )=ProgressionWorkoutEvidence(
         id,"db-press",LoadUnit.LB,RepBand(8,12),2,
         loads.indices.map { i -> WorkingSetFact(

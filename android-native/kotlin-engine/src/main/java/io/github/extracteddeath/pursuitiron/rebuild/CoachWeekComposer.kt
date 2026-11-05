@@ -476,6 +476,40 @@ object CoachWeekComposer {
                     }
                 }
             }
+            // An isolated relocation can be impossible when two days are
+            // full. A simultaneous two-visit exchange may still be legal,
+            // especially when the shorter session belongs on a different
+            // calendar day. Authorize this ONLY as two date moves: neither
+            // exercise identity nor authored set count may change.
+            //
+            // Validate both insertions against the same candidate state,
+            // then run the full dose/time audit in consider(). Intermediate
+            // states are never published or scored as finished programs.
+            if(permissions.mayMoveVisits) {
+                for(left in chosen.indices) {
+                    if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                    val first=chosen[left]
+                    for(right in left+1 until chosen.size) {
+                        if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                        val second=chosen[right]
+                        if(first.dayIndex==second.dayIndex)continue
+                        val without=chosen.filterIndexed { index,_ ->
+                            index!=left && index!=right
+                        }
+                        val firstOption=options.getValue(first.exerciseId)
+                        val secondOption=options.getValue(second.exerciseId)
+                        if(!mayStart(firstOption,second.dayIndex,request,without))
+                            continue
+                        val movedFirst=first.copy(dayIndex=second.dayIndex)
+                        if(!mayStart(secondOption,first.dayIndex,request,
+                                without+movedFirst))continue
+                        consider(chosen.toMutableList().apply {
+                            this[left]=movedFirst
+                            this[right]=second.copy(dayIndex=first.dayIndex)
+                        })
+                    }
+                }
+            }
             if(permissions.mayReplaceExercises || permissions.mayMoveVisits)
             for(index in chosen.indices) {
                 if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break

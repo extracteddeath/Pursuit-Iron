@@ -698,4 +698,73 @@ class CoachWeekComposerTest {
         assertEquals(ComposerStatus.CONSTRAINTS_UNRESOLVED,draft.status)
     }
 
+
+    @Test fun boundedPairExchangeRepairsTwoFullDaysWithoutExtraVisits() {
+        val longPress=chestOption.copy(maximumVisits=1,
+            minimumSetsPerVisit=2,maximumSetsPerVisit=2,
+            workSeconds=300,restSeconds=180)
+        val shortRow=backOption.copy(maximumVisits=1,
+            minimumSetsPerVisit=2,maximumSetsPerVisit=2,
+            workSeconds=90,restSeconds=60)
+        val shortSquat=legOption.copy(maximumVisits=1,
+            minimumSetsPerVisit=2,maximumSetsPerVisit=2,
+            workSeconds=90,restSeconds=60)
+        val schedule=listOf(
+            ComposerDay(0,ComposerFocus.FULL_BODY,
+                DeclaredSessionWindow(1,6,null,0)),
+            ComposerDay(2,ComposerFocus.FULL_BODY,
+                DeclaredSessionWindow(12,16,null,0)),
+            ComposerDay(4,ComposerFocus.FULL_BODY,
+                DeclaredSessionWindow(1,6,null,0)))
+        val request=base(
+            exerciseOptions=listOf(longPress,shortRow,shortSquat),
+            bands=bounds(dose(chest,"0","2","4"),
+                dose(lats,"0","2","4"),dose(quads,"0","2","4")),
+            schedule=schedule,patterns=1,maxPerDay=1)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
+        // A single move would empty an occupied day and violate the
+        // one-exercise cap on the destination. The pair must move together.
+        assertEquals(authored,CoachWeekComposer.rebalanceForReview(
+            request,authored))
+        val repaired=CoachWeekComposer.rebalanceForReview(
+            request,authored,ComposerRepairPermissions(mayMoveVisits=true))
+        assertEquals(3,repaired.size)
+        assertEquals(1,repaired.single {it.exerciseId=="db-press"}.dayIndex)
+        assertEquals(0,repaired.single {it.exerciseId=="db-row"}.dayIndex)
+        assertEquals(2,repaired.single {it.exerciseId=="goblet-squat"}.dayIndex)
+        assertTrue(repaired.all {it.sets==2})
+        assertEquals(authored.map {it.exerciseId}.toSet(),
+            repaired.map {it.exerciseId}.toSet())
+        assertEquals(repaired,CoachWeekComposer.rebalanceForReview(
+            request,authored,ComposerRepairPermissions(mayMoveVisits=true)))
+    }
+
+    @Test fun pairExchangeCannotIgnoreDayFocus() {
+        val upperPress=chestOption.copy(maximumVisits=1,
+            allowedFocus=setOf(ComposerFocus.UPPER))
+        val lowerSquat=legOption.copy(maximumVisits=1,
+            allowedFocus=setOf(ComposerFocus.LOWER))
+        val upperRow=backOption.copy(maximumVisits=1,
+            allowedFocus=setOf(ComposerFocus.UPPER))
+        val schedule=days(listOf(0,2,4),
+            focuses=listOf(ComposerFocus.UPPER,ComposerFocus.LOWER,
+                ComposerFocus.UPPER),min=1,max=90)
+        val request=base(
+            exerciseOptions=listOf(upperPress,lowerSquat,upperRow),
+            bands=bounds(dose(chest,"0","4","6"),
+                dose(lats,"0","4","6"),dose(quads,"0","4","6")),
+            schedule=schedule,split=ComposerSplit.UPPER_LOWER,
+            patterns=1,maxPerDay=1)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"goblet-squat",ComposerPattern.SQUAT,2),
+            ComposerVisit(2,"db-row",ComposerPattern.HORIZONTAL_PULL,2))
+        val repaired=CoachWeekComposer.rebalanceForReview(
+            request,authored,ComposerRepairPermissions(mayMoveVisits=true))
+        assertEquals(authored,repaired)
+    }
+
 }

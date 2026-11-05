@@ -208,4 +208,17 @@ class NativeSegmentedHistoryWritePlanDomainTest {
             NativeSegmentedHistoryWritePlanDomain.prepare(
                 h.copy(rootDigest = "bad"), 7, intent, null))
     }
+    @Test fun appendedReceiptCannotReuseAnExistingShardReceipt() {
+        val h = head(1)
+        val intent = finish(2)
+        val staged = prepared(h, intent)
+        val original = entry(1)
+        val collision = entry(2).copy(storedReceiptId = original.storedReceiptId)
+        assertEquals(rejected(NativeSegmentedWriteRefusal.UNVERIFIED_RECEIPT),
+            NativeSegmentedHistoryWritePlanDomain.finalize(
+                staged, intent, null,
+                NativeSegmentedWriteSegment(h.rootDigest, 1, listOf(original)),
+                collision))
+    }
+
 }

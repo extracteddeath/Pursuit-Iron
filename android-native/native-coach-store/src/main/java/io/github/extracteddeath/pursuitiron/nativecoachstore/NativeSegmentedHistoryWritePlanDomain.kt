@@ -250,6 +250,12 @@ object NativeSegmentedHistoryWritePlanDomain {
                 return denied(NativeSegmentedWriteRefusal.UNVERIFIED_RECEIPT)
             segment.completions.toMutableList().also { it[position] = resolved }
         }
+        // The newly appended record cannot reuse an identity already present
+        // in the replacement segment. The persistent root writer must also
+        // check every older segment through its authenticated ID index.
+        if (changed.map { it.workoutId }.distinct().size != changed.size ||
+            changed.map { it.storedReceiptId }.distinct().size != changed.size)
+            return denied(NativeSegmentedWriteRefusal.UNVERIFIED_RECEIPT)
         return NativeSegmentedWriteDecision.ProposedPatch(
             NativeSegmentedWritePatch(
                 prepared.rootDigest, prepared.revision, prepared.revision + 1,

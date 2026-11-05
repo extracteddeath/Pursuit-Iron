@@ -400,11 +400,12 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
         val index = ((patch.replaceSegmentFirstOrdinal - 1) / PER_SEGMENT).toInt()
         if (index < 0 || index > root.segments.size)
             return@guarded deny(NativeCandidateHistoryRootRefusal.INVALID_PATCH)
+        val sourceReceipts = HashSet<String>()
         val original = try {
             // Recheck ALL existing shards; do not assume caller-provided
             // null proves a new workout ID or a unique correction target.
             val workouts = HashSet<String>()
-            val receipts = HashSet<String>()
+            val receipts = sourceReceipts
             val shards = root.segments.map { ref ->
                 decodeShard(owner, athlete, ref).also { entries ->
                     for (e in entries)
@@ -434,6 +435,9 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
         } ?: return@guarded deny(NativeCandidateHistoryRootRefusal.INVALID_PATCH)
         if (resolved == null) return@guarded deny(
             NativeCandidateHistoryRootRefusal.INVALID_PATCH)
+        if (record.target == null &&
+            resolved.storedReceiptId in sourceReceipts)
+            return@guarded deny(NativeCandidateHistoryRootRefusal.INVALID_PATCH)
         val plan = NativeSegmentedHistoryWritePlanDomain.finalize(
             record.base.copy(pending = record.intent), record.intent, record.target,
             NativeSegmentedWriteSegment(opened.digest,

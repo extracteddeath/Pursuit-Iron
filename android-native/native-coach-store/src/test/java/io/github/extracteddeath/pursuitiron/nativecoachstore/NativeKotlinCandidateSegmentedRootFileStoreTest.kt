@@ -338,4 +338,26 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertFalse(result(published).canPublishHistory)
     }
 
+    @Test fun duplicateReceiptFailsBeforeAnyCandidateRootMutation() {
+        val saved = realComposerCompletion()
+        assertTrue(v2.enrollVerifiedSnapshot(
+            owner, athlete, listOf(saved)) { o, a ->
+                signedIn == NativeKotlinOwnerIdentity(o, a)
+            } is NativeHistoryLedgerResult.Durable)
+        assertTrue(shadow.sync(owner, athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val original = result(store().bootstrapFromVerifiedV2(owner, athlete))
+        val operation = finish(2)
+        assertTrue(wal().prepare(owner, athlete, original.head, operation, null)
+            is NativeSegmentedRedoResult.Durable)
+        val collision = entry(2).copy(storedReceiptId = saved.storedReceiptId)
+        val attempted = wal().stage(owner, athlete,
+            NativeSegmentedWriteSegment(original.head.rootDigest, 1, listOf(saved)),
+            collision)
+        assertEquals(NativeSegmentedRedoResult.Rejected(
+            NativeSegmentedRedoRefusal.INVALID_PROPOSAL), attempted)
+        assertEquals(original, result(store().audit(owner, athlete)))
+        assertEquals(1, candidateFiles(".shard").size)
+    }
+
 }

@@ -212,3 +212,22 @@ shortened format must fail closed and be explicitly reconciled, not silently
 treated as the same committed transaction. This does not create an
 authenticated single writer, a scalable durable index, directory fsync, or
 device-tested power-loss recovery.
+
+## Paged identity directory layout (non-authoritative planner)
+
+`NativeSegmentedIdentityPageDomain` introduces a separate proof-of-layout
+for the future replacement identity index: **independent workout-ID and
+receipt-ID sort orders**, at most 128 rows per checksummed page, stable
+long completion ordinals and an exact root/revision identity. In-memory
+tests cover 4,097 identities, boundary lookups, an empty index, missing
+ordinal, cross-page duplicate IDs, stale roots, revoked/incorrect scopes
+and a mutated selected page. A null lookup or positive match has **zero**
+write, edit, PR, coaching, or migration authority.
+
+This does **not** replace the existing 4,096-row v2-backed candidate
+index or expand current production history. It is a pure, caller-supplied
+candidate snapshot, NOT a persistent index; building still consumes the
+complete source history. Before use, a native one-writer protocol must
+persist immutable pages, authenticate their COMPLETE directory and owner,
+prove source-journal and legacy parity, atomically couple receipt/workout
+directories with the segmented history root, and recover a lost commit.

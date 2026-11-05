@@ -64,6 +64,17 @@
       ]
     },
     {
+      "id": "load-after-personalized-sessions",
+      "domain": "progression",
+      "severity": "critical",
+      "scenario": "Compare the latest two completed, owner-verified training sessions with individually issued exact per-set rep targets. Exercise actual load is uniformly verified, set effort reported, and the original approved practical range remains 8–12. Include a strong pair at 12/12 and a previously demonstrated 25-lb load followed by a failed 30-lb overload.",
+      "expected": "Earn a 35-lb load review only from two genuine whole-session ceiling performances with actual RIR headroom; after a 30-lb rep-floor failure offer only a verified historical 25-lb recovery for review. Do not substitute current planned load for old issued loading, change logged facts, or cherry-pick older successful workouts.",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
       "id": "progression-no-rir",
       "domain": "progression",
       "severity": "major",

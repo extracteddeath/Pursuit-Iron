@@ -84,3 +84,24 @@ Android device power-loss/backup testing. A production handoff must
 replace these engineering-only entrypoints with one replay-authenticated,
 account-scoped writer and a scalable unique workout index. Do not merge
 or wire this candidate into the existing app.
+
+## Replay-authenticated v2 mirror gate
+
+The candidate now also supports
+`publishReplayVerifiedV2Mirror(owner, athlete, replayReader)` as an
+**internal migration rehearsal**, distinct from the original unauthenticated
+candidate-test publication seam. Under the owner transaction fence it requires
+the current v2 manifest to have finalized the exact next revision and count,
+full independent Composer/custom journal + saved-correction replay, and exact
+whole-history equality between the proposed candidate root and every
+authoritatively saved manifest entry. It refuses pending source transactions,
+fabricated entries, stale proposals and contradictory revisions before a
+candidate root swap. Exact replay after a lost acknowledgment is allowed.
+Any material staged beyond the v2 4,096-entry cap remains test-only.
+
+This is a strict **mirror of a pre-existing v2 commit**, not the segmented
+source of truth: it can neither Finish a workout nor issue progress changes.
+It remains O(all existing segments) and does not provide device power-loss,
+backup/restore or single-writer cutover guarantees. Once the verified
+segmented writer becomes primary, an independent journal verifier and unique
+workout ID index must replace the v2 source check.

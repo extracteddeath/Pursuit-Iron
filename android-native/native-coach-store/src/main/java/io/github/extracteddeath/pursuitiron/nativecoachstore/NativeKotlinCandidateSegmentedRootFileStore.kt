@@ -45,7 +45,7 @@ data class NativeCandidateHistoryRootView(
 enum class NativeCandidateHistoryRootRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, NOT_BOOTSTRAPPED, BOOTSTRAP_DENIED,
     PENDING_REDO_REQUIRED, BASE_REVISION_CONFLICT, INVALID_PATCH,
-    CORRUPT_ROOT, CORRUPT_SEGMENT, STORAGE_UNAVAILABLE
+    UNVERIFIED_SOURCE, CORRUPT_ROOT, CORRUPT_SEGMENT, STORAGE_UNAVAILABLE
 }
 
 sealed interface NativeCandidateHistoryRootResult {
@@ -365,6 +365,84 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
             })
         }
         return hash(out.toByteArray())
+    }
+
+    /**
+     * STRONGER read-only v2 mirror path: the currently authoritative ledger
+     * must already have finalized the exact Finish/correction, and the full
+     * saved Composer/custom journal history must independently replay. The
+     * *entire* projected candidate root must equal that source, not merely
+     * one changed row. Everything stays under the same owner fence.
+     *
+     * This cannot be used after cutover, because v2 is still the source of
+     * truth here. Does not authenticate a future single-writer journal,
+     * transfer ownership, or make candidate history visible to Compose.
+     */
+    internal fun publishReplayVerifiedV2Mirror(
+        owner: String, athlete: String,
+        replayReader: NativeKotlinMixedHistoryReadCoordinator
+    ): NativeCandidateHistoryRootResult = guarded(owner, athlete) {
+        val staged = (redo.read(owner, athlete)
+            as? NativeSegmentedRedoResult.Durable)?.redo
+            ?: return@guarded deny(NativeCandidateHistoryRootRefusal.PENDING_REDO_REQUIRED)
+        val patch = staged.stagedPatch
+            ?: return@guarded deny(NativeCandidateHistoryRootRefusal.PENDING_REDO_REQUIRED)
+        val source = (ledger.open(owner, athlete)
+            as? NativeHistoryLedgerResult.Durable)?.ledger
+            ?: return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+        if (!source.readyForHistoryReads || source.pending != null ||
+            source.ownerKey != owner || source.athleteId != athlete ||
+            source.revision != patch.nextHeadRevision ||
+            source.completions.size.toLong() != patch.nextCompletionCount)
+            return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+
+        val replay = (replayReader.read(owner, athlete)
+            as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+            ?: return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+        if (replay.athleteId != athlete ||
+            replay.manifestRevision != source.revision ||
+            replay.completions.map { it.manifest } != source.completions)
+            return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+
+        val current = try { readRoot(owner, athlete) } catch (_: Exception) {
+            return@guarded deny(NativeCandidateHistoryRootRefusal.CORRUPT_ROOT)
+        } ?: return@guarded deny(NativeCandidateHistoryRootRefusal.NOT_BOOTSTRAPPED)
+        val sameCommittedPatch = current.root.revision == patch.nextHeadRevision &&
+            current.root.parent == staged.base.rootDigest &&
+            current.root.lastPatchHash == patchDigest(patch) &&
+            current.root.count == patch.nextCompletionCount
+        if (!sameCommittedPatch &&
+            (current.digest != staged.base.rootDigest ||
+             current.root.revision != staged.base.revision ||
+             current.root.count != staged.base.completionCount))
+            return@guarded deny(NativeCandidateHistoryRootRefusal.BASE_REVISION_CONFLICT)
+
+        // Verify existing immutable material, including unchanged old shards.
+        // The source replay already proved all receipts, and the projected
+        // manifest must match all of those exact entries before any root swap.
+        val entries = try {
+            current.root.segments.flatMap { ref ->
+                decodeShard(owner, athlete, ref)
+            }
+        } catch (_: Exception) {
+            return@guarded deny(NativeCandidateHistoryRootRefusal.CORRUPT_SEGMENT)
+        }
+        val projected = if (sameCommittedPatch) entries else {
+            val firstIndex = patch.replaceSegmentFirstOrdinal - 1
+            if (firstIndex < 0 || firstIndex > entries.size.toLong())
+                return@guarded deny(NativeCandidateHistoryRootRefusal.INVALID_PATCH)
+            val first = firstIndex.toInt()
+            val oldSize = if (first == entries.size) 0 else
+                minOf(PER_SEGMENT, entries.size - first)
+            if (first != entries.size && first % PER_SEGMENT != 0)
+                return@guarded deny(NativeCandidateHistoryRootRefusal.INVALID_PATCH)
+            entries.take(first) + patch.completions + entries.drop(first + oldSize)
+        }
+        if (projected != source.completions)
+            return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+        // The same lock also protects the second, disk-backed root/redo CAS.
+        // A lost publication ack is recognized by its exact parent/patch hash.
+        publishStagedForCandidateReview(owner, athlete)
     }
 
     /**

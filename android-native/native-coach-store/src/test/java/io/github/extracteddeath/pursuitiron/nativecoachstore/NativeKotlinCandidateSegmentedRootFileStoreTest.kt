@@ -360,4 +360,108 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(1, candidateFiles(".shard").size)
     }
 
+    @Test fun replayVerifiedMirrorRefusesUncommittedSyntheticFinish() {
+        val initial = boot()
+        stagedAppend(initial)
+        val result = store().publishReplayVerifiedV2Mirror(owner, athlete, replay)
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
+            result)
+        assertEquals(initial, this.result(store().audit(owner, athlete)))
+        assertTrue(candidateFiles(".shard").isEmpty())
+    }
+
+    @Test fun replayVerifiedMirrorAcceptsExactDurableComposerFinish() {
+        val initial = boot()
+        val saved = realComposerCompletion()
+        val intent = finish(1)
+        assertTrue(wal().prepare(owner, athlete, initial.head, intent, null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner, athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest, 1, emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner, athlete, 1, intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(v2.finalize(owner, athlete, intent, saved)
+            is NativeHistoryLedgerResult.Durable)
+        val accepted = store().publishReplayVerifiedV2Mirror(owner, athlete, replay)
+        assertTrue(accepted.toString(),
+            accepted is NativeCandidateHistoryRootResult.Reviewed)
+        val view = this.result(accepted)
+        assertEquals(2L, view.head.revision)
+        assertEquals(1L, view.head.completionCount)
+        assertEquals(1L, (v2.open(owner, athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())
+        assertTrue((store().publishReplayVerifiedV2Mirror(owner, athlete, replay)
+            as NativeCandidateHistoryRootResult.Reviewed).replayed)
+    }
+
+    @Test fun replayVerifiedMirrorRejectsFabricatedV2ReceiptWithoutJournal() {
+        val initial = boot()
+        stagedAppend(initial)
+        val intent = finish(1)
+        assertTrue(v2.prepare(owner, athlete, 1, intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(v2.finalize(owner, athlete, intent, entry(1))
+            is NativeHistoryLedgerResult.Durable)
+        // A valid v2 checksum and segment patch are insufficient evidence.
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
+            store().publishReplayVerifiedV2Mirror(owner, athlete, replay))
+        assertEquals(initial, result(store().audit(owner, athlete)))
+    }
+
+    @Test fun replayVerifiedMirrorRejectsPendingV2EvenWithFinishedJournal() {
+        val initial = boot()
+        val saved = realComposerCompletion()
+        val intent = finish(1)
+        assertTrue(wal().prepare(owner, athlete, initial.head, intent, null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner, athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest, 1, emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner, athlete, 1, intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
+            store().publishReplayVerifiedV2Mirror(owner, athlete, replay))
+        assertEquals(initial, result(store().audit(owner, athlete)))
+    }
+
+    @Test fun replayVerifiedMirrorAcceptsSavedCorrectionOnlyAfterCanonicalCommit() {
+        val original = realComposerCompletion()
+        assertTrue(v2.enrollVerifiedSnapshot(owner, athlete,
+            listOf(original)) { o, a ->
+                signedIn == NativeKotlinOwnerIdentity(o, a)
+            } is NativeHistoryLedgerResult.Durable)
+        assertTrue(shadow.sync(owner, athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val initial = result(store().bootstrapFromVerifiedV2(owner, athlete))
+        val operation = KotlinSavedSetCorrection(
+            "edit-1", 0, "set-1", "set-event-1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(java.math.BigDecimal("195"), LoadUnit.LB, 6, 1))
+        val intent = NativeHistoryWriteIntent.Correct("workout-1", operation)
+        val corrected = original.copy(savedCorrectionRevision = 1)
+        assertTrue(wal().prepare(owner, athlete, initial.head, intent, original)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner, athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest, 1,
+                listOf(original)), corrected)
+            is NativeSegmentedRedoResult.Durable)
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
+            store().publishReplayVerifiedV2Mirror(owner, athlete, replay))
+        assertTrue(v2.prepare(owner, athlete, 1, intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(correction.appendStored(owner, "workout-1",
+            operation) { who, source ->
+                authority.canAccessIssuedWorkout(who, source)
+            } is NativeSavedCorrectionFileResult.Durable)
+        assertTrue(v2.finalize(owner, athlete, intent, corrected)
+            is NativeHistoryLedgerResult.Durable)
+        val mirrored = store().publishReplayVerifiedV2Mirror(owner, athlete, replay)
+        assertTrue(mirrored.toString(),
+            mirrored is NativeCandidateHistoryRootResult.Reviewed)
+        assertEquals(2L, result(mirrored).head.revision)
+        assertEquals(1L, result(mirrored).head.completionCount)
+        assertEquals(2, candidateFiles(".shard").size)
+    }
+
 }

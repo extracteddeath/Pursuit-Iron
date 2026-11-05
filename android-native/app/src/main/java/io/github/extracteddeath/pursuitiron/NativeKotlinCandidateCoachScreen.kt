@@ -45,6 +45,8 @@ internal fun NativeKotlinCandidateCoachScreen(
         mutableStateOf<NativeOwnerNextSetResult.Review?>(null)
     }
     var nextRepNotice by remember { mutableStateOf<String?>(null) }
+    var repAccepted by remember { mutableStateOf(false) }
+    var repApprovedWorkout by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     var savedWorkout by remember { mutableStateOf<String?>(null) }
     val step=remember(maximumStep) {
@@ -59,6 +61,8 @@ internal fun NativeKotlinCandidateCoachScreen(
         reviewed=null
         nextRepReview=null
         nextRepNotice=null
+        repAccepted=false
+        repApprovedWorkout=null
         checked=false
         savedWorkout=null
         notice=null
@@ -167,6 +171,8 @@ internal fun NativeKotlinCandidateCoachScreen(
                     onClick={
                         nextRepReview=null
                         nextRepNotice=null
+                        repAccepted=false
+                        repApprovedWorkout=null
                         busy=true
                         scope.launch {
                             val outcome=runCatching {
@@ -217,8 +223,55 @@ internal fun NativeKotlinCandidateCoachScreen(
                         Text("Load: ${sameLoad?.value ?: "bodyweight"} ${sameLoad?.unit?.name ?: ""} · Target RIR: ${set.targetRir ?: "not issued"} · Rest: ${set.restSeconds}s",
                             style=MaterialTheme.typography.bodySmall)
                     }
-                    Text("No changes to weights, warmups, other exercises, workout history or saved prescriptions. An authenticated acceptance and new issuance path is still required.",
+                    Text("No changes to weights, warmups, other exercises or workout history. Saving creates a NEW immutable workout grant; it never edits an issued session.",
                         style=MaterialTheme.typography.bodySmall)
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Checkbox(checked=repAccepted,
+                            onCheckedChange={repAccepted=it})
+                        Text("I reviewed each new rep target and authorize a new native workout prescription.")
+                    }
+                    Button(
+                        enabled=repAccepted && !busy,
+                        onClick={
+                            val shown=nextRepReview
+                            val review=shown?.candidate
+                                as? NativeCurrentRepPrescriptionResult.Reviewed
+                            if(shown!=null && review!=null) {
+                                val nextId=UUID.randomUUID().toString()
+                                val intent=NativeKotlinAcceptedRepIntent(
+                                    candidate.exerciseId,
+                                    shown.approvalRevision,review.historyRevision,
+                                    candidate.workout.workoutId,
+                                    candidate.historicalWorkoutId,
+                                    candidate.editedSetKey,
+                                    candidate.observedReps,
+                                    candidate.newRepTargets,
+                                    "workout-$nextId",
+                                    "grant-$nextId",
+                                    "receipt-$nextId",true)
+                                busy=true
+                                scope.launch {
+                                    val result=runCatching {
+                                        withContext(Dispatchers.IO) {
+                                            host.acceptReviewedNativeRepTargets(
+                                                intent,readiness,restricted)
+                                        }
+                                    }
+                                    val written=result.getOrNull()
+                                        as? NativeKotlinRepAcceptanceResult.Committed
+                                    repApprovedWorkout=written?.approvedWorkoutId
+                                    nextRepNotice=if(written!=null)
+                                        "Your reviewed set targets are saved under a new native grant. They will be rechecked against corrected history at workout issuance. Open Train to issue the new workout."
+                                    else
+                                        "The set-target approval was not saved: ${result.getOrNull() ?: "storage unavailable"}. Review again before accepting."
+                                    nextRepReview=null
+                                    repAccepted=false
+                                    busy=false
+                                }
+                            }
+                        }
+                    ) {Text(if(busy)"Saving rep targets…" else "Accept set targets")}
+
                 }
             }
         }

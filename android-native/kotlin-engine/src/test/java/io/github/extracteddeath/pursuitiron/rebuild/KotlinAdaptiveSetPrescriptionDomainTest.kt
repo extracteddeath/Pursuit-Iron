@@ -323,4 +323,28 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
             (rejected as AdaptiveSetPrescriptionResult.Rejected).reason)
     }
 
+
+    @Test fun dayScopedRepPolicyUsesExactSlotInsteadOfSharedPurposeDefaults() {
+        val individualized=policies()+policies().first {
+            it.exerciseId=="db-press"
+        }.copy(dayIndex=1,purposeWorkingLoad=n("25"),
+            workingReps=RepBand(10,15),targetRir=3,restSecondsPerSet=180)
+        val draft=KotlinWorkoutSnapshotDomain.stage(
+            stagedRequest(p=individualized))
+        val issued=(draft as KotlinWorkoutSnapshotResult.Staged).snapshot
+        assertTrue(issued.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.all {(it.load as DraftSetLoad.Verified).value==n("25") &&
+            it.targetRir==3 && it.restSeconds==180})
+        val previous=observed(actualLoads=listOf("25","25","25"),
+            issuedLoads=listOf("25","25","25"))
+        val reviewed=candidate(request(previous=previous,
+            next=stagedRequest(p=individualized)))
+        assertEquals(listOf(14,14,12),reviewed.newRepTargets)
+        assertTrue(reviewed.workout.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.all {(it.load as DraftSetLoad.Verified).value==n("25")})
+        assertFalse(reviewed.mayIssueWorkout)
+    }
+
 }

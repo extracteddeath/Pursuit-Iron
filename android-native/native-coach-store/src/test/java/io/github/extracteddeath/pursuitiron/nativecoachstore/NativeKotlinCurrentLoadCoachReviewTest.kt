@@ -540,4 +540,59 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         assertNull(result.coaching.candidatePolicies)
     }
 
+
+    @Test fun samePurposeDifferentDayCannotSupplyEachOthersProgressionEvidence() {
+        val dayPolicies=policies+policies.single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.copy(dayIndex=2,purposeWorkingLoad=n("25"))
+        val next=approval().copy(policies=dayPolicies,grant=
+            KotlinWorkoutSelectionGrant("grant-4","workout-4",source,1))
+        val upper=composer(1).copy(dayIndex=1)
+        val push=withExactIssuedTargets(composer(2).copy(dayIndex=2),
+            listOf(RepBand(12,12),RepBand(12,12)),historicalWeight=n("25"))
+        val notEnough=inspect(timeline(upper,push),accepted=next)
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY),
+            notEnough)
+        val last=composer(3).copy(dayIndex=1)
+        val valid=inspect(timeline(upper,push,last),accepted=next)
+        assertTrue(valid.toString(),valid is NativeCurrentLoadReviewResult.Reviewed)
+        val coached=valid as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(listOf("workout-1","workout-3"),coached.comparedWorkoutIds)
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            coached.coaching.status)
+        assertEquals(listOf(1),coached.coaching.affectedDayIndices)
+        val after=checkNotNull(coached.coaching.candidatePolicies)
+        assertEquals(n("35"),after.single {
+            it.exerciseId=="db-press" && it.dayIndex==1
+        }.purposeWorkingLoad)
+        assertEquals(n("25"),after.single {
+            it.exerciseId=="db-press" && it.dayIndex==2
+        }.purposeWorkingLoad)
+        assertFalse(coached.mayApply)
+    }
+
+    @Test fun repReviewerUsesMatchingDayEvenWhenSessionPurposesMatch() {
+        val scoped=policies+policies.single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.copy(dayIndex=2,purposeWorkingLoad=n("25"))
+        val approval=approval().copy(policies=scoped,
+            grant=KotlinWorkoutSelectionGrant("grant-4","workout-4",source,1))
+        val other=composer(1).copy(dayIndex=2)
+        assertEquals(NativeCurrentRepPrescriptionResult.Rejected(
+            NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED),
+            NativeKotlinCurrentRepPrescriptionDomain.inspect(
+                approval,timeline(other),"db-press",CoachReadiness.NORMAL,false))
+        val upper=composer(2).copy(dayIndex=1)
+        val returned=NativeKotlinCurrentRepPrescriptionDomain.inspect(
+            approval,timeline(other,upper),"db-press",
+            CoachReadiness.NORMAL,false)
+        assertTrue(returned.toString(),
+            returned is NativeCurrentRepPrescriptionResult.Reviewed)
+        assertEquals("workout-2",
+            (returned as NativeCurrentRepPrescriptionResult.Reviewed).priorWorkoutId)
+    }
+
 }

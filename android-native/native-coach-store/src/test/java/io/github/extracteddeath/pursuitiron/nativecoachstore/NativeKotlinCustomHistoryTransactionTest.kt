@@ -648,4 +648,72 @@ class NativeKotlinCustomHistoryTransactionTest {
             NativeCustomCorrectionTransactionRefusal.NOT_AUTHORIZED),
             customEdits.recover("owner-1","athlete-1"))
     }
+    private fun independentReceiptVerifier() =
+        NativeKotlinIndependentHistoryReceiptVerifier(
+            composerJournal,
+            KotlinNativeSavedCorrectionFileStore(temp.root.toPath(), composerJournal),
+            issued, customSaved, generatedAuthority, fence, identity)
+
+    @Test fun independentCustomFinishVerifierReplaysOriginalDurableJournal() {
+        logged()
+        val completed = transactions.complete(
+            "owner-1", "athlete-1", "workout-2", finish())
+        assertTrue(completed.toString(), completed is NativeCustomFinishResult.Committed)
+        val entry = (completed as NativeCustomFinishResult.Committed).completion
+        val intent = NativeHistoryWriteIntent.CustomFinish("workout-2", finish())
+        val verified = independentReceiptVerifier().verify(
+            "owner-1", "athlete-1", intent, entry)
+        assertTrue(verified.toString(),
+            verified is NativeIndependentReceiptResult.Verified)
+        val evidence = (verified as NativeIndependentReceiptResult.Verified).evidence
+        assertEquals(entry, evidence.entry)
+        assertEquals("finish-1", evidence.intentEventId)
+        assertTrue(evidence.isCustom)
+        assertFalse(evidence.provesCompleteHistory)
+        assertFalse(evidence.canPublishHistory)
+        assertFalse(evidence.canIssueProgression)
+        assertEquals(NativeIndependentReceiptResult.Rejected(
+            NativeIndependentReceiptRefusal.FINISH_MISMATCH),
+            independentReceiptVerifier().verify(
+                "owner-1", "athlete-1", intent,
+                entry.copy(storedReceiptId = "custom-v2-forged")))
+    }
+
+    @Test fun independentCustomCorrectionVerifierRequiresExactLatestEdit() {
+        logged()
+        val finished = transactions.complete(
+            "owner-1", "athlete-1", "workout-2", finish())
+        assertTrue(finished is NativeCustomFinishResult.Committed)
+        val original = (finished as NativeCustomFinishResult.Committed).completion
+        val change = correction()
+        val correctionIntent = NativeHistoryWriteIntent.CustomCorrect(
+            "workout-2", change)
+        val proposedEntry = original.copy(savedCorrectionRevision = 1)
+        assertEquals(NativeIndependentReceiptResult.Rejected(
+            NativeIndependentReceiptRefusal.CORRECTION_MISMATCH),
+            independentReceiptVerifier().verify(
+                "owner-1", "athlete-1", correctionIntent, proposedEntry))
+        assertTrue(customEdits.correct(
+            "owner-1", "athlete-1", "workout-2", change)
+            is NativeCustomCorrectionTransactionResult.Committed)
+        val approved = independentReceiptVerifier().verify(
+            "owner-1", "athlete-1", correctionIntent, proposedEntry)
+        assertTrue(approved.toString(), approved is NativeIndependentReceiptResult.Verified)
+        assertEquals("correct-1",
+            (approved as NativeIndependentReceiptResult.Verified)
+                .evidence.intentEventId)
+        assertEquals(NativeIndependentReceiptResult.Rejected(
+            NativeIndependentReceiptRefusal.CORRECTION_MISMATCH),
+            independentReceiptVerifier().verify(
+                "owner-1", "athlete-1",
+                correctionIntent.copy(operation = change.copy(eventId = "fabricated")),
+                proposedEntry))
+        assertEquals(NativeIndependentReceiptResult.Rejected(
+            NativeIndependentReceiptRefusal.CORRECTION_MISMATCH),
+            independentReceiptVerifier().verify(
+                "owner-1", "athlete-1",
+                NativeHistoryWriteIntent.CustomFinish("workout-2", finish()),
+                original))
+    }
+
 }

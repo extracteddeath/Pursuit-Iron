@@ -105,3 +105,22 @@ It remains O(all existing segments) and does not provide device power-loss,
 backup/restore or single-writer cutover guarantees. Once the verified
 segmented writer becomes primary, an independent journal verifier and unique
 workout ID index must replace the v2 source check.
+
+## Independent native receipt verifier (candidate migration precondition)
+
+`NativeKotlinIndependentHistoryReceiptVerifier.verify` now reopens the
+authenticated Composer/custom workout journals and saved-correction receipts
+under the shared owner fence **without querying the version-2 ledger**.
+It verifies one exact proposed completion receipt, original Finish event,
+revision, issued athlete, latest corrected event (if applicable), and complete
+factual history projection. It fails closed on a missing custom saved-correction
+store instead of inferring that there are no edits. Tests exercise generated
+and athlete-authored custom Finishes/corrections, unexpected edits, wrong
+receipt identities, wrong revision, and revoked owner access.
+
+One valid receipt does NOT establish the completeness of a lifetime history,
+prove an existing workout ID is unique, authorize a root transition, or
+publish Last/PR/progression. This verifier is deliberately not part of the
+active app, v2 transaction writer or any training decision. The next
+single-writer gate must combine these exact journal receipts with a durable
+owner-verified unique workout index, WAL root CAS and migration enrollment.

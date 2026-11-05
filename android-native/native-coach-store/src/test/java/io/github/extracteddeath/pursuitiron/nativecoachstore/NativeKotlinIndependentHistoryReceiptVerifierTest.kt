@@ -159,7 +159,7 @@ class NativeKotlinIndependentHistoryReceiptVerifierTest {
         assertTrue(edits.appendStored(owner, "workout-1", corrected(), ::access)
             is NativeSavedCorrectionFileResult.Durable)
         val path = Files.list(root).use { paths ->
-            paths.filter { it.fileName.toString().startsWith("corrected-") &&
+            paths.filter { it.fileName.toString().startsWith("correction-") &&
                 it.fileName.toString().endsWith(".bin") }.findFirst().orElse(null)
         }
         // If the store names the file differently, still require the

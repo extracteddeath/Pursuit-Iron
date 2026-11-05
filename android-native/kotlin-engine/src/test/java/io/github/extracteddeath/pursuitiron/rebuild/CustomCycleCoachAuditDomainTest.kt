@@ -250,6 +250,74 @@ class CustomCycleCoachAuditDomainTest {
         assertFalse(audit.mayIssueWorkout)
     }
 
+    private fun intraBlockThreeToFiveWeekCycle(): CustomTrainingCycle {
+        val ramp=listOf(authoredSet(),authoredSet())
+        val overrides=mapOf("block-1" to listOf(
+            CustomWeekSlotOverride(2,0,"slot-0",ramp),
+            CustomWeekSlotOverride(2,2,"slot-2",ramp),
+            CustomWeekSlotOverride(3,0,"slot-0",ramp),
+            CustomWeekSlotOverride(3,2,"slot-2",ramp)))
+        return cycle(weeks=3,overrides=overrides)
+    }
+
+    @Test fun weeklyVolumeRampNeedsReviewedIncreaseCeilingEvenInsideMevMrv() {
+        val source=intraBlockThreeToFiveWeekCycle()
+        val missing=CustomCycleCoachAuditDomain.review(
+            source,setup(),StarterExerciseTranche.movements(),inputs())
+        assertEquals(listOf(3,5,5),missing.weeks.map {it.workingSets})
+        assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,
+            missing.status)
+        assertTrue(missing.issues.any {
+            it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_MISSING
+        })
+        val dropOnly=CustomCycleCoachAuditDomain.review(
+            source,setup(),StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.5"),n("0.5"))))
+        assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,
+            dropOnly.status)
+        assertTrue(dropOnly.issues.any {
+            it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_MISSING
+        })
+    }
+
+    @Test fun cappedWeeklyRampRejectsOversizedSetsAndMuscleSpecificIncrease() {
+        val result=CustomCycleCoachAuditDomain.review(
+            intraBlockThreeToFiveWeekCycle(),setup(),
+            StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.5"),n("0.5"),n("0.5"),n("0.5"))))
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,result.status)
+        assertTrue(result.issues.any {
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE &&
+                it.location.contains("week.2.block.block-1")
+        })
+        assertTrue(result.issues.any {
+            it.kind==CustomCoachIssueKind.DIRECT_MUSCLE_SPIKE &&
+                it.location.contains("week.2.ABS")
+        })
+        assertFalse(result.mayIssueWorkout)
+    }
+
+    @Test fun explicitlyAuthorizedWeeklyRampCanPassWithoutInventingAnySets() {
+        val source=intraBlockThreeToFiveWeekCycle()
+        val review=CustomCycleCoachAuditDomain.review(
+            source,setup(),StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.5"),n("0.5"),n("0.75"),n("0.75"))))
+        assertEquals(review.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,review.status)
+        assertTrue(review.issues.none {
+            it.kind in setOf(CustomCoachIssueKind.CONTINUITY_POLICY_MISSING,
+                CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
+                CustomCoachIssueKind.DIRECT_MUSCLE_SPIKE)
+        })
+        assertEquals(listOf(3,5,5),review.weeks.map {it.workingSets})
+        assertEquals(1,source.blocks.single().days.first()
+            .slots.single().sets.size)
+        assertFalse(review.mayIssueWorkout)
+    }
+
     @Test fun unexplainedBlockVolumeCollapseIsNotApproved() {
         val cycle=twoBlockCycle()
         val audit=CustomCycleCoachAuditDomain.review(

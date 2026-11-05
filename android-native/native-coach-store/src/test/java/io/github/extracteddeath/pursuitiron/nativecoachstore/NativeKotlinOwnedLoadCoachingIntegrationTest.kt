@@ -142,6 +142,104 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             "owner-1","athlete-1",approvals,"db-press",
             n("5"),CoachReadiness.NORMAL,false)
 
+    private fun enrolled() {
+        val opened=transactions.enroll("owner-1","athlete-1") { owner,athlete ->
+            owner=="owner-1" && athlete=="athlete-1"
+        }
+        assertTrue(opened.toString(),opened is NativeHistoryTransactionResult.Durable)
+    }
+    private fun intent(
+        proposed:NativeCurrentLoadReviewResult.Reviewed,
+        confirmation:Boolean=true,
+        workoutId:String="workout-3",
+        candidate:BigDecimal=n("35"),
+        expectedHistory:Long=proposed.historyRevision
+    )=NativeKotlinCoachLoadAcceptanceIntent(
+        "db-press",2,expectedHistory,proposed.comparedWorkoutIds,
+        CoachNextLoadChangeKind.EARNED_INCREMENT,n("30"),candidate,
+        proposed.coaching.affectedDayIndices,workoutId,"grant-next",
+        "storage-next",1,confirmation)
+    private fun accept(
+        data:NativeKotlinCoachLoadAcceptanceIntent
+    )=reader.acceptCurrentApprovedLoad(
+        "owner-1","athlete-1",approvals,data,n("5"),
+        CoachReadiness.NORMAL,false)
+
+    @Test fun athleteAcceptsExactRecheckedReviewIntoNewRevisionWithoutMutatingIssuedWorkout() {
+        enrolled()
+        complete(1,1)
+        val old=complete(2,2)
+        val initial=(review() as NativeOwnerLoadReviewResult.Review)
+            .coaching as NativeCurrentLoadReviewResult.Reviewed
+        val expected=intent(initial)
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.NOT_EXPLICITLY_ACCEPTED),
+            accept(expected.copy(explicitlyAccepted=false)))
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.PROPOSAL_CHANGED),
+            accept(expected.copy(expectedCandidateLoad=n("40"))))
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.IDENTIFIER_ALREADY_USED),
+            accept(expected.copy(newWorkoutId="workout-1")))
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.IDENTIFIER_ALREADY_USED),
+            accept(expected.copy(newStorageReceiptId="storage-2")))
+        assertEquals(2L,approvals.currentOwnedApproval("owner-1")?.storageRevision)
+        val saved=accept(expected)
+        assertTrue(saved.toString(),saved is NativeKotlinCoachAcceptanceResult.Committed)
+        val committed=saved as NativeKotlinCoachAcceptanceResult.Committed
+        assertEquals(3L,committed.storageRevision)
+        assertEquals(9L,committed.approvedSource.programRevision)
+        assertFalse(committed.workoutIssued)
+        assertFalse(committed.productionCutover)
+        val next=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals("workout-3",next.grant.workoutId)
+        assertEquals(n("35"),
+            ((next.program.exercises.first().equipment as ComposerEquipment.Verified)
+                .plannedLoad))
+        assertEquals(8L,old.first.snapshot.source.programRevision)
+        assertEquals(n("30"),
+            ((program.exercises.first().equipment as ComposerEquipment.Verified)
+                .plannedLoad))
+        val reopened=NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+            .open("owner-1","workout-2")
+        assertEquals(3L,(reopened as NativeJournalFileResult.Durable)
+            .journal.snapshot.source.gymRevision)
+        assertEquals(8L,reopened.journal.snapshot.source.programRevision)
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.APPROVAL_CHANGED),accept(expected))
+        val issued=NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+            .issue("owner-1","workout-3")
+        assertTrue(issued.toString(),issued is NativeKotlinIssueResult.Committed)
+        val targets=(issued as NativeKotlinIssueResult.Committed).journal.snapshot.targets
+        assertTrue(targets.filter { it.exerciseId=="db-press" }.all {
+            (it.load as DraftSetLoad.Verified).value.compareTo(n("35"))==0
+        })
+    }
+
+    @Test fun correctionBeforeExplicitAcceptanceInvalidatesPreviouslyShownReview() {
+        enrolled()
+        complete(1,1)
+        val last=complete(2,2)
+        val shown=(review() as NativeOwnerLoadReviewResult.Review)
+            .coaching as NativeCurrentLoadReviewResult.Reviewed
+        val original=last.first.effectiveSets.getValue(last.second)
+            .operation.eventId
+        val changed=transactions.correct("owner-1","athlete-1","workout-2",
+            KotlinSavedSetCorrection("edited-before-accept",0,last.second,original,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("30"),LoadUnit.LB,8,2)))
+        assertTrue(changed.toString(),changed is NativeHistoryTransactionResult.Durable)
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.HISTORY_CHANGED),
+            accept(intent(shown)))
+        assertEquals(2L,approvals.currentOwnedApproval("owner-1")?.storageRevision)
+        val refreshed=intent(shown,expectedHistory=4)
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.PROPOSAL_CHANGED),
+            accept(refreshed))
+    }
+
     @Test fun actualSavedWorkoutCorrectionRevokesEarnedProgressionWithoutBacktracking() {
         val enrollment=transactions.enroll("owner-1","athlete-1") {
             owner,athlete ->

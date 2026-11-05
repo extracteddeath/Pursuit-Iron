@@ -115,10 +115,13 @@ class CustomCycleCoachAuditDomainTest {
         val result=CustomCycleCoachAuditDomain.review(
             cycle(overrides=overrides),setup(),
             StarterExerciseTranche.movements(),inputs())
-        assertEquals(CustomCoachAuditStatus.UNRESOLVED,result.status)
+        assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,result.status)
         assertEquals(3,result.weeks[0].workingSets)
         assertEquals(8,result.weeks[1].workingSets)
         assertEquals(3,result.weeks[2].workingSets)
+        assertTrue(result.issues.any {
+            it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_MISSING
+        })
         assertTrue(result.issues.any {
             it.kind==CustomCoachIssueKind.ABOVE_WEEKLY_MRV &&
             it.location.startsWith("week.2.")
@@ -185,6 +188,66 @@ class CustomCycleCoachAuditDomainTest {
             }) }
         )
         return source.copy(blocks=listOf(first,second))
+    }
+
+    private fun intraBlockFiveToThreeWeekCycle(): CustomTrainingCycle {
+        val heavierSets=listOf(authoredSet(),authoredSet())
+        val overrides=mapOf("block-1" to listOf(
+            CustomWeekSlotOverride(1,0,"slot-0",heavierSets),
+            CustomWeekSlotOverride(1,2,"slot-2",heavierSets)))
+        return cycle(weeks=3,overrides=overrides)
+    }
+
+    @Test fun withinBlockDropNeedsExplicitContinuityEvenWhenBothWeeksMeetMev() {
+        val original=intraBlockFiveToThreeWeekCycle()
+        val audit=CustomCycleCoachAuditDomain.review(original,setup(),
+            StarterExerciseTranche.movements(),inputs())
+        assertEquals(listOf(5,3,3),audit.weeks.map {it.workingSets})
+        assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,audit.status)
+        assertTrue(audit.issues.any {
+            it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_MISSING
+        })
+        assertTrue(audit.issues.none {
+            it.kind in setOf(CustomCoachIssueKind.BELOW_WEEKLY_MEV,
+                CustomCoachIssueKind.ABOVE_WEEKLY_MRV)
+        })
+        assertFalse(audit.mayIssueWorkout)
+        assertEquals(1,original.blocks.single().days.first()
+            .slots.single().sets.size)
+    }
+
+    @Test fun smallerWithinBlockDropLimitRefusesOtherwiseIndividuallyValidWeeks() {
+        val audit=CustomCycleCoachAuditDomain.review(
+            intraBlockFiveToThreeWeekCycle(),setup(),
+            StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.25"),n("0.25"))))
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,audit.status)
+        assertTrue(audit.issues.any {
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP &&
+                it.location.contains("week.2.block.block-1")
+        })
+        assertTrue(audit.issues.any {
+            it.kind==CustomCoachIssueKind.DIRECT_MUSCLE_DROP &&
+                it.location.contains("week.2.ABS")
+        })
+    }
+
+    @Test fun explicitlyApprovedWithinBlockDoseTransitionCanPassFullAudit() {
+        val original=intraBlockFiveToThreeWeekCycle()
+        val audit=CustomCycleCoachAuditDomain.review(
+            original,setup(),StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.5"),n("0.5"))))
+        assertEquals(audit.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
+        assertTrue(audit.issues.none {
+            it.kind in setOf(CustomCoachIssueKind.CONTINUITY_POLICY_MISSING,
+                CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP,
+                CustomCoachIssueKind.DIRECT_MUSCLE_DROP)
+        })
+        assertEquals(listOf(5,3,3),audit.weeks.map {it.workingSets})
+        assertFalse(audit.mayIssueWorkout)
     }
 
     @Test fun unexplainedBlockVolumeCollapseIsNotApproved() {

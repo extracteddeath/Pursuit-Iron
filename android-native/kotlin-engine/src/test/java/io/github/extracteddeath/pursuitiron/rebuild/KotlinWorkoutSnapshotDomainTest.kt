@@ -235,7 +235,8 @@ class KotlinWorkoutSnapshotDomainTest {
     )=ProgressionWorkoutEvidence(
         id,"db-press",LoadUnit.LB,RepBand(8,12),2,
         loads.indices.map { i -> WorkingSetFact(
-            i,SetOutcome.COMPLETED,n(loads[i].toString()),reps[i],rir[i])
+            i,SetOutcome.COMPLETED,n(loads[i].toString()),reps[i],rir[i],
+            n(loads[i].toString()),2)
         })
 
     private fun nextLoadRequest(

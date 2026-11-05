@@ -128,6 +128,40 @@ class NativeKotlinApprovalFileAuthorityTest {
             (session.targets.first().load as DraftSetLoad.Verified).value)
     }
 
+    @Test fun currentOwnedApprovalRequiresCurrentIdentityAndSavedGrant() {
+        val authority=authority()
+        assertNull(authority.currentOwnedApproval("owner-1"))
+        assertNull(authority.currentOwnedApproval("owner-2"))
+        assertEquals(1L,success(authority.publish("owner-1",0,approval())))
+        assertEquals(approval(),authority().currentOwnedApproval("owner-1"))
+        assertEquals("workout-1",
+            authority.currentOwnedApproval("owner-1")?.grant?.workoutId)
+        assertNull(authority.currentOwnedApproval("owner-2"))
+        signedIn=NativeKotlinOwnerIdentity("owner-1","other-athlete")
+        assertNull(authority.currentOwnedApproval("owner-1"))
+        signedIn=null
+        assertNull(authority.currentOwnedApproval("owner-1"))
+        signedIn=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(2L,success(authority.revokeCurrentGrant("owner-1",1)))
+        assertNull(authority.currentOwnedApproval("owner-1"))
+        assertNull(authority().currentOwnedApproval("owner-1"))
+    }
+
+    @Test fun currentOwnedApprovalNeverInventsFromCorruptSavedBytes() {
+        val authority=authority()
+        success(authority.publish("owner-1",0,approval()))
+        val file=Files.list(temp.root.toPath()).use { entries ->
+            entries.filter {
+                it.fileName.toString().startsWith("approved-")
+            }.toList().single()
+        }
+        val bytes=Files.readAllBytes(file)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        Files.write(file,bytes)
+        assertNull(authority().currentOwnedApproval("owner-1"))
+        assertNull(authority.currentOwnedApproval("owner-1"))
+    }
+
     @Test fun nativePersistentAuthorityPublishesAndIssuesRealKotlinWorkout() {
         val owner=authority()
         assertNull(owner.currentApprovedWorkout("owner-1","workout-1"))

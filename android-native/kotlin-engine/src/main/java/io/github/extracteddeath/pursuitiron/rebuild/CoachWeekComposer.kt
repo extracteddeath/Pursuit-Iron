@@ -347,7 +347,8 @@ object CoachWeekComposer {
     private fun refine(
         request:ComposerRequest,
         seed:List<ComposerVisit>,
-        eligible:List<ComposerExerciseOption>
+        eligible:List<ComposerExerciseOption>,
+        permitTrainingDoseChange:Boolean
     ):List<ComposerVisit> {
         val options=eligible.associateBy {it.exerciseId}
         var chosen=seed
@@ -401,6 +402,7 @@ object CoachWeekComposer {
                     bestAudit=check
                 }
             }
+            if(permitTrainingDoseChange) {
             // A valid authored week may be underfilled even after swaps and
             // relocations: recover missing dose by changing existing set
             // counts, and recover missing training-day variety by adding a
@@ -430,6 +432,7 @@ object CoachWeekComposer {
                             option.pattern,option.minimumSetsPerVisit))
                     }
                 }
+            }
             }
             for(index in chosen.indices) {
                 if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
@@ -473,7 +476,9 @@ object CoachWeekComposer {
      */
     internal fun rebalanceForReview(
         request:ComposerRequest,
-        authoredVisits:List<ComposerVisit>
+        authoredVisits:List<ComposerVisit>,
+        /** Author-written visit/set counts are immutable without opt-in. */
+        permitTrainingDoseChange:Boolean=false
     ):List<ComposerVisit> {
         validate(request)
         require(authoredVisits.size<=MAX_VISITS)
@@ -493,7 +498,8 @@ object CoachWeekComposer {
                 mayStart(option,visit.dayIndex,request,accepted))
             accepted+=visit
         }
-        return Collections.unmodifiableList(refine(request,accepted,eligible))
+        return Collections.unmodifiableList(refine(request,accepted,eligible,
+            permitTrainingDoseChange))
     }
 
     fun compose(request:ComposerRequest):ComposerDraft {
@@ -558,7 +564,7 @@ object CoachWeekComposer {
         // The greedy phase cannot replace occupied slots or relocate a
         // useful lift. Reconsider those decisions without violating verified
         // equipment, recovery spacing, dose or athlete hard-time limits.
-        val improved=refine(request,chosen,eligible)
+        val improved=refine(request,chosen,eligible,true)
         if(improved!=chosen) {
             chosen=improved
             week=toWeek(request,chosen,map)

@@ -559,7 +559,7 @@ class CoachWeekComposerTest {
             ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
             ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
             ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
-        val repaired=CoachWeekComposer.rebalanceForReview(request,seed)
+        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,true)
         assertEquals(6,repaired.size)
         assertTrue(request.days.indices.all {day->
             repaired.filter {it.dayIndex==day}.map {it.pattern}.distinct().size==2
@@ -577,7 +577,7 @@ class CoachWeekComposerTest {
             patterns=1,maxPerDay=1)
         val seed=listOf(
             ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
-        val repaired=CoachWeekComposer.rebalanceForReview(request,seed)
+        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,true)
         assertEquals(1,repaired.size)
         assertTrue(repaired.single().sets in 3..4)
         assertEquals("db-press",repaired.single().exerciseId)

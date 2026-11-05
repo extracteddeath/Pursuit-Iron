@@ -41,6 +41,10 @@ internal fun NativeKotlinCandidateCoachScreen(
     var reviewed by remember {
         mutableStateOf<NativeOwnerLoadReviewResult.Review?>(null)
     }
+    var nextRepReview by remember {
+        mutableStateOf<NativeOwnerNextSetResult.Review?>(null)
+    }
+    var nextRepNotice by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     var savedWorkout by remember { mutableStateOf<String?>(null) }
     val step=remember(maximumStep) {
@@ -53,6 +57,8 @@ internal fun NativeKotlinCandidateCoachScreen(
         exerciseId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$"))
     fun invalidate() {
         reviewed=null
+        nextRepReview=null
+        nextRepNotice=null
         checked=false
         savedWorkout=null
         notice=null
@@ -72,6 +78,9 @@ internal fun NativeKotlinCandidateCoachScreen(
         choicesLoading=false
     }
     val verified=reviewed?.coaching as? NativeCurrentLoadReviewResult.Reviewed
+    val repCandidate=(nextRepReview?.candidate as?
+        NativeCurrentRepPrescriptionResult.Reviewed)?.proposal
+        as? AdaptiveSetPrescriptionResult.Candidate
     val proposal=verified?.coaching?.takeIf {
         it.status==CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW &&
             it.candidateProgram!=null
@@ -153,7 +162,69 @@ internal fun NativeKotlinCandidateCoachScreen(
                         }
                     }
                 ) {Text(if(busy)"Verifying native history…" else "Review coaching change")}
+                OutlinedButton(
+                    enabled=!busy && permitted,
+                    onClick={
+                        nextRepReview=null
+                        nextRepNotice=null
+                        busy=true
+                        scope.launch {
+                            val outcome=runCatching {
+                                withContext(Dispatchers.IO) {
+                                    host.reviewNextNativeSetTargets(
+                                        exerciseId,readiness,restricted)
+                                }
+                            }
+                            nextRepReview=outcome.getOrNull()
+                                as? NativeOwnerNextSetResult.Review
+                            val result=nextRepReview?.candidate
+                                as? NativeCurrentRepPrescriptionResult.Reviewed
+                            nextRepNotice=when {
+                                outcome.isFailure ->
+                                    "Unable to verify saved workout history. No targets changed."
+                                result?.proposal is AdaptiveSetPrescriptionResult.Candidate ->
+                                    null
+                                result!=null ->
+                                    "No eligible next-set progression: ${result.proposal}"
+                                else ->
+                                    "No history-backed set suggestion: ${outcome.getOrNull()}"
+                            }
+                            busy=false
+                        }
+                    }
+                ) {Text("Preview next working-set reps")}
             }
+        }
+
+        repCandidate?.let { candidate ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp),
+                    verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text("Next-session rep preview",
+                        style=MaterialTheme.typography.titleLarge)
+                    Text("Built from the most recent verified, corrected workout. This is a preview only; already-issued sessions are never changed.",
+                        style=MaterialTheme.typography.bodySmall)
+                    val sets=candidate.workout.targets.filter {
+                        it.exerciseId==candidate.exerciseId &&
+                            it.type==DraftSetType.WORKING
+                    }.sortedBy {it.ordinal}
+                    sets.forEachIndexed {index,set ->
+                        val before=candidate.observedReps[index]
+                        val after=candidate.newRepTargets[index]
+                        val sameLoad=set.load as? DraftSetLoad.Verified
+                        Text("Set ${index+1}: ${before} recorded → ${after} proposed reps",
+                            style=MaterialTheme.typography.titleMedium)
+                        Text("Load: ${sameLoad?.value ?: "bodyweight"} ${sameLoad?.unit?.name ?: ""} · Target RIR: ${set.targetRir ?: "not issued"} · Rest: ${set.restSeconds}s",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                    Text("No changes to weights, warmups, other exercises, workout history or saved prescriptions. An authenticated acceptance and new issuance path is still required.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        nextRepNotice?.let {
+            Text(it,color=MaterialTheme.colorScheme.onSurfaceVariant,
+                style=MaterialTheme.typography.bodySmall)
         }
 
         proposal?.let { candidate ->

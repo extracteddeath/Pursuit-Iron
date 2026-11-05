@@ -168,3 +168,30 @@ cross-process and physical-device crash testing, Android backup/restore
 tests, and an exclusive atomic source-owner cutover with rollback policy.
 The original JS app, current v2 history and other Android development branches
 remain unchanged.
+
+## Candidate workout identity index (shadow-only migration rehearsal)
+
+`NativeKotlinCandidateWorkoutIdentityIndexFileStore` now persists a
+checksum-framed, per-owner **auxiliary** lookup table of exact workout IDs,
+saved Finish receipt IDs and completion ordinals. Building is permitted only
+after the candidate root passes `reviewAuthenticatedV2Parity` (including full
+v2/shadow/journal replay), and it records that candidate's exact root digest
+and manifest revision. A repeated build of the identical index is idempotent;
+a newer fully verified root may refresh an older index. Conflicting indices
+at the same or higher revision and corrupted existing bytes are *not*
+silently overwritten. Crash-before-index-swap retains an old, detectable
+stale index; an orphan temporary file does not become authoritative.
+
+Both workout-ID and saved-receipt lookups fail closed on owner revocation,
+missing index, corrupt bytes, stale root digest, pending uncommitted redo or
+unverified source history. Null lookup results **never authorize** inserting
+a new workout. A correction keeps the stable receipt/ordinal identity but
+requires the index to be refreshed after the candidate root changes.
+
+**No new history writer was introduced.** The current format is deliberately
+bounded by the existing 4,096-completion v2 migration source and loads a
+whole lookup table. Each lookup still performs complete authenticated parity
+replay and thus is *not* a scalable or O(1) history authority. Production
+requires a paged/indexed identity owner, atomic index-and-root cutover,
+crash-safe directory durability, backup/restore certification, verified
+legacy migration and a strict single-writer protocol before any active use.

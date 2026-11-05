@@ -83,6 +83,16 @@ class NativeKotlinApprovedGymCoherenceDomainTest {
                         LoadUnit.LB,n("30"),equivalent)))))))
     }
 
+    @Test fun anUnbuildableIntermediateWeightIsNotAcceptedAsConfirmedStock() {
+        val impossible=approval.copy(program=program.copy(
+            exercises=listOf(option.copy(
+                equipment=ComposerEquipment.Verified(
+                    LoadUnit.LB,n("32.5"),stock)))))
+        assertEquals(NativeApprovedGymCoherenceResult.Rejected(
+            NativeApprovedGymCoherenceRefusal.PHYSICAL_EQUIPMENT_CHANGED,
+            "rope-pushdown"),check(approval=impossible))
+    }
+
     @Test fun removedOrChangedStockCannotQuietlyPermitAnOldProgramLoad() {
         val athlete=checkNotNull(source.setup.reviewed)
         val removed=source.copy(setup=source.setup.copy(

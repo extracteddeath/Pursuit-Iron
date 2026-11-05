@@ -88,6 +88,14 @@ class KotlinLongitudinalRepEvidenceDomainTest {
         assertEquals(LongitudinalRepEvidenceResult.Rejected(
             LongitudinalRepEvidenceRefusal.CHANGED_EQUIPMENT_OR_ISSUED_LOAD),
             result(historical(loads=listOf("30","35","30"))))
+        val contradictory=historical()
+        val changed=contradictory.workingSets.mapIndexed {i,set->
+            if(i==0)set.copy(actual=set.actual!!.copy(unit=LoadUnit.KG))
+            else set
+        }
+        assertEquals(LongitudinalRepEvidenceResult.Rejected(
+            LongitudinalRepEvidenceRefusal.CHANGED_EQUIPMENT_OR_ISSUED_LOAD),
+            result(contradictory.copy(workingSets=changed)))
         assertEquals(LongitudinalRepEvidenceResult.Rejected(
             LongitudinalRepEvidenceRefusal.CHANGED_TARGET_EFFORT),
             result(historical(effort=3)))

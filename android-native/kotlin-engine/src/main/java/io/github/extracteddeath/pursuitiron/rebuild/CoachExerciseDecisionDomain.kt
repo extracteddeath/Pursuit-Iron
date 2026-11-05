@@ -182,6 +182,14 @@ object CoachExerciseDecisionDomain {
         if(!repeatable)
             return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,CoachConfidence.MODERATE,
                 "This is a promising session. Repeat a comparable performance before reviewing a load increase.")
+        // An issued RIR goal is never evidence of actual effort. A separate
+        // conservative progression gate already requires all sets' observed
+        // RIR for BOTH workouts. Never give contradictory "increase" advice.
+        val previousMissingRir=assessments[priorIndex].actualRirReportedOrdinals.size!=
+            last.expectedWorkingSets
+        if(missingRir || previousMissingRir)
+            return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,CoachConfidence.LIMITED,
+                "Your reps are promising, but actual effort was not recorded for every set in both workouts. Keep the current load and record RIR when possible before reviewing an increase.")
         flags+=CoachEvidenceFlag.REPEATABLE_PERFORMANCE
 
         val load=currentLoad ?: return result(CoachDirection.STABILIZE_SET_LOADING,
@@ -205,17 +213,9 @@ object CoachExerciseDecisionDomain {
             return result(CoachDirection.VERIFY_LOADING_OPTIONS,CoachConfidence.LIMITED,
                 "The next available weight exceeds your approved increment. Hold the current load or adjust your equipment options.")
         }
-        // Missing RIR is still missing. Repeatable reps can justify an
-        // optional human review, NOT a high-confidence auto-increase.
         return result(CoachDirection.REVIEW_SMALL_INCREASE,
-            if(missingRir ||
-                assessments[priorIndex].actualRirReportedOrdinals.size!=
-                    last.expectedWorkingSets) CoachConfidence.LIMITED
-            else CoachConfidence.MODERATE,
-            if(missingRir || assessments[priorIndex].actualRirReportedOrdinals.size!=
-                last.expectedWorkingSets)
-                "Reps were repeatable at this weight. A small increase is worth reviewing, but confirm effort since RIR was not fully recorded."
-            else "The full working sets reached the rep target in consecutive sessions without reported near-failure. Review a small, equipment-valid increase.",
+            CoachConfidence.MODERATE,
+            "The full working sets reached the rep target in consecutive sessions with actual effort recorded and no near-failure. Review a small, equipment-valid increase.",
             next)
     }
 }

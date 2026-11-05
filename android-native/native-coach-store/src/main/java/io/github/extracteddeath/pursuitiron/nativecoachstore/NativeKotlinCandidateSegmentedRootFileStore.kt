@@ -480,10 +480,12 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
     private fun DataOutputStream.patchPerformed(performed: KotlinPerformedSet?) {
         writeBoolean(performed != null)
         if (performed == null) return
-        writeBoolean(performed.load != null)
-        if (performed.load != null) writeUTF(performed.load.toPlainString())
-        writeBoolean(performed.unit != null)
-        if (performed.unit != null) writeUTF(performed.unit.name)
+        val reportedLoad = performed.load
+        writeBoolean(reportedLoad != null)
+        if (reportedLoad != null) writeUTF(reportedLoad.toPlainString())
+        val reportedUnit = performed.unit
+        writeBoolean(reportedUnit != null)
+        if (reportedUnit != null) writeUTF(reportedUnit.name)
         writeInt(performed.reps)
         val reportedRir = performed.actualRir
         writeBoolean(reportedRir != null)

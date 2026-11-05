@@ -41,6 +41,8 @@ without executing it.
 | L24 | Original custom program cannot be edited as richly as a good coach would write it | Native custom source editor, split and cycle drafts | **Open**: complete premium UI, arbitrary custom structures and safe mutation |
 | L25 | No objective proof the new engine beats the existing web coach | `verification/engine-superiority-gate.mjs` and pinned bilateral scenarios | **Open**: actual matched JS vs Kotlin runs, device and blinded coaching |
 
+| L26 | Individually targeted workouts make the following session appear to have incompatible rep bands or reset progression | `KotlinLongitudinalRepEvidenceDomainTest`, native complete-personalized-session integration: preserve actual issued 12/12 while coaching against originally approved 8–12, with exact stock and source rules | **Partial**: high-level program/load timeline must also normalize authenticated exact targets; run matched JS and Android device continuity tests |
+
 ## Definition of done for each defect
 
 1. Verify the *actual* legacy baseline or record the defect explicitly as a
@@ -59,6 +61,25 @@ without executing it.
 6. Require zero known unresolved P0 regressions **and** full feature parity
    before cutover, while adding real improvements to the coach algorithm.
    Never lower the benchmark or delete failing cases to make Kotlin pass.
+
+## Continued progression after a personalized workout
+
+Previously the history projector correctly retained precise issued rep targets,
+but a later coach review could treat a mix such as 14/14/12 exact targets as
+an incompatible mixed-band scheme, or compare a 12-rep narrow target against
+the original 8–12 policy and give up. The owner-scoped review now passes a
+*verified native completion* through `KotlinLongitudinalRepEvidenceDomain`.
+It restores the **approved original practical rep envelope only in the next
+coaching evidence**, preserving every exact issued target, actual rep, RIR,
+weight and correction in history. This requires matching actual exercise ID,
+set count/order, target RIR, verified exact gym weight, source revision,
+straight-set scheme and purpose. An authored top/backoff or nonmatching mixed
+scheme fails closed. A completed individualized workout can therefore support
+another earned one-rep proposal, without resetting the athlete's program.
+
+The wider two-workout **load-increase** timeline still requires a corresponding
+authenticated normalization policy before it can evaluate mixed exact-set
+rep bands for weight increases. This remains a distinct release blocker.
 
 ## Native set-specific next-session prescription (candidate)
 

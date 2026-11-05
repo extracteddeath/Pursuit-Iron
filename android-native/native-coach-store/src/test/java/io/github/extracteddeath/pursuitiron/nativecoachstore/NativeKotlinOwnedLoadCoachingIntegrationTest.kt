@@ -202,9 +202,8 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             ((program.exercises.first().equipment as ComposerEquipment.Verified)
                 .plannedLoad))
         val reopened=NativeKotlinWorkoutCoordinator(journals,approvals,fence)
-            .open("owner-1","workout-2")
-        assertEquals(3L,(reopened as NativeJournalFileResult.Durable)
-            .journal.snapshot.source.gymRevision)
+            .open("owner-1","workout-2") as NativeJournalFileResult.Durable
+        assertEquals(3L,reopened.journal.snapshot.source.gymRevision)
         assertEquals(8L,reopened.journal.snapshot.source.programRevision)
         assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
             NativeKotlinCoachAcceptanceRefusal.APPROVAL_CHANGED),accept(expected))

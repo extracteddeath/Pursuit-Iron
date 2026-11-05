@@ -118,28 +118,36 @@ generated approval's source revision fields. Before full replacement, the
 athlete/profile/gym/catalog and approved program need one unified durable
 revision protocol and migration/rollback tests.
 
-## Explicit cross-block volume continuity
+## Training-cycle volume continuity across ALL consecutive weeks
 
-`CustomCycleCoachAuditDomain` now checks actual resolved weeks at every
-TRAINING-to-TRAINING block boundary, including any author-defined weekly
-overrides. It requires two explicitly authored maximum-reduction fractions:
-total working sets and direct muscle-credit sets. It rejects negative,
-excessive or over-precise policy values, missing continuity policies and
-training blocks that exceed the reviewed reduction. This checks direct muscles
-separately, including biceps/brachialis and wrist flexion/extension.
+`CustomCycleCoachAuditDomain` now checks actual resolved consecutive
+TRAINING weeks **both inside each block and across block boundaries**.
+It includes every authored per-week override in the measured sets. A 5-to-3
+weekly drop cannot escape review just because both weeks independently meet
+their MEV. A 3-to-5 weekly ramp within MRV likewise cannot escape review.
 
-A deliberately named RECOVERY or PERFORMANCE_TEST block has a separate
-coaching purpose and is not equated to a normal TRAINING boundary. The
-existing MEV/MAV/MRV, muscle frequency, gym, rest, full-cycle and actual
-technique/attachment checks continue to apply.
+`CustomCoachVolumeContinuityPolicy` preserves separately reviewed ceilings
+for total working-set drop and **direct credited-muscle** drop, and requires
+explicit total and direct-muscle **ramp-up** ceilings whenever training work
+increases. It rejects missing policy, unbounded ramps, excessive weekly
+declines, invalid percentages, and stale assumptions about muscle dose.
+Direct biceps/brachialis and wrist flexion/extension are evaluated separately.
+The audit does not manufacture missing sets, auto-adjust custom authoring, or
+permit a coach suggestion to overwrite an athlete-pinned program.
 
-For illustration, a change from five to three sets is a 40% drop. An
-athlete-authored 25% maximum blocks it even when both weeks satisfy their
-separate individual MEV bounds; an expressly reviewed 50% maximum can
-permit that transition. These are tests of explicit individual policy, **not
-recommended universal drop percentages**. The original reported 30-to-11
-volume collapse is a mandatory head-to-head regression, not a claimed
-measured web or Kotlin outcome.
+A declared RECOVERY or PERFORMANCE_TEST block has a separate coaching purpose
+and is *not* treated as ordinary training-volume loss. Existing phase-specific
+MEV/MAV/MRV, direct training frequency, exact equipment, time and session
+purpose checks still apply to every week.
+
+Example **test fixtures only**, not universal training recommendations:
+5-to-3 sets represents a 40% drop; a reviewed 25% drop limit rejects it,
+whereas an explicitly approved 50% limit can permit it. A 3-to-5 set rise
+is about 67%; it exceeds an athlete-reviewed 50% rise limit but can fit
+a separately approved 75% ceiling. Both cases pass their *individual*
+weekly MEV/MRV and therefore prove why continuity needs its own review.
+The old reported 30-to-11 collapse remains a required real paired regression;
+no legacy/Kotlin head-to-head result is claimed here.
 
 ## Candidate Android workout path
 

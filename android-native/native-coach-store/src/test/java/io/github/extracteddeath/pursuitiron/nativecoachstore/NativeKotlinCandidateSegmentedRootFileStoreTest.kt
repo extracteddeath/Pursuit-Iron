@@ -383,6 +383,10 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             KotlinJournalOperation.Finish("finish-1",2))
         assertTrue(wal().prepare(owner,athlete,initial.head,altered,null)
             is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,emptyList()),
+            saved.copy(originalJournalRevision=3))
+            is NativeSegmentedRedoResult.Durable)
         assertEquals(NativeCandidateTransactionIntentResult.Rejected(
             NativeCandidateTransactionIntentRefusal.PENDING_TRANSACTION),
             transactionIntent().prepare(owner,athlete))

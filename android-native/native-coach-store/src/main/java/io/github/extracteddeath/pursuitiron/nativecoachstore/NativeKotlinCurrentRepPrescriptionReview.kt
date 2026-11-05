@@ -74,7 +74,8 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         val original=last.evidence.exerciseReviews.singleOrNull {
             it.exerciseId==exerciseId
         }
-        if(original?.progressionGate!=KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW ||
+        if(original==null ||
+            original.progressionGate!=KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW ||
             original.progressionWorkout==null ||
             original.workingSets.any {it.issuedLoad !is DraftSetLoad.Verified})
             return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)

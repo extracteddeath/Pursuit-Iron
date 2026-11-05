@@ -63,7 +63,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
     // New native issuance requires today's authenticated gym/catalog, while
     // already-issued journals retain their historical access contract.
     private val gymCoherentAuthority=NativeKotlinGymCoherentWorkoutAuthority(
-        approvalStore,authoringSourceStore)
+        approvalStore,authoringSourceStore,revisionFence)
     private val coordinator=NativeKotlinWorkoutCoordinator(
         journalStore,gymCoherentAuthority,revisionFence)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(

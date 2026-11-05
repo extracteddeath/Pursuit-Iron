@@ -199,8 +199,21 @@ internal class NativeKotlinCandidateMirrorRecoveryIntentFileStore(
         if (existing != null) {
             if (existing.sourceRevision == revision &&
                 existing.completionCount == count &&
-                existing.rootDigest == rootDigest)
+                existing.rootDigest == rootDigest) {
+                if (existing.phase == NativeCandidateRecoveryIntentPhase.ACKNOWLEDGED) {
+                    val sealed = (checkpoint.savedCheckpoint(owner, athlete) as?
+                        NativeCandidateSavedCheckpoint.Present)?.value
+                    if (sealed == null ||
+                        sealed.sourceRevision != existing.sourceRevision ||
+                        sealed.completionCount != existing.completionCount ||
+                        sealed.rootDigest != existing.rootDigest ||
+                        sealed.pagedDirectoryFileDigest !=
+                            existing.acknowledgedDirectoryDigest)
+                        return@guarded deny(
+                            NativeCandidateRecoveryIntentRefusal.LOST_ACKNOWLEDGED_SEAL)
+                }
                 return@guarded NativeCandidateRecoveryIntentResult.Durable(existing, true)
+            }
             if (existing.phase != NativeCandidateRecoveryIntentPhase.ACKNOWLEDGED)
                 return@guarded deny(
                     NativeCandidateRecoveryIntentRefusal.PENDING_CONFLICT)

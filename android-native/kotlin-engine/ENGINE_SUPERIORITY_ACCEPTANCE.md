@@ -9,9 +9,11 @@ Neither engine gets credit for producing the other engine's output.
 
 ## Source-of-truth benchmark files
 
-- `verification/engine-superiority-cases.json`: 24 fixed, independently
-  stated scenarios spanning progression, equipment, programming, custom
-  programs/cycles, coaching, history, migration and Android.
+- `verification/engine-superiority-cases.json`: 25 fixed, independently
+  stated scenarios (34 required paired proofs) spanning progression, equipment,
+  programming, custom programs/cycles, coaching, history, migration and
+  Android. The critical rep-jump case is a release blocker, not a claimed
+  measured improvement.
 - `verification/engine-superiority-evidence.json`: deliberately empty until
   both engines are actually run. Do NOT fill it with reported defects, source
   comments, existence of Kotlin classes or impressions from screenshots.
@@ -71,6 +73,12 @@ passing this release gate.
 | Custom program and cycle authoring | Existing live working product has many features, with reported amplifier and volume-loss defects | Separate first-class custom authoring, candidate transitions and review contracts; not fully production-integrated | **No** until complete parity plus better authoring and block outcomes on device |
 | Native history integrity | Existing web and JS-native paths support actual historical workouts | v2 native history and candidate segmented root, replay, redo, correction and lookup tests; segmented candidate is inactive and v2 is capped at 4,096 entries | **No:** missing single-authority cutover and 4,097+ actual persistence |
 | End-to-end usability | Web product available for real workouts | Kotlin replacement is not the sole native coaching issuer; existing Compose integration can still depend on old engine | **No** until complete offline device journey and no JS fallback |
+
+The separate `KNOWN_LEGACY_BUG_REGRESSIONS.md` ledger tracks 25 reported
+regression areas. New Kotlin-only single-set rep targeting is tested for
+no +3 jumps, no blanket all-set increases, missing effort, near failure,
+unbuildable weights and altered set loading. That is one headless safeguard,
+**not** production parity or a completed matched JS/Kotlin benchmark.
 
 The user-reported bugs above are essential regression scenarios, **not**
 a claim that the current JavaScript commit still reproduces each issue.

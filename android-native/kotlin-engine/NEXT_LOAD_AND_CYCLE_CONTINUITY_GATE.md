@@ -68,15 +68,26 @@ identity reuse, unbuildable stock or missing explicit confirmation refuses
 the write. The real native issuance transaction must separately approve the
 newly selected workout before it appears in the logger.
 
+The isolated `NativeKotlinCandidateCoachScreen` now presents this
+candidate flow in Compose: exercise and verified-increment inputs, explicit
+readiness/restriction controls, the read-only history review, actual before/
+after load, all affected days, the next training-day selection, and a separate
+checkbox plus confirmation action. It creates fresh native grant/workout/
+receipt IDs for that accepted revision. The next workout remains unissued
+until the normal native Train issuance path runs; the old workout stays frozen.
+The acceptance writer also refuses IDs already held by **unfinished custom
+workouts**, not just issued Composer journals and completed history entries.
+
 **Still not production cutover:** The candidate approval store owns its own
 Kotlin-generated program record, but the app's full authoritative
-athlete/gym/catalog source store, user-facing acceptance sheet, and
-interrupted legacy workout migration have not been transactionally tied
-to this commit. The boolean confirmation is an interface prerequisite,
-not evidence of an actual UI tap. The v2 history manifest remains capped
-at 4,096 completions, and directory fsync/device power-loss certification,
-atomic source-owner revisions and real backup/restore checks remain pending.
-Do not invoke this acceptance as an automatic post-Finish progression.
+athlete/gym/catalog source store, production acceptance UI, and interrupted
+legacy workout migration have not been transactionally tied to this commit.
+The candidate UI has not had physical-device acceptance testing, and a
+caller-supplied confirmation flag is not a standalone proof of user consent.
+The v2 history manifest remains capped at 4,096 completions, and directory
+fsync/device power-loss certification, atomic source-owner revisions and
+real backup/restore checks remain pending. Do not invoke this acceptance
+as an automatic post-Finish progression.
 
 ## Explicit cross-block volume continuity
 

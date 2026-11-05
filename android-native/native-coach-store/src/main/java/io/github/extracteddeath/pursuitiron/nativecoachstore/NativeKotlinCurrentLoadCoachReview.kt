@@ -123,32 +123,46 @@ object NativeKotlinCurrentLoadCoachReview {
         val newer = latest.evidence.exerciseReviews.singleOrNull {
             it.exerciseId == exerciseId
         }
-        if (older?.progressionGate != KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW ||
-            newer?.progressionGate != KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW)
-            return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
-        val olderFacts = checkNotNull(older.progressionWorkout)
-        val newerFacts = checkNotNull(newer.progressionWorkout)
-        if (olderFacts.unit != newerFacts.unit ||
-            olderFacts.targetReps != newerFacts.targetReps ||
-            olderFacts.expectedWorkingSets != newerFacts.expectedWorkingSets ||
-            older.workingSets.map { it.issuedLoad }.any {
-                it !is DraftSetLoad.Verified
-            } ||
-            newer.workingSets.map { it.issuedLoad }.any {
-                it !is DraftSetLoad.Verified
-            })
-            return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
-        val previousBasis = (older.workingSets.first().issuedLoad as DraftSetLoad.Verified)
-        val latestBasis = (newer.workingSets.first().issuedLoad as DraftSetLoad.Verified)
-        if (previousBasis.basis != latestBasis.basis ||
-            previousBasis.unit != latestBasis.unit)
+        if (older == null || newer == null)
             return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
         val matchingEquipment = approval.program.exercises.singleOrNull {
             it.exerciseId == exerciseId
         }?.equipment as? ComposerEquipment.Verified
-        if (matchingEquipment == null ||
-            matchingEquipment.unit != latestBasis.unit ||
-            matchingEquipment.inventory?.basis != latestBasis.basis)
+            ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        val stock=matchingEquipment.inventory
+            ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        val policy=approval.policies.singleOrNull {
+            it.exerciseId==exerciseId && it.purpose==latest.purpose
+        } ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        // Do not reinterpret authored top/backoff or warmup prescriptions as
+        // individualized STRAIGHT sets. Only the approved rep envelope is
+        // normalized, never a single historical issued target or actual fact.
+        if(policy.scheme!=SetLoadScheme.STRAIGHT ||
+            policy.warmups.isNotEmpty() ||
+            listOf(previous,latest).any { session ->
+                session.evidence.sets.any {
+                    it.exerciseId==exerciseId && it.type==DraftSetType.WARMUP
+                }
+            })
+            return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        fun normalized(
+            session:NativeKotlinMixedHistoryCompletion.Composer,
+            exercise:KotlinExerciseHistoryEvidence
+        ):ProgressionWorkoutEvidence? {
+            val compared=KotlinLongitudinalRepEvidenceDomain.review(
+                exercise,session.evidence.workoutId,policy.workingReps,
+                exercise.workingSets.size,matchingEquipment.plannedLoad,
+                stock,matchingEquipment.unit,stock.basis,policy.targetRir)
+            return (compared as? LongitudinalRepEvidenceResult.Comparable)
+                ?.session
+        }
+        val olderFacts=normalized(previous,older)
+            ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        val newerFacts=normalized(latest,newer)
+            ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        if (olderFacts.targetReps!=newerFacts.targetReps ||
+            olderFacts.expectedWorkingSets!=newerFacts.expectedWorkingSets ||
+            olderFacts.unit!=newerFacts.unit)
             return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
 
         // Retain all approved exercise variants, policies and pinned choices.

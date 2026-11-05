@@ -54,9 +54,14 @@ data class CoachExerciseReview(
     val explanation: String,
     val evidence: Set<CoachEvidenceFlag>,
     val sessionsExamined: Int,
-    val observedWorkingLoad: BigDecimal?
+    val observedWorkingLoad: BigDecimal?,
+    /** Independent, set-specific suggestion. No mutation of issued targets. */
+    val nextRepTargetsForReview: List<Int>? = null
 ) {
     init {
+        require(nextRepTargetsForReview==null ||
+            (direction==CoachDirection.BUILD_REPS_AT_CURRENT_LOAD &&
+                nextLoadToReview==null))
         require(nextLoadToReview == null || direction == CoachDirection.REVIEW_SMALL_INCREASE)
         require(direction != CoachDirection.REVIEW_SMALL_INCREASE || nextLoadToReview != null)
         require(explanation.isNotBlank())
@@ -128,9 +133,11 @@ object CoachExerciseDecisionDomain {
         else flags+=CoachEvidenceFlag.COMPLETED_AT_CEILING
 
         fun result(direction:CoachDirection,confidence:CoachConfidence,
-            explanation:String,candidate:BigDecimal?=null)=
+            explanation:String,candidate:BigDecimal?=null,
+            repTargets:List<Int>?=null)=
             CoachExerciseReview(direction,confidence,candidate,explanation,
-                flags.toSet(),chronologicalSessions.size,currentLoad)
+                flags.toSet(),chronologicalSessions.size,currentLoad,
+                repTargets)
 
         // Exercise restrictions and day readiness are separate from
         // performance failure; never mark a recovery substitution as
@@ -159,9 +166,19 @@ object CoachExerciseDecisionDomain {
         if(latestFacts.mixedActualLoads)
             return result(CoachDirection.STABILIZE_SET_LOADING,CoachConfidence.LIMITED,
                 "Working weights varied across the sets. Use the full set history to choose a repeatable load; the heaviest set alone is not a starting target.")
-        if(latestFacts.ceilingOrdinals.size!=last.expectedWorkingSets)
-            return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,CoachConfidence.MODERATE,
-                "Keep building quality reps across the prescribed range before increasing the load.")
+        if(latestFacts.ceilingOrdinals.size!=last.expectedWorkingSets) {
+            val repReview=FatigueAwareRepTargetReviewDomain.assess(
+                last,context.availableLoads,
+                context.availableLoads?.basis ?: LoadBasis.EXERCISE_OVERRIDE,
+                context.readiness,context.movementRestricted)
+            return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
+                if(repReview.candidateRepTargets!=null)CoachConfidence.MODERATE
+                else CoachConfidence.LIMITED,
+                if(repReview.candidateRepTargets!=null)
+                    "Your recorded effort supports reviewing one additional rep on one set, while preserving other sets and the current load. This does not change your workout targets."
+                else "Keep building quality reps at the current load. No safe set-specific rep increase is demonstrated yet.",
+                repTargets=repReview.candidateRepTargets)
+        }
         if(nearFailure)
             return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,CoachConfidence.MODERATE,
                 "All sets reached the top of the rep range, but reported effort was very high. Repeat or recover before reviewing an increase.")

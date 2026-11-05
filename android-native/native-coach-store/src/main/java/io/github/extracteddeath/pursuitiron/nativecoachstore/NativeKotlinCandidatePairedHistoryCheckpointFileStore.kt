@@ -50,6 +50,13 @@ internal data class NativeCandidatePairedHistoryCheckpoint(
 internal enum class NativeCandidateCheckpointPresence {
     ABSENT, PRESENT, INVALID
 }
+/** A saved seal is a recorded fact, NOT proof of current source parity. */
+internal sealed interface NativeCandidateSavedCheckpoint {
+    data object Missing : NativeCandidateSavedCheckpoint
+    data object Invalid : NativeCandidateSavedCheckpoint
+    data class Present(val value: NativeCandidatePairedHistoryCheckpoint) :
+        NativeCandidateSavedCheckpoint
+}
 internal enum class NativeCandidatePairedHistoryRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, UNVERIFIED_SOURCE,
     NOT_CHECKPOINTED, STALE_CHECKPOINT, CORRUPT_CHECKPOINT,
@@ -224,6 +231,25 @@ internal class NativeKotlinCandidatePairedHistoryCheckpointFileStore(
                 else NativeCandidateCheckpointPresence.PRESENT
             }
         }.getOrElse { NativeCandidateCheckpointPresence.INVALID }
+    }
+
+    internal fun savedCheckpoint(owner: String, athlete: String):
+        NativeCandidateSavedCheckpoint {
+        if (!id.matches(owner) || !id.matches(athlete))
+            return NativeCandidateSavedCheckpoint.Invalid
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                if (identity.signedInIdentity() !=
+                    NativeKotlinOwnerIdentity(owner, athlete) ||
+                    Files.exists(directory, LinkOption.NOFOLLOW_LINKS) &&
+                    (Files.isSymbolicLink(directory) ||
+                        !Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)))
+                    NativeCandidateSavedCheckpoint.Invalid
+                else read(owner, athlete)?.let {
+                    NativeCandidateSavedCheckpoint.Present(it)
+                } ?: NativeCandidateSavedCheckpoint.Missing
+            }
+        }.getOrElse { NativeCandidateSavedCheckpoint.Invalid }
     }
 
     /** Seal only a fully proven pair; an old stale seal may be superseded. */

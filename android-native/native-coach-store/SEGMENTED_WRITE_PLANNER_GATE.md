@@ -336,3 +336,22 @@ It does not become the real transaction writer, clear/release the underlying
 redo WAL, make the v2 ledger optional, guarantee parent-directory durability
 or grant any history/PR/progression/Finish authority. Testing remains
 essential before Android cutover.
+
+## Durable candidate mirror recovery intent (optional WAL gate)
+
+`NativeKotlinCandidateMirrorRecoveryIntentFileStore` now persists a
+checksum-framed, per-owner immutable **PREPARED** target root/revision/count
+before candidate index reconciliation, and advances to **ACKNOWLEDGED** only
+after complete authenticated root and both-index checkpoint review.
+The coordinator accepts it through an explicitly optional candidate-only
+dependency; existing production history and the v2 writer are untouched.
+An identical retry after index publication or lost checkpoint acknowledgment
+is idempotent. A contradictory root while PREPARED refuses. An acknowledged
+previous revision cannot advance unless the previous recorded checkpoint
+still exists with the exact persisted digest. Corrupt intent bytes fail closed.
+
+This journal does **not** participate in the original Finish or saved-edit
+transaction and cannot publish/restore a segmented root. It is a checkpoint
+reconciliation WAL rehearsal, not the final native single-writer authority.
+Physical Android directory-fsync/backup and rollback evidence are still
+missing.

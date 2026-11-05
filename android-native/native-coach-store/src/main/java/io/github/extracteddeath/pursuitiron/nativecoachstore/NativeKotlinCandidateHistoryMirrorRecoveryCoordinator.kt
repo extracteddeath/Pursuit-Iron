@@ -24,7 +24,8 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 internal enum class NativeCandidateMirrorRecoveryRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, UNVERIFIED_ROOT,
     LOST_COMMITTED_INDEX, CORRUPT_INDEX, CORRUPT_CHECKPOINT,
-    UNVERIFIED_INDEX, CONFLICT, STORAGE_UNAVAILABLE
+    UNVERIFIED_INDEX, CORRUPT_INTENT, PENDING_INTENT,
+    CONFLICT, STORAGE_UNAVAILABLE
 }
 internal sealed interface NativeCandidateMirrorRecoveryResult {
     data class Consistent(
@@ -45,7 +46,8 @@ internal class NativeKotlinCandidateHistoryMirrorRecoveryCoordinator(
     private val index: NativeKotlinCandidatePagedIdentityFileStore,
     private val checkpoint: NativeKotlinCandidatePairedHistoryCheckpointFileStore,
     private val afterIndexForTest: (() -> Unit)? = null,
-    private val afterCheckpointForTest: (() -> Unit)? = null
+    private val afterCheckpointForTest: (() -> Unit)? = null,
+    private val intentStore: NativeKotlinCandidateMirrorRecoveryIntentFileStore? = null
 ) {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private fun deny(reason: NativeCandidateMirrorRecoveryRefusal) =
@@ -65,6 +67,27 @@ internal class NativeKotlinCandidateHistoryMirrorRecoveryCoordinator(
                     as? NativeCandidateHistoryRootResult.Reviewed)?.view
                     ?: return@withOwnerTransaction deny(
                         NativeCandidateMirrorRecoveryRefusal.UNVERIFIED_ROOT)
+                // The optional durable recovery intent binds THIS verified
+                // source root before any candidate index publication.
+                if (intentStore != null) {
+                    when (val durable = intentStore.prepare(
+                        owner, athlete, current.head.revision,
+                        current.head.completionCount, current.head.rootDigest)
+                    ) {
+                        is NativeCandidateRecoveryIntentResult.Rejected ->
+                            return@withOwnerTransaction deny(
+                                when (durable.reason) {
+                                    NativeCandidateRecoveryIntentRefusal.CORRUPT_INTENT ->
+                                        NativeCandidateMirrorRecoveryRefusal.CORRUPT_INTENT
+                                    NativeCandidateRecoveryIntentRefusal.PENDING_CONFLICT,
+                                    NativeCandidateRecoveryIntentRefusal.STALE_SOURCE,
+                                    NativeCandidateRecoveryIntentRefusal.LOST_ACKNOWLEDGED_SEAL ->
+                                        NativeCandidateMirrorRecoveryRefusal.PENDING_INTENT
+                                    else -> NativeCandidateMirrorRecoveryRefusal.STORAGE_UNAVAILABLE
+                                })
+                        else -> Unit
+                    }
+                }
                 val presence = checkpoint.presence(owner, athlete)
                 if (presence == NativeCandidateCheckpointPresence.INVALID)
                     return@withOwnerTransaction deny(
@@ -145,6 +168,13 @@ internal class NativeKotlinCandidateHistoryMirrorRecoveryCoordinator(
                     reviewed.checkpoint.completionCount != current.head.completionCount)
                     return@withOwnerTransaction deny(
                         NativeCandidateMirrorRecoveryRefusal.CONFLICT)
+                if (intentStore != null) {
+                    val durable = intentStore.acknowledge(
+                        owner, athlete, reviewed.checkpoint)
+                    if (durable !is NativeCandidateRecoveryIntentResult.Durable)
+                        return@withOwnerTransaction deny(
+                            NativeCandidateMirrorRecoveryRefusal.PENDING_INTENT)
+                }
                 NativeCandidateMirrorRecoveryResult.Consistent(
                     reviewed.checkpoint, committed.replayed)
             }

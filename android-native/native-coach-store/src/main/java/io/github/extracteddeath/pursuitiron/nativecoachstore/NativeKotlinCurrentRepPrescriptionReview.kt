@@ -121,7 +121,10 @@ object NativeKotlinCurrentRepPrescriptionDomain {
                     source,source,approval.grant,approval.program,approval.policies),
                 last.evidence.source,actualEvidence,
                 timeline.manifestRevision,timeline.manifestRevision,
-                readiness,movementRestricted))
+                readiness,movementRestricted,
+                if(normalized.normalizedPersonalizedTargets)
+                    normalized.exactIssuedReps.map { it.minimum }
+                else null))
         return NativeCurrentRepPrescriptionResult.Reviewed(
             timeline.manifestRevision,last.manifest.workoutId,proposal)
     }

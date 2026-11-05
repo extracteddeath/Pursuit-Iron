@@ -15,6 +15,7 @@ package io.github.extracteddeath.pursuitiron.nativecoachstore
 internal enum class NativeCandidateStagedRecoveryRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, NO_VERIFIED_STAGED_REDO,
     ROOT_NOT_VERIFIED, SHADOW_NOT_VERIFIED, PAIR_NOT_VERIFIED,
+    DURABLE_INTENT_NOT_VERIFIED, INTENT_NOT_ACKNOWLEDGED,
     CONFLICT, STORAGE_UNAVAILABLE
 }
 
@@ -23,7 +24,8 @@ internal sealed interface NativeCandidateStagedRecoveryResult {
         val checkpoint: NativeCandidatePairedHistoryCheckpoint,
         val rootReplayed: Boolean,
         val shadowReplayed: Boolean,
-        val checkpointReplayed: Boolean
+        val checkpointReplayed: Boolean,
+        val intentAcknowledgmentReplayed: Boolean
     ) : NativeCandidateStagedRecoveryResult {
         val canAuthorizeHistoryReads: Boolean get() = false
         val canAuthorizeWrites: Boolean get() = false
@@ -39,6 +41,7 @@ internal class NativeKotlinCandidateStagedReplayRecoveryCoordinator(
     private val fence: NativeKotlinApprovalRevisionFence,
     private val identity: NativeKotlinCurrentIdentity,
     private val redo: NativeKotlinSegmentedRedoFileStore,
+    private val durableIntent: NativeKotlinCandidateHistoryTransactionIntentFileStore,
     private val root: NativeKotlinCandidateSegmentedRootFileStore,
     private val replayReader: NativeKotlinMixedHistoryReadCoordinator,
     private val receiptVerifier: NativeKotlinIndependentHistoryReceiptVerifier,
@@ -73,6 +76,19 @@ internal class NativeKotlinCandidateStagedReplayRecoveryCoordinator(
                         NativeCandidateStagedRecoveryRefusal.NO_VERIFIED_STAGED_REDO)
                 if (patch.consumedIntent != staged.intent ||
                     patch.priorRootDigest != staged.base.rootDigest)
+                    return@withOwnerTransaction deny(
+                        NativeCandidateStagedRecoveryRefusal.CONFLICT)
+
+                // Freeze the exact staged operation BEFORE publishing root or
+                // touching a paged index. A previously persisted ticket must
+                // equal this redo, even after an interrupted root swap.
+                val prepared = durableIntent.prepare(owner, athlete)
+                    as? NativeCandidateTransactionIntentResult.Durable
+                    ?: return@withOwnerTransaction deny(
+                        NativeCandidateStagedRecoveryRefusal.DURABLE_INTENT_NOT_VERIFIED)
+                if (prepared.intent.nextRevision != patch.nextHeadRevision ||
+                    prepared.intent.nextCompletionCount != patch.nextCompletionCount ||
+                    prepared.intent.baseRootDigest != patch.priorRootDigest)
                     return@withOwnerTransaction deny(
                         NativeCandidateStagedRecoveryRefusal.CONFLICT)
 
@@ -111,9 +127,22 @@ internal class NativeKotlinCandidateStagedReplayRecoveryCoordinator(
                     pair.checkpoint.rootDigest != published.view.head.rootDigest)
                     return@withOwnerTransaction deny(
                         NativeCandidateStagedRecoveryRefusal.CONFLICT)
+                // This final intent acknowledgment is a second durable
+                // candidate marker, NOT the new application's commit point.
+                val acknowledged = durableIntent.acknowledge(owner, athlete)
+                    as? NativeCandidateTransactionIntentResult.Durable
+                    ?: return@withOwnerTransaction deny(
+                        NativeCandidateStagedRecoveryRefusal.INTENT_NOT_ACKNOWLEDGED)
+                if (!acknowledged.intent.acknowledged ||
+                    acknowledged.intent.acknowledgedRootDigest !=
+                        pair.checkpoint.rootDigest ||
+                    acknowledged.intent.acknowledgedDirectoryDigest !=
+                        pair.checkpoint.pagedDirectoryFileDigest)
+                    return@withOwnerTransaction deny(
+                        NativeCandidateStagedRecoveryRefusal.CONFLICT)
                 NativeCandidateStagedRecoveryResult.Consistent(
                     pair.checkpoint, published.replayed, synced.replayed,
-                    pair.replayed)
+                    pair.replayed, acknowledged.replayed)
             }
         }.getOrElse {
             deny(NativeCandidateStagedRecoveryRefusal.STORAGE_UNAVAILABLE)

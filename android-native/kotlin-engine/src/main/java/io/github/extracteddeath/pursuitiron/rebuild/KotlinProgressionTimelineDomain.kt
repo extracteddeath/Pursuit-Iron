@@ -42,6 +42,7 @@ enum class KotlinTimelineReviewStatus {
     LATEST_EXERCISE_NOT_COMPARABLE,
     PREVIOUS_EXERCISE_NOT_COMPARABLE,
     CHANGED_PROGRAM_OR_CATALOG,
+    CHANGED_ATHLETE_PROFILE,
     CHANGED_GYM_OR_COACH_RULES,
     CHANGED_SESSION_PURPOSE,
     CHANGED_LOAD_BASIS,
@@ -142,9 +143,18 @@ object KotlinProgressionTimelineDomain {
 
         val previousSource = olderHistory.source
         val newestSource = latestHistory.source
+        // Never credit an old achievement toward a changed program revision:
+        // even an unchanged set count and rep band can conceal amended
+        // rest, exercise semantics, training dose or cycle intent.
         if (previousSource.programId != newestSource.programId ||
+            previousSource.programRevision != newestSource.programRevision ||
             previousSource.catalogRevision != newestSource.catalogRevision)
             return rejected(KotlinTimelineReviewStatus.CHANGED_PROGRAM_OR_CATALOG, ids, count)
+        // Athlete setup revisions may change recovery/experience or
+        // relevant coaching constraints without changing the exercise ID.
+        if (previousSource.athleteRevision != newestSource.athleteRevision)
+            return rejected(KotlinTimelineReviewStatus.CHANGED_ATHLETE_PROFILE,
+                ids, count)
         if (previousSource.gymId != newestSource.gymId ||
             previousSource.gymRevision != newestSource.gymRevision ||
             previousSource.coachingRulesRevision != newestSource.coachingRulesRevision)

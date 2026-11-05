@@ -156,6 +156,14 @@ class KotlinProgressionTimelineDomainTest {
             KotlinProgressionTimelineDomain.review(request(listOf(
                 base, workout(2, source = baseSource.copy(catalogRevision = "catalog-3")))))
                 .status)
+        assertEquals(KotlinTimelineReviewStatus.CHANGED_PROGRAM_OR_CATALOG,
+            KotlinProgressionTimelineDomain.review(request(listOf(
+                base, workout(2, source = baseSource.copy(programRevision = 5)))))
+                .status)
+        assertEquals(KotlinTimelineReviewStatus.CHANGED_ATHLETE_PROFILE,
+            KotlinProgressionTimelineDomain.review(request(listOf(
+                base, workout(2, source = baseSource.copy(athleteRevision = 3)))))
+                .status)
         assertEquals(KotlinTimelineReviewStatus.CHANGED_SET_PRESCRIPTION,
             KotlinProgressionTimelineDomain.review(request(listOf(
                 base, workout(2, repBand = RepBand(6, 10)))))

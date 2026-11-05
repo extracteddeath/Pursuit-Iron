@@ -77,6 +77,17 @@ straight-set scheme and purpose. An authored top/backoff or nonmatching mixed
 scheme fails closed. A completed individualized workout can therefore support
 another earned one-rep proposal, without resetting the athlete's program.
 
+The follow-on prescription now classifies the *real* relationship between
+issued and observed reps. Re-proposing a missed exact target is labeled
+`REPEAT_PREVIOUSLY_ISSUED_TARGETS`, never marketed as an earned increase.
+If any personalized target was missed, the engine refuses to raise a
+different set above its previous target until the prior targets are met.
+A true `EARNED_ONE_MORE_REP` must exceed exactly one previous exact target,
+while every other target remains at least as demanding and supported by
+reported effort. Android's Coach preview shows this distinction. This
+does not yet implement fatigue-adjusted downward targets or peak-specific
+periodization; the current conservative refusal remains intentional.
+
 The wider two-workout **load-increase** timeline still requires a corresponding
 authenticated normalization policy before it can evaluate mixed exact-set
 rep bands for weight increases. This remains a distinct release blocker.

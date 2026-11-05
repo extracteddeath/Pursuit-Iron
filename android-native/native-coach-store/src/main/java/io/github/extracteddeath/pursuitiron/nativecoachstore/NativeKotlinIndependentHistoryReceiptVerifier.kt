@@ -189,11 +189,13 @@ class NativeKotlinIndependentHistoryReceiptVerifier(
                     entry.savedCorrectionRevision)
                 return deny(NativeIndependentReceiptRefusal.CORRECTION_MISMATCH)
         }
-        val valid = if (saved.hasCorrectionFile)
-            CustomSavedHistoryEvidenceDomain.projectSaved(saved.state)
-                is CustomSavedHistoryProjectionResult.Candidate
-        else CustomWorkoutHistoryEvidenceDomain.project(journal)
-                is CustomHistoryEvidenceResult.Candidate
+        val valid = if (saved.hasCorrectionFile) {
+            CustomSavedHistoryEvidenceDomain.projectSaved(saved.state) is
+                CustomSavedHistoryProjectionResult.Candidate
+        } else {
+            CustomWorkoutHistoryEvidenceDomain.project(journal) is
+                CustomHistoryEvidenceResult.Candidate
+        }
         if (!valid) return deny(NativeIndependentReceiptRefusal.EVIDENCE_NOT_VERIFIED)
         val eventId = if (isFinish) entry.finishEventId
             else (intent as NativeHistoryWriteIntent.CustomCorrect).operation.eventId

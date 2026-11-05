@@ -41,6 +41,43 @@ future per-purpose/per-visit loading model and a review/approval UI are needed
 for true coach-quality strength-vs-hypertrophy variation. A submitted DTO is
 not authenticated history by itself.
 
+## Owner-fenced explicit load-change acceptance (candidate only)
+
+`NativeKotlinMixedHistoryReadCoordinator.acceptCurrentApprovedLoad` is now a
+bounded **isolated-native** bridge from the actual stored coaching review to a
+new independently approved program revision. It requires a user-triggered
+confirmation and **exact** displayed expectations: two compared workout IDs,
+history/approval revisions, exercise, change kind, old/new load, all affected
+day indices, and a fresh workout selection grant and receipt ID. None of
+these caller values is trusted as evidence of training performance.
+
+Under the same owner fence used for native approvals, history and issuance,
+the method reopens the full mixed-history ledger, independently validates
+every historical journal and post-Finish correction, recomputes the coaching
+proposal, compares its complete displayed decision with the user's
+expectations, verifies the new workout ID is neither in completed history nor
+already issued as an unfinished journal, and preflights the entire newly
+proposed program. Only then does it use the existing approval store's
+compare-and-swap transaction to advance **both** storage approval revision
+and Kotlin program revision and save a new, separate workout grant.
+
+An unchanged original issued journal remains resumable and immutable; the
+new grant has **not** issued any sets or changed completed history. A
+repeat acceptance, altered correction, stale approval, unavailable history,
+identity reuse, unbuildable stock or missing explicit confirmation refuses
+the write. The real native issuance transaction must separately approve the
+newly selected workout before it appears in the logger.
+
+**Still not production cutover:** The candidate approval store owns its own
+Kotlin-generated program record, but the app's full authoritative
+athlete/gym/catalog source store, user-facing acceptance sheet, and
+interrupted legacy workout migration have not been transactionally tied
+to this commit. The boolean confirmation is an interface prerequisite,
+not evidence of an actual UI tap. The v2 history manifest remains capped
+at 4,096 completions, and directory fsync/device power-loss certification,
+atomic source-owner revisions and real backup/restore checks remain pending.
+Do not invoke this acceptance as an automatic post-Finish progression.
+
 ## Explicit cross-block volume continuity
 
 `CustomCycleCoachAuditDomain` now checks actual resolved weeks at every

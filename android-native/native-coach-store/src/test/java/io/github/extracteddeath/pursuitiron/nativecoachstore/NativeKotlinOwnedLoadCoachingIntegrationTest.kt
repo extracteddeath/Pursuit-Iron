@@ -391,7 +391,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }.setKey
         val persisted=old.journal.effectiveSets.getValue(key).operation.eventId
         assertTrue(transactions.correct("owner-1","athlete-1","workout-1",
-            KotlinSavedSetCorrection("rep-changed-after-accept",1,key,persisted,
+            KotlinSavedSetCorrection("rep-changed-after-accept",1,key,"rep-accept-correction",
                 KotlinJournalSetOutcome.COMPLETED,
                 KotlinPerformedSet(n("30"),LoadUnit.LB,9,1)))
             is NativeHistoryTransactionResult.Durable)

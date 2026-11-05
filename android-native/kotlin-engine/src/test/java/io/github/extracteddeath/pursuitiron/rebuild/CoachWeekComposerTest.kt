@@ -767,4 +767,30 @@ class CoachWeekComposerTest {
         assertEquals(authored,repaired)
     }
 
+
+    @Test fun generatedAndAuthoredSearchShareTheSameVolumeCeiling() {
+        val limitedChest=chestOption.copy(maximumVisits=1,
+            minimumSetsPerVisit=2,maximumSetsPerVisit=4)
+        val onceBack=backOption.copy(maximumVisits=1)
+        val onceLeg=legOption.copy(maximumVisits=1)
+        val request=base(
+            exerciseOptions=listOf(limitedChest,onceBack,onceLeg),
+            bands=bounds(dose(chest,"2","2","2"),
+                dose(lats,"2","2","4"),dose(quads,"2","2","4")),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            patterns=1,maxPerDay=1)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
+        val reviewed=CoachWeekComposer.rebalanceForReview(
+            request,authored,ComposerRepairPermissions(mayAdjustSets=true))
+        assertEquals(2,reviewed.single {it.exerciseId=="db-press"}.sets)
+        val generated=CoachWeekComposer.compose(request)
+        assertEquals(2,generated.visits.single {it.exerciseId=="db-press"}.sets)
+        assertEquals(DoseFinding.WITHIN_BOUNDS,
+            generated.audit.muscles[chest]?.finding)
+        assertFalse(generated.canIssueTargets)
+    }
+
 }

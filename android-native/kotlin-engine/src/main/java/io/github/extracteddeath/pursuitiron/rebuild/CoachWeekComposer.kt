@@ -367,6 +367,30 @@ object CoachWeekComposer {
                 patternGap*400L+visits.sumOf {it.sets}*100L-priority*6L)
     }
     /**
+     * One candidate safety policy for BOTH initial generation and local
+     * refinement. Phase/dose legality, declared user hard-time ceilings and
+     * the no-junk-sets-above-MAV rule must never diverge between search paths.
+     * This does not grant workout issuance or resolve a missing coach policy.
+     */
+    private fun withinCandidateLimits(
+        request:ComposerRequest,
+        current:Cost,
+        candidate:WeeklyDoseFeasibilityReport
+    ):Boolean {
+        if(candidate.muscles.values.any {
+            it.finding==DoseFinding.ABOVE_MRV
+        })return false
+        if(candidate.sessions.any {
+            it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT
+        })return false
+        if(current.hardSatisfied && candidate.muscles.values.any { finding ->
+            finding.effectiveWorkingSets >
+                request.bounds.first {it.muscle==finding.muscle}.mav
+        })return false
+        return true
+    }
+
+    /**
      * Read-only local refinement. Keep session positions, equipment, pinned
      * appearances and cross-week recovery verifiable at every accepted move.
      * Swaps can recover from a fully occupied day; relocations can rescue an
@@ -429,14 +453,7 @@ object CoachWeekComposer {
                         check.sessions[before.dayIndex].finding!=
                             TimeWindowFinding.WITHIN_PREFERENCE
                 })return
-                if(check.muscles.values.any {it.finding==DoseFinding.ABOVE_MRV} ||
-                    check.sessions.any {
-                        it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT
-                    })return
-                if(current.hardSatisfied && check.muscles.values.any {finding ->
-                    finding.effectiveWorkingSets >
-                        request.bounds.first {it.muscle==finding.muscle}.mav
-                })return
+                if(!withinCandidateLimits(request,current,check))return
                 val trialCost=cost(request,trial,check,options)
                 if(trialCost<best) {
                     best=trialCost
@@ -620,17 +637,7 @@ object CoachWeekComposer {
                 }
                 val candidate=toWeek(request,trial,map)
                 val check=WeeklyDoseFeasibilityDomain.audit(candidate)
-                if(check.muscles.values.any {
-                    it.finding==DoseFinding.ABOVE_MRV
-                } || check.sessions.any {
-                    it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT
-                })continue
-                // Do not pad sessions with extra volume above the
-                // athlete's MAV once minimums/frequency/visits are met.
-                if(current.hardSatisfied && check.muscles.values.any {finding ->
-                    val bound=request.bounds.first {it.muscle==finding.muscle}
-                    finding.effectiveWorkingSets>bound.mav
-                })continue
+                if(!withinCandidateLimits(request,current,check))continue
                 val candidateCost=cost(request,trial,check,map)
                 if(candidateCost<best) {
                     best=candidateCost

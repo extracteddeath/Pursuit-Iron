@@ -1445,7 +1445,11 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         afterRoot: (() -> Unit)? = null,
         afterShadow: (() -> Unit)? = null
     ) = NativeKotlinCandidateStagedReplayRecoveryCoordinator(
-        fence, identity, wal(), candidate, replay, receiptVerifier(),
+        fence, identity, wal(),
+        NativeKotlinCandidateHistoryTransactionIntentFileStore(
+            root, fence, identity, wal(), candidate, pagedIndex(),
+            pairedCheckpoint()),
+        candidate, replay, receiptVerifier(),
         shadow, mirror, afterRoot, afterShadow)
 
     private fun committedComposerFinishForStagedRecovery(
@@ -1493,6 +1497,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(1L, first.checkpoint.completionCount)
         assertFalse(first.rootReplayed)
         assertFalse(first.checkpointReplayed)
+        assertFalse(first.intentAcknowledgmentReplayed)
         assertFalse(first.canAuthorizeWrites)
         assertFalse(first.canAuthorizeHistoryReads)
         assertFalse(first.canIssueProgression)
@@ -1502,6 +1507,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(sealed.rootReplayed)
         assertTrue(sealed.shadowReplayed)
         assertTrue(sealed.checkpointReplayed)
+        assertTrue(sealed.intentAcknowledgmentReplayed)
         assertEquals(first.checkpoint, sealed.checkpoint)
         assertEquals(1L, (v2.open(owner, athlete)
             as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())

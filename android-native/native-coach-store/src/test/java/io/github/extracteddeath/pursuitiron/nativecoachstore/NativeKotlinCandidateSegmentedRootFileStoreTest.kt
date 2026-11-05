@@ -130,10 +130,8 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(NativeCandidateIdentityIndexResult.Rejected(
             NativeCandidateIdentityIndexRefusal.NOT_INDEXED), missing)
         val written = identityIndex().build(owner, athlete)
-        assertTrue(written.toString(),
-            written is NativeCandidateIdentityIndexResult.Indexed)
-        assertEquals(initial.head.rootDigest,
-            (written as NativeCandidateIdentityIndexResult.Indexed).view.rootDigest)
+            as NativeCandidateIdentityIndexResult.Indexed
+        assertEquals(initial.head.rootDigest, written.view.rootDigest)
         assertFalse(written.view.canAuthorizeWrites)
         assertFalse(written.view.canIssueProgression)
         assertFalse(written.view.canTransferAuthority)

@@ -107,6 +107,38 @@ class ConservativeProgressionReviewTest {
         assertEquals(setOf(1),review(next=failed).latest.failedAttemptOrdinals)
     }
 
+    @Test fun completedLowerWeightCannotPretendToMasterHigherIssuedTarget() {
+        val previous=workout("week-one").copy(observations=
+            workout("week-one").observations.map {
+                it.copy(issuedLoad=n(205))
+            })
+        val latest=workout("week-two").copy(observations=
+            workout("week-two").observations.map {
+                it.copy(issuedLoad=n(205))
+            })
+        val result=review(old=previous,next=latest)
+        assertEquals(IncreaseReviewReason.ISSUED_LOAD_NOT_COMPLETED,
+            result.reason)
+        assertNull(result.reviewCandidate)
+        assertFalse(result.canOfferIncrease)
+        // A single earlier altered target invalidates the independent
+        // success requirement; do not cherry-pick the better latest visit.
+        assertEquals(IncreaseReviewReason.ISSUED_LOAD_NOT_COMPLETED,
+            review(old=previous).reason)
+        assertEquals(IncreaseReviewReason.ISSUED_LOAD_NOT_COMPLETED,
+            review(next=latest).reason)
+        assertEquals(IncreaseReviewReason.ISSUED_LOAD_NOT_COMPLETED,
+            review(next=workout("week-two").copy(observations=
+                workout("week-two").observations.map {
+                    it.copy(issuedLoad=null)
+                })).reason)
+        // No synthetic modification of actual facts or their target RIR.
+        assertEquals(List(4){n(200)},
+            latest.observations.map {it.actualLoad})
+        assertEquals(List(4){n(205)},
+            latest.observations.map {it.issuedLoad})
+    }
+
     @Test fun unconfirmedWrongUnitOffIncrementAndGiantJumpNeverInventLoads() {
         assertEquals(IncreaseReviewReason.CONFIRMED_INVENTORY_REQUIRED,
             review(inventory=null).reason)

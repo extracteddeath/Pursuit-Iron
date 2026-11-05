@@ -669,7 +669,14 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
             beforeRootPublicationForTest?.invoke()
             atomicWrite(rootFile(owner, athlete), encodeRoot(updated))
             afterRootPublicationForTest?.invoke()
-            audit(owner, athlete)
+            // audit() reports a verified read (replayed=true). This path
+            // actually performed a NEW root publication; never mislabel
+            // that first commit as an acknowledged retry.
+            when (val published = audit(owner, athlete)) {
+                is NativeCandidateHistoryRootResult.Reviewed ->
+                    published.copy(replayed = false)
+                else -> published
+            }
         } catch (_: Exception) {
             deny(NativeCandidateHistoryRootRefusal.STORAGE_UNAVAILABLE)
         }

@@ -124,6 +124,60 @@ object CustomCycleTransitionDomain {
             emit(CustomCycleChangeKind.BLOCKS, "blocks",
                 "Block order or stable IDs changed.")
         val nextBlocks = next.blocks.associateBy { it.blockId }
+        // New blocks must not smuggle a different split, frequency, exercise
+        // inventory or prescription through the adaptBlocks flag alone.
+        // Compare each entirely new block against its nearest pre-existing
+        // authored block; the original blocks themselves remain untouched.
+        for ((index, added) in next.blocks.withIndex()) {
+            if (old.blocks.any { it.blockId==added.blockId }) continue
+            val reference=old.blocks.getOrNull(index) ?: old.blocks.lastOrNull()
+                ?: continue
+            val location="block."+added.blockId
+            if(added.phase!=reference.phase)
+                emit(CustomCycleChangeKind.PHASE,location,
+                    "New block changes the training phase.")
+            if(added.split!=reference.split)
+                emit(CustomCycleChangeKind.SPLIT,location,
+                    "New block changes the training split.")
+            if(added.days.size!=reference.days.size)
+                emit(CustomCycleChangeKind.DAY_COUNT,location,
+                    "New block changes the number of weekly training days.")
+            if(added.days.map {it.weekday}!=reference.days.map {it.weekday})
+                emit(CustomCycleChangeKind.SCHEDULE,location,
+                    "New block changes the training-day schedule.")
+            val previousDays=reference.days.associateBy {it.weekday}
+            for (newDay in added.days) {
+                val oldDay=previousDays[newDay.weekday]
+                if(oldDay==null) {
+                    if(newDay.slots.isNotEmpty())
+                        emit(CustomCycleChangeKind.EXERCISES,location,
+                            "New block introduces exercise slots on another day.")
+                    continue
+                }
+                if(newDay.purpose!=oldDay.purpose)
+                    emit(CustomCycleChangeKind.SCHEDULE,location,
+                        "New block changes session purpose.")
+                if(newDay.slots.map {it.slotId to it.exerciseId}!=
+                    oldDay.slots.map {it.slotId to it.exerciseId})
+                    emit(CustomCycleChangeKind.EXERCISES,location,
+                        "New block changes authored exercise slots.")
+                val priorSlots=oldDay.slots.associateBy {it.slotId}
+                for(slot in newDay.slots) {
+                    val previous=priorSlots[slot.slotId] ?:continue
+                    val at=location+".day."+newDay.weekday+".slot."+slot.slotId
+                    if(slot.role!=previous.role || slot.pinned!=previous.pinned)
+                        emit(CustomCycleChangeKind.EXERCISES,at,
+                            "New block changes an exercise role or pin.")
+                    if(slot.attachmentId!=previous.attachmentId)
+                        emit(CustomCycleChangeKind.ATTACHMENTS,at,
+                            "New block changes a verified attachment.")
+                    if(slot.supersetGroup!=previous.supersetGroup)
+                        emit(CustomCycleChangeKind.SUPERSETS,at,
+                            "New block changes a superset group.")
+                    compareSets(previous.sets,slot.sets,at,::emit)
+                }
+            }
+        }
         for (block in old.blocks) {
             val proposed = nextBlocks[block.blockId]
             val path = "block." + block.blockId

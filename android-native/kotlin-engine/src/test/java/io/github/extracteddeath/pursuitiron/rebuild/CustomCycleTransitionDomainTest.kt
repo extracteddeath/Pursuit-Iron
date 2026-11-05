@@ -256,4 +256,49 @@ class CustomCycleTransitionDomainTest {
         assertFalse(allowed.mayModifyHistory)
     }
 
+
+    @Test fun newlyAddedBlockRequiresItsActualSplitDayCountAndExercisePermissions() {
+        val original=cycle()
+        val previous=original.blocks.single()
+        val newDay=CustomTrainingDay(2,"Push",
+            ComposerSessionPurpose.HYPERTROPHY,
+            listOf(CustomExerciseSlot("accessory","press",
+                ComposerRole.PRIMARY,listOf(set(),set()),pinned=false)))
+        val added=previous.copy(blockId="strength",label="Strength",
+            phase=TrainingPhase.STRENGTH,
+            split=CustomSplitIdentity.Freeform("Another split"),
+            days=previous.days+newDay)
+        val proposed=original.copy(revision=4,
+            blocks=listOf(previous,added))
+        val denied=transition(original,proposed,
+            CustomCycleCoachPermissions(adaptBlocks=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,
+            denied.status)
+        assertTrue(denied.blockedKinds.containsAll(setOf(
+            CustomCycleChangeKind.PHASE,CustomCycleChangeKind.SPLIT,
+            CustomCycleChangeKind.DAY_COUNT,CustomCycleChangeKind.SCHEDULE,
+            CustomCycleChangeKind.EXERCISES)))
+        val allowed=transition(original,proposed,
+            CustomCycleCoachPermissions(adaptBlocks=true,
+                adaptPhase=true,adaptSplit=true,adaptDayCount=true,
+                adaptSchedule=true,adaptExercises=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            allowed.status)
+        assertFalse(allowed.mayApplyAutomatically)
+        assertFalse(allowed.mayModifyHistory)
+    }
+    @Test fun addingSameStructureBlockOnlyRequiresBlockPermission() {
+        val original=cycle()
+        val prior=original.blocks.single()
+        val proposed=original.copy(revision=4,blocks=listOf(prior,
+            prior.copy(blockId="repeat",label="Repeat coached work")))
+        val reviewed=transition(original,proposed,
+            CustomCycleCoachPermissions(adaptBlocks=true))
+        assertEquals(reviewed.differences.toString(),
+            CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            reviewed.status)
+        assertEquals(setOf(CustomCycleChangeKind.BLOCKS),
+            reviewed.differences.map {it.kind}.toSet())
+    }
+
 }

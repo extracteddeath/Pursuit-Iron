@@ -101,11 +101,13 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         policy("db-row",ComposerSessionPurpose.STRENGTH_SKILL),
         policy("db-row",ComposerSessionPurpose.HYPERTROPHY))
 
-    private fun accept(id:Int,day:Int):KotlinWorkoutJournalState {
+    private fun accept(id:Int,day:Int,
+        sessionPolicies:List<ExercisePrescriptionPolicy> = policies
+    ):KotlinWorkoutJournalState {
         val grant=KotlinWorkoutSelectionGrant(
             "grant-$id","workout-$id",source,day)
         val approval=NativeKotlinWorkoutApproval(
-            "owner-1","athlete-1",source,source,grant,program,policies,
+            "owner-1","athlete-1",source,source,grant,program,sessionPolicies,
             "storage-$id",id.toLong())
         assertEquals(NativeApprovalWriteResult.Committed(id.toLong()),
             approvals.publish("owner-1",(id-1).toLong(),approval))
@@ -114,8 +116,10 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertTrue(issued.toString(),issued is NativeKotlinIssueResult.Committed)
         return (issued as NativeKotlinIssueResult.Committed).journal
     }
-    private fun complete(id:Int,day:Int):Pair<KotlinWorkoutJournalState,String> {
-        var journal=accept(id,day)
+    private fun complete(id:Int,day:Int,
+        sessionPolicies:List<ExercisePrescriptionPolicy> = policies
+    ):Pair<KotlinWorkoutJournalState,String> {
+        var journal=accept(id,day,sessionPolicies)
         var pressKey=""
         for ((index,target) in journal.snapshot.targets.withIndex()) {
             val load=(target.load as DraftSetLoad.Verified)
@@ -755,4 +759,78 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertFalse(newest.coaching.maySaveProgram)
         assertTrue(first.first.snapshot.targets.isNotEmpty())
     }
+
+    @Test fun ownerDiskHistoryInterleavedPurposeRepReviewToIssuedSession() {
+        enrolled()
+        val mixed=policies.map {p ->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("25")) else p
+        }
+        val strength=complete(1,0,mixed)
+        val volume=complete(2,1,mixed)
+        assertTrue(strength.first.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.all { (it.load as DraftSetLoad.Verified).value==n("25") })
+        assertTrue(volume.first.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.all { (it.load as DraftSetLoad.Verified).value==n("30") })
+        val key=strength.second
+        val originalEvent=strength.first.effectiveSets.getValue(key).operation.eventId
+        assertTrue(transactions.correct(
+            "owner-1","athlete-1","workout-1",
+            KotlinSavedSetCorrection("strength-correction",0,key,
+                originalEvent,KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("25"),LoadUnit.LB,11,3)))
+            is NativeHistoryTransactionResult.Durable)
+
+        val approval=NativeKotlinWorkoutApproval(
+            "owner-1","athlete-1",source,source,
+            KotlinWorkoutSelectionGrant("grant-3","workout-3",source,0),
+            program,mixed,"storage-3",3)
+        assertEquals(NativeApprovalWriteResult.Committed(3),
+            approvals.publish("owner-1",2,approval))
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,sourceRecord()))
+        val current=reader.reviewCurrentNextSetTargets(
+            "owner-1","athlete-1",approvals,"db-press",
+            CoachReadiness.NORMAL,false,authoring)
+        assertTrue(current.toString(),current is NativeOwnerNextSetResult.Review)
+        val scoped=current as NativeOwnerNextSetResult.Review
+        val reviewed=scoped.candidate as NativeCurrentRepPrescriptionResult.Reviewed
+        assertEquals("workout-1",reviewed.priorWorkoutId)
+        val candidate=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals(listOf(11,12),candidate.observedReps)
+        assertEquals(listOf(12,12),candidate.newRepTargets)
+        assertTrue(candidate.workout.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.all {(it.load as DraftSetLoad.Verified).value==n("25")})
+
+        val intent=NativeKotlinAcceptedRepIntent(
+            "db-press",scoped.approvalRevision,reviewed.historyRevision,
+            "workout-3",candidate.historicalWorkoutId,
+            candidate.editedSetKey,candidate.observedReps,candidate.newRepTargets,
+            "workout-4","grant-4","storage-4",true)
+        assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)
+        val issued=repIssuer().issue("owner-1","workout-4")
+        assertTrue(issued.toString(),issued is NativeKotlinIssueResult.Committed)
+        val saved=(issued as NativeKotlinIssueResult.Committed).journal
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
+            saved.snapshot.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.map {it.reps})
+        assertTrue(saved.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.all {(it.load as DraftSetLoad.Verified).value==n("25")})
+        assertTrue(repIssuer().open("owner-1","workout-1")
+            is NativeJournalFileResult.Durable)
+        assertTrue(repIssuer().open("owner-1","workout-2")
+            is NativeJournalFileResult.Durable)
+        assertEquals(NativeOwnerNextSetResult.Rejected(
+            NativeOwnerNextSetRefusal.ALREADY_ISSUED_OR_CONFLICT),
+            reader.reviewCurrentNextSetTargets(
+                "owner-1","athlete-1",approvals,"db-press",
+                CoachReadiness.NORMAL,false,authoring))
+    }
+
 }

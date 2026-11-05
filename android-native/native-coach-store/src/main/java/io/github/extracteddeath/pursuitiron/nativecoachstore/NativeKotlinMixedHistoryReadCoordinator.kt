@@ -14,7 +14,9 @@ sealed interface NativeKotlinMixedHistoryCompletion {
 
     data class Composer(
         override val manifest: KotlinHistoryManifestEntry,
-        val evidence: KotlinWorkoutHistoryEvidence
+        val evidence: KotlinWorkoutHistoryEvidence,
+        /** Authenticated from the original immutable native issued snapshot. */
+        val purpose: ComposerSessionPurpose = ComposerSessionPurpose.UNSPECIFIED
     ) : NativeKotlinMixedHistoryCompletion
 
     data class Custom(
@@ -59,6 +61,18 @@ sealed interface NativeKotlinMixedFactsReadResult {
         NativeKotlinMixedFactsReadResult
     data class FactsRejected(val reason: NativeMixedFactsRefusal) :
         NativeKotlinMixedFactsReadResult
+}
+
+enum class NativeOwnerLoadReviewRefusal {
+    INVALID_SCOPE, NOT_AUTHORIZED, NO_CURRENT_APPROVAL, STORAGE_UNAVAILABLE
+}
+sealed interface NativeOwnerLoadReviewResult {
+    data class Rejected(val reason: NativeOwnerLoadReviewRefusal) :
+        NativeOwnerLoadReviewResult
+    data class HistoryRejected(val reason: NativeKotlinMixedHistoryRefusal) :
+        NativeOwnerLoadReviewResult
+    data class Review(val coaching: NativeCurrentLoadReviewResult) :
+        NativeOwnerLoadReviewResult
 }
 
 /**
@@ -129,6 +143,54 @@ class NativeKotlinMixedHistoryReadCoordinator(
         }.getOrElse {
             NativeKotlinMixedFactsReadResult.HistoryRejected(
                 NativeKotlinMixedHistoryRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Authenticated, read-only next-program coaching from the COMPLETE
+     * native ledger. Caller never supplies a hand-picked workout history
+     * pair, a cached Last value or a fabricated approved ComposerRequest.
+     *
+     * A single owner fence spans current approval, all saved corrections,
+     * every completion, and an end-of-read revision check. The returned
+     * suggestion does not grant mutation/issuance rights after unlock.
+     */
+    fun reviewCurrentApprovedLoad(
+        owner: String,
+        athlete: String,
+        approvals: NativeKotlinApprovalFileAuthority,
+        exerciseId: String,
+        maximumAuthorizedIncrease: java.math.BigDecimal,
+        readiness: CoachReadiness,
+        movementRestricted: Boolean
+    ): NativeOwnerLoadReviewResult {
+        if(!id.matches(owner) || !id.matches(athlete))
+            return NativeOwnerLoadReviewResult.Rejected(
+                NativeOwnerLoadReviewRefusal.INVALID_SCOPE)
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                if(!authorized(owner,athlete))
+                    return@withOwnerTransaction NativeOwnerLoadReviewResult.Rejected(
+                        NativeOwnerLoadReviewRefusal.NOT_AUTHORIZED)
+                val approval=approvals.currentOwnedApproval(owner)
+                    ?.takeIf { it.athleteId == athlete }
+                    ?:return@withOwnerTransaction NativeOwnerLoadReviewResult.Rejected(
+                        NativeOwnerLoadReviewRefusal.NO_CURRENT_APPROVAL)
+                when(val history=readFenced(owner,athlete)) {
+                    is NativeKotlinMixedHistoryReadResult.Rejected ->
+                        NativeOwnerLoadReviewResult.HistoryRejected(history.reason)
+                    is NativeKotlinMixedHistoryReadResult.Review ->
+                        NativeOwnerLoadReviewResult.Review(
+                            NativeKotlinCurrentLoadCoachReview.inspect(
+                                approval,history.timeline,exerciseId,
+                                history.timeline.manifestRevision,
+                                maximumAuthorizedIncrease,readiness,
+                                movementRestricted))
+                }
+            }
+        }.getOrElse {
+            NativeOwnerLoadReviewResult.Rejected(
+                NativeOwnerLoadReviewRefusal.STORAGE_UNAVAILABLE)
         }
     }
 
@@ -233,7 +295,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                 val evidence = (projection as? KotlinHistoryProjectionResult.Candidate)
                     ?.evidence ?: return rejected(
                         NativeKotlinMixedHistoryRefusal.UNVERIFIED_COMPOSER)
-                values.add(NativeKotlinMixedHistoryCompletion.Composer(entry, evidence))
+                values.add(NativeKotlinMixedHistoryCompletion.Composer(
+                    entry, evidence, original.snapshot.purpose))
             }
         }
 

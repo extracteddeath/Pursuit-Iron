@@ -78,6 +78,8 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
     private fun identityIndex() =
         NativeKotlinCandidateWorkoutIdentityIndexFileStore(
             root, fence, identity, v2, store())
+    private fun pagedIndex() = NativeKotlinCandidatePagedIdentityFileStore(
+        root, fence, identity, v2, store())
     private fun result(r: NativeCandidateHistoryRootResult) =
         (r as NativeCandidateHistoryRootResult.Reviewed).view
     private fun rejection(reason: NativeCandidateHistoryRootRefusal) =
@@ -243,6 +245,60 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             identityIndex().findWorkout(owner, athlete, "workout-1"))
         // An independently proven Finish uses a fresh candidate root.
         // The synthetic candidate cannot be repaired by an index write.
+    }
+
+    @Test fun pagedIndexColdReopenAndCorruptionNeverAuthorizeNewFinish() {
+        val candidate=boot()
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.NOT_INDEXED),
+            pagedIndex().findWorkout(owner,athlete,"workout-1"))
+        val built=pagedIndex().build(owner,athlete)
+            as NativeCandidatePagedIdentityResult.Indexed
+        assertEquals(candidate.head.rootDigest,built.view.rootDigest)
+        assertEquals(0L,built.view.completionCount)
+        assertFalse(built.view.canAuthorizeNewWorkout)
+        assertFalse(built.view.canPublishHistory)
+        assertFalse(built.view.canIssueProgression)
+        assertFalse(built.view.canTransferAuthority)
+        assertTrue((pagedIndex().build(owner,athlete)
+            as NativeCandidatePagedIdentityResult.Indexed).replayed)
+        assertTrue(pagedIndex().audit(owner,athlete)
+            is NativeCandidatePagedIdentityResult.Indexed)
+        val absent=pagedIndex().findWorkout(owner,athlete,"workout-1")
+            as NativeCandidatePagedIdentityResult.Lookup
+        assertNull(absent.row)
+        assertFalse(absent.canAuthorizeNewWorkout)
+        assertFalse(absent.canAuthorizeCorrection)
+        assertEquals(1,candidateFiles(".pidx").size)
+        val indexFile=candidateFiles(".pidx").single()
+        val bytes=Files.readAllBytes(indexFile)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        Files.write(indexFile,bytes)
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.CORRUPT_INDEX),
+            pagedIndex().findReceipt(owner,athlete,"receipt-1"))
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.CORRUPT_INDEX),
+            pagedIndex().build(owner,athlete))
+        signedIn=null
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.NOT_AUTHORIZED),
+            pagedIndex().audit(owner,athlete))
+    }
+
+    @Test fun pagedIndexCannotMirrorSyntheticCandidateFinish() {
+        val initial=boot()
+        assertTrue(pagedIndex().build(owner,athlete)
+            is NativeCandidatePagedIdentityResult.Indexed)
+        stagedAppend(initial)
+        assertTrue(store().publishStagedForCandidateReview(owner,athlete)
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.UNVERIFIED_SOURCE),
+            pagedIndex().build(owner,athlete))
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.UNVERIFIED_SOURCE),
+            pagedIndex().findWorkout(owner,athlete,"workout-1"))
     }
 
     @Test fun zeroHistoryBootstrapRequiresReplayGateAndDoesNotReset() {

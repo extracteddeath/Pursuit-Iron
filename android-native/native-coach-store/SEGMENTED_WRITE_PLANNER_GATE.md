@@ -240,3 +240,25 @@ proposal changes at most one old page in each key tree (with a bounded
 rehearse the 4,096-to-4,097 transition and a full page split. No directory,
 WAL, journal, root or index is published by this reducer, and it cannot
 authenticate a caller-supplied absence proof or grant write authority.
+
+## Persistent candidate paged identity mirror — not a source of truth
+
+`NativeKotlinCandidatePagedIdentityFileStore` persists separate, immutable,
+SHA-256-bound workout/receipt key pages and a checksummed owner/athlete-scoped
+directory. Each page is at most 128 identities. Page publication forces file
+bytes before a final atomic directory replacement; a crash can leave orphan
+pages but cannot make them part of a committed directory. Read-only cold
+reopen audits **both** page trees and verifies exact row-for-row parity against
+the currently replay-authenticated v2/candidate root. Missing, corrupt,
+cross-owner, stale, or superseded material fails closed. Corrupt existing
+indexes are NEVER silently repaired.
+
+**Migration rehearsal only:** although the on-disk format uses long ordinals
+and can represent more than 4,096 identities, its authenticated build source
+is still the legacy 4,096-entry v2 ledger. Every lookup currently replays
+complete parity and opens every candidate page, so no scalable O(1) access
+or independent uniqueness ownership is claimed. The two page trees are not
+yet atomically coupled to the segmented workout root. Further work must
+replace the source gate, implement transaction/redo-coupled index updates,
+validate on-device power-loss behavior and backup/restore, and prove a
+single native writer before cutover.

@@ -43,6 +43,7 @@ sealed interface LongitudinalRepEvidenceResult {
 object KotlinLongitudinalRepEvidenceDomain {
     fun review(
         historical:KotlinExerciseHistoryEvidence,
+        completedWorkoutId:String,
         approvedReps:RepBand,
         expectedSets:Int,
         approvedLoad:BigDecimal,
@@ -54,7 +55,7 @@ object KotlinLongitudinalRepEvidenceDomain {
         fun reject(reason:LongitudinalRepEvidenceRefusal)=
             LongitudinalRepEvidenceResult.Rejected(reason)
         val ordered=historical.workingSets.sortedBy {it.originalOrdinal}
-        if(expectedSets !in 1..32 ||
+        if(completedWorkoutId.isBlank() || expectedSets !in 1..32 ||
             ordered.size!=expectedSets ||
             ordered.map {it.originalOrdinal}!=(0 until expectedSets).toList() ||
             ordered.map {it.setKey}.distinct().size!=expectedSets ||
@@ -95,15 +96,9 @@ object KotlinLongitudinalRepEvidenceDomain {
         }
         // Preserve original facts and records: only the coaching evidence
         // object's effective *range* is normalized to the approved program.
-        val original=historical.progressionWorkout
         val normalized=ProgressionWorkoutEvidence(
-            original?.workoutId ?: "",historical.exerciseId,approvedUnit,
+            completedWorkoutId,historical.exerciseId,approvedUnit,
             approvedReps,expectedSets,Collections.unmodifiableList(observations))
-        // A mixed-band historical projector intentionally has no workout ID.
-        // Use the authenticated COMPLETION ID supplied by the native owner;
-        // never manufacture one or authorize progress from an empty identity.
-        if(normalized.workoutId.isBlank())
-            return reject(LongitudinalRepEvidenceRefusal.NO_SETS_OR_INVALID_ORDER)
         return LongitudinalRepEvidenceResult.Comparable(
             normalized,Collections.unmodifiableList(bands),
             personalized && !standard)

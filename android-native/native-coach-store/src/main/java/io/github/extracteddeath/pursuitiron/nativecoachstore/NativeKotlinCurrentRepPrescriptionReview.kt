@@ -78,9 +78,13 @@ object NativeKotlinCurrentRepPrescriptionDomain {
                     "The newly approved workout cannot be staged safely."))
         if(day.purpose==ComposerSessionPurpose.UNSPECIFIED)
             return reject(NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED)
+        val slotScoped=approval.policies.any {
+            it.exerciseId==exerciseId && it.dayIndex!=null
+        }
         val last=appearances.filterIsInstance<
             NativeKotlinMixedHistoryCompletion.Composer>().lastOrNull {
-                it.purpose==day.purpose
+                it.purpose==day.purpose &&
+                    (!slotScoped || it.dayIndex==day.dayIndex)
             } ?:return reject(NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED)
         // Validate the whole suffix after the matching workout, not just
         // the selected event. A custom appearance or changed program/gym
@@ -106,9 +110,9 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         if(original==null ||
             original.workingSets.any {it.issuedLoad !is DraftSetLoad.Verified})
             return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
-        val prescription=approval.policies.singleOrNull {
-            it.exerciseId==exerciseId && it.purpose==day.purpose
-        } ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
+        val prescription=CoachSessionPrescriptionDomain.selectedPolicy(
+            approval.policies,exerciseId,day.purpose,day.dayIndex)
+            ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         if(prescription.scheme!=SetLoadScheme.STRAIGHT ||
             prescription.warmups.isNotEmpty() ||
             last.evidence.sets.any {

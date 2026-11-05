@@ -101,7 +101,11 @@ object NativeKotlinCurrentLoadCoachReview {
         if (appearances.size < 2)
             return refuse(NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY)
         val purposeScoped=approval.policies.any {
-            it.exerciseId==exerciseId && it.purposeWorkingLoad!=null
+            it.exerciseId==exerciseId &&
+                (it.purposeWorkingLoad!=null || it.dayIndex!=null)
+        }
+        val dayScoped=approval.policies.any {
+            it.exerciseId==exerciseId && it.dayIndex!=null
         }
         val nextPurpose=if(purposeScoped)approval.program.sessionIntents
             .singleOrNull {it.dayIndex==approval.grant.dayIndex}?.purpose else null
@@ -111,7 +115,8 @@ object NativeKotlinCurrentLoadCoachReview {
         val matching=if(nextPurpose==null)appearances else
             appearances.filter {
                 it is NativeKotlinMixedHistoryCompletion.Composer &&
-                    it.purpose==nextPurpose
+                    it.purpose==nextPurpose &&
+                    (!dayScoped || it.dayIndex==approval.grant.dayIndex)
             }
         if(matching.size<2)
             return refuse(NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY)
@@ -154,9 +159,10 @@ object NativeKotlinCurrentLoadCoachReview {
             ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
         val stock=matchingEquipment.inventory
             ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
-        val policy=approval.policies.singleOrNull {
-            it.exerciseId==exerciseId && it.purpose==latest.purpose
-        } ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        val policy=CoachSessionPrescriptionDomain.selectedPolicy(
+            approval.policies,exerciseId,latest.purpose,
+            approval.grant.dayIndex)
+            ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
         // Do not reinterpret authored top/backoff or warmup prescriptions as
         // individualized STRAIGHT sets. Only the approved rep envelope is
         // normalized, never a single historical issued target or actual fact.
@@ -204,7 +210,7 @@ object NativeKotlinCurrentLoadCoachReview {
                 timeline.manifestRevision,expectedHistoryRevision,
                 olderFacts,newerFacts,exerciseId,approval.policies,
                 maximumAuthorizedIncrease,readiness,movementRestricted,
-                nextPurpose
+                nextPurpose,if(dayScoped)approval.grant.dayIndex else null
             )
         )
         return NativeCurrentLoadReviewResult.Reviewed(

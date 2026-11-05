@@ -107,12 +107,10 @@ object KotlinAdaptiveSetPrescriptionDomain {
 
         // Do not overwrite a warmup/top-set/backoff or a purpose-specific
         // scheme. Future supported variants need distinct, tested policies.
-        val policies=base.policies.filter {
-            it.exerciseId==history.exerciseId &&
-                it.purpose==original.purpose
-        }
-        if(policies.size!=1 || policies.single().scheme!=SetLoadScheme.STRAIGHT ||
-            policies.single().warmups.isNotEmpty() ||
+        val policy=CoachSessionPrescriptionDomain.selectedPolicy(
+            base.policies,history.exerciseId,original.purpose,original.dayIndex)
+        if(policy==null || policy.scheme!=SetLoadScheme.STRAIGHT ||
+            policy.warmups.isNotEmpty() ||
             original.targets.any {
                 it.exerciseId==history.exerciseId && it.type==DraftSetType.WARMUP
             })

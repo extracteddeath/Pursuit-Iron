@@ -16,7 +16,10 @@ sealed interface NativeKotlinMixedHistoryCompletion {
         override val manifest: KotlinHistoryManifestEntry,
         val evidence: KotlinWorkoutHistoryEvidence,
         /** Authenticated from the original immutable native issued snapshot. */
-        val purpose: ComposerSessionPurpose = ComposerSessionPurpose.UNSPECIFIED
+        val purpose: ComposerSessionPurpose = ComposerSessionPurpose.UNSPECIFIED,
+        /** Authenticated original 0-based program day slot; -1 for synthetic
+         * legacy evidence with no separately authenticated slot. */
+        val dayIndex: Int = -1
     ) : NativeKotlinMixedHistoryCompletion
 
     data class Custom(
@@ -821,7 +824,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     ?.evidence ?: return rejected(
                         NativeKotlinMixedHistoryRefusal.UNVERIFIED_COMPOSER)
                 values.add(NativeKotlinMixedHistoryCompletion.Composer(
-                    entry, evidence, original.snapshot.purpose))
+                    entry, evidence, original.snapshot.purpose,
+                    original.snapshot.dayIndex))
             }
         }
 

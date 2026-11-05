@@ -52,7 +52,10 @@ data class CoachNextProgramLoadRequest(
     val movementRestricted: Boolean,
     /** Null keeps legacy program-wide behavior; explicit purpose changes only
      * that verified policy, never another session-purpose working load. */
-    val requestedPurpose: ComposerSessionPurpose? = null
+    val requestedPurpose: ComposerSessionPurpose? = null,
+    /** Null retains prior exercise/purpose policy; explicit index isolates
+     * one scheduled session from another of the same purpose. */
+    val requestedDayIndex: Int? = null
 )
 
 data class CoachNextProgramLoadReview(
@@ -118,12 +121,19 @@ object CoachNextProgramLoadReviewDomain {
             return denied(CoachNextLoadReviewStatus.LOAD_BASIS_UNVERIFIED,
                 "The exact gym load and equipment basis have not been confirmed.")
         val purpose=request.requestedPurpose
-        if(purpose==ComposerSessionPurpose.UNSPECIFIED)
+        if(purpose==ComposerSessionPurpose.UNSPECIFIED ||
+            (request.requestedDayIndex!=null &&
+                (purpose==null ||
+                    request.requestedDayIndex !in request.approvedProgram.days.indices)))
             return denied(CoachNextLoadReviewStatus.NO_COMPARABLE_PLANNED_VISIT,
-                "An explicit exercise-specific coaching purpose is required.")
-        val specific=if(purpose==null)null else request.policies.singleOrNull {
-            it.exerciseId==request.exerciseId && it.purpose==purpose
-        }
+                "The requested training purpose or day slot is not valid.")
+        val day=request.requestedDayIndex
+        val specific=if(purpose==null)null else if(day==null)
+            request.policies.singleOrNull {
+                it.exerciseId==request.exerciseId && it.purpose==purpose &&
+                    it.dayIndex==null
+            } else CoachSessionPrescriptionDomain.selectedPolicy(
+                request.policies,request.exerciseId,purpose,day)
         if(purpose!=null && specific==null)
             return denied(
                 CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
@@ -145,6 +155,7 @@ object CoachNextProgramLoadReviewDomain {
                 "The original complete week must be resolved before changing a load.")
         val affected = plan.sessions.filter { session ->
             (purpose==null || session.purpose==purpose) &&
+                (day==null || session.dayIndex==day) &&
                 session.exercises.any { it.exerciseId == request.exerciseId }
         }.map { it.dayIndex }
         if (affected.isEmpty())
@@ -157,7 +168,8 @@ object CoachNextProgramLoadReviewDomain {
                 CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
                 "This exercise uses purpose-specific working loads. Review each purpose and its saved history independently; a program-wide increase is unsafe.")
         if (request.policies.filter { it.exerciseId == request.exerciseId &&
-                (purpose==null || it.purpose==purpose) }
+                (purpose==null || it.purpose==purpose) &&
+                (day==null || it==specific) }
                 .any { it.scheme != SetLoadScheme.STRAIGHT ||
                     it.warmups.isNotEmpty() })
             return denied(CoachNextLoadReviewStatus.ONLY_STRAIGHT_SETS_SUPPORTED,
@@ -174,7 +186,10 @@ object CoachNextProgramLoadReviewDomain {
             prior.expectedWorkingSets != latest.expectedWorkingSets)
             return denied(CoachNextLoadReviewStatus.MORE_EVIDENCE_REQUIRED,
                 "The last two exercise appearances are not safely comparable.")
-        val relevant=plan.sessions.filter {purpose==null || it.purpose==purpose}
+        val relevant=plan.sessions.filter {
+            (purpose==null || it.purpose==purpose) &&
+                (day==null || it.dayIndex==day)
+        }
         val programBands = relevant.flatMap { it.exercises }.filter {
             it.exerciseId == request.exerciseId
         }.flatMap { it.sets }.filter { it.type == DraftSetType.WORKING }
@@ -229,11 +244,18 @@ object CoachNextProgramLoadReviewDomain {
                     else it
                 })) else request.approvedProgram
         val modifiedPolicies=if(purpose==null)request.policies
-            else Collections.unmodifiableList(request.policies.map {
-                if(it.exerciseId==request.exerciseId && it.purpose==purpose)
+            else if(day==null)Collections.unmodifiableList(request.policies.map {
+                if(it.exerciseId==request.exerciseId && it.purpose==purpose &&
+                    it.dayIndex==null)
                     it.copy(purposeWorkingLoad=normalized(candidate))
                 else it
-            })
+            }) else {
+                val update=checkNotNull(specific).copy(
+                    dayIndex=day,purposeWorkingLoad=normalized(candidate))
+                Collections.unmodifiableList(
+                    request.policies.filterNot {it.exerciseId==request.exerciseId &&
+                        it.purpose==purpose && it.dayIndex==day}+update)
+            }
         val checked = runCatching {
             CoachSessionPrescriptionDomain.draft(modified, modifiedPolicies)
         }.getOrNull()
@@ -245,11 +267,13 @@ object CoachNextProgramLoadReviewDomain {
                 "The whole proposed week could not be independently verified. Keep the saved plan.")
         val actualAffected=checked.sessions.filter { session ->
             (purpose==null || session.purpose==purpose) &&
+                (day==null || session.dayIndex==day) &&
                 session.exercises.any {it.exerciseId==request.exerciseId}
         }.map {it.dayIndex}
         if (actualAffected != affected ||
             (purpose!=null && plan.sessions.zip(checked.sessions).any { (before,after) ->
-                before.purpose!=purpose && before!=after
+                (before.purpose!=purpose ||
+                    (day!=null && before.dayIndex!=day)) && before!=after
             }))
             return denied(CoachNextLoadReviewStatus.FULL_WEEK_REAUDIT_FAILED,
                 "The exercise schedule changed during review.")

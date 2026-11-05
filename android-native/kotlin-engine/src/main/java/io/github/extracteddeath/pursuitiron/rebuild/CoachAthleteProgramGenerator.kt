@@ -54,16 +54,16 @@ data class AthleteProgramGenerationReview(
     /** Bounded selection evidence; a feasible candidate is not a global
      * optimum or proof that athlete-specific cycle progression is finished. */
     val search:AthleteGenerationSearchEvidence=AthleteGenerationSearchEvidence()
-)
+) {
+    val mayIssueWorkout:Boolean get()=false
+    val maySaveProgram:Boolean get()=false
+}
 data class AthleteGenerationSearchEvidence(
     val placementsChecked:Int=0,
     val draftsAudited:Int=0,
     val feasibleWeeksCompared:Int=0,
     val searchBudgetReached:Boolean=false
-) {
-    val mayIssueWorkout:Boolean get()=false
-    val maySaveProgram:Boolean get()=false
-}
+)
 object CoachAthleteProgramGenerator {
     private const val MAX_ASSIGNMENTS=16000
     /** Do not turn a bounded candidate review into an unbounded search. */

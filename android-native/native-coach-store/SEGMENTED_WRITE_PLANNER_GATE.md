@@ -298,3 +298,22 @@ revisions or unexpected legacy changes fall back to the full source layout.
 This is an **I/O optimization for a candidate mirror**, not evidence of
 scalable latency, a removed v2 4,096-cap, an atomic cross-file writer or
 production cutover. Source and page verification still scan lifetime records.
+
+## Post-commit recovery of candidate root/index/checkpoint
+
+`NativeKotlinCandidateHistoryMirrorRecoveryCoordinator` rehearses recovery
+**only after the canonical v2 Finish/correction and replay-verified candidate
+segmented root already agree**. Under the same cross-process owner fence it
+authenticates the full source/root, audits the current paged index, permits
+an exact source-verified stale-index refresh, and acknowledges one matching
+paired checkpoint. Cold retries are idempotent; failure injections separate
+crash after index replacement from lost checkpoint acknowledgment.
+A corrupt persisted directory, invalid seal, revoked owner, or missing
+directory referred to by a previously committed seal is refused, never
+silently recreated.
+
+It does NOT replay an uncommitted v2 journal, finalize a redo WAL,
+commit a candidate segmented root, write history facts, or grant new-workout
+IDs; these still require a future **single transaction-owning native writer**.
+The checkpoint's own atomic rename is not a substitute for jointly fsynced
+root+index authority or real-device backup/power-loss certification.

@@ -42,6 +42,14 @@ internal data class NativeCandidatePairedHistoryCheckpoint(
     val canIssueProgression: Boolean get() = false
     val canTransferAuthority: Boolean get() = false
 }
+/**
+ * Physical presence only, never proof the stored pair is current, readable,
+ * or authoritative. Used by the candidate recovery seam to avoid silently
+ * replacing a lost index that an earlier committed checkpoint referenced.
+ */
+internal enum class NativeCandidateCheckpointPresence {
+    ABSENT, PRESENT, INVALID
+}
 internal enum class NativeCandidatePairedHistoryRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, UNVERIFIED_SOURCE,
     NOT_CHECKPOINTED, STALE_CHECKPOINT, CORRUPT_CHECKPOINT,
@@ -191,6 +199,31 @@ internal class NativeKotlinCandidatePairedHistoryCheckpointFileStore(
         return NativeCandidatePairedHistoryCheckpoint(
             owner, athlete, root.head.revision, root.head.completionCount,
             root.head.rootDigest, fileDigest)
+    }
+
+    /**
+     * Only checks whether a checksum-valid checkpoint exists, not source
+     * freshness. INVALID includes revoked identity, unsafe files and tamper.
+     * A recovery caller MUST separately perform full replay parity.
+     */
+    internal fun presence(owner: String, athlete: String):
+        NativeCandidateCheckpointPresence {
+        if (!id.matches(owner) || !id.matches(athlete))
+            return NativeCandidateCheckpointPresence.INVALID
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                if (identity.signedInIdentity() !=
+                    NativeKotlinOwnerIdentity(owner, athlete))
+                    NativeCandidateCheckpointPresence.INVALID
+                else if (Files.exists(directory, LinkOption.NOFOLLOW_LINKS) &&
+                    (Files.isSymbolicLink(directory) ||
+                        !Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)))
+                    NativeCandidateCheckpointPresence.INVALID
+                else if (read(owner, athlete) == null)
+                    NativeCandidateCheckpointPresence.ABSENT
+                else NativeCandidateCheckpointPresence.PRESENT
+            }
+        }.getOrElse { NativeCandidateCheckpointPresence.INVALID }
     }
 
     /** Seal only a fully proven pair; an old stale seal may be superseded. */

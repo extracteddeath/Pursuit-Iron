@@ -71,8 +71,11 @@ sealed interface NativeOwnerLoadReviewResult {
         NativeOwnerLoadReviewResult
     data class HistoryRejected(val reason: NativeKotlinMixedHistoryRefusal) :
         NativeOwnerLoadReviewResult
-    data class Review(val coaching: NativeCurrentLoadReviewResult) :
-        NativeOwnerLoadReviewResult
+    data class Review(
+        val coaching: NativeCurrentLoadReviewResult,
+        /** From owner-fenced accepted record; still rechecked on write. */
+        val approvalStorageRevision: Long = 0
+    ) : NativeOwnerLoadReviewResult
 }
 
 /**
@@ -185,7 +188,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                                 approval,history.timeline,exerciseId,
                                 history.timeline.manifestRevision,
                                 maximumAuthorizedIncrease,readiness,
-                                movementRestricted))
+                                movementRestricted),
+                            approval.storageRevision)
                 }
             }
         }.getOrElse {

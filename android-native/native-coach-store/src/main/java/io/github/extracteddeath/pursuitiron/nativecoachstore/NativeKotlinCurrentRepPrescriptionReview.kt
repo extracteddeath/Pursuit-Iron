@@ -75,13 +75,8 @@ object NativeKotlinCurrentRepPrescriptionDomain {
             it.exerciseId==exerciseId
         }
         if(original==null ||
-            original.progressionGate!=KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW ||
             original.workingSets.any {it.issuedLoad !is DraftSetLoad.Verified})
             return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
-        // Cross-module data-class public properties cannot be smart-cast
-        // after a separate nullable check: capture the verified evidence.
-        val actualEvidence=original.progressionWorkout
-            ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         val staged=KotlinWorkoutSnapshotDomain.stage(
             KotlinWorkoutSnapshotRequest(
                 source,source,approval.grant,approval.program,approval.policies))
@@ -94,6 +89,31 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         if(last.purpose!=day.purpose ||
             last.purpose==ComposerSessionPurpose.UNSPECIFIED)
             return reject(NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED)
+        val prescription=approval.policies.singleOrNull {
+            it.exerciseId==exerciseId && it.purpose==day.purpose
+        } ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
+        if(prescription.scheme!=SetLoadScheme.STRAIGHT ||
+            prescription.warmups.isNotEmpty() ||
+            last.evidence.sets.any {
+                it.exerciseId==exerciseId && it.type==DraftSetType.WARMUP
+            })
+            return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
+        val equipment=(approval.program.exercises.singleOrNull {
+            it.exerciseId==exerciseId
+        }?.equipment as? ComposerEquipment.Verified)
+            ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
+        val inventory=equipment.inventory
+            ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
+        val working=day.targets.filter {
+            it.exerciseId==exerciseId && it.type==DraftSetType.WORKING
+        }
+        val normalized=KotlinLongitudinalRepEvidenceDomain.review(
+            original,last.evidence.workoutId,prescription.workingReps,
+            working.size,equipment.plannedLoad,inventory,
+            equipment.unit,inventory.basis,prescription.targetRir)
+            as? LongitudinalRepEvidenceResult.Comparable
+            ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
+        val actualEvidence=normalized.session
 
         val proposal=KotlinAdaptiveSetPrescriptionDomain.draft(
             AdaptiveSetPrescriptionRequest(

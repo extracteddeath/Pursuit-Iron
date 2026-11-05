@@ -208,6 +208,12 @@ internal fun NativeKotlinCandidateCoachScreen(
                     verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text("Next-session rep preview",
                         style=MaterialTheme.typography.titleLarge)
+                    Text(
+                        if(candidate.decisionKind==
+                            AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS)
+                            "Maintain your previously prescribed targets. A missed target is not a newly earned progression."
+                        else "Your recorded performance supports reviewing exactly one additional rep on one set.",
+                        style=MaterialTheme.typography.bodyMedium)
                     Text("Built from the most recent verified, corrected workout. This is a preview only; already-issued sessions are never changed.",
                         style=MaterialTheme.typography.bodySmall)
                     val sets=candidate.workout.targets.filter {

@@ -88,7 +88,8 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             3,1,listOf(
                 ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL,"db-press"),
                 ComposerSessionIntent(1,ComposerSessionPurpose.HYPERTROPHY),
-                ComposerSessionIntent(2,ComposerSessionPurpose.HYPERTROPHY)))
+                ComposerSessionIntent(2,ComposerSessionPurpose.HYPERTROPHY)),
+            maximumBarbellExercisesPerDay=0)
     }
     private fun policy(id:String,purpose:ComposerSessionPurpose)=
         ExercisePrescriptionPolicy(id,purpose,RepBand(8,12),2,
@@ -164,6 +165,103 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
     )=reader.acceptCurrentApprovedLoad(
         "owner-1","athlete-1",approvals,data,n("5"),
         CoachReadiness.NORMAL,false)
+
+    private fun sourceRecord():NativeCustomAuthoringSnapshot {
+        val reviewed=CoachAthleteSetupDomain.review(AthleteSetupDraft(
+            profileRevision="profile-1",athleteProfileId="athlete-1",
+            goal=AthleteTrainingGoal.STRENGTH,
+            experience=AthleteExperience.ADVANCED,
+            split=ComposerSplit.FULL_BODY,
+            trainingWeekdays=setOf(0,2,4),
+            timezoneId="America/New_York",
+            sessionTimeBucket=SessionTimeBucket.SIXTY_TO_NINETY,
+            hardSessionLimit=HardSessionLimit.NO_HARD_LIMIT,
+            gym=GymProfileDraft("gym-1",LoadUnit.LB,
+                mapOf("db-press-stock" to stock,"db-row-stock" to stock),
+                emptySet(),emptySet()),
+            allowBodyweight=true,allowSupersets=false,
+            allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
+            focusedMuscles=emptySet(),reducedMuscles=emptySet(),
+            excludedExerciseIds=emptySet(),lockedTrainingDays=emptySet(),
+            hardTrainingDays=emptySet(),longTrainingDays=emptySet(),
+            declaredRestDays=setOf(1,3,5,6)))
+        assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,reviewed.status)
+        val catalog=program.exercises.map {ex->
+            CatalogMovement(ex.exerciseId,"family-"+ex.exerciseId,"default",
+                null,ex.pattern,ex.role,ex.allowedFocus,
+                ex.exerciseId+"-stock",LoadBasis.DUMBBELL_PER_HAND,
+                ex.credits,CatalogCreditStatus.AUTHOR_REVIEWED_PROVISIONAL,
+                "review-1",emptySet(),ex.sourcePracticalReps,ex.recoveryGroup,
+                ex.minimumGroupCalendarDayGap)
+        }
+        return NativeCustomAuthoringSnapshot(
+            "owner-1","athlete-1",1,reviewed,catalog)
+    }
+
+    @Test fun currentGymMustBePersistedAndAgreeBeforeCoachingApproval() {
+        enrolled()
+        complete(1,1)
+        complete(2,2)
+        val absent=reader.reviewCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,"db-press",n("5"),
+            CoachReadiness.NORMAL,false,authoring)
+        assertEquals(NativeOwnerLoadReviewResult.Rejected(
+            NativeOwnerLoadReviewRefusal.GYM_SOURCE_UNAVAILABLE),absent)
+        val original=sourceRecord()
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,original))
+        val valid=reader.reviewCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,"db-press",n("5"),
+            CoachReadiness.NORMAL,false,authoring)
+        assertTrue(valid.toString(),valid is NativeOwnerLoadReviewResult.Review)
+        val verified=(valid as NativeOwnerLoadReviewResult.Review)
+            .coaching as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            verified.coaching.status)
+        val strict=reader.acceptCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,intent(verified),n("5"),
+            CoachReadiness.NORMAL,false,authoring)
+        assertTrue(strict.toString(),strict is NativeKotlinCoachAcceptanceResult.Committed)
+        val current=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals(9L,current.currentSource.programRevision)
+        assertEquals(NativeApprovedGymCoherenceResult.Matched,
+            NativeKotlinApprovedGymCoherenceDomain.inspect(current,original))
+    }
+
+    @Test fun removingConfirmedStockAfterReviewRevokesPendingNativeProgression() {
+        enrolled()
+        complete(1,1)
+        complete(2,2)
+        val original=sourceRecord()
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,original))
+        val shown=(reader.reviewCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,"db-press",n("5"),
+            CoachReadiness.NORMAL,false,authoring)
+            as NativeOwnerLoadReviewResult.Review).coaching
+            as NativeCurrentLoadReviewResult.Reviewed
+        val edited=NativeKotlinGymCatalogEditingDomain.removeStock(
+            original,1,"db-press-stock")
+        assertTrue(edited.toString(),edited is NativeGymCatalogEdit.Proposed)
+        val changed=(edited as NativeGymCatalogEdit.Proposed).source
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            authoring.publish("owner-1",1,changed))
+        val rejected=reader.acceptCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,intent(shown),n("5"),
+            CoachReadiness.NORMAL,false,authoring)
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.GYM_SOURCE_CHANGED),rejected)
+        assertEquals(2L,approvals.currentOwnedApproval("owner-1")?.storageRevision)
+        assertEquals(NativeOwnerLoadReviewResult.Rejected(
+            NativeOwnerLoadReviewRefusal.GYM_SOURCE_CHANGED),
+            reader.reviewCurrentApprovedLoad(
+                "owner-1","athlete-1",approvals,"db-press",n("5"),
+                CoachReadiness.NORMAL,false,authoring))
+        // The original issued workout is still accessible for honest
+        // history corrections despite a change to today's gym inventory.
+        assertTrue(NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+            .open("owner-1","workout-2") is NativeJournalFileResult.Durable)
+    }
 
     @Test fun athleteAcceptsExactRecheckedReviewIntoNewRevisionWithoutMutatingIssuedWorkout() {
         enrolled()

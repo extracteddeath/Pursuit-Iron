@@ -91,17 +91,25 @@ class NativeKotlinCurrentLoadCoachReviewTest {
     private fun withExactIssuedTargets(
         original:NativeKotlinMixedHistoryCompletion.Composer,
         issued:List<RepBand>,
-        targetRir:Int=2
+        targetRir:Int=2,
+        historicalWeight:BigDecimal=n("30")
     ):NativeKotlinMixedHistoryCompletion.Composer {
         val before=original.evidence.exerciseReviews.single()
         require(issued.size==before.workingSets.size)
+        val historicalLoad=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,historicalWeight)
         val sets=before.workingSets.mapIndexed {i,fact->
-            fact.copy(issuedReps=issued[i],issuedRir=targetRir)
+            fact.copy(issuedReps=issued[i],issuedRir=targetRir,
+                issuedLoad=historicalLoad,
+                actual=fact.actual?.copy(load=historicalWeight))
         }
         val comparable=issued.distinct().size==1
         val target=if(comparable) issued.single() else null
         val originalFacts=checkNotNull(before.progressionWorkout)
-        val workout=target?.let {originalFacts.copy(targetReps=it)}
+        val workout=target?.let {originalFacts.copy(targetReps=it,
+            observations=originalFacts.observations.map {
+                it.copy(actualLoad=historicalWeight,issuedLoad=historicalWeight)
+            })}
         val assessed=workout?.let {
             DoubleProgressionEvidenceDomain.assess(
                 it.targetReps,it.expectedWorkingSets,it.observations)
@@ -179,6 +187,35 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         val result=inspect(timeline(previous,composer(2)))
         assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
             (result as NativeCurrentLoadReviewResult.Reviewed).coaching.status)
+    }
+
+    @Test fun overloadedNewerWorkoutStillOffersOnlyVerifiedDemonstratedLowerLoad() {
+        val demonstrated=withExactIssuedTargets(
+            composer(1,completedReps=listOf(12,12)),
+            listOf(RepBand(11,11),RepBand(12,12)),
+            historicalWeight=n("25"))
+        val overloaded=withExactIssuedTargets(
+            composer(2,completedReps=listOf(7,7)),
+            listOf(RepBand(12,12),RepBand(11,11)),
+            historicalWeight=n("30"))
+        val review=inspect(timeline(demonstrated,overloaded))
+        assertTrue(review.toString(),review is NativeCurrentLoadReviewResult.Reviewed)
+        val coach=(review as NativeCurrentLoadReviewResult.Reviewed).coaching
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            coach.status)
+        assertEquals(CoachNextLoadChangeKind.RETURN_TO_DEMONSTRATED_LOAD,
+            coach.kind)
+        assertEquals(n("25"),coach.candidateLoad)
+        assertEquals(n("30"),coach.originalLoad)
+        assertFalse(coach.maySaveProgram)
+        // The original captured weights remain the evidence; never
+        // substitute the athlete's new planned load for the prior workout.
+        assertEquals(n("25"),
+            (demonstrated.evidence.sets.first().issuedLoad
+                as DraftSetLoad.Verified).value)
+        assertEquals(n("30"),
+            (overloaded.evidence.sets.first().issuedLoad
+                as DraftSetLoad.Verified).value)
     }
 
     @Test fun historicalNarrowTargetsDoNotAuthorizeIncreaseAfterMissedRep() {

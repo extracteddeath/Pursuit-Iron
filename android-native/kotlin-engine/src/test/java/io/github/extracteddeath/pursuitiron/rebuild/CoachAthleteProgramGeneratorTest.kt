@@ -302,13 +302,12 @@ class CoachAthleteProgramGeneratorTest {
         fun lift(day:Int,id:String="bench")=ComposerVisit(
             day,id,ComposerPattern.HORIZONTAL_PRESS,3)
         val spaced=listOf(lift(0),lift(2))
-        val adjacent=listOf(lift(0),lift(3))
+        val twoDayGap=listOf(lift(0),lift(3))
         assertEquals(0L,CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(
             spaced,calendar))
-        // Saturday -> Monday is only two calendar days in the circular
-        // training week even if a fresh calendar page begins on Monday.
+        // Saturday -> Monday is a two-day calendar gap (the wrap counts).
         assertEquals(20L,CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(
-            adjacent,calendar))
+            twoDayGap,listOf(0,2,4,5)))
         val sundayMonday=listOf(lift(0),lift(3))
         assertEquals(100L,CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(
             sundayMonday,listOf(0,2,3,6)))

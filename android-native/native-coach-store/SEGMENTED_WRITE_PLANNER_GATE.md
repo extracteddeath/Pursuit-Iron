@@ -262,3 +262,23 @@ yet atomically coupled to the segmented workout root. Further work must
 replace the source gate, implement transaction/redo-coupled index updates,
 validate on-device power-loss behavior and backup/restore, and prove a
 single native writer before cutover.
+
+## Candidate paired-root/index checkpoint (single candidate acknowledgment)
+
+`NativeKotlinCandidatePairedHistoryCheckpointFileStore` now durably records
+ONE verified revision/count/root digest plus the EXACT checksum-framed paged
+directory's **disk-file digest** in a SHA-256 framed, owner-scoped checkpoint.
+The checkpoint only publishes after complete authenticated source-to-candidate
+root parity and independently reopened **both-tree** workout/receipt parity.
+If a crash updates only the root or only the index, the old checkpoint is stale
+and a read must fail closed; a lost acknowledgment of the checkpoint's own
+atomic rename is idempotently recovered. Corrupt existing checkpoints are never
+silently replaced. A verified newer root+index pair may advance the checkpoint;
+revisions cannot go backward.
+
+This is a read-only candidate *pairing acknowledgment*, not an atomic
+transaction spanning the two source files. A future single-writer WAL must
+coordinate journal receipt, root, BOTH paged trees, directory force/sync and
+the final commit marker under one exclusive native owner before any history
+cutover. Candidate checkpoint reads do NOT issue training, authorize a
+workout Finish/correction or expose history to Compose.

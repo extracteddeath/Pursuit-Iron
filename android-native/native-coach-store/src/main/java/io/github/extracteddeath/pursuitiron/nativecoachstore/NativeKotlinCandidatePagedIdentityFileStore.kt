@@ -420,6 +420,23 @@ internal class NativeKotlinCandidatePagedIdentityFileStore(
         NativeCandidatePagedIdentityResult.Lookup(view(stored.directory), row)
     }
 
+    /**
+     * Fingerprint of the currently replay-verified DISK directory, not a
+     * caller-supplied root digest. This is candidate evidence only.
+     * Calling the full audit before reading closes stale/missing-page gaps.
+     */
+    internal fun verifiedDirectoryFileDigest(owner: String, athlete: String):
+        String? {
+        if (audit(owner, athlete) !is NativeCandidatePagedIdentityResult.Indexed)
+            return null
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                if (!authorized(owner, athlete)) return@withOwnerTransaction null
+                hash(readBounded(indexPath(owner, athlete), MAX_INDEX_BYTES))
+            }
+        }.getOrNull()
+    }
+
     fun findWorkout(owner: String, athlete: String, workoutId: String) =
         lookup(owner, athlete, workoutId, true)
 

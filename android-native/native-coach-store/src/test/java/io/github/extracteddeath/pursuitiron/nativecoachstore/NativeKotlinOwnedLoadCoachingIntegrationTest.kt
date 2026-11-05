@@ -485,8 +485,11 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             }.progressionWorkout?.targetReps)
         complete(4,1)
         val proposed=review()
-        assertTrue(proposed.toString(),proposed is NativeOwnerLoadReviewResult.Reviewed)
-        val verified=proposed as NativeOwnerLoadReviewResult.Reviewed
+        assertTrue(proposed.toString(),proposed is NativeOwnerLoadReviewResult.Review)
+        val ownerReview=proposed as NativeOwnerLoadReviewResult.Review
+        assertTrue(ownerReview.toString(),
+            ownerReview.coaching is NativeCurrentLoadReviewResult.Reviewed)
+        val verified=ownerReview.coaching as NativeCurrentLoadReviewResult.Reviewed
         assertEquals(listOf("workout-3","workout-4"),verified.comparedWorkoutIds)
         assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
             verified.coaching.status)

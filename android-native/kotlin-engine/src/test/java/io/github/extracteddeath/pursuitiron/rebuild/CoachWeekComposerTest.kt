@@ -545,4 +545,42 @@ class CoachWeekComposerTest {
         })
     }
 
+
+    @Test fun rebalanceAddsMissingVerifiedVisitsInsteadOfLeavingDaysUnderfilled() {
+        val request=base(
+            exerciseOptions=listOf(chestOption,backOption,legOption),
+            bands=bounds(dose(chest,"2","8","9"),
+                dose(lats,"2","8","9"),dose(quads,"2","8","9")),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            patterns=2,maxPerDay=2)
+        // One valid movement per day is not the best available week:
+        // each day can carry two distinct patterns without breaking spacing.
+        val seed=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
+        val repaired=CoachWeekComposer.rebalanceForReview(request,seed)
+        assertEquals(6,repaired.size)
+        assertTrue(request.days.indices.all {day->
+            repaired.filter {it.dayIndex==day}.map {it.pattern}.distinct().size==2
+        })
+        assertTrue(repaired.groupBy {it.exerciseId}.values.all {it.size<=3})
+        assertTrue(repaired.all {it.sets==2})
+    }
+
+    @Test fun rebalanceIncreasesExistingSetsToReachMinimumDose() {
+        val onlyChest=chestOption.copy(maximumVisits=1)
+        val request=base(
+            exerciseOptions=listOf(onlyChest),
+            bands=bounds(dose(chest,"3","4","4")),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            patterns=1,maxPerDay=1)
+        val seed=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
+        val repaired=CoachWeekComposer.rebalanceForReview(request,seed)
+        assertEquals(1,repaired.size)
+        assertEquals(3,repaired.single().sets)
+        assertEquals("db-press",repaired.single().exerciseId)
+    }
+
 }

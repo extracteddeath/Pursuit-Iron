@@ -401,6 +401,36 @@ object CoachWeekComposer {
                     bestAudit=check
                 }
             }
+            // A valid authored week may be underfilled even after swaps and
+            // relocations: recover missing dose by changing existing set
+            // counts, and recover missing training-day variety by adding a
+            // verified visit. These are independently audited against MEV,
+            // MRV, the user's hard time ceiling, caps, and recovery spacing.
+            // Try these BEFORE exchanges so bounded search cannot starve them.
+            for(index in chosen.indices) {
+                if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                val visit=chosen[index]
+                val option=options.getValue(visit.exerciseId)
+                if(visit.sets<option.maximumSetsPerVisit)
+                    consider(chosen.toMutableList().apply {
+                        this[index]=visit.copy(sets=visit.sets+1)
+                    })
+                if(visit.sets>option.minimumSetsPerVisit)
+                    consider(chosen.toMutableList().apply {
+                        this[index]=visit.copy(sets=visit.sets-1)
+                    })
+            }
+            if(chosen.size<MAX_VISITS) {
+                for(option in eligible) {
+                    if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                    for(day in request.days.indices) {
+                        if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
+                        if(!mayStart(option,day,request,chosen))continue
+                        consider(chosen+ComposerVisit(day,option.exerciseId,
+                            option.pattern,option.minimumSetsPerVisit))
+                    }
+                }
+            }
             for(index in chosen.indices) {
                 if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
                 val original=chosen[index]

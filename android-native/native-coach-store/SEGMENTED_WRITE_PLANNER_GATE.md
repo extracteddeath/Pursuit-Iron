@@ -88,7 +88,7 @@ or wire this candidate into the existing app.
 ## Replay-authenticated v2 mirror gate
 
 The candidate now also supports
-`publishReplayVerifiedV2Mirror(owner, athlete, replayReader)` as an
+`publishReplayVerifiedV2Mirror(owner, athlete, replayReader, receiptVerifier)` as an
 **internal migration rehearsal**, distinct from the original unauthenticated
 candidate-test publication seam. Under the owner transaction fence it requires
 the current v2 manifest to have finalized the exact next revision and count,
@@ -140,3 +140,31 @@ and the older test-only root-publication seam is not authorized for
 production. The new check does not eliminate the need for explicit
 lifetime-history enrollment, durable unique identity indexing or
 single-writer migration.
+
+## Candidate-to-v2 parity preflight (read-only)
+
+`NativeKotlinCandidateSegmentedRootFileStore.reviewAuthenticatedV2Parity`
+adds a second, **non-mutating** gate after a candidate root has been staged or
+mirrored. Under one authenticated owner fence it requires a full handoff review:
+current v2 source, the independently checked segmented shadow, and the
+replayed generated/custom workout and correction journals must all match.
+It reopens and checks **every** candidate immutable shard, verifies unique
+workout and saved receipt identities, and requires exact row-for-row parity
+with the current authoritative manifest at the same revision.
+
+A candidate root that published synthetic test-only history, has an incomplete
+redo, references corrupted shards, belongs to a revoked owner, or was made
+stale by a v2 correction fails the review. Because staged WAL files are
+deliberately retained after successful mirrored commits, the gate accepts
+a WAL only when its exact parent, patch digest, revision and count are
+already represented by the committed root. The independent shadow must be
+synchronized to the newly finalized source revision before a positive review.
+
+**Important:** passing this snapshot comparison does not transfer history
+write authority, open Compose history reads, approve progression or certify
+backup/device durability. The production migration still needs an
+account-scoped unique-workout index, full legacy import verification,
+cross-process and physical-device crash testing, Android backup/restore
+tests, and an exclusive atomic source-owner cutover with rollback policy.
+The original JS app, current v2 history and other Android development branches
+remain unchanged.

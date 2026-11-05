@@ -1,0 +1,173 @@
+package io.github.extracteddeath.pursuitiron.nativecoachstore
+
+import io.github.extracteddeath.pursuitiron.rebuild.*
+import java.math.BigDecimal
+import org.junit.Assert.*
+import org.junit.Test
+
+/** Synthetic timeline rules; real disk ownership is enforced by coordinator. */
+class NativeKotlinCurrentLoadCoachReviewTest {
+    private fun n(value: String)=BigDecimal(value)
+    private val source=KotlinTrainingSourceRevision(
+        "athlete-1",4,"program-1",8,"gym-1",3,"catalog-5","coach-rules-2")
+    private val stock=VerifiedLoadStock.Totals(
+        LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+        listOf(n("20"),n("25"),n("30"),n("35")))
+    private val verified=DraftSetLoad.Verified(
+        LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,n("30"))
+    private fun option(id:String,muscle:TrainingMuscle,role:ComposerRole)=
+        ComposerExerciseOption(
+            id,if(muscle==TrainingMuscle.CHEST)
+                ComposerPattern.HORIZONTAL_PRESS else ComposerPattern.HORIZONTAL_PULL,
+            setOf(ComposerFocus.FULL_BODY),
+            ComposerEquipment.Verified(LoadUnit.LB,n("30"),stock),
+            listOf(DeclaredMuscleCredit(muscle,MuscleCreditRole.DIRECT,n("1"))),
+            90,120,2,2,3,2,1,2,role=role)
+    private fun program():ComposerRequest {
+        val window=DeclaredSessionWindow(1,120,null,60)
+        val bounds=TrainingMuscle.entries.map { muscle ->
+            if(muscle in setOf(TrainingMuscle.CHEST,TrainingMuscle.LATS))
+                DeclaredMuscleDoseBounds(muscle,n("2"),n("8"),n("10"),1)
+            else DeclaredMuscleDoseBounds(muscle,n("0"),n("0"),n("0"),0)
+        }
+        return ComposerRequest(ComposerSplit.FULL_BODY,TrainingPhase.STRENGTH,
+            listOf(
+                ComposerDay(0,ComposerFocus.FULL_BODY,window),
+                ComposerDay(2,ComposerFocus.FULL_BODY,window),
+                ComposerDay(4,ComposerFocus.FULL_BODY,window)),
+            bounds,
+            listOf(option("db-press",TrainingMuscle.CHEST,ComposerRole.PRIMARY),
+                option("db-row",TrainingMuscle.LATS,ComposerRole.SECONDARY)),
+            3,1,listOf(
+                ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL,"db-press"),
+                ComposerSessionIntent(1,ComposerSessionPurpose.HYPERTROPHY),
+                ComposerSessionIntent(2,ComposerSessionPurpose.HYPERTROPHY)))
+    }
+    private fun policy(id:String,purpose:ComposerSessionPurpose)=
+        ExercisePrescriptionPolicy(id,purpose,RepBand(8,12),2,90,120,
+            SetLoadScheme.STRAIGHT)
+    private val policies=listOf(
+        policy("db-press",ComposerSessionPurpose.STRENGTH_SKILL),
+        policy("db-press",ComposerSessionPurpose.HYPERTROPHY),
+        policy("db-row",ComposerSessionPurpose.STRENGTH_SKILL),
+        policy("db-row",ComposerSessionPurpose.HYPERTROPHY))
+    private fun approval()=NativeKotlinWorkoutApproval(
+        "owner-1","athlete-1",source,source,
+        KotlinWorkoutSelectionGrant("grant-1","workout-1",source,0),
+        program(),policies,"receipt-1",1)
+
+    private fun composer(i:Int,sourceOverride:KotlinTrainingSourceRevision=source,
+        completedReps:List<Int> = listOf(12,12),
+        purpose:ComposerSessionPurpose=ComposerSessionPurpose.HYPERTROPHY):
+        NativeKotlinMixedHistoryCompletion.Composer {
+        val facts=completedReps.mapIndexed { ordinal,reps ->
+            KotlinHistoricalSetFact(
+                "db-press","db-press:d1:s$ordinal",DraftSetType.WORKING,
+                ordinal,verified,RepBand(8,12),2,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("30"),LoadUnit.LB,reps,2),
+                "event-$i-$ordinal",null)
+        }
+        val observed=ProgressionWorkoutEvidence(
+            "workout-$i","db-press",LoadUnit.LB,RepBand(8,12),2,
+            completedReps.mapIndexed { index,reps ->
+                WorkingSetFact(index,SetOutcome.COMPLETED,n("30"),reps,2,n("30"),2)
+            })
+        val assessed=DoubleProgressionEvidenceDomain.assess(
+            observed.targetReps,observed.expectedWorkingSets,observed.observations)
+        val review=KotlinExerciseHistoryEvidence(
+            "db-press",facts,KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW,
+            assessed,observed)
+        val manifest=KotlinHistoryManifestEntry(i.toLong(),"workout-$i",
+            "receipt-$i","finish-$i",3,0)
+        return NativeKotlinMixedHistoryCompletion.Composer(
+            manifest,KotlinWorkoutHistoryEvidence(sourceOverride,
+                "workout-$i","finish-$i",3,facts,listOf(review)),purpose)
+    }
+    private fun custom(i:Int):NativeKotlinMixedHistoryCompletion.Custom {
+        val visit=CustomHistoricalVisitFact(
+            "slot-a","db-press","custom-set-$i",CustomWorkoutVisitPart.MAIN,
+            DraftSetType.WORKING,verified,RepBand(8,12),2,null,
+            KotlinJournalSetOutcome.SKIPPED,null,"event-custom-$i")
+        return NativeKotlinMixedHistoryCompletion.Custom(
+            KotlinHistoryManifestEntry(i.toLong(),"workout-$i",
+                "receipt-$i","finish-$i",3,0),
+            CustomWorkoutHistoricalEvidence("athlete-1","workout-$i",
+                "cycle-1",1,"finish-$i",3,listOf(visit)))
+    }
+    private fun timeline(vararg values:NativeKotlinMixedHistoryCompletion,
+        revision:Long=7)=NativeKotlinMixedHistoryTimeline(
+        "athlete-1",revision,values.toList())
+    private fun inspect(t:NativeKotlinMixedHistoryTimeline,
+        accepted:NativeKotlinWorkoutApproval=approval(),
+        expectedRevision:Long=7)=NativeKotlinCurrentLoadCoachReview.inspect(
+        accepted,t,"db-press",expectedRevision,n("5"),
+        CoachReadiness.NORMAL,false)
+
+    @Test fun lastTwoVerifiedFullHistoryAppearancesCanRecommendOnlyReview() {
+        val result=inspect(timeline(composer(1),composer(2)))
+        assertTrue(result.toString(),result is NativeCurrentLoadReviewResult.Reviewed)
+        val ready=result as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(listOf("workout-1","workout-2"),ready.comparedWorkoutIds)
+        assertEquals(7L,ready.historyRevision)
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            ready.coaching.status)
+        assertEquals(CoachNextLoadChangeKind.EARNED_INCREMENT,ready.coaching.kind)
+        assertEquals(n("35"),ready.coaching.candidateLoad)
+        assertFalse(ready.mayApply)
+        assertFalse(ready.mayIssueWorkout)
+        assertFalse(ready.coaching.maySaveProgram)
+    }
+
+    @Test fun doNotSkipLatestCustomVisitToCherryPickOlderSuccessfulWorkouts() {
+        val result=inspect(timeline(composer(1),composer(2),custom(3)))
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT),
+            result)
+    }
+
+    @Test fun doNotSkipPoorOrIncompatibleNewestComposerSession() {
+        val poor=inspect(timeline(composer(1),composer(2),
+            composer(3,completedReps=listOf(8,9))))
+        assertTrue(poor is NativeCurrentLoadReviewResult.Reviewed)
+        val reviewed=poor as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(listOf("workout-2","workout-3"),reviewed.comparedWorkoutIds)
+        assertNotEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            reviewed.coaching.status)
+        assertNull(reviewed.coaching.candidateLoad)
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.PURPOSE_CHANGED),
+            inspect(timeline(composer(1,purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+                composer(2))))
+    }
+
+    @Test fun staleOwnerProgramOrRevisionCanNeverProposeNextTarget() {
+        val good=timeline(composer(1),composer(2))
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.HISTORY_NOT_CURRENT),
+            inspect(good,expectedRevision=8))
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.SOURCE_NOT_CURRENT),
+            inspect(good,accepted=approval().copy(
+                currentSource=source.copy(programRevision=9))))
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.HISTORICAL_SOURCE_CHANGED),
+            inspect(timeline(composer(1,source.copy(gymRevision=2)),
+                composer(2))))
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.INVALID_HISTORY),
+            inspect(timeline(composer(2),composer(1))))
+    }
+
+    @Test fun missingHistoryCustomAndNoEquipmentAreNeverTreatedAsProof() {
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY),
+            inspect(timeline(composer(1))))
+        val altered=approval().copy(program=program().copy(
+            exercises=program().exercises.map { if(it.exerciseId=="db-press")
+                it.copy(equipment=ComposerEquipment.Bodyweight) else it }))
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT),
+            inspect(timeline(composer(1),composer(2)),accepted=altered))
+    }
+}

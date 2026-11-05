@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "description": "Fixed cross-engine comparison cases; expectations are independent of either implementation.",
+  "cases": [
+    {
+      "id": "dp-mixed-overload",
+      "domain": "progression",
+      "severity": "critical",
+      "scenario": "Mixed 200/205/210/215 lb sets with 3/3/2/2 reps against 5–8",
+      "expected": "No all-set promotion to unearned 215 lb; safe next step grounded in observed capacity",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "dp-uniform-failure",
+      "domain": "progression",
+      "severity": "critical",
+      "scenario": "215 lb for all sets at 2 reps near failure",
+      "expected": "No increase and no accidental repetition of failing loads",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "dp-earned-step",
+      "domain": "progression",
+      "severity": "major",
+      "scenario": "Repeated completed upper-rep-range work with actual RIR",
+      "expected": "Earned, physical-stock-valid increment; never inferred from targets",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "dp-fatigue-decay",
+      "domain": "progression",
+      "severity": "major",
+      "scenario": "4 sets with progressively declining reps and high fatigue",
+      "expected": "Differentiate early-set capacity from repeatable all-set capacity",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "progression-no-rir",
+      "domain": "progression",
+      "severity": "major",
+      "scenario": "RIR missing despite an issued RIR target",
+      "expected": "Do not treat prescribed RIR as measured effort",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "machine-increments",
+      "domain": "equipment",
+      "severity": "critical",
+      "scenario": "Machine requires 5-lb increments; candidate load 159.5 or 38.5",
+      "expected": "No unbuildable or unverified weights",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "bar-stock",
+      "domain": "equipment",
+      "severity": "major",
+      "scenario": "Known bar weight and actual plate pairs",
+      "expected": "Only suggest exactly buildable external load",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "unavailable-gym",
+      "domain": "equipment",
+      "severity": "critical",
+      "scenario": "Exercise, attachment or Smith absent from selected gym",
+      "expected": "No gym-incompatible prescriptions or cycle previews",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "custom-preservation",
+      "domain": "custom",
+      "severity": "critical",
+      "scenario": "Custom workout with pinned exercises and myo/drop techniques advances block",
+      "expected": "Retain author intent and correct warmups, techniques and RIR",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "custom-builder",
+      "domain": "custom",
+      "severity": "major",
+      "scenario": "Create, clone, edit, save and resume a completely custom program",
+      "expected": "Full first-class authoring beyond legacy web workflow",
+      "requiredProof": [
+        "device"
+      ]
+    },
+    {
+      "id": "strength-volume",
+      "domain": "programming",
+      "severity": "critical",
+      "scenario": "Hypertrophy block ~30 sets transitions to strength block ~11",
+      "expected": "No unjustified volume collapse; use explicit phase policy and dose bounds",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "strength-frequency",
+      "domain": "programming",
+      "severity": "major",
+      "scenario": "Bench-priority strength block in four or five days",
+      "expected": "Adapt frequency when approved, with recovery feasibility",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "split-constraints",
+      "domain": "programming",
+      "severity": "critical",
+      "scenario": "3–6 day FB/UL/PPL/ULPPL with gym and locked days",
+      "expected": "Consistent feasible weekly plan, dose and rests",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "time-buckets",
+      "domain": "programming",
+      "severity": "major",
+      "scenario": "40–60, 60–90, 120+ preference and shorter-session request",
+      "expected": "Realistic elapsed time, preserve safe priorities and approved caps",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "muscle-separation",
+      "domain": "programming",
+      "severity": "major",
+      "scenario": "Direct biceps vs brachialis and wrist flexion vs extension",
+      "expected": "Count separate muscular dose channels without double counting",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
+      "id": "readiness-injury",
+      "domain": "coaching",
+      "severity": "critical",
+      "scenario": "Low readiness and injured-muscle restrictions during active workout",
+      "expected": "No contraindicated prescribed work, explicit adaptive substitution",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "history-finish-idempotence",
+      "domain": "history",
+      "severity": "critical",
+      "scenario": "Finish repeated after lost acknowledgment and process death",
+      "expected": "Exactly one durable completion, no duplicate records",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "history-correction",
+      "domain": "history",
+      "severity": "critical",
+      "scenario": "Edit older set after more recent workout; inspect PR/Last",
+      "expected": "Preserve chronology, corrections and recent observations",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "history-capacity",
+      "domain": "history",
+      "severity": "critical",
+      "scenario": "4,097+ workouts and correction of a historical workout",
+      "expected": "No 4,096-record ceiling and no lost or fabricated entries",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "legacy-import",
+      "domain": "migration",
+      "severity": "critical",
+      "scenario": "Real legacy export with custom IDs, history, bodyweight and preferences",
+      "expected": "Inspect, reconcile, approve, restore and rollback without lost facts",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "backup-restart",
+      "domain": "migration",
+      "severity": "critical",
+      "scenario": "Crash/power loss during import and redo before acknowledgment",
+      "expected": "Crash-safe restore, no dual authority or silent data reset",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "full-journey",
+      "domain": "android",
+      "severity": "critical",
+      "scenario": "Offline onboarding to plan, logged workout, Finish, corrected history and next plan",
+      "expected": "Entire Kotlin-authoritative Compose journey works on Android",
+      "requiredProof": [
+        "device"
+      ]
+    },
+    {
+      "id": "accessibility",
+      "domain": "android",
+      "severity": "major",
+      "scenario": "20 original themes, large font, TalkBack, Focus and foldable screens",
+      "expected": "Accessible polished native experience without feature loss",
+      "requiredProof": [
+        "device"
+      ]
+    },
+    {
+      "id": "blind-coach",
+      "domain": "coaching",
+      "severity": "critical",
+      "scenario": "Independent coach sees blinded generated program and cycle outputs",
+      "expected": "At least as good as web across dose, fatigue, safety and programming",
+      "requiredProof": [
+        "human"
+      ]
+    }
+  ]
+}

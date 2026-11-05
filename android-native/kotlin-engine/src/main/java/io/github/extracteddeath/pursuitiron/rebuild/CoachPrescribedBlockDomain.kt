@@ -79,10 +79,11 @@ object CoachPrescribedBlockDomain {
             }
             val oldByKey=previous.associateBy {it.stableSetKey}
             for(next in nextSets) {
-                val old=oldByKey[next.stableSetKey] ?:previous.maxByOrNull {set->
-                    (set.load as? DraftSetLoad.Verified)?.value ?:BigDecimal.ZERO
+                val old=oldByKey[next.stableSetKey]
+                if(old==null) {
+                    notes+="Deload set ${next.stableSetKey} has no matching baseline set; a changed visit needs separate review."
+                    continue
                 }
-                if(old==null)continue
                 val was=observedLoad(old)
                 val now=observedLoad(next)
                 if(was.unit!=now.unit || was.basis!=now.basis) {
@@ -93,6 +94,20 @@ object CoachPrescribedBlockDomain {
                     now.value>was.value) {
                     notes+="Deload working load increased for $exerciseId."
                 }
+                // Fewer sets do not license harder per-set rep demands at
+                // the same or a higher physical load. Bodyweight-to-bodyweight
+                // is also a comparable load, not an exemption. A separately
+                // verified lighter load can support an explicitly authored
+                // higher-rep recovery prescription.
+                val sameOrHeavierLoad=when {
+                    was.value!=null && now.value!=null -> now.value>=was.value
+                    was.value==null && now.value==null -> true
+                    else -> false
+                }
+                if(sameOrHeavierLoad &&
+                    (next.targetReps.minimum>old.targetReps.minimum ||
+                        next.targetReps.maximum>old.targetReps.maximum))
+                    notes+="Deload rep demands increased without a lighter load for $exerciseId."
                 if(old.targetRir!=null && next.targetRir!=null &&
                     next.targetRir<old.targetRir)
                     notes+="Deload target effort became harder for $exerciseId."

@@ -230,6 +230,29 @@ class CoachPrescribedBlockDomainTest {
         }
     }
 
+    @Test fun deloadCannotIncreaseRemainingSetRepDemandAtSameWeight() {
+        // Reduced volume is no excuse for higher per-set rep demands.
+        // Raising either rep bound still warrants coach review, even when a
+        // higher target RIR was typed without actual effort evidence.
+        for (band in listOf(RepBand(6,12), RepBand(8,10), RepBand(8,12))) {
+            for (effortTarget in listOf(3,4)) {
+                val changed=policies(goal=effortTarget).map {
+                    it.copy(workingReps=band)
+                }
+                val result=review(candidate=changed)
+                assertEquals(
+                    "Rep band $band and target RIR $effortTarget must be reviewed",
+                    PrescribedBlockStatus.RECOVERY_COMPARISON_UNRESOLVED,
+                    result.status
+                )
+                assertTrue(result.unresolvedReasons.any {
+                    it.contains("rep demands increased")
+                })
+                assertFalse(result.mayApplyAutomatically)
+            }
+        }
+    }
+
     @Test fun deloadCannotArtificiallyShortenRecoveryBetweenRemainingSets() {
         val shorter=review(candidate=policies(rest=0))
         assertEquals(PrescribedBlockStatus.RECOVERY_COMPARISON_UNRESOLVED,

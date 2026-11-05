@@ -64,7 +64,8 @@ sealed interface NativeKotlinMixedFactsReadResult {
 }
 
 enum class NativeOwnerLoadReviewRefusal {
-    INVALID_SCOPE, NOT_AUTHORIZED, NO_CURRENT_APPROVAL, STORAGE_UNAVAILABLE
+    INVALID_SCOPE, NOT_AUTHORIZED, NO_CURRENT_APPROVAL,
+    GYM_SOURCE_UNAVAILABLE, GYM_SOURCE_CHANGED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeOwnerLoadReviewResult {
     data class Rejected(val reason: NativeOwnerLoadReviewRefusal) :
@@ -165,7 +166,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
         exerciseId: String,
         maximumAuthorizedIncrease: java.math.BigDecimal,
         readiness: CoachReadiness,
-        movementRestricted: Boolean
+        movementRestricted: Boolean,
+        authoringStore: NativeKotlinCustomAuthoringSourceFileStore? = null
     ): NativeOwnerLoadReviewResult {
         if(!id.matches(owner) || !id.matches(athlete))
             return NativeOwnerLoadReviewResult.Rejected(
@@ -179,6 +181,16 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     ?.takeIf { it.athleteId == athlete }
                     ?:return@withOwnerTransaction NativeOwnerLoadReviewResult.Rejected(
                         NativeOwnerLoadReviewRefusal.NO_CURRENT_APPROVAL)
+                if(authoringStore != null) {
+                    val source=(authoringStore.read(owner)
+                        as? NativeAuthoringSourceRead.Found)?.source
+                        ?: return@withOwnerTransaction NativeOwnerLoadReviewResult.Rejected(
+                            NativeOwnerLoadReviewRefusal.GYM_SOURCE_UNAVAILABLE)
+                    if(NativeKotlinApprovedGymCoherenceDomain.inspect(approval,source)
+                        != NativeApprovedGymCoherenceResult.Matched)
+                        return@withOwnerTransaction NativeOwnerLoadReviewResult.Rejected(
+                            NativeOwnerLoadReviewRefusal.GYM_SOURCE_CHANGED)
+                }
                 when(val history=readFenced(owner,athlete)) {
                     is NativeKotlinMixedHistoryReadResult.Rejected ->
                         NativeOwnerLoadReviewResult.HistoryRejected(history.reason)
@@ -219,7 +231,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
         intent: NativeKotlinCoachLoadAcceptanceIntent,
         maximumAuthorizedIncrease: java.math.BigDecimal,
         readiness: CoachReadiness,
-        movementRestricted: Boolean
+        movementRestricted: Boolean,
+        authoringStore: NativeKotlinCustomAuthoringSourceFileStore? = null
     ): NativeKotlinCoachAcceptanceResult {
         fun reject(reason: NativeKotlinCoachAcceptanceRefusal) =
             NativeKotlinCoachAcceptanceResult.Rejected(reason)
@@ -253,6 +266,16 @@ class NativeKotlinMixedHistoryReadCoordinator(
                 if(current.storageRevision != intent.expectedApprovalRevision)
                     return@withOwnerTransaction reject(
                         NativeKotlinCoachAcceptanceRefusal.APPROVAL_CHANGED)
+                if(authoringStore != null) {
+                    val source=(authoringStore.read(owner)
+                        as? NativeAuthoringSourceRead.Found)?.source
+                        ?:return@withOwnerTransaction reject(
+                            NativeKotlinCoachAcceptanceRefusal.GYM_SOURCE_UNAVAILABLE)
+                    if(NativeKotlinApprovedGymCoherenceDomain.inspect(current,source)
+                        != NativeApprovedGymCoherenceResult.Matched)
+                        return@withOwnerTransaction reject(
+                            NativeKotlinCoachAcceptanceRefusal.GYM_SOURCE_CHANGED)
+                }
                 if(current.grant.workoutId == intent.newWorkoutId ||
                     current.grant.grantId == intent.newGrantId ||
                     current.storageReceiptId == intent.newStorageReceiptId)
@@ -336,6 +359,19 @@ class NativeKotlinMixedHistoryReadCoordinator(
                 if(validation !is KotlinWorkoutSnapshotResult.Staged)
                     return@withOwnerTransaction reject(
                         NativeKotlinCoachAcceptanceRefusal.NEW_WORKOUT_UNRESOLVED)
+                // Recheck complete proposed program against trusted physical
+                // stock: a larger new load cannot be authorized by a stale
+                // copy of gym equipment embedded in the old approval.
+                if(authoringStore != null) {
+                    val source=(authoringStore.read(owner)
+                        as? NativeAuthoringSourceRead.Found)?.source
+                        ?:return@withOwnerTransaction reject(
+                            NativeKotlinCoachAcceptanceRefusal.GYM_SOURCE_UNAVAILABLE)
+                    if(NativeKotlinApprovedGymCoherenceDomain.inspect(next,source)
+                        != NativeApprovedGymCoherenceResult.Matched)
+                        return@withOwnerTransaction reject(
+                            NativeKotlinCoachAcceptanceRefusal.GYM_SOURCE_CHANGED)
+                }
                 return@withOwnerTransaction when(
                     approvals.publish(owner,current.storageRevision,next)) {
                     is NativeApprovalWriteResult.Committed ->

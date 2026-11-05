@@ -60,13 +60,17 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val segmentedHistoryHandoff=NativeKotlinSegmentedHistoryHandoffGate(
         historyStore,segmentedHistoryShadow,mixedHistoryReader,
         revisionFence,localAthlete)
+    // New native issuance requires today's authenticated gym/catalog, while
+    // already-issued journals retain their historical access contract.
+    private val gymCoherentAuthority=NativeKotlinGymCoherentWorkoutAuthority(
+        approvalStore,authoringSourceStore)
     private val coordinator=NativeKotlinWorkoutCoordinator(
-        journalStore,approvalStore,revisionFence)
+        journalStore,gymCoherentAuthority,revisionFence)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
         historyStore,journalStore,correctionStore,approvalStore,revisionFence)
     private val trackedWorkout=NativeKotlinTrackedWorkoutGateway(
         coordinator,historyTransactions,historyStore,correctionStore,
-        approvalStore,revisionFence)
+        gymCoherentAuthority,revisionFence)
 
     /** A displayed local ID is not a session nor access to gym/history. */
     fun savedAthleteIdForExplicitResume():String? =
@@ -651,9 +655,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
      */
     fun currentlyApprovedKotlinWorkoutId():String? {
         val owner=localAthlete.signedInIdentity() ?:return null
-        return approvalStore.currentOwnedApproval(owner.ownerKey)
+        val pending=approvalStore.currentOwnedApproval(owner.ownerKey)
             ?.takeIf { it.athleteId==owner.athleteId }
-            ?.grant?.workoutId
+            ?:return null
+        return gymCoherentAuthority.currentApprovedWorkout(
+            owner.ownerKey,pending.grant.workoutId)?.grant?.workoutId
     }
 
     fun issueWorkout(workoutId:String):NativeKotlinIssueResult {

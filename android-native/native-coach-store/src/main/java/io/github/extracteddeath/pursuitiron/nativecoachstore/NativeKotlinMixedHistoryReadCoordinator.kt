@@ -496,29 +496,49 @@ class NativeKotlinMixedHistoryReadCoordinator(
         approval:NativeKotlinWorkoutApproval,
         authoringStore:NativeKotlinCustomAuthoringSourceFileStore
     ):KotlinStagedWorkout? {
+        // Called while the coordinator may already hold the NEW workout's
+        // OS journal lock. Do NOT call reviewCurrentNextSetTargets here:
+        // that preview function must open the same journal to check whether
+        // it was issued, which would deadlock/throw OverlappingFileLockException.
+        // The issuer's own lock and issueLocked() establish absence/conflict.
+        // This path rechecks ALL other source and corrected-history evidence.
         val proof=approval.acceptedRepTargets ?:return null
-        if(!authorized(owner,athlete) ||
-            approval.ownerKey!=owner || approval.athleteId!=athlete)
-            return null
-        val verified=reviewCurrentNextSetTargets(
-            owner,athlete,approvals,proof.exerciseId,
-            proof.reviewedReadiness,false,authoringStore)
-            as? NativeOwnerNextSetResult.Review ?:return null
-        if(verified.approvalRevision!=approval.storageRevision)
-            return null
-        val review=verified.candidate
-            as? NativeCurrentRepPrescriptionResult.Reviewed ?:return null
-        val result=review.proposal
-            as? AdaptiveSetPrescriptionResult.Candidate ?:return null
-        if(review.historyRevision!=proof.historyRevision ||
-            review.priorWorkoutId!=proof.historicalWorkoutId ||
-            result.editedSetKey!=proof.changedSetKey ||
-            result.observedReps!=proof.observedReps ||
-            result.newRepTargets!=proof.newRepTargets ||
-            result.workout.workoutId!=approval.grant.workoutId ||
-            result.workout.grantId!=approval.grant.grantId)
-            return null
-        return result.workout
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                if(!authorized(owner,athlete) ||
+                    approval.ownerKey!=owner || approval.athleteId!=athlete ||
+                    approvals.currentOwnedApproval(owner)!=approval)
+                    return@withOwnerTransaction null
+                val authored=(authoringStore.read(owner)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction null
+                if(NativeKotlinApprovedGymCoherenceDomain.inspect(
+                    approval,authored)!=NativeApprovedGymCoherenceResult.Matched)
+                    return@withOwnerTransaction null
+                val history=(readFenced(owner,athlete)
+                    as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+                    ?:return@withOwnerTransaction null
+                if(history.manifestRevision!=proof.historyRevision)
+                    return@withOwnerTransaction null
+                val reviewed=NativeKotlinCurrentRepPrescriptionDomain.inspect(
+                    approval,history,proof.exerciseId,
+                    proof.reviewedReadiness,false)
+                    as? NativeCurrentRepPrescriptionResult.Reviewed
+                    ?:return@withOwnerTransaction null
+                val result=reviewed.proposal
+                    as? AdaptiveSetPrescriptionResult.Candidate
+                    ?:return@withOwnerTransaction null
+                if(reviewed.historyRevision!=proof.historyRevision ||
+                    reviewed.priorWorkoutId!=proof.historicalWorkoutId ||
+                    result.editedSetKey!=proof.changedSetKey ||
+                    result.observedReps!=proof.observedReps ||
+                    result.newRepTargets!=proof.newRepTargets ||
+                    result.workout.workoutId!=approval.grant.workoutId ||
+                    result.workout.grantId!=approval.grant.grantId)
+                    return@withOwnerTransaction null
+                result.workout
+            }
+        }.getOrNull()
     }
 
     /**

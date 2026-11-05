@@ -323,4 +323,85 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT),
             inspect(timeline(composer(1),composer(2)),accepted=altered))
     }
+
+    private fun purposeLoad(
+        sourceCompletion:NativeKotlinMixedHistoryCompletion.Composer,
+        weight:String,
+        actualReps:List<Int> = listOf(11,10),
+        actualRir:Int=3
+    ):NativeKotlinMixedHistoryCompletion.Composer {
+        val before=sourceCompletion.evidence.exerciseReviews.single()
+        val replacement=DraftSetLoad.Verified(
+            LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,n(weight))
+        val revised=before.workingSets.mapIndexed {i,set ->
+            set.copy(issuedLoad=replacement,
+                actual=KotlinPerformedSet(n(weight),LoadUnit.LB,
+                    actualReps[i],actualRir))
+        }
+        val evidence=sourceCompletion.evidence
+        return sourceCompletion.copy(evidence=evidence.copy(
+            sets=revised,
+            exerciseReviews=listOf(before.copy(workingSets=revised,
+                progressionGate=KotlinHistoryProgressionGate.MIXED_REP_BANDS,
+                progressionReview=null,progressionWorkout=null))))
+    }
+
+    @Test fun nativeRepReviewUsesLatestMatchingPurposeAndExactSessionLoad() {
+        val policies=listOf(
+            policy("db-press",ComposerSessionPurpose.STRENGTH_SKILL)
+                .copy(purposeWorkingLoad=n("25")),
+            policy("db-press",ComposerSessionPurpose.HYPERTROPHY),
+            policy("db-row",ComposerSessionPurpose.STRENGTH_SKILL),
+            policy("db-row",ComposerSessionPurpose.HYPERTROPHY))
+        val approved=approval().copy(policies=policies)
+        val strength=purposeLoad(composer(1,
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL),"25")
+        val volume=composer(2,purpose=ComposerSessionPurpose.HYPERTROPHY)
+        val result=NativeKotlinCurrentRepPrescriptionDomain.inspect(
+            approved,timeline(strength,volume),"db-press",
+            CoachReadiness.NORMAL,false)
+        assertTrue(result.toString(),
+            result is NativeCurrentRepPrescriptionResult.Reviewed)
+        val reviewed=result as NativeCurrentRepPrescriptionResult.Reviewed
+        assertEquals("workout-1",reviewed.priorWorkoutId)
+        val candidate=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals("db-press",candidate.exerciseId)
+        assertEquals(2,candidate.newRepTargets.size)
+        assertTrue(candidate.workout.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.all {(it.load as DraftSetLoad.Verified).value==n("25")})
+        assertFalse(candidate.mayIssueWorkout)
+        assertEquals(n("30"),
+            ((approved.program.exercises.first().equipment as
+                ComposerEquipment.Verified).plannedLoad))
+    }
+
+    @Test fun nativePurposeReviewWillNotSkipCustomOrChangedSources() {
+        val policies=policies.map {
+            if(it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                it.copy(purposeWorkingLoad=n("25"))
+            else it
+        }
+        val approved=approval().copy(policies=policies)
+        val strength=purposeLoad(composer(1,
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL),"25")
+        fun inspect(vararg histories:NativeKotlinMixedHistoryCompletion)=
+            NativeKotlinCurrentRepPrescriptionDomain.inspect(
+                approved,timeline(*histories),"db-press",
+                CoachReadiness.NORMAL,false)
+        assertEquals(NativeCurrentRepPrescriptionResult.Rejected(
+            NativeCurrentRepPrescriptionRefusal.CUSTOM_WORKOUT_IS_LATEST),
+            inspect(strength,custom(2)))
+        val changed=composer(2,sourceOverride=source.copy(programRevision=9))
+        assertEquals(NativeCurrentRepPrescriptionResult.Rejected(
+            NativeCurrentRepPrescriptionRefusal.EXERCISE_SOURCE_CHANGED),
+            inspect(strength,changed))
+        val twoUnrelated=composer(1,
+            purpose=ComposerSessionPurpose.HYPERTROPHY)
+        assertEquals(NativeCurrentRepPrescriptionResult.Rejected(
+            NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED),
+            inspect(twoUnrelated))
+    }
+
 }

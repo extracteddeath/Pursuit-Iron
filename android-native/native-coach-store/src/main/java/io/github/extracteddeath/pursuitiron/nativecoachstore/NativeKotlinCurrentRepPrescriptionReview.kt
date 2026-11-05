@@ -5,8 +5,10 @@ import java.util.Collections
 
 /**
  * Projection only. Call from the exhaustive, owner-fenced history reader.
- * An athlete's MOST RECENT appearance is authoritative: never skip a custom
- * visit or an unsuccessful attempt to cherry-pick an earlier good session.
+ * For the NEXT approved session purpose, use the most recent matching
+ * occurrence from the entire authenticated history. Interleaved workouts
+ * for other purposes must not erase that history. Never skip an intervening
+ * custom workout or changed source to cherry-pick an old success.
  */
 enum class NativeCurrentRepPrescriptionRefusal {
     INVALID_SOURCE_OR_HISTORY,
@@ -61,15 +63,42 @@ object NativeKotlinCurrentRepPrescriptionDomain {
                     completion.evidence.visits.any {it.exerciseId==exerciseId}
             }
         }
-        val last=appearances.lastOrNull()
+        val mostRecent=appearances.lastOrNull()
             ?:return reject(NativeCurrentRepPrescriptionRefusal.NO_RECORDED_EXERCISE)
-        if(last !is NativeKotlinMixedHistoryCompletion.Composer)
+        if(mostRecent is NativeKotlinMixedHistoryCompletion.Custom)
             return reject(NativeCurrentRepPrescriptionRefusal.CUSTOM_WORKOUT_IS_LATEST)
-        if(last.evidence.source!=source)
+        val staged=KotlinWorkoutSnapshotDomain.stage(
+            KotlinWorkoutSnapshotRequest(
+                source,source,approval.grant,approval.program,approval.policies))
+        val day=(staged as? KotlinWorkoutSnapshotResult.Staged)?.snapshot
+            ?:return NativeCurrentRepPrescriptionResult.Reviewed(
+                timeline.manifestRevision,mostRecent.manifest.workoutId,
+                AdaptiveSetPrescriptionResult.Rejected(
+                    AdaptiveSetPrescriptionRefusal.APPROVED_PROGRAM_UNRESOLVED,
+                    "The newly approved workout cannot be staged safely."))
+        if(day.purpose==ComposerSessionPurpose.UNSPECIFIED)
+            return reject(NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED)
+        val last=appearances.filterIsInstance<
+            NativeKotlinMixedHistoryCompletion.Composer>().lastOrNull {
+                it.purpose==day.purpose
+            } ?:return reject(NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED)
+        // Validate the whole suffix after the matching workout, not just
+        // the selected event. A custom appearance or changed program/gym
+        // revision cannot be bypassed by a purpose-specific review.
+        val suffix=appearances.dropWhile {it!==last}
+        if(suffix.any {it is NativeKotlinMixedHistoryCompletion.Custom})
+            return reject(NativeCurrentRepPrescriptionRefusal.CUSTOM_WORKOUT_IS_LATEST)
+        if(suffix.any {
+            it is NativeKotlinMixedHistoryCompletion.Composer &&
+                it.evidence.source!=source
+        })
             return reject(NativeCurrentRepPrescriptionRefusal.EXERCISE_SOURCE_CHANGED)
-        if(last.evidence.workoutId!=last.manifest.workoutId ||
-            last.evidence.finishEventId!=last.manifest.finishEventId ||
-            last.evidence.journalRevision!=last.manifest.originalJournalRevision)
+        if(suffix.any {
+            it is NativeKotlinMixedHistoryCompletion.Composer &&
+                (it.evidence.workoutId!=it.manifest.workoutId ||
+                 it.evidence.finishEventId!=it.manifest.finishEventId ||
+                 it.evidence.journalRevision!=it.manifest.originalJournalRevision)
+        })
             return reject(NativeCurrentRepPrescriptionRefusal.INVALID_SOURCE_OR_HISTORY)
         val original=last.evidence.exerciseReviews.singleOrNull {
             it.exerciseId==exerciseId
@@ -77,18 +106,6 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         if(original==null ||
             original.workingSets.any {it.issuedLoad !is DraftSetLoad.Verified})
             return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
-        val staged=KotlinWorkoutSnapshotDomain.stage(
-            KotlinWorkoutSnapshotRequest(
-                source,source,approval.grant,approval.program,approval.policies))
-        val day=(staged as? KotlinWorkoutSnapshotResult.Staged)?.snapshot
-            ?:return NativeCurrentRepPrescriptionResult.Reviewed(
-                timeline.manifestRevision,last.manifest.workoutId,
-                AdaptiveSetPrescriptionResult.Rejected(
-                    AdaptiveSetPrescriptionRefusal.APPROVED_PROGRAM_UNRESOLVED,
-                    "The newly approved workout cannot be staged safely."))
-        if(last.purpose!=day.purpose ||
-            last.purpose==ComposerSessionPurpose.UNSPECIFIED)
-            return reject(NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED)
         val prescription=approval.policies.singleOrNull {
             it.exerciseId==exerciseId && it.purpose==day.purpose
         } ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
@@ -107,9 +124,21 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         val working=day.targets.filter {
             it.exerciseId==exerciseId && it.type==DraftSetType.WORKING
         }
+        // Never substitute the exercise-wide default for a session-specific
+        // issued load. All-set straight progression requires an EXACT,
+        // uniform, stock-verified working weight for the requested purpose.
+        val verified=working.firstOrNull()?.load as? DraftSetLoad.Verified
+            ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
+        if(working.any {
+            val actual=it.load as? DraftSetLoad.Verified
+            actual==null || actual.unit!=verified.unit ||
+                actual.basis!=verified.basis ||
+                actual.value.compareTo(verified.value)!=0
+        })
+            return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         val normalized=KotlinLongitudinalRepEvidenceDomain.review(
             original,last.evidence.workoutId,prescription.workingReps,
-            working.size,equipment.plannedLoad,inventory,
+            working.size,verified.value,inventory,
             equipment.unit,inventory.basis,prescription.targetRir)
             as? LongitudinalRepEvidenceResult.Comparable
             ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)

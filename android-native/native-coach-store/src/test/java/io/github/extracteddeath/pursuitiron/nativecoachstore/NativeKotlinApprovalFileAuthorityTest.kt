@@ -98,19 +98,75 @@ class NativeKotlinApprovalFileAuthorityTest {
     }
 
     @Test fun legacyVersionOneApprovalRemainsReadableDuringRepProofUpgrade() {
-        // Version 1 had an identical field prefix, ending after the
-        // storage revision. Version 2 adds one optional proof-presence flag.
+        // Rebuild the genuine v2 and v1 bytes: v3 added a null-or-decimal
+        // marker AFTER EACH policy, not merely a new trailing byte. A real
+        // old approval must decode without accidentally consuming the next
+        // policy's exercise ID as a load.
         val current=NativeKotlinApprovalCodec.encode(approval())
         assertEquals(0,current.last().toInt())
-        val original=current.copyOf(current.size-1)
-        original[7]=1 // On-disk v1 int, big-endian.
-        assertEquals(approval(),NativeKotlinApprovalCodec.decode(original))
+        fun utf(vararg strings:String):ByteArray {
+            val out=java.io.ByteArrayOutputStream()
+            java.io.DataOutputStream(out).use {d->
+                strings.forEach {d.writeUTF(it)}
+            }
+            return out.toByteArray()
+        }
+        fun indexOfToken(value:ByteArray,needle:ByteArray):Int =
+            (0..value.size-needle.size).firstOrNull {start ->
+                needle.indices.all {j->value[start+j]==needle[j]}
+            } ?:error("Expected legacy policy marker")
+        val nextFields=listOf(
+            utf("db-press","HYPERTROPHY"),
+            utf("db-row","STRENGTH_SKILL"),
+            utf("db-row","HYPERTROPHY"),
+            utf("commit-1"))
+        val loadPresenceIndices=nextFields.map {marker ->
+            indexOfToken(current,marker)-1
+        }
+        assertEquals(4,loadPresenceIndices.distinct().size)
+        assertTrue(loadPresenceIndices.all {it in current.indices &&
+            current[it]==0.toByte()})
+        val legacy=current.filterIndexed {index,_ ->
+            index !in loadPresenceIndices
+        }.toByteArray()
+        // v2 retained the single optional accepted-rep-proof presence byte.
+        val v2=legacy.clone().also {it[7]=2}
+        assertEquals(approval(),NativeKotlinApprovalCodec.decode(v2))
+        // v1 ended at the storage revision and had no proof flag at all.
+        val v1=v2.copyOf(v2.size-1).also {it[7]=1}
+        assertEquals(approval(),NativeKotlinApprovalCodec.decode(v1))
         assertEquals(approval(),NativeKotlinApprovalCodec.decode(
             NativeKotlinApprovalCodec.encode(
-                NativeKotlinApprovalCodec.decode(original))))
+                NativeKotlinApprovalCodec.decode(v1))))
         assertThrows(java.io.IOException::class.java) {
-            NativeKotlinApprovalCodec.decode(original.copyOf(original.size-1))
+            NativeKotlinApprovalCodec.decode(v1.copyOf(v1.size-1))
         }
+    }
+
+    @Test fun purposeSpecificWorkingLoadsRemainExactAfterV3DiskRoundtrip() {
+        val authored=approval().copy(policies=policies().map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("35"))
+            else if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY)
+                p.copy(purposeWorkingLoad=n("25"))
+            else p
+        })
+        assertEquals(authored,NativeKotlinApprovalCodec.decode(
+            NativeKotlinApprovalCodec.encode(authored)))
+        assertEquals(NativeApprovalWriteResult.Committed(1),
+            authority().publish("owner-1",0,authored))
+        val restored=checkNotNull(authority().currentOwnedApproval("owner-1"))
+        assertEquals(authored,restored)
+        assertEquals(n("35"),restored.policies.first {
+            it.exerciseId=="db-press" &&
+            it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+        }.purposeWorkingLoad)
+        assertEquals(n("25"),restored.policies.first {
+            it.exerciseId=="db-press" &&
+            it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.purposeWorkingLoad)
     }
 
     @Test fun forgedMultiRepApprovalOrUnknownSetKeyIsNotPersistable() {

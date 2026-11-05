@@ -149,9 +149,16 @@ object NativeKotlinCurrentLoadCoachReview {
             session:NativeKotlinMixedHistoryCompletion.Composer,
             exercise:KotlinExerciseHistoryEvidence
         ):ProgressionWorkoutEvidence? {
+            // Recovery from an overloaded attempt MUST compare the prior
+            // independently demonstrated lighter load, not assume both
+            // sessions used today's programmed heavy load. The normalizer
+            // still requires one uniform ISSUED load per historical visit,
+            // exact current stock, the right unit/basis and full set order.
+            val issued=exercise.workingSets.firstOrNull()?.issuedLoad
+                as? DraftSetLoad.Verified ?:return null
             val compared=KotlinLongitudinalRepEvidenceDomain.review(
                 exercise,session.evidence.workoutId,policy.workingReps,
-                exercise.workingSets.size,matchingEquipment.plannedLoad,
+                exercise.workingSets.size,issued.value,
                 stock,matchingEquipment.unit,stock.basis,policy.targetRir)
             return (compared as? LongitudinalRepEvidenceResult.Comparable)
                 ?.session

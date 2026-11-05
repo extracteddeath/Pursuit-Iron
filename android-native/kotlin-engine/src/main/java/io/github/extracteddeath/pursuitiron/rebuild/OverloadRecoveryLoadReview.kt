@@ -53,7 +53,8 @@ object OverloadRecoveryLoadReviewDomain {
     fun assess(
         previous: ProgressionWorkoutEvidence,
         latest: ProgressionWorkoutEvidence,
-        verifiedStock: VerifiedLoadStock?
+        verifiedStock: VerifiedLoadStock?,
+        expectedLoadBasis: LoadBasis
     ): OverloadRecoveryLoadReview {
         val comparable = previous.workoutId.isNotBlank() &&
             latest.workoutId.isNotBlank() &&
@@ -113,6 +114,9 @@ object OverloadRecoveryLoadReviewDomain {
                 demonstrated, heavy)
 
         // Never round, extrapolate or use an unconfirmed gym increment.
+        if (verifiedStock?.basis != expectedLoadBasis)
+            return result(OverloadRecoveryReason.PREVIOUS_LOAD_UNVERIFIED,
+                demonstrated, heavy)
         val inspected = EquipmentLoadDomain.inspect(
             verifiedStock, demonstrated, latest.unit)
         if (inspected !is LoadInspection.Confirmed || !inspected.exact)

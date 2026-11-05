@@ -600,6 +600,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 request.policies,storageReceiptId,expectedApprovalRevision+1))
     }
 
+    /**
+     * Read-only owner-verified generated workout selection for isolated
+     * native Train. Not an issuance decision or custom-cycle fallback.
+     * Off-main-thread only: the private approval file is reopened under
+     * the same owner fence as grants, journaling and sign-out.
+     */
+    fun currentlyApprovedKotlinWorkoutId():String? {
+        val owner=localAthlete.signedInIdentity() ?:return null
+        return approvalStore.currentOwnedApproval(owner.ownerKey)
+            ?.takeIf { it.athleteId==owner.athleteId }
+            ?.grant?.workoutId
+    }
+
     fun issueWorkout(workoutId:String):NativeKotlinIssueResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinIssueResult.Rejected(

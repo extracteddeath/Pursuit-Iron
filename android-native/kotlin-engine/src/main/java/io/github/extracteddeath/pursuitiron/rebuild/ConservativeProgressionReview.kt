@@ -29,6 +29,7 @@ enum class IncreaseReviewReason {
     STILL_BUILDING_REPS,
     MIXED_ACTUAL_LOADS,
     NEEDS_SECOND_COMPARABLE_SESSION,
+    ISSUED_LOAD_NOT_COMPLETED,
     ACTUAL_RIR_MISSING,
     TOO_CLOSE_TO_FAILURE,
     ZERO_LOAD_NEEDS_EXERCISE_SEMANTICS,
@@ -129,6 +130,19 @@ object ConservativeProgressionReview {
         val observed=checkNotNull(currentLoad)
         if(observed.compareTo(zero)==0)
             return result(IncreaseReviewReason.ZERO_LOAD_NEEDS_EXERCISE_SEMANTICS)
+
+        // A lifter may deliberately use less (or more) than the session's
+        // target. Keep the actual fact, but do not call this proof that the
+        // ISSUED straight-set weight has been mastered over two sessions.
+        // Recovery/return-to-demonstrated-load is a separate reviewed path.
+        if(listOf(previous,latest).any { session ->
+            session.observations.any {set->
+                set.outcome==SetOutcome.COMPLETED &&
+                    (set.issuedLoad==null || set.actualLoad==null ||
+                        set.actualLoad.compareTo(set.issuedLoad)!=0)
+            }
+        })
+            return result(IncreaseReviewReason.ISSUED_LOAD_NOT_COMPLETED)
 
         val inspected=EquipmentLoadDomain.inspect(verifiedStock,observed,latest.unit)
         if(inspected !is LoadInspection.Confirmed)

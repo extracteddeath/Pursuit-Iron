@@ -198,6 +198,41 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             "owner-1","athlete-1",1,reviewed,catalog)
     }
 
+    @Test fun currentGymEditBlocksNewWorkoutIssueWithoutInvalidatingHistoricalAccess() {
+        enrolled()
+        val gym=sourceRecord()
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,gym))
+        val newGrant=KotlinWorkoutSelectionGrant(
+            "first-native-grant","future-native-workout",source,1)
+        val original=NativeKotlinWorkoutApproval(
+            "owner-1","athlete-1",source,source,newGrant,program,
+            policies,"first-native-receipt",1)
+        assertEquals(NativeApprovalWriteResult.Committed(1),
+            approvals.publish("owner-1",0,original))
+        val coherent=NativeKotlinGymCoherentWorkoutAuthority(
+            approvals,authoring)
+        assertEquals(original,coherent.currentApprovedWorkout(
+            "owner-1","future-native-workout"))
+        val proposed=NativeKotlinGymCatalogEditingDomain.removeStock(
+            gym,1,"db-press-stock") as NativeGymCatalogEdit.Proposed
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            authoring.publish("owner-1",1,proposed.source))
+        assertNull(coherent.currentApprovedWorkout(
+            "owner-1","future-native-workout"))
+        val issuer=NativeKotlinWorkoutCoordinator(journals,coherent,fence)
+        val tracked=NativeKotlinTrackedWorkoutGateway(
+            issuer,transactions,history,corrections,coherent,fence)
+        assertEquals(NativeKotlinIssueResult.Rejected(
+            NativeKotlinIssueRefusal.NOT_AUTHORIZED),
+            tracked.issue("owner-1","athlete-1","future-native-workout"))
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            journals.openStored("owner-1","future-native-workout",
+                coherent::canAccessIssuedWorkout))
+        assertTrue(coherent.canAccessIssuedWorkout("owner-1",source))
+    }
+
     @Test fun currentGymMustBePersistedAndAgreeBeforeCoachingApproval() {
         enrolled()
         complete(1,1)

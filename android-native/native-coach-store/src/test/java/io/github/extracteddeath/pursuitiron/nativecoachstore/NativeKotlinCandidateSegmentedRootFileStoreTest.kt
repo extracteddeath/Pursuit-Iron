@@ -70,6 +70,11 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
     private fun wal() = NativeKotlinSegmentedRedoFileStore(root, fence, identity)
     private fun store() = NativeKotlinCandidateSegmentedRootFileStore(
         root, fence, identity, v2, handoff, wal())
+    private fun receiptVerifier() = NativeKotlinIndependentHistoryReceiptVerifier(
+        composer, correction, custom,
+        NativeKotlinCustomSavedCorrectionFileStore(
+            root, fence, identity, custom, v2),
+        authority, fence, identity)
     private fun result(r: NativeCandidateHistoryRootResult) =
         (r as NativeCandidateHistoryRootResult.Reviewed).view
     private fun rejection(reason: NativeCandidateHistoryRootRefusal) =
@@ -363,7 +368,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
     @Test fun replayVerifiedMirrorRefusesUncommittedSyntheticFinish() {
         val initial = boot()
         stagedAppend(initial)
-        val result = store().publishReplayVerifiedV2Mirror(owner, athlete, replay)
+        val result = store().publishReplayVerifiedV2Mirror(owner, athlete, replay, receiptVerifier())
         assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
             result)
         assertEquals(initial, this.result(store().audit(owner, athlete)))
@@ -383,7 +388,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             is NativeHistoryLedgerResult.Durable)
         assertTrue(v2.finalize(owner, athlete, intent, saved)
             is NativeHistoryLedgerResult.Durable)
-        val accepted = store().publishReplayVerifiedV2Mirror(owner, athlete, replay)
+        val accepted = store().publishReplayVerifiedV2Mirror(owner, athlete, replay, receiptVerifier())
         assertTrue(accepted.toString(),
             accepted is NativeCandidateHistoryRootResult.Reviewed)
         val view = this.result(accepted)
@@ -391,7 +396,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(1L, view.head.completionCount)
         assertEquals(1L, (v2.open(owner, athlete)
             as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())
-        assertTrue((store().publishReplayVerifiedV2Mirror(owner, athlete, replay)
+        assertTrue((store().publishReplayVerifiedV2Mirror(owner, athlete, replay, receiptVerifier())
             as NativeCandidateHistoryRootResult.Reviewed).replayed)
     }
 
@@ -405,7 +410,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             is NativeHistoryLedgerResult.Durable)
         // A valid v2 checksum and segment patch are insufficient evidence.
         assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
-            store().publishReplayVerifiedV2Mirror(owner, athlete, replay))
+            store().publishReplayVerifiedV2Mirror(owner, athlete, replay, receiptVerifier()))
         assertEquals(initial, result(store().audit(owner, athlete)))
     }
 
@@ -421,7 +426,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(v2.prepare(owner, athlete, 1, intent)
             is NativeHistoryLedgerResult.Durable)
         assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
-            store().publishReplayVerifiedV2Mirror(owner, athlete, replay))
+            store().publishReplayVerifiedV2Mirror(owner, athlete, replay, receiptVerifier()))
         assertEquals(initial, result(store().audit(owner, athlete)))
     }
 
@@ -447,7 +452,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
                 listOf(original)), corrected)
             is NativeSegmentedRedoResult.Durable)
         assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
-            store().publishReplayVerifiedV2Mirror(owner, athlete, replay))
+            store().publishReplayVerifiedV2Mirror(owner, athlete, replay, receiptVerifier()))
         assertTrue(v2.prepare(owner, athlete, 1, intent)
             is NativeHistoryLedgerResult.Durable)
         assertTrue(correction.appendStored(owner, "workout-1",
@@ -456,7 +461,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             } is NativeSavedCorrectionFileResult.Durable)
         assertTrue(v2.finalize(owner, athlete, intent, corrected)
             is NativeHistoryLedgerResult.Durable)
-        val mirrored = store().publishReplayVerifiedV2Mirror(owner, athlete, replay)
+        val mirrored = store().publishReplayVerifiedV2Mirror(owner, athlete, replay, receiptVerifier())
         assertTrue(mirrored.toString(),
             mirrored is NativeCandidateHistoryRootResult.Reviewed)
         assertEquals(2L, result(mirrored).head.revision)

@@ -380,7 +380,8 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
      */
     internal fun publishReplayVerifiedV2Mirror(
         owner: String, athlete: String,
-        replayReader: NativeKotlinMixedHistoryReadCoordinator
+        replayReader: NativeKotlinMixedHistoryReadCoordinator,
+        receiptVerifier: NativeKotlinIndependentHistoryReceiptVerifier
     ): NativeCandidateHistoryRootResult = guarded(owner, athlete) {
         val staged = (redo.read(owner, athlete)
             as? NativeSegmentedRedoResult.Durable)?.redo
@@ -439,6 +440,12 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
             entries.take(first) + patch.completions + entries.drop(first + oldSize)
         }
         if (projected != source.completions)
+            return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+        val receipt = source.completions.singleOrNull {
+            it.workoutId == staged.intent.workoutId
+        } ?: return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+        if (receiptVerifier.verify(owner, athlete, staged.intent, receipt)
+            !is NativeIndependentReceiptResult.Verified)
             return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
         // The same lock also protects the second, disk-backed root/redo CAS.
         // A lost publication ack is recognized by its exact parent/patch hash.

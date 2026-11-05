@@ -44,7 +44,7 @@ class NativeKotlinIndependentHistoryReceiptVerifier(
     private val identity: NativeKotlinCurrentIdentity
 ) {
     private val id = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
-    private const val MAX_REVISION = 9_007_199_254_740_991L
+    private val MAX_REVISION = 9_007_199_254_740_991L
 
     private fun deny(reason: NativeIndependentReceiptRefusal) =
         NativeIndependentReceiptResult.Rejected(reason)

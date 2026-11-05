@@ -124,3 +124,19 @@ publish Last/PR/progression. This verifier is deliberately not part of the
 active app, v2 transaction writer or any training decision. The next
 single-writer gate must combine these exact journal receipts with a durable
 owner-verified unique workout index, WAL root CAS and migration enrollment.
+
+## Candidate root integration of exact native receipt verification
+
+The internal `publishReplayVerifiedV2Mirror` path now also calls
+`NativeKotlinIndependentHistoryReceiptVerifier` for the **exact staged**
+Finish/custom Finish or generated/custom saved correction. Merely matching
+the full v2 manifest is insufficient: the specific source operation must
+exist as a fully replayed durable journal/correction receipt. The verifier,
+whole-history replay, candidate WAL and root CAS run under the same
+owner transaction fence. Missing or forged receipts fail closed.
+
+The candidate remains a read-only v2 *mirror* as far as the app is concerned,
+and the older test-only root-publication seam is not authorized for
+production. The new check does not eliminate the need for explicit
+lifetime-history enrollment, durable unique identity indexing or
+single-writer migration.

@@ -83,6 +83,26 @@ data class ComposerRequest(
 data class ComposerVisit(val dayIndex:Int,val exerciseId:String,
     val pattern:ComposerPattern,val sets:Int)
 enum class ComposerStatus { FEASIBLE_DRAFT_FOR_REVIEW, CONSTRAINTS_UNRESOLVED }
+/**
+ * Search conclusions describe EVIDENCE, not permission to train.
+ * A source conflict is a mathematical or inventory bound, not proof that
+ * different equipment, an expanded catalog or a changed policy cannot work.
+ */
+enum class ComposerSearchConclusion {
+    FEASIBLE_CANDIDATE_FOUND,
+    PROVEN_CONFLICT_WITH_CURRENT_INPUTS,
+    SEARCH_BUDGET_REACHED,
+    UNRESOLVED_LOCAL_SEARCH
+}
+data class ComposerSearchEvidence(
+    val conclusion:ComposerSearchConclusion,
+    val greedyRounds:Int,
+    val refinementPasses:Int,
+    val candidateEvaluations:Int,
+    val budgetReached:Boolean,
+    val provableInputConflicts:List<String>
+)
+
 /** Review capabilities, not save or issuance authorization. Authored defaults deny all edits. */
 data class ComposerRepairPermissions(
     val mayAdjustSets:Boolean=false,
@@ -104,7 +124,8 @@ data class ComposerDraft(
     val daysBelowPatternPreference:Set<Int>,
     val sessions:List<ComposerSessionPlan>,
     val daysWithUnmetPrimary:Set<Int>,
-    val explanations:List<String>
+    val explanations:List<String>,
+    val searchEvidence:ComposerSearchEvidence
 ) {
     /** A reviewed candidate is NOT user-approved or executable. */
     val canIssueTargets:Boolean get()=false
@@ -390,6 +411,73 @@ object CoachWeekComposer {
         return true
     }
 
+
+    /**
+     * Only prove contradictions from verified inventory and deliberately
+     * OPTIMISTIC upper bounds. These proofs ignore session conflicts,
+     * calendar recovery, per-day caps and other limits; therefore finding
+     * an upper bound below MEV is sufficient to prove this source selection
+     * cannot satisfy MEV, while reaching it NEVER proves feasibility.
+     */
+    private fun provableInputConflicts(
+        request:ComposerRequest,
+        eligible:List<ComposerExerciseOption>
+    ):List<String> {
+        val viable=eligible.filter {option ->
+            request.days.any {it.focus in option.allowedFocus}
+        }
+        val ids=viable.map {it.exerciseId}.toSet()
+        val conflicts=mutableListOf<String>()
+        request.exercises.filter {it.requiredVisits>0 && it.exerciseId !in ids}
+            .forEach {option ->
+                conflicts+="Required exercise ${option.exerciseId} has no verified eligible placement."
+            }
+        for(intent in request.sessionIntents) {
+            val id=intent.requiredPrimaryExerciseId ?:continue
+            if(viable.none { it.exerciseId==id &&
+                    request.days[intent.dayIndex].focus in it.allowedFocus })
+                conflicts+="Required primary ${id} on day ${intent.dayIndex} has no verified eligible placement."
+        }
+        for(day in request.days.indices) {
+            if(viable.none { request.days[day].focus in it.allowedFocus })
+                conflicts+="Scheduled day ${day} has no verified exercise compatible with its focus."
+            val window=request.days[day].window
+            if(window.userHardLimitMinutes!=null &&
+                window.declaredNonSetSeconds.toLong() >
+                    window.userHardLimitMinutes.toLong()*60L)
+                conflicts+="Scheduled day ${day} has overhead exceeding its hard time limit."
+        }
+        for(bound in request.bounds) {
+            val useful=viable.mapNotNull {option ->
+                val credit=option.credits.firstOrNull {it.muscle==bound.muscle}
+                if(credit==null)null else option to credit
+            }
+            val upper=useful.fold(BigDecimal.ZERO) {sum,(option,credit) ->
+                sum.add(credit.fractionalSet.multiply(
+                    BigDecimal(option.maximumSetsPerVisit.toLong()*
+                        option.maximumVisits.toLong())))
+            }
+            if(upper<bound.mev)
+                conflicts+="${bound.muscle} MEV exceeds the optimistic maximum dose from verified exercises."
+            if(bound.minimumDirectDays>0) {
+                val direct=useful.filter {it.second.role==MuscleCreditRole.DIRECT}
+                val visitCeiling=direct.sumOf {it.first.maximumVisits}
+                val eligibleDays=request.days.count {day ->
+                    direct.any {day.focus in it.first.allowedFocus}
+                }
+                if(minOf(visitCeiling,eligibleDays)<bound.minimumDirectDays)
+                    conflicts+="${bound.muscle} direct-day frequency exceeds verified placement capacity."
+            }
+        }
+        return Collections.unmodifiableList(conflicts)
+    }
+
+    private data class RefinementOutcome(
+        val visits:List<ComposerVisit>,
+        val passes:Int,
+        val candidateEvaluations:Int,
+        val budgetReached:Boolean
+    )
     /**
      * Read-only local refinement. Keep session positions, equipment, pinned
      * appearances and cross-week recovery verifiable at every accepted move.
@@ -404,11 +492,15 @@ object CoachWeekComposer {
         seed:List<ComposerVisit>,
         eligible:List<ComposerExerciseOption>,
         permissions:ComposerRepairPermissions
-    ):List<ComposerVisit> {
+    ):RefinementOutcome {
         val options=eligible.associateBy {it.exerciseId}
         var chosen=seed
         var audit=WeeklyDoseFeasibilityDomain.audit(toWeek(request,chosen,options))
+        var passes=0
+        var totalEvaluations=0
+        var hitEvaluationBudget=false
         repeat(MAX_REPAIR_PASSES) {
+            passes++
             val current=cost(request,chosen,audit,options)
             val originalPinnedGaps=request.exercises.associate {
                 it.exerciseId to missing(it,chosen)
@@ -562,11 +654,17 @@ object CoachWeekComposer {
                     if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
                 }
             }
-            if(bestVisits==null)return chosen
+            totalEvaluations+=evaluated
+            if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)
+                hitEvaluationBudget=true
+            if(bestVisits==null)return RefinementOutcome(
+                chosen,passes,totalEvaluations,hitEvaluationBudget)
             chosen=checkNotNull(bestVisits)
             audit=checkNotNull(bestAudit)
         }
-        return chosen
+        // Even if this last pass improved the score, a bounded eight-pass
+        // search does not prove a local optimum or a globally feasible plan.
+        return RefinementOutcome(chosen,passes,totalEvaluations,true)
     }
 
     /**
@@ -598,7 +696,7 @@ object CoachWeekComposer {
             accepted+=visit
         }
         return Collections.unmodifiableList(refine(request,accepted,eligible,
-            permissions))
+            permissions).visits)
     }
 
     fun compose(request:ComposerRequest):ComposerDraft {
@@ -612,8 +710,15 @@ object CoachWeekComposer {
         var chosen:List<ComposerVisit> = emptyList()
         var week=toWeek(request,chosen,map)
         var audit=WeeklyDoseFeasibilityDomain.audit(week)
+        var greedyRounds=0
+        var greedyBudgetReached=false
+        var greedyCandidateEvaluations=0
         for(iteration in 0 until MAX_ITERATIONS) {
-            if(chosen.size>=MAX_VISITS)break
+            if(chosen.size>=MAX_VISITS) {
+                greedyBudgetReached=true
+                break
+            }
+            greedyRounds++
             val current=cost(request,chosen,audit,map)
             var best=current
             var bestChoice:List<ComposerVisit>?=null
@@ -635,6 +740,7 @@ object CoachWeekComposer {
                             option.pattern,option.minimumSetsPerVisit)
                     else ->continue
                 }
+                greedyCandidateEvaluations++
                 val candidate=toWeek(request,trial,map)
                 val check=WeeklyDoseFeasibilityDomain.audit(candidate)
                 if(!withinCandidateLimits(request,current,check))continue
@@ -649,12 +755,14 @@ object CoachWeekComposer {
             chosen=bestChoice
             audit=checkNotNull(bestAudit)
             week=toWeek(request,chosen,map)
+            if(iteration==MAX_ITERATIONS-1)greedyBudgetReached=true
         }
         // The greedy phase cannot replace occupied slots or relocate a
         // useful lift. Reconsider those decisions without violating verified
         // equipment, recovery spacing, dose or athlete hard-time limits.
-        val improved=refine(request,chosen,eligible,
+        val refinement=refine(request,chosen,eligible,
             ComposerRepairPermissions.GENERATED_DRAFT)
+        val improved=refinement.visits
         if(improved!=chosen) {
             chosen=improved
             week=toWeek(request,chosen,map)
@@ -669,6 +777,8 @@ object CoachWeekComposer {
         val unmetPrimary=unmetPrimaryDays(request,chosen)
         val sessions=orderedSessions(request,chosen,map)
         val notes=mutableListOf<String>()
+        val conflicts=provableInputConflicts(request,eligible)
+        val budgetReached=greedyBudgetReached || refinement.budgetReached
         if(unmetPrimary.isNotEmpty())
             notes+="The requested main lift is missing on one or more days; the day purpose remains unresolved."
         if(rejected.isNotEmpty())
@@ -696,6 +806,25 @@ object CoachWeekComposer {
             audit.daysWithoutWorkingSets.isEmpty() &&
             audit.daysOutsidePreferredWindow.isEmpty() &&
             missingPatterns.isEmpty() && !audit.requiresExtensionDosePolicy
+        val conclusion=when {
+            feasible -> ComposerSearchConclusion.FEASIBLE_CANDIDATE_FOUND
+            conflicts.isNotEmpty() ->
+                ComposerSearchConclusion.PROVEN_CONFLICT_WITH_CURRENT_INPUTS
+            budgetReached -> ComposerSearchConclusion.SEARCH_BUDGET_REACHED
+            else -> ComposerSearchConclusion.UNRESOLVED_LOCAL_SEARCH
+        }
+        if(!feasible) {
+            if(conflicts.isNotEmpty())
+                notes+="Some constraints cannot be met with the verified current exercise catalog."
+            else if(budgetReached)
+                notes+="The bounded search reached a limit; a different valid plan may exist."
+            else
+                notes+="This local search found no better candidate; other solutions may exist."
+        }
+        val evidence=ComposerSearchEvidence(conclusion,greedyRounds,
+            refinement.passes,
+            greedyCandidateEvaluations+refinement.candidateEvaluations,
+            budgetReached,conflicts)
         return ComposerDraft(
             if(feasible)ComposerStatus.FEASIBLE_DRAFT_FOR_REVIEW
                 else ComposerStatus.CONSTRAINTS_UNRESOLVED,
@@ -705,6 +834,6 @@ object CoachWeekComposer {
             Collections.unmodifiableSet(missingPatterns),
             Collections.unmodifiableList(sessions),
             Collections.unmodifiableSet(unmetPrimary),
-            Collections.unmodifiableList(notes))
+            Collections.unmodifiableList(notes),evidence)
     }
 }

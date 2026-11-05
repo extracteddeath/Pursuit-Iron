@@ -793,4 +793,57 @@ class CoachWeekComposerTest {
         assertFalse(generated.canIssueTargets)
     }
 
+
+    @Test fun feasibleWeekHasSearchEvidenceWithoutClaimingWorkoutIssuance() {
+        val first=CoachWeekComposer.compose(base())
+        val second=CoachWeekComposer.compose(base())
+        assertEquals(ComposerSearchConclusion.FEASIBLE_CANDIDATE_FOUND,
+            first.searchEvidence.conclusion)
+        assertTrue(first.searchEvidence.provableInputConflicts.isEmpty())
+        assertTrue(first.searchEvidence.candidateEvaluations>0)
+        assertEquals(first.searchEvidence,second.searchEvidence)
+        assertFalse(first.canIssueTargets)
+    }
+
+    @Test fun impossibleVolumeIsProvenByOptimisticVerifiedCatalogUpperBound() {
+        val only=chestOption.copy(maximumVisits=1,maximumSetsPerVisit=2,
+            minimumSetsPerVisit=2)
+        val result=CoachWeekComposer.compose(base(
+            exerciseOptions=listOf(only,backOption,legOption),
+            bands=bounds(dose(chest,"8","10","12",2),
+                dose(lats,"4","6","8",1),dose(quads,"4","6","8",1))))
+        assertEquals(ComposerSearchConclusion.PROVEN_CONFLICT_WITH_CURRENT_INPUTS,
+            result.searchEvidence.conclusion)
+        assertTrue(result.searchEvidence.provableInputConflicts.any {
+            it.contains("CHEST") && it.contains("optimistic maximum dose")
+        })
+        assertFalse(result.canIssueTargets)
+    }
+
+    @Test fun unavailableRequiredEquipmentIsAProvenInputConflict() {
+        val invalid=chestOption.copy(requiredVisits=2,
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n("32.5"),available))
+        val result=CoachWeekComposer.compose(base(
+            exerciseOptions=listOf(invalid,backOption,legOption)))
+        assertEquals(ComposerSearchConclusion.PROVEN_CONFLICT_WITH_CURRENT_INPUTS,
+            result.searchEvidence.conclusion)
+        assertTrue(result.searchEvidence.provableInputConflicts.any {
+            it.contains("db-press") && it.contains("no verified eligible placement")
+        })
+    }
+
+    @Test fun underlengthPreferenceIsNotMistakenForProvenInfeasibility() {
+        val request=base(schedule=days(min=75,max=90,overhead=300),
+            bands=bounds(dose(chest,"2","2","2",1),
+                dose(lats,"2","2","2",1),dose(quads,"2","2","2",1)))
+        val result=CoachWeekComposer.compose(request)
+        assertEquals(ComposerStatus.CONSTRAINTS_UNRESOLVED,result.status)
+        assertTrue(result.searchEvidence.provableInputConflicts.isEmpty())
+        assertTrue(result.searchEvidence.conclusion==
+            ComposerSearchConclusion.UNRESOLVED_LOCAL_SEARCH ||
+            result.searchEvidence.conclusion==
+                ComposerSearchConclusion.SEARCH_BUDGET_REACHED)
+        assertTrue(result.explanations.any {it.contains("may exist")})
+    }
+
 }

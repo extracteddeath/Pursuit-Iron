@@ -97,6 +97,48 @@ class NativeKotlinApprovalFileAuthorityTest {
         }
     }
 
+    @Test fun legacyVersionOneApprovalRemainsReadableDuringRepProofUpgrade() {
+        // Version 1 had an identical field prefix, ending after the
+        // storage revision. Version 2 adds one optional proof-presence flag.
+        val current=NativeKotlinApprovalCodec.encode(approval())
+        assertEquals(0,current.last().toInt())
+        val original=current.copyOf(current.size-1)
+        original[7]=1 // On-disk v1 int, big-endian.
+        assertEquals(approval(),NativeKotlinApprovalCodec.decode(original))
+        assertEquals(approval(),NativeKotlinApprovalCodec.decode(
+            NativeKotlinApprovalCodec.encode(
+                NativeKotlinApprovalCodec.decode(original))))
+        assertThrows(java.io.IOException::class.java) {
+            NativeKotlinApprovalCodec.decode(original.copyOf(original.size-1))
+        }
+    }
+
+    @Test fun forgedMultiRepApprovalOrUnknownSetKeyIsNotPersistable() {
+        val baseline=approval().copy(grant=KotlinWorkoutSelectionGrant(
+            "grant-2","future-session",source,1))
+        val proof=NativeKotlinAcceptedRepTargets(
+            "past-session",7,"db-press","db-press:d1:s0",
+            listOf(11,12),listOf(12,12),CoachReadiness.NORMAL)
+        val valid=baseline.copy(acceptedRepTargets=proof)
+        assertEquals(valid,NativeKotlinApprovalCodec.decode(
+            NativeKotlinApprovalCodec.encode(valid)))
+        val unsafe=listOf(
+            proof.copy(newRepTargets=listOf(14,12)),
+            proof.copy(newRepTargets=listOf(12,13)),
+            proof.copy(changedSetKey="db-press:d1:s999"),
+            proof.copy(reviewedReadiness=CoachReadiness.LOW),
+            proof.copy(historicalWorkoutId="future-session"),
+            proof.copy(newRepTargets=listOf(12)),
+            proof.copy(observedReps=listOf(11,11),newRepTargets=listOf(12,12))
+        )
+        for(forged in unsafe) {
+            assertThrows(IllegalArgumentException::class.java) {
+                NativeKotlinApprovalCodec.encode(
+                    baseline.copy(acceptedRepTargets=forged))
+            }
+        }
+    }
+
     @Test fun explicitBarbellPlatesAndMachineStackSurviveApprovalRoundtrip() {
         // One pair of 2.5 and one pair of 5 lbs permits 20,25,30,35...
         // It never invents impossible 38.5 lb suggestions.

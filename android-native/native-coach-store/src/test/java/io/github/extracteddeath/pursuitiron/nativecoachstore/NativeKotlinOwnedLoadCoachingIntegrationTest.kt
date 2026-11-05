@@ -89,7 +89,8 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
                 ComposerSessionIntent(0,ComposerSessionPurpose.STRENGTH_SKILL,"db-press"),
                 ComposerSessionIntent(1,ComposerSessionPurpose.HYPERTROPHY),
                 ComposerSessionIntent(2,ComposerSessionPurpose.HYPERTROPHY)),
-            maximumBarbellExercisesPerDay=0)
+            maximumBarbellExercisesPerDay=0,
+            allowDirectTricepsOnLower=false)
     }
     private fun policy(id:String,purpose:ComposerSessionPurpose)=
         ExercisePrescriptionPolicy(id,purpose,RepBand(8,12),2,

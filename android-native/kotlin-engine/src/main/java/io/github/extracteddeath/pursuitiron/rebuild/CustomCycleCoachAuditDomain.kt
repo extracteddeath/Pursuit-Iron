@@ -24,7 +24,8 @@ enum class CustomCoachIssueKind {
     GOAL_POLICY_UNRESOLVED, NON_SET_TIME_UNDECLARED,
     SESSION_HARD_LIMIT, BELOW_WEEKLY_MEV, ABOVE_WEEKLY_MRV,
     INSUFFICIENT_DIRECT_FREQUENCY, PRIMARY_SKILL_FREQUENCY,
-    REVIEW_CAP_EXCEEDED
+    CONTINUITY_POLICY_INVALID, UNJUSTIFIED_BLOCK_VOLUME_DROP,
+    DIRECT_MUSCLE_DROP, REVIEW_CAP_EXCEEDED
 }
 
 data class CustomCoachIssue(
@@ -68,11 +69,22 @@ data class CustomCoachAudit(
     val mayAlterWorkoutHistory: Boolean get() = false
 }
 
-/** Explicitly supplied coach policy and transition-time declarations. */
+/**
+ * Athlete-specific, explicitly reviewed ceiling on a NON-recovery training
+ * block's week-to-week volume decline. Not a universal MEV/MRV threshold.
+ * Missing this policy leaves continuity unproven, not approved for cutover.
+ */
+data class CustomCoachVolumeContinuityPolicy(
+    val maximumTotalWorkingSetDropFraction: BigDecimal,
+    val maximumDirectMuscleDropFraction: BigDecimal
+)
+
+/** Explicitly supplied coach policy, transitions and non-set time. */
 data class CustomCoachAuditInputs(
     val policiesByPhase: Map<TrainingPhase, AuthoredGoalProgramPolicy> =
         emptyMap(),
-    val nonSetSecondsByWeekday: Map<Int, Int> = emptyMap()
+    val nonSetSecondsByWeekday: Map<Int, Int> = emptyMap(),
+    val continuityPolicy: CustomCoachVolumeContinuityPolicy? = null
 )
 
 object CustomCycleCoachAuditDomain {
@@ -302,6 +314,49 @@ object CustomCycleCoachAuditDomain {
                 }
             }
         }
+        // A new TRAINING block must not silently lose dose solely because
+        // each phase independently meets a different lower MEV. Compare
+        // resolved weeks including all authored per-week overrides.
+        val continuity = inputs.continuityPolicy
+        if (continuity != null) {
+            val totalLimit = continuity.maximumTotalWorkingSetDropFraction
+            val directLimit = continuity.maximumDirectMuscleDropFraction
+            val valid = listOf(totalLimit, directLimit).all {
+                it >= zero && it <= BigDecimal.ONE &&
+                    it.stripTrailingZeros().scale() <= 3
+            }
+            if (!valid) {
+                add(CustomCoachIssueKind.CONTINUITY_POLICY_INVALID,
+                    "continuity",
+                    "Specify reviewed volume-drop ceilings between zero and one.")
+            } else {
+                for ((earlier, later) in measurements.zipWithNext()) {
+                    if (earlier.blockId == later.blockId ||
+                        earlier.blockPurpose != CustomBlockPurpose.TRAINING ||
+                        later.blockPurpose != CustomBlockPurpose.TRAINING)
+                        continue
+                    if (earlier.workingSets > later.workingSets &&
+                        earlier.workingSets > 0) {
+                        val decline = BigDecimal(earlier.workingSets - later.workingSets)
+                        val allowed = BigDecimal(earlier.workingSets).multiply(totalLimit)
+                        if (decline > allowed)
+                            add(CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP,
+                                "week.${later.absoluteWeek}.block.${later.blockId}",
+                                "This transition drops from ${earlier.workingSets} to ${later.workingSets} working sets, exceeding the reviewed maximum training reduction.")
+                    }
+                    for (muscle in TrainingMuscle.entries) {
+                        val before = earlier.directSets[muscle] ?: zero
+                        val after = later.directSets[muscle] ?: zero
+                        if (before > zero && after < before &&
+                            before.subtract(after) > before.multiply(directLimit))
+                            add(CustomCoachIssueKind.DIRECT_MUSCLE_DROP,
+                                "week.${later.absoluteWeek}.${muscle.name}",
+                                "Direct work for this muscle falls beyond the reviewed transition limit.")
+                    }
+                }
+            }
+        }
+
         // Unknown amplifier working-time makes a complete exact session
         // time audit impossible; do not treat under-estimated minutes as ready.
         if (structural.verifiedDraft!=null &&

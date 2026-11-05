@@ -87,17 +87,16 @@ object AdaptiveBlockOptionGenerationDomain {
             val refusal=when {
                 !sameSource || setup==null ||
                     !option.generation.setup.mayReviewProgramCandidate ||
-                    setup.athleteProfileId!=source!!.athleteProfileId ||
-                    setup.profileRevision!=source.profileRevision ||
-                    setup.goal!=source.goal ||
-                    setup.gym!=source.gym ||
                     option.generation.catalog!=request.catalog ||
-                    setup.excludedExerciseIds!=source.excludedExerciseIds ||
-                    setup.allowBodyweight!=source.allowBodyweight ||
-                    setup.allowSupersets!=source.allowSupersets ||
-                    setup.maxBarbellExercisesPerDay!=
-                        source.maxBarbellExercisesPerDay ||
-                    setup.allowTricepsOnLower!=source.allowTricepsOnLower ->
+                    // Candidate scheduling is the only field we permit to
+                    // differ at all. Do not bypass reviewed gym, injury,
+                    // session time, priority, goal or other athlete facts.
+                    setup.copy(split=source!!.split,
+                        trainingWeekdays=source.trainingWeekdays,
+                        lockedTrainingDays=source.lockedTrainingDays,
+                        hardTrainingDays=source.hardTrainingDays,
+                        longTrainingDays=source.longTrainingDays,
+                        declaredRestDays=source.declaredRestDays)!=source ->
                     AdaptiveBlockGenerationRefusal.DIFFERENT_ATHLETE_OR_GYM
                 setup.trainingWeekdays!=source.trainingWeekdays ||
                     setup.split!=source.split ||

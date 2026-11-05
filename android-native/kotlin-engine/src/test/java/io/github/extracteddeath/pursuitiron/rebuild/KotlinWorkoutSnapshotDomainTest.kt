@@ -339,4 +339,53 @@ class KotlinWorkoutSnapshotDomainTest {
                 .plannedLoad))
     }
 
+
+    @Test fun purposeSpecificWeightsReachKotlinNativeWorkoutStaging() {
+        val mixed=policies().map {p ->
+            if(p.exerciseId!="db-press")p
+            else if(p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("35"))
+            else p.copy(purposeWorkingLoad=n("25"))
+        }
+        val heavy=(KotlinWorkoutSnapshotDomain.stage(
+            request(authoredPolicies=mixed)) as KotlinWorkoutSnapshotResult.Staged).snapshot
+        val other=grant.copy(dayIndex=2,grantId="approval-2",workoutId="session-2")
+        val volume=(KotlinWorkoutSnapshotDomain.stage(
+            request(authoredPolicies=mixed).copy(grant=other)) as
+                KotlinWorkoutSnapshotResult.Staged).snapshot
+        val heavyPress=heavy.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }
+        assertTrue(heavyPress.size>=2)
+        assertTrue(heavyPress.dropLast(1).all {
+            (it.load as DraftSetLoad.Verified).value==n("35")
+        })
+        assertEquals(n("30"),(heavyPress.last().load as DraftSetLoad.Verified).value)
+        val volumePress=volume.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }
+        assertTrue(volumePress.isNotEmpty())
+        assertTrue(volumePress.all {
+            (it.load as DraftSetLoad.Verified).value==n("25")
+        })
+        assertFalse(heavy.persisted)
+        assertFalse(volume.persisted)
+    }
+
+    @Test fun programWideProgressionRefusesPurposeSpecificWeights() {
+        val mixed=reviewedStraightPolicies().map {p ->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY)
+                p.copy(purposeWorkingLoad=n("25")) else p
+        }
+        val result=CoachNextProgramLoadReviewDomain.review(
+            nextLoadRequest(declaredPolicies=mixed))
+        assertEquals(
+            CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
+            result.status)
+        assertNull(result.candidateProgram)
+        assertNull(result.candidateLoad)
+        assertFalse(result.mayIssueWorkout)
+    }
+
 }

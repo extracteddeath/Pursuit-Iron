@@ -309,4 +309,67 @@ class CoachSessionPrescriptionDomainTest {
             .map {it.stableSetKey}
         assertEquals(ids.size,ids.distinct().size)
     }
+
+    @Test fun strengthAndHypertrophyUseDistinctVerifiedPurposeLoadsAndBackoff() {
+        val authored=policies().map {p->
+            if(p.exerciseId!="db-press")p
+            else if(p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("35"))
+            else p.copy(purposeWorkingLoad=n("25"))
+        }
+        val draft=CoachSessionPrescriptionDomain.draft(request(),authored)
+        assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,draft.status)
+        val strength=draft.sessions.first().exercises.single {it.exerciseId=="db-press"}
+        val top=strength.sets.filter {it.type==DraftSetType.WORKING}
+        assertTrue(top.size>=2)
+        assertTrue(top.dropLast(1).all {
+            (it.load as DraftSetLoad.Verified).value==n("35")
+        })
+        assertEquals(n("30"),(top.last().load as DraftSetLoad.Verified).value)
+        assertEquals(n("20"),(strength.sets.first().load as DraftSetLoad.Verified).value)
+        val volume=draft.sessions.drop(1).flatMap {it.exercises}
+            .filter {it.exerciseId=="db-press"}
+        assertTrue(volume.isNotEmpty())
+        assertTrue(volume.flatMap {it.sets}.all {
+            (it.load as DraftSetLoad.Verified).value==n("25")
+        })
+        assertEquals(n("30"),(press.equipment as ComposerEquipment.Verified).plannedLoad)
+        assertFalse(draft.canIssueWorkout)
+    }
+
+    @Test fun invalidPurposeSpecificLoadWarmupAndBodyweightRefuseTheDraft() {
+        val invented=policies().map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("32.5")) else p
+        }
+        val invalid=CoachSessionPrescriptionDomain.draft(request(),invented)
+        assertEquals(PrescriptionDraftStatus.UNRESOLVED,invalid.status)
+        assertNull(invalid.finalAudit)
+        val tooHeavyWarmup=policies().map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("20")) else p
+        }
+        assertEquals(PrescriptionDraftStatus.UNRESOLVED,
+            CoachSessionPrescriptionDomain.draft(request(),tooHeavyWarmup).status)
+        assertThrows(IllegalArgumentException::class.java) {
+            CoachSessionPrescriptionDomain.draft(request(),
+                policies().map {it.copy(purposeWorkingLoad=n("-5"))})
+        }
+        val body=press.copy(equipment=ComposerEquipment.Bodyweight)
+        val bodyPolicy=policies().map {p ->
+            if(p.exerciseId=="db-press")p.copy(
+                scheme=SetLoadScheme.STRAIGHT,
+                maximumAuthorizedBackoff=null,warmups=emptyList(),
+                backoffReps=null,backoffRir=null,
+                purposeWorkingLoad=n("25"))
+            else p
+        }
+        val bodyDraft=CoachSessionPrescriptionDomain.draft(
+            request(options=listOf(body,row)),bodyPolicy)
+        assertEquals(PrescriptionDraftStatus.UNRESOLVED,bodyDraft.status)
+        assertNull(bodyDraft.finalAudit)
+    }
+
 }

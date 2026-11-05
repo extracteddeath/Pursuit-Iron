@@ -22,6 +22,7 @@ enum class CoachNextLoadReviewStatus {
     EXERCISE_NOT_IN_PROGRAM,
     NO_COMPARABLE_PLANNED_VISIT,
     ONLY_STRAIGHT_SETS_SUPPORTED,
+    PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
     LOAD_BASIS_UNVERIFIED,
     HISTORY_DOES_NOT_MATCH_PLANNED_LOAD,
     MORE_EVIDENCE_REQUIRED,
@@ -129,6 +130,12 @@ object CoachNextProgramLoadReviewDomain {
         if (affected.isEmpty())
             return denied(CoachNextLoadReviewStatus.NO_COMPARABLE_PLANNED_VISIT,
                 "No approved training day contains this exercise.")
+        if (request.policies.any {
+                it.exerciseId == request.exerciseId && it.purposeWorkingLoad != null
+            })
+            return denied(
+                CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
+                "This exercise uses purpose-specific working loads. Review each purpose and its saved history independently; a program-wide increase is unsafe.")
         if (request.policies.filter { it.exerciseId == request.exerciseId }
                 .any { it.scheme != SetLoadScheme.STRAIGHT ||
                     it.warmups.isNotEmpty() })

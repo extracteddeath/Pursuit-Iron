@@ -38,7 +38,9 @@ data class ExercisePrescriptionPolicy(
     val warmups:List<DeclaredWarmupStep> = emptyList(),
     /** Backoff targets are authored separately; never copy top-set targets. */
     val backoffReps:RepBand?=null,
-    val backoffRir:Int?=null
+    val backoffRir:Int?=null,
+    /** Explicit, verified PURPOSE-specific load. Null uses original Composer load. */
+    val purposeWorkingLoad:BigDecimal?=null
 )
 
 data class DraftPrescribedSet(
@@ -98,6 +100,8 @@ object CoachSessionPrescriptionDomain {
             p.exerciseId in ids &&
                 (p.targetRir==null || p.targetRir in 0..10) &&
                 (p.backoffRir==null || p.backoffRir in 0..10) &&
+                (p.purposeWorkingLoad==null ||
+                    (p.purposeWorkingLoad>zero && validLoad(p.purposeWorkingLoad))) &&
                 p.activeSecondsPerSet in 1..3600 && p.restSecondsPerSet in 0..3600 &&
                 p.warmups.size<=12 &&
                 (p.maximumAuthorizedBackoff==null ||
@@ -126,24 +130,29 @@ object CoachSessionPrescriptionDomain {
 
     /** Find one actual attainable lower load, not a guessed percentage. */
     private fun backoff(option:ComposerExerciseOption,
-        maxDecrease:BigDecimal):DraftSetLoad.Verified? {
+        workingValue:BigDecimal,maxDecrease:BigDecimal):DraftSetLoad.Verified? {
         val eq=option.equipment as? ComposerEquipment.Verified ?:return null
-        if(eq.plannedLoad<=zero)return null
+        if(workingValue<=zero)return null
         val result=EquipmentLoadDomain.inspect(eq.inventory,
-            eq.plannedLoad.subtract(smallStep),eq.unit)
+            workingValue.subtract(smallStep),eq.unit)
         val lower=(result as? LoadInspection.Confirmed)?.atOrBelow ?:return null
-        if(lower<=zero || lower>=eq.plannedLoad ||
-            eq.plannedLoad.subtract(lower)>maxDecrease)return null
+        if(lower<=zero || lower>=workingValue ||
+            workingValue.subtract(lower)>maxDecrease)return null
         return load(option,lower)
     }
 
     private fun plannedSets(option:ComposerExerciseOption,
         visit:ComposerVisit,p:ExercisePrescriptionPolicy):List<DraftPrescribedSet>? {
-        val workLoad=when(val e=option.equipment) {
-            ComposerEquipment.Bodyweight -> DraftSetLoad.ExplicitBodyweight
-            is ComposerEquipment.Verified ->
-                load(option,e.plannedLoad) ?:return null
+        val workingValue=when(val e=option.equipment) {
+            ComposerEquipment.Bodyweight -> {
+                if(p.purposeWorkingLoad!=null)return null
+                null
+            }
+            is ComposerEquipment.Verified -> p.purposeWorkingLoad ?: e.plannedLoad
         }
+        val workLoad=if(workingValue==null)
+            DraftSetLoad.ExplicitBodyweight
+        else load(option,workingValue) ?:return null
         if(option.equipment==ComposerEquipment.Bodyweight &&
             (p.warmups.isNotEmpty() || p.scheme==SetLoadScheme.LAST_SET_BACKOFF))
             return null
@@ -151,14 +160,14 @@ object CoachSessionPrescriptionDomain {
 
         val warmups=p.warmups.mapIndexed {i,w->
             val verified=load(option,w.load) ?:return null
-            val working=(option.equipment as ComposerEquipment.Verified).plannedLoad
-            if(w.load>=working)return null
+            if(workingValue==null || w.load>=workingValue)return null
             DraftPrescribedSet(option.exerciseId+":d"+visit.dayIndex+":w"+i,
                 DraftSetType.WARMUP,i,verified,RepBand(w.reps,w.reps),null,
                 w.activeSeconds,w.restSeconds)
         }
         val smaller=if(p.scheme==SetLoadScheme.LAST_SET_BACKOFF)
-            backoff(option,checkNotNull(p.maximumAuthorizedBackoff)) ?:return null
+            backoff(option,checkNotNull(workingValue),
+                checkNotNull(p.maximumAuthorizedBackoff)) ?:return null
         else null
         val working=(0 until visit.sets).map {i->
             DraftPrescribedSet(option.exerciseId+":d"+visit.dayIndex+":s"+i,

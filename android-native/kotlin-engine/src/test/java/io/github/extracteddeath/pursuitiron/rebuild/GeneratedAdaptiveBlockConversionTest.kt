@@ -9,9 +9,13 @@ class GeneratedAdaptiveBlockConversionTest {
     @Test fun realGeneratorProducesCompleteExactFutureBlockWithoutIssuing() {
         val request=fixture.request()
         val outcome=GeneratedAdaptiveBlockDomain.propose(request)
-        assertEquals(outcome.explanation,
-            GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
-            outcome.status)
+        assertTrue("Conversion status: "+outcome.status+
+            " reason: "+outcome.explanation+
+            " generation: "+outcome.generatedWeek?.status+
+            " issues: "+outcome.generatedWeek?.issues+
+            " prescription: "+outcome.prescribedWeek?.status+
+            " notes: "+outcome.prescribedWeek?.reviewNotes,
+            outcome.status==GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW)
         val proposed=checkNotNull(outcome.proposedOption).proposedCycle
         assertEquals(5L,proposed.revision)
         assertEquals(3,proposed.blocks.single().weeks)
@@ -45,8 +49,9 @@ class GeneratedAdaptiveBlockConversionTest {
     @Test fun missingPrescriptionAndImpossibleGymWeightFailClosed() {
         val absent=GeneratedAdaptiveBlockDomain.propose(
             fixture.request(prescriptions=fixture.policies().dropLast(1)))
-        assertEquals(GeneratedAdaptiveBlockStatus.PRESCRIPTION_UNRESOLVED,
-            absent.status)
+        assertTrue("missing policy returned "+absent.status+
+            " / "+absent.explanation,
+            absent.status==GeneratedAdaptiveBlockStatus.PRESCRIPTION_UNRESOLVED)
         assertNull(absent.proposedOption)
         val bad=fixture.policies().map {policy->
             if(policy.exerciseId=="bench")

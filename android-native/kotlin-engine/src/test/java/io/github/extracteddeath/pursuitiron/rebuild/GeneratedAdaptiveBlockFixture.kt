@@ -57,7 +57,7 @@ internal object GeneratedAdaptiveBlockFixture {
             movements,movements.map {
                 CatalogExerciseChoice(it.exerciseId,n("25"),90,120,
                     2,4,3,1,1,5)
-            },mapOf(0 to 1200,2 to 1200,4 to 1200),3,1)
+            },mapOf(0 to 2100,2 to 2100,4 to 2100),3,1)
     }
     fun policies()=movements.map {
         ExercisePrescriptionPolicy(it.exerciseId,

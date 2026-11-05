@@ -285,6 +285,27 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * the same native history transaction fence. Still read-only: NO
      * automatic PR, progression, training change, or UI cutover.
      */
+    /**
+     * Full-ledger, owner-authenticated training load review. Unlike the
+     * earlier pure DTO bridge, neither workout pair nor approved plan is
+     * supplied by the screen. This operation is READ ONLY and disk-bound.
+     * A separate, authenticated athlete approval is required to save a
+     * changed program and to issue any subsequent training targets.
+     */
+    fun reviewCurrentNativeLoad(
+        exerciseId:String,
+        maximumAuthorizedIncrease:java.math.BigDecimal,
+        readiness:CoachReadiness,
+        movementRestricted:Boolean
+    ):NativeOwnerLoadReviewResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeOwnerLoadReviewResult.Rejected(
+                NativeOwnerLoadReviewRefusal.NOT_AUTHORIZED)
+        return mixedHistoryReader.reviewCurrentApprovedLoad(
+            owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
+            maximumAuthorizedIncrease,readiness,movementRestricted)
+    }
+
     fun reviewVerifiedKotlinWorkingSetFacts(): NativeKotlinMixedFactsReadResult {
         val owner = localAthlete.signedInIdentity()
             ?: return NativeKotlinMixedFactsReadResult.HistoryRejected(

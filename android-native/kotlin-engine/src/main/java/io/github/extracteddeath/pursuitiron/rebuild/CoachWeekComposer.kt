@@ -387,6 +387,17 @@ object CoachWeekComposer {
                                 after.missingDirectDays>0
                         }
                 })return
+                // A soft preference does not justify undoing an already
+                // satisfied training day. Improving muscle dose elsewhere
+                // must never make a previously scheduled day empty or push
+                // a previously in-range session outside its time bucket.
+                if(!audit.daysWithoutWorkingSets.containsAll(
+                    check.daysWithoutWorkingSets))return
+                if(audit.sessions.any { before ->
+                    before.finding==TimeWindowFinding.WITHIN_PREFERENCE &&
+                        check.sessions[before.dayIndex].finding!=
+                            TimeWindowFinding.WITHIN_PREFERENCE
+                })return
                 if(check.muscles.values.any {it.finding==DoseFinding.ABOVE_MRV} ||
                     check.sessions.any {
                         it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT

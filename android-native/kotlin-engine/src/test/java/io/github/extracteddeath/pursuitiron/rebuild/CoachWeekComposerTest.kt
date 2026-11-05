@@ -583,4 +583,27 @@ class CoachWeekComposerTest {
         assertEquals("db-press",repaired.single().exerciseId)
     }
 
+
+    @Test fun adaptiveRepairNeverPushesAnAlreadyInRangeDayPastItsPreferredMax() {
+        val request=base(
+            exerciseOptions=listOf(chestOption,backOption,legOption),
+            bands=bounds(dose(chest,"2","8","9"),
+                dose(lats,"2","8","9"),dose(quads,"2","8","9")),
+            schedule=days(listOf(0,2,4),min=1,max=26),
+            patterns=2,maxPerDay=2)
+        val seed=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(0,"goblet-squat",ComposerPattern.SQUAT,2),
+            ComposerVisit(1,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
+        // Each seed day already fits in 25 minutes including declared setup.
+        // One more set would exceed the explicitly preferred 26-minute max.
+        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,true)
+        assertEquals(6,repaired.size)
+        assertTrue(repaired.all {it.sets==2})
+        assertEquals((0..2).toSet(),repaired.map {it.dayIndex}.toSet())
+    }
+
 }

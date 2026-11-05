@@ -194,7 +194,7 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
         }
         val result2=KotlinAdaptiveSetPrescriptionDomain.draft(
             request(next=stagedRequest(p=backoff)))
-        assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
+        assertEquals(AdaptiveSetPrescriptionRefusal.UNSUPPORTED_SET_SCHEME,
             (result2 as AdaptiveSetPrescriptionResult.Rejected).reason)
     }
 

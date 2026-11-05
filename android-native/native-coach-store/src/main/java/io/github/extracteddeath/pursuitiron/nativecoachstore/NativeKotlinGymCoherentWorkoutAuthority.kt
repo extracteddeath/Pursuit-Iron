@@ -14,21 +14,24 @@ import io.github.extracteddeath.pursuitiron.rebuild.KotlinTrainingSourceRevision
  */
 class NativeKotlinGymCoherentWorkoutAuthority(
     private val approvals: NativeKotlinApprovalFileAuthority,
-    private val authoring: NativeKotlinCustomAuthoringSourceFileStore
+    private val authoring: NativeKotlinCustomAuthoringSourceFileStore,
+    private val fence: NativeKotlinApprovalRevisionFence
 ) : NativeKotlinWorkoutAuthority {
     override fun currentApprovedWorkout(
         ownerKey: String, workoutId: String
-    ): NativeKotlinWorkoutApproval? {
-        val current=approvals.currentApprovedWorkout(ownerKey,workoutId)
-            ?:return null
-        val nativeSource=(authoring.read(ownerKey)
-            as? NativeAuthoringSourceRead.Found)?.source
-            ?:return null
-        if(NativeKotlinApprovedGymCoherenceDomain.inspect(current,nativeSource)
-            !=NativeApprovedGymCoherenceResult.Matched)
-            return null
-        return current
-    }
+    ): NativeKotlinWorkoutApproval? = runCatching {
+        fence.withOwnerTransaction(ownerKey) {
+            val current=approvals.currentApprovedWorkout(ownerKey,workoutId)
+                ?:return@withOwnerTransaction null
+            val nativeSource=(authoring.read(ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+                ?:return@withOwnerTransaction null
+            if(NativeKotlinApprovedGymCoherenceDomain.inspect(current,nativeSource)
+                !=NativeApprovedGymCoherenceResult.Matched)
+                return@withOwnerTransaction null
+            current
+        }
+    }.getOrNull()
 
     override fun canAccessIssuedWorkout(
         ownerKey: String, source: KotlinTrainingSourceRevision

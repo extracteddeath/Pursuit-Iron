@@ -269,4 +269,58 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
             (result.newRepTargets as MutableList<Int>).clear()
         }
     }
+
+    @Test fun purposeSpecificPhysicalLoadCanEarnOneRepWithoutChangingWeight() {
+        val different=policies().map {p->
+            if(p.exerciseId=="db-press")p.copy(purposeWorkingLoad=n("25"))
+            else p
+        }
+        val last=observed(
+            actualLoads=listOf("25","25","25"),
+            issuedLoads=listOf("25","25","25"))
+        val reviewed=candidate(request(previous=last,
+            next=stagedRequest(p=different)))
+        assertEquals(listOf(14,14,12),reviewed.newRepTargets)
+        val prescribed=reviewed.workout.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }
+        assertEquals(3,prescribed.size)
+        assertTrue(prescribed.all {
+            (it.load as DraftSetLoad.Verified).value==n("25")
+        })
+        assertFalse(reviewed.mayIssueWorkout)
+        assertEquals(n("30"),
+            ((approved().exercises.first().equipment as ComposerEquipment.Verified)
+                .plannedLoad))
+    }
+
+    @Test fun purposeLoadProgressionRefusesOtherIssuedOrActualWeights() {
+        val different=policies().map {p->
+            if(p.exerciseId=="db-press")p.copy(purposeWorkingLoad=n("25"))
+            else p
+        }
+        for(last in listOf(
+            observed(actualLoads=listOf("25","30","25"),
+                issuedLoads=listOf("25","25","25")),
+            observed(actualLoads=listOf("25","25","25"),
+                issuedLoads=listOf("30","30","30")),
+            observed(actualLoads=listOf("30","30","30"),
+                issuedLoads=listOf("30","30","30"))
+        )) {
+            assertTrue(KotlinAdaptiveSetPrescriptionDomain.draft(
+                request(previous=last,next=stagedRequest(p=different)))
+                    is AdaptiveSetPrescriptionResult.Rejected)
+        }
+        val invalid=different.map {p->
+            if(p.exerciseId=="db-press")p.copy(purposeWorkingLoad=n("32.5"))
+            else p
+        }
+        val rejected=KotlinAdaptiveSetPrescriptionDomain.draft(
+            request(previous=observed(actualLoads=listOf("25","25","25"),
+                issuedLoads=listOf("25","25","25")),
+                next=stagedRequest(p=invalid)))
+        assertEquals(AdaptiveSetPrescriptionRefusal.APPROVED_PROGRAM_UNRESOLVED,
+            (rejected as AdaptiveSetPrescriptionResult.Rejected).reason)
+    }
+
 }

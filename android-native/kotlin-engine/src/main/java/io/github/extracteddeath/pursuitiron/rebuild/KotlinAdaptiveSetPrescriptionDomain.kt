@@ -119,19 +119,24 @@ object KotlinAdaptiveSetPrescriptionDomain {
             return denied(AdaptiveSetPrescriptionRefusal.UNSUPPORTED_SET_SCHEME,
                 "Authored warmups, top/backoff and advanced loading require their own prescription.")
 
+        // Resolve the CURRENT approved SESSION'S actual verified target,
+        // not the program-wide Composer exercise default. Purpose-specific
+        // load policies may lawfully use a different exact stock weight.
+        // Mixed top/backoff set schemes remain forbidden above.
         val issuedLoads=chosen.map { it.load as DraftSetLoad.Verified }
+        val purposeLoad=issuedLoads.first().value
         val observed=history.observations.sortedBy {it.workingOrdinal}
         if(issuedLoads.any {
             it.basis!=equipment.inventory?.basis ||
                 it.unit!=history.unit ||
-                !same(it.value,equipment.plannedLoad)
+                !same(it.value,purposeLoad)
         } ||
             observed.size!=chosen.size ||
             observed.map {it.workingOrdinal}!=(0 until chosen.size).toList() ||
             observed.any { it.issuedLoad==null ||
-                !same(checkNotNull(it.issuedLoad),equipment.plannedLoad) })
+                !same(checkNotNull(it.issuedLoad),purposeLoad) })
             return denied(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
-                "Working-set load or ordinal differs from the full approved prescription.")
+                "Working-set load or ordinal differs from the exact approved session prescription.")
 
         val proposed=runCatching {
             FatigueAwareRepTargetReviewDomain.assess(
@@ -144,7 +149,7 @@ object KotlinAdaptiveSetPrescriptionDomain {
                 "No demonstrated single-set rep increase. Keep the approved targets.")
         if(targets.size!=chosen.size ||
             targets.any { it !in history.targetReps.minimum..history.targetReps.maximum } ||
-            proposed.observedLoad?.let {same(it,equipment.plannedLoad)} != true)
+            proposed.observedLoad?.let {same(it,purposeLoad)} != true)
             return denied(AdaptiveSetPrescriptionRefusal.CANDIDATE_REAUDIT_FAILED,
                 "Observed loads or proposed repetitions no longer match the approved exercise.")
 

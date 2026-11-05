@@ -14,6 +14,11 @@ import java.util.Collections
  * from a generic 1RM or multiplied across every set. Physical weights, warmups,
  * active/rest seconds and purpose-specific effort remain unchanged.
  */
+enum class AdaptiveRepDecisionKind {
+    EARNED_ONE_MORE_REP,
+    REPEAT_PREVIOUSLY_ISSUED_TARGETS
+}
+
 enum class AdaptiveSetPrescriptionRefusal {
     STALE_SOURCE_OR_HISTORY,
     APPROVED_PROGRAM_UNRESOLVED,
@@ -36,7 +41,8 @@ sealed interface AdaptiveSetPrescriptionResult {
         val exerciseId: String,
         val editedSetKey: String,
         val observedReps: List<Int>,
-        val newRepTargets: List<Int>
+        val newRepTargets: List<Int>,
+        val decisionKind:AdaptiveRepDecisionKind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
     ) : AdaptiveSetPrescriptionResult {
         val mayAutoApply: Boolean get() = false
         val mayIssueWorkout: Boolean get() = false
@@ -51,7 +57,9 @@ data class AdaptiveSetPrescriptionRequest(
     val historyRevision: Long,
     val currentHistoryRevision: Long,
     val readiness: CoachReadiness,
-    val movementRestricted: Boolean
+    val movementRestricted: Boolean,
+    /** From owner-verified real issued set bands, never screen input. */
+    val previouslyIssuedExactReps: List<Int>?=null
 )
 
 object KotlinAdaptiveSetPrescriptionDomain {
@@ -140,6 +148,31 @@ object KotlinAdaptiveSetPrescriptionDomain {
             return denied(AdaptiveSetPrescriptionRefusal.CANDIDATE_REAUDIT_FAILED,
                 "Observed loads or proposed repetitions no longer match the approved exercise.")
 
+        val earlierTargets=request.previouslyIssuedExactReps
+        var kind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
+        if(earlierTargets!=null) {
+            if(earlierTargets.size!=targets.size ||
+                earlierTargets.any {it !in history.targetReps.minimum..history.targetReps.maximum})
+                return denied(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
+                    "The recorded individualized target count or range differs from the approved plan.")
+            if(targets==earlierTargets) {
+                // Same previously issued goals. This is a repeat target,
+                // NOT a new coaching improvement or weight increase.
+                kind=AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS
+            } else {
+                // A missed individualized set precludes increasing some
+                // other set while calling the entire session an advance.
+                if(earlierTargets.indices.any {
+                    checkNotNull(history.observations.single {obs ->
+                        obs.workingOrdinal==it
+                    }.actualReps)<earlierTargets[it]
+                } || targets.indices.any {targets[it]<earlierTargets[it]} ||
+                    targets.indices.count {targets[it]>earlierTargets[it]}!=1)
+                    return denied(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+                        "Repeat the previous individualized targets before earning another increase.")
+            }
+        }
+
         val targetByKey=chosen.mapIndexed {i,set ->
             set.setKey to targets[i]
         }.toMap()
@@ -174,7 +207,7 @@ object KotlinAdaptiveSetPrescriptionDomain {
             history.workoutId,request.historyRevision,history.exerciseId,
             chosen[changed].setKey,
             Collections.unmodifiableList(checkNotNull(proposed.observedReps)),
-            Collections.unmodifiableList(targets)
+            Collections.unmodifiableList(targets),kind
         )
     }
 }

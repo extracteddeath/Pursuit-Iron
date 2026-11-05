@@ -20,6 +20,15 @@ the native app's training authority. The live web app is not being retired
 or modified as part of this branch.
 
 
+## Master coaching and adaptive-cycle implementation plan
+
+[**Coaching engine and adaptive-cycle master plan**](COACHING_ENGINE_MASTER_PLAN.md)
+defines the single end-to-end contract: initial program quality, candidate
+block/split/day-count/exercise adaptation, permissions, stable progression
+slots, multiweek coaching, native ownership, adversarial tests and phased
+completion gates. It is the execution roadmap, not evidence that those
+capabilities are already implemented.
+
 ## Kotlin-only journal state machine (proposed receipts, not yet persisted)
 
 `KotlinWorkoutJournalDomain` models the next JS-retirement lifecycle seam:
@@ -173,9 +182,8 @@ The generator asks for explicit extra-focus choices when an odd UL/PPL
 schedule or six-day ULPPL schedule is ambiguous. It never makes up
 unreviewed weekly muscle doses or leftover day purposes, and exposes
 infeasible calendars instead of disregarding a lift. It reviews multiple
-calendar alternatives within a **bounded 32-candidate search**, returning
-the first independently feasible draft or the best inspectable unresolved
-draft (prioritizing required visits and actual dose over softer time
+calendar alternatives within a **bounded 32-candidate search**, comparing a bounded set of feasible weeks before returning a
+reviewed candidate, or the best inspectable unresolved draft (prioritizing required visits and actual dose over softer time
 preferences), not an arbitrary first failing arrangement. Each resulting
 week passes through the existing **catalog, equipment, dose and whole-program**
 checks. This is an isolated, bounded first generation layer—not a trained

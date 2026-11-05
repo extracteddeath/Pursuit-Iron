@@ -14,6 +14,14 @@ replacement is developed. This contract does not authorize publishing,
 decommissioning the website, modifying another developer's native branch, or
 migrating real user data.
 
+## Unified coaching implementation roadmap
+
+The [coaching engine and adaptive-cycle master plan](COACHING_ENGINE_MASTER_PLAN.md)
+is the dependency-ordered implementation contract for program quality,
+adaptive blocks, independent split/day-count/exercise permissions, full
+progression and native issuance. This does **not** relax any requirement below;
+the feature/UX and objective superiority ledgers remain launch blockers.
+
 ## Target release architecture
 
 - **Training engine: Kotlin-only.** Program generation, equipment and exercise

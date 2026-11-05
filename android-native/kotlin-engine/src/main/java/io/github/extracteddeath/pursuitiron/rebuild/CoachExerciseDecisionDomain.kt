@@ -187,6 +187,7 @@ object CoachExerciseDecisionDomain {
         // RIR for BOTH workouts. Never give contradictory "increase" advice.
         val previousMissingRir=assessments[priorIndex].actualRirReportedOrdinals.size!=
             last.expectedWorkingSets
+        if(previousMissingRir) flags+=CoachEvidenceFlag.EFFORT_NOT_REPORTED
         if(missingRir || previousMissingRir)
             return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,CoachConfidence.LIMITED,
                 "Your reps are promising, but actual effort was not recorded for every set in both workouts. Keep the current load and record RIR when possible before reviewing an increase.")

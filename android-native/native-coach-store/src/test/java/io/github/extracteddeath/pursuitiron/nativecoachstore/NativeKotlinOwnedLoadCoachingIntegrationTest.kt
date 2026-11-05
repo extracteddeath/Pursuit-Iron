@@ -443,6 +443,69 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertFalse(following.mayIssueWorkout)
     }
 
+    @Test fun diskBackedConservativeWeightReviewUsesPersonalizedThenOrdinaryCeilingSessions() {
+        val intent=repReadyHistory()
+        assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)
+        val issuer=repIssuer()
+        var issued=(issuer.issue("owner-1","workout-3")
+            as NativeKotlinIssueResult.Committed).journal
+        val exact=issued.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.map {it.reps}
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),exact)
+        for((index,target) in issued.snapshot.targets.withIndex()) {
+            val physical=target.load as DraftSetLoad.Verified
+            val applied=journals.appendStored(
+                "owner-1","workout-3",
+                KotlinJournalOperation.RecordSet(
+                    "weight-3-$index",issued.revision,target.setKey,
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(physical.value,physical.unit,12,2)),
+                approvals::canAccessIssuedWorkout)
+            assertTrue(applied.toString(),applied is NativeJournalFileResult.Durable)
+            issued=(applied as NativeJournalFileResult.Durable).journal
+        }
+        assertTrue(transactions.complete(
+            "owner-1","athlete-1","workout-3",
+            KotlinJournalOperation.Finish("weight-3-finish",issued.revision))
+            is NativeHistoryTransactionResult.Durable)
+        val before=reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review
+        val completed=before.timeline.completions.last()
+            as NativeKotlinMixedHistoryCompletion.Composer
+        assertEquals(KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW,
+            completed.evidence.exerciseReviews.single {
+                it.exerciseId=="db-press"
+            }.progressionGate)
+        // All equal narrow target bands are syntactically comparable by
+        // the old projector, but they are NOT the original 8–12 policy.
+        assertEquals(RepBand(12,12),
+            completed.evidence.exerciseReviews.single {
+                it.exerciseId=="db-press"
+            }.progressionWorkout?.targetReps)
+        complete(4,1)
+        val proposed=review()
+        assertTrue(proposed.toString(),proposed is NativeOwnerLoadReviewResult.Reviewed)
+        val verified=proposed as NativeOwnerLoadReviewResult.Reviewed
+        assertEquals(listOf("workout-3","workout-4"),verified.comparedWorkoutIds)
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            verified.coaching.status)
+        assertEquals(CoachNextLoadChangeKind.EARNED_INCREMENT,
+            verified.coaching.kind)
+        assertEquals(n("35"),verified.coaching.candidateLoad)
+        assertFalse(verified.coaching.maySaveProgram)
+        val reread=reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review
+        assertEquals(RepBand(12,12),
+            (reread.timeline.completions[1]
+                as NativeKotlinMixedHistoryCompletion.Composer)
+                .evidence.exerciseReviews.single {
+                    it.exerciseId=="db-press"
+                }.workingSets.first().issuedReps)
+        assertTrue(issuer.open("owner-1","workout-3")
+            is NativeJournalFileResult.Durable)
+    }
+
     @Test fun correctionAfterRepAcceptanceRevokesUnissuedTargetWithoutHistoryLoss() {
         val intent=repReadyHistory()
         assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)

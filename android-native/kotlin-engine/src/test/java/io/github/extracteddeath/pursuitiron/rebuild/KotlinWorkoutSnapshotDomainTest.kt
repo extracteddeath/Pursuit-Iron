@@ -318,8 +318,8 @@ class KotlinWorkoutSnapshotDomainTest {
         )
         for(candidate in cases) {
             val review=CoachNextProgramLoadReviewDomain.review(candidate)
-            assertNotEquals(candidate.toString(),
-                CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,review.status)
+            assertNotEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+                review.status)
             assertNull(review.candidateProgram)
             assertNull(review.candidateLoad)
             assertFalse(review.mayIssueWorkout)

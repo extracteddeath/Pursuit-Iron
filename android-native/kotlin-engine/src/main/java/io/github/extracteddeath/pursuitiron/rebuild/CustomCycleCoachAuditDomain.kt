@@ -24,7 +24,8 @@ enum class CustomCoachIssueKind {
     GOAL_POLICY_UNRESOLVED, NON_SET_TIME_UNDECLARED,
     SESSION_HARD_LIMIT, BELOW_WEEKLY_MEV, ABOVE_WEEKLY_MRV,
     INSUFFICIENT_DIRECT_FREQUENCY, PRIMARY_SKILL_FREQUENCY,
-    CONTINUITY_POLICY_INVALID, UNJUSTIFIED_BLOCK_VOLUME_DROP,
+    CONTINUITY_POLICY_MISSING, CONTINUITY_POLICY_INVALID,
+    UNJUSTIFIED_BLOCK_VOLUME_DROP,
     DIRECT_MUSCLE_DROP, REVIEW_CAP_EXCEEDED
 }
 
@@ -317,6 +318,18 @@ object CustomCycleCoachAuditDomain {
         // A new TRAINING block must not silently lose dose solely because
         // each phase independently meets a different lower MEV. Compare
         // resolved weeks including all authored per-week overrides.
+        val trainingBlockBoundaries=measurements.zipWithNext().any {
+            (earlier,later) ->
+            earlier.blockId != later.blockId &&
+                earlier.blockPurpose == CustomBlockPurpose.TRAINING &&
+                later.blockPurpose == CustomBlockPurpose.TRAINING
+        }
+        val missingContinuity=trainingBlockBoundaries &&
+            inputs.continuityPolicy == null
+        if (missingContinuity)
+            add(CustomCoachIssueKind.CONTINUITY_POLICY_MISSING,
+                "continuity",
+                "A new training block requires an explicit maximum weekly and direct-muscle dose reduction policy; a smaller strength MEV alone is not approval to erase volume.")
         val continuity = inputs.continuityPolicy
         if (continuity != null) {
             val totalLimit = continuity.maximumTotalWorkingSetDropFraction
@@ -372,7 +385,8 @@ object CustomCycleCoachAuditDomain {
                 structural.verifiedDraft==null ->
                 CustomCoachAuditStatus.INVALID_SOURCE
             issues.isEmpty()->CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW
-            policyIssue->CustomCoachAuditStatus.COACHING_POLICY_REQUIRED
+            policyIssue || missingContinuity ->
+                CustomCoachAuditStatus.COACHING_POLICY_REQUIRED
             else->CustomCoachAuditStatus.UNRESOLVED
         }
         return CustomCoachAudit(status,

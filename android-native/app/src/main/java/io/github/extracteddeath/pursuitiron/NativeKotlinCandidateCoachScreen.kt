@@ -30,6 +30,8 @@ internal fun NativeKotlinCandidateCoachScreen(
 ) {
     val scope=rememberCoroutineScope()
     var exerciseId by rememberSaveable { mutableStateOf("") }
+    var exerciseChoices by remember { mutableStateOf<List<String>>(emptyList()) }
+    var choicesLoading by remember { mutableStateOf(true) }
     var maximumStep by rememberSaveable { mutableStateOf("5") }
     var readiness by remember { mutableStateOf(CoachReadiness.NORMAL) }
     var restricted by rememberSaveable { mutableStateOf(false) }
@@ -47,13 +49,27 @@ internal fun NativeKotlinCandidateCoachScreen(
                 it <= BigDecimal("100000") &&
                 it.stripTrailingZeros().scale() <= 3 }
     }
-    val permitted=exerciseId.matches(
-        Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$"))
+    val permitted=exerciseId in exerciseChoices &&
+        exerciseId.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$"))
     fun invalidate() {
         reviewed=null
         checked=false
         savedWorkout=null
         notice=null
+    }
+    LaunchedEffect(host) {
+        choicesLoading=true
+        val choices=runCatching {
+            withContext(Dispatchers.IO) {
+                host.currentVerifiedCoachExerciseChoices()
+            }
+        }.getOrDefault(emptyList())
+        exerciseChoices=choices
+        if(exerciseId !in choices) {
+            exerciseId=choices.firstOrNull().orEmpty()
+            invalidate()
+        }
+        choicesLoading=false
     }
     val verified=reviewed?.coaching as? NativeCurrentLoadReviewResult.Reviewed
     val proposal=verified?.coaching?.takeIf {
@@ -68,11 +84,23 @@ internal fun NativeKotlinCandidateCoachScreen(
             "A proposed program change based on your real saved native workouts. Nothing changes automatically.")
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Text("Exercise and equipment",style=MaterialTheme.typography.titleMedium)
-                OutlinedTextField(value=exerciseId,
-                    onValueChange={ exerciseId=it.trim();invalidate() },
-                    label={Text("Approved exercise ID")},
-                    singleLine=true,modifier=Modifier.fillMaxWidth())
+                Text("Choose an approved exercise",
+                    style=MaterialTheme.typography.titleMedium)
+                when {
+                    choicesLoading -> Text("Checking your current native program and gym…")
+                    exerciseChoices.isEmpty() ->
+                        Text("No current verified Kotlin program and gym catalog. Complete your native gym setup and approve a program before reviewing progression.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    else -> Row(Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        exerciseChoices.forEach { id ->
+                            FilterChip(selected=exerciseId==id,
+                                onClick={exerciseId=id;invalidate()},
+                                label={Text(id.replace('_',' ').replace('-',' '))})
+                        }
+                    }
+                }
                 OutlinedTextField(value=maximumStep,
                     onValueChange={ maximumStep=it;invalidate() },
                     label={Text("Maximum approved increase (gym units)")},

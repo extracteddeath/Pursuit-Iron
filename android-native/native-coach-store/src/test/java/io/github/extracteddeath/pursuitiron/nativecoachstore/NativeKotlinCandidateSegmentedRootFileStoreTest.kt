@@ -435,6 +435,9 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(accepted.toString(),
             accepted is NativeCandidateHistoryRootResult.Reviewed)
         val view = this.result(accepted)
+        // The candidate check also requires the independently reviewed v2
+        // shadow to catch up to the newly finalized source revision.
+        assertTrue(shadow.sync(owner, athlete) is NativeSegmentedHistoryResult.Indexed)
         assertEquals(view,
             this.result(store().reviewAuthenticatedV2Parity(owner, athlete)))
         assertEquals(2L, view.head.revision)
@@ -512,6 +515,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(2L, result(mirrored).head.revision)
         assertEquals(1L, result(mirrored).head.completionCount)
         assertEquals(2, candidateFiles(".shard").size)
+        assertTrue(shadow.sync(owner, athlete) is NativeSegmentedHistoryResult.Indexed)
         assertEquals(this.result(mirrored),
             this.result(store().reviewAuthenticatedV2Parity(owner, athlete)))
     }

@@ -167,4 +167,81 @@ class CustomCycleCoachAuditDomainTest {
             it.kind==CustomCoachIssueKind.SESSION_HARD_LIMIT
         })
     }
+    private fun twoBlockCycle(recoverySecond: Boolean = false): CustomTrainingCycle {
+        val source=cycle(weeks=1)
+        val original=source.blocks.single()
+        val first=original.copy(days=original.days.map { day ->
+            if(day.weekday==4) day else day.copy(slots=day.slots.map {
+                it.copy(sets=listOf(authoredSet(),authoredSet()))
+            })
+        })
+        val second=original.copy(
+            blockId="block-2",
+            label="Next training block",
+            purpose=if(recoverySecond) CustomBlockPurpose.RECOVERY
+                else CustomBlockPurpose.TRAINING,
+            days=original.days.map { day -> day.copy(slots=day.slots.map {
+                it.copy(sets=listOf(authoredSet()))
+            }) }
+        )
+        return source.copy(blocks=listOf(first,second))
+    }
+
+    @Test fun unexplainedBlockVolumeCollapseIsNotApproved() {
+        val cycle=twoBlockCycle()
+        val audit=CustomCycleCoachAuditDomain.review(
+            cycle,setup(),StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.25"),n("0.25"))))
+        assertEquals(listOf(5,3),audit.weeks.map {it.workingSets})
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,audit.status)
+        assertTrue(audit.issues.any {
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP &&
+                it.location.contains("block-2")
+        })
+        assertTrue(audit.issues.any {
+            it.kind==CustomCoachIssueKind.DIRECT_MUSCLE_DROP &&
+                it.location.contains("ABS")
+        })
+        assertFalse(audit.mayIssueWorkout)
+        assertEquals(5,cycle.blocks.first().days.flatMap { it.slots }
+            .flatMap { it.sets }.count {it.type==DraftSetType.WORKING})
+    }
+
+    @Test fun expresslyReviewedTransitionLimitCanAcceptThreeOfFiveSets() {
+        val result=CustomCycleCoachAuditDomain.review(
+            twoBlockCycle(),setup(),StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.5"),n("0.5"))))
+        assertEquals(result.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,result.status)
+        assertTrue(result.issues.none {
+            it.kind in setOf(CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP,
+                CustomCoachIssueKind.DIRECT_MUSCLE_DROP)
+        })
+    }
+
+    @Test fun declaredRecoveryBlockIsNotMisreportedAsNormalTrainingCollapse() {
+        val result=CustomCycleCoachAuditDomain.review(
+            twoBlockCycle(recoverySecond=true),setup(),
+            StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.1"),n("0.1"))))
+        assertTrue(result.issues.none {
+            it.kind in setOf(CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP,
+                CustomCoachIssueKind.DIRECT_MUSCLE_DROP)
+        })
+    }
+
+    @Test fun invalidContinuityPolicyNeverPassesSilently() {
+        val result=CustomCycleCoachAuditDomain.review(
+            twoBlockCycle(),setup(),StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("1.5"),n("-0.1"))))
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,result.status)
+        assertTrue(result.issues.any {
+            it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_INVALID
+        })
+    }
+
 }

@@ -115,6 +115,72 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         it.filter { f -> f.fileName.toString().endsWith(ext) }.toList()
     }
 
+    @Test fun rootAcknowledgmentDigestBindsEveryCorrectionFieldNotJustEventId() {
+        val candidate=store()
+        val baseIntent=NativeHistoryWriteIntent.Correct("workout-1",
+            KotlinSavedSetCorrection("edit-1", 0, "set-1",
+                "event-1", KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(java.math.BigDecimal("200"), LoadUnit.LB, 6, 2)))
+        fun patch(intent: NativeHistoryWriteIntent) = NativeSegmentedWritePatch(
+            "a".repeat(64), 1, 2, 1, 1,
+            listOf(entry(1).copy(savedCorrectionRevision = 1)), intent)
+        val basePatch=patch(baseIntent)
+        val hash=candidate.patchDigest(basePatch)
+        assertEquals(64,hash.length)
+        assertEquals(hash,candidate.patchDigest(basePatch))
+        fun changed(correction: KotlinSavedSetCorrection) =
+            candidate.patchDigest(patch(baseIntent.copy(operation=correction)))
+        val original=baseIntent.operation
+        assertNotEquals(hash,changed(original.copy(
+            actual=original.actual!!.copy(reps=5))))
+        assertNotEquals(hash,changed(original.copy(
+            actual=original.actual!!.copy(load=java.math.BigDecimal("205")))))
+        assertNotEquals(hash,changed(original.copy(
+            actual=original.actual!!.copy(actualRir=1))))
+        assertNotEquals(hash,changed(original.copy(setKey="other-set")))
+        assertNotEquals(hash,changed(original.copy(correctsEventId="other-event")))
+        assertNotEquals(hash,changed(original.copy(
+            outcome=KotlinJournalSetOutcome.SKIPPED,actual=null)))
+        assertNotEquals(hash,changed(original.copy(expectedCorrectionRevision=1)))
+        assertNotEquals(hash,changed(original.copy(eventId="edit-2")))
+        assertNotEquals(hash,candidate.patchDigest(basePatch.copy(
+            consumedIntent=NativeHistoryWriteIntent.Finish("workout-1",
+                KotlinJournalOperation.Finish("edit-1",1)))))
+    }
+
+    @Test fun rootAcknowledgmentDigestBindsCustomAmplifierVisitAndFinishRevision() {
+        val candidate=store()
+        val visit=CustomWorkoutVisitKey("set-1",CustomWorkoutVisitPart.MAIN)
+        val original=CustomSavedVisitCorrection("edit-1",0,visit,"event-1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(java.math.BigDecimal("25"),LoadUnit.LB,8,2))
+        fun hash(intent: NativeHistoryWriteIntent) =
+            candidate.patchDigest(NativeSegmentedWritePatch(
+                "a".repeat(64),1,2,1,1,
+                listOf(entry(1).copy(savedCorrectionRevision=1)),intent))
+        val base=hash(NativeHistoryWriteIntent.CustomCorrect("workout-1",original))
+        assertNotEquals(base,hash(NativeHistoryWriteIntent.CustomCorrect(
+            "workout-1",original.copy(visit=CustomWorkoutVisitKey(
+                "set-1",CustomWorkoutVisitPart.FOLLOW_UP)))))
+        assertNotEquals(base,hash(NativeHistoryWriteIntent.CustomCorrect(
+            "workout-1",original.copy(performed=original.performed!!.copy(reps=7)))))
+        assertNotEquals(base,hash(NativeHistoryWriteIntent.CustomCorrect(
+            "workout-1",original.copy(expectedCorrectionRevision=1))))
+        assertNotEquals(base,hash(NativeHistoryWriteIntent.Correct("workout-1",
+            KotlinSavedSetCorrection("edit-1",0,"set-1","event-1",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(java.math.BigDecimal("25"),LoadUnit.LB,8,2)))))
+        val finished=hash(NativeHistoryWriteIntent.Finish("workout-1",
+            KotlinJournalOperation.Finish("finish-1",1)))
+        assertNotEquals(finished,hash(NativeHistoryWriteIntent.Finish("workout-1",
+            KotlinJournalOperation.Finish("finish-1",2))))
+        val customFinished=hash(NativeHistoryWriteIntent.CustomFinish("workout-1",
+            CustomWorkoutJournalOperation.Finish("finish-1",1)))
+        assertNotEquals(customFinished,hash(NativeHistoryWriteIntent.CustomFinish(
+            "workout-1",CustomWorkoutJournalOperation.Finish("finish-1",2))))
+        assertNotEquals(finished,customFinished)
+    }
+
     @Test fun noUnenrolledOrPartialHistoryMayCreateCandidateRoot() {
         assertEquals(rejection(NativeCandidateHistoryRootRefusal.NOT_BOOTSTRAPPED),
             store().audit(owner, athlete))

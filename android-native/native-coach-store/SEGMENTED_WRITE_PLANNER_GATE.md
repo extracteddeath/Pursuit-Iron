@@ -195,3 +195,20 @@ replay and thus is *not* a scalable or O(1) history authority. Production
 requires a paged/indexed identity owner, atomic index-and-root cutover,
 crash-safe directory durability, backup/restore certification, verified
 legacy migration and a strict single-writer protocol before any active use.
+
+## Exact redo acknowledgement fingerprint (candidate-only)
+
+The candidate segmented root now hashes the **entire typed redo operation**,
+including the expected revision, original set or custom amplifier visit key,
+corrected event ID, actual outcome, weight, unit, reps and RIR. Distinct
+correction payloads with a reused event ID can no longer be mistaken for an
+already published patch after acknowledgment loss. Finish events also bind
+their expected journal revision, and Composer/custom kinds have separate tags.
+Regression tests exercise collisions without writing to the canonical v2 ledger.
+
+This changes only the internal candidate acknowledgment fingerprint schema.
+An older experimental candidate root/WAL pair whose last-patch digest used the
+shortened format must fail closed and be explicitly reconciled, not silently
+treated as the same committed transaction. This does not create an
+authenticated single writer, a scalable durable index, directory fsync, or
+device-tested power-loss recovery.

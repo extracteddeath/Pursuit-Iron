@@ -1,6 +1,6 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
-import io.github.extracteddeath.pursuitiron.rebuild.KotlinHistoryManifestEntry
+import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -417,9 +417,20 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
         NativeCandidateHistoryRootResult.Reviewed(view(opened), false)
     }
 
-    private fun patchDigest(patch: NativeSegmentedWritePatch): String {
+    /**
+     * Candidate root CAS/acknowledgment identity MUST bind the exact redo
+     * operation, not merely its event ID. Otherwise a different correction
+     * with the SAME event ID, root/segment and manifest correction revision
+     * could be misreported as an already committed action after a crash.
+     *
+     * This is a SHA-256 equality digest, NOT an owner signature or durable
+     * history authority. The v2 replay + independent receipt verifier remain
+     * mandatory. Legacy candidate roots using the shorter digest fail closed.
+     */
+    internal fun patchDigest(patch: NativeSegmentedWritePatch): String {
         val out = ByteArrayOutputStream()
         DataOutputStream(out).use { d ->
+            d.writeInt(2) // versioned fingerprint schema
             d.writeUTF(patch.priorRootDigest)
             d.writeLong(patch.expectedHeadRevision)
             d.writeLong(patch.nextHeadRevision)
@@ -427,17 +438,55 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
             d.writeLong(patch.replaceSegmentFirstOrdinal)
             d.writeInt(patch.completions.size)
             patch.completions.forEach { d.entry(it) }
-            // The exact redo operation is persisted in the WAL; its eventId
-            // distinguishes otherwise identical edits in this candidate.
-            d.writeUTF(patch.consumedIntent.workoutId)
-            d.writeUTF(when (val intent = patch.consumedIntent) {
-                is NativeHistoryWriteIntent.Finish -> intent.operation.eventId
-                is NativeHistoryWriteIntent.CustomFinish -> intent.operation.eventId
-                is NativeHistoryWriteIntent.Correct -> intent.operation.eventId
-                is NativeHistoryWriteIntent.CustomCorrect -> intent.operation.eventId
-            })
+            val intent = patch.consumedIntent
+            d.writeUTF(intent.workoutId)
+            when (intent) {
+                is NativeHistoryWriteIntent.Finish -> {
+                    d.writeByte(1)
+                    d.writeUTF(intent.operation.eventId)
+                    d.writeLong(intent.operation.expectedJournalRevision)
+                }
+                is NativeHistoryWriteIntent.CustomFinish -> {
+                    d.writeByte(2)
+                    d.writeUTF(intent.operation.eventId)
+                    d.writeLong(intent.operation.expectedRevision)
+                }
+                is NativeHistoryWriteIntent.Correct -> {
+                    d.writeByte(3)
+                    val correction = intent.operation
+                    d.writeUTF(correction.eventId)
+                    d.writeLong(correction.expectedCorrectionRevision)
+                    d.writeUTF(correction.setKey)
+                    d.writeUTF(correction.correctsEventId)
+                    d.writeUTF(correction.outcome.name)
+                    d.patchPerformed(correction.actual)
+                }
+                is NativeHistoryWriteIntent.CustomCorrect -> {
+                    d.writeByte(4)
+                    val correction = intent.operation
+                    d.writeUTF(correction.eventId)
+                    d.writeLong(correction.expectedCorrectionRevision)
+                    d.writeUTF(correction.visit.setKey)
+                    d.writeUTF(correction.visit.part.name)
+                    d.writeUTF(correction.correctsEventId)
+                    d.writeUTF(correction.outcome.name)
+                    d.patchPerformed(correction.performed)
+                }
+            }
         }
         return hash(out.toByteArray())
+    }
+
+    private fun DataOutputStream.patchPerformed(performed: KotlinPerformedSet?) {
+        writeBoolean(performed != null)
+        if (performed == null) return
+        writeBoolean(performed.load != null)
+        if (performed.load != null) writeUTF(performed.load.toPlainString())
+        writeBoolean(performed.unit != null)
+        if (performed.unit != null) writeUTF(performed.unit.name)
+        writeInt(performed.reps)
+        writeBoolean(performed.actualRir != null)
+        if (performed.actualRir != null) writeInt(performed.actualRir)
     }
 
     /**

@@ -168,7 +168,7 @@ and safe closeout of any in-progress JS-issued workout before cutover.
 
 Headless Kotlin tests cover earned increase, overload rollback, stale history,
 incompatible or missing evidence, authored techniques, exact physical stock,
-unapproved proposals, cross-block dose changes and missing continuity policy.
+unapproved proposals, within-block and cross-block dose changes, weekly ramps and missing continuity policy.
 These tests verify candidate behavior, not human-coach superiority. CI must
 also pass the native store recovery suite and Compose compilation.
 
@@ -176,5 +176,5 @@ Do not transfer source ownership, merge this development branch, publish an APK
 or claim superiority until real paired JavaScript/Kotlin comparisons, the
 full 14-feature and E01–E41 ledgers, authoritative history, actual Android
 onboarding-to-Finish acceptance, device power-loss/restore and blind coaching
-reviews pass. The 24-scenario comparison's evidence file remains empty until
+reviews pass. The 26-scenario comparison's evidence file remains empty until
 both engines are actually run with matched inputs.

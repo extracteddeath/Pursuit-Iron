@@ -91,6 +91,15 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
     ) = NativeKotlinCandidateHistoryMirrorRecoveryCoordinator(
         fence, identity, store(), pagedIndex(), pairedCheckpoint(),
         afterIndex, afterCheckpoint)
+    private fun durableRecoveryIntent() =
+        NativeKotlinCandidateMirrorRecoveryIntentFileStore(
+            root, fence, identity, pairedCheckpoint())
+    private fun durableReconciler(
+        afterIndex: (() -> Unit)? = null,
+        afterCheckpoint: (() -> Unit)? = null
+    ) = NativeKotlinCandidateHistoryMirrorRecoveryCoordinator(
+        fence, identity, store(), pagedIndex(), pairedCheckpoint(),
+        afterIndex, afterCheckpoint, durableRecoveryIntent())
     private fun transactionIntent(
         beforeAck: (() -> Unit)? = null,
         afterAck: (() -> Unit)? = null
@@ -396,6 +405,127 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         Files.write(originalRedo,originalBytes)
         assertTrue((transactionIntent().prepare(owner,athlete)
             as NativeCandidateTransactionIntentResult.Durable).replayed)
+    }
+
+    @Test fun durableMirrorRecoveryResumesPreparedIntentAfterCrash() {
+        boot()
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.STORAGE_UNAVAILABLE),
+            durableReconciler(afterIndex={
+                throw IllegalStateException("crash after index")
+            }).reconcile(owner,athlete))
+        val prepared=durableRecoveryIntent().read(owner,athlete)
+            as NativeCandidateRecoveryIntentResult.Durable
+        assertEquals(NativeCandidateRecoveryIntentPhase.PREPARED,
+            prepared.intent.phase)
+        assertEquals(1,candidateFiles(".rintent").size)
+        assertTrue(candidateFiles(".cseal").isEmpty())
+        val recovered=durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertEquals(1L,recovered.checkpoint.sourceRevision)
+        assertEquals(NativeCandidateRecoveryIntentPhase.ACKNOWLEDGED,
+            (durableRecoveryIntent().read(owner,athlete)
+                as NativeCandidateRecoveryIntentResult.Durable).intent.phase)
+        assertTrue((durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent).replayed)
+        assertFalse(recovered.canAuthorizeWrites)
+    }
+
+    @Test fun durableMirrorRecoveryReplaysAfterCheckpointPublicationWithoutIntentAck() {
+        boot()
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.STORAGE_UNAVAILABLE),
+            durableReconciler(afterCheckpoint={
+                throw IllegalStateException("checkpoint persisted, ack lost")
+            }).reconcile(owner,athlete))
+        assertEquals(1,candidateFiles(".cseal").size)
+        val pending=durableRecoveryIntent().read(owner,athlete)
+            as NativeCandidateRecoveryIntentResult.Durable
+        assertEquals(NativeCandidateRecoveryIntentPhase.PREPARED,
+            pending.intent.phase)
+        val retried=durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertTrue(retried.replayed)
+        val acknowledged=durableRecoveryIntent().read(owner,athlete)
+            as NativeCandidateRecoveryIntentResult.Durable
+        assertEquals(NativeCandidateRecoveryIntentPhase.ACKNOWLEDGED,
+            acknowledged.intent.phase)
+        assertEquals(retried.checkpoint.pagedDirectoryFileDigest,
+            acknowledged.intent.acknowledgedDirectoryDigest)
+    }
+
+    @Test fun durableMirrorRecoveryRefusesMissingPreviouslyAcknowledgedSeal() {
+        boot()
+        val saved=durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        Files.delete(candidateFiles(".cseal").single())
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.PENDING_INTENT),
+            durableReconciler().reconcile(owner,athlete))
+        assertTrue(candidateFiles(".cseal").isEmpty())
+        assertEquals(NativeCandidateRecoveryIntentResult.Rejected(
+            NativeCandidateRecoveryIntentRefusal.LOST_ACKNOWLEDGED_SEAL),
+            durableRecoveryIntent().prepare(owner,athlete,
+                saved.checkpoint.sourceRevision,
+                saved.checkpoint.completionCount,
+                saved.checkpoint.rootDigest))
+    }
+
+    @Test fun durableMirrorRecoveryRejectsConflictingIntentAndCorruptBytes() {
+        val original=boot()
+        assertTrue(durableRecoveryIntent().prepare(owner,athlete,
+            original.head.revision,original.head.completionCount,
+            original.head.rootDigest) is NativeCandidateRecoveryIntentResult.Durable)
+        assertEquals(NativeCandidateRecoveryIntentResult.Rejected(
+            NativeCandidateRecoveryIntentRefusal.PENDING_CONFLICT),
+            durableRecoveryIntent().prepare(owner,athlete,
+                original.head.revision+1,original.head.completionCount,
+                "b".repeat(64)))
+        val walFile=candidateFiles(".rintent").single()
+        val content=Files.readAllBytes(walFile)
+        content[content.lastIndex]=(content.last().toInt() xor 1).toByte()
+        Files.write(walFile,content)
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.CORRUPT_INTENT),
+            durableReconciler().reconcile(owner,athlete))
+        assertEquals(NativeCandidateRecoveryIntentResult.Rejected(
+            NativeCandidateRecoveryIntentRefusal.CORRUPT_INTENT),
+            durableRecoveryIntent().read(owner,athlete))
+        assertTrue(candidateFiles(".pidx").isEmpty())
+        assertTrue(candidateFiles(".cseal").isEmpty())
+    }
+
+    @Test fun durableMirrorRecoveryReplaysRealFinishAtNextRevision() {
+        val initial=boot()
+        val before=durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        val saved=realComposerCompletion()
+        val intent=finish(1)
+        assertTrue(wal().prepare(owner,athlete,initial.head,intent,null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner,athlete,1,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(v2.finalize(owner,athlete,intent,saved)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(store().publishReplayVerifiedV2Mirror(
+            owner,athlete,replay,receiptVerifier())
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertTrue(shadow.sync(owner,athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val next=durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertEquals(2L,next.checkpoint.sourceRevision)
+        assertEquals(1L,next.checkpoint.completionCount)
+        assertNotEquals(before.checkpoint.rootDigest,next.checkpoint.rootDigest)
+        assertEquals(NativeCandidateRecoveryIntentPhase.ACKNOWLEDGED,
+            (durableRecoveryIntent().read(owner,athlete)
+                as NativeCandidateRecoveryIntentResult.Durable).intent.phase)
+        assertTrue((durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent).replayed)
+        assertFalse(next.canIssueProgression)
     }
 
     @Test fun mirrorReconciliationCreatesOneVerifiedPairAndOnlyAcknowledgesExactRetry() {

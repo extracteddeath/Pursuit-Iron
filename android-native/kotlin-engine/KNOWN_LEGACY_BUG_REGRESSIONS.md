@@ -19,7 +19,7 @@ without executing it.
 | L02 | 215×2 near failure repeatedly offered as earned weight | Actual RIR, below-floor and observed uniform-load checks; `CoachExerciseDecisionDomainTest` | Need longitudinal individualized plateau/recovery policy and paired execution |
 | L03 | Unavailable 38.5/159.5 lb weights on 5-lb equipment | `EquipmentLoadDomain`, native gym coherence and issuance tests | Need exhaustive device/equipment variant grid and real app data migration |
 | L04 | A set below the rep floor still causes aggressive future progression | Evidence-gated reviews and history correction revalidation | Need full athlete-specific fallback progression |
-| L05 | 14 reps within 10–15 or +3 reps on the very next set | `FatigueAwareRepTargetReviewDomainTest`: at most **one** rep on **one** eligible set, only with reported effort headroom | Need multiweek rep calibration and a real accepted per-set workout prescription |
+| L05 | 14 reps within 10–15 or +3 reps on the very next set | `FatigueAwareRepTargetReviewDomainTest`, `KotlinAdaptiveSetPrescriptionDomainTest`, native corrected-ledger integration: exact next-session **per-set** proposal, at most +1 rep for one proven set, unchanged physical loads/RIR/rest and other exercises | Still requires authenticated athlete acceptance and an actual persisted/issued per-set prescription; multiweek calibration and device validation |
 | L06 | Near-failure or unknown actual RIR treated as spare capacity | `FatigueAwareRepTargetReviewDomainTest`, `ConservativeProgressionReview` | Need complete client RIR capture and historical import rules |
 | L07 | App displays the same target RIR all through hypertrophy without phase-dependent intent | Current session-purpose and prescription policy checks | **Open**: individualized changing RIR progression and UI display |
 | L08 | Next set weight silently changes before the athlete logs it | `InWorkoutCoachDomain` explicitly preserves user edits and issued target | **Partial**: test actual Compose set editing, interrupted workouts, cold resume |
@@ -59,6 +59,34 @@ without executing it.
 6. Require zero known unresolved P0 regressions **and** full feature parity
    before cutover, while adding real improvements to the coach algorithm.
    Never lower the benchmark or delete failing cases to make Kotlin pass.
+
+## Native set-specific next-session prescription (candidate)
+
+`KotlinAdaptiveSetPrescriptionDomain` first recomputes the **entire** currently
+approved workout from `KotlinWorkoutSnapshotDomain.stage`. When full,
+comparable, exactly loaded historical working sets have actual RIR and at
+least one set has enough demonstrated headroom, it produces a concrete
+**immutable full-workout snapshot** with exact set-specific rep targets.
+It does not change a single load, unit, equipment basis, RIR, rest, warmup,
+other exercise, training day, journal or historical observation. Reps remain
+inside the approved practical rep envelope, and only one actual working set
+can earn an additional rep. Missing effort, near failure, skipped sets,
+edited/mixed loads, an unaudited set scheme, or stale source/history fails
+closed. This prevents copying a strong first set onto a fatigued last set.
+
+`NativeKotlinMixedHistoryReadCoordinator.reviewCurrentNextSetTargets`
+reopens the full native completion/correction ledger, identifies the
+**most recent** exercise appearance without skipping intervening custom
+work, and checks the currently approved program and actual available gym
+under the owner lock. It refuses review if the next workout's immutable
+journal has already been issued. The native host can request this read-only
+proposal off-thread.
+
+**Not production-complete:** The accepted per-set prescription must get a
+distinct durable approval record and be re-derived at issuance. It cannot
+become a saved target merely because the UI presented this candidate.
+The comparison baseline, corrections after display, account switches,
+gym changes and real-device workout logging still need end-to-end testing.
 
 The engineering goal is **strictly greater real-world quality**, not a
 one-sided claim that any headless Kotlin test makes it superior.

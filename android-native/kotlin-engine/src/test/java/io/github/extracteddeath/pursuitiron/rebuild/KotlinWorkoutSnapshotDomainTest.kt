@@ -244,7 +244,7 @@ class KotlinWorkoutSnapshotDomainTest {
         latest:ProgressionWorkoutEvidence=
             observed("week-new",listOf(30,30),listOf(12,12)),
         approved:ComposerRequest=reviewedStraightProgram(),
-        declaredPolicies:List<ExercisePrescriptionPolicy>=reviewedStraightPolicies(),
+        declaredPolicies:List<ExercisePrescriptionPolicy> = reviewedStraightPolicies(),
         current:KotlinTrainingSourceRevision=source,
         previousHistory:Long=7,
         currentHistory:Long=7,

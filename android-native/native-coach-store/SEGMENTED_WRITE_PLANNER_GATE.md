@@ -355,3 +355,26 @@ transaction and cannot publish/restore a segmented root. It is a checkpoint
 reconciliation WAL rehearsal, not the final native single-writer authority.
 Physical Android directory-fsync/backup and rollback evidence are still
 missing.
+
+## End-to-end candidate staged replay recovery (still v2-owned)
+
+`NativeKotlinCandidateStagedReplayRecoveryCoordinator` links the previously
+isolated stages under the **same cross-process owner lock**: confirm the exact
+saved redo, durably freeze its operation identity as a transaction ticket,
+verify that the original v2 Finish/saved correction and original journal have
+already been committed, publish/reopen the segmented candidate root, refresh
+the verified shadow, reconcile both paged identity trees plus their paired
+checkpoint, and finally acknowledge that SAME durable transaction ticket.
+It cannot create a workout completion from WAL-only evidence, clear a redo,
+rewrite a corrupt checkpoint/index/ticket, authorize any training decision, or
+transfer authority away from the current v2 history store.
+
+Failure-injected tests cover crashes before and after the candidate root
+swap, after root verification, after shadow refresh, lost checkpoint/index
+material, cold restart/idempotence and revoked or wrong athlete identity.
+The separately isolated transaction-intent and mirror-recovery-intent stores
+have their own corruption and retry regressions. For a future cutover, the
+single production writer must replace v2 with a journal-first exclusive native
+commit protocol, coordinate root/index directory fsync, and prove real device
+power-loss/backup restores, 4,097+ workouts and multi-cycle training accuracy.
+Neither this coordinator nor its successful tests constitute that cutover.

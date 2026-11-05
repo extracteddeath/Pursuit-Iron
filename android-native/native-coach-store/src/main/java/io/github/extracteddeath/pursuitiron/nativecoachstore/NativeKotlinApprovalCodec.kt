@@ -20,7 +20,7 @@ import java.math.BigDecimal
  */
 internal object NativeKotlinApprovalCodec {
     private const val MAGIC=0x50494131 // PIA1
-    private const val VERSION=1
+    private const val VERSION=2
     const val MAX_BYTES=512_000
 
     private fun DataOutputStream.string(value:String)=writeUTF(value)
@@ -230,6 +230,37 @@ internal object NativeKotlinApprovalCodec {
                 },optionalBand(),optionalInt())
         }
 
+    private fun verifiedRepProof(
+        proof:NativeKotlinAcceptedRepTargets,
+        base:KotlinStagedWorkout
+    ) {
+        val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
+        require(id.matches(proof.historicalWorkoutId) &&
+            proof.historicalWorkoutId!=base.workoutId &&
+            id.matches(proof.exerciseId) &&
+            id.matches(proof.changedSetKey) &&
+            proof.historyRevision in 1..9_007_199_254_740_991L &&
+            proof.reviewedReadiness!=CoachReadiness.LOW &&
+            proof.observedReps.size in 1..32 &&
+            proof.newRepTargets.size==proof.observedReps.size)
+        val working=base.targets.filter {
+            it.exerciseId==proof.exerciseId && it.type==DraftSetType.WORKING
+        }.sortedBy {it.ordinal}
+        require(working.size==proof.observedReps.size &&
+            working.map {it.ordinal}==(0 until working.size).toList() &&
+            proof.changedSetKey in working.map {it.setKey})
+        val differences=proof.newRepTargets.zip(proof.observedReps)
+            .mapIndexedNotNull {i,(next,was)->
+                require(was in 1..100 && next in 1..100 &&
+                    next in working[i].reps.minimum..working[i].reps.maximum &&
+                    (next==was || next==was+1))
+                if(next!=was)i else null
+            }
+        require(differences.size==1 &&
+            working[differences.single()].setKey==proof.changedSetKey)
+        require(working.all {it.load is DraftSetLoad.Verified})
+    }
+
     fun encode(value:NativeKotlinWorkoutApproval):ByteArray {
         // An approval must be a COMPLETE independently reviewed week.
         require(value.ownerKey.matches(Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")))
@@ -244,6 +275,7 @@ internal object NativeKotlinApprovalCodec {
         require(staged is KotlinWorkoutSnapshotResult.Staged) {
             "Cannot persist a partially reviewed or infeasible approval"
         }
+        value.acceptedRepTargets?.let {verifiedRepProof(it,staged.snapshot)}
         val bytes=ByteArrayOutputStream()
         DataOutputStream(bytes).use {out->
             with(out){
@@ -254,6 +286,15 @@ internal object NativeKotlinApprovalCodec {
                 source(value.grant.approvedSource);writeInt(value.grant.dayIndex)
                 program(value.program);policies(value.policies)
                 string(value.storageReceiptId);writeLong(value.storageRevision)
+                val proof=value.acceptedRepTargets
+                writeBoolean(proof!=null)
+                if(proof!=null) {
+                    string(proof.historicalWorkoutId);writeLong(proof.historyRevision)
+                    string(proof.exerciseId);string(proof.changedSetKey)
+                    items(proof.observedReps){writeInt(it)}
+                    items(proof.newRepTargets){writeInt(it)}
+                    writeEnum(proof.reviewedReadiness)
+                }
             }
         }
         return bytes.toByteArray().also {require(it.size<=MAX_BYTES)}
@@ -264,8 +305,11 @@ internal object NativeKotlinApprovalCodec {
         try {
             val value=DataInputStream(ByteArrayInputStream(bytes)).use {inp->
                 with(inp){
-                    if(readInt()!=MAGIC || readInt()!=VERSION)
+                    if(readInt()!=MAGIC)
                         throw IOException("unrecognized approval encoding")
+                    val version=readInt()
+                    if(version !in 1..VERSION)
+                        throw IOException("unsupported approval encoding")
                     val owner=readUTF();val athlete=readUTF()
                     val approved=source();val current=source()
                     val grant=KotlinWorkoutSelectionGrant(
@@ -273,9 +317,15 @@ internal object NativeKotlinApprovalCodec {
                     val program=program()
                     val policies=policies()
                     val receipt=readUTF();val revision=readLong()
+                    val proof=if(version==2 && readBoolean()) {
+                        NativeKotlinAcceptedRepTargets(
+                            readUTF(),readLong(),readUTF(),readUTF(),
+                            items(32){readInt()},items(32){readInt()},
+                            readEnum<CoachReadiness>())
+                    } else null
                     if(available()!=0)throw IOException("trailing approval bytes")
                     NativeKotlinWorkoutApproval(owner,athlete,approved,current,
-                        grant,program,policies,receipt,revision)
+                        grant,program,policies,receipt,revision,proof)
                 }
             }
             // Reject malformed but checksum-valid contents too.

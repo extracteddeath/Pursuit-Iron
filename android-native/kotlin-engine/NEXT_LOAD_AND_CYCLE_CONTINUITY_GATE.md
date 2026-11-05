@@ -149,6 +149,43 @@ weekly MEV/MRV and therefore prove why continuity needs its own review.
 The old reported 30-to-11 collapse remains a required real paired regression;
 no legacy/Kotlin head-to-head result is claimed here.
 
+## Durable, athlete-accepted per-set rep prescription
+
+`KotlinAdaptiveSetPrescriptionDomain` builds one **whole-session** candidate
+from the approved program and measured completed working sets. It changes
+only exact per-set rep targets, never arbitrary set weights, RIR, rest,
+exercise order, or logged evidence. Eligibility requires matching actual
+unit and equipment stock, stable ordinals, authentic historical source,
+actual recorded RIR, sufficient headroom and no restricted movement.
+
+The isolated native Coach screen now displays the before/after working-set
+targets and asks the athlete to explicitly accept them. The native owner
+reopens complete saved history including corrections and current equipment
+under one revision fence. It rejects unissued/custom workout identity
+collisions, stale approval/history, omitted effort, or any altered proposed
+rep. Acceptance persists a new approval storage revision and **new grant**
+with a constrained evidence proof (original workout/revision and exact
+working-set targets). Version-2 `NativeKotlinApprovalCodec` retains version-1
+read compatibility; the codec refuses fabricated or multi-rep jumps.
+
+Issuance is genuinely connected through
+`NativeKotlinAcceptedRepSnapshotVerifier`. The issuer restages the entire
+original Kotlin workout, re-derives accepted sets from authoritative
+corrected history and current gym **before and again under the immutable
+journal lock**, and refuses if anything differs. The inner verifier
+intentionally never re-locks its own pending journal; it checks the full
+history and gym while the outer issuer holds that journal's lock.
+Neither a missing verifier nor a post-acceptance correction can cause
+a silent fallback to broad generic ranges. The old issued journal survives
+unchanged.
+
+This is still a candidate-only grant, not a release-ready Android feature.
+Device account switches, interruption recovery, full backup/restore,
+cross-program phase behavior, custom amplifiers, and future rep recalibration
+after a narrowly issued target still need complete testing. The full native
+history is bounded by its existing ledger cap, and the web coach still has
+unmatched features. No JS/Kotlin paired superiority result is claimed.
+
 ## Candidate Android workout path
 
 `NativeKotlinCandidateJourney` can now navigate to the existing

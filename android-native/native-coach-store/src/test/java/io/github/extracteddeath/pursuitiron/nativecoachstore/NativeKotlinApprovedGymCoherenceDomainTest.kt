@@ -100,11 +100,13 @@ class NativeKotlinApprovedGymCoherenceDomainTest {
         assertEquals(NativeApprovedGymCoherenceResult.Rejected(
             NativeApprovedGymCoherenceRefusal.PHYSICAL_EQUIPMENT_CHANGED,
             "rope-pushdown"),check(source=removed))
+        val changedStock=VerifiedLoadStock.Totals(
+            LoadUnit.LB,LoadBasis.CABLE_STACK,
+            listOf(n("20"),n("25"),n("30")))
+        val changedGym=athlete.gym.copy(
+            confirmedStock=mapOf("cable-1" to changedStock))
         val other=source.copy(setup=source.setup.copy(
-            reviewed=athlete.copy(gym=athlete.gym.copy(
-                confirmedStock=mapOf("cable-1" to
-                    VerifiedLoadStock.Totals(LoadUnit.LB,LoadBasis.CABLE_STACK,
-                        listOf(n("20"),n("25"),n("30")))))))
+            reviewed=athlete.copy(gym=changedGym)))
         assertEquals(NativeApprovedGymCoherenceResult.Rejected(
             NativeApprovedGymCoherenceRefusal.PHYSICAL_EQUIPMENT_CHANGED,
             "rope-pushdown"),check(source=other))

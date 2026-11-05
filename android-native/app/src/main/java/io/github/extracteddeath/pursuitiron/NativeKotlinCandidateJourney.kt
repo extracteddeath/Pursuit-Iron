@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
  * while screen navigation preserves authored draft revisions.
  */
 private enum class KotlinCandidateDestination(val label:String) {
-    ONBOARD("My setup"),GYM("My gym"),PROGRAM("My program")
+    ONBOARD("My setup"),GYM("My gym"),PROGRAM("My program"),TRAIN("Train")
 }
 
 @Composable
@@ -29,10 +29,12 @@ internal fun NativeKotlinCandidateJourney() {
     val host=remember(context){NativeKotlinCandidateHost(context)}
     val gymController=remember(host){NativeKotlinGymSourceController(host)}
     val cycleController=remember(host){NativeKotlinCustomCycleController(host)}
-    DisposableEffect(gymController,cycleController) {
+    val sessionController=remember(host){NativeKotlinSessionController(host)}
+    DisposableEffect(gymController,cycleController,sessionController) {
         onDispose {
             gymController.close()
             cycleController.close()
+            sessionController.close()
         }
     }
     var destination by rememberSaveable {
@@ -63,7 +65,65 @@ internal fun NativeKotlinCandidateJourney() {
                         NativeKotlinGymSourceCandidateScreen(gymController)
                     KotlinCandidateDestination.PROGRAM ->
                         NativeKotlinCustomCycleCandidateScreen(cycleController)
+                    KotlinCandidateDestination.TRAIN ->
+                        NativeKotlinCandidateTrainEntry(sessionController)
                 }
+            }
+        }
+    }
+}
+
+
+/**
+ * Makes the existing complete Kotlin logger reachable in the ISOLATED
+ * candidate journey. Merely entering an ID never issues or invents a session.
+ * The native store requires the same owned, revision-bound approval grant
+ * and history enrollment before "Start" can persist any workout.
+ */
+@Composable
+private fun NativeKotlinCandidateTrainEntry(
+    controller: NativeKotlinSessionController
+) {
+    var entryId by rememberSaveable { mutableStateOf("") }
+    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val valid = entryId.matches(
+        Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
+    if(selectedId == null) {
+        Column(Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement=Arrangement.spacedBy(16.dp)) {
+            PageHeading("KOTLIN COACH · ISOLATED",
+                "Your native workout",
+                "Only an explicitly approved Kotlin workout can be started.")
+            PursuitCard(highlighted=true) {
+                Text("Open an approved workout",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("Enter the workout ID from an already saved, owner-verified native program grant. This is a candidate testing flow, not the live workout screen.")
+                OutlinedTextField(
+                    value=entryId,
+                    onValueChange={entryId=it},
+                    singleLine=true,
+                    label={Text("Approved native workout ID")},
+                    isError=entryId.isNotBlank() && !valid,
+                    modifier=Modifier.fillMaxWidth())
+                PursuitPrimaryAction(
+                    "Open native workout",enabled=valid
+                ) { selectedId=entryId }
+            }
+        }
+    } else {
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),
+                horizontalArrangement=Arrangement.SpaceBetween) {
+                Text("Native workout · ${selectedId}",
+                    style=MaterialTheme.typography.labelLarge)
+                TextButton(onClick={
+                    controller.clear()
+                    selectedId=null
+                }) { Text("Other workout") }
+            }
+            Box(Modifier.weight(1f)) {
+                NativeKotlinWorkoutCandidateScreen(
+                    controller,checkNotNull(selectedId))
             }
         }
     }

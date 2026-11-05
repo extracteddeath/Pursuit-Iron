@@ -100,7 +100,30 @@ object NativeKotlinCurrentLoadCoachReview {
         }
         if (appearances.size < 2)
             return refuse(NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY)
-        val lastTwo = appearances.takeLast(2)
+        val purposeScoped=approval.policies.any {
+            it.exerciseId==exerciseId && it.purposeWorkingLoad!=null
+        }
+        val nextPurpose=if(purposeScoped)approval.program.sessionIntents
+            .singleOrNull {it.dayIndex==approval.grant.dayIndex}?.purpose else null
+        if(purposeScoped && (nextPurpose==null ||
+            nextPurpose==ComposerSessionPurpose.UNSPECIFIED))
+            return refuse(NativeCurrentLoadReviewRefusal.PURPOSE_CHANGED)
+        val matching=if(nextPurpose==null)appearances else
+            appearances.filter {
+                it is NativeKotlinMixedHistoryCompletion.Composer &&
+                    it.purpose==nextPurpose
+            }
+        if(matching.size<2)
+            return refuse(NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY)
+        val lastTwo=matching.takeLast(2)
+        if(nextPurpose!=null) {
+            val after=appearances.dropWhile {it!==lastTwo[0]}
+            if(after.any {it is NativeKotlinMixedHistoryCompletion.Custom})
+                return refuse(NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT)
+            if(after.any {it is NativeKotlinMixedHistoryCompletion.Composer &&
+                    it.evidence.source!=source})
+                return refuse(NativeCurrentLoadReviewRefusal.HISTORICAL_SOURCE_CHANGED)
+        }
         if (lastTwo.any { it !is NativeKotlinMixedHistoryCompletion.Composer })
             return refuse(NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT)
         val previous = lastTwo[0] as NativeKotlinMixedHistoryCompletion.Composer
@@ -180,7 +203,8 @@ object NativeKotlinCurrentLoadCoachReview {
                 approval.program,source,approval.currentSource,
                 timeline.manifestRevision,expectedHistoryRevision,
                 olderFacts,newerFacts,exerciseId,approval.policies,
-                maximumAuthorizedIncrease,readiness,movementRestricted
+                maximumAuthorizedIncrease,readiness,movementRestricted,
+                nextPurpose
             )
         )
         return NativeCurrentLoadReviewResult.Reviewed(

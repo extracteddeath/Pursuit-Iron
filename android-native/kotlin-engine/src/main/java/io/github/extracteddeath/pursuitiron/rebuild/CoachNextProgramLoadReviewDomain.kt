@@ -49,7 +49,10 @@ data class CoachNextProgramLoadRequest(
     val policies: List<ExercisePrescriptionPolicy>,
     val maximumAuthorizedIncrease: BigDecimal,
     val readiness: CoachReadiness,
-    val movementRestricted: Boolean
+    val movementRestricted: Boolean,
+    /** Null keeps legacy program-wide behavior; explicit purpose changes only
+     * that verified policy, never another session-purpose working load. */
+    val requestedPurpose: ComposerSessionPurpose? = null
 )
 
 data class CoachNextProgramLoadReview(
@@ -59,7 +62,9 @@ data class CoachNextProgramLoadReview(
     val candidateLoad: BigDecimal?,
     val affectedDayIndices: List<Int>,
     val candidateProgram: ComposerRequest?,
-    val explanation: String
+    val explanation: String,
+    /** Entire verified policy list for the proposed revision, when scoped. */
+    val candidatePolicies: List<ExercisePrescriptionPolicy>? = null
 ) {
     init {
         require(explanation.isNotBlank())
@@ -112,8 +117,21 @@ object CoachNextProgramLoadReviewDomain {
         if (stock == null || stock.unit != equipment.unit)
             return denied(CoachNextLoadReviewStatus.LOAD_BASIS_UNVERIFIED,
                 "The exact gym load and equipment basis have not been confirmed.")
+        val purpose=request.requestedPurpose
+        if(purpose==ComposerSessionPurpose.UNSPECIFIED)
+            return denied(CoachNextLoadReviewStatus.NO_COMPARABLE_PLANNED_VISIT,
+                "An explicit exercise-specific coaching purpose is required.")
+        val specific=if(purpose==null)null else request.policies.singleOrNull {
+            it.exerciseId==request.exerciseId && it.purpose==purpose
+        }
+        if(purpose!=null && (specific==null ||
+            specific.purposeWorkingLoad==null))
+            return denied(
+                CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
+                "The exact approved purpose-specific working load is missing.")
+        val workingLoad=specific?.purposeWorkingLoad ?:equipment.plannedLoad
         val currentInspection = EquipmentLoadDomain.inspect(
-            stock, equipment.plannedLoad, equipment.unit)
+            stock, workingLoad, equipment.unit)
         if (currentInspection !is LoadInspection.Confirmed || !currentInspection.exact)
             return denied(CoachNextLoadReviewStatus.LOAD_BASIS_UNVERIFIED,
                 "The current prescribed weight cannot be built with verified equipment.")
@@ -125,12 +143,13 @@ object CoachNextProgramLoadReviewDomain {
             return denied(CoachNextLoadReviewStatus.NO_COMPARABLE_PLANNED_VISIT,
                 "The original complete week must be resolved before changing a load.")
         val affected = plan.sessions.filter { session ->
-            session.exercises.any { it.exerciseId == request.exerciseId }
+            (purpose==null || session.purpose==purpose) &&
+                session.exercises.any { it.exerciseId == request.exerciseId }
         }.map { it.dayIndex }
         if (affected.isEmpty())
             return denied(CoachNextLoadReviewStatus.NO_COMPARABLE_PLANNED_VISIT,
                 "No approved training day contains this exercise.")
-        if (request.policies.any {
+        if (purpose==null && request.policies.any {
                 it.exerciseId == request.exerciseId && it.purposeWorkingLoad != null
             })
             return denied(
@@ -153,11 +172,12 @@ object CoachNextProgramLoadReviewDomain {
             prior.expectedWorkingSets != latest.expectedWorkingSets)
             return denied(CoachNextLoadReviewStatus.MORE_EVIDENCE_REQUIRED,
                 "The last two exercise appearances are not safely comparable.")
-        val programBands = plan.sessions.flatMap { it.exercises }.filter {
+        val relevant=plan.sessions.filter {purpose==null || it.purpose==purpose}
+        val programBands = relevant.flatMap { it.exercises }.filter {
             it.exerciseId == request.exerciseId
         }.flatMap { it.sets }.filter { it.type == DraftSetType.WORKING }
             .map { it.targetReps }.distinct()
-        val programSetCounts = plan.sessions.flatMap { it.exercises }.filter {
+        val programSetCounts = relevant.flatMap { it.exercises }.filter {
             it.exerciseId == request.exerciseId
         }.map { ex -> ex.sets.count { it.type == DraftSetType.WORKING } }.distinct()
         if (programBands.size != 1 || programBands.single() != latest.targetReps ||
@@ -182,12 +202,12 @@ object CoachNextProgramLoadReviewDomain {
         val kind: CoachNextLoadChangeKind
         if (increase.canOfferIncrease &&
             increase.currentObservedLoad != null &&
-            same(equipment.plannedLoad, increase.currentObservedLoad)) {
+            same(workingLoad, increase.currentObservedLoad)) {
             candidate = checkNotNull(increase.reviewCandidate)
             kind = CoachNextLoadChangeKind.EARNED_INCREMENT
         } else if (recovery.canOfferForReview &&
             recovery.heaviestAttemptedLoad != null &&
-            same(equipment.plannedLoad, recovery.heaviestAttemptedLoad)) {
+            same(workingLoad, recovery.heaviestAttemptedLoad)) {
             candidate = checkNotNull(recovery.candidateReturnLoad)
             kind = CoachNextLoadChangeKind.RETURN_TO_DEMONSTRATED_LOAD
         } else {
@@ -196,17 +216,24 @@ object CoachNextProgramLoadReviewDomain {
         }
         val attainable = EquipmentLoadDomain.inspect(stock, candidate, equipment.unit)
         if (attainable !is LoadInspection.Confirmed || !attainable.exact ||
-            same(candidate, equipment.plannedLoad))
+            same(candidate, workingLoad))
             return denied(CoachNextLoadReviewStatus.NO_SAFE_CHANGE,
                 "The reviewed change is not an available, distinct physical load.")
-        val modified = request.approvedProgram.copy(exercises =
-            Collections.unmodifiableList(request.approvedProgram.exercises.map {
-                if (it.exerciseId == request.exerciseId)
-                    it.copy(equipment = equipment.copy(plannedLoad = normalized(candidate)))
+        val modified = if(purpose==null)
+            request.approvedProgram.copy(exercises =
+                Collections.unmodifiableList(request.approvedProgram.exercises.map {
+                    if(it.exerciseId==request.exerciseId)
+                        it.copy(equipment=equipment.copy(plannedLoad=normalized(candidate)))
+                    else it
+                })) else request.approvedProgram
+        val modifiedPolicies=if(purpose==null)request.policies
+            else Collections.unmodifiableList(request.policies.map {
+                if(it.exerciseId==request.exerciseId && it.purpose==purpose)
+                    it.copy(purposeWorkingLoad=normalized(candidate))
                 else it
-            }))
+            })
         val checked = runCatching {
-            CoachSessionPrescriptionDomain.draft(modified, request.policies)
+            CoachSessionPrescriptionDomain.draft(modified, modifiedPolicies)
         }.getOrNull()
         if (checked?.status != PrescriptionDraftStatus.COMPLETE_FOR_REVIEW ||
             checked.sessions.map { it.dayIndex } != plan.sessions.map { it.dayIndex } ||
@@ -214,21 +241,26 @@ object CoachNextProgramLoadReviewDomain {
                 plan.sessions.map { it.exercises.map { ex -> ex.exerciseId } })
             return denied(CoachNextLoadReviewStatus.FULL_WEEK_REAUDIT_FAILED,
                 "The whole proposed week could not be independently verified. Keep the saved plan.")
-        val actualAffected = checked.sessions.filter { session ->
-            session.exercises.any { it.exerciseId == request.exerciseId }
-        }.map { it.dayIndex }
-        if (actualAffected != affected)
+        val actualAffected=checked.sessions.filter { session ->
+            (purpose==null || session.purpose==purpose) &&
+                session.exercises.any {it.exerciseId==request.exerciseId}
+        }.map {it.dayIndex}
+        if (actualAffected != affected ||
+            (purpose!=null && plan.sessions.zip(checked.sessions).any { (before,after) ->
+                before.purpose!=purpose && before!=after
+            }))
             return denied(CoachNextLoadReviewStatus.FULL_WEEK_REAUDIT_FAILED,
                 "The exercise schedule changed during review.")
 
         return CoachNextProgramLoadReview(
             CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW, kind,
-            normalized(equipment.plannedLoad), normalized(candidate),
+            normalized(workingLoad), normalized(candidate),
             Collections.unmodifiableList(affected),
             modified,
             if (kind == CoachNextLoadChangeKind.EARNED_INCREMENT)
                 "Two complete comparable workouts earned the next physically verified load. Review every affected training day before saving a new program revision."
-            else "The overloaded session did not demonstrate the heaviest attempted weight across all sets. Review a return to the previously demonstrated load across the affected days."
+            else "The overloaded session did not demonstrate the heaviest attempted weight across all sets. Review a return to the previously demonstrated load across the affected days.",
+            if(purpose==null)null else modifiedPolicies
         )
     }
 }

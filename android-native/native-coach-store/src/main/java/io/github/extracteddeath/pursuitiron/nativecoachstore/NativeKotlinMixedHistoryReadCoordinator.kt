@@ -682,6 +682,7 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     currentSource = nextSource,
                     grant = nextGrant,
                     program = proposed,
+                    policies=coaching.candidatePolicies ?: current.policies,
                     storageReceiptId = intent.newStorageReceiptId,
                     storageRevision = nextRevision)
                 val validation = KotlinWorkoutSnapshotDomain.stage(

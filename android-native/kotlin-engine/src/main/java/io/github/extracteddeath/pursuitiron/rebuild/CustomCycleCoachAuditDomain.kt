@@ -315,21 +315,30 @@ object CustomCycleCoachAuditDomain {
                 }
             }
         }
-        // A new TRAINING block must not silently lose dose solely because
-        // each phase independently meets a different lower MEV. Compare
-        // resolved weeks including all authored per-week overrides.
-        val trainingBlockBoundaries=measurements.zipWithNext().any {
+        // Compare EVERY consecutive pair of actual resolved training
+        // weeks, including authored week overrides inside a block. MEV by
+        // itself does not show that a 5-to-3 set drop was planned or safe.
+        // Separate RECOVERY/PERFORMANCE_TEST purposes preserve explicitly
+        // intended deloads rather than disguising TRAINING reductions.
+        val trainingPairs=measurements.zipWithNext().filter {
             (earlier,later) ->
-            earlier.blockId != later.blockId &&
-                earlier.blockPurpose == CustomBlockPurpose.TRAINING &&
+            earlier.blockPurpose == CustomBlockPurpose.TRAINING &&
                 later.blockPurpose == CustomBlockPurpose.TRAINING
         }
-        val missingContinuity=trainingBlockBoundaries &&
+        val requiresContinuity=trainingPairs.any { (earlier,later) ->
+            earlier.blockId != later.blockId ||
+                earlier.workingSets > later.workingSets ||
+                TrainingMuscle.entries.any { muscle ->
+                    (earlier.directSets[muscle] ?: zero) >
+                        (later.directSets[muscle] ?: zero)
+                }
+        }
+        val missingContinuity=requiresContinuity &&
             inputs.continuityPolicy == null
         if (missingContinuity)
             add(CustomCoachIssueKind.CONTINUITY_POLICY_MISSING,
                 "continuity",
-                "A new training block requires an explicit maximum weekly and direct-muscle dose reduction policy; a smaller strength MEV alone is not approval to erase volume.")
+                "Training-phase transitions and within-block weekly dose reductions need an explicitly reviewed total/direct-muscle continuity policy; meeting separate MEVs is not permission to erase work.")
         val continuity = inputs.continuityPolicy
         if (continuity != null) {
             val totalLimit = continuity.maximumTotalWorkingSetDropFraction
@@ -343,11 +352,7 @@ object CustomCycleCoachAuditDomain {
                     "continuity",
                     "Specify reviewed volume-drop ceilings between zero and one.")
             } else {
-                for ((earlier, later) in measurements.zipWithNext()) {
-                    if (earlier.blockId == later.blockId ||
-                        earlier.blockPurpose != CustomBlockPurpose.TRAINING ||
-                        later.blockPurpose != CustomBlockPurpose.TRAINING)
-                        continue
+                for ((earlier, later) in trainingPairs) {
                     if (earlier.workingSets > later.workingSets &&
                         earlier.workingSets > 0) {
                         val decline = BigDecimal(earlier.workingSets - later.workingSets)
@@ -355,7 +360,7 @@ object CustomCycleCoachAuditDomain {
                         if (decline > allowed)
                             add(CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP,
                                 "week.${later.absoluteWeek}.block.${later.blockId}",
-                                "This transition drops from ${earlier.workingSets} to ${later.workingSets} working sets, exceeding the reviewed maximum training reduction.")
+                                "Consecutive training weeks drop from ${earlier.workingSets} to ${later.workingSets} working sets (week ${earlier.absoluteWeek} to ${later.absoluteWeek}), exceeding the explicitly reviewed reduction limit.")
                     }
                     for (muscle in TrainingMuscle.entries) {
                         val before = earlier.directSets[muscle] ?: zero

@@ -1562,6 +1562,82 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(1, candidateFiles(".cseal").size)
     }
 
+    @Test fun stagedReplayCorrectionCrashKeepsImmutableWorkoutIdentityAndExactAck() {
+        val original=realComposerCompletion()
+        assertTrue(v2.enrollVerifiedSnapshot(owner, athlete,
+            listOf(original)) { o,a ->
+                signedIn==NativeKotlinOwnerIdentity(o,a)
+            } is NativeHistoryLedgerResult.Durable)
+        assertTrue(shadow.sync(owner,athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val initial=result(store().bootstrapFromVerifiedV2(owner,athlete))
+        val first=durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        val immutablePages=candidateFiles(".pidpage")
+            .associate { path ->
+                path.fileName.toString() to Files.readAllBytes(path).toList()
+            }
+        assertEquals(2,immutablePages.size)
+
+        val operation=KotlinSavedSetCorrection("edit-1",0,"set-1","set-event-1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(java.math.BigDecimal("195"),LoadUnit.LB,6,1))
+        val intent=NativeHistoryWriteIntent.Correct("workout-1",operation)
+        val corrected=original.copy(savedCorrectionRevision=1)
+        assertTrue(wal().prepare(owner,athlete,initial.head,intent,original)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,listOf(original)),
+            corrected) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner,athlete,1,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(correction.appendStored(owner,"workout-1",operation) { who, source ->
+            authority.canAccessIssuedWorkout(who,source)
+        } is NativeSavedCorrectionFileResult.Durable)
+        assertTrue(v2.finalize(owner,athlete,intent,corrected)
+            is NativeHistoryLedgerResult.Durable)
+
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.STORAGE_UNAVAILABLE),
+            stagedRecovery(afterRoot={
+                throw IllegalStateException("crash after corrected root")
+            }).resume(owner,athlete))
+        assertEquals(2L,result(store().audit(owner,athlete)).head.revision)
+        assertEquals(1L,result(store().audit(owner,athlete)).head.completionCount)
+        assertEquals(1L,(v2.open(owner,athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.completions.single()
+                .savedCorrectionRevision)
+        assertEquals(immutablePages,candidateFiles(".pidpage")
+            .associate { path ->
+                path.fileName.toString() to Files.readAllBytes(path).toList()
+            })
+
+        val recovered=stagedRecovery().resume(owner,athlete)
+            as NativeCandidateStagedRecoveryResult.Consistent
+        assertTrue(recovered.rootReplayed)
+        assertFalse(recovered.canAuthorizeWrites)
+        assertFalse(recovered.canAuthorizeHistoryReads)
+        assertFalse(recovered.canIssueProgression)
+        assertEquals(2L,recovered.checkpoint.sourceRevision)
+        assertEquals(1L,recovered.checkpoint.completionCount)
+        assertNotEquals(first.checkpoint.rootDigest,recovered.checkpoint.rootDigest)
+        assertEquals(immutablePages,candidateFiles(".pidpage")
+            .associate { path ->
+                path.fileName.toString() to Files.readAllBytes(path).toList()
+            })
+        val indexedWorkout=pagedIndex().findWorkout(owner,athlete,"workout-1")
+            as NativeCandidatePagedIdentityResult.Lookup
+        val indexedReceipt=pagedIndex().findReceipt(owner,athlete,original.storedReceiptId)
+            as NativeCandidatePagedIdentityResult.Lookup
+        assertEquals(indexedWorkout.row,indexedReceipt.row)
+        assertEquals(1L,indexedWorkout.row?.completionOrder)
+        assertTrue((transactionIntent().inspect(owner,athlete)
+            as NativeCandidateTransactionIntentResult.Durable).intent.acknowledged)
+        assertTrue((stagedRecovery().resume(owner,athlete)
+            as NativeCandidateStagedRecoveryResult.Consistent)
+                .intentAcknowledgmentReplayed)
+    }
+
     @Test fun stagedReplayCannotReplaceLostCommittedIndexOrDifferentAthlete() {
         val initial = boot()
         committedComposerFinishForStagedRecovery(initial)

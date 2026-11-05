@@ -211,7 +211,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertEquals(NativeApprovalWriteResult.Committed(1),
             approvals.publish("owner-1",0,original))
         val coherent=NativeKotlinGymCoherentWorkoutAuthority(
-            approvals,authoring)
+            approvals,authoring,fence)
         assertEquals(original,coherent.currentApprovedWorkout(
             "owner-1","future-native-workout"))
         val proposed=NativeKotlinGymCatalogEditingDomain.removeStock(

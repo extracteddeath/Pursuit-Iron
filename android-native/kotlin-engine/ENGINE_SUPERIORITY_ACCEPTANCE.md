@@ -9,8 +9,8 @@ Neither engine gets credit for producing the other engine's output.
 
 ## Source-of-truth benchmark files
 
-- `verification/engine-superiority-cases.json`: 26 fixed, independently
-  stated scenarios (35 required paired proofs) spanning progression, equipment,
+- `verification/engine-superiority-cases.json`: 27 fixed, independently
+  stated scenarios (37 required paired proofs) spanning progression, equipment,
   programming, custom programs/cycles, coaching, history, migration and
   Android. The critical rep-jump case is a release blocker, not a claimed
   measured improvement.

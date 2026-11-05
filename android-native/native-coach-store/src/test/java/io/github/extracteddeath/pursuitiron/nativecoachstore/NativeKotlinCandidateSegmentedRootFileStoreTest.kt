@@ -91,6 +91,12 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
     ) = NativeKotlinCandidateHistoryMirrorRecoveryCoordinator(
         fence, identity, store(), pagedIndex(), pairedCheckpoint(),
         afterIndex, afterCheckpoint)
+    private fun transactionIntent(
+        beforeAck: (() -> Unit)? = null,
+        afterAck: (() -> Unit)? = null
+    ) = NativeKotlinCandidateHistoryTransactionIntentFileStore(
+        root, fence, identity, wal(), store(), pagedIndex(),
+        pairedCheckpoint(), beforeAck, afterAck)
     private fun result(r: NativeCandidateHistoryRootResult) =
         (r as NativeCandidateHistoryRootResult.Reviewed).view
     private fun rejection(reason: NativeCandidateHistoryRootRefusal) =
@@ -256,6 +262,136 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             identityIndex().findWorkout(owner, athlete, "workout-1"))
         // An independently proven Finish uses a fresh candidate root.
         // The synthetic candidate cannot be repaired by an index write.
+    }
+
+    @Test fun stagedTransactionIntentCannotAcknowledgeBeforeActualHistoryCommit() {
+        val initial=boot()
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.NOT_STAGED),
+            transactionIntent().prepare(owner,athlete))
+        val saved=realComposerCompletion()
+        val intent=finish(1)
+        assertTrue(wal().prepare(owner,athlete,initial.head,intent,null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        val prepared=transactionIntent().prepare(owner,athlete)
+            as NativeCandidateTransactionIntentResult.Durable
+        assertFalse(prepared.intent.acknowledged)
+        assertFalse(prepared.intent.canAuthorizeHistoryReads)
+        assertFalse(prepared.intent.canAuthorizeWrites)
+        assertFalse(prepared.intent.canIssueProgression)
+        assertFalse(prepared.intent.canTransferAuthority)
+        assertEquals(initial.head.rootDigest,prepared.intent.baseRootDigest)
+        assertEquals(2L,prepared.intent.nextRevision)
+        assertEquals(1L,prepared.intent.nextCompletionCount)
+        assertEquals(64,prepared.intent.operationPatchDigest.length)
+        assertTrue((transactionIntent().prepare(owner,athlete)
+            as NativeCandidateTransactionIntentResult.Durable).replayed)
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.UNVERIFIED_COMMIT),
+            transactionIntent().acknowledge(owner,athlete))
+        assertTrue(candidateFiles(".txintent").size==1)
+        assertFalse((transactionIntent().inspect(owner,athlete)
+            as NativeCandidateTransactionIntentResult.Durable).intent.acknowledged)
+        assertEquals(0L,(v2.open(owner,athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())
+    }
+
+    @Test fun stagedTransactionIntentAcknowledgesOnlyReplayVerifiedRootAndPair() {
+        val initial=boot()
+        val saved=realComposerCompletion()
+        val intent=finish(1)
+        assertTrue(wal().prepare(owner,athlete,initial.head,intent,null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        val staged=(transactionIntent().prepare(owner,athlete)
+            as NativeCandidateTransactionIntentResult.Durable).intent
+        assertTrue(v2.prepare(owner,athlete,1,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(v2.finalize(owner,athlete,intent,saved)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.UNVERIFIED_COMMIT),
+            transactionIntent().acknowledge(owner,athlete))
+        assertTrue(store().publishReplayVerifiedV2Mirror(
+            owner,athlete,replay,receiptVerifier())
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertTrue(shadow.sync(owner,athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.UNVERIFIED_COMMIT),
+            transactionIntent().acknowledge(owner,athlete))
+        val pair=reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.STORAGE_UNAVAILABLE),
+            transactionIntent(beforeAck={
+                throw IllegalStateException("crash before ack")
+            }).acknowledge(owner,athlete))
+        assertFalse((transactionIntent().inspect(owner,athlete)
+            as NativeCandidateTransactionIntentResult.Durable).intent.acknowledged)
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.STORAGE_UNAVAILABLE),
+            transactionIntent(afterAck={
+                throw IllegalStateException("lost ack")
+            }).acknowledge(owner,athlete))
+        val recovered=transactionIntent().acknowledge(owner,athlete)
+            as NativeCandidateTransactionIntentResult.Durable
+        assertTrue(recovered.replayed)
+        assertTrue(recovered.intent.acknowledged)
+        assertEquals(staged.operationPatchDigest,recovered.intent.operationPatchDigest)
+        assertEquals(pair.checkpoint.rootDigest,recovered.intent.acknowledgedRootDigest)
+        assertEquals(pair.checkpoint.pagedDirectoryFileDigest,
+            recovered.intent.acknowledgedDirectoryDigest)
+        assertEquals(1,candidateFiles(".txintent").size)
+        signedIn=null
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.NOT_AUTHORIZED),
+            transactionIntent().acknowledge(owner,athlete))
+    }
+
+    @Test fun stagedTransactionIntentRejectsTamperAndConflictingSameEventPayload() {
+        val initial=boot()
+        val saved=realComposerCompletion()
+        val intent=finish(1)
+        assertTrue(wal().prepare(owner,athlete,initial.head,intent,null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        val originalRedo=candidateFiles(".wal").single()
+        val originalBytes=Files.readAllBytes(originalRedo)
+        assertTrue(transactionIntent().prepare(owner,athlete)
+            is NativeCandidateTransactionIntentResult.Durable)
+        val originalTicket=candidateFiles(".txintent").single()
+        val ticketBytes=Files.readAllBytes(originalTicket)
+        val corrupted=ticketBytes.copyOf()
+        corrupted[corrupted.lastIndex]=(corrupted.last().toInt() xor 1).toByte()
+        Files.write(originalTicket,corrupted)
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.CORRUPT_INTENT),
+            transactionIntent().prepare(owner,athlete))
+        Files.write(originalTicket,ticketBytes)
+        // A genuinely different candidate WAL can never be acknowledged by
+        // a previously persisted ticket, even with a reused event ID.
+        Files.delete(originalRedo)
+        val altered=NativeHistoryWriteIntent.Finish("workout-1",
+            KotlinJournalOperation.Finish("finish-1",2))
+        assertTrue(wal().prepare(owner,athlete,initial.head,altered,null)
+            is NativeSegmentedRedoResult.Durable)
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.PENDING_TRANSACTION),
+            transactionIntent().prepare(owner,athlete))
+        assertEquals(NativeCandidateTransactionIntentResult.Rejected(
+            NativeCandidateTransactionIntentRefusal.CONFLICTING_REDO),
+            transactionIntent().acknowledge(owner,athlete))
+        Files.write(originalRedo,originalBytes)
+        assertTrue((transactionIntent().prepare(owner,athlete)
+            as NativeCandidateTransactionIntentResult.Durable).replayed)
     }
 
     @Test fun mirrorReconciliationCreatesOneVerifiedPairAndOnlyAcknowledgesExactRetry() {

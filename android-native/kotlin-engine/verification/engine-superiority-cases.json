@@ -308,6 +308,17 @@
       ]
     },
     {
+      "id": "history-paired-root-index-cutover",
+      "domain": "migration",
+      "severity": "critical",
+      "scenario": "Under an authenticated athlete, interrupt publication independently after native Finish/correction journal receipt, immutable history shard, segmented root, workout-ID page, receipt-ID page, paged directory and combined root/index checkpoint. Include before-checkpoint crash, lost checkpoint acknowledgment, stale old checkpoint, restored backup and cross-owner access.",
+      "expected": "Only one complete, same-owner, exact-revision root+workout/receipt directory may be readable or used for Last, PR and next-session coaching after exclusive single-writer authority is proven. Any torn, stale, tampered, replayed-conflicting or incompletely restored artifact must fail closed without dropping or fabricating any workout; exact acknowledged replays remain idempotent. The current candidate-only checkpoint is not sufficient to pass this production acceptance.",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
       "id": "full-journey",
       "domain": "android",
       "severity": "critical",

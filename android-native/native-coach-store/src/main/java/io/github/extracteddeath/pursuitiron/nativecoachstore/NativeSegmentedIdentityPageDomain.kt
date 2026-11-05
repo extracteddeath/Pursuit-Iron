@@ -195,6 +195,102 @@ internal object NativeSegmentedIdentityPageDomain {
         )
     }
 
+    /** Change at most one page per key tree, splitting at 128 rows. */
+    private fun insertPage(
+        current: List<NativeSegmentedIdentityPage>,
+        row: NativeCandidateIndexedWorkout,
+        kind: KeyType
+    ): List<NativeSegmentedIdentityPage>? {
+        if (current.isEmpty()) return pages(listOf(row), kind)
+        val newKey = key(row, kind)
+        // Find the first page ending at/after this key (or the last page).
+        // The rest of the already verified directory is not materialized.
+        val result = current.binarySearch { page ->
+            page.lastKey.compareTo(newKey)
+        }
+        val index = if (result >= 0) result
+            else minOf(current.lastIndex, -result - 1)
+        val old = current[index]
+        if (old.rows.size !in 1..PAGE_SIZE ||
+            old.firstKey != key(old.rows.first(), kind) ||
+            old.lastKey != key(old.rows.last(), kind) ||
+            old.rows.zipWithNext().any { (a,b) -> key(a, kind) >= key(b, kind) } ||
+            digestPage(kind, old.rows) != old.contentDigest ||
+            old.rows.any { key(it, kind) == newKey })
+            return null
+        val replacementRows = (old.rows + row).sortedBy { key(it, kind) }
+        val split = if (replacementRows.size > PAGE_SIZE)
+            listOf(replacementRows.take(PAGE_SIZE / 2),
+                replacementRows.drop(PAGE_SIZE / 2))
+        else listOf(replacementRows)
+        val updated = current.toMutableList()
+        updated.removeAt(index)
+        updated.addAll(index, split.map { rows ->
+            val frozen = Collections.unmodifiableList(rows.toList())
+            NativeSegmentedIdentityPage(
+                key(frozen.first(), kind), key(frozen.last(), kind),
+                digestPage(kind, frozen), frozen)
+        })
+        return Collections.unmodifiableList(updated)
+    }
+
+    /**
+     * PROSPECTIVE, non-durable copy-on-write page layout for a new Finish.
+     * An independent native owner must first prove that this directory is
+     * complete/current and that the new journal is a real durable Finish.
+     * This reducer alone cannot authorize an insert or publish history.
+     */
+    fun proposeAppend(
+        current: NativeSegmentedIdentityPageDirectory,
+        expectedRootDigest: String, expectedRevision: Long,
+        nextRootDigest: String, nextRevision: Long,
+        newEntry: KotlinHistoryManifestEntry
+    ): NativeSegmentedIdentityPageDecision {
+        if (expectedRootDigest != current.sourceRootDigest ||
+            expectedRevision != current.sourceRevision)
+            return deny(NativeSegmentedIdentityPageRefusal.STALE_ROOT)
+        if (!digest.matches(nextRootDigest) ||
+            nextRootDigest == expectedRootDigest ||
+            current.sourceRevision >= MAX_REVISION ||
+            nextRevision != current.sourceRevision + 1 ||
+            current.completionCount >= MAX_REVISION - 1 ||
+            newEntry.completionOrder != current.completionCount + 1 ||
+            newEntry.savedCorrectionRevision != 0L ||
+            newEntry.originalJournalRevision !in 1..MAX_REVISION ||
+            !id.matches(newEntry.workoutId) ||
+            !id.matches(newEntry.storedReceiptId) ||
+            !id.matches(newEntry.finishEventId))
+            return deny(NativeSegmentedIdentityPageRefusal.INVALID_HISTORY)
+        val workout = find(current, current.ownerKey, current.athleteId,
+            expectedRootDigest, expectedRevision, newEntry.workoutId,
+            KeyType.WORKOUT)
+        val receipt = find(current, current.ownerKey, current.athleteId,
+            expectedRootDigest, expectedRevision, newEntry.storedReceiptId,
+            KeyType.RECEIPT)
+        if (workout is NativeSegmentedIdentityPageDecision.Rejected)
+            return workout
+        if (receipt is NativeSegmentedIdentityPageDecision.Rejected)
+            return receipt
+        if ((workout as NativeSegmentedIdentityPageDecision.Located).row != null)
+            return deny(NativeSegmentedIdentityPageRefusal.DUPLICATE_WORKOUT)
+        if ((receipt as NativeSegmentedIdentityPageDecision.Located).row != null)
+            return deny(NativeSegmentedIdentityPageRefusal.DUPLICATE_RECEIPT)
+        val row = NativeCandidateIndexedWorkout(
+            newEntry.workoutId, newEntry.storedReceiptId,
+            newEntry.completionOrder)
+        val nextWorkouts = insertPage(current.workoutPages,row,KeyType.WORKOUT)
+            ?: return deny(NativeSegmentedIdentityPageRefusal.CORRUPT_PAGE)
+        val nextReceipts = insertPage(current.receiptPages,row,KeyType.RECEIPT)
+            ?: return deny(NativeSegmentedIdentityPageRefusal.CORRUPT_PAGE)
+        return NativeSegmentedIdentityPageDecision.Prepared(current.copy(
+            sourceRootDigest = nextRootDigest,
+            sourceRevision = nextRevision,
+            completionCount = current.completionCount + 1,
+            workoutPages = nextWorkouts,
+            receiptPages = nextReceipts
+        ))
+    }
+
     fun findWorkout(
         directory: NativeSegmentedIdentityPageDirectory,
         owner: String, athlete: String, expectedRootDigest: String,

@@ -96,6 +96,62 @@ class NativeSegmentedIdentityPageDomainTest {
                 forged,"owner-1","athlete-1",digest,12,target))
     }
 
+    @Test fun append4097CopiesOnlyBoundedIndexPagesAndFencesOldRoot() {
+        val initial=prepared((1L..4096L).map { entry(it) })
+        val inserted=entry(4097)
+        val decision=NativeSegmentedIdentityPageDomain.proposeAppend(
+            initial,digest,12,"b".repeat(64),13,inserted)
+        assertTrue(decision.toString(),decision is NativeSegmentedIdentityPageDecision.Prepared)
+        val after=(decision as NativeSegmentedIdentityPageDecision.Prepared).directory
+        assertEquals(4097L,after.completionCount)
+        assertEquals(13L,after.sourceRevision)
+        assertEquals(33,after.workoutPages.size)
+        assertEquals(33,after.receiptPages.size)
+        assertTrue(after.workoutPages.all { it.rows.size<=128 })
+        assertTrue(after.receiptPages.all { it.rows.size<=128 })
+        assertEquals(4096L,initial.completionCount)
+        assertFalse(after.canAuthorizeNewWorkout)
+        assertTrue(after.workoutPages.any { newer ->
+            initial.workoutPages.any { older -> newer === older }
+        })
+        val found=NativeSegmentedIdentityPageDomain.findWorkout(
+            after,"owner-1","athlete-1","b".repeat(64),13,"workout-4097")
+            as NativeSegmentedIdentityPageDecision.Located
+        assertEquals(4097L,found.row?.completionOrder)
+        assertEquals(NativeSegmentedIdentityPageDecision.Rejected(
+            NativeSegmentedIdentityPageRefusal.STALE_ROOT),
+            NativeSegmentedIdentityPageDomain.findWorkout(
+                after,"owner-1","athlete-1",digest,12,"workout-4097"))
+        assertEquals(NativeSegmentedIdentityPageDecision.Rejected(
+            NativeSegmentedIdentityPageRefusal.DUPLICATE_WORKOUT),
+            NativeSegmentedIdentityPageDomain.proposeAppend(
+                initial,digest,12,"b".repeat(64),13,
+                inserted.copy(workoutId="workout-1")))
+        assertEquals(NativeSegmentedIdentityPageDecision.Rejected(
+            NativeSegmentedIdentityPageRefusal.DUPLICATE_RECEIPT),
+            NativeSegmentedIdentityPageDomain.proposeAppend(
+                initial,digest,12,"b".repeat(64),13,
+                inserted.copy(storedReceiptId=entry(1).storedReceiptId)))
+        assertEquals(NativeSegmentedIdentityPageDecision.Rejected(
+            NativeSegmentedIdentityPageRefusal.STALE_ROOT),
+            NativeSegmentedIdentityPageDomain.proposeAppend(
+                initial,digest,11,"b".repeat(64),13,inserted))
+    }
+
+    @Test fun fullPageSplitsInsteadOfGrowingUnbounded() {
+        val old=prepared((1L..128L).map { entry(it) })
+        val append=NativeSegmentedIdentityPageDomain.proposeAppend(
+            old,digest,12,"b".repeat(64),13,
+            entry(129,receipt="receipt-500").copy(workoutId="workout-64-extra"))
+        assertTrue(append.toString(),append is NativeSegmentedIdentityPageDecision.Prepared)
+        val next=(append as NativeSegmentedIdentityPageDecision.Prepared).directory
+        assertEquals(listOf(64,65),next.workoutPages.map { it.rows.size })
+        assertEquals(listOf(64,65),next.receiptPages.map { it.rows.size })
+        assertEquals(128,old.workoutPages.single().rows.size)
+        assertEquals(129L,next.completionCount)
+        assertFalse(next.canPublishHistory)
+    }
+
     @Test fun emptyCandidateStillDoesNotAuthorizeAnAbsentWorkout() {
         val empty=prepared(emptyList())
         assertTrue(empty.workoutPages.isEmpty())

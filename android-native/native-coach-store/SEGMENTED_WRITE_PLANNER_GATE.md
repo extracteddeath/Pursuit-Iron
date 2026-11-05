@@ -231,3 +231,12 @@ complete source history. Before use, a native one-writer protocol must
 persist immutable pages, authenticate their COMPLETE directory and owner,
 prove source-journal and legacy parity, atomically couple receipt/workout
 directories with the segmented history root, and recover a lost commit.
+
+The page planner also has a **candidate-only copy-on-write Finish projection**.
+It rejects a stale source root or revision, duplicate workout/receipt ID,
+incorrect completion ordinal and malformed selected pages. A successful
+proposal changes at most one old page in each key tree (with a bounded
+128-row split when full); untouched page objects remain unchanged. Tests
+rehearse the 4,096-to-4,097 transition and a full page split. No directory,
+WAL, journal, root or index is published by this reducer, and it cannot
+authenticate a caller-supplied absence proof or grant write authority.

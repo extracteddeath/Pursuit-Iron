@@ -239,6 +239,36 @@ class NativeKotlinApprovalFileAuthority(
         }
     }
 
+    /**
+     * Owner-authenticated read of the current saved generated-workout grant.
+     * Unlike selecting a user-entered ID, this can drive a genuine native
+     * Today/Train picker. A corrupt, revoked, stale or cross-account approval
+     * is never returned. This does NOT issue the selected session or enroll
+     * history, and the issuance writer re-verifies everything at commit.
+     */
+    fun currentOwnedApproval(ownerKey: String): NativeKotlinWorkoutApproval? =
+        runCatching {
+            fence.withOwnerTransaction(ownerKey) {
+                val signedIn = active(ownerKey) ?: return@withOwnerTransaction null
+                val record = read(path(ownerKey))
+                    ?: return@withOwnerTransaction null
+                if(record.ownerKey != ownerKey ||
+                    record.athleteId != signedIn.athleteId)
+                    return@withOwnerTransaction null
+                val approved = record.approved
+                    ?: return@withOwnerTransaction null
+                if(approved.ownerKey != ownerKey ||
+                    approved.athleteId != signedIn.athleteId ||
+                    approved.currentSource != approved.approvedSource ||
+                    approved.grant.approvedSource != approved.currentSource ||
+                    approved.grant.workoutId.isBlank() ||
+                    approved.storageRevision != record.revision ||
+                    active(ownerKey) != signedIn)
+                    return@withOwnerTransaction null
+                approved
+            }
+        }.getOrNull()
+
     /** No caller-supplied approvals; only private disk and current sign-in. */
     override fun currentApprovedWorkout(
         ownerKey:String,workoutId:String

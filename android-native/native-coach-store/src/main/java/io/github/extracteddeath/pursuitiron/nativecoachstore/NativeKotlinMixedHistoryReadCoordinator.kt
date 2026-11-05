@@ -194,6 +194,151 @@ class NativeKotlinMixedHistoryReadCoordinator(
         }
     }
 
+    /**
+     * BOUNDED isolated native program acceptance transaction.
+     *
+     * This executes under exactly the same owner lock as native approvals,
+     * journal issuance and history commits. No UI-supplied proposed program
+     * or saved set data is trusted. All of the actual completed journals and
+     * saved corrections are opened again at commit time; a stale review,
+     * unbuildable target or reused workout identity fails closed.
+     *
+     * The approval file is the current candidate generated-program owner.
+     * This does NOT modify a prior issued workout or transfer legacy history
+     * ownership. Future production must additionally authenticate the
+     * persisted athlete/gym/catalog source and certify directory fsync.
+     */
+    fun acceptCurrentApprovedLoad(
+        owner: String,
+        athlete: String,
+        approvals: NativeKotlinApprovalFileAuthority,
+        intent: NativeKotlinCoachLoadAcceptanceIntent,
+        maximumAuthorizedIncrease: java.math.BigDecimal,
+        readiness: CoachReadiness,
+        movementRestricted: Boolean
+    ): NativeKotlinCoachAcceptanceResult {
+        fun reject(reason: NativeKotlinCoachAcceptanceRefusal) =
+            NativeKotlinCoachAcceptanceResult.Rejected(reason)
+        val validWorkoutId = Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")
+        if(!id.matches(owner) || !id.matches(athlete) ||
+            !id.matches(intent.exerciseId) ||
+            !validWorkoutId.matches(intent.newWorkoutId) ||
+            !validWorkoutId.matches(intent.newGrantId) ||
+            !validWorkoutId.matches(intent.newStorageReceiptId) ||
+            intent.newDayIndex !in 0..5 ||
+            intent.expectedApprovalRevision !in 1..9_007_199_254_740_990L ||
+            intent.expectedHistoryRevision !in 1..9_007_199_254_740_991L ||
+            intent.expectedComparedWorkoutIds.size != 2 ||
+            intent.expectedComparedWorkoutIds.distinct().size != 2 ||
+            intent.expectedComparedWorkoutIds.any { !id.matches(it) } ||
+            intent.expectedAffectedDayIndices.isEmpty() ||
+            intent.expectedAffectedDayIndices.distinct().size !=
+                intent.expectedAffectedDayIndices.size)
+            return reject(NativeKotlinCoachAcceptanceRefusal.INVALID_SCOPE)
+        if(!intent.explicitlyAccepted)
+            return reject(NativeKotlinCoachAcceptanceRefusal.NOT_EXPLICITLY_ACCEPTED)
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                if(!authorized(owner, athlete))
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.NOT_AUTHORIZED)
+                val current = approvals.currentOwnedApproval(owner)
+                    ?.takeIf { it.athleteId == athlete }
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.NO_CURRENT_APPROVAL)
+                if(current.storageRevision != intent.expectedApprovalRevision)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.APPROVAL_CHANGED)
+                if(current.grant.workoutId == intent.newWorkoutId ||
+                    current.grant.grantId == intent.newGrantId ||
+                    current.storageReceiptId == intent.newStorageReceiptId)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
+                val history = when(val read = readFenced(owner, athlete)) {
+                    is NativeKotlinMixedHistoryReadResult.Rejected ->
+                        return@withOwnerTransaction reject(
+                            NativeKotlinCoachAcceptanceRefusal.HISTORY_UNAVAILABLE)
+                    is NativeKotlinMixedHistoryReadResult.Review -> read.timeline
+                }
+                if(history.manifestRevision != intent.expectedHistoryRevision)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.HISTORY_CHANGED)
+                if(history.completions.any {
+                    it.manifest.workoutId == intent.newWorkoutId ||
+                    it.manifest.storedReceiptId == intent.newStorageReceiptId
+                })
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
+                // Detect even an issued, unfinished workout omitted from the
+                // completion manifest. A corrupt/unauthorized existing journal
+                // is NEVER interpreted as a missing identity.
+                val existing = composerStore.openStored(
+                    owner, intent.newWorkoutId) { who, source ->
+                    who == owner && source.athleteId == athlete &&
+                        runCatching {
+                            approvals.canAccessIssuedWorkout(who, source)
+                        }.getOrDefault(false)
+                }
+                if(existing != NativeJournalFileResult.Rejected(
+                    NativeJournalFileRefusal.NOT_ISSUED))
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
+
+                val review = NativeKotlinCurrentLoadCoachReview.inspect(
+                    current,history,intent.exerciseId,history.manifestRevision,
+                    maximumAuthorizedIncrease,readiness,movementRestricted)
+                val verified = review as? NativeCurrentLoadReviewResult.Reviewed
+                    ?: return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.NO_VERIFIED_COACHING_CHANGE)
+                val coaching = verified.coaching
+                val proposed = coaching.candidateProgram
+                if(coaching.status != CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW ||
+                    proposed == null || coaching.kind != intent.expectedKind ||
+                    verified.comparedWorkoutIds != intent.expectedComparedWorkoutIds ||
+                    coaching.affectedDayIndices != intent.expectedAffectedDayIndices ||
+                    coaching.originalLoad?.compareTo(intent.expectedOriginalLoad) != 0 ||
+                    coaching.candidateLoad?.compareTo(intent.expectedCandidateLoad) != 0 ||
+                    intent.newDayIndex !in proposed.days.indices)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.PROPOSAL_CHANGED)
+                val source = current.currentSource
+                if(source.programRevision >= 9_007_199_254_740_991L)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.APPROVAL_CHANGED)
+                val nextSource = source.copy(
+                    programRevision = source.programRevision + 1)
+                val nextRevision = current.storageRevision + 1
+                val nextGrant = KotlinWorkoutSelectionGrant(
+                    intent.newGrantId,intent.newWorkoutId,nextSource,
+                    intent.newDayIndex)
+                val next = current.copy(
+                    approvedSource = nextSource,
+                    currentSource = nextSource,
+                    grant = nextGrant,
+                    program = proposed,
+                    storageReceiptId = intent.newStorageReceiptId,
+                    storageRevision = nextRevision)
+                val validation = KotlinWorkoutSnapshotDomain.stage(
+                    KotlinWorkoutSnapshotRequest(
+                        nextSource,nextSource,nextGrant,proposed,next.policies))
+                if(validation !is KotlinWorkoutSnapshotResult.Staged)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.NEW_WORKOUT_UNRESOLVED)
+                return@withOwnerTransaction when(
+                    approvals.publish(owner,current.storageRevision,next)) {
+                    is NativeApprovalWriteResult.Committed ->
+                        NativeKotlinCoachAcceptanceResult.Committed(
+                            nextSource,intent.newWorkoutId,nextRevision,
+                            history.manifestRevision)
+                    is NativeApprovalWriteResult.Rejected ->
+                        reject(NativeKotlinCoachAcceptanceRefusal.APPROVAL_STORE_REJECTED)
+                }
+            }
+        }.getOrElse {
+            reject(NativeKotlinCoachAcceptanceRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
     private fun readFenced(
         owner: String, athlete: String
     ): NativeKotlinMixedHistoryReadResult {

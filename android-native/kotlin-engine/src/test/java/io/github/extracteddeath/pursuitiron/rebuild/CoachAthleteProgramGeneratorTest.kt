@@ -338,4 +338,54 @@ class CoachAthleteProgramGeneratorTest {
         assertEquals(generated,CoachAthleteProgramGenerator.generate(input))
     }
 
+
+    @Test fun primaryPlacementEnumeratesAlternativesWithoutBreakingFrequencyOrRecovery() {
+        val s=setup(weekdays=setOf(0,1,3,5))
+        val p=policy(s,primaries=mapOf("bench" to 2))
+        val calendar=listOf(0,1,3,5)
+        val focus=List(4){ComposerFocus.FULL_BODY}
+        val purpose=List(4){ComposerSessionPurpose.HYPERTROPHY}
+        val options=movements.associateBy {it.exerciseId}
+        val choices=movements.associate {it.exerciseId to choice(it.exerciseId,
+            visits=3,gap=2)}
+        val placements=CoachAthleteProgramGenerator.placements(
+            calendar,focus,purpose,p,options,choices)
+        assertTrue("More than one valid coach placement must be reviewed",
+            placements.size>=2)
+        assertTrue(placements.size<=8)
+        assertEquals(placements.distinct().size,placements.size)
+        assertTrue(placements.all {schedule ->
+            val assigned=schedule.filter {it.requiredPrimaryExerciseId=="bench"}
+                .map {it.weekday}
+            assigned.size>=2 && assigned.size<=3 &&
+                assigned.indices.all {a->assigned.indices.all {b->
+                    a==b || minOf(kotlin.math.abs(assigned[a]-assigned[b]),
+                        7-kotlin.math.abs(assigned[a]-assigned[b]))>=2
+                }}
+        })
+        assertEquals(placements,
+            CoachAthleteProgramGenerator.placements(calendar,focus,purpose,
+                p,options,choices))
+        assertEquals(0,p.primaryLiftMinimumDays["row"] ?: 0)
+    }
+
+    @Test fun alternatePrimaryPlacementsRespectSundayToMondayRecovery() {
+        val s=setup(weekdays=setOf(0,2,4,6))
+        val policy=policy(s,primaries=mapOf("bench" to 2))
+        val assignments=CoachAthleteProgramGenerator.placements(
+            listOf(0,2,4,6),List(4){ComposerFocus.FULL_BODY},
+            List(4){ComposerSessionPurpose.HYPERTROPHY},
+            policy,movements.associateBy {it.exerciseId},
+            movements.associate {it.exerciseId to choice(it.exerciseId,
+                visits=3,gap=2)})
+        assertTrue(assignments.isNotEmpty())
+        assertTrue(assignments.all {a->
+            val days=a.filter {it.requiredPrimaryExerciseId=="bench"}
+                .map {it.weekday}.sorted()
+            days.size>=2 &&
+                days.zipWithNext().all { (x,y)->y-x>=2 } &&
+                (days.first()+7-days.last())>=2
+        })
+    }
+
 }

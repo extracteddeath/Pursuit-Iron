@@ -70,6 +70,8 @@ object CoachAthleteProgramGenerator {
     private const val MAX_COMPOSED_CANDIDATES=32
     /** Search a handful of feasible weeks instead of returning the first. */
     private const val MAX_FEASIBLE_CANDIDATES=5
+    /** Alternative primary-lift placements considered per focus/purpose layout. */
+    private const val MAX_PRIMARY_PLACEMENTS_PER_LAYOUT=8
 
     private fun focusCounts(split:ComposerSplit,days:Int,
         extra:List<ComposerFocus>):Map<ComposerFocus,Int>? {
@@ -239,17 +241,18 @@ object CoachAthleteProgramGenerator {
         return inspected is LoadInspection.Confirmed && inspected.exact
     }
 
-    private fun placements(
+    internal fun placements(
         calendar:List<Int>,
         focus:List<ComposerFocus>,
         purpose:List<ComposerSessionPurpose>,
         policy:AuthoredGoalProgramPolicy,
         catalog:Map<String,CatalogMovement>,
         choices:Map<String,CatalogExerciseChoice>
-    ):List<AthleteCalendarIntent>? {
+    ):List<List<AthleteCalendarIntent>> {
         val liftIds=policy.primaryLiftMinimumDays.keys.sorted()
         val used=mutableMapOf<String,MutableList<Int>>()
         val assigned=mutableListOf<AthleteCalendarIntent>()
+        val found=mutableListOf<List<AthleteCalendarIntent>>()
         fun gapOkay(id:String,day:Int):Boolean {
             val spec=catalog.getValue(id)
             val choice=choices.getValue(id)
@@ -276,9 +279,13 @@ object CoachAthleteProgramGenerator {
             }
             return true
         }
-        fun solve(index:Int):Boolean {
-            if(index==calendar.size)return liftIds.all {
-                used[it].orEmpty().size>=policy.primaryLiftMinimumDays.getValue(it)
+        fun solve(index:Int) {
+            if(found.size>=MAX_PRIMARY_PLACEMENTS_PER_LAYOUT)return
+            if(index==calendar.size) {
+                if(liftIds.all {
+                    used[it].orEmpty().size>=policy.primaryLiftMinimumDays.getValue(it)
+                })found+=assigned.toList()
+                return
             }
             val day=calendar[index]
             val skill=purpose[index]==ComposerSessionPurpose.STRENGTH_SKILL
@@ -299,14 +306,17 @@ object CoachAthleteProgramGenerator {
                         used[lift].orEmpty().size).coerceAtLeast(0)
                     missing<=calendar.size-index-1
                 }
-                if(stillPossible && solve(index+1))return true
+                if(stillPossible)solve(index+1)
                 if(id!=null)used.getValue(id).removeAt(
                     used.getValue(id).lastIndex)
                 assigned.removeAt(assigned.lastIndex)
+                if(found.size>=MAX_PRIMARY_PLACEMENTS_PER_LAYOUT)break
             }
-            return false
         }
-        return if(solve(0))assigned.toList()else null
+        solve(0)
+        return Collections.unmodifiableList(found.map {
+            Collections.unmodifiableList(it.toList())
+        })
     }
 
     fun generate(input:AthleteProgramGenerationRequest):
@@ -454,16 +464,27 @@ object CoachAthleteProgramGenerator {
                 budgetReached=true
                 break@search
             }
-            evaluated++
-            val plans=placements(weekdays,focus,purpose,policy,catalog,choices)
-                ?:continue
-            // Reject unverified phase-specific policy before composing sets.
-            val policyReview=CoachGoalProgramPolicyDomain.review(
-                athlete,input.phase,policy.selectedBounds,plans,policy)
-            if(policyReview.status!=GoalPolicyStatus.MATCHED_FOR_REVIEW)
+            val alternatives=placements(
+                weekdays,focus,purpose,policy,catalog,choices)
+            if(alternatives.isEmpty()) {
+                evaluated++
                 continue
-            drafted++
-            val byDay=weekdays.indices.associate {weekdays[it] to focus[it]}
+            }
+            for(plans in alternatives) {
+                if(evaluated>=MAX_ASSIGNMENTS ||
+                    drafted>=MAX_COMPOSED_CANDIDATES ||
+                    feasibleCompared>=MAX_FEASIBLE_CANDIDATES) {
+                    budgetReached=true
+                    break@search
+                }
+                evaluated++
+                // Reject unverified phase-specific policy before composing sets.
+                val policyReview=CoachGoalProgramPolicyDomain.review(
+                    athlete,input.phase,policy.selectedBounds,plans,policy)
+                if(policyReview.status!=GoalPolicyStatus.MATCHED_FOR_REVIEW)
+                    continue
+                drafted++
+                val byDay=weekdays.indices.associate {weekdays[it] to focus[it]}
             val proposal=CoachAthleteCatalogCandidateDomain.review(
                 AthleteCatalogCandidateRequest(
                     input.setup,input.phase,byDay,
@@ -505,6 +526,7 @@ object CoachAthleteProgramGenerator {
             )
             if(best==null || better(score,checkNotNull(best).score))
                 best=ViablePlacement(byDay,plans,proposal,score)
+            }
         }
         val selected=strongest
         if(selected!=null)

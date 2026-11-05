@@ -292,12 +292,15 @@ object KotlinGlobalHistoryIndexDomain {
 
         if (read.manifestRevision != read.currentManifestRevision)
             return rejected(KotlinGlobalHistoryRefusal.STALE_MANIFEST)
-        if (read.manifest.zipWithNext().any { (a, b) ->
-                a.completionOrder >= b.completionOrder
-            } || read.manifest.indices.any { index ->
+        // This projection consumes the COMPLETE lifetime manifest, not a
+        // conveniently selected page. A gap (including missing ordinal 1)
+        // would silently omit an old workout, correction, PR and Last fact.
+        // Do not infer completeness from strictly increasing order alone.
+        if (read.manifest.indices.any { index ->
                 val expected = read.manifest[index]
                 val actual = read.completedWorkouts[index]
-                expected.completionOrder != actual.completionOrder
+                expected.completionOrder != index.toLong() + 1L ||
+                    expected.completionOrder != actual.completionOrder
             })
             return rejected(KotlinGlobalHistoryRefusal.MANIFEST_ORDER_MISMATCH)
 

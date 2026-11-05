@@ -211,6 +211,28 @@ class KotlinGlobalHistoryIndexDomainTest {
                 })))
     }
 
+    @Test fun missingFirstOrMiddleCompletionCannotSilentlyBecomeLifetimeHistory() {
+        val a=completed(1)
+        val b=completed(2)
+        val c=completed(3)
+        val full=snapshot(item(a,1),item(b,2),item(c,3))
+        assertEquals(3,index(full).completedWorkoutIds.size)
+
+        // Both received lists are self-consistent, sorted, unique and
+        // reference valid finished workouts. The omitted old record must
+        // nevertheless block the global factual index.
+        val middleMissing=snapshot(item(a,1),item(c,3))
+        assertEquals(KotlinGlobalHistoryResult.Rejected(
+            KotlinGlobalHistoryRefusal.MANIFEST_ORDER_MISMATCH),
+            KotlinGlobalHistoryIndexDomain.project(middleMissing))
+        val firstMissing=snapshot(item(b,2),item(c,3))
+        assertEquals(KotlinGlobalHistoryResult.Rejected(
+            KotlinGlobalHistoryRefusal.MANIFEST_ORDER_MISMATCH),
+            KotlinGlobalHistoryIndexDomain.project(firstMissing))
+        assertEquals(listOf("workout-1","workout-2","workout-3"),
+            index(full).completedWorkoutIds)
+    }
+
     @Test fun incorrectAthleteTamperedJournalAndMismatchedCorrectionsAreRejected() {
         val first = completed(1)
         val second = completed(2)

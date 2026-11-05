@@ -108,9 +108,7 @@ object CoachNextProgramLoadReviewDomain {
             ?: return denied(CoachNextLoadReviewStatus.LOAD_BASIS_UNVERIFIED,
                 "Bodyweight or assisted loading needs a separate exercise-specific policy.")
         val stock = equipment.inventory
-        if (stock == null || stock.unit != equipment.unit ||
-            !same(equipment.plannedLoad, equipment.plannedLoad) ||
-            stock.basis !in LoadBasis.entries)
+        if (stock == null || stock.unit != equipment.unit)
             return denied(CoachNextLoadReviewStatus.LOAD_BASIS_UNVERIFIED,
                 "The exact gym load and equipment basis have not been confirmed.")
         val currentInspection = EquipmentLoadDomain.inspect(

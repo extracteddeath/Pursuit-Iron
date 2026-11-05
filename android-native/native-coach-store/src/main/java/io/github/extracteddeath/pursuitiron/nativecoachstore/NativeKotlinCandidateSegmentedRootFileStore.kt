@@ -485,8 +485,9 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
         writeBoolean(performed.unit != null)
         if (performed.unit != null) writeUTF(performed.unit.name)
         writeInt(performed.reps)
-        writeBoolean(performed.actualRir != null)
-        if (performed.actualRir != null) writeInt(performed.actualRir)
+        val reportedRir = performed.actualRir
+        writeBoolean(reportedRir != null)
+        if (reportedRir != null) writeInt(reportedRir)
     }
 
     /**

@@ -362,6 +362,69 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())
     }
 
+    @Test fun mirrorReconciliationRecoversSavedCorrectionWithoutChangingIdentityPages() {
+        val original=realComposerCompletion()
+        assertTrue(v2.enrollVerifiedSnapshot(owner, athlete,
+            listOf(original)) { o, a ->
+                signedIn == NativeKotlinOwnerIdentity(o, a)
+            } is NativeHistoryLedgerResult.Durable)
+        assertTrue(shadow.sync(owner, athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val initial=result(store().bootstrapFromVerifiedV2(owner, athlete))
+        val checkpointBefore=reconciler().reconcile(owner, athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        val previousPages=candidateFiles(".pidpage")
+            .associate { f -> f.fileName.toString() to Files.readAllBytes(f).toList() }
+        assertEquals(2,previousPages.size)
+        val operation=KotlinSavedSetCorrection(
+            "edit-1",0,"set-1","set-event-1",
+            KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(java.math.BigDecimal("195"),LoadUnit.LB,6,1))
+        val intent=NativeHistoryWriteIntent.Correct("workout-1",operation)
+        val corrected=original.copy(savedCorrectionRevision=1)
+        assertTrue(wal().prepare(owner, athlete, initial.head, intent, original)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,listOf(original)),
+            corrected) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner,athlete,1,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(correction.appendStored(owner,"workout-1",operation) { who, source ->
+            authority.canAccessIssuedWorkout(who, source)
+        } is NativeSavedCorrectionFileResult.Durable)
+        assertTrue(v2.finalize(owner,athlete,intent,corrected)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(store().publishReplayVerifiedV2Mirror(
+            owner,athlete,replay,receiptVerifier())
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertTrue(shadow.sync(owner,athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        // A paired acknowledgment of the old revision must not be reused.
+        assertEquals(NativeCandidatePairedHistoryResult.Rejected(
+            NativeCandidatePairedHistoryRefusal.UNVERIFIED_SOURCE),
+            pairedCheckpoint().review(owner,athlete))
+        val updated=reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent
+        assertEquals(2L,updated.checkpoint.sourceRevision)
+        assertEquals(1L,updated.checkpoint.completionCount)
+        assertNotEquals(checkpointBefore.checkpoint.rootDigest,
+            updated.checkpoint.rootDigest)
+        assertEquals(previousPages, candidateFiles(".pidpage")
+            .associate { f -> f.fileName.toString() to Files.readAllBytes(f).toList() })
+        val identityByWorkout=pagedIndex().findWorkout(owner,athlete,"workout-1")
+            as NativeCandidatePagedIdentityResult.Lookup
+        val identityByReceipt=pagedIndex().findReceipt(
+            owner,athlete,original.storedReceiptId)
+            as NativeCandidatePagedIdentityResult.Lookup
+        assertEquals(identityByWorkout.row,identityByReceipt.row)
+        assertEquals(1L,identityByWorkout.row?.completionOrder)
+        assertTrue((reconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent).replayed)
+        assertEquals(1L,(v2.open(owner,athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.completions.single()
+                .savedCorrectionRevision)
+    }
+
     @Test fun mirrorReconciliationRefusesCorruptCheckpointAndIndexWithoutRepair() {
         boot()
         reconciler().reconcile(owner,athlete)

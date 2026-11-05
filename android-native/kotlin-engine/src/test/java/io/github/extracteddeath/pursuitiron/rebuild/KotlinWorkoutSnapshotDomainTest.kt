@@ -213,4 +213,129 @@ class KotlinWorkoutSnapshotDomainTest {
             KotlinWorkoutJournalDomain.reduce(completed,finish))
     }
 
+    private fun reviewedStraightProgram(load: String = "30"): ComposerRequest {
+        val a=press.copy(
+            equipment=ComposerEquipment.Verified(LoadUnit.LB,n(load),stock),
+            minimumSetsPerVisit=2,maximumSetsPerVisit=2)
+        val b=row.copy(minimumSetsPerVisit=2,maximumSetsPerVisit=2)
+        return program(options=listOf(a,b))
+    }
+
+    private fun reviewedStraightPolicies()=policies().map { p ->
+        if(p.exerciseId=="db-press") p.copy(
+            workingReps=RepBand(8,12), targetRir=2,
+            scheme=SetLoadScheme.STRAIGHT, maximumAuthorizedBackoff=null,
+            warmups=emptyList(),backoffReps=null,backoffRir=null)
+        else p
+    }
+
+    private fun observed(
+        id:String, loads:List<Int>, reps:List<Int>,
+        rir:List<Int?>=listOf(2,2)
+    )=ProgressionWorkoutEvidence(
+        id,"db-press",LoadUnit.LB,RepBand(8,12),2,
+        loads.indices.map { i -> WorkingSetFact(
+            i,SetOutcome.COMPLETED,n(loads[i].toString()),reps[i],rir[i])
+        })
+
+    private fun nextLoadRequest(
+        previous:ProgressionWorkoutEvidence=
+            observed("week-old",listOf(30,30),listOf(12,12)),
+        latest:ProgressionWorkoutEvidence=
+            observed("week-new",listOf(30,30),listOf(12,12)),
+        approved:ComposerRequest=reviewedStraightProgram(),
+        declaredPolicies:List<ExercisePrescriptionPolicy>=reviewedStraightPolicies(),
+        current:KotlinTrainingSourceRevision=source,
+        previousHistory:Long=7,
+        currentHistory:Long=7,
+        readiness:CoachReadiness=CoachReadiness.NORMAL,
+        restricted:Boolean=false
+    )=CoachNextProgramLoadRequest(
+        approved,source,current,previousHistory,currentHistory,
+        previous,latest,"db-press",declaredPolicies,n("5"),
+        readiness,restricted
+    )
+
+    @Test fun twoCompleteComparableWorkoutsProposeAuditedNextProgramLoad() {
+        val original=reviewedStraightProgram()
+        val reviewed=CoachNextProgramLoadReviewDomain.review(
+            nextLoadRequest(approved=original))
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            reviewed.status)
+        assertEquals(CoachNextLoadChangeKind.EARNED_INCREMENT,reviewed.kind)
+        assertEquals(n("30"),reviewed.originalLoad)
+        assertEquals(n("35"),reviewed.candidateLoad)
+        val next=checkNotNull(reviewed.candidateProgram)
+        assertTrue(reviewed.affectedDayIndices.isNotEmpty())
+        assertTrue(reviewed.affectedDayIndices.all {
+            index -> index in 0..2
+        })
+        assertEquals(n("35"),
+            ((next.exercises.first { it.exerciseId=="db-press" }).equipment
+                as ComposerEquipment.Verified).plannedLoad)
+        assertEquals(n("30"),
+            ((original.exercises.first { it.exerciseId=="db-press" }).equipment
+                as ComposerEquipment.Verified).plannedLoad)
+        assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,
+            CoachSessionPrescriptionDomain.draft(next,reviewedStraightPolicies()).status)
+        assertFalse(reviewed.maySaveProgram)
+        assertFalse(reviewed.mayIssueWorkout)
+        assertFalse(reviewed.mayModifyHistory)
+    }
+
+    @Test fun unearnedHeavySetsReturnOnlyToVerifiedPriorCapacityForReview() {
+        val before=observed("week-old",listOf(30,30),listOf(12,12))
+        val failed=observed("week-new",listOf(30,35),listOf(3,2),
+            listOf(2,0))
+        val reviewed=CoachNextProgramLoadReviewDomain.review(nextLoadRequest(
+            previous=before,latest=failed,approved=reviewedStraightProgram("35")))
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            reviewed.status)
+        assertEquals(CoachNextLoadChangeKind.RETURN_TO_DEMONSTRATED_LOAD,
+            reviewed.kind)
+        assertEquals(n("30"),reviewed.candidateLoad)
+        assertNotEquals(n("35"),reviewed.candidateLoad)
+        assertFalse(reviewed.mayIssueWorkout)
+        assertEquals("week-new",failed.workoutId)
+    }
+
+    @Test fun noComparableEvidenceStaleHistoryAndRestrictionsCannotOverrideSavedTargets() {
+        val old=observed("week-old",listOf(30,30),listOf(12,12))
+        val poor=observed("week-new",listOf(30,35),listOf(3,2),
+            listOf(2,0))
+        val cases=listOf(
+            nextLoadRequest(current=source.copy(gymRevision=4)),
+            nextLoadRequest(previousHistory=7,currentHistory=8),
+            nextLoadRequest(readiness=CoachReadiness.LOW),
+            nextLoadRequest(restricted=true),
+            nextLoadRequest(previous=old,latest=poor),
+            nextLoadRequest(previous=old,latest=old),
+            nextLoadRequest(previous=old,latest=poor.copy(
+                exerciseId="other-exercise")),
+            nextLoadRequest(latest=observed(
+                "week-new",listOf(30,30),listOf(8,9))),
+            nextLoadRequest(approved=reviewedStraightProgram("35"))
+        )
+        for(candidate in cases) {
+            val review=CoachNextProgramLoadReviewDomain.review(candidate)
+            assertNotEquals(candidate.toString(),
+                CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,review.status)
+            assertNull(review.candidateProgram)
+            assertNull(review.candidateLoad)
+            assertFalse(review.mayIssueWorkout)
+        }
+    }
+
+    @Test fun customBackoffAndWarmupsRemainAuthoredRatherThanCovertlyChanged() {
+        val current=program()
+        val review=CoachNextProgramLoadReviewDomain.review(nextLoadRequest(
+            approved=current,declaredPolicies=policies()))
+        assertNotEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            review.status)
+        assertNull(review.candidateProgram)
+        assertEquals(n("30"),
+            ((current.exercises.first().equipment as ComposerEquipment.Verified)
+                .plannedLoad))
+    }
+
 }

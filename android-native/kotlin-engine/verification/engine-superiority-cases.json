@@ -125,6 +125,16 @@
       ]
     },
     {
+      "id": "cycle-weekly-dose-jumps",
+      "domain": "programming",
+      "severity": "critical",
+      "scenario": "Within one training block, an override changes 5-to-3 or 3-to-5 total/direct working sets, with both weeks separately inside MEV/MRV",
+      "expected": "No unreviewed weekly set loss or sharp weekly dose ramp; apply explicit athlete-specific percentage limits to total and individual direct-muscle work without overwriting authored slots or misclassifying recovery weeks",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
       "id": "strength-frequency",
       "domain": "programming",
       "severity": "major",

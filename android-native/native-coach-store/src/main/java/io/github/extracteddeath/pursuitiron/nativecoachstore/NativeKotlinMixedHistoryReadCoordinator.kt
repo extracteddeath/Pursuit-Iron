@@ -79,6 +79,40 @@ sealed interface NativeOwnerNextSetResult {
     ) : NativeOwnerNextSetResult
 }
 
+data class NativeKotlinAcceptedRepIntent(
+    val exerciseId:String,
+    val expectedApprovalRevision:Long,
+    val expectedHistoryRevision:Long,
+    val expectedCurrentWorkoutId:String,
+    val expectedHistoricalWorkoutId:String,
+    val expectedChangedSetKey:String,
+    val expectedObservedReps:List<Int>,
+    val expectedNewRepTargets:List<Int>,
+    val nextWorkoutId:String,
+    val nextGrantId:String,
+    val nextStorageReceiptId:String,
+    /** The UI must collect a fresh, explicit acceptance of every set. */
+    val explicitlyAccepted:Boolean
+)
+enum class NativeKotlinRepAcceptanceRefusal {
+    INVALID_SCOPE, NOT_ACCEPTED, NOT_AUTHORIZED, NO_CURRENT_APPROVAL,
+    APPROVAL_CHANGED, HISTORY_CHANGED, GYM_CHANGED,
+    SOURCE_NOT_VERIFIED, ALREADY_ISSUED,
+    IDENTIFIER_ALREADY_USED, PROPOSAL_CHANGED, STORAGE_REJECTED,
+    STORAGE_UNAVAILABLE
+}
+sealed interface NativeKotlinRepAcceptanceResult {
+    data class Rejected(val reason:NativeKotlinRepAcceptanceRefusal) :
+        NativeKotlinRepAcceptanceResult
+    data class Committed(
+        val approvalRevision:Long,
+        val approvedWorkoutId:String,
+        val historicalRevision:Long
+    ):NativeKotlinRepAcceptanceResult {
+        val workoutIssued:Boolean get()=false
+    }
+}
+
 enum class NativeOwnerLoadReviewRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, NO_CURRENT_APPROVAL,
     GYM_SOURCE_UNAVAILABLE, GYM_SOURCE_CHANGED, STORAGE_UNAVAILABLE
@@ -296,6 +330,195 @@ class NativeKotlinMixedHistoryReadCoordinator(
         }.getOrElse {
             reject(NativeOwnerNextSetRefusal.STORAGE_UNAVAILABLE)
         }
+    }
+
+    /**
+     * Save an explicitly confirmed per-set prescription under the shared
+     * owner fence. Reopen every journal and correction at write time. This
+     * only replaces an UNISSUED current grant with a fresh grant; already
+     * issued targets are immutable. Every submitted proposed rep is compared
+     * to an independently calculated, full-workout preview.
+     */
+    fun acceptReviewedNextSetTargets(
+        owner:String,
+        athlete:String,
+        approvals:NativeKotlinApprovalFileAuthority,
+        intent:NativeKotlinAcceptedRepIntent,
+        readiness:CoachReadiness,
+        movementRestricted:Boolean,
+        authoringStore:NativeKotlinCustomAuthoringSourceFileStore
+    ):NativeKotlinRepAcceptanceResult {
+        fun reject(reason:NativeKotlinRepAcceptanceRefusal)=
+            NativeKotlinRepAcceptanceResult.Rejected(reason)
+        val shortId=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$")
+        if(!id.matches(owner) || !id.matches(athlete) ||
+            !id.matches(intent.exerciseId) ||
+            !shortId.matches(intent.nextWorkoutId) ||
+            !shortId.matches(intent.nextGrantId) ||
+            !shortId.matches(intent.nextStorageReceiptId) ||
+            !id.matches(intent.expectedCurrentWorkoutId) ||
+            !id.matches(intent.expectedHistoricalWorkoutId) ||
+            !id.matches(intent.expectedChangedSetKey) ||
+            intent.expectedApprovalRevision !in 1..9_007_199_254_740_990L ||
+            intent.expectedHistoryRevision !in 1..9_007_199_254_740_991L ||
+            intent.expectedObservedReps.size !in 1..32 ||
+            intent.expectedNewRepTargets.size!=intent.expectedObservedReps.size)
+            return reject(NativeKotlinRepAcceptanceRefusal.INVALID_SCOPE)
+        if(!intent.explicitlyAccepted)
+            return reject(NativeKotlinRepAcceptanceRefusal.NOT_ACCEPTED)
+        if(readiness==CoachReadiness.LOW || movementRestricted)
+            return reject(NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED)
+        return runCatching {
+            fence.withOwnerTransaction(owner) {
+                if(!authorized(owner,athlete))
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.NOT_AUTHORIZED)
+                val current=approvals.currentOwnedApproval(owner)
+                    ?.takeIf {it.athleteId==athlete}
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.NO_CURRENT_APPROVAL)
+                if(current.storageRevision!=intent.expectedApprovalRevision ||
+                    current.grant.workoutId!=intent.expectedCurrentWorkoutId ||
+                    current.acceptedRepTargets!=null)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.APPROVAL_CHANGED)
+                val authored=(authoringStore.read(owner)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.SOURCE_NOT_VERIFIED)
+                if(NativeKotlinApprovedGymCoherenceDomain.inspect(
+                    current,authored)!=NativeApprovedGymCoherenceResult.Matched)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.GYM_CHANGED)
+                if(intent.nextWorkoutId==current.grant.workoutId ||
+                    intent.nextGrantId==current.grant.grantId ||
+                    intent.nextStorageReceiptId==current.storageReceiptId)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
+                // Complete history is held under the lock throughout the
+                // comparison, proposal generation and approval-file commit.
+                val history=when(val read=readFenced(owner,athlete)) {
+                    is NativeKotlinMixedHistoryReadResult.Rejected ->
+                        return@withOwnerTransaction reject(
+                            NativeKotlinRepAcceptanceRefusal.SOURCE_NOT_VERIFIED)
+                    is NativeKotlinMixedHistoryReadResult.Review ->read.timeline
+                }
+                if(history.manifestRevision!=intent.expectedHistoryRevision)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.HISTORY_CHANGED)
+                if(history.completions.any {
+                    it.manifest.workoutId==intent.nextWorkoutId ||
+                        it.manifest.storedReceiptId==intent.nextStorageReceiptId
+                })
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
+                fun unused(workoutId:String):Boolean {
+                    val old=composerStore.openStored(
+                        owner,workoutId,approvals::canAccessIssuedWorkout)
+                    val custom=customStore.open(owner,workoutId)
+                    return old==NativeJournalFileResult.Rejected(
+                        NativeJournalFileRefusal.NOT_ISSUED) &&
+                        custom==NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.NOT_ISSUED)
+                }
+                if(!unused(current.grant.workoutId))
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.ALREADY_ISSUED)
+                if(!unused(intent.nextWorkoutId))
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
+                val original=NativeKotlinCurrentRepPrescriptionDomain.inspect(
+                    current,history,intent.exerciseId,readiness,false)
+                    as? NativeCurrentRepPrescriptionResult.Reviewed
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED)
+                val evidence=original.proposal
+                    as? AdaptiveSetPrescriptionResult.Candidate
+                    ?:return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED)
+                if(original.historyRevision!=intent.expectedHistoryRevision ||
+                    original.priorWorkoutId!=intent.expectedHistoricalWorkoutId ||
+                    evidence.editedSetKey!=intent.expectedChangedSetKey ||
+                    evidence.observedReps!=intent.expectedObservedReps ||
+                    evidence.newRepTargets!=intent.expectedNewRepTargets)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED)
+                val next=current.copy(
+                    grant=current.grant.copy(
+                        grantId=intent.nextGrantId,workoutId=intent.nextWorkoutId),
+                    storageReceiptId=intent.nextStorageReceiptId,
+                    storageRevision=current.storageRevision+1,
+                    acceptedRepTargets=NativeKotlinAcceptedRepTargets(
+                        original.priorWorkoutId,original.historyRevision,
+                        intent.exerciseId,evidence.editedSetKey,
+                        Collections.unmodifiableList(evidence.observedReps.toList()),
+                        Collections.unmodifiableList(evidence.newRepTargets.toList()),
+                        readiness))
+                val rederived=NativeKotlinCurrentRepPrescriptionDomain.inspect(
+                    next,history,intent.exerciseId,readiness,false)
+                    as? NativeCurrentRepPrescriptionResult.Reviewed
+                val nextEvidence=rederived?.proposal
+                    as? AdaptiveSetPrescriptionResult.Candidate
+                if(nextEvidence==null ||
+                    nextEvidence.historicalRevision!=original.historyRevision ||
+                    nextEvidence.historicalWorkoutId!=original.priorWorkoutId ||
+                    nextEvidence.workout.grantId!=next.grant.grantId ||
+                    nextEvidence.workout.workoutId!=next.grant.workoutId ||
+                    nextEvidence.newRepTargets!=evidence.newRepTargets ||
+                    nextEvidence.observedReps!=evidence.observedReps)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED)
+                return@withOwnerTransaction when(val written=
+                    approvals.publish(owner,current.storageRevision,next)) {
+                    is NativeApprovalWriteResult.Committed ->
+                        NativeKotlinRepAcceptanceResult.Committed(
+                            written.revision,next.grant.workoutId,
+                            original.historyRevision)
+                    is NativeApprovalWriteResult.Rejected ->
+                        reject(NativeKotlinRepAcceptanceRefusal.STORAGE_REJECTED)
+                }
+            }
+        }.getOrElse {
+            reject(NativeKotlinRepAcceptanceRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Critical issuance-time verifier. This is invoked TWICE by the
+     * coordinator (before and inside the journal lock), with the same owner
+     * fence held. Any history correction, gym/profile edit, account switch
+     * or changed proposed reps invalidates the accepted target. Fail closed.
+     */
+    fun rederiveAcceptedRepSnapshot(
+        owner:String,
+        athlete:String,
+        approvals:NativeKotlinApprovalFileAuthority,
+        approval:NativeKotlinWorkoutApproval,
+        authoringStore:NativeKotlinCustomAuthoringSourceFileStore
+    ):KotlinStagedWorkout? {
+        val proof=approval.acceptedRepTargets ?:return null
+        if(!authorized(owner,athlete) ||
+            approval.ownerKey!=owner || approval.athleteId!=athlete)
+            return null
+        val verified=reviewCurrentNextSetTargets(
+            owner,athlete,approvals,proof.exerciseId,
+            proof.reviewedReadiness,false,authoringStore)
+            as? NativeOwnerNextSetResult.Review ?:return null
+        if(verified.approvalRevision!=approval.storageRevision)
+            return null
+        val review=verified.candidate
+            as? NativeCurrentRepPrescriptionResult.Reviewed ?:return null
+        val result=review.proposal
+            as? AdaptiveSetPrescriptionResult.Candidate ?:return null
+        if(review.historyRevision!=proof.historyRevision ||
+            review.priorWorkoutId!=proof.historicalWorkoutId ||
+            result.editedSetKey!=proof.changedSetKey ||
+            result.observedReps!=proof.observedReps ||
+            result.newRepTargets!=proof.newRepTargets ||
+            result.workout.workoutId!=approval.grant.workoutId ||
+            result.workout.grantId!=approval.grant.grantId)
+            return null
+        return result.workout
     }
 
     /**

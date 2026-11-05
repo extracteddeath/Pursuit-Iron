@@ -88,7 +88,7 @@ class NativeKotlinSegmentedRedoFileStore(
         return directory.resolve("candidate-segmented-redo-$hex.wal")
     }
 
-    private fun <T> guarded(
+    private fun guarded(
         owner: String, athlete: String,
         work: () -> NativeSegmentedRedoResult
     ): NativeSegmentedRedoResult {

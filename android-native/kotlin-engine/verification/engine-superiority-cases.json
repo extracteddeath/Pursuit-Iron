@@ -64,6 +64,17 @@
       ]
     },
     {
+      "id": "progression-revision-fencing",
+      "domain": "progression",
+      "severity": "critical",
+      "scenario": "Two saved workouts meet all rep and RIR targets at 200 lb, but the athlete revision or approved program revision changed between sessions without changing the exercise ID, rep range, or set count.",
+      "expected": "No earned step may borrow evidence from a different athlete coaching revision or edited program. Correctly identify the changed source; preserve completed historical sets and do not issue a higher weight.",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
       "id": "load-after-personalized-sessions",
       "domain": "progression",
       "severity": "critical",
@@ -236,6 +247,17 @@
       "severity": "critical",
       "scenario": "Edit older set after more recent workout; inspect PR/Last",
       "expected": "Preserve chronology, corrections and recent observations",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
+      "id": "history-missing-ordinal",
+      "domain": "history",
+      "severity": "critical",
+      "scenario": "A purported complete chronological lifetime history contains valid workouts 1 and 3 but silently omits completion 2 (or starts at 2), while all supplied records and correction receipts otherwise replay correctly.",
+      "expected": "Reject incomplete global history rather than publishing incorrect Last, PR or progression facts; retain exact complete chronology after crash, migration and saved corrections.",
       "requiredProof": [
         "headless",
         "device"

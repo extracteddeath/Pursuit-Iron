@@ -1169,4 +1169,134 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertFalse(byWorkout.canAuthorizeNewWorkout)
     }
 
+    private fun stagedRecovery(
+        candidate: NativeKotlinCandidateSegmentedRootFileStore = store(),
+        mirror: NativeKotlinCandidateHistoryMirrorRecoveryCoordinator = reconciler(),
+        afterRoot: (() -> Unit)? = null,
+        afterShadow: (() -> Unit)? = null
+    ) = NativeKotlinCandidateStagedReplayRecoveryCoordinator(
+        fence, identity, wal(), candidate, replay, receiptVerifier(),
+        shadow, mirror, afterRoot, afterShadow)
+
+    private fun committedComposerFinishForStagedRecovery(
+        initial: NativeCandidateHistoryRootView
+    ) {
+        val saved = realComposerCompletion()
+        val intent = finish(1)
+        assertTrue(wal().prepare(owner, athlete, initial.head, intent, null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner, athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest, 1, emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner, athlete, 1, intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(v2.finalize(owner, athlete, intent, saved)
+            is NativeHistoryLedgerResult.Durable)
+    }
+
+    @Test fun stagedReplayRequiresAnAlreadyVerifiedCanonicalFinish() {
+        val initial = boot()
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.NO_VERIFIED_STAGED_REDO),
+            stagedRecovery().resume(owner, athlete))
+        stagedAppend(initial)
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.ROOT_NOT_VERIFIED),
+            stagedRecovery().resume(owner, athlete))
+        assertEquals(1L, result(store().audit(owner, athlete)).head.revision)
+        assertTrue(candidateFiles(".cseal").isEmpty())
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.INVALID_SCOPE),
+            stagedRecovery().resume("wrong/owner", athlete))
+        signedIn = null
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.NOT_AUTHORIZED),
+            stagedRecovery().resume(owner, athlete))
+    }
+
+    @Test fun stagedReplayColdRetryPreservesOneCanonicalCompletion() {
+        val initial = boot()
+        committedComposerFinishForStagedRecovery(initial)
+        val first = stagedRecovery().resume(owner, athlete)
+            as NativeCandidateStagedRecoveryResult.Consistent
+        assertEquals(2L, first.checkpoint.sourceRevision)
+        assertEquals(1L, first.checkpoint.completionCount)
+        assertFalse(first.rootReplayed)
+        assertFalse(first.checkpointReplayed)
+        assertFalse(first.canAuthorizeWrites)
+        assertFalse(first.canAuthorizeHistoryReads)
+        assertFalse(first.canIssueProgression)
+        assertFalse(first.canTransferAuthority)
+        val sealed = stagedRecovery().resume(owner, athlete)
+            as NativeCandidateStagedRecoveryResult.Consistent
+        assertTrue(sealed.rootReplayed)
+        assertTrue(sealed.shadowReplayed)
+        assertTrue(sealed.checkpointReplayed)
+        assertEquals(first.checkpoint, sealed.checkpoint)
+        assertEquals(1L, (v2.open(owner, athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())
+        assertEquals(1L, (pagedIndex().findReceipt(owner, athlete, "stored-1")
+            as NativeCandidatePagedIdentityResult.Lookup).row?.completionOrder)
+        assertTrue(wal().read(owner, athlete) is NativeSegmentedRedoResult.Durable)
+    }
+
+    @Test fun stagedReplayRecoversInterruptedRootAndShadowPublications() {
+        val initial = boot()
+        committedComposerFinishForStagedRecovery(initial)
+        val before = NativeKotlinCandidateSegmentedRootFileStore(
+            root, fence, identity, v2, handoff, wal(),
+            beforeRootPublicationForTest = {
+                throw IllegalStateException("process death before root")
+            })
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.ROOT_NOT_VERIFIED),
+            stagedRecovery(candidate = before).resume(owner, athlete))
+        assertEquals(1L, result(store().audit(owner, athlete)).head.revision)
+
+        val after = NativeKotlinCandidateSegmentedRootFileStore(
+            root, fence, identity, v2, handoff, wal(),
+            afterRootPublicationForTest = {
+                throw IllegalStateException("lost root write acknowledgement")
+            })
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.ROOT_NOT_VERIFIED),
+            stagedRecovery(candidate = after).resume(owner, athlete))
+        assertEquals(2L, result(store().audit(owner, athlete)).head.revision)
+        assertTrue(candidateFiles(".cseal").isEmpty())
+
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.STORAGE_UNAVAILABLE),
+            stagedRecovery(afterRoot = {
+                throw IllegalStateException("process death after root")
+            }).resume(owner, athlete))
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.STORAGE_UNAVAILABLE),
+            stagedRecovery(afterShadow = {
+                throw IllegalStateException("process death after shadow")
+            }).resume(owner, athlete))
+        assertTrue(candidateFiles(".cseal").isEmpty())
+        val recovered = stagedRecovery().resume(owner, athlete)
+            as NativeCandidateStagedRecoveryResult.Consistent
+        assertTrue(recovered.rootReplayed)
+        assertTrue(recovered.shadowReplayed)
+        assertEquals(2L, recovered.checkpoint.sourceRevision)
+        assertEquals(1, candidateFiles(".cseal").size)
+    }
+
+    @Test fun stagedReplayCannotReplaceLostCommittedIndexOrDifferentAthlete() {
+        val initial = boot()
+        committedComposerFinishForStagedRecovery(initial)
+        assertTrue(stagedRecovery().resume(owner, athlete)
+            is NativeCandidateStagedRecoveryResult.Consistent)
+        Files.delete(candidateFiles(".pidx").single())
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.PAIR_NOT_VERIFIED),
+            stagedRecovery().resume(owner, athlete))
+        assertTrue(candidateFiles(".pidx").isEmpty())
+        assertEquals(NativeCandidateStagedRecoveryResult.Rejected(
+            NativeCandidateStagedRecoveryRefusal.NOT_AUTHORIZED),
+            stagedRecovery().resume(owner, "other-athlete"))
+    }
+
+
 }

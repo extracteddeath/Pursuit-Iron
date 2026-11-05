@@ -73,10 +73,11 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
         historyRevision:Long=7,
         currentHistoryRevision:Long=7,
         readiness:CoachReadiness=CoachReadiness.NORMAL,
-        restricted:Boolean=false
+        restricted:Boolean=false,
+        issuedExactReps:List<Int>?=null
     )=AdaptiveSetPrescriptionRequest(
         next,historicalSource,previous,historyRevision,
-        currentHistoryRevision,readiness,restricted)
+        currentHistoryRevision,readiness,restricted,issuedExactReps)
     private fun candidate(
         req:AdaptiveSetPrescriptionRequest=request()
     ):AdaptiveSetPrescriptionResult.Candidate {
@@ -117,6 +118,40 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
         assertTrue(base.targets.filter {it.exerciseId=="db-press"}.all {
             it.reps==RepBand(10,15)
         })
+    }
+
+    @Test fun aMissedExactTargetIsRepeatedNotFalselyLabeledEarned() {
+        val last=listOf(14,14,12)
+        val proposal=candidate(request(
+            previous=observed(reps=listOf(14,13,12),
+                rir=listOf(3,3,2)),issuedExactReps=last))
+        assertEquals(last,proposal.newRepTargets)
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            proposal.decisionKind)
+        assertFalse(proposal.mayAutoApply)
+        // A genuine fresh improvement requires ALL prior exact set goals
+        // to have been met; the next set target is not a free +3-rep jump.
+        val advanced=candidate(request(
+            previous=observed(reps=listOf(14,14,12),
+                rir=listOf(3,3,3)),issuedExactReps=last))
+        assertEquals(listOf(14,14,13),advanced.newRepTargets)
+        assertEquals(AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP,
+            advanced.decisionKind)
+    }
+
+    @Test fun doNotIncreaseOtherSetsWhenAnyPreviousPersonalizedGoalWasMissed() {
+        val input=request(previous=observed(
+            reps=listOf(14,13,12),rir=listOf(3,3,3)),
+            issuedExactReps=listOf(14,14,12))
+        val result=KotlinAdaptiveSetPrescriptionDomain.draft(input)
+            as AdaptiveSetPrescriptionResult.Rejected
+        assertEquals(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+            result.reason)
+        assertTrue(result.detail.contains("Repeat"))
+        assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
+            (KotlinAdaptiveSetPrescriptionDomain.draft(request(
+                issuedExactReps=listOf(14,14))) as
+                AdaptiveSetPrescriptionResult.Rejected).reason)
     }
 
     @Test fun noUnobservedRepsNearFailureOrMissingEffortCanGenerateNextTargets() {

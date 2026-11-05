@@ -305,6 +305,79 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
         }
 
     /**
+     * Read-only, fail-closed migration parity preflight. A valid candidate
+     * checksum by itself cannot prove that every workout is enrolled or that
+     * the still-authoritative v2 history has not moved. Replay the complete
+     * mixed workout history and its shadow under the owner fence, then compare
+     * EVERY candidate shard row and the head revision to that source.
+     *
+     * A staged redo is acceptable only when the exact patch was already
+     * committed to the candidate root. Pending/incomplete redo blocks review.
+     * A positive result is evidence for a future cutover decision, NOT a
+     * write-authority switch, progression permission, or UI history source.
+     */
+    fun reviewAuthenticatedV2Parity(
+        owner: String, athlete: String
+    ): NativeCandidateHistoryRootResult = guarded(owner, athlete) {
+        val sourceReview = (handoff.review(owner, athlete)
+            as? NativeSegmentedHistoryHandoffResult.Review)?.review
+            ?: return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+        val source = (ledger.open(owner, athlete)
+            as? NativeHistoryLedgerResult.Durable)?.ledger
+            ?: return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+        if (!source.readyForHistoryReads || source.pending != null ||
+            source.ownerKey != owner || source.athleteId != athlete ||
+            source.revision != sourceReview.manifestRevision ||
+            source.completions.size != sourceReview.completionCount)
+            return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+
+        val opened = try { readRoot(owner, athlete) } catch (_: Exception) {
+            return@guarded deny(NativeCandidateHistoryRootRefusal.CORRUPT_ROOT)
+        } ?: return@guarded deny(NativeCandidateHistoryRootRefusal.NOT_BOOTSTRAPPED)
+        if (opened.root.revision != source.revision ||
+            opened.root.count != source.completions.size.toLong())
+            return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+
+        // WAL is intentionally preserved after publication. Distinguish an
+        // acknowledged, exactly matching root from an uncommitted patch.
+        when (val pending = redo.read(owner, athlete)) {
+            is NativeSegmentedRedoResult.Rejected ->
+                if (pending.reason != NativeSegmentedRedoRefusal.NOT_PREPARED)
+                    return@guarded deny(
+                        NativeCandidateHistoryRootRefusal.PENDING_REDO_REQUIRED)
+            is NativeSegmentedRedoResult.Durable -> {
+                val patch = pending.redo.stagedPatch
+                    ?: return@guarded deny(
+                        NativeCandidateHistoryRootRefusal.PENDING_REDO_REQUIRED)
+                if (opened.root.parent != pending.redo.base.rootDigest ||
+                    opened.root.lastPatchHash != patchDigest(patch) ||
+                    opened.root.revision != patch.nextHeadRevision ||
+                    opened.root.count != patch.nextCompletionCount)
+                    return@guarded deny(
+                        NativeCandidateHistoryRootRefusal.PENDING_REDO_REQUIRED)
+            }
+        }
+
+        val entries = try {
+            val ids = HashSet<String>()
+            val receipts = HashSet<String>()
+            opened.root.segments.flatMap { ref ->
+                decodeShard(owner, athlete, ref).also { rows ->
+                    for (entry in rows)
+                        if (!ids.add(entry.workoutId) ||
+                            !receipts.add(entry.storedReceiptId))
+                            throw IOException("duplicated history")
+                }
+            }
+        } catch (_: Exception) {
+            return@guarded deny(NativeCandidateHistoryRootRefusal.CORRUPT_SEGMENT)
+        }
+        if (entries != source.completions)
+            return@guarded deny(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE)
+        NativeCandidateHistoryRootResult.Reviewed(view(opened), true)
+    }
+
+    /**
      * One-time candidate bootstrap, only from COMPLETE authenticated v2
      * journal replay + shadow parity. Never creates a new empty athlete by
      * looking at a UI list or by absence of a candidate root.

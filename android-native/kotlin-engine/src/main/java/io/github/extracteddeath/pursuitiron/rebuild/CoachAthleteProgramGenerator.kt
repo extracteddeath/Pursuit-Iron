@@ -150,7 +150,7 @@ object CoachAthleteProgramGenerator {
         // A feasible 40–60 minute workout closer to 50 is preferred, but
         // a gap to authored MAV takes precedence over decorative duration.
         val sessionFit=draft.audit.sessions.sumOf {session->
-            val bounds=request.days[session.dayIndex].window
+            val bounds=request.windows[session.dayIndex]
             val preferred=if(bounds.preferredMaximumMinutes==null)
                 bounds.preferredMinimumMinutes.toLong()
             else (bounds.preferredMinimumMinutes.toLong()+

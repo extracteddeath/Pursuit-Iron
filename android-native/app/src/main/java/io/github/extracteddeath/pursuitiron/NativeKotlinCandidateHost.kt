@@ -634,17 +634,39 @@ internal class NativeKotlinCandidateHost(context:Context) {
             expectedApprovalRevision<0)
             return NativeApprovalWriteResult.Rejected(
                 NativeApprovalWriteRefusal.MALFORMED_APPROVAL)
-        val staged=runCatching{
-            KotlinWorkoutSnapshotDomain.stage(request)
-        }.getOrNull()
-        if(staged !is KotlinWorkoutSnapshotResult.Staged)
-            return NativeApprovalWriteResult.Rejected(
-                NativeApprovalWriteRefusal.MALFORMED_APPROVAL)
-        return approvalStore.publish(current.ownerKey,expectedApprovalRevision,
-            NativeKotlinWorkoutApproval(
-                current.ownerKey,current.athleteId,request.source,
-                request.currentSource,request.grant,request.approvedProgram,
-                request.policies,storageReceiptId,expectedApprovalRevision+1))
+        return runCatching {
+            revisionFence.withOwnerTransaction(current.ownerKey) {
+                if(localAthlete.signedInIdentity()!=current)
+                    return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.NOT_AUTHORIZED)
+                val saved=(authoringSourceStore.read(current.ownerKey)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.MALFORMED_APPROVAL)
+                val approval=NativeKotlinWorkoutApproval(
+                    current.ownerKey,current.athleteId,request.source,
+                    request.currentSource,request.grant,request.approvedProgram,
+                    request.policies,storageReceiptId,expectedApprovalRevision+1)
+                // Authoring source is the current gym/catalog authority.
+                // Do not publish a plan carrying removed weights, stale
+                // attachments, changed exercise credits or conflicting days.
+                if(NativeKotlinApprovedGymCoherenceDomain.inspect(approval,saved)
+                    !=NativeApprovedGymCoherenceResult.Matched)
+                    return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.MALFORMED_APPROVAL)
+                val staged=runCatching {
+                    KotlinWorkoutSnapshotDomain.stage(request)
+                }.getOrNull()
+                if(staged !is KotlinWorkoutSnapshotResult.Staged)
+                    return@withOwnerTransaction NativeApprovalWriteResult.Rejected(
+                        NativeApprovalWriteRefusal.MALFORMED_APPROVAL)
+                approvalStore.publish(
+                    current.ownerKey,expectedApprovalRevision,approval)
+            }
+        }.getOrElse {
+            NativeApprovalWriteResult.Rejected(
+                NativeApprovalWriteRefusal.STORAGE_UNAVAILABLE)
+        }
     }
 
     /**

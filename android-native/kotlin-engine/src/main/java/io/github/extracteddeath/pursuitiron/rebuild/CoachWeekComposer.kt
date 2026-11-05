@@ -83,6 +83,17 @@ data class ComposerRequest(
 data class ComposerVisit(val dayIndex:Int,val exerciseId:String,
     val pattern:ComposerPattern,val sets:Int)
 enum class ComposerStatus { FEASIBLE_DRAFT_FOR_REVIEW, CONSTRAINTS_UNRESOLVED }
+/** Review capabilities, not save or issuance authorization. Authored defaults deny all edits. */
+data class ComposerRepairPermissions(
+    val mayAdjustSets:Boolean=false,
+    val mayAddVisits:Boolean=false,
+    val mayReplaceExercises:Boolean=false,
+    val mayMoveVisits:Boolean=false
+) {
+    companion object {
+        val GENERATED_DRAFT=ComposerRepairPermissions(true,true,true,true)
+    }
+}
 data class ComposerDraft(
     val status:ComposerStatus,
     val week:DeclaredTrainingWeek,
@@ -348,7 +359,7 @@ object CoachWeekComposer {
         request:ComposerRequest,
         seed:List<ComposerVisit>,
         eligible:List<ComposerExerciseOption>,
-        permitTrainingDoseChange:Boolean
+        permissions:ComposerRepairPermissions
     ):List<ComposerVisit> {
         val options=eligible.associateBy {it.exerciseId}
         var chosen=seed
@@ -413,7 +424,7 @@ object CoachWeekComposer {
                     bestAudit=check
                 }
             }
-            if(permitTrainingDoseChange) {
+            if(permissions.mayAdjustSets) {
             // A valid authored week may be underfilled even after swaps and
             // relocations: recover missing dose by changing existing set
             // counts, and recover missing training-day variety by adding a
@@ -433,7 +444,8 @@ object CoachWeekComposer {
                         this[index]=visit.copy(sets=visit.sets-1)
                     })
             }
-            if(chosen.size<MAX_VISITS) {
+            }
+            if(permissions.mayAddVisits && chosen.size<MAX_VISITS) {
                 for(option in eligible) {
                     if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
                     for(day in request.days.indices) {
@@ -444,26 +456,32 @@ object CoachWeekComposer {
                     }
                 }
             }
-            }
+            if(permissions.mayReplaceExercises || permissions.mayMoveVisits)
             for(index in chosen.indices) {
                 if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
                 val original=chosen[index]
                 val remaining=chosen.filterIndexed {i,_->i!=index}
-                // A full day may still accept a better EXCHANGE, not another
-                // exercise. Never silently change the authored exercise ID.
+                // An exercise replacement must be separately authorized.
+                if(permissions.mayReplaceExercises)
                 for(alternative in eligible) {
                     if(alternative.exerciseId==original.exerciseId)continue
                     if(!mayStart(alternative,original.dayIndex,request,remaining))
                         continue
+                    // Replacing a movement does not also grant set-count
+                    // changes. Preserve the authored count when lawful.
+                    if(!permissions.mayAdjustSets &&
+                        original.sets !in alternative.minimumSetsPerVisit..
+                            alternative.maximumSetsPerVisit)continue
+                    val sets=if(permissions.mayAdjustSets)
+                        alternative.minimumSetsPerVisit else original.sets
                     val replacement=ComposerVisit(original.dayIndex,
-                        alternative.exerciseId,alternative.pattern,
-                        alternative.minimumSetsPerVisit)
+                        alternative.exerciseId,alternative.pattern,sets)
                     consider(chosen.toMutableList().apply {this[index]=replacement})
                     if(evaluated>=MAX_REPAIR_EVALUATIONS_PER_PASS)break
                 }
                 val selected=checkNotNull(options[original.exerciseId])
-                // No new exposure is needed when an existing visit can be
-                // moved to the day that needs it.
+                // Movement relocation is independent from exercise substitution.
+                if(permissions.mayMoveVisits)
                 for(newDay in request.days.indices) {
                     if(newDay==original.dayIndex)continue
                     if(!mayStart(selected,newDay,request,remaining))continue
@@ -488,8 +506,7 @@ object CoachWeekComposer {
     internal fun rebalanceForReview(
         request:ComposerRequest,
         authoredVisits:List<ComposerVisit>,
-        /** Author-written visit/set counts are immutable without opt-in. */
-        permitTrainingDoseChange:Boolean=false
+        permissions:ComposerRepairPermissions=ComposerRepairPermissions()
     ):List<ComposerVisit> {
         validate(request)
         require(authoredVisits.size<=MAX_VISITS)
@@ -510,7 +527,7 @@ object CoachWeekComposer {
             accepted+=visit
         }
         return Collections.unmodifiableList(refine(request,accepted,eligible,
-            permitTrainingDoseChange))
+            permissions))
     }
 
     fun compose(request:ComposerRequest):ComposerDraft {
@@ -575,7 +592,8 @@ object CoachWeekComposer {
         // The greedy phase cannot replace occupied slots or relocate a
         // useful lift. Reconsider those decisions without violating verified
         // equipment, recovery spacing, dose or athlete hard-time limits.
-        val improved=refine(request,chosen,eligible,true)
+        val improved=refine(request,chosen,eligible,
+            ComposerRepairPermissions.GENERATED_DRAFT)
         if(improved!=chosen) {
             chosen=improved
             week=toWeek(request,chosen,map)

@@ -127,13 +127,15 @@ class CoachWeekComposerTest {
                 },original.bounds))
         assertEquals(DoseFinding.BELOW_MEV,
             before.muscles[quads]?.finding)
-        val repaired=CoachWeekComposer.rebalanceForReview(original,authored)
+        val repaired=CoachWeekComposer.rebalanceForReview(original,authored,
+            ComposerRepairPermissions(mayReplaceExercises=true))
         assertEquals(3,repaired.size)
         assertTrue(repaired.any {it.exerciseId=="goblet-squat"})
         assertEquals(1,repaired.count {it.exerciseId=="db-press"})
         assertEquals(1,repaired.count {it.exerciseId=="db-row"})
         assertEquals(authored,authored.toList())
-        assertEquals(repaired,CoachWeekComposer.rebalanceForReview(original,authored))
+        assertEquals(repaired,CoachWeekComposer.rebalanceForReview(original,authored,
+            ComposerRepairPermissions(mayReplaceExercises=true)))
     }
 
     @Test fun rebalanceMovesVisitIntoEmptyDayWithoutInventingSets() {
@@ -148,7 +150,8 @@ class CoachWeekComposerTest {
             ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
             ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
             ComposerVisit(1,"goblet-squat",ComposerPattern.SQUAT,2))
-        val repaired=CoachWeekComposer.rebalanceForReview(request,authored)
+        val repaired=CoachWeekComposer.rebalanceForReview(request,authored,
+            ComposerRepairPermissions(mayMoveVisits=true))
         assertEquals(3,repaired.map {it.dayIndex}.distinct().size)
         assertEquals(authored.map {it.exerciseId}.toSet(),
             repaired.map {it.exerciseId}.toSet())
@@ -559,7 +562,8 @@ class CoachWeekComposerTest {
             ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
             ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
             ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
-        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,true)
+        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,
+            ComposerRepairPermissions(mayAddVisits=true))
         assertEquals(6,repaired.size)
         assertTrue(request.days.indices.all {day->
             repaired.filter {it.dayIndex==day}.map {it.pattern}.distinct().size==2
@@ -577,7 +581,8 @@ class CoachWeekComposerTest {
             patterns=1,maxPerDay=1)
         val seed=listOf(
             ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
-        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,true)
+        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,
+            ComposerRepairPermissions(mayAdjustSets=true))
         assertEquals(1,repaired.size)
         assertTrue(repaired.single().sets in 3..4)
         assertEquals("db-press",repaired.single().exerciseId)
@@ -600,10 +605,57 @@ class CoachWeekComposerTest {
             ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
         // Each seed day already fits in 25 minutes including declared setup.
         // One more set would exceed the explicitly preferred 26-minute max.
-        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,true)
+        val repaired=CoachWeekComposer.rebalanceForReview(request,seed,
+            ComposerRepairPermissions(mayAdjustSets=true,mayAddVisits=true))
         assertEquals(6,repaired.size)
         assertTrue(repaired.all {it.sets==2})
         assertEquals((0..2).toSet(),repaired.map {it.dayIndex}.toSet())
+    }
+
+
+    @Test fun defaultReviewCannotSilentlyReplaceAnAuthoredExercise() {
+        val request=base(
+            exerciseOptions=listOf(chestOption,backOption,legOption),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            bands=bounds(dose(chest,"2","4","6",1),
+                dose(lats,"2","4","6",1),dose(quads,"2","4","6",1)),
+            patterns=1,maxPerDay=1)
+        val authored=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"db-press",ComposerPattern.HORIZONTAL_PRESS,2))
+        assertEquals(authored,CoachWeekComposer.rebalanceForReview(request,authored))
+        val setOnly=CoachWeekComposer.rebalanceForReview(request,authored,
+            ComposerRepairPermissions(mayAdjustSets=true))
+        assertEquals(authored.map {it.exerciseId to it.dayIndex},
+            setOnly.map {it.exerciseId to it.dayIndex})
+        assertEquals(authored.size,setOnly.size)
+        val replacement=CoachWeekComposer.rebalanceForReview(request,authored,
+            ComposerRepairPermissions(mayReplaceExercises=true))
+        assertTrue(replacement.any {it.exerciseId=="goblet-squat"})
+        assertTrue(replacement.all {it.sets==2})
+    }
+
+    @Test fun independentRepairPermissionsDoNotGrantOtherEditTypes() {
+        val request=base(
+            exerciseOptions=listOf(chestOption,backOption,legOption),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            bands=bounds(dose(chest,"2","8","9"),
+                dose(lats,"2","8","9"),dose(quads,"2","8","9")),
+            patterns=2,maxPerDay=2)
+        val seed=listOf(
+            ComposerVisit(0,"db-press",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"db-row",ComposerPattern.HORIZONTAL_PULL,2),
+            ComposerVisit(2,"goblet-squat",ComposerPattern.SQUAT,2))
+        val setOnly=CoachWeekComposer.rebalanceForReview(request,seed,
+            ComposerRepairPermissions(mayAdjustSets=true))
+        assertEquals(seed.map {it.exerciseId to it.dayIndex},
+            setOnly.map {it.exerciseId to it.dayIndex})
+        val added=CoachWeekComposer.rebalanceForReview(request,seed,
+            ComposerRepairPermissions(mayAddVisits=true))
+        assertTrue(added.size>seed.size)
+        assertTrue(seed.all {it in added})
+        assertTrue(added.all {it.sets==2})
     }
 
 }

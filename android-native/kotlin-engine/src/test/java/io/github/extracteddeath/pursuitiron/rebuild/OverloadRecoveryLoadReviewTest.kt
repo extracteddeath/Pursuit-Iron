@@ -33,8 +33,9 @@ class OverloadRecoveryLoadReviewTest {
     private fun review(
         earlier: ProgressionWorkoutEvidence = demonstrated,
         latest: ProgressionWorkoutEvidence = overload,
-        stock: VerifiedLoadStock? = verified
-    ) = OverloadRecoveryLoadReviewDomain.assess(earlier, latest, stock)
+        stock: VerifiedLoadStock? = verified,
+        basis: LoadBasis = LoadBasis.SMITH_TOTAL
+    ) = OverloadRecoveryLoadReviewDomain.assess(earlier, latest, stock, basis)
 
     @Test fun reportedOverloadReturnsOnlyToPreviouslyDemonstratedLoadForReview() {
         val result = review()
@@ -116,7 +117,10 @@ class OverloadRecoveryLoadReviewTest {
             review(stock = missing200).reason)
         val step10 = VerifiedLoadStock.Stack(LoadUnit.LB,
             LoadBasis.MACHINE_STACK, n(190), n(10), n(240))
-        assertEquals(n(200), review(stock = step10).candidateReturnLoad)
+        assertEquals(OverloadRecoveryReason.PREVIOUS_LOAD_UNVERIFIED,
+            review(stock = step10).reason)
+        assertEquals(n(200), review(stock = step10,
+            basis = LoadBasis.MACHINE_STACK).candidateReturnLoad)
     }
 
     @Test fun withoutHigherAttemptLatestDoesNotCauseUnnecessaryRollback() {

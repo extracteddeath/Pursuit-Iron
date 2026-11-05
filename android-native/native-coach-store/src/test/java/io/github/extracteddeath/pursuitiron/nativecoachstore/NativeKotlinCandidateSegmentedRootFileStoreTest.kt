@@ -215,4 +215,127 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(rejection(NativeCandidateHistoryRootRefusal.INVALID_SCOPE),
             store().audit("../owner", athlete))
     }
+    @Test fun interruptionAfterShardBeforeRootLeavesRecoverableOrphan() {
+        val initial = boot()
+        stagedAppend(initial)
+        var injected = false
+        val crashed = NativeKotlinCandidateSegmentedRootFileStore(
+            root, fence, identity, v2, handoff, wal(),
+            beforeRootPublicationForTest = {
+                injected = true
+                throw IllegalStateException("simulated power interruption")
+            })
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.STORAGE_UNAVAILABLE),
+            crashed.publishStagedForCandidateReview(owner, athlete))
+        assertTrue(injected)
+        assertEquals(initial, result(store().audit(owner, athlete)))
+        assertEquals(1, candidateFiles(".shard").size)
+        assertTrue((wal().read(owner, athlete)
+            as NativeSegmentedRedoResult.Durable).redo.stagedPatch != null)
+        // Reuse existing immutable bytes, then swap root only once.
+        val restored = store().publishStagedForCandidateReview(owner, athlete)
+        assertTrue(restored.toString(),
+            restored is NativeCandidateHistoryRootResult.Reviewed)
+        assertEquals(1L, result(restored).head.completionCount)
+        assertEquals(1, candidateFiles(".shard").size)
+        assertTrue((store().publishStagedForCandidateReview(owner, athlete)
+            as NativeCandidateHistoryRootResult.Reviewed).replayed)
+    }
+
+    @Test fun lostAcknowledgementAfterRootSwapIsRecognizedOnRestart() {
+        val initial = boot()
+        stagedAppend(initial)
+        val crashed = NativeKotlinCandidateSegmentedRootFileStore(
+            root, fence, identity, v2, handoff, wal(),
+            afterRootPublicationForTest = {
+                throw IllegalStateException("simulated ack loss")
+            })
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.STORAGE_UNAVAILABLE),
+            crashed.publishStagedForCandidateReview(owner, athlete))
+        val current = result(store().audit(owner, athlete))
+        assertEquals(2L, current.head.revision)
+        assertEquals(1L, current.head.completionCount)
+        assertTrue((store().publishStagedForCandidateReview(owner, athlete)
+            as NativeCandidateHistoryRootResult.Reviewed).replayed)
+        assertEquals(current, result(store().audit(owner, athlete)))
+    }
+
+    private fun realComposerCompletion(): KotlinHistoryManifestEntry {
+        val source = KotlinTrainingSourceRevision(
+            athlete, 2, "program-1", 3, "gym-1", 3,
+            "catalog-1", "rules-1")
+        val target = KotlinWorkoutTarget(
+            "bench", ComposerRole.PRIMARY,
+            ComposerSessionPurpose.HYPERTROPHY, "set-1",
+            DraftSetType.WORKING, 0,
+            DraftSetLoad.Verified(
+                LoadUnit.LB, LoadBasis.SMITH_TOTAL,
+                java.math.BigDecimal("200")),
+            RepBand(5, 8), 2, 60, 90)
+        val snapshot = KotlinStagedWorkout(
+            source, "grant-1", "workout-1", 0, 0,
+            ComposerSessionPurpose.HYPERTROPHY, 45, listOf(target))
+        val stored = KotlinStoredWorkoutIdentity(
+            "stored-1", "workout-1", source, 1)
+        assertTrue(composer.issue(owner, snapshot, stored)
+            is NativeJournalFileResult.Durable)
+        val record = composer.appendStored(
+            owner, "workout-1", KotlinJournalOperation.RecordSet(
+                "set-event-1", 0, "set-1",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(java.math.BigDecimal("200"),
+                    LoadUnit.LB, 8, 2)
+            ), { o, sourceRevision ->
+                authority.canAccessIssuedWorkout(o, sourceRevision)
+            })
+        assertTrue(record is NativeJournalFileResult.Durable)
+        val finish = composer.appendStored(
+            owner, "workout-1", KotlinJournalOperation.Finish(
+                "finish-1", (record as NativeJournalFileResult.Durable).journal.revision
+            ), { o, sourceRevision ->
+                authority.canAccessIssuedWorkout(o, sourceRevision)
+            })
+        assertTrue(finish is NativeJournalFileResult.Durable)
+        val journal = (finish as NativeJournalFileResult.Durable).journal
+        return KotlinHistoryManifestEntry(
+            1, "workout-1", journal.storedIdentity.storageReceiptId,
+            checkNotNull(journal.finishedByEventId), journal.revision, 0)
+    }
+
+    @Test fun historicalCorrectionCopiesOneShardButKeepsV2AsSourceOwner() {
+        val saved = realComposerCompletion()
+        assertTrue(v2.enrollVerifiedSnapshot(owner, athlete,
+            listOf(saved)) { o, a ->
+                signedIn == NativeKotlinOwnerIdentity(o, a)
+            } is NativeHistoryLedgerResult.Durable)
+        assertTrue(shadow.sync(owner, athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        val rootView = result(store().bootstrapFromVerifiedV2(owner, athlete))
+        val correctionIntent = NativeHistoryWriteIntent.Correct(
+            "workout-1", KotlinSavedSetCorrection(
+                "edit-1", 0, "set-1", "set-event-1",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(java.math.BigDecimal("195"),
+                    LoadUnit.LB, 6, 1)))
+        assertTrue(wal().prepare(owner, athlete,
+            rootView.head, correctionIntent, saved)
+            is NativeSegmentedRedoResult.Durable)
+        val originalShard = NativeSegmentedWriteSegment(
+            rootView.head.rootDigest, 1, listOf(saved))
+        val corrected = saved.copy(savedCorrectionRevision = 1)
+        assertTrue(wal().stage(owner, athlete, originalShard, corrected)
+            is NativeSegmentedRedoResult.Durable)
+        val published = store().publishStagedForCandidateReview(owner, athlete)
+        assertTrue(published.toString(),
+            published is NativeCandidateHistoryRootResult.Reviewed)
+        assertEquals(1L, result(published).head.completionCount)
+        assertEquals(2, candidateFiles(".shard").size)
+        assertEquals(1L, (v2.open(owner, athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.revision)
+        assertEquals(0L, (v2.open(owner, athlete)
+            as NativeHistoryLedgerResult.Durable)
+            .ledger.completions.single().savedCorrectionRevision)
+        assertFalse(result(published).canPublishHistory)
+    }
+
 }

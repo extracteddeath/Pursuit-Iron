@@ -61,7 +61,10 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
     private val identity: NativeKotlinCurrentIdentity,
     private val ledger: NativeKotlinHistoryManifestFileStore,
     private val handoff: NativeKotlinSegmentedHistoryHandoffGate,
-    private val redo: NativeKotlinSegmentedRedoFileStore
+    private val redo: NativeKotlinSegmentedRedoFileStore,
+    /** Internal failure-injection seam; never configured by the app. */
+    private val beforeRootPublicationForTest: (() -> Unit)? = null,
+    private val afterRootPublicationForTest: (() -> Unit)? = null
 ) {
     private data class Ref(val first: Long, val size: Int, val sha: String)
     private data class Root(
@@ -449,7 +452,9 @@ internal class NativeKotlinCandidateSegmentedRootFileStore(
                 parent = opened.digest, lastPatchHash = patchHash)
             // The root is the only commit point; orphaned pre-commit shard
             // is harmless and remains outside current history.
+            beforeRootPublicationForTest?.invoke()
             atomicWrite(rootFile(owner, athlete), encodeRoot(updated))
+            afterRootPublicationForTest?.invoke()
             audit(owner, athlete)
         } catch (_: Exception) {
             deny(NativeCandidateHistoryRootRefusal.STORAGE_UNAVAILABLE)

@@ -56,3 +56,31 @@ weights/repetitions/RIR; wrong segment/root or correction receipts; owner
 revocation and isolation; checksum corruption; and a staged workout 4,097
 that never changes the legacy v2 manifest. The store is NOT wired to
 Compose, production history readers, the live JS engine, or a second writer.
+
+## Candidate immutable shard + atomic root publication (rehearsal)
+
+`NativeKotlinCandidateSegmentedRootFileStore` is an **internal, inactive**
+secondary root namespace. Bootstrap requires both authenticated full
+Composer/custom journal replay and exact parity with the version-2 shadow.
+It never creates an athlete merely because no candidate root exists. The
+candidate loads durable staged redo, verifies the actual existing shard(s),
+checks unique workout/receipt IDs, reruns the pure transaction planner
+against the on-disk root, forces a new immutable shard, and atomically
+replaces its *own* checksummed root. The WAL is retained unchanged. A retry
+after publication compares the exact parent root and patch identity and
+returns an idempotent acknowledgment; a stale unrelated root fails closed.
+
+Failure-injection tests cover a crash after a shard is written but before
+the root swap (orphan ignored; repeat safely commits) and loss of
+acknowledgment after root publication (cold restart reports replay, never
+double-counts). Tests also cover old workout correction, root/shard
+corruption, owner revocation, and the fact that version-2 remains unchanged.
+
+This is **NOT a new history authority**. Candidate publication does not
+authenticate a post-bootstrap journal/Finish/correction and cannot
+publish Last/PR/progression. It still scans historical shards to prove
+uniqueness, carries a bounded root descriptor table, and has not passed
+Android device power-loss/backup testing. A production handoff must
+replace these engineering-only entrypoints with one replay-authenticated,
+account-scoped writer and a scalable unique workout index. Do not merge
+or wire this candidate into the existing app.

@@ -43,6 +43,16 @@
       ]
     },
     {
+      "id": "dp-rep-target-jumps",
+      "domain": "progression",
+      "severity": "critical",
+      "scenario": "At one verified working weight, sets complete 14/13/12 reps in 10–15 with actual RIR 3/3/2; also test all-set RIR 2, missing RIR and near failure",
+      "expected": "If effort permits, at most one extra rep on one demonstrably capable set for review; no +2/+3 jumps, no wholesale all-set increases and no issued-target overwrite",
+      "requiredProof": [
+        "headless"
+      ]
+    },
+    {
       "id": "progression-no-rir",
       "domain": "progression",
       "severity": "major",

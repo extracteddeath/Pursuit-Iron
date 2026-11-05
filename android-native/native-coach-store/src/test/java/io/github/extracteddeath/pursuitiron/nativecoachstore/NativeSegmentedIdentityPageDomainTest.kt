@@ -152,6 +152,44 @@ class NativeSegmentedIdentityPageDomainTest {
         assertFalse(next.canPublishHistory)
     }
 
+    @Test fun untouchedCorruptedPageOrMismatchedReceiptTreeFailsClosed() {
+        val clean=prepared((1L..300L).map { entry(it) })
+        assertTrue(NativeSegmentedIdentityPageDomain.audit(clean)
+            is NativeSegmentedIdentityPageDecision.Prepared)
+        // A locally valid page is insufficient when a distant page is
+        // missing or a page in the independent receipt tree is altered.
+        val missing=clean.copy(workoutPages=clean.workoutPages.dropLast(1))
+        assertEquals(NativeSegmentedIdentityPageDecision.Rejected(
+            NativeSegmentedIdentityPageRefusal.MISSING_COMPLETION),
+            NativeSegmentedIdentityPageDomain.findWorkout(
+                missing,"owner-1","athlete-1",digest,12,"workout-1"))
+        val receipt=clean.receiptPages.last()
+        val altered=receipt.copy(rows=receipt.rows.mapIndexed { index,row ->
+            if(index==0) row.copy(completionOrder=2L) else row
+        })
+        val corrupted=clean.copy(receiptPages=
+            clean.receiptPages.dropLast(1)+altered)
+        assertEquals(NativeSegmentedIdentityPageDecision.Rejected(
+            NativeSegmentedIdentityPageRefusal.CORRUPT_PAGE),
+            NativeSegmentedIdentityPageDomain.findWorkout(
+                corrupted,"owner-1","athlete-1",digest,12,"workout-1"))
+        assertEquals(NativeSegmentedIdentityPageDecision.Rejected(
+            NativeSegmentedIdentityPageRefusal.CORRUPT_PAGE),
+            NativeSegmentedIdentityPageDomain.proposeAppend(
+                corrupted,digest,12,"b".repeat(64),13,entry(301)))
+        // Two completely valid page checksums are still insufficient if
+        // the trees represent different histories. Here we splice in a
+        // separately prepared, internally checksummed but different tree.
+        val replaced=prepared((1L..300L).map {
+            if(it==300L) entry(it,receipt="receipt-distinct") else entry(it)
+        })
+        val inconsistent=clean.copy(receiptPages=replaced.receiptPages)
+        assertEquals(NativeSegmentedIdentityPageDecision.Rejected(
+            NativeSegmentedIdentityPageRefusal.MISSING_COMPLETION),
+            NativeSegmentedIdentityPageDomain.findReceipt(
+                inconsistent,"owner-1","athlete-1",digest,12,"receipt-99999"))
+    }
+
     @Test fun emptyCandidateStillDoesNotAuthorizeAnAbsentWorkout() {
         val empty=prepared(emptyList())
         assertTrue(empty.workoutPages.isEmpty())

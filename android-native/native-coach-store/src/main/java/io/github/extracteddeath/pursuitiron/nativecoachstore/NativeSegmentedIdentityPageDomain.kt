@@ -155,6 +155,72 @@ internal object NativeSegmentedIdentityPageDomain {
     }
 
     /**
+     * Audit BOTH key trees, including pages not touched by the requested
+     * workout. A valid selected-page checksum says nothing about a missing
+     * older receipt or a conflicting page in the other key tree.
+     *
+     * The index is still caller-supplied and never authenticates its source.
+     * This is a structural parity check, not permission to issue workouts.
+     */
+    fun audit(
+        directory: NativeSegmentedIdentityPageDirectory
+    ): NativeSegmentedIdentityPageDecision {
+        if (!id.matches(directory.ownerKey) ||
+            !id.matches(directory.athleteId) ||
+            !digest.matches(directory.sourceRootDigest) ||
+            directory.sourceRevision !in 1..MAX_REVISION ||
+            directory.completionCount !in 0 until MAX_REVISION)
+            return deny(NativeSegmentedIdentityPageRefusal.INVALID_SCOPE)
+
+        fun readTree(
+            pages: List<NativeSegmentedIdentityPage>,
+            kind: KeyType
+        ): List<NativeCandidateIndexedWorkout>? {
+            if (directory.completionCount == 0L && pages.isNotEmpty() ||
+                directory.completionCount != 0L && pages.isEmpty() ||
+                pages.size.toLong() > directory.completionCount)
+                return null
+            val all = ArrayList<NativeCandidateIndexedWorkout>()
+            var previous: String? = null
+            for (page in pages) {
+                if (page.rows.size !in 1..PAGE_SIZE ||
+                    page.firstKey != key(page.rows.first(), kind) ||
+                    page.lastKey != key(page.rows.last(), kind) ||
+                    !digest.matches(page.contentDigest) ||
+                    digestPage(kind, page.rows) != page.contentDigest)
+                    return null
+                for (row in page.rows) {
+                    val current = key(row, kind)
+                    if (!id.matches(row.workoutId) ||
+                        !id.matches(row.storedReceiptId) ||
+                        row.completionOrder !in 1..directory.completionCount ||
+                        previous != null && current <= previous)
+                        return null
+                    previous = current
+                    all.add(row)
+                }
+                if (all.size.toLong() > directory.completionCount)
+                    return null
+            }
+            return all
+        }
+
+        val workouts = readTree(directory.workoutPages, KeyType.WORKOUT)
+            ?: return deny(NativeSegmentedIdentityPageRefusal.CORRUPT_PAGE)
+        val receipts = readTree(directory.receiptPages, KeyType.RECEIPT)
+            ?: return deny(NativeSegmentedIdentityPageRefusal.CORRUPT_PAGE)
+        if (workouts.size.toLong() != directory.completionCount ||
+            receipts.size.toLong() != directory.completionCount)
+            return deny(NativeSegmentedIdentityPageRefusal.MISSING_COMPLETION)
+        val ordered = workouts.sortedBy { it.completionOrder }
+        if (ordered.withIndex().any { (index, row) ->
+                row.completionOrder != index.toLong() + 1L
+            } || ordered != receipts.sortedBy { it.completionOrder })
+            return deny(NativeSegmentedIdentityPageRefusal.MISSING_COMPLETION)
+        return NativeSegmentedIdentityPageDecision.Prepared(directory)
+    }
+
+    /**
      * Lookup in an already prepared snapshot; a null row DOES NOT prove
      * absence in authentic lifetime history. The expected root/revision
      * arguments are caller-supplied, not independently authenticated here.
@@ -171,6 +237,9 @@ internal object NativeSegmentedIdentityPageDomain {
             expectedRootDigest != directory.sourceRootDigest ||
             expectedRevision != directory.sourceRevision)
             return deny(NativeSegmentedIdentityPageRefusal.STALE_ROOT)
+        val verified = audit(directory)
+        if (verified is NativeSegmentedIdentityPageDecision.Rejected)
+            return verified
         val pages = if (kind == KeyType.WORKOUT)
             directory.workoutPages else directory.receiptPages
         val pageIndex = pages.binarySearch { page ->

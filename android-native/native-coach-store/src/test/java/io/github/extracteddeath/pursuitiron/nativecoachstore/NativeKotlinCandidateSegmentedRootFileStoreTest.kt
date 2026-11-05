@@ -75,6 +75,9 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         NativeKotlinCustomSavedCorrectionFileStore(
             root, fence, identity, custom, v2),
         authority, fence, identity)
+    private fun identityIndex() =
+        NativeKotlinCandidateWorkoutIdentityIndexFileStore(
+            root, fence, identity, v2, store())
     private fun result(r: NativeCandidateHistoryRootResult) =
         (r as NativeCandidateHistoryRootResult.Reviewed).view
     private fun rejection(reason: NativeCandidateHistoryRootRefusal) =
@@ -119,6 +122,63 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             store().bootstrapFromVerifiedV2(owner, athlete))
         assertTrue(candidateFiles(".root").isEmpty())
         // Onboarding or an absent UI history list cannot bypass v2 enrollment.
+    }
+
+    @Test fun candidateIdentityIndexIsDurableButNeverAuthoritative() {
+        val initial = boot()
+        val missing = identityIndex().findWorkout(owner, athlete, "workout-1")
+        assertEquals(NativeCandidateIdentityIndexResult.Rejected(
+            NativeCandidateIdentityIndexRefusal.NOT_INDEXED), missing)
+        val written = identityIndex().build(owner, athlete)
+        assertTrue(written.toString(),
+            written is NativeCandidateIdentityIndexResult.Indexed)
+        assertEquals(initial.head.rootDigest,
+            (written as NativeCandidateIdentityIndexResult.Indexed).view.rootDigest)
+        assertFalse(written.view.canAuthorizeWrites)
+        assertFalse(written.view.canIssueProgression)
+        assertFalse(written.view.canTransferAuthority)
+        assertFalse(written.replayed)
+        assertTrue((identityIndex().build(owner, athlete)
+            as NativeCandidateIdentityIndexResult.Indexed).replayed)
+        val absent = identityIndex().findWorkout(owner, athlete, "unknown")
+            as NativeCandidateIdentityIndexResult.Lookup
+        assertNull(absent.match)
+        assertFalse(absent.canAuthorizeNewWorkout)
+        val files = candidateFiles(".idx").filter {
+            it.fileName.toString().startsWith("candidate-identity-")
+        }
+        assertEquals(1, files.size)
+        val bytes = Files.readAllBytes(files.single())
+        bytes[bytes.lastIndex] = (bytes.last().toInt() xor 1).toByte()
+        Files.write(files.single(), bytes)
+        assertEquals(NativeCandidateIdentityIndexResult.Rejected(
+            NativeCandidateIdentityIndexRefusal.CORRUPT_INDEX),
+            identityIndex().findWorkout(owner, athlete, "unknown"))
+        // A damaged identity index must not be silently rebuilt or reset.
+        assertEquals(NativeCandidateIdentityIndexResult.Rejected(
+            NativeCandidateIdentityIndexRefusal.CORRUPT_INDEX),
+            identityIndex().build(owner, athlete))
+        signedIn = null
+        assertEquals(NativeCandidateIdentityIndexResult.Rejected(
+            NativeCandidateIdentityIndexRefusal.NOT_AUTHORIZED),
+            identityIndex().build(owner, athlete))
+    }
+
+    @Test fun candidateIndexRejectsForgedHistoryAndRefreshesOnlyAfterRealFinish() {
+        val initial = boot()
+        assertTrue(identityIndex().build(owner, athlete)
+            is NativeCandidateIdentityIndexResult.Indexed)
+        stagedAppend(initial)
+        assertTrue(store().publishStagedForCandidateReview(owner, athlete)
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertEquals(NativeCandidateIdentityIndexResult.Rejected(
+            NativeCandidateIdentityIndexRefusal.UNVERIFIED_SOURCE),
+            identityIndex().build(owner, athlete))
+        assertEquals(NativeCandidateIdentityIndexResult.Rejected(
+            NativeCandidateIdentityIndexRefusal.UNVERIFIED_SOURCE),
+            identityIndex().findWorkout(owner, athlete, "workout-1"))
+        // An independently proven Finish uses a fresh candidate root.
+        // The synthetic candidate cannot be repaired by an index write.
     }
 
     @Test fun zeroHistoryBootstrapRequiresReplayGateAndDoesNotReset() {
@@ -487,6 +547,8 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(shadow.sync(owner, athlete)
             is NativeSegmentedHistoryResult.Indexed)
         val initial = result(store().bootstrapFromVerifiedV2(owner, athlete))
+        assertTrue(identityIndex().build(owner, athlete)
+            is NativeCandidateIdentityIndexResult.Indexed)
         val operation = KotlinSavedSetCorrection(
             "edit-1", 0, "set-1", "set-event-1",
             KotlinJournalSetOutcome.COMPLETED,
@@ -518,6 +580,21 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(shadow.sync(owner, athlete) is NativeSegmentedHistoryResult.Indexed)
         assertEquals(this.result(mirrored),
             this.result(store().reviewAuthenticatedV2Parity(owner, athlete)))
+        assertEquals(NativeCandidateIdentityIndexResult.Rejected(
+            NativeCandidateIdentityIndexRefusal.STALE_INDEX),
+            identityIndex().findWorkout(owner, athlete, "workout-1"))
+        val refreshed = identityIndex().build(owner, athlete)
+        assertTrue(refreshed.toString(),
+            refreshed is NativeCandidateIdentityIndexResult.Indexed)
+        val byWorkout = identityIndex().findWorkout(owner, athlete, "workout-1")
+            as NativeCandidateIdentityIndexResult.Lookup
+        val byReceipt = identityIndex().findReceipt(
+            owner, athlete, original.storedReceiptId)
+            as NativeCandidateIdentityIndexResult.Lookup
+        assertEquals(byWorkout.match, byReceipt.match)
+        assertEquals(1L, byWorkout.match?.completionOrder)
+        assertEquals(original.storedReceiptId, byWorkout.match?.storedReceiptId)
+        assertFalse(byWorkout.canAuthorizeNewWorkout)
     }
 
 }

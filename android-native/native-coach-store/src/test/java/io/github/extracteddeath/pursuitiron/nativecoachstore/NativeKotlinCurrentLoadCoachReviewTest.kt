@@ -84,6 +84,38 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             manifest,KotlinWorkoutHistoryEvidence(sourceOverride,
                 "workout-$i","finish-$i",3,facts,listOf(review)),purpose)
     }
+    /**
+     * Projector preserves the actual immutable issued narrow bands. Only the
+     * next coach calculation can restore the original approved 8–12 range.
+     */
+    private fun withExactIssuedTargets(
+        original:NativeKotlinMixedHistoryCompletion.Composer,
+        issued:List<RepBand>,
+        targetRir:Int=2
+    ):NativeKotlinMixedHistoryCompletion.Composer {
+        val before=original.evidence.exerciseReviews.single()
+        require(issued.size==before.workingSets.size)
+        val sets=before.workingSets.mapIndexed {i,fact->
+            fact.copy(issuedReps=issued[i],issuedRir=targetRir)
+        }
+        val comparable=issued.distinct().size==1
+        val target=if(comparable) issued.single() else null
+        val workout=target?.let {before.progressionWorkout!!.copy(
+            targetReps=it,observations=before.progressionWorkout.observations)}
+        val assessed=workout?.let {
+            DoubleProgressionEvidenceDomain.assess(
+                it.targetReps,it.expectedWorkingSets,it.observations)
+        }
+        val review=before.copy(
+            workingSets=sets,
+            progressionGate=if(comparable)
+                KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW
+            else KotlinHistoryProgressionGate.MIXED_REP_BANDS,
+            progressionReview=assessed,progressionWorkout=workout)
+        return original.copy(evidence=original.evidence.copy(
+            sets=sets,exerciseReviews=listOf(review)))
+    }
+
     private fun custom(i:Int):NativeKotlinMixedHistoryCompletion.Custom {
         val visit=CustomHistoricalVisitFact(
             "slot-a","db-press","custom-set-$i",CustomWorkoutVisitPart.MAIN,
@@ -117,6 +149,90 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         assertFalse(ready.mayApply)
         assertFalse(ready.mayIssueWorkout)
         assertFalse(ready.coaching.maySaveProgram)
+    }
+
+    @Test fun twoCeilingSessionsCanIncreaseLoadAfterIndividualizedRepTargets() {
+        val first=withExactIssuedTargets(composer(1),
+            listOf(RepBand(12,12),RepBand(11,11)))
+        val second=withExactIssuedTargets(composer(2),
+            listOf(RepBand(11,11),RepBand(12,12)))
+        assertEquals(KotlinHistoryProgressionGate.MIXED_REP_BANDS,
+            first.evidence.exerciseReviews.single().progressionGate)
+        assertEquals(listOf(RepBand(12,12),RepBand(11,11)),
+            first.evidence.exerciseReviews.single().workingSets.map {it.issuedReps})
+        val result=inspect(timeline(first,second))
+        assertTrue(result.toString(),
+            result is NativeCurrentLoadReviewResult.Reviewed)
+        val coach=(result as NativeCurrentLoadReviewResult.Reviewed).coaching
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            coach.status)
+        assertEquals(CoachNextLoadChangeKind.EARNED_INCREMENT,coach.kind)
+        assertEquals(n("35"),coach.candidateLoad)
+        assertFalse(coach.maySaveProgram)
+        assertEquals(listOf(RepBand(11,11),RepBand(12,12)),
+            second.evidence.exerciseReviews.single().workingSets.map {it.issuedReps})
+    }
+
+    @Test fun historicalExactTargetsRemainComparableToOrdinaryBroadRange() {
+        val previous=withExactIssuedTargets(composer(1),
+            listOf(RepBand(12,12),RepBand(12,12)))
+        val result=inspect(timeline(previous,composer(2)))
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            (result as NativeCurrentLoadReviewResult.Reviewed).coaching.status)
+    }
+
+    @Test fun historicalNarrowTargetsDoNotAuthorizeIncreaseAfterMissedRep() {
+        val before=withExactIssuedTargets(composer(1),
+            listOf(RepBand(12,12),RepBand(11,11)))
+        val poor=withExactIssuedTargets(
+            composer(2,completedReps=listOf(12,11)),
+            listOf(RepBand(12,12),RepBand(12,12)))
+        val result=inspect(timeline(before,poor))
+        assertTrue(result is NativeCurrentLoadReviewResult.Reviewed)
+        val coach=(result as NativeCurrentLoadReviewResult.Reviewed).coaching
+        assertNotEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            coach.status)
+        assertNull(coach.candidateLoad)
+        val later=withExactIssuedTargets(
+            composer(3,completedReps=listOf(12,9)),
+            listOf(RepBand(12,12),RepBand(11,11)))
+        val failed=inspect(timeline(before,composer(2),later))
+        assertTrue(failed is NativeCurrentLoadReviewResult.Reviewed)
+        assertNotEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            (failed as NativeCurrentLoadReviewResult.Reviewed).coaching.status)
+    }
+
+    @Test fun forgedOrIncompatibleNarrowRangesNeverJustifyNextWeight() {
+        val first=composer(1)
+        val invalid=listOf(
+            withExactIssuedTargets(composer(2),
+                listOf(RepBand(12,12),RepBand(13,13))),
+            withExactIssuedTargets(composer(2),
+                listOf(RepBand(8,10),RepBand(12,12))),
+            withExactIssuedTargets(composer(2),
+                listOf(RepBand(12,12),RepBand(11,11)),targetRir=3)
+        )
+        for(latest in invalid) {
+            assertEquals(NativeCurrentLoadReviewResult.Rejected(
+                NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT),
+                inspect(timeline(first,latest)))
+        }
+        val changed=withExactIssuedTargets(composer(2),
+            listOf(RepBand(12,12),RepBand(11,11)))
+        val base=changed.evidence.exerciseReviews.single()
+        val load=DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,n("35"))
+        val stale=changed.copy(evidence=changed.evidence.copy(
+            sets=changed.evidence.sets.mapIndexed {i,item->
+                if(i==0) item.copy(issuedLoad=load) else item
+            },
+            exerciseReviews=listOf(base.copy(
+                workingSets=base.workingSets.mapIndexed {i,item->
+                    if(i==0) item.copy(issuedLoad=load) else item
+                }))))
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT),
+            inspect(timeline(first,stale)))
     }
 
     @Test fun doNotSkipLatestCustomVisitToCherryPickOlderSuccessfulWorkouts() {

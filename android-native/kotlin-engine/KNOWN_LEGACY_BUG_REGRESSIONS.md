@@ -88,9 +88,25 @@ reported effort. Android's Coach preview shows this distinction. This
 does not yet implement fatigue-adjusted downward targets or peak-specific
 periodization; the current conservative refusal remains intentional.
 
-The wider two-workout **load-increase** timeline still requires a corresponding
-authenticated normalization policy before it can evaluate mixed exact-set
-rep bands for weight increases. This remains a distinct release blocker.
+The owner-fenced native **two-workout load review now uses the same
+conservative, exact-inventory normalization** across the two latest
+relevant exercise appearances. It reconstructs each workout against the
+current approved practical rep range while retaining its own distinct
+historical, uniform *issued* load. Two all-set ceiling sessions can thereby
+earn a physically stocked, bounded next-load review without discarding
+individualized targets. If the last session instead failed at a heavier
+issued load, the independent overload-recovery evaluator can still review
+the **previous actually demonstrated** weight; it never substitutes the
+current heavy plan for the old completed workout.
+
+The comparison must remain athlete/source, purpose, gym, unit/basis,
+set-count/order, RIR-target and scheme consistent; custom visits and missed
+rep floors are not skipped. Kotlin unit tests, native synthetic history tests
+and a disk-backed real-journal integration test cover those conditions.
+**Remaining blocker:** This is still only a review until the existing native
+approval path accepts the proposed program revision; demonstrate the entire
+Android path, long-term fatigue and recovery, and actual frozen JS/Kotlin
+head-to-head evidence before calling it production superior.
 
 ## Native set-specific next-session prescription (candidate)
 

@@ -433,6 +433,8 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertEquals("workout-3",following.historicalWorkoutId)
         assertEquals(listOf(12,11),following.observedReps)
         assertEquals(listOf(12,12),following.newRepTargets)
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            following.decisionKind)
         assertEquals("workout-4",following.workout.workoutId)
         assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
             following.workout.targets.filter {

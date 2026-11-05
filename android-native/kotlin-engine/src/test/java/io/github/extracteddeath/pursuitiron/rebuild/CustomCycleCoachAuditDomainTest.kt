@@ -233,6 +233,18 @@ class CustomCycleCoachAuditDomainTest {
         })
     }
 
+    @Test fun missingContinuityPolicyBlocksTwoTrainingBlocksEvenIfBothMeetMev() {
+        val audit=CustomCycleCoachAuditDomain.review(
+            twoBlockCycle(),setup(),StarterExerciseTranche.movements(),
+            inputs())
+        assertEquals(listOf(5,3),audit.weeks.map { it.workingSets })
+        assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,audit.status)
+        assertTrue(audit.issues.any {
+            it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_MISSING
+        })
+        assertFalse(audit.mayIssueWorkout)
+    }
+
     @Test fun invalidContinuityPolicyNeverPassesSilently() {
         val result=CustomCycleCoachAuditDomain.review(
             twoBlockCycle(),setup(),StarterExerciseTranche.movements(),

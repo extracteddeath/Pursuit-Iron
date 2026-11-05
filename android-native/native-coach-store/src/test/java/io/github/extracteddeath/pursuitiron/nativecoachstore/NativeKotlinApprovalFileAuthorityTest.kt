@@ -98,10 +98,9 @@ class NativeKotlinApprovalFileAuthorityTest {
     }
 
     @Test fun legacyVersionOneApprovalRemainsReadableDuringRepProofUpgrade() {
-        // Rebuild the genuine v2 and v1 bytes: v3 added a null-or-decimal
-        // marker AFTER EACH policy, not merely a new trailing byte. A real
-        // old approval must decode without accidentally consuming the next
-        // policy's exercise ID as a load.
+        // The v4 format adds one day-scope marker after each optional
+        // v3 load marker. Reconstruct v3, v2 and v1 byte layouts, rather
+        // than assuming changing a version byte is a valid downgrade.
         val current=NativeKotlinApprovalCodec.encode(approval())
         assertEquals(0,current.last().toInt())
         fun utf(vararg strings:String):ByteArray {
@@ -120,17 +119,24 @@ class NativeKotlinApprovalFileAuthorityTest {
             utf("db-row","STRENGTH_SKILL"),
             utf("db-row","HYPERTROPHY"),
             utf("commit-1"))
-        val loadPresenceIndices=nextFields.map {marker ->
+        val dayPresenceIndices=nextFields.map {marker ->
             indexOfToken(current,marker)-1
         }
-        assertEquals(4,loadPresenceIndices.distinct().size)
-        assertTrue(loadPresenceIndices.all {it in current.indices &&
-            current[it]==0.toByte()})
-        val legacy=current.filterIndexed {index,_ ->
-            index !in loadPresenceIndices
-        }.toByteArray()
-        // v2 retained the single optional accepted-rep-proof presence byte.
-        val v2=legacy.clone().also {it[7]=2}
+        assertEquals(4,dayPresenceIndices.distinct().size)
+        assertTrue(dayPresenceIndices.all {index ->
+            index>0 && current[index]==0.toByte() &&
+                current[index-1]==0.toByte()
+        })
+        val v3=current.filterIndexed {i,_ ->
+            i !in dayPresenceIndices
+        }.toByteArray().also {it[7]=3}
+        assertEquals(approval(),NativeKotlinApprovalCodec.decode(v3))
+        val loadPresenceIndices=dayPresenceIndices.mapIndexed {order,index ->
+            index-1-order
+        }
+        val v2=v3.filterIndexed {i,_ ->
+            i !in loadPresenceIndices
+        }.toByteArray().also {it[7]=2}
         assertEquals(approval(),NativeKotlinApprovalCodec.decode(v2))
         // v1 ended at the storage revision and had no proof flag at all.
         val v1=v2.copyOf(v2.size-1).also {it[7]=1}
@@ -353,4 +359,30 @@ class NativeKotlinApprovalFileAuthorityTest {
             NativeApprovalWriteRefusal.CORRUPT_EXISTING_RECORD),
             authority().revokeCurrentGrant("owner-1",1))
     }
+
+    @Test fun v4ApprovalPersistsDaySpecificProgramLoadsAcrossReopening() {
+        val base=approval()
+        val scoped=base.copy(policies=base.policies+
+            base.policies.single {
+                it.exerciseId=="db-press" &&
+                    it.purpose==ComposerSessionPurpose.HYPERTROPHY
+            }.copy(dayIndex=2,purposeWorkingLoad=n("25"),
+                workingReps=RepBand(10,12),targetRir=3,restSecondsPerSet=180))
+        val bytes=NativeKotlinApprovalCodec.encode(scoped)
+        assertEquals(scoped,NativeKotlinApprovalCodec.decode(bytes))
+        assertEquals(NativeApprovalWriteResult.Committed(1),
+            authority().publish("owner-1",0,scoped))
+        val restored=checkNotNull(authority().currentOwnedApproval("owner-1"))
+        assertEquals(scoped,restored)
+        val specific=restored.policies.single {it.exerciseId=="db-press" &&
+            it.dayIndex==2}
+        assertEquals(n("25"),specific.purposeWorkingLoad)
+        assertEquals(RepBand(10,12),specific.workingReps)
+        assertEquals(3,specific.targetRir)
+        val shared=restored.policies.single {it.exerciseId=="db-press" &&
+            it.purpose==ComposerSessionPurpose.HYPERTROPHY &&
+            it.dayIndex==null}
+        assertNull(shared.purposeWorkingLoad)
+    }
+
 }

@@ -372,4 +372,51 @@ class CoachSessionPrescriptionDomainTest {
         assertNull(bodyDraft.finalAudit)
     }
 
+
+    @Test fun samePurposeOnDifferentDaysUsesIndependentSetsRepsAndVerifiedWeights() {
+        val baseline=policies()
+        val independent=baseline+policy(
+            "db-press",ComposerSessionPurpose.HYPERTROPHY,
+            reps=RepBand(10,12),rir=3,rest=180).copy(
+                purposeWorkingLoad=n("25"),dayIndex=2)
+        val preview=CoachSessionPrescriptionDomain.draft(request(),independent)
+        assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,preview.status)
+        fun pressOn(day:Int)=preview.sessions.single {it.dayIndex==day}
+            .exercises.single {it.exerciseId=="db-press"}
+            .sets.filter {it.type==DraftSetType.WORKING}
+        val upper=pressOn(1)
+        val push=pressOn(2)
+        assertTrue(upper.isNotEmpty() && push.isNotEmpty())
+        assertTrue(upper.all {it.targetReps==RepBand(8,12) &&
+            it.targetRir==2 && it.restSeconds==120 &&
+            (it.load as DraftSetLoad.Verified).value==n("30")})
+        assertTrue(push.all {it.targetReps==RepBand(10,12) &&
+            it.targetRir==3 && it.restSeconds==180 &&
+            (it.load as DraftSetLoad.Verified).value==n("25")})
+        assertTrue(push.all {it.stableSetKey.startsWith("db-press:d2:s")})
+        assertTrue(upper.all {it.stableSetKey.startsWith("db-press:d1:s")})
+        assertFalse(preview.canIssueWorkout)
+    }
+
+    @Test fun conflictingOrForgedDayScopedPolicyCannotProduceApprovedTargets() {
+        val shared=policies()
+        val specific=shared[1].copy(dayIndex=2,purposeWorkingLoad=n("25"))
+        val illegal=shared+specific.copy(dayIndex=99)
+        assertThrows(IllegalArgumentException::class.java) {
+            CoachSessionPrescriptionDomain.draft(request(),illegal)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            CoachSessionPrescriptionDomain.draft(request(),
+                shared+specific+specific.copy(purposeWorkingLoad=n("35")))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            CoachSessionPrescriptionDomain.draft(request(),shared+specific.copy(
+                purpose=ComposerSessionPurpose.STRENGTH_SKILL))
+        }
+        val unstocked=CoachSessionPrescriptionDomain.draft(request(),
+            shared+specific.copy(purposeWorkingLoad=n("32.5")))
+        assertEquals(PrescriptionDraftStatus.UNRESOLVED,unstocked.status)
+        assertNull(unstocked.finalAudit)
+    }
+
 }

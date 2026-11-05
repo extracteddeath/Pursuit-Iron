@@ -40,7 +40,10 @@ data class ExercisePrescriptionPolicy(
     val backoffReps:RepBand?=null,
     val backoffRir:Int?=null,
     /** Explicit, verified PURPOSE-specific load. Null uses original Composer load. */
-    val purposeWorkingLoad:BigDecimal?=null
+    val purposeWorkingLoad:BigDecimal?=null,
+    /** Stable 0-based program day slot; null applies to all days of purpose.
+     * Upper and Push may share purpose but have independent authored policies. */
+    val dayIndex:Int?=null
 )
 
 data class DraftPrescribedSet(
@@ -94,10 +97,18 @@ object CoachSessionPrescriptionDomain {
         policies:List<ExercisePrescriptionPolicy>,request:ComposerRequest
     ) {
         require(policies.size<=128)
-        require(policies.map {it.exerciseId to it.purpose}.distinct().size==policies.size)
+        require(policies.map {
+            Triple(it.exerciseId,it.purpose,it.dayIndex)
+        }.distinct().size==policies.size)
         val ids=request.exercises.map {it.exerciseId}.toSet()
         require(policies.all {p->
             p.exerciseId in ids &&
+                (p.dayIndex==null || (
+                    p.dayIndex in request.days.indices &&
+                    request.sessionIntents.any {intent ->
+                        intent.dayIndex==p.dayIndex &&
+                            intent.purpose==p.purpose
+                    })) &&
                 (p.targetRir==null || p.targetRir in 0..10) &&
                 (p.backoffRir==null || p.backoffRir in 0..10) &&
                 (p.purposeWorkingLoad==null ||
@@ -118,6 +129,19 @@ object CoachSessionPrescriptionDomain {
                 }
         })
     }
+
+    /** One slot-specific policy wins over the shared purpose fallback. */
+    fun selectedPolicy(
+        policies:List<ExercisePrescriptionPolicy>,exerciseId:String,
+        purpose:ComposerSessionPurpose,dayIndex:Int
+    ):ExercisePrescriptionPolicy? =
+        policies.singleOrNull {
+            it.exerciseId==exerciseId && it.purpose==purpose &&
+                it.dayIndex==dayIndex
+        } ?:policies.singleOrNull {
+            it.exerciseId==exerciseId && it.purpose==purpose &&
+                it.dayIndex==null
+        }
 
     /** Every numeric load needs exact unit/basis/exercise stock verification. */
     private fun load(option:ComposerExerciseOption,
@@ -187,12 +211,12 @@ object CoachSessionPrescriptionDomain {
         validatePolicies(policies,request)
         val composed=CoachWeekComposer.compose(request)
         val options=request.exercises.associateBy {it.exerciseId}
-        val lookup=policies.associateBy {it.exerciseId to it.purpose}
         val conflicts=linkedSetOf<String>()
         val sessions=composed.sessions.map {session->
             val exercises=session.orderedVisits.mapNotNull {visit->
                 val option=checkNotNull(options[visit.exerciseId])
-                val policy=lookup[visit.exerciseId to session.purpose]
+                val policy=selectedPolicy(policies,visit.exerciseId,
+                    session.purpose,session.dayIndex)
                 if(policy==null) {
                     conflicts+=visit.exerciseId+":d"+session.dayIndex+":missing-policy"
                     return@mapNotNull null

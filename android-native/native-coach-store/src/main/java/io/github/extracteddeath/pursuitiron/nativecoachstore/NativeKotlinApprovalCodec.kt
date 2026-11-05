@@ -20,7 +20,7 @@ import java.math.BigDecimal
  */
 internal object NativeKotlinApprovalCodec {
     private const val MAGIC=0x50494131 // PIA1
-    private const val VERSION=3
+    private const val VERSION=4
     const val MAX_BYTES=512_000
 
     private fun DataOutputStream.string(value:String)=writeUTF(value)
@@ -220,6 +220,8 @@ internal object NativeKotlinApprovalCodec {
             optionalBand(p.backoffReps);optionalInt(p.backoffRir)
             // Version 3: preserve verified strength/hypertrophy working loads.
             optionalDecimal(p.purposeWorkingLoad)
+            // v4: day slot is distinct from session purpose; no lossy merge.
+            optionalInt(p.dayIndex)
         }
     }
     private fun DataInputStream.policies(version:Int):List<ExercisePrescriptionPolicy> =
@@ -230,7 +232,8 @@ internal object NativeKotlinApprovalCodec {
                 items(12){
                     DeclaredWarmupStep(decimal(),readInt(),readInt(),readInt())
                 },optionalBand(),optionalInt(),
-                if(version>=3)optionalDecimal() else null)
+                if(version>=3)optionalDecimal() else null,
+                if(version>=4)optionalInt() else null)
         }
 
     private fun verifiedRepProof(

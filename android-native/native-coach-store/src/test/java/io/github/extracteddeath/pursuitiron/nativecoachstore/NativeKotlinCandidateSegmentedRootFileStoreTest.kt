@@ -1441,7 +1441,7 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
 
     private fun stagedRecovery(
         candidate: NativeKotlinCandidateSegmentedRootFileStore = store(),
-        mirror: NativeKotlinCandidateHistoryMirrorRecoveryCoordinator = reconciler(),
+        mirror: NativeKotlinCandidateHistoryMirrorRecoveryCoordinator = durableReconciler(),
         afterRoot: (() -> Unit)? = null,
         afterShadow: (() -> Unit)? = null
     ) = NativeKotlinCandidateStagedReplayRecoveryCoordinator(
@@ -1508,6 +1508,9 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(sealed.shadowReplayed)
         assertTrue(sealed.checkpointReplayed)
         assertTrue(sealed.intentAcknowledgmentReplayed)
+        assertEquals(NativeCandidateRecoveryIntentPhase.ACKNOWLEDGED,
+            (durableRecoveryIntent().read(owner, athlete)
+                as NativeCandidateRecoveryIntentResult.Durable).intent.phase)
         assertEquals(first.checkpoint, sealed.checkpoint)
         assertEquals(1L, (v2.open(owner, athlete)
             as NativeHistoryLedgerResult.Durable).ledger.completions.size.toLong())

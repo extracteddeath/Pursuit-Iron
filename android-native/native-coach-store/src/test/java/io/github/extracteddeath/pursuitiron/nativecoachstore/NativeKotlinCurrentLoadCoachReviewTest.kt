@@ -100,8 +100,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         }
         val comparable=issued.distinct().size==1
         val target=if(comparable) issued.single() else null
-        val workout=target?.let {before.progressionWorkout!!.copy(
-            targetReps=it,observations=before.progressionWorkout.observations)}
+        val originalFacts=checkNotNull(before.progressionWorkout)
+        val workout=target?.let {originalFacts.copy(targetReps=it)}
         val assessed=workout?.let {
             DoubleProgressionEvidenceDomain.assess(
                 it.targetReps,it.expectedWorkingSets,it.observations)

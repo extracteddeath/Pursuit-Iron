@@ -69,6 +69,25 @@ class OverloadRecoveryLoadReviewTest {
         assertNull(review(earlier = nearFailure).candidateReturnLoad)
     }
 
+    @Test fun aRecentNearFailureAtReturnWeightBlocksUnsafeRecoveryAdvice() {
+        // Earlier 200 lb x 8 was achievable; today 200 lb x 3 at 0 RIR
+        // was not. The reviewer must not prescribe/recommend 200 again
+        // merely because even heavier attempts also failed.
+        val recentlyFailed=session("after",listOf(200,205,210,215),
+            listOf(3,3,2,2),listOf(0,1,0,0))
+        val refused=review(latest=recentlyFailed)
+        assertEquals(OverloadRecoveryReason.INSUFFICIENT_LATEST_EVIDENCE,
+            refused.reason)
+        assertEquals(n(200),refused.demonstratedLoad)
+        assertEquals(n(215),refused.heaviestAttemptedLoad)
+        assertNull(refused.candidateReturnLoad)
+        assertFalse(refused.canOfferForReview)
+
+        // Stopping that 200-lb set deliberately at 2 actual RIR is NOT
+        // evidence of near-limit failure; retain the conservative review.
+        assertEquals(n(200),review().candidateReturnLoad)
+    }
+
     @Test fun aSuccessfulHeavySessionIsNotMisclassifiedAsOverload() {
         val high = session("after", listOf(205, 205, 205, 205),
             listOf(8, 8, 8, 8))

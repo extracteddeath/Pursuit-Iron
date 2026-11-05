@@ -113,6 +113,19 @@ object OverloadRecoveryLoadReviewDomain {
             return result(OverloadRecoveryReason.NO_REP_FLOOR_FAILURE,
                 demonstrated, heavy)
 
+        // A historical load is NOT a safe return target when the latest
+        // workout also showed a near-limit rep-floor failure at that very
+        // load. A short set with >=2 actual reps in reserve is different:
+        // it is not proof that the athlete could not do the required reps.
+        // Preserve the user's real sets and request a fresh recovery review.
+        if (latestRows.any { row ->
+                row.actualLoad?.compareTo(demonstrated) == 0 &&
+                    checkNotNull(row.actualReps) < latest.targetReps.minimum &&
+                    checkNotNull(row.actualRir) <= 1
+            })
+            return result(OverloadRecoveryReason.INSUFFICIENT_LATEST_EVIDENCE,
+                demonstrated, heavy)
+
         // Never round, extrapolate or use an unconfirmed gym increment.
         if (verifiedStock?.basis != expectedLoadBasis)
             return result(OverloadRecoveryReason.PREVIOUS_LOAD_UNVERIFIED,

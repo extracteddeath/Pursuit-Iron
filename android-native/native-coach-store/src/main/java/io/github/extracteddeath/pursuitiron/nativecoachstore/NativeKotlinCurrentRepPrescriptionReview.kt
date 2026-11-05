@@ -76,9 +76,12 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         }
         if(original==null ||
             original.progressionGate!=KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW ||
-            original.progressionWorkout==null ||
             original.workingSets.any {it.issuedLoad !is DraftSetLoad.Verified})
             return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
+        // Cross-module data-class public properties cannot be smart-cast
+        // after a separate nullable check: capture the verified evidence.
+        val actualEvidence=original.progressionWorkout
+            ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         val staged=KotlinWorkoutSnapshotDomain.stage(
             KotlinWorkoutSnapshotRequest(
                 source,source,approval.grant,approval.program,approval.policies))
@@ -96,7 +99,7 @@ object NativeKotlinCurrentRepPrescriptionDomain {
             AdaptiveSetPrescriptionRequest(
                 KotlinWorkoutSnapshotRequest(
                     source,source,approval.grant,approval.program,approval.policies),
-                last.evidence.source,original.progressionWorkout,
+                last.evidence.source,actualEvidence,
                 timeline.manifestRevision,timeline.manifestRevision,
                 readiness,movementRestricted))
         return NativeCurrentRepPrescriptionResult.Reviewed(

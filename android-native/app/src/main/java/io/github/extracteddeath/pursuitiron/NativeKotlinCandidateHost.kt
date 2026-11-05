@@ -309,7 +309,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeKotlinCoachAcceptanceRefusal.NOT_AUTHORIZED)
         return mixedHistoryReader.acceptCurrentApprovedLoad(
             owner.ownerKey,owner.athleteId,approvalStore,intent,
-            maximumAuthorizedIncrease,readiness,movementRestricted)
+            maximumAuthorizedIncrease,readiness,movementRestricted,
+            authoringSourceStore)
     }
 
     fun reviewCurrentNativeLoad(
@@ -323,7 +324,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeOwnerLoadReviewRefusal.NOT_AUTHORIZED)
         return mixedHistoryReader.reviewCurrentApprovedLoad(
             owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
-            maximumAuthorizedIncrease,readiness,movementRestricted)
+            maximumAuthorizedIncrease,readiness,movementRestricted,
+            authoringSourceStore)
     }
 
     fun reviewVerifiedKotlinWorkingSetFacts(): NativeKotlinMixedFactsReadResult {

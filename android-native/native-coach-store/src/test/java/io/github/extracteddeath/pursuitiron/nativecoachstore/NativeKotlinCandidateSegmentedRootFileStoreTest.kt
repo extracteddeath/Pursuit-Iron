@@ -1519,11 +1519,15 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
     @Test fun stagedReplayColdRetryPreservesOneCanonicalCompletion() {
         val initial = boot()
         committedComposerFinishForStagedRecovery(initial)
+        val rootBefore = result(store().audit(owner, athlete))
+        assertEquals(initial.head.rootDigest, rootBefore.head.rootDigest)
+        assertEquals(1L, rootBefore.head.revision)
         val first = stagedRecovery().resume(owner, athlete)
             as NativeCandidateStagedRecoveryResult.Consistent
         assertEquals(2L, first.checkpoint.sourceRevision)
         assertEquals(1L, first.checkpoint.completionCount)
-        assertFalse(first.rootReplayed)
+        assertFalse("Unexpected replay of first root: $first; prior root $rootBefore; " +
+            "published root ${store().audit(owner, athlete)}", first.rootReplayed)
         assertFalse(first.checkpointReplayed)
         assertFalse(first.intentAcknowledgmentReplayed)
         assertFalse(first.canAuthorizeWrites)

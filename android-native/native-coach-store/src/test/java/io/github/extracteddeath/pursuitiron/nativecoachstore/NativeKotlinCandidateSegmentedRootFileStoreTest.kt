@@ -161,6 +161,47 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             as NativeSegmentedRedoResult.Durable).redo.stagedPatch != null)
     }
 
+    @Test fun parityPreflightBlocksPendingRedoAndSyntheticCandidateOnlyHistory() {
+        val initial = boot()
+        val empty = store().reviewAuthenticatedV2Parity(owner, athlete)
+        assertTrue(empty.toString(),
+            empty is NativeCandidateHistoryRootResult.Reviewed)
+        assertEquals(initial, result(empty))
+        assertFalse(result(empty).canTransferAuthority)
+        assertFalse(result(empty).canPublishHistory)
+        assertFalse(result(empty).canIssueProgression)
+
+        stagedAppend(initial)
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.PENDING_REDO_REQUIRED),
+            store().reviewAuthenticatedV2Parity(owner, athlete))
+        assertEquals(initial, result(store().audit(owner, athlete)))
+
+        // The test-only candidate publisher cannot authorize fabricated
+        // history, even when the root and immutable shards are well formed.
+        assertTrue(store().publishStagedForCandidateReview(owner, athlete)
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
+            store().reviewAuthenticatedV2Parity(owner, athlete))
+        assertEquals(1L, (v2.open(owner, athlete)
+            as NativeHistoryLedgerResult.Durable).ledger.revision)
+    }
+
+    @Test fun parityPreflightRequiresCurrentOwnerAndUnmodifiedRoot() {
+        val initial = boot()
+        signedIn = null
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.NOT_AUTHORIZED),
+            store().reviewAuthenticatedV2Parity(owner, athlete))
+        signedIn = NativeKotlinOwnerIdentity(owner, athlete)
+        assertEquals(initial,
+            result(store().reviewAuthenticatedV2Parity(owner, athlete)))
+        val rootFile = candidateFiles(".root").single()
+        val bytes = Files.readAllBytes(rootFile)
+        bytes[bytes.lastIndex] = (bytes.last().toInt() xor 1).toByte()
+        Files.write(rootFile, bytes)
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.CORRUPT_ROOT),
+            store().reviewAuthenticatedV2Parity(owner, athlete))
+    }
+
     @Test fun preparedButUnstagedRedoNeverPublishesRoot() {
         val initial = boot()
         assertTrue(wal().prepare(owner, athlete, initial.head,
@@ -372,6 +413,8 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(rejection(NativeCandidateHistoryRootRefusal.UNVERIFIED_SOURCE),
             result)
         assertEquals(initial, this.result(store().audit(owner, athlete)))
+        assertEquals(rejection(NativeCandidateHistoryRootRefusal.PENDING_REDO_REQUIRED),
+            store().reviewAuthenticatedV2Parity(owner, athlete))
         assertTrue(candidateFiles(".shard").isEmpty())
     }
 
@@ -392,6 +435,8 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(accepted.toString(),
             accepted is NativeCandidateHistoryRootResult.Reviewed)
         val view = this.result(accepted)
+        assertEquals(view,
+            this.result(store().reviewAuthenticatedV2Parity(owner, athlete)))
         assertEquals(2L, view.head.revision)
         assertEquals(1L, view.head.completionCount)
         assertEquals(1L, (v2.open(owner, athlete)
@@ -467,6 +512,8 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(2L, result(mirrored).head.revision)
         assertEquals(1L, result(mirrored).head.completionCount)
         assertEquals(2, candidateFiles(".shard").size)
+        assertEquals(this.result(mirrored),
+            this.result(store().reviewAuthenticatedV2Parity(owner, athlete)))
     }
 
 }

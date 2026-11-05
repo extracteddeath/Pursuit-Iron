@@ -253,6 +253,31 @@ class CoachPrescribedBlockDomainTest {
         }
     }
 
+    @Test fun verifiedLighterLoadMaySupportExplicitHigherRepRecoveryWork() {
+        // A reviewed, physically available 25-lb load is genuinely lighter
+        // than the original 30-lb work. Preserve this legitimate option
+        // rather than forbidding all higher-rep recovery programming.
+        val lighter=exercises.map { exercise ->
+            exercise.copy(equipment=ComposerEquipment.Verified(
+                LoadUnit.LB,n(25),loaded))
+        }
+        val changed=policies().map {
+            it.copy(workingReps=RepBand(8,12))
+        }
+        val r=review(
+            block=deload(
+                proposed=program(cap=4,options=lighter),
+                permissions=BlockAdaptPermissions(adaptLoads=true)
+            ),
+            candidate=changed
+        )
+        assertEquals(BlockCandidateStatus.READY_FOR_HUMAN_REVIEW,
+            r.coarseReview.status)
+        assertEquals(PrescribedBlockStatus.READY_FOR_HUMAN_REVIEW,r.status)
+        assertTrue(r.unresolvedReasons.isEmpty())
+        assertFalse(r.mayIssueWorkout)
+    }
+
     @Test fun deloadCannotArtificiallyShortenRecoveryBetweenRemainingSets() {
         val shorter=review(candidate=policies(rest=0))
         assertEquals(PrescribedBlockStatus.RECOVERY_COMPARISON_UNRESOLVED,

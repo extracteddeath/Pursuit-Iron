@@ -658,4 +658,44 @@ class CoachWeekComposerTest {
         assertTrue(added.all {it.sets==2})
     }
 
+
+    @Test fun requiredAthleteExerciseCannotBeOutvotedByLargeMevDeficit() {
+        val required=chestOption.copy(requiredVisits=1,maximumVisits=1)
+        val back=backOption.copy(maximumVisits=3)
+        val request=base(
+            exerciseOptions=listOf(required,back),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            bands=bounds(dose(chest,"0","4","4"),
+                dose(lats,"12","12","12",3)),
+            patterns=1,maxPerDay=1)
+        // Three back visits could meet the entire lat dose but would
+        // silently omit the explicit athlete-required chest exercise.
+        val draft=CoachWeekComposer.compose(request)
+        assertEquals(1,draft.visits.count {it.exerciseId=="db-press"})
+        assertTrue(draft.missingRequiredVisits.isEmpty())
+        assertEquals(DoseFinding.BELOW_MEV,draft.audit.muscles[lats]?.finding)
+        assertEquals(ComposerStatus.CONSTRAINTS_UNRESOLVED,draft.status)
+        assertFalse(draft.canIssueTargets)
+    }
+
+    @Test fun namedPrimaryExerciseCannotBeOutvotedByUnrelatedMuscleDose() {
+        val primary=chestOption.copy(role=ComposerRole.PRIMARY,
+            maximumVisits=1,requiredVisits=0)
+        val back=backOption.copy(maximumVisits=3)
+        val request=base(
+            exerciseOptions=listOf(primary,back),
+            schedule=days(listOf(0,2,4),min=1,max=90),
+            bands=bounds(dose(chest,"0","4","4"),
+                dose(lats,"12","12","12",3)),
+            patterns=1,maxPerDay=1).copy(
+                sessionIntents=listOf(ComposerSessionIntent(
+                    0,ComposerSessionPurpose.STRENGTH_SKILL,"db-press")))
+        val draft=CoachWeekComposer.compose(request)
+        assertEquals("db-press",draft.sessions[0].primaryExerciseId)
+        assertTrue(draft.sessions[0].requiredPrimaryScheduled)
+        assertTrue(draft.daysWithUnmetPrimary.isEmpty())
+        assertEquals(DoseFinding.BELOW_MEV,draft.audit.muscles[lats]?.finding)
+        assertEquals(ComposerStatus.CONSTRAINTS_UNRESOLVED,draft.status)
+    }
+
 }

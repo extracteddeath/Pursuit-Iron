@@ -277,9 +277,29 @@ object CoachWeekComposer {
             minOf(gap,7-gap)>=neededGap
         }
     }
-    private data class Cost(val hard:Long,val soft:Long):Comparable<Cost> {
-        override fun compareTo(other:Cost):Int=compareValuesBy(
-            this,other,{it.hard},{it.soft})
+    /**
+     * Hard promises are not exchangeable numeric weights. A missing named
+     * primary, pinned appearance or scheduled workout cannot be "paid for"
+     * by chasing additional muscle volume. Each tier is independently
+     * minimized before later tiers or soft preferences may influence search.
+     * This is a deterministic ranking of unresolved candidates, NOT a claim
+     * that any incomplete program is safe to issue.
+     */
+    private data class Cost(
+        val missingPrimaryDays:Int,
+        val missingRequiredVisits:Int,
+        val emptyScheduledDays:Int,
+        val missingDirectMuscleDays:Int,
+        val mevDeficitThousandths:Long,
+        val soft:Long
+    ):Comparable<Cost> {
+        val hardSatisfied:Boolean get()=missingPrimaryDays==0 &&
+            missingRequiredVisits==0 && emptyScheduledDays==0 &&
+            missingDirectMuscleDays==0 && mevDeficitThousandths==0L
+        override fun compareTo(other:Cost):Int=compareValuesBy(this,other,
+            {it.missingPrimaryDays},{it.missingRequiredVisits},
+            {it.emptyScheduledDays},{it.missingDirectMuscleDays},
+            {it.mevDeficitThousandths},{it.soft})
     }
     private fun unmetPrimaryDays(request:ComposerRequest,
         visits:List<ComposerVisit>):Set<Int> =
@@ -319,11 +339,10 @@ object CoachWeekComposer {
         val mevGap=audit.muscles.values.sumOf {
             it.gapToMev.multiply(BigDecimal("1000")).toLong()
         }
-        val hard=mevGap*10L+
-            audit.muscles.values.sumOf {it.missingDirectDays}*3000L+
-            audit.daysWithoutWorkingSets.size*3500L+
-            request.exercises.sumOf {missing(it,visits)}*10000L+
-            unmetPrimaryDays(request,visits).size*20000L
+        val missingPrimary=unmetPrimaryDays(request,visits).size
+        val missingPinned=request.exercises.sumOf {missing(it,visits)}
+        val emptyDays=audit.daysWithoutWorkingSets.size
+        val missingDirect=audit.muscles.values.sumOf {it.missingDirectDays}
         val mavGap=audit.muscles.values.sumOf {
             it.gapToMav.multiply(BigDecimal("1000")).toLong()
         }
@@ -343,8 +362,9 @@ object CoachWeekComposer {
         val priority=visits.sumOf {
             checkNotNull(options[it.exerciseId]).priority.toLong()*it.sets
         }
-        return Cost(hard,mavGap*2L+short*180L+long*250L+
-            patternGap*400L+visits.sumOf {it.sets}*100L-priority*6L)
+        return Cost(missingPrimary,missingPinned,emptyDays,missingDirect,
+            mevGap,mavGap*2L+short*180L+long*250L+
+                patternGap*400L+visits.sumOf {it.sets}*100L-priority*6L)
     }
     /**
      * Read-only local refinement. Keep session positions, equipment, pinned
@@ -413,7 +433,7 @@ object CoachWeekComposer {
                     check.sessions.any {
                         it.finding==TimeWindowFinding.ABOVE_USER_HARD_LIMIT
                     })return
-                if(current.hard==0L && check.muscles.values.any {finding ->
+                if(current.hardSatisfied && check.muscles.values.any {finding ->
                     finding.effectiveWorkingSets >
                         request.bounds.first {it.muscle==finding.muscle}.mav
                 })return
@@ -573,7 +593,7 @@ object CoachWeekComposer {
                 })continue
                 // Do not pad sessions with extra volume above the
                 // athlete's MAV once minimums/frequency/visits are met.
-                if(current.hard==0L && check.muscles.values.any {finding ->
+                if(current.hardSatisfied && check.muscles.values.any {finding ->
                     val bound=request.bounds.first {it.muscle==finding.muscle}
                     finding.effectiveWorkingSets>bound.mav
                 })continue

@@ -454,6 +454,34 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             acknowledged.intent.acknowledgedDirectoryDigest)
     }
 
+    @Test fun durableMirrorIntentCannotRewritePreviouslyAcknowledgedDirectoryFingerprint() {
+        boot()
+        val committed=(durableReconciler().reconcile(owner,athlete)
+            as NativeCandidateMirrorRecoveryResult.Consistent).checkpoint
+        val file=candidateFiles(".rintent").single()
+        val tampered=Files.readAllBytes(file)
+        val expected=committed.pagedDirectoryFileDigest
+        val position=String(tampered,Charsets.ISO_8859_1).indexOf(expected)
+        assertTrue(position>=0)
+        val altered=if(expected.first()=='a') "b".repeat(64) else "a".repeat(64)
+        for(i in 0 until 64) tampered[position+i]=altered[i].code.toByte()
+        // Keep an otherwise valid checksum to test *semantic* conflict,
+        // not merely the lower-level corrupt-byte refusal.
+        val size=java.nio.ByteBuffer.wrap(tampered,0,4).int
+        val signature=java.security.MessageDigest.getInstance("SHA-256")
+            .digest(tampered.copyOfRange(4,size+4))
+        System.arraycopy(signature,0,tampered,size+4,32)
+        Files.write(file,tampered)
+        assertEquals(NativeCandidateRecoveryIntentResult.Rejected(
+            NativeCandidateRecoveryIntentRefusal.PENDING_CONFLICT),
+            durableRecoveryIntent().acknowledge(owner,athlete,committed))
+        assertEquals(tampered.toList(),Files.readAllBytes(file).toList())
+        assertEquals(NativeCandidateMirrorRecoveryResult.Rejected(
+            NativeCandidateMirrorRecoveryRefusal.PENDING_INTENT),
+            durableReconciler().reconcile(owner,athlete))
+        assertEquals(1,candidateFiles(".cseal").size)
+    }
+
     @Test fun durableMirrorRecoveryRefusesMissingPreviouslyAcknowledgedSeal() {
         boot()
         val saved=durableReconciler().reconcile(owner,athlete)

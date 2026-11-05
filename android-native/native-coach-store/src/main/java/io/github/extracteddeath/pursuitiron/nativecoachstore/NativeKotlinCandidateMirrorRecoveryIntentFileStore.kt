@@ -267,6 +267,12 @@ internal class NativeKotlinCandidateMirrorRecoveryIntentFileStore(
         if (certified != verified)
             return@guarded deny(
                 NativeCandidateRecoveryIntentRefusal.UNVERIFIED_CHECKPOINT)
+        // An acknowledged revision is immutable. Even when the canonical
+        // source history still matches, a changed directory fingerprint
+        // must not silently rewrite the evidence of a prior acknowledgment.
+        if (old.phase == NativeCandidateRecoveryIntentPhase.ACKNOWLEDGED &&
+            old.acknowledgedDirectoryDigest != verified.pagedDirectoryFileDigest)
+            return@guarded deny(NativeCandidateRecoveryIntentRefusal.PENDING_CONFLICT)
         val updated = old.copy(
             phase = NativeCandidateRecoveryIntentPhase.ACKNOWLEDGED,
             acknowledgedDirectoryDigest = verified.pagedDirectoryFileDigest)

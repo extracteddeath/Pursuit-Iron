@@ -408,4 +408,79 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             inspect(twoUnrelated))
     }
 
+
+    @Test fun interleavedPurposeSpecificLoadReviewChangesOnlyTargetPolicy() {
+        val separate=policies.map {
+            if(it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                it.copy(purposeWorkingLoad=n("25"))
+            else it
+        }
+        val approved=approval().copy(policies=separate,
+            grant=KotlinWorkoutSelectionGrant("grant-4","workout-4",source,0))
+        val first=withExactIssuedTargets(
+            composer(1,purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+            listOf(RepBand(12,12),RepBand(12,12)),
+            historicalWeight=n("25"))
+        val middle=composer(2,purpose=ComposerSessionPurpose.HYPERTROPHY)
+        val latest=withExactIssuedTargets(
+            composer(3,purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+            listOf(RepBand(12,12),RepBand(12,12)),
+            historicalWeight=n("25"))
+        val result=inspect(timeline(first,middle,latest),accepted=approved)
+        assertTrue(result.toString(),result is NativeCurrentLoadReviewResult.Reviewed)
+        val reviewed=result as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(listOf("workout-1","workout-3"),reviewed.comparedWorkoutIds)
+        val coach=reviewed.coaching
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,coach.status)
+        assertEquals(CoachNextLoadChangeKind.EARNED_INCREMENT,coach.kind)
+        assertEquals(n("25"),coach.originalLoad)
+        assertEquals(n("30"),coach.candidateLoad)
+        assertEquals(listOf(0),coach.affectedDayIndices)
+        assertEquals(approved.program,coach.candidateProgram)
+        val updated=checkNotNull(coach.candidatePolicies)
+        assertEquals(n("30"),updated.single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+        }.purposeWorkingLoad)
+        assertEquals(null,updated.single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.purposeWorkingLoad)
+        assertEquals(approved.policies.filter {
+            it.exerciseId=="db-row"
+        },updated.filter {it.exerciseId=="db-row"})
+        assertFalse(coach.maySaveProgram)
+    }
+
+    @Test fun purposeSpecificLoadingNeverSkipsFailedSamePurposeOrCustomSource() {
+        val separate=policies.map {
+            if(it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                it.copy(purposeWorkingLoad=n("25")) else it
+        }
+        val approved=approval().copy(policies=separate,
+            grant=KotlinWorkoutSelectionGrant("grant-4","workout-4",source,0))
+        fun strength(i:Int,reps:List<Int>=listOf(12,12))=
+            withExactIssuedTargets(
+                composer(i,completedReps=reps,
+                    purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+                listOf(RepBand(12,12),RepBand(12,12)),
+                historicalWeight=n("25"))
+        val poor=inspect(timeline(strength(1),composer(2),
+            strength(3,listOf(8,7))),accepted=approved)
+        assertTrue(poor is NativeCurrentLoadReviewResult.Reviewed)
+        assertNotEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            (poor as NativeCurrentLoadReviewResult.Reviewed).coaching.status)
+        assertNull(poor.coaching.candidatePolicies)
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT),
+            inspect(timeline(strength(1),custom(2),strength(3)),accepted=approved))
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.HISTORICAL_SOURCE_CHANGED),
+            inspect(timeline(strength(1),
+                composer(2,sourceOverride=source.copy(programRevision=9)),
+                strength(3)),accepted=approved))
+    }
+
 }

@@ -461,7 +461,7 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         }
         val approved=approval().copy(policies=separate,
             grant=KotlinWorkoutSelectionGrant("grant-4","workout-4",source,0))
-        fun strength(i:Int,reps:List<Int>=listOf(12,12))=
+        fun strength(i:Int,reps:List<Int> = listOf(12,12))=
             withExactIssuedTargets(
                 composer(i,completedReps=reps,
                     purpose=ComposerSessionPurpose.STRENGTH_SKILL),

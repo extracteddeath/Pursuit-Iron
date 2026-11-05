@@ -42,15 +42,21 @@ class CoachExerciseDecisionDomainTest {
         assertEquals(n(30),second.observations.last().actualLoad)
     }
 
-    @Test fun missingRirLowersConfidenceButDoesNotFreezeEveryProgression() {
+    @Test fun missingActualRirNeverConflictsWithConservativeProgressionGate() {
         val unknown=workout("second",rir=listOf(null,null,null))
         val result=review(first,unknown)
-        assertEquals(CoachDirection.REVIEW_SMALL_INCREASE,result.direction)
+        assertEquals(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,result.direction)
         assertEquals(CoachConfidence.LIMITED,result.confidence)
-        assertEquals(n(35),result.nextLoadToReview)
+        assertNull(result.nextLoadToReview)
         assertTrue(CoachEvidenceFlag.EFFORT_NOT_REPORTED in result.evidence)
-        assertTrue(result.explanation.contains("confirm effort"))
+        assertTrue(result.explanation.contains("actual effort"))
         assertNull(unknown.observations.first().actualRir)
+        val missingPrior=workout("first",rir=listOf(null,2,2))
+        val priorResult=review(missingPrior,second)
+        assertEquals(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+            priorResult.direction)
+        assertEquals(CoachConfidence.LIMITED,priorResult.confidence)
+        assertNull(priorResult.nextLoadToReview)
         val allMissing=workout("first",rir=listOf(null,null,null))
         assertEquals(CoachConfidence.LIMITED,
             review(allMissing,unknown).confidence)

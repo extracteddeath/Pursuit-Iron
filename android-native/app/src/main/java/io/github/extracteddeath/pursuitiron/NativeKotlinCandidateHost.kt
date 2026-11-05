@@ -290,6 +290,26 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * automatic PR, progression, training change, or UI cutover.
      */
     /**
+     * Owner-verified next-session per-set REP prescription candidate.
+     * Only the latest corrected workout from the exhaustive native ledger
+     * can inform it; never issues or silently replaces a saved set target.
+     * Execute off the UI thread, then require an explicit revision-bound
+     * acceptance path before any future on-device issuance.
+     */
+    fun reviewNextNativeSetTargets(
+        exerciseId:String,
+        readiness:CoachReadiness,
+        movementRestricted:Boolean
+    ):NativeOwnerNextSetResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeOwnerNextSetResult.Rejected(
+                NativeOwnerNextSetRefusal.NOT_AUTHORIZED)
+        return mixedHistoryReader.reviewCurrentNextSetTargets(
+            owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
+            readiness,movementRestricted,authoringSourceStore)
+    }
+
+    /**
      * Full-ledger, owner-authenticated training load review. Unlike the
      * earlier pure DTO bridge, neither workout pair nor approved plan is
      * supplied by the screen. This operation is READ ONLY and disk-bound.

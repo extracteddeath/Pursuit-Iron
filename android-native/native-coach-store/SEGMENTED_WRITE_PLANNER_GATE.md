@@ -317,3 +317,22 @@ commit a candidate segmented root, write history facts, or grant new-workout
 IDs; these still require a future **single transaction-owning native writer**.
 The checkpoint's own atomic rename is not a substitute for jointly fsynced
 root+index authority or real-device backup/power-loss certification.
+
+## Candidate exact-redo transaction intent (not the authoritative WAL)
+
+`NativeKotlinCandidateHistoryTransactionIntentFileStore` durably freezes
+the exact, typed staged redo patch digest, parent root, expected revision and
+completion count before the source-history mirror commit. A later candidate
+acknowledgment is permitted **only** if full generated/custom journal replay,
+already-committed v2 ledger, candidate segmented root, both identity trees
+and the exact paired root/index checkpoint match that frozen operation.
+Wrong original root, reused correction event ID with a different performed
+load/reps/RIR, incomplete directory or missing checkpoint cannot be
+acknowledged. Lost acknowledgment is byte-for-byte idempotent. Corrupt
+existing intent bytes are rejected, never overwritten.
+
+This is a durable, isolated rehearsal marker for one staged operation only.
+It does not become the real transaction writer, clear/release the underlying
+redo WAL, make the v2 ledger optional, guarantee parent-directory durability
+or grant any history/PR/progression/Finish authority. Testing remains
+essential before Android cutover.

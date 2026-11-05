@@ -199,6 +199,81 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             "owner-1","athlete-1",1,reviewed,catalog)
     }
 
+    @Test fun latestCorrectedWorkoutShapesNextPerSetRepsWithoutChangingIssuedTargets() {
+        enrolled()
+        val completed=complete(1,1)
+        val oldJournal=completed.first
+        val editedKey=completed.second
+        val parent=oldJournal.effectiveSets.getValue(editedKey)
+            .operation.eventId
+        val saved=transactions.correct("owner-1","athlete-1","workout-1",
+            KotlinSavedSetCorrection(
+                "rep-correction-1",0,editedKey,parent,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("30"),LoadUnit.LB,11,3)))
+        assertTrue(saved.toString(),saved is NativeHistoryTransactionResult.Durable)
+        val next=NativeKotlinWorkoutApproval(
+            "owner-1","athlete-1",source,source,
+            KotlinWorkoutSelectionGrant("grant-2","workout-2",source,1),
+            program,policies,"storage-2",2)
+        assertEquals(NativeApprovalWriteResult.Committed(2),
+            approvals.publish("owner-1",1,next))
+        val gym=sourceRecord()
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,gym))
+        val result=reader.reviewCurrentNextSetTargets(
+            "owner-1","athlete-1",approvals,"db-press",
+            CoachReadiness.NORMAL,false,authoring)
+        assertTrue(result.toString(),result is NativeOwnerNextSetResult.Review)
+        val verified=result as NativeOwnerNextSetResult.Review
+        assertEquals(2L,verified.approvalRevision)
+        val historyReview=verified.candidate
+            as NativeCurrentRepPrescriptionResult.Reviewed
+        assertEquals("workout-1",historyReview.priorWorkoutId)
+        val plan=historyReview.proposal
+            as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals("workout-2",plan.workout.workoutId)
+        assertEquals(listOf(11,12),plan.observedReps)
+        assertEquals(listOf(12,12),plan.newRepTargets)
+        assertEquals("db-press:d1:s0",plan.editedSetKey)
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
+            plan.workout.targets.filter { it.exerciseId=="db-press" }
+                .map {it.reps})
+        assertTrue(plan.workout.targets.filter {
+            it.exerciseId=="db-press"
+        }.all {
+            (it.load as DraftSetLoad.Verified).value.compareTo(n("30"))==0 &&
+                it.targetRir==2
+        })
+        assertTrue(plan.workout.targets.filter {
+            it.exerciseId=="db-row"
+        }.all {it.reps==RepBand(8,12)})
+        assertFalse(historyReview.canIssueWorkout)
+        assertFalse(plan.mayIssueWorkout)
+        assertEquals(8L,oldJournal.snapshot.source.programRevision)
+        assertTrue(journals.openStored("owner-1","workout-1",
+            approvals::canAccessIssuedWorkout) is NativeJournalFileResult.Durable)
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            journals.openStored("owner-1","workout-2",
+                approvals::canAccessIssuedWorkout))
+        val issuer=NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+        assertTrue(issuer.issue("owner-1","workout-2")
+            is NativeKotlinIssueResult.Committed)
+        assertEquals(NativeOwnerNextSetResult.Rejected(
+            NativeOwnerNextSetRefusal.ALREADY_ISSUED_OR_CONFLICT),
+            reader.reviewCurrentNextSetTargets(
+                "owner-1","athlete-1",approvals,"db-press",
+                CoachReadiness.NORMAL,false,authoring))
+        // The approved generic workout is not silently edited by this
+        // read-only candidate. A separate acceptance protocol is required.
+        val issued=issuer.open("owner-1","workout-2")
+            as NativeJournalFileResult.Durable
+        assertTrue(issued.journal.snapshot.targets.filter {
+            it.exerciseId=="db-press"
+        }.all {it.reps==RepBand(8,12)})
+    }
+
     @Test fun currentGymEditBlocksNewWorkoutIssueWithoutInvalidatingHistoricalAccess() {
         enrolled()
         val gym=sourceRecord()

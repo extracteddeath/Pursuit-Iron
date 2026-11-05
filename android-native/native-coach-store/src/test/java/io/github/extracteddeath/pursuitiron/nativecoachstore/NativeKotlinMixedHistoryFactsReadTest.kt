@@ -86,6 +86,32 @@ class NativeKotlinMixedHistoryFactsReadTest {
             reader.readFacts("owner-1", "athlete-1"))
     }
 
+    @Test fun coachingReadCannotUseUnapprovedOrForeignAthleteHistory() {
+        val approvals=NativeKotlinApprovalFileAuthority(root,fence,identity)
+        val before=reader.reviewCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,"db-press",
+            java.math.BigDecimal("5"),CoachReadiness.NORMAL,false)
+        assertEquals(NativeOwnerLoadReviewResult.Rejected(
+            NativeOwnerLoadReviewRefusal.NO_CURRENT_APPROVAL),before)
+        current=null
+        assertEquals(NativeOwnerLoadReviewResult.Rejected(
+            NativeOwnerLoadReviewRefusal.NOT_AUTHORIZED),
+            reader.reviewCurrentApprovedLoad(
+                "owner-1","athlete-1",approvals,"db-press",
+                java.math.BigDecimal("5"),CoachReadiness.NORMAL,false))
+        current=NativeKotlinOwnerIdentity("owner-1","other-athlete")
+        assertEquals(NativeOwnerLoadReviewResult.Rejected(
+            NativeOwnerLoadReviewRefusal.NOT_AUTHORIZED),
+            reader.reviewCurrentApprovedLoad(
+                "owner-1","athlete-1",approvals,"db-press",
+                java.math.BigDecimal("5"),CoachReadiness.NORMAL,false))
+        assertEquals(NativeOwnerLoadReviewResult.Rejected(
+            NativeOwnerLoadReviewRefusal.INVALID_SCOPE),
+            reader.reviewCurrentApprovedLoad(
+                "../owner","athlete-1",approvals,"db-press",
+                java.math.BigDecimal("5"),CoachReadiness.NORMAL,false))
+    }
+
     @Test fun malformedScopeCannotReadEvenPreviouslyEnrolledHistory() {
         assertEquals(NativeKotlinMixedFactsReadResult.HistoryRejected(
             NativeKotlinMixedHistoryRefusal.INVALID_SCOPE),

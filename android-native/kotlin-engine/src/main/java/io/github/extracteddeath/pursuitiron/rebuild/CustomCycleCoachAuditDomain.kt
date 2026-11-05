@@ -25,8 +25,8 @@ enum class CustomCoachIssueKind {
     SESSION_HARD_LIMIT, BELOW_WEEKLY_MEV, ABOVE_WEEKLY_MRV,
     INSUFFICIENT_DIRECT_FREQUENCY, PRIMARY_SKILL_FREQUENCY,
     CONTINUITY_POLICY_MISSING, CONTINUITY_POLICY_INVALID,
-    UNJUSTIFIED_BLOCK_VOLUME_DROP,
-    DIRECT_MUSCLE_DROP, REVIEW_CAP_EXCEEDED
+    UNJUSTIFIED_BLOCK_VOLUME_DROP, UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
+    DIRECT_MUSCLE_DROP, DIRECT_MUSCLE_SPIKE, REVIEW_CAP_EXCEEDED
 }
 
 data class CustomCoachIssue(
@@ -77,7 +77,10 @@ data class CustomCoachAudit(
  */
 data class CustomCoachVolumeContinuityPolicy(
     val maximumTotalWorkingSetDropFraction: BigDecimal,
-    val maximumDirectMuscleDropFraction: BigDecimal
+    val maximumDirectMuscleDropFraction: BigDecimal,
+    /** Required when any normal TRAINING week increases its workload. */
+    val maximumTotalWorkingSetRiseFraction: BigDecimal? = null,
+    val maximumDirectMuscleRiseFraction: BigDecimal? = null
 )
 
 /** Explicitly supplied coach policy, transitions and non-set time. */
@@ -325,25 +328,37 @@ object CustomCycleCoachAuditDomain {
             earlier.blockPurpose == CustomBlockPurpose.TRAINING &&
                 later.blockPurpose == CustomBlockPurpose.TRAINING
         }
+        val rises=trainingPairs.any { (earlier,later) ->
+            later.workingSets > earlier.workingSets ||
+                TrainingMuscle.entries.any { muscle ->
+                    (later.directSets[muscle] ?: zero) >
+                        (earlier.directSets[muscle] ?: zero)
+                }
+        }
         val requiresContinuity=trainingPairs.any { (earlier,later) ->
             earlier.blockId != later.blockId ||
-                earlier.workingSets > later.workingSets ||
+                earlier.workingSets != later.workingSets ||
                 TrainingMuscle.entries.any { muscle ->
-                    (earlier.directSets[muscle] ?: zero) >
+                    (earlier.directSets[muscle] ?: zero) !=
                         (later.directSets[muscle] ?: zero)
                 }
         }
         val missingContinuity=requiresContinuity &&
-            inputs.continuityPolicy == null
+            (inputs.continuityPolicy == null ||
+                (rises && (inputs.continuityPolicy.maximumTotalWorkingSetRiseFraction==null ||
+                    inputs.continuityPolicy.maximumDirectMuscleRiseFraction==null)))
         if (missingContinuity)
             add(CustomCoachIssueKind.CONTINUITY_POLICY_MISSING,
                 "continuity",
-                "Training-phase transitions and within-block weekly dose reductions need an explicitly reviewed total/direct-muscle continuity policy; meeting separate MEVs is not permission to erase work.")
+                "Training-phase transitions, weekly volume drops and weekly volume ramps need explicit total/direct-muscle reduction and (when increasing) ramp-up ceilings; individual weekly MEV/MRV alone cannot justify abrupt changes.")
         val continuity = inputs.continuityPolicy
         if (continuity != null) {
             val totalLimit = continuity.maximumTotalWorkingSetDropFraction
             val directLimit = continuity.maximumDirectMuscleDropFraction
-            val valid = listOf(totalLimit, directLimit).all {
+            val totalRiseLimit = continuity.maximumTotalWorkingSetRiseFraction
+            val directRiseLimit = continuity.maximumDirectMuscleRiseFraction
+            val valid = listOfNotNull(totalLimit,directLimit,
+                totalRiseLimit,directRiseLimit).all {
                 it >= zero && it <= BigDecimal.ONE &&
                     it.stripTrailingZeros().scale() <= 3
             }
@@ -362,6 +377,14 @@ object CustomCycleCoachAuditDomain {
                                 "week.${later.absoluteWeek}.block.${later.blockId}",
                                 "Consecutive training weeks drop from ${earlier.workingSets} to ${later.workingSets} working sets (week ${earlier.absoluteWeek} to ${later.absoluteWeek}), exceeding the explicitly reviewed reduction limit.")
                     }
+                    if(later.workingSets > earlier.workingSets &&
+                        earlier.workingSets > 0 && totalRiseLimit!=null) {
+                        val increase=BigDecimal(later.workingSets-earlier.workingSets)
+                        if(increase>BigDecimal(earlier.workingSets).multiply(totalRiseLimit))
+                            add(CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
+                                "week.${later.absoluteWeek}.block.${later.blockId}",
+                                "Week ${later.absoluteWeek} ramps from ${earlier.workingSets} to ${later.workingSets} working sets beyond the explicitly reviewed workload increase.")
+                    }
                     for (muscle in TrainingMuscle.entries) {
                         val before = earlier.directSets[muscle] ?: zero
                         val after = later.directSets[muscle] ?: zero
@@ -370,6 +393,12 @@ object CustomCycleCoachAuditDomain {
                             add(CustomCoachIssueKind.DIRECT_MUSCLE_DROP,
                                 "week.${later.absoluteWeek}.${muscle.name}",
                                 "Direct work for this muscle falls beyond the reviewed transition limit.")
+                        if (before > zero && after > before &&
+                            directRiseLimit!=null &&
+                            after.subtract(before)>before.multiply(directRiseLimit))
+                            add(CustomCoachIssueKind.DIRECT_MUSCLE_SPIKE,
+                                "week.${later.absoluteWeek}.${muscle.name}",
+                                "Direct work for this muscle rises beyond the reviewed weekly ramp ceiling.")
                     }
                 }
             }

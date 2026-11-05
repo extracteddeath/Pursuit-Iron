@@ -50,7 +50,16 @@ data class AthleteProgramGenerationReview(
     val focusByWeekday:Map<Int,ComposerFocus>,
     val intents:List<AthleteCalendarIntent>,
     val candidate:AthleteCatalogCandidateReview?,
-    val exerciseSelection:AthleteExerciseSelectionReview?=null
+    val exerciseSelection:AthleteExerciseSelectionReview?=null,
+    /** Bounded selection evidence; a feasible candidate is not a global
+     * optimum or proof that athlete-specific cycle progression is finished. */
+    val search:AthleteGenerationSearchEvidence=AthleteGenerationSearchEvidence()
+)
+data class AthleteGenerationSearchEvidence(
+    val placementsChecked:Int=0,
+    val draftsAudited:Int=0,
+    val feasibleWeeksCompared:Int=0,
+    val searchBudgetReached:Boolean=false
 ) {
     val mayIssueWorkout:Boolean get()=false
     val maySaveProgram:Boolean get()=false
@@ -59,6 +68,8 @@ object CoachAthleteProgramGenerator {
     private const val MAX_ASSIGNMENTS=16000
     /** Do not turn a bounded candidate review into an unbounded search. */
     private const val MAX_COMPOSED_CANDIDATES=32
+    /** Search a handful of feasible weeks instead of returning the first. */
+    private const val MAX_FEASIBLE_CANDIDATES=5
 
     private fun focusCounts(split:ComposerSplit,days:Int,
         extra:List<ComposerFocus>):Map<ComposerFocus,Int>? {
@@ -105,6 +116,48 @@ object CoachAthleteProgramGenerator {
         }
         rec(mutableListOf())
         return result
+    }
+
+    private fun betterLong(a:List<Long>,b:List<Long>):Boolean {
+        for(i in a.indices)if(a[i]!=b[i])return a[i]<b[i]
+        return false
+    }
+
+    /**
+     * Rank ONLY audited feasible weeks; nothing here can waive MEV/MRV,
+     * frequency, equipment, preferred session window or authored primary
+     * requirements. We do not synthesize new exercises, reps or sets.
+     */
+    internal fun qualityScore(
+        draft:ComposerDraft,
+        focus:List<ComposerFocus>,
+        purpose:List<ComposerSessionPurpose>,
+        weekdays:List<Int>
+    ):List<Long> {
+        val recovery=spacingPenalty(weekdays,focus.map {f->
+            if(f in setOf(ComposerFocus.UPPER,ComposerFocus.PUSH,
+                    ComposerFocus.PULL))"upper:"+f.name else f.name
+        }).toLong()
+        val purposes=spacingPenalty(weekdays,purpose.map {it.name}).toLong()
+        val mavGap=draft.audit.muscles.values.sumOf {
+            if(it.gapToMav.signum()>0)
+                it.gapToMav.multiply(java.math.BigDecimal("1000")).toLong()
+            else 0L
+        }
+        val request=draft.week
+        val minutes=draft.audit.sessions.map {it.roundedMinutes}
+        val variation=(minutes.maxOrNull() ?:0L)-(minutes.minOrNull() ?:0L)
+        // A feasible 40–60 minute workout closer to 50 is preferred, but
+        // a gap to authored MAV takes precedence over decorative duration.
+        val sessionFit=draft.audit.sessions.sumOf {session->
+            val bounds=request.days[session.dayIndex].window
+            val preferred=if(bounds.preferredMaximumMinutes==null)
+                bounds.preferredMinimumMinutes.toLong()
+            else (bounds.preferredMinimumMinutes.toLong()+
+                bounds.preferredMaximumMinutes.toLong())/2L
+            abs(session.roundedMinutes-preferred)
+        }
+        return listOf(recovery,purposes,mavGap,sessionFit,variation)
     }
 
     private fun spacingPenalty(calendar:List<Int>,categories:List<String>):Int {
@@ -227,6 +280,10 @@ object CoachAthleteProgramGenerator {
         fun fail(field:String,kind:AthleteGenerationIssueKind,message:String) {
             issues+=AthleteGenerationIssue(field,kind,message)
         }
+        var evaluated=0
+        var drafted=0
+        var feasibleCompared=0
+        var budgetReached=false
         fun result(status:AthleteGenerationStatus,
             focuses:Map<Int,ComposerFocus> =emptyMap(),
             intents:List<AthleteCalendarIntent> =emptyList(),
@@ -235,7 +292,9 @@ object CoachAthleteProgramGenerator {
         )=AthleteProgramGenerationReview(status,
             Collections.unmodifiableList(issues.toList()),
             Collections.unmodifiableMap(LinkedHashMap(focuses)),
-            Collections.unmodifiableList(intents.toList()),candidate,selection)
+            Collections.unmodifiableList(intents.toList()),candidate,selection,
+            AthleteGenerationSearchEvidence(evaluated,drafted,feasibleCompared,
+                budgetReached))
 
         val athlete=input.setup.reviewed?.takeIf {
             input.setup.mayReviewProgramCandidate
@@ -350,12 +409,17 @@ object CoachAthleteProgramGenerator {
             for(i in a.indices)if(a[i]!=b[i])return a[i]<b[i]
             return false
         }
-        var evaluated=0
-        var drafted=0
         var best:ViablePlacement?=null
+        var strongest:ViablePlacement?=null
+        var strongestScore:List<Long>?=null
         search@ for(focus in focuses)for(purpose in purposes) {
-            if(++evaluated>MAX_ASSIGNMENTS || drafted>=MAX_COMPOSED_CANDIDATES)
+            if(evaluated>=MAX_ASSIGNMENTS ||
+                drafted>=MAX_COMPOSED_CANDIDATES ||
+                feasibleCompared>=MAX_FEASIBLE_CANDIDATES) {
+                budgetReached=true
                 break@search
+            }
+            evaluated++
             val plans=placements(weekdays,focus,purpose,policy,catalog,choices)
                 ?:continue
             // Reject unverified phase-specific policy before composing sets.
@@ -373,9 +437,20 @@ object CoachAthleteProgramGenerator {
                     input.preferredPatternsPerDay,policy))
             val actual=proposal.realization
             if(proposal.status==AthleteCandidateStatus.CANDIDATE_FOR_REVIEW &&
-                actual?.status==GoalRealizationStatus.DELIVERED_FOR_REVIEW)
-                return result(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
-                    byDay,plans,proposal,selection)
+                actual?.status==GoalRealizationStatus.DELIVERED_FOR_REVIEW) {
+                feasibleCompared++
+                // Lexicographic choice: preserve whole-week recovery spacing
+                // before preferring closer-to-MAV doses and balanced time.
+                // No extra volume is added for the sake of a longer workout.
+                val week=checkNotNull(proposal.catalogReview?.draft)
+                val score=qualityScore(week,focus,purpose,weekdays)
+                if(strongestScore==null ||
+                    betterLong(score,checkNotNull(strongestScore))) {
+                    strongest=ViablePlacement(byDay,plans,proposal,emptyList())
+                    strongestScore=score
+                }
+                continue
+            }
 
             // Rank actual unresolved drafts by unmet authored promises
             // before soft time preferences. A locally incomplete first
@@ -396,6 +471,10 @@ object CoachAthleteProgramGenerator {
             if(best==null || better(score,checkNotNull(best).score))
                 best=ViablePlacement(byDay,plans,proposal,score)
         }
+        val selected=strongest
+        if(selected!=null)
+            return result(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
+                selected.focuses,selected.intents,selected.review,selection)
         val closest=best
         if(closest!=null) {
             fail("composedWeek",AthleteGenerationIssueKind.COMPOSED_WEEK_UNRESOLVED,

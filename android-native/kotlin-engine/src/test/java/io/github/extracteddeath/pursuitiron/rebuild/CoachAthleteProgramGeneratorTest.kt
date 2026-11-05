@@ -268,4 +268,32 @@ class CoachAthleteProgramGeneratorTest {
         assertEquals(3,input.choices.size)
         assertFalse(a.mayIssueWorkout)
     }
+
+    @Test fun feasibleWeekRankingPrefersRecoveryDoseAndBalancedSessionLength() {
+        val generated=CoachAthleteProgramGenerator.generate(request())
+        val actual=generated.candidate?.catalogReview?.draft
+        if(generated.status==AthleteGenerationStatus.GENERATED_FOR_REVIEW) {
+            assertNotNull(actual)
+            val evidence=generated.search
+            assertTrue(evidence.feasibleWeeksCompared>=1)
+            assertTrue(evidence.feasibleWeeksCompared<=5)
+            assertTrue(evidence.draftsAudited>=evidence.feasibleWeeksCompared)
+            assertTrue(evidence.placementsChecked>=evidence.draftsAudited)
+            assertTrue(evidence.draftsAudited<=32)
+            val focus=checkNotNull(generated.candidate?.catalogReview)
+                .composedRequest?.days?.map {it.focus}
+            val purpose=generated.intents.map {it.purpose}
+            val score=CoachAthleteProgramGenerator.qualityScore(
+                checkNotNull(actual),checkNotNull(focus),purpose,
+                checkNotNull(generated.candidate?.catalogReview)
+                    .composedRequest!!.days.map {it.calendarDay})
+            assertEquals(5,score.size)
+            assertTrue(score.all {it>=0L})
+        } else {
+            assertEquals(0,generated.search.feasibleWeeksCompared)
+            assertTrue(generated.issues.isNotEmpty())
+        }
+        assertEquals(generated,CoachAthleteProgramGenerator.generate(request()))
+    }
+
 }

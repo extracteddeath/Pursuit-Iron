@@ -7,7 +7,7 @@ enum class CustomCycleEditOrigin { ATHLETE_EDIT, COACH_SUGGESTION }
 enum class CustomCycleChangeKind {
     GOAL, BLOCKS, PHASE, SPLIT, SCHEDULE, EXERCISES, REMOVE_PINNED,
     ATTACHMENTS, SUPERSETS, SET_COUNT, LOADS, REPS, RIR, REST,
-    AMPLIFIERS, CUES, WEEK_OVERRIDES
+    AMPLIFIERS, CUES, WEEK_OVERRIDES, DAY_COUNT
 }
 data class CustomCycleChange(
     val kind: CustomCycleChangeKind,
@@ -31,7 +31,9 @@ data class CustomCycleCoachPermissions(
     val adaptRest: Boolean = false,
     val adaptAmplifiers: Boolean = false,
     val adaptCues: Boolean = false,
-    val adaptWeekOverrides: Boolean = false
+    val adaptWeekOverrides: Boolean = false,
+    /** Different from changing a split or moving existing training days. */
+    val adaptDayCount: Boolean = false
 ) {
     fun permits(kind: CustomCycleChangeKind): Boolean = when(kind) {
         CustomCycleChangeKind.GOAL -> adaptGoal
@@ -39,6 +41,7 @@ data class CustomCycleCoachPermissions(
         CustomCycleChangeKind.PHASE -> adaptPhase
         CustomCycleChangeKind.SPLIT -> adaptSplit
         CustomCycleChangeKind.SCHEDULE -> adaptSchedule
+        CustomCycleChangeKind.DAY_COUNT -> adaptDayCount
         CustomCycleChangeKind.EXERCISES -> adaptExercises
         CustomCycleChangeKind.REMOVE_PINNED -> removePinned
         CustomCycleChangeKind.ATTACHMENTS -> adaptAttachments
@@ -139,14 +142,28 @@ object CustomCycleTransitionDomain {
                 emit(CustomCycleChangeKind.SPLIT, path, "Training split changed.")
             if (block.label != proposed.label)
                 emit(CustomCycleChangeKind.CUES, path, "Block label changed.")
+            if (block.days.size != proposed.days.size)
+                emit(CustomCycleChangeKind.DAY_COUNT, path,
+                    "Weekly training-day count changed in this block.")
             if (block.days.map { it.weekday } != proposed.days.map { it.weekday })
                 emit(CustomCycleChangeKind.SCHEDULE, path,
                     "Training days or order changed.")
+            // A newly added session also adds exercise prescriptions.
+            // adaptSchedule alone cannot authorize unseen exercises.
+            if (proposed.days.any { newDay ->
+                    block.days.none { it.weekday==newDay.weekday } &&
+                        newDay.slots.isNotEmpty()
+                })
+                emit(CustomCycleChangeKind.EXERCISES, path,
+                    "A newly scheduled day introduces exercise slots.")
             val nextDays = proposed.days.associateBy { it.weekday }
             for (day in block.days) {
                 val newerDay = nextDays[day.weekday]
                 val location = path + ".day." + day.weekday
                 if (newerDay == null) {
+                    if(day.slots.isNotEmpty())
+                        emit(CustomCycleChangeKind.EXERCISES, location,
+                            "A removed day also removes its exercise slots.")
                     if (day.slots.any { it.pinned })
                         emit(CustomCycleChangeKind.REMOVE_PINNED, location,
                             "Removed day contains athlete-pinned exercises.")

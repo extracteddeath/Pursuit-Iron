@@ -177,4 +177,83 @@ class CustomCycleTransitionDomainTest {
         assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,
             review.status)
     }
+
+    @Test fun addingTrainingDaysRequiresSeparateDayCountScheduleAndExercisePermissions() {
+        val original=cycle()
+        val source=original.blocks.single()
+        val extraDay=CustomTrainingDay(2,"Push B",
+            ComposerSessionPurpose.HYPERTROPHY,
+            listOf(CustomExerciseSlot("extra","press",ComposerRole.PRIMARY,
+                listOf(set(),set()),pinned=false)))
+        val candidate=original.copy(revision=4,blocks=listOf(
+            source.copy(days=source.days+extraDay)))
+        val onlySplitAndBlocks=transition(original,candidate,
+            CustomCycleCoachPermissions(adaptSplit=true,adaptBlocks=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,
+            onlySplitAndBlocks.status)
+        assertTrue(onlySplitAndBlocks.blockedKinds.containsAll(setOf(
+            CustomCycleChangeKind.DAY_COUNT,CustomCycleChangeKind.SCHEDULE,
+            CustomCycleChangeKind.EXERCISES)))
+        val missingDays=transition(original,candidate,
+            CustomCycleCoachPermissions(adaptSplit=true,adaptBlocks=true,
+                adaptSchedule=true,adaptExercises=true))
+        assertEquals(setOf(CustomCycleChangeKind.DAY_COUNT),
+            missingDays.blockedKinds)
+        val missingExercises=transition(original,candidate,
+            CustomCycleCoachPermissions(adaptDayCount=true,
+                adaptSchedule=true))
+        assertEquals(setOf(CustomCycleChangeKind.EXERCISES),
+            missingExercises.blockedKinds)
+        val approvedForReview=transition(original,candidate,
+            CustomCycleCoachPermissions(adaptDayCount=true,
+                adaptSchedule=true,adaptExercises=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            approvedForReview.status)
+        assertTrue(approvedForReview.blockedKinds.isEmpty())
+        assertFalse(approvedForReview.mayApplyAutomatically)
+        assertFalse(approvedForReview.mayIssueWorkout)
+        assertEquals(1,original.blocks.single().days.size)
+    }
+
+    @Test fun sameDayCountSplitChangesRequireOnlySplitPermission() {
+        val original=cycle()
+        val candidate=original.copy(revision=4,blocks=listOf(
+            original.blocks.single().copy(
+                split=CustomSplitIdentity.Freeform("Split alternative"))))
+        val review=transition(original,candidate,
+            CustomCycleCoachPermissions(adaptSplit=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            review.status)
+        assertTrue(review.differences.any {
+            it.kind==CustomCycleChangeKind.SPLIT
+        })
+        assertTrue(review.differences.none {
+            it.kind==CustomCycleChangeKind.DAY_COUNT ||
+                it.kind==CustomCycleChangeKind.SCHEDULE
+        })
+        assertFalse(review.mayApplyAutomatically)
+    }
+
+    @Test fun droppingUnpinnedDayNeedsDayCountAndExercisePermissions() {
+        val original=cycle()
+        val originalBlock=original.blocks.single()
+        val addedDay=CustomTrainingDay(2,"Extra",
+            ComposerSessionPurpose.HYPERTROPHY,
+            listOf(CustomExerciseSlot("extra","press",ComposerRole.PRIMARY,
+                listOf(set(),set()),pinned=false)))
+        val withExtra=original.copy(blocks=listOf(
+            originalBlock.copy(days=originalBlock.days+addedDay)))
+        val candidate=withExtra.copy(revision=4,blocks=listOf(originalBlock))
+        val denied=transition(withExtra,candidate,
+            CustomCycleCoachPermissions(adaptSchedule=true,adaptDayCount=true))
+        assertEquals(setOf(CustomCycleChangeKind.EXERCISES),
+            denied.blockedKinds)
+        val allowed=transition(withExtra,candidate,
+            CustomCycleCoachPermissions(adaptSchedule=true,adaptDayCount=true,
+                adaptExercises=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            allowed.status)
+        assertFalse(allowed.mayModifyHistory)
+    }
+
 }

@@ -9,8 +9,8 @@ Neither engine gets credit for producing the other engine's output.
 
 ## Source-of-truth benchmark files
 
-- `verification/engine-superiority-cases.json`: 28 fixed, independently
-  stated scenarios (39 required paired proofs) spanning progression, equipment,
+- `verification/engine-superiority-cases.json`: 29 fixed, independently
+  stated scenarios (41 required paired proofs) spanning progression, equipment,
   programming, custom programs/cycles, coaching, history, migration and
   Android. The critical rep-jump case is a release blocker, not a claimed
   measured improvement.
@@ -70,7 +70,7 @@ passing this release gate.
 | --- | --- | --- | --- |
 | Overloaded progression (200/205/210/215 for 3/3/2/2) | **User-reported** unearned 215-for-every-set recommendation; NOT yet remeasured on frozen web revision | Candidate `ConservativeProgressionReview` refuses increase; `OverloadRecoveryLoadReviewDomain` can offer a prior verified all-set load for review | **Not yet:** new logic is headless and no paired current web run exists |
 | Verified exercise equipment and weight increments | Live web engine has broad equipment support; user-reported phantom 38.5/159.5 recommendations | `EquipmentLoadDomain` uses BigDecimal, confirmed plate pairs, machine stack and exact implement basis | **Not yet:** narrow headless correctness is encouraging, full supported-catalog breadth and app issuance are not proven |
-| Custom program and cycle authoring | Existing live working product has many features, with reported amplifier and volume-loss defects | Separate first-class custom authoring, candidate transitions and review contracts; not fully production-integrated | **No** until complete parity plus better authoring and block outcomes on device |
+| Recovery-week per-set intensity | No matched web execution yet; cannot infer behavior from old bug reports | Kotlin candidate now flags higher rep floors/ceilings at unchanged load and refuses unmatched set comparisons despite fewer sets | **Not yet:** requires matched executed headless and Android proofs |\n| Custom program and cycle authoring | Existing live working product has many features, with reported amplifier and volume-loss defects | Separate first-class custom authoring, candidate transitions and review contracts; not fully production-integrated | **No** until complete parity plus better authoring and block outcomes on device |
 | Native history integrity | Existing web and JS-native paths support actual historical workouts | v2 native history and candidate segmented root, replay, redo, correction and lookup tests; segmented candidate is inactive and v2 is capped at 4,096 entries | **No:** missing single-authority cutover and 4,097+ actual persistence |
 | End-to-end usability | Web product available for real workouts | Kotlin replacement is not the sole native coaching issuer; existing Compose integration can still depend on old engine | **No** until complete offline device journey and no JS fallback |
 

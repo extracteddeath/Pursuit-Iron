@@ -157,6 +157,17 @@
       ]
     },
     {
+      "id": "deload-hidden-rep-demand",
+      "domain": "programming",
+      "severity": "critical",
+      "scenario": "A recovery deload removes working sets but retains the same verified 30-lb load while raising the working-rep floor or ceiling (6–10 to 8–10, 6–12 or 8–12). Include increased prescribed RIR and moved sets without matching baseline identity.",
+      "expected": "Do not approve a superficially lower-volume deload that silently makes remaining sets harder, assumes a new target RIR is measured effort, or compares unmatched sets to a convenient old load. Preserve authored plans and require explicit review; test legitimate separately verified lighter-load alternatives.",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
       "id": "strength-frequency",
       "domain": "programming",
       "severity": "major",

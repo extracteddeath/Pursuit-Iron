@@ -20,7 +20,7 @@ import java.math.BigDecimal
  */
 internal object NativeKotlinApprovalCodec {
     private const val MAGIC=0x50494131 // PIA1
-    private const val VERSION=2
+    private const val VERSION=3
     const val MAX_BYTES=512_000
 
     private fun DataOutputStream.string(value:String)=writeUTF(value)
@@ -218,16 +218,19 @@ internal object NativeKotlinApprovalCodec {
                 writeInt(w.activeSeconds);writeInt(w.restSeconds)
             }
             optionalBand(p.backoffReps);optionalInt(p.backoffRir)
+            // Version 3: preserve verified strength/hypertrophy working loads.
+            optionalDecimal(p.purposeWorkingLoad)
         }
     }
-    private fun DataInputStream.policies():List<ExercisePrescriptionPolicy> =
+    private fun DataInputStream.policies(version:Int):List<ExercisePrescriptionPolicy> =
         items(128){
             ExercisePrescriptionPolicy(readUTF(),readEnum<ComposerSessionPurpose>(),
                 RepBand(readInt(),readInt()),optionalInt(),
                 readInt(),readInt(),readEnum<SetLoadScheme>(),optionalDecimal(),
                 items(12){
                     DeclaredWarmupStep(decimal(),readInt(),readInt(),readInt())
-                },optionalBand(),optionalInt())
+                },optionalBand(),optionalInt(),
+                if(version>=3)optionalDecimal() else null)
         }
 
     private fun verifiedRepProof(
@@ -315,9 +318,9 @@ internal object NativeKotlinApprovalCodec {
                     val grant=KotlinWorkoutSelectionGrant(
                         readUTF(),readUTF(),source(),readInt())
                     val program=program()
-                    val policies=policies()
+                    val policies=policies(version)
                     val receipt=readUTF();val revision=readLong()
-                    val proof=if(version==2 && readBoolean()) {
+                    val proof=if(version>=2 && readBoolean()) {
                         NativeKotlinAcceptedRepTargets(
                             readUTF(),readLong(),readUTF(),readUTF(),
                             items(32){readInt()},items(32){readInt()},

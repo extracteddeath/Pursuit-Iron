@@ -353,7 +353,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             policy("db-press",ComposerSessionPurpose.HYPERTROPHY),
             policy("db-row",ComposerSessionPurpose.STRENGTH_SKILL),
             policy("db-row",ComposerSessionPurpose.HYPERTROPHY))
-        val approved=approval().copy(policies=policies)
+        val approved=approval().copy(policies=policies,
+            grant=KotlinWorkoutSelectionGrant("grant-3","workout-3",source,0))
         val strength=purposeLoad(composer(1,
             purpose=ComposerSessionPurpose.STRENGTH_SKILL),"25")
         val volume=composer(2,purpose=ComposerSessionPurpose.HYPERTROPHY)
@@ -364,6 +365,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             result is NativeCurrentRepPrescriptionResult.Reviewed)
         val reviewed=result as NativeCurrentRepPrescriptionResult.Reviewed
         assertEquals("workout-1",reviewed.priorWorkoutId)
+        assertTrue(reviewed.proposal.toString(),
+            reviewed.proposal is AdaptiveSetPrescriptionResult.Candidate)
         val candidate=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
         assertEquals("db-press",candidate.exerciseId)
         assertEquals(2,candidate.newRepTargets.size)
@@ -383,7 +386,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
                 it.copy(purposeWorkingLoad=n("25"))
             else it
         }
-        val approved=approval().copy(policies=policies)
+        val approved=approval().copy(policies=policies,
+            grant=KotlinWorkoutSelectionGrant("grant-3","workout-3",source,0))
         val strength=purposeLoad(composer(1,
             purpose=ComposerSessionPurpose.STRENGTH_SKILL),"25")
         fun inspect(vararg histories:NativeKotlinMixedHistoryCompletion)=

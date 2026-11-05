@@ -297,6 +297,32 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * changed program and to issue any subsequent training targets.
      */
     /**
+     * Read-only choices for the Kotlin Coach screen. UI cannot invent an
+     * exercise to review: the current owner's accepted program, current gym
+     * source and complete exercise identities are inspected together.
+     *
+     * Always call off the main thread. Repeated reads are safe; the actual
+     * coaching review rechecks all source/history data under the owner fence.
+     */
+    fun currentVerifiedCoachExerciseChoices():List<String> {
+        val owner=localAthlete.signedInIdentity() ?:return emptyList()
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val approved=approvalStore.currentOwnedApproval(owner.ownerKey)
+                    ?.takeIf {it.athleteId==owner.athleteId}
+                    ?:return@withOwnerTransaction emptyList<String>()
+                val source=(authoringSourceStore.read(owner.ownerKey)
+                    as? NativeAuthoringSourceRead.Found)?.source
+                    ?:return@withOwnerTransaction emptyList<String>()
+                if(NativeKotlinApprovedGymCoherenceDomain.inspect(approved,source)
+                    !=NativeApprovedGymCoherenceResult.Matched)
+                    return@withOwnerTransaction emptyList<String>()
+                approved.program.exercises.map {it.exerciseId}.distinct()
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    /**
      * Explicit candidate athlete acceptance. Never trust UI-provided
      * workouts, plans or historical observations: the native coordinator
      * replays complete history and the approved plan under the owner fence.

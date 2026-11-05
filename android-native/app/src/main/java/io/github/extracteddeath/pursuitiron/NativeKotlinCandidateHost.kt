@@ -65,7 +65,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val gymCoherentAuthority=NativeKotlinGymCoherentWorkoutAuthority(
         approvalStore,authoringSourceStore,revisionFence)
     private val coordinator=NativeKotlinWorkoutCoordinator(
-        journalStore,gymCoherentAuthority,revisionFence)
+        journalStore,gymCoherentAuthority,revisionFence,
+        NativeKotlinAcceptedRepSnapshotVerifier { owner,approval ->
+            val signed=localAthlete.signedInIdentity()
+            if(signed==null || signed.ownerKey!=owner ||
+                signed.athleteId!=approval.athleteId)null
+            else mixedHistoryReader.rederiveAcceptedRepSnapshot(
+                owner,signed.athleteId,approvalStore,approval,
+                authoringSourceStore)
+        })
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
         historyStore,journalStore,correctionStore,approvalStore,revisionFence)
     private val trackedWorkout=NativeKotlinTrackedWorkoutGateway(
@@ -306,6 +314,20 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeOwnerNextSetRefusal.NOT_AUTHORIZED)
         return mixedHistoryReader.reviewCurrentNextSetTargets(
             owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
+            readiness,movementRestricted,authoringSourceStore)
+    }
+
+    /** Explicitly accept only the exact reverified preview; no issuance. */
+    fun acceptReviewedNativeRepTargets(
+        intent:NativeKotlinAcceptedRepIntent,
+        readiness:CoachReadiness,
+        movementRestricted:Boolean
+    ):NativeKotlinRepAcceptanceResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeKotlinRepAcceptanceResult.Rejected(
+                NativeKotlinRepAcceptanceRefusal.NOT_AUTHORIZED)
+        return mixedHistoryReader.acceptReviewedNextSetTargets(
+            signed.ownerKey,signed.athleteId,approvalStore,intent,
             readiness,movementRestricted,authoringSourceStore)
     }
 

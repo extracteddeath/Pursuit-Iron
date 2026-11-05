@@ -211,4 +211,95 @@ class KotlinProgressionTimelineDomainTest {
         assertEquals(listOf("workout-2"), review.comparedWorkoutIds)
         assertNull(review.progression)
     }
+
+    @Test fun interleavedStrengthAndHypertrophyHaveIndependentEvidence() {
+        // The full authenticated timeline is not filtered by the caller.
+        // The REVIEWER alone chooses the latest two matching-purpose sessions.
+        val history=listOf(
+            workout(1,purpose=ComposerSessionPurpose.HYPERTROPHY),
+            workout(2,purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                repBand=RepBand(3,5),reps=listOf(3,3,3,3)),
+            workout(3,purpose=ComposerSessionPurpose.HYPERTROPHY),
+            workout(4,purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                repBand=RepBand(3,5),reps=listOf(3,3,3,3)),
+            workout(5,purpose=ComposerSessionPurpose.HYPERTROPHY))
+        val unscoped=KotlinProgressionTimelineDomain.review(request(history))
+        assertEquals(KotlinTimelineReviewStatus.CHANGED_SESSION_PURPOSE,unscoped.status)
+        val volume=KotlinProgressionTimelineDomain.review(
+            request(history).copy(
+                requestedPurpose=ComposerSessionPurpose.HYPERTROPHY))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,volume.status)
+        assertEquals(listOf("workout-3","workout-5"),volume.comparedWorkoutIds)
+        assertEquals(IncreaseReviewReason.QUALIFIED_FOR_REVIEW,
+            volume.progression?.reason)
+        assertEquals(n(205),volume.progression?.reviewCandidate)
+        assertFalse(volume.canIssueTargets)
+        val strength=KotlinProgressionTimelineDomain.review(
+            request(history).copy(
+                requestedPurpose=ComposerSessionPurpose.STRENGTH_SKILL))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,strength.status)
+        assertEquals(listOf("workout-2","workout-4"),strength.comparedWorkoutIds)
+        assertEquals(IncreaseReviewReason.STILL_BUILDING_REPS,
+            strength.progression?.reason)
+        assertNull(strength.progression?.reviewCandidate)
+    }
+
+    @Test fun latestFailureWithinRequestedPurposeCannotBeSkipped() {
+        val failed=workout(5,purpose=ComposerSessionPurpose.HYPERTROPHY,
+            reps=listOf(3,3,2,2),
+            actualRir=listOf(2,1,0,0),
+            loads=listOf(200,205,210,215))
+        val history=listOf(
+            workout(1),
+            workout(2,purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                repBand=RepBand(3,5),reps=listOf(3,3,3,3)),
+            workout(3),
+            workout(4,purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                repBand=RepBand(3,5),reps=listOf(3,3,3,3)),
+            failed)
+        val review=KotlinProgressionTimelineDomain.review(
+            request(history).copy(requestedPurpose=
+                ComposerSessionPurpose.HYPERTROPHY))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,review.status)
+        assertEquals(listOf("workout-3","workout-5"),review.comparedWorkoutIds)
+        assertEquals(IncreaseReviewReason.BELOW_REP_FLOOR,
+            review.progression?.reason)
+        assertNull(review.progression?.reviewCandidate)
+        assertEquals(FatiguePattern.MIXED_LOADS,review.latestFatigue?.pattern)
+    }
+
+    @Test fun purposeSelectionPreservesFullHistoryValidationAndRevisions() {
+        val first=workout(1,purpose=ComposerSessionPurpose.HYPERTROPHY)
+        val middle=workout(2,purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+            repBand=RepBand(3,5),reps=listOf(3,3,3,3))
+        val last=workout(3,purpose=ComposerSessionPurpose.HYPERTROPHY)
+        val scoped=request(listOf(first,middle,last)).copy(
+            requestedPurpose=ComposerSessionPurpose.HYPERTROPHY)
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,
+            KotlinProgressionTimelineDomain.review(scoped).status)
+        assertEquals(KotlinTimelineReviewStatus.UNVERIFIED_JOURNAL,
+            KotlinProgressionTimelineDomain.review(request(listOf(
+                first,middle.copy(effectiveSets=emptyMap()),last)).copy(
+                requestedPurpose=ComposerSessionPurpose.HYPERTROPHY)).status)
+        assertEquals(KotlinTimelineReviewStatus.STALE_HISTORY,
+            KotlinProgressionTimelineDomain.review(
+                scoped.copy(currentHistoryRevision=11)).status)
+        val changed=workout(3,purpose=ComposerSessionPurpose.HYPERTROPHY,
+            source=baseSource.copy(programRevision=5))
+        assertEquals(KotlinTimelineReviewStatus.CHANGED_PROGRAM_OR_CATALOG,
+            KotlinProgressionTimelineDomain.review(request(
+                listOf(first,middle,changed)).copy(
+                requestedPurpose=ComposerSessionPurpose.HYPERTROPHY)).status)
+        assertEquals(KotlinTimelineReviewStatus.INVALID_REQUEST,
+            KotlinProgressionTimelineDomain.review(scoped.copy(
+                requestedPurpose=ComposerSessionPurpose.UNSPECIFIED)).status)
+        val insufficient=KotlinProgressionTimelineDomain.review(request(
+            listOf(first,middle)).copy(
+                requestedPurpose=ComposerSessionPurpose.STRENGTH_SKILL))
+        assertEquals(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,
+            insufficient.status)
+        assertEquals(listOf("workout-2"),insufficient.comparedWorkoutIds)
+        assertNull(insufficient.progression)
+    }
+
 }

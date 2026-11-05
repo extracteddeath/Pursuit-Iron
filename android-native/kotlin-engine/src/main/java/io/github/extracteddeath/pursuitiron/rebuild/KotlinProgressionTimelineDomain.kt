@@ -28,7 +28,14 @@ data class KotlinProgressionTimelineRequest(
     val completedWorkouts: List<KotlinChronologicalWorkout>,
     /** Current exact physical inventory, still subject to owner verification. */
     val currentVerifiedStock: VerifiedLoadStock?,
-    val maximumAuthorizedIncrease: BigDecimal
+    val maximumAuthorizedIncrease: BigDecimal,
+    /**
+     * Explicit owner-verified purpose of the NEXT proposed training session.
+     * Null preserves the strict legacy adjacent-appearance comparison.
+     * A specified purpose compares the latest two occurrences WITHIN that
+     * purpose from the complete replayed history, not two chosen successes.
+     */
+    val requestedPurpose: ComposerSessionPurpose? = null
 )
 
 enum class KotlinTimelineReviewStatus {
@@ -83,6 +90,7 @@ object KotlinProgressionTimelineDomain {
         if (!id.matches(request.athleteId) || !id.matches(request.exerciseId) ||
             request.historyRevision < 1 || request.currentHistoryRevision < 1 ||
             request.completedWorkouts.size !in 1..MAX_COMPLETIONS ||
+            request.requestedPurpose==ComposerSessionPurpose.UNSPECIFIED ||
             request.maximumAuthorizedIncrease <= zero ||
             request.maximumAuthorizedIncrease > maxStep ||
             request.maximumAuthorizedIncrease.stripTrailingZeros().scale() > 3)
@@ -127,13 +135,24 @@ object KotlinProgressionTimelineDomain {
             } ?: return@mapNotNull null
             Triple(stored, history, exercise)
         }
-        if (appearances.size < 2)
+        // Preserve a fully authenticated replay of EVERY completed workout,
+        // including those from other purposes. Only AFTER validating history
+        // do we partition coaching evidence by the explicitly requested
+        // session purpose. An intervening strength day is not a failed or
+        // successful hypertrophy exposure and must not erase that history.
+        // Importantly, an intervening BAD workout of the requested purpose
+        // stays in the comparison: never cherry-pick two earlier successes.
+        val applicable=if(request.requestedPurpose==null)appearances
+            else appearances.filter { (stored,_,_) ->
+                stored.journal.snapshot.purpose==request.requestedPurpose
+            }
+        if (applicable.size < 2)
             return rejected(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,
-                appearances.map { it.second.workoutId },
-                appearances.lastOrNull()?.third?.workingSets?.size ?: 0)
+                applicable.map { it.second.workoutId },
+                applicable.lastOrNull()?.third?.workingSets?.size ?: 0)
 
-        val (olderStored, olderHistory, older) = appearances[appearances.size - 2]
-        val (latestStored, latestHistory, latest) = appearances.last()
+        val (olderStored, olderHistory, older) = applicable[applicable.size - 2]
+        val (latestStored, latestHistory, latest) = applicable.last()
         val ids = listOf(olderHistory.workoutId, latestHistory.workoutId)
         val count = latest.workingSets.size
         if (latest.progressionGate != KotlinHistoryProgressionGate.COMPARABLE_FOR_REVIEW)

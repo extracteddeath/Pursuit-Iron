@@ -31,6 +31,21 @@ interface NativeKotlinWorkoutAuthority {
  * Trusted storage owns these fields. The app must authenticate the owner key
  * and athlete ID independently; they are NOT inferred from a JS program.
  */
+/**
+ * Durable acceptance of ONE history-derived per-set adjustment, bound to
+ * immutable native evidence. This is NOT a substitute for live revalidation:
+ * the issuer must recompute it from the complete corrected history, or refuse.
+ */
+data class NativeKotlinAcceptedRepTargets(
+    val historicalWorkoutId: String,
+    val historyRevision: Long,
+    val exerciseId: String,
+    val changedSetKey: String,
+    val observedReps: List<Int>,
+    val newRepTargets: List<Int>,
+    val reviewedReadiness: CoachReadiness
+)
+
 data class NativeKotlinWorkoutApproval(
     val ownerKey: String,
     val athleteId: String,
@@ -40,7 +55,8 @@ data class NativeKotlinWorkoutApproval(
     val program: ComposerRequest,
     val policies: List<ExercisePrescriptionPolicy>,
     val storageReceiptId: String,
-    val storageRevision: Long
+    val storageRevision: Long,
+    val acceptedRepTargets: NativeKotlinAcceptedRepTargets? = null
 )
 
 enum class NativeKotlinIssueRefusal {

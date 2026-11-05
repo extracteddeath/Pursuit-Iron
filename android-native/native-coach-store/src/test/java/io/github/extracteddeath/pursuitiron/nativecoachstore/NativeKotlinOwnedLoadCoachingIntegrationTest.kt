@@ -901,4 +901,63 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }.all { (it.load as DraftSetLoad.Verified).value==n("25") })
     }
 
+
+    @Test fun diskHistoryCanProgressDefaultHypertrophyWithoutChangingStrengthWeight() {
+        enrolled()
+        val mixed=policies.map {p ->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("25")) else p
+        }
+        val first=complete(1,1,mixed)
+        val strength=complete(2,0,mixed)
+        val latest=complete(3,2,mixed)
+        val next=NativeKotlinWorkoutApproval(
+            "owner-1","athlete-1",source,source,
+            KotlinWorkoutSelectionGrant("grant-4","workout-4",source,1),
+            program,mixed,"storage-4",4)
+        assertEquals(NativeApprovalWriteResult.Committed(4),
+            approvals.publish("owner-1",3,next))
+        val current=reader.reviewCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,"db-press",n("5"),
+            CoachReadiness.NORMAL,false)
+        assertTrue(current.toString(),current is NativeOwnerLoadReviewResult.Review)
+        val coaching=(current as NativeOwnerLoadReviewResult.Review)
+            .coaching as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(listOf("workout-1","workout-3"),coaching.comparedWorkoutIds)
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            coaching.coaching.status)
+        val intent=NativeKotlinCoachLoadAcceptanceIntent(
+            "db-press",4,coaching.historyRevision,coaching.comparedWorkoutIds,
+            CoachNextLoadChangeKind.EARNED_INCREMENT,n("30"),n("35"),
+            listOf(1,2),"workout-5","grant-5","storage-5",1,true)
+        assertTrue(accept(intent) is NativeKotlinCoachAcceptanceResult.Committed)
+        val stored=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals(n("25"),stored.policies.single {p ->
+            p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+        }.purposeWorkingLoad)
+        assertEquals(n("35"),stored.policies.single {p ->
+            p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.purposeWorkingLoad)
+        assertEquals(n("30"),(stored.program.exercises.first()
+            .equipment as ComposerEquipment.Verified).plannedLoad)
+        val issued=NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+            .issue("owner-1","workout-5")
+        assertTrue(issued.toString(),issued is NativeKotlinIssueResult.Committed)
+        assertTrue((issued as NativeKotlinIssueResult.Committed).journal
+            .snapshot.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.all {(it.load as DraftSetLoad.Verified).value==n("35")})
+        assertTrue(strength.first.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.all {(it.load as DraftSetLoad.Verified).value==n("25")})
+        assertTrue(listOf(first,latest).all {saved ->
+            saved.first.snapshot.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.all {(it.load as DraftSetLoad.Verified).value==n("30")}
+        })
+    }
+
 }

@@ -124,11 +124,12 @@ object CoachNextProgramLoadReviewDomain {
         val specific=if(purpose==null)null else request.policies.singleOrNull {
             it.exerciseId==request.exerciseId && it.purpose==purpose
         }
-        if(purpose!=null && (specific==null ||
-            specific.purposeWorkingLoad==null))
+        if(purpose!=null && specific==null)
             return denied(
                 CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
-                "The exact approved purpose-specific working load is missing.")
+                "The selected purpose has no unique approved prescription.")
+        // Other purposes may override their loads while this one still uses
+        // the original exact verified default. Treat both as independent.
         val workingLoad=specific?.purposeWorkingLoad ?:equipment.plannedLoad
         val currentInspection = EquipmentLoadDomain.inspect(
             stock, workingLoad, equipment.unit)
@@ -155,7 +156,8 @@ object CoachNextProgramLoadReviewDomain {
             return denied(
                 CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
                 "This exercise uses purpose-specific working loads. Review each purpose and its saved history independently; a program-wide increase is unsafe.")
-        if (request.policies.filter { it.exerciseId == request.exerciseId }
+        if (request.policies.filter { it.exerciseId == request.exerciseId &&
+                (purpose==null || it.purpose==purpose) }
                 .any { it.scheme != SetLoadScheme.STRAIGHT ||
                     it.warmups.isNotEmpty() })
             return denied(CoachNextLoadReviewStatus.ONLY_STRAIGHT_SETS_SUPPORTED,

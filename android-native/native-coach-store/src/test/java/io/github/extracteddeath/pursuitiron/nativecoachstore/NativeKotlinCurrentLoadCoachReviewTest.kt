@@ -483,4 +483,61 @@ class NativeKotlinCurrentLoadCoachReviewTest {
                 strength(3)),accepted=approved))
     }
 
+
+    @Test fun defaultHypertrophyProgressesWhileStrengthHasDistinctWeight() {
+        val mixed=policies.map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("25")) else p
+        }
+        val approved=approval().copy(policies=mixed,
+            grant=KotlinWorkoutSelectionGrant("grant-5","workout-5",source,1))
+        val first=composer(1,purpose=ComposerSessionPurpose.HYPERTROPHY)
+        val strength=withExactIssuedTargets(composer(2,
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+            listOf(RepBand(12,12),RepBand(12,12)),historicalWeight=n("25"))
+        val latest=composer(3,purpose=ComposerSessionPurpose.HYPERTROPHY)
+        val result=inspect(timeline(first,strength,latest),accepted=approved)
+        assertTrue(result.toString(),result is NativeCurrentLoadReviewResult.Reviewed)
+        val coach=(result as NativeCurrentLoadReviewResult.Reviewed).coaching
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,coach.status)
+        assertEquals(n("30"),coach.originalLoad)
+        assertEquals(n("35"),coach.candidateLoad)
+        assertEquals(listOf(1,2),coach.affectedDayIndices)
+        assertEquals(approved.program,coach.candidateProgram)
+        val after=checkNotNull(coach.candidatePolicies)
+        assertEquals(n("25"),after.single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+        }.purposeWorkingLoad)
+        assertEquals(n("35"),after.single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.purposeWorkingLoad)
+        assertEquals(approved.policies.filter {it.exerciseId=="db-row"},
+            after.filter {it.exerciseId=="db-row"})
+    }
+
+    @Test fun failedLatestDefaultPurposeDoesNotEarnWeightFromOlderSuccesses() {
+        val mixed=policies.map {p ->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(purposeWorkingLoad=n("25")) else p
+        }
+        val approved=approval().copy(policies=mixed,
+            grant=KotlinWorkoutSelectionGrant("grant-5","workout-5",source,1))
+        val first=composer(1,purpose=ComposerSessionPurpose.HYPERTROPHY)
+        val middle=composer(2,purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+        val failed=composer(3,completedReps=listOf(12,7),
+            purpose=ComposerSessionPurpose.HYPERTROPHY)
+        val review=inspect(timeline(first,middle,failed),accepted=approved)
+        assertTrue(review.toString(),review is NativeCurrentLoadReviewResult.Reviewed)
+        val result=review as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(listOf("workout-1","workout-3"),result.comparedWorkoutIds)
+        assertNotEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            result.coaching.status)
+        assertNull(result.coaching.candidateLoad)
+        assertNull(result.coaching.candidatePolicies)
+    }
+
 }

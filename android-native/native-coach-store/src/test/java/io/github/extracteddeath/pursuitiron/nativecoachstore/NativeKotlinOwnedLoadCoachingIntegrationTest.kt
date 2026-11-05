@@ -377,6 +377,70 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }.all {it.reps==RepBand(8,12)})
     }
 
+    @Test fun completedPersonalizedWorkoutCanEarnNextRepTargetWithoutReset() {
+        val first=repReadyHistory()
+        assertTrue(acceptRep(first) is NativeKotlinRepAcceptanceResult.Committed)
+        val native=repIssuer()
+        val granted=native.issue("owner-1","workout-3")
+            as NativeKotlinIssueResult.Committed
+        var completed=granted.journal
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
+            completed.snapshot.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.map {it.reps})
+        for ((index,target) in completed.snapshot.targets.withIndex()) {
+            val physical=target.load as DraftSetLoad.Verified
+            val actual=if(target.exerciseId=="db-press") {
+                if(target.ordinal==0)12 else 11
+            } else 12
+            val outcome=journals.appendStored("owner-1","workout-3",
+                KotlinJournalOperation.RecordSet(
+                    "personalized-set-$index",completed.revision,
+                    target.setKey,KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(physical.value,physical.unit,actual,3)),
+                approvals::canAccessIssuedWorkout)
+            assertTrue(outcome.toString(),outcome is NativeJournalFileResult.Durable)
+            completed=(outcome as NativeJournalFileResult.Durable).journal
+        }
+        val finish=transactions.complete("owner-1","athlete-1",
+            "workout-3",KotlinJournalOperation.Finish(
+                "personalized-finish",completed.revision))
+        assertTrue(finish.toString(),
+            finish is NativeHistoryTransactionResult.Durable)
+        val historical=reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review
+        assertEquals(2,historical.timeline.completions.size)
+        val last=historical.timeline.completions.last()
+            as NativeKotlinMixedHistoryCompletion.Composer
+        assertEquals("workout-3",last.evidence.workoutId)
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
+            last.evidence.exerciseReviews.single {it.exerciseId=="db-press"}
+                .workingSets.map {it.issuedReps})
+        val current=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals(NativeApprovalWriteResult.Committed(4),
+            approvals.publish("owner-1",3,current.copy(
+                grant=current.grant.copy(
+                    workoutId="workout-4",grantId="grant-4"),
+                storageReceiptId="storage-4",storageRevision=4,
+                acceptedRepTargets=null)))
+        val next=reader.reviewCurrentNextSetTargets(
+            "owner-1","athlete-1",approvals,"db-press",
+            CoachReadiness.NORMAL,false,authoring)
+        assertTrue(next.toString(),next is NativeOwnerNextSetResult.Review)
+        val reviewed=(next as NativeOwnerNextSetResult.Review).candidate
+            as NativeCurrentRepPrescriptionResult.Reviewed
+        val following=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals("workout-3",following.historicalWorkoutId)
+        assertEquals(listOf(12,11),following.observedReps)
+        assertEquals(listOf(12,12),following.newRepTargets)
+        assertEquals("workout-4",following.workout.workoutId)
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
+            following.workout.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.map {it.reps})
+        assertFalse(following.mayIssueWorkout)
+    }
+
     @Test fun correctionAfterRepAcceptanceRevokesUnissuedTargetWithoutHistoryLoss() {
         val intent=repReadyHistory()
         assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)

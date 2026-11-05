@@ -62,10 +62,12 @@ object KotlinLongitudinalRepEvidenceDomain {
             ordered.any {it.type!=DraftSetType.WORKING ||
                 it.exerciseId!=historical.exerciseId})
             return reject(LongitudinalRepEvidenceRefusal.NO_SETS_OR_INVALID_ORDER)
+        val inspected=EquipmentLoadDomain.inspect(
+            stock,approvedLoad,approvedUnit)
         if(stock==null || stock.unit!=approvedUnit ||
             stock.basis!=approvedBasis ||
-            EquipmentLoadDomain.inspect(stock,approvedLoad,approvedUnit)
-                !is LoadInspection.Confirmed)
+            inspected !is LoadInspection.Confirmed ||
+            !inspected.exact || inspected.basis!=approvedBasis)
             return reject(LongitudinalRepEvidenceRefusal.UNVERIFIED_PHYSICAL_STOCK)
         if(ordered.any {
             val load=it.issuedLoad as? DraftSetLoad.Verified

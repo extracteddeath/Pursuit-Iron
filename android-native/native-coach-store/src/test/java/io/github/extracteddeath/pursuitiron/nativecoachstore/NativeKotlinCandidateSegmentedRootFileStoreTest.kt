@@ -675,6 +675,66 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             as NativeCandidateHistoryRootResult.Reviewed).replayed)
     }
 
+    @Test fun pagedIndexRefreshesOnlyAfterRealComposerFinishAndBothPageTreesStayComplete() {
+        val initial = boot()
+        assertTrue(pagedIndex().build(owner,athlete)
+            is NativeCandidatePagedIdentityResult.Indexed)
+        val saved = realComposerCompletion()
+        val intent = finish(1)
+        assertTrue(wal().prepare(owner,athlete,initial.head,intent,null)
+            is NativeSegmentedRedoResult.Durable)
+        assertTrue(wal().stage(owner,athlete,
+            NativeSegmentedWriteSegment(initial.head.rootDigest,1,emptyList()),
+            saved) is NativeSegmentedRedoResult.Durable)
+        assertTrue(v2.prepare(owner,athlete,1,intent)
+            is NativeHistoryLedgerResult.Durable)
+        assertTrue(v2.finalize(owner,athlete,intent,saved)
+            is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.UNVERIFIED_SOURCE),
+            pagedIndex().build(owner,athlete))
+        assertTrue(store().publishReplayVerifiedV2Mirror(
+            owner,athlete,replay,receiptVerifier())
+            is NativeCandidateHistoryRootResult.Reviewed)
+        assertTrue(shadow.sync(owner,athlete)
+            is NativeSegmentedHistoryResult.Indexed)
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.STALE_INDEX),
+            pagedIndex().findWorkout(owner,athlete,"workout-1"))
+
+        val built=pagedIndex().build(owner,athlete)
+            as NativeCandidatePagedIdentityResult.Indexed
+        assertEquals(1L,built.view.completionCount)
+        assertEquals(2L,built.view.sourceRevision)
+        assertEquals(1,built.view.workoutPages)
+        assertEquals(1,built.view.receiptPages)
+        assertFalse(built.view.canAuthorizeNewWorkout)
+        val byWorkout=pagedIndex().findWorkout(owner,athlete,"workout-1")
+            as NativeCandidatePagedIdentityResult.Lookup
+        val byReceipt=pagedIndex().findReceipt(owner,athlete,saved.storedReceiptId)
+            as NativeCandidatePagedIdentityResult.Lookup
+        assertEquals(1L,byWorkout.row?.completionOrder)
+        assertEquals(byWorkout.row,byReceipt.row)
+        assertFalse(byReceipt.canAuthorizeCorrection)
+        assertTrue((pagedIndex().build(owner,athlete)
+            as NativeCandidatePagedIdentityResult.Indexed).replayed)
+        assertEquals(2,candidateFiles(".pidpage").size)
+
+        // Corrupt the OTHER tree. A workout lookup must refuse even though
+        // its own page and the directory checksum are still intact.
+        val receiptFile=candidateFiles(".pidpage").last()
+        // Either page's corruption must invalidate the full paired index.
+        val pageBytes=Files.readAllBytes(receiptFile)
+        pageBytes[pageBytes.lastIndex]=(pageBytes.last().toInt() xor 1).toByte()
+        Files.write(receiptFile,pageBytes)
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.CORRUPT_INDEX),
+            pagedIndex().findWorkout(owner,athlete,"workout-1"))
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.CORRUPT_INDEX),
+            pagedIndex().build(owner,athlete))
+    }
+
     @Test fun replayVerifiedMirrorRejectsFabricatedV2ReceiptWithoutJournal() {
         val initial = boot()
         stagedAppend(initial)

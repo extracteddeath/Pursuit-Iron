@@ -89,6 +89,35 @@ fsync/device power-loss certification, atomic source-owner revisions and
 real backup/restore checks remain pending. Do not invoke this acceptance
 as an automatic post-Finish progression.
 
+## Current native gym/catalog coherence before a new target
+
+`NativeKotlinApprovedGymCoherenceDomain` compares an accepted generated
+program against the **currently persisted, reviewed** native athlete/gym and
+curated exercise source. It refuses missing/stale gym stock, an unavailable
+attachment or facility, removed/excluded movements, incompatible exercise
+roles/patterns/focus/muscle credits, invalid schedule/rest days, incompatible
+exercise equipment, and a planned load that is not *exactly* buildable.
+
+The isolated Android host now requires this check when publishing a first
+generated program, reviewing an earned load, explicitly accepting the new
+revision and issuing the next session. Native issuance uses a separately
+wrapped authority that reads the accepted program and gym source together
+under one owner revision fence, preventing edits between validation and the
+new journal commit. The wrapper delegates **historical** journal access to
+the original owner authority: editing or removing equipment must not make an
+already issued workout or its corrections disappear.
+
+The pure validation is not source authentication on its own; the native
+store must have decoded and verified the full reviewed gym snapshot under
+the current owner and athlete. Candidate tests cover physical equipment
+removal, confirmation changes, attachment/variant and direct-muscle credit
+mismatches, schedule/exclusion changes, buildable weights, and read/accept/
+issuance after on-disk gym edits. This is not yet a production source
+cutover: the source snapshot revision is not cryptographically pinned in the
+generated approval's source revision fields. Before full replacement, the
+athlete/profile/gym/catalog and approved program need one unified durable
+revision protocol and migration/rollback tests.
+
 ## Explicit cross-block volume continuity
 
 `CustomCycleCoachAuditDomain` now checks actual resolved weeks at every

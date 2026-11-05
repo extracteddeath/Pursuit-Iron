@@ -19,7 +19,7 @@ without executing it.
 | L02 | 215×2 near failure repeatedly offered as earned weight | Actual RIR, below-floor and observed uniform-load checks; `CoachExerciseDecisionDomainTest` | Need longitudinal individualized plateau/recovery policy and paired execution |
 | L03 | Unavailable 38.5/159.5 lb weights on 5-lb equipment | `EquipmentLoadDomain`, native gym coherence and issuance tests | Need exhaustive device/equipment variant grid and real app data migration |
 | L04 | A set below the rep floor still causes aggressive future progression | Evidence-gated reviews and history correction revalidation | Need full athlete-specific fallback progression |
-| L05 | 14 reps within 10–15 or +3 reps on the very next set | `FatigueAwareRepTargetReviewDomainTest`, `KotlinAdaptiveSetPrescriptionDomainTest`, native corrected-ledger integration: exact next-session **per-set** proposal, at most +1 rep for one proven set, unchanged physical loads/RIR/rest and other exercises | Still requires authenticated athlete acceptance and an actual persisted/issued per-set prescription; multiweek calibration and device validation |
+| L05 | 14 reps within 10–15 or +3 reps on the very next set | `FatigueAwareRepTargetReviewDomainTest`, `KotlinAdaptiveSetPrescriptionDomainTest`, and disk-backed native acceptance/issuance tests: at most +1 on one earned set, exact weights, unchanged RIR/rest and other exercises, fail-closed after history corrections | Candidate now supports a versioned durable acceptance and guarded issuance; **remaining** multiweek rep calibration, custom/set-technique parity and device validation |
 | L06 | Near-failure or unknown actual RIR treated as spare capacity | `FatigueAwareRepTargetReviewDomainTest`, `ConservativeProgressionReview` | Need complete client RIR capture and historical import rules |
 | L07 | App displays the same target RIR all through hypertrophy without phase-dependent intent | Current session-purpose and prescription policy checks | **Open**: individualized changing RIR progression and UI display |
 | L08 | Next set weight silently changes before the athlete logs it | `InWorkoutCoachDomain` explicitly preserves user edits and issued target | **Partial**: test actual Compose set editing, interrupted workouts, cold resume |
@@ -82,11 +82,28 @@ under the owner lock. It refuses review if the next workout's immutable
 journal has already been issued. The native host can request this read-only
 proposal off-thread.
 
-**Not production-complete:** The accepted per-set prescription must get a
-distinct durable approval record and be re-derived at issuance. It cannot
-become a saved target merely because the UI presented this candidate.
-The comparison baseline, corrections after display, account switches,
-gym changes and real-device workout logging still need end-to-end testing.
+**New isolated native acceptance path:** The candidate Coach screen
+requires explicit set-by-set authorization. The private approval file now
+stores the accepted proposal and original historical revision in a **version-2**
+binary format, while retaining version-1 decoding. The acceptance writer
+reopens the full corrected ledger and current gym, rejects already issued
+workouts, and compares every UI-presented rep against a new deterministic
+proposal. A fresh grant and approval storage revision are persisted; the old
+journal is never modified. The issuer must independently re-derive the exact
+approved set targets twice under its owner/journal locks. If history changes
+after acceptance, physical stock disappears, or the history verifier is not
+connected, issuance refuses rather than silently falling back to generic
+ranges. Regression tests cover successful cold-open issuance and history
+correction after acceptance.
+
+**Still not production-complete:** This is the isolated candidate, not the
+production app migration or physical-device acceptance. The v2 history ledger
+is bounded, directory fsync/backup-restore are not certified, account switching
+and restart behavior need device runs, and subsequent fixed-target sessions
+need their own longitudinal recalibration policy. A retained original program
+source revision is supplemented by approval storage CAS here; the future
+unified athlete/gym/catalog/program owner must reconcile all revision
+semantics. The actual frozen JS/Kotlin benchmark is not yet completed.
 
 The engineering goal is **strictly greater real-world quality**, not a
 one-sided claim that any headless Kotlin test makes it superior.

@@ -60,7 +60,7 @@
       "expected": "Retain exact original issued targets and actual effort in history, normalize only the approved practical envelope for the next decision, reject unrelated mixed schemes and unavailable loading, and allow further earned single-set improvements without resetting to a generic plan",
       "requiredProof": [
         "headless",
-        "android-device"
+        "device"
       ]
     },
     {

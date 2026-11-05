@@ -23,7 +23,7 @@ import kotlinx.coroutines.withContext
  * while screen navigation preserves authored draft revisions.
  */
 private enum class KotlinCandidateDestination(val label:String) {
-    ONBOARD("My setup"),GYM("My gym"),PROGRAM("My program"),TRAIN("Train")
+    ONBOARD("My setup"),GYM("My gym"),PROGRAM("My program"),COACH("Coach"),TRAIN("Train")
 }
 
 @Composable
@@ -68,6 +68,8 @@ internal fun NativeKotlinCandidateJourney() {
                         NativeKotlinGymSourceCandidateScreen(gymController)
                     KotlinCandidateDestination.PROGRAM ->
                         NativeKotlinCustomCycleCandidateScreen(cycleController)
+                    KotlinCandidateDestination.COACH ->
+                        NativeKotlinCandidateCoachScreen(host)
                     KotlinCandidateDestination.TRAIN ->
                         NativeKotlinCandidateTrainEntry(host,sessionController)
                 }

@@ -123,13 +123,16 @@ class NativeKotlinSegmentedRedoFileStore(
     private fun DataOutputStream.performed(p: KotlinPerformedSet?) {
         writeBoolean(p != null)
         if (p != null) {
-            writeBoolean(p.load != null)
-            if (p.load != null) writeUTF(p.load.toPlainString())
-            writeBoolean(p.unit != null)
-            if (p.unit != null) writeUTF(p.unit.name)
+            val load = p.load
+            writeBoolean(load != null)
+            if (load != null) writeUTF(load.toPlainString())
+            val unit = p.unit
+            writeBoolean(unit != null)
+            if (unit != null) writeUTF(unit.name)
             writeInt(p.reps)
-            writeBoolean(p.actualRir != null)
-            if (p.actualRir != null) writeInt(p.actualRir)
+            val rir = p.actualRir
+            writeBoolean(rir != null)
+            if (rir != null) writeInt(rir)
         }
     }
     private fun DataInputStream.performed(): KotlinPerformedSet? {
@@ -212,7 +215,7 @@ class NativeKotlinSegmentedRedoFileStore(
                 d.writeLong(patch.nextCompletionCount)
                 d.writeLong(patch.replaceSegmentFirstOrdinal)
                 d.writeInt(patch.completions.size)
-                patch.completions.forEach(d::entry)
+                patch.completions.forEach { item -> d.entry(item) }
                 d.intent(patch.consumedIntent)
             }
         }

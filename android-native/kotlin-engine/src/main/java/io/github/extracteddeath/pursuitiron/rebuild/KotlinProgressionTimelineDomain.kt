@@ -42,6 +42,7 @@ enum class KotlinTimelineReviewStatus {
     INVALID_REQUEST,
     STALE_HISTORY,
     INVALID_COMPLETION_ORDER,
+    INCOMPLETE_COMPLETION_WINDOW,
     DUPLICATE_WORKOUT,
     WRONG_ATHLETE,
     UNVERIFIED_JOURNAL,
@@ -52,6 +53,7 @@ enum class KotlinTimelineReviewStatus {
     CHANGED_ATHLETE_PROFILE,
     CHANGED_GYM_OR_COACH_RULES,
     CHANGED_SESSION_PURPOSE,
+    CHANGED_INTERVENING_SOURCE,
     CHANGED_LOAD_BASIS,
     CHANGED_SET_PRESCRIPTION,
     VERIFIED_REVIEW
@@ -105,6 +107,15 @@ object KotlinProgressionTimelineDomain {
                 first.completionOrder >= next.completionOrder
             })
             return rejected(KotlinTimelineReviewStatus.INVALID_COMPLETION_ORDER)
+        // Complete read windows must have contiguous, storage-authenticated
+        // completion ordinals. Otherwise an unfavorable or skipped workout
+        // could be silently omitted despite increasing order.
+        // The native owner MUST also authenticate the first/last window
+        // boundaries; this DTO cannot prove a missing prefix or tail.
+        if (sessions.zipWithNext().any { (first, next) ->
+                next.completionOrder != first.completionOrder+1L
+            })
+            return rejected(KotlinTimelineReviewStatus.INCOMPLETE_COMPLETION_WINDOW)
 
         if (sessions.map { it.journal.snapshot.workoutId }.distinct().size != sessions.size ||
             sessions.map { it.journal.storedIdentity.storageReceiptId }.distinct().size != sessions.size)
@@ -180,6 +191,16 @@ object KotlinProgressionTimelineDomain {
             return rejected(KotlinTimelineReviewStatus.CHANGED_GYM_OR_COACH_RULES, ids, count)
         if (olderStored.journal.snapshot.purpose != latestStored.journal.snapshot.purpose)
             return rejected(KotlinTimelineReviewStatus.CHANGED_SESSION_PURPOSE, ids, count)
+
+        // Filtering by purpose cannot conceal a program, gym, athlete or
+        // coaching-rules revision that occurred BETWEEN the matched
+        // workouts. A later "return" to an old source is not continuity.
+        val between=appearances.dropWhile {
+            it.second.workoutId!=olderHistory.workoutId
+        }.takeWhile {it.second.workoutId!=latestHistory.workoutId}
+        if(between.any {it.second.source!=newestSource})
+            return rejected(KotlinTimelineReviewStatus.CHANGED_INTERVENING_SOURCE,
+                ids,count)
 
         val priorLoad = older.workingSets.first().issuedLoad as DraftSetLoad.Verified
         val latestLoad = latest.workingSets.first().issuedLoad as DraftSetLoad.Verified

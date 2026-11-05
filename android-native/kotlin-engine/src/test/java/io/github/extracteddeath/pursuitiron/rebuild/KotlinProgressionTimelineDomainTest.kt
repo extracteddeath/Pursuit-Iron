@@ -302,4 +302,41 @@ class KotlinProgressionTimelineDomainTest {
         assertNull(insufficient.progression)
     }
 
+
+    @Test fun aMissingCompletionOrdinalCannotBeHiddenAsACompleteHistory() {
+        val first=workout(1)
+        val second=workout(2)
+        val third=workout(3)
+        val source=request(listOf(first,second,third))
+        val omitted=source.copy(completedWorkouts=listOf(
+            KotlinChronologicalWorkout(41,first),
+            KotlinChronologicalWorkout(43,third)))
+        assertEquals(KotlinTimelineReviewStatus.INCOMPLETE_COMPLETION_WINDOW,
+            KotlinProgressionTimelineDomain.review(omitted).status)
+        val complete=source.copy(completedWorkouts=listOf(
+            KotlinChronologicalWorkout(41,first),
+            KotlinChronologicalWorkout(42,second),
+            KotlinChronologicalWorkout(43,third)))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,
+            KotlinProgressionTimelineDomain.review(complete).status)
+    }
+
+    @Test fun purposeFilteringCannotHideAnInterveningSourceRevision() {
+        val old=workout(1)
+        val intervening=workout(2,
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+            source=baseSource.copy(programRevision=7),
+            repBand=RepBand(3,5),reps=listOf(3,3,3,3))
+        val newest=workout(3)
+        val reviewed=KotlinProgressionTimelineDomain.review(
+            request(listOf(old,intervening,newest)).copy(
+                requestedPurpose=ComposerSessionPurpose.HYPERTROPHY))
+        assertEquals(KotlinTimelineReviewStatus.CHANGED_INTERVENING_SOURCE,
+            reviewed.status)
+        assertEquals(listOf("workout-1","workout-3"),
+            reviewed.comparedWorkoutIds)
+        assertNull(reviewed.progression)
+        assertFalse(reviewed.canIssueTargets)
+    }
+
 }

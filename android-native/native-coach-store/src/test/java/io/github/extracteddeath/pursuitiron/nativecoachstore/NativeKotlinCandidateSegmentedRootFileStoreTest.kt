@@ -776,6 +776,10 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         val initial = result(store().bootstrapFromVerifiedV2(owner, athlete))
         assertTrue(identityIndex().build(owner, athlete)
             is NativeCandidateIdentityIndexResult.Indexed)
+        assertTrue(pagedIndex().build(owner, athlete)
+            is NativeCandidatePagedIdentityResult.Indexed)
+        val originalPageCount = candidateFiles(".pidpage").size
+        assertEquals(2, originalPageCount)
         val operation = KotlinSavedSetCorrection(
             "edit-1", 0, "set-1", "set-event-1",
             KotlinJournalSetOutcome.COMPLETED,
@@ -807,6 +811,24 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertTrue(shadow.sync(owner, athlete) is NativeSegmentedHistoryResult.Indexed)
         assertEquals(this.result(mirrored),
             this.result(store().reviewAuthenticatedV2Parity(owner, athlete)))
+        assertEquals(NativeCandidatePagedIdentityResult.Rejected(
+            NativeCandidatePagedIdentityRefusal.STALE_INDEX),
+            pagedIndex().findWorkout(owner, athlete, "workout-1"))
+        val updatedPaged = pagedIndex().build(owner, athlete)
+            as NativeCandidatePagedIdentityResult.Indexed
+        assertEquals(2L, updatedPaged.view.sourceRevision)
+        assertEquals(1L, updatedPaged.view.completionCount)
+        assertEquals(originalPageCount, candidateFiles(".pidpage").size)
+        val pagedWorkout = pagedIndex().findWorkout(owner, athlete, "workout-1")
+            as NativeCandidatePagedIdentityResult.Lookup
+        val pagedReceipt = pagedIndex().findReceipt(
+            owner, athlete, original.storedReceiptId)
+            as NativeCandidatePagedIdentityResult.Lookup
+        assertEquals(pagedWorkout.row, pagedReceipt.row)
+        assertEquals(1L, pagedWorkout.row?.completionOrder)
+        assertEquals(original.storedReceiptId, pagedWorkout.row?.storedReceiptId)
+        assertFalse(updatedPaged.view.canIssueProgression)
+        assertFalse(pagedWorkout.canAuthorizeNewWorkout)
         assertEquals(NativeCandidateIdentityIndexResult.Rejected(
             NativeCandidateIdentityIndexRefusal.STALE_INDEX),
             identityIndex().findWorkout(owner, athlete, "workout-1"))

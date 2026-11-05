@@ -297,6 +297,17 @@
       ]
     },
     {
+      "id": "history-conflicting-redo-ack",
+      "domain": "history",
+      "severity": "critical",
+      "scenario": "After a correction is committed, simulate lost acknowledgment and cold restart. Present a second durable correction with the same event ID, original root and manifest revision but a different actual load, reps or RIR; separately retry the byte-identical original operation.",
+      "expected": "Only the exact original durable correction may be acknowledged as a replay. A changed payload must refuse without writing the root, fabricating an edit, removing history or changing PR/Last. A genuinely identical retry remains idempotent.",
+      "requiredProof": [
+        "headless",
+        "device"
+      ]
+    },
+    {
       "id": "full-journey",
       "domain": "android",
       "severity": "critical",

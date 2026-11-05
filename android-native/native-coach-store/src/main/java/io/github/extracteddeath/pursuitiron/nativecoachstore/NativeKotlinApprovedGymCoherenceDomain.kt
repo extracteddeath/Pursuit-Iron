@@ -113,13 +113,15 @@ object NativeKotlinApprovedGymCoherenceDomain {
                         athlete.gym.confirmedStock[it]
                     }
                     val optionStock=equipment.inventory
+                    val attainable=EquipmentLoadDomain.inspect(
+                        actualStock,equipment.plannedLoad,equipment.unit)
                     if(actualStock==null || optionStock==null ||
                         actualStock.unit!=equipment.unit ||
                         actualStock.basis!=move.expectedLoadBasis ||
                         !equivalent(actualStock,optionStock) ||
-                        EquipmentLoadDomain.inspect(
-                            actualStock,equipment.plannedLoad,equipment.unit)
-                            !is LoadInspection.Confirmed)
+                        attainable !is LoadInspection.Confirmed ||
+                        !attainable.exact ||
+                        attainable.basis!=move.expectedLoadBasis)
                         return refused(
                             NativeApprovedGymCoherenceRefusal.PHYSICAL_EQUIPMENT_CHANGED,id)
                 }

@@ -287,6 +287,14 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     NativeJournalFileRefusal.NOT_ISSUED))
                     return@withOwnerTransaction reject(
                         NativeKotlinCoachAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
+                // Custom workouts use their OWN immutable journal namespace.
+                // A generated workout must not reuse an unfinished custom ID,
+                // even though no completion manifest entry exists yet.
+                val existingCustom=customStore.open(owner,intent.newWorkoutId)
+                if(existingCustom != NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.NOT_ISSUED))
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
 
                 val review = NativeKotlinCurrentLoadCoachReview.inspect(
                     current,history,intent.exerciseId,history.manifestRevision,

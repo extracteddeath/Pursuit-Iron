@@ -45,6 +45,10 @@ jobs:
         run: node android-native/kotlin-engine/verification/offline-only-test.mjs
       - name: Verify entire engine feature scope and native UX documentation
         run: node android-native/kotlin-engine/verification/feature-scope-contract.mjs
+      - name: Validate web vs Kotlin superiority scorecard without assuming success
+        run: |
+          node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --self-test
+          node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --audit --write-report
       - name: Stage legacy web exercise catalog as unreviewed source inventory
         run: node android-native/kotlin-engine/verification/legacy-catalog-ingest.mjs --write-report
       - name: Verify first curated starter tranche provenance
@@ -58,6 +62,14 @@ jobs:
       - name: Compile Android application with isolated Kotlin host, without building an APK
         working-directory: android-native
         run: gradle :app:compileDebugKotlin --no-daemon --stacktrace
+      - name: Attach incomplete engine comparison scorecard (not release approval)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-vs-web-comparison-incomplete
+          path: android-native/kotlin-engine/reports/engine-superiority-audit.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Attach legacy migration review inventory (not coaching-approved)
         if: always()
         uses: actions/upload-artifact@v4

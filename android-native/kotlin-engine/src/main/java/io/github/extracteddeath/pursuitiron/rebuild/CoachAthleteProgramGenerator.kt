@@ -124,6 +124,39 @@ object CoachAthleteProgramGenerator {
     }
 
     /**
+     * Prefer actual repeated movement exposures spaced over the CIRCULAR
+     * seven-day week. All declarations remain hard-checked by the composer:
+     * this is a tie-breaking quality preference, never a silent new gap.
+     *
+     * A gap of one calendar day gets a larger penalty than a gap of two.
+     * Only distinct training days count: one exercise's sets are not
+     * independent appearances, and unrelated exercises remain independent.
+     */
+    internal fun repeatLiftSpacingPenalty(
+        visits:List<ComposerVisit>,weekdays:List<Int>
+    ):Long {
+        var penalty=0L
+        for(days in visits.groupBy {it.exerciseId}.values) {
+            val appearances=days.map {visit ->
+                weekdays[visit.dayIndex]
+            }.distinct().sorted()
+            if(appearances.size<2)continue
+            for(index in appearances.indices) {
+                val today=appearances[index]
+                val next=if(index==appearances.lastIndex)
+                    appearances.first()+7 else appearances[index+1]
+                val gap=next-today
+                penalty+=when(gap) {
+                    1 -> 100L
+                    2 -> 20L
+                    else -> 0L
+                }
+            }
+        }
+        return penalty
+    }
+
+    /**
      * Rank ONLY audited feasible weeks; nothing here can waive MEV/MRV,
      * frequency, equipment, preferred session window or authored primary
      * requirements. We do not synthesize new exercises, reps or sets.
@@ -139,6 +172,7 @@ object CoachAthleteProgramGenerator {
                     ComposerFocus.PULL))"upper:"+f.name else f.name
         }).toLong()
         val purposes=spacingPenalty(weekdays,purpose.map {it.name}).toLong()
+        val repeatedLiftSpacing=repeatLiftSpacingPenalty(draft.visits,weekdays)
         val mavGap=draft.audit.muscles.values.sumOf {
             if(it.gapToMav.signum()>0)
                 it.gapToMav.multiply(java.math.BigDecimal("1000")).toLong()
@@ -157,7 +191,8 @@ object CoachAthleteProgramGenerator {
                 bounds.preferredMaximumMinutes.toLong())/2L
             abs(session.roundedMinutes-preferred)
         }
-        return listOf(recovery,purposes,mavGap,sessionFit,variation)
+        return listOf(recovery,purposes,repeatedLiftSpacing,
+            mavGap,sessionFit,variation)
     }
 
     private fun spacingPenalty(calendar:List<Int>,categories:List<String>):Int {

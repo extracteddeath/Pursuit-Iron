@@ -287,13 +287,56 @@ class CoachAthleteProgramGeneratorTest {
                 checkNotNull(actual),checkNotNull(focus),purpose,
                 checkNotNull(generated.candidate?.catalogReview)
                     .composedRequest!!.days.map {it.calendarDay})
-            assertEquals(5,score.size)
+            assertEquals(6,score.size)
             assertTrue(score.all {it>=0L})
         } else {
             assertEquals(0,generated.search.feasibleWeeksCompared)
             assertTrue(generated.issues.isNotEmpty())
         }
         assertEquals(generated,CoachAthleteProgramGenerator.generate(request()))
+    }
+
+
+    @Test fun repeatLiftRecoveryRankingRecognizesWeekBoundaryAndSeparateExercises() {
+        val calendar=listOf(0,2,4,6)
+        fun lift(day:Int,id:String="bench")=ComposerVisit(
+            day,id,ComposerPattern.HORIZONTAL_PRESS,3)
+        val spaced=listOf(lift(0),lift(2))
+        val adjacent=listOf(lift(0),lift(3))
+        assertEquals(0L,CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(
+            spaced,calendar))
+        // Saturday -> Monday is only two calendar days in the circular
+        // training week even if a fresh calendar page begins on Monday.
+        assertEquals(20L,CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(
+            adjacent,calendar))
+        val sundayMonday=listOf(lift(0),lift(3))
+        assertEquals(100L,CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(
+            sundayMonday,listOf(0,2,3,6)))
+        assertEquals(0L,CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(
+            listOf(lift(0),lift(0),lift(3,"row")),calendar))
+        assertEquals(
+            CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(spaced,calendar),
+            CoachAthleteProgramGenerator.repeatLiftSpacingPenalty(
+                spaced.reversed(),calendar))
+    }
+
+    @Test fun spacingPenaltyNeverOverridesEquipmentVolumeOrAuthoredConstraints() {
+        val input=request()
+        val generated=CoachAthleteProgramGenerator.generate(input)
+        val draft=generated.candidate?.catalogReview?.draft
+        if(generated.status==AthleteGenerationStatus.GENERATED_FOR_REVIEW) {
+            val audited=checkNotNull(draft)
+            assertTrue(audited.audit.satisfiesDeclaredHardConstraints)
+            assertTrue(audited.daysWithUnmetPrimary.isEmpty())
+            assertTrue(audited.missingRequiredVisits.isEmpty())
+            assertTrue(audited.excludedUnverifiedExerciseIds.isEmpty())
+            assertEquals(0,generated.issues.size)
+            assertTrue(generated.search.feasibleWeeksCompared in 1..5)
+        }else {
+            assertFalse(generated.maySaveProgram)
+            assertFalse(generated.mayIssueWorkout)
+        }
+        assertEquals(generated,CoachAthleteProgramGenerator.generate(input))
     }
 
 }

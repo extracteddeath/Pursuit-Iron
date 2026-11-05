@@ -213,5 +213,5 @@ Do not transfer source ownership, merge this development branch, publish an APK
 or claim superiority until real paired JavaScript/Kotlin comparisons, the
 full 14-feature and E01–E41 ledgers, authoritative history, actual Android
 onboarding-to-Finish acceptance, device power-loss/restore and blind coaching
-reviews pass. The 26-scenario comparison's evidence file remains empty until
+reviews pass. The 27-scenario comparison's evidence file remains empty until
 both engines are actually run with matched inputs.

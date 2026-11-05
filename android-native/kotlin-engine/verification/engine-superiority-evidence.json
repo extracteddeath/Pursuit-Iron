@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "baselineEngine": "legacy-javascript",
+  "candidateEngine": "independent-kotlin",
+  "userAcceptance": {
+    "approved": false,
+    "artifact": null
+  },
+  "measurements": []
+}

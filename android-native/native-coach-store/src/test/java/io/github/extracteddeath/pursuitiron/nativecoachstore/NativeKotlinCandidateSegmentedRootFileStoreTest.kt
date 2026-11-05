@@ -903,6 +903,12 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
             is NativeCandidatePagedIdentityResult.Indexed)
         val originalPageCount = candidateFiles(".pidpage").size
         assertEquals(2, originalPageCount)
+        val previousPageFiles = candidateFiles(".pidpage")
+            .associate { path ->
+                path.fileName.toString() to Files.readAllBytes(path).toList()
+            }
+        val previousDirectory = Files.readAllBytes(
+            candidateFiles(".pidx").single()).toList()
         val operation = KotlinSavedSetCorrection(
             "edit-1", 0, "set-1", "set-event-1",
             KotlinJournalSetOutcome.COMPLETED,
@@ -942,6 +948,12 @@ class NativeKotlinCandidateSegmentedRootFileStoreTest {
         assertEquals(2L, updatedPaged.view.sourceRevision)
         assertEquals(1L, updatedPaged.view.completionCount)
         assertEquals(originalPageCount, candidateFiles(".pidpage").size)
+        assertEquals(previousPageFiles, candidateFiles(".pidpage")
+            .associate { path ->
+                path.fileName.toString() to Files.readAllBytes(path).toList()
+            })
+        assertNotEquals(previousDirectory,
+            Files.readAllBytes(candidateFiles(".pidx").single()).toList())
         val pagedWorkout = pagedIndex().findWorkout(owner, athlete, "workout-1")
             as NativeCandidatePagedIdentityResult.Lookup
         val pagedReceipt = pagedIndex().findReceipt(

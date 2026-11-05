@@ -334,6 +334,46 @@ internal class NativeKotlinCandidatePagedIdentityFileStore(
             }
     }
 
+    /**
+     * Source-backed incremental layout: reuses original content-addressed
+     * identity pages for saved corrections and projects a single new Finish
+     * with the bounded 128-row pure append planner. Always compare the
+     * resulting complete identity rows against the independently replayed
+     * v2 source; a caller-supplied absence is NEVER a write permission.
+     *
+     * Rebuilding source parity remains O(lifetime history) in this
+     * inactive rehearsal; this only avoids replacing unchanged DISK pages.
+     */
+    private fun projectedLayout(
+        prior: Verified?,
+        root: NativeCandidateHistoryRootView,
+        canonical: List<KotlinHistoryManifestEntry>,
+        full: NativeSegmentedIdentityPageDirectory
+    ): NativeSegmentedIdentityPageDirectory {
+        val before = prior?.directory ?: return full
+        if (before.sourceRevision >= root.head.revision ||
+            root.head.revision != before.sourceRevision + 1)
+            return full
+        val projected: NativeSegmentedIdentityPageDirectory? = when {
+            before.completionCount == root.head.completionCount &&
+                matchesSource(before, canonical) ->
+                before.copy(sourceRootDigest = root.head.rootDigest,
+                    sourceRevision = root.head.revision)
+            before.completionCount + 1 == root.head.completionCount &&
+                canonical.isNotEmpty() &&
+                matchesSource(before, canonical.dropLast(1)) ->
+                (NativeSegmentedIdentityPageDomain.proposeAppend(
+                    before, before.sourceRootDigest, before.sourceRevision,
+                    root.head.rootDigest, root.head.revision, canonical.last())
+                    as? NativeSegmentedIdentityPageDecision.Prepared)?.directory
+            else -> null
+        }
+        return if (projected != null &&
+            NativeSegmentedIdentityPageDomain.audit(projected)
+                is NativeSegmentedIdentityPageDecision.Prepared &&
+            matchesSource(projected, canonical)) projected else full
+    }
+
     fun build(owner: String, athlete: String):
         NativeCandidatePagedIdentityResult = guarded(owner, athlete) {
         val (root, entries) = currentSource(owner, athlete)
@@ -344,29 +384,42 @@ internal class NativeKotlinCandidatePagedIdentityFileStore(
             catch (_: Exception) {
                 return@guarded reject(NativeCandidatePagedIdentityRefusal.CORRUPT_INDEX)
             }
-        if (previous != null) {
-            val old = try { readVerified(previous) } catch (_: Exception) {
+        val old = if (previous == null) null
+            else try { readVerified(previous) } catch (_: Exception) {
                 return@guarded reject(NativeCandidatePagedIdentityRefusal.CORRUPT_INDEX)
             }
-            if (old.index.sourceRevision >= root.head.revision) {
-                if (old.index.sourceRevision == root.head.revision &&
-                    old.index.rootDigest == root.head.rootDigest &&
-                    matchesSource(old.directory, entries))
-                    return@guarded NativeCandidatePagedIdentityResult.Indexed(
-                        view(old.directory), true)
-                return@guarded reject(NativeCandidatePagedIdentityRefusal.STALE_INDEX)
-            }
+        if (old != null && old.index.sourceRevision >= root.head.revision) {
+            if (old.index.sourceRevision == root.head.revision &&
+                old.index.rootDigest == root.head.rootDigest &&
+                matchesSource(old.directory, entries))
+                return@guarded NativeCandidatePagedIdentityResult.Indexed(
+                    view(old.directory), true)
+            return@guarded reject(NativeCandidatePagedIdentityRefusal.STALE_INDEX)
         }
-        try {
+        val layout = projectedLayout(old, root, entries, desired)
+        // Each old immutable page is already checksum-verified by readVerified.
+        // Preserve its exact disk digest when the complete typed page digest
+        // is unchanged; only affected page(s) need new files.
+        val oldWorkouts = old?.index?.workouts?.associateBy { it.contentDigest }
+            ?: emptyMap()
+        val oldReceipts = old?.index?.receipts?.associateBy { it.contentDigest }
+            ?: emptyMap()
+        return@guarded try {
             val indexed = DiskIndex(owner, athlete, root.head.rootDigest,
                 root.head.revision, root.head.completionCount,
-                desired.workoutPages.map { publishPage(owner, athlete, 1, it) },
-                desired.receiptPages.map { publishPage(owner, athlete, 2, it) })
+                layout.workoutPages.map { page ->
+                    oldWorkouts[page.contentDigest] ?:
+                        publishPage(owner, athlete, 1, page)
+                },
+                layout.receiptPages.map { page ->
+                    oldReceipts[page.contentDigest] ?:
+                        publishPage(owner, athlete, 2, page)
+                })
             atomicWrite(indexPath(owner, athlete), encodeIndex(indexed))
+            NativeCandidatePagedIdentityResult.Indexed(view(layout), false)
         } catch (_: Exception) {
-            return@guarded reject(NativeCandidatePagedIdentityRefusal.STORAGE_UNAVAILABLE)
+            reject(NativeCandidatePagedIdentityRefusal.STORAGE_UNAVAILABLE)
         }
-        NativeCandidatePagedIdentityResult.Indexed(view(desired), false)
     }
 
     fun audit(owner: String, athlete: String):

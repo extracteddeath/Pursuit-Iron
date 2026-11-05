@@ -282,3 +282,19 @@ coordinate journal receipt, root, BOTH paged trees, directory force/sync and
 the final commit marker under one exclusive native owner before any history
 cutover. Candidate checkpoint reads do NOT issue training, authorize a
 workout Finish/correction or expose history to Compose.
+
+## Source-verified paged identity incremental refresh
+
+The candidate disk index now uses the bounded page planner when one
+replay-authenticated v2 Finish adds a completion, and reuses unchanged typed
+content-addressed page references across both Finish and saved-correction
+refreshes. A correction changing no workout/receipt identities only replaces
+the directory bound to the new segmented-root revision. No old immutable page
+may be altered. On every path it still constructs the independently verified
+complete source layout, checks old-page integrity, authenticates candidate
+root parity, and verifies every projected row before publishing. Unmatched
+revisions or unexpected legacy changes fall back to the full source layout.
+
+This is an **I/O optimization for a candidate mirror**, not evidence of
+scalable latency, a removed v2 4,096-cap, an atomic cross-file writer or
+production cutover. Source and page verification still scan lifetime records.

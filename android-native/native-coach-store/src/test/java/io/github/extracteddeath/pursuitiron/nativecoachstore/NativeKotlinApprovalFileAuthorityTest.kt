@@ -114,8 +114,14 @@ class NativeKotlinApprovalFileAuthorityTest {
     }
 
     @Test fun forgedMultiRepApprovalOrUnknownSetKeyIsNotPersistable() {
-        val baseline=approval().copy(grant=KotlinWorkoutSelectionGrant(
-            "grant-2","future-session",source,1))
+        val fixed=program().copy(exercises=listOf(press,row).map {
+            it.copy(minimumSetsPerVisit=2,maximumSetsPerVisit=2,
+                maximumVisits=3,requiredVisits=3)
+        })
+        val baseline=approval().copy(
+            program=fixed,
+            grant=KotlinWorkoutSelectionGrant(
+                "grant-2","future-session",source,1))
         val proof=NativeKotlinAcceptedRepTargets(
             "past-session",7,"db-press","db-press:d1:s0",
             listOf(11,12),listOf(12,12),CoachReadiness.NORMAL)

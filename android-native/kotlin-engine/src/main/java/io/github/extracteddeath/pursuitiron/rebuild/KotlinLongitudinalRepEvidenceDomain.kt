@@ -73,7 +73,8 @@ object KotlinLongitudinalRepEvidenceDomain {
             val load=it.issuedLoad as? DraftSetLoad.Verified
             load==null || load.unit!=approvedUnit ||
                 load.basis!=approvedBasis ||
-                load.value.compareTo(approvedLoad)!=0
+                load.value.compareTo(approvedLoad)!=0 ||
+                (it.actual!=null && it.actual.unit!=approvedUnit)
         })
             return reject(LongitudinalRepEvidenceRefusal.CHANGED_EQUIPMENT_OR_ISSUED_LOAD)
         if(ordered.any { it.issuedRir!=approvedTargetRir })

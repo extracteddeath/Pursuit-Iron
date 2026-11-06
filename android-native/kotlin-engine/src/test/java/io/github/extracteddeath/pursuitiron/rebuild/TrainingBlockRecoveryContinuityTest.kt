@@ -340,6 +340,67 @@ class TrainingBlockRecoveryContinuityTest {
         assertEquals(repaired,autoRepair(source))
     }
 
+    private fun repeatedStrength(weeks:Int)=cycle().let {source->
+        source.copy(blocks=source.blocks.map {block->
+            if(block.blockId=="strength")block.copy(weeks=weeks)
+            else block
+        })
+    }
+
+    @Test fun generatedRepairCoversEveryWeekOfAnUnchangedStrengthTemplate() {
+        val source=repeatedStrength(3)
+        val proposed=autoRepair(source)
+        assertEquals(proposed.explanation,
+            AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,
+            proposed.status)
+        assertEquals(3,proposed.repairedWeekCount)
+        assertEquals(13,proposed.addedWorkingSets)
+        val repaired=checkNotNull(proposed.proposedOption).proposedCycle
+        assertEquals(3,repaired.blocks.last().weeks)
+        assertEquals(source.blocks.take(2),repaired.blocks.take(2))
+        assertEquals(listOf(30,9,24,24,24),
+            proposed.comparison.evaluated.single()
+                .coachingAudit!!.weeks.map {it.workingSets})
+        val after=proposed.comparison.evaluated.single()
+            .coachingAudit!!.weeks.drop(2)
+        assertEquals(3,after.size)
+        assertTrue(after.all {week->
+            listOf(TrainingMuscle.CHEST,TrainingMuscle.LATS,
+                TrainingMuscle.QUADS).all {muscle->
+                week.directSets.getValue(muscle)==n("8") &&
+                    week.totalSetCredits.getValue(muscle)<=n("10")
+            }
+        })
+        assertEquals(proposed,autoRepair(source))
+        assertEquals(source,repeatedStrength(3))
+        assertFalse(proposed.mayIssueWorkout)
+        assertFalse(proposed.mayApplyAutomatically)
+    }
+
+    @Test fun longStrengthBlockRefusesUnboundedTemplateExpansion() {
+        val denied=autoRepair(source=repeatedStrength(9))
+        assertEquals(AdaptiveStrengthVolumeRepairStatus.PRESCRIPTION_UNSUPPORTED,
+            denied.status)
+        assertNull(denied.proposedOption)
+        assertEquals(0,denied.repairedWeekCount)
+    }
+
+    @Test fun changingOneStrengthWeekDoesNotSilentlyOverwriteItsOverrides() {
+        val source=repeatedStrength(3)
+        val day=source.blocks.last().days.first()
+        val slot=day.slots.first()
+        val varied=source.copy(weekOverrides=mapOf(
+            "strength" to listOf(CustomWeekSlotOverride(
+                2,day.weekday,slot.slotId,slot.sets+slot.sets))))
+        val result=autoRepair(source=varied)
+        assertNotEquals(AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,
+            result.status)
+        assertNull(result.proposedOption)
+        assertEquals(0,result.repairedWeekCount)
+        assertEquals(varied.weekOverrides,source.copy(
+            weekOverrides=varied.weekOverrides).weekOverrides)
+    }
+
     @Test fun generatedStrengthRepairNeedsIndependentSetCountPermission() {
         val denied=autoRepair(permissions=CustomCycleCoachPermissions())
         assertEquals(AdaptiveStrengthVolumeRepairStatus.PERMISSION_REQUIRED,

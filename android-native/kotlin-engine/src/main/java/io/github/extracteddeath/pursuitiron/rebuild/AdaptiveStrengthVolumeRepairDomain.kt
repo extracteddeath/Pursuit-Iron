@@ -32,7 +32,11 @@ data class AdaptiveStrengthVolumeRepairResult(
     val proposedOption:AdaptiveCycleOption?,
     val addedWorkingSets:Int,
     val searchTruncated:Boolean,
-    val explanation:String
+    val explanation:String,
+    /** Number of identical resolved strength weeks covered by this candidate;
+     * zero for refusals. Added working sets are per weekly template, not
+     * the sum across the entire multi-week block. */
+    val repairedWeekCount:Int=0
 ) {
     val maySaveProgram:Boolean get()=false
     val mayApplyAutomatically:Boolean get()=false
@@ -69,9 +73,9 @@ object AdaptiveStrengthVolumeRepairDomain {
             reason:String,
             comparison:AdaptiveCycleComparison=initial,
             option:AdaptiveCycleOption?=null,
-            added:Int=0,truncated:Boolean=false
+            added:Int=0,truncated:Boolean=false,weeks:Int=0
         )=AdaptiveStrengthVolumeRepairResult(status,comparison,option,
-            added,truncated,reason)
+            added,truncated,reason,weeks)
         if(!initial.sourceRepairRequired)
             return response(AdaptiveStrengthVolumeRepairStatus.SOURCE_UNRESOLVED,
                 "Source defects are not limited to this future block's reviewed training-dose continuity.")
@@ -86,21 +90,34 @@ object AdaptiveStrengthVolumeRepairDomain {
         val profile=input.review.athleteSetup.reviewed
         val policy=block?.let {input.review.coaching.policiesByPhase[it.phase]}
         val continuity=input.review.coaching.continuityPolicy
-        val target=initial.sourceAudit.weeks.singleOrNull {
+        val targetWeeks=initial.sourceAudit.weeks.filter {
             it.blockId==input.review.targetBlockId
         }
+        val target=targetWeeks.firstOrNull()
+        val identicalWeeks=target!=null &&
+            targetWeeks.size==block?.weeks &&
+            targetWeeks.all {week->
+                week.blockPurpose==CustomBlockPurpose.TRAINING &&
+                    week.workingSets==target.workingSets &&
+                    week.directSets==target.directSets &&
+                    week.totalSetCredits==target.totalSetCredits &&
+                    week.directDays==target.directDays &&
+                    week.estimatedSecondsByDay==target.estimatedSecondsByDay
+            }
         val previous=target?.let {current ->
             initial.sourceAudit.weeks.lastOrNull {
                 it.absoluteWeek<current.absoluteWeek &&
                     it.blockPurpose==CustomBlockPurpose.TRAINING
             }
         }
-        // A single resolved prospective week makes every addition auditable.
-        // Do not erase athlete week overrides, amplifiers, or intentionally
-        // varied top/backoff prescriptions to satisfy a simple dose metric.
+        // A uniform authored template can be repaired for EACH projected
+        // week without inventing a progression. Keep this search bounded
+        // to eight weeks and refuse overrides, time changes or nonuniform
+        // working prescriptions: never flatten custom programming.
         if(block==null || block.phase!=TrainingPhase.STRENGTH ||
             block.purpose!=CustomBlockPurpose.TRAINING ||
-            block.weeks!=1 || target==null || previous==null ||
+            block.weeks !in 1..8 || !identicalWeeks ||
+            target==null || previous==null ||
             profile==null || policy==null || continuity==null ||
             cycle.weekOverrides[block.blockId].orEmpty().isNotEmpty() ||
             block.days.any {day->day.slots.any {slot->
@@ -111,7 +128,7 @@ object AdaptiveStrengthVolumeRepairDomain {
                     work.any {it!=work.first()}
             }})
             return response(AdaptiveStrengthVolumeRepairStatus.PRESCRIPTION_UNSUPPORTED,
-                "Only one-week strength blocks with verified, uniform working sets and no custom overrides or amplifiers can be repaired automatically.")
+                "Only bounded, identical strength weeks with verified uniform working sets and no custom overrides or amplifiers can be repaired automatically.")
 
         val dropTotal=continuity.maximumTotalWorkingSetDropFraction
         val dropDirect=continuity.maximumDirectMuscleDropFraction
@@ -231,7 +248,7 @@ object AdaptiveStrengthVolumeRepairDomain {
                 "The candidate still fails the full-cycle dose, equipment, time, phase or edit-permission review.",
                 comparison,added=added)
         return response(AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,
-            "Rebalanced $added existing, exact strength working-set prescriptions; all unchanged blocks and training records remain untouched.",
-            comparison,proposed,added)
+            "Rebalanced $added exact working-set prescriptions per week across ${block.weeks} strength weeks; all unchanged blocks and training records remain untouched.",
+            comparison,proposed,added,weeks=block.weeks)
     }
 }

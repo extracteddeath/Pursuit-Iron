@@ -232,8 +232,14 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                         NativeCustomJournalRefusal.NOT_AUTHORIZED)
                 val currentRecord=read(ownerKey,workoutId,current)
                 if(currentRecord is NativeCustomJournalResult.Durable) {
+                    // Even historical replay is scoped to the ORIGINAL
+                    // consent type; never cross-call into activated authority.
+                    val origin=(prepared.open(ownerKey,workoutId)
+                        as? NativeCustomPreparedRead.Found)?.workout
                     val snap=currentRecord.issued.journal.snapshot
-                    return@withOwnerTransaction if(snap.stamp.cycleId==cycleId &&
+                    return@withOwnerTransaction if(origin?.authority==
+                            NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                        snap.stamp.cycleId==cycleId &&
                         snap.absoluteWeek==absoluteWeek && snap.weekday==weekday)
                         currentRecord
                     else NativeCustomJournalResult.Rejected(
@@ -304,11 +310,6 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         }
     }
 
-    /**
-     * Durable actual set / amplifier receipt; explicitly excludes Finish.
-     * The future history transaction coordinator must perform Finish under
-     * this same fence with a manifest redo intent BEFORE committing history.
-     */
     /**
      * Isolated NEW authority for a previously activated future custom block.
      * No global barrier release: ONLY a precisely signed, same-block,
@@ -426,6 +427,11 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
     }
 
+    /**
+     * Durable actual set / amplifier receipt; explicitly excludes Finish.
+     * The shared history transaction coordinator commits Finish through
+     * manifest redo before making any completed session visible.
+     */
     fun record(
         ownerKey:String,workoutId:String,
         operation:CustomWorkoutJournalOperation.Record

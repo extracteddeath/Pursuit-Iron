@@ -229,4 +229,78 @@ class CustomNextWorkoutCoachingDomainTest {
             result.nextSetSuggestions.map{it.setKey})
     }
 
+
+    @Test fun verifiedLoadAmendmentOnlyChangesWorkingSetsForThisDay() {
+        val planned=snapshot(5)
+        val reviewed=review(next=planned)
+        val approved=CustomNextLoadAmendmentDomain.propose(
+            planned,"main",reviewed,stock(),n(5))
+        assertTrue(approved.toString(),approved is CustomNextLoadAmendmentResult.Proposed)
+        val changed=(approved as CustomNextLoadAmendmentResult.Proposed).amendment
+        assertEquals(n(200),changed.previousLoad)
+        assertEquals(n(205),changed.proposedLoad)
+        assertEquals(LoadUnit.LB,changed.unit)
+        assertEquals(LoadBasis.MACHINE_STACK,changed.basis)
+        assertEquals(planned.slots.single().sets.map{it.setKey},
+            changed.workingSetKeys)
+        assertEquals(listOf(n(205),n(205)),
+            changed.amended.slots.single().sets.map{
+                (it.prescription.load as DraftSetLoad.Verified).value})
+        assertEquals(planned.slots.single().sets.map{it.prescription.reps},
+            changed.amended.slots.single().sets.map{it.prescription.reps})
+        assertEquals(listOf(n(200),n(200)),planned.slots.single().sets.map{
+            (it.prescription.load as DraftSetLoad.Verified).value})
+        assertEquals(planned.stamp,changed.amended.stamp)
+        assertFalse(changed.mayIssueWorkout)
+        assertFalse(changed.mayEditCycle)
+    }
+
+    @Test fun unavailableStepMixedLoadsAndNearFailureCannotBecomeWeightApprovals() {
+        val planned=snapshot(5)
+        val success=review(next=planned)
+        assertEquals(CustomNextLoadAmendmentResult.Rejected(
+            CustomNextLoadAmendmentRefusal.UNVERIFIED_EQUIPMENT),
+            CustomNextLoadAmendmentDomain.propose(planned,"main",
+                success,VerifiedLoadStock.Totals(
+                    LoadUnit.LB,LoadBasis.MACHINE_STACK,listOf(n(200),n(210))),n(5)))
+        assertEquals(CustomNextLoadAmendmentResult.Rejected(
+            CustomNextLoadAmendmentRefusal.INVALID_INCREMENT),
+            CustomNextLoadAmendmentDomain.propose(planned,"main",
+                success,stock(),n(2)))
+        val unsafe=review(next=snapshot(5,loads=listOf(200,215)),
+            sessions=listOf(
+                completed(1,3,issued=listOf(200,215),actual=listOf(200,215)),
+                completed(2,4,issued=listOf(200,215),actual=listOf(200,215))))
+        assertNull(unsafe.loadReviewCandidate)
+        assertEquals(CustomNextLoadAmendmentResult.Rejected(
+            CustomNextLoadAmendmentRefusal.NOT_EARNED),
+            CustomNextLoadAmendmentDomain.propose(
+                snapshot(5,loads=listOf(200,215)),"main",unsafe,stock(),n(15)))
+        val near=review(sessions=listOf(
+            completed(1,3),completed(2,4,rirs=listOf(2,1))))
+        assertEquals(CustomNextLoadAmendmentResult.Rejected(
+            CustomNextLoadAmendmentRefusal.NOT_EARNED),
+            CustomNextLoadAmendmentDomain.propose(planned,"main",
+                near,stock(),n(5)))
+    }
+
+    @Test fun weekdaySpecificLoadReviewCannotIncreaseAnotherDaysBench() {
+        val history=listOf(
+            completed(1,3,day=0),completed(2,3,day=2),
+            completed(3,4,day=0,reps=listOf(7,8)),
+            completed(4,4,day=2))
+        val upper=review(next=snapshot(5,0),sessions=history)
+        val push=review(next=snapshot(5,2),sessions=history)
+        assertNull(upper.loadReviewCandidate)
+        assertEquals(n(205),push.loadReviewCandidate)
+        assertEquals(CustomNextLoadAmendmentResult.Rejected(
+            CustomNextLoadAmendmentRefusal.NOT_EARNED),
+            CustomNextLoadAmendmentDomain.propose(
+                snapshot(5,0),"main",upper,stock(),n(5)))
+        assertTrue(CustomNextLoadAmendmentDomain.propose(
+            snapshot(5,2),"main",push,stock(),n(5))
+            is CustomNextLoadAmendmentResult.Proposed)
+    }
+
+
 }

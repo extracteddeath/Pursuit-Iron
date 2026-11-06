@@ -5,10 +5,11 @@ import java.util.Collections
 
 /**
  * Projection only. Call from the exhaustive, owner-fenced history reader.
- * For the NEXT approved session purpose, use the most recent matching
- * occurrence from the entire authenticated history. Interleaved workouts
- * for other purposes must not erase that history. Never skip an intervening
- * custom workout or changed source to cherry-pick an old success.
+ * For the NEXT approved training day and session purpose, use the most
+ * recent matching occurrence from the entire authenticated history.
+ * Interleaved workouts on other days cannot advance this day's reps.
+ * Never skip an intervening custom workout or changed source to
+ * cherry-pick an old success.
  */
 enum class NativeCurrentRepPrescriptionRefusal {
     INVALID_SOURCE_OR_HISTORY,
@@ -78,13 +79,12 @@ object NativeKotlinCurrentRepPrescriptionDomain {
                     "The newly approved workout cannot be staged safely."))
         if(day.purpose==ComposerSessionPurpose.UNSPECIFIED)
             return reject(NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED)
-        val slotScoped=approval.policies.any {
-            it.exerciseId==exerciseId && it.dayIndex!=null
-        }
+        // A workout's immutable approved day identity determines which
+        // evidence may advance its reps. Authored day-specific load policy
+        // is optional and never grants permission to borrow another day.
         val last=appearances.filterIsInstance<
             NativeKotlinMixedHistoryCompletion.Composer>().lastOrNull {
-                it.purpose==day.purpose &&
-                    (!slotScoped || it.dayIndex==day.dayIndex)
+                it.purpose==day.purpose && it.dayIndex==day.dayIndex
             } ?:return reject(NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED)
         // Validate the whole suffix after the matching workout, not just
         // the selected event. A custom appearance or changed program/gym

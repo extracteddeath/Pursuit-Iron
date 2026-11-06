@@ -356,7 +356,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         val approved=approval().copy(policies=policies,
             grant=KotlinWorkoutSelectionGrant("grant-3","workout-3",source,0))
         val strength=purposeLoad(composer(1,
-            purpose=ComposerSessionPurpose.STRENGTH_SKILL),"25")
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            .copy(dayIndex=0),"25")
         val volume=composer(2,purpose=ComposerSessionPurpose.HYPERTROPHY)
         val result=NativeKotlinCurrentRepPrescriptionDomain.inspect(
             approved,timeline(strength,volume),"db-press",
@@ -389,7 +390,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         val approved=approval().copy(policies=policies,
             grant=KotlinWorkoutSelectionGrant("grant-3","workout-3",source,0))
         val strength=purposeLoad(composer(1,
-            purpose=ComposerSessionPurpose.STRENGTH_SKILL),"25")
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            .copy(dayIndex=0),"25")
         fun inspect(vararg histories:NativeKotlinMixedHistoryCompletion)=
             NativeKotlinCurrentRepPrescriptionDomain.inspect(
                 approved,timeline(*histories),"db-press",
@@ -593,6 +595,36 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             returned is NativeCurrentRepPrescriptionResult.Reviewed)
         assertEquals("workout-2",
             (returned as NativeCurrentRepPrescriptionResult.Reviewed).priorWorkoutId)
+    }
+
+
+    @Test fun unscopedRepPolicyKeepsUpperAndPushEvidenceIndependent() {
+        // Without an explicit day-specific policy, day ownership must still
+        // be taken from the original authenticated issued workout.
+        val next=approval().copy(grant=
+            KotlinWorkoutSelectionGrant("grant-4","workout-4",source,1))
+        val unrelated=composer(1).copy(dayIndex=2)
+        val absent=NativeKotlinCurrentRepPrescriptionDomain.inspect(
+            next,timeline(unrelated),"db-press",CoachReadiness.NORMAL,false)
+        assertEquals(NativeCurrentRepPrescriptionResult.Rejected(
+            NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED),absent)
+        val upper=composer(2,completedReps=listOf(11,12))
+            .copy(dayIndex=1)
+        val latestPush=composer(3,completedReps=listOf(12,12))
+            .copy(dayIndex=2)
+        val valid=NativeKotlinCurrentRepPrescriptionDomain.inspect(
+            next,timeline(unrelated,upper,latestPush),"db-press",
+            CoachReadiness.NORMAL,false)
+        assertTrue(valid.toString(),
+            valid is NativeCurrentRepPrescriptionResult.Reviewed)
+        val selected=valid as NativeCurrentRepPrescriptionResult.Reviewed
+        assertEquals("workout-2",selected.priorWorkoutId)
+        assertFalse(selected.canIssueWorkout)
+        assertTrue(selected.proposal.toString(),
+            selected.proposal is AdaptiveSetPrescriptionResult.Candidate)
+        assertEquals(listOf(11,12),
+            (selected.proposal as AdaptiveSetPrescriptionResult.Candidate)
+                .observedReps)
     }
 
 }

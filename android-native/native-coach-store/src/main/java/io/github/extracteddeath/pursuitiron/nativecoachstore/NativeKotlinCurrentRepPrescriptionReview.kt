@@ -113,7 +113,10 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         val prescription=CoachSessionPrescriptionDomain.selectedPolicy(
             approval.policies,exerciseId,day.purpose,day.dayIndex)
             ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
-        if(prescription.scheme!=SetLoadScheme.STRAIGHT ||
+        val reviewedBackoff=prescription.scheme==SetLoadScheme.LAST_SET_BACKOFF &&
+            prescription.backoffReps==prescription.workingReps &&
+            prescription.backoffRir==prescription.targetRir
+        if((prescription.scheme!=SetLoadScheme.STRAIGHT && !reviewedBackoff) ||
             prescription.warmups.isNotEmpty() ||
             last.evidence.sets.any {
                 it.exerciseId==exerciseId && it.type==DraftSetType.WARMUP
@@ -128,22 +131,29 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         val working=day.targets.filter {
             it.exerciseId==exerciseId && it.type==DraftSetType.WORKING
         }
-        // Never substitute the exercise-wide default for a session-specific
-        // issued load. All-set straight progression requires an EXACT,
-        // uniform, stock-verified working weight for the requested purpose.
+        // No transfer from other days or legacy exercise-wide defaults.
+        // The FULL currently approved next day supplies the original stable
+        // working-set load of EVERY ordinal. Both the historical issuance
+        // and exact equipment stock must independently match it.
         val verified=working.firstOrNull()?.load as? DraftSetLoad.Verified
             ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
-        if(working.any {
-            val actual=it.load as? DraftSetLoad.Verified
-            actual==null || actual.unit!=verified.unit ||
-                actual.basis!=verified.basis ||
-                actual.value.compareTo(verified.value)!=0
-        })
+        val perSet=working.map {it.load as? DraftSetLoad.Verified
+            ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)}
+        if(perSet.any{
+                it.unit!=verified.unit || it.basis!=verified.basis
+            } || (!reviewedBackoff && perSet.any{
+                it.value.compareTo(verified.value)!=0
+            }) || (reviewedBackoff && (
+                perSet.size<2 ||
+                    perSet.dropLast(1).any{
+                        it.value.compareTo(verified.value)!=0
+                    } || perSet.last().value>=verified.value)))
             return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         val normalized=KotlinLongitudinalRepEvidenceDomain.review(
             original,last.evidence.workoutId,prescription.workingReps,
             working.size,verified.value,inventory,
-            equipment.unit,inventory.basis,prescription.targetRir)
+            equipment.unit,inventory.basis,prescription.targetRir,
+            if(reviewedBackoff)perSet.map{it.value} else null)
             as? LongitudinalRepEvidenceResult.Comparable
             ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         val actualEvidence=normalized.session

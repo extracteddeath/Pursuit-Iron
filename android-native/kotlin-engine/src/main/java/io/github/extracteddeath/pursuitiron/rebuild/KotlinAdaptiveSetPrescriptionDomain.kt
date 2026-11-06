@@ -105,51 +105,72 @@ object KotlinAdaptiveSetPrescriptionDomain {
             return denied(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
                 "The latest exercise history does not match all approved next-session working sets.")
 
-        // Do not overwrite a warmup/top-set/backoff or a purpose-specific
-        // scheme. Future supported variants need distinct, tested policies.
+        // A recognized last-set backoff is eligible ONLY if its rep envelope
+        // and issued RIR are the same as the main sets. Each prescribed
+        // weight is independently re-staged and verified, never promoted to
+        // the heaviest set. Other advanced schemes remain unchanged.
         val policy=CoachSessionPrescriptionDomain.selectedPolicy(
             base.policies,history.exerciseId,original.purpose,original.dayIndex)
-        if(policy==null || policy.scheme!=SetLoadScheme.STRAIGHT ||
+        val backoff=policy?.scheme==SetLoadScheme.LAST_SET_BACKOFF
+        if(policy==null || (
+                policy.scheme!=SetLoadScheme.STRAIGHT && !backoff) ||
+            (backoff && (
+                policy.backoffReps!=policy.workingReps ||
+                    policy.backoffRir!=policy.targetRir)) ||
             policy.warmups.isNotEmpty() ||
             original.targets.any {
                 it.exerciseId==history.exerciseId && it.type==DraftSetType.WARMUP
             })
             return denied(AdaptiveSetPrescriptionRefusal.UNSUPPORTED_SET_SCHEME,
-                "Authored warmups, top/backoff and advanced loading require their own prescription.")
+                "This load/effort scheme requires a separate approved set-specific prescription.")
 
-        // Resolve the CURRENT approved SESSION'S actual verified target,
-        // not the program-wide Composer exercise default. Purpose-specific
-        // load policies may lawfully use a different exact stock weight.
-        // Mixed top/backoff set schemes remain forbidden above.
-        val issuedLoads=chosen.map { it.load as DraftSetLoad.Verified }
+        // Verify EVERY ordinal against the CURRENT full approved schedule,
+        // including the separately authored last backoff. Uniform loading is
+        // still required for normal STRAIGHT prescriptions.
+        val issuedLoads=chosen.map {it.load as DraftSetLoad.Verified}
         val purposeLoad=issuedLoads.first().value
         val observed=history.observations.sortedBy {it.workingOrdinal}
         if(issuedLoads.any {
-            it.basis!=equipment.inventory?.basis ||
-                it.unit!=history.unit ||
-                !same(it.value,purposeLoad)
-        } ||
+                it.basis!=equipment.inventory?.basis ||
+                    it.unit!=history.unit
+            } || (!backoff && issuedLoads.any{!same(it.value,purposeLoad)}) ||
+            (backoff && (
+                issuedLoads.size<2 ||
+                    issuedLoads.dropLast(1).any{
+                        !same(it.value,purposeLoad)
+                    } || issuedLoads.last().value>=purposeLoad)) ||
             observed.size!=chosen.size ||
             observed.map {it.workingOrdinal}!=(0 until chosen.size).toList() ||
-            observed.any { it.issuedLoad==null ||
-                !same(checkNotNull(it.issuedLoad),purposeLoad) })
+            observed.indices.any {index ->
+                observed[index].issuedLoad==null ||
+                    !same(checkNotNull(observed[index].issuedLoad),
+                        issuedLoads[index].value)
+            })
             return denied(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
-                "Working-set load or ordinal differs from the exact approved session prescription.")
+                "Each original issued working-set load must match its new approved ordinal.")
 
         val proposed=runCatching {
             FatigueAwareRepTargetReviewDomain.assess(
                 history,equipment.inventory,
                 checkNotNull(equipment.inventory).basis,
-                request.readiness,request.movementRestricted)
+                request.readiness,request.movementRestricted,
+                verifiedPerSetLoading=backoff)
         }.getOrNull()
         val targets=proposed?.candidateRepTargets
             ?:return denied(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
                 "No demonstrated single-set rep increase. Keep the approved targets.")
         if(targets.size!=chosen.size ||
             targets.any { it !in history.targetReps.minimum..history.targetReps.maximum } ||
-            proposed.observedLoad?.let {same(it,purposeLoad)} != true)
+            (!backoff &&
+                proposed.observedLoad?.let{same(it,purposeLoad)}!=true) ||
+            (backoff && proposed.observedSetLoads?.let{actual ->
+                actual.size==issuedLoads.size &&
+                    actual.indices.all {i ->
+                        same(actual[i],issuedLoads[i].value)
+                    }
+            }!=true))
             return denied(AdaptiveSetPrescriptionRefusal.CANDIDATE_REAUDIT_FAILED,
-                "Observed loads or proposed repetitions no longer match the approved exercise.")
+                "Observed per-set loads or proposed reps no longer match the approved exercise.")
 
         val earlierTargets=request.previouslyIssuedExactReps
         var kind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP

@@ -50,7 +50,10 @@ object KotlinLongitudinalRepEvidenceDomain {
         stock:VerifiedLoadStock?,
         approvedUnit:LoadUnit,
         approvedBasis:LoadBasis,
-        approvedTargetRir:Int?
+        approvedTargetRir:Int?,
+        /** Only native re-staged, exact per-ordinal prescription may supply
+         * different issued working loads. A UI flag is not sufficient. */
+        approvedSetLoads:List<BigDecimal>?=null
     ):LongitudinalRepEvidenceResult {
         fun reject(reason:LongitudinalRepEvidenceRefusal)=
             LongitudinalRepEvidenceResult.Rejected(reason)
@@ -62,19 +65,22 @@ object KotlinLongitudinalRepEvidenceDomain {
             ordered.any {it.type!=DraftSetType.WORKING ||
                 it.exerciseId!=historical.exerciseId})
             return reject(LongitudinalRepEvidenceRefusal.NO_SETS_OR_INVALID_ORDER)
-        val inspected=EquipmentLoadDomain.inspect(
-            stock,approvedLoad,approvedUnit)
-        if(stock==null || stock.unit!=approvedUnit ||
+        val expected=approvedSetLoads ?:List(expectedSets){approvedLoad}
+        if(expected.size!=expectedSets ||
+            stock==null || stock.unit!=approvedUnit ||
             stock.basis!=approvedBasis ||
-            inspected !is LoadInspection.Confirmed ||
-            !inspected.exact || inspected.basis!=approvedBasis)
+            expected.any {planned ->
+                val checked=EquipmentLoadDomain.inspect(stock,planned,approvedUnit)
+                checked !is LoadInspection.Confirmed ||
+                    !checked.exact || checked.basis!=approvedBasis
+            })
             return reject(LongitudinalRepEvidenceRefusal.UNVERIFIED_PHYSICAL_STOCK)
-        if(ordered.any {
-            val load=it.issuedLoad as? DraftSetLoad.Verified
+        if(ordered.any {set ->
+            val load=set.issuedLoad as? DraftSetLoad.Verified
             load==null || load.unit!=approvedUnit ||
                 load.basis!=approvedBasis ||
-                load.value.compareTo(approvedLoad)!=0 ||
-                (it.actual!=null && it.actual.unit!=approvedUnit)
+                load.value.compareTo(expected[set.originalOrdinal])!=0 ||
+                (set.actual!=null && set.actual.unit!=approvedUnit)
         })
             return reject(LongitudinalRepEvidenceRefusal.CHANGED_EQUIPMENT_OR_ISSUED_LOAD)
         if(ordered.any { it.issuedRir!=approvedTargetRir })

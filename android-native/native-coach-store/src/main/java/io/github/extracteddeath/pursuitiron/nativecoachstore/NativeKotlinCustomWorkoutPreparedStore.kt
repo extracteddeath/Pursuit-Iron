@@ -365,16 +365,18 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 session.absoluteWeek!=absoluteWeek || session.weekday!=weekday)
                 return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                     NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
-            val repApproval=repApprovals?.readCurrent(ownerKey,workoutId,
-                coachingInputs,absoluteWeek,weekday)
-                ?:NativeCustomNextRepRead.Missing
+            val repApproval=NativeKotlinStaleWorkoutAdvicePolicy.rep(
+                repApprovals?.readCurrent(ownerKey,workoutId,
+                    coachingInputs,absoluteWeek,weekday)
+                    ?:NativeCustomNextRepRead.Missing)
             if(repApproval is NativeCustomNextRepRead.Rejected)
                 return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                     NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
             val amended=(repApproval as? NativeCustomNextRepRead.Current)
-            val loadRead=loadApprovals?.readCurrent(ownerKey,workoutId,
-                coachingInputs,absoluteWeek,weekday)
-                ?:NativeCustomLoadRead.Missing
+            val loadRead=NativeKotlinStaleWorkoutAdvicePolicy.load(
+                loadApprovals?.readCurrent(ownerKey,workoutId,
+                    coachingInputs,absoluteWeek,weekday)
+                    ?:NativeCustomLoadRead.Missing)
             if(loadRead is NativeCustomLoadRead.Rejected ||
                 (amended!=null && loadRead is NativeCustomLoadRead.Current))
                 return@withOwnerTransaction NativeCustomPrepareResult.Rejected(

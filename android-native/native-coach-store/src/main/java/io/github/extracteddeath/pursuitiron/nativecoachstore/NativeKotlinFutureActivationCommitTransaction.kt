@@ -43,6 +43,7 @@ enum class NativeFutureCommitRefusal {
 }
 sealed interface NativeFutureCommitReview {
     data object Missing:NativeFutureCommitReview
+    data object Cancelled:NativeFutureCommitReview
     data class Prepared(val cycleId:String,val blockId:String):
         NativeFutureCommitReview
     data class Applied(val context:NativeFutureActivatedCoaching,
@@ -252,6 +253,42 @@ class NativeKotlinFutureActivationCommitTransaction(
             resolved(ownerKey,h,saved,true)
         }}.getOrElse{NativeFutureCommitReview.Rejected(
             NativeFutureCommitRefusal.INTENT_CORRUPT)}
+
+    /**
+     * Safe rollback only BEFORE the source CAS and only by explicit athlete
+     * confirmation. Clear the write-ahead intent first, then the handoff;
+     * a crash between those operations still leaves the issuance barrier.
+     */
+    fun abortBeforeSourceApplied(
+        ownerKey:String,approvalRevision:Long,approvedFingerprint:String,
+        athleteConfirmed:Boolean
+    ):NativeFutureCommitReview =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            if(!athleteConfirmed || !hash.matches(approvedFingerprint))
+                return@withOwnerTransaction NativeFutureCommitReview.Rejected(
+                    NativeFutureCommitRefusal.NOT_AUTHORIZED)
+            val staged=(handoffs.read(ownerKey) as? NativeFutureHandoffReview.Staged)
+                ?.receipt ?:return@withOwnerTransaction NativeFutureCommitReview.Rejected(
+                    NativeFutureCommitRefusal.HANDOFF_MISSING)
+            if(staged.approvalRevision!=approvalRevision ||
+                staged.approvalFingerprint!=approvedFingerprint)
+                return@withOwnerTransaction NativeFutureCommitReview.Rejected(
+                    NativeFutureCommitRefusal.APPROVAL_STALE)
+            val saved=intent(ownerKey)
+            if(saved!=null) {
+                if(resolved(ownerKey,staged,saved,true) !is
+                    NativeFutureCommitReview.Prepared)
+                    return@withOwnerTransaction NativeFutureCommitReview.Rejected(
+                        NativeFutureCommitRefusal.SOURCE_CONFLICT)
+                Files.delete(path(ownerKey))
+            }
+            when(handoffs.cancel(ownerKey,approvalRevision,approvedFingerprint,true)){
+                NativeFutureHandoffReview.Cancelled->NativeFutureCommitReview.Cancelled
+                else->NativeFutureCommitReview.Rejected(
+                    NativeFutureCommitRefusal.SOURCE_CONFLICT)
+            }
+        }}.getOrElse{NativeFutureCommitReview.Rejected(
+            NativeFutureCommitRefusal.STORAGE_UNAVAILABLE)}
 
     /** Idempotent under crash replay; never changes an already-applied source. */
     fun commit(ownerKey:String):NativeFutureCommitReview =

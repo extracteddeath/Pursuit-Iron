@@ -100,35 +100,34 @@ object NativeKotlinCurrentLoadCoachReview {
         }
         if (appearances.size < 2)
             return refuse(NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY)
-        val purposeScoped=approval.policies.any {
-            it.exerciseId==exerciseId &&
-                (it.purposeWorkingLoad!=null || it.dayIndex!=null)
-        }
-        val dayScoped=approval.policies.any {
-            it.exerciseId==exerciseId && it.dayIndex!=null
-        }
-        val nextPurpose=if(purposeScoped)approval.program.sessionIntents
-            .singleOrNull {it.dayIndex==approval.grant.dayIndex}?.purpose else null
-        if(purposeScoped && (nextPurpose==null ||
-            nextPurpose==ComposerSessionPurpose.UNSPECIFIED))
+        // The candidate NEXT day is independently re-staged from the
+        // currently approved program. Exercise-wide/purpose-wide policies
+        // do not grant permission to borrow another day's bench history.
+        val staged=KotlinWorkoutSnapshotDomain.stage(
+            KotlinWorkoutSnapshotRequest(source,source,approval.grant,
+                approval.program,approval.policies))
+        val nextDay=(staged as? KotlinWorkoutSnapshotResult.Staged)?.snapshot
+            ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
+        val nextPurpose=nextDay.purpose
+        if(nextPurpose==ComposerSessionPurpose.UNSPECIFIED ||
+            nextDay.dayIndex!=approval.grant.dayIndex)
             return refuse(NativeCurrentLoadReviewRefusal.PURPOSE_CHANGED)
-        val matching=if(nextPurpose==null)appearances else
-            appearances.filter {
-                it is NativeKotlinMixedHistoryCompletion.Composer &&
-                    it.purpose==nextPurpose &&
-                    (!dayScoped || it.dayIndex==approval.grant.dayIndex)
+        val matching=appearances.filterIsInstance<
+            NativeKotlinMixedHistoryCompletion.Composer>().filter {
+                it.purpose==nextPurpose && it.dayIndex==nextDay.dayIndex
             }
         if(matching.size<2)
             return refuse(NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY)
         val lastTwo=matching.takeLast(2)
-        if(nextPurpose!=null) {
-            val after=appearances.dropWhile {it!==lastTwo[0]}
-            if(after.any {it is NativeKotlinMixedHistoryCompletion.Custom})
-                return refuse(NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT)
-            if(after.any {it is NativeKotlinMixedHistoryCompletion.Composer &&
-                    it.evidence.source!=source})
-                return refuse(NativeCurrentLoadReviewRefusal.HISTORICAL_SOURCE_CHANGED)
-        }
+        // Audit all intervening exercise visits, including OTHER days.
+        // A new custom visit or a changed source must not be hidden by
+        // filtering for the requested approved day.
+        val after=appearances.dropWhile {it!==lastTwo[0]}
+        if(after.any {it is NativeKotlinMixedHistoryCompletion.Custom})
+            return refuse(NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT)
+        if(after.any {it is NativeKotlinMixedHistoryCompletion.Composer &&
+                it.evidence.source!=source})
+            return refuse(NativeCurrentLoadReviewRefusal.HISTORICAL_SOURCE_CHANGED)
         if (lastTwo.any { it !is NativeKotlinMixedHistoryCompletion.Composer })
             return refuse(NativeCurrentLoadReviewRefusal.CUSTOM_OR_UNWEIGHTED_INTERVENING_VISIT)
         val previous = lastTwo[0] as NativeKotlinMixedHistoryCompletion.Composer
@@ -161,7 +160,7 @@ object NativeKotlinCurrentLoadCoachReview {
             ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
         val policy=CoachSessionPrescriptionDomain.selectedPolicy(
             approval.policies,exerciseId,latest.purpose,
-            approval.grant.dayIndex)
+            nextDay.dayIndex)
             ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
         // Do not reinterpret authored top/backoff or warmup prescriptions as
         // individualized STRAIGHT sets. Only the approved rep envelope is
@@ -210,7 +209,7 @@ object NativeKotlinCurrentLoadCoachReview {
                 timeline.manifestRevision,expectedHistoryRevision,
                 olderFacts,newerFacts,exerciseId,approval.policies,
                 maximumAuthorizedIncrease,readiness,movementRestricted,
-                nextPurpose,if(dayScoped)approval.grant.dayIndex else null
+                nextPurpose,nextDay.dayIndex
             )
         )
         return NativeCurrentLoadReviewResult.Reviewed(

@@ -1750,4 +1750,166 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             activatedIssuer(fixture,ledger).open("owner-1",workoutId))
     }
 
+
+    private data class LiveFutureCoachFixture(
+        val activation:NativeKotlinFutureActivationCommitTransaction,
+        val signoff:NativeKotlinActivatedCycleSignoffFileStore,
+        val prepared:NativeKotlinCustomWorkoutPreparedStore,
+        val issuer:NativeKotlinCustomWorkoutJournalFileStore,
+        val history:NativeKotlinHistoryManifestFileStore,
+        val reader:NativeKotlinMixedHistoryReadCoordinator,
+        val coach:NativeKotlinCustomNextWorkoutReview,
+        val repApprovals:NativeKotlinCustomNextRepApprovalFileStore
+    )
+
+    private fun liveFutureCoachFixture():LiveFutureCoachFixture {
+        // Unlike a fabricated nine-item manifest, each preceding workout is
+        // a real issued, logged, redo-Finished, native persisted journal.
+        val fixture=activationFixture(historyRevision=1,realPriorHistory=true)
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val inputs=futureInputs()
+        val signoff=activatedSignoff(fixture)
+        val fingerprint=(tx.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready).reviewFingerprint
+        assertTrue(signoff.confirm("owner-1",0,fingerprint,inputs,true)
+            is NativeActivatedSignoffWrite.Committed)
+        val history=NativeKotlinHistoryManifestFileStore(temp.root.toPath())
+        val prepared=activatedPrepared(fixture)
+        val issuer=activatedIssuer(fixture,history)
+        val composer=KotlinNativeJournalFileStore(temp.root.toPath())
+        val authority=object:NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(
+                ownerKey:String,workoutId:String
+            ):NativeKotlinWorkoutApproval?=null
+            override fun canAccessIssuedWorkout(
+                ownerKey:String,source:KotlinTrainingSourceRevision
+            )=ownerKey=="owner-1" && source.athleteId=="athlete-1"
+        }
+        val reader=NativeKotlinMixedHistoryReadCoordinator(history,
+            composer,KotlinNativeSavedCorrectionFileStore(
+                temp.root.toPath(),composer),issuer,authority,identity,fence)
+        val verified=reader.read("owner-1","athlete-1")
+        assertTrue("Real nine-session history: $verified",
+            verified is NativeKotlinMixedHistoryReadResult.Review)
+        assertEquals(9,(verified as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.size)
+        val coach=NativeKotlinCustomNextWorkoutReview(
+            fence,identity,tx,signoff,sources,reader,issuer)
+        val reps=NativeKotlinCustomNextRepApprovalFileStore(
+            temp.root.toPath(),fence,identity,tx,coach,prepared,issuer)
+        return LiveFutureCoachFixture(tx,signoff,prepared,issuer,history,
+            reader,coach,reps)
+    }
+
+    private fun finishRealActivatedSession(
+        f:LiveFutureCoachFixture,week:Int,reps:Int,
+        repApprovals:NativeKotlinCustomNextRepApprovalFileStore?=null
+    ):String {
+        val workoutId="real-activated-week$week"
+        val inputs=futureInputs()
+        val prepared=f.prepared.prepareActivated("owner-1",workoutId,
+            "cycle-1",week,1,inputs,f.signoff,f.activation,repApprovals)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val issued=f.issuer.issueActivated("owner-1",workoutId,
+            "cycle-1",week,1,inputs,f.signoff,f.activation,repApprovals)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        val recorded=f.issuer.record("owner-1",workoutId,
+            CustomWorkoutJournalOperation.Record(
+                "real-actual-w$week",0,
+                CustomWorkoutVisitKey("cycle-1:w$week:d1:slot-1:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,reps,2)))
+        assertTrue(recorded.toString(),recorded is NativeCustomJournalResult.Durable)
+        val finish=NativeKotlinCustomHistoryTransaction(
+            f.history,f.issuer,fence,identity)
+            .complete("owner-1","athlete-1",workoutId,
+                CustomWorkoutJournalOperation.Finish(
+                    "real-finish-w$week",1))
+        assertTrue(finish.toString(),finish is NativeCustomFinishResult.Committed)
+        return workoutId
+    }
+
+    @Test fun realCustomFinishToApprovedNextRepToIssuedWorkoutSurvivesRestart() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        finishRealActivatedSession(f,5,13)
+        val coaching=f.coach.review("owner-1",futureInputs(),6,1,
+            "slot-1",CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(coaching.toString(),coaching is NativeCustomNextCoachResult.Reviewed)
+        val suggestion=(coaching as NativeCustomNextCoachResult.Reviewed).review
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
+            suggestion.status)
+        assertEquals(14,suggestion.nextSetSuggestions.single().proposedNextReps)
+        assertNull(suggestion.loadReviewCandidate)
+        val approvalPreview=f.repApprovals.preview("owner-1","real-activated-week6",
+            futureInputs(),6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(approvalPreview.toString(),
+            approvalPreview is NativeCustomNextRepPreview.Ready)
+        val offered=(approvalPreview as NativeCustomNextRepPreview.Ready)
+        assertEquals(listOf(14),offered.receipt.nextMinimumReps)
+        assertFalse(offered.amendment.mayIssueWorkout)
+        assertEquals(NativeCustomNextRepWrite.Rejected(
+            NativeCustomNextRepRefusal.CONFIRMATION_REQUIRED),
+            f.repApprovals.accept("owner-1","real-activated-week6",
+                futureInputs(),6,1,"slot-1",CoachReadiness.NORMAL,false,
+                n("5"),offered.receipt.fingerprint,
+                offered.receipt.historyRevision,offered.receipt.consentRevision,
+                offered.receipt.setKeys,offered.receipt.nextMinimumReps,false))
+        assertEquals(NativeCustomNextRepRead.Missing,
+            f.repApprovals.readCurrent("owner-1","real-activated-week6",
+                futureInputs(),6,1))
+        val accepted=f.repApprovals.accept("owner-1","real-activated-week6",
+            futureInputs(),6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
+            offered.receipt.fingerprint,offered.receipt.historyRevision,
+            offered.receipt.consentRevision,offered.receipt.setKeys,
+            offered.receipt.nextMinimumReps,true)
+        assertEquals(NativeCustomNextRepWrite.Accepted(offered.receipt,false),
+            accepted)
+        assertEquals(NativeCustomNextRepRead.Current(
+            offered.receipt,offered.amendment),
+            NativeKotlinCustomNextRepApprovalFileStore(
+                temp.root.toPath(),fence,identity,f.activation,f.coach,
+                f.prepared,
+                f.issuer).readCurrent("owner-1","real-activated-week6",
+                    futureInputs(),6,1))
+        // No preparation until the athlete explicitly accepted exact targets.
+        val start=f.prepared.prepareActivated("owner-1",
+            "real-activated-week6","cycle-1",6,1,
+            futureInputs(),f.signoff,f.activation,f.repApprovals)
+        assertTrue(start.toString(),start is NativeCustomPrepareResult.Prepared)
+        val snap=(start as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(RepBand(14,15),
+            snap.snapshot.slots.single().sets.single().prescription.reps)
+        assertEquals(offered.receipt.fingerprint,snap.repApprovalFingerprint)
+        val issued=f.issuer.issueActivated("owner-1",
+            "real-activated-week6","cycle-1",6,1,
+            futureInputs(),f.signoff,f.activation,f.repApprovals)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(snap.snapshot,
+            (issued as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+        val record=f.issuer.record("owner-1","real-activated-week6",
+            CustomWorkoutJournalOperation.Record(
+                "real-actual-w6",0,
+                CustomWorkoutVisitKey("cycle-1:w6:d1:slot-1:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,14,2)))
+        assertTrue(record.toString(),record is NativeCustomJournalResult.Durable)
+        val finish=NativeKotlinCustomHistoryTransaction(
+            f.history,f.issuer,fence,identity)
+            .complete("owner-1","athlete-1","real-activated-week6",
+                CustomWorkoutJournalOperation.Finish("real-finish-w6",1))
+        assertTrue(finish.toString(),finish is NativeCustomFinishResult.Committed)
+        val all=f.reader.read("owner-1","athlete-1")
+        assertTrue(all.toString(),all is NativeKotlinMixedHistoryReadResult.Review)
+        assertEquals(12,(all as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.size)
+        assertEquals(14,
+            (all.timeline.completions.last() as NativeKotlinMixedHistoryCompletion.Custom)
+                .evidence.visits.single().actual?.reps)
+    }
+
+
 }

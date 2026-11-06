@@ -278,8 +278,7 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
                 NativeFutureApprovalRefusal.NOT_AUTHORIZED)
         return runCatching{
             fence.withOwnerTransaction(ownerKey){
-                val current=owner(ownerKey) ?:return@withOwnerTransaction
-                    NativeFutureApprovalPreview.Rejected(
+                val current=owner(ownerKey) ?:return@withOwnerTransaction NativeFutureApprovalPreview.Rejected(
                         NativeFutureApprovalRefusal.NOT_AUTHORIZED)
                 val record=stored(ownerKey,cycleId,blockId)
                 if(record!=null && record.athlete!=current.athleteId)
@@ -310,8 +309,7 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
                 NativeFutureApprovalRefusal.NOT_AUTHORIZED)
         return runCatching{
             fence.withOwnerTransaction(ownerKey){
-                val signed=owner(ownerKey)?:return@withOwnerTransaction
-                    NativeFutureApprovalWrite.Rejected(
+                val signed=owner(ownerKey)?:return@withOwnerTransaction NativeFutureApprovalWrite.Rejected(
                         NativeFutureApprovalRefusal.NOT_AUTHORIZED)
                 val previous=stored(ownerKey,cycleId,blockId)
                 if(previous!=null && previous.athlete!=signed.athleteId)
@@ -345,8 +343,7 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
                 NativeFutureApprovalRefusal.NOT_AUTHORIZED)
         return runCatching{
             fence.withOwnerTransaction(ownerKey){
-                val signed=owner(ownerKey)?:return@withOwnerTransaction
-                    NativeFutureApprovalRead.Rejected(
+                val signed=owner(ownerKey)?:return@withOwnerTransaction NativeFutureApprovalRead.Rejected(
                         NativeFutureApprovalRefusal.NOT_AUTHORIZED)
                 val previous=stored(ownerKey,cycleId,blockId)
                     ?:return@withOwnerTransaction NativeFutureApprovalRead.Missing
@@ -378,8 +375,7 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
                 NativeFutureApprovalRefusal.NOT_AUTHORIZED)
         return runCatching{
             fence.withOwnerTransaction(ownerKey){
-                val signed=owner(ownerKey)?:return@withOwnerTransaction
-                    NativeFutureApprovalWrite.Rejected(
+                val signed=owner(ownerKey)?:return@withOwnerTransaction NativeFutureApprovalWrite.Rejected(
                         NativeFutureApprovalRefusal.NOT_AUTHORIZED)
                 val previous=stored(ownerKey,cycleId,blockId)
                 if(previous==null || previous.athlete!=signed.athleteId ||

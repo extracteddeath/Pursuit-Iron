@@ -1970,13 +1970,20 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeCustomNextRepRead.Rejected(
             NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY),
             f.repApprovals.readCurrent("owner-1",nextId,inputs,6,1))
-        assertEquals(NativeCustomPrepareResult.Rejected(
-            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
-            f.prepared.prepareActivated("owner-1",nextId,"cycle-1",
-                6,1,inputs,f.signoff,f.activation,f.repApprovals))
-        assertEquals(NativeCustomJournalResult.Rejected(
-            NativeCustomJournalRefusal.NOT_ISSUED),
-            f.issuer.open("owner-1",nextId))
+        // With a NEW current base signoff, stale advice is discarded.
+        // The normal authored workout must remain trainable.
+        val baseline=f.prepared.prepareActivated("owner-1",nextId,
+            "cycle-1",6,1,inputs,f.signoff,f.activation,f.repApprovals)
+        assertTrue(baseline.toString(),baseline is NativeCustomPrepareResult.Prepared)
+        val selected=(baseline as NativeCustomPrepareResult.Prepared).workout
+        assertNull(selected.repApprovalFingerprint)
+        assertEquals(RepBand(10,15),
+            selected.snapshot.slots.single().sets.single().prescription.reps)
+        val issued=f.issuer.issueActivated("owner-1",nextId,"cycle-1",
+            6,1,inputs,f.signoff,f.activation,f.repApprovals)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(selected.snapshot,
+            (issued as NativeCustomJournalResult.Durable).issued.journal.snapshot)
     }
 
 
@@ -2178,20 +2185,27 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeCustomNextRepRead.Rejected(
             NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY),
             f.repApprovals.readCurrent(key,workoutId,input,6,1))
-        assertEquals(NativeCustomPrepareResult.Rejected(
-            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
-            f.prepared.prepareActivated(key,workoutId,"cycle-1",6,1,
-                input,f.signoff,f.activation,f.repApprovals))
+        val manual=f.prepared.prepareActivated(key,workoutId,
+            "cycle-1",6,1,input,f.signoff,f.activation,f.repApprovals)
+        assertTrue(manual.toString(),manual is NativeCustomPrepareResult.Prepared)
+        val baseline=(manual as NativeCustomPrepareResult.Prepared).workout
+        assertNull(baseline.repApprovalFingerprint)
+        assertEquals(RepBand(10,15),
+            baseline.snapshot.slots.single().sets.single().prescription.reps)
         assertTrue(f.assistance.save(key,1,CoachAssistancePolicy.STANDARD)
             is NativeCoachSettingsWrite.Saved)
         // No old "one tap" accepted progression survives a settings toggle.
         assertEquals(NativeCustomNextRepRead.Rejected(
             NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY),
             f.repApprovals.readCurrent(key,workoutId,input,6,1))
-        assertEquals(NativeCustomPrepareResult.Rejected(
-            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
-            f.prepared.prepareActivated(key,workoutId,"cycle-1",6,1,
-                input,f.signoff,f.activation,f.repApprovals))
+        val replay=f.prepared.prepareActivated(key,workoutId,
+            "cycle-1",6,1,input,f.signoff,f.activation,f.repApprovals)
+        assertEquals(NativeCustomPrepareResult.Prepared(baseline,true),replay)
+        val issued=f.issuer.issueActivated(key,workoutId,"cycle-1",
+            6,1,input,f.signoff,f.activation,f.repApprovals)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(baseline.snapshot,
+            (issued as NativeCustomJournalResult.Durable).issued.journal.snapshot)
     }
 
 

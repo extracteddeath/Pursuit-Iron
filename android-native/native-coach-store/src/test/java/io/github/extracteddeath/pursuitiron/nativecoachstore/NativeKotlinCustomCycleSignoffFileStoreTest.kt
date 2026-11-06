@@ -1445,4 +1445,130 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
     }
 
+    private fun activatedPrepared(
+        fixture:ActivationFixture
+    ):NativeKotlinCustomWorkoutPreparedStore {
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store())
+        return NativeKotlinCustomWorkoutPreparedStore(
+            temp.root.toPath(),fence,identity,preflight,fixture.handoff)
+    }
+
+    @Test fun activatedWorkoutIsPreparedLosslesslyAfterConsentAndColdRecovers() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        val signoff=activatedSignoff(fixture)
+        val prepared=activatedPrepared(fixture)
+        val inputs=futureInputs()
+        val name="activated-build-week4-day1"
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepareActivated("owner-1",name,"cycle-1",4,1,
+                inputs,signoff,tx))
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepareActivated("owner-1",name,"cycle-1",4,1,
+                inputs,signoff,tx))
+        val review=tx.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready
+        val confirmed=signoff.confirm("owner-1",0,
+            review.reviewFingerprint,inputs,true)
+        assertTrue(confirmed is NativeActivatedSignoffWrite.Committed)
+        val first=prepared.prepareActivated("owner-1",name,"cycle-1",4,1,
+            inputs,signoff,tx)
+        assertTrue(first.toString(),first is NativeCustomPrepareResult.Prepared)
+        val workout=(first as NativeCustomPrepareResult.Prepared).workout
+        assertFalse(first.replayed)
+        assertEquals(NativeCustomPreparationAuthority.ACTIVATED_BLOCK,
+            workout.authority)
+        assertEquals("build",workout.snapshot.blockId)
+        assertEquals(2L,workout.snapshot.stamp.gymCatalogSourceRevision)
+        assertEquals("slot-1",workout.snapshot.slots.single().slotId)
+        assertEquals(RepBand(10,15),
+            workout.snapshot.slots.single().sets.single().prescription.reps)
+        assertEquals(200,workout.snapshot.declaredNonSetSeconds)
+        assertFalse(workout.isIssued)
+        assertFalse(workout.mayLog)
+        assertFalse(workout.mayFinish)
+        assertEquals(NativeCustomPreparedRead.Found(workout),
+            activatedPrepared(fixture).open("owner-1",name))
+        assertEquals(NativeCustomPrepareResult.Prepared(workout,true),
+            activatedPrepared(fixture).prepareActivated("owner-1",name,
+                "cycle-1",4,1,inputs,activatedSignoff(fixture),
+                activationTransaction(fixture)))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),
+            prepared.prepareActivated("owner-1",name,"cycle-1",4,2,
+                inputs,signoff,tx))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepare("owner-1","unapproved-new","cycle-1",4,1,inputs))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
+    @Test fun activatedPreparedWorkoutCannotEnterLegacyCustomIssuer() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val inputs=futureInputs()
+        val signoff=activatedSignoff(fixture)
+        val fingerprint=(tx.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready).reviewFingerprint
+        assertTrue(signoff.confirm("owner-1",0,fingerprint,inputs,true)
+            is NativeActivatedSignoffWrite.Committed)
+        val prepared=activatedPrepared(fixture)
+        val name="activated-only-not-issued"
+        assertTrue(prepared.prepareActivated("owner-1",name,"cycle-1",4,1,
+            inputs,signoff,tx) is NativeCustomPrepareResult.Prepared)
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store())
+        // Test seam deliberately omits the handoff barrier; authority type
+        // itself must still prohibit laundering a new approval into v1 issue.
+        val oldIssuer=NativeKotlinCustomWorkoutJournalFileStore(
+            temp.root.toPath(),fence,identity,prepared,preflight,
+            NativeKotlinHistoryManifestFileStore(temp.root.toPath()),
+            KotlinNativeJournalFileStore(temp.root.toPath()))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.CONSENT_CHANGED),
+            oldIssuer.issue("owner-1",name,"cycle-1",4,1,inputs))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.NOT_ISSUED),
+            oldIssuer.open("owner-1",name))
+    }
+
+    @Test fun activatedPreparationRejectsRevokedAndStaleSignoffButPreservesSnapshot() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val inputs=futureInputs()
+        val signoff=activatedSignoff(fixture)
+        val ready=tx.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready
+        val accepted=signoff.confirm("owner-1",0,
+            ready.reviewFingerprint,inputs,true)
+            as NativeActivatedSignoffWrite.Committed
+        val prepared=activatedPrepared(fixture)
+        val first=prepared.prepareActivated("owner-1","original-activated",
+            "cycle-1",4,1,inputs,signoff,tx)
+            as NativeCustomPrepareResult.Prepared
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepareActivated("owner-1","wrong-cycle",
+                "different-cycle",4,1,inputs,signoff,tx))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepareActivated("owner-1","previous-week",
+                "cycle-1",3,0,inputs,signoff,tx))
+        assertEquals(NativeActivatedSignoffWrite.Revoked(2),
+            signoff.revoke("owner-1",accepted.receipt.recordRevision))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepareActivated("owner-1","after-revocation",
+                "cycle-1",4,1,inputs,signoff,tx))
+        assertEquals(NativeCustomPreparedRead.Found(first.workout),
+            activatedPrepared(fixture).open("owner-1","original-activated"))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
 }

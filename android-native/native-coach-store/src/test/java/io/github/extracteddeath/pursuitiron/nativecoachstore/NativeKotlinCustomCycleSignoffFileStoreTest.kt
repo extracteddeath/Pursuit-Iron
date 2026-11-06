@@ -1322,4 +1322,127 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             actual.read("owner-1","cycle-1","build"))
     }
 
+    private fun activatedSignoff(fixture:ActivationFixture)=
+        NativeKotlinActivatedCycleSignoffFileStore(
+            temp.root.toPath(),fence,identity,activationTransaction(fixture))
+
+    @Test fun activatedSignoffRequiresFreshAuditAndIndependentAthleteConfirmation() {
+        val fixture=activationFixture()
+        val signoff=activatedSignoff(fixture)
+        val tx=activationTransaction(fixture)
+        val before="0".repeat(64)
+        assertEquals(NativeActivatedSignoffWrite.Rejected(
+            NativeActivatedSignoffRefusal.REVIEW_NOT_READY),
+            signoff.confirm("owner-1",0,before,futureInputs(),true))
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val ready=tx.reviewActivatedCycle("owner-1",futureInputs())
+            as NativeFutureActivatedCycleReview.Ready
+        assertTrue(ready.reviewFingerprint.matches(Regex("[a-f0-9]{64}")))
+        assertEquals(NativeActivatedSignoffWrite.Rejected(
+            NativeActivatedSignoffRefusal.CONFIRMATION_REQUIRED),
+            signoff.confirm("owner-1",0,ready.reviewFingerprint,futureInputs(),false))
+        assertEquals(NativeActivatedSignoffRead.Missing,
+            signoff.read("owner-1",futureInputs()))
+        assertEquals(NativeActivatedSignoffWrite.Rejected(
+            NativeActivatedSignoffRefusal.FINGERPRINT_CHANGED),
+            signoff.confirm("owner-1",0,before,futureInputs(),true))
+        assertEquals(NativeActivatedSignoffWrite.Rejected(
+            NativeActivatedSignoffRefusal.REVIEW_NOT_READY),
+            signoff.confirm("owner-1",0,ready.reviewFingerprint,
+                CustomCoachAuditInputs(),true))
+        val committed=signoff.confirm("owner-1",0,ready.reviewFingerprint,
+            futureInputs(),true) as NativeActivatedSignoffWrite.Committed
+        assertEquals(1L,committed.receipt.recordRevision)
+        assertFalse(committed.receipt.mayIssueWorkout)
+        assertFalse(committed.receipt.mayChangeHistory)
+        assertEquals(NativeActivatedSignoffRead.Found(committed.receipt,true),
+            activatedSignoff(fixture).read("owner-1",futureInputs()))
+        assertEquals(NativeActivatedSignoffRead.Found(committed.receipt,false),
+            activatedSignoff(fixture).read("owner-1"))
+        assertEquals(NativeActivatedSignoffWrite.Rejected(
+            NativeActivatedSignoffRefusal.REVISION_CONFLICT),
+            activatedSignoff(fixture).confirm("owner-1",0,
+                ready.reviewFingerprint,futureInputs(),true))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
+    @Test fun activatedConsentTracksChangedCoachingAndStaleDraftWithoutReissuing() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val inputs=futureInputs()
+        val fingerprint=(tx.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready).reviewFingerprint
+        val signoff=activatedSignoff(fixture)
+        val receipt=(signoff.confirm("owner-1",0,fingerprint,inputs,true)
+            as NativeActivatedSignoffWrite.Committed).receipt
+        val previous=signoff.read("owner-1",inputs)
+        assertEquals(NativeActivatedSignoffRead.Found(receipt,true),previous)
+        val original=inputs.policiesByPhase.getValue(TrainingPhase.HYPERTROPHY)
+        val amended=inputs.copy(policiesByPhase=
+            inputs.policiesByPhase+(TrainingPhase.HYPERTROPHY to
+                original.copy(rationale="Changed coaching rationale")))
+        val revised=tx.reviewActivatedCycle("owner-1",amended)
+        assertTrue(revised.toString(),revised is NativeFutureActivatedCycleReview.Ready)
+        assertNotEquals(fingerprint,
+            (revised as NativeFutureActivatedCycleReview.Ready).reviewFingerprint)
+        assertEquals(NativeActivatedSignoffRead.Found(receipt,false),
+            signoff.read("owner-1",amended))
+        assertEquals(NativeActivatedSignoffWrite.Rejected(
+            NativeActivatedSignoffRefusal.FINGERPRINT_CHANGED),
+            signoff.confirm("owner-1",1,fingerprint,amended,true))
+        assertEquals(NativeCustomDraftWriteResult.Committed(4),
+            drafts.save("owner-1","cycle-1",3,
+                futureCycle().copy(revision=4,title="Changed after approval")))
+        assertEquals(NativeActivatedSignoffRead.Found(receipt,false),
+            activatedSignoff(fixture).read("owner-1",inputs))
+        assertEquals(NativeActivatedSignoffWrite.Rejected(
+            NativeActivatedSignoffRefusal.REVIEW_NOT_READY),
+            activatedSignoff(fixture).confirm("owner-1",1,
+                fingerprint,inputs,true))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
+    @Test fun activatedConsentRevocationAndCorruptionNeverBecomeApproval() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val inputs=futureInputs()
+        val fingerprint=(tx.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready).reviewFingerprint
+        val signoff=activatedSignoff(fixture)
+        val receipt=(signoff.confirm("owner-1",0,fingerprint,inputs,true)
+            as NativeActivatedSignoffWrite.Committed).receipt
+        assertEquals(NativeActivatedSignoffWrite.Revoked(2),
+            activatedSignoff(fixture).revoke("owner-1",1))
+        assertEquals(NativeActivatedSignoffRead.Revoked(2),
+            signoff.read("owner-1",inputs))
+        assertEquals(NativeActivatedSignoffWrite.Rejected(
+            NativeActivatedSignoffRefusal.REVISION_CONFLICT),
+            signoff.confirm("owner-1",1,fingerprint,inputs,true))
+        assertEquals(NativeActivatedSignoffRead.Rejected(
+            NativeActivatedSignoffRefusal.NOT_AUTHORIZED),
+            signoff.read("other-owner",inputs))
+        val file=Files.list(temp.root.toPath()).use{stream->
+            stream.filter{it.fileName.toString().startsWith("activated-cycle-signoff-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().orElseThrow()
+        }
+        val original=Files.readAllBytes(file)
+        val corrupt=original.clone()
+        corrupt[corrupt.lastIndex]=(corrupt.last().toInt() xor 1).toByte()
+        Files.write(file,corrupt)
+        assertEquals(NativeActivatedSignoffRead.Rejected(
+            NativeActivatedSignoffRefusal.RECORD_CORRUPT),
+            activatedSignoff(fixture).read("owner-1",inputs))
+        Files.write(file,original)
+        val pending=temp.root.toPath().resolve(
+            file.fileName.toString().removeSuffix(".bin")+"-abandoned.pending")
+        Files.write(pending,byteArrayOf(1))
+        assertEquals(NativeActivatedSignoffRead.Rejected(
+            NativeActivatedSignoffRefusal.RECORD_CORRUPT),
+            signoff.read("owner-1",inputs))
+        assertFalse(receipt.mayIssueWorkout)
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
 }

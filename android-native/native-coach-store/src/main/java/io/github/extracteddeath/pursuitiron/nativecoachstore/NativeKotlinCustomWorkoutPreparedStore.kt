@@ -217,6 +217,9 @@ class NativeKotlinCustomWorkoutPreparedStore(
                         it.name==authorityName
                     } ?:throw IOException("unrecognized preparation authority")
                 }
+                if(schema==5 &&
+                    authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK)
+                    throw IOException("invalid manual-reset preparation authority")
                 val repProof=if(schema==3)data.readUTF() else null
                 val loadProof=if(schema==4)data.readUTF() else null
                 if((repProof!=null || loadProof!=null) &&

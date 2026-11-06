@@ -250,9 +250,13 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
             source,future,reviewed)?:return null
         val scope=ByteArrayOutputStream()
         DataOutputStream(scope).use{out->
-            out.writeInt(1)
+            // Consent fingerprint schema v2: includes both prospective
+            // source bytes and the full policy/time payload, not labels.
+            out.writeInt(2)
             listOf(ownerKey,signed.athleteId,cycleId,blockId,
                 future.reviewedFingerprint).forEach{out.writeUTF(it)}
+            out.writeUTF(NativeFutureBlockContextCodec.coachingContentFingerprint(
+                future.future))
             out.writeLong(future.draftRevision)
             out.writeLong(source.revision)
             out.writeLong(rights.revision)

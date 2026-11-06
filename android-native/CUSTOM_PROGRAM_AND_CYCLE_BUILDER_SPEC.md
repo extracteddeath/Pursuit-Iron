@@ -337,3 +337,21 @@ explicitly report that they cannot issue workouts or publish changes.
   session inventory, an owner-fenced source transition with compatible
   per-block policy authority, and independent athlete signoff. Historical
   journals and the current live app are untouched.
+
+### Second athlete consent checkpoint before source activation
+
+Future-block draft acceptance and actual schedule/profile activation are
+**different decisions**. The candidate now persists an owner-fenced,
+checksummed, revision-CAS **activation consent checkpoint** only after a fresh
+full history-boundary review, complete custom prepared/issued inventory,
+complete Composer issued inventory, current source, future context and
+athlete-approved adaptive rights. The athlete must confirm the exact displayed
+fingerprint; stale callbacks and stale revisions cannot restore a revoked
+consent. On cold launch, `readFutureBlockActivationApproval` replays the
+entire gate before reporting `isCurrent`.
+
+**Safety boundary:** the checkpoint is NOT the actual source/policy activation.
+The active authoring source, existing custom-cycle signoff, current gym and
+historical workouts remain untouched. A subsequent atomic source transition
+must re-audit complete per-block policies, recovery and the persisted consent
+and make a versioned source update with crash-safe reconciliation.

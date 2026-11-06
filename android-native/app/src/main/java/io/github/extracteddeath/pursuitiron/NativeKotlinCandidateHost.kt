@@ -69,6 +69,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,customDraftStore,futureBlockContexts,
         mixedHistoryReader,customIssuedStore,outstandingCustomInventory,
         composerActivationInventory)
+    private val futureActivationApproval=NativeKotlinFutureActivationApprovalFileStore(
+        root,revisionFence,localAthlete,futureActivationPreflight,
+        futureBlockContexts,authoringSourceStore,adaptiveCyclePermissions)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)
@@ -509,6 +512,51 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?:return NativeFutureActivationReview.Rejected(
                 NativeFutureActivationRefusal.NOT_AUTHORIZED)
         return futureActivationPreflight.inspect(owner.ownerKey,cycleId,blockId)
+    }
+
+    /**
+     * SECOND explicit consent to a future boundary. This is neither an
+     * active profile update nor a workout grant. All calls revalidate the
+     * native history and both session inventories behind the owner fence.
+     */
+    fun previewFutureBlockActivationApproval(
+        cycleId:String,blockId:String
+    ):NativeFutureApprovalPreview {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeFutureApprovalPreview.Rejected(
+                NativeFutureApprovalRefusal.NOT_AUTHORIZED)
+        return futureActivationApproval.preview(
+            signed.ownerKey,cycleId,blockId)
+    }
+    fun confirmFutureBlockActivationApproval(
+        cycleId:String,blockId:String,
+        expectedRevision:Long,reviewedFingerprint:String,
+        athleteConfirmed:Boolean
+    ):NativeFutureApprovalWrite {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeFutureApprovalWrite.Rejected(
+                NativeFutureApprovalRefusal.NOT_AUTHORIZED)
+        return futureActivationApproval.confirm(
+            signed.ownerKey,cycleId,blockId,expectedRevision,
+            reviewedFingerprint,athleteConfirmed)
+    }
+    fun readFutureBlockActivationApproval(
+        cycleId:String,blockId:String
+    ):NativeFutureApprovalRead {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeFutureApprovalRead.Rejected(
+                NativeFutureApprovalRefusal.NOT_AUTHORIZED)
+        return futureActivationApproval.read(
+            signed.ownerKey,cycleId,blockId)
+    }
+    fun revokeFutureBlockActivationApproval(
+        cycleId:String,blockId:String,expectedRevision:Long
+    ):NativeFutureApprovalWrite {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeFutureApprovalWrite.Rejected(
+                NativeFutureApprovalRefusal.NOT_AUTHORIZED)
+        return futureActivationApproval.revoke(
+            signed.ownerKey,cycleId,blockId,expectedRevision)
     }
 
     fun readAcceptedFutureBlockContext(

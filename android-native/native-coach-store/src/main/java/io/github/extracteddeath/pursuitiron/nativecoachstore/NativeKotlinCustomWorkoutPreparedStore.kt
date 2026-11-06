@@ -32,7 +32,9 @@ data class NativeCustomPreparedWorkout(
     val snapshot:CustomWorkoutDaySnapshot,
     /** Explicit, durable provenance: activated consent is not a legacy grant. */
     val authority:NativeCustomPreparationAuthority =
-        NativeCustomPreparationAuthority.CUSTOM_CYCLE
+        NativeCustomPreparationAuthority.CUSTOM_CYCLE,
+    /** Only approved, rederived future-set amendments may populate this. */
+    val repApprovalFingerprint:String?=null
 ) {
     val isIssued:Boolean get() = false
     val mayLog:Boolean get() = false
@@ -95,13 +97,17 @@ class NativeKotlinCustomWorkoutPreparedStore(
         require(workout.consentRevision>0 &&
             fingerprint.matches(workout.consentFingerprint))
         require(workout.snapshot.stamp.athleteId==workout.athleteId)
+        require(workout.repApprovalFingerprint==null ||
+            (workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK &&
+                fingerprint.matches(workout.repApprovalFingerprint)))
         val session=NativeKotlinCustomWorkoutSnapshotCodec.encode(
             workout.snapshot)
         val payload=ByteArrayOutputStream()
         DataOutputStream(payload).use{out->
             out.writeInt(magic)
-            out.writeInt(if(workout.authority==
-                NativeCustomPreparationAuthority.CUSTOM_CYCLE) version else 2)
+            out.writeInt(if(workout.repApprovalFingerprint!=null)3 else
+                if(workout.authority==
+                    NativeCustomPreparationAuthority.CUSTOM_CYCLE) version else 2)
             out.writeUTF(workout.ownerKey)
             out.writeUTF(workout.athleteId)
             out.writeUTF(workout.workoutId)
@@ -109,6 +115,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
             out.writeUTF(workout.consentFingerprint)
             if(workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK)
                 out.writeUTF(workout.authority.name)
+            if(workout.repApprovalFingerprint!=null)
+                out.writeUTF(workout.repApprovalFingerprint)
             out.writeInt(session.size);out.write(session)
         }
         val bytes=payload.toByteArray()
@@ -142,7 +150,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(data.readInt()!=magic)
                     throw IOException("unsupported prepared custom snapshot magic")
                 val schema=data.readInt()
-                if(schema !in 1..2)
+                if(schema !in 1..3)
                     throw IOException("unsupported prepared custom snapshot version")
                 val owner=data.readUTF()
                 val athlete=data.readUTF()
@@ -161,6 +169,11 @@ class NativeKotlinCustomWorkoutPreparedStore(
                         it.name==authorityName
                     } ?:throw IOException("unrecognized preparation authority")
                 }
+                val repProof=if(schema==3)data.readUTF() else null
+                if(repProof!=null &&
+                    (authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
+                        !fingerprint.matches(repProof)))
+                    throw IOException("invalid amended-preparation proof")
                 val sessionBytes=data.readInt()
                 if(sessionBytes !in 16..NativeKotlinCustomWorkoutSnapshotCodec.MAX_BYTES ||
                     sessionBytes>data.available())
@@ -172,7 +185,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 NativeCustomPreparedWorkout(owner,athlete,workoutId,
                     revision,receiptHash,
                     NativeKotlinCustomWorkoutSnapshotCodec.decode(session),
-                    authority).also{
+                    authority,repProof).also{
                         if(it.snapshot.stamp.athleteId!=athlete)
                             throw IOException("prepared athlete mismatch")
                     }
@@ -292,7 +305,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
         ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,coachingInputs:CustomCoachAuditInputs,
         signoffs:NativeKotlinActivatedCycleSignoffFileStore,
-        activation:NativeKotlinFutureActivationCommitTransaction
+        activation:NativeKotlinFutureActivationCommitTransaction,
+        repApprovals:NativeKotlinCustomNextRepApprovalFileStore?=null
     ):NativeCustomPrepareResult {
         if(!id.matches(workoutId)||!id.matches(cycleId) ||
             absoluteWeek !in 1..104||weekday !in 0..6)
@@ -340,9 +354,18 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 session.absoluteWeek!=absoluteWeek || session.weekday!=weekday)
                 return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                     NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            val repApproval=repApprovals?.readCurrent(ownerKey,workoutId,
+                coachingInputs,absoluteWeek,weekday)
+                ?:NativeCustomNextRepRead.Missing
+            if(repApproval is NativeCustomNextRepRead.Rejected)
+                return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                    NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            val amended=(repApproval as? NativeCustomNextRepRead.Current)
             val planned=NativeCustomPreparedWorkout(ownerKey,owner.athleteId,
                 workoutId,consent.recordRevision,consent.reviewFingerprint,
-                session,NativeCustomPreparationAuthority.ACTIVATED_BLOCK)
+                amended?.amendment?.amended ?:session,
+                NativeCustomPreparationAuthority.ACTIVATED_BLOCK,
+                amended?.receipt?.fingerprint)
             val existing=openFenced(ownerKey,workoutId,owner)
             if(existing is NativeCustomPreparedRead.Rejected)
                 return@withOwnerTransaction NativeCustomPrepareResult.Rejected(

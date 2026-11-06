@@ -191,6 +191,37 @@ class CustomNextWorkoutCoachingDomainTest {
         assertTrue(result.nextSetSuggestions.isEmpty())
     }
 
+    @Test fun alteredHistoricalPrescriptionCannotEarnRepsOrNextLoad() {
+        val earlier=completed(1,3)
+        val latest=completed(2,4)
+        val changedLoad=latest.copy(evidence=latest.evidence.copy(
+            visits=latest.evidence.visits.mapIndexed{index,visit->
+                if(index==0)visit.copy(prescribedLoad=load(205)) else visit
+            }))
+        assertEquals(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+            review(sessions=listOf(earlier,changedLoad)).status)
+        val changedReps=latest.copy(evidence=latest.evidence.copy(
+            visits=latest.evidence.visits.mapIndexed{index,visit->
+                if(index==0)visit.copy(prescribedReps=RepBand(6,8)) else visit
+            }))
+        assertEquals(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+            review(sessions=listOf(earlier,changedReps)).status)
+        val alteredPrior=earlier.copy(evidence=earlier.evidence.copy(
+            visits=earlier.evidence.visits.mapIndexed{index,visit->
+                if(index==0)visit.copy(prescribedRir=0) else visit
+            }))
+        val result=review(sessions=listOf(alteredPrior,latest))
+        assertEquals(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+            result.status)
+        assertNull(result.loadReviewCandidate)
+        val inventedEvent=latest.copy(evidence=latest.evidence.copy(
+            visits=latest.evidence.visits.mapIndexed{index,visit->
+                if(index==0)visit.copy(effectiveEventId="") else visit
+            }))
+        assertEquals(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+            review(sessions=listOf(earlier,inventedEvent)).status)
+    }
+
     @Test fun incompleteRecentDayAndChangedExerciseOrSourceNeverCherryPickSuccess() {
         val mostRecent=completed(3,4,reps=listOf(0,0),
             failed=setOf(0,1),rirs=listOf(null,null))

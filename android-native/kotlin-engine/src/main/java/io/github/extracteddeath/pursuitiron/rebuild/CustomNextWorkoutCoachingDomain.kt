@@ -143,7 +143,11 @@ object CustomNextWorkoutCoachingDomain {
         val oldSets=oldSlot.sets.filter{it.prescription.type==DraftSetType.WORKING}
         if(oldSets.size!=nextSets.size ||
             oldSets.zip(nextSets).any { (old,next) ->
-                old.prescription!=next.prescription ||
+                old.prescription.copy(reps=next.prescription.reps)!=
+                    next.prescription ||
+                    old.prescription.reps.maximum!=next.prescription.reps.maximum ||
+                    old.prescription.reps.minimum<
+                        next.prescription.reps.minimum ||
                     old.slotId!=next.slotId ||
                     old.ordinalInSlot!=next.ordinalInSlot ||
                     old.prescription.amplifier!=null
@@ -226,7 +230,13 @@ object CustomNextWorkoutCoachingDomain {
             }.orEmpty()
             val sameSets=previousSets.size==nextSets.size &&
                 previousSets.zip(nextSets).all{
-                    it.first.prescription==it.second.prescription &&
+                    it.first.prescription.copy(
+                        reps=it.second.prescription.reps)==
+                        it.second.prescription &&
+                        it.first.prescription.reps.maximum==
+                        it.second.prescription.reps.maximum &&
+                        it.first.prescription.reps.minimum>=
+                        it.second.prescription.reps.minimum &&
                         it.first.ordinalInSlot==it.second.ordinalInSlot &&
                         it.first.prescription.amplifier==null
                 }

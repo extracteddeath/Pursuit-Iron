@@ -1,8 +1,5 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
-import io.github.extracteddeath.pursuitiron.rebuild.KotlinTrainingSourceRevision
-import io.github.extracteddeath.pursuitiron.rebuild.KotlinWorkoutJournalState
-
 /**
  * Composer sessions remain independently owned by their native journal
  * store. This read-only gate protects a custom future-block source change
@@ -63,11 +60,11 @@ internal object NativeComposerActivationInventoryDomain {
  * replay. Authorization is delegated to the native workout authority, not
  * a boolean constructed by an Android screen.
  */
-internal class NativeKotlinComposerActivationInventory(
+class NativeKotlinComposerActivationInventory(
     private val journals:KotlinNativeJournalFileStore,
     private val authority:NativeKotlinWorkoutAuthority
 ) {
-    fun inspect(
+    internal fun inspect(
         ownerKey:String,athleteId:String,
         completed:List<NativeKotlinMixedHistoryCompletion.Composer>
     ):NativeComposerActivationInventoryResult {

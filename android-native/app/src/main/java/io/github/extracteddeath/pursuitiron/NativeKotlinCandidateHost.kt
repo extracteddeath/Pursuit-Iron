@@ -63,9 +63,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
         approvalStore,localAthlete,revisionFence,customSavedCorrections)
     private val outstandingCustomInventory=NativeKotlinCustomOutstandingWorkoutInventory(
         customPreparedStore,customIssuedStore)
+    private val composerActivationInventory=NativeKotlinComposerActivationInventory(
+        journalStore,approvalStore)
     private val futureActivationPreflight=NativeKotlinFutureBlockActivationPreflight(
         revisionFence,localAthlete,customDraftStore,futureBlockContexts,
-        mixedHistoryReader,customIssuedStore,outstandingCustomInventory)
+        mixedHistoryReader,customIssuedStore,outstandingCustomInventory,
+        composerActivationInventory)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)

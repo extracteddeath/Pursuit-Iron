@@ -18,6 +18,7 @@ enum class NativeFutureActivationRefusal {
     NOT_AUTHORIZED, NO_ACCEPTED_FUTURE_CONTEXT, STALE_SOURCE_OR_DRAFT,
     NOT_A_FUTURE_BLOCK, INCOMPLETE_HISTORY, CONFLICTING_HISTORY,
     TARGET_BLOCK_ALREADY_STARTED, OUTSTANDING_CUSTOM_WORKOUTS,
+    OUTSTANDING_COMPOSER_WORKOUTS, COMPOSER_INVENTORY_UNAVAILABLE,
     WORKOUT_INVENTORY_UNAVAILABLE, STORAGE_UNAVAILABLE
 }
 
@@ -118,7 +119,8 @@ class NativeKotlinFutureBlockActivationPreflight(
     private val contexts:NativeKotlinFutureBlockContextFileStore,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
     private val customJournals:NativeKotlinCustomWorkoutJournalFileStore,
-    private val customInventory:NativeKotlinCustomOutstandingWorkoutInventory
+    private val customInventory:NativeKotlinCustomOutstandingWorkoutInventory,
+    private val composerInventory:NativeKotlinComposerActivationInventory
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -194,6 +196,22 @@ class NativeKotlinFutureBlockActivationPreflight(
                 if(inventory.outstanding.any{it.cycleId==cycleId})
                     return@withOwnerTransaction NativeFutureActivationReview.Rejected(
                         NativeFutureActivationRefusal.OUTSTANDING_CUSTOM_WORKOUTS)
+                // A future custom profile changes shared athlete source
+                // authority. Any live Composer journal (regardless of
+                // its program ID) may still be logging against that source.
+                // Require complete verified owner-scoped Composer inventory.
+                val composer=composerInventory.inspect(ownerKey,owner.athleteId,
+                    full.timeline.completions.filterIsInstance<
+                        NativeKotlinMixedHistoryCompletion.Composer>())
+                when(composer) {
+                    is NativeComposerActivationInventoryResult.Rejected ->
+                        return@withOwnerTransaction NativeFutureActivationReview.Rejected(
+                            if(composer.reason==
+                                NativeComposerActivationInventoryRefusal.UNRESOLVED_COMPOSER_WORKOUT)
+                                NativeFutureActivationRefusal.OUTSTANDING_COMPOSER_WORKOUTS
+                            else NativeFutureActivationRefusal.COMPOSER_INVENTORY_UNAVAILABLE)
+                    is NativeComposerActivationInventoryResult.Clear -> Unit
+                }
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction NativeFutureActivationReview.Rejected(
                         NativeFutureActivationRefusal.NOT_AUTHORIZED)

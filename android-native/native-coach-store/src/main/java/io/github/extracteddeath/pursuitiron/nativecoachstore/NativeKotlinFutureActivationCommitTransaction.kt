@@ -17,6 +17,9 @@ import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAudit
 import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditInputs
 import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditStatus
 import io.github.extracteddeath.pursuitiron.rebuild.CustomCycleCoachAuditDomain
+import io.github.extracteddeath.pursuitiron.rebuild.CustomWorkoutSnapshotDomain
+import io.github.extracteddeath.pursuitiron.rebuild.CustomWorkoutSnapshotResult
+import io.github.extracteddeath.pursuitiron.rebuild.CustomWorkoutSnapshotRefusal
 
 /**
  * Owner-fenced WRITE-AHEAD activation of a second-consented future block.
@@ -374,6 +377,44 @@ class NativeKotlinFutureActivationCommitTransaction(
                 decoded.proposed.revision,handoff.firstWeek)
         }}.getOrElse{NativeFutureActivatedCycleReview.Rejected(
             NativeFutureCommitRefusal.STORAGE_UNAVAILABLE)}
+
+    /**
+     * Lossless read-only native workout preview for the activated block.
+     * Unlike a generic current-cycle preview, this uses the saved original
+     * athlete context for completed blocks and the new context ONLY for
+     * the future block. It NEVER bypasses issuance consent.
+     */
+    fun previewActivatedWorkout(
+        ownerKey:String,inputs:CustomCoachAuditInputs,
+        absoluteWeek:Int,weekday:Int
+    ):CustomWorkoutSnapshotResult =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            val reviewed=reviewActivatedCycle(ownerKey,inputs)
+            if(reviewed !is NativeFutureActivatedCycleReview.Ready)
+                return@withOwnerTransaction CustomWorkoutSnapshotResult.Rejected(
+                    CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+            val handoff=(handoffs.read(ownerKey) as? NativeFutureHandoffReview.Staged)
+                ?.receipt ?:return@withOwnerTransaction CustomWorkoutSnapshotResult.Rejected(
+                    CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+            val intent=intent(ownerKey)
+                ?:return@withOwnerTransaction CustomWorkoutSnapshotResult.Rejected(
+                    CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+            val original=validate(intent).original
+            val active=(sources.read(ownerKey)
+                as? NativeAuthoringSourceRead.Found)?.source
+                ?:return@withOwnerTransaction CustomWorkoutSnapshotResult.Rejected(
+                    CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+            val draft=(drafts.read(ownerKey,handoff.cycleId)
+                as? NativeCustomDraftReadResult.Found)?.draft
+                ?:return@withOwnerTransaction CustomWorkoutSnapshotResult.Rejected(
+                    CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+            val future=validate(intent).future.future
+            CustomWorkoutSnapshotDomain.previewActivatedBlock(
+                draft,original.setup,active.setup,active.catalog,
+                active.revision,inputs,future,handoff.blockId,
+                handoff.firstWeek,absoluteWeek,weekday)
+        }}.getOrElse{CustomWorkoutSnapshotResult.Rejected(
+            CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)}
 
     /** Idempotent under crash replay; never changes an already-applied source. */
     fun commit(ownerKey:String):NativeFutureCommitReview =

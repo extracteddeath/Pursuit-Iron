@@ -251,6 +251,12 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 val selected=(plan as? NativeCustomPreparedRead.Found)?.workout
                     ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.NOT_PREPARED)
+                // A future-block preparation is a different consent protocol.
+                // It must never be laundered into legacy custom issuance,
+                // even after a later activation handoff has been cleared.
+                if(selected.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.CONSENT_CHANGED)
                 if(selected.athleteId!=current.athleteId ||
                     selected.snapshot.stamp.cycleId!=cycleId ||
                     selected.snapshot.absoluteWeek!=absoluteWeek ||

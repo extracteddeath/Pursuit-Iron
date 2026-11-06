@@ -35,7 +35,9 @@ data class NativeCustomPreparedWorkout(
         NativeCustomPreparationAuthority.CUSTOM_CYCLE,
     /** Only approved, rederived future-set amendments may populate this. */
     val repApprovalFingerprint:String?=null,
-    val loadApprovalFingerprint:String?=null
+    val loadApprovalFingerprint:String?=null,
+    /** Explicit athlete reset of unissued coaching changes to authored plan. */
+    val resetToAuthored:Boolean=false
 ) {
     val isIssued:Boolean get() = false
     val mayLog:Boolean get() = false
@@ -106,12 +108,17 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 fingerprint.matches(workout.loadApprovalFingerprint)))
         require(workout.repApprovalFingerprint==null ||
             workout.loadApprovalFingerprint==null)
+        require(!workout.resetToAuthored ||
+            (workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK &&
+                workout.repApprovalFingerprint==null &&
+                workout.loadApprovalFingerprint==null))
         val session=NativeKotlinCustomWorkoutSnapshotCodec.encode(
             workout.snapshot)
         val payload=ByteArrayOutputStream()
         DataOutputStream(payload).use{out->
             out.writeInt(magic)
-            out.writeInt(if(workout.loadApprovalFingerprint!=null)4 else
+            out.writeInt(if(workout.resetToAuthored)5 else
+                if(workout.loadApprovalFingerprint!=null)4 else
                 if(workout.repApprovalFingerprint!=null)3 else
                     if(workout.authority==
                         NativeCustomPreparationAuthority.CUSTOM_CYCLE) version else 2)
@@ -159,7 +166,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(data.readInt()!=magic)
                     throw IOException("unsupported prepared custom snapshot magic")
                 val schema=data.readInt()
-                if(schema !in 1..4)
+                if(schema !in 1..5)
                     throw IOException("unsupported prepared custom snapshot version")
                 val owner=data.readUTF()
                 val athlete=data.readUTF()
@@ -195,7 +202,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 NativeCustomPreparedWorkout(owner,athlete,workoutId,
                     revision,receiptHash,
                     NativeKotlinCustomWorkoutSnapshotCodec.decode(session),
-                    authority,repProof,loadProof).also{
+                    authority,repProof,loadProof,schema==5).also{
                         if(it.snapshot.stamp.athleteId!=athlete)
                             throw IOException("prepared athlete mismatch")
                     }

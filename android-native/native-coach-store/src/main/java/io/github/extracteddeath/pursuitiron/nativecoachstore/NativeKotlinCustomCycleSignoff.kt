@@ -104,10 +104,10 @@ internal object NativeCustomCycleSignoffFingerprint {
                 out.decimal(continuity.maximumDirectMuscleDropFraction)
                 out.writeBoolean(
                     continuity.maximumTotalWorkingSetRiseFraction!=null)
-                continuity.maximumTotalWorkingSetRiseFraction?.let(out::decimal)
+                continuity.maximumTotalWorkingSetRiseFraction?.let { out.decimal(it) }
                 out.writeBoolean(
                     continuity.maximumDirectMuscleRiseFraction!=null)
-                continuity.maximumDirectMuscleRiseFraction?.let(out::decimal)
+                continuity.maximumDirectMuscleRiseFraction?.let { out.decimal(it) }
             }
         }
         return MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray())

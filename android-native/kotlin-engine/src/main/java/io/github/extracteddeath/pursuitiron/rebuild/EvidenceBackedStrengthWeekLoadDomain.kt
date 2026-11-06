@@ -103,7 +103,7 @@ object EvidenceBackedStrengthWeekLoadDomain {
                     source.gymId!=athlete.gym.gymId
             } || history.currentVerifiedStock==null ||
             stock==null || stock!=history.currentVerifiedStock ||
-            movement.expectedLoadBasis!=stock.basis)
+            movement?.expectedLoadBasis!=stock.basis)
             return no(EvidenceBackedStrengthWeekLoadStatus.STALE_SOURCE_OR_GYM,
                 "Exercise, athlete, exact gym inventory and historical program revision must agree.")
 

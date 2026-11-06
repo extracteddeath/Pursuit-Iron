@@ -284,3 +284,18 @@ explicitly report that they cannot issue workouts or publish changes.
   inputs, not production-authenticated coaching grants. Even after draft
   acceptance, the athlete must separately sign off and the independent
   native workout preflight/issuer must approve exact targets before training.
+
+### Owner-persisted adaptation rights (candidate)
+
+- `NativeKotlinAdaptiveCyclePermissionFileStore` persists the athlete's
+  explicit per-cycle change rights as an owner-fenced, SHA-256 verified,
+  revision-CAS record, including revocation tombstones. No issued workout,
+  training history or completed log is changed by the permission store.
+- A caller's `CustomCycleCoachPermissions` object now has no standalone
+  authority. Candidate previews and commits must reopen the durable rights,
+  require the expected revision and an exact match of allowed change kinds.
+  Changed/revoked/corrupt/foreign grants fail closed.
+- `NativeKotlinCandidateHost` exposes read/confirm/revoke rights and uses its
+  own authenticated identity. The acceptance proposal still needs a
+  separately authenticated *coaching policy* source before full production
+  activation or prospective split/frequency approvals.

@@ -32,8 +32,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
         authoringSourceStore,customDraftStore,revisionFence,localAthlete)
     private val customCycleSignoffs=NativeKotlinCustomCycleSignoffFileStore(
         root,revisionFence,localAthlete,customDraftStore,authoringSourceStore)
+    private val adaptiveCyclePermissions=NativeKotlinAdaptiveCyclePermissionFileStore(
+        root,revisionFence,localAthlete)
     private val adaptiveCycleDrafts=NativeKotlinAdaptiveCycleDraftAcceptance(
-        revisionFence,localAthlete,customDraftStore,authoringSourceStore)
+        revisionFence,localAthlete,customDraftStore,authoringSourceStore,
+        adaptiveCyclePermissions)
     private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs)
@@ -482,29 +485,64 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * I/O and must stay off the main thread. They do not activate native
      * navigation, approve workouts, or accept prospective schedule profiles.
      */
+    fun readAdaptiveCyclePermissions(cycleId:String):NativeAdaptivePermissionRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAdaptivePermissionRead.Rejected(
+                NativeAdaptivePermissionRefusal.NOT_AUTHORIZED)
+        return adaptiveCyclePermissions.read(owner.ownerKey,cycleId)
+    }
+
+    fun confirmAdaptiveCyclePermissions(
+        cycleId:String,expectedPermissionRevision:Long,
+        allowedKinds:Set<CustomCycleChangeKind>,athleteConfirmed:Boolean
+    ):NativeAdaptivePermissionWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAdaptivePermissionWrite.Rejected(
+                NativeAdaptivePermissionRefusal.NOT_AUTHORIZED)
+        return adaptiveCyclePermissions.confirm(
+            owner.ownerKey,cycleId,expectedPermissionRevision,
+            allowedKinds,athleteConfirmed)
+    }
+
+    fun revokeAdaptiveCyclePermissions(
+        cycleId:String,expectedPermissionRevision:Long
+    ):NativeAdaptivePermissionWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAdaptivePermissionWrite.Rejected(
+                NativeAdaptivePermissionRefusal.NOT_AUTHORIZED)
+        return adaptiveCyclePermissions.revoke(
+            owner.ownerKey,cycleId,expectedPermissionRevision)
+    }
+
+    /**
+     * This authenticated candidate host is still NOT active navigation.
+     * Calls are off-main-thread. No caller supplies an owner or grant.
+     */
     private fun adaptiveChoice(
         cycleId:String,targetBlockId:String,optionId:String,
         expectedDraftRevision:Long,expectedSourceRevision:Long,
         proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
-        permissions:CustomCycleCoachPermissions
+        permissions:CustomCycleCoachPermissions,
+        expectedPermissionRevision:Long
     ):NativeAdaptiveCycleDraftCandidate? {
         val owner=localAthlete.signedInIdentity() ?:return null
         if(proposedCycle.athleteId!=owner.athleteId)return null
         return NativeAdaptiveCycleDraftCandidate(
             owner.ownerKey,cycleId,targetBlockId,optionId,
             expectedDraftRevision,expectedSourceRevision,proposedCycle,
-            inputs,permissions)
+            inputs,permissions,expectedPermissionRevision)
     }
 
     fun previewReviewedAdaptiveCycleDraft(
         cycleId:String,targetBlockId:String,optionId:String,
         expectedDraftRevision:Long,expectedSourceRevision:Long,
         proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
-        permissions:CustomCycleCoachPermissions
+        permissions:CustomCycleCoachPermissions,
+        expectedPermissionRevision:Long
     ):NativeAdaptiveCycleDraftPreview {
         val choice=adaptiveChoice(cycleId,targetBlockId,optionId,
             expectedDraftRevision,expectedSourceRevision,proposedCycle,
-            inputs,permissions)
+            inputs,permissions,expectedPermissionRevision)
             ?:return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
         return adaptiveCycleDrafts.preview(choice)
@@ -515,11 +553,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
         expectedDraftRevision:Long,expectedSourceRevision:Long,
         proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
         permissions:CustomCycleCoachPermissions,
+        expectedPermissionRevision:Long,
         reviewedFingerprint:String,athleteConfirmed:Boolean
     ):NativeAdaptiveCycleDraftDecision {
         val choice=adaptiveChoice(cycleId,targetBlockId,optionId,
             expectedDraftRevision,expectedSourceRevision,proposedCycle,
-            inputs,permissions)
+            inputs,permissions,expectedPermissionRevision)
             ?:return NativeAdaptiveCycleDraftDecision.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
         return adaptiveCycleDrafts.accept(choice,

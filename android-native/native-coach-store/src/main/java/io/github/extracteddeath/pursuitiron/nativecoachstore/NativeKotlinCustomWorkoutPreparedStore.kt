@@ -254,4 +254,64 @@ class NativeKotlinCustomWorkoutPreparedStore(
         }.getOrElse {NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.STORAGE_UNAVAILABLE)}
     }
+
+    /**
+     * Enumerate EVERY immutable preparation file under the owner OS fence,
+     * including abandoned or never-issued work. Unknown, renamed, pending,
+     * corrupt and over-capacity records fail closed rather than vanishing.
+     * A different owner's well-formed records are not this athlete's work.
+     */
+    internal fun inventory(ownerKey:String):NativePreparedInventoryResult {
+        fun fail(reason:NativeCustomInventoryRefusal)=
+            NativePreparedInventoryResult.Rejected(reason)
+        if(current(ownerKey)==null)
+            return fail(NativeCustomInventoryRefusal.NOT_AUTHORIZED)
+        return runCatching{
+            fence.withOwnerTransaction(ownerKey){
+                val signed=current(ownerKey)
+                    ?:return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.NOT_AUTHORIZED)
+                if(!Files.exists(directory))
+                    return@withOwnerTransaction NativePreparedInventoryResult.Found(
+                        emptyList())
+                if(Files.isSymbolicLink(directory))
+                    return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                val files=Files.list(directory).use{stream->
+                    stream.filter{it.fileName.toString().startsWith(
+                        "prepared-custom-")}.toList()
+                }
+                if(files.size>4096)
+                    return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.TOO_MANY_FILES)
+                val found=mutableListOf<NativeCustomPreparedWorkout>()
+                val filename=Regex("^prepared-custom-[a-f0-9]{64}\\.bin$")
+                for(file in files){
+                    if(!filename.matches(file.fileName.toString()) ||
+                        !Files.isRegularFile(file) || Files.isSymbolicLink(file))
+                        return@withOwnerTransaction fail(
+                            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                    val record=try{decode(file)}catch(_:Exception){
+                        return@withOwnerTransaction fail(
+                            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                    }?:return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                    if(path(record.ownerKey,record.workoutId)!=file)
+                        return@withOwnerTransaction fail(
+                            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                    if(record.ownerKey==ownerKey) {
+                        if(record.athleteId!=signed.athleteId)
+                            return@withOwnerTransaction fail(
+                                NativeCustomInventoryRefusal.NOT_AUTHORIZED)
+                        found+=record
+                    }
+                }
+                if(current(ownerKey)!=signed)
+                    return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.NOT_AUTHORIZED)
+                NativePreparedInventoryResult.Found(found.toList())
+            }
+        }.getOrElse{fail(NativeCustomInventoryRefusal.STORAGE_UNAVAILABLE)}
+    }
+
 }

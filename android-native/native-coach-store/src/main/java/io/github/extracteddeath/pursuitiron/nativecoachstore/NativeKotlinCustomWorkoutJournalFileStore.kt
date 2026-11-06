@@ -383,4 +383,68 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
     }
 
+
+    /**
+     * Enumerate issued custom journals, not merely those listed as already
+     * finished in the history manifest. Orphan, renamed and corrupt journal
+     * files MUST NOT disappear from the activation gate.
+     */
+    internal fun inventory(ownerKey:String):NativeIssuedInventoryResult {
+        fun fail(reason:NativeCustomInventoryRefusal)=
+            NativeIssuedInventoryResult.Rejected(reason)
+        if(owner(ownerKey)==null)
+            return fail(NativeCustomInventoryRefusal.NOT_AUTHORIZED)
+        return runCatching{
+            fence.withOwnerTransaction(ownerKey){
+                val signed=owner(ownerKey)
+                    ?:return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.NOT_AUTHORIZED)
+                if(!Files.exists(root))
+                    return@withOwnerTransaction NativeIssuedInventoryResult.Found(
+                        emptyList())
+                if(Files.isSymbolicLink(root))
+                    return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                val files=Files.list(root).use{stream->
+                    stream.filter{it.fileName.toString().startsWith(
+                        "issued-custom-")}.toList()
+                }
+                if(files.size>4096)
+                    return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.TOO_MANY_FILES)
+                val filename=Regex("^issued-custom-[a-f0-9]{64}\\.bin$")
+                val found=mutableListOf<NativeCustomIssuedJournal>()
+                for(file in files) {
+                    if(!filename.matches(file.fileName.toString()) ||
+                        !Files.isRegularFile(file) || Files.isSymbolicLink(file))
+                        return@withOwnerTransaction fail(
+                            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                    val data=try{decode(file)}catch(_:Exception){
+                        return@withOwnerTransaction fail(
+                            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                    }?:return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                    if(path(data.ownerKey,data.journal.workoutId)!=file)
+                        return@withOwnerTransaction fail(
+                            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE)
+                    if(data.ownerKey==ownerKey) {
+                        if(data.athleteId!=signed.athleteId)
+                            return@withOwnerTransaction fail(
+                                NativeCustomInventoryRefusal.NOT_AUTHORIZED)
+                        val verified=read(ownerKey,data.journal.workoutId,signed)
+                        if(verified !is NativeCustomJournalResult.Durable ||
+                            verified.issued!=data)
+                            return@withOwnerTransaction fail(
+                                NativeCustomInventoryRefusal.ISSUED_CONTENT_MISMATCH)
+                        found+=data
+                    }
+                }
+                if(owner(ownerKey)!=signed)
+                    return@withOwnerTransaction fail(
+                        NativeCustomInventoryRefusal.NOT_AUTHORIZED)
+                NativeIssuedInventoryResult.Found(found.toList())
+            }
+        }.getOrElse{fail(NativeCustomInventoryRefusal.STORAGE_UNAVAILABLE)}
+    }
+
 }

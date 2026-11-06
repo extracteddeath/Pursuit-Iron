@@ -64,7 +64,11 @@ object KotlinJournalLiveSetCoachDomain {
                     }!=true
             })
             return unavailable(LiveSetCoachUnavailable.UNVERIFIED_OR_MIXED_SET_SCHEME)
-        val prior=working.take(index).mapIndexed{ordinal,target->
+        // Include recorded LATER sets as well as earlier evidence. Otherwise an
+        // out-of-order or corrected journal could suggest lowering a still-open
+        // middle set even though a later set has already been recorded.
+        // InWorkoutCoachDomain returns NEXT_SET_ALREADY_LOGGED for this case.
+        val observed=working.mapIndexed{ordinal,target->
             val record=journal.effectiveSets[target.setKey]?.operation
                 as? KotlinJournalOperation.RecordSet
             val outcome=when(record?.outcome) {
@@ -81,7 +85,7 @@ object KotlinJournalLiveSetCoachDomain {
             }
         }.filterNotNull()
         val review=InWorkoutCoachDomain.review(InWorkoutReviewRequest(
-            next.reps,working.size,prior,index,nextLoad.value,
+            next.reps,working.size,observed,index,nextLoad.value,
             nextLoad.unit,currentGymStock,maximumReviewStep,
             nextTargetUserEdited=false,readiness=readiness,
             movementRestricted=movementRestricted))

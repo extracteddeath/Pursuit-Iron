@@ -1571,4 +1571,103 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
     }
 
+    private fun activatedIssuer(
+        fixture:ActivationFixture,
+        ledger:NativeKotlinHistoryManifestFileStore,
+        handoff:NativeKotlinFutureActivationHandoffFileStore?=fixture.handoff
+    ):NativeKotlinCustomWorkoutJournalFileStore {
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store())
+        return NativeKotlinCustomWorkoutJournalFileStore(
+            temp.root.toPath(),fence,identity,activatedPrepared(fixture),
+            preflight,ledger,KotlinNativeJournalFileStore(temp.root.toPath()),
+            handoff)
+    }
+
+    @Test fun signedActivatedWorkoutIssuesLogsAndReplaysWithDurableHistory() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val inputs=futureInputs()
+        val signoff=activatedSignoff(fixture)
+        val fingerprint=(tx.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready).reviewFingerprint
+        assertTrue(signoff.confirm("owner-1",0,fingerprint,inputs,true)
+            is NativeActivatedSignoffWrite.Committed)
+        val workoutId="future-issued-w4-d1"
+        assertTrue(activatedPrepared(fixture).prepareActivated("owner-1",
+            workoutId,"cycle-1",4,1,inputs,signoff,tx)
+            is NativeCustomPrepareResult.Prepared)
+        val ledger=NativeKotlinHistoryManifestFileStore(temp.root.toPath())
+        val issuer=activatedIssuer(fixture,ledger)
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.HISTORY_NOT_READY),
+            issuer.issueActivated("owner-1",workoutId,"cycle-1",
+                4,1,inputs,signoff,tx))
+        assertTrue(ledger.enroll("owner-1","athlete-1"){o,a ->
+            o=="owner-1" && a=="athlete-1" &&
+                active==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        val first=issuer.issueActivated("owner-1",workoutId,"cycle-1",
+            4,1,inputs,signoff,tx)
+        assertTrue(first.toString(),first is NativeCustomJournalResult.Durable)
+        assertFalse((first as NativeCustomJournalResult.Durable).replayed)
+        assertEquals("build",first.issued.journal.snapshot.blockId)
+        assertEquals(first.issued.journal.snapshot,
+            (activatedPrepared(fixture).open("owner-1",workoutId)
+                as NativeCustomPreparedRead.Found).workout.snapshot)
+        assertEquals(NativeCustomJournalResult.Durable(first.issued,true),
+            activatedIssuer(fixture,ledger).issueActivated(
+                "owner-1",workoutId,"cycle-1",4,1,
+                inputs,activatedSignoff(fixture),activationTransaction(fixture)))
+        val recorded=issuer.record("owner-1",workoutId,
+            CustomWorkoutJournalOperation.Record(
+                "future-actual-set",1,
+                CustomWorkoutVisitKey("cycle-1:w4:d1:slot-1:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,12,1)))
+        assertTrue(recorded.toString(),recorded is NativeCustomJournalResult.Durable)
+        assertEquals(recorded.let{(it as NativeCustomJournalResult.Durable).issued},
+            (activatedIssuer(fixture,ledger).open("owner-1",workoutId)
+                as NativeCustomJournalResult.Durable).issued)
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT),
+            issuer.issue("owner-1",workoutId,"cycle-1",4,1,inputs))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
+    @Test fun activatedWorkoutCannotIssueWithRevokedConsentOrOldPreparedGrant() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val inputs=futureInputs()
+        val signoff=activatedSignoff(fixture)
+        val fingerprint=(tx.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready).reviewFingerprint
+        val approved=signoff.confirm("owner-1",0,fingerprint,inputs,true)
+            as NativeActivatedSignoffWrite.Committed
+        val workoutId="pending-activated-issue"
+        assertTrue(activatedPrepared(fixture).prepareActivated("owner-1",
+            workoutId,"cycle-1",4,1,inputs,signoff,tx)
+            is NativeCustomPrepareResult.Prepared)
+        val ledger=NativeKotlinHistoryManifestFileStore(temp.root.toPath())
+        assertTrue(ledger.enroll("owner-1","athlete-1"){o,a ->
+            o=="owner-1" && a=="athlete-1"
+        } is NativeHistoryLedgerResult.Durable)
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT),
+            activatedIssuer(fixture,ledger).issueActivated(
+                "owner-1",workoutId,"cycle-1",4,2,inputs,signoff,tx))
+        assertEquals(NativeActivatedSignoffWrite.Revoked(2),
+            signoff.revoke("owner-1",approved.receipt.recordRevision))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.CONSENT_CHANGED),
+            activatedIssuer(fixture,ledger).issueActivated(
+                "owner-1",workoutId,"cycle-1",4,1,inputs,signoff,tx))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.NOT_ISSUED),
+            activatedIssuer(fixture,ledger).open("owner-1",workoutId))
+    }
+
 }

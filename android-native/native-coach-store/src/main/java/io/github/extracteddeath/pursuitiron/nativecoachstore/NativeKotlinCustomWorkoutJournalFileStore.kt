@@ -324,7 +324,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
         signoffs:NativeKotlinActivatedCycleSignoffFileStore,
-        activation:NativeKotlinFutureActivationCommitTransaction
+        activation:NativeKotlinFutureActivationCommitTransaction,
+        repApprovals:NativeKotlinCustomNextRepApprovalFileStore?=null
     ):NativeCustomJournalResult {
         if(!id.matches(workoutId)||!id.matches(cycleId) ||
             absoluteWeek !in 1..104 || weekday !in 0..6)
@@ -400,7 +401,18 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 absoluteWeek,weekday) as? CustomWorkoutSnapshotResult.Preview
                 ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)
-            if(exact.snapshot!=selected.snapshot)
+            // Base-cycle signoff alone cannot authorize a changed rep band.
+            // Independently redo the athlete's rep amendment from verified
+            // history. A corrupt/stale receipt must never silently fall back
+            // to an unchanged or forged prepared snapshot.
+            val repApproval=repApprovals?.readCurrent(ownerKey,workoutId,
+                inputs,absoluteWeek,weekday) ?:NativeCustomNextRepRead.Missing
+            if(repApproval is NativeCustomNextRepRead.Rejected)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            val amended=repApproval as? NativeCustomNextRepRead.Current
+            if(selected.repApprovalFingerprint!=amended?.receipt?.fingerprint ||
+                (amended?.amendment?.amended ?:exact.snapshot)!=selected.snapshot)
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)
             val ledger=history.open(ownerKey,current.athleteId)

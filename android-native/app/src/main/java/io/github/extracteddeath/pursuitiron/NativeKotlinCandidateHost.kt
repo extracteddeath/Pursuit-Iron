@@ -971,10 +971,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
             inputs,permissions,expectedPermissionRevision,prospective)
             ?:return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
-        if(availableCoachAssistance()?.coachingSuggestionsEnabled!=true)
-            return NativeAdaptiveCycleDraftPreview.Rejected(
-                NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED)
-        return adaptiveCycleDrafts.preview(choice)
+        return runCatching {
+            revisionFence.withOwnerTransaction(choice.ownerKey) {
+                if(availableCoachAssistance()?.coachingSuggestionsEnabled!=true)
+                    NativeAdaptiveCycleDraftPreview.Rejected(
+                        NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED)
+                else adaptiveCycleDrafts.preview(choice)
+            }
+        }.getOrElse {NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.STORAGE_UNAVAILABLE)}
     }
 
     fun acceptReviewedAdaptiveCycleDraft(
@@ -991,11 +996,16 @@ internal class NativeKotlinCandidateHost(context:Context) {
             inputs,permissions,expectedPermissionRevision,prospective)
             ?:return NativeAdaptiveCycleDraftDecision.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
-        if(availableCoachAssistance()?.coachingSuggestionsEnabled!=true)
-            return NativeAdaptiveCycleDraftDecision.Rejected(
-                NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED)
-        return adaptiveCycleDrafts.accept(choice,
-            reviewedFingerprint,athleteConfirmed)
+        return runCatching {
+            revisionFence.withOwnerTransaction(choice.ownerKey) {
+                if(availableCoachAssistance()?.coachingSuggestionsEnabled!=true)
+                    NativeAdaptiveCycleDraftDecision.Rejected(
+                        NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED)
+                else adaptiveCycleDrafts.accept(choice,
+                    reviewedFingerprint,athleteConfirmed)
+            }
+        }.getOrElse {NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.STORAGE_UNAVAILABLE)}
     }
 
     fun readCustomCycleConsent(

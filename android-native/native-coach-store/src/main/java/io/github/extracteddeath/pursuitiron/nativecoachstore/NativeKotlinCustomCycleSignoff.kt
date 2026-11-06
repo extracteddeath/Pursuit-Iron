@@ -9,7 +9,8 @@ import java.security.MessageDigest
 /**
  * Athlete consent is NOT a workout approval. A fingerprint is tied to every
  * byte of the immutable authored cycle and reviewed gym/catalog source, plus
- * the complete authored coaching policies and declared session overhead.
+ * the complete authored coaching policies, transition continuity ceilings,
+ * and declared session overhead.
  * A policy's human-readable revision label alone is not enough.
  */
 data class NativeKotlinCustomCycleSignoff(
@@ -78,6 +79,9 @@ internal object NativeCustomCycleSignoffFingerprint {
     ):String {
         val bytes=ByteArrayOutputStream()
         DataOutputStream(bytes).use {out->
+            // This is a versioned consent fingerprint, NOT the draft file
+            // codec version. Changing it intentionally stales older receipts.
+            out.writeInt(2)
             val authored=NativeCustomCycleDraftCodec.encode(cycle)
             val confirmed=NativeKotlinCustomAuthoringSourceCodec.encode(source)
             out.writeInt(authored.size);out.write(authored)
@@ -89,6 +93,21 @@ internal object NativeCustomCycleSignoffFingerprint {
             out.writeInt(inputs.nonSetSecondsByWeekday.size)
             inputs.nonSetSecondsByWeekday.toSortedMap().forEach { (day,seconds)->
                 out.writeInt(day);out.writeInt(seconds)
+            }
+            // Omission used to let a changed volume-drop or ramp policy
+            // masquerade as the same reviewed program. Serialize ALL four
+            // bounds, including absence, in fixed order and canonical units.
+            val continuity=inputs.continuityPolicy
+            out.writeBoolean(continuity!=null)
+            if(continuity!=null) {
+                out.decimal(continuity.maximumTotalWorkingSetDropFraction)
+                out.decimal(continuity.maximumDirectMuscleDropFraction)
+                out.writeBoolean(
+                    continuity.maximumTotalWorkingSetRiseFraction!=null)
+                continuity.maximumTotalWorkingSetRiseFraction?.let(out::decimal)
+                out.writeBoolean(
+                    continuity.maximumDirectMuscleRiseFraction!=null)
+                continuity.maximumDirectMuscleRiseFraction?.let(out::decimal)
             }
         }
         return MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray())

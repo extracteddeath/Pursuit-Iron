@@ -306,4 +306,44 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             drafts.read("owner-1","cycle-1"))
     }
 
+
+    @Test fun continuityPolicyChangeInvalidatesSignedCycleEvenIfReviewStillReady() {
+        initialize()
+        val prior=inputs().copy(continuityPolicy=
+            CustomCoachVolumeContinuityPolicy(n("0.20"),n("0.25"),
+                n("0.15"),n("0.10")))
+        val signed=store().confirm("owner-1","cycle-1",1,1,0,prior,true)
+        assertTrue(signed.toString(),signed is NativeCustomSignoffWrite.Committed)
+        val receipt=(signed as NativeCustomSignoffWrite.Committed).receipt
+        assertEquals(NativeCustomSignoffRead.Found(receipt,true),
+            store().read("owner-1","cycle-1",prior))
+        val cases=listOf(
+            prior.copy(continuityPolicy=null),
+            prior.copy(continuityPolicy=prior.continuityPolicy!!.copy(
+                maximumTotalWorkingSetDropFraction=n("0.19"))),
+            prior.copy(continuityPolicy=prior.continuityPolicy!!.copy(
+                maximumDirectMuscleDropFraction=n("0.24"))),
+            prior.copy(continuityPolicy=prior.continuityPolicy!!.copy(
+                maximumTotalWorkingSetRiseFraction=n("0.14"))),
+            prior.copy(continuityPolicy=prior.continuityPolicy!!.copy(
+                maximumDirectMuscleRiseFraction=n("0.09")))
+        )
+        cases.forEach {changed ->
+            assertEquals(NativeCustomSignoffRead.Found(receipt,false),
+                store().read("owner-1","cycle-1",changed))
+            assertNotEquals(
+                NativeCustomCycleSignoffFingerprint.calculate(
+                    cycle(),source(),prior),
+                NativeCustomCycleSignoffFingerprint.calculate(
+                    cycle(),source(),changed))
+        }
+        // Equivalent decimal representations must never demand new consent.
+        val equivalent=prior.copy(continuityPolicy=
+            prior.continuityPolicy!!.copy(
+                maximumTotalWorkingSetDropFraction=n("0.200"),
+                maximumDirectMuscleRiseFraction=n("0.100")))
+        assertEquals(NativeCustomSignoffRead.Found(receipt,true),
+            store().read("owner-1","cycle-1",equivalent))
+    }
+
 }

@@ -100,8 +100,15 @@ class CustomCycleTransitionDomainTest {
             ))))
         val refused = transition(original, changed)
         assertTrue(CustomCycleChangeKind.WEEK_OVERRIDES in refused.blockedKinds)
+        val overrideOnly=transition(original,changed,
+            CustomCycleCoachPermissions(adaptWeekOverrides=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,
+            overrideOnly.status)
+        assertEquals(setOf(CustomCycleChangeKind.LOADS),
+            overrideOnly.blockedKinds)
         val allowed = transition(original, changed,
-            CustomCycleCoachPermissions(adaptWeekOverrides = true))
+            CustomCycleCoachPermissions(adaptWeekOverrides = true,
+                adaptLoads=true))
         assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
             allowed.status)
         val oldWeek = CustomTrainingCycleDomain.week(
@@ -114,6 +121,69 @@ class CustomCycleTransitionDomainTest {
         assertEquals(n(200),
             (newWeek.days.single().slots.single().sets.first().load
                 as DraftSetLoad.Verified).value)
+    }
+
+    @Test fun newWeekOverrideCannotChangeRepRirSetCountRestOrAmplifierWithoutPermissions() {
+        val source=cycle()
+        val amplifier=CustomSetAmplifier(CustomAmplifierKind.DROP_SET,
+            6,15,DraftSetLoad.Verified(
+                LoadUnit.LB,LoadBasis.SMITH_TOTAL,n(135)))
+        val changed=source.copy(revision=4,weekOverrides=mapOf(
+            "build" to listOf(CustomWeekSlotOverride(
+                3,0,"main",listOf(
+                    set(reps=6,rir=1,rest=145,amp=amplifier),
+                    set(reps=6,rir=1,rest=145),
+                    set(reps=6,rir=1,rest=145))))))
+        val unchecked=transition(source,changed,
+            CustomCycleCoachPermissions(adaptWeekOverrides=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,
+            unchecked.status)
+        assertEquals(setOf(
+            CustomCycleChangeKind.SET_COUNT,CustomCycleChangeKind.REPS,
+            CustomCycleChangeKind.RIR,CustomCycleChangeKind.REST,
+            CustomCycleChangeKind.AMPLIFIERS),unchecked.blockedKinds)
+        val reviewed=transition(source,changed,
+            CustomCycleCoachPermissions(adaptWeekOverrides=true,
+                adaptSetCount=true,adaptReps=true,adaptRir=true,
+                adaptRest=true,adaptAmplifiers=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            reviewed.status)
+        assertFalse(reviewed.mayIssueWorkout)
+    }
+
+    @Test fun deletingWeekOverrideCannotRestoreUnauthorizedTemplateLoad() {
+        val base=cycle()
+        val withOverride=base.copy(weekOverrides=mapOf(
+            "build" to listOf(CustomWeekSlotOverride(
+                2,0,"main",listOf(set(load=200),set(load=200))))))
+        val revert=base.copy(revision=4)
+        val noLoadPermission=transition(withOverride,revert,
+            CustomCycleCoachPermissions(adaptWeekOverrides=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,
+            noLoadPermission.status)
+        assertEquals(setOf(CustomCycleChangeKind.LOADS),
+            noLoadPermission.blockedKinds)
+        val allowed=transition(withOverride,revert,
+            CustomCycleCoachPermissions(adaptWeekOverrides=true,
+                adaptLoads=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            allowed.status)
+    }
+
+    @Test fun redundantWeekOverrideStillNeedsOverrideButNotLoadPermission() {
+        val original=cycle()
+        val candidate=original.copy(revision=4,weekOverrides=mapOf(
+            "build" to listOf(CustomWeekSlotOverride(
+                3,0,"main",original.blocks.single().days.single()
+                    .slots.single().sets))))
+        val noLoads=transition(original,candidate,
+            CustomCycleCoachPermissions(adaptWeekOverrides=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            noLoads.status)
+        assertTrue(noLoads.blockedKinds.isEmpty())
+        assertTrue(noLoads.differences.none {
+            it.kind==CustomCycleChangeKind.LOADS
+        })
     }
 
     @Test fun userCanManuallyEditWithoutCoachPermissionButStillNeedsReview() {

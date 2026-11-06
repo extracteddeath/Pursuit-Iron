@@ -295,12 +295,24 @@ object CustomCycleTransitionDomain {
                 emit(CustomCycleChangeKind.WEEK_OVERRIDES,
                     "weekOverrides." + blockId,
                     "Athlete-authored weekly override added or removed.")
-            for (key in original.keys.intersect(proposed.keys)) {
-                val a = checkNotNull(original[key])
-                val b = checkNotNull(proposed[key])
-                compareSets(a.sets, b.sets,
-                    "weekOverrides." + blockId + "." + a.weekInBlock +
-                        "." + a.weekday + "." + a.slotId, ::emit)
+            // Compare EFFECTIVE prescriptions for all added, removed and
+            // replaced overrides. Comparing only existing override keys
+            // permits a new override to alter loads/RIR/reps/sets merely
+            // with adaptWeekOverrides=true; restoring the template on
+            // removal can make exactly the same silent changes.
+            fun templateSets(
+                cycle:CustomTrainingCycle,key:Triple<Int,Int,String>
+            ):List<CustomAuthoredSet>? = cycle.blocks
+                .singleOrNull {it.blockId==blockId}?.days
+                ?.singleOrNull {it.weekday==key.second}?.slots
+                ?.singleOrNull {it.slotId==key.third}?.sets
+            for(key in original.keys.union(proposed.keys)) {
+                val before=original[key]?.sets ?:templateSets(old,key)
+                val after=proposed[key]?.sets ?:templateSets(next,key)
+                if(before!=null && after!=null)
+                    compareSets(before,after,
+                        "weekOverrides." + blockId + "." + key.first +
+                            "." + key.second + "." + key.third,::emit)
             }
         }
         return found.values.toList()

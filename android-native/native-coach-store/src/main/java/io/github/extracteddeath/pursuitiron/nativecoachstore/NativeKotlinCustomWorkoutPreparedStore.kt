@@ -360,8 +360,12 @@ class NativeKotlinCustomWorkoutPreparedStore(
             NativePreparedManualResetPreview.Rejected(r)
         val athlete=current(ownerKey)?:return no(
             NativePreparedManualResetRefusal.NOT_AUTHORIZED)
-        val saved=(openFenced(ownerKey,workoutId,athlete)
-            as? NativeCustomPreparedRead.Found)?.workout
+        val read=openFenced(ownerKey,workoutId,athlete)
+        if(read is NativeCustomPreparedRead.Rejected)
+            return no(if(read.reason==NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+                NativePreparedManualResetRefusal.NOT_AUTHORIZED
+                else NativePreparedManualResetRefusal.CORRUPT_RECORD)
+        val saved=(read as? NativeCustomPreparedRead.Found)?.workout
             ?:return no(NativePreparedManualResetRefusal.NO_AMENDED_PREPARATION)
         if(saved.authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
             saved.resetToAuthored ||
@@ -373,9 +377,16 @@ class NativeKotlinCustomWorkoutPreparedStore(
             saved.snapshot.weekday!=weekday ||
             saved.ownerKey!=ownerKey || saved.athleteId!=athlete.athleteId)
             return no(NativePreparedManualResetRefusal.INVALID_SELECTION)
-        if(issued.open(ownerKey,workoutId)!=NativeCustomJournalResult.Rejected(
-                NativeCustomJournalRefusal.NOT_ISSUED))
-            return no(NativePreparedManualResetRefusal.ALREADY_ISSUED)
+        when(val journal=issued.open(ownerKey,workoutId)) {
+            is NativeCustomJournalResult.Durable ->
+                return no(NativePreparedManualResetRefusal.ALREADY_ISSUED)
+            is NativeCustomJournalResult.Rejected ->
+                if(journal.reason!=NativeCustomJournalRefusal.NOT_ISSUED)
+                    return no(if(journal.reason==
+                            NativeCustomJournalRefusal.NOT_AUTHORIZED)
+                        NativePreparedManualResetRefusal.NOT_AUTHORIZED
+                        else NativePreparedManualResetRefusal.STORAGE_UNAVAILABLE)
+        }
         val preferences=(settings.read(ownerKey)
             as? NativeCoachSettingsRead.Current)?.settings
             ?:return no(NativePreparedManualResetRefusal.SETTINGS_UNAVAILABLE)

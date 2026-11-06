@@ -202,7 +202,6 @@ object AdaptiveStrengthVolumeRepairDomain {
                         })
                     })
                 })
-            }
             working++
             added++
             seconds[pick.weekday]=checkNotNull(seconds[pick.weekday])+

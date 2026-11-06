@@ -683,6 +683,23 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return activatedCycleSignoffs.revoke(owner.ownerKey,expectedRevision)
     }
 
+    /**
+     * Immutable future-block workout preparation under the NEW activated
+     * signoff, not the legacy custom-cycle grant. It preserves exact authored
+     * slots/sets and remains deliberately non-issued and non-loggable.
+     */
+    fun prepareActivatedFutureWorkout(
+        workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs
+    ):NativeCustomPrepareResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomPrepareResult.Rejected(
+                NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.prepareActivated(owner.ownerKey,workoutId,
+            cycleId,absoluteWeek,weekday,inputs,activatedCycleSignoffs,
+            futureActivationCommit)
+    }
+
     fun abortFutureBlockActivationBeforeSourceChange(
         approvalRevision:Long,fingerprint:String,athleteConfirmed:Boolean
     ):NativeFutureCommitReview {

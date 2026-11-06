@@ -369,6 +369,33 @@ class CoachAthleteProgramGeneratorTest {
         assertEquals(0,p.primaryLiftMinimumDays["row"] ?: 0)
     }
 
+    @Test fun primaryLiftSearchRanksSpacedWeekRatherThanFirstEightDfsLeaves() {
+        val s=setup(weekdays=setOf(0,1,2,3,4,5))
+        val required=policy(s,primaries=mapOf("bench" to 2))
+        val calendar=(0..5).toList()
+        val placements=CoachAthleteProgramGenerator.placements(
+            calendar,List(6){ComposerFocus.FULL_BODY},
+            List(6){ComposerSessionPurpose.HYPERTROPHY},
+            required,movements.associateBy {it.exerciseId},
+            movements.associate {it.exerciseId to choice(it.exerciseId,
+                visits=2,gap=1)})
+        assertEquals(8,placements.size)
+        fun selectedDays(plan:List<AthleteCalendarIntent>)=plan.filter {
+            it.requiredPrimaryExerciseId=="bench"
+        }.map {it.weekday}.toSet()
+        // The three optimal three-calendar-day-gap combinations.
+        // The old DFS-first-eight list omitted Monday/Thursday.
+        assertEquals(setOf(setOf(0,3),setOf(1,4),setOf(2,5)),
+            placements.take(3).map(::selectedDays).toSet())
+        assertTrue(placements.all {selectedDays(it).size==2})
+        assertEquals(placements,CoachAthleteProgramGenerator.placements(
+            calendar,List(6){ComposerFocus.FULL_BODY},
+            List(6){ComposerSessionPurpose.HYPERTROPHY},required,
+            movements.associateBy {it.exerciseId},
+            movements.associate {it.exerciseId to choice(it.exerciseId,
+                visits=2,gap=1)}))
+    }
+
     @Test fun alternatePrimaryPlacementsRespectSundayToMondayRecovery() {
         val s=setup(weekdays=setOf(0,2,4,6))
         val policy=policy(s,primaries=mapOf("bench" to 2))

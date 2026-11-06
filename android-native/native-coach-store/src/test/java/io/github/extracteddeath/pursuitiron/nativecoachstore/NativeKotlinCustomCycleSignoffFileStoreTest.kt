@@ -296,7 +296,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             it.copy(split=CustomSplitIdentity.Named(ComposerSplit.UPPER_LOWER))
         }))
         assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
-            NativeAdaptiveCycleDraftRefusal.FUTURE_PROFILE_REQUIRES_APPROVAL),
+            NativeAdaptiveCycleDraftRefusal.TARGET_NOT_FUTURE_BLOCK),
             adaptive().preview(prospective))
         val unrelated=option(adjusted().copy(title="Unreviewed other change"))
         assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
@@ -484,6 +484,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             split=ComposerSplit.UPPER_LOWER,trainingDays=4,
             minimumPurposeDays=mapOf(ComposerSessionPurpose.HYPERTROPHY to 4)),
         mapOf(0 to 200,1 to 200,2 to 200,4 to 200))
+    private fun futureInputs()=inputs().copy(continuityPolicy=
+        CustomCoachVolumeContinuityPolicy(
+            n("0.50"),n("0.50"),n("0.50"),n("0.50")))
     private fun futureBaselineCycle():CustomTrainingCycle {
         val authored=cycle(2)
         val original=authored.blocks.single()
@@ -495,12 +498,12 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeCustomDraftWriteResult.Committed(2),
             drafts.save("owner-1","cycle-1",1,futureBaselineCycle()))
         val review=CustomCycleCoachAuditDomain.review(
-            futureBaselineCycle(),source().setup,source().catalog,inputs())
+            futureBaselineCycle(),source().setup,source().catalog,futureInputs())
         assertEquals(review.issues.toString(),
             CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,review.status)
     }
     private fun approveFutureBaseline():NativeKotlinCustomCycleSignoff {
-        val result=store().confirm("owner-1","cycle-1",2,1,0,inputs(),true)
+        val result=store().confirm("owner-1","cycle-1",2,1,0,futureInputs(),true)
         assertTrue(result.toString(),result is NativeCustomSignoffWrite.Committed)
         return (result as NativeCustomSignoffWrite.Committed).receipt
     }
@@ -526,7 +529,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         context:ProspectiveBlockCoachingContext=futureContext()
     )=option(proposed=futureCycle(),permissions=futurePermissions())
         .copy(targetBlockId="build",expectedDraftRevision=2,
-            expectedPermissionRevision=2,prospective=context)
+            expectedPermissionRevision=2,coaching=futureInputs(),
+            prospective=context)
 
 
     @Test fun firstBlockCannotBeSavedAsFutureScheduleEvenWithFutureConsent() {
@@ -607,7 +611,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertFalse(receipt.mayIssueWorkout)
         assertFalse(receipt.mayActivateProfile)
         assertEquals(NativeCustomSignoffRead.Found(signed,false),
-            store().read("owner-1","cycle-1",inputs()))
+            store().read("owner-1","cycle-1",futureInputs()))
         // This is a DRAFT: the actual reviewed gym/profile remains the
         // original three-day split and issuance is still unauthorized.
         assertEquals(ComposerSplit.FULL_BODY,
@@ -615,7 +619,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 .source.setup.reviewed!!.split)
         assertEquals(NativeCustomSignoffWrite.Rejected(
             NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED),
-            store().confirm("owner-1","cycle-1",3,1,1,inputs(),true))
+            store().confirm("owner-1","cycle-1",3,1,1,futureInputs(),true))
     }
 
     @Test fun futureScheduleCannotLaunderNewGymOrUnapprovedFrequency() {

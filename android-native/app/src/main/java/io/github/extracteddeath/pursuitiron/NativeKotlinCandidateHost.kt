@@ -32,6 +32,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         authoringSourceStore,customDraftStore,revisionFence,localAthlete)
     private val customCycleSignoffs=NativeKotlinCustomCycleSignoffFileStore(
         root,revisionFence,localAthlete,customDraftStore,authoringSourceStore)
+    private val adaptiveCycleDrafts=NativeKotlinAdaptiveCycleDraftAcceptance(
+        revisionFence,localAthlete,customDraftStore,authoringSourceStore)
     private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs)
@@ -471,6 +473,57 @@ internal class NativeKotlinCandidateHost(context:Context) {
             owner.ownerKey,cycleId,expectedCycleRevision,
             expectedSourceRevision,expectedConsentRevision,
             inputs,athleteConfirmed)
+    }
+
+    /**
+     * Candidate-only adaptive custom-cycle choice. The host derives the
+     * identity from its authenticated local athlete; a Compose card cannot
+     * furnish its own owner key or pre-verified source. These calls do disk
+     * I/O and must stay off the main thread. They do not activate native
+     * navigation, approve workouts, or accept prospective schedule profiles.
+     */
+    private fun adaptiveChoice(
+        cycleId:String,targetBlockId:String,optionId:String,
+        expectedDraftRevision:Long,expectedSourceRevision:Long,
+        proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
+        permissions:CustomCycleCoachPermissions
+    ):NativeAdaptiveCycleDraftCandidate? {
+        val owner=localAthlete.signedInIdentity() ?:return null
+        if(proposedCycle.athleteId!=owner.athleteId)return null
+        return NativeAdaptiveCycleDraftCandidate(
+            owner.ownerKey,cycleId,targetBlockId,optionId,
+            expectedDraftRevision,expectedSourceRevision,proposedCycle,
+            inputs,permissions)
+    }
+
+    fun previewReviewedAdaptiveCycleDraft(
+        cycleId:String,targetBlockId:String,optionId:String,
+        expectedDraftRevision:Long,expectedSourceRevision:Long,
+        proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
+        permissions:CustomCycleCoachPermissions
+    ):NativeAdaptiveCycleDraftPreview {
+        val choice=adaptiveChoice(cycleId,targetBlockId,optionId,
+            expectedDraftRevision,expectedSourceRevision,proposedCycle,
+            inputs,permissions)
+            ?:return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
+        return adaptiveCycleDrafts.preview(choice)
+    }
+
+    fun acceptReviewedAdaptiveCycleDraft(
+        cycleId:String,targetBlockId:String,optionId:String,
+        expectedDraftRevision:Long,expectedSourceRevision:Long,
+        proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
+        permissions:CustomCycleCoachPermissions,
+        reviewedFingerprint:String,athleteConfirmed:Boolean
+    ):NativeAdaptiveCycleDraftDecision {
+        val choice=adaptiveChoice(cycleId,targetBlockId,optionId,
+            expectedDraftRevision,expectedSourceRevision,proposedCycle,
+            inputs,permissions)
+            ?:return NativeAdaptiveCycleDraftDecision.Rejected(
+                NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
+        return adaptiveCycleDrafts.accept(choice,
+            reviewedFingerprint,athleteConfirmed)
     }
 
     fun readCustomCycleConsent(

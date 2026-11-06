@@ -261,3 +261,26 @@ explicitly report that they cannot issue workouts or publish changes.
 - Kotlin regressions exercise cold restart, idempotent retries, foreign
   pending redo, corrupt correction files and mixed-history recomputation.
   JVM/Android compile and device acceptance remain unverified release gates.
+
+### Candidate adaptive option preview and athlete-authored draft acceptance
+
+- `NativeKotlinAdaptiveCycleDraftAcceptance` now reopens the currently saved
+  athlete-owned custom cycle and reviewed gym/catalog source under the same
+  per-owner OS fence, re-runs full-cycle coaching and coach-permission reviews,
+  and returns an exact fingerprint of the offered option and review context.
+- A separate, explicit athlete action rechecks that fingerprint, current
+  revisions, source, permissions and full-cycle audit under the owner lock
+  before saving ONE revision-CAS **draft**. A stale program, changed gym,
+  modified proposal, denied permission or wrong signed-in account fails
+  closed. No issued workout, past evidence, training history or source
+  inventory is rewritten. The previous cycle signoff becomes non-current.
+- `NativeKotlinCandidateHost` exposes off-main-thread preview and acceptance
+  entry points using its own local authenticated owner rather than letting
+  the screen supply identity. These remain unused by production navigation.
+- **The supported slice is intentionally limited:** an option with changed
+  split or scheduled weekdays is rejected until prospective athlete setup,
+  phase policies and actual gym/source revisions have coordinated approval.
+  Caller-supplied policy and permission values are still candidate review
+  inputs, not production-authenticated coaching grants. Even after draft
+  acceptance, the athlete must separately sign off and the independent
+  native workout preflight/issuer must approve exact targets before training.

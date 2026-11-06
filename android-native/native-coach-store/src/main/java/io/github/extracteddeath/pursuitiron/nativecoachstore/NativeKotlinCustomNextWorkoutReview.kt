@@ -110,12 +110,11 @@ class NativeKotlinCustomNextWorkoutReview(
             val verifiedStock=movement.equipmentId?.let{
                 gym.confirmedStock[it]
             }?.takeIf{it.basis==movement.expectedLoadBasis && it.unit==gym.unit}
-            val full=(history.read(ownerKey,current.athleteId)
-                as? NativeKotlinMixedHistoryReadResult.Review)
-                ?:return@withOwnerTransaction when(
-                    val latest=history.read(ownerKey,current.athleteId)) {
+            val historyRead=history.read(ownerKey,current.athleteId)
+            val full=historyRead as? NativeKotlinMixedHistoryReadResult.Review
+                ?:return@withOwnerTransaction when(historyRead) {
                     is NativeKotlinMixedHistoryReadResult.Rejected ->
-                        NativeCustomNextCoachResult.HistoryRejected(latest.reason)
+                        NativeCustomNextCoachResult.HistoryRejected(historyRead.reason)
                     else -> reject(NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
                 }
             val completions=ArrayList<CustomCoachingHistoricalSession>()

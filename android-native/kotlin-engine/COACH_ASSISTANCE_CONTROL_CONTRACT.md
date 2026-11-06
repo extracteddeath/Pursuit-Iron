@@ -53,6 +53,19 @@ can receive non-progression informational assistance later.
 7. **Existing issued workouts remain historical facts.** Turning the coach OFF
    does not retrospectively revoke a workout already issued; amendments to
    future, unissued workouts require a fresh review after settings change.
+8. **Explicit reset of a prepared change.** An athlete can preview and
+   explicitly revert an already PREPARED (but unissued) signed custom
+   workout to the current authored rep/load prescription. This is not
+   automatic on toggling coaching OFF. It requires the exact prepared-file
+   fingerprint, a matching coaching-settings revision, explicit confirmation,
+   current activated-cycle consent, and structural proof that the only
+   preparation changes were approved working-set reps OR verified load in
+   one slot. It performs ONE atomic, checksum-protected replacement.
+   A versioned reset flag prevents older approvals from reappearing when
+   coaching is turned back ON. Unrelated program fields, all started or
+   issued workouts and finished history are immutable. An expired optional
+   suggestion never blocks ordinary manual training; a corrupt receipt
+   must still fail closed.
 
 ## Implementation and UI integration boundary
 

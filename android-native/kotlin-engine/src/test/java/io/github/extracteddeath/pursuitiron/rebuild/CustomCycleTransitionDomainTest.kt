@@ -342,6 +342,31 @@ class CustomCycleTransitionDomainTest {
                 adaptExercises=true,removePinned=true)).status)
     }
 
+    @Test fun newBlockPreservesAthleteExerciseNotesUnlessCueChangesArePermitted() {
+        val original=cycle()
+        val existing=original.blocks.single()
+        val before=existing.days.single()
+        val annotated=before.copy(slots=listOf(
+            before.slots.single().copy(coachNote="Avoid deep stretch")))
+        val reviewedBase=original.copy(blocks=listOf(existing.copy(
+            days=listOf(annotated))))
+        val source=reviewedBase.blocks.single()
+        val replacement=annotated.copy(slots=listOf(
+            annotated.slots.single().copy(coachNote="Different cue")))
+        val proposed=reviewedBase.copy(revision=4,blocks=listOf(source,
+            source.copy(blockId="next",days=listOf(replacement))))
+        val denied=transition(reviewedBase,proposed,
+            CustomCycleCoachPermissions(adaptBlocks=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,denied.status)
+        assertEquals(setOf(CustomCycleChangeKind.CUES),denied.blockedKinds)
+        val allowed=transition(reviewedBase,proposed,
+            CustomCycleCoachPermissions(adaptBlocks=true,adaptCues=true))
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            allowed.status)
+        assertEquals("Avoid deep stretch",
+            reviewedBase.blocks.single().days.single().slots.single().coachNote)
+    }
+
     @Test fun addingSameStructureBlockOnlyRequiresBlockPermission() {
         val original=cycle()
         val prior=original.blocks.single()

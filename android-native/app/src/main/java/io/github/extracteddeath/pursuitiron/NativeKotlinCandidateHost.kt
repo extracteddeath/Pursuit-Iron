@@ -381,14 +381,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeOwnerNextSetResult.Rejected(
                 NativeOwnerNextSetRefusal.NOT_AUTHORIZED)
-        val assistance=availableCoachAssistance()
-        if(assistance?.offersProgression!=true)
-            return NativeOwnerNextSetResult.Rejected(
-                NativeOwnerNextSetRefusal.ASSISTANCE_DISABLED)
-        return mixedHistoryReader.reviewCurrentNextSetTargets(
-            owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
-            assistance.coachingReadiness(readiness),movementRestricted,
-            authoringSourceStore)
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val assistance=availableCoachAssistance()
+                if(assistance?.offersProgression!=true)
+                    NativeOwnerNextSetResult.Rejected(
+                        NativeOwnerNextSetRefusal.ASSISTANCE_DISABLED)
+                else mixedHistoryReader.reviewCurrentNextSetTargets(
+                    owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
+                    assistance.coachingReadiness(readiness),movementRestricted,
+                    authoringSourceStore)
+            }
+        }.getOrElse {NativeOwnerNextSetResult.Rejected(
+            NativeOwnerNextSetRefusal.STORAGE_UNAVAILABLE)}
     }
 
     /** Explicitly accept only the exact reverified preview; no issuance. */
@@ -400,14 +405,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeKotlinRepAcceptanceResult.Rejected(
                 NativeKotlinRepAcceptanceRefusal.NOT_AUTHORIZED)
-        val assistance=availableCoachAssistance()
-        if(assistance?.offersProgression!=true)
-            return NativeKotlinRepAcceptanceResult.Rejected(
-                NativeKotlinRepAcceptanceRefusal.ASSISTANCE_DISABLED)
-        return mixedHistoryReader.acceptReviewedNextSetTargets(
-            signed.ownerKey,signed.athleteId,approvalStore,intent,
-            assistance.coachingReadiness(readiness),movementRestricted,
-            authoringSourceStore)
+        return runCatching {
+            revisionFence.withOwnerTransaction(signed.ownerKey) {
+                val assistance=availableCoachAssistance()
+                if(assistance?.offersProgression!=true)
+                    NativeKotlinRepAcceptanceResult.Rejected(
+                        NativeKotlinRepAcceptanceRefusal.ASSISTANCE_DISABLED)
+                else mixedHistoryReader.acceptReviewedNextSetTargets(
+                    signed.ownerKey,signed.athleteId,approvalStore,intent,
+                    assistance.coachingReadiness(readiness),movementRestricted,
+                    authoringSourceStore)
+            }
+        }.getOrElse {NativeKotlinRepAcceptanceResult.Rejected(
+            NativeKotlinRepAcceptanceRefusal.STORAGE_UNAVAILABLE)}
     }
 
     /**
@@ -426,10 +436,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * coaching review rechecks all source/history data under the owner fence.
      */
     fun currentVerifiedCoachExerciseChoices():List<String> {
-        if(availableCoachAssistance()?.offersProgression!=true)return emptyList()
         val owner=localAthlete.signedInIdentity() ?:return emptyList()
         return runCatching {
             revisionFence.withOwnerTransaction(owner.ownerKey) {
+                if(availableCoachAssistance()?.offersProgression!=true)
+                    return@withOwnerTransaction emptyList<String>()
                 val approved=approvalStore.currentOwnedApproval(owner.ownerKey)
                     ?.takeIf {it.athleteId==owner.athleteId}
                     ?:return@withOwnerTransaction emptyList<String>()
@@ -459,14 +470,20 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinCoachAcceptanceResult.Rejected(
                 NativeKotlinCoachAcceptanceRefusal.NOT_AUTHORIZED)
-        val assistance=availableCoachAssistance()
-        if(assistance?.offersProgression!=true)
-            return NativeKotlinCoachAcceptanceResult.Rejected(
-                NativeKotlinCoachAcceptanceRefusal.ASSISTANCE_DISABLED)
-        return mixedHistoryReader.acceptCurrentApprovedLoad(
-            owner.ownerKey,owner.athleteId,approvalStore,intent,
-            maximumAuthorizedIncrease,assistance.coachingReadiness(readiness),
-            movementRestricted,authoringSourceStore)
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val assistance=availableCoachAssistance()
+                if(assistance?.offersProgression!=true)
+                    NativeKotlinCoachAcceptanceResult.Rejected(
+                        NativeKotlinCoachAcceptanceRefusal.ASSISTANCE_DISABLED)
+                else mixedHistoryReader.acceptCurrentApprovedLoad(
+                    owner.ownerKey,owner.athleteId,approvalStore,intent,
+                    maximumAuthorizedIncrease,
+                    assistance.coachingReadiness(readiness),
+                    movementRestricted,authoringSourceStore)
+            }
+        }.getOrElse {NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.STORAGE_UNAVAILABLE)}
     }
 
     fun reviewCurrentNativeLoad(
@@ -478,14 +495,20 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeOwnerLoadReviewResult.Rejected(
                 NativeOwnerLoadReviewRefusal.NOT_AUTHORIZED)
-        val assistance=availableCoachAssistance()
-        if(assistance?.offersProgression!=true)
-            return NativeOwnerLoadReviewResult.Rejected(
-                NativeOwnerLoadReviewRefusal.ASSISTANCE_DISABLED)
-        return mixedHistoryReader.reviewCurrentApprovedLoad(
-            owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
-            maximumAuthorizedIncrease,assistance.coachingReadiness(readiness),
-            movementRestricted,authoringSourceStore)
+        return runCatching {
+            revisionFence.withOwnerTransaction(owner.ownerKey) {
+                val assistance=availableCoachAssistance()
+                if(assistance?.offersProgression!=true)
+                    NativeOwnerLoadReviewResult.Rejected(
+                        NativeOwnerLoadReviewRefusal.ASSISTANCE_DISABLED)
+                else mixedHistoryReader.reviewCurrentApprovedLoad(
+                    owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
+                    maximumAuthorizedIncrease,
+                    assistance.coachingReadiness(readiness),
+                    movementRestricted,authoringSourceStore)
+            }
+        }.getOrElse {NativeOwnerLoadReviewResult.Rejected(
+            NativeOwnerLoadReviewRefusal.STORAGE_UNAVAILABLE)}
     }
 
     fun reviewVerifiedKotlinWorkingSetFacts(): NativeKotlinMixedFactsReadResult {

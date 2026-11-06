@@ -23,7 +23,7 @@ class KotlinLongitudinalRepEvidenceDomainTest {
                 DraftSetLoad.Verified(LoadUnit.LB,
                     LoadBasis.DUMBBELL_PER_HAND,n(loads[i])),
                 reps,effort,KotlinJournalSetOutcome.COMPLETED,
-                KotlinPerformedSet(n("30"),LoadUnit.LB,
+                KotlinPerformedSet(n(loads[i]),LoadUnit.LB,
                     listOf(14,14,12)[i],actualRir[i]),
                 "event-$i",null)
         }
@@ -121,4 +121,37 @@ class KotlinLongitudinalRepEvidenceDomainTest {
             LongitudinalRepEvidenceRefusal.NO_SETS_OR_INVALID_ORDER),
             result(historical().copy(workingSets=duplicated)))
     }
+
+    @Test fun nativeBackoffNormalizationPreservesEachVerifiedIssuedLoad() {
+        val record=historical(loads=listOf("30","30","25"))
+        val result=KotlinLongitudinalRepEvidenceDomain.review(
+            record,"backoff-completed",band,3,n("30"),stock,LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,2,
+            listOf(n("30"),n("30"),n("25")))
+        assertTrue(result.toString(),
+            result is LongitudinalRepEvidenceResult.Comparable)
+        val saved=result as LongitudinalRepEvidenceResult.Comparable
+        assertEquals(listOf(n("30"),n("30"),n("25")),
+            saved.session.observations.map{it.issuedLoad})
+        assertEquals(listOf(n("30"),n("30"),n("25")),
+            saved.session.observations.map{it.actualLoad})
+        assertTrue(saved.normalizedPersonalizedTargets)
+        assertEquals(record.workingSets.map{it.issuedReps},
+            saved.exactIssuedReps)
+        // A journal's actual issue is not a license to change new targets.
+        assertEquals(LongitudinalRepEvidenceResult.Rejected(
+            LongitudinalRepEvidenceRefusal.CHANGED_EQUIPMENT_OR_ISSUED_LOAD),
+            KotlinLongitudinalRepEvidenceDomain.review(
+                historical(loads=listOf("30","30","30")),
+                "backoff-completed",band,3,n("30"),stock,LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND,2,
+                listOf(n("30"),n("30"),n("25"))))
+        assertEquals(LongitudinalRepEvidenceResult.Rejected(
+            LongitudinalRepEvidenceRefusal.UNVERIFIED_PHYSICAL_STOCK),
+            KotlinLongitudinalRepEvidenceDomain.review(
+                record,"backoff-completed",band,3,n("30"),stock,LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND,2,
+                listOf(n("30"),n("30"),n("27.5"))))
+    }
+
 }

@@ -229,7 +229,10 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
         }
         val result2=KotlinAdaptiveSetPrescriptionDomain.draft(
             request(next=stagedRequest(p=backoff)))
-        assertEquals(AdaptiveSetPrescriptionRefusal.UNSUPPORTED_SET_SCHEME,
+        // The backoff itself is now supported when its rep/RIR targets
+        // match, but a historical uniform 30-lb day is NOT comparable
+        // to the new authentic 30/30/25-lb backoff prescription.
+        assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
             (result2 as AdaptiveSetPrescriptionResult.Rejected).reason)
     }
 
@@ -345,6 +348,77 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
             it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
         }.all {(it.load as DraftSetLoad.Verified).value==n("25")})
         assertFalse(reviewed.mayIssueWorkout)
+    }
+
+
+    private fun matchingBackoffPolicy(
+        backoffReps:RepBand=RepBand(10,15),backoffRir:Int?=2
+    )=policies().map{p->
+        if(p.exerciseId=="db-press")p.copy(
+            scheme=SetLoadScheme.LAST_SET_BACKOFF,
+            maximumAuthorizedBackoff=n("5"),
+            backoffReps=backoffReps,backoffRir=backoffRir
+        ) else p
+    }
+
+    @Test fun authenticBackoffEarnsOneRepOnLastSetWithoutAnyLoadChanges() {
+        val last=observed(
+            reps=listOf(14,13,12),rir=listOf(3,3,4),
+            actualLoads=listOf("30","30","25"),
+            issuedLoads=listOf("30","30","25"))
+        val base=(KotlinWorkoutSnapshotDomain.stage(stagedRequest(
+            p=matchingBackoffPolicy())) as KotlinWorkoutSnapshotResult.Staged).snapshot
+        assertEquals(listOf(n("30"),n("30"),n("25")),
+            base.targets.filter{it.exerciseId=="db-press" &&
+                it.type==DraftSetType.WORKING}.map{
+                (it.load as DraftSetLoad.Verified).value
+            })
+        val next=candidate(request(previous=last,
+            next=stagedRequest(p=matchingBackoffPolicy())))
+        assertEquals(listOf(14,13,13),next.newRepTargets)
+        assertEquals("db-press:d1:s2",next.editedSetKey)
+        assertEquals(AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP,
+            next.decisionKind)
+        val rows=next.workout.targets.filter{
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }
+        assertEquals(listOf(n("30"),n("30"),n("25")),
+            rows.map{(it.load as DraftSetLoad.Verified).value})
+        assertEquals(listOf(RepBand(14,14),RepBand(13,13),RepBand(13,13)),
+            rows.map{it.reps})
+        assertEquals(base.targets.filter{it.exerciseId=="db-row"},
+            next.workout.targets.filter{it.exerciseId=="db-row"})
+        assertFalse(next.mayIssueWorkout)
+    }
+
+    @Test fun backoffDoesNotBorrowOtherRepRirOrEditedSetLoads() {
+        val correct=observed(
+            reps=listOf(14,13,12),rir=listOf(3,3,4),
+            actualLoads=listOf("30","30","25"),
+            issuedLoads=listOf("30","30","25"))
+        for(p in listOf(
+            matchingBackoffPolicy(backoffReps=RepBand(12,15)),
+            matchingBackoffPolicy(backoffRir=1))) {
+            val denied=KotlinAdaptiveSetPrescriptionDomain.draft(
+                request(previous=correct,next=stagedRequest(p=p)))
+                    as AdaptiveSetPrescriptionResult.Rejected
+            assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
+                denied.reason)
+        }
+        val changed=correct.copy(observations=correct.observations.mapIndexed{i,row->
+            if(i==2) row.copy(actualLoad=n("30")) else row
+        })
+        assertEquals(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+            (KotlinAdaptiveSetPrescriptionDomain.draft(
+                request(previous=changed,next=stagedRequest(
+                    p=matchingBackoffPolicy()))) as AdaptiveSetPrescriptionResult.Rejected).reason)
+        val forged=correct.copy(observations=correct.observations.mapIndexed{i,row->
+            if(i==2)row.copy(issuedLoad=n("30")) else row
+        })
+        assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
+            (KotlinAdaptiveSetPrescriptionDomain.draft(
+                request(previous=forged,next=stagedRequest(
+                    p=matchingBackoffPolicy()))) as AdaptiveSetPrescriptionResult.Rejected).reason)
     }
 
 }

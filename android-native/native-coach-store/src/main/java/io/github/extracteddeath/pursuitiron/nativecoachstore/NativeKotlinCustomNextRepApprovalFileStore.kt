@@ -160,8 +160,9 @@ class NativeKotlinCustomNextRepApprovalFileStore(
             val fingerprint=data.readUTF()
             val week=data.readInt();val weekday=data.readInt()
             val consent=data.readLong();val history=data.readLong()
+            val readinessName=data.readUTF()
             val readiness=CoachReadiness.entries.singleOrNull{
-                it.name==data.readUTF()
+                it.name==readinessName
             }?:throw IOException("bad readiness")
             val restricted=data.readBoolean()
             val step=BigDecimal(data.readUTF())

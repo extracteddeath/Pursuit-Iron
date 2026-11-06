@@ -1771,7 +1771,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val history:NativeKotlinHistoryManifestFileStore,
         val reader:NativeKotlinMixedHistoryReadCoordinator,
         val coach:NativeKotlinCustomNextWorkoutReview,
-        val repApprovals:NativeKotlinCustomNextRepApprovalFileStore
+        val repApprovals:NativeKotlinCustomNextRepApprovalFileStore,
+        val assistance:NativeKotlinCoachAssistanceSettingsStore
     )
 
     private fun liveFutureCoachFixture():LiveFutureCoachFixture {
@@ -1806,12 +1807,14 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             verified is NativeKotlinMixedHistoryReadResult.Review)
         assertEquals(9,(verified as NativeKotlinMixedHistoryReadResult.Review)
             .timeline.completions.size)
+        val assistance=NativeKotlinCoachAssistanceSettingsStore(
+            temp.root.toPath(),fence,identity)
         val coach=NativeKotlinCustomNextWorkoutReview(
-            fence,identity,tx,signoff,sources,reader,issuer)
+            fence,identity,tx,signoff,sources,reader,issuer,assistance)
         val reps=NativeKotlinCustomNextRepApprovalFileStore(
             temp.root.toPath(),fence,identity,tx,coach,prepared,issuer)
         return LiveFutureCoachFixture(tx,signoff,prepared,issuer,history,
-            reader,coach,reps)
+            reader,coach,reps,assistance)
     }
 
     private fun finishRealActivatedSession(
@@ -2074,5 +2077,81 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(10,last.evidence.visits.single().actual?.reps)
     }
 
+
+
+    @Test fun turningCoachOffBlocksReviewButDoesNotBlockNormalTrainingOrFinish() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        finishRealActivatedSession(f,5,13)
+        val before=f.coach.review("owner-1",futureInputs(),6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(before.toString(),before is NativeCustomNextCoachResult.Reviewed)
+        assertEquals(NativeCoachSettingsWrite.Saved(NativeCoachAssistanceSettings(
+            "owner-1","athlete-1",1,CoachAssistancePolicy.MANUAL)),
+            f.assistance.save("owner-1",0,CoachAssistancePolicy.MANUAL))
+        assertEquals(NativeCustomNextCoachResult.Rejected(
+            NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED),
+            f.coach.review("owner-1",futureInputs(),6,1,"slot-1",
+                CoachReadiness.NORMAL,false,n("5")))
+        assertEquals(NativeCustomNextRepPreview.Rejected(
+            NativeCustomNextRepRefusal.REVIEW_NOT_READY),
+            f.repApprovals.preview("owner-1","manual-training-week6",
+                futureInputs(),6,1,"slot-1",CoachReadiness.NORMAL,
+                false,n("5")))
+        // Native workout execution, journal recording and Finish still work
+        // identically. A manual athlete can log the exact authored targets.
+        val prepared=f.prepared.prepareActivated("owner-1",
+            "manual-training-week6","cycle-1",6,1,futureInputs(),f.signoff,
+            f.activation,f.repApprovals)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val session=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertNull(session.repApprovalFingerprint)
+        assertEquals(RepBand(10,15),
+            session.snapshot.slots.single().sets.single().prescription.reps)
+        val issued=f.issuer.issueActivated("owner-1","manual-training-week6",
+            "cycle-1",6,1,futureInputs(),f.signoff,f.activation,f.repApprovals)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertTrue(f.issuer.record("owner-1","manual-training-week6",
+            CustomWorkoutJournalOperation.Record("manual-observed",0,
+                CustomWorkoutVisitKey("cycle-1:w6:d1:slot-1:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,14,null)))
+            is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(
+            f.history,f.issuer,fence,identity).complete(
+                "owner-1","athlete-1","manual-training-week6",
+                CustomWorkoutJournalOperation.Finish("manual-finish",1))
+            is NativeCustomFinishResult.Committed)
+    }
+
+    @Test fun fatigueOffKeepsEarnedProgressionWithoutReadinessSuggestions() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        finishRealActivatedSession(f,5,13)
+        assertEquals(NativeCustomNextCoachResult.Reviewed::class,
+            f.coach.review("owner-1",futureInputs(),6,1,"slot-1",
+                CoachReadiness.NORMAL,false,n("5"))::class)
+        val low=f.coach.review("owner-1",futureInputs(),6,1,"slot-1",
+            CoachReadiness.LOW,false,n("5"))
+            as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomNextWorkoutCoachingStatus.RESTRICTED_OR_LOW_READINESS,
+            low.review.status)
+        assertTrue(f.assistance.save("owner-1",0,
+            CoachAssistancePolicy.PROGRESSION_ONLY)
+            is NativeCoachSettingsWrite.Saved)
+        val normal=f.coach.review("owner-1",futureInputs(),6,1,"slot-1",
+            CoachReadiness.LOW,false,n("5"))
+            as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,
+            normal.review.status)
+        assertEquals(14,normal.review.nextSetSuggestions.single().proposedNextReps)
+        // Disabling fatigue is NOT permission to ignore an injured movement.
+        val restricted=f.coach.review("owner-1",futureInputs(),6,1,"slot-1",
+            CoachReadiness.LOW,true,n("5"))
+            as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomNextWorkoutCoachingStatus.RESTRICTED_OR_LOW_READINESS,
+            restricted.review.status)
+    }
 
 }

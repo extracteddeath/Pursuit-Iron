@@ -7,7 +7,7 @@ import org.junit.Test
 class CustomNextWorkoutCoachingDomainTest {
     private fun n(v:Int)=BigDecimal(v)
     private fun band()=RepBand(5,8)
-    private fun load(v:Int)=DraftSetLoad.Verified(n(v),LoadUnit.LB,LoadBasis.MACHINE_STACK)
+    private fun load(v:Int)=DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.MACHINE_STACK,n(v))
     private fun set(v:Int=200)=CustomAuthoredSet(
         DraftSetType.WORKING,load(v),band(),2,60,120)
     private fun snapshot(

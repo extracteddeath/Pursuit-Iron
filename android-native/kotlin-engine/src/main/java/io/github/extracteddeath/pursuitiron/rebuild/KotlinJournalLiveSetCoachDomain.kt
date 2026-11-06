@@ -74,7 +74,7 @@ object KotlinJournalLiveSetCoachDomain {
                 null ->null
             }
             if(outcome==null)null else {
-                val actual=record.performed
+                val actual=record?.performed
                 WorkingSetFact(ordinal,outcome,actual?.load,actual?.reps,
                     actual?.actualRir,
                     (target.load as DraftSetLoad.Verified).value,target.targetRir)

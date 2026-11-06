@@ -1031,4 +1031,63 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }.all {(it.load as DraftSetLoad.Verified).value==n("25")})
     }
 
+
+    @Test fun diskVerifiedDefaultLoadingUsesIndependentDayEvidenceAndApproval() {
+        enrolled()
+        val upperFirst=complete(1,1)
+        val push=complete(2,2)
+        // Two successes on different scheduled days do NOT authorize the
+        // upcoming Push-day increment, even though their exercise, reps,
+        // purpose and default exercise-wide load policy are identical.
+        val unavailable=reader.reviewCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,"db-press",n("5"),
+            CoachReadiness.NORMAL,false)
+        assertTrue(unavailable.toString(),
+            unavailable is NativeOwnerLoadReviewResult.Review)
+        assertEquals(NativeCurrentLoadReviewResult.Rejected(
+            NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY),
+            (unavailable as NativeOwnerLoadReviewResult.Review).coaching)
+
+        val upperLast=complete(3,1)
+        val shown=reader.reviewCurrentApprovedLoad(
+            "owner-1","athlete-1",approvals,"db-press",n("5"),
+            CoachReadiness.NORMAL,false)
+        val proposed=(shown as NativeOwnerLoadReviewResult.Review)
+            .coaching as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(listOf("workout-1","workout-3"),
+            proposed.comparedWorkoutIds)
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            proposed.coaching.status)
+        assertEquals(listOf(1),proposed.coaching.affectedDayIndices)
+        val confirm=NativeKotlinCoachLoadAcceptanceIntent(
+            "db-press",3,proposed.historyRevision,proposed.comparedWorkoutIds,
+            CoachNextLoadChangeKind.EARNED_INCREMENT,n("30"),n("35"),
+            listOf(1),"workout-4","grant-4","storage-4",2,true)
+        assertTrue(accept(confirm) is NativeKotlinCoachAcceptanceResult.Committed)
+        val stored=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals(n("30"),(stored.program.exercises.first().equipment
+            as ComposerEquipment.Verified).plannedLoad)
+        assertEquals(n("35"),stored.policies.single {
+            it.exerciseId=="db-press" && it.dayIndex==1
+        }.purposeWorkingLoad)
+        assertNull(stored.policies.single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY &&
+                it.dayIndex==null
+        }.purposeWorkingLoad)
+        val pushIssued=NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+            .issue("owner-1","workout-4")
+        assertTrue(pushIssued.toString(),
+            pushIssued is NativeKotlinIssueResult.Committed)
+        assertTrue((pushIssued as NativeKotlinIssueResult.Committed)
+            .journal.snapshot.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.all {(it.load as DraftSetLoad.Verified).value==n("30")})
+        assertTrue(listOf(upperFirst,push,upperLast).all { recorded ->
+            recorded.first.snapshot.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.all {(it.load as DraftSetLoad.Verified).value==n("30")}
+        })
+    }
+
 }

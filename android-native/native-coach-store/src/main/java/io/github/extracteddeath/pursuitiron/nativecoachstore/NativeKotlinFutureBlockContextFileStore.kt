@@ -73,7 +73,8 @@ internal object NativeFutureBlockContextCodec {
         writeUTF(p.split.name);writeUTF(p.phase.name);writeInt(p.trainingDays)
         fun bounds(list:List<DeclaredMuscleDoseBounds>) {
             writeInt(list.size)
-            list.sortedBy{it.muscle.name}.forEach {
+            // Preserve authored dose-bound ordering on cold restoration.
+            list.forEach {
                 writeUTF(it.muscle.name);decimal(it.mev)
                 decimal(it.mav);decimal(it.mrv)
                 writeInt(it.minimumDirectDays)

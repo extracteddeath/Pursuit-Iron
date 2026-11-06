@@ -61,7 +61,9 @@ sealed interface NativeFutureCommitReview {
 sealed interface NativeFutureActivatedCycleReview {
     data class Ready(
         val audit:CustomCoachAudit,val cycleId:String,val blockId:String,
-        val sourceRevision:Long,val firstWeek:Int
+        val sourceRevision:Long,val firstWeek:Int,
+        /** Exact post-activation cycle, historical policy and future-policy proof. */
+        val reviewFingerprint:String
     ):NativeFutureActivatedCycleReview {
         val mayIssueWorkout:Boolean get()=false
     }
@@ -372,9 +374,29 @@ class NativeKotlinFutureActivationCommitTransaction(
                 audit.issues.isNotEmpty() ||
                 audit.prospectiveBlockIds!=setOf(handoff.blockId))
                 NativeFutureActivatedCycleReview.Unresolved(audit)
-            else NativeFutureActivatedCycleReview.Ready(
-                audit,handoff.cycleId,handoff.blockId,
-                decoded.proposed.revision,handoff.firstWeek)
+            else {
+                // Review consent must bind the complete old/source policy,
+                // prospective split/phase/overhead, current draft and the
+                // original verified transition history, not just a label.
+                val proof=ByteArrayOutputStream()
+                DataOutputStream(proof).use{out->
+                    out.writeInt(1)
+                    out.writeUTF(ownerKey);out.writeUTF(signed.athleteId)
+                    out.writeUTF(handoff.cycleId);out.writeUTF(handoff.blockId)
+                    out.writeInt(handoff.firstWeek)
+                    out.writeLong(handoff.historyManifestRevision)
+                    out.writeUTF(handoff.approvalFingerprint)
+                    out.writeUTF(handoff.proposedSourceSha256)
+                    out.writeUTF(sha(intent.prospectiveBundle))
+                    out.writeUTF(draftHash)
+                    out.writeUTF(NativeCustomCycleSignoffFingerprint.calculate(
+                        draft,decoded.original,inputs))
+                }
+                NativeFutureActivatedCycleReview.Ready(
+                    audit,handoff.cycleId,handoff.blockId,
+                    decoded.proposed.revision,handoff.firstWeek,
+                    sha(proof.toByteArray()))
+            }
         }}.getOrElse{NativeFutureActivatedCycleReview.Rejected(
             NativeFutureCommitRefusal.STORAGE_UNAVAILABLE)}
 

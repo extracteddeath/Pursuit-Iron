@@ -22,6 +22,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val localAthlete=AppPrivateKotlinLocalAthlete(
         context.applicationContext)
     private val revisionFence=NativeKotlinApprovalRevisionFence(root)
+    private val coachSettings=NativeKotlinCoachAssistanceSettingsStore(
+        root,revisionFence,localAthlete)
     private val approvalStore=NativeKotlinApprovalFileAuthority(
         root,revisionFence,localAthlete)
     private val customDraftStore=NativeCustomCycleDraftFileStore(
@@ -85,7 +87,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val activatedNextWorkoutCoach=NativeKotlinCustomNextWorkoutReview(
         revisionFence,localAthlete,futureActivationCommit,
         activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
-        customIssuedStore)
+        customIssuedStore,coachSettings)
     private val acceptedFutureRepTargets=NativeKotlinCustomNextRepApprovalFileStore(
         root,revisionFence,localAthlete,futureActivationCommit,
         activatedNextWorkoutCoach,customPreparedStore,customIssuedStore)
@@ -123,6 +125,35 @@ internal class NativeKotlinCandidateHost(context:Context) {
         localAthlete.savedAthleteIdForExplicitResume()
 
     /** The Kotlin engine owns readiness validation, never the JS runtime. */
+    /**
+     * Athlete-facing coaching preferences (Settings > Training > Coach).
+     * STANDARD: suggestions and fatigue; PROGRESSION_ONLY: naturally earned
+     * rep/load options, no fatigue-driven edits; MANUAL: no suggestions.
+     * Turning these off never disables workout logging or Finish.
+     */
+    fun readCoachAssistance():NativeCoachSettingsRead {
+        val athlete=localAthlete.signedInIdentity()
+            ?:return NativeCoachSettingsRead.Rejected(
+                NativeCoachSettingsRefusal.NOT_AUTHORIZED)
+        return coachSettings.read(athlete.ownerKey)
+    }
+
+    fun updateCoachAssistance(
+        expectedRevision:Long,policy:CoachAssistancePolicy
+    ):NativeCoachSettingsWrite {
+        val athlete=localAthlete.signedInIdentity()
+            ?:return NativeCoachSettingsWrite.Rejected(
+                NativeCoachSettingsRefusal.NOT_AUTHORIZED)
+        return coachSettings.save(athlete.ownerKey,expectedRevision,policy)
+    }
+
+    /** No recommendations are generated while the preference read is invalid. */
+    private fun availableCoachAssistance():CoachAssistancePolicy? {
+        val athlete=localAthlete.signedInIdentity()?:return null
+        return (coachSettings.read(athlete.ownerKey)
+            as? NativeCoachSettingsRead.Current)?.settings?.policy
+    }
+
     fun reviewSetup(draft:AthleteSetupDraft):AthleteSetupReview =
         CoachAthleteSetupDomain.review(draft)
 

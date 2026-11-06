@@ -1142,6 +1142,37 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             .days.map {it.weekday})
     }
 
+    @Test fun activatedFutureWorkoutPreviewPreservesExactCustomSetsButCannotIssue() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val preview=tx.previewActivatedWorkout("owner-1",futureInputs(),4,1)
+        assertTrue(preview.toString(),preview is CustomWorkoutSnapshotResult.Preview)
+        val snap=(preview as CustomWorkoutSnapshotResult.Preview).snapshot
+        assertEquals("build",snap.blockId)
+        assertEquals(4,snap.absoluteWeek)
+        assertEquals(1,snap.weekday)
+        assertEquals(2L,snap.stamp.gymCatalogSourceRevision)
+        assertEquals(200,snap.declaredNonSetSeconds)
+        assertEquals(listOf("slot-1"),snap.slots.map{it.slotId})
+        assertEquals("bodyweight_crunch",snap.slots.single().exerciseId)
+        assertEquals(RepBand(10,15),
+            snap.slots.single().sets.single().prescription.reps)
+        assertFalse(snap.isIssued)
+        assertFalse(snap.mayRecordSets)
+        assertFalse(snap.mayFinishWorkout)
+        assertEquals(CustomWorkoutSnapshotResult.Rejected(
+            CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED),
+            tx.previewActivatedWorkout("owner-1",futureInputs(),3,0))
+        assertEquals(CustomWorkoutSnapshotResult.Rejected(
+            CustomWorkoutSnapshotRefusal.INVALID_WEEK),
+            tx.previewActivatedWorkout("owner-1",futureInputs(),7,0))
+        assertEquals(CustomWorkoutSnapshotResult.Rejected(
+            CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED),
+            tx.previewActivatedWorkout("owner-1",CustomCoachAuditInputs(),4,1))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
     @Test fun activatedCycleRejectsUnreviewedBasePolicyOrChangedDraft() {
         val fixture=activationFixture()
         val tx=activationTransaction(fixture)

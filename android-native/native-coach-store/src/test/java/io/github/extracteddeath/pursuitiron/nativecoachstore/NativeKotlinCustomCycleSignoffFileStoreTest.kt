@@ -1114,6 +1114,54 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         temp.root.toPath(),fence,identity,sources,drafts,futureStore(),
         fixture.approvals,fixture.handoff,onIntent,onSource)
 
+    @Test fun activatedCycleAuditsOriginalCompletedScheduleAndNewFuturePolicy() {
+        val fixture=activationFixture()
+        val transaction=activationTransaction(fixture)
+        assertTrue(transaction.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val reviewed=activationTransaction(fixture).reviewActivatedCycle(
+            "owner-1",futureInputs())
+        assertTrue(reviewed.toString(),
+            reviewed is NativeFutureActivatedCycleReview.Ready)
+        val accepted=reviewed as NativeFutureActivatedCycleReview.Ready
+        assertEquals("build",accepted.blockId)
+        assertEquals(4,accepted.firstWeek)
+        assertEquals(2L,accepted.sourceRevision)
+        assertEquals(6,accepted.audit.weeks.size)
+        assertEquals(3,accepted.audit.weeks.first().knownSecondsByDay.size)
+        assertEquals(4,accepted.audit.weeks.last().knownSecondsByDay.size)
+        assertEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
+            accepted.audit.status)
+        assertFalse(accepted.mayIssueWorkout)
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+
+        // The activated source cannot rewrite the completed base phase.
+        assertEquals(ComposerSplit.UPPER_LOWER,
+            (sources.read("owner-1") as NativeAuthoringSourceRead.Found)
+                .source.setup.reviewed?.split)
+        assertEquals(listOf(0,2,4),futureBaselineCycle().blocks.first()
+            .days.map {it.weekday})
+    }
+
+    @Test fun activatedCycleRejectsUnreviewedBasePolicyOrChangedDraft() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
+        val missing=tx.reviewActivatedCycle("owner-1",
+            CustomCoachAuditInputs(continuityPolicy=
+                futureInputs().continuityPolicy))
+        assertTrue(missing is NativeFutureActivatedCycleReview.Unresolved)
+        val invalid=tx.reviewActivatedCycle("owner-1",
+            futureInputs().copy(continuityPolicy=null))
+        assertTrue(invalid is NativeFutureActivatedCycleReview.Unresolved)
+        assertEquals(NativeCustomDraftWriteResult.Committed(4),
+            drafts.save("owner-1","cycle-1",3,
+                futureCycle().copy(revision=4,title="Edited after activation")))
+        assertEquals(NativeFutureActivatedCycleReview.Rejected(
+            NativeFutureCommitRefusal.APPROVAL_STALE),
+            tx.reviewActivatedCycle("owner-1",futureInputs()))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
     @Test fun futureActivationSourceAndCoachingSurviveColdRestart() {
         val fixture=activationFixture()
         val tx=activationTransaction(fixture)

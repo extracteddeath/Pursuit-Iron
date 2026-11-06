@@ -484,17 +484,40 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             split=ComposerSplit.UPPER_LOWER,trainingDays=4,
             minimumPurposeDays=mapOf(ComposerSessionPurpose.HYPERTROPHY to 4)),
         mapOf(0 to 200,1 to 200,2 to 200,4 to 200))
+    private fun futureBaselineCycle():CustomTrainingCycle {
+        val authored=cycle(2)
+        val original=authored.blocks.single()
+        return authored.copy(blocks=listOf(original,
+            original.copy(blockId="build",label="Build")))
+    }
+    private fun initializeFutureBaseline() {
+        initialize()
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            drafts.save("owner-1","cycle-1",1,futureBaselineCycle()))
+        val review=CustomCycleCoachAuditDomain.review(
+            futureBaselineCycle(),source().setup,source().catalog,inputs())
+        assertEquals(review.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,review.status)
+    }
+    private fun approveFutureBaseline():NativeKotlinCustomCycleSignoff {
+        val result=store().confirm("owner-1","cycle-1",2,1,0,inputs(),true)
+        assertTrue(result.toString(),result is NativeCustomSignoffWrite.Committed)
+        return (result as NativeCustomSignoffWrite.Committed).receipt
+    }
     private fun futureCycle():CustomTrainingCycle {
-        val base=cycle(2)
-        return base.copy(blocks=base.blocks.map {block ->
-            block.copy(split=CustomSplitIdentity.Named(
-                ComposerSplit.UPPER_LOWER),
-                days=(block.days+CustomTrainingDay(1,"Day 1",
-                    ComposerSessionPurpose.HYPERTROPHY,
-                    listOf(CustomExerciseSlot("slot-1","bodyweight_crunch",
-                        ComposerRole.ACCESSORY,listOf(set())))))
-                    .sortedBy {it.weekday})
-        })
+        val baseline=futureBaselineCycle()
+        return baseline.copy(revision=3,
+            blocks=baseline.blocks.map {block ->
+                if(block.blockId!="build")block else
+                    block.copy(split=CustomSplitIdentity.Named(
+                        ComposerSplit.UPPER_LOWER),
+                        days=(block.days+CustomTrainingDay(1,"Day 1",
+                            ComposerSessionPurpose.HYPERTROPHY,
+                            listOf(CustomExerciseSlot("slot-1",
+                                "bodyweight_crunch",ComposerRole.ACCESSORY,
+                                listOf(set())))))
+                            .sortedBy {it.weekday})
+            })
     }
     private fun futurePermissions()=CustomCycleCoachPermissions(
         adaptSplit=true,adaptSchedule=true,adaptDayCount=true,
@@ -502,11 +525,46 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     private fun futureCandidate(
         context:ProspectiveBlockCoachingContext=futureContext()
     )=option(proposed=futureCycle(),permissions=futurePermissions())
-        .copy(expectedPermissionRevision=2,prospective=context)
+        .copy(targetBlockId="build",expectedDraftRevision=2,
+            expectedPermissionRevision=2,prospective=context)
+
+
+    @Test fun firstBlockCannotBeSavedAsFutureScheduleEvenWithFutureConsent() {
+        initialize()
+        approved()
+        assertEquals(NativeAdaptivePermissionWrite.Committed(2),
+            permissionStore.confirm("owner-1","cycle-1",1,
+                setOf(CustomCycleChangeKind.SPLIT,
+                    CustomCycleChangeKind.SCHEDULE,
+                    CustomCycleChangeKind.DAY_COUNT,
+                    CustomCycleChangeKind.EXERCISES),true))
+        // Real first block has no predecessor. Future policy and a full
+        // calendar cannot make it a prospective-only change.
+        val proposed=cycle(2).copy(blocks=cycle(2).blocks.map{block->
+            block.copy(split=CustomSplitIdentity.Named(ComposerSplit.UPPER_LOWER),
+                days=(block.days+CustomTrainingDay(1,"Day 1",
+                    ComposerSessionPurpose.HYPERTROPHY,
+                    listOf(CustomExerciseSlot("slot-1",
+                        "bodyweight_crunch",ComposerRole.ACCESSORY,
+                        listOf(set()))))).sortedBy{it.weekday})
+        })
+        val c=option(proposed=proposed,permissions=futurePermissions())
+            .copy(expectedPermissionRevision=2,prospective=futureContext())
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.TARGET_NOT_FUTURE_BLOCK),
+            adaptive().preview(c))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.TARGET_NOT_FUTURE_BLOCK),
+            adaptive().accept(c,"0".repeat(64),true))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+        assertEquals(NativeFutureBlockContextRead.Missing,
+            futureStore().read("owner-1","cycle-1","base"))
+    }
 
     @Test fun futureScheduleRequiresFullProspectiveReviewAndExplicitDraftAcceptance() {
-        initialize()
-        val signed=approved()
+        initializeFutureBaseline()
+        val signed=approveFutureBaseline()
         assertEquals(NativeAdaptivePermissionWrite.Committed(2),
             permissionStore.confirm("owner-1","cycle-1",1,
                 setOf(CustomCycleChangeKind.SPLIT,
@@ -534,17 +592,17 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
             NativeAdaptiveCycleDraftRefusal.CONFIRMATION_REQUIRED),
             adaptive().accept(prospective,reviewed.reviewedFingerprint,false))
-        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(2,"coach_option_1"),
+        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(3,"coach_option_1"),
             adaptive().accept(prospective,reviewed.reviewedFingerprint,true))
         assertEquals(NativeCustomDraftReadResult.Found(futureCycle()),
             drafts.read("owner-1","cycle-1"))
-        val restored=futureStore().read("owner-1","cycle-1","base")
+        val restored=futureStore().read("owner-1","cycle-1","build")
         assertTrue(restored.toString(),
             restored is NativeFutureBlockContextRead.Found)
         val receipt=(restored as NativeFutureBlockContextRead.Found).receipt
         assertEquals(futureContext(),receipt.future)
         assertEquals(reviewed.reviewedFingerprint,receipt.reviewedFingerprint)
-        assertEquals(2L,receipt.draftRevision)
+        assertEquals(3L,receipt.draftRevision)
         assertEquals(1L,receipt.sourceRevision)
         assertFalse(receipt.mayIssueWorkout)
         assertFalse(receipt.mayActivateProfile)
@@ -557,12 +615,12 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 .source.setup.reviewed!!.split)
         assertEquals(NativeCustomSignoffWrite.Rejected(
             NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED),
-            store().confirm("owner-1","cycle-1",2,1,1,inputs(),true))
+            store().confirm("owner-1","cycle-1",3,1,1,inputs(),true))
     }
 
     @Test fun futureScheduleCannotLaunderNewGymOrUnapprovedFrequency() {
-        initialize()
-        approved()
+        initializeFutureBaseline()
+        approveFutureBaseline()
         assertEquals(NativeAdaptivePermissionWrite.Committed(2),
             permissionStore.confirm("owner-1","cycle-1",1,
                 setOf(CustomCycleChangeKind.SPLIT,
@@ -579,26 +637,26 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
             NativeAdaptiveCycleDraftRefusal.COACH_REVIEW_UNRESOLVED),
             adaptive().preview(invalid))
-        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+        assertEquals(NativeCustomDraftReadResult.Found(futureBaselineCycle()),
             drafts.read("owner-1","cycle-1"))
     }
 
 
     @Test fun interruptedProspectiveStageIsNotAValidAcceptedFutureContext() {
-        initialize()
-        approved()
-        assertTrue(futureStore().stage("owner-1","cycle-1","base",
+        initializeFutureBaseline()
+        approveFutureBaseline()
+        assertTrue(futureStore().stage("owner-1","cycle-1","build",
             futureCycle(),source(),"a".repeat(64),futureContext()))
         assertEquals(NativeFutureBlockContextRead.Rejected(
             NativeFutureBlockContextRefusal.STALE_DRAFT_OR_SOURCE),
-            futureStore().read("owner-1","cycle-1","base"))
-        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            futureStore().read("owner-1","cycle-1","build"))
+        assertEquals(NativeCustomDraftReadResult.Found(futureBaselineCycle()),
             drafts.read("owner-1","cycle-1"))
     }
 
     @Test fun futureContextCorruptionAndChangingGymOrDraftFailsClosed() {
-        initialize()
-        approved()
+        initializeFutureBaseline()
+        approveFutureBaseline()
         assertEquals(NativeAdaptivePermissionWrite.Committed(2),
             permissionStore.confirm("owner-1","cycle-1",1,
                 setOf(CustomCycleChangeKind.SPLIT,
@@ -608,9 +666,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val offer=futureCandidate()
         val ready=adaptive().preview(offer)
             as NativeAdaptiveCycleDraftPreview.Ready
-        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(2,"coach_option_1"),
+        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(3,"coach_option_1"),
             adaptive().accept(offer,ready.reviewedFingerprint,true))
-        assertTrue(futureStore().read("owner-1","cycle-1","base") is
+        assertTrue(futureStore().read("owner-1","cycle-1","build") is
             NativeFutureBlockContextRead.Found)
         val record=Files.list(temp.root.toPath()).use {files->
             files.filter{it.fileName.toString().startsWith("future-block-")}
@@ -622,13 +680,13 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         Files.write(record,corrupt)
         assertEquals(NativeFutureBlockContextRead.Rejected(
             NativeFutureBlockContextRefusal.CORRUPT_RECORD),
-            futureStore().read("owner-1","cycle-1","base"))
+            futureStore().read("owner-1","cycle-1","build"))
         Files.write(record,original)
         assertEquals(NativeAuthoringSourceWrite.Committed(2),
             sources.publish("owner-1",1,source(2)))
         assertEquals(NativeFutureBlockContextRead.Rejected(
             NativeFutureBlockContextRefusal.STALE_DRAFT_OR_SOURCE),
-            futureStore().read("owner-1","cycle-1","base"))
+            futureStore().read("owner-1","cycle-1","build"))
     }
 
 
@@ -638,7 +696,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
      * the real fully verified custom + Composer + history preflight.
      */
     private fun readyFutureForSecondConsent() {
-        initialize();approved()
+        initializeFutureBaseline();approveFutureBaseline()
         assertEquals(NativeAdaptivePermissionWrite.Committed(2),
             permissionStore.confirm("owner-1","cycle-1",1,
                 setOf(CustomCycleChangeKind.SPLIT,
@@ -648,13 +706,13 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val candidate=futureCandidate()
         val shown=adaptive().preview(candidate)
             as NativeAdaptiveCycleDraftPreview.Ready
-        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(2,"coach_option_1"),
+        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(3,"coach_option_1"),
             adaptive().accept(candidate,shown.reviewedFingerprint,true))
     }
     private fun approvalCheckpoint(
         boundary:()->NativeFutureActivationReview =
             {NativeFutureActivationReview.BoundaryReviewed(
-                "cycle-1","base",2,1,3,7)}
+                "cycle-1","build",4,3,9,7)}
     )=NativeKotlinFutureActivationApprovalFileStore(
         temp.root.toPath(),fence,identity,
         {_,_,_->boundary()},futureStore(),sources,permissionStore)
@@ -663,18 +721,18 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         readyFutureForSecondConsent()
         val store=approvalCheckpoint()
         assertEquals(NativeFutureApprovalRead.Missing,
-            store.read("owner-1","cycle-1","base"))
-        val offer=store.preview("owner-1","cycle-1","base")
+            store.read("owner-1","cycle-1","build"))
+        val offer=store.preview("owner-1","cycle-1","build")
         assertTrue(offer.toString(),offer is NativeFutureApprovalPreview.Ready)
         val ready=offer as NativeFutureApprovalPreview.Ready
         assertEquals(0L,ready.expectedRecordRevision)
         assertEquals(NativeFutureApprovalWrite.Rejected(
             NativeFutureApprovalRefusal.CONFIRMATION_REQUIRED),
-            store.confirm("owner-1","cycle-1","base",0,ready.fingerprint,false))
+            store.confirm("owner-1","cycle-1","build",0,ready.fingerprint,false))
         assertEquals(NativeFutureApprovalWrite.Rejected(
             NativeFutureApprovalRefusal.REVIEW_CHANGED),
-            store.confirm("owner-1","cycle-1","base",0,"a".repeat(64),true))
-        val result=store.confirm("owner-1","cycle-1","base",0,
+            store.confirm("owner-1","cycle-1","build",0,"a".repeat(64),true))
+        val result=store.confirm("owner-1","cycle-1","build",0,
             ready.fingerprint,true)
         assertTrue(result.toString(),result is NativeFutureApprovalWrite.Committed)
         val receipt=(result as NativeFutureApprovalWrite.Committed).approval
@@ -683,10 +741,10 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertFalse(receipt.mayIssueWorkout)
         assertFalse(receipt.mayChangeHistory)
         assertEquals(NativeFutureApprovalRead.Found(receipt,true),
-            approvalCheckpoint().read("owner-1","cycle-1","base"))
+            approvalCheckpoint().read("owner-1","cycle-1","build"))
         assertEquals(NativeFutureApprovalWrite.Rejected(
             NativeFutureApprovalRefusal.REVISION_CONFLICT),
-            approvalCheckpoint().confirm("owner-1","cycle-1","base",0,
+            approvalCheckpoint().confirm("owner-1","cycle-1","build",0,
                 ready.fingerprint,true))
         assertEquals(NativeAuthoringSourceRead.Found(source()),
             sources.read("owner-1"))
@@ -699,62 +757,62 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         var historyRevision=7L
         val store=approvalCheckpoint{
             NativeFutureActivationReview.BoundaryReviewed(
-                "cycle-1","base",2,1,3,historyRevision)
+                "cycle-1","build",4,3,9,historyRevision)
         }
-        val ready=store.preview("owner-1","cycle-1","base")
+        val ready=store.preview("owner-1","cycle-1","build")
             as NativeFutureApprovalPreview.Ready
-        val approved=store.confirm("owner-1","cycle-1","base",0,
+        val approved=store.confirm("owner-1","cycle-1","build",0,
             ready.fingerprint,true) as NativeFutureApprovalWrite.Committed
         historyRevision=8L
         assertEquals(NativeFutureApprovalRead.Found(approved.approval,false),
-            store.read("owner-1","cycle-1","base"))
+            store.read("owner-1","cycle-1","build"))
         assertEquals(NativeFutureApprovalWrite.Rejected(
             NativeFutureApprovalRefusal.REVIEW_CHANGED),
-            store.confirm("owner-1","cycle-1","base",1,
+            store.confirm("owner-1","cycle-1","build",1,
                 ready.fingerprint,true))
-        val changed=store.preview("owner-1","cycle-1","base")
+        val changed=store.preview("owner-1","cycle-1","build")
             as NativeFutureApprovalPreview.Ready
         assertTrue(changed.fingerprint!=ready.fingerprint)
-        assertTrue(store.confirm("owner-1","cycle-1","base",1,
+        assertTrue(store.confirm("owner-1","cycle-1","build",1,
             changed.fingerprint,true) is NativeFutureApprovalWrite.Committed)
         assertEquals(NativeAdaptivePermissionWrite.Committed(3),
             permissionStore.confirm("owner-1","cycle-1",2,
                 setOf(CustomCycleChangeKind.CUES),true))
-        assertTrue(store.read("owner-1","cycle-1","base") is
+        assertTrue(store.read("owner-1","cycle-1","build") is
             NativeFutureApprovalRead.Found)
-        assertFalse((store.read("owner-1","cycle-1","base")
+        assertFalse((store.read("owner-1","cycle-1","build")
             as NativeFutureApprovalRead.Found).isCurrent)
         assertEquals(NativeFutureApprovalPreview.Rejected(
             NativeFutureApprovalRefusal.NOT_READY),
-            store.preview("owner-1","cycle-1","base"))
+            store.preview("owner-1","cycle-1","build"))
     }
 
     @Test fun revisionedRevocationAndAccountSwitchCannotResurrectSecondConsent() {
         readyFutureForSecondConsent()
         val store=approvalCheckpoint()
-        val shown=store.preview("owner-1","cycle-1","base")
+        val shown=store.preview("owner-1","cycle-1","build")
             as NativeFutureApprovalPreview.Ready
-        val first=(store.confirm("owner-1","cycle-1","base",0,
+        val first=(store.confirm("owner-1","cycle-1","build",0,
             shown.fingerprint,true) as NativeFutureApprovalWrite.Committed).approval
         active=NativeKotlinOwnerIdentity("other-owner","athlete-1")
         assertEquals(NativeFutureApprovalRead.Rejected(
             NativeFutureApprovalRefusal.NOT_AUTHORIZED),
-            store.read("owner-1","cycle-1","base"))
+            store.read("owner-1","cycle-1","build"))
         active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
         assertEquals(NativeFutureApprovalWrite.Revoked(2),
-            store.revoke("owner-1","cycle-1","base",1))
+            store.revoke("owner-1","cycle-1","build",1))
         assertEquals(NativeFutureApprovalRead.Revoked(2),
-            store.read("owner-1","cycle-1","base"))
+            store.read("owner-1","cycle-1","build"))
         assertEquals(NativeFutureApprovalWrite.Rejected(
             NativeFutureApprovalRefusal.REVISION_CONFLICT),
-            store.confirm("owner-1","cycle-1","base",0,
+            store.confirm("owner-1","cycle-1","build",0,
                 first.reviewedFingerprint,true))
-        val updated=store.preview("owner-1","cycle-1","base")
+        val updated=store.preview("owner-1","cycle-1","build")
             as NativeFutureApprovalPreview.Ready
         assertEquals(2L,updated.expectedRecordRevision)
         assertEquals(NativeFutureApprovalWrite.Committed(
             first.copy(revision=3)),
-            store.confirm("owner-1","cycle-1","base",2,
+            store.confirm("owner-1","cycle-1","build",2,
                 updated.fingerprint,true))
     }
 
@@ -788,9 +846,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             futureStore(),sources,permissionStore)
         assertEquals(NativeFutureApprovalPreview.Rejected(
             NativeFutureApprovalRefusal.NOT_READY),
-            actual.preview("owner-1","cycle-1","base"))
+            actual.preview("owner-1","cycle-1","build"))
         assertEquals(NativeFutureApprovalRead.Missing,
-            actual.read("owner-1","cycle-1","base"))
+            actual.read("owner-1","cycle-1","build"))
     }
 
 }

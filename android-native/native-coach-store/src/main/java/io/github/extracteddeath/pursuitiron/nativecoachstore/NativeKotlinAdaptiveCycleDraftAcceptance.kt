@@ -36,7 +36,8 @@ data class NativeAdaptiveCycleDraftCandidate(
 enum class NativeAdaptiveCycleDraftRefusal {
     INVALID_REQUEST, NOT_AUTHORIZED, DRAFT_MISSING, SOURCE_MISSING,
     DRAFT_CHANGED, SOURCE_CHANGED, UNRELATED_BLOCK_CHANGED,
-    FUTURE_PROFILE_REQUIRES_APPROVAL, COACH_REVIEW_UNRESOLVED,
+    TARGET_NOT_FUTURE_BLOCK, FUTURE_PROFILE_REQUIRES_APPROVAL,
+    COACH_REVIEW_UNRESOLVED,
     PERMISSION_REQUIRED, PERMISSIONS_NOT_APPROVED, PERMISSIONS_CHANGED,
     CURRENT_CYCLE_NOT_SIGNED_OFF, CONFIRMATION_REQUIRED, REVIEW_CHANGED,
     FUTURE_CONTEXT_STORAGE_REJECTED, DRAFT_STORAGE_REJECTED, STORAGE_UNAVAILABLE
@@ -178,6 +179,14 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
         // Merely changing the caller-provided split is never sufficient.
         val changedSchedule=original.split!=updated.split ||
             original.days.map{it.weekday}!=updated.days.map{it.weekday}
+        // A prospective calendar is ONLY valid for a later block. Changing
+        // the first/current block would rewrite an already active schedule,
+        // even though the proposal is marked non-issuable. Do not permit a
+        // future-context file to be staged for that block.
+        if(changedSchedule &&
+            draft.blocks.indexOfFirst{it.blockId==c.targetBlockId}<=0)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.TARGET_NOT_FUTURE_BLOCK)
         if(changedSchedule && c.prospective==null)
             return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.FUTURE_PROFILE_REQUIRES_APPROVAL)

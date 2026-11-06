@@ -30,7 +30,8 @@ internal object NativeFutureActivationSourcePlanDomain {
     fun prepare(
         source:NativeCustomAuthoringSnapshot,
         accepted:NativeFutureBlockContextReceipt,
-        boundary:NativeFutureActivationReview.BoundaryReviewed
+        boundary:NativeFutureActivationReview.BoundaryReviewed,
+        draft:CustomTrainingCycle
     ):NativeFutureActivationSourcePlan? {
         val current=source.setup.reviewed ?:return null
         val future=accepted.future.setup.reviewed ?:return null
@@ -51,6 +52,24 @@ internal object NativeFutureActivationSourcePlanDomain {
             boundary.verifiedPriorSessions<boundary.precedingWeeks)
             return null
 
+        // The future policy and calendar must name the SAME persisted block,
+        // not just an otherwise plausible athlete profile. The consent's
+        // completed-week boundary is derived from this exact draft ordering.
+        val index=draft.blocks.indexOfFirst {it.blockId==accepted.blockId}
+        if(draft.cycleId!=accepted.cycleId ||
+            draft.athleteId!=accepted.athleteId ||
+            draft.revision!=accepted.draftRevision ||
+            index<=0 || draft.blocks.any {it.weeks<=0} ||
+            draft.blocks.map {it.blockId}.distinct().size!=draft.blocks.size ||
+            draft.blocks.take(index).sumOf {it.weeks}+1!=boundary.firstWeek)
+            return null
+        val block=draft.blocks[index]
+        if(block.purpose!=CustomBlockPurpose.TRAINING ||
+            !NativeFutureBlockBoundaryDomain.scheduleMatches(
+                block.split,block.days.map {it.weekday},
+                future.split,future.trainingWeekdays))
+            return null
+
         // Only the future split/calendar may differ. Any gym, load,
         // experience, goal, limits, muscles, equipment or injury/exclusion
         // changes require their own complete source and policy review.
@@ -68,11 +87,27 @@ internal object NativeFutureActivationSourcePlanDomain {
         if(policy.athleteId!=future.athleteProfileId ||
             policy.athleteRevision!=future.profileRevision ||
             policy.goal!=future.goal || policy.experience!=future.experience ||
-            policy.split!=future.split ||
+            policy.split!=future.split || policy.phase!=block.phase ||
             policy.trainingDays!=future.trainingWeekdays.size ||
             overhead.keys!=future.trainingWeekdays ||
             overhead.values.any{it !in 0..21600})
             return null
+
+        val intents=block.days.map {day->
+            AthleteCalendarIntent(day.weekday,day.purpose,
+                day.slots.firstOrNull {it.role==ComposerRole.PRIMARY}?.exerciseId)
+        }
+        if(CoachGoalProgramPolicyDomain.review(future,block.phase,
+                policy.selectedBounds,intents,policy).status!=
+            GoalPolicyStatus.MATCHED_FOR_REVIEW)
+            return null
+        // Never activate a strength/peak policy declaring priority-lift
+        // frequency which the exact next block cannot actually deliver.
+        if(policy.primaryLiftMinimumDays.any {(id,needed)->
+            block.days.count {day->day.slots.any {slot->
+                slot.exerciseId==id && slot.role==ComposerRole.PRIMARY
+            }}<needed
+        })return null
 
         val proposed=source.copy(revision=source.revision+1,
             setup=accepted.future.setup)

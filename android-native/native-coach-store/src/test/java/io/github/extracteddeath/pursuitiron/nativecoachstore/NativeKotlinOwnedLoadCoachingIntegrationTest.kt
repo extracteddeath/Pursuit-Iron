@@ -1238,4 +1238,78 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
                 .timeline.completions.map{it.manifest.workoutId})
     }
 
+
+    @Test fun completedPersonalizedBackoffRetainsExactLoadsAndRepeatsMissedRepTarget() {
+        val intent=backoffReadyHistory()
+        assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)
+        var inProgress=(repIssuer().issue("owner-1","workout-3")
+            as NativeKotlinIssueResult.Committed).journal
+        val issuedBackoff=inProgress.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy{it.ordinal}
+        assertEquals(listOf(n("30"),n("25")),
+            issuedBackoff.map{(it.load as DraftSetLoad.Verified).value})
+        assertEquals(listOf(12,12),issuedBackoff.map{it.reps.minimum})
+        for((i,set) in inProgress.snapshot.targets.withIndex()) {
+            val stock=(set.load as DraftSetLoad.Verified)
+            val reps=if(set.setKey==issuedBackoff.last().setKey)11
+                else set.reps.maximum
+            val written=journals.appendStored(
+                "owner-1","workout-3",
+                KotlinJournalOperation.RecordSet(
+                    "backoff-next-log-$i",inProgress.revision,set.setKey,
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(stock.value,stock.unit,reps,3)),
+                approvals::canAccessIssuedWorkout)
+            assertTrue(written.toString(),written is NativeJournalFileResult.Durable)
+            inProgress=(written as NativeJournalFileResult.Durable).journal
+        }
+        assertTrue(transactions.complete(
+            "owner-1","athlete-1","workout-3",
+            KotlinJournalOperation.Finish(
+                "backoff-repeat-finish",inProgress.revision))
+            is NativeHistoryTransactionResult.Durable)
+        val evidence=(reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.last()
+            as NativeKotlinMixedHistoryCompletion.Composer
+        assertEquals(listOf(n("30"),n("25")),
+            evidence.evidence.exerciseReviews.single{
+                it.exerciseId=="db-press"
+            }.workingSets.map{(it.issuedLoad as DraftSetLoad.Verified).value})
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
+            evidence.evidence.exerciseReviews.single{
+                it.exerciseId=="db-press"
+            }.workingSets.map{it.issuedReps})
+        val current=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        assertEquals(NativeApprovalWriteResult.Committed(4),
+            approvals.publish("owner-1",3,current.copy(
+                grant=current.grant.copy(
+                    workoutId="workout-4",grantId="grant-4"),
+                storageReceiptId="storage-4",storageRevision=4,
+                acceptedRepTargets=null)))
+        val review=reader.reviewCurrentNextSetTargets(
+            "owner-1","athlete-1",approvals,"db-press",
+            CoachReadiness.NORMAL,false,authoring)
+        assertTrue(review.toString(),review is NativeOwnerNextSetResult.Review)
+        val verified=(review as NativeOwnerNextSetResult.Review)
+            .candidate as NativeCurrentRepPrescriptionResult.Reviewed
+        val proposal=verified.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals("workout-3",proposal.historicalWorkoutId)
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            proposal.decisionKind)
+        assertEquals(listOf(12,11),proposal.observedReps)
+        assertEquals(listOf(12,12),proposal.newRepTargets)
+        assertEquals(listOf(n("30"),n("25")),
+            proposal.workout.targets.filter{
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.sortedBy{it.ordinal}.map{
+                (it.load as DraftSetLoad.Verified).value
+            })
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            journals.openStored("owner-1","workout-4",
+                approvals::canAccessIssuedWorkout))
+    }
+
 }

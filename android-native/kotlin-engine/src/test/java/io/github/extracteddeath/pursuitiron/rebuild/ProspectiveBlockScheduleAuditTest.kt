@@ -18,7 +18,7 @@ class ProspectiveBlockScheduleAuditTest {
             profileRevision=a.profileRevision,
             athleteProfileId=a.athleteProfileId,
             goal=a.goal,experience=a.experience,
-            split=ComposerSplit.UL,
+            split=ComposerSplit.UPPER_LOWER,
             trainingWeekdays=setOf(0,1,2,4),
             timezoneId=a.timezoneId,sessionTimeBucket=a.sessionTimeBucket,
             hardSessionLimit=a.hardSessionLimit,
@@ -36,7 +36,7 @@ class ProspectiveBlockScheduleAuditTest {
             declaredRestDays=setOf(3,5,6)))
     }
     private fun futurePolicy()=checkNotNull(f.generation().policy).copy(
-        revision="future-r2",split=ComposerSplit.UL,trainingDays=4,
+        revision="future-r2",split=ComposerSplit.UPPER_LOWER,trainingDays=4,
         minimumPurposeDays=mapOf(ComposerSessionPurpose.HYPERTROPHY to 4))
     private fun future()=ProspectiveBlockCoachingContext(
         futureReview(),futurePolicy(),
@@ -56,7 +56,7 @@ class ProspectiveBlockScheduleAuditTest {
             })
         return source.copy(revision=source.revision+1,
             blocks=listOf(source.blocks.first(),next.copy(
-                split=CustomSplitIdentity.Named(ComposerSplit.UL),
+                split=CustomSplitIdentity.Named(ComposerSplit.UPPER_LOWER),
                 days=(next.days+extra).sortedBy {it.weekday})))
     }
     private fun permissions()=CustomCycleCoachPermissions(

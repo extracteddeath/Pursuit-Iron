@@ -34,9 +34,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete,customDraftStore,authoringSourceStore)
     private val adaptiveCyclePermissions=NativeKotlinAdaptiveCyclePermissionFileStore(
         root,revisionFence,localAthlete)
+    private val futureBlockContexts=NativeKotlinFutureBlockContextFileStore(
+        root,revisionFence,localAthlete,customDraftStore,authoringSourceStore)
     private val adaptiveCycleDrafts=NativeKotlinAdaptiveCycleDraftAcceptance(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
-        adaptiveCyclePermissions,customCycleSignoffs)
+        adaptiveCyclePermissions,customCycleSignoffs,futureBlockContexts)
     private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs)
@@ -485,6 +487,19 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * I/O and must stay off the main thread. They do not activate native
      * navigation, approve workouts, or accept prospective schedule profiles.
      */
+    /**
+     * Return only a matching saved draft's companion future review; it is
+     * NOT permission to activate a profile or issue a workout.
+     */
+    fun readAcceptedFutureBlockContext(
+        cycleId:String,blockId:String
+    ):NativeFutureBlockContextRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureBlockContextRead.Rejected(
+                NativeFutureBlockContextRefusal.NOT_AUTHORIZED)
+        return futureBlockContexts.read(owner.ownerKey,cycleId,blockId)
+    }
+
     fun readAdaptiveCyclePermissions(cycleId:String):NativeAdaptivePermissionRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAdaptivePermissionRead.Rejected(

@@ -39,7 +39,7 @@ enum class NativeAdaptiveCycleDraftRefusal {
     FUTURE_PROFILE_REQUIRES_APPROVAL, COACH_REVIEW_UNRESOLVED,
     PERMISSION_REQUIRED, PERMISSIONS_NOT_APPROVED, PERMISSIONS_CHANGED,
     CURRENT_CYCLE_NOT_SIGNED_OFF, CONFIRMATION_REQUIRED, REVIEW_CHANGED,
-    DRAFT_STORAGE_REJECTED, STORAGE_UNAVAILABLE
+    FUTURE_CONTEXT_STORAGE_REJECTED, DRAFT_STORAGE_REJECTED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeAdaptiveCycleDraftPreview {
     data class Ready(
@@ -72,7 +72,8 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
     private val drafts:NativeCustomCycleDraftFileStore,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val permissionStore:NativeKotlinAdaptiveCyclePermissionFileStore,
-    private val cycleSignoffs:NativeKotlinCustomCycleSignoffFileStore
+    private val cycleSignoffs:NativeKotlinCustomCycleSignoffFileStore,
+    private val futureStore:NativeKotlinFutureBlockContextFileStore
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val digest=Regex("^[a-f0-9]{64}$")
@@ -276,6 +277,21 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
                 if(ready.reviewedFingerprint!=expectedReviewedFingerprint)
                     return@withOwnerTransaction NativeAdaptiveCycleDraftDecision.Rejected(
                         NativeAdaptiveCycleDraftRefusal.REVIEW_CHANGED)
+                // Write the companion before the draft's one-file CAS. An
+                // interruption can leave an inert prepared record, NEVER a
+                // future schedule that can issue a workout. read() verifies
+                // the committed draft and current source fingerprints.
+                if(c.prospective!=null) {
+                    val source=(sources.read(c.ownerKey)
+                        as? NativeAuthoringSourceRead.Found)?.source
+                        ?:return@withOwnerTransaction NativeAdaptiveCycleDraftDecision.Rejected(
+                            NativeAdaptiveCycleDraftRefusal.SOURCE_CHANGED)
+                    if(!futureStore.stage(c.ownerKey,c.cycleId,c.targetBlockId,
+                            c.proposedCycle,source,expectedReviewedFingerprint,
+                            c.prospective))
+                        return@withOwnerTransaction NativeAdaptiveCycleDraftDecision.Rejected(
+                            NativeAdaptiveCycleDraftRefusal.FUTURE_CONTEXT_STORAGE_REJECTED)
+                }
                 // No historical workout, source record or consent is written.
                 when(drafts.save(c.ownerKey,c.cycleId,c.expectedDraftRevision,
                     c.proposedCycle)) {

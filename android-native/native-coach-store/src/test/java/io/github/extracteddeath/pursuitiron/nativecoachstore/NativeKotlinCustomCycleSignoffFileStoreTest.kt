@@ -22,6 +22,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         temp.root.toPath(),fence,identity,drafts,sources)
     private val permissionStore by lazy{NativeKotlinAdaptiveCyclePermissionFileStore(
         temp.root.toPath(),fence,identity)}
+    private fun futureStore()=NativeKotlinFutureBlockContextFileStore(
+        temp.root.toPath(),fence,identity,drafts,sources)
     private fun n(value:String)=BigDecimal(value)
     private fun setup()=CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="rev-1",athleteProfileId="athlete-1",
@@ -204,7 +206,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
     private fun adaptive()=NativeKotlinAdaptiveCycleDraftAcceptance(
-        fence,identity,drafts,sources,permissionStore,store())
+        fence,identity,drafts,sources,permissionStore,store(),futureStore())
     private fun adjusted():CustomTrainingCycle {
         val original=cycle(2)
         return original.copy(blocks=original.blocks.map{block->
@@ -536,6 +538,16 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             adaptive().accept(prospective,reviewed.reviewedFingerprint,true))
         assertEquals(NativeCustomDraftReadResult.Found(futureCycle()),
             drafts.read("owner-1","cycle-1"))
+        val restored=futureStore().read("owner-1","cycle-1","base")
+        assertTrue(restored.toString(),
+            restored is NativeFutureBlockContextRead.Found)
+        val receipt=(restored as NativeFutureBlockContextRead.Found).receipt
+        assertEquals(futureContext(),receipt.future)
+        assertEquals(reviewed.reviewedFingerprint,receipt.reviewedFingerprint)
+        assertEquals(2L,receipt.draftRevision)
+        assertEquals(1L,receipt.sourceRevision)
+        assertFalse(receipt.mayIssueWorkout)
+        assertFalse(receipt.mayActivateProfile)
         assertEquals(NativeCustomSignoffRead.Found(signed,false),
             store().read("owner-1","cycle-1",inputs()))
         // This is a DRAFT: the actual reviewed gym/profile remains the
@@ -569,6 +581,54 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             adaptive().preview(invalid))
         assertEquals(NativeCustomDraftReadResult.Found(cycle()),
             drafts.read("owner-1","cycle-1"))
+    }
+
+
+    @Test fun interruptedProspectiveStageIsNotAValidAcceptedFutureContext() {
+        initialize()
+        approved()
+        assertTrue(futureStore().stage("owner-1","cycle-1","base",
+            futureCycle(),source(),"a".repeat(64),futureContext()))
+        assertEquals(NativeFutureBlockContextRead.Rejected(
+            NativeFutureBlockContextRefusal.STALE_DRAFT_OR_SOURCE),
+            futureStore().read("owner-1","cycle-1","base"))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+    }
+
+    @Test fun futureContextCorruptionAndChangingGymOrDraftFailsClosed() {
+        initialize()
+        approved()
+        assertEquals(NativeAdaptivePermissionWrite.Committed(2),
+            permissionStore.confirm("owner-1","cycle-1",1,
+                setOf(CustomCycleChangeKind.SPLIT,
+                    CustomCycleChangeKind.SCHEDULE,
+                    CustomCycleChangeKind.DAY_COUNT,
+                    CustomCycleChangeKind.EXERCISES),true))
+        val offer=futureCandidate()
+        val ready=adaptive().preview(offer)
+            as NativeAdaptiveCycleDraftPreview.Ready
+        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(2,"coach_option_1"),
+            adaptive().accept(offer,ready.reviewedFingerprint,true))
+        assertTrue(futureStore().read("owner-1","cycle-1","base") is
+            NativeFutureBlockContextRead.Found)
+        val record=Files.list(temp.root.toPath()).use {files->
+            files.filter{it.fileName.toString().startsWith("future-block-")}
+                .findFirst().orElseThrow()
+        }
+        val original=Files.readAllBytes(record)
+        val corrupt=original.clone()
+        corrupt[corrupt.lastIndex]=(corrupt.last().toInt() xor 1).toByte()
+        Files.write(record,corrupt)
+        assertEquals(NativeFutureBlockContextRead.Rejected(
+            NativeFutureBlockContextRefusal.CORRUPT_RECORD),
+            futureStore().read("owner-1","cycle-1","base"))
+        Files.write(record,original)
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.publish("owner-1",1,source(2)))
+        assertEquals(NativeFutureBlockContextRead.Rejected(
+            NativeFutureBlockContextRefusal.STALE_DRAFT_OR_SOURCE),
+            futureStore().read("owner-1","cycle-1","base"))
     }
 
 }

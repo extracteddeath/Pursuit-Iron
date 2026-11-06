@@ -293,6 +293,13 @@ class NativeKotlinFutureActivationHandoffFileStore(
                     current.baseSourceSha256)
                 return@withOwnerTransaction NativeFutureHandoffReview.Rejected(
                     NativeFutureHandoffRefusal.SOURCE_CHANGED)
+            // A persisted write-ahead activation intent cannot be erased
+            // by an earlier UI cancellation callback. Cancel that intent
+            // under the same fence FIRST, with its own source CAS proof.
+            if(NativeKotlinFutureActivationCommitTransaction.hasCommitRecord(
+                    directory,ownerKey))
+                return@withOwnerTransaction NativeFutureHandoffReview.Rejected(
+                    NativeFutureHandoffRefusal.ALREADY_STAGED)
             Files.delete(path(ownerKey))
             NativeFutureHandoffReview.Cancelled
         }}.getOrElse{NativeFutureHandoffReview.Rejected(

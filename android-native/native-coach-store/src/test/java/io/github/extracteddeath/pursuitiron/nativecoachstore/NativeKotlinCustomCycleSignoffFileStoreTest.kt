@@ -447,4 +447,128 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             drafts.read("owner-1","cycle-1"))
     }
 
+
+    private fun futureSetup():AthleteSetupReview {
+        val prior=checkNotNull(setup().reviewed)
+        return CoachAthleteSetupDomain.review(AthleteSetupDraft(
+            profileRevision=prior.profileRevision,
+            athleteProfileId=prior.athleteProfileId,
+            goal=prior.goal,experience=prior.experience,
+            split=ComposerSplit.UPPER_LOWER,
+            trainingWeekdays=setOf(0,1,2,4),
+            timezoneId=prior.timezoneId,
+            sessionTimeBucket=prior.sessionTimeBucket,
+            hardSessionLimit=prior.hardSessionLimit,
+            gym=GymProfileDraft(
+                prior.gym.gymId,prior.gym.unit,
+                prior.gym.confirmedStock,
+                prior.gym.availableFacilities,
+                prior.gym.availableAttachments),
+            allowBodyweight=prior.allowBodyweight,
+            allowSupersets=prior.allowSupersets,
+            allowTricepsOnLower=prior.allowTricepsOnLower,
+            maxBarbellExercisesPerDay=prior.maxBarbellExercisesPerDay,
+            focusedMuscles=prior.focusedMuscles,
+            reducedMuscles=prior.reducedMuscles,
+            excludedExerciseIds=prior.excludedExerciseIds,
+            lockedTrainingDays=prior.lockedTrainingDays,
+            hardTrainingDays=prior.hardTrainingDays,
+            longTrainingDays=prior.longTrainingDays,
+            declaredRestDays=setOf(3,5,6)))
+    }
+    private fun futureContext()=ProspectiveBlockCoachingContext(
+        futureSetup(),policy().copy(
+            revision="future-r2",
+            split=ComposerSplit.UPPER_LOWER,trainingDays=4,
+            minimumPurposeDays=mapOf(ComposerSessionPurpose.HYPERTROPHY to 4)),
+        mapOf(0 to 200,1 to 200,2 to 200,4 to 200))
+    private fun futureCycle():CustomTrainingCycle {
+        val base=cycle(2)
+        return base.copy(blocks=base.blocks.map {block ->
+            block.copy(split=CustomSplitIdentity.Named(
+                ComposerSplit.UPPER_LOWER),
+                days=(block.days+CustomTrainingDay(1,"Day 1",
+                    ComposerSessionPurpose.HYPERTROPHY,
+                    listOf(CustomExerciseSlot("slot-1","bodyweight_crunch",
+                        ComposerRole.ACCESSORY,listOf(set())))))
+                    .sortedBy {it.weekday})
+        })
+    }
+    private fun futurePermissions()=CustomCycleCoachPermissions(
+        adaptSplit=true,adaptSchedule=true,adaptDayCount=true,
+        adaptExercises=true)
+    private fun futureCandidate(
+        context:ProspectiveBlockCoachingContext=futureContext()
+    )=option(proposed=futureCycle(),permissions=futurePermissions())
+        .copy(expectedPermissionRevision=2,prospective=context)
+
+    @Test fun futureScheduleRequiresFullProspectiveReviewAndExplicitDraftAcceptance() {
+        initialize()
+        val signed=approved()
+        assertEquals(NativeAdaptivePermissionWrite.Committed(2),
+            permissionStore.confirm("owner-1","cycle-1",1,
+                setOf(CustomCycleChangeKind.SPLIT,
+                    CustomCycleChangeKind.SCHEDULE,
+                    CustomCycleChangeKind.DAY_COUNT,
+                    CustomCycleChangeKind.EXERCISES),true))
+        val prospective=futureCandidate()
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.FUTURE_PROFILE_REQUIRES_APPROVAL),
+            adaptive().preview(prospective.copy(prospective=null)))
+        val first=adaptive().preview(prospective)
+        assertTrue(first.toString(),first is NativeAdaptiveCycleDraftPreview.Ready)
+        val reviewed=first as NativeAdaptiveCycleDraftPreview.Ready
+        assertEquals(setOf(CustomCycleChangeKind.SPLIT,
+            CustomCycleChangeKind.SCHEDULE,
+            CustomCycleChangeKind.DAY_COUNT,
+            CustomCycleChangeKind.EXERCISES),
+            reviewed.changes.map{it.kind}.toSet())
+        val modified=futureCandidate(futureContext().copy(
+            policy=futureContext().policy.copy(
+                rationale="Changed future coaching evidence with same version")))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.REVIEW_CHANGED),
+            adaptive().accept(modified,reviewed.reviewedFingerprint,true))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.CONFIRMATION_REQUIRED),
+            adaptive().accept(prospective,reviewed.reviewedFingerprint,false))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(2,"coach_option_1"),
+            adaptive().accept(prospective,reviewed.reviewedFingerprint,true))
+        assertEquals(NativeCustomDraftReadResult.Found(futureCycle()),
+            drafts.read("owner-1","cycle-1"))
+        assertEquals(NativeCustomSignoffRead.Found(signed,false),
+            store().read("owner-1","cycle-1",inputs()))
+        // This is a DRAFT: the actual reviewed gym/profile remains the
+        // original three-day split and issuance is still unauthorized.
+        assertEquals(ComposerSplit.FULL_BODY,
+            (sources.read("owner-1") as NativeAuthoringSourceRead.Found)
+                .source.setup.reviewed!!.split)
+        assertEquals(NativeCustomSignoffWrite.Rejected(
+            NativeCustomSignoffRefusal.COACH_REVIEW_UNRESOLVED),
+            store().confirm("owner-1","cycle-1",2,1,1,inputs(),true))
+    }
+
+    @Test fun futureScheduleCannotLaunderNewGymOrUnapprovedFrequency() {
+        initialize()
+        approved()
+        assertEquals(NativeAdaptivePermissionWrite.Committed(2),
+            permissionStore.confirm("owner-1","cycle-1",1,
+                setOf(CustomCycleChangeKind.SPLIT,
+                    CustomCycleChangeKind.SCHEDULE,
+                    CustomCycleChangeKind.DAY_COUNT,
+                    CustomCycleChangeKind.EXERCISES),true))
+        val normal=futureCandidate()
+        assertTrue(adaptive().preview(normal).toString(),
+            adaptive().preview(normal) is NativeAdaptiveCycleDraftPreview.Ready)
+        val other=checkNotNull(futureContext().setup.reviewed)
+        val invalid=futureCandidate(futureContext().copy(
+            setup=futureContext().setup.copy(reviewed=other.copy(
+                experience=AthleteExperience.BEGINNER))))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.COACH_REVIEW_UNRESOLVED),
+            adaptive().preview(invalid))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+    }
+
 }

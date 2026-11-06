@@ -2209,4 +2209,90 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
 
+
+    @Test fun oldApprovedWeightDoesNotBlockAuthoredTrainingAfterCoachOff() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        val id="manual-after-load-approval"
+        val inputs=futureInputs()
+        val approvals=NativeKotlinCustomNextLoadApprovalFileStore(
+            temp.root.toPath(),fence,identity,f.activation,f.coach,
+            f.prepared,f.issuer)
+        val ready=approvals.preview("owner-1",id,inputs,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5"))
+            as NativeCustomLoadPreview.Ready
+        val receipt=ready.receipt
+        assertEquals(NativeCustomLoadWrite.Accepted(receipt,false),
+            approvals.accept("owner-1",id,inputs,6,1,"slot-1",
+                CoachReadiness.NORMAL,false,n("5"),receipt.fingerprint,
+                receipt.historyRevision,receipt.consentRevision,
+                receipt.setKeys,receipt.originalLoad,receipt.proposedLoad,true))
+        assertTrue(f.assistance.save("owner-1",0,CoachAssistancePolicy.MANUAL)
+            is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomLoadRead.Rejected(
+            NativeCustomLoadRefusal.STALE_HISTORY_OR_CONSENT),
+            approvals.readCurrent("owner-1",id,inputs,6,1))
+        val prepared=f.prepared.prepareActivated("owner-1",id,"cycle-1",
+            6,1,inputs,f.signoff,f.activation,f.repApprovals,approvals)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val original=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertNull(original.loadApprovalFingerprint)
+        assertNull(original.repApprovalFingerprint)
+        val load=original.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified
+        assertEquals(n("20"),load.value)
+        assertEquals(RepBand(10,15),original.snapshot.slots.single().sets.single()
+            .prescription.reps)
+        val issued=f.issuer.issueActivated("owner-1",id,"cycle-1",
+            6,1,inputs,f.signoff,f.activation,f.repApprovals,approvals)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(original.snapshot,
+            (issued as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+        assertTrue(f.assistance.save("owner-1",1,
+            CoachAssistancePolicy.STANDARD) is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomLoadRead.Rejected(
+            NativeCustomLoadRefusal.STALE_HISTORY_OR_CONSENT),
+            approvals.readCurrent("owner-1",id,inputs,6,1))
+        assertEquals(n("20"),(f.issuer.open("owner-1",id)
+            as NativeCustomJournalResult.Durable).issued.journal.snapshot
+            .slots.single().sets.single().prescription.load
+            .let{(it as DraftSetLoad.Verified).value})
+    }
+
+    @Test fun corruptedAdviceStillFailsClosedInsteadOfSilentlyFallingBack() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        finishRealActivatedSession(f,5,13)
+        val id="corrupted-rep-advice"
+        val inputs=futureInputs()
+        val proposal=f.repApprovals.preview("owner-1",id,inputs,
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+            as NativeCustomNextRepPreview.Ready
+        val r=proposal.receipt
+        assertTrue(f.repApprovals.accept("owner-1",id,inputs,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5"),r.fingerprint,
+            r.historyRevision,r.consentRevision,r.setKeys,r.nextMinimumReps,
+            true) is NativeCustomNextRepWrite.Accepted)
+        val file=Files.list(temp.root.toPath()).use{stream->
+            stream.filter{
+                it.fileName.toString().startsWith("future-rep-") &&
+                    it.fileName.toString().endsWith(".bin")
+            }.findFirst().orElseThrow()}
+        val damaged=Files.readAllBytes(file)
+        damaged[damaged.lastIndex]=(damaged.last().toInt() xor 1).toByte()
+        Files.write(file,damaged)
+        assertEquals(NativeCustomNextRepRead.Rejected(
+            NativeCustomNextRepRefusal.CORRUPT_RECORD),
+            f.repApprovals.readCurrent("owner-1",id,inputs,6,1))
+        assertTrue(f.assistance.save("owner-1",0,
+            CoachAssistancePolicy.MANUAL) is NativeCoachSettingsWrite.Saved)
+        // A corrupt receipt is not interchangeable with an expired one.
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            f.prepared.prepareActivated("owner-1",id,"cycle-1",
+                6,1,inputs,f.signoff,f.activation,f.repApprovals))
+    }
+
 }

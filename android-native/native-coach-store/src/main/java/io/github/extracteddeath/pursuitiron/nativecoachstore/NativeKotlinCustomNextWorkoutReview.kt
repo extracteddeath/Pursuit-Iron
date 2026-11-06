@@ -6,7 +6,8 @@ import java.math.BigDecimal
 enum class NativeCustomNextCoachRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, ACTIVATED_CONSENT_UNAVAILABLE,
     NEXT_WORKOUT_UNAVAILABLE, CURRENT_GYM_UNAVAILABLE,
-    HISTORY_CHANGED_OR_UNVERIFIED, STORAGE_UNAVAILABLE
+    HISTORY_CHANGED_OR_UNVERIFIED, ASSISTANCE_DISABLED,
+    COACH_SETTINGS_UNAVAILABLE, STORAGE_UNAVAILABLE
 }
 sealed interface NativeCustomNextCoachResult {
     data class Reviewed(
@@ -41,7 +42,8 @@ class NativeKotlinCustomNextWorkoutReview(
     private val signoffs:NativeKotlinActivatedCycleSignoffFileStore,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
-    private val journals:NativeKotlinCustomWorkoutJournalFileStore
+    private val journals:NativeKotlinCustomWorkoutJournalFileStore,
+    private val assistance:NativeKotlinCoachAssistanceSettingsStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     fun review(
@@ -60,6 +62,15 @@ class NativeKotlinCustomNextWorkoutReview(
                 it.ownerKey==ownerKey
             }?:return@withOwnerTransaction reject(
                 NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
+            val preference=if(assistance==null)
+                CoachAssistancePolicy.STANDARD else
+                (assistance.read(ownerKey) as? NativeCoachSettingsRead.Current)
+                    ?.settings?.policy
+                    ?:return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.COACH_SETTINGS_UNAVAILABLE)
+            if(!preference.offersProgression)
+                return@withOwnerTransaction reject(
+                    NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED)
             val acceptance=(signoffs.read(ownerKey,inputs)
                 as? NativeActivatedSignoffRead.Found)?.takeIf{it.isCurrent}
                 ?.receipt
@@ -143,7 +154,8 @@ class NativeKotlinCustomNextWorkoutReview(
             val validated=runCatching{CustomNextWorkoutCoachingDomain.review(
                 CustomNextWorkoutCoachingRequest(
                     next,slotId,completions,verifiedStock,
-                    maximumAuthorizedIncrease,readiness,movementRestricted)
+                    maximumAuthorizedIncrease,
+                    preference.coachingReadiness(readiness),movementRestricted)
             )}.getOrNull()
                 ?:return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)

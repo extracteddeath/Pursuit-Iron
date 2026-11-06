@@ -1090,4 +1090,152 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         })
     }
 
+
+    private fun verifiedBackoffPolicies()=policies.map {p->
+        if(p.exerciseId=="db-press" &&
+            p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+            p.copy(scheme=SetLoadScheme.LAST_SET_BACKOFF,
+                maximumAuthorizedBackoff=n("5"),
+                backoffReps=p.workingReps,backoffRir=p.targetRir)
+        else p
+    }
+
+    private fun backoffReadyHistory():NativeKotlinAcceptedRepIntent {
+        enrolled()
+        val samePolicy=verifiedBackoffPolicies()
+        val (finished,_) = complete(1,0,samePolicy)
+        val press=finished.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy {it.ordinal}
+        assertEquals(2,press.size)
+        assertEquals(listOf(n("30"),n("25")),
+            press.map{(it.load as DraftSetLoad.Verified).value})
+        val backoff=press.last()
+        val sourceEvent=finished.effectiveSets.getValue(backoff.setKey)
+            .operation.eventId
+        assertTrue(transactions.correct(
+            "owner-1","athlete-1","workout-1",
+            KotlinSavedSetCorrection(
+                "verified-backoff-correction",0,backoff.setKey,sourceEvent,
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("25"),LoadUnit.LB,11,4)))
+            is NativeHistoryTransactionResult.Durable)
+        val subsequent=NativeKotlinWorkoutApproval(
+            "owner-1","athlete-1",source,source,
+            KotlinWorkoutSelectionGrant("grant-2","workout-2",source,0),
+            program,samePolicy,"storage-2",2)
+        assertEquals(NativeApprovalWriteResult.Committed(2),
+            approvals.publish("owner-1",1,subsequent))
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,sourceRecord()))
+        val display=reader.reviewCurrentNextSetTargets(
+            "owner-1","athlete-1",approvals,"db-press",
+            CoachReadiness.NORMAL,false,authoring)
+        assertTrue(display.toString(),display is NativeOwnerNextSetResult.Review)
+        val reviewed=display as NativeOwnerNextSetResult.Review
+        val context=reviewed.candidate
+            as NativeCurrentRepPrescriptionResult.Reviewed
+        val proposal=context.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals("workout-1",proposal.historicalWorkoutId)
+        assertEquals(listOf(12,11),proposal.observedReps)
+        assertEquals(listOf(12,12),proposal.newRepTargets)
+        assertEquals(backoff.setKey,proposal.editedSetKey)
+        assertEquals(listOf(n("30"),n("25")),
+            proposal.workout.targets.filter{
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.sortedBy {it.ordinal}
+                .map{(it.load as DraftSetLoad.Verified).value})
+        return NativeKotlinAcceptedRepIntent(
+            "db-press",reviewed.approvalRevision,context.historyRevision,
+            "workout-2",proposal.historicalWorkoutId,proposal.editedSetKey,
+            proposal.observedReps,proposal.newRepTargets,
+            "workout-3","grant-3","storage-3",true)
+    }
+
+    @Test fun realCorrectedBackoffJournalToConsentToNativeIssuedNextWorkout() {
+        val intent=backoffReadyHistory()
+        assertEquals(NativeKotlinRepAcceptanceResult.Rejected(
+            NativeKotlinRepAcceptanceRefusal.NOT_ACCEPTED),
+            acceptRep(intent.copy(explicitlyAccepted=false)))
+        assertEquals(NativeKotlinRepAcceptanceResult.Rejected(
+            NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED),
+            acceptRep(intent.copy(expectedNewRepTargets=listOf(12,11))))
+        val recorded=acceptRep(intent)
+        assertTrue(recorded.toString(),
+            recorded is NativeKotlinRepAcceptanceResult.Committed)
+        assertEquals(3L,(recorded as NativeKotlinRepAcceptanceResult.Committed)
+            .approvalRevision)
+        assertEquals(NativeKotlinIssueResult.Rejected(
+            NativeKotlinIssueRefusal.WORKOUT_UNRESOLVED,
+            KotlinSnapshotRejection.UNVERIFIED_TARGET),
+            NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+                .issue("owner-1","workout-3"))
+        val issuer=repIssuer()
+        val result=issuer.issue("owner-1","workout-3")
+        assertTrue(result.toString(),result is NativeKotlinIssueResult.Committed)
+        val journal=(result as NativeKotlinIssueResult.Committed).journal
+        val press=journal.snapshot.targets.filter{
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy{it.ordinal}
+        assertEquals(listOf(n("30"),n("25")),
+            press.map{(it.load as DraftSetLoad.Verified).value})
+        assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
+            press.map{it.reps})
+        assertEquals(listOf(2,2),press.map{it.targetRir})
+        assertTrue(journal.snapshot.targets.filter{
+            it.exerciseId=="db-row" && it.type==DraftSetType.WORKING
+        }.all{it.reps==RepBand(8,12)})
+        assertEquals(journal,
+            (repIssuer().open("owner-1","workout-3")
+                as NativeJournalFileResult.Durable).journal)
+        val former=repIssuer().open("owner-1","workout-1")
+            as NativeJournalFileResult.Durable
+        assertEquals(RepBand(8,12),
+            former.journal.snapshot.targets.first{
+                it.exerciseId=="db-press" &&
+                    it.type==DraftSetType.WORKING
+            }.reps)
+        assertEquals(listOf(n("30"),n("25")),
+            former.journal.snapshot.targets.filter{
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.sortedBy{it.ordinal}.map{
+                (it.load as DraftSetLoad.Verified).value
+            })
+        assertEquals(NativeOwnerNextSetResult.Rejected(
+            NativeOwnerNextSetRefusal.ALREADY_ISSUED_OR_CONFLICT),
+            reader.reviewCurrentNextSetTargets(
+                "owner-1","athlete-1",approvals,"db-press",
+                CoachReadiness.NORMAL,false,authoring))
+    }
+
+    @Test fun correctedBackoffAfterConsentInvalidatesUnissuedNextWorkout() {
+        val intent=backoffReadyHistory()
+        assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)
+        val past=repIssuer().open("owner-1","workout-1")
+            as NativeJournalFileResult.Durable
+        val last=past.journal.snapshot.targets.last{
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }
+        val changed=transactions.correct(
+            "owner-1","athlete-1","workout-1",
+            KotlinSavedSetCorrection(
+                "backoff-revoked-after-consent",1,last.setKey,
+                "verified-backoff-correction",
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("25"),LoadUnit.LB,9,1)))
+        assertTrue(changed.toString(),changed is NativeHistoryTransactionResult.Durable)
+        assertEquals(NativeKotlinIssueResult.Rejected(
+            NativeKotlinIssueRefusal.WORKOUT_UNRESOLVED,
+            KotlinSnapshotRejection.UNVERIFIED_TARGET),
+            repIssuer().issue("owner-1","workout-3"))
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            journals.openStored("owner-1","workout-3",
+                approvals::canAccessIssuedWorkout))
+        assertEquals(listOf("workout-1"),
+            (reader.read("owner-1","athlete-1")
+                as NativeKotlinMixedHistoryReadResult.Review)
+                .timeline.completions.map{it.manifest.workoutId})
+    }
+
 }

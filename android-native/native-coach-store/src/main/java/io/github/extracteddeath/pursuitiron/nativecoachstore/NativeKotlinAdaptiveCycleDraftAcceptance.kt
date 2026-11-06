@@ -123,31 +123,13 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
         val updated=c.proposedCycle.blocks.single{it.blockId==c.targetBlockId}
         // A one-block choice can never clandestinely rewrite another block,
         // the athlete's cycle title, or other blocks' weekly overrides.
-        if(draft.copy(revision=c.proposedCycle.revision,
-                blocks=c.proposedCycle.blocks.map {
-                    if(it.blockId==c.targetBlockId)original else it
-                },
-                weekOverrides=c.proposedCycle.weekOverrides.mapValues{(block,_) ->
-                    if(block==c.targetBlockId)
-                        draft.weekOverrides[block].orEmpty()
-                    else c.proposedCycle.weekOverrides[block].orEmpty()
-                })!=c.proposedCycle.copy(
-                    blocks=c.proposedCycle.blocks.map {
-                        if(it.blockId==c.targetBlockId)original else it
-                    },
-                    weekOverrides=c.proposedCycle.weekOverrides.mapValues{(block,_) ->
-                        if(block==c.targetBlockId)
-                            draft.weekOverrides[block].orEmpty()
-                        else c.proposedCycle.weekOverrides[block].orEmpty()
-                    }))
-            return NativeAdaptiveCycleDraftPreview.Rejected(
-                NativeAdaptiveCycleDraftRefusal.UNRELATED_BLOCK_CHANGED)
         if(draft.blocks.map{it.blockId}!=c.proposedCycle.blocks.map{it.blockId} ||
             draft.blocks.filter{it.blockId!=c.targetBlockId}!=
                 c.proposedCycle.blocks.filter{it.blockId!=c.targetBlockId} ||
             draft.weekOverrides.filterKeys{it!=c.targetBlockId}!=
                 c.proposedCycle.weekOverrides.filterKeys{it!=c.targetBlockId} ||
             draft.title!=c.proposedCycle.title ||
+            draft.authorNote!=c.proposedCycle.authorNote ||
             draft.goal!=c.proposedCycle.goal ||
             draft.athleteId!=c.proposedCycle.athleteId)
             return NativeAdaptiveCycleDraftPreview.Rejected(
@@ -180,7 +162,7 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
                 CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW ||
             review.coachingAudit?.status!=
                 CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
-            review.coachingAudit.issues.isNotEmpty())
+            review.coachingAudit?.issues?.isNotEmpty()!=false)
             return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.COACH_REVIEW_UNRESOLVED)
 
@@ -198,10 +180,13 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
             draft.revision,authoring.revision)
     }
 
-    fun preview(c:NativeAdaptiveCycleDraftCandidate):NativeAdaptiveCycleDraftPreview =
-        runCatching{fence.withOwnerTransaction(c.ownerKey){evaluate(c)}}
+    fun preview(c:NativeAdaptiveCycleDraftCandidate):NativeAdaptiveCycleDraftPreview {
+        if(!valid(c))return NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.INVALID_REQUEST)
+        return runCatching{fence.withOwnerTransaction(c.ownerKey){evaluate(c)}}
             .getOrElse{NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.STORAGE_UNAVAILABLE)}
+    }
 
     /**
      * A fresh, exact on-screen review fingerprint and user confirmation are

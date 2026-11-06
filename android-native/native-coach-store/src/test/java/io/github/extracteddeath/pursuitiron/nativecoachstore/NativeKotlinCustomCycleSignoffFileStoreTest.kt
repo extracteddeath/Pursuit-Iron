@@ -196,4 +196,114 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             NativeCustomSignoffRefusal.CORRUPT_RECORD),
             store().confirm("owner-1","cycle-1",1,1,1,inputs(),true))
     }
+
+    private fun adaptive()=NativeKotlinAdaptiveCycleDraftAcceptance(
+        fence,identity,drafts,sources)
+    private fun adjusted():CustomTrainingCycle {
+        val original=cycle(2)
+        return original.copy(blocks=original.blocks.map{block->
+            block.copy(label="Reviewed foundation",days=block.days.map{day->
+                if(day.weekday!=0)day else day.copy(
+                    slots=day.slots.map{slot->
+                        slot.copy(sets=slot.sets.map{set->
+                            set.copy(reps=RepBand(11,15))
+                        })
+                    })
+            })
+        })
+    }
+    private fun option(
+        proposed:CustomTrainingCycle=adjusted(),
+        permissions:CustomCycleCoachPermissions=
+            CustomCycleCoachPermissions(adaptCues=true,adaptReps=true)
+    )=NativeAdaptiveCycleDraftCandidate(
+        "owner-1","cycle-1","base","coach_option_1",
+        1,1,proposed,inputs(),permissions)
+
+    @Test fun athleteReviewedAdaptiveOptionPersistsOnlyDraftAndStalesOldConsent() {
+        initialize()
+        val signed=approved()
+        val proposal=option()
+        val shown=adaptive().preview(proposal)
+        assertTrue(shown.toString(),shown is NativeAdaptiveCycleDraftPreview.Ready)
+        val review=shown as NativeAdaptiveCycleDraftPreview.Ready
+        assertEquals(setOf(CustomCycleChangeKind.CUES,CustomCycleChangeKind.REPS),
+            review.changes.map{it.kind}.toSet())
+        assertFalse(review.mayIssueWorkout)
+        assertFalse(review.mayApplyAutomatically)
+        val saved=adaptive().accept(proposal,review.reviewedFingerprint,true)
+        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(2,"coach_option_1"),saved)
+        assertFalse((saved as NativeAdaptiveCycleDraftDecision.Saved).mayIssueWorkout)
+        assertFalse(saved.isSignedOff)
+        assertEquals(NativeCustomDraftReadResult.Found(adjusted()),
+            drafts.read("owner-1","cycle-1"))
+        assertEquals(NativeCustomSignoffRead.Found(signed,false),
+            store().read("owner-1","cycle-1",inputs()))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.DRAFT_CHANGED),
+            adaptive().accept(proposal,review.reviewedFingerprint,true))
+        // New cycle revision needs its OWN explicit signoff; a draft is
+        // never treated as an approved program or workout grant.
+        val renewed=store().confirm("owner-1","cycle-1",2,1,1,inputs(),true)
+        assertTrue(renewed.toString(),renewed is NativeCustomSignoffWrite.Committed)
+        assertEquals(2L,(renewed as NativeCustomSignoffWrite.Committed)
+            .receipt.cycleRevision)
+    }
+
+    @Test fun adaptiveOptionNeverBypassesPermissionsOrDisplayedFingerprint() {
+        initialize()
+        val blocked=adaptive().preview(option(
+            permissions=CustomCycleCoachPermissions()))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.PERMISSION_REQUIRED),blocked)
+        val proposal=option()
+        val review=adaptive().preview(proposal)
+            as NativeAdaptiveCycleDraftPreview.Ready
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.CONFIRMATION_REQUIRED),
+            adaptive().accept(proposal,review.reviewedFingerprint,false))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.REVIEW_CHANGED),
+            adaptive().accept(proposal,"0".repeat(64),true))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+        val alternate=option(adjusted().copy(blocks=adjusted().blocks.map {
+            it.copy(label="Different but still permitted")
+        }))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.REVIEW_CHANGED),
+            adaptive().accept(alternate,review.reviewedFingerprint,true))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+    }
+
+    @Test fun adaptiveOptionFailsClosedOnSourceEditsForeignAccountAndFutureSplit() {
+        initialize()
+        val proposal=option()
+        val ready=adaptive().preview(proposal)
+            as NativeAdaptiveCycleDraftPreview.Ready
+        val prospective=option(adjusted().copy(blocks=adjusted().blocks.map{
+            it.copy(split=CustomSplitIdentity.Named(ComposerSplit.UPPER_LOWER))
+        }))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.FUTURE_PROFILE_REQUIRES_APPROVAL),
+            adaptive().preview(prospective))
+        val unrelated=option(adjusted().copy(title="Unreviewed other change"))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.UNRELATED_BLOCK_CHANGED),
+            adaptive().preview(unrelated))
+        active=NativeKotlinOwnerIdentity("wrong-owner","athlete-1")
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED),
+            adaptive().accept(proposal,ready.reviewedFingerprint,true))
+        active=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.publish("owner-1",1,source(2)))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.SOURCE_CHANGED),
+            adaptive().accept(proposal,ready.reviewedFingerprint,true))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+    }
+
 }

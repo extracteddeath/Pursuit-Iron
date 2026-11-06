@@ -298,7 +298,12 @@ class CoachAthleteProgramGeneratorTest {
 
 
     @Test fun qualityRankingPrefersActualMavDoseBeforeCosmeticPurposeSpacing() {
-        val generated=CoachAthleteProgramGenerator.generate(request())
+        // Use the same explicitly feasible 40–60 minute source-backed
+        // program fixture as the generation matrix. The bare request()
+        // intentionally supplies only 20 minutes of non-set work and may
+        // remain unresolved under the hard program-quality audit.
+        val generated=CoachAthleteProgramGenerator.generate(
+            GeneratedAdaptiveBlockFixture.generation())
         assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
             generated.status)
         val draft=checkNotNull(generated.candidate?.catalogReview?.draft)
@@ -328,7 +333,12 @@ class CoachAthleteProgramGeneratorTest {
     }
 
     @Test fun actualAdjacentRepeatStillOutranksSlightlyBetterSoftDose() {
-        val generated=CoachAthleteProgramGenerator.generate(request())
+        // Use the same explicitly feasible 40–60 minute source-backed
+        // program fixture as the generation matrix. The bare request()
+        // intentionally supplies only 20 minutes of non-set work and may
+        // remain unresolved under the hard program-quality audit.
+        val generated=CoachAthleteProgramGenerator.generate(
+            GeneratedAdaptiveBlockFixture.generation())
         assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
             generated.status)
         val draft=checkNotNull(generated.candidate?.catalogReview?.draft)
@@ -364,6 +374,34 @@ class CoachAthleteProgramGeneratorTest {
             listOf(ComposerVisit(0,"bench",ComposerPattern.HORIZONTAL_PRESS,2),
                 ComposerVisit(1,"bench",ComposerPattern.HORIZONTAL_PRESS,2)),
             listOf(ComposerFocus.UPPER,ComposerFocus.LOWER),
+            listOf(6,0)))
+    }
+
+    @Test fun overlappingSplitDayRecoveryIsNotLimitedToIdenticalFocusNames() {
+        val none=emptyList<ComposerVisit>()
+        fun repeats(a:ComposerFocus,b:ComposerFocus,days:List<Int>)=
+            CoachAthleteProgramGenerator.adjacentRepeatCount(
+                none,listOf(a,b),days)
+        // Repeating-week boundary must be treated exactly like midweek.
+        assertEquals(1L,repeats(ComposerFocus.UPPER,
+            ComposerFocus.PUSH,listOf(6,0)))
+        assertEquals(1L,repeats(ComposerFocus.UPPER,
+            ComposerFocus.PULL,listOf(0,1)))
+        assertEquals(1L,repeats(ComposerFocus.LOWER,
+            ComposerFocus.LEGS,listOf(0,1)))
+        assertEquals(1L,repeats(ComposerFocus.FULL_BODY,
+            ComposerFocus.LEGS,listOf(0,1)))
+        // Standard push/pull sequencing must not be falsely penalized.
+        assertEquals(0L,repeats(ComposerFocus.PUSH,
+            ComposerFocus.PULL,listOf(0,1)))
+        assertEquals(0L,repeats(ComposerFocus.UPPER,
+            ComposerFocus.PUSH,listOf(0,2)))
+        // A repeated lift still counts even when its day focus differs.
+        val sameLift=listOf(
+            ComposerVisit(0,"bench",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(1,"bench",ComposerPattern.HORIZONTAL_PRESS,2))
+        assertEquals(1L,CoachAthleteProgramGenerator.adjacentRepeatCount(
+            sameLift,listOf(ComposerFocus.PUSH,ComposerFocus.PULL),
             listOf(6,0)))
     }
 

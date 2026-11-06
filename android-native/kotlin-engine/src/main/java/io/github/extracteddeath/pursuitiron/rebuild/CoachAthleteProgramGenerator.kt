@@ -176,8 +176,22 @@ object CoachAthleteProgramGenerator {
             return minOf(gap,7-gap)==1
         }
         var count=0L
+        // Split names are not recovery partitions. Upper/Push and
+        // Upper/Pull share upper-body exposure; Lower/Legs share lower-body
+        // exposure. Full Body overlaps every specialized day. Conversely,
+        // Push/Pull should not be treated as an identical training stimulus.
+        fun overlapping(a:ComposerFocus,b:ComposerFocus):Boolean =
+            a==b || a==ComposerFocus.FULL_BODY ||
+                b==ComposerFocus.FULL_BODY ||
+                (a==ComposerFocus.UPPER &&
+                    b in setOf(ComposerFocus.PUSH,ComposerFocus.PULL)) ||
+                (b==ComposerFocus.UPPER &&
+                    a in setOf(ComposerFocus.PUSH,ComposerFocus.PULL)) ||
+                (a==ComposerFocus.LOWER && b==ComposerFocus.LEGS) ||
+                (a==ComposerFocus.LEGS && b==ComposerFocus.LOWER)
         for(i in focus.indices)for(j in 0 until i)
-            if(focus[i]==focus[j] && adjacent(weekdays[i],weekdays[j]))
+            if(overlapping(focus[i],focus[j]) &&
+                adjacent(weekdays[i],weekdays[j]))
                 count++
         for(group in visits.groupBy {it.exerciseId}.values) {
             val days=group.map{weekdays[it.dayIndex]}.distinct().sorted()

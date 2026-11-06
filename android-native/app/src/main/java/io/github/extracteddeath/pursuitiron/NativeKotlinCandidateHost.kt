@@ -71,7 +71,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         composerActivationInventory)
     private val futureActivationApproval=NativeKotlinFutureActivationApprovalFileStore(
         root,revisionFence,localAthlete,futureActivationPreflight,
-        futureBlockContexts,authoringSourceStore,adaptiveCyclePermissions)
+        futureBlockContexts,customDraftStore,authoringSourceStore,
+        adaptiveCyclePermissions)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)

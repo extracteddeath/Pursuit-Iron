@@ -26,7 +26,8 @@ enum class CustomCoachIssueKind {
     INSUFFICIENT_DIRECT_FREQUENCY, PRIMARY_SKILL_FREQUENCY,
     CONTINUITY_POLICY_MISSING, CONTINUITY_POLICY_INVALID,
     UNJUSTIFIED_BLOCK_VOLUME_DROP, UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
-    DIRECT_MUSCLE_DROP, DIRECT_MUSCLE_SPIKE, REVIEW_CAP_EXCEEDED
+    DIRECT_MUSCLE_DROP, DIRECT_MUSCLE_SPIKE, REVIEW_CAP_EXCEEDED,
+    PROSPECTIVE_CONTEXT_INVALID
 }
 
 data class CustomCoachIssue(
@@ -63,7 +64,10 @@ data class CustomCoachAudit(
     val weeks: List<CustomCoachWeekMeasurement>,
     val sourceAthleteRevision: String?,
     val auditedCycleRevision: Long,
-    val coachingPolicyRevisions: Map<TrainingPhase, String>
+    val coachingPolicyRevisions: Map<TrainingPhase, String>,
+    /** Future-only proposals still require explicit schedule acceptance. */
+    val prospectiveBlockIds: Set<String> = emptySet(),
+    val prospectivePolicyRevisions: Map<String,String> = emptyMap()
 ) {
     val mayIssueWorkout: Boolean get() = false
     val mayPublishApprovedProgram: Boolean get() = false
@@ -91,6 +95,18 @@ data class CustomCoachAuditInputs(
     val continuityPolicy: CustomCoachVolumeContinuityPolicy? = null
 )
 
+/**
+ * Reviewed proposed setup for ONE future block. It is not a committed
+ * profile change: the current source setup remains authoritative for every
+ * other block. A different gym, goal, effort profile or time limit must not
+ * be laundered through a schedule adaptation.
+ */
+data class ProspectiveBlockCoachingContext(
+    val setup:AthleteSetupReview,
+    val policy:AuthoredGoalProgramPolicy,
+    val nonSetSecondsByWeekday:Map<Int,Int>
+)
+
 object CustomCycleCoachAuditDomain {
     private val zero = BigDecimal.ZERO
     private const val MAX_REVIEW_WEEKS = 104
@@ -100,7 +116,9 @@ object CustomCycleCoachAuditDomain {
         cycle: CustomTrainingCycle,
         setup: AthleteSetupReview,
         catalog: List<CatalogMovement>,
-        inputs: CustomCoachAuditInputs = CustomCoachAuditInputs()
+        inputs: CustomCoachAuditInputs = CustomCoachAuditInputs(),
+        prospectiveByBlock:Map<String,ProspectiveBlockCoachingContext> =
+            emptyMap()
     ): CustomCoachAudit {
         val issues = mutableListOf<CustomCoachIssue>()
         fun add(kind: CustomCoachIssueKind, where: String, why: String) {
@@ -121,6 +139,36 @@ object CustomCycleCoachAuditDomain {
             profile.goal != cycle.goal) {
             add(CustomCoachIssueKind.ATHLETE_MISMATCH, "cycle.athlete",
                 "Cycle athlete or goal differs from the confirmed profile.")
+        }
+        // Read-only prospective contexts are strictly block-bound. They may
+        // differ ONLY in split and the future weekly calendar, never in
+        // weight stock, experience, restrictions, history identity or time.
+        if(prospectiveByBlock.keys.any {key ->
+                cycle.blocks.none {it.blockId==key}
+            } || prospectiveByBlock.size>cycle.blocks.size)
+            add(CustomCoachIssueKind.PROSPECTIVE_CONTEXT_INVALID,
+                "future.blocks","A prospective context references an unknown block.")
+        for((blockId,context) in prospectiveByBlock) {
+            val future=context.setup.reviewed
+            if(!context.setup.mayReviewProgramCandidate ||
+                future==null ||
+                future.copy(split=profile.split,
+                    trainingWeekdays=profile.trainingWeekdays,
+                    lockedTrainingDays=profile.lockedTrainingDays,
+                    hardTrainingDays=profile.hardTrainingDays,
+                    longTrainingDays=profile.longTrainingDays,
+                    declaredRestDays=profile.declaredRestDays)!=profile)
+                add(CustomCoachIssueKind.PROSPECTIVE_CONTEXT_INVALID,
+                    "future.$blockId",
+                    "A future block may change only reviewed split and calendar settings.")
+        }
+        val blockProfiles=cycle.blocks.associate {block ->
+            block.blockId to (prospectiveByBlock[block.blockId]?.setup
+                ?.reviewed ?: profile)
+        }
+        val blockPolicies=cycle.blocks.associate {block ->
+            block.blockId to (prospectiveByBlock[block.blockId]?.policy
+                ?:inputs.policiesByPhase[block.phase])
         }
         val options = CustomExerciseAuthoringDomain.picker(setup, catalog)
         // A partially malformed or unreviewed catalog cannot silently pass
@@ -153,10 +201,18 @@ object CustomCycleCoachAuditDomain {
                     "Additional authored structure problems require a new audit.")
         }
         val indices = catalog.associateBy { it.exerciseId }
-        if (cycle.blocks.any { it.days.map { day -> day.weekday }.toSet() !=
-                profile.trainingWeekdays }) {
-            add(CustomCoachIssueKind.ATHLETE_SCHEDULE_CONFLICT,"blocks",
-                "A block's authored training days differ from the athlete's confirmed weekly schedule. Update the confirmed schedule or this block.")
+        for(block in cycle.blocks) {
+            val blockProfile=checkNotNull(blockProfiles[block.blockId])
+            if(block.days.map {it.weekday}.toSet()!=
+                blockProfile.trainingWeekdays)
+                add(CustomCoachIssueKind.ATHLETE_SCHEDULE_CONFLICT,
+                    "block."+block.blockId,
+                    "Training days differ from this block's reviewed schedule.")
+            val identity=(block.split as? CustomSplitIdentity.Named)?.split
+            if(identity!=null && identity!=blockProfile.split)
+                add(CustomCoachIssueKind.ATHLETE_SCHEDULE_CONFLICT,
+                    "block."+block.blockId+".split",
+                    "The block split differs from its reviewed schedule context.")
         }
         for (block in cycle.blocks) for (day in block.days) {
             val location = "block.${block.blockId}.day.${day.weekday}"
@@ -189,19 +245,18 @@ object CustomCycleCoachAuditDomain {
                     "Too many different barbell exercises for the confirmed per-day limit.")
         }
 
-        val allPhases=cycle.blocks.map {it.phase}.toSet()
-        val policyIssue = allPhases.any {
-            it !in inputs.policiesByPhase
+        val policyIssue=cycle.blocks.any {
+            blockPolicies[it.blockId]==null
         }
-        if (policyIssue) for (phase in allPhases) {
-            if (phase !in inputs.policiesByPhase)
+        if(policyIssue)for(block in cycle.blocks) {
+            if(blockPolicies[block.blockId]==null)
                 add(CustomCoachIssueKind.REVIEWED_POLICY_MISSING,
-                    "policy.${phase.name}",
-                    "No versioned goal/experience/phase-specific coaching policy was supplied. Weekly MEV/MAV/MRV and primary skill frequency cannot be assumed.")
+                    "policy."+block.blockId,
+                    "A phase- and block-specific coaching policy is missing.")
         }
-        val policyChecks = mutableMapOf<TrainingPhase, GoalPolicyReview>()
+        val policyChecks=mutableMapOf<String,GoalPolicyReview>()
         for (block in cycle.blocks) {
-            val policy=inputs.policiesByPhase[block.phase] ?:continue
+            val policy=blockPolicies[block.blockId] ?:continue
             val intents=block.days.map { day ->
                 AthleteCalendarIntent(day.weekday,day.purpose,
                     day.slots.firstOrNull {
@@ -209,17 +264,23 @@ object CustomCycleCoachAuditDomain {
                     }?.exerciseId)
             }
             val checked=CoachGoalProgramPolicyDomain.review(
-                profile,block.phase,policy.selectedBounds,intents,policy)
-            policyChecks[block.phase]=checked
+                checkNotNull(blockProfiles[block.blockId]),block.phase,
+                policy.selectedBounds,intents,policy)
+            policyChecks[block.blockId]=checked
             checked.issues.take(25).forEach {
                 add(CustomCoachIssueKind.GOAL_POLICY_UNRESOLVED,
                     "block.${block.blockId}.${it.field}",it.explanation)
             }
         }
-        if (inputs.nonSetSecondsByWeekday.keys != profile.trainingWeekdays ||
-            inputs.nonSetSecondsByWeekday.values.any { it !in 0..21600 }) {
-            add(CustomCoachIssueKind.NON_SET_TIME_UNDECLARED,"time",
-                "Explicit setup, transition and cooldown seconds are needed for each training day; known set duration alone is not total session duration.")
+        for(block in cycle.blocks) {
+            val blockProfile=checkNotNull(blockProfiles[block.blockId])
+            val overhead=prospectiveByBlock[block.blockId]
+                ?.nonSetSecondsByWeekday ?:inputs.nonSetSecondsByWeekday
+            if(overhead.keys!=blockProfile.trainingWeekdays ||
+                overhead.values.any {it !in 0..21600})
+                add(CustomCoachIssueKind.NON_SET_TIME_UNDECLARED,
+                    "block."+block.blockId+".time",
+                    "Each reviewed day needs explicit setup, transition and cooldown seconds.")
         }
         val measurements=mutableListOf<CustomCoachWeekMeasurement>()
         if (structural.verifiedDraft != null &&
@@ -265,9 +326,11 @@ object CustomCycleCoachAuditDomain {
                         directDayCount[it]=checkNotNull(directDayCount[it])+1
                     }
                     known[day.weekday]=seconds
-                    val overhead=inputs.nonSetSecondsByWeekday[day.weekday]
+                    val overhead=(prospectiveByBlock[week.blockId]
+                        ?.nonSetSecondsByWeekday ?:inputs.nonSetSecondsByWeekday)[day.weekday]
                     estimated[day.weekday]=overhead?.let {seconds+it}
-                    val hard=profile.explicitHardMaximumMinutes
+                    val hard=checkNotNull(blockProfiles[week.blockId])
+                        .explicitHardMaximumMinutes
                     if (hard!=null && estimated[day.weekday]!=null &&
                         checkNotNull(estimated[day.weekday])>hard*60L)
                         add(CustomCoachIssueKind.SESSION_HARD_LIMIT,
@@ -281,9 +344,9 @@ object CustomCycleCoachAuditDomain {
                     Collections.unmodifiableMap(directDayCount),
                     Collections.unmodifiableMap(known),
                     Collections.unmodifiableMap(estimated))
-                val policy=inputs.policiesByPhase[week.phase]
+                val policy=blockPolicies[week.blockId]
                 if (policy!=null && week.purpose==CustomBlockPurpose.TRAINING &&
-                    policyChecks[week.phase]?.status == GoalPolicyStatus.MATCHED_FOR_REVIEW) {
+                    policyChecks[week.blockId]?.status == GoalPolicyStatus.MATCHED_FOR_REVIEW) {
                     for (bound in policy.selectedBounds) {
                         val dose=byMuscle[bound.muscle] ?:zero
                         if (dose < bound.mev)
@@ -416,6 +479,7 @@ object CustomCycleCoachAuditDomain {
         val status=when {
             profile.athleteProfileId!=cycle.athleteId ||
                 profile.goal!=cycle.goal ||
+                issues.any {it.kind==CustomCoachIssueKind.PROSPECTIVE_CONTEXT_INVALID} ||
                 structural.verifiedDraft==null ->
                 CustomCoachAuditStatus.INVALID_SOURCE
             issues.isEmpty()->CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW
@@ -427,6 +491,10 @@ object CustomCycleCoachAuditDomain {
             Collections.unmodifiableList(issues.toList()),
             structural,Collections.unmodifiableList(measurements),
             profile.profileRevision,cycle.revision,
-            inputs.policiesByPhase.mapValues {it.value.revision})
+            inputs.policiesByPhase.mapValues {it.value.revision},
+            Collections.unmodifiableSet(prospectiveByBlock.keys.toSet()),
+            Collections.unmodifiableMap(prospectiveByBlock.mapValues {
+                it.value.policy.revision
+            })
     }
 }

@@ -2154,4 +2154,45 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             restricted.review.status)
     }
 
+
+    @Test fun savedRepAdviceNeverResurrectsAfterCoachWasTurnedOffThenOn() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        finishRealActivatedSession(f,5,13)
+        val key="owner-1"
+        val workoutId="toggle-coach-week6"
+        val input=futureInputs()
+        val shown=f.repApprovals.preview(key,workoutId,input,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5"))
+            as NativeCustomNextRepPreview.Ready
+        assertTrue(f.repApprovals.accept(key,workoutId,input,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5"),
+            shown.receipt.fingerprint,shown.receipt.historyRevision,
+            shown.receipt.consentRevision,shown.receipt.setKeys,
+            shown.receipt.nextMinimumReps,true)
+            is NativeCustomNextRepWrite.Accepted)
+        assertTrue(f.repApprovals.readCurrent(key,workoutId,input,6,1)
+            is NativeCustomNextRepRead.Current)
+        assertTrue(f.assistance.save(key,0,CoachAssistancePolicy.MANUAL)
+            is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomNextRepRead.Rejected(
+            NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY),
+            f.repApprovals.readCurrent(key,workoutId,input,6,1))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            f.prepared.prepareActivated(key,workoutId,"cycle-1",6,1,
+                input,f.signoff,f.activation,f.repApprovals))
+        assertTrue(f.assistance.save(key,1,CoachAssistancePolicy.STANDARD)
+            is NativeCoachSettingsWrite.Saved)
+        // No old "one tap" accepted progression survives a settings toggle.
+        assertEquals(NativeCustomNextRepRead.Rejected(
+            NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY),
+            f.repApprovals.readCurrent(key,workoutId,input,6,1))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            f.prepared.prepareActivated(key,workoutId,"cycle-1",6,1,
+                input,f.signoff,f.activation,f.repApprovals))
+    }
+
+
 }

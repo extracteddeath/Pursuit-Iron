@@ -1507,6 +1507,11 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             prepared.prepareActivated("owner-1",name,"cycle-1",4,2,
                 inputs,signoff,tx))
         assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED),
+            activatedPrepared(fixture).prepareActivated("owner-1",
+                "second-id-same-day","cycle-1",4,1,
+                inputs,activatedSignoff(fixture),activationTransaction(fixture)))
+        assertEquals(NativeCustomPrepareResult.Rejected(
             NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
             prepared.prepare("owner-1","unapproved-new","cycle-1",4,1,inputs))
         assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))

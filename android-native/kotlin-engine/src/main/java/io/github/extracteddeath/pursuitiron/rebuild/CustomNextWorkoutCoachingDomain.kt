@@ -73,6 +73,30 @@ object CustomNextWorkoutCoachingDomain {
     private fun same(a:BigDecimal,b:BigDecimal)=a.compareTo(b)==0
     private fun normalized(v:BigDecimal)=BigDecimal(v.stripTrailingZeros().toPlainString())
 
+    private fun matchingReceipts(
+        records:List<CustomHistoricalVisitFact>,
+        authored:List<CustomWorkoutSetSnapshot>
+    ):Boolean {
+        if(records.size!=authored.size ||
+            records.map{it.setKey}.toSet()!=authored.map{it.setKey}.toSet())
+            return false
+        return authored.all {set->
+            val fact=records.singleOrNull {it.setKey==set.setKey}
+                ?:return@all false
+            val prescribed=set.prescription
+            fact.slotId==set.slotId &&
+                fact.part==CustomWorkoutVisitPart.MAIN &&
+                fact.setType==DraftSetType.WORKING &&
+                fact.prescribedLoad==prescribed.load &&
+                fact.prescribedReps==prescribed.reps &&
+                fact.prescribedRir==prescribed.targetRir &&
+                fact.amplifierKind==prescribed.amplifier?.kind &&
+                fact.effectiveEventId.isNotBlank() &&
+                CustomWorkoutJournalDomain.actualValid(
+                    prescribed.load,fact.outcome,fact.actual)
+        }
+    }
+
     fun review(request:CustomNextWorkoutCoachingRequest):CustomNextWorkoutCoachingReview {
         fun result(
             status:CustomNextWorkoutCoachingStatus,
@@ -176,8 +200,7 @@ object CustomNextWorkoutCoachingDomain {
                 it.part==CustomWorkoutVisitPart.MAIN &&
                 it.setType==DraftSetType.WORKING
         }
-        if(facts.size!=nextSets.size ||
-            facts.map{it.setKey}.toSet()!=oldSets.map{it.setKey}.toSet() ||
+        if(!matchingReceipts(facts,oldSets) ||
             facts.any{it.exerciseId!=target.exerciseId})
             return result(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
                 ids,latest.evidence.workoutId,
@@ -263,10 +286,11 @@ object CustomNextWorkoutCoachingDomain {
                 }
                 val straight=nextSets.mapNotNull{it.prescription.load as? DraftSetLoad.Verified}
                 val bands=nextSets.map{it.prescription.reps}.distinct()
-                if(priorFacts.size==nextSets.size &&
-                    priorFacts.map{it.setKey}.toSet()==
-                        previousSets.map{it.setKey}.toSet() &&
-                    straight.size==nextSets.size &&
+                if(!matchingReceipts(priorFacts,previousSets))
+                    return result(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+                        ids,latest.evidence.workoutId,
+                        explanation="The earlier completed day no longer matches its immutable logged working-set prescription.")
+                if(straight.size==nextSets.size &&
                     straight.map{it.value.stripTrailingZeros()}.distinct().size==1 &&
                     bands.size==1 && verifiedStockMatches(
                         request.verifiedStock,straight.first())) {

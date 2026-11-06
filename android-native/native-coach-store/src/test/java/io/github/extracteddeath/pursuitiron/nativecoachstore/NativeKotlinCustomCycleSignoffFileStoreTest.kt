@@ -761,6 +761,25 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(offer.toString(),offer is NativeFutureApprovalPreview.Ready)
         val ready=offer as NativeFutureApprovalPreview.Ready
         assertEquals(0L,ready.expectedRecordRevision)
+        // This exact next source is inspectable before the athlete signs,
+        // and must NOT replace the still-active, three-day gym profile.
+        val proposed=ready.sourcePlan
+        assertEquals(2L,proposed.proposedSource.revision)
+        assertEquals(setOf(0,1,2,4),
+            proposed.proposedSource.setup.reviewed?.trainingWeekdays)
+        assertEquals(ComposerSplit.UPPER_LOWER,
+            proposed.proposedSource.setup.reviewed?.split)
+        assertEquals("build",proposed.targetBlockId)
+        assertEquals(4,proposed.firstWeek)
+        assertEquals(7L,proposed.historyManifestRevision)
+        assertEquals(futureContext().policy,proposed.targetPolicy)
+        assertEquals(futureContext().nonSetSecondsByWeekday,
+            proposed.nonSetSecondsByWeekday)
+        assertFalse(proposed.mayActivate)
+        assertFalse(proposed.mayIssueWorkout)
+        assertEquals(setOf(0,2,4),
+            (sources.read("owner-1") as NativeAuthoringSourceRead.Found)
+                .source.setup.reviewed!!.trainingWeekdays)
         assertEquals(NativeFutureApprovalWrite.Rejected(
             NativeFutureApprovalRefusal.CONFIRMATION_REQUIRED),
             store.confirm("owner-1","cycle-1","build",0,ready.fingerprint,false))
@@ -820,6 +839,41 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeFutureApprovalPreview.Rejected(
             NativeFutureApprovalRefusal.NOT_READY),
             store.preview("owner-1","cycle-1","build"))
+    }
+
+    @Test fun sourceActivationPlanCannotChangeGymGoalOrPhasePolicyWithoutReview() {
+        readyFutureForSecondConsent()
+        val saved=(futureStore().read("owner-1","cycle-1","build")
+            as NativeFutureBlockContextRead.Found).receipt
+        val baseline=NativeFutureActivationReview.BoundaryReviewed(
+            "cycle-1","build",4,3,9,7)
+        val original=source()
+        val prepared=NativeFutureActivationSourcePlanDomain.prepare(
+            original,saved,baseline)
+        assertNotNull(prepared)
+        assertEquals(original.catalog,prepared!!.proposedSource.catalog)
+        assertEquals(original.athleteId,prepared.proposedSource.athleteId)
+        assertEquals(original.revision+1,prepared.proposedSource.revision)
+        assertEquals(1L,original.revision)
+
+        val other=checkNotNull(saved.future.setup.reviewed)
+        val invalidGym=saved.copy(future=saved.future.copy(
+            setup=saved.future.setup.copy(reviewed=other.copy(
+                maxBarbellExercisesPerDay=1))))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            original,invalidGym,baseline))
+        val invalidPolicy=saved.copy(future=saved.future.copy(
+            policy=saved.future.policy.copy(trainingDays=3)))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            original,invalidPolicy,baseline))
+        val invalidTimes=saved.copy(future=saved.future.copy(
+            nonSetSecondsByWeekday=mapOf(0 to 200,1 to 200,2 to 200)))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            original,invalidTimes,baseline))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            original.copy(revision=2),saved,baseline))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            original,saved,baseline.copy(blockId="base")))
     }
 
     @Test fun revisionedRevocationAndAccountSwitchCannotResurrectSecondConsent() {

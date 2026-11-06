@@ -13,6 +13,10 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
+import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAudit
+import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditInputs
+import io.github.extracteddeath.pursuitiron.rebuild.CustomCoachAuditStatus
+import io.github.extracteddeath.pursuitiron.rebuild.CustomCycleCoachAuditDomain
 
 /**
  * Owner-fenced WRITE-AHEAD activation of a second-consented future block.
@@ -51,8 +55,21 @@ sealed interface NativeFutureCommitReview {
     data class Rejected(val reason:NativeFutureCommitRefusal):
         NativeFutureCommitReview
 }
+sealed interface NativeFutureActivatedCycleReview {
+    data class Ready(
+        val audit:CustomCoachAudit,val cycleId:String,val blockId:String,
+        val sourceRevision:Long,val firstWeek:Int
+    ):NativeFutureActivatedCycleReview {
+        val mayIssueWorkout:Boolean get()=false
+    }
+    data class Unresolved(val audit:CustomCoachAudit):
+        NativeFutureActivatedCycleReview
+    data class Rejected(val reason:NativeFutureCommitRefusal):
+        NativeFutureActivatedCycleReview
+}
 private data class NativeFutureCommitIntent(
     val handoff:NativeFutureActivationHandoff,
+    val baseSourceBytes:ByteArray,
     val prospectiveBundle:ByteArray
 )
 
@@ -72,8 +89,9 @@ class NativeKotlinFutureActivationCommitTransaction(
     private val hash=Regex("^[a-f0-9]{64}$")
     private val max=9_007_199_254_740_991L
     private val magic=0x50494654 // PIFT
-    private val version=1
-    private val maxFile=NativeFutureBlockContextCodec.MAX_BYTES+8192
+    private val version=2
+    private val maxFile=NativeFutureBlockContextCodec.MAX_BYTES+
+        NativeKotlinCustomAuthoringSourceCodec.MAX_BYTES+8192
     private fun sha(bytes:ByteArray)=MessageDigest.getInstance("SHA-256")
         .digest(bytes).joinToString(""){"%02x".format(it.toInt() and 255)}
     private fun owner(key:String)=runCatching{identity.signedInIdentity()}
@@ -106,6 +124,8 @@ class NativeKotlinFutureActivationCommitTransaction(
             listOf(h.approvalFingerprint,h.baseSourceSha256,
                 h.proposedSourceSha256).all(hash::matches))
         require(intent.prospectiveBundle.size in 44..NativeFutureBlockContextCodec.MAX_BYTES)
+        require(intent.baseSourceBytes.size in
+            16..NativeKotlinCustomAuthoringSourceCodec.MAX_BYTES)
         val raw=ByteArrayOutputStream()
         DataOutputStream(raw).use{out->
             out.writeInt(magic);out.writeInt(version)
@@ -114,6 +134,8 @@ class NativeKotlinFutureActivationCommitTransaction(
             out.writeLong(h.sourceRevision);out.writeUTF(h.baseSourceSha256)
             out.writeUTF(h.proposedSourceSha256);out.writeInt(h.firstWeek)
             out.writeLong(h.historyManifestRevision)
+            out.writeInt(intent.baseSourceBytes.size)
+            out.write(intent.baseSourceBytes)
             out.writeInt(intent.prospectiveBundle.size)
             out.write(intent.prospectiveBundle)
         }
@@ -148,12 +170,16 @@ class NativeKotlinFutureActivationCommitTransaction(
                 data.readUTF(),data.readUTF(),data.readUTF(),data.readUTF(),
                 data.readLong(),data.readUTF(),data.readLong(),data.readUTF(),
                 data.readUTF(),data.readInt(),data.readLong())
+            val baseLength=data.readInt()
+            if(baseLength !in 16..NativeKotlinCustomAuthoringSourceCodec.MAX_BYTES ||
+                baseLength>data.available())throw IOException("Invalid base source")
+            val baseBytes=ByteArray(baseLength);data.readFully(baseBytes)
             val n=data.readInt()
             if(n !in 44..NativeFutureBlockContextCodec.MAX_BYTES ||
                 n>data.available())throw IOException("Invalid prospective payload")
             val bundle=ByteArray(n);data.readFully(bundle)
             if(data.available()!=0)throw IOException("Trailing activation bytes")
-            val intent=NativeFutureCommitIntent(h,bundle)
+            val intent=NativeFutureCommitIntent(h,baseBytes,bundle)
             // Validate both envelopes and their explicit source hashes.
             encode(intent);validate(intent)
             intent
@@ -166,6 +192,8 @@ class NativeKotlinFutureActivationCommitTransaction(
     )
     private fun validate(intent:NativeFutureCommitIntent):Decoded {
         val h=intent.handoff
+        val original=NativeKotlinCustomAuthoringSourceCodec.decode(
+            intent.baseSourceBytes)
         val (saved,futureSource)=NativeFutureBlockContextCodec.decode(
             intent.prospectiveBundle)
         val receipt=saved.receipt
@@ -177,12 +205,17 @@ class NativeKotlinFutureActivationCommitTransaction(
             receipt.sourceRevision!=h.sourceRevision ||
             sha(NativeKotlinCustomAuthoringSourceCodec.encode(proposed))!=
                 h.proposedSourceSha256 ||
-            originalFingerprint!=h.baseSourceSha256)
+            originalFingerprint!=h.baseSourceSha256 ||
+            sha(intent.baseSourceBytes)!=h.baseSourceSha256 ||
+            original.revision!=h.sourceRevision ||
+            original.ownerKey!=h.ownerKey ||
+            original.athleteId!=h.athleteId ||
+            futureSource.catalog!=original.catalog)
             throw IOException("Intent provenance mismatch")
-        // The stored prospective snapshot is intentionally the future
-        // profile at the old revision; reconstructing the ORIGINAL source
-        // requires reading the current base revision before activation.
-        return Decoded(futureSource,proposed,receipt)
+        // Retain exact old athlete context for a full-cycle review after
+        // the active source changes. Prior completed blocks are never
+        // retroactively judged using the future split/calendar.
+        return Decoded(original,proposed,receipt)
     }
     private fun atomic(file:Path,bytes:ByteArray,key:String) {
         Files.createDirectories(directory)
@@ -290,6 +323,58 @@ class NativeKotlinFutureActivationCommitTransaction(
         }}.getOrElse{NativeFutureCommitReview.Rejected(
             NativeFutureCommitRefusal.STORAGE_UNAVAILABLE)}
 
+    /**
+     * Recheck the ENTIRE authored cycle after applying the future profile.
+     * The original reviewed setup is preserved in the durable activation
+     * intent; the accepted future setup/policy applies only to its named
+     * block. This is still a read-only, non-issuance review, not a signoff.
+     *
+     * No cached "approved" UI state or unbounded caller-supplied session
+     * estimate may skip the native full-cycle continuity/dose audit.
+     */
+    fun reviewActivatedCycle(
+        ownerKey:String,inputs:CustomCoachAuditInputs
+    ):NativeFutureActivatedCycleReview =
+        runCatching{fence.withOwnerTransaction(ownerKey){
+            val signed=owner(ownerKey)
+                ?:return@withOwnerTransaction NativeFutureActivatedCycleReview.Rejected(
+                    NativeFutureCommitRefusal.NOT_AUTHORIZED)
+            val handoff=(handoffs.read(ownerKey) as? NativeFutureHandoffReview.Staged)
+                ?.receipt ?:return@withOwnerTransaction NativeFutureActivatedCycleReview.Rejected(
+                    NativeFutureCommitRefusal.HANDOFF_MISSING)
+            val intent=intent(ownerKey)
+                ?:return@withOwnerTransaction NativeFutureActivatedCycleReview.Rejected(
+                    NativeFutureCommitRefusal.INTENT_CONFLICT)
+            if(resolved(ownerKey,handoff,intent,true) !is NativeFutureCommitReview.Applied)
+                return@withOwnerTransaction NativeFutureActivatedCycleReview.Rejected(
+                    NativeFutureCommitRefusal.SOURCE_CONFLICT)
+            val decoded=validate(intent)
+            val (bundle,_)=NativeFutureBlockContextCodec.decode(
+                intent.prospectiveBundle)
+            val draft=(drafts.read(ownerKey,handoff.cycleId)
+                as? NativeCustomDraftReadResult.Found)?.draft
+                ?:return@withOwnerTransaction NativeFutureActivatedCycleReview.Rejected(
+                    NativeFutureCommitRefusal.APPROVAL_STALE)
+            val draftHash=sha(NativeCustomCycleDraftCodec.encode(draft))
+            if(draftHash!=bundle.draftSha ||
+                draft.revision!=decoded.future.draftRevision ||
+                draft.athleteId!=signed.athleteId ||
+                owner(ownerKey)!=signed)
+                return@withOwnerTransaction NativeFutureActivatedCycleReview.Rejected(
+                    NativeFutureCommitRefusal.APPROVAL_STALE)
+            val audit=CustomCycleCoachAuditDomain.review(
+                draft,decoded.original.setup,decoded.original.catalog,inputs,
+                mapOf(handoff.blockId to decoded.future.future))
+            if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+                audit.issues.isNotEmpty() ||
+                audit.prospectiveBlockIds!=setOf(handoff.blockId))
+                NativeFutureActivatedCycleReview.Unresolved(audit)
+            else NativeFutureActivatedCycleReview.Ready(
+                audit,handoff.cycleId,handoff.blockId,
+                decoded.proposed.revision,handoff.firstWeek)
+        }}.getOrElse{NativeFutureActivatedCycleReview.Rejected(
+            NativeFutureCommitRefusal.STORAGE_UNAVAILABLE)}
+
     /** Idempotent under crash replay; never changes an already-applied source. */
     fun commit(ownerKey:String):NativeFutureCommitReview =
         runCatching{fence.withOwnerTransaction(ownerKey){
@@ -344,7 +429,8 @@ class NativeKotlinFutureActivationCommitTransaction(
                 val bundle=NativeFutureBlockContextCodec.encode(
                     NativeFutureBlockRecord(future,draftHash,
                         handoff.baseSourceSha256),base)
-                saved=NativeFutureCommitIntent(handoff,bundle)
+                saved=NativeFutureCommitIntent(handoff,
+                    NativeKotlinCustomAuthoringSourceCodec.encode(base),bundle)
                 validate(saved!!)
                 atomic(path(ownerKey),encode(saved!!),ownerKey)
                 afterIntentPersisted()

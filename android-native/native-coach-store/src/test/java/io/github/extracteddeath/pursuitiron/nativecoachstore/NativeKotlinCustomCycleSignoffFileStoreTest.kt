@@ -841,6 +841,33 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             store.preview("owner-1","cycle-1","build"))
     }
 
+    @Test fun futureApprovalFingerprintCoversCoachingContentBeyondRevisionLabels() {
+        val future=futureContext()
+        val baseline=NativeFutureBlockContextCodec.coachingContentFingerprint(future)
+        assertEquals(baseline,
+            NativeFutureBlockContextCodec.coachingContentFingerprint(future))
+        val sameLabelDifferentDose=future.copy(policy=future.policy.copy(
+            selectedBounds=future.policy.selectedBounds.map {
+                if(it.muscle==TrainingMuscle.ABS)it.copy(
+                    mav=it.mav.add(n("0.5")))else it
+            }))
+        assertNotEquals(baseline,
+            NativeFutureBlockContextCodec.coachingContentFingerprint(
+                sameLabelDifferentDose))
+        val sameLabelDifferentRationale=future.copy(
+            policy=future.policy.copy(rationale="New coach review"))
+        assertNotEquals(baseline,
+            NativeFutureBlockContextCodec.coachingContentFingerprint(
+                sameLabelDifferentRationale))
+        val sameLabelDifferentTime=future.copy(
+            nonSetSecondsByWeekday=future.nonSetSecondsByWeekday+
+                (1 to 250))
+        assertNotEquals(baseline,
+            NativeFutureBlockContextCodec.coachingContentFingerprint(
+                sameLabelDifferentTime))
+        assertEquals(future.policy.revision,sameLabelDifferentDose.policy.revision)
+    }
+
     @Test fun sourceActivationPlanCannotChangeGymGoalOrPhasePolicyWithoutReview() {
         readyFutureForSecondConsent()
         val saved=(futureStore().read("owner-1","cycle-1","build")

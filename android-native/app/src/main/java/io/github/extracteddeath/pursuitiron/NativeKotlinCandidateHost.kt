@@ -77,6 +77,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete,futureActivationPreflight,
         futureBlockContexts,customDraftStore,authoringSourceStore,
         adaptiveCyclePermissions)
+    private val futureActivationCommit=NativeKotlinFutureActivationCommitTransaction(
+        root,revisionFence,localAthlete,authoringSourceStore,customDraftStore,
+        futureBlockContexts,futureActivationApproval,futureActivationHandoff)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)
@@ -594,6 +597,33 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeFutureHandoffRefusal.NOT_AUTHORIZED)
         return futureActivationHandoff.cancel(owner.ownerKey,approvalRevision,
             fingerprint,athleteConfirmed)
+    }
+
+    /**
+     * Owner-fenced source CAS with write-ahead recovery. This intentionally
+     * keeps the new-workout barrier until the new cycle's active policy and
+     * issuance consent have been separately installed and audited.
+     */
+    fun commitFutureBlockActivation():NativeFutureCommitReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureCommitReview.Rejected(
+                NativeFutureCommitRefusal.NOT_AUTHORIZED)
+        return futureActivationCommit.commit(owner.ownerKey)
+    }
+    fun readFutureBlockActivationCommit():NativeFutureCommitReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureCommitReview.Rejected(
+                NativeFutureCommitRefusal.NOT_AUTHORIZED)
+        return futureActivationCommit.read(owner.ownerKey)
+    }
+    fun abortFutureBlockActivationBeforeSourceChange(
+        approvalRevision:Long,fingerprint:String,athleteConfirmed:Boolean
+    ):NativeFutureCommitReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureCommitReview.Rejected(
+                NativeFutureCommitRefusal.NOT_AUTHORIZED)
+        return futureActivationCommit.abortBeforeSourceApplied(
+            owner.ownerKey,approvalRevision,fingerprint,athleteConfirmed)
     }
 
     fun readAcceptedFutureBlockContext(

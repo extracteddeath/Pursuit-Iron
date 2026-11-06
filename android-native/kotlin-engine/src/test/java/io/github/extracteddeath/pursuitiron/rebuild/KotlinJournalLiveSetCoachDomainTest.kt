@@ -109,6 +109,37 @@ class KotlinJournalLiveSetCoachDomainTest {
             look(finished,"bench:s2"))
     }
 
+    @Test fun laterRecordedSetBlocksLoadAdviceForEarlierStillOpenSet() {
+        val initial=record(started(),"bench:s0",2,0,"215")
+        // Journal events are saved by set key, not necessarily in target order.
+        // This could happen through skipping ahead or a history correction.
+        val outOfOrder=record(initial,"bench:s2",5,2,"205")
+        val review=look(outOfOrder,"bench:s1") as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.NEXT_SET_ALREADY_LOGGED,
+            review.coaching.direction)
+        assertNull(review.coaching.weightForHumanReview)
+        assertEquals(n("215"),review.coaching.issuedTargetUnchanged)
+        assertFalse(review.canModifyWorkout)
+        assertFalse(review.canIssueWorkout)
+        // It is still okay to coach an actually next, unrecorded set.
+        val last=look(outOfOrder,"bench:s3") as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.PRIOR_SET_UNRESOLVED,
+            last.coaching.direction)
+    }
+
+    @Test fun laterSkippedSetAlsoBlocksEarlierLoadSuggestion() {
+        val initial=record(started(),"bench:s0")
+        val skipped=KotlinJournalOperation.RecordSet(
+            "skipped-later",initial.revision,"bench:s2",
+            KotlinJournalSetOutcome.SKIPPED,null)
+        val saved=(KotlinWorkoutJournalDomain.reduce(initial,skipped)
+            as KotlinJournalDecision.Proposed).state
+        val reviewed=look(saved,"bench:s1") as LiveSetCoachResult.Reviewed
+        assertEquals(InWorkoutDirection.NEXT_SET_ALREADY_LOGGED,
+            reviewed.coaching.direction)
+        assertNull(reviewed.coaching.weightForHumanReview)
+    }
+
     @Test fun gymMustBeVerifiedBeforeSuggestingAnyWeightChange() {
         val j=record(started(),"bench:s0")
         val suggestion=look(j,"bench:s1",null) as LiveSetCoachResult.Reviewed

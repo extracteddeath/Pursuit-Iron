@@ -21,11 +21,14 @@ data class AdaptiveCycleOptionRequest(
     val catalog:List<CatalogMovement>,
     val coaching:CustomCoachAuditInputs,
     val permissions:CustomCycleCoachPermissions=CustomCycleCoachPermissions(),
-    val alternatives:List<AdaptiveCycleOption>
+    val alternatives:List<AdaptiveCycleOption>,
+    val prospectiveByOptionId:Map<String,ProspectiveBlockCoachingContext> =
+        emptyMap()
 )
 
 enum class AdaptiveCycleOptionStatus {
-    READY_FOR_REVIEW, UNCHANGED, PERMISSION_REQUIRED, INVALID_CYCLE,
+    READY_FOR_REVIEW, UNCHANGED, PROSPECTIVE_REVIEW_REQUIRED,
+    PERMISSION_REQUIRED, INVALID_CYCLE,
     COACH_POLICY_REQUIRED, COACH_AUDIT_FAILED
 }
 
@@ -43,14 +46,17 @@ data class AdaptiveCycleOptionAssessment(
 }
 
 enum class AdaptiveCycleComparisonStatus {
-    SOURCE_UNRESOLVED, NO_FEASIBLE_ALTERNATIVE, OPTIONS_COMPARED
+    SOURCE_UNRESOLVED, NO_FEASIBLE_ALTERNATIVE, OPTIONS_COMPARED,
+    PROSPECTIVE_OPTIONS_ONLY
 }
 data class AdaptiveCycleComparison(
     val status:AdaptiveCycleComparisonStatus,
     val sourceAudit:CustomCoachAudit,
     val evaluated:List<AdaptiveCycleOptionAssessment>,
     val recommendedOptionId:String?,
-    val candidatesChecked:Int
+    val candidatesChecked:Int,
+    /** Future schedule candidates require separate acceptance. */
+    val recommendedProspectiveOptionId:String?=null
 ) {
     val mayApplyAutomatically:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -133,6 +139,9 @@ object AdaptiveCycleOptionReviewDomain {
         require(request.alternatives.all {id.matches(it.optionId)} &&
             request.alternatives.map {it.optionId}.distinct().size==
                 request.alternatives.size)
+        require(request.prospectiveByOptionId.keys.all {key->
+            request.alternatives.any {it.optionId==key}
+        })
         val source=request.approvedCycle
         val sourceAudit=CustomCycleCoachAuditDomain.review(
             source,request.athleteSetup,request.catalog,request.coaching)
@@ -147,6 +156,7 @@ object AdaptiveCycleOptionReviewDomain {
         val available=CustomExerciseAuthoringDomain.picker(
             request.athleteSetup,request.catalog).map {it.availability}
         val assessed=request.alternatives.map {option ->
+            val prospective=request.prospectiveByOptionId[option.optionId]
             val change=CustomCycleTransitionDomain.review(
                 source,option.proposedCycle,available,
                 CustomCycleEditOrigin.COACH_SUGGESTION,request.permissions)
@@ -154,7 +164,9 @@ object AdaptiveCycleOptionReviewDomain {
             // audit every proposed week and inter-block transition.
             val audit=CustomCycleCoachAuditDomain.review(
                 option.proposedCycle,request.athleteSetup,
-                request.catalog,request.coaching)
+                request.catalog,request.coaching,
+                if(prospective==null)emptyMap()
+                else mapOf(request.targetBlockId to prospective))
             val block=option.proposedCycle.blocks.singleOrNull {
                 it.blockId==request.targetBlockId
             }
@@ -170,13 +182,17 @@ object AdaptiveCycleOptionReviewDomain {
                     AdaptiveCycleOptionStatus.COACH_AUDIT_FAILED
                 change.status==CustomCycleTransitionStatus.PERMISSION_REQUIRED ->
                     AdaptiveCycleOptionStatus.PERMISSION_REQUIRED
-                change.status==CustomCycleTransitionStatus.NO_CHANGE ->
-                    AdaptiveCycleOptionStatus.UNCHANGED
+                change.status==CustomCycleTransitionStatus.NO_CHANGE &&
+                    prospective==null ->AdaptiveCycleOptionStatus.UNCHANGED
+                prospective!=null ->
+                    AdaptiveCycleOptionStatus.PROSPECTIVE_REVIEW_REQUIRED
                 else -> AdaptiveCycleOptionStatus.READY_FOR_REVIEW
             }
             val eligible=status==AdaptiveCycleOptionStatus.READY_FOR_REVIEW ||
-                status==AdaptiveCycleOptionStatus.UNCHANGED
-            val policy=block?.let {request.coaching.policiesByPhase[it.phase]}
+                status==AdaptiveCycleOptionStatus.UNCHANGED ||
+                status==AdaptiveCycleOptionStatus.PROSPECTIVE_REVIEW_REQUIRED
+            val policy=prospective?.policy ?:
+                block?.let {request.coaching.policiesByPhase[it.phase]}
             val quality=if(eligible && policy!=null)
                 score(source,option.proposedCycle,request.targetBlockId,
                     audit,policy,change.differences) else null
@@ -185,6 +201,8 @@ object AdaptiveCycleOptionReviewDomain {
                     "Audited option: requires explicit athlete approval."
                 AdaptiveCycleOptionStatus.UNCHANGED ->
                     "Keep this block; no training targets changed."
+                AdaptiveCycleOptionStatus.PROSPECTIVE_REVIEW_REQUIRED ->
+                    "Audited future schedule, but changing the approved split or training days still requires explicit athlete acceptance."
                 AdaptiveCycleOptionStatus.PERMISSION_REQUIRED ->
                     "Missing adaptive permissions: "+
                     change.blockedKinds.joinToString(",") {it.name}
@@ -198,8 +216,7 @@ object AdaptiveCycleOptionReviewDomain {
             AdaptiveCycleOptionAssessment(option.optionId,status,
                 change,audit,quality,explanation)
         }
-        val feasible=assessed.filter {it.qualityScore!=null}
-        val best=feasible.minWithOrNull(Comparator {a,b ->
+        val ranking=Comparator<AdaptiveCycleOptionAssessment> {a,b ->
             val x=checkNotNull(a.qualityScore)
             val y=checkNotNull(b.qualityScore)
             when {
@@ -207,11 +224,25 @@ object AdaptiveCycleOptionReviewDomain {
                 better(y,x)->1
                 else->a.optionId.compareTo(b.optionId)
             }
-        })
+        }
+        val eligible=assessed.filter {
+            it.qualityScore!=null &&
+                it.status!=AdaptiveCycleOptionStatus.PROSPECTIVE_REVIEW_REQUIRED
+        }
+        val future=assessed.filter {
+            it.qualityScore!=null &&
+                it.status==AdaptiveCycleOptionStatus.PROSPECTIVE_REVIEW_REQUIRED
+        }
+        val best=eligible.minWithOrNull(ranking)
+        val futureBest=future.minWithOrNull(ranking)
         return AdaptiveCycleComparison(
-            if(best==null)AdaptiveCycleComparisonStatus.NO_FEASIBLE_ALTERNATIVE
-            else AdaptiveCycleComparisonStatus.OPTIONS_COMPARED,
+            when {
+                best!=null ->AdaptiveCycleComparisonStatus.OPTIONS_COMPARED
+                futureBest!=null ->
+                    AdaptiveCycleComparisonStatus.PROSPECTIVE_OPTIONS_ONLY
+                else ->AdaptiveCycleComparisonStatus.NO_FEASIBLE_ALTERNATIVE
+            },
             sourceAudit,Collections.unmodifiableList(assessed),
-            best?.optionId,assessed.size)
+            best?.optionId,assessed.size,futureBest?.optionId)
     }
 }

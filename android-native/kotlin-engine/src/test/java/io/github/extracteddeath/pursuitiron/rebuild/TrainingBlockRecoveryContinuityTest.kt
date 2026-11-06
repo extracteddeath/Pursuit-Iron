@@ -273,6 +273,135 @@ class TrainingBlockRecoveryContinuityTest {
         assertTrue(reviewed.sourceAudit.issues.any {
             it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_MISSING})
     }
+
+    private fun autoRepair(
+        source:CustomTrainingCycle=cycle(),
+        cap:Int=3,
+        permissions:CustomCycleCoachPermissions=
+            CustomCycleCoachPermissions(adaptSetCount=true),
+        reviewInput:CustomCoachAuditInputs=coaching(
+            CustomCoachVolumeContinuityPolicy(n("0.25"),n("0.25")))
+    )=AdaptiveStrengthVolumeRepairDomain.propose(
+        AdaptiveStrengthVolumeRepairRequest(
+            AdaptiveCycleOptionRequest(
+                source,"strength",fixture.athlete(),fixture.movements,
+                reviewInput,permissions,emptyList()),
+            maximumWorkingSetsPerSlot=cap))
+
+    @Test fun generatedStrengthRepairActuallyProducesAudited24SetWeek() {
+        val source=cycle()
+        val repaired=autoRepair(source)
+        assertEquals(repaired.explanation,
+            AdaptiveStrengthVolumeRepairStatus.CANDIDATE_READY_FOR_REVIEW,
+            repaired.status)
+        assertEquals(13,repaired.addedWorkingSets)
+        assertFalse(repaired.searchTruncated)
+        assertTrue(repaired.comparison.sourceRepairRequired)
+        assertEquals("auto_strength_dose_repair",
+            repaired.comparison.recommendedOptionId)
+        assertEquals(AdaptiveCycleOptionStatus.READY_FOR_REVIEW,
+            repaired.comparison.evaluated.single().status)
+        val changed=checkNotNull(repaired.proposedOption).proposedCycle
+        assertEquals(source.revision+1,changed.revision)
+        assertEquals(source.blocks.take(2),changed.blocks.take(2))
+        assertEquals(source.weekOverrides,changed.weekOverrides)
+        assertEquals(listOf(30,9,24),
+            repaired.comparison.evaluated.single()
+                .coachingAudit!!.weeks.map {it.workingSets})
+        val measured=repaired.comparison.evaluated.single()
+            .coachingAudit!!.weeks.last()
+        for(muscle in listOf(
+            TrainingMuscle.CHEST,TrainingMuscle.LATS,TrainingMuscle.QUADS)) {
+            assertEquals(n("8"),measured.directSets.getValue(muscle))
+            assertTrue(measured.totalSetCredits.getValue(muscle)<=n("10"))
+        }
+        assertTrue(measured.estimatedSecondsByDay.values.all {
+            it!=null && it in 2400L..3600L
+        })
+        val before=source.blocks.last().days.associateBy {it.weekday}
+        for(day in changed.blocks.last().days) {
+            val earlier=checkNotNull(before[day.weekday])
+                .slots.associateBy {it.slotId}
+            for(slot in day.slots) {
+                val old=checkNotNull(earlier[slot.slotId])
+                assertEquals(old.exerciseId,slot.exerciseId)
+                assertEquals(old.pinned,slot.pinned)
+                assertEquals(old.attachmentId,slot.attachmentId)
+                assertEquals(old.sets.first(),slot.sets.first())
+                assertTrue(slot.sets.size<=3)
+                assertTrue(slot.sets.all {it==old.sets.first()})
+            }
+        }
+        assertFalse(repaired.maySaveProgram)
+        assertFalse(repaired.mayApplyAutomatically)
+        assertFalse(repaired.mayIssueWorkout)
+        assertFalse(repaired.mayAlterHistory)
+        assertEquals(source,cycle())
+        assertEquals(repaired,autoRepair(source))
+    }
+
+    @Test fun generatedStrengthRepairNeedsIndependentSetCountPermission() {
+        val denied=autoRepair(permissions=CustomCycleCoachPermissions())
+        assertEquals(AdaptiveStrengthVolumeRepairStatus.PERMISSION_REQUIRED,
+            denied.status)
+        assertNull(denied.proposedOption)
+        assertEquals(0,denied.addedWorkingSets)
+        assertFalse(denied.mayIssueWorkout)
+    }
+
+    @Test fun repairedStrengthCannotInventMoreSetsThanExplicitSlotCap() {
+        val rejected=autoRepair(cap=2)
+        assertEquals(AdaptiveStrengthVolumeRepairStatus.NO_FEASIBLE_REPAIR,
+            rejected.status)
+        assertNull(rejected.proposedOption)
+        assertTrue(rejected.addedWorkingSets>0)
+        assertNull(rejected.comparison.recommendedOptionId)
+    }
+
+    @Test fun generatorRefusesMissingContinuityPolicyOrUnrelatedDoseDefects() {
+        val missing=autoRepair(reviewInput=coaching())
+        assertEquals(AdaptiveStrengthVolumeRepairStatus.SOURCE_UNRESOLVED,
+            missing.status)
+        val source=cycle()
+        val deficient=source.copy(blocks=source.blocks.map {block->
+            if(block.blockId!="block-1")block else block.copy(
+                days=block.days.map {day->day.copy(
+                    slots=day.slots.filter {
+                        day.weekday==0 || it.exerciseId!="row"
+                    })
+                })
+        })
+        val refused=autoRepair(source=deficient)
+        assertEquals(AdaptiveStrengthVolumeRepairStatus.SOURCE_UNRESOLVED,
+            refused.status)
+        assertNull(refused.proposedOption)
+    }
+
+    @Test fun generatorPreservesWeeklyOverridesAndUnknownEffort() {
+        val source=cycle()
+        val week=source.blocks.last().days.first()
+        val slot=week.slots.first()
+        val withOverride=source.copy(weekOverrides=mapOf(
+            "strength" to listOf(CustomWeekSlotOverride(
+                1,week.weekday,slot.slotId,slot.sets))))
+        val blocked=autoRepair(source=withOverride)
+        assertEquals(AdaptiveStrengthVolumeRepairStatus.PRESCRIPTION_UNSUPPORTED,
+            blocked.status)
+        val unknownEffort=source.copy(blocks=source.blocks.map {block->
+            if(block.blockId!="strength")block else block.copy(
+                days=block.days.map {day->day.copy(
+                    slots=day.slots.map {item->
+                        if(item.exerciseId!="row")item else item.copy(
+                            sets=item.sets.map {it.copy(targetRir=null)})
+                    })
+                })
+        })
+        val refused=autoRepair(source=unknownEffort)
+        assertEquals(AdaptiveStrengthVolumeRepairStatus.PRESCRIPTION_UNSUPPORTED,
+            refused.status)
+        assertNull(refused.proposedOption)
+    }
+
     @Test fun explicitlyReviewedLargerDropCanPassWithoutRewritingDeload() {
         val source=cycle()
         val audited=review(limit=CustomCoachVolumeContinuityPolicy(

@@ -1977,4 +1977,102 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
 
+
+    @Test fun verifiedDumbbellProgressionNeedsFullHistoryAndExplicitLoadApproval() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        val owner="owner-1"
+        val workoutId="future-load-week6"
+        val inputs=futureInputs()
+        val maxIncrease=n("5")
+        val observed=f.coach.review(owner,inputs,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,maxIncrease)
+        assertTrue(observed.toString(),observed is NativeCustomNextCoachResult.Reviewed)
+        val ready=(observed as NativeCustomNextCoachResult.Reviewed)
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
+            ready.review.status)
+        assertEquals(n("25"),ready.review.loadReviewCandidate)
+        assertEquals(listOf("real-activated-week4","real-activated-week5"),
+            ready.review.comparedWorkoutIds)
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,ready.verifiedStock?.basis)
+        val approvals=NativeKotlinCustomNextLoadApprovalFileStore(
+            temp.root.toPath(),fence,identity,f.activation,f.coach,
+            f.prepared,f.issuer)
+        val preview=approvals.preview(owner,workoutId,inputs,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,maxIncrease)
+        assertTrue(preview.toString(),preview is NativeCustomLoadPreview.Ready)
+        val shown=(preview as NativeCustomLoadPreview.Ready).receipt
+        assertEquals(n("20"),shown.originalLoad)
+        assertEquals(n("25"),shown.proposedLoad)
+        assertEquals(LoadUnit.LB,shown.unit)
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,shown.basis)
+        assertEquals(NativeCustomLoadWrite.Rejected(
+            NativeCustomLoadRefusal.CONFIRMATION_REQUIRED),
+            approvals.accept(owner,workoutId,inputs,6,1,"slot-1",
+                CoachReadiness.NORMAL,false,maxIncrease,shown.fingerprint,
+                shown.historyRevision,shown.consentRevision,
+                shown.setKeys,shown.originalLoad,shown.proposedLoad,false))
+        assertEquals(NativeCustomLoadRead.Missing,
+            approvals.readCurrent(owner,workoutId,inputs,6,1))
+        assertEquals(NativeCustomLoadWrite.Rejected(
+            NativeCustomLoadRefusal.FINGERPRINT_CHANGED),
+            approvals.accept(owner,workoutId,inputs,6,1,"slot-1",
+                CoachReadiness.NORMAL,false,maxIncrease,shown.fingerprint,
+                shown.historyRevision,shown.consentRevision,
+                shown.setKeys,shown.originalLoad,n("30"),true))
+        val accepted=approvals.accept(owner,workoutId,inputs,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,maxIncrease,shown.fingerprint,
+            shown.historyRevision,shown.consentRevision,
+            shown.setKeys,shown.originalLoad,shown.proposedLoad,true)
+        assertEquals(NativeCustomLoadWrite.Accepted(shown,false),accepted)
+        val restarted=NativeKotlinCustomNextLoadApprovalFileStore(
+            temp.root.toPath(),fence,identity,f.activation,f.coach,
+            f.prepared,f.issuer)
+        assertTrue(restarted.readCurrent(owner,workoutId,inputs,6,1)
+            is NativeCustomLoadRead.Current)
+        val prepared=f.prepared.prepareActivated(owner,workoutId,"cycle-1",
+            6,1,inputs,f.signoff,f.activation,f.repApprovals,restarted)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val snapshot=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(shown.fingerprint,snapshot.loadApprovalFingerprint)
+        assertNull(snapshot.repApprovalFingerprint)
+        val load=snapshot.snapshot.slots.single().sets.single().prescription.load
+            as DraftSetLoad.Verified
+        assertEquals(n("25"),load.value)
+        assertEquals(RepBand(10,15),
+            snapshot.snapshot.slots.single().sets.single().prescription.reps)
+        assertEquals(NativeCustomPreparedRead.Found(snapshot),
+            f.prepared.open(owner,workoutId))
+        val issued=f.issuer.issueActivated(owner,workoutId,"cycle-1",6,1,
+            inputs,f.signoff,f.activation,f.repApprovals,restarted)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(snapshot.snapshot,
+            (issued as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+        assertEquals(NativeCustomLoadPreview.Rejected(
+            NativeCustomLoadRefusal.ALREADY_PREPARED_OR_ISSUED),
+            restarted.preview(owner,workoutId,inputs,6,1,"slot-1",
+                CoachReadiness.NORMAL,false,maxIncrease))
+        val record=f.issuer.record(owner,workoutId,
+            CustomWorkoutJournalOperation.Record("load-actual-week6",0,
+                CustomWorkoutVisitKey("cycle-1:w6:d1:slot-1:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("25"),LoadUnit.LB,10,2)))
+        assertTrue(record.toString(),record is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(
+            f.history,f.issuer,fence,identity).complete(owner,"athlete-1",
+                workoutId,CustomWorkoutJournalOperation.Finish(
+                    "load-finish-week6",1)) is NativeCustomFinishResult.Committed)
+        val recovered=f.reader.read(owner,"athlete-1")
+        assertTrue(recovered.toString(),
+            recovered is NativeKotlinMixedHistoryReadResult.Review)
+        val last=(recovered as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.last() as NativeKotlinMixedHistoryCompletion.Custom
+        assertEquals(n("25"),last.evidence.visits.single().actual?.load)
+        assertEquals(10,last.evidence.visits.single().actual?.reps)
+    }
+
+
 }

@@ -976,6 +976,118 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 updated.fingerprint,true))
     }
 
+    private fun newHandoff()=NativeKotlinFutureActivationHandoffFileStore(
+        temp.root.toPath(),fence,identity,sources)
+
+    @Test fun approvedFutureHandoffIsCrashDurableAndBlocksNewWorkoutPreparation() {
+        readyFutureForSecondConsent()
+        val approvals=approvalCheckpoint()
+        val preview=approvals.preview("owner-1","cycle-1","build")
+            as NativeFutureApprovalPreview.Ready
+        val accepted=approvals.confirm("owner-1","cycle-1","build",0,
+            preview.fingerprint,true) as NativeFutureApprovalWrite.Committed
+        val handoff=newHandoff()
+        assertFalse(handoff.blocksNewIssuance("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.CONFIRMATION_REQUIRED),
+            handoff.stage("owner-1","cycle-1","build",
+                accepted.approval.revision,preview.fingerprint,approvals,false))
+        val staged=handoff.stage("owner-1","cycle-1","build",
+            accepted.approval.revision,preview.fingerprint,approvals,true)
+        assertTrue(staged.toString(),staged is NativeFutureHandoffReview.Staged)
+        val receipt=(staged as NativeFutureHandoffReview.Staged).receipt
+        assertFalse(staged.replayed)
+        assertEquals(1L,receipt.sourceRevision)
+        assertEquals(4,receipt.firstWeek)
+        assertEquals(preview.fingerprint,receipt.approvalFingerprint)
+        assertTrue(handoff.blocksNewIssuance("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Staged(receipt,false),
+            newHandoff().read("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Staged(receipt,true),
+            newHandoff().stage("owner-1","cycle-1","build",
+                accepted.approval.revision,preview.fingerprint,approvals,true))
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store())
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(
+            temp.root.toPath(),fence,identity,preflight,newHandoff())
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            prepared.prepare("owner-1","new_workout","cycle-1",1,0,inputs()))
+        assertEquals(NativeAuthoringSourceRead.Found(source()),
+            sources.read("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Cancelled,
+            newHandoff().cancel("owner-1",receipt.approvalRevision,
+                receipt.approvalFingerprint,true))
+        assertFalse(handoff.blocksNewIssuance("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Missing,handoff.read("owner-1"))
+    }
+
+    @Test fun handoffRejectsStaleApprovalAndNeverClearsAfterSourceChanges() {
+        readyFutureForSecondConsent()
+        val approvals=approvalCheckpoint()
+        val preview=approvals.preview("owner-1","cycle-1","build")
+            as NativeFutureApprovalPreview.Ready
+        val committed=approvals.confirm("owner-1","cycle-1","build",0,
+            preview.fingerprint,true) as NativeFutureApprovalWrite.Committed
+        val handoff=newHandoff()
+        assertEquals(NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.REVIEW_CHANGED),
+            handoff.stage("owner-1","cycle-1","build",committed.approval.revision,
+                "a".repeat(64),approvals,true))
+        assertEquals(NativeFutureHandoffReview.Missing,handoff.read("owner-1"))
+        val staged=handoff.stage("owner-1","cycle-1","build",
+            committed.approval.revision,preview.fingerprint,approvals,true)
+                as NativeFutureHandoffReview.Staged
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.publish("owner-1",1,source(2)))
+        assertEquals(NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.SOURCE_CHANGED),
+            handoff.cancel("owner-1",staged.receipt.approvalRevision,
+                staged.receipt.approvalFingerprint,true))
+        assertTrue(handoff.blocksNewIssuance("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Staged(staged.receipt,false),
+            newHandoff().read("owner-1"))
+        active=NativeKotlinOwnerIdentity("someone_else","athlete-1")
+        assertTrue(handoff.blocksNewIssuance("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.NOT_AUTHORIZED),
+            handoff.read("owner-1"))
+    }
+
+    @Test fun corruptedOrInterruptedHandoffCannotBeMistakenForNoBarrier() {
+        readyFutureForSecondConsent()
+        val approvals=approvalCheckpoint()
+        val ready=approvals.preview("owner-1","cycle-1","build")
+            as NativeFutureApprovalPreview.Ready
+        val approved=approvals.confirm("owner-1","cycle-1","build",0,
+            ready.fingerprint,true) as NativeFutureApprovalWrite.Committed
+        val handoff=newHandoff()
+        assertTrue(handoff.stage("owner-1","cycle-1","build",
+            approved.approval.revision,ready.fingerprint,approvals,true)
+            is NativeFutureHandoffReview.Staged)
+        val file=Files.list(temp.root.toPath()).use{stream->
+            stream.filter {it.fileName.toString().startsWith("future-handoff-") &&
+                it.fileName.toString().endsWith(".bin")}
+                .findFirst().orElseThrow()
+        }
+        val bytes=Files.readAllBytes(file)
+        val damaged=bytes.clone()
+        damaged[damaged.lastIndex]=(damaged.last().toInt() xor 1).toByte()
+        Files.write(file,damaged)
+        assertEquals(NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.RECORD_CORRUPT),
+            newHandoff().read("owner-1"))
+        assertTrue(newHandoff().blocksNewIssuance("owner-1"))
+        Files.write(file,bytes)
+        val prefix=file.fileName.toString().removeSuffix(".bin")
+        val unfinished=temp.root.toPath().resolve(prefix+"-orphan.pending")
+        Files.write(unfinished,byteArrayOf(1))
+        assertEquals(NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.RECORD_CORRUPT),
+            newHandoff().read("owner-1"))
+        assertTrue(newHandoff().blocksNewIssuance("owner-1"))
+    }
+
     @Test fun actualProductionBoundaryIsNotBypassedBySecondConsent() {
         readyFutureForSecondConsent()
         val history=NativeKotlinHistoryManifestFileStore(temp.root.toPath())

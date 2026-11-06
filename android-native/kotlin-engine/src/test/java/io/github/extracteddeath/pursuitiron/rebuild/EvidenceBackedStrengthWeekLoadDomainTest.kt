@@ -306,6 +306,95 @@ class EvidenceBackedStrengthWeekLoadDomainTest {
             attempt(restricted=true).status)
     }
 
+    /**
+     * Four-set boundary mirrors the historical double-progression defect:
+     * all four sets, not merely the best effort, must earn a load change.
+     */
+    private fun fourSetCycle():CustomTrainingCycle {
+        val base=cycle()
+        return base.copy(blocks=base.blocks.map {block->
+            block.copy(days=block.days.map {day->
+                if(day.weekday!=0)day else day.copy(slots=day.slots.map {slot->
+                    if(slot.exerciseId!="bench")slot
+                    else slot.copy(sets=List(4){slot.sets.single().copy()})
+                })
+            })
+        })
+    }
+
+    private fun fourSetJournal(id:Int,reps:List<Int>):KotlinWorkoutJournalState {
+        require(reps.size==4)
+        val workoutId="history-$id"
+        val targets=reps.indices.map {ordinal->
+            KotlinWorkoutTarget("bench",ComposerRole.PRIMARY,
+                ComposerSessionPurpose.STRENGTH_SKILL,
+                "set-$id-$ordinal",DraftSetType.WORKING,ordinal,
+                DraftSetLoad.Verified(LoadUnit.LB,
+                    LoadBasis.DUMBBELL_PER_HAND,n("25")),
+                RepBand(4,6),2,90,150)
+        }
+        val stage=KotlinStagedWorkout(source,"grant-$id",workoutId,
+            0,0,ComposerSessionPurpose.STRENGTH_SKILL,48,targets)
+        var journal=KotlinWorkoutJournalDomain.begin(stage,
+            KotlinStoredWorkoutIdentity("stored-$id",workoutId,source,1))
+        for((index,repsDone) in reps.withIndex()) {
+            journal=(KotlinWorkoutJournalDomain.reduce(journal,
+                KotlinJournalOperation.RecordSet(
+                    "event-$id-$index",journal.revision,
+                    targets[index].setKey,KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(n("25"),LoadUnit.LB,repsDone,2)))
+                as KotlinJournalDecision.Proposed).state
+        }
+        return (KotlinWorkoutJournalDomain.reduce(journal,
+            KotlinJournalOperation.Finish("finish-$id",journal.revision))
+            as KotlinJournalDecision.Proposed).state
+    }
+
+    @Test fun earnedFourSetStrengthWorkoutChangesOnlyItsFourFutureWorkingLoads() {
+        val before=fourSetCycle()
+        val workouts=history(
+            a=fourSetJournal(1,listOf(6,6,6,6)),
+            b=fourSetJournal(2,listOf(6,6,6,6)))
+        val result=attempt(cycle=before,timeline=workouts)
+        assertEquals(result.explanation,
+            EvidenceBackedStrengthWeekLoadStatus.READY_FOR_ATHLETE_REVIEW,
+            result.status)
+        assertEquals(listOf(2),result.affectedWeeks)
+        val draft=checkNotNull(result.proposed).proposedCycle
+        val added=draft.weekOverrides.getValue("block-1").single()
+        assertEquals(4,added.sets.size)
+        assertTrue(added.sets.all {
+            (it.load as DraftSetLoad.Verified).value==n("30") &&
+                it.reps==RepBand(4,6) && it.targetRir==2 &&
+                it.restSeconds==150
+        })
+        assertEquals(4,before.blocks.single().days.single {
+            it.weekday==0
+        }.slots.single {it.exerciseId=="bench"}.sets.size)
+        val audited=result.cycleComparison!!.evaluated.single().coachingAudit!!
+        assertEquals(listOf(12,12,12),
+            audited.weeks.map {it.workingSets})
+        assertFalse(result.mayIssueWorkout)
+    }
+
+    @Test fun fourSetProgressionCannotPromoteOnlyBestTwoSets() {
+        val before=fourSetCycle()
+        val histories=listOf(
+            listOf(6,6,6,4),
+            listOf(6,6,3,2)
+        )
+        for(poor in histories) {
+            val reviewed=attempt(cycle=before,timeline=history(
+                a=fourSetJournal(1,listOf(6,6,6,6)),
+                b=fourSetJournal(2,poor)))
+            assertEquals(poor.toString(),
+                EvidenceBackedStrengthWeekLoadStatus.EVIDENCE_NOT_EARNED,
+                reviewed.status)
+            assertNull(reviewed.proposed)
+            assertTrue(reviewed.affectedWeeks.isEmpty())
+        }
+    }
+
     @Test fun sourcePlannedLoadMustMatchActualLastIssuedLoad() {
         val before=cycle()
         val changed=before.copy(blocks=before.blocks.map {block->

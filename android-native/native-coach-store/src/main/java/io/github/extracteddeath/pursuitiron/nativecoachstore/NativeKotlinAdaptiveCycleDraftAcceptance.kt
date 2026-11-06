@@ -35,7 +35,7 @@ enum class NativeAdaptiveCycleDraftRefusal {
     DRAFT_CHANGED, SOURCE_CHANGED, UNRELATED_BLOCK_CHANGED,
     FUTURE_PROFILE_REQUIRES_APPROVAL, COACH_REVIEW_UNRESOLVED,
     PERMISSION_REQUIRED, PERMISSIONS_NOT_APPROVED, PERMISSIONS_CHANGED,
-    CONFIRMATION_REQUIRED, REVIEW_CHANGED,
+    CURRENT_CYCLE_NOT_SIGNED_OFF, CONFIRMATION_REQUIRED, REVIEW_CHANGED,
     DRAFT_STORAGE_REJECTED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeAdaptiveCycleDraftPreview {
@@ -68,7 +68,8 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
     private val identity:NativeKotlinCurrentIdentity,
     private val drafts:NativeCustomCycleDraftFileStore,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
-    private val permissionStore:NativeKotlinAdaptiveCyclePermissionFileStore
+    private val permissionStore:NativeKotlinAdaptiveCyclePermissionFileStore,
+    private val cycleSignoffs:NativeKotlinCustomCycleSignoffFileStore
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val digest=Regex("^[a-f0-9]{64}$")
@@ -137,6 +138,18 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
             authoring.athleteId!=signed.athleteId)
             return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.SOURCE_CHANGED)
+        // The full training policy cannot be invented by a Compose caller.
+        // Its exact contents must match a durable, previously audited and
+        // athlete-signed baseline cycle. Each source/draft/policy edit
+        // automatically stales this receipt. Recheck under the SAME lock
+        // at preview and at commit before writing the new draft.
+        val approved=cycleSignoffs.read(c.ownerKey,c.cycleId,c.coaching)
+        if(approved !is NativeCustomSignoffRead.Found ||
+            !approved.isCurrent ||
+            approved.receipt.cycleRevision!=c.expectedDraftRevision ||
+            approved.receipt.sourceRevision!=c.expectedSourceRevision)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.CURRENT_CYCLE_NOT_SIGNED_OFF)
 
         val original=draft.blocks.singleOrNull{it.blockId==c.targetBlockId}
             ?:return NativeAdaptiveCycleDraftPreview.Rejected(

@@ -36,7 +36,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete)
     private val adaptiveCycleDrafts=NativeKotlinAdaptiveCycleDraftAcceptance(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
-        adaptiveCyclePermissions)
+        adaptiveCyclePermissions,customCycleSignoffs)
     private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs)

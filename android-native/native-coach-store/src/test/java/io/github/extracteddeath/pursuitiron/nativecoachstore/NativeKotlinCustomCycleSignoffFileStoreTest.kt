@@ -204,7 +204,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
     private fun adaptive()=NativeKotlinAdaptiveCycleDraftAcceptance(
-        fence,identity,drafts,sources,permissionStore)
+        fence,identity,drafts,sources,permissionStore,store())
     private fun adjusted():CustomTrainingCycle {
         val original=cycle(2)
         return original.copy(blocks=original.blocks.map{block->
@@ -258,6 +258,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
     @Test fun adaptiveOptionNeverBypassesPermissionsOrDisplayedFingerprint() {
         initialize()
+        approved()
         val blocked=adaptive().preview(option(
             permissions=CustomCycleCoachPermissions()))
         assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
@@ -285,6 +286,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
     @Test fun adaptiveOptionFailsClosedOnSourceEditsForeignAccountAndFutureSplit() {
         initialize()
+        approved()
         val proposal=option()
         val ready=adaptive().preview(proposal)
             as NativeAdaptiveCycleDraftPreview.Ready
@@ -355,6 +357,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
     @Test fun permissionConsentCannotBeForgedByCallerAfterGrantChanges() {
         initialize()
+        approved()
         val candidate=option()
         val shown=adaptive().preview(candidate)
             as NativeAdaptiveCycleDraftPreview.Ready
@@ -412,6 +415,36 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
             NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED),
             adaptive().accept(option(),"0".repeat(64),true))
+    }
+
+
+    @Test fun adaptiveOptionRequiresSameSignedBaselineAndCompletePolicyInputs() {
+        initialize()
+        val proposal=option()
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.CURRENT_CYCLE_NOT_SIGNED_OFF),
+            adaptive().preview(proposal))
+        val signed=approved()
+        val shown=adaptive().preview(proposal)
+        assertTrue(shown.toString(),shown is NativeAdaptiveCycleDraftPreview.Ready)
+        val prior=shown as NativeAdaptiveCycleDraftPreview.Ready
+        val changed=proposal.copy(coaching=inputs().copy(continuityPolicy=
+            CustomCoachVolumeContinuityPolicy(n("0.2"),n("0.3"),
+                n("0.15"),n("0.1"))))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.CURRENT_CYCLE_NOT_SIGNED_OFF),
+            adaptive().preview(changed))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.CURRENT_CYCLE_NOT_SIGNED_OFF),
+            adaptive().accept(changed,prior.reviewedFingerprint,true))
+        assertEquals(NativeCustomSignoffWrite.Committed(
+            signed.copy(recordRevision=2)),
+            store().revoke("owner-1","cycle-1",1))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.CURRENT_CYCLE_NOT_SIGNED_OFF),
+            adaptive().preview(proposal))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
     }
 
 }

@@ -82,6 +82,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
         futureBlockContexts,futureActivationApproval,futureActivationHandoff)
     private val activatedCycleSignoffs=NativeKotlinActivatedCycleSignoffFileStore(
         root,revisionFence,localAthlete,futureActivationCommit)
+    private val activatedNextWorkoutCoach=NativeKotlinCustomNextWorkoutReview(
+        revisionFence,localAthlete,futureActivationCommit,
+        activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
+        customIssuedStore)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)
@@ -688,6 +692,24 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * signoff, not the legacy custom-cycle grant. It preserves exact authored
      * slots/sets and remains deliberately non-issued and non-loggable.
      */
+    /**
+     * READ-ONLY next-workout coaching after actual custom Finish. Authenticated
+     * full mixed history + current future-block consent are rechecked together.
+     * Upper/Push or different custom weekdays NEVER share progression state.
+     */
+    fun reviewNextActivatedWorkoutProgression(
+        nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
+        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal
+    ):NativeCustomNextCoachResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeCustomNextCoachResult.Rejected(
+                NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
+        return activatedNextWorkoutCoach.review(signed.ownerKey,inputs,
+            nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
+            maximumAuthorizedIncrease)
+    }
+
     fun prepareActivatedFutureWorkout(
         workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs

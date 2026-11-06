@@ -61,6 +61,7 @@ enum class KotlinTimelineReviewStatus {
     CHANGED_ATHLETE_PROFILE,
     CHANGED_GYM_OR_COACH_RULES,
     CHANGED_SESSION_PURPOSE,
+    CHANGED_TRAINING_DAY,
     CHANGED_INTERVENING_SOURCE,
     CHANGED_LOAD_BASIS,
     CHANGED_SET_PRESCRIPTION,
@@ -204,6 +205,16 @@ object KotlinProgressionTimelineDomain {
             return rejected(KotlinTimelineReviewStatus.CHANGED_GYM_OR_COACH_RULES, ids, count)
         if (olderStored.journal.snapshot.purpose != latestStored.journal.snapshot.purpose)
             return rejected(KotlinTimelineReviewStatus.CHANGED_SESSION_PURPOSE, ids, count)
+        // Never compare Upper and Push simply because both share the same
+        // broad HYPERTROPHY session purpose. When the owner has not supplied
+        // a day index, refuse the cross-day inference instead of declaring
+        // a false weight increase. Changing the weekday under one unchanged
+        // program revision is also not comparable.
+        if (olderStored.journal.snapshot.dayIndex !=
+                latestStored.journal.snapshot.dayIndex ||
+            olderStored.journal.snapshot.calendarDay !=
+                latestStored.journal.snapshot.calendarDay)
+            return rejected(KotlinTimelineReviewStatus.CHANGED_TRAINING_DAY, ids, count)
 
         // Filtering by purpose cannot conceal a program, gym, athlete or
         // coaching-rules revision that occurred BETWEEN the matched

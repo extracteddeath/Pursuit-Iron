@@ -380,6 +380,9 @@ class KotlinProgressionTimelineDomainTest {
         val unscoped=KotlinProgressionTimelineDomain.review(complete)
         assertEquals(listOf("workout-4","workout-5"),
             unscoped.comparedWorkoutIds)
+        assertEquals(KotlinTimelineReviewStatus.CHANGED_TRAINING_DAY,
+            unscoped.status)
+        assertNull(unscoped.progression)
     }
 
     @Test fun daySelectionCannotHideMissingHistoryOrAnInterveningRevision() {

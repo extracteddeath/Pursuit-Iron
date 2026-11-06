@@ -41,7 +41,7 @@ internal object NativeFutureActivationSourcePlanDomain {
             current.athleteProfileId!=source.athleteId ||
             future.athleteProfileId!=source.athleteId ||
             source.revision!=accepted.sourceRevision ||
-            source.revision !in 1 until MAX_REVISION ||
+            source.revision<1 || source.revision>=MAX_REVISION ||
             accepted.draftRevision !in 1..MAX_REVISION ||
             accepted.blockId!=boundary.blockId ||
             accepted.cycleId!=boundary.cycleId ||

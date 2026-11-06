@@ -52,7 +52,9 @@ sealed interface NativeFutureApprovalPreview {
     data class Ready(
         val boundary:NativeFutureActivationReview.BoundaryReviewed,
         val fingerprint:String,
-        val expectedRecordRevision:Long
+        val expectedRecordRevision:Long,
+        /** Fully codable, review-only future source. No source write occurs. */
+        val sourcePlan:NativeFutureActivationSourcePlan
     ):NativeFutureApprovalPreview
     data class Rejected(val reason:NativeFutureApprovalRefusal):
         NativeFutureApprovalPreview
@@ -214,7 +216,7 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
     /** Must be called inside owner fence; never consumes UI-supplied evidence. */
     private fun evidence(
         ownerKey:String,cycleId:String,blockId:String
-    ):Pair<NativeFutureActivationApproval,NativeFutureActivationReview.BoundaryReviewed>? {
+    ):Triple<NativeFutureActivationApproval,NativeFutureActivationReview.BoundaryReviewed,NativeFutureActivationSourcePlan>? {
         val signed=owner(ownerKey)?:return null
         val future=(futureContexts.read(ownerKey,cycleId,blockId)
             as? NativeFutureBlockContextRead.Found)?.receipt ?:return null
@@ -244,6 +246,8 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
             reviewed.historyManifestRevision<1 ||
             reviewed.verifiedPriorSessions<reviewed.precedingWeeks)
             return null
+        val plan=NativeFutureActivationSourcePlanDomain.prepare(
+            source,future,reviewed)?:return null
         val scope=ByteArrayOutputStream()
         DataOutputStream(scope).use{out->
             out.writeInt(1)
@@ -259,12 +263,16 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
             out.writeInt(reviewed.firstWeek)
             out.writeInt(reviewed.precedingWeeks)
             out.writeInt(reviewed.verifiedPriorSessions)
+            // Bind explicit next source bytes to this athlete review.
+            // Source changes cannot retain an old approval fingerprint.
+            out.writeUTF(sha(
+                NativeKotlinCustomAuthoringSourceCodec.encode(plan.proposedSource)))
         }
         val fingerprint=sha(scope.toByteArray())
         return NativeFutureActivationApproval(ownerKey,signed.athleteId,
             cycleId,blockId,0L,future.draftRevision,source.revision,
             reviewed.historyManifestRevision,reviewed.firstWeek,
-            rights.revision,fingerprint) to reviewed
+            rights.revision,fingerprint).let {Triple(it,reviewed,plan)}
     }
     private fun stored(
         ownerKey:String,cycleId:String,blockId:String
@@ -295,11 +303,12 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
                 if(record!=null && record.athlete!=current.athleteId)
                     return@withOwnerTransaction NativeFutureApprovalPreview.Rejected(
                         NativeFutureApprovalRefusal.NOT_AUTHORIZED)
-                val (candidate,bound)=evidence(ownerKey,cycleId,blockId)
+                val (candidate,bound,plan)=evidence(ownerKey,cycleId,blockId)
                     ?:return@withOwnerTransaction NativeFutureApprovalPreview.Rejected(
                         NativeFutureApprovalRefusal.NOT_READY)
                 NativeFutureApprovalPreview.Ready(bound,
-                    candidate.reviewedFingerprint,record?.revision?:0L)
+                    candidate.reviewedFingerprint,record?.revision?:0L,
+                    plan)
             }
         }.getOrElse{NativeFutureApprovalPreview.Rejected(
             NativeFutureApprovalRefusal.STORAGE_UNAVAILABLE)}
@@ -329,7 +338,7 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
                 if((previous?.revision?:0L)!=expectedRevision)
                     return@withOwnerTransaction NativeFutureApprovalWrite.Rejected(
                         NativeFutureApprovalRefusal.REVISION_CONFLICT)
-                val (candidate,_)=evidence(ownerKey,cycleId,blockId)
+                val (candidate,_,_)=evidence(ownerKey,cycleId,blockId)
                     ?:return@withOwnerTransaction NativeFutureApprovalWrite.Rejected(
                         NativeFutureApprovalRefusal.NOT_READY)
                 if(candidate.reviewedFingerprint!=reviewedFingerprint)

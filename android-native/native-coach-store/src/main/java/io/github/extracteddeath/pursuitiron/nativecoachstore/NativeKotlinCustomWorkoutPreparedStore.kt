@@ -155,9 +155,12 @@ class NativeKotlinCustomWorkoutPreparedStore(
                     throw IOException("invalid prepared identity")
                 val authority=if(schema==1)
                     NativeCustomPreparationAuthority.CUSTOM_CYCLE
-                else NativeCustomPreparationAuthority.entries.firstOrNull{
-                    it.name==data.readUTF()
-                } ?:throw IOException("unrecognized preparation authority")
+                else {
+                    val authorityName=data.readUTF()
+                    NativeCustomPreparationAuthority.entries.firstOrNull{
+                        it.name==authorityName
+                    } ?:throw IOException("unrecognized preparation authority")
+                }
                 val sessionBytes=data.readInt()
                 if(sessionBytes !in 16..NativeKotlinCustomWorkoutSnapshotCodec.MAX_BYTES ||
                     sessionBytes>data.available())

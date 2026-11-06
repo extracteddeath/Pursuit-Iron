@@ -8,9 +8,10 @@ import java.util.Collections
  * Athlete-reviewed candidate acceptance for an EXISTING custom-cycle draft.
  *
  * The current gym/profile is the only source of authority in this slice.
- * A proposed future schedule requiring different athlete setup or a future
- * phase policy remains preview-only until those changes have their own
- * coordinated, versioned native approval. This writer never updates workout
+ * A future split/day-count change may be saved only as a NON-ISSUABLE
+ * athlete-reviewed draft, with a full prospective setup + policy audit.
+ * The matching future gym/source and separate cycle signoff must still be
+ * activated before a future workout can be issued. Never update workout
  * grants, signoffs, journals, historical observations or active sessions.
  *
  * Preview and acceptance both read and audit the exact full cycle under the
@@ -27,7 +28,9 @@ data class NativeAdaptiveCycleDraftCandidate(
     val proposedCycle:CustomTrainingCycle,
     val coaching:CustomCoachAuditInputs,
     val coachPermissions:CustomCycleCoachPermissions,
-    val expectedPermissionRevision:Long
+    val expectedPermissionRevision:Long,
+    /** Reviewed future-block context: a proposed schedule, NOT an active source. */
+    val prospective:ProspectiveBlockCoachingContext?=null
 )
 
 enum class NativeAdaptiveCycleDraftRefusal {
@@ -169,19 +172,25 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
             return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.UNRELATED_BLOCK_CHANGED)
 
-        // A future changed split / weekday map needs a separately reviewed
-        // source/policy update. Never persist it as if today's source were
-        // sufficient to authorize the new calendar.
-        if(original.split!=updated.split ||
-            original.days.map{it.weekday}!=updated.days.map{it.weekday})
+        // A changed future split/calendar is eligible ONLY as a DRAFT when
+        // accompanied by the specific reviewed prospective block context.
+        // Merely changing the caller-provided split is never sufficient.
+        val changedSchedule=original.split!=updated.split ||
+            original.days.map{it.weekday}!=updated.days.map{it.weekday}
+        if(changedSchedule && c.prospective==null)
             return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.FUTURE_PROFILE_REQUIRES_APPROVAL)
+        if(!changedSchedule && c.prospective!=null)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.INVALID_REQUEST)
         val comparison=runCatching{
             AdaptiveCycleOptionReviewDomain.review(
                 AdaptiveCycleOptionRequest(draft,c.targetBlockId,
                     authoring.setup,authoring.catalog,c.coaching,
                     c.coachPermissions,listOf(AdaptiveCycleOption(
-                        c.optionId,c.proposedCycle))))
+                        c.optionId,c.proposedCycle)),
+                    if(c.prospective==null)emptyMap()
+                    else mapOf(c.optionId to c.prospective)))
         }.getOrNull() ?:return NativeAdaptiveCycleDraftPreview.Rejected(
             NativeAdaptiveCycleDraftRefusal.COACH_REVIEW_UNRESOLVED)
         val review=comparison.evaluated.singleOrNull()
@@ -190,8 +199,14 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
         if(review.status==AdaptiveCycleOptionStatus.PERMISSION_REQUIRED)
             return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.PERMISSION_REQUIRED)
-        if(comparison.status!=AdaptiveCycleComparisonStatus.OPTIONS_COMPARED ||
-            review.status!=AdaptiveCycleOptionStatus.READY_FOR_REVIEW ||
+        val expectedStatus=if(changedSchedule)
+            AdaptiveCycleOptionStatus.PROSPECTIVE_REVIEW_REQUIRED
+            else AdaptiveCycleOptionStatus.READY_FOR_REVIEW
+        val expectedComparison=if(changedSchedule)
+            AdaptiveCycleComparisonStatus.PROSPECTIVE_OPTIONS_ONLY
+            else AdaptiveCycleComparisonStatus.OPTIONS_COMPARED
+        if(comparison.status!=expectedComparison ||
+            review.status!=expectedStatus ||
             review.transition?.status!=
                 CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW ||
             review.coachingAudit?.status!=
@@ -204,8 +219,21 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
             draft,authoring,c.coaching)
         val next=NativeCustomCycleSignoffFingerprint.calculate(
             c.proposedCycle,authoring,c.coaching)
+        // Bind ALL future setup facts, the full future authored policy
+        // (not just its revision), the future session overhead and every
+        // continuity ceiling. Any altered prospective offer invalidates a
+        // previously displayed approval fingerprint.
+        val future=c.prospective?.let {context->
+            val futureProfile=authoring.copy(setup=context.setup)
+            val policyInputs=CustomCoachAuditInputs(
+                mapOf(updated.phase to context.policy),
+                context.nonSetSecondsByWeekday,
+                c.coaching.continuityPolicy)
+            NativeCustomCycleSignoffFingerprint.calculate(
+                c.proposedCycle,futureProfile,policyInputs)
+        } ?: "no-prospective-context"
         val scope=listOf(c.ownerKey,c.cycleId,c.targetBlockId,c.optionId,
-            prior,next,c.expectedPermissionRevision.toString(),
+            prior,next,future,c.expectedPermissionRevision.toString(),
             rights.allowedKinds.sortedBy{it.name}.joinToString(",")).joinToString("\u0000")
         val sha=MessageDigest.getInstance("SHA-256")
             .digest(scope.toByteArray(Charsets.UTF_8))

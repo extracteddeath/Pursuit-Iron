@@ -1912,4 +1912,55 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
 
+
+    @Test fun acceptedRepAmendmentCannotSurviveRevokedOrReconfirmedCycleConsent() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        finishRealActivatedSession(f,5,13)
+        val nextId="future-rep-revocation-test"
+        val inputs=futureInputs()
+        val candidate=f.repApprovals.preview("owner-1",nextId,inputs,
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+            as NativeCustomNextRepPreview.Ready
+        assertTrue(f.repApprovals.accept("owner-1",nextId,inputs,
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"),
+            candidate.receipt.fingerprint,
+            candidate.receipt.historyRevision,
+            candidate.receipt.consentRevision,
+            candidate.receipt.setKeys,candidate.receipt.nextMinimumReps,true)
+            is NativeCustomNextRepWrite.Accepted)
+        val original=f.repApprovals.readCurrent("owner-1",nextId,
+            inputs,6,1)
+        assertTrue(original.toString(),original is NativeCustomNextRepRead.Current)
+        val signed=f.signoff.read("owner-1",inputs)
+            as NativeActivatedSignoffRead.Found
+        assertEquals(NativeActivatedSignoffWrite.Revoked(
+            signed.receipt.recordRevision+1),
+            f.signoff.revoke("owner-1",signed.receipt.recordRevision))
+        assertEquals(NativeCustomNextRepRead.Rejected(
+            NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY),
+            f.repApprovals.readCurrent("owner-1",nextId,inputs,6,1))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            f.prepared.prepareActivated("owner-1",nextId,"cycle-1",
+                6,1,inputs,f.signoff,f.activation,f.repApprovals))
+        val fingerprint=(f.activation.reviewActivatedCycle("owner-1",inputs)
+            as NativeFutureActivatedCycleReview.Ready).reviewFingerprint
+        assertTrue(f.signoff.confirm("owner-1",
+            signed.receipt.recordRevision+1,fingerprint,inputs,true)
+            is NativeActivatedSignoffWrite.Committed)
+        // Fresh signoff does NOT resurrect a previous rep-acceptance receipt.
+        assertEquals(NativeCustomNextRepRead.Rejected(
+            NativeCustomNextRepRefusal.STALE_CONSENT_OR_HISTORY),
+            f.repApprovals.readCurrent("owner-1",nextId,inputs,6,1))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            f.prepared.prepareActivated("owner-1",nextId,"cycle-1",
+                6,1,inputs,f.signoff,f.activation,f.repApprovals))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.NOT_ISSUED),
+            f.issuer.open("owner-1",nextId))
+    }
+
+
 }

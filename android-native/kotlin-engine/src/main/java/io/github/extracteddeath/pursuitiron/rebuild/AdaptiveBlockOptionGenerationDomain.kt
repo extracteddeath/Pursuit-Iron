@@ -26,15 +26,18 @@ data class AdaptiveBlockGenerationRequest(
 data class AdaptiveBlockGenerationAlternative(
     val optionId:String,
     val generation:AthleteProgramGenerationRequest,
-    val prescriptions:List<ExercisePrescriptionPolicy>
+    val prescriptions:List<ExercisePrescriptionPolicy>,
+    /** Requires a separately reviewed future profile and block policy. */
+    val futureBlockContext:ProspectiveBlockCoachingContext?=null
 )
 enum class AdaptiveBlockGenerationStatus {
-    SOURCE_UNRESOLVED, OPTIONS_EVALUATED, NO_FEASIBLE_OPTION
+    SOURCE_UNRESOLVED, OPTIONS_EVALUATED, NO_FEASIBLE_OPTION,
+    PROSPECTIVE_OPTIONS_ONLY
 }
 enum class AdaptiveBlockGenerationRefusal {
     DIFFERENT_ATHLETE_OR_GYM,
     FUTURE_SCHEDULE_REQUIRES_APPROVAL,
-    MISSING_PHASE_POLICY
+    INVALID_PROSPECTIVE_CONTEXT, MISSING_PHASE_POLICY
 }
 data class AdaptiveBlockGenerationOutcome(
     val optionId:String,
@@ -75,6 +78,7 @@ object AdaptiveBlockOptionGenerationDomain {
             source.goal==request.approvedCycle.goal
         val assessments=mutableListOf<AdaptiveBlockGenerationOutcome>()
         val candidates=mutableListOf<AdaptiveCycleOption>()
+        val prospective=mutableMapOf<String,ProspectiveBlockCoachingContext>()
         // Always compare keeping a fully audited cycle when requested.
         // A valid baseline gets the same policy and full-cycle checks as
         // every changed block. No guess about a new training frequency.
@@ -84,6 +88,14 @@ object AdaptiveBlockOptionGenerationDomain {
                     revision=request.approvedCycle.revision+1))
         for(option in request.alternatives) {
             val setup=option.generation.setup.reviewed
+            val context=option.futureBlockContext
+            val changedSchedule=source!=null && setup!=null && (
+                setup.trainingWeekdays!=source.trainingWeekdays ||
+                setup.split!=source.split ||
+                setup.lockedTrainingDays!=source.lockedTrainingDays ||
+                setup.hardTrainingDays!=source.hardTrainingDays ||
+                setup.longTrainingDays!=source.longTrainingDays ||
+                setup.declaredRestDays!=source.declaredRestDays)
             val refusal=when {
                 !sameSource || setup==null ||
                     !option.generation.setup.mayReviewProgramCandidate ||
@@ -98,15 +110,17 @@ object AdaptiveBlockOptionGenerationDomain {
                         longTrainingDays=source.longTrainingDays,
                         declaredRestDays=source.declaredRestDays)!=source ->
                     AdaptiveBlockGenerationRefusal.DIFFERENT_ATHLETE_OR_GYM
-                setup.trainingWeekdays!=source.trainingWeekdays ||
-                    setup.split!=source.split ||
-                    setup.lockedTrainingDays!=source.lockedTrainingDays ||
-                    setup.hardTrainingDays!=source.hardTrainingDays ||
-                    setup.longTrainingDays!=source.longTrainingDays ||
-                    setup.declaredRestDays!=source.declaredRestDays ->
+                changedSchedule && context==null ->
                     AdaptiveBlockGenerationRefusal.FUTURE_SCHEDULE_REQUIRES_APPROVAL
-                request.coaching.policiesByPhase[option.generation.phase]!=
-                    option.generation.policy ->
+                context!=null && (
+                    context.setup!=option.generation.setup ||
+                    context.policy!=option.generation.policy ||
+                    context.nonSetSecondsByWeekday!=
+                        option.generation.nonSetSecondsByWeekday) ->
+                    AdaptiveBlockGenerationRefusal.INVALID_PROSPECTIVE_CONTEXT
+                context==null &&
+                    request.coaching.policiesByPhase[option.generation.phase]!=
+                        option.generation.policy ->
                     AdaptiveBlockGenerationRefusal.MISSING_PHASE_POLICY
                 else -> null
             }
@@ -115,8 +129,10 @@ object AdaptiveBlockOptionGenerationDomain {
                     GeneratedAdaptiveBlockRequest(request.approvedCycle,
                         request.targetBlockId,option.optionId,
                         option.generation,option.prescriptions))
-            if(generated?.status==GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW)
+            if(generated?.status==GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW) {
                 candidates+=checkNotNull(generated.proposedOption)
+                if(context!=null)prospective[option.optionId]=context
+            }
             assessments+=AdaptiveBlockGenerationOutcome(
                 option.optionId,generated,refusal)
         }
@@ -124,12 +140,15 @@ object AdaptiveBlockOptionGenerationDomain {
             AdaptiveCycleOptionRequest(request.approvedCycle,
                 request.targetBlockId,request.athleteSetup,
                 request.catalog,request.coaching,request.permissions,
-                Collections.unmodifiableList(candidates)))
+                Collections.unmodifiableList(candidates),
+                Collections.unmodifiableMap(prospective)))
         val status=when(comparison.status) {
             AdaptiveCycleComparisonStatus.SOURCE_UNRESOLVED ->
                 AdaptiveBlockGenerationStatus.SOURCE_UNRESOLVED
             AdaptiveCycleComparisonStatus.NO_FEASIBLE_ALTERNATIVE ->
                 AdaptiveBlockGenerationStatus.NO_FEASIBLE_OPTION
+            AdaptiveCycleComparisonStatus.PROSPECTIVE_OPTIONS_ONLY ->
+                AdaptiveBlockGenerationStatus.PROSPECTIVE_OPTIONS_ONLY
             AdaptiveCycleComparisonStatus.OPTIONS_COMPARED ->
                 AdaptiveBlockGenerationStatus.OPTIONS_EVALUATED
         }

@@ -1631,6 +1631,23 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(recorded.let{(it as NativeCustomJournalResult.Durable).issued},
             (activatedIssuer(fixture,ledger).open("owner-1",workoutId)
                 as NativeCustomJournalResult.Durable).issued)
+        // Same existing redo-backed Finish transaction owns completion; no
+        // special future-block history writer or unindexed Finish shortcut.
+        val completions=NativeKotlinCustomHistoryTransaction(
+            ledger,issuer,fence,identity)
+        val finish=CustomWorkoutJournalOperation.Finish("future-finish",1)
+        val completed=completions.complete("owner-1","athlete-1",
+            workoutId,finish)
+        assertTrue(completed.toString(),
+            completed is NativeCustomFinishResult.Committed)
+        val receipt=completed as NativeCustomFinishResult.Committed
+        assertEquals(12,receipt.evidence.visits.single().actual?.reps)
+        assertEquals(1,(ledger.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.completions.size)
+        assertEquals(receipt.copy(replayed=true),
+            NativeKotlinCustomHistoryTransaction(
+                ledger,activatedIssuer(fixture,ledger),fence,identity)
+                .complete("owner-1","athlete-1",workoutId,finish))
         assertEquals(NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT),
             issuer.issue("owner-1",workoutId,"cycle-1",4,1,inputs))

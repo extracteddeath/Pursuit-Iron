@@ -657,11 +657,26 @@ class NativeKotlinCustomWorkoutPreparedStore(
             if(existing is NativeCustomPreparedRead.Rejected)
                 return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                     existing.reason)
-            if(existing is NativeCustomPreparedRead.Found)
-                return@withOwnerTransaction if(existing.workout==planned)
-                    NativeCustomPrepareResult.Prepared(existing.workout,true)
+            if(existing is NativeCustomPreparedRead.Found) {
+                val stored=existing.workout
+                // A version-5 athlete reset is intentionally sticky: an old
+                // still-accepted suggestion must never override it on an
+                // idempotent re-entry to the same future workout.
+                val acceptedReset=stored.resetToAuthored &&
+                    stored.authority==
+                        NativeCustomPreparationAuthority.ACTIVATED_BLOCK &&
+                    stored.repApprovalFingerprint==null &&
+                    stored.loadApprovalFingerprint==null &&
+                    stored.snapshot==session &&
+                    stored.consentRevision==consent.recordRevision &&
+                    stored.consentFingerprint==consent.reviewFingerprint &&
+                    stored.ownerKey==ownerKey &&
+                    stored.athleteId==owner.athleteId
+                return@withOwnerTransaction if(stored==planned || acceptedReset)
+                    NativeCustomPrepareResult.Prepared(stored,true)
                 else NativeCustomPrepareResult.Rejected(
                     NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
+            }
             // Multiple IDs must NEVER prepare the same cycle/week/weekday.
             // Otherwise the athlete could log two contradictory versions of
             // one session and pollute next-session progression history.

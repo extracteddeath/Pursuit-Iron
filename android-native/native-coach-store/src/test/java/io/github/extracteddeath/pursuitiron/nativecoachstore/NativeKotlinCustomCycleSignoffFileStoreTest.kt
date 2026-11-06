@@ -2360,6 +2360,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         // but cannot reappear after explicit reset of the prepared snapshot.
         assertTrue(f.repApprovals.readCurrent(key,workout,inputs,6,1)
             is NativeCustomNextRepRead.Current)
+        assertEquals(NativeCustomPrepareResult.Prepared(reset,true),
+            f.prepared.prepareActivated(key,workout,"cycle-1",6,1,
+                inputs,f.signoff,f.activation,f.repApprovals))
         val issued=f.issuer.issueActivated(key,workout,"cycle-1",6,1,
             inputs,f.signoff,f.activation,f.repApprovals)
         assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
@@ -2430,6 +2433,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         // A load receipt can still be current. It must not override a reset.
         assertTrue(approvals.readCurrent(key,workout,inputs,6,1)
             is NativeCustomLoadRead.Current)
+        assertEquals(NativeCustomPrepareResult.Prepared(original,true),
+            f.prepared.prepareActivated(key,workout,"cycle-1",6,1,
+                inputs,f.signoff,f.activation,f.repApprovals,approvals))
         assertTrue(f.issuer.issueActivated(key,workout,"cycle-1",6,1,
             inputs,f.signoff,f.activation,f.repApprovals,approvals)
             is NativeCustomJournalResult.Durable)

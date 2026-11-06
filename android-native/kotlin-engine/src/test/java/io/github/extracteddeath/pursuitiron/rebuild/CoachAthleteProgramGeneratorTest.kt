@@ -297,6 +297,76 @@ class CoachAthleteProgramGeneratorTest {
     }
 
 
+    @Test fun qualityRankingPrefersActualMavDoseBeforeCosmeticPurposeSpacing() {
+        val generated=CoachAthleteProgramGenerator.generate(request())
+        assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
+            generated.status)
+        val draft=checkNotNull(generated.candidate?.catalogReview?.draft)
+        val weekdays=listOf(0,2,4)
+        val focuses=List(3){ComposerFocus.FULL_BODY}
+        val ordered=listOf(ComposerSessionPurpose.HYPERTROPHY,
+            ComposerSessionPurpose.GENERAL_PREPARATION,
+            ComposerSessionPurpose.HYPERTROPHY)
+        val repetitive=List(3){ComposerSessionPurpose.HYPERTROPHY}
+        fun forceGap(gap:String)=draft.copy(audit=draft.audit.copy(
+            muscles=draft.audit.muscles.mapValues {(_,finding)->
+                finding.copy(gapToMav=n(gap))
+            }))
+        val delivered=CoachAthleteProgramGenerator.qualityScore(
+            forceGap("0"),focuses,repetitive,weekdays)
+        val underdosed=CoachAthleteProgramGenerator.qualityScore(
+            forceGap("1"),focuses,ordered,weekdays)
+        assertEquals(6,delivered.size)
+        assertEquals(0L,delivered[0])
+        assertEquals(0L,delivered[1])
+        assertTrue(underdosed[1]>delivered[1])
+        // Purpose spacing no longer hides an otherwise materially better
+        // week that delivers the athlete's reviewed phase MAV.
+        assertTrue(delivered[1]<underdosed[1])
+        assertEquals(delivered,CoachAthleteProgramGenerator.qualityScore(
+            forceGap("0"),focuses,repetitive,weekdays))
+    }
+
+    @Test fun actualAdjacentRepeatStillOutranksSlightlyBetterSoftDose() {
+        val generated=CoachAthleteProgramGenerator.generate(request())
+        assertEquals(AthleteGenerationStatus.GENERATED_FOR_REVIEW,
+            generated.status)
+        val draft=checkNotNull(generated.candidate?.catalogReview?.draft)
+        val days=listOf(0,1,4)
+        val focus=listOf(ComposerFocus.UPPER,
+            ComposerFocus.LOWER,ComposerFocus.UPPER)
+        val purpose=List(3){ComposerSessionPurpose.HYPERTROPHY}
+        val spacedVisits=listOf(
+            ComposerVisit(0,"bench",ComposerPattern.HORIZONTAL_PRESS,2),
+            ComposerVisit(2,"bench",ComposerPattern.HORIZONTAL_PRESS,2))
+        val adjacentVisits=spacedVisits.mapIndexed {index,visit->
+            if(index==1)visit.copy(dayIndex=1)else visit
+        }
+        val safe=draft.copy(visits=spacedVisits)
+        val closerToMav=draft.copy(visits=adjacentVisits,
+            audit=draft.audit.copy(muscles=draft.audit.muscles.mapValues {
+                (_,finding)->finding.copy(gapToMav=n("0"))
+            }))
+        val good=CoachAthleteProgramGenerator.qualityScore(
+            safe,focus,purpose,days)
+        val adjacent=CoachAthleteProgramGenerator.qualityScore(
+            closerToMav,focus,purpose,days)
+        assertEquals(0L,good[0])
+        assertTrue(adjacent[0]>good[0])
+        // Avoid adjacent same-exercise days before optimizing soft MAV gap.
+        assertTrue(good[0]<adjacent[0])
+        assertEquals(1L,CoachAthleteProgramGenerator.adjacentRepeatCount(
+            adjacentVisits,focus,days))
+        assertEquals(0L,CoachAthleteProgramGenerator.adjacentRepeatCount(
+            spacedVisits,focus,days))
+        // Sunday -> Monday is also adjacent in a repeating cycle.
+        assertEquals(1L,CoachAthleteProgramGenerator.adjacentRepeatCount(
+            listOf(ComposerVisit(0,"bench",ComposerPattern.HORIZONTAL_PRESS,2),
+                ComposerVisit(1,"bench",ComposerPattern.HORIZONTAL_PRESS,2)),
+            listOf(ComposerFocus.UPPER,ComposerFocus.LOWER),
+            listOf(6,0)))
+    }
+
     @Test fun repeatLiftRecoveryRankingRecognizesWeekBoundaryAndSeparateExercises() {
         val calendar=listOf(0,2,4,6)
         fun lift(day:Int,id:String="bench")=ComposerVisit(

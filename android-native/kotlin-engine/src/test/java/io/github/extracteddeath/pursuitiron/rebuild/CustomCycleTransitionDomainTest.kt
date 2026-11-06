@@ -141,11 +141,12 @@ class CustomCycleTransitionDomainTest {
         assertEquals(setOf(
             CustomCycleChangeKind.SET_COUNT,CustomCycleChangeKind.REPS,
             CustomCycleChangeKind.RIR,CustomCycleChangeKind.REST,
-            CustomCycleChangeKind.AMPLIFIERS),unchecked.blockedKinds)
+            CustomCycleChangeKind.AMPLIFIERS,CustomCycleChangeKind.LOADS),
+            unchecked.blockedKinds)
         val reviewed=transition(source,changed,
             CustomCycleCoachPermissions(adaptWeekOverrides=true,
                 adaptSetCount=true,adaptReps=true,adaptRir=true,
-                adaptRest=true,adaptAmplifiers=true))
+                adaptRest=true,adaptAmplifiers=true,adaptLoads=true))
         assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
             reviewed.status)
         assertFalse(reviewed.mayIssueWorkout)

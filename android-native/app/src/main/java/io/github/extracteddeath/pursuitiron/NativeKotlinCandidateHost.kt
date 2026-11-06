@@ -860,6 +860,42 @@ internal class NativeKotlinCandidateHost(context:Context) {
             shownNextMinimumReps,athleteConfirmed)
     }
 
+    /**
+     * Display an EXACT, original authored workout for explicit athlete
+     * reset of a prepared but NOT issued rep/load coaching amendment.
+     * A reset never edits a started workout or a completed training record.
+     */
+    fun previewResetPreparedFutureWorkout(
+        workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs
+    ):NativePreparedManualResetPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativePreparedManualResetPreview.Rejected(
+                NativePreparedManualResetRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.previewManualReset(owner.ownerKey,workoutId,
+            cycleId,absoluteWeek,weekday,inputs,activatedCycleSignoffs,
+            futureActivationCommit,customIssuedStore,coachSettings)
+    }
+
+    /**
+     * Atomic, revision-checked and non-replayable manual choice. A saved
+     * old coach approval cannot resurrect after the athlete resets targets.
+     */
+    fun acceptResetPreparedFutureWorkout(
+        workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs,expectedPreparedFingerprint:String,
+        expectedSettingsRevision:Long,athleteConfirmed:Boolean
+    ):NativePreparedManualResetWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativePreparedManualResetWrite.Rejected(
+                NativePreparedManualResetRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.acceptManualReset(owner.ownerKey,workoutId,
+            cycleId,absoluteWeek,weekday,inputs,activatedCycleSignoffs,
+            futureActivationCommit,customIssuedStore,coachSettings,
+            expectedPreparedFingerprint,expectedSettingsRevision,
+            athleteConfirmed)
+    }
+
     fun prepareActivatedFutureWorkout(
         workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs

@@ -616,6 +616,22 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeFutureCommitRefusal.NOT_AUTHORIZED)
         return futureActivationCommit.read(owner.ownerKey)
     }
+    /**
+     * Full-cycle coach audit after source activation. Completed historical
+     * blocks use the preserved ORIGINAL athlete setup; only the accepted
+     * target block uses its prospective policy and new schedule.
+     * Review status alone never authorizes fresh workout issuance.
+     */
+    fun reviewActivatedFutureCycle(
+        coachingInputs:CustomCoachAuditInputs
+    ):NativeFutureActivatedCycleReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureActivatedCycleReview.Rejected(
+                NativeFutureCommitRefusal.NOT_AUTHORIZED)
+        return futureActivationCommit.reviewActivatedCycle(owner.ownerKey,
+            coachingInputs)
+    }
+
     fun abortFutureBlockActivationBeforeSourceChange(
         approvalRevision:Long,fingerprint:String,athleteConfirmed:Boolean
     ):NativeFutureCommitReview {

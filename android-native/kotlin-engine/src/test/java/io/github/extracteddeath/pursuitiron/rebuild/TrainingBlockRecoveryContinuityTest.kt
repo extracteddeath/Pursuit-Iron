@@ -368,6 +368,9 @@ class TrainingBlockRecoveryContinuityTest {
                 days=block.days.map {day->day.copy(
                     slots=day.slots.filter {
                         day.weekday==0 || it.exerciseId!="row"
+                    }.map {slot ->
+                        if(slot.exerciseId=="row")
+                            slot.copy(sets=slot.sets.take(1)) else slot
                     })
                 })
         })
@@ -375,6 +378,14 @@ class TrainingBlockRecoveryContinuityTest {
         assertEquals(AdaptiveStrengthVolumeRepairStatus.SOURCE_UNRESOLVED,
             refused.status)
         assertNull(refused.proposedOption)
+    }
+
+    @Test fun repairDoesNotRelaxAlreadyAuthoredSetCeilings() {
+        val refused=autoRepair(cap=1)
+        assertEquals(AdaptiveStrengthVolumeRepairStatus.PRESCRIPTION_UNSUPPORTED,
+            refused.status)
+        assertNull(refused.proposedOption)
+        assertEquals(0,refused.addedWorkingSets)
     }
 
     @Test fun generatorPreservesWeeklyOverridesAndUnknownEffort() {

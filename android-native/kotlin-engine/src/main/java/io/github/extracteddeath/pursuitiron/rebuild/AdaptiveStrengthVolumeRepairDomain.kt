@@ -106,6 +106,7 @@ object AdaptiveStrengthVolumeRepairDomain {
             block.days.any {day->day.slots.any {slot->
                 val work=slot.sets.filter {it.type==DraftSetType.WORKING}
                 work.isEmpty() || work.size!=slot.sets.size ||
+                    work.size>input.maximumWorkingSetsPerSlot ||
                     work.any {it.amplifier!=null || it.targetRir==null} ||
                     work.any {it!=work.first()}
             }})

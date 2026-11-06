@@ -406,14 +406,18 @@ class NativeKotlinCustomWorkoutJournalFileStore(
             // Independently redo the athlete's rep amendment from verified
             // history. A corrupt/stale receipt must never silently fall back
             // to an unchanged or forged prepared snapshot.
-            val repApproval=repApprovals?.readCurrent(ownerKey,workoutId,
-                inputs,absoluteWeek,weekday) ?:NativeCustomNextRepRead.Missing
+            val repApproval=NativeKotlinStaleWorkoutAdvicePolicy.rep(
+                repApprovals?.readCurrent(ownerKey,workoutId,
+                    inputs,absoluteWeek,weekday)
+                    ?:NativeCustomNextRepRead.Missing)
             if(repApproval is NativeCustomNextRepRead.Rejected)
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)
             val amended=repApproval as? NativeCustomNextRepRead.Current
-            val loadRead=loadApprovals?.readCurrent(ownerKey,workoutId,
-                inputs,absoluteWeek,weekday) ?:NativeCustomLoadRead.Missing
+            val loadRead=NativeKotlinStaleWorkoutAdvicePolicy.load(
+                loadApprovals?.readCurrent(ownerKey,workoutId,
+                    inputs,absoluteWeek,weekday)
+                    ?:NativeCustomLoadRead.Missing)
             if(loadRead is NativeCustomLoadRead.Rejected ||
                 (amended!=null && loadRead is NativeCustomLoadRead.Current))
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(

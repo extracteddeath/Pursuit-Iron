@@ -228,6 +228,7 @@ class NativeKotlinCustomNextLoadApprovalFileStore(
             out.writeUTF(workoutId);out.writeUTF(slot)
             out.writeLong(reviewed.historyRevision)
             out.writeLong(reviewed.approvedConsentRevision)
+            out.writeLong(reviewed.assistanceRevision)
             out.writeUTF(consent.reviewFingerprint)
             out.writeUTF(readiness.name);out.writeBoolean(restricted)
             out.writeUTF(norm(limit).toPlainString())

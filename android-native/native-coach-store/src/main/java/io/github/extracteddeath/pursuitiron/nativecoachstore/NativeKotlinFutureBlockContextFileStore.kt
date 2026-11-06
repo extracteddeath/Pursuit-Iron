@@ -139,6 +139,30 @@ internal object NativeFutureBlockContextCodec {
             athleteRevision,goal,experience,split,phase,days,baseline,
             selected,purposes,lifts)
     }
+    /**
+     * Exact content binding for the later SOURCE activation consent.
+     * A saved future receipt can keep the same author-facing review label
+     * while a phase policy, muscle target or day overhead changes. Those
+     * bytes must still stale prior activation approvals.
+     */
+    internal fun coachingContentFingerprint(
+        context:ProspectiveBlockCoachingContext
+    ):String {
+        val raw=ByteArrayOutputStream()
+        DataOutputStream(raw).use{out->
+            out.writeInt(1)
+            out.policy(context.policy)
+            out.writeInt(context.nonSetSecondsByWeekday.size)
+            context.nonSetSecondsByWeekday.toSortedMap().forEach{(day,seconds)->
+                out.writeInt(day);out.writeInt(seconds)
+            }
+        }
+        return MessageDigest.getInstance("SHA-256")
+            .digest(raw.toByteArray()).joinToString("") {
+                "%02x".format(it.toInt() and 255)
+            }
+    }
+
     fun encode(record:NativeFutureBlockRecord,baseSource:NativeCustomAuthoringSnapshot):ByteArray {
         val r=record.receipt
         require(sha.matches(record.draftSha)&&sha.matches(record.sourceSha) &&

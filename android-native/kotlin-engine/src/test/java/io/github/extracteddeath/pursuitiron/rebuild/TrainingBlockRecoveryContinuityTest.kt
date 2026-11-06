@@ -67,10 +67,10 @@ class TrainingBlockRecoveryContinuityTest {
             })
     }
 
-    private fun cycle(interruption:CustomBlockPurpose=
+    private fun cycle(interruptedBy:CustomBlockPurpose=
         CustomBlockPurpose.RECOVERY)=
         original().copy(blocks=listOf(
-            hypertrophy(),interruption(interruption),strength()))
+            hypertrophy(),interruption(interruptedBy),strength()))
 
     private fun coaching(
         limit:CustomCoachVolumeContinuityPolicy?=null

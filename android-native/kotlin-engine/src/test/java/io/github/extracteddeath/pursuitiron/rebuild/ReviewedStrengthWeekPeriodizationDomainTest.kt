@@ -16,10 +16,12 @@ class ReviewedStrengthWeekPeriodizationDomainTest {
                             ComposerSessionPurpose.STRENGTH_SKILL
                             else ComposerSessionPurpose.GENERAL_PREPARATION,
                         slots=day.slots.map {slot->
-                            slot.copy(sets=slot.sets.map {set->
-                                set.copy(reps=RepBand(4,6),targetRir=3,
-                                    restSeconds=150)
-                            })
+                            slot.copy(
+                                pinned=index<2 && slot.exerciseId=="bench",
+                                sets=slot.sets.map {set->
+                                    set.copy(reps=RepBand(4,6),targetRir=3,
+                                        restSeconds=150)
+                                })
                         })
                 })
         })

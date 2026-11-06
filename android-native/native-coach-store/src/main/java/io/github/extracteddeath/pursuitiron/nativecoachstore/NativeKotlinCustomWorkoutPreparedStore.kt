@@ -182,7 +182,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 val loadProof=if(schema==4)data.readUTF() else null
                 if((repProof!=null || loadProof!=null) &&
                     (authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
-                        !(fingerprint.matches(repProof ?: loadProof))))
+                        !(fingerprint.matches(checkNotNull(repProof ?: loadProof)))))
                     throw IOException("invalid amended-preparation proof")
                 val sessionBytes=data.readInt()
                 if(sessionBytes !in 16..NativeKotlinCustomWorkoutSnapshotCodec.MAX_BYTES ||

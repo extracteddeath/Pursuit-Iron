@@ -283,4 +283,93 @@ class NativeKotlinWorkoutCoordinatorTest {
             coordinator(auth).append("owner-1","session-1",
                 KotlinJournalOperation.Finish("finish",0)))
     }
+
+    @Test fun acceptedBackoffRepTargetsCanIssueOnlyFromFullReverifiedSnapshot() {
+        val reviewedPolicies=policies().map {p ->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(warmups=emptyList(),
+                    backoffReps=p.workingReps,backoffRir=p.targetRir)
+            else p
+        }
+        val regular=approval().copy(policies=reviewedPolicies)
+        val next=KotlinWorkoutSnapshotRequest(source,source,
+            regular.grant,regular.program,regular.policies)
+        val baseline=(KotlinWorkoutSnapshotDomain.stage(next)
+            as KotlinWorkoutSnapshotResult.Staged).snapshot
+        val working=baseline.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy{it.ordinal}
+        assertTrue(working.size>=2)
+        assertEquals(listOf(n("30"),n("30"),n("25")),
+            working.map{(it.load as DraftSetLoad.Verified).value})
+        val band=working.first().reps
+        val history=ProgressionWorkoutEvidence(
+            "prior-finished","db-press",LoadUnit.LB,band,working.size,
+            working.mapIndexed{i,set ->
+                val actual=(set.load as DraftSetLoad.Verified).value
+                WorkingSetFact(i,SetOutcome.COMPLETED,actual,
+                    if(i==working.lastIndex)band.minimum
+                        else band.minimum+1,
+                    if(i==working.lastIndex)4 else 3,
+                    actual,set.targetRir)
+            })
+        val proposed=KotlinAdaptiveSetPrescriptionDomain.draft(
+            AdaptiveSetPrescriptionRequest(next,source,history,
+                7,7,CoachReadiness.NORMAL,false))
+        assertTrue(proposed.toString(),
+            proposed is AdaptiveSetPrescriptionResult.Candidate)
+        val candidate=proposed as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals(working.last().setKey,candidate.editedSetKey)
+        assertEquals(working.size,candidate.newRepTargets.size)
+        val accepted=regular.copy(acceptedRepTargets=NativeKotlinAcceptedRepTargets(
+            "prior-finished",7,"db-press",candidate.editedSetKey,
+            candidate.observedReps,candidate.newRepTargets,
+            CoachReadiness.NORMAL))
+        val authority=FakeAuthority(accepted)
+        val withoutVerifier=coordinator(authority).issue("owner-1","session-1")
+        assertEquals(NativeKotlinIssueResult.Rejected(
+            NativeKotlinIssueRefusal.WORKOUT_UNRESOLVED,
+            KotlinSnapshotRejection.UNVERIFIED_TARGET),
+            withoutVerifier)
+        // A dishonest verifier could not change loading or other exercises:
+        // only the exactly rederived individualized REP fields are allowed.
+        val fakeLoad=candidate.workout.copy(
+            targets=candidate.workout.targets.map {set ->
+                if(set.setKey==working.last().setKey)
+                    set.copy(load=DraftSetLoad.Verified(
+                        LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,n("30")))
+                else set
+            })
+        val altered=NativeKotlinWorkoutCoordinator(
+            KotlinNativeJournalFileStore(temporary.root.toPath()),
+            authority,fence(),NativeKotlinAcceptedRepSnapshotVerifier { _,_->
+                fakeLoad
+            }).issue("owner-1","session-1")
+        assertEquals(NativeKotlinIssueResult.Rejected(
+            NativeKotlinIssueRefusal.WORKOUT_UNRESOLVED,
+            KotlinSnapshotRejection.UNVERIFIED_TARGET),altered)
+        val service=NativeKotlinWorkoutCoordinator(
+            KotlinNativeJournalFileStore(temporary.root.toPath()),
+            authority,fence(),NativeKotlinAcceptedRepSnapshotVerifier {owner,proof->
+                if(owner=="owner-1" && proof==accepted)candidate.workout else null
+            })
+        val committed=issued(service.issue("owner-1","session-1"))
+        val realSets=committed.journal.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy {it.ordinal}
+        assertEquals(listOf(n("30"),n("30"),n("25")),
+            realSets.map{(it.load as DraftSetLoad.Verified).value})
+        assertEquals(candidate.newRepTargets,
+            realSets.map{it.reps.minimum})
+        assertTrue(realSets.all{it.reps.minimum==it.reps.maximum})
+        assertEquals(baseline.targets.filter{it.exerciseId=="db-row"},
+            committed.journal.snapshot.targets.filter{it.exerciseId=="db-row"})
+        val reopened=NativeKotlinWorkoutCoordinator(
+            KotlinNativeJournalFileStore(temporary.root.toPath()),
+            authority,fence())
+        assertEquals(committed.journal,durable(
+            reopened.open("owner-1","session-1")).journal)
+    }
+
 }

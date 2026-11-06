@@ -396,15 +396,18 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
             reps=listOf(14,13,12),rir=listOf(3,3,4),
             actualLoads=listOf("30","30","25"),
             issuedLoads=listOf("30","30","25"))
-        for(p in listOf(
-            matchingBackoffPolicy(backoffReps=RepBand(12,15)),
-            matchingBackoffPolicy(backoffRir=1))) {
-            val denied=KotlinAdaptiveSetPrescriptionDomain.draft(
-                request(previous=correct,next=stagedRequest(p=p)))
-                    as AdaptiveSetPrescriptionResult.Rejected
-            assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
-                denied.reason)
-        }
+        val differentReps=KotlinAdaptiveSetPrescriptionDomain.draft(
+            request(previous=correct,next=stagedRequest(
+                p=matchingBackoffPolicy(backoffReps=RepBand(12,15)))))
+            as AdaptiveSetPrescriptionResult.Rejected
+        assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
+            differentReps.reason)
+        val differentEffort=KotlinAdaptiveSetPrescriptionDomain.draft(
+            request(previous=correct,next=stagedRequest(
+                p=matchingBackoffPolicy(backoffRir=1))))
+            as AdaptiveSetPrescriptionResult.Rejected
+        assertEquals(AdaptiveSetPrescriptionRefusal.UNSUPPORTED_SET_SCHEME,
+            differentEffort.reason)
         val changed=correct.copy(observations=correct.observations.mapIndexed{i,row->
             if(i==2) row.copy(actualLoad=n("30")) else row
         })

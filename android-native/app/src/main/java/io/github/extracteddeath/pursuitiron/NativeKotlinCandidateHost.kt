@@ -80,6 +80,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val futureActivationCommit=NativeKotlinFutureActivationCommitTransaction(
         root,revisionFence,localAthlete,authoringSourceStore,customDraftStore,
         futureBlockContexts,futureActivationApproval,futureActivationHandoff)
+    private val activatedCycleSignoffs=NativeKotlinActivatedCycleSignoffFileStore(
+        root,revisionFence,localAthlete,futureActivationCommit)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)
@@ -645,6 +647,40 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
         return futureActivationCommit.previewActivatedWorkout(
             owner.ownerKey,coachingInputs,absoluteWeek,weekday)
+    }
+
+    /**
+     * Separate, durable athlete review of the activated cycle. Signoff
+     * remains non-executable until the scoped workout-issuance handoff is
+     * verified and installed. Existing issued sessions are unaffected.
+     */
+    fun confirmActivatedFutureCycleSignoff(
+        expectedRevision:Long,expectedFingerprint:String,
+        inputs:CustomCoachAuditInputs,athleteConfirmed:Boolean
+    ):NativeActivatedSignoffWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeActivatedSignoffWrite.Rejected(
+                NativeActivatedSignoffRefusal.NOT_AUTHORIZED)
+        return activatedCycleSignoffs.confirm(owner.ownerKey,expectedRevision,
+            expectedFingerprint,inputs,athleteConfirmed)
+    }
+
+    fun readActivatedFutureCycleSignoff(
+        inputs:CustomCoachAuditInputs?=null
+    ):NativeActivatedSignoffRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeActivatedSignoffRead.Rejected(
+                NativeActivatedSignoffRefusal.NOT_AUTHORIZED)
+        return activatedCycleSignoffs.read(owner.ownerKey,inputs)
+    }
+
+    fun revokeActivatedFutureCycleSignoff(
+        expectedRevision:Long
+    ):NativeActivatedSignoffWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeActivatedSignoffWrite.Rejected(
+                NativeActivatedSignoffRefusal.NOT_AUTHORIZED)
+        return activatedCycleSignoffs.revoke(owner.ownerKey,expectedRevision)
     }
 
     fun abortFutureBlockActivationBeforeSourceChange(

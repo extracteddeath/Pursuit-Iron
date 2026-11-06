@@ -163,4 +163,70 @@ class CustomNextWorkoutCoachingDomainTest {
         assertEquals(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,
             changedPrescription.status)
     }
+    @Test fun approvedRepAmendmentChangesOnlyTheNextSetsMinimums() {
+        val next=snapshot(5)
+        val reviewed=review(next=next,sessions=listOf(
+            completed(1,3,reps=listOf(5,5)),
+            completed(2,4,reps=listOf(6,5)) ))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,reviewed.status)
+        val offer=CustomNextRepAmendmentDomain.propose(next,"main",reviewed)
+        assertTrue(offer.toString(),offer is CustomNextRepAmendmentResult.Proposed)
+        val amended=(offer as CustomNextRepAmendmentResult.Proposed).amendment
+        assertEquals(listOf(7,6),amended.nextMinimumReps)
+        assertEquals(next.slots.single().sets.map{it.setKey},
+            amended.originalSetKeys)
+        assertEquals(listOf(7,6),amended.amended.slots.single().sets.map{
+            it.prescription.reps.minimum})
+        assertEquals(listOf(8,8),amended.amended.slots.single().sets.map{
+            it.prescription.reps.maximum})
+        assertEquals(listOf(5,5),next.slots.single().sets.map{
+            it.prescription.reps.minimum})
+        assertEquals(next.stamp,amended.amended.stamp)
+        assertEquals(next.slots.single().sets.map{it.prescription.load},
+            amended.amended.slots.single().sets.map{it.prescription.load})
+        assertFalse(amended.mayIssueWorkout)
+        assertFalse(amended.mayChangeCycle)
+    }
+
+    @Test fun tamperedRepOfferAndLowReadinessCannotCreateApprovedAmendment() {
+        val next=snapshot(5)
+        val reviewed=review(next=next,sessions=listOf(
+            completed(1,3,reps=listOf(5,5)),
+            completed(2,4,reps=listOf(5,6))))
+        assertEquals(CustomNextRepAmendmentResult.Rejected(
+            CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED),
+            CustomNextRepAmendmentDomain.propose(next,"main",
+                reviewed.copy(nextSetSuggestions=
+                    reviewed.nextSetSuggestions.mapIndexed{i,value->
+                        if(i==0)value.copy(proposedNextReps=8) else value
+                    })))
+        assertEquals(CustomNextRepAmendmentResult.Rejected(
+            CustomNextRepAmendmentRefusal.INVALID_TARGET_SLOT),
+            CustomNextRepAmendmentDomain.propose(next,"another-slot",reviewed))
+        assertEquals(CustomNextRepAmendmentResult.Rejected(
+            CustomNextRepAmendmentRefusal.NOT_AN_ELIGIBLE_REP_REVIEW),
+            CustomNextRepAmendmentDomain.propose(next,"main",
+                review(next=next,readiness=CoachReadiness.LOW)))
+    }
+
+    @Test fun nextWeekAfterApprovedRepFloorStillReceivesCoaching() {
+        val latest=completed(2,5,reps=listOf(6,6))
+        val raised=latest.copy(
+            snapshot=latest.snapshot.copy(slots=latest.snapshot.slots.map{
+                slot->slot.copy(sets=slot.sets.map{set->set.copy(
+                    prescription=set.prescription.copy(reps=RepBand(6,8)))
+                })
+            }),
+            evidence=latest.evidence.copy(visits=latest.evidence.visits.map{
+                it.copy(prescribedReps=RepBand(6,8))
+            }))
+        val result=review(next=snapshot(6),sessions=listOf(
+            completed(1,4,reps=listOf(5,5)),raised))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,result.status)
+        assertEquals(listOf(7,7),result.nextSetSuggestions.map{
+            it.proposedNextReps})
+        assertEquals(listOf("cycle:w6:d0:main:s1","cycle:w6:d0:main:s2"),
+            result.nextSetSuggestions.map{it.setKey})
+    }
+
 }

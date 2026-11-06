@@ -377,6 +377,11 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 as? NativeCustomPreparedRead.Found)?.workout
                 ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.NOT_PREPARED)
+            if(selected.snapshot.stamp.cycleId!=cycleId ||
+                selected.snapshot.absoluteWeek!=absoluteWeek ||
+                selected.snapshot.weekday!=weekday)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
             if(selected.authority!=
                     NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
                 selected.ownerKey!=ownerKey ||

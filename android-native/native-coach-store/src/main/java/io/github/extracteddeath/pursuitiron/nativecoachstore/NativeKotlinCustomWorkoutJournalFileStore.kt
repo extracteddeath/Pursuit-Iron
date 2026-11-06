@@ -419,14 +419,26 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     inputs,absoluteWeek,weekday)
                     ?:NativeCustomLoadRead.Missing)
             if(loadRead is NativeCustomLoadRead.Rejected ||
-                (amended!=null && loadRead is NativeCustomLoadRead.Current))
+                (!selected.resetToAuthored && amended!=null &&
+                    loadRead is NativeCustomLoadRead.Current))
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)
             val load=loadRead as? NativeCustomLoadRead.Current
-            if(selected.repApprovalFingerprint!=amended?.receipt?.fingerprint ||
-                selected.loadApprovalFingerprint!=load?.receipt?.fingerprint ||
-                (load?.amendment?.amended ?:amended?.amendment?.amended
-                    ?:exact.snapshot)!=selected.snapshot)
+            // Reset is explicit, authenticated, version-5 preparation
+            // provenance. Never reapply a superseded coaching approval,
+            // even if its old receipt still happens to be current. A corrupt
+            // approval still fails closed above, and issued journals never
+            // consult preferences to rewrite their historical targets.
+            val expectedSnapshot=if(selected.resetToAuthored)exact.snapshot
+                else load?.amendment?.amended
+                    ?:amended?.amendment?.amended ?:exact.snapshot
+            val expectedRepProof=if(selected.resetToAuthored)null
+                else amended?.receipt?.fingerprint
+            val expectedLoadProof=if(selected.resetToAuthored)null
+                else load?.receipt?.fingerprint
+            if(selected.repApprovalFingerprint!=expectedRepProof ||
+                selected.loadApprovalFingerprint!=expectedLoadProof ||
+                selected.snapshot!=expectedSnapshot)
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)
             val ledger=history.open(ownerKey,current.athleteId)

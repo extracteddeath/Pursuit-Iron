@@ -309,6 +309,123 @@ class NativeKotlinCustomWorkoutJournalFileStore(
      * The future history transaction coordinator must perform Finish under
      * this same fence with a manifest redo intent BEFORE committing history.
      */
+    /**
+     * Isolated NEW authority for a previously activated future custom block.
+     * No global barrier release: ONLY a precisely signed, same-block,
+     * immutable preparation may issue while other new issuers stay blocked.
+     * History and identity are rechecked at the point of durable issuance.
+     *
+     * The separate store provenance prevents a legacy custom consent from
+     * crossing this path. Already-issued journal replay keeps its historical
+     * snapshot and requires no retroactive rewrite after later plan changes.
+     */
+    fun issueActivated(
+        ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        signoffs:NativeKotlinActivatedCycleSignoffFileStore,
+        activation:NativeKotlinFutureActivationCommitTransaction
+    ):NativeCustomJournalResult {
+        if(!id.matches(workoutId)||!id.matches(cycleId) ||
+            absoluteWeek !in 1..104 || weekday !in 0..6)
+            return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.INVALID_ID)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val current=owner(ownerKey)
+                ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.NOT_AUTHORIZED)
+            val existing=read(ownerKey,workoutId,current)
+            if(existing is NativeCustomJournalResult.Durable) {
+                val preparedWorkout=(prepared.open(ownerKey,workoutId)
+                    as? NativeCustomPreparedRead.Found)?.workout
+                val snapshot=existing.issued.journal.snapshot
+                return@withOwnerTransaction if(preparedWorkout?.authority==
+                        NativeCustomPreparationAuthority.ACTIVATED_BLOCK &&
+                    snapshot.stamp.cycleId==cycleId &&
+                    snapshot.absoluteWeek==absoluteWeek &&
+                    snapshot.weekday==weekday)
+                    existing
+                else NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
+            }
+            if((existing as NativeCustomJournalResult.Rejected).reason!=
+                NativeCustomJournalRefusal.NOT_ISSUED)
+                return@withOwnerTransaction existing
+            val staged=(activationHandoff?.read(ownerKey)
+                as? NativeFutureHandoffReview.Staged)?.receipt
+                ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            val accepted=activation.read(ownerKey)
+                as? NativeFutureCommitReview.Applied
+                ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            val consent=(signoffs.read(ownerKey,inputs)
+                as? NativeActivatedSignoffRead.Found)?.takeIf{it.isCurrent}
+                ?.receipt
+                ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            if(staged.cycleId!=cycleId || staged.blockId!=consent.blockId ||
+                staged.firstWeek!=consent.firstWeek ||
+                accepted.context.cycleId!=cycleId ||
+                accepted.context.blockId!=consent.blockId ||
+                accepted.context.sourceRevision!=consent.sourceRevision ||
+                consent.athleteId!=current.athleteId ||
+                consent.ownerKey!=ownerKey || absoluteWeek<consent.firstWeek)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            val selected=(prepared.open(ownerKey,workoutId)
+                as? NativeCustomPreparedRead.Found)?.workout
+                ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.NOT_PREPARED)
+            if(selected.authority!=
+                    NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
+                selected.ownerKey!=ownerKey ||
+                selected.athleteId!=current.athleteId ||
+                selected.consentRevision!=consent.recordRevision ||
+                selected.consentFingerprint!=consent.reviewFingerprint ||
+                selected.snapshot.stamp.cycleId!=cycleId ||
+                selected.snapshot.stamp.gymCatalogSourceRevision!=
+                    consent.sourceRevision ||
+                selected.snapshot.blockId!=consent.blockId ||
+                selected.snapshot.absoluteWeek!=absoluteWeek ||
+                selected.snapshot.weekday!=weekday)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            val exact=activation.previewActivatedWorkout(ownerKey,inputs,
+                absoluteWeek,weekday) as? CustomWorkoutSnapshotResult.Preview
+                ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            if(exact.snapshot!=selected.snapshot)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            val ledger=history.open(ownerKey,current.athleteId)
+            if(ledger !is NativeHistoryLedgerResult.Durable ||
+                !ledger.ledger.readyForHistoryReads ||
+                ledger.ledger.ownerKey!=ownerKey ||
+                ledger.ledger.athleteId!=current.athleteId ||
+                ledger.ledger.completions.any{it.workoutId==workoutId})
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.HISTORY_NOT_READY)
+            val other=composerJournals.openStored(ownerKey,workoutId){
+                owner,source->owner==ownerKey &&
+                    source.athleteId==current.athleteId
+            }
+            if(other !is NativeJournalFileResult.Rejected ||
+                other.reason!=NativeJournalFileRefusal.NOT_ISSUED)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
+            if(owner(ownerKey)!=current)
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.NOT_AUTHORIZED)
+            val issued=NativeCustomIssuedJournal(ownerKey,current.athleteId,
+                selected.consentRevision,
+                CustomWorkoutJournalDomain.begin(workoutId,
+                    selected.snapshot,selected.consentFingerprint))
+            atomic(path(ownerKey,workoutId),encode(issued))
+            NativeCustomJournalResult.Durable(issued,false)
+        }}.getOrElse{NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     fun record(
         ownerKey:String,workoutId:String,
         operation:CustomWorkoutJournalOperation.Record

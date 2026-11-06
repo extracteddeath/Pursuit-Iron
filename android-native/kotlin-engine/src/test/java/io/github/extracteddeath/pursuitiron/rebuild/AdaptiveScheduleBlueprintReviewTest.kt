@@ -53,8 +53,13 @@ class AdaptiveScheduleBlueprintReviewTest {
     private fun future(split:ComposerSplit)=run {
         val newDays=setOf(0,1,2,4)
         val old=checkNotNull(f.generation().policy)
+        // A four-day block should not unilaterally add half the prior
+        // week's working sets; review a lower, explicit phase MAV/MRV.
         val doses=old.selectedBounds.map {bound ->
-            bound.copy(minimumDirectDays=bound.minimumDirectDays.coerceAtMost(2))
+            if(bound.minimumDirectDays>0)
+                bound.copy(mav=n("4"),mrv=n("4"),
+                    minimumDirectDays=bound.minimumDirectDays.coerceAtMost(2))
+            else bound
         }
         ProspectiveBlockCoachingContext(
             setup(split,newDays),

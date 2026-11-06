@@ -29,7 +29,10 @@ class AdaptiveScheduleCalendarSearchTest {
     private fun offer(split:ComposerSplit,count:Int):AdaptiveCalendarPolicyOffer {
         val original=checkNotNull(f.generation().policy)
         val dose=original.selectedBounds.map {bound ->
-            bound.copy(minimumDirectDays=
+            if(count==4 && bound.minimumDirectDays>0)
+                bound.copy(mav=n("4"),mrv=n("4"),
+                    minimumDirectDays=bound.minimumDirectDays.coerceAtMost(2))
+            else bound.copy(minimumDirectDays=
                 bound.minimumDirectDays.coerceAtMost(count))
         }
         return AdaptiveCalendarPolicyOffer(

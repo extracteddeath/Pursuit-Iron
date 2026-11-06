@@ -1093,9 +1093,14 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val handoff:NativeKotlinFutureActivationHandoffFileStore,
         val receipt:NativeFutureActivationHandoff
     )
-    private fun activationFixture():ActivationFixture {
+    private fun activationFixture(
+        historyRevision:Long=7
+    ):ActivationFixture {
         readyFutureForSecondConsent()
-        val approvals=approvalCheckpoint()
+        val approvals=approvalCheckpoint {
+            NativeFutureActivationReview.BoundaryReviewed(
+                "cycle-1","build",4,3,9,historyRevision)
+        }
         val preview=approvals.preview("owner-1","cycle-1","build")
             as NativeFutureApprovalPreview.Ready
         val accepted=approvals.confirm("owner-1","cycle-1","build",0,
@@ -1571,6 +1576,19 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
     }
 
+    private fun enrollActivatedHistory(
+        ledger:NativeKotlinHistoryManifestFileStore
+    ) {
+        // Synthetic manifest fixtures are confined to the native issuer test:
+        // production stage preflight independently verifies actual journals.
+        val entries=(1..9).map{i->KotlinHistoryManifestEntry(
+            i.toLong(),"historical-$i","stored-$i","completed-$i",3,0)}
+        val result=ledger.enrollVerifiedSnapshot("owner-1","athlete-1",
+            entries){o,a->o=="owner-1" && a=="athlete-1" &&
+                active==NativeKotlinOwnerIdentity(o,a)}
+        assertTrue(result.toString(),result is NativeHistoryLedgerResult.Durable)
+    }
+
     private fun activatedIssuer(
         fixture:ActivationFixture,
         ledger:NativeKotlinHistoryManifestFileStore,
@@ -1585,7 +1603,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
     @Test fun signedActivatedWorkoutIssuesLogsAndReplaysWithDurableHistory() {
-        val fixture=activationFixture()
+        val fixture=activationFixture(historyRevision=1)
         val tx=activationTransaction(fixture)
         assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
         val inputs=futureInputs()
@@ -1604,10 +1622,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             NativeCustomJournalRefusal.HISTORY_NOT_READY),
             issuer.issueActivated("owner-1",workoutId,"cycle-1",
                 4,1,inputs,signoff,tx))
-        assertTrue(ledger.enroll("owner-1","athlete-1"){o,a ->
-            o=="owner-1" && a=="athlete-1" &&
-                active==NativeKotlinOwnerIdentity(o,a)
-        } is NativeHistoryLedgerResult.Durable)
+        enrollActivatedHistory(ledger)
         val first=issuer.issueActivated("owner-1",workoutId,"cycle-1",
             4,1,inputs,signoff,tx)
         assertTrue(first.toString(),first is NativeCustomJournalResult.Durable)
@@ -1642,7 +1657,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             completed is NativeCustomFinishResult.Committed)
         val receipt=completed as NativeCustomFinishResult.Committed
         assertEquals(12,receipt.evidence.visits.single().actual?.reps)
-        assertEquals(1,(ledger.open("owner-1","athlete-1")
+        assertEquals(10,(ledger.open("owner-1","athlete-1")
             as NativeHistoryLedgerResult.Durable).ledger.completions.size)
         assertEquals(receipt.copy(replayed=true),
             NativeKotlinCustomHistoryTransaction(
@@ -1655,7 +1670,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
     @Test fun activatedWorkoutCannotIssueWithRevokedConsentOrOldPreparedGrant() {
-        val fixture=activationFixture()
+        val fixture=activationFixture(historyRevision=1)
         val tx=activationTransaction(fixture)
         assertTrue(tx.commit("owner-1") is NativeFutureCommitReview.Applied)
         val inputs=futureInputs()
@@ -1669,9 +1684,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             workoutId,"cycle-1",4,1,inputs,signoff,tx)
             is NativeCustomPrepareResult.Prepared)
         val ledger=NativeKotlinHistoryManifestFileStore(temp.root.toPath())
-        assertTrue(ledger.enroll("owner-1","athlete-1"){o,a ->
-            o=="owner-1" && a=="athlete-1"
-        } is NativeHistoryLedgerResult.Durable)
+        enrollActivatedHistory(ledger)
         assertEquals(NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT),
             activatedIssuer(fixture,ledger).issueActivated(

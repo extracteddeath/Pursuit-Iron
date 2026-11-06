@@ -2348,10 +2348,14 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertNull(reset.repApprovalFingerprint)
         assertNull(reset.loadApprovalFingerprint)
         assertEquals(offered.authored,reset.snapshot)
-        // Cold decode must preserve v5 reset provenance.
+        // Cold process recovery of v5: create an independent store instance
+        // with no in-memory reference to the prepared object.
+        val recoveredPreparation=NativeKotlinCustomWorkoutPreparedStore(
+            temp.root.toPath(),fence,identity,
+            NativeKotlinCustomWorkoutPreflight(
+                fence,identity,drafts,sources,store()))
         assertEquals(NativeCustomPreparedRead.Found(reset),
-            f.prepared
-                .open(key,workout))
+            recoveredPreparation.open(key,workout))
         // The old rep receipt is still mathematically earned and valid,
         // but cannot reappear after explicit reset of the prepared snapshot.
         assertTrue(f.repApprovals.readCurrent(key,workout,inputs,6,1)

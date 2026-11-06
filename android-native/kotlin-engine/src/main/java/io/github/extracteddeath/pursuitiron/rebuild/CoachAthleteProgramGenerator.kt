@@ -212,10 +212,7 @@ object CoachAthleteProgramGenerator {
         purpose:List<ComposerSessionPurpose>,
         weekdays:List<Int>
     ):List<Long> {
-        val recovery=spacingPenalty(weekdays,focus.map {f->
-            if(f in setOf(ComposerFocus.UPPER,ComposerFocus.PUSH,
-                    ComposerFocus.PULL))"upper:"+f.name else f.name
-        }).toLong()
+        val recovery=spacingPenalty(weekdays,focus.map {it.name}).toLong()
         val purposes=spacingPenalty(weekdays,purpose.map {it.name}).toLong()
         val repeatedLiftSpacing=repeatLiftSpacingPenalty(draft.visits,weekdays)
         val mavGap=draft.audit.muscles.values.sumOf {
@@ -252,9 +249,6 @@ object CoachAthleteProgramGenerator {
             val gap=minOf(raw,7-raw)
             if(categories[i]==categories[j] && gap<2)
                 penalty+=100
-            if(categories[i].startsWith("upper:") &&
-                categories[j].startsWith("upper:") && gap<2)
-                penalty+=25
         }
         return penalty
     }
@@ -532,13 +526,11 @@ object CoachAthleteProgramGenerator {
                 "The policy lacks its phase-specific training purpose.")
             return result(AthleteGenerationStatus.INPUTS_UNRESOLVED)
         }
+        // Use the same true-overlap recovery model when ordering bounded
+        // focus arrangements. A normal Push/Pull pairing is not an
+        // artificial conflict that should consume the search budget.
         val focuses=arrangements(counts).sortedWith(compareBy<List<ComposerFocus>> {
-            val categories=it.map {focus -> when(focus) {
-                ComposerFocus.UPPER,ComposerFocus.PUSH,
-                ComposerFocus.PULL -> "upper:"+focus.name
-                else -> focus.name
-            }}
-            spacingPenalty(weekdays,categories)
+            adjacentRepeatCount(emptyList(),it,weekdays)
         }.thenBy {it.joinToString(",") {focus ->focus.name}})
         val purposes=arrangements(purposeCounts).sortedWith(
             compareBy<List<ComposerSessionPurpose>> {

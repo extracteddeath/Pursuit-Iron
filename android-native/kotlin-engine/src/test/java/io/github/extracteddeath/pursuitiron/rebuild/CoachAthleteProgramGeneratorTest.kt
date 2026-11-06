@@ -396,6 +396,19 @@ class CoachAthleteProgramGeneratorTest {
             ComposerFocus.PULL,listOf(0,1)))
         assertEquals(0L,repeats(ComposerFocus.UPPER,
             ComposerFocus.PUSH,listOf(0,2)))
+        // The second ranking tier must agree: there is no hidden
+        // upper-body penalty for consecutive Push and Pull sessions.
+        val source=CoachAthleteProgramGenerator.generate(
+            GeneratedAdaptiveBlockFixture.generation())
+        val draft=checkNotNull(source.candidate?.catalogReview?.draft)
+            .copy(visits=emptyList())
+        val score=CoachAthleteProgramGenerator.qualityScore(
+            draft,listOf(ComposerFocus.PUSH,ComposerFocus.PULL,
+                ComposerFocus.LEGS),
+            List(3){ComposerSessionPurpose.HYPERTROPHY},
+            listOf(0,1,3))
+        assertEquals(0L,score[0])
+        assertEquals(0L,score[2])
         // A repeated lift still counts even when its day focus differs.
         val sameLift=listOf(
             ComposerVisit(0,"bench",ComposerPattern.HORIZONTAL_PRESS,2),

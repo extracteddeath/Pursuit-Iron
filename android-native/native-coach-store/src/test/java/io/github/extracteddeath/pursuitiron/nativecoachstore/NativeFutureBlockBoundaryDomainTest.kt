@@ -19,7 +19,7 @@ class NativeFutureBlockBoundaryDomainTest {
                 CustomBlockPurpose.TRAINING,3,
                 CustomSplitIdentity.Named(ComposerSplit.UPPER_LOWER),
                 listOf(0,1,2,4).map{day->CustomTrainingDay(
-                    day,"Build $day",ComposerSessionPurpose.STRENGTH,
+                    day,"Build $day",ComposerSessionPurpose.STRENGTH_SKILL,
                     emptyList())})
         ))
     private fun done(block:String,week:Int,day:Int,cycleId:String="cycle-1")=

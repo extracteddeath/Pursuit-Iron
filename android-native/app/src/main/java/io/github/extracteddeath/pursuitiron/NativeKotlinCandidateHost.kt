@@ -61,6 +61,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val mixedHistoryReader=NativeKotlinMixedHistoryReadCoordinator(
         historyStore,journalStore,correctionStore,customIssuedStore,
         approvalStore,localAthlete,revisionFence,customSavedCorrections)
+    private val futureActivationPreflight=NativeKotlinFutureBlockActivationPreflight(
+        revisionFence,localAthlete,customDraftStore,futureBlockContexts,
+        mixedHistoryReader,customIssuedStore)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)
@@ -491,6 +494,18 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * Return only a matching saved draft's companion future review; it is
      * NOT permission to activate a profile or issue a workout.
      */
+    /** Never an activation grant: checks accepted future draft and authenticated
+     * completed custom workouts before an explicit block-boundary review.
+     */
+    fun inspectFutureBlockActivation(
+        cycleId:String,blockId:String
+    ):NativeFutureActivationReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureActivationReview.Rejected(
+                NativeFutureActivationRefusal.NOT_AUTHORIZED)
+        return futureActivationPreflight.inspect(owner.ownerKey,cycleId,blockId)
+    }
+
     fun readAcceptedFutureBlockContext(
         cycleId:String,blockId:String
     ):NativeFutureBlockContextRead {

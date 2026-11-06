@@ -320,3 +320,20 @@ explicitly report that they cannot issue workouts or publish changes.
   workflow must update the authoritative source and require a new athlete
   cycle signoff before any future block can issue actual workouts. Native
   end-to-end phase transition and UI flow validation remain outstanding.
+
+### Owner-fenced activation boundary preflight
+
+- The candidate host exposes a **read-only** future-block activation
+  preflight. It reopens a durable accepted future review and complete
+  owner-authenticated native mixed history, then verifies the original
+  immutable custom journal for each completed session.
+- The pure boundary reviewer derives the first week from the authored
+  preceding block lengths; it refuses the first block, missing prior
+  prescribed training sessions, duplicate/conflicting history, and any
+  completed session in or after the target block. Workouts from unrelated
+  cycles never count as completion proof.
+- `BoundaryReviewed` explicitly **does not authorize activation**. The
+  protocol still needs a first-class durable issued/prepared/in-progress
+  session inventory, an owner-fenced source transition with compatible
+  per-block policy authority, and independent athlete signoff. Historical
+  journals and the current live app are untouched.

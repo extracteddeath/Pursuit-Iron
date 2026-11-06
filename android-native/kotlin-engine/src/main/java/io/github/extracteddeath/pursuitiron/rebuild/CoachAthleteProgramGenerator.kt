@@ -346,17 +346,28 @@ object CoachAthleteProgramGenerator {
             }
             return penalty
         }
-        val ranked=found.sortedWith(
+        fun pinnedCount(plan:List<AthleteCalendarIntent>)=
+            plan.count {it.requiredPrimaryExerciseId!=null}
+        val sorted=found.sortedWith(
             compareBy<List<AthleteCalendarIntent>> {plan->
-                plan.count {it.requiredPrimaryExerciseId!=null}-
-                    policy.primaryLiftMinimumDays.values.sum()
+                pinnedCount(plan)-policy.primaryLiftMinimumDays.values.sum()
             }.thenBy {recoveryPenalty(it)}
                 .thenBy {plan->
                     plan.joinToString("|") {intent->
                         intent.requiredPrimaryExerciseId ?: "~"
                     }
                 }
-        ).take(MAX_PRIMARY_PLACEMENTS_PER_LAYOUT)
+        )
+        // Preserve a small number of optional higher-frequency alternatives.
+        // Extra named primary exposures may be needed to reach actual MEV;
+        // favoring only minimal pins would hide these from the full dose audit.
+        val minimum=policy.primaryLiftMinimumDays.values.sum()
+        val extraFrequency=sorted.filter {pinnedCount(it)>minimum}
+            .distinctBy {pinnedCount(it)}
+            .take(2)
+        val preferred=sorted.filter {it !in extraFrequency}
+            .take(MAX_PRIMARY_PLACEMENTS_PER_LAYOUT-extraFrequency.size)
+        val ranked=(preferred+extraFrequency).take(MAX_PRIMARY_PLACEMENTS_PER_LAYOUT)
         return Collections.unmodifiableList(ranked.map {
             Collections.unmodifiableList(it.toList())
         })

@@ -381,9 +381,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeOwnerNextSetResult.Rejected(
                 NativeOwnerNextSetRefusal.NOT_AUTHORIZED)
+        val assistance=availableCoachAssistance()
+        if(assistance?.offersProgression!=true)
+            return NativeOwnerNextSetResult.Rejected(
+                NativeOwnerNextSetRefusal.ASSISTANCE_DISABLED)
         return mixedHistoryReader.reviewCurrentNextSetTargets(
             owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
-            readiness,movementRestricted,authoringSourceStore)
+            assistance.coachingReadiness(readiness),movementRestricted,
+            authoringSourceStore)
     }
 
     /** Explicitly accept only the exact reverified preview; no issuance. */
@@ -395,9 +400,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeKotlinRepAcceptanceResult.Rejected(
                 NativeKotlinRepAcceptanceRefusal.NOT_AUTHORIZED)
+        val assistance=availableCoachAssistance()
+        if(assistance?.offersProgression!=true)
+            return NativeKotlinRepAcceptanceResult.Rejected(
+                NativeKotlinRepAcceptanceRefusal.ASSISTANCE_DISABLED)
         return mixedHistoryReader.acceptReviewedNextSetTargets(
             signed.ownerKey,signed.athleteId,approvalStore,intent,
-            readiness,movementRestricted,authoringSourceStore)
+            assistance.coachingReadiness(readiness),movementRestricted,
+            authoringSourceStore)
     }
 
     /**
@@ -416,6 +426,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * coaching review rechecks all source/history data under the owner fence.
      */
     fun currentVerifiedCoachExerciseChoices():List<String> {
+        if(availableCoachAssistance()?.offersProgression!=true)return emptyList()
         val owner=localAthlete.signedInIdentity() ?:return emptyList()
         return runCatching {
             revisionFence.withOwnerTransaction(owner.ownerKey) {
@@ -448,10 +459,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeKotlinCoachAcceptanceResult.Rejected(
                 NativeKotlinCoachAcceptanceRefusal.NOT_AUTHORIZED)
+        val assistance=availableCoachAssistance()
+        if(assistance?.offersProgression!=true)
+            return NativeKotlinCoachAcceptanceResult.Rejected(
+                NativeKotlinCoachAcceptanceRefusal.ASSISTANCE_DISABLED)
         return mixedHistoryReader.acceptCurrentApprovedLoad(
             owner.ownerKey,owner.athleteId,approvalStore,intent,
-            maximumAuthorizedIncrease,readiness,movementRestricted,
-            authoringSourceStore)
+            maximumAuthorizedIncrease,assistance.coachingReadiness(readiness),
+            movementRestricted,authoringSourceStore)
     }
 
     fun reviewCurrentNativeLoad(
@@ -463,10 +478,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeOwnerLoadReviewResult.Rejected(
                 NativeOwnerLoadReviewRefusal.NOT_AUTHORIZED)
+        val assistance=availableCoachAssistance()
+        if(assistance?.offersProgression!=true)
+            return NativeOwnerLoadReviewResult.Rejected(
+                NativeOwnerLoadReviewRefusal.ASSISTANCE_DISABLED)
         return mixedHistoryReader.reviewCurrentApprovedLoad(
             owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
-            maximumAuthorizedIncrease,readiness,movementRestricted,
-            authoringSourceStore)
+            maximumAuthorizedIncrease,assistance.coachingReadiness(readiness),
+            movementRestricted,authoringSourceStore)
     }
 
     fun reviewVerifiedKotlinWorkingSetFacts(): NativeKotlinMixedFactsReadResult {
@@ -929,6 +948,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
             inputs,permissions,expectedPermissionRevision,prospective)
             ?:return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
+        if(availableCoachAssistance()?.coachingSuggestionsEnabled!=true)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED)
         return adaptiveCycleDrafts.preview(choice)
     }
 
@@ -946,6 +968,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
             inputs,permissions,expectedPermissionRevision,prospective)
             ?:return NativeAdaptiveCycleDraftDecision.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
+        if(availableCoachAssistance()?.coachingSuggestionsEnabled!=true)
+            return NativeAdaptiveCycleDraftDecision.Rejected(
+                NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED)
         return adaptiveCycleDrafts.accept(choice,
             reviewedFingerprint,athleteConfirmed)
     }

@@ -161,6 +161,33 @@ object CoachAthleteProgramGenerator {
     }
 
     /**
+     * Count actual adjacent exposures across the circular week. These are
+     * SOFT quality signals, not invented mandatory rest days: the composer
+     * already enforces source-authored minimum calendar and recovery gaps.
+     * Distinct exercise days count once even if they contain many sets.
+     */
+    internal fun adjacentRepeatCount(
+        visits:List<ComposerVisit>,
+        focus:List<ComposerFocus>,
+        weekdays:List<Int>
+    ):Long {
+        fun adjacent(a:Int,b:Int):Boolean {
+            val gap=abs(a-b)
+            return minOf(gap,7-gap)==1
+        }
+        var count=0L
+        for(i in focus.indices)for(j in 0 until i)
+            if(focus[i]==focus[j] && adjacent(weekdays[i],weekdays[j]))
+                count++
+        for(group in visits.groupBy {it.exerciseId}.values) {
+            val days=group.map{weekdays[it.dayIndex]}.distinct().sorted()
+            for(i in days.indices)for(j in 0 until i)
+                if(adjacent(days[i],days[j]))count++
+        }
+        return count
+    }
+
+    /**
      * Rank ONLY audited feasible weeks; nothing here can waive MEV/MRV,
      * frequency, equipment, preferred session window or authored primary
      * requirements. We do not synthesize new exercises, reps or sets.
@@ -195,8 +222,13 @@ object CoachAthleteProgramGenerator {
                 bounds.preferredMaximumMinutes.toLong())/2L
             abs(session.roundedMinutes-preferred)
         }
-        return listOf(recovery,purposes,repeatedLiftSpacing,
-            mavGap,sessionFit,variation)
+        // Avoid immediately repeating the same focus/lift first. Once
+        // critical spacing is equal, prefer ACTUAL authored MAV delivery
+        // over aesthetic purpose ordering or a prettier duration spread.
+        // All compared weeks have already passed every HARD coach constraint.
+        val adjacent=adjacentRepeatCount(draft.visits,focus,weekdays)
+        return listOf(adjacent,mavGap,recovery+repeatedLiftSpacing,
+            purposes,sessionFit,variation)
     }
 
     private fun spacingPenalty(calendar:List<Int>,categories:List<String>):Int {
@@ -549,8 +581,9 @@ object CoachAthleteProgramGenerator {
             if(proposal.status==AthleteCandidateStatus.CANDIDATE_FOR_REVIEW &&
                 actual?.status==GoalRealizationStatus.DELIVERED_FOR_REVIEW) {
                 feasibleCompared++
-                // Lexicographic choice: preserve whole-week recovery spacing
-                // before preferring closer-to-MAV doses and balanced time.
+                // Lexicographic choice: avoid adjacent same-focus/lift
+                // exposure; then prioritize actual authored MAV delivery
+                // before softer spacing, purpose and time preferences.
                 // No extra volume is added for the sake of a longer workout.
                 val week=checkNotNull(proposal.catalogReview?.draft)
                 val score=qualityScore(week,focus,purpose,weekdays)

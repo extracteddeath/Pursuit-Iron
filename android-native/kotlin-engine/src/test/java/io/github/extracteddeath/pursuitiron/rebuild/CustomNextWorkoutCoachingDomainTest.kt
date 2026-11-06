@@ -145,6 +145,52 @@ class CustomNextWorkoutCoachingDomainTest {
             review(readiness=CoachReadiness.LOW).status)
     }
 
+    @Test fun completedFutureWeekCannotCoachAnAlreadyTrainedEarlierWeek() {
+        val completedNext=review(
+            next=snapshot(4),sessions=listOf(
+                completed(1,3,reps=listOf(5,5)),
+                completed(2,4,reps=listOf(8,8))))
+        assertEquals(CustomNextWorkoutCoachingStatus.TARGET_ALREADY_TRAINED,
+            completedNext.status)
+        assertNull(completedNext.loadReviewCandidate)
+        assertTrue(completedNext.nextSetSuggestions.isEmpty())
+
+        // Even if an older completed week looks eligible, a later same-day
+        // completion must not be silently skipped to justify coaching.
+        val late=review(
+            next=snapshot(5),sessions=listOf(
+                completed(1,3,reps=listOf(8,8)),
+                completed(2,6,reps=listOf(8,8))))
+        assertEquals(CustomNextWorkoutCoachingStatus.TARGET_ALREADY_TRAINED,
+            late.status)
+        assertEquals("workout-6-0",late.latestWorkoutId)
+        assertTrue(late.nextSetSuggestions.isEmpty())
+    }
+
+    @Test fun futureCompletionOnDifferentWeekdayDoesNotBlockIndependentDay() {
+        val result=review(next=snapshot(5,0),
+            sessions=listOf(
+                completed(1,3,0,reps=listOf(5,5)),
+                completed(2,5,2,reps=listOf(8,8))))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,result.status)
+        assertEquals(listOf(6,6),result.nextSetSuggestions.map{
+            it.proposedNextReps})
+        assertEquals(listOf("workout-3-0"),result.comparedWorkoutIds)
+    }
+
+    @Test fun duplicateFinishedWorkoutIdentityInvalidatesProgressionEvidence() {
+        val earlier=completed(1,3)
+        val duplicate=completed(2,4).let{
+            it.copy(evidence=it.evidence.copy(
+                workoutId=earlier.evidence.workoutId))
+        }
+        val result=review(sessions=listOf(earlier,duplicate))
+        assertEquals(CustomNextWorkoutCoachingStatus.INVALID_HISTORY,
+            result.status)
+        assertNull(result.loadReviewCandidate)
+        assertTrue(result.nextSetSuggestions.isEmpty())
+    }
+
     @Test fun incompleteRecentDayAndChangedExerciseOrSourceNeverCherryPickSuccess() {
         val mostRecent=completed(3,4,reps=listOf(0,0),
             failed=setOf(0,1),rirs=listOf(null,null))

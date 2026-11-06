@@ -581,7 +581,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
     @Test fun currentGymMustBePersistedAndAgreeBeforeCoachingApproval() {
         enrolled()
         complete(1,1)
-        complete(2,2)
+        complete(2,1)
         val absent=reader.reviewCurrentApprovedLoad(
             "owner-1","athlete-1",approvals,"db-press",n("5"),
             CoachReadiness.NORMAL,false,authoring)
@@ -611,7 +611,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
     @Test fun removingConfirmedStockAfterReviewRevokesPendingNativeProgression() {
         enrolled()
         complete(1,1)
-        complete(2,2)
+        complete(2,1)
         val original=sourceRecord()
         assertEquals(NativeAuthoringSourceWrite.Committed(1),
             authoring.publish("owner-1",0,original))
@@ -646,7 +646,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
     @Test fun athleteAcceptsExactRecheckedReviewIntoNewRevisionWithoutMutatingIssuedWorkout() {
         enrolled()
         complete(1,1)
-        val old=complete(2,2)
+        val old=complete(2,1)
         val initial=(review() as NativeOwnerLoadReviewResult.Review)
             .coaching as NativeCurrentLoadReviewResult.Reviewed
         val expected=intent(initial)
@@ -672,9 +672,14 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertFalse(committed.productionCutover)
         val next=checkNotNull(approvals.currentOwnedApproval("owner-1"))
         assertEquals("workout-3",next.grant.workoutId)
-        assertEquals(n("35"),
+        // A day-local increment must NOT rewrite the default load used
+        // by any other hypertrophy training day.
+        assertEquals(n("30"),
             ((next.program.exercises.first().equipment as ComposerEquipment.Verified)
                 .plannedLoad))
+        assertEquals(n("35"),next.policies.single {
+            it.exerciseId=="db-press" && it.dayIndex==1
+        }.purposeWorkingLoad)
         assertEquals(8L,old.first.snapshot.source.programRevision)
         assertEquals(n("30"),
             ((program.exercises.first().equipment as ComposerEquipment.Verified)
@@ -697,7 +702,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
     @Test fun correctionBeforeExplicitAcceptanceInvalidatesPreviouslyShownReview() {
         enrolled()
         complete(1,1)
-        val last=complete(2,2)
+        val last=complete(2,1)
         val shown=(review() as NativeOwnerLoadReviewResult.Review)
             .coaching as NativeCurrentLoadReviewResult.Reviewed
         val original=last.first.effectiveSets.getValue(last.second)
@@ -725,7 +730,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertTrue(enrollment.toString(),
             enrollment is NativeHistoryTransactionResult.Durable)
         val first=complete(1,1)
-        val last=complete(2,2)
+        val last=complete(2,1)
         val raw=review()
         assertTrue(raw.toString(),raw is NativeOwnerLoadReviewResult.Review)
         val coaching=(raw as NativeOwnerLoadReviewResult.Review)
@@ -875,7 +880,8 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         val restored=checkNotNull(approvals.currentOwnedApproval("owner-1"))
         assertEquals(n("30"),restored.policies.single {
             it.exerciseId=="db-press" &&
-                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL &&
+                it.dayIndex==0
         }.purposeWorkingLoad)
         assertNull(restored.policies.single {
             it.exerciseId=="db-press" &&
@@ -911,7 +917,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }
         val first=complete(1,1,mixed)
         val strength=complete(2,0,mixed)
-        val latest=complete(3,2,mixed)
+        val latest=complete(3,1,mixed)
         val next=NativeKotlinWorkoutApproval(
             "owner-1","athlete-1",source,source,
             KotlinWorkoutSelectionGrant("grant-4","workout-4",source,1),
@@ -930,7 +936,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         val intent=NativeKotlinCoachLoadAcceptanceIntent(
             "db-press",4,coaching.historyRevision,coaching.comparedWorkoutIds,
             CoachNextLoadChangeKind.EARNED_INCREMENT,n("30"),n("35"),
-            listOf(1,2),"workout-5","grant-5","storage-5",1,true)
+            listOf(1),"workout-5","grant-5","storage-5",1,true)
         assertTrue(accept(intent) is NativeKotlinCoachAcceptanceResult.Committed)
         val stored=checkNotNull(approvals.currentOwnedApproval("owner-1"))
         assertEquals(n("25"),stored.policies.single {p ->
@@ -939,7 +945,13 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }.purposeWorkingLoad)
         assertEquals(n("35"),stored.policies.single {p ->
             p.exerciseId=="db-press" &&
-                p.purpose==ComposerSessionPurpose.HYPERTROPHY
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY &&
+                p.dayIndex==1
+        }.purposeWorkingLoad)
+        assertNull(stored.policies.single {p ->
+            p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY &&
+                p.dayIndex==null
         }.purposeWorkingLoad)
         assertEquals(n("30"),(stored.program.exercises.first()
             .equipment as ComposerEquipment.Verified).plannedLoad)

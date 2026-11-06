@@ -12,7 +12,9 @@ sealed interface NativeCustomNextCoachResult {
     data class Reviewed(
         val historyRevision:Long,
         val approvedConsentRevision:Long,
-        val review:CustomNextWorkoutCoachingReview
+        val review:CustomNextWorkoutCoachingReview,
+        /** Same owner-fenced, source-verified inventory used by the review. */
+        val verifiedStock:VerifiedLoadStock?
     ):NativeCustomNextCoachResult {
         /** Display-only: re-review after subsequent Finish/correction. */
         val mayIssueWorkout:Boolean get()=false
@@ -146,7 +148,8 @@ class NativeKotlinCustomNextWorkoutReview(
                 ?:return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
             NativeCustomNextCoachResult.Reviewed(
-                full.timeline.manifestRevision,acceptance.recordRevision,validated)
+                full.timeline.manifestRevision,acceptance.recordRevision,
+                validated,verifiedStock)
         }}.getOrElse{reject(NativeCustomNextCoachRefusal.STORAGE_UNAVAILABLE)}
     }
 }

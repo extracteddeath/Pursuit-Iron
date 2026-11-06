@@ -56,7 +56,10 @@ data class AdaptiveCycleComparison(
     val recommendedOptionId:String?,
     val candidatesChecked:Int,
     /** Future schedule candidates require separate acceptance. */
-    val recommendedProspectiveOptionId:String?=null
+    val recommendedProspectiveOptionId:String?=null,
+    /** A review-only exception for narrowly identified target-block
+     * continuity defects; never permission to edit an issued week. */
+    val sourceRepairRequired:Boolean=false
 ) {
     val mayApplyAutomatically:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -66,6 +69,57 @@ object AdaptiveCycleOptionReviewDomain {
     private const val MAX_OPTIONS=8
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val zero=BigDecimal.ZERO
+    private val weekPath=Regex("^week\\.(\\d+)(?:\\.|$)")
+    private val repairableContinuity=setOf(
+        CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP,
+        CustomCoachIssueKind.DIRECT_MUSCLE_DROP,
+        CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE,
+        CustomCoachIssueKind.DIRECT_MUSCLE_SPIKE)
+
+    /**
+     * Permit full candidate review when the sole source defects are audited
+     * continuity violations on the named target. Invalid athlete, gym,
+     * missing policy, unrelated block defects or malformed source stay closed.
+     * This is NEVER authority to change current/previously issued workouts.
+     */
+    private fun repairableSource(
+        source:CustomCoachAudit,targetBlockId:String
+    ):Boolean =
+        source.status==CustomCoachAuditStatus.UNRESOLVED &&
+        source.structuralReview?.verifiedDraft!=null &&
+        source.issues.isNotEmpty() &&
+        source.issues.all {issue->
+            if(issue.kind !in repairableContinuity)false
+            else {
+                val weekNumber=weekPath.find(issue.location)
+                    ?.groupValues?.get(1)?.toIntOrNull()
+                weekNumber!=null && source.weeks.any {
+                    it.absoluteWeek==weekNumber &&
+                        it.blockId==targetBlockId &&
+                        it.blockPurpose==CustomBlockPurpose.TRAINING
+                }
+            }
+        }
+
+    /** No other block, override, phase, goal or cycle authoring may move. */
+    private fun confinedRepair(
+        old:CustomTrainingCycle,new:CustomTrainingCycle,target:String
+    ):Boolean {
+        val before=old.blocks.singleOrNull {it.blockId==target}
+            ?:return false
+        val after=new.blocks.singleOrNull {it.blockId==target}
+            ?:return false
+        return before.purpose==CustomBlockPurpose.TRAINING &&
+            after.purpose==CustomBlockPurpose.TRAINING &&
+            before.phase==after.phase &&
+            old.blocks.map {it.blockId}==new.blocks.map {it.blockId} &&
+            old.blocks.filterNot {it.blockId==target}==
+                new.blocks.filterNot {it.blockId==target} &&
+            old.weekOverrides.filterKeys {it!=target}==
+                new.weekOverrides.filterKeys {it!=target} &&
+            old.goal==new.goal && old.authorNote==new.authorNote &&
+            old.title==new.title
+    }
 
     private fun better(a:List<BigDecimal>,b:List<BigDecimal>):Boolean {
         for (i in a.indices) {
@@ -148,8 +202,10 @@ object AdaptiveCycleOptionReviewDomain {
         val sourceBlock=source.blocks.singleOrNull {
             it.blockId==request.targetBlockId
         }
+        val needsRepair=repairableSource(sourceAudit,request.targetBlockId)
         if(sourceBlock==null ||
-            sourceAudit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW)
+            (sourceAudit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW &&
+                !needsRepair))
             return AdaptiveCycleComparison(
                 AdaptiveCycleComparisonStatus.SOURCE_UNRESOLVED,sourceAudit,
                 emptyList(),null,0)
@@ -170,8 +226,11 @@ object AdaptiveCycleOptionReviewDomain {
             val block=option.proposedCycle.blocks.singleOrNull {
                 it.blockId==request.targetBlockId
             }
+            val repairScopeInvalid=needsRepair &&
+                !confinedRepair(source,option.proposedCycle,request.targetBlockId)
             val status=when {
-                block==null || change.status in setOf(
+                repairScopeInvalid ||
+                    block==null || change.status in setOf(
                     CustomCycleTransitionStatus.INVALID_SOURCE_OR_CANDIDATE,
                     CustomCycleTransitionStatus.STALE_REVISION) ||
                     audit.status==CustomCoachAuditStatus.INVALID_SOURCE ->
@@ -207,7 +266,9 @@ object AdaptiveCycleOptionReviewDomain {
                     "Missing adaptive permissions: "+
                     change.blockedKinds.joinToString(",") {it.name}
                 AdaptiveCycleOptionStatus.INVALID_CYCLE ->
-                    "Invalid cycle identity, revision, exercises or equipment."
+                    if(repairScopeInvalid)
+                        "A continuity repair may only modify the target block and its own overrides, never another block, phase, or cycle identity."
+                    else "Invalid cycle identity, revision, exercises or equipment."
                 AdaptiveCycleOptionStatus.COACH_POLICY_REQUIRED ->
                     "Missing phase policy or training-volume continuity limits."
                 AdaptiveCycleOptionStatus.COACH_AUDIT_FAILED ->
@@ -243,6 +304,7 @@ object AdaptiveCycleOptionReviewDomain {
                 else ->AdaptiveCycleComparisonStatus.NO_FEASIBLE_ALTERNATIVE
             },
             sourceAudit,Collections.unmodifiableList(assessed),
-            best?.optionId,assessed.size,futureBest?.optionId)
+            best?.optionId,assessed.size,futureBest?.optionId,
+            sourceRepairRequired=needsRepair)
     }
 }

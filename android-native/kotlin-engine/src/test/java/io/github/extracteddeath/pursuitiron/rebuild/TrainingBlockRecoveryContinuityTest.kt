@@ -150,6 +150,127 @@ class TrainingBlockRecoveryContinuityTest {
                 it.location=="week.3.block.strength"})
     }
 
+
+    private fun fixedStrength(source:CustomTrainingCycle):CustomTrainingCycle =
+        source.copy(revision=source.revision+1,
+            blocks=source.blocks.map {block->
+                if(block.blockId!="strength")block else block.copy(
+                    days=block.days.map {day->day.copy(
+                        slots=day.slots.map {slot->
+                            val original=slot.sets.first()
+                            slot.copy(sets=List(3){original})
+                        })
+                    })
+            })
+
+    private fun repairRequest(
+        source:CustomTrainingCycle,
+        alternatives:List<AdaptiveCycleOption>,
+        permissions:CustomCycleCoachPermissions=
+            CustomCycleCoachPermissions(adaptSetCount=true)
+    )=AdaptiveCycleOptionRequest(
+        source,"strength",fixture.athlete(),fixture.movements,
+        coaching(CustomCoachVolumeContinuityPolicy(n("0.25"),n("0.25"))),
+        permissions,alternatives)
+
+    @Test fun badStrengthBlockCanBeRepairedWithoutErasingHypertrophyOrRecovery() {
+        val source=cycle()
+        val fixed=fixedStrength(source)
+        val reviewed=AdaptiveCycleOptionReviewDomain.review(repairRequest(
+            source,listOf(
+                AdaptiveCycleOption("keep_current",
+                    source.copy(revision=source.revision+1)),
+                AdaptiveCycleOption("repair_strength",fixed))))
+        assertTrue(reviewed.sourceRepairRequired)
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,
+            reviewed.sourceAudit.status)
+        assertEquals(AdaptiveCycleComparisonStatus.OPTIONS_COMPARED,
+            reviewed.status)
+        assertEquals("repair_strength",reviewed.recommendedOptionId)
+        assertEquals(AdaptiveCycleOptionStatus.COACH_AUDIT_FAILED,
+            reviewed.evaluated[0].status)
+        assertEquals(AdaptiveCycleOptionStatus.READY_FOR_REVIEW,
+            reviewed.evaluated[1].status)
+        assertEquals(listOf(30,9,27),
+            reviewed.evaluated[1].coachingAudit!!.weeks.map {it.workingSets})
+        assertEquals(source.blocks.take(2),fixed.blocks.take(2))
+        assertEquals(source.blocks.last().days.map {day->
+            day.slots.filter {it.pinned}.map {it.slotId}
+        },fixed.blocks.last().days.map {day->
+            day.slots.filter {it.pinned}.map {it.slotId}
+        })
+        assertTrue(fixed.blocks.last().days.flatMap {it.slots}
+            .flatMap {it.sets}.all {it.reps==RepBand(3,6) &&
+                it.targetRir==2 && it.restSeconds==240})
+        assertFalse(reviewed.mayIssueWorkout)
+        assertFalse(reviewed.mayApplyAutomatically)
+        assertEquals(source,cycle())
+    }
+
+    @Test fun repairStillRequiresExplicitAdaptSetCountPermission() {
+        val source=cycle()
+        val reviewed=AdaptiveCycleOptionReviewDomain.review(repairRequest(
+            source,listOf(AdaptiveCycleOption("repair",
+                fixedStrength(source))),
+            CustomCycleCoachPermissions()))
+        assertTrue(reviewed.sourceRepairRequired)
+        assertEquals(AdaptiveCycleComparisonStatus.NO_FEASIBLE_ALTERNATIVE,
+            reviewed.status)
+        assertEquals(AdaptiveCycleOptionStatus.PERMISSION_REQUIRED,
+            reviewed.evaluated.single().status)
+        assertNull(reviewed.recommendedOptionId)
+    }
+
+    @Test fun repairCannotChangeEarlierBlocksEvenWithBroadEditPermission() {
+        val source=cycle()
+        val repaired=fixedStrength(source)
+        val changed=repaired.copy(blocks=repaired.blocks.map {block->
+            if(block.blockId=="recovery")block.copy(
+                label="Changed recovery") else block})
+        val reviewed=AdaptiveCycleOptionReviewDomain.review(repairRequest(
+            source,listOf(AdaptiveCycleOption("smuggled",changed)),
+            CustomCycleCoachPermissions(adaptSetCount=true,adaptCues=true)))
+        assertTrue(reviewed.sourceRepairRequired)
+        assertEquals(AdaptiveCycleOptionStatus.INVALID_CYCLE,
+            reviewed.evaluated.single().status)
+        assertNull(reviewed.recommendedOptionId)
+    }
+
+    @Test fun unrelatedSourceCoachDefectCannotBeLaunderedThroughRepair() {
+        val source=cycle()
+        val deficient=source.copy(blocks=source.blocks.map {block->
+            if(block.blockId!="block-1")block else block.copy(
+                days=block.days.map {day->day.copy(
+                    slots=day.slots.map {slot->
+                        if(slot.exerciseId=="row")
+                            slot.copy(sets=slot.sets.take(1)) else slot
+                    })
+                })
+        })
+        val reviewed=AdaptiveCycleOptionReviewDomain.review(repairRequest(
+            deficient,listOf(AdaptiveCycleOption("repaired",
+                fixedStrength(deficient)))))
+        assertEquals(AdaptiveCycleComparisonStatus.SOURCE_UNRESOLVED,
+            reviewed.status)
+        assertFalse(reviewed.sourceRepairRequired)
+        assertEquals(0,reviewed.candidatesChecked)
+        assertTrue(reviewed.sourceAudit.issues.any {
+            it.kind==CustomCoachIssueKind.BELOW_WEEKLY_MEV &&
+                it.location.startsWith("week.1.")})
+    }
+
+    @Test fun missingReviewedContinuityPolicyCannotUseRepairException() {
+        val source=cycle()
+        val request=repairRequest(source,listOf(
+            AdaptiveCycleOption("repair",fixedStrength(source))))
+            .copy(coaching=coaching())
+        val reviewed=AdaptiveCycleOptionReviewDomain.review(request)
+        assertEquals(AdaptiveCycleComparisonStatus.SOURCE_UNRESOLVED,
+            reviewed.status)
+        assertFalse(reviewed.sourceRepairRequired)
+        assertTrue(reviewed.sourceAudit.issues.any {
+            it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_MISSING})
+    }
     @Test fun explicitlyReviewedLargerDropCanPassWithoutRewritingDeload() {
         val source=cycle()
         val audited=review(limit=CustomCoachVolumeContinuityPolicy(

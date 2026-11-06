@@ -39,17 +39,21 @@ internal class NativeKotlinCandidateHost(context:Context) {
     private val adaptiveCycleDrafts=NativeKotlinAdaptiveCycleDraftAcceptance(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         adaptiveCyclePermissions,customCycleSignoffs,futureBlockContexts)
+    private val futureActivationHandoff=NativeKotlinFutureActivationHandoffFileStore(
+        root,revisionFence,localAthlete,authoringSourceStore)
     private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
         customCycleSignoffs)
     private val customPreparedStore=NativeKotlinCustomWorkoutPreparedStore(
-        root,revisionFence,localAthlete,customWorkoutPreflight)
+        root,revisionFence,localAthlete,customWorkoutPreflight,
+        futureActivationHandoff)
     private val journalStore=KotlinNativeJournalFileStore(root)
     private val correctionStore=KotlinNativeSavedCorrectionFileStore(root,journalStore)
     private val historyStore=NativeKotlinHistoryManifestFileStore(root)
     private val customIssuedStore=NativeKotlinCustomWorkoutJournalFileStore(
         root,revisionFence,localAthlete,customPreparedStore,
-        customWorkoutPreflight,historyStore,journalStore)
+        customWorkoutPreflight,historyStore,journalStore,
+        futureActivationHandoff)
     private val customHistoryTransactions=NativeKotlinCustomHistoryTransaction(
         historyStore,customIssuedStore,revisionFence,localAthlete)
     private val customSavedCorrections=NativeKotlinCustomSavedCorrectionFileStore(
@@ -92,7 +96,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             else mixedHistoryReader.rederiveAcceptedRepSnapshot(
                 owner,signed.athleteId,approvalStore,approval,
                 authoringSourceStore)
-        })
+        },futureActivationHandoff)
     private val historyTransactions=NativeKotlinHistoryTransactionCoordinator(
         historyStore,journalStore,correctionStore,approvalStore,revisionFence)
     private val trackedWorkout=NativeKotlinTrackedWorkoutGateway(
@@ -558,6 +562,38 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeFutureApprovalRefusal.NOT_AUTHORIZED)
         return futureActivationApproval.revoke(
             signed.ownerKey,cycleId,blockId,expectedRevision)
+    }
+
+    /**
+     * Crash-safe handoff gate, not an active-profile switch. After staging,
+     * BOTH native workout issuers refuse new sessions until the handoff is
+     * explicitly cancelled with the original source unchanged, or a future
+     * fully recoverable activation executor consumes it.
+     */
+    fun stageFutureBlockActivationHandoff(
+        cycleId:String,blockId:String,approvalRevision:Long,
+        fingerprint:String,athleteConfirmed:Boolean
+    ):NativeFutureHandoffReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureHandoffReview.Rejected(
+                NativeFutureHandoffRefusal.NOT_AUTHORIZED)
+        return futureActivationHandoff.stage(owner.ownerKey,cycleId,blockId,
+            approvalRevision,fingerprint,futureActivationApproval,athleteConfirmed)
+    }
+    fun readFutureBlockActivationHandoff():NativeFutureHandoffReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureHandoffReview.Rejected(
+                NativeFutureHandoffRefusal.NOT_AUTHORIZED)
+        return futureActivationHandoff.read(owner.ownerKey)
+    }
+    fun cancelFutureBlockActivationHandoff(
+        approvalRevision:Long,fingerprint:String,athleteConfirmed:Boolean
+    ):NativeFutureHandoffReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureHandoffReview.Rejected(
+                NativeFutureHandoffRefusal.NOT_AUTHORIZED)
+        return futureActivationHandoff.cancel(owner.ownerKey,approvalRevision,
+            fingerprint,athleteConfirmed)
     }
 
     fun readAcceptedFutureBlockContext(

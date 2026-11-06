@@ -12,6 +12,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     @get:Rule val temp=TemporaryFolder()
     private var active:NativeKotlinOwnerIdentity?=
         NativeKotlinOwnerIdentity("owner-1","athlete-1")
+    /** Isolated weighted variant for the real progression integration test. */
+    private var weightedFixture=false
     private val identity=NativeKotlinCurrentIdentity{active}
     private val fence by lazy{NativeKotlinApprovalRevisionFence(temp.root.toPath())}
     private val drafts by lazy{NativeCustomCycleDraftFileStore(
@@ -33,7 +35,10 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         trainingWeekdays=setOf(0,2,4),timezoneId="America/New_York",
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.Minutes(60),
-        gym=GymProfileDraft("gym-1",LoadUnit.LB,emptyMap(),
+        gym=GymProfileDraft("gym-1",LoadUnit.LB,
+            if(weightedFixture)mapOf("dumbbell-rack" to VerifiedLoadStock.Totals(
+                LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
+                listOf(n("20"),n("25"),n("30")))) else emptyMap(),
             emptySet(),emptySet()),
         allowBodyweight=true,allowSupersets=false,
         allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
@@ -45,7 +50,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     private fun source(rev:Long=1)=NativeCustomAuthoringSnapshot(
         "owner-1","athlete-1",rev,setup(),StarterExerciseTranche.movements())
     private fun set()=CustomAuthoredSet(DraftSetType.WORKING,
-        DraftSetLoad.ExplicitBodyweight,RepBand(10,15),2,55,75)
+        if(weightedFixture)DraftSetLoad.Verified(LoadUnit.LB,
+            LoadBasis.DUMBBELL_PER_HAND,n("20"))
+        else DraftSetLoad.ExplicitBodyweight,RepBand(10,15),2,55,75)
     private fun cycle(rev:Long=1)=CustomTrainingCycle(
         "cycle-1",rev,"athlete-1",AthleteTrainingGoal.HYPERTROPHY,
         "My custom cycle",listOf(CustomTrainingBlock(
@@ -54,16 +61,18 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             CustomSplitIdentity.Freeform("Custom core"),listOf(0,2,4).map {
                 day->CustomTrainingDay(day,"Day $day",
                     ComposerSessionPurpose.HYPERTROPHY,
-                    listOf(CustomExerciseSlot("slot-$day","bodyweight_crunch",
+                    listOf(CustomExerciseSlot("slot-$day",
+                        if(weightedFixture)"db_curl" else "bodyweight_crunch",
                         ComposerRole.ACCESSORY,listOf(set()))))
             }
         )))
     private fun bounds()=TrainingMuscle.entries.map{muscle ->
+        val focus=if(weightedFixture)TrainingMuscle.BICEPS else TrainingMuscle.ABS
         DeclaredMuscleDoseBounds(muscle,
-            if(muscle==TrainingMuscle.ABS)n("3") else BigDecimal.ZERO,
-            if(muscle==TrainingMuscle.ABS)n("4") else BigDecimal.ZERO,
-            if(muscle==TrainingMuscle.ABS)n("5") else BigDecimal.ZERO,
-            if(muscle==TrainingMuscle.ABS)3 else 0)
+            if(muscle==focus)n("3") else BigDecimal.ZERO,
+            if(muscle==focus)n("4") else BigDecimal.ZERO,
+            if(muscle==focus)n("5") else BigDecimal.ZERO,
+            if(muscle==focus)3 else 0)
     }
     private fun policy()=AuthoredGoalProgramPolicy(
         policyId="coach-1",revision="policy-1",
@@ -517,7 +526,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                         days=(block.days+CustomTrainingDay(1,"Day 1",
                             ComposerSessionPurpose.HYPERTROPHY,
                             listOf(CustomExerciseSlot("slot-1",
-                                "bodyweight_crunch",ComposerRole.ACCESSORY,
+                                if(weightedFixture)"db_curl" else "bodyweight_crunch",
+                                ComposerRole.ACCESSORY,
                                 listOf(set())))))
                             .sortedBy {it.weekday})
             })
@@ -727,7 +737,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                     "observed-w$week-d$day",0,
                     CustomWorkoutVisitKey(set,CustomWorkoutVisitPart.MAIN),
                     KotlinJournalSetOutcome.COMPLETED,
-                    KotlinPerformedSet(null,null,12,2)))
+                    KotlinPerformedSet(
+                        if(weightedFixture)n("20") else null,
+                        if(weightedFixture)LoadUnit.LB else null,12,2)))
             assertTrue(recorded.toString(),
                 recorded is NativeCustomJournalResult.Durable)
             val finish=transaction.complete("owner-1","athlete-1",
@@ -1820,7 +1832,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 CustomWorkoutVisitKey("cycle-1:w$week:d1:slot-1:s1",
                     CustomWorkoutVisitPart.MAIN),
                 KotlinJournalSetOutcome.COMPLETED,
-                KotlinPerformedSet(null,null,reps,2)))
+                KotlinPerformedSet(
+                    if(weightedFixture)n("20") else null,
+                    if(weightedFixture)LoadUnit.LB else null,reps,2)))
         assertTrue(recorded.toString(),recorded is NativeCustomJournalResult.Durable)
         val finish=NativeKotlinCustomHistoryTransaction(
             f.history,f.issuer,fence,identity)

@@ -17,7 +17,8 @@ internal data class NativeVerifiedCustomBlockCompletion(
 enum class NativeFutureActivationRefusal {
     NOT_AUTHORIZED, NO_ACCEPTED_FUTURE_CONTEXT, STALE_SOURCE_OR_DRAFT,
     NOT_A_FUTURE_BLOCK, INCOMPLETE_HISTORY, CONFLICTING_HISTORY,
-    TARGET_BLOCK_ALREADY_STARTED, STORAGE_UNAVAILABLE
+    TARGET_BLOCK_ALREADY_STARTED, OUTSTANDING_CUSTOM_WORKOUTS,
+    WORKOUT_INVENTORY_UNAVAILABLE, STORAGE_UNAVAILABLE
 }
 
 sealed interface NativeFutureActivationReview {
@@ -116,7 +117,8 @@ class NativeKotlinFutureBlockActivationPreflight(
     private val drafts:NativeCustomCycleDraftFileStore,
     private val contexts:NativeKotlinFutureBlockContextFileStore,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
-    private val customJournals:NativeKotlinCustomWorkoutJournalFileStore
+    private val customJournals:NativeKotlinCustomWorkoutJournalFileStore,
+    private val customInventory:NativeKotlinCustomOutstandingWorkoutInventory
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
 
@@ -178,6 +180,20 @@ class NativeKotlinFutureBlockActivationPreflight(
                         snap.stamp.cycleId,snap.blockId,
                         snap.absoluteWeek,snap.weekday)
                 }
+                // A completed-history boundary alone is insufficient:
+                // enumerate every durable prepared AND issued custom file.
+                // Even an orphaned or corrupt record must block transition.
+                val completedIds=full.timeline.completions
+                    .filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+                    .map{it.manifest.workoutId}.toSet()
+                val inventory=customInventory.inspect(
+                    ownerKey,owner.athleteId,completedIds)
+                if(inventory !is NativeCustomInventoryReview.Reviewed)
+                    return@withOwnerTransaction NativeFutureActivationReview.Rejected(
+                        NativeFutureActivationRefusal.WORKOUT_INVENTORY_UNAVAILABLE)
+                if(inventory.outstanding.any{it.cycleId==cycleId})
+                    return@withOwnerTransaction NativeFutureActivationReview.Rejected(
+                        NativeFutureActivationRefusal.OUTSTANDING_CUSTOM_WORKOUTS)
                 if(identity.signedInIdentity()!=owner)
                     return@withOwnerTransaction NativeFutureActivationReview.Rejected(
                         NativeFutureActivationRefusal.NOT_AUTHORIZED)

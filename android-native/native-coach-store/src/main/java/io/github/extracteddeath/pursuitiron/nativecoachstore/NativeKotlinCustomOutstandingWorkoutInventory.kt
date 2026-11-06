@@ -102,11 +102,11 @@ internal object NativeKotlinCustomInventoryDomain {
 }
 
 /** A full scan is deliberately conservative and never an activation grant. */
-internal class NativeKotlinCustomOutstandingWorkoutInventory(
+class NativeKotlinCustomOutstandingWorkoutInventory(
     private val prepared:NativeKotlinCustomWorkoutPreparedStore,
     private val issued:NativeKotlinCustomWorkoutJournalFileStore
 ) {
-    fun inspect(
+    internal fun inspect(
         ownerKey:String,athleteId:String,
         completedCustomWorkoutIds:Set<String>
     ):NativeCustomInventoryReview {

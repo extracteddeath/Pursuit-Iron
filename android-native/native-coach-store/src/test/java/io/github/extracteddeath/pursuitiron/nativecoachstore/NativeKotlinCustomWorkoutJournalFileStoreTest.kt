@@ -247,4 +247,79 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             issued.record("owner-1","workout-2",
                 recordSet("cannot-write",0)))
     }
+
+    private fun inventory()=NativeKotlinCustomOutstandingWorkoutInventory(
+        prepared,issued)
+
+    @Test fun censusDistinguishesPreparedIssuedAndManifestCompletedWorkouts() {
+        initialize();approve();prepareWeek()
+        val planned=inventory().inspect("owner-1","athlete-1",emptySet())
+        assertTrue(planned.toString(),
+            planned is NativeCustomInventoryReview.Reviewed)
+        val before=(planned as NativeCustomInventoryReview.Reviewed)
+            .sessions.single()
+        assertEquals("workout-2",before.workoutId)
+        assertEquals("cycle-1",before.cycleId)
+        assertEquals(2,before.absoluteWeek)
+        assertFalse(before.issued)
+        assertFalse(before.completed)
+        enroll();issueWeek()
+        val issuedReview=inventory().inspect("owner-1","athlete-1",emptySet())
+        assertTrue(issuedReview.toString(),
+            issuedReview is NativeCustomInventoryReview.Reviewed)
+        val entry=(issuedReview as NativeCustomInventoryReview.Reviewed)
+            .outstanding.single()
+        assertTrue(entry.issued)
+        assertFalse(entry.completed)
+        assertEquals(NativeCustomInventoryReview.Rejected(
+            NativeCustomInventoryRefusal.UNVERIFIED_COMPLETION),
+            inventory().inspect("owner-1","athlete-1",setOf("workout-2")))
+        // Reopen both stores cold without relying on a caller's memory.
+        val reopened=NativeKotlinCustomOutstandingWorkoutInventory(
+            NativeKotlinCustomWorkoutPreparedStore(
+                temp.root.toPath(),fence,identity,preflight),
+            NativeKotlinCustomWorkoutJournalFileStore(
+                temp.root.toPath(),fence,identity,prepared,preflight,
+                history,composerJournal))
+        assertEquals(issuedReview,
+            reopened.inspect("owner-1","athlete-1",emptySet()))
+    }
+
+    @Test fun censusCannotIgnoreStrayRenamedOrTamperedPreparedRecords() {
+        initialize();approve();prepareWeek()
+        val original=java.nio.file.Files.list(temp.root.toPath()).use{files->
+            files.filter{it.fileName.toString().startsWith("prepared-custom-")}
+                .findFirst().orElseThrow()
+        }
+        val fake=original.resolveSibling("prepared-custom-"+
+            "a".repeat(64)+".bin")
+        java.nio.file.Files.copy(original,fake)
+        assertEquals(NativeCustomInventoryReview.Rejected(
+            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE),
+            inventory().inspect("owner-1","athlete-1",emptySet()))
+        java.nio.file.Files.delete(fake)
+        val bytes=java.nio.file.Files.readAllBytes(original)
+        val corrupted=bytes.clone()
+        corrupted[corrupted.lastIndex]=
+            (corrupted.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(original,corrupted)
+        assertEquals(NativeCustomInventoryReview.Rejected(
+            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE),
+            inventory().inspect("owner-1","athlete-1",emptySet()))
+    }
+
+    @Test fun censusCannotIgnoreCorruptedIssuedJournal() {
+        initialize();approve();prepareWeek();enroll();issueWeek()
+        val file=java.nio.file.Files.list(temp.root.toPath()).use{files->
+            files.filter{it.fileName.toString().startsWith("issued-custom-")}
+                .findFirst().orElseThrow()
+        }
+        val bytes=java.nio.file.Files.readAllBytes(file)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(file,bytes)
+        assertEquals(NativeCustomInventoryReview.Rejected(
+            NativeCustomInventoryRefusal.CORRUPT_OR_UNRECOGNIZED_FILE),
+            inventory().inspect("owner-1","athlete-1",emptySet()))
+    }
+
 }

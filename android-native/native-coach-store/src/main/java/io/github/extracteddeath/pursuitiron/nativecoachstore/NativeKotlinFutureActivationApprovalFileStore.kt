@@ -83,15 +83,29 @@ private data class NativeFutureApprovalDiskRecord(
 )
 
 /** Scoped, checksummed and atomic. The owner-fence serializes all CAS writers. */
-class NativeKotlinFutureActivationApprovalFileStore(
+class NativeKotlinFutureActivationApprovalFileStore internal constructor(
     private val directory:Path,
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
-    private val boundary:NativeKotlinFutureBlockActivationPreflight,
+    // Test seams can supply deterministic BOUNDARY evidence; production host
+    // always supplies the real owner-fenced fully verified preflight below.
+    // No checkpoint produced by either path can authorize source mutation.
+    private val boundaryReview:(String,String,String)->NativeFutureActivationReview,
     private val futureContexts:NativeKotlinFutureBlockContextFileStore,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val permissions:NativeKotlinAdaptiveCyclePermissionFileStore
 ) {
+    constructor(
+        directory:Path,
+        fence:NativeKotlinApprovalRevisionFence,
+        identity:NativeKotlinCurrentIdentity,
+        boundary:NativeKotlinFutureBlockActivationPreflight,
+        futureContexts:NativeKotlinFutureBlockContextFileStore,
+        sources:NativeKotlinCustomAuthoringSourceFileStore,
+        permissions:NativeKotlinAdaptiveCyclePermissionFileStore
+    ):this(directory,fence,identity,
+        {owner,cycle,block->boundary.inspect(owner,cycle,block)},
+        futureContexts,sources,permissions)
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val hash=Regex("^[a-f0-9]{64}$")
     private val maximum=9_007_199_254_740_991L
@@ -217,7 +231,7 @@ class NativeKotlinFutureActivationApprovalFileStore(
                 CustomCycleChangeKind.SPLIT,CustomCycleChangeKind.SCHEDULE,
                 CustomCycleChangeKind.DAY_COUNT,CustomCycleChangeKind.EXERCISES)))
             return null
-        val reviewed=(boundary.inspect(ownerKey,cycleId,blockId)
+        val reviewed=(boundaryReview(ownerKey,cycleId,blockId)
             as? NativeFutureActivationReview.BoundaryReviewed)?:return null
         val scope=ByteArrayOutputStream()
         DataOutputStream(scope).use{out->

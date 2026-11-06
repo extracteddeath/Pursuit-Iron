@@ -16,6 +16,7 @@ enum class InWorkoutDirection {
     VERIFY_PLANNED_EQUIPMENT,
     CONFIRM_ZERO_LOAD_SEMANTICS,
     REVIEW_AUTHORED_LOAD_CHANGE,
+    FOLLOW_PLANNED_BACKOFF,
     BUILD_REPS_AS_PLANNED,
     CONSIDER_AFTER_WORKOUT,
     REVIEW_MORE_RECOVERY,
@@ -114,9 +115,27 @@ object InWorkoutCoachDomain {
             return result(InWorkoutDirection.CONFIRM_ZERO_LOAD_SEMANTICS,
                 "Confirm whether zero represents bodyweight, assistance, or another loading setup.")
         val lastReps=checkNotNull(previous.actualReps)
-        if(actual.compareTo(kept)!=0)
+        // When a verified original set is followed by a verified planned
+        // lighter backoff, the coach should RECOGNIZE the plan rather than
+        // suggest a second unscheduled reduction. Edited/unknown actuals
+        // are not evidence that the authored next load was an intended backoff.
+        if(actual.compareTo(kept)!=0) {
+            val verifiedPrior=EquipmentLoadDomain.inspect(
+                request.equipment,actual,request.unit)
+            val unchangedActual=previous.issuedLoad?.compareTo(actual)==0
+            if(unchangedActual && verifiedPrior is LoadInspection.Confirmed &&
+                verifiedPrior.exact && kept<actual)
+                return result(InWorkoutDirection.FOLLOW_PLANNED_BACKOFF,
+                    "Your next set is already lighter at ${kept.toPlainString()} ${request.unit.name.lowercase()}. "+
+                    if(lastReps<request.repBand.minimum)
+                        "The last set reached $lastReps of ${request.repBand.minimum} minimum reps; follow the planned backoff and review recovery."
+                    else if(previous.actualRir!=null && previous.actualRir<=1)
+                        "The previous set was demanding. Keep the prescribed backoff and give yourself adequate recovery."
+                    else "Follow the planned backoff; there is no reason to add another weight change.",
+                    CoachConfidence.MODERATE)
             return result(InWorkoutDirection.REVIEW_AUTHORED_LOAD_CHANGE,
-                "The planned next set uses a different load. Review the intended top/backoff scheme rather than replacing it automatically.")
+                "The next set has a different prescribed weight. Check the planned loading scheme and any edited actuals before changing it.")
+        }
         if(lastReps<request.repBand.minimum) {
             val below=EquipmentLoadDomain.inspect(request.equipment,
                 actual.subtract(smallestUnit),request.unit)
@@ -124,11 +143,13 @@ object InWorkoutCoachDomain {
             if(smaller!=null &&
                 actual.subtract(smaller)<=request.maximumApprovedReviewStep)
                 return result(InWorkoutDirection.REVIEW_SMALLER_NEXT_LOAD,
-                    "The last set missed the rep floor. Consider the next smaller verified load for only the upcoming set.",
+                    "You completed $lastReps of ${request.repBand.minimum} minimum reps. "+
+                    "Consider ${smaller.toPlainString()} ${request.unit.name.lowercase()} for this next set only; nothing changes until you choose.",
                     if(actualRirKnown)CoachConfidence.MODERATE
                     else CoachConfidence.LIMITED,smaller)
             return result(InWorkoutDirection.NO_SAFE_SMALLER_LOAD,
-                "The set missed its rep floor, but no smaller load meets the verified equipment and approved step limits.")
+                "You completed $lastReps of ${request.repBand.minimum} minimum reps, "+
+                "but no smaller verified weight fits your approved step. Review rest and technique before continuing.")
         }
         if(previous.actualRir!=null && previous.actualRir<=1)
             return result(InWorkoutDirection.REVIEW_MORE_RECOVERY,

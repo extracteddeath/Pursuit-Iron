@@ -70,9 +70,11 @@ class InWorkoutCoachDomainTest {
 
     @Test fun prePlannedBackoffCannotBeOverwrittenFromTopSetEvidence() {
         val result=assess(ask(nextLoad=205))
-        assertEquals(InWorkoutDirection.REVIEW_AUTHORED_LOAD_CHANGE,result.direction)
+        assertEquals(InWorkoutDirection.FOLLOW_PLANNED_BACKOFF,result.direction)
         assertNull(result.weightForHumanReview)
         assertEquals(n(205),result.issuedTargetUnchanged)
+        assertTrue(result.message.contains("205"))
+        assertTrue(result.message.contains("2 of 5"))
     }
 
     @Test fun noPhantomLoadOrUnconfirmedNextTarget() {
@@ -136,4 +138,37 @@ class InWorkoutCoachDomainTest {
             assess(ask().copy(nextIssuedLoad=BigDecimal("159.5555")))
         }
     }
+
+    @Test fun doNotMistakeAthleteEditedTopSetForVerifiedAuthoredBackoff() {
+        val edited=fact(0,215,2,0).copy(issuedLoad=n(210))
+        val result=assess(ask(observations=listOf(edited),nextLoad=205))
+        assertEquals(InWorkoutDirection.REVIEW_AUTHORED_LOAD_CHANGE,
+            result.direction)
+        assertNull(result.weightForHumanReview)
+        assertEquals(n(205),result.issuedTargetUnchanged)
+    }
+
+    @Test fun missingPhysicalStockCannotAuthorizeEvenPreplannedBackoffCue() {
+        val result=assess(ask(nextLoad=205,stock=null))
+        assertEquals(InWorkoutDirection.VERIFY_PLANNED_EQUIPMENT,result.direction)
+        assertNull(result.weightForHumanReview)
+    }
+
+    @Test fun highEffortBackoffAtRepFloorHighlightsRecoveryWithoutSecondWeightDrop() {
+        val review=assess(ask(observations=listOf(fact(0,215,5,0)),
+            nextLoad=210))
+        assertEquals(InWorkoutDirection.FOLLOW_PLANNED_BACKOFF,review.direction)
+        assertTrue(review.message.contains("recovery"))
+        assertNull(review.weightForHumanReview)
+        assertFalse(review.canApplyAutomatically)
+    }
+
+    @Test fun coachOffersExactAttainableSmallerLoadNotInventedHalfStep() {
+        val review=assess(ask())
+        assertEquals(n(210),review.weightForHumanReview)
+        assertTrue(review.message.contains("2 of 5"))
+        assertTrue(review.message.contains("210 lb"))
+        assertEquals(n(215),review.issuedTargetUnchanged)
+    }
+
 }

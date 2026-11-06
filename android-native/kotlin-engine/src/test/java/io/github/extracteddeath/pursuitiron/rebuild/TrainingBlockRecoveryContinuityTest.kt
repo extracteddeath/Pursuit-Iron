@@ -26,7 +26,7 @@ class TrainingBlockRecoveryContinuityTest {
         slots=day.slots.map {slot ->
             val old=slot.sets.single()
             val prescribed=if(strength)old.copy(
-                reps=RepBand(3,6),restSeconds=240) else old
+                reps=RepBand(3,6),restSeconds=150) else old
             slot.copy(
                 sets=List(checkNotNull(counts[slot.exerciseId])){prescribed},
                 pinned=pinBench && slot.exerciseId=="bench")
@@ -201,7 +201,7 @@ class TrainingBlockRecoveryContinuityTest {
         })
         assertTrue(fixed.blocks.last().days.flatMap {it.slots}
             .flatMap {it.sets}.all {it.reps==RepBand(3,6) &&
-                it.targetRir==2 && it.restSeconds==240})
+                it.targetRir==2 && it.restSeconds==150})
         assertFalse(reviewed.mayIssueWorkout)
         assertFalse(reviewed.mayApplyAutomatically)
         assertEquals(source,cycle())
@@ -241,7 +241,9 @@ class TrainingBlockRecoveryContinuityTest {
         val deficient=source.copy(blocks=source.blocks.map {block->
             if(block.blockId!="block-1")block else block.copy(
                 days=block.days.map {day->day.copy(
-                    slots=day.slots.map {slot->
+                    slots=day.slots.filter {slot->
+                        day.weekday==0 || slot.exerciseId!="row"
+                    }.map {slot->
                         if(slot.exerciseId=="row")
                             slot.copy(sets=slot.sets.take(1)) else slot
                     })

@@ -193,6 +193,9 @@ object CustomCycleTransitionDomain {
                     if(slot.supersetGroup!=previous.supersetGroup)
                         emit(CustomCycleChangeKind.SUPERSETS,at,
                             "New block changes a superset group.")
+                    if(slot.coachNote!=previous.coachNote)
+                        emit(CustomCycleChangeKind.CUES,at,
+                            "New block changes an athlete-authored exercise note.")
                     compareSets(previous.sets,slot.sets,at,::emit)
                 }
             }

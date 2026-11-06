@@ -348,6 +348,146 @@ class NativeKotlinCustomWorkoutPreparedStore(
         }
     }
 
+    private fun resetPreviewFenced(
+        ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        signoffs:NativeKotlinActivatedCycleSignoffFileStore,
+        activation:NativeKotlinFutureActivationCommitTransaction,
+        issued:NativeKotlinCustomWorkoutJournalFileStore,
+        settings:NativeKotlinCoachAssistanceSettingsStore
+    ):NativePreparedManualResetPreview {
+        fun no(r:NativePreparedManualResetRefusal)=
+            NativePreparedManualResetPreview.Rejected(r)
+        val athlete=current(ownerKey)?:return no(
+            NativePreparedManualResetRefusal.NOT_AUTHORIZED)
+        val saved=(openFenced(ownerKey,workoutId,athlete)
+            as? NativeCustomPreparedRead.Found)?.workout
+            ?:return no(NativePreparedManualResetRefusal.NO_AMENDED_PREPARATION)
+        if(saved.authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
+            saved.resetToAuthored ||
+            saved.repApprovalFingerprint==null &&
+                saved.loadApprovalFingerprint==null)
+            return no(NativePreparedManualResetRefusal.NO_AMENDED_PREPARATION)
+        if(saved.snapshot.stamp.cycleId!=cycleId ||
+            saved.snapshot.absoluteWeek!=absoluteWeek ||
+            saved.snapshot.weekday!=weekday ||
+            saved.ownerKey!=ownerKey || saved.athleteId!=athlete.athleteId)
+            return no(NativePreparedManualResetRefusal.INVALID_SELECTION)
+        if(issued.open(ownerKey,workoutId)!=NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_ISSUED))
+            return no(NativePreparedManualResetRefusal.ALREADY_ISSUED)
+        val preferences=(settings.read(ownerKey)
+            as? NativeCoachSettingsRead.Current)?.settings
+            ?:return no(NativePreparedManualResetRefusal.SETTINGS_UNAVAILABLE)
+        val consent=(signoffs.read(ownerKey,inputs)
+            as? NativeActivatedSignoffRead.Found)?.takeIf{it.isCurrent}
+            ?.receipt ?:return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
+        val active=(activation.read(ownerKey)
+            as? NativeFutureCommitReview.Applied)?.context
+            ?:return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
+        val original=(activation.previewActivatedWorkout(
+            ownerKey,inputs,absoluteWeek,weekday)
+            as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+            ?:return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
+        if(consent.ownerKey!=ownerKey ||
+            consent.athleteId!=athlete.athleteId ||
+            consent.cycleId!=cycleId || consent.blockId!=active.blockId ||
+            consent.sourceRevision!=active.sourceRevision ||
+            consent.recordRevision!=saved.consentRevision ||
+            consent.reviewFingerprint!=saved.consentFingerprint ||
+            absoluteWeek<consent.firstWeek ||
+            original.stamp.athleteId!=athlete.athleteId ||
+            original.stamp.cycleId!=cycleId ||
+            original.stamp.gymCatalogSourceRevision!=active.sourceRevision ||
+            original.blockId!=consent.blockId ||
+            original.absoluteWeek!=absoluteWeek ||
+            original.weekday!=weekday)
+            return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
+        if(!isResettableAmendment(saved,original))
+            return no(NativePreparedManualResetRefusal.UNSAFE_AMENDMENT)
+        if(current(ownerKey)!=athlete)
+            return no(NativePreparedManualResetRefusal.NOT_AUTHORIZED)
+        return NativePreparedManualResetPreview.Ready(
+            saved,original,storedFingerprint(ownerKey,workoutId),
+            preferences.revision)
+    }
+
+    /** Show the exact original targets BEFORE requesting reset acceptance. */
+    fun previewManualReset(
+        ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        signoffs:NativeKotlinActivatedCycleSignoffFileStore,
+        activation:NativeKotlinFutureActivationCommitTransaction,
+        issued:NativeKotlinCustomWorkoutJournalFileStore,
+        settings:NativeKotlinCoachAssistanceSettingsStore
+    ):NativePreparedManualResetPreview {
+        if(!listOf(ownerKey,workoutId,cycleId).all(id::matches) ||
+            absoluteWeek !in 1..104 || weekday !in 0..6)
+            return NativePreparedManualResetPreview.Rejected(
+                NativePreparedManualResetRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            resetPreviewFenced(ownerKey,workoutId,cycleId,absoluteWeek,
+                weekday,inputs,signoffs,activation,issued,settings)
+        }}.getOrElse{NativePreparedManualResetPreview.Rejected(
+            NativePreparedManualResetRefusal.STORAGE_UNAVAILABLE)}
+    }
+
+    /**
+     * This single-file, owner-fenced CAS transaction is never automatic:
+     * exact old checksum, current preferences revision and explicit athlete
+     * confirmation must still match at the durable replacement point.
+     *
+     * A reset-only schema v5 flag prevents a previously accepted progression
+     * from silently reappearing when coaching is switched back ON later.
+     */
+    fun acceptManualReset(
+        ownerKey:String,workoutId:String,cycleId:String,
+        absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
+        signoffs:NativeKotlinActivatedCycleSignoffFileStore,
+        activation:NativeKotlinFutureActivationCommitTransaction,
+        issued:NativeKotlinCustomWorkoutJournalFileStore,
+        settings:NativeKotlinCoachAssistanceSettingsStore,
+        expectedPreparedFingerprint:String,
+        expectedSettingsRevision:Long,
+        athleteConfirmed:Boolean
+    ):NativePreparedManualResetWrite {
+        fun no(r:NativePreparedManualResetRefusal)=
+            NativePreparedManualResetWrite.Rejected(r)
+        if(!athleteConfirmed)
+            return no(NativePreparedManualResetRefusal.CONFIRMATION_REQUIRED)
+        if(!fingerprint.matches(expectedPreparedFingerprint) ||
+            expectedSettingsRevision<0)
+            return no(NativePreparedManualResetRefusal.INVALID_SELECTION)
+        if(!listOf(ownerKey,workoutId,cycleId).all(id::matches) ||
+            absoluteWeek !in 1..104 || weekday !in 0..6)
+            return no(NativePreparedManualResetRefusal.INVALID_SELECTION)
+        return runCatching{fence.withOwnerTransaction(ownerKey){
+            val preview=resetPreviewFenced(ownerKey,workoutId,cycleId,
+                absoluteWeek,weekday,inputs,signoffs,activation,issued,settings)
+            if(preview !is NativePreparedManualResetPreview.Ready) {
+                val denied=(preview as NativePreparedManualResetPreview.Rejected)
+                return@withOwnerTransaction no(denied.reason)
+            }
+            if(preview.preparedFingerprint!=expectedPreparedFingerprint ||
+                preview.settingsRevision!=expectedSettingsRevision)
+                return@withOwnerTransaction no(
+                    NativePreparedManualResetRefusal.STALE_PREVIEW)
+            val athlete=current(ownerKey)
+                ?:return@withOwnerTransaction no(
+                    NativePreparedManualResetRefusal.NOT_AUTHORIZED)
+            if(athlete.athleteId!=preview.original.athleteId)
+                return@withOwnerTransaction no(
+                    NativePreparedManualResetRefusal.NOT_AUTHORIZED)
+            val baseline=preview.original.copy(
+                snapshot=preview.authored,
+                repApprovalFingerprint=null,
+                loadApprovalFingerprint=null,
+                resetToAuthored=true)
+            replacePreparedAtomically(ownerKey,workoutId,baseline)
+            NativePreparedManualResetWrite.Reset(baseline)
+        }}.getOrElse{no(NativePreparedManualResetRefusal.STORAGE_UNAVAILABLE)}
+    }
+
     private fun openFenced(
         ownerKey:String,workoutId:String,
         owner:NativeKotlinOwnerIdentity

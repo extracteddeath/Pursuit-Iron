@@ -408,6 +408,10 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 !ledger.ledger.readyForHistoryReads ||
                 ledger.ledger.ownerKey!=ownerKey ||
                 ledger.ledger.athleteId!=current.athleteId ||
+                // A reset/replaced manifest must not satisfy a future-block
+                // approval that was signed against a later verified boundary.
+                ledger.ledger.revision<staged.historyManifestRevision ||
+                ledger.ledger.completions.size<staged.firstWeek-1 ||
                 ledger.ledger.completions.any{it.workoutId==workoutId})
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.HISTORY_NOT_READY)

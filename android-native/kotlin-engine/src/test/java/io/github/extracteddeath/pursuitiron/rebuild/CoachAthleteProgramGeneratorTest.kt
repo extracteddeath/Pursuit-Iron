@@ -398,6 +398,24 @@ class CoachAthleteProgramGeneratorTest {
                 visits=2,gap=1)}))
     }
 
+    @Test fun boundedPrimarySearchRetainsOptionalExtraFrequencyForWholeDoseAudit() {
+        val s=setup(weekdays=setOf(0,1,2,3,4,5))
+        val required=policy(s,primaries=mapOf("bench" to 2))
+        val plans=CoachAthleteProgramGenerator.placements(
+            (0..5).toList(),List(6){ComposerFocus.FULL_BODY},
+            List(6){ComposerSessionPurpose.HYPERTROPHY},
+            required,movements.associateBy {it.exerciseId},
+            movements.associate {it.exerciseId to choice(it.exerciseId,
+                visits=3,gap=1)})
+        assertEquals(8,plans.size)
+        val frequencies=plans.map {plan->plan.count {
+            it.requiredPrimaryExerciseId=="bench"
+        }}
+        assertEquals(2,frequencies.first())
+        assertEquals(3,frequencies.last())
+        assertTrue(frequencies.all {it in 2..3})
+    }
+
     @Test fun alternatePrimaryPlacementsRespectSundayToMondayRecovery() {
         val s=setup(weekdays=setOf(0,2,4,6))
         val policy=policy(s,primaries=mapOf("bench" to 2))

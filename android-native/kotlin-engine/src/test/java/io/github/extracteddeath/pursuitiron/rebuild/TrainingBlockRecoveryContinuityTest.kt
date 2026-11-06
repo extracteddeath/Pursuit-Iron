@@ -1,0 +1,169 @@
+package io.github.extracteddeath.pursuitiron.rebuild
+
+import java.math.BigDecimal
+import org.junit.Assert.*
+import org.junit.Test
+
+/**
+ * A recovery week or performance-test bridge must not reset the regular
+ * training dose baseline. The 30 -> 11 scenario is an engineering regression
+ * for the athlete-reported strength-block collapse, not a clinical volume
+ * recommendation or an approval to change a real training cycle.
+ */
+class TrainingBlockRecoveryContinuityTest {
+    private val fixture=GeneratedAdaptiveBlockFixture
+    private fun n(value:String)=BigDecimal(value)
+    private fun original()=fixture.cycle()
+    private fun template()=original().blocks.single()
+    private fun modifiedDay(
+        day:CustomTrainingDay,
+        counts:Map<String,Int>,
+        purpose:ComposerSessionPurpose=ComposerSessionPurpose.HYPERTROPHY,
+        pinBench:Boolean=false,
+        strength:Boolean=false
+    )=day.copy(
+        purpose=purpose,
+        slots=day.slots.map {slot ->
+            val old=slot.sets.single()
+            val prescribed=if(strength)old.copy(
+                reps=RepBand(3,6),restSeconds=240) else old
+            slot.copy(
+                sets=List(checkNotNull(counts[slot.exerciseId])){prescribed},
+                pinned=pinBench && slot.exerciseId=="bench")
+        })
+
+    private fun hypertrophy():CustomTrainingBlock {
+        val setsByDay=listOf(
+            mapOf("bench" to 4,"row" to 3,"squat" to 3),
+            mapOf("bench" to 3,"row" to 4,"squat" to 3),
+            mapOf("bench" to 3,"row" to 3,"squat" to 4))
+        return template().copy(
+            weeks=1,label="Reviewed hypertrophy baseline",
+            days=template().days.mapIndexed {index,day ->
+                modifiedDay(day,setsByDay[index])
+            })
+    }
+
+    private fun interruption(purpose:CustomBlockPurpose)=template().copy(
+        blockId=if(purpose==CustomBlockPurpose.RECOVERY)"recovery"
+            else "performance",
+        label="Temporary lower-load interruption",
+        purpose=purpose,weeks=1)
+
+    private fun strength():CustomTrainingBlock {
+        val setsByDay=listOf(
+            mapOf("bench" to 2,"row" to 1,"squat" to 1),
+            mapOf("bench" to 2,"row" to 1,"squat" to 1),
+            mapOf("bench" to 1,"row" to 1,"squat" to 1))
+        return template().copy(
+            blockId="strength",label="Strength training",
+            phase=TrainingPhase.STRENGTH,weeks=1,
+            days=template().days.mapIndexed {index,day ->
+                modifiedDay(day,setsByDay[index],
+                    purpose=if(index<2)
+                        ComposerSessionPurpose.STRENGTH_SKILL
+                    else ComposerSessionPurpose.GENERAL_PREPARATION,
+                    pinBench=index<2,strength=true)
+            })
+    }
+
+    private fun cycle(interruption:CustomBlockPurpose=
+        CustomBlockPurpose.RECOVERY)=
+        original().copy(blocks=listOf(
+            hypertrophy(),interruption(interruption),strength()))
+
+    private fun coaching(
+        limit:CustomCoachVolumeContinuityPolicy?=null
+    ):CustomCoachAuditInputs {
+        val hypertrophy=checkNotNull(fixture.generation().policy)
+        val strength=hypertrophy.copy(
+            policyId="strength-policy",revision="strength-v1",
+            phase=TrainingPhase.STRENGTH,
+            minimumPurposeDays=mapOf(
+                ComposerSessionPurpose.STRENGTH_SKILL to 2,
+                ComposerSessionPurpose.GENERAL_PREPARATION to 1),
+            primaryLiftMinimumDays=mapOf("bench" to 2))
+        return CustomCoachAuditInputs(
+            policiesByPhase=mapOf(
+                TrainingPhase.HYPERTROPHY to hypertrophy,
+                TrainingPhase.STRENGTH to strength),
+            nonSetSecondsByWeekday=mapOf(
+                0 to 1200,2 to 1200,4 to 1200),
+            continuityPolicy=limit)
+    }
+
+    private fun review(
+        interruptedBy:CustomBlockPurpose=CustomBlockPurpose.RECOVERY,
+        limit:CustomCoachVolumeContinuityPolicy?=null
+    )=CustomCycleCoachAuditDomain.review(
+        cycle(interruptedBy),fixture.athlete(),
+        fixture.movements,coaching(limit))
+
+    @Test fun recoveryCannotMask30To11StrengthWorkingSetAndDirectMuscleDrop() {
+        val audited=review(limit=CustomCoachVolumeContinuityPolicy(
+            n("0.25"),n("0.25")))
+        assertEquals(listOf(30,9,11),
+            audited.weeks.map {it.workingSets})
+        assertEquals(listOf(
+            CustomBlockPurpose.TRAINING,CustomBlockPurpose.RECOVERY,
+            CustomBlockPurpose.TRAINING),
+            audited.weeks.map {it.blockPurpose})
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,audited.status)
+        assertTrue(audited.issues.toString(),audited.issues.any {
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP &&
+                it.location=="week.3.block.strength" &&
+                it.explanation.contains("30 to 11")})
+        assertTrue(audited.issues.any {
+            it.kind==CustomCoachIssueKind.DIRECT_MUSCLE_DROP &&
+                it.location=="week.3.LATS"})
+        // All three weeks retain their exact authored sets. Neither normal
+        // training week breaks its own explicit phase-specific MEV/MRV.
+        assertEquals(n("10"),audited.weeks[0]
+            .directSets.getValue(TrainingMuscle.CHEST))
+        assertEquals(n("3"),audited.weeks[2]
+            .directSets.getValue(TrainingMuscle.LATS))
+        assertFalse(audited.issues.toString(),audited.issues.any {
+            it.kind in setOf(
+                CustomCoachIssueKind.BELOW_WEEKLY_MEV,
+                CustomCoachIssueKind.ABOVE_WEEKLY_MRV,
+                CustomCoachIssueKind.GOAL_POLICY_UNRESOLVED)})
+        assertFalse(audited.mayIssueWorkout)
+    }
+
+    @Test fun missingContinuityPolicyStillBlocksReturnAfterRecovery() {
+        val audited=review()
+        assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,
+            audited.status)
+        assertTrue(audited.issues.any {
+            it.kind==CustomCoachIssueKind.CONTINUITY_POLICY_MISSING})
+    }
+
+    @Test fun testWeekAlsoCannotEraseNormalTrainingBaseline() {
+        val audited=review(
+            interruptedBy=CustomBlockPurpose.PERFORMANCE_TEST,
+            limit=CustomCoachVolumeContinuityPolicy(
+                n("0.25"),n("0.25")))
+        assertEquals(listOf(30,9,11),
+            audited.weeks.map {it.workingSets})
+        assertTrue(audited.issues.any {
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP &&
+                it.location=="week.3.block.strength"})
+    }
+
+    @Test fun explicitlyReviewedLargerDropCanPassWithoutRewritingDeload() {
+        val source=cycle()
+        val audited=review(limit=CustomCoachVolumeContinuityPolicy(
+            n("0.75"),n("0.75")))
+        assertEquals(audited.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audited.status)
+        assertEquals(listOf(30,9,11),
+            audited.weeks.map {it.workingSets})
+        assertTrue(audited.issues.none {
+            it.kind in setOf(
+                CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP,
+                CustomCoachIssueKind.DIRECT_MUSCLE_DROP)})
+        assertEquals(source,cycle())
+        assertFalse(audited.mayPublishApprovedProgram)
+        assertFalse(audited.mayIssueWorkout)
+    }
+}

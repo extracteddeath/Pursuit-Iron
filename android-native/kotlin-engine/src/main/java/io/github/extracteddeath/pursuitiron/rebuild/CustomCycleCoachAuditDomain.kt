@@ -381,16 +381,17 @@ object CustomCycleCoachAuditDomain {
                 }
             }
         }
-        // Compare EVERY consecutive pair of actual resolved training
-        // weeks, including authored week overrides inside a block. MEV by
-        // itself does not show that a 5-to-3 set drop was planned or safe.
-        // Separate RECOVERY/PERFORMANCE_TEST purposes preserve explicitly
-        // intended deloads rather than disguising TRAINING reductions.
-        val trainingPairs=measurements.zipWithNext().filter {
-            (earlier,later) ->
-            earlier.blockPurpose == CustomBlockPurpose.TRAINING &&
-                later.blockPurpose == CustomBlockPurpose.TRAINING
-        }
+        // Compare successive NORMAL training weeks, including overrides
+        // and different phases. A RECOVERY or PERFORMANCE_TEST block is an
+        // intentional short-lived workload change, not a new long-term
+        // training-dose baseline. Comparing calendar-adjacent weeks and then
+        // dropping non-training pairs would let Hypertrophy 30 -> Recovery 9
+        // -> Strength 11 evade the 30 -> 11 continuity check entirely.
+        // Recovery/test weeks are still measured, but never themselves
+        // penalized as training-volume drops or used as a denominator.
+        val trainingPairs=measurements
+            .filter {it.blockPurpose==CustomBlockPurpose.TRAINING}
+            .zipWithNext()
         val rises=trainingPairs.any { (earlier,later) ->
             later.workingSets > earlier.workingSets ||
                 TrainingMuscle.entries.any { muscle ->

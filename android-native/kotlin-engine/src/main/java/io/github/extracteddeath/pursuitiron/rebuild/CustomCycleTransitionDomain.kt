@@ -146,6 +146,16 @@ object CustomCycleTransitionDomain {
                 emit(CustomCycleChangeKind.SCHEDULE,location,
                     "New block changes the training-day schedule.")
             val previousDays=reference.days.associateBy {it.weekday}
+            // Pin protection is a cross-block promise: adding a new phase
+            // cannot quietly remove an athlete-pinned lift from its reference
+            // schedule by replacing the entire day.
+            for (oldDay in reference.days) {
+                if(added.days.none {it.weekday==oldDay.weekday} &&
+                    oldDay.slots.any {it.pinned})
+                    emit(CustomCycleChangeKind.REMOVE_PINNED,
+                        location+".day."+oldDay.weekday,
+                        "New block omits a day with athlete-pinned exercises.")
+            }
             for (newDay in added.days) {
                 val oldDay=previousDays[newDay.weekday]
                 if(oldDay==null) {
@@ -162,6 +172,15 @@ object CustomCycleTransitionDomain {
                     emit(CustomCycleChangeKind.EXERCISES,location,
                         "New block changes authored exercise slots.")
                 val priorSlots=oldDay.slots.associateBy {it.slotId}
+                for(previous in oldDay.slots.filter {it.pinned}) {
+                    if(newDay.slots.none {candidate->
+                        candidate.slotId==previous.slotId &&
+                            candidate.exerciseId==previous.exerciseId &&
+                            candidate.pinned
+                    }) emit(CustomCycleChangeKind.REMOVE_PINNED,
+                        location+".day."+newDay.weekday+".slot."+previous.slotId,
+                        "New block removes, replaces or unpins an athlete-pinned exercise.")
+                }
                 for(slot in newDay.slots) {
                     val previous=priorSlots[slot.slotId] ?:continue
                     val at=location+".day."+newDay.weekday+".slot."+slot.slotId
@@ -242,9 +261,10 @@ object CustomCycleTransitionDomain {
                         slot.role != proposedSlot.role || slot.pinned != proposedSlot.pinned)
                         emit(CustomCycleChangeKind.EXERCISES, slotPath,
                             "Exercise, role or pin changed.")
-                    if (slot.pinned && slot.exerciseId != proposedSlot.exerciseId)
+                    if (slot.pinned && (!proposedSlot.pinned ||
+                        slot.exerciseId != proposedSlot.exerciseId))
                         emit(CustomCycleChangeKind.REMOVE_PINNED, slotPath,
-                            "Athlete-pinned exercise was replaced.")
+                            "Athlete-pinned exercise was replaced or unpinned.")
                     if (slot.attachmentId != proposedSlot.attachmentId)
                         emit(CustomCycleChangeKind.ATTACHMENTS, slotPath,
                             "Equipment attachment changed.")

@@ -383,10 +383,12 @@ class CoachAthleteProgramGeneratorTest {
         fun selectedDays(plan:List<AthleteCalendarIntent>)=plan.filter {
             it.requiredPrimaryExerciseId=="bench"
         }.map {it.weekday}.toSet()
-        // The three optimal three-calendar-day-gap combinations.
-        // The old DFS-first-eight list omitted Monday/Thursday.
-        assertEquals(setOf(setOf(0,3),setOf(1,4),setOf(2,5)),
-            placements.take(3).map(::selectedDays).toSet())
+        // All five pairs with circular recovery gaps of at least
+        // three days lead the ranking (including Monday/Thursday,
+        // which the old DFS-first-eight list omitted).
+        assertEquals(setOf(setOf(0,3),setOf(0,4),setOf(1,4),
+            setOf(1,5),setOf(2,5)),
+            placements.take(5).map(::selectedDays).toSet())
         assertTrue(placements.all {selectedDays(it).size==2})
         assertEquals(placements,CoachAthleteProgramGenerator.placements(
             calendar,List(6){ComposerFocus.FULL_BODY},

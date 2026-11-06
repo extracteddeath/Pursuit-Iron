@@ -89,10 +89,7 @@ internal object NativeFutureBlockContextCodec {
             writeUTF(k);writeInt(v)
         }
     }
-    private inline fun <reified T:Enum<T>> DataInputStream.enumeration():T =
-        enumValues<T>().firstOrNull{it.name==readUTF()}
-            ?:throw IOException("Invalid enum")
-    // Read enum names ONCE; do not re-read the stream per candidate.
+    // Decode enum names exactly once; reject unknown schema values.
     private inline fun <reified T:Enum<T>> DataInputStream.safeEnum():T {
         val value=readUTF()
         return enumValues<T>().firstOrNull{it.name==value}
@@ -310,12 +307,11 @@ class NativeKotlinFutureBlockContextFileStore(
                 NativeFutureBlockContextRefusal.NOT_AUTHORIZED)
         return runCatching {
             fence.withOwnerTransaction(ownerKey){
-                val signed=owner(ownerKey) ?:return@withOwnerTransaction
-                    NativeFutureBlockContextRead.Rejected(
-                        NativeFutureBlockContextRefusal.NOT_AUTHORIZED)
+                val signed=owner(ownerKey) ?:return@withOwnerTransaction NativeFutureBlockContextRead.Rejected(
+                    NativeFutureBlockContextRefusal.NOT_AUTHORIZED)
                 val file=path(ownerKey,cycleId,blockId)
-                if(!Files.exists(file))return@withOwnerTransaction
-                    NativeFutureBlockContextRead.Missing
+                if(!Files.exists(file))
+                    return@withOwnerTransaction NativeFutureBlockContextRead.Missing
                 if(Files.isSymbolicLink(file) ||
                     Files.size(file)>NativeFutureBlockContextCodec.MAX_BYTES)
                     return@withOwnerTransaction NativeFutureBlockContextRead.Rejected(
@@ -341,7 +337,8 @@ class NativeKotlinFutureBlockContextFileStore(
                     sha(NativeCustomCycleDraftCodec.encode(draft))!=record.draftSha ||
                     sha(NativeKotlinCustomAuthoringSourceCodec.encode(source))!=record.sourceSha ||
                     draft.blocks.none{it.blockId==blockId} ||
-                    restored.copy(setup=source.setup)!=source)
+                    restored.copy(setup=source.setup)!=source ||
+                    owner(ownerKey)!=signed)
                     NativeFutureBlockContextRead.Rejected(
                         NativeFutureBlockContextRefusal.STALE_DRAFT_OR_SOURCE)
                 else NativeFutureBlockContextRead.Found(receipt)

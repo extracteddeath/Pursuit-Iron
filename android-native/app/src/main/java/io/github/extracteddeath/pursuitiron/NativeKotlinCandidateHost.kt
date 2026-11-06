@@ -86,6 +86,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,futureActivationCommit,
         activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
         customIssuedStore)
+    private val acceptedFutureRepTargets=NativeKotlinCustomNextRepApprovalFileStore(
+        root,revisionFence,localAthlete,futureActivationCommit,
+        activatedNextWorkoutCoach,customPreparedStore,customIssuedStore)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)
@@ -710,6 +713,43 @@ internal class NativeKotlinCandidateHost(context:Context) {
             maximumAuthorizedIncrease)
     }
 
+    /** View exactly reviewed future-set minima without changing the program. */
+    fun previewNextActivatedRepAmendment(
+        workoutId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
+        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal
+    ):NativeCustomNextRepPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomNextRepPreview.Rejected(
+                NativeCustomNextRepRefusal.NOT_AUTHORIZED)
+        return acceptedFutureRepTargets.preview(owner.ownerKey,workoutId,inputs,
+            nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
+            maximumAuthorizedIncrease)
+    }
+
+    /**
+     * Persist ONLY the exact displayed candidate with explicit consent.
+     * Re-derives whole native history and approved cycle under one owner fence;
+     * no already-prepared/issued workout can be changed retroactively.
+     */
+    fun approveNextActivatedRepAmendment(
+        workoutId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
+        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal,
+        expectedFingerprint:String,expectedHistoryRevision:Long,
+        expectedConsentRevision:Long,shownSetKeys:List<String>,
+        shownNextMinimumReps:List<Int>,athleteConfirmed:Boolean
+    ):NativeCustomNextRepWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomNextRepWrite.Rejected(
+                NativeCustomNextRepRefusal.NOT_AUTHORIZED)
+        return acceptedFutureRepTargets.accept(owner.ownerKey,workoutId,inputs,
+            nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
+            maximumAuthorizedIncrease,expectedFingerprint,
+            expectedHistoryRevision,expectedConsentRevision,shownSetKeys,
+            shownNextMinimumReps,athleteConfirmed)
+    }
+
     fun prepareActivatedFutureWorkout(
         workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
         inputs:CustomCoachAuditInputs
@@ -719,7 +759,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomPrepareRefusal.NOT_AUTHORIZED)
         return customPreparedStore.prepareActivated(owner.ownerKey,workoutId,
             cycleId,absoluteWeek,weekday,inputs,activatedCycleSignoffs,
-            futureActivationCommit)
+            futureActivationCommit,acceptedFutureRepTargets)
     }
 
     /**
@@ -737,7 +777,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomJournalRefusal.NOT_AUTHORIZED)
         return customIssuedStore.issueActivated(owner.ownerKey,workoutId,
             cycleId,absoluteWeek,weekday,inputs,activatedCycleSignoffs,
-            futureActivationCommit)
+            futureActivationCommit,acceptedFutureRepTargets)
     }
 
     fun abortFutureBlockActivationBeforeSourceChange(

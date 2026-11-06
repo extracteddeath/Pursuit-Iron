@@ -53,7 +53,7 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         policy("db-row",ComposerSessionPurpose.HYPERTROPHY))
     private fun approval()=NativeKotlinWorkoutApproval(
         "owner-1","athlete-1",source,source,
-        KotlinWorkoutSelectionGrant("grant-1","workout-1",source,0),
+        KotlinWorkoutSelectionGrant("grant-1","workout-1",source,1),
         program(),policies,"receipt-1",1)
 
     private fun composer(i:Int,sourceOverride:KotlinTrainingSourceRevision=source,
@@ -82,7 +82,7 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             "receipt-$i","finish-$i",3,0)
         return NativeKotlinMixedHistoryCompletion.Composer(
             manifest,KotlinWorkoutHistoryEvidence(sourceOverride,
-                "workout-$i","finish-$i",3,facts,listOf(review)),purpose)
+                "workout-$i","finish-$i",3,facts,listOf(review)),purpose,1)
     }
     /**
      * Projector preserves the actual immutable issued narrow bands. Only the
@@ -289,7 +289,7 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             reviewed.coaching.status)
         assertNull(reviewed.coaching.candidateLoad)
         assertEquals(NativeCurrentLoadReviewResult.Rejected(
-            NativeCurrentLoadReviewRefusal.PURPOSE_CHANGED),
+            NativeCurrentLoadReviewRefusal.NOT_ENOUGH_EXERCISE_HISTORY),
             inspect(timeline(composer(1,purpose=ComposerSessionPurpose.STRENGTH_SKILL),
                 composer(2))))
     }
@@ -421,12 +421,14 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         val approved=approval().copy(policies=separate,
             grant=KotlinWorkoutSelectionGrant("grant-4","workout-4",source,0))
         val first=withExactIssuedTargets(
-            composer(1,purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+            composer(1,purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+                .copy(dayIndex=0),
             listOf(RepBand(12,12),RepBand(12,12)),
             historicalWeight=n("25"))
         val middle=composer(2,purpose=ComposerSessionPurpose.HYPERTROPHY)
         val latest=withExactIssuedTargets(
-            composer(3,purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+            composer(3,purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+                .copy(dayIndex=0),
             listOf(RepBand(12,12),RepBand(12,12)),
             historicalWeight=n("25"))
         val result=inspect(timeline(first,middle,latest),accepted=approved)
@@ -443,7 +445,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         val updated=checkNotNull(coach.candidatePolicies)
         assertEquals(n("30"),updated.single {
             it.exerciseId=="db-press" &&
-                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL
+                it.purpose==ComposerSessionPurpose.STRENGTH_SKILL &&
+                it.dayIndex==0
         }.purposeWorkingLoad)
         assertEquals(null,updated.single {
             it.exerciseId=="db-press" &&
@@ -466,7 +469,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         fun strength(i:Int,reps:List<Int> = listOf(12,12))=
             withExactIssuedTargets(
                 composer(i,completedReps=reps,
-                    purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+                    purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+                    .copy(dayIndex=0),
                 listOf(RepBand(12,12),RepBand(12,12)),
                 historicalWeight=n("25"))
         val poor=inspect(timeline(strength(1),composer(2),
@@ -496,7 +500,8 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             grant=KotlinWorkoutSelectionGrant("grant-5","workout-5",source,1))
         val first=composer(1,purpose=ComposerSessionPurpose.HYPERTROPHY)
         val strength=withExactIssuedTargets(composer(2,
-            purpose=ComposerSessionPurpose.STRENGTH_SKILL),
+            purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            .copy(dayIndex=0),
             listOf(RepBand(12,12),RepBand(12,12)),historicalWeight=n("25"))
         val latest=composer(3,purpose=ComposerSessionPurpose.HYPERTROPHY)
         val result=inspect(timeline(first,strength,latest),accepted=approved)
@@ -505,7 +510,7 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,coach.status)
         assertEquals(n("30"),coach.originalLoad)
         assertEquals(n("35"),coach.candidateLoad)
-        assertEquals(listOf(1,2),coach.affectedDayIndices)
+        assertEquals(listOf(1),coach.affectedDayIndices)
         assertEquals(approved.program,coach.candidateProgram)
         val after=checkNotNull(coach.candidatePolicies)
         assertEquals(n("25"),after.single {
@@ -514,7 +519,13 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         }.purposeWorkingLoad)
         assertEquals(n("35"),after.single {
             it.exerciseId=="db-press" &&
-                it.purpose==ComposerSessionPurpose.HYPERTROPHY
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY &&
+                it.dayIndex==1
+        }.purposeWorkingLoad)
+        assertNull(after.single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY &&
+                it.dayIndex==null
         }.purposeWorkingLoad)
         assertEquals(approved.policies.filter {it.exerciseId=="db-row"},
             after.filter {it.exerciseId=="db-row"})
@@ -530,6 +541,7 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             grant=KotlinWorkoutSelectionGrant("grant-5","workout-5",source,1))
         val first=composer(1,purpose=ComposerSessionPurpose.HYPERTROPHY)
         val middle=composer(2,purpose=ComposerSessionPurpose.STRENGTH_SKILL)
+            .copy(dayIndex=0)
         val failed=composer(3,completedReps=listOf(12,7),
             purpose=ComposerSessionPurpose.HYPERTROPHY)
         val review=inspect(timeline(first,middle,failed),accepted=approved)

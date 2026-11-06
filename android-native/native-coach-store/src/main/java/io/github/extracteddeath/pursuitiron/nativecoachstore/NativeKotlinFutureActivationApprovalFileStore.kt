@@ -94,6 +94,7 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
     // No checkpoint produced by either path can authorize source mutation.
     private val boundaryReview:(String,String,String)->NativeFutureActivationReview,
     private val futureContexts:NativeKotlinFutureBlockContextFileStore,
+    private val drafts:NativeCustomCycleDraftFileStore,
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val permissions:NativeKotlinAdaptiveCyclePermissionFileStore
 ) {
@@ -103,11 +104,12 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
         identity:NativeKotlinCurrentIdentity,
         boundary:NativeKotlinFutureBlockActivationPreflight,
         futureContexts:NativeKotlinFutureBlockContextFileStore,
+        drafts:NativeCustomCycleDraftFileStore,
         sources:NativeKotlinCustomAuthoringSourceFileStore,
         permissions:NativeKotlinAdaptiveCyclePermissionFileStore
     ):this(directory,fence,identity,
         {owner,cycle,block->boundary.inspect(owner,cycle,block)},
-        futureContexts,sources,permissions)
+        futureContexts,drafts,sources,permissions)
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val hash=Regex("^[a-f0-9]{64}$")
     private val maximum=9_007_199_254_740_991L
@@ -222,6 +224,8 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
             as? NativeFutureBlockContextRead.Found)?.receipt ?:return null
         val source=(sources.read(ownerKey)
             as? NativeAuthoringSourceRead.Found)?.source ?:return null
+        val draft=(drafts.read(ownerKey,cycleId)
+            as? NativeCustomDraftReadResult.Found)?.draft ?:return null
         val rights=(permissions.read(ownerKey,cycleId)
             as? NativeAdaptivePermissionRead.Found)?.receipt ?:return null
         if(future.athleteId!=signed.athleteId ||
@@ -247,7 +251,7 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
             reviewed.verifiedPriorSessions<reviewed.precedingWeeks)
             return null
         val plan=NativeFutureActivationSourcePlanDomain.prepare(
-            source,future,reviewed)?:return null
+            source,future,reviewed,draft)?:return null
         val scope=ByteArrayOutputStream()
         DataOutputStream(scope).use{out->
             // Consent fingerprint schema v2: includes both prospective

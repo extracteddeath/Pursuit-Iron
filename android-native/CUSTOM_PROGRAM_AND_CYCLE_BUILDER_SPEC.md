@@ -299,3 +299,24 @@ explicitly report that they cannot issue workouts or publish changes.
   own authenticated identity. The acceptance proposal still needs a
   separately authenticated *coaching policy* source before full production
   activation or prospective split/frequency approvals.
+
+### Prospective schedule drafts (separate from approved source and issuance)
+
+- A reviewed future block can now carry an explicit
+  `ProspectiveBlockCoachingContext` through the native candidate host.
+  The adaptive reviewer compares the proposed future split/weekday map
+  to the existing signed baseline, re-audits the entire cycle using the
+  reviewed prospective setup and phase policy, and checks persisted athlete
+  adaptation rights. It refuses changed calendars with no future context.
+- The displayed fingerprint binds the exact current signed source, full
+  future athlete setup, future authored policy contents, future non-set
+  time and all current training-volume continuity ceilings. A changed
+  future proposal requires a NEW preview and a NEW explicit acceptance.
+  The accepted object is **only a custom-cycle draft**: it does not modify
+  the current gym/source, grant future-day workout issuance, or replace the
+  prior accepted cycle. Current source/signoff and custom preflight reject
+  a future block whose reviewed schedule is not yet current.
+- Remaining gate: an explicit, versioned future profile/policy activation
+  workflow must update the authoritative source and require a new athlete
+  cycle signoff before any future block can issue actual workouts. Native
+  end-to-end phase transition and UI flow validation remain outstanding.

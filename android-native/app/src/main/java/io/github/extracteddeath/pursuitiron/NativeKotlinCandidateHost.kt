@@ -523,14 +523,15 @@ internal class NativeKotlinCandidateHost(context:Context) {
         expectedDraftRevision:Long,expectedSourceRevision:Long,
         proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
         permissions:CustomCycleCoachPermissions,
-        expectedPermissionRevision:Long
+        expectedPermissionRevision:Long,
+        prospective:ProspectiveBlockCoachingContext?=null
     ):NativeAdaptiveCycleDraftCandidate? {
         val owner=localAthlete.signedInIdentity() ?:return null
         if(proposedCycle.athleteId!=owner.athleteId)return null
         return NativeAdaptiveCycleDraftCandidate(
             owner.ownerKey,cycleId,targetBlockId,optionId,
             expectedDraftRevision,expectedSourceRevision,proposedCycle,
-            inputs,permissions,expectedPermissionRevision)
+            inputs,permissions,expectedPermissionRevision,prospective)
     }
 
     fun previewReviewedAdaptiveCycleDraft(
@@ -538,11 +539,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
         expectedDraftRevision:Long,expectedSourceRevision:Long,
         proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
         permissions:CustomCycleCoachPermissions,
-        expectedPermissionRevision:Long
+        expectedPermissionRevision:Long,
+        prospective:ProspectiveBlockCoachingContext?=null
     ):NativeAdaptiveCycleDraftPreview {
         val choice=adaptiveChoice(cycleId,targetBlockId,optionId,
             expectedDraftRevision,expectedSourceRevision,proposedCycle,
-            inputs,permissions,expectedPermissionRevision)
+            inputs,permissions,expectedPermissionRevision,prospective)
             ?:return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
         return adaptiveCycleDrafts.preview(choice)
@@ -554,11 +556,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
         proposedCycle:CustomTrainingCycle,inputs:CustomCoachAuditInputs,
         permissions:CustomCycleCoachPermissions,
         expectedPermissionRevision:Long,
-        reviewedFingerprint:String,athleteConfirmed:Boolean
+        reviewedFingerprint:String,athleteConfirmed:Boolean,
+        prospective:ProspectiveBlockCoachingContext?=null
     ):NativeAdaptiveCycleDraftDecision {
         val choice=adaptiveChoice(cycleId,targetBlockId,optionId,
             expectedDraftRevision,expectedSourceRevision,proposedCycle,
-            inputs,permissions,expectedPermissionRevision)
+            inputs,permissions,expectedPermissionRevision,prospective)
             ?:return NativeAdaptiveCycleDraftDecision.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
         return adaptiveCycleDrafts.accept(choice,

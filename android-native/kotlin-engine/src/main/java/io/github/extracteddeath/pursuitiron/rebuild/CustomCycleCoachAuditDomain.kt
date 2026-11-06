@@ -495,6 +495,6 @@ object CustomCycleCoachAuditDomain {
             Collections.unmodifiableSet(prospectiveByBlock.keys.toSet()),
             Collections.unmodifiableMap(prospectiveByBlock.mapValues {
                 it.value.policy.revision
-            })
+            }))
     }
 }

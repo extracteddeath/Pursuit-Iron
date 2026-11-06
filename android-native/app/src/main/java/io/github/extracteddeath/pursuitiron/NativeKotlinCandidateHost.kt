@@ -632,6 +632,21 @@ internal class NativeKotlinCandidateHost(context:Context) {
             coachingInputs)
     }
 
+    /**
+     * Complete active-future session preview with original historical
+     * context, exact authored sets and selected new source. Still NOT an
+     * issuance or permission to resume a previously unsigned workout.
+     */
+    fun previewActivatedFutureWorkout(
+        coachingInputs:CustomCoachAuditInputs,absoluteWeek:Int,weekday:Int
+    ):CustomWorkoutSnapshotResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+        return futureActivationCommit.previewActivatedWorkout(
+            owner.ownerKey,coachingInputs,absoluteWeek,weekday)
+    }
+
     fun abortFutureBlockActivationBeforeSourceChange(
         approvalRevision:Long,fingerprint:String,athleteConfirmed:Boolean
     ):NativeFutureCommitReview {

@@ -69,10 +69,6 @@ object ReviewedStrengthWeekPeriodizationDomain {
         val existing=original.map {
             Triple(it.weekInBlock,it.weekday,it.slotId)
         }.toSet()
-        if(selected.toSet().size!=selected.size ||
-            selected.any {it in existing})
-            return refuse(ReviewedStrengthWeekPeriodizationStatus.PROTECTED_WEEK,
-                "An authored week/weekday/slot prescription already exists or an edit is duplicated; never replace it silently.")
         if(offered.any {edit->
             edit.weekInBlock !in 1..block.weeks ||
                 edit.sets.isEmpty() || edit.sets.size>20 ||
@@ -83,6 +79,10 @@ object ReviewedStrengthWeekPeriodizationDomain {
         })
             return refuse(ReviewedStrengthWeekPeriodizationStatus.INVALID_REQUEST,
                 "Each proposed week must identify an actual source slot and nonempty exact authored sets.")
+        if(selected.toSet().size!=selected.size ||
+            selected.any {it in existing})
+            return refuse(ReviewedStrengthWeekPeriodizationStatus.PROTECTED_WEEK,
+                "An authored week/weekday/slot prescription already exists or an edit is duplicated; never replace it silently.")
         // Do not populate an invisible no-op override: this must alter at
         // least one issued target, rather than merely changing a metadata key.
         val changes=offered.count {edit->

@@ -65,7 +65,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
     private val directory:Path,
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
-    private val preflight:NativeKotlinCustomWorkoutPreflight
+    private val preflight:NativeKotlinCustomWorkoutPreflight,
+    private val activationHandoff:NativeKotlinFutureActivationHandoffFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val fingerprint=Regex("^[a-f0-9]{64}$")
@@ -227,6 +228,9 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 val owner=current(ownerKey)
                     ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                         NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+                if(activationHandoff?.blocksNewIssuance(ownerKey)==true)
+                    return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
                 val pre=preflight.inspect(ownerKey,cycleId,
                     absoluteWeek,weekday,coachingInputs)
                 if(pre !is NativeCustomPreflightResult.ReviewedPreview)

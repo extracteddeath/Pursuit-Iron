@@ -186,8 +186,10 @@ object CustomNextWorkoutCoachingDomain {
 
         // Recommend at most ONE additional rep per individual working set.
         // A mixed-loading top set never becomes an all-sets prescription.
-        val suggestions=nextSets.map {set->
-            val observation=facts.single{it.setKey==set.setKey}
+        // Set keys include absolute week; join the last completed set to
+        // next week's set by stable slot ordinal, never by different-week ID.
+        val suggestions=nextSets.zip(oldSets).map {(set,previousSet)->
+            val observation=facts.single{it.setKey==previousSet.setKey}
             val actual=checkNotNull(observation.actual)
             val upper=set.prescription.reps.maximum
             val lower=set.prescription.reps.minimum

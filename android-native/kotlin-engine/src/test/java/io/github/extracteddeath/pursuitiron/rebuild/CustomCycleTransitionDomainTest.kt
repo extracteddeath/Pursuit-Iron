@@ -287,6 +287,61 @@ class CustomCycleTransitionDomainTest {
         assertFalse(allowed.mayApplyAutomatically)
         assertFalse(allowed.mayModifyHistory)
     }
+    @Test fun newBlockCannotReplacePinnedExerciseWithOnlyAdaptExercisesPermission() {
+        val original=cycle()
+        val reference=original.blocks.single()
+        val changedSlot=slot("press").copy(pinned=false)
+        val added=reference.copy(blockId="strength",label="Strength",
+            days=listOf(reference.days.single().copy(slots=listOf(changedSlot))))
+        val proposed=original.copy(revision=4,blocks=listOf(reference,added))
+        val denied=transition(original,proposed,
+            CustomCycleCoachPermissions(adaptBlocks=true,adaptExercises=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,denied.status)
+        assertEquals(setOf(CustomCycleChangeKind.REMOVE_PINNED),
+            denied.blockedKinds)
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(original,proposed,CustomCycleCoachPermissions(
+                adaptBlocks=true,adaptExercises=true,removePinned=true)).status)
+        assertTrue(original.blocks.single().days.single().slots.single().pinned)
+    }
+
+    @Test fun newBlockCannotDropEntirePinnedDayThroughSchedulePermission() {
+        val original=cycle()
+        val reference=original.blocks.single()
+        val replacement=CustomTrainingDay(2,"Other training day",
+            ComposerSessionPurpose.HYPERTROPHY,
+            listOf(CustomExerciseSlot("alternative","press",
+                ComposerRole.PRIMARY,listOf(set(),set()),pinned=false)))
+        val added=reference.copy(blockId="alternative",days=listOf(replacement))
+        val proposed=original.copy(revision=4,blocks=listOf(reference,added))
+        val denied=transition(original,proposed,
+            CustomCycleCoachPermissions(adaptBlocks=true,adaptSchedule=true,
+                adaptExercises=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,denied.status)
+        assertTrue(CustomCycleChangeKind.REMOVE_PINNED in denied.blockedKinds)
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(original,proposed,CustomCycleCoachPermissions(
+                adaptBlocks=true,adaptSchedule=true,adaptExercises=true,
+                removePinned=true)).status)
+    }
+
+    @Test fun unpinningSameExerciseRequiresExplicitDestructivePermission() {
+        val original=cycle()
+        val block=original.blocks.single()
+        val day=block.days.single()
+        val changed=original.copy(revision=4,blocks=listOf(
+            block.copy(days=listOf(day.copy(
+                slots=listOf(day.slots.single().copy(pinned=false)))))))
+        val denied=transition(original,changed,
+            CustomCycleCoachPermissions(adaptExercises=true))
+        assertEquals(CustomCycleTransitionStatus.PERMISSION_REQUIRED,denied.status)
+        assertEquals(setOf(CustomCycleChangeKind.REMOVE_PINNED),
+            denied.blockedKinds)
+        assertEquals(CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW,
+            transition(original,changed,CustomCycleCoachPermissions(
+                adaptExercises=true,removePinned=true)).status)
+    }
+
     @Test fun addingSameStructureBlockOnlyRequiresBlockPermission() {
         val original=cycle()
         val prior=original.blocks.single()

@@ -2295,4 +2295,162 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 6,1,inputs,f.signoff,f.activation,f.repApprovals))
     }
 
+
+    @Test fun explicitRepResetRestoresAuthoredWorkoutAndKeepsJournalImmutable() {
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,12)
+        finishRealActivatedSession(f,5,13)
+        val key="owner-1"
+        val workout="reset-rep-before-start"
+        val inputs=futureInputs()
+        val advice=f.repApprovals.preview(key,workout,inputs,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5"))
+            as NativeCustomNextRepPreview.Ready
+        val proposed=advice.receipt
+        assertTrue(f.repApprovals.accept(key,workout,inputs,6,1,
+            "slot-1",CoachReadiness.NORMAL,false,n("5"),
+            proposed.fingerprint,proposed.historyRevision,
+            proposed.consentRevision,proposed.setKeys,
+            proposed.nextMinimumReps,true)
+            is NativeCustomNextRepWrite.Accepted)
+        val prepared=f.prepared.prepareActivated(key,workout,"cycle-1",6,1,
+            inputs,f.signoff,f.activation,f.repApprovals)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val adjusted=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(RepBand(14,15),adjusted.snapshot.slots.single()
+            .sets.single().prescription.reps)
+        val preview=f.prepared.previewManualReset(key,workout,"cycle-1",6,1,
+            inputs,f.signoff,f.activation,f.issuer,f.assistance)
+        assertTrue(preview.toString(),
+            preview is NativePreparedManualResetPreview.Ready)
+        val offered=preview as NativePreparedManualResetPreview.Ready
+        assertEquals(adjusted,offered.original)
+        assertEquals(RepBand(10,15),
+            offered.authored.slots.single().sets.single().prescription.reps)
+        assertFalse(offered.mayChangeIssuedWorkout)
+        assertFalse(offered.mayChangeHistory)
+        assertEquals(NativePreparedManualResetWrite.Rejected(
+            NativePreparedManualResetRefusal.CONFIRMATION_REQUIRED),
+            f.prepared.acceptManualReset(key,workout,"cycle-1",6,1,
+                inputs,f.signoff,f.activation,f.issuer,f.assistance,
+                offered.preparedFingerprint,offered.settingsRevision,false))
+        assertEquals(NativePreparedManualResetWrite.Rejected(
+            NativePreparedManualResetRefusal.STALE_PREVIEW),
+            f.prepared.acceptManualReset(key,workout,"cycle-1",6,1,
+                inputs,f.signoff,f.activation,f.issuer,f.assistance,
+                "a".repeat(64),offered.settingsRevision,true))
+        val committed=f.prepared.acceptManualReset(key,workout,"cycle-1",6,1,
+            inputs,f.signoff,f.activation,f.issuer,f.assistance,
+            offered.preparedFingerprint,offered.settingsRevision,true)
+        assertTrue(committed.toString(),committed is NativePreparedManualResetWrite.Reset)
+        val reset=(committed as NativePreparedManualResetWrite.Reset).prepared
+        assertTrue(reset.resetToAuthored)
+        assertNull(reset.repApprovalFingerprint)
+        assertNull(reset.loadApprovalFingerprint)
+        assertEquals(offered.authored,reset.snapshot)
+        // Cold decode must preserve v5 reset provenance.
+        assertEquals(NativeCustomPreparedRead.Found(reset),
+            f.prepared
+                .open(key,workout))
+        // The old rep receipt is still mathematically earned and valid,
+        // but cannot reappear after explicit reset of the prepared snapshot.
+        assertTrue(f.repApprovals.readCurrent(key,workout,inputs,6,1)
+            is NativeCustomNextRepRead.Current)
+        val issued=f.issuer.issueActivated(key,workout,"cycle-1",6,1,
+            inputs,f.signoff,f.activation,f.repApprovals)
+        assertTrue(issued.toString(),issued is NativeCustomJournalResult.Durable)
+        assertEquals(offered.authored,
+            (issued as NativeCustomJournalResult.Durable).issued.journal.snapshot)
+        assertEquals(NativePreparedManualResetPreview.Rejected(
+            NativePreparedManualResetRefusal.NO_AMENDED_PREPARATION),
+            f.prepared.previewManualReset(key,workout,"cycle-1",6,1,inputs,
+                f.signoff,f.activation,f.issuer,f.assistance))
+        assertTrue(f.issuer.record(key,workout,
+            CustomWorkoutJournalOperation.Record("reset-rep-performed",0,
+                CustomWorkoutVisitKey("cycle-1:w6:d1:slot-1:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(null,null,13,2)))
+            is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(
+            f.history,f.issuer,fence,identity).complete(key,"athlete-1",
+                workout,CustomWorkoutJournalOperation.Finish(
+                    "reset-rep-finish",1)) is NativeCustomFinishResult.Committed)
+        val recovered=f.reader.read(key,"athlete-1")
+        assertTrue(recovered.toString(),
+            recovered is NativeKotlinMixedHistoryReadResult.Review)
+        val last=(recovered as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.last() as NativeKotlinMixedHistoryCompletion.Custom
+        assertEquals(offered.authored, f.issuer.open(key,workout).let{
+            (it as NativeCustomJournalResult.Durable).issued.journal.snapshot
+        })
+        assertEquals(13,last.evidence.visits.single().actual?.reps)
+    }
+
+    @Test fun explicitLoadResetWorksButCannotRewriteAlreadyIssuedWorkout() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        val key="owner-1"
+        val workout="reset-dumbbell-before-start"
+        val inputs=futureInputs()
+        val approvals=NativeKotlinCustomNextLoadApprovalFileStore(
+            temp.root.toPath(),fence,identity,f.activation,f.coach,
+            f.prepared,f.issuer)
+        val shown=approvals.preview(key,workout,inputs,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5")) as NativeCustomLoadPreview.Ready
+        val offer=shown.receipt
+        assertTrue(approvals.accept(key,workout,inputs,6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5"),offer.fingerprint,
+            offer.historyRevision,offer.consentRevision,offer.setKeys,
+            offer.originalLoad,offer.proposedLoad,true)
+            is NativeCustomLoadWrite.Accepted)
+        val prepared=f.prepared.prepareActivated(key,workout,"cycle-1",6,1,
+            inputs,f.signoff,f.activation,f.repApprovals,approvals)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        val suggested=(prepared as NativeCustomPrepareResult.Prepared).workout
+        assertEquals(n("25"),(suggested.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified).value)
+        val shownReset=f.prepared.previewManualReset(key,workout,"cycle-1",
+            6,1,inputs,f.signoff,f.activation,f.issuer,f.assistance)
+            as NativePreparedManualResetPreview.Ready
+        val result=f.prepared.acceptManualReset(key,workout,"cycle-1",6,1,
+            inputs,f.signoff,f.activation,f.issuer,f.assistance,
+            shownReset.preparedFingerprint,shownReset.settingsRevision,true)
+        assertTrue(result.toString(),result is NativePreparedManualResetWrite.Reset)
+        val original=(result as NativePreparedManualResetWrite.Reset).prepared
+        assertEquals(n("20"),(original.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified).value)
+        assertTrue(original.resetToAuthored)
+        // A load receipt can still be current. It must not override a reset.
+        assertTrue(approvals.readCurrent(key,workout,inputs,6,1)
+            is NativeCustomLoadRead.Current)
+        assertTrue(f.issuer.issueActivated(key,workout,"cycle-1",6,1,
+            inputs,f.signoff,f.activation,f.repApprovals,approvals)
+            is NativeCustomJournalResult.Durable)
+        assertEquals(n("20"),((f.issuer.open(key,workout)
+            as NativeCustomJournalResult.Durable).issued.journal.snapshot
+            .slots.single().sets.single().prescription.load
+            as DraftSetLoad.Verified).value)
+        assertEquals(NativePreparedManualResetWrite.Rejected(
+            NativePreparedManualResetRefusal.NO_AMENDED_PREPARATION),
+            f.prepared.acceptManualReset(key,workout,"cycle-1",6,1,
+                inputs,f.signoff,f.activation,f.issuer,f.assistance,
+                shownReset.preparedFingerprint,shownReset.settingsRevision,true))
+        // Nothing can replace a logged journal after it is already issued.
+        assertTrue(f.issuer.record(key,workout,
+            CustomWorkoutJournalOperation.Record("issued-load-target",0,
+                CustomWorkoutVisitKey("cycle-1:w6:d1:slot-1:s1",
+                    CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("20"),LoadUnit.LB,10,2)))
+            is NativeCustomJournalResult.Durable)
+        assertEquals(n("20"),((f.issuer.open(key,workout)
+            as NativeCustomJournalResult.Durable).issued.journal.snapshot
+            .slots.single().sets.single().prescription.load
+            as DraftSetLoad.Verified).value)
+    }
+
+
 }

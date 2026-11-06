@@ -25,7 +25,7 @@ data class EvidenceBackedStrengthWeekLoadRequest(
      * Caller must supply the CURRENT owner-read assistance policy. This
      * DTO is not evidence of ownership or persisted preference revision.
      */
-    val assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD,
+    val assistance:CoachAssistancePolicy,
     /**
      * Explicit optional choice: preserve the earned load in every remaining
      * unissued week of this block rather than silently reverting to the

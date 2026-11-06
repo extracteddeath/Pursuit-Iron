@@ -98,7 +98,8 @@ class NativeKotlinWorkoutCoordinator(
     private val store: KotlinNativeJournalFileStore,
     private val authority: NativeKotlinWorkoutAuthority,
     private val revisionFence: NativeKotlinApprovalRevisionFence,
-    private val repVerifier: NativeKotlinAcceptedRepSnapshotVerifier?=null
+    private val repVerifier: NativeKotlinAcceptedRepSnapshotVerifier?=null,
+    private val activationHandoff:NativeKotlinFutureActivationHandoffFileStore?=null
 ) {
     private fun stage(
         ownerKey: String,
@@ -181,6 +182,8 @@ class NativeKotlinWorkoutCoordinator(
 
     private fun issueFenced(ownerKey: String, workoutId: String):
         NativeKotlinIssueResult {
+        if(activationHandoff?.blocksNewIssuance(ownerKey)==true)
+            return NativeKotlinIssueResult.Rejected(NativeKotlinIssueRefusal.NOT_AUTHORIZED)
         val initialApproval=runCatching {
             authority.currentApprovedWorkout(ownerKey,workoutId)
         }.getOrNull()

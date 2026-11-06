@@ -22,7 +22,8 @@ class KotlinProgressionTimelineDomainTest {
         purpose: ComposerSessionPurpose = ComposerSessionPurpose.HYPERTROPHY,
         failedAt: Int? = null,
         correctedReps: Pair<Int, Int>? = null,
-        exercise: String = "bench"
+        exercise: String = "bench",
+        dayIndex: Int = 0
     ): KotlinWorkoutJournalState {
         require(reps.size == 4 && actualRir.size == 4 && loads.size == 4)
         val id = "workout-$index"
@@ -35,7 +36,7 @@ class KotlinProgressionTimelineDomainTest {
             )
         }
         val snapshot = KotlinStagedWorkout(
-            source, "grant-$index", id, 0, 0, purpose, 48, targets)
+            source, "grant-$index", id, dayIndex, dayIndex, purpose, 48, targets)
         var journal = KotlinWorkoutJournalDomain.begin(
             snapshot, KotlinStoredWorkoutIdentity("stored-$index", id, source, 1))
         for (i in reps.indices) {
@@ -337,6 +338,75 @@ class KotlinProgressionTimelineDomainTest {
             reviewed.comparedWorkoutIds)
         assertNull(reviewed.progression)
         assertFalse(reviewed.canIssueTargets)
+    }
+
+
+    @Test fun matchingPurposeDifferentDaysHaveIndependentProgression() {
+        // Both days are HYPERTROPHY. Partition by authenticated approved
+        // day index, not by the exercise ID or broad coaching purpose alone.
+        val pushFailure=listOf(3,3,2,2)
+        val history=listOf(
+            workout(1,dayIndex=0),
+            workout(2,dayIndex=1,reps=pushFailure,
+                actualRir=listOf(2,1,0,0)),
+            workout(3,dayIndex=0),
+            workout(4,dayIndex=1,reps=pushFailure,
+                actualRir=listOf(2,1,0,0)),
+            workout(5,dayIndex=0)
+        )
+        val complete=request(history)
+        val upper=KotlinProgressionTimelineDomain.review(complete.copy(
+            requestedPurpose=ComposerSessionPurpose.HYPERTROPHY,
+            requestedDayIndex=0))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,upper.status)
+        assertEquals(listOf("workout-3","workout-5"),upper.comparedWorkoutIds)
+        assertEquals(IncreaseReviewReason.QUALIFIED_FOR_REVIEW,
+            upper.progression?.reason)
+        assertEquals(n(205),upper.progression?.reviewCandidate)
+
+        val push=KotlinProgressionTimelineDomain.review(complete.copy(
+            requestedPurpose=ComposerSessionPurpose.HYPERTROPHY,
+            requestedDayIndex=1))
+        assertEquals(KotlinTimelineReviewStatus.VERIFIED_REVIEW,push.status)
+        assertEquals(listOf("workout-2","workout-4"),push.comparedWorkoutIds)
+        assertEquals(IncreaseReviewReason.BELOW_REP_FLOOR,
+            push.progression?.reason)
+        assertNull(push.progression?.reviewCandidate)
+        assertFalse(upper.canIssueTargets)
+        assertFalse(push.canIssueTargets)
+
+        // Older callers without an authenticated day identity remain
+        // diagnostic, not an approval to merge the two progressions.
+        val unscoped=KotlinProgressionTimelineDomain.review(complete)
+        assertEquals(listOf("workout-4","workout-5"),
+            unscoped.comparedWorkoutIds)
+    }
+
+    @Test fun daySelectionCannotHideMissingHistoryOrAnInterveningRevision() {
+        val source=request(listOf(
+            workout(1,dayIndex=0),
+            workout(2,dayIndex=1,
+                source=baseSource.copy(programRevision=7)),
+            workout(3,dayIndex=0)
+        )).copy(requestedDayIndex=0)
+        val changed=KotlinProgressionTimelineDomain.review(source)
+        assertEquals(KotlinTimelineReviewStatus.CHANGED_INTERVENING_SOURCE,
+            changed.status)
+        assertNull(changed.progression)
+
+        val incomplete=source.copy(completedWorkouts=listOf(
+            source.completedWorkouts.first(),source.completedWorkouts.last()))
+        assertEquals(KotlinTimelineReviewStatus.INCOMPLETE_COMPLETION_WINDOW,
+            KotlinProgressionTimelineDomain.review(incomplete).status)
+        assertEquals(KotlinTimelineReviewStatus.INVALID_REQUEST,
+            KotlinProgressionTimelineDomain.review(source.copy(
+                requestedDayIndex=7)).status)
+        val one=KotlinProgressionTimelineDomain.review(request(listOf(
+            workout(1,dayIndex=0),workout(2,dayIndex=1)
+        )).copy(requestedDayIndex=1))
+        assertEquals(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,
+            one.status)
+        assertEquals(listOf("workout-2"),one.comparedWorkoutIds)
     }
 
 }

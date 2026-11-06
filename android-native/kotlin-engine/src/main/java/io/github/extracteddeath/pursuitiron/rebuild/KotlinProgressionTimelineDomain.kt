@@ -35,7 +35,15 @@ data class KotlinProgressionTimelineRequest(
      * A specified purpose compares the latest two occurrences WITHIN that
      * purpose from the complete replayed history, not two chosen successes.
      */
-    val requestedPurpose: ComposerSessionPurpose? = null
+    val requestedPurpose: ComposerSessionPurpose? = null,
+    /**
+     * Owner-verified index of the NEXT approved training day. For example,
+     * Upper and Push bench exposures may both be HYPERTROPHY but must
+     * progress independently. This index is meaningful only within the
+     * source's exact approved program revision. Null preserves the older
+     * purpose-only diagnostic until the trusted owner supplies day identity.
+     */
+    val requestedDayIndex: Int? = null
 )
 
 enum class KotlinTimelineReviewStatus {
@@ -93,6 +101,8 @@ object KotlinProgressionTimelineDomain {
             request.historyRevision < 1 || request.currentHistoryRevision < 1 ||
             request.completedWorkouts.size !in 1..MAX_COMPLETIONS ||
             request.requestedPurpose==ComposerSessionPurpose.UNSPECIFIED ||
+            (request.requestedDayIndex!=null &&
+                request.requestedDayIndex !in 0..6) ||
             request.maximumAuthorizedIncrease <= zero ||
             request.maximumAuthorizedIncrease > maxStep ||
             request.maximumAuthorizedIncrease.stripTrailingZeros().scale() > 3)
@@ -149,14 +159,17 @@ object KotlinProgressionTimelineDomain {
         // Preserve a fully authenticated replay of EVERY completed workout,
         // including those from other purposes. Only AFTER validating history
         // do we partition coaching evidence by the explicitly requested
-        // session purpose. An intervening strength day is not a failed or
-        // successful hypertrophy exposure and must not erase that history.
+        // session purpose AND the approved day index, when supplied. A Push
+        // bench must not earn an Upper bench increase even if their purposes
+        // match. Intervening sessions remain authenticated in full.
         // Importantly, an intervening BAD workout of the requested purpose
         // stays in the comparison: never cherry-pick two earlier successes.
-        val applicable=if(request.requestedPurpose==null)appearances
-            else appearances.filter { (stored,_,_) ->
-                stored.journal.snapshot.purpose==request.requestedPurpose
-            }
+        val applicable=appearances.filter { (stored,_,_) ->
+            (request.requestedPurpose==null ||
+                stored.journal.snapshot.purpose==request.requestedPurpose) &&
+            (request.requestedDayIndex==null ||
+                stored.journal.snapshot.dayIndex==request.requestedDayIndex)
+        }
         if (applicable.size < 2)
             return rejected(KotlinTimelineReviewStatus.NEEDS_TWO_RECORDED_WORKOUTS,
                 applicable.map { it.second.workoutId },

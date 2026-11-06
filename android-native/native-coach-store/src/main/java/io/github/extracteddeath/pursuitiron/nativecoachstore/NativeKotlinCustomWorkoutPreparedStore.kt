@@ -375,6 +375,19 @@ class NativeKotlinCustomWorkoutPreparedStore(
                     NativeCustomPrepareResult.Prepared(existing.workout,true)
                 else NativeCustomPrepareResult.Rejected(
                     NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
+            // Multiple IDs must NEVER prepare the same cycle/week/weekday.
+            // Otherwise the athlete could log two contradictory versions of
+            // one session and pollute next-session progression history.
+            val all=inventory(ownerKey) as? NativePreparedInventoryResult.Found
+                ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                    NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+            if(all.workouts.any{
+                it.workoutId!=workoutId &&
+                    it.snapshot.stamp.cycleId==cycleId &&
+                    it.snapshot.absoluteWeek==absoluteWeek &&
+                    it.snapshot.weekday==weekday
+            })return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                NativeCustomPrepareRefusal.DIFFERENT_WORKOUT_ALREADY_PREPARED)
             if(current(ownerKey)!=owner)
                 return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                     NativeCustomPrepareRefusal.NOT_AUTHORIZED)

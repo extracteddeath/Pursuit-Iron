@@ -699,8 +699,52 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
      * test the persistence/CAS contract; the production host always injects
      * the real fully verified custom + Composer + history preflight.
      */
-    private fun readyFutureForSecondConsent() {
+    /** Full, disk-verified historical boundary: nine real custom Finish commits. */
+    private fun persistNineHistoricalBaseWorkouts() {
+        val root=temp.root.toPath()
+        val ledger=NativeKotlinHistoryManifestFileStore(root)
+        assertTrue(ledger.enroll("owner-1","athlete-1"){o,a->
+            active==NativeKotlinOwnerIdentity(o,a)
+        } is NativeHistoryLedgerResult.Durable)
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store())
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(
+            root,fence,identity,preflight)
+        val issued=NativeKotlinCustomWorkoutJournalFileStore(
+            root,fence,identity,prepared,preflight,ledger,
+            KotlinNativeJournalFileStore(root))
+        val transaction=NativeKotlinCustomHistoryTransaction(
+            ledger,issued,fence,identity)
+        for(week in 1..3)for(day in listOf(0,2,4)) {
+            val workoutId="real-base-w$week-d$day"
+            assertTrue(prepared.prepare("owner-1",workoutId,"cycle-1",
+                week,day,futureInputs()) is NativeCustomPrepareResult.Prepared)
+            assertTrue(issued.issue("owner-1",workoutId,"cycle-1",
+                week,day,futureInputs()) is NativeCustomJournalResult.Durable)
+            val set="cycle-1:w$week:d$day:slot-$day:s1"
+            val recorded=issued.record("owner-1",workoutId,
+                CustomWorkoutJournalOperation.Record(
+                    "observed-w$week-d$day",0,
+                    CustomWorkoutVisitKey(set,CustomWorkoutVisitPart.MAIN),
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(null,null,12,2)))
+            assertTrue(recorded.toString(),
+                recorded is NativeCustomJournalResult.Durable)
+            val finish=transaction.complete("owner-1","athlete-1",
+                workoutId,CustomWorkoutJournalOperation.Finish(
+                    "finish-w$week-d$day",1))
+            assertTrue(finish.toString(),
+                finish is NativeCustomFinishResult.Committed)
+        }
+        val entries=(ledger.open("owner-1","athlete-1")
+            as NativeHistoryLedgerResult.Durable).ledger.completions
+        assertEquals(9,entries.size)
+        assertEquals((1L..9L).toList(),entries.map{it.completionOrder})
+    }
+
+    private fun readyFutureForSecondConsent(realPriorHistory:Boolean=false) {
         initializeFutureBaseline();approveFutureBaseline()
+        if(realPriorHistory)persistNineHistoricalBaseWorkouts()
         assertEquals(NativeAdaptivePermissionWrite.Committed(2),
             permissionStore.confirm("owner-1","cycle-1",1,
                 setOf(CustomCycleChangeKind.SPLIT,
@@ -1094,9 +1138,10 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val receipt:NativeFutureActivationHandoff
     )
     private fun activationFixture(
-        historyRevision:Long=7
+        historyRevision:Long=7,
+        realPriorHistory:Boolean=false
     ):ActivationFixture {
-        readyFutureForSecondConsent()
+        readyFutureForSecondConsent(realPriorHistory)
         val approvals=approvalCheckpoint {
             NativeFutureActivationReview.BoundaryReviewed(
                 "cycle-1","build",4,3,9,historyRevision)

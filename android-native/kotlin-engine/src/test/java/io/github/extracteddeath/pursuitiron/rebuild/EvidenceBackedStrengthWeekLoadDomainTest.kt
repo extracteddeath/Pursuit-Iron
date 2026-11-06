@@ -99,13 +99,17 @@ class EvidenceBackedStrengthWeekLoadDomainTest {
         week:Int=2,
         firstUnissued:Int=1,
         readiness:CoachReadiness=CoachReadiness.NORMAL,
-        restricted:Boolean=false
+        restricted:Boolean=false,
+        assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD,
+        carryForward:Boolean=false
     )=EvidenceBackedStrengthWeekLoadDomain.propose(
         EvidenceBackedStrengthWeekLoadRequest(
             AdaptiveCycleOptionRequest(
                 cycle,"block-1",fixture.athlete(),fixture.movements,
                 coaching(),permissions,emptyList()),
-            timeline,week,firstUnissued,0,"old_bench",readiness,restricted))
+            timeline,week,firstUnissued,0,"old_bench",readiness,
+            restricted,assistance=assistance,
+            carryForwardThroughBlock=carryForward))
 
     @Test fun earnedLoadAffectsOneFutureStrengthSlotAndNoOtherWorkout() {
         val before=cycle()
@@ -120,6 +124,7 @@ class EvidenceBackedStrengthWeekLoadDomainTest {
             result.status)
         assertEquals(n("25"),result.oldLoad)
         assertEquals(n("30"),result.nextLoad)
+        assertEquals(listOf(2),result.affectedWeeks)
         assertEquals(listOf("history-1","history-2"),
             result.comparedWorkoutIds)
         val option=checkNotNull(result.proposed)
@@ -150,6 +155,83 @@ class EvidenceBackedStrengthWeekLoadDomainTest {
         assertFalse(result.mayIssueWorkout)
         assertFalse(result.mayAlterHistory)
         assertEquals(result,attempt(before))
+    }
+
+    @Test fun explicitCarryForwardKeepsEarnedLoadWithoutChangingOtherDays() {
+        val result=attempt(carryForward=true)
+        assertEquals(result.explanation,
+            EvidenceBackedStrengthWeekLoadStatus.READY_FOR_ATHLETE_REVIEW,
+            result.status)
+        assertEquals(listOf(2,3),result.affectedWeeks)
+        val proposed=checkNotNull(result.proposed).proposedCycle
+        val override=proposed.weekOverrides.getValue("block-1")
+        assertEquals(listOf(2,3),override.map {it.weekInBlock})
+        assertTrue(override.all {it.weekday==0 && it.slotId=="old_bench"})
+        assertEquals(listOf(9,9,9),
+            result.cycleComparison!!.evaluated.single()
+                .coachingAudit!!.weeks.map {it.workingSets})
+        val structural=checkNotNull(
+            result.cycleComparison.evaluated.single()
+                .coachingAudit!!.structuralReview)
+        for(week in 1..3) for(day in listOf(0,2)) {
+            val resolved=checkNotNull(
+                CustomTrainingCycleDomain.week(structural,week))
+            val load=(resolved.days.single {it.weekday==day}
+                .slots.single {it.exerciseId=="bench"}
+                .sets.single().load as DraftSetLoad.Verified).value
+            assertEquals(if(day==0 && week>=2)n("30") else n("25"),load)
+        }
+        assertEquals(result,attempt(carryForward=true))
+        assertFalse(result.mayApplyAutomatically)
+    }
+
+    @Test fun carryForwardDoesNotOverwriteAnyLaterCustomWeek() {
+        val original=cycle()
+        val later=original.blocks.single().days.single {it.weekday==0}
+            .slots.single {it.slotId=="old_bench"}
+        val protected=original.copy(weekOverrides=mapOf(
+            "block-1" to listOf(
+                CustomWeekSlotOverride(3,0,later.slotId,later.sets))))
+        val blocked=attempt(cycle=protected,carryForward=true)
+        assertEquals(EvidenceBackedStrengthWeekLoadStatus.PROTECTED_WEEK,
+            blocked.status)
+        assertNull(blocked.proposed)
+        val single=attempt(cycle=protected,carryForward=false)
+        assertEquals(EvidenceBackedStrengthWeekLoadStatus.READY_FOR_ATHLETE_REVIEW,
+            single.status)
+        assertEquals(listOf(2),single.affectedWeeks)
+        assertEquals(protected.weekOverrides.getValue("block-1").first(),
+            checkNotNull(single.proposed).proposedCycle
+                .weekOverrides.getValue("block-1").first())
+    }
+
+    @Test fun persistedManualAndProgressionOffModesDoNotOfferChanges() {
+        for(mode in listOf(CoachAssistancePolicy.MANUAL,
+            CoachAssistancePolicy.STANDARD.copy(
+                progressionSuggestionsEnabled=false))) {
+            val refused=attempt(assistance=mode)
+            assertEquals(EvidenceBackedStrengthWeekLoadStatus.ASSISTANCE_DISABLED,
+                refused.status)
+            assertNull(refused.proposed)
+            assertNull(refused.cycleComparison)
+            assertTrue(refused.affectedWeeks.isEmpty())
+        }
+        // Fatigue off preserves natural progression, not injury exemptions.
+        val straightforward=attempt(
+            readiness=CoachReadiness.LOW,
+            assistance=CoachAssistancePolicy.PROGRESSION_ONLY)
+        assertEquals(straightforward.explanation,
+            EvidenceBackedStrengthWeekLoadStatus.READY_FOR_ATHLETE_REVIEW,
+            straightforward.status)
+        assertEquals(EvidenceBackedStrengthWeekLoadStatus.RECOVERY_PRIORITY,
+            attempt(readiness=CoachReadiness.LOW).status)
+        assertEquals(EvidenceBackedStrengthWeekLoadStatus.RECOVERY_PRIORITY,
+            attempt(assistance=CoachAssistancePolicy.PROGRESSION_ONLY,
+                restricted=true).status)
+        assertEquals(EvidenceBackedStrengthWeekLoadStatus.EVIDENCE_NOT_EARNED,
+            attempt(assistance=CoachAssistancePolicy.PROGRESSION_ONLY,
+                timeline=history(b=complete(2,actualReps=3,actualRir=0)))
+                .status)
     }
 
     @Test fun failedLatestSetOrMissingEffortCannotEarnWeight() {

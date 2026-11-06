@@ -20,13 +20,25 @@ data class EvidenceBackedStrengthWeekLoadRequest(
     val slotId:String,
     val readiness:CoachReadiness,
     val movementRestricted:Boolean,
-    val optionId:String="earned_strength_week_load"
+    val optionId:String="earned_strength_week_load",
+    /**
+     * Caller must supply the CURRENT owner-read assistance policy. This
+     * DTO is not evidence of ownership or persisted preference revision.
+     */
+    val assistance:CoachAssistancePolicy=CoachAssistancePolicy.STANDARD,
+    /**
+     * Explicit optional choice: preserve the earned load in every remaining
+     * unissued week of this block rather than silently reverting to the
+     * original template in the next week. An authored weekly exception is
+     * always protected and causes the entire proposal to be refused.
+     */
+    val carryForwardThroughBlock:Boolean=false
 )
 
 enum class EvidenceBackedStrengthWeekLoadStatus {
     INVALID_SCOPE, STALE_SOURCE_OR_GYM, PROTECTED_WEEK,
     HISTORY_UNVERIFIED, EVIDENCE_NOT_EARNED,
-    DIFFERENT_PRESCRIPTION, RECOVERY_PRIORITY,
+    DIFFERENT_PRESCRIPTION, RECOVERY_PRIORITY, ASSISTANCE_DISABLED,
     PERMISSION_REQUIRED, COACH_AUDIT_FAILED, READY_FOR_ATHLETE_REVIEW
 }
 
@@ -37,7 +49,9 @@ data class EvidenceBackedStrengthWeekLoadResult(
     val comparedWorkoutIds:List<String>,
     val oldLoad:BigDecimal?,
     val nextLoad:BigDecimal?,
-    val explanation:String
+    val explanation:String,
+    /** A proposed weekly-template change is never retroactive. */
+    val affectedWeeks:List<Int> = emptyList()
 ) {
     val mayApplyAutomatically:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -78,14 +92,23 @@ object EvidenceBackedStrengthWeekLoadDomain {
             history.exerciseId!=slot.exerciseId)
             return no(EvidenceBackedStrengthWeekLoadStatus.INVALID_SCOPE,
                 "A current, exact future strength week, purpose, day and exercise are required.")
-        if(cycle.weekOverrides[block.blockId].orEmpty().any {
-            it.weekInBlock==input.targetWeekInBlock &&
-                it.weekday==input.weekday && it.slotId==slot.slotId
+        if(!input.assistance.offersProgression)
+            return no(EvidenceBackedStrengthWeekLoadStatus.ASSISTANCE_DISABLED,
+                "Coaching or progression suggestions are off. The athlete's authored program remains unchanged.")
+        val weeks=if(input.carryForwardThroughBlock)
+            (input.targetWeekInBlock..block.weeks).toList()
+        else listOf(input.targetWeekInBlock)
+        if(cycle.weekOverrides[block.blockId].orEmpty().any {override->
+            override.weekInBlock in weeks &&
+                override.weekday==input.weekday &&
+                override.slotId==slot.slotId
         })return no(EvidenceBackedStrengthWeekLoadStatus.PROTECTED_WEEK,
-            "The athlete already authored this exact weekly exercise.")
-        if(input.movementRestricted || input.readiness==CoachReadiness.LOW)
+            "One affected future week already contains an athlete-authored prescription.")
+        if(input.movementRestricted ||
+            (input.assistance.offersFatigueAdvice &&
+                input.readiness==CoachReadiness.LOW))
             return no(EvidenceBackedStrengthWeekLoadStatus.RECOVERY_PRIORITY,
-                "Restriction or low readiness takes priority over a weight increase.")
+                "Movement restrictions always block progression; low readiness takes priority when fatigue coaching is enabled.")
 
         val athlete=review.athleteSetup.reviewed
         val movement=review.catalog.singleOrNull {it.exerciseId==slot.exerciseId}
@@ -172,14 +195,15 @@ object EvidenceBackedStrengthWeekLoadDomain {
             val load=set.load as DraftSetLoad.Verified
             set.copy(load=load.copy(value=norm(candidate)))
         })
-        val override=CustomWeekSlotOverride(input.targetWeekInBlock,
-            input.weekday,input.slotId,newSets)
+        val overrides=weeks.map{week->
+            CustomWeekSlotOverride(week,input.weekday,input.slotId,newSets)
+        }
         val option=AdaptiveCycleOption(input.optionId,cycle.copy(
             revision=cycle.revision+1,
             weekOverrides=Collections.unmodifiableMap(
                 cycle.weekOverrides+(block.blockId to
                     Collections.unmodifiableList(
-                        cycle.weekOverrides[block.blockId].orEmpty()+override)))))
+                        cycle.weekOverrides[block.blockId].orEmpty()+overrides)))))
         val compared=AdaptiveCycleOptionReviewDomain.review(
             review.copy(alternatives=listOf(option)))
         val assessment=compared.evaluated.singleOrNull()
@@ -196,6 +220,7 @@ object EvidenceBackedStrengthWeekLoadDomain {
             EvidenceBackedStrengthWeekLoadStatus.READY_FOR_ATHLETE_REVIEW,
             option,compared,Collections.unmodifiableList(timeline.comparedWorkoutIds),
             norm(current),norm(candidate),
-            "The two latest comparable performances earned one verified load step on one future strength day. Athlete approval is still required.")
+            "The two latest comparable performances earned one exact load step across ${weeks.size} explicitly selected future strength week(s) on this day. Athlete approval is still required.",
+            Collections.unmodifiableList(weeks))
     }
 }

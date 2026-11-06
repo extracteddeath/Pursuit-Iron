@@ -868,6 +868,50 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(future.policy.revision,sameLabelDifferentDose.policy.revision)
     }
 
+    @Test fun activationPlanMustMatchExactPersistedBlockPhaseAndWeekBoundary() {
+        readyFutureForSecondConsent()
+        val receipt=(futureStore().read("owner-1","cycle-1","build")
+            as NativeFutureBlockContextRead.Found).receipt
+        val source=source()
+        val actual=futureCycle()
+        val boundary=NativeFutureActivationReview.BoundaryReviewed(
+            "cycle-1","build",4,3,9,7)
+        assertNotNull(NativeFutureActivationSourcePlanDomain.prepare(
+            source,receipt,boundary,actual))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            source,receipt,boundary,
+            actual.copy(revision=actual.revision+1)))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            source,receipt,boundary,
+            actual.copy(cycleId="wrong-cycle")))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            source,receipt,boundary,
+            actual.copy(blocks=actual.blocks.map {block->
+                if(block.blockId=="base")block.copy(weeks=4)else block
+            })))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            source,receipt,boundary,
+            actual.copy(blocks=actual.blocks.map {block->
+                if(block.blockId=="build")
+                    block.copy(phase=TrainingPhase.STRENGTH)else block
+            })))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            source,receipt.copy(future=receipt.future.copy(
+                policy=receipt.future.policy.copy(phase=TrainingPhase.STRENGTH))),
+            boundary,actual))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            source,receipt,boundary,
+            actual.copy(blocks=actual.blocks.map {block->
+                if(block.blockId!="build")block else block.copy(
+                    days=block.days.filter {it.weekday!=1})
+            })))
+        assertNull(NativeFutureActivationSourcePlanDomain.prepare(
+            source,receipt.copy(future=receipt.future.copy(
+                policy=receipt.future.policy.copy(
+                    selectedBounds=receipt.future.policy.selectedBounds.dropLast(1)))),
+            boundary,actual))
+    }
+
     @Test fun sourceActivationPlanCannotChangeGymGoalOrPhasePolicyWithoutReview() {
         readyFutureForSecondConsent()
         val saved=(futureStore().read("owner-1","cycle-1","build")

@@ -233,6 +233,17 @@ class NativeKotlinFutureActivationApprovalFileStore internal constructor(
             return null
         val reviewed=(boundaryReview(ownerKey,cycleId,blockId)
             as? NativeFutureActivationReview.BoundaryReviewed)?:return null
+        // This receipt is the proof used by the NEXT source-activation
+        // transaction, not an arbitrary "ready" flag. Check the boundary's
+        // owner-independent identity and arithmetic against this exact
+        // accepted future block, even if a future adapter regresses.
+        // An implausible or cross-cycle preflight must never be signed.
+        if(reviewed.cycleId!=cycleId || reviewed.blockId!=blockId ||
+            reviewed.firstWeek !in 2..104 ||
+            reviewed.precedingWeeks!=reviewed.firstWeek-1 ||
+            reviewed.historyManifestRevision<1 ||
+            reviewed.verifiedPriorSessions<reviewed.precedingWeeks)
+            return null
         val scope=ByteArrayOutputStream()
         DataOutputStream(scope).use{out->
             out.writeInt(1)

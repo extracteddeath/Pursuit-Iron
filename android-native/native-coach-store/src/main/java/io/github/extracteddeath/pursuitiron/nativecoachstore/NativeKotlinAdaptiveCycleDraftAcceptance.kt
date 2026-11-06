@@ -26,14 +26,16 @@ data class NativeAdaptiveCycleDraftCandidate(
     val expectedSourceRevision:Long,
     val proposedCycle:CustomTrainingCycle,
     val coaching:CustomCoachAuditInputs,
-    val coachPermissions:CustomCycleCoachPermissions
+    val coachPermissions:CustomCycleCoachPermissions,
+    val expectedPermissionRevision:Long
 )
 
 enum class NativeAdaptiveCycleDraftRefusal {
     INVALID_REQUEST, NOT_AUTHORIZED, DRAFT_MISSING, SOURCE_MISSING,
     DRAFT_CHANGED, SOURCE_CHANGED, UNRELATED_BLOCK_CHANGED,
     FUTURE_PROFILE_REQUIRES_APPROVAL, COACH_REVIEW_UNRESOLVED,
-    PERMISSION_REQUIRED, CONFIRMATION_REQUIRED, REVIEW_CHANGED,
+    PERMISSION_REQUIRED, PERMISSIONS_NOT_APPROVED, PERMISSIONS_CHANGED,
+    CONFIRMATION_REQUIRED, REVIEW_CHANGED,
     DRAFT_STORAGE_REJECTED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeAdaptiveCycleDraftPreview {
@@ -65,7 +67,8 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
     private val drafts:NativeCustomCycleDraftFileStore,
-    private val sources:NativeKotlinCustomAuthoringSourceFileStore
+    private val sources:NativeKotlinCustomAuthoringSourceFileStore,
+    private val permissionStore:NativeKotlinAdaptiveCyclePermissionFileStore
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val digest=Regex("^[a-f0-9]{64}$")
@@ -81,6 +84,7 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
             c.optionId!="keep_current" &&
             c.expectedDraftRevision in 1..maxRevision &&
             c.expectedSourceRevision in 1..maxRevision &&
+            c.expectedPermissionRevision in 1..maxRevision &&
             c.proposedCycle.cycleId==c.cycleId &&
             c.proposedCycle.revision==c.expectedDraftRevision+1 &&
             c.proposedCycle.blocks.count{it.blockId==c.targetBlockId}==1
@@ -93,6 +97,23 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
         val signed=owner(c.ownerKey)
             ?:return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
+        // Caller-provided toggles alone are not authorization. Reopen the
+        // current versioned, athlete-approved rights under the owner fence.
+        val rights=when(val read=permissionStore.read(c.ownerKey,c.cycleId)) {
+            is NativeAdaptivePermissionRead.Found->read.receipt
+            else->return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.PERMISSIONS_NOT_APPROVED)
+        }
+        if(rights.athleteId!=signed.athleteId ||
+            rights.revision!=c.expectedPermissionRevision)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.PERMISSIONS_CHANGED)
+        val requested=CustomCycleChangeKind.entries.filter {
+            c.coachPermissions.permits(it)
+        }.toSet()
+        if(requested!=rights.allowedKinds)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.PERMISSION_REQUIRED)
         val draft=when(val found=drafts.read(c.ownerKey,c.cycleId)) {
             is NativeCustomDraftReadResult.Found -> found.draft
             is NativeCustomDraftReadResult.Missing,
@@ -171,7 +192,8 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
         val next=NativeCustomCycleSignoffFingerprint.calculate(
             c.proposedCycle,authoring,c.coaching)
         val scope=listOf(c.ownerKey,c.cycleId,c.targetBlockId,c.optionId,
-            prior,next,c.coachPermissions.toString()).joinToString("\u0000")
+            prior,next,c.expectedPermissionRevision.toString(),
+            rights.allowedKinds.sortedBy{it.name}.joinToString(",")).joinToString("\u0000")
         val sha=MessageDigest.getInstance("SHA-256")
             .digest(scope.toByteArray(Charsets.UTF_8))
             .joinToString(""){"%02x".format(it.toInt() and 255)}

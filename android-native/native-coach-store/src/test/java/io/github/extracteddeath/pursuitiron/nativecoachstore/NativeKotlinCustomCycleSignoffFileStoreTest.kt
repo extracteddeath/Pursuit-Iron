@@ -20,6 +20,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         temp.root.toPath(),fence,identity)}
     private fun store()=NativeKotlinCustomCycleSignoffFileStore(
         temp.root.toPath(),fence,identity,drafts,sources)
+    private val permissionStore by lazy{NativeKotlinAdaptiveCyclePermissionFileStore(
+        temp.root.toPath(),fence,identity)}
     private fun n(value:String)=BigDecimal(value)
     private fun setup()=CoachAthleteSetupDomain.review(AthleteSetupDraft(
         profileRevision="rev-1",athleteProfileId="athlete-1",
@@ -83,6 +85,10 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             sources.publish("owner-1",0,source()))
         assertEquals(NativeCustomDraftWriteResult.Committed(1),
             drafts.save("owner-1","cycle-1",0,cycle()))
+        assertEquals(NativeAdaptivePermissionWrite.Committed(1),
+            permissionStore.confirm("owner-1","cycle-1",0,
+                setOf(CustomCycleChangeKind.CUES,CustomCycleChangeKind.REPS),
+                true))
         assertEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,
             CustomCycleCoachAuditDomain.review(
                 cycle(),source().setup,source().catalog,inputs()).status)
@@ -198,7 +204,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
 
     private fun adaptive()=NativeKotlinAdaptiveCycleDraftAcceptance(
-        fence,identity,drafts,sources)
+        fence,identity,drafts,sources,permissionStore)
     private fun adjusted():CustomTrainingCycle {
         val original=cycle(2)
         return original.copy(blocks=original.blocks.map{block->
@@ -218,7 +224,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             CustomCycleCoachPermissions(adaptCues=true,adaptReps=true)
     )=NativeAdaptiveCycleDraftCandidate(
         "owner-1","cycle-1","base","coach_option_1",
-        1,1,proposed,inputs(),permissions)
+        1,1,proposed,inputs(),permissions,1)
 
     @Test fun athleteReviewedAdaptiveOptionPersistsOnlyDraftAndStalesOldConsent() {
         initialize()
@@ -344,6 +350,68 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 maximumDirectMuscleRiseFraction=n("0.100")))
         assertEquals(NativeCustomSignoffRead.Found(receipt,true),
             store().read("owner-1","cycle-1",equivalent))
+    }
+
+
+    @Test fun permissionConsentCannotBeForgedByCallerAfterGrantChanges() {
+        initialize()
+        val candidate=option()
+        val shown=adaptive().preview(candidate)
+            as NativeAdaptiveCycleDraftPreview.Ready
+        assertEquals(NativeAdaptivePermissionWrite.Rejected(
+            NativeAdaptivePermissionRefusal.NOT_CONFIRMED),
+            permissionStore.confirm("owner-1","cycle-1",1,
+                CustomCycleChangeKind.entries.toSet(),false))
+        assertEquals(NativeAdaptivePermissionWrite.Committed(2),
+            permissionStore.confirm("owner-1","cycle-1",1,
+                setOf(CustomCycleChangeKind.CUES),true))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.PERMISSIONS_CHANGED),
+            adaptive().preview(candidate))
+        val noRep=option(permissions=CustomCycleCoachPermissions(
+            adaptCues=true)).copy(expectedPermissionRevision=2)
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.PERMISSION_REQUIRED),
+            adaptive().preview(noRep))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.PERMISSIONS_CHANGED),
+            adaptive().accept(candidate,shown.reviewedFingerprint,true))
+        assertEquals(NativeAdaptivePermissionWrite.Committed(3),
+            permissionStore.revoke("owner-1","cycle-1",2))
+        assertEquals(NativeAdaptivePermissionRead.Revoked(3),
+            permissionStore.read("owner-1","cycle-1"))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.PERMISSIONS_NOT_APPROVED),
+            adaptive().preview(candidate.copy(expectedPermissionRevision=3)))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+    }
+
+    @Test fun permissionFileCorruptionAndForeignOwnerFailClosed() {
+        initialize()
+        val records=Files.list(temp.root.toPath()).use{it.filter {path ->
+            path.fileName.toString().startsWith("adapt-permission-")
+        }.toList()}
+        assertEquals(1,records.size)
+        val target=records.single()
+        val original=Files.readAllBytes(target)
+        val mangled=original.clone()
+        mangled[mangled.lastIndex]=(mangled.last().toInt() xor 1).toByte()
+        Files.write(target,mangled)
+        assertEquals(NativeAdaptivePermissionRead.Rejected(
+            NativeAdaptivePermissionRefusal.CORRUPT_RECORD),
+            permissionStore.read("owner-1","cycle-1"))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.PERMISSIONS_NOT_APPROVED),
+            adaptive().preview(option()))
+        Files.write(target,original)
+        active=NativeKotlinOwnerIdentity("foreign-owner","athlete-1")
+        assertEquals(NativeAdaptivePermissionRead.Rejected(
+            NativeAdaptivePermissionRefusal.NOT_AUTHORIZED),
+            permissionStore.read("owner-1","cycle-1"))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED),
+            adaptive().accept(option(),"0".repeat(64),true))
     }
 
 }

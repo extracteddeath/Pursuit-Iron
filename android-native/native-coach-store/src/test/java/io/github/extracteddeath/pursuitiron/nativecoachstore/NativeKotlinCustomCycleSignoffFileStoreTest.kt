@@ -721,6 +721,37 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         temp.root.toPath(),fence,identity,
         {_,_,_->boundary()},futureStore(),sources,permissionStore)
 
+    @Test fun futureActivationRejectsCrossCycleOrContradictoryBoundaryEvidence() {
+        readyFutureForSecondConsent()
+        val valid=NativeFutureActivationReview.BoundaryReviewed(
+            "cycle-1","build",4,3,9,7)
+        val corrupt=listOf(
+            valid.copy(cycleId="another-cycle"),
+            valid.copy(blockId="wrong-block"),
+            valid.copy(firstWeek=5),
+            valid.copy(precedingWeeks=2),
+            valid.copy(verifiedPriorSessions=2),
+            valid.copy(historyManifestRevision=0),
+            valid.copy(firstWeek=1,precedingWeeks=0)
+        )
+        for((index,boundary) in corrupt.withIndex()){
+            val store=approvalCheckpoint{boundary}
+            assertEquals("Corrupt evidence "+index,
+                NativeFutureApprovalPreview.Rejected(
+                    NativeFutureApprovalRefusal.NOT_READY),
+                store.preview("owner-1","cycle-1","build"))
+            assertEquals("Corrupt evidence cannot be accepted "+index,
+                NativeFutureApprovalWrite.Rejected(
+                    NativeFutureApprovalRefusal.NOT_READY),
+                store.confirm("owner-1","cycle-1","build",0,
+                    "a".repeat(64),true))
+            assertEquals(NativeFutureApprovalRead.Missing,
+                store.read("owner-1","cycle-1","build"))
+        }
+        assertTrue(approvalCheckpoint().preview(
+            "owner-1","cycle-1","build") is NativeFutureApprovalPreview.Ready)
+    }
+
     @Test fun secondConsentIsDurableExactAndNeverChangesCurrentGymOrProgram() {
         readyFutureForSecondConsent()
         val store=approvalCheckpoint()

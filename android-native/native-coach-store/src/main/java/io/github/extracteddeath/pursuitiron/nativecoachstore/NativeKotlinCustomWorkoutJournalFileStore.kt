@@ -65,7 +65,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
     private val preflight: NativeKotlinCustomWorkoutPreflight,
     private val history: NativeKotlinHistoryManifestFileStore,
     /** Prevent collisions with the existing Composer workout journal. */
-    private val composerJournals: KotlinNativeJournalFileStore
+    private val composerJournals: KotlinNativeJournalFileStore,
+    private val activationHandoff:NativeKotlinFutureActivationHandoffFileStore?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val magic=0x50494349 // PICI
@@ -241,6 +242,11 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 if((currentRecord as NativeCustomJournalResult.Rejected).reason!=
                     NativeCustomJournalRefusal.NOT_ISSUED)
                     return@withOwnerTransaction currentRecord
+                // Existing durable sessions can replay above, but no NEW
+                // issuance may cross a staged future-source transition.
+                if(activationHandoff?.blocksNewIssuance(ownerKey)==true)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.CONSENT_CHANGED)
                 val plan=prepared.open(ownerKey,workoutId)
                 val selected=(plan as? NativeCustomPreparedRead.Found)?.workout
                     ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(

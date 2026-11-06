@@ -66,6 +66,38 @@ sealed interface NativeCustomPreparedRead {
 }
 
 /**
+ * Reset is the ONLY exception to immutable preparation: the athlete must
+ * explicitly review and authorize the exact, original authored workout.
+ * It replaces ONE unissued prepared snapshot atomically, never an issued
+ * journal, history receipt, or source training cycle.
+ */
+enum class NativePreparedManualResetRefusal {
+    INVALID_SELECTION,NOT_AUTHORIZED,NO_AMENDED_PREPARATION,
+    ALREADY_ISSUED,CONSENT_CHANGED,UNSAFE_AMENDMENT,
+    SETTINGS_UNAVAILABLE,STALE_PREVIEW,CONFIRMATION_REQUIRED,
+    CORRUPT_RECORD,STORAGE_UNAVAILABLE
+}
+sealed interface NativePreparedManualResetPreview {
+    data class Ready(
+        val original:NativeCustomPreparedWorkout,
+        val authored:CustomWorkoutDaySnapshot,
+        val preparedFingerprint:String,
+        val settingsRevision:Long
+    ):NativePreparedManualResetPreview {
+        val mayChangeIssuedWorkout:Boolean get()=false
+        val mayChangeHistory:Boolean get()=false
+    }
+    data class Rejected(val reason:NativePreparedManualResetRefusal):
+        NativePreparedManualResetPreview
+}
+sealed interface NativePreparedManualResetWrite {
+    data class Reset(val prepared:NativeCustomPreparedWorkout):
+        NativePreparedManualResetWrite
+    data class Rejected(val reason:NativePreparedManualResetRefusal):
+        NativePreparedManualResetWrite
+}
+
+/**
  * One-way immutable preparation file: no mutation or overwrite API.
  * Idempotent same-content retries are safe; a different cycle/week/target
  * with the same workout ID is a hard collision. All file reads and writes
@@ -229,6 +261,93 @@ class NativeKotlinCustomWorkoutPreparedStore(
             }
         }finally {Files.deleteIfExists(pending)}
     }
+    /** Only a verified, signed rep OR load amendment is resettable.
+     * Every unrelated exercise, field, set, rep ceiling and load must still
+     * match the current approved authored snapshot exactly. */
+    private fun isResettableAmendment(
+        selected:NativeCustomPreparedWorkout,
+        authored:CustomWorkoutDaySnapshot
+    ):Boolean {
+        if(selected.resetToAuthored ||
+            (selected.repApprovalFingerprint==null &&
+                selected.loadApprovalFingerprint==null) ||
+            selected.authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
+            selected.snapshot.copy(slots=authored.slots)!=authored ||
+            selected.snapshot.slots.size!=authored.slots.size)
+            return false
+        var amendedSlots=0
+        for((actualSlot,baseSlot) in selected.snapshot.slots.zip(authored.slots)) {
+            if(actualSlot.copy(sets=baseSlot.sets)!=baseSlot ||
+                actualSlot.sets.size!=baseSlot.sets.size)return false
+            var edited=0
+            for((set,base) in actualSlot.sets.zip(baseSlot.sets)) {
+                if(set==base)continue
+                if(set.copy(prescription=base.prescription)!=base ||
+                    set.prescription.type!=DraftSetType.WORKING ||
+                    base.prescription.type!=DraftSetType.WORKING ||
+                    set.prescription.amplifier!=null)return false
+                val sameExceptReps=set.prescription.copy(
+                    reps=base.prescription.reps)==base.prescription
+                val sameExceptLoad=set.prescription.copy(
+                    load=base.prescription.load)==base.prescription
+                val goodRep=selected.repApprovalFingerprint!=null &&
+                    sameExceptReps &&
+                    set.prescription.reps.maximum==
+                        base.prescription.reps.maximum &&
+                    set.prescription.reps.minimum>
+                        base.prescription.reps.minimum
+                val originalLoad=base.prescription.load
+                    as? DraftSetLoad.Verified
+                val actualLoad=set.prescription.load
+                    as? DraftSetLoad.Verified
+                val goodLoad=selected.loadApprovalFingerprint!=null &&
+                    sameExceptLoad && originalLoad!=null && actualLoad!=null &&
+                    actualLoad.unit==originalLoad.unit &&
+                    actualLoad.basis==originalLoad.basis &&
+                    actualLoad.value>originalLoad.value
+                if(!goodRep && !goodLoad)return false
+                edited++
+            }
+            if(edited>0)amendedSlots++
+        }
+        return amendedSlots==1
+    }
+
+    private fun storedFingerprint(ownerKey:String,workoutId:String):String {
+        val bytes=Files.readAllBytes(path(ownerKey,workoutId))
+        return MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString(""){"%02x".format(it.toInt() and 255)}
+    }
+
+    /**
+     * Atomically replaces exactly ONE prepared file. The previous or next
+     * complete checksummed snapshot survives a process crash; there is no
+     * second store to update, and no partial session can be observed.
+     */
+    private fun replacePreparedAtomically(
+        ownerKey:String,workoutId:String,reset:NativeCustomPreparedWorkout
+    ) {
+        if(!Files.isDirectory(directory)||Files.isSymbolicLink(directory))
+            throw IOException("unsafe preparation directory")
+        val original=path(ownerKey,workoutId)
+        if(!Files.isRegularFile(original)||Files.isSymbolicLink(original))
+            throw IOException("unavailable prepared snapshot")
+        val stage=Files.createTempFile(directory,
+            "manual-preparation-reset-", ".pending")
+        try {
+            FileChannel.open(stage,StandardOpenOption.WRITE,
+                StandardOpenOption.TRUNCATE_EXISTING).use{channel->
+                val body=ByteBuffer.wrap(encode(reset))
+                while(body.hasRemaining())channel.write(body)
+                channel.force(true)
+            }
+            Files.move(stage,original,StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING)
+        }finally {
+            Files.deleteIfExists(stage)
+        }
+    }
+
     private fun openFenced(
         ownerKey:String,workoutId:String,
         owner:NativeKotlinOwnerIdentity

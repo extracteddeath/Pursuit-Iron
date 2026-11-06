@@ -14,6 +14,8 @@ sealed interface NativeCustomNextCoachResult {
         val historyRevision:Long,
         val approvedConsentRevision:Long,
         val review:CustomNextWorkoutCoachingReview,
+        /** Changing an assistance preference requires fresh athlete acceptance. */
+        val assistanceRevision:Long=0,
         /** Same owner-fenced, source-verified inventory used by the review. */
         val verifiedStock:VerifiedLoadStock?
     ):NativeCustomNextCoachResult {
@@ -62,12 +64,12 @@ class NativeKotlinCustomNextWorkoutReview(
                 it.ownerKey==ownerKey
             }?:return@withOwnerTransaction reject(
                 NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
-            val preference=if(assistance==null)
-                CoachAssistancePolicy.STANDARD else
+            val currentSettings=if(assistance==null)null else
                 (assistance.read(ownerKey) as? NativeCoachSettingsRead.Current)
-                    ?.settings?.policy
+                    ?.settings
                     ?:return@withOwnerTransaction reject(
                         NativeCustomNextCoachRefusal.COACH_SETTINGS_UNAVAILABLE)
+            val preference=currentSettings?.policy ?:CoachAssistancePolicy.STANDARD
             if(!preference.offersProgression)
                 return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED)
@@ -161,7 +163,7 @@ class NativeKotlinCustomNextWorkoutReview(
                     NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
             NativeCustomNextCoachResult.Reviewed(
                 full.timeline.manifestRevision,acceptance.recordRevision,
-                validated,verifiedStock)
+                validated,currentSettings?.revision ?:0,verifiedStock)
         }}.getOrElse{reject(NativeCustomNextCoachRefusal.STORAGE_UNAVAILABLE)}
     }
 }

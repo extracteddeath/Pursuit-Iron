@@ -1622,7 +1622,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 inputs,activatedSignoff(fixture),activationTransaction(fixture)))
         val recorded=issuer.record("owner-1",workoutId,
             CustomWorkoutJournalOperation.Record(
-                "future-actual-set",1,
+                "future-actual-set",0,
                 CustomWorkoutVisitKey("cycle-1:w4:d1:slot-1:s1",
                     CustomWorkoutVisitPart.MAIN),
                 KotlinJournalSetOutcome.COMPLETED,

@@ -31,6 +31,7 @@ data class CustomNextWorkoutCoachingRequest(
 enum class CustomNextWorkoutCoachingStatus {
     INVALID_HISTORY,
     NO_MATCHING_SESSION,
+    TARGET_ALREADY_TRAINED,
     CHANGED_DAY_OR_EXERCISE,
     CHANGED_COACHING_SOURCE,
     CHANGED_PRESCRIPTION,
@@ -89,6 +90,8 @@ object CustomNextWorkoutCoachingDomain {
             request.completed.zipWithNext().any{
                 it.first.completionOrder>=it.second.completionOrder
             } ||
+            request.completed.map{it.evidence.workoutId}.distinct().size!=
+                request.completed.size ||
             request.completed.any{
                 it.completionOrder<1 ||
                     it.snapshot.stamp.athleteId!=request.next.stamp.athleteId ||
@@ -116,6 +119,18 @@ object CustomNextWorkoutCoachingDomain {
                 it.snapshot.blockId==request.next.blockId &&
                 it.snapshot.weekday==request.next.weekday
         }
+        // An older workout is not a "next" workout if this training day
+        // has already been finished in that absolute week or a later one.
+        // Do not cherry-pick earlier successful sessions and prescribe
+        // progression into a historically completed calendar slot.
+        // Different weekdays remain independent (Upper versus Push).
+        if(appearances.any{
+                it.snapshot.absoluteWeek>=request.next.absoluteWeek
+            })
+            return result(CustomNextWorkoutCoachingStatus.TARGET_ALREADY_TRAINED,
+                appearances.takeLast(2).map{it.evidence.workoutId},
+                appearances.last().evidence.workoutId,
+                explanation="This training day has a completed workout in the requested week or a later week. Review the next untrained day.")
         if(appearances.isEmpty())
             return result(CustomNextWorkoutCoachingStatus.NO_MATCHING_SESSION,
                 explanation="Build evidence on this training day before progressing its targets.")

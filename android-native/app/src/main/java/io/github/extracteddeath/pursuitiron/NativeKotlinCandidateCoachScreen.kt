@@ -26,12 +26,14 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 internal fun NativeKotlinCandidateCoachScreen(
-    host: NativeKotlinCandidateHost
+    host: NativeKotlinCandidateHost,
+    onOpenSettings:()->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var exerciseId by rememberSaveable { mutableStateOf("") }
     var exerciseChoices by remember { mutableStateOf<List<String>>(emptyList()) }
     var choicesLoading by remember { mutableStateOf(true) }
+    var assistance by remember(host) {mutableStateOf<CoachAssistancePolicy?>(null)}
     var maximumStep by rememberSaveable { mutableStateOf("5") }
     var readiness by remember { mutableStateOf(CoachReadiness.NORMAL) }
     var restricted by rememberSaveable { mutableStateOf(false) }
@@ -69,11 +71,15 @@ internal fun NativeKotlinCandidateCoachScreen(
     }
     LaunchedEffect(host) {
         choicesLoading=true
-        val choices=runCatching {
+        val saved=runCatching {
+            withContext(Dispatchers.IO){host.readCoachAssistance()}
+        }.getOrNull()
+        assistance=(saved as? NativeCoachSettingsRead.Current)?.settings?.policy
+        val choices=if(assistance?.offersProgression==true)runCatching {
             withContext(Dispatchers.IO) {
                 host.currentVerifiedCoachExerciseChoices()
             }
-        }.getOrDefault(emptyList())
+        }.getOrDefault(emptyList()) else emptyList()
         exerciseChoices=choices
         if(exerciseId !in choices) {
             exerciseId=choices.firstOrNull().orEmpty()
@@ -90,8 +96,29 @@ internal fun NativeKotlinCandidateCoachScreen(
             it.candidateProgram!=null
     }
 
+    if(assistance?.offersProgression!=true) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+            PageHeading("KOTLIN COACH · ISOLATED",
+                if(choicesLoading) "Checking coach settings…" else "Train your way",
+                "Your authored workouts, history, and Finish stay available even when coaching is off.")
+            PursuitFormSection("Coaching preferences",
+                "No progression proposals will be shown or accepted while the relevant coach switches are off.") {
+                Text(when {
+                    choicesLoading -> "Reading your saved preferences…"
+                    assistance==null -> "Your settings could not be verified. Suggestions stay disabled."
+                    !checkNotNull(assistance).coachingSuggestionsEnabled ->
+                        "Manual training is active. Workouts keep their authored weight and rep targets."
+                    else -> "Progression recommendations are off. You can still follow and complete your program."
+                },style=MaterialTheme.typography.bodyMedium)
+                Button(onClick=onOpenSettings) {Text("Coaching settings")}
+            }
+        }
+        return
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        Button(onClick=onOpenSettings) {Text("Coaching settings")}
         PageHeading("KOTLIN COACH · ISOLATED",
             "Review your next load",
             "A proposed program change based on your real saved native workouts. Nothing changes automatically.")
@@ -119,17 +146,23 @@ internal fun NativeKotlinCandidateCoachScreen(
                     label={Text("Maximum approved increase (gym units)")},
                     singleLine=true,modifier=Modifier.fillMaxWidth(),
                     isError=step==null)
-                Text("Readiness",style=MaterialTheme.typography.labelLarge)
-                Row(Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    CoachReadiness.entries.forEach { value ->
-                        FilterChip(
-                            selected=readiness==value,
-                            onClick={readiness=value;invalidate()},
-                            label={Text(value.name.lowercase().replaceFirstChar {
-                                it.uppercase()
-                            })})
+                if(assistance?.offersFatigueAdvice==true) {
+                    Text("Readiness",style=MaterialTheme.typography.labelLarge)
+                    Row(Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        CoachReadiness.entries.forEach { value ->
+                            FilterChip(
+                                selected=readiness==value,
+                                onClick={readiness=value;invalidate()},
+                                label={Text(value.name.lowercase().replaceFirstChar {
+                                    it.uppercase()
+                                })})
+                        }
                     }
+                } else {
+                    Text("Fatigue-aware advice is off. Verified completed sets still guide optional progression.",
+                        color=MaterialTheme.colorScheme.onSurfaceVariant,
+                        style=MaterialTheme.typography.bodySmall)
                 }
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Checkbox(checked=restricted,

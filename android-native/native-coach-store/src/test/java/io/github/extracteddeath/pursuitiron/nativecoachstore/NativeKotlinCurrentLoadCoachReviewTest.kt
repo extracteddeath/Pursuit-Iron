@@ -620,8 +620,10 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             next,timeline(unrelated),"db-press",CoachReadiness.NORMAL,false)
         assertEquals(NativeCurrentRepPrescriptionResult.Rejected(
             NativeCurrentRepPrescriptionRefusal.SESSION_PURPOSE_CHANGED),absent)
-        val upper=composer(2,completedReps=listOf(11,12))
-            .copy(dayIndex=1)
+        // Sufficient actual RIR is deliberate: the source must be an
+        // earned rep candidate, not merely a matching day identity.
+        val upper=purposeLoad(composer(2).copy(dayIndex=1),
+            "30",listOf(11,10),3)
         val latestPush=composer(3,completedReps=listOf(12,12))
             .copy(dayIndex=2)
         val valid=NativeKotlinCurrentRepPrescriptionDomain.inspect(
@@ -634,7 +636,7 @@ class NativeKotlinCurrentLoadCoachReviewTest {
         assertFalse(selected.canIssueWorkout)
         assertTrue(selected.proposal.toString(),
             selected.proposal is AdaptiveSetPrescriptionResult.Candidate)
-        assertEquals(listOf(11,12),
+        assertEquals(listOf(11,10),
             (selected.proposal as AdaptiveSetPrescriptionResult.Candidate)
                 .observedReps)
     }

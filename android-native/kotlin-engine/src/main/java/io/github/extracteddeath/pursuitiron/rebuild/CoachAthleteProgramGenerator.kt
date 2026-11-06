@@ -72,6 +72,8 @@ object CoachAthleteProgramGenerator {
     private const val MAX_FEASIBLE_CANDIDATES=5
     /** Alternative primary-lift placements considered per focus/purpose layout. */
     private const val MAX_PRIMARY_PLACEMENTS_PER_LAYOUT=8
+    /** Explore a bounded set before ranking; the first DFS leaves are not the best schedules. */
+    private const val MAX_RAW_PRIMARY_PLACEMENTS_PER_LAYOUT=64
 
     private fun focusCounts(split:ComposerSplit,days:Int,
         extra:List<ComposerFocus>):Map<ComposerFocus,Int>? {
@@ -280,7 +282,7 @@ object CoachAthleteProgramGenerator {
             return true
         }
         fun solve(index:Int) {
-            if(found.size>=MAX_PRIMARY_PLACEMENTS_PER_LAYOUT)return
+            if(found.size>=MAX_RAW_PRIMARY_PLACEMENTS_PER_LAYOUT)return
             if(index==calendar.size) {
                 if(liftIds.all {
                     used[it].orEmpty().size>=policy.primaryLiftMinimumDays.getValue(it)
@@ -301,20 +303,61 @@ object CoachAthleteProgramGenerator {
             for(id in options) {
                 assigned+=AthleteCalendarIntent(day,purpose[index],id)
                 if(id!=null)used.getOrPut(id){mutableListOf()}.add(day)
-                val stillPossible=liftIds.all {lift ->
+                // Optimistic forward check: each required lift still needs
+                // enough ELIGIBLE remaining weekdays and unused visit budget.
+                // Calendar slots are not interchangeable across U/L/P/P/L.
+                val stillPossible=liftIds.all {lift->
+                    val scheduled=used[lift].orEmpty().size
                     val missing=(policy.primaryLiftMinimumDays.getValue(lift)-
-                        used[lift].orEmpty().size).coerceAtLeast(0)
-                    missing<=calendar.size-index-1
+                        scheduled).coerceAtLeast(0)
+                    val spareVisits=choices.getValue(lift).maximumVisits-scheduled
+                    val eligibleDays=((index+1) until calendar.size).count {j->
+                        focus[j] in catalog.getValue(lift).permittedFocus &&
+                            gapOkay(lift,calendar[j])
+                    }
+                    missing<=spareVisits && missing<=eligibleDays
                 }
                 if(stillPossible)solve(index+1)
                 if(id!=null)used.getValue(id).removeAt(
                     used.getValue(id).lastIndex)
                 assigned.removeAt(assigned.lastIndex)
-                if(found.size>=MAX_PRIMARY_PLACEMENTS_PER_LAYOUT)break
+                if(found.size>=MAX_RAW_PRIMARY_PLACEMENTS_PER_LAYOUT)break
             }
         }
         solve(0)
-        return Collections.unmodifiableList(found.map {
+        // DFS-first-eight can spend every slot on adjacent bench days
+        // while overlooking a better distributed candidate. Rank a bounded
+        // look-ahead sample by minimal required primary slots and circular
+        // seven-day spacing before expensive whole-program audits.
+        fun recoveryPenalty(plan:List<AthleteCalendarIntent>):Int {
+            var penalty=0
+            for(id in liftIds) {
+                val days=plan.filter {it.requiredPrimaryExerciseId==id}
+                    .map {it.weekday}.sorted()
+                if(days.size<2)continue
+                for(i in days.indices) {
+                    val next=if(i==days.lastIndex)days.first()+7 else days[i+1]
+                    penalty+=when(next-days[i]) {
+                        1 ->100
+                        2 ->20
+                        else ->0
+                    }
+                }
+            }
+            return penalty
+        }
+        val ranked=found.sortedWith(
+            compareBy<List<AthleteCalendarIntent>> {plan->
+                plan.count {it.requiredPrimaryExerciseId!=null}-
+                    policy.primaryLiftMinimumDays.values.sum()
+            }.thenBy {recoveryPenalty(it)}
+                .thenBy {plan->
+                    plan.joinToString("|") {intent->
+                        intent.requiredPrimaryExerciseId ?: "~"
+                    }
+                }
+        ).take(MAX_PRIMARY_PLACEMENTS_PER_LAYOUT)
+        return Collections.unmodifiableList(ranked.map {
             Collections.unmodifiableList(it.toList())
         })
     }

@@ -325,7 +325,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
         signoffs:NativeKotlinActivatedCycleSignoffFileStore,
         activation:NativeKotlinFutureActivationCommitTransaction,
-        repApprovals:NativeKotlinCustomNextRepApprovalFileStore?=null
+        repApprovals:NativeKotlinCustomNextRepApprovalFileStore?=null,
+        loadApprovals:NativeKotlinCustomNextLoadApprovalFileStore?=null
     ):NativeCustomJournalResult {
         if(!id.matches(workoutId)||!id.matches(cycleId) ||
             absoluteWeek !in 1..104 || weekday !in 0..6)
@@ -411,8 +412,17 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)
             val amended=repApproval as? NativeCustomNextRepRead.Current
+            val loadRead=loadApprovals?.readCurrent(ownerKey,workoutId,
+                inputs,absoluteWeek,weekday) ?:NativeCustomLoadRead.Missing
+            if(loadRead is NativeCustomLoadRead.Rejected ||
+                (amended!=null && loadRead is NativeCustomLoadRead.Current))
+                return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                    NativeCustomJournalRefusal.CONSENT_CHANGED)
+            val load=loadRead as? NativeCustomLoadRead.Current
             if(selected.repApprovalFingerprint!=amended?.receipt?.fingerprint ||
-                (amended?.amendment?.amended ?:exact.snapshot)!=selected.snapshot)
+                selected.loadApprovalFingerprint!=load?.receipt?.fingerprint ||
+                (load?.amendment?.amended ?:amended?.amendment?.amended
+                    ?:exact.snapshot)!=selected.snapshot)
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)
             val ledger=history.open(ownerKey,current.athleteId)

@@ -35,7 +35,9 @@ data class FatigueRepTargetReview(
     /** Proposed per-set repetitions, NEVER a change to issued targets. */
     val candidateRepTargets: List<Int>?,
     val proposedOrdinal: Int?,
-    val observedLoad: BigDecimal?
+    val observedLoad: BigDecimal?,
+    /** Exact original ordinal loads; essential when every set is different. */
+    val observedSetLoads: List<BigDecimal>? = null
 ) {
     init {
         val ready=reason==FatigueRepReviewReason.ONE_SET_REP_INCREASE_FOR_REVIEW
@@ -67,7 +69,10 @@ object FatigueAwareRepTargetReviewDomain {
         verifiedStock: VerifiedLoadStock?,
         approvedLoadBasis: LoadBasis,
         readiness: CoachReadiness,
-        movementRestricted: Boolean
+        movementRestricted: Boolean,
+        /** Only an authenticated native per-set prescription can enable
+         * mixed-load coaching. Never infer this from a user-selected toggle. */
+        verifiedPerSetLoading: Boolean = false
     ): FatigueRepTargetReview {
         val evidence=DoubleProgressionEvidenceDomain.assess(
             session.targetReps,session.expectedWorkingSets,session.observations)
@@ -76,33 +81,41 @@ object FatigueAwareRepTargetReviewDomain {
             ordered.size==session.expectedWorkingSets
         val reps=if(complete) Collections.unmodifiableList(
             ordered.map {checkNotNull(it.actualReps)}) else null
-        val rawLoads=ordered.filter {it.outcome==SetOutcome.COMPLETED}
-            .mapNotNull {it.actualLoad?.stripTrailingZeros()}
-            .distinct()
-        val load=if(rawLoads.size==1)
-            BigDecimal(rawLoads.single().toPlainString()) else null
+        val setLoads=if(complete)ordered.map {
+            BigDecimal(checkNotNull(it.actualLoad)
+                .stripTrailingZeros().toPlainString())
+        } else null
+        val rawLoads=setLoads?.distinct().orEmpty()
+        val load=if(rawLoads.size==1)rawLoads.single() else null
         fun result(reason:FatigueRepReviewReason,
             candidate:List<Int>?=null,ordinal:Int?=null)=
             FatigueRepTargetReview(reason,reps,
-                candidate?.let {Collections.unmodifiableList(it)},ordinal,load)
+                candidate?.let {Collections.unmodifiableList(it)},ordinal,load,
+                setLoads?.let{Collections.unmodifiableList(it)})
 
         if(!complete || ordered.any {it.outcome!=SetOutcome.COMPLETED})
             return result(FatigueRepReviewReason.INCOMPLETE_OR_FAILED_SESSION)
         if(evidence.belowFloorOrdinals.isNotEmpty())
             return result(FatigueRepReviewReason.BELOW_TARGET_FLOOR)
-        // A changed or top/backoff workout is not a straight-set rep
-        // progression. The user's entered loads remain authoritative facts.
-        if(evidence.mixedActualLoads || load==null ||
+        // Mixed authored set loads can progress REPS independently; they
+        // cannot claim a new uniform weight. Every ordinal must match the
+        // actual immutable issued target and physically verified gym stock.
+        // The legacy uniform-only path remains unchanged by default.
+        if((evidence.mixedActualLoads && !verifiedPerSetLoading) ||
+            setLoads==null || setLoads.size!=ordered.size ||
             ordered.any {it.issuedLoad==null ||
                 it.issuedLoad.compareTo(it.actualLoad)!=0})
             return result(FatigueRepReviewReason.UNSTABLE_OR_USER_EDITED_LOADS)
-        if(load.compareTo(zero)==0)
+        if(setLoads.any{it.compareTo(zero)==0})
             return result(FatigueRepReviewReason.ZERO_LOAD_NEEDS_SPECIFIC_POLICY)
         if(verifiedStock?.basis!=approvedLoadBasis)
             return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
-        val availability=EquipmentLoadDomain.inspect(verifiedStock,load,session.unit)
-        if(availability !is LoadInspection.Confirmed || !availability.exact ||
-            availability.basis!=approvedLoadBasis)
+        if(setLoads.any{actual ->
+                val inspected=EquipmentLoadDomain.inspect(
+                    verifiedStock,actual,session.unit)
+                inspected !is LoadInspection.Confirmed || !inspected.exact ||
+                    inspected.basis!=approvedLoadBasis
+            })
             return result(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED)
         if(ordered.any {it.actualRir==null})
             return result(FatigueRepReviewReason.ACTUAL_EFFORT_NOT_REPORTED)

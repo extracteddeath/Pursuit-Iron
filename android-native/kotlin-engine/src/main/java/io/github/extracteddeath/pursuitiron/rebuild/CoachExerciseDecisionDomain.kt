@@ -42,7 +42,10 @@ data class CoachExerciseContext(
     /** An explicit user-reported restriction; not an inferred diagnosis. */
     val movementRestricted: Boolean,
     val availableLoads: VerifiedLoadStock?,
-    val maximumStepForReview: BigDecimal
+    val maximumStepForReview: BigDecimal,
+    /** Explicitly established by native authored/issued per-set loading.
+     * Never enable for a top/backoff or unverified user-edited session. */
+    val verifiedPerSetLoading: Boolean = false
 )
 
 data class CoachExerciseReview(
@@ -163,9 +166,27 @@ object CoachExerciseDecisionDomain {
         if(latestFacts.belowFloorOrdinals.isNotEmpty())
             return result(CoachDirection.REVIEW_WORKING_LOAD,CoachConfidence.STRONG,
                 "Some sets fell below the prescribed rep range. Review the load and fatigue before adding weight.")
-        if(latestFacts.mixedActualLoads)
+        if(latestFacts.mixedActualLoads) {
+            // A verified per-set prescription is different from an athlete
+            // unexpectedly editing weights during a straight-set workout.
+            // Even in the verified case only ONE set may earn one REP.
+            // No weight is raised or copied to other days/sets.
+            if(context.verifiedPerSetLoading &&
+                latestFacts.ceilingOrdinals.size<last.expectedWorkingSets) {
+                val review=FatigueAwareRepTargetReviewDomain.assess(
+                    last,context.availableLoads,
+                    context.availableLoads?.basis ?: LoadBasis.EXERCISE_OVERRIDE,
+                    context.readiness,context.movementRestricted,
+                    verifiedPerSetLoading=true)
+                if(review.candidateRepTargets!=null)
+                    return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
+                        CoachConfidence.MODERATE,
+                        "Each authored set kept its own verified weight. Recorded effort supports reviewing one more rep on one set without changing any load.",
+                        repTargets=review.candidateRepTargets)
+            }
             return result(CoachDirection.STABILIZE_SET_LOADING,CoachConfidence.LIMITED,
                 "Working weights varied across the sets. Use the full set history to choose a repeatable load; the heaviest set alone is not a starting target.")
+        }
         if(latestFacts.ceilingOrdinals.size!=last.expectedWorkingSets) {
             val repReview=FatigueAwareRepTargetReviewDomain.assess(
                 last,context.availableLoads,

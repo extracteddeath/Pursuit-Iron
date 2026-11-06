@@ -153,4 +153,67 @@ class FatigueAwareRepTargetReviewDomainTest {
             session(rir=listOf(3,3,1))),context)
         assertNull(poorlyRecovered.nextRepTargetsForReview)
     }
+
+    @Test fun verifiedPerSetLoadsCanEarnOneRepWithoutCopyingHeaviestWeight() {
+        val mixed=session(reps=listOf(14,13,12),rir=listOf(3,3,4),
+            loads=listOf("35","30","25"),
+            issued=listOf("35","30","25"))
+        // Default straight-set mode must still reject mixed weights.
+        assertEquals(FatigueRepReviewReason.UNSTABLE_OR_USER_EDITED_LOADS,
+            review(mixed).reason)
+        val reviewed=FatigueAwareRepTargetReviewDomain.assess(
+            mixed,gym,LoadBasis.DUMBBELL_PER_HAND,CoachReadiness.NORMAL,
+            false,verifiedPerSetLoading=true)
+        assertEquals(FatigueRepReviewReason.ONE_SET_REP_INCREASE_FOR_REVIEW,
+            reviewed.reason)
+        assertNull(reviewed.observedLoad)
+        assertEquals(listOf(n("35"),n("30"),n("25")),
+            reviewed.observedSetLoads)
+        assertEquals(listOf(14,13,13),reviewed.candidateRepTargets)
+        assertEquals(2,reviewed.proposedOrdinal)
+        assertFalse(reviewed.mayIssueWorkout)
+        assertFalse(reviewed.canAutoApply)
+        assertEquals(listOf(n("35"),n("30"),n("25")),
+            mixed.observations.map {it.actualLoad})
+        val context=CoachExerciseContext(
+            CoachReadiness.NORMAL,false,gym,n("5"),
+            verifiedPerSetLoading=true)
+        val decision=CoachExerciseDecisionDomain.review(listOf(mixed),context)
+        assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,decision.direction)
+        assertEquals(listOf(14,13,13),decision.nextRepTargetsForReview)
+        assertNull(decision.nextLoadToReview)
+        assertNull(decision.observedWorkingLoad)
+    }
+
+    @Test fun mixedSetLoadingNeverLaundersEditedUnattainableOrNearFailureLoads() {
+        fun authorized(session:ProgressionWorkoutEvidence,
+            stock:VerifiedLoadStock?=gym):FatigueRepTargetReview =
+            FatigueAwareRepTargetReviewDomain.assess(
+                session,stock,LoadBasis.DUMBBELL_PER_HAND,
+                CoachReadiness.NORMAL,false,verifiedPerSetLoading=true)
+        val valid=session(loads=listOf("35","30","25"),
+            issued=listOf("35","30","25"))
+        assertEquals(FatigueRepReviewReason.UNSTABLE_OR_USER_EDITED_LOADS,
+            authorized(valid.copy(observations=valid.observations.mapIndexed{i,set->
+                if(i==2)set.copy(issuedLoad=n("30")) else set
+            })).reason)
+        assertEquals(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED,
+            authorized(session(loads=listOf("35","32.5","25"),
+                issued=listOf("35","32.5","25"))).reason)
+        assertEquals(FatigueRepReviewReason.CURRENT_LOAD_NOT_VERIFIED,
+            authorized(valid,stock=null).reason)
+        assertEquals(FatigueRepReviewReason.BELOW_TARGET_FLOOR,
+            authorized(session(loads=listOf("35","30","25"),
+                issued=listOf("35","30","25"),
+                reps=listOf(14,13,9))).reason)
+        assertEquals(FatigueRepReviewReason.NEAR_FAILURE_OR_RECOVERY_PRIORITY,
+            authorized(session(loads=listOf("35","30","25"),
+                issued=listOf("35","30","25"),
+                rir=listOf(3,3,1))).reason)
+        assertEquals(CoachDirection.STABILIZE_SET_LOADING,
+            CoachExerciseDecisionDomain.review(listOf(valid),
+                CoachExerciseContext(CoachReadiness.NORMAL,false,gym,n("5")))
+                .direction)
+    }
+
 }

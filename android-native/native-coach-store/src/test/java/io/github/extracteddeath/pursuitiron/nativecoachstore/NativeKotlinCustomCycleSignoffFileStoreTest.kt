@@ -1088,6 +1088,126 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertTrue(newHandoff().blocksNewIssuance("owner-1"))
     }
 
+    private data class ActivationFixture(
+        val approvals:NativeKotlinFutureActivationApprovalFileStore,
+        val handoff:NativeKotlinFutureActivationHandoffFileStore,
+        val receipt:NativeFutureActivationHandoff
+    )
+    private fun activationFixture():ActivationFixture {
+        readyFutureForSecondConsent()
+        val approvals=approvalCheckpoint()
+        val preview=approvals.preview("owner-1","cycle-1","build")
+            as NativeFutureApprovalPreview.Ready
+        val accepted=approvals.confirm("owner-1","cycle-1","build",0,
+            preview.fingerprint,true) as NativeFutureApprovalWrite.Committed
+        val handoff=newHandoff()
+        val staged=handoff.stage("owner-1","cycle-1","build",
+            accepted.approval.revision,preview.fingerprint,approvals,true)
+            as NativeFutureHandoffReview.Staged
+        return ActivationFixture(approvals,handoff,staged.receipt)
+    }
+    private fun activationTransaction(
+        fixture:ActivationFixture,
+        onIntent:()->Unit={},
+        onSource:()->Unit={}
+    )=NativeKotlinFutureActivationCommitTransaction(
+        temp.root.toPath(),fence,identity,sources,drafts,futureStore(),
+        fixture.approvals,fixture.handoff,onIntent,onSource)
+
+    @Test fun futureActivationSourceAndCoachingSurviveColdRestart() {
+        val fixture=activationFixture()
+        val tx=activationTransaction(fixture)
+        assertEquals(NativeFutureCommitReview.Missing,tx.read("owner-1"))
+        val applied=tx.commit("owner-1")
+        assertTrue(applied.toString(),applied is NativeFutureCommitReview.Applied)
+        val context=(applied as NativeFutureCommitReview.Applied).context
+        assertEquals(2L,context.sourceRevision)
+        assertEquals("build",context.blockId)
+        assertEquals(4,context.firstWeek)
+        assertEquals(futureContext().policy,context.policy)
+        assertEquals(futureContext().nonSetSecondsByWeekday,
+            context.nonSetSecondsByWeekday)
+        assertEquals(ComposerSplit.UPPER_LOWER,
+            (sources.read("owner-1") as NativeAuthoringSourceRead.Found)
+                .source.setup.reviewed?.split)
+        assertEquals(2L,
+            (sources.read("owner-1") as NativeAuthoringSourceRead.Found)
+                .source.revision)
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+        assertTrue(activationTransaction(fixture).read("owner-1") is
+            NativeFutureCommitReview.Applied)
+        assertEquals(NativeFutureCommitReview.Applied(context,true),
+            activationTransaction(fixture).commit("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.SOURCE_CHANGED),
+            fixture.handoff.cancel("owner-1",fixture.receipt.approvalRevision,
+                fixture.receipt.approvalFingerprint,true))
+    }
+
+    @Test fun interruptedActivationBeforeSourceWriteCanReplayOrExplicitlyAbort() {
+        val fixture=activationFixture()
+        val interrupted=activationTransaction(fixture,
+            onIntent={throw IllegalStateException("simulate process death")})
+        assertEquals(NativeFutureCommitReview.Rejected(
+            NativeFutureCommitRefusal.STORAGE_UNAVAILABLE),
+            interrupted.commit("owner-1"))
+        assertEquals(NativeAuthoringSourceRead.Found(source()),
+            sources.read("owner-1"))
+        assertEquals(NativeFutureCommitReview.Prepared("cycle-1","build"),
+            activationTransaction(fixture).read("owner-1"))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+        assertEquals(NativeFutureHandoffReview.Rejected(
+            NativeFutureHandoffRefusal.ALREADY_STAGED),
+            fixture.handoff.cancel("owner-1",fixture.receipt.approvalRevision,
+                fixture.receipt.approvalFingerprint,true))
+        assertEquals(NativeFutureCommitReview.Cancelled,
+            activationTransaction(fixture).abortBeforeSourceApplied(
+                "owner-1",fixture.receipt.approvalRevision,
+                fixture.receipt.approvalFingerprint,true))
+        assertEquals(NativeFutureHandoffReview.Missing,
+            fixture.handoff.read("owner-1"))
+        assertEquals(NativeAuthoringSourceRead.Found(source()),
+            sources.read("owner-1"))
+    }
+
+    @Test fun interruptedActivationAfterSourceWriteReplaysWithoutDoubleIncrement() {
+        val fixture=activationFixture()
+        val interrupted=activationTransaction(fixture,
+            onSource={throw IllegalStateException("simulate process death")})
+        assertEquals(NativeFutureCommitReview.Rejected(
+            NativeFutureCommitRefusal.STORAGE_UNAVAILABLE),
+            interrupted.commit("owner-1"))
+        assertEquals(2L,
+            (sources.read("owner-1") as NativeAuthoringSourceRead.Found)
+                .source.revision)
+        val recovered=activationTransaction(fixture)
+        assertTrue(recovered.read("owner-1") is NativeFutureCommitReview.Applied)
+        assertTrue(recovered.commit("owner-1") is NativeFutureCommitReview.Applied)
+        assertEquals(2L,
+            (sources.read("owner-1") as NativeAuthoringSourceRead.Found)
+                .source.revision)
+        assertEquals(NativeFutureCommitReview.Rejected(
+            NativeFutureCommitRefusal.SOURCE_CONFLICT),
+            recovered.abortBeforeSourceApplied("owner-1",
+                fixture.receipt.approvalRevision,
+                fixture.receipt.approvalFingerprint,true))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
+    @Test fun activationIntentRejectsStaleApprovalAndSourceConflictWithoutWriting() {
+        val fixture=activationFixture()
+        assertEquals(NativeFutureApprovalWrite.Revoked(2),
+            fixture.approvals.revoke("owner-1","cycle-1","build",1))
+        assertEquals(NativeFutureCommitReview.Rejected(
+            NativeFutureCommitRefusal.APPROVAL_STALE),
+            activationTransaction(fixture).commit("owner-1"))
+        assertEquals(NativeAuthoringSourceRead.Found(source()),
+            sources.read("owner-1"))
+        assertEquals(NativeFutureCommitReview.Missing,
+            activationTransaction(fixture).read("owner-1"))
+        assertTrue(fixture.handoff.blocksNewIssuance("owner-1"))
+    }
+
     @Test fun actualProductionBoundaryIsNotBypassedBySecondConsent() {
         readyFutureForSecondConsent()
         val history=NativeKotlinHistoryManifestFileStore(temp.root.toPath())

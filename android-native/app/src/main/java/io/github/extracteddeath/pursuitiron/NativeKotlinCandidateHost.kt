@@ -700,6 +700,24 @@ internal class NativeKotlinCandidateHost(context:Context) {
             futureActivationCommit)
     }
 
+    /**
+     * REAL Kotlin custom journal issuance for the activated block only.
+     * The owner-fenced issuer verifies the new signoff, exact immutable
+     * preparation, source, original history enrollment and ID collision.
+     * Other issuers remain behind the staged activation barrier.
+     */
+    fun issueActivatedFutureWorkout(
+        workoutId:String,cycleId:String,absoluteWeek:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs
+    ):NativeCustomJournalResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomJournalResult.Rejected(
+                NativeCustomJournalRefusal.NOT_AUTHORIZED)
+        return customIssuedStore.issueActivated(owner.ownerKey,workoutId,
+            cycleId,absoluteWeek,weekday,inputs,activatedCycleSignoffs,
+            futureActivationCommit)
+    }
+
     fun abortFutureBlockActivationBeforeSourceChange(
         approvalRevision:Long,fingerprint:String,athleteConfirmed:Boolean
     ):NativeFutureCommitReview {

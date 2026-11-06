@@ -1,7 +1,8 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import io.github.extracteddeath.pursuitiron.rebuild.CustomTrainingCycle
-import io.github.extracteddeath.pursuitiron.rebuild.CustomTrainingCycleDomain
+import io.github.extracteddeath.pursuitiron.rebuild.CustomSplitIdentity
+import io.github.extracteddeath.pursuitiron.rebuild.ComposerSplit
 
 /**
  * A completed historical workout is authenticated by the mixed history
@@ -42,6 +43,22 @@ sealed interface NativeFutureActivationReview {
 
 /** Deterministic full-cycle boundary check; no schedule or journal writes. */
 internal object NativeFutureBlockBoundaryDomain {
+    /**
+     * A freeform custom split is not a preset mismatch: its authored days
+     * remain authoritative. A named split must match its reviewed profile.
+     * Duplicate days are never converted into a valid schedule by a Set.
+     */
+    fun scheduleMatches(
+        split:CustomSplitIdentity,
+        days:List<Int>,
+        reviewedSplit:ComposerSplit,
+        reviewedDays:Set<Int>
+    ):Boolean =
+        days.size==days.toSet().size &&
+            days.toSet()==reviewedDays &&
+            (split !is CustomSplitIdentity.Named ||
+                split.split==reviewedSplit)
+
     fun check(
         cycle:CustomTrainingCycle,
         targetBlockId:String,
@@ -131,9 +148,9 @@ class NativeKotlinFutureBlockActivationPreflight(
                         NativeFutureActivationRefusal.NOT_A_FUTURE_BLOCK)
                 val reviewed=future.receipt.future.setup.reviewed
                 if(reviewed==null ||
-                    block.days.map{it.weekday}.toSet()!=reviewed.trainingWeekdays ||
-                    (block.split as? io.github.extracteddeath.pursuitiron.rebuild.CustomSplitIdentity.Named)
-                        ?.split!=reviewed.split)
+                    !NativeFutureBlockBoundaryDomain.scheduleMatches(
+                        block.split,block.days.map{it.weekday},
+                        reviewed.split,reviewed.trainingWeekdays))
                     return@withOwnerTransaction NativeFutureActivationReview.Rejected(
                         NativeFutureActivationRefusal.STALE_SOURCE_OR_DRAFT)
                 val full=history.read(ownerKey,owner.athleteId)

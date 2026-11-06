@@ -87,4 +87,20 @@ class NativeFutureBlockBoundaryDomainTest {
             NativeFutureBlockBoundaryDomain.check(
                 cycle(),"build",earlier()+unrelated,7))
     }
+
+    @Test fun realFreeformSplitRetainsAthleteAuthoredWeekdays() {
+        assertTrue(NativeFutureBlockBoundaryDomain.scheduleMatches(
+            CustomSplitIdentity.Freeform("Chest and Arms"),listOf(0,1,3,5),
+            ComposerSplit.UPPER_LOWER,setOf(0,1,3,5)))
+        assertFalse(NativeFutureBlockBoundaryDomain.scheduleMatches(
+            CustomSplitIdentity.Freeform("Chest and Arms"),listOf(0,1,3,5),
+            ComposerSplit.UPPER_LOWER,setOf(0,1,2,5)))
+        assertFalse(NativeFutureBlockBoundaryDomain.scheduleMatches(
+            CustomSplitIdentity.Freeform("Chest and Arms"),listOf(0,1,3,3),
+            ComposerSplit.UPPER_LOWER,setOf(0,1,3)))
+        assertFalse(NativeFutureBlockBoundaryDomain.scheduleMatches(
+            CustomSplitIdentity.Named(ComposerSplit.FULL_BODY),listOf(0,1,3,5),
+            ComposerSplit.UPPER_LOWER,setOf(0,1,3,5)))
+    }
+
 }

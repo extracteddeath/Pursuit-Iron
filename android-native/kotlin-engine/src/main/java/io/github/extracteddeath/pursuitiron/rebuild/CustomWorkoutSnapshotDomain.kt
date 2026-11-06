@@ -190,6 +190,61 @@ object CustomWorkoutSnapshotDomain {
     }
 
     /**
+     * Preview the FIRST valid workout after a prospective block has become
+     * the active athlete schedule. Previously completed blocks retain the
+     * original reviewed setup in the full-cycle dose/continuity audit.
+     *
+     * This deliberately has NO issuance authority. A separate durable,
+     * revision-bound activated-cycle consent must still precede preparation
+     * or issuance, and may only authorize weeks in the activated block.
+     */
+    fun previewActivatedBlock(
+        cycle:CustomTrainingCycle,
+        originalSetup:AthleteSetupReview,
+        activeSetup:AthleteSetupReview,
+        catalog:List<CatalogMovement>,
+        sourceRevision:Long,
+        inputs:CustomCoachAuditInputs,
+        activatedContext:ProspectiveBlockCoachingContext,
+        targetBlockId:String,
+        firstWeek:Int,
+        absoluteWeek:Int,
+        weekday:Int
+    ):CustomWorkoutSnapshotResult {
+        if(activeSetup!=activatedContext.setup ||
+            firstWeek !in 2..104 || absoluteWeek !in firstWeek..104)
+            return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+        val index=cycle.blocks.indexOfFirst {it.blockId==targetBlockId}
+        if(index<=0 || cycle.blocks.take(index).sumOf {it.weeks}+1!=firstWeek)
+            return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+        val target=cycle.blocks[index]
+        val last=firstWeek+target.weeks-1
+        if(absoluteWeek>last || target.purpose!=CustomBlockPurpose.TRAINING)
+            return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.INVALID_WEEK)
+        val audit=CustomCycleCoachAuditDomain.review(
+            cycle,originalSetup,catalog,inputs,
+            mapOf(targetBlockId to activatedContext))
+        if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+            audit.issues.isNotEmpty())
+            return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+        val day=preview(cycle,activeSetup,catalog,sourceRevision,
+            absoluteWeek,weekday)
+        if(day !is CustomWorkoutSnapshotResult.Preview)return day
+        if(day.snapshot.blockId!=targetBlockId)
+            return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.INVALID_WEEK)
+        val overhead=activatedContext.nonSetSecondsByWeekday[weekday]
+            ?:return CustomWorkoutSnapshotResult.Rejected(
+                CustomWorkoutSnapshotRefusal.COACHING_REVIEW_REQUIRED)
+        return day.copy(snapshot=day.snapshot.copy(
+            declaredNonSetSeconds=overhead))
+    }
+
+    /**
      * Additional full-cycle coaching gate for a signoff-bound snapshot.
      * Native owner transaction still must verify the actual consent bytes
      * and all current source revisions; this alone cannot grant issuance.

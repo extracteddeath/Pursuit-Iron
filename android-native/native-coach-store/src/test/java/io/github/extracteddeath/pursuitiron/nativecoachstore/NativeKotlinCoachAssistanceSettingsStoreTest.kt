@@ -26,7 +26,7 @@ class NativeKotlinCoachAssistanceSettingsStoreTest {
         assertEquals(saved(1,CoachAssistancePolicy.MANUAL),
             store().save("owner-1",0,CoachAssistancePolicy.MANUAL))
         val recovered=read() as NativeCoachSettingsRead.Current
-        assertEquals(1,recovered.settings.revision)
+        assertEquals(1L,recovered.settings.revision)
         assertTrue(recovered.settings.policy.manualOnly)
         assertFalse(recovered.settings.policy.offersProgression)
         assertFalse(recovered.settings.policy.offersFatigueAdvice)

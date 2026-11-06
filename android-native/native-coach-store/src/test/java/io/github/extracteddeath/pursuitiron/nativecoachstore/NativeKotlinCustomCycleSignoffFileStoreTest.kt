@@ -719,7 +719,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 "cycle-1","build",4,3,9,7)}
     )=NativeKotlinFutureActivationApprovalFileStore(
         temp.root.toPath(),fence,identity,
-        {_,_,_->boundary()},futureStore(),sources,permissionStore)
+        {_,_,_->boundary()},futureStore(),drafts,sources,permissionStore)
 
     @Test fun futureActivationRejectsCrossCycleOrContradictoryBoundaryEvidence() {
         readyFutureForSecondConsent()
@@ -876,7 +876,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             "cycle-1","build",4,3,9,7)
         val original=source()
         val prepared=NativeFutureActivationSourcePlanDomain.prepare(
-            original,saved,baseline)
+            original,saved,baseline,futureCycle())
         assertNotNull(prepared)
         assertEquals(original.catalog,prepared!!.proposedSource.catalog)
         assertEquals(original.athleteId,prepared.proposedSource.athleteId)
@@ -888,19 +888,19 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             setup=saved.future.setup.copy(reviewed=other.copy(
                 maxBarbellExercisesPerDay=1))))
         assertNull(NativeFutureActivationSourcePlanDomain.prepare(
-            original,invalidGym,baseline))
+            original,invalidGym,baseline,futureCycle()))
         val invalidPolicy=saved.copy(future=saved.future.copy(
             policy=saved.future.policy.copy(trainingDays=3)))
         assertNull(NativeFutureActivationSourcePlanDomain.prepare(
-            original,invalidPolicy,baseline))
+            original,invalidPolicy,baseline,futureCycle()))
         val invalidTimes=saved.copy(future=saved.future.copy(
             nonSetSecondsByWeekday=mapOf(0 to 200,1 to 200,2 to 200)))
         assertNull(NativeFutureActivationSourcePlanDomain.prepare(
-            original,invalidTimes,baseline))
+            original,invalidTimes,baseline,futureCycle()))
         assertNull(NativeFutureActivationSourcePlanDomain.prepare(
-            original.copy(revision=2),saved,baseline))
+            original.copy(revision=2),saved,baseline,futureCycle()))
         assertNull(NativeFutureActivationSourcePlanDomain.prepare(
-            original,saved,baseline.copy(blockId="base")))
+            original,saved,baseline.copy(blockId="base"),futureCycle()))
     }
 
     @Test fun revisionedRevocationAndAccountSwitchCannotResurrectSecondConsent() {
@@ -959,7 +959,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             inventory,composerInventory)
         val actual=NativeKotlinFutureActivationApprovalFileStore(
             temp.root.toPath(),fence,identity,live,
-            futureStore(),sources,permissionStore)
+            futureStore(),drafts,sources,permissionStore)
         assertEquals(NativeFutureApprovalPreview.Rejected(
             NativeFutureApprovalRefusal.NOT_READY),
             actual.preview("owner-1","cycle-1","build"))

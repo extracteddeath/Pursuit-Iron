@@ -58,10 +58,75 @@ data class AdaptiveBlockGenerationReview(
     val maySaveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
 }
+/**
+ * G2 blueprint: the athlete/reviewer supplies allowable future splits,
+ * weekdays, phase policies and exercise prescriptions, not an already
+ * assembled program-generation request. This is NOT authority to change
+ * the currently approved schedule or to synthesize training thresholds.
+ */
+data class AdaptiveScheduleBlueprint(
+    val optionId:String,
+    val choices:List<CatalogExerciseChoice>,
+    val prescriptions:List<ExercisePrescriptionPolicy>,
+    val future:ProspectiveBlockCoachingContext?=null,
+    val extraFocuses:List<ComposerFocus> =emptyList()
+)
+data class AdaptiveScheduleBlueprintRequest(
+    val base:AdaptiveBlockGenerationRequest,
+    /** Full current reviewed generator constraints, including density. */
+    val generatorTemplate:AthleteProgramGenerationRequest,
+    val blueprints:List<AdaptiveScheduleBlueprint>
+)
+
 object AdaptiveBlockOptionGenerationDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private const val BASELINE="keep_current"
     private const val MAX_GENERATED=7
+
+    /**
+     * Assemble distinct, bounded candidate weeks from verified current and
+     * prospective contexts. Reuses the same generator, prescription
+     * converter, cycle auditor and transition permissions as review().
+     *
+     * A prospective context is never silently treated as a committed
+     * profile. Change of split alone is separate from day-count change.
+     */
+    fun reviewBlueprints(request:AdaptiveScheduleBlueprintRequest):
+        AdaptiveBlockGenerationReview {
+        val base=request.base
+        val template=request.generatorTemplate
+        require(base.alternatives.isEmpty()) {
+            "Blueprint review owns its alternatives; do not merge two sources."
+        }
+        require(request.blueprints.size<=MAX_GENERATED)
+        require(template.setup==base.athleteSetup &&
+            template.catalog==base.catalog &&
+            template.nonSetSecondsByWeekday==
+                base.coaching.nonSetSecondsByWeekday) {
+            "The generator template must use the current audited athlete and time."
+        }
+        val target=base.approvedCycle.blocks.singleOrNull {
+            it.blockId==base.targetBlockId
+        }
+        require(target!=null && template.phase==target.phase &&
+            template.policy==base.coaching.policiesByPhase[target.phase]) {
+            "The template must match the existing target phase and policy."
+        }
+        val alternatives=request.blueprints.map {blueprint ->
+            val future=blueprint.future
+            val setup=future?.setup ?:base.athleteSetup
+            val policy=future?.policy ?:template.policy
+            val overhead=future?.nonSetSecondsByWeekday ?:
+                template.nonSetSecondsByWeekday
+            AdaptiveBlockGenerationAlternative(
+                blueprint.optionId,
+                template.copy(setup=setup,policy=policy,
+                    choices=blueprint.choices,extraFocuses=blueprint.extraFocuses,
+                    nonSetSecondsByWeekday=overhead),
+                blueprint.prescriptions,future)
+        }
+        return review(base.copy(alternatives=alternatives))
+    }
 
     fun review(request:AdaptiveBlockGenerationRequest):
         AdaptiveBlockGenerationReview {

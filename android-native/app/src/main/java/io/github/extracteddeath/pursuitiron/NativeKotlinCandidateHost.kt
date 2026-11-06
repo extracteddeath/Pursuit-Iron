@@ -937,6 +937,47 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return trackedWorkout.issue(owner.ownerKey,owner.athleteId,workoutId)
     }
 
+
+    /**
+     * Premium NEXT-SET coaching using only a reopened native journal and the
+     * CURRENT fully coherent owner-verified gym. It never changes a target.
+     * This also fails safely when the workout's original gym is no longer
+     * the approved source: past sets can be resumed, but no unverified
+     * physical weight suggestion is generated.
+     */
+    fun reviewLiveIssuedNextSet(
+        workoutId:String,setKey:String,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumReviewStep:java.math.BigDecimal
+    ):LiveSetCoachResult? {
+        val signed=localAthlete.signedInIdentity()?:return null
+        return runCatching {
+            revisionFence.withOwnerTransaction(signed.ownerKey) {
+                if(localAthlete.signedInIdentity()!=signed)
+                    return@withOwnerTransaction null
+                val stored=coordinator.open(signed.ownerKey,workoutId)
+                    as? NativeJournalFileResult.Durable
+                    ?:return@withOwnerTransaction null
+                val journal=stored.journal
+                if(journal.snapshot.source.athleteId!=signed.athleteId)
+                    return@withOwnerTransaction null
+                val selected=journal.snapshot.targets.singleOrNull{
+                    it.setKey==setKey
+                }?:return@withOwnerTransaction null
+                val current=gymCoherentAuthority.currentApprovedWorkout(
+                    signed.ownerKey,workoutId)
+                val stock=if(current?.approvedSource==journal.snapshot.source)
+                    (current.program.exercises.singleOrNull{
+                        it.exerciseId==selected.exerciseId
+                    }?.equipment as? ComposerEquipment.Verified)?.inventory
+                else null
+                KotlinJournalLiveSetCoachDomain.review(
+                    journal,setKey,stock,readiness,movementRestricted,
+                    maximumReviewStep)
+            }
+        }.getOrNull()
+    }
+
     fun recoverWorkout(workoutId:String):NativeJournalFileResult {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeJournalFileResult.Rejected(

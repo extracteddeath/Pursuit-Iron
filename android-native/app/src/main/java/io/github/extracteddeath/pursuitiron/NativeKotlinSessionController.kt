@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import java.math.BigDecimal
 
 /**
  * Process-scoped Compose-facing controller for the independent Kotlin workout.
@@ -28,6 +30,7 @@ internal data class NativeKotlinSessionState(
     val busy:Boolean=false,
     val journal:KotlinWorkoutJournalState?=null,
     val presentation:KotlinWorkoutPresentation?=null,
+    val liveCoach:LiveSetCoachResult.Reviewed?=null,
     val unavailableReason:NativeJournalFileRefusal?=null,
     val journalRefusal:KotlinJournalRefusal?=null
 )
@@ -37,11 +40,13 @@ internal class NativeKotlinSessionController(
 ):AutoCloseable {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
     private val pending=AtomicBoolean(false)
+    private val latestCoachRequest=AtomicLong(0)
     private val mutable=MutableStateFlow(NativeKotlinSessionState())
     val state:StateFlow<NativeKotlinSessionState> = mutable.asStateFlow()
 
     private fun accepted(workoutId:String,result:NativeJournalFileResult,
         journalRefusal:KotlinJournalRefusal?=null) {
+        latestCoachRequest.incrementAndGet()
         mutable.value=when(result) {
             is NativeJournalFileResult.Durable -> NativeKotlinSessionState(
                 workoutId=workoutId,
@@ -138,6 +143,35 @@ internal class NativeKotlinSessionController(
         },recoverOnReject=true)
     }
 
+    /**
+     * Nonblocking read-only next-set guidance. Every request rereads saved
+     * native receipts and current gym off Main. A newer selection or journal
+     * revision invalidates any older callback; no UI input grants authority.
+     */
+    fun reviewNextSet(
+        setKey:String,readiness:CoachReadiness,movementRestricted:Boolean
+    ) {
+        val before=mutable.value
+        val current=before.journal ?:return
+        if(before.busy || current.finishedByEventId!=null)return
+        val workoutId=before.workoutId ?:return
+        val observedRevision=current.revision
+        val requestId=latestCoachRequest.incrementAndGet()
+        mutable.value=before.copy(liveCoach=null)
+        scope.launch {
+            val reviewed=host.reviewLiveIssuedNextSet(
+                workoutId,setKey,readiness,movementRestricted,
+                BigDecimal("5"))
+            val state=mutable.value
+            if(latestCoachRequest.get()==requestId &&
+                state.workoutId==workoutId &&
+                state.journal?.revision==observedRevision &&
+                !state.busy)
+                mutable.value=state.copy(
+                    liveCoach=reviewed as? LiveSetCoachResult.Reviewed)
+        }
+    }
+
     fun finish() {
         val prior=mutable.value
         val workoutId=prior.workoutId ?:return
@@ -151,10 +185,12 @@ internal class NativeKotlinSessionController(
 
     fun clear() {
         if(pending.get())return
+        latestCoachRequest.incrementAndGet()
         mutable.value=NativeKotlinSessionState()
     }
 
     override fun close() {
+        latestCoachRequest.incrementAndGet()
         scope.cancel()
         mutable.value=NativeKotlinSessionState()
     }

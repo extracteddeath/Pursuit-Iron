@@ -88,6 +88,12 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     }
     var selectedKey by rememberSaveable(workoutId){mutableStateOf<String?>(null)}
     var showAll by rememberSaveable(workoutId){mutableStateOf(false)}
+    var readiness by rememberSaveable(workoutId) {
+        mutableStateOf(CoachReadiness.NORMAL)
+    }
+    var movementRestricted by rememberSaveable(workoutId) {
+        mutableStateOf(false)
+    }
     LaunchedEffect(presentation?.revision) {
         if(presentation!=null)
             selectedKey=presentation.firstUnresolvedSetKey ?:
@@ -97,6 +103,17 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     val selected=allSets.firstOrNull{it.target.setKey==selectedKey}
         ?:allSets.firstOrNull()
     val activeKeys=if(showAll)allSets else listOfNotNull(selected)
+    LaunchedEffect(workoutId,presentation?.revision,selected?.target?.setKey,
+        readiness,movementRestricted) {
+        if(selected?.target?.type==DraftSetType.WORKING &&
+            selected.isResolved.not() && presentation?.finished==false)
+            controller.reviewNextSet(selected.target.setKey,readiness,
+                movementRestricted)
+    }
+    val coach=state.liveCoach?.takeIf {
+        it.journalRevision==presentation?.revision &&
+            it.setKey==selected?.target?.setKey
+    }
 
     if(showFinishConfirm && presentation?.canFinish==true) {
         AlertDialog(onDismissRequest={showFinishConfirm=false},
@@ -174,6 +191,41 @@ internal fun NativeKotlinWorkoutCandidateScreen(
             TextButton(onClick={showAll=!showAll}) {
                 Text(if(showAll)"Focus mode" else "Show all")
             }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text("Readiness",style=MaterialTheme.typography.labelLarge)
+            CoachReadiness.entries.forEach{option->
+                FilterChip(selected=readiness==option,
+                    onClick={readiness=option},
+                    label={Text(option.name.lowercase().replaceFirstChar{
+                        it.uppercase()
+                    })})
+            }
+        }
+        Row(Modifier.fillMaxWidth(),
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Checkbox(checked=movementRestricted,
+                onCheckedChange={movementRestricted=it})
+            Text("Movement restricted",style=MaterialTheme.typography.bodyMedium)
+        }
+        if(coach!=null && !presentation.finished)PursuitCard(
+            highlighted=coach.coaching.direction==
+                InWorkoutDirection.FOLLOW_PLANNED_BACKOFF) {
+            Text("Coach · next set",style=MaterialTheme.typography.titleMedium)
+            Text(coach.coaching.message,
+                style=MaterialTheme.typography.bodyMedium)
+            coach.coaching.weightForHumanReview?.let{weight->
+                Text("Optional review: ${weight.stripTrailingZeros().toPlainString()} "+
+                    "${selected?.target?.load.let{
+                        (it as? DraftSetLoad.Verified)?.unit?.name?.lowercase()
+                            ?: ""
+                    }} · your original target is unchanged.",
+                    style=MaterialTheme.typography.labelMedium)
+            }
+            Text("Based on saved sets · no automatic weight or rep changes",
+                style=MaterialTheme.typography.labelSmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         activeKeys.forEach{set->
             key(set.target.setKey){

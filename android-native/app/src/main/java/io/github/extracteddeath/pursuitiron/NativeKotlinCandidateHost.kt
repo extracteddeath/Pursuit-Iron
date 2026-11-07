@@ -16,6 +16,16 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
  *
  * R&D calls must run off the main thread; all methods perform disk I/O.
  */
+/**
+ * Same-device, explicit profile resume. A verified identity alone cannot
+ * open workouts: the source must also survive current revision-locked decode.
+ */
+internal sealed interface NativeSavedSetupResume {
+    data class Ready(val setup:ReviewedAthleteSetup,val sourceRevision:Long):
+        NativeSavedSetupResume
+    data class Rejected(val reason:String):NativeSavedSetupResume
+}
+
 internal class NativeKotlinCandidateHost(context:Context) {
     private val root=context.applicationContext.noBackupFilesDir
         .resolve("kotlin-coach-v1").toPath()
@@ -141,6 +151,38 @@ internal class NativeKotlinCandidateHost(context:Context) {
     /** A displayed local ID is not a session nor access to gym/history. */
     fun savedAthleteIdForExplicitResume():String? =
         localAthlete.savedAthleteIdForExplicitResume()
+
+    /**
+     * Restores the ORIGINAL athlete after a cold start, only on a direct
+     * confirmation. The authoring store re-decodes and re-runs Kotlin setup
+     * validation; missing, corrupt, revoked or mismatched sources fail closed.
+     * No new profile, gym, catalog, plan, or workout is written here.
+     */
+    fun resumeVerifiedSavedSetup(confirmedAthleteId:String):NativeSavedSetupResume {
+        val activated=localAthlete.activatePreviouslySaved(confirmedAthleteId)
+        val identity=(activated as? AppPrivateKotlinLocalAthlete.Enrollment.Activated)
+            ?.identity ?:return NativeSavedSetupResume.Rejected(
+            (activated as? AppPrivateKotlinLocalAthlete.Enrollment.Rejected)
+                ?.reason ?: "Saved athlete could not be confirmed")
+        return try {
+            val found=authoringSourceStore.read(identity.ownerKey)
+            val source=(found as? NativeAuthoringSourceRead.Found)?.source
+            val reviewed=source?.setup?.reviewed
+            if(source==null || source.ownerKey!=identity.ownerKey ||
+                source.athleteId!=identity.athleteId ||
+                !source.setup.mayReviewProgramCandidate ||
+                reviewed?.athleteProfileId!=identity.athleteId) {
+                localAthlete.deactivate()
+                NativeSavedSetupResume.Rejected(
+                    "Saved training setup is missing, revoked or cannot be verified. No private training data was opened.")
+            } else NativeSavedSetupResume.Ready(reviewed,source.revision)
+        } catch(_:Exception) {
+            localAthlete.deactivate()
+            NativeSavedSetupResume.Rejected(
+                "Saved training setup could not be verified. Nothing was replaced.")
+        }
+    }
+
 
     /** The Kotlin engine owns readiness validation, never the JS runtime. */
     /**

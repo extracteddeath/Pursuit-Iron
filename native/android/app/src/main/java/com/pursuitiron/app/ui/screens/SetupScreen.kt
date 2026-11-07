@@ -185,12 +185,10 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             val sc by androidx.compose.animation.core.animateFloatAsState(hero.i("score") / 100f, Motion.data(), label = "sc")
             Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
-                val ring = cs.primary; val track = cs.onPrimaryContainer.copy(alpha = 0.15f)
-                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-                    val st = androidx.compose.ui.graphics.drawscope.Stroke(7.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                    val inset = 4.dp.toPx(); val sz = androidx.compose.ui.geometry.Size(size.width - 2 * inset, size.height - 2 * inset); val off = androidx.compose.ui.geometry.Offset(inset, inset)
-                    drawArc(track, 0f, 360f, false, off, sz, style = st); drawArc(ring, -90f, 360f * sc, false, off, sz, style = st)
-                }
+                // M3 Expressive wavy ring: the score as a determinate wavy progress indicator.
+                @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+                androidx.compose.material3.CircularWavyProgressIndicator(progress = { sc }, modifier = Modifier.fillMaxSize(),
+                    color = cs.primary, trackColor = cs.onPrimaryContainer.copy(alpha = 0.15f))
                 Text("${hero.i("score")}", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold), color = cs.onPrimaryContainer)
             }
             Column(Modifier.weight(1f)) {

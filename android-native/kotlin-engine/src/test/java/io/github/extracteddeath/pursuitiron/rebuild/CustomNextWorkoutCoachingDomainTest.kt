@@ -405,4 +405,128 @@ class CustomNextWorkoutCoachingDomainTest {
     }
 
 
+
+    private fun blockEntry(
+        week:Int=5,day:Int=0
+    )=snapshot(week,day).copy(
+        blockId="new-block",weekInBlock=1)
+
+    private fun baseline(
+        next:CustomWorkoutDaySnapshot=blockEntry(),
+        sessions:List<CustomCoachingHistoricalSession> =
+            listOf(completed(1,4)),
+        physical:VerifiedLoadStock?=stock()
+    )=CustomBlockBaselineContinuityDomain.review(
+        CustomBlockBaselineRequest(next,"main",sessions,physical))
+
+    @Test fun adjacentBlocksMayCarryExactObservedContextButNeverEarnAnIncrease() {
+        val latest=completed(2,4,rirs=listOf(null,2))
+        val carried=baseline(sessions=listOf(completed(1,3),latest))
+        assertEquals(CustomBlockBaselineStatus.VERIFIED_CONTEXT_ONLY,carried.status)
+        assertEquals("workout-4-0",carried.previousWorkoutId)
+        assertEquals("build",carried.previousBlockId)
+        assertEquals("main",carried.previousSlotId)
+        assertEquals(listOf(8,8),carried.priorWorkingSets.map{it.performedReps})
+        assertEquals(listOf(null,2),carried.priorWorkingSets.map{it.actualRir})
+        assertEquals(listOf(n(200),n(200)),carried.priorWorkingSets.map{it.priorLoad})
+        assertFalse(carried.mayApplyProgression)
+        assertFalse(carried.mayChangePrescription)
+        assertFalse(carried.mayIssueWorkout)
+        assertFalse(carried.mayModifyHistory)
+        assertTrue(runCatching {
+            (carried.priorWorkingSets as MutableList<CustomBlockBaselineSet>).clear()
+        }.isFailure)
+        // Coaching still rejects both rep/weight promotion across blocks.
+        val coached=review(next=blockEntry(),
+            sessions=listOf(completed(1,3),latest))
+        assertEquals(CustomNextWorkoutCoachingStatus.NO_MATCHING_SESSION,coached.status)
+        assertNull(coached.loadReviewCandidate)
+        assertTrue(coached.nextSetSuggestions.isEmpty())
+        assertNull(latest.evidence.visits.first().actual?.actualRir)
+    }
+
+    @Test fun alteredPhasePurposeSplitOrGymRequireNewBaseline() {
+        val current=blockEntry()
+        assertEquals(CustomBlockBaselineStatus.PHASE_PURPOSE_OR_SPLIT_CHANGED,
+            baseline(next=current.copy(phase=TrainingPhase.STRENGTH)).status)
+        assertEquals(CustomBlockBaselineStatus.PHASE_PURPOSE_OR_SPLIT_CHANGED,
+            baseline(next=current.copy(
+                sessionPurpose=ComposerSessionPurpose.STRENGTH_SKILL)).status)
+        assertEquals(CustomBlockBaselineStatus.PHASE_PURPOSE_OR_SPLIT_CHANGED,
+            baseline(next=current.copy(split=CustomSplitIdentity.Freeform("PPL"))).status)
+        assertEquals(CustomBlockBaselineStatus.ATHLETE_OR_GYM_SOURCE_CHANGED,
+            baseline(next=current.copy(stamp=current.stamp.copy(
+                gymCatalogSourceRevision=3))).status)
+        assertEquals(CustomBlockBaselineStatus.ATHLETE_OR_GYM_SOURCE_CHANGED,
+            baseline(next=current.copy(stamp=current.stamp.copy(
+                athleteProfileRevision="new-profile"))).status)
+    }
+
+    @Test fun newWeightsRepsAndEquipmentCannotBorrowOldBlockWorkingTargets() {
+        val current=blockEntry()
+        fun amendedSets(change:(CustomAuthoredSet)->CustomAuthoredSet)=
+            current.copy(slots=current.slots.map {slot ->
+                slot.copy(sets=slot.sets.map {set ->
+                    set.copy(prescription=change(set.prescription))
+                })
+            })
+        assertEquals(CustomBlockBaselineStatus.PRESCRIPTION_CHANGED,
+            baseline(next=amendedSets{it.copy(load=load(205))}).status)
+        assertEquals(CustomBlockBaselineStatus.PRESCRIPTION_CHANGED,
+            baseline(next=amendedSets{it.copy(reps=RepBand(6,10))}).status)
+        assertEquals(CustomBlockBaselineStatus.PRESCRIPTION_CHANGED,
+            baseline(next=amendedSets{it.copy(targetRir=3)}).status)
+        assertEquals(CustomBlockBaselineStatus.EQUIPMENT_UNVERIFIED,
+            baseline(physical=null).status)
+        assertEquals(CustomBlockBaselineStatus.EQUIPMENT_UNVERIFIED,
+            baseline(physical=VerifiedLoadStock.Totals(LoadUnit.LB,
+                LoadBasis.MACHINE_STACK,listOf(n(205),n(210)))).status)
+        val distinctVariant=current.copy(slots=current.slots.map{
+            it.copy(variantId="cable")
+        })
+        assertEquals(CustomBlockBaselineStatus.EXERCISE_OR_VARIANT_CHANGED,
+            baseline(next=distinctVariant).status)
+        val anotherMovement=current.copy(slots=current.slots.map {
+            it.copy(exerciseId="other_chest_press")
+        })
+        assertEquals(CustomBlockBaselineStatus.EXERCISE_OR_VARIANT_CHANGED,
+            baseline(next=anotherMovement).status)
+    }
+
+    @Test fun failedLatestSameDayCannotCherryPickEarlierPerfectExposure() {
+        assertEquals(CustomBlockBaselineStatus.PREVIOUS_WORKOUT_UNVERIFIED_OR_INCOMPLETE,
+            baseline(sessions=listOf(completed(1,3),
+                completed(2,4,failed=setOf(0)))).status)
+        assertEquals(CustomBlockBaselineStatus.PREVIOUS_WORKOUT_UNVERIFIED_OR_INCOMPLETE,
+            baseline(sessions=listOf(completed(1,3),
+                completed(2,4,reps=listOf(4,8)))).status)
+        val altered=completed(2,4)
+        val mismatch=altered.copy(evidence=altered.evidence.copy(
+            visits=altered.evidence.visits.mapIndexed{index,visit ->
+                if(index==0)visit.copy(actual=visit.actual?.copy(load=n(205)))
+                else visit
+            }))
+        assertEquals(CustomBlockBaselineStatus.PREVIOUS_WORKOUT_UNVERIFIED_OR_INCOMPLETE,
+            baseline(sessions=listOf(completed(1,3),mismatch)).status)
+        val moved=completed(2,4,exercise="different_machine")
+        assertEquals(CustomBlockBaselineStatus.EXERCISE_OR_VARIANT_CHANGED,
+            baseline(sessions=listOf(completed(1,3),moved)).status)
+    }
+
+    @Test fun noBorrowingBetweenWeekdaysOrAfterMissingWeekOrFinishedTarget() {
+        val otherDay=completed(1,4,2)
+        assertEquals(CustomBlockBaselineStatus.NO_PRIOR_SAME_WEEKDAY,
+            baseline(sessions=listOf(otherDay)).status)
+        assertEquals(CustomBlockBaselineStatus.GAP_OR_SAME_BLOCK,
+            baseline(sessions=listOf(completed(1,3))).status)
+        assertEquals(CustomBlockBaselineStatus.NOT_BLOCK_ENTRY,
+            baseline(next=blockEntry().copy(weekInBlock=2)).status)
+        val finished=completed(2,5)
+        assertEquals(CustomBlockBaselineStatus.TARGET_ALREADY_TRAINED,
+            baseline(sessions=listOf(completed(1,4),finished)).status)
+        val duplicate=completed(2,4).copy(completionOrder=1)
+        assertEquals(CustomBlockBaselineStatus.INVALID_HISTORY,
+            baseline(sessions=listOf(completed(1,3),duplicate)).status)
+    }
+
 }

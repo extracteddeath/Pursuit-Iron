@@ -17,7 +17,9 @@ sealed interface NativeCustomNextCoachResult {
         /** Changing an assistance preference requires fresh athlete acceptance. */
         val assistanceRevision:Long=0,
         /** Same owner-fenced, source-verified inventory used by the review. */
-        val verifiedStock:VerifiedLoadStock?
+        val verifiedStock:VerifiedLoadStock?,
+        /** Prior-block facts are display-only, not a rep/load proposal. */
+        val priorBlockBaseline:CustomBlockBaselineReview?=null
     ):NativeCustomNextCoachResult {
         /** Display-only: re-review after subsequent Finish/correction. */
         val mayIssueWorkout:Boolean get()=false
@@ -161,9 +163,13 @@ class NativeKotlinCustomNextWorkoutReview(
             )}.getOrNull()
                 ?:return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)
+            // Reuse the same authenticated complete corrected ledger. A
+            // changed block never earns an automatic step from old receipts.
+            val baseline=CustomBlockBaselineContinuityDomain.review(
+                CustomBlockBaselineRequest(next,slotId,completions,verifiedStock))
             NativeCustomNextCoachResult.Reviewed(
                 full.timeline.manifestRevision,acceptance.recordRevision,
-                validated,currentSettings?.revision ?:0,verifiedStock)
+                validated,currentSettings?.revision ?:0,verifiedStock,baseline)
         }}.getOrElse{reject(NativeCustomNextCoachRefusal.STORAGE_UNAVAILABLE)}
     }
 }

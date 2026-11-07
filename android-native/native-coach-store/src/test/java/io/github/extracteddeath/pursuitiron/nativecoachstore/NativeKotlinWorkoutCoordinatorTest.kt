@@ -284,6 +284,72 @@ class NativeKotlinWorkoutCoordinatorTest {
                 KotlinJournalOperation.Finish("finish",0)))
     }
 
+    @Test fun repeatedBackoffTargetsRemainExactThroughApprovalIssueAndColdReopen() {
+        val compatible=policies().map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.STRENGTH_SKILL)
+                p.copy(warmups=emptyList(),
+                    backoffReps=p.workingReps,backoffRir=p.targetRir)
+            else p
+        }
+        val baseApproval=approval().copy(policies=compatible)
+        val request=KotlinWorkoutSnapshotRequest(source,source,
+            baseApproval.grant,baseApproval.program,baseApproval.policies)
+        val stage=(KotlinWorkoutSnapshotDomain.stage(request)
+            as KotlinWorkoutSnapshotResult.Staged).snapshot
+        val rows=stage.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy{it.ordinal}
+        assertEquals(3,rows.size)
+        val priorTargets=listOf(4,4,3)
+        val observed=listOf(4,3,3)
+        val history=ProgressionWorkoutEvidence(
+            "prior-repeat","db-press",LoadUnit.LB,rows.first().reps,rows.size,
+            rows.mapIndexed{i,set->
+                val load=(set.load as DraftSetLoad.Verified).value
+                WorkingSetFact(i,SetOutcome.COMPLETED,load,observed[i],
+                    3,load,set.targetRir)
+            })
+        val proposal=KotlinAdaptiveSetPrescriptionDomain.draft(
+            AdaptiveSetPrescriptionRequest(
+                request,source,history,7,7,CoachReadiness.NORMAL,false,
+                previouslyIssuedExactReps=priorTargets))
+            as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            proposal.decisionKind)
+        assertEquals(priorTargets,proposal.newRepTargets)
+        val acceptance=baseApproval.copy(acceptedRepTargets=
+            NativeKotlinAcceptedRepTargets(
+                "prior-repeat",7,"db-press",proposal.editedSetKey,
+                proposal.observedReps,proposal.newRepTargets,
+                CoachReadiness.NORMAL,proposal.decisionKind))
+        val persisted=NativeKotlinApprovalCodec.decode(
+            NativeKotlinApprovalCodec.encode(acceptance))
+        val authority=FakeAuthority(persisted)
+        val verifier=NativeKotlinAcceptedRepSnapshotVerifier {owner,record->
+            if(owner=="owner-1" && record==persisted)proposal.workout
+            else null
+        }
+        val service=NativeKotlinWorkoutCoordinator(
+            KotlinNativeJournalFileStore(temporary.root.toPath()),
+            authority,fence(),verifier)
+        val issued=issued(service.issue("owner-1","session-1"))
+        assertEquals(priorTargets,issued.journal.snapshot.targets.filter{
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy{it.ordinal}.map{it.reps.minimum})
+        assertEquals(listOf(n("30"),n("30"),n("25")),
+            issued.journal.snapshot.targets.filter{
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.sortedBy{it.ordinal}.map{
+                (it.load as DraftSetLoad.Verified).value
+            })
+        val restarted=NativeKotlinWorkoutCoordinator(
+            KotlinNativeJournalFileStore(temporary.root.toPath()),
+            authority,fence())
+        assertEquals(issued.journal,
+            durable(restarted.open("owner-1","session-1")).journal)
+    }
+
     @Test fun acceptedBackoffRepTargetsCanIssueOnlyFromFullReverifiedSnapshot() {
         val reviewedPolicies=policies().map {p ->
             if(p.exerciseId=="db-press" &&

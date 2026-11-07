@@ -359,10 +359,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodySmall)
                     if(it==NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED)
-                        Text("The authored load is higher than the last ISSUED load. " +
-                            "Review and explicitly accept the lower-load repeat before preparation. " +
-                            "A failed previous workout does not earn the heavier weight; " +
-                            "turning progression coaching off is a separate manual preference.",
+                        Text("The authored weights are higher than the previous same-day workout. " +
+                            "Review the suggested repeat or choose the heavier authored targets below. " +
+                            "A failed previous workout does not earn a weight increase.",
                             style=MaterialTheme.typography.bodySmall)
                 }
                 state.preparedWorkout?.let { prepared ->

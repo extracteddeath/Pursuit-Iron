@@ -7,6 +7,33 @@ use the legacy JavaScript runtime.
 
 ## One-workout block calibration consent — 2026-11-07
 
+### Explicit choice of heavier authored targets
+
+The ordinary-cycle native candidate now has a complete reviewed authored-return
+path. `NativeAuthoredLoadReturnPreview` lists every working set heavier than the
+immediately prior issued same-day workout. It is a choice of the signed authored
+plan, not an earned increase, even after near failure or missing actual RIR.
+The review verifies all cycle weeks, current gym, consent, corrected history,
+settings and prepared/issued identities under the existing owner fence.
+
+`prepareAuthoredReturn` requires exact displayed-review equality and explicit
+confirmation, then atomically writes the authored snapshot and separate consent
+proof in prepared schema 9. It supports adding consent to an old untouched
+unissued preparation and explicitly renewing stale consent after a fresh review.
+Ordinary retries cannot renew consent, drop the proof or substitute targets.
+First issuance independently repeats the review and requires its exact proof;
+schemas 1–8 remain readable. Cold discovery and the isolated Compose
+review → confirm → issue → logger journey include the new preparation.
+Confirmed manual reset also clears the proof with coaching off; an issued
+workout can never be reset or re-prescribed.
+
+Regression coverage includes cold reopen, exact/rejected confirmation, altered
+displayed sets, a late correction before acceptance and before issuance, fresh
+reconsent, near-failure choice, settings/source changes, corrupt preparation,
+competing workout IDs, wrong owners, manual reset, immutable issued targets,
+Finish and retained original lower-load history. Device acceptance and the
+production cutover remain open.
+
 `NativeKotlinBlockCalibrationConsentStore` adds revision-bound athlete acceptance
 for conservative changed-recipe starting loads in ordinary signed custom cycles.
 It delegates all training decisions to the existing custom-day reviewer, then

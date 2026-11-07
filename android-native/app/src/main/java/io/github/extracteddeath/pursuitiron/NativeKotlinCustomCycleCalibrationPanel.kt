@@ -17,6 +17,13 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
     var confirmAccept by remember{mutableStateOf(false)}
     var confirmIssue by remember{mutableStateOf(false)}
     var confirmReset by remember{mutableStateOf(false)}
+    var confirmAuthoredReturn by remember{mutableStateOf(false)}
+    val authoredReturn=state.authoredReturnReview?.takeIf{
+        it.authored.stamp.cycleRevision==state.draft?.revision&&
+            it.authored.stamp.gymCatalogSourceRevision==state.sourceRevision&&
+            (it.authored==state.preparedWorkout?.snapshot||
+                it.authored.copy(declaredNonSetSeconds=state.authoredPreview?.declaredNonSetSeconds)==state.authoredPreview)
+    }
     val offer=state.calibrationReview?.takeIf {
         it.original.stamp.cycleRevision==state.draft?.revision &&
             it.original.stamp.gymCatalogSourceRevision==state.sourceRevision &&
@@ -24,11 +31,11 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                 it.original.copy(declaredNonSetSeconds=state.authoredPreview?.declaredNonSetSeconds)==state.authoredPreview)
     }
     val prepared=state.preparedWorkout?.takeIf {
-        it.calibrationApprovalFingerprint!=null||it.resetToAuthored
+        it.calibrationApprovalFingerprint!=null||it.resetToAuthored||it.authoredReturnFingerprint!=null
     }
     val reset=state.calibrationReset
-    LaunchedEffect(offer?.receipt?.fingerprint,prepared?.workoutId,reset?.preparedFingerprint) {
-        confirmAccept=false;confirmIssue=false;confirmReset=false
+    LaunchedEffect(offer?.receipt?.fingerprint,prepared,reset?.preparedFingerprint,authoredReturn?.fingerprint) {
+        confirmAccept=false;confirmIssue=false;confirmReset=false;confirmAuthoredReturn=false
     }
     val readyPolicy=state.reviewedCoachInputs!=null
     PursuitCard {
@@ -46,6 +53,36 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
         state.pendingCalibrations.forEach {workout->
             OutlinedButton(enabled=!state.busy,onClick={controller.resumePreparedCalibration(workout.workoutId)}) {
                 Text("Reopen week ${workout.snapshot.absoluteWeek} · ${workout.snapshot.dayLabel}")
+            }
+        }
+        val reviewedDay=state.dayCoaching?.takeIf{review->
+            review.nextWorkout?.copy(declaredNonSetSeconds=state.authoredPreview?.declaredNonSetSeconds)==
+                state.authoredPreview&&review.nextWorkout!=null
+        }
+        if((reviewedDay?.authoredLoadReversion?.requiresAthleteReview==true||
+                prepared?.authoredReturnFingerprint!=null||
+                state.preparationRefusal==NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED)&&
+            state.issuedCalibrationId==null) {
+            OutlinedButton(enabled=!state.busy&&readyPolicy,
+                onClick=controller::reviewAuthoredLoadReturn){Text("Review heavier authored weights")}
+        }
+        authoredReturn?.let {review->
+            HorizontalDivider()
+            Text("Choose authored weights",style=MaterialTheme.typography.titleMedium)
+            Text("These weights are higher than the previous same-day workout. Choosing them does not mean an increase was earned.",
+                style=MaterialTheme.typography.bodySmall)
+            review.higherSlots.forEach {slot->
+                Text(slot.exerciseId.replace('_',' '),style=MaterialTheme.typography.titleSmall)
+                slot.higherSets.forEach {set->
+                    val basis=if(set.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                    Text("Set ${set.ordinal}: previously prescribed ${set.lastIssuedLoad} → authored ${set.authoredLoad} ${set.unit.name.lowercase()}$basis",
+                        style=MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Text("All ${review.auditedWeeks} cycle weeks checked. Your performed sets remain in history.",
+                style=MaterialTheme.typography.bodySmall)
+            Button(enabled=!state.busy&&readyPolicy,onClick={confirmAuthoredReturn=true}) {
+                Text("Choose these authored targets")
             }
         }
         offer?.let {
@@ -68,6 +105,8 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             HorizontalDivider()
             Text("Prepared · week ${workout.snapshot.absoluteWeek} · ${workout.snapshot.dayLabel}",
                 style=MaterialTheme.typography.titleMedium)
+            if(workout.authoredReturnFingerprint!=null)Text("Your confirmed choice of heavier authored weights. History will be checked again before issuance.",
+                style=MaterialTheme.typography.bodySmall)
             workout.snapshot.slots.forEach {slot->
                 Text(slot.exerciseId.replace('_',' '),style=MaterialTheme.typography.titleSmall)
                 slot.sets.forEach {set->
@@ -81,7 +120,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
                 style=MaterialTheme.typography.bodySmall)
             if(state.issuedCalibrationId==null) {
                 Button(enabled=!state.busy&&readyPolicy,onClick={confirmIssue=true}){Text("Issue this exact workout")}
-                if(workout.calibrationApprovalFingerprint!=null)OutlinedButton(
+                if(workout.calibrationApprovalFingerprint!=null||workout.authoredReturnFingerprint!=null)OutlinedButton(
                     enabled=!state.busy&&readyPolicy,onClick=controller::reviewCalibrationReset) {
                     Text("Review original authored targets")
                 }
@@ -118,4 +157,9 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
         text={Text("Replace this unissued preparation with exactly the original targets shown above. Re-enabling coaching will not restore the old calibration automatically.")},
         confirmButton={Button(enabled=!state.busy,onClick={confirmReset=false;controller.acceptCalibrationReset()}){Text("Restore exact targets")}},
         dismissButton={TextButton(enabled=!state.busy,onClick={confirmReset=false}){Text("Cancel")}})
+    if(confirmAuthoredReturn&&authoredReturn!=null)AlertDialog(
+        onDismissRequest={if(!state.busy)confirmAuthoredReturn=false},title={Text("Choose heavier authored targets?")},
+        text={Text("Confirm the displayed increases for week ${authoredReturn.authored.absoluteWeek}, ${authoredReturn.authored.dayLabel}. Save this one workout with its exact authored targets. This does not mark the increases as earned or start the workout.")},
+        confirmButton={Button(enabled=!state.busy,onClick={confirmAuthoredReturn=false;controller.acceptAuthoredLoadReturn()}){Text("Confirm authored targets")}},
+        dismissButton={TextButton(enabled=!state.busy,onClick={confirmAuthoredReturn=false}){Text("Cancel")}})
 }

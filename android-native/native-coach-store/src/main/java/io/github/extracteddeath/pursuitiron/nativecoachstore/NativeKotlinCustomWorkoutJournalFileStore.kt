@@ -298,13 +298,25 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                         ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                             NativeCustomJournalRefusal.CONSENT_CHANGED)
                 else null
+                val authoredReturn=if(selected.authoredReturnFingerprint!=null)
+                    (calibration?.previewAuthoredReturn(ownerKey,workoutId,cycleId,
+                        inputs,absoluteWeek,weekday) as? NativeAuthoredLoadReturnPreview.Ready)
+                        ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                else null
+                if(authoredReturn!=null && (authoredReturn.fingerprint!=selected.authoredReturnFingerprint||
+                    authoredReturn.authored!=selected.snapshot||
+                    authoredReturn.consentRevision!=selected.consentRevision||
+                    authoredReturn.consentFingerprint!=selected.consentFingerprint))
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.CONSENT_CHANGED)
                 // Recheck a previously prepared untouched authored workout at
                 // the FIRST issuance boundary, not just at preparation. A
                 // corrected/finalized LOWER prior issued load must not turn a
                 // cold-recovered old 25 lb preparation into a silent step up.
                 // Already-issued sessions replay above without rewriting history.
                 if(pre is NativeCustomPreflightResult.ReviewedPreview &&
-                    approvedCalibration==null && !selected.resetToAuthored &&
+                    approvedCalibration==null && authoredReturn==null && !selected.resetToAuthored &&
                     calibration!=null &&
                     calibration.authoredPreparationGate(ownerKey,cycleId,inputs,
                         pre.session)!=NativeAuthoredLoadPreparationGate.CLEAR)

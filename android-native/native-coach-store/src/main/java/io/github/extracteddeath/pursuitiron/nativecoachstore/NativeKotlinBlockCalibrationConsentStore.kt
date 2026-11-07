@@ -336,6 +336,91 @@ class NativeKotlinBlockCalibrationConsentStore(
             else NativeAuthoredLoadPreparationGate.CLEAR
     }
 
+    /**
+     * Review ALL heavier slots before the athlete chooses the exact signed
+     * authored day. The acceptance will live in the prepared file itself;
+     * no second receipt/write can leave a half-accepted workout after restart.
+     * Re-run this under the same owner fence at acceptance AND first issuance.
+     */
+    fun previewAuthoredReturn(key:String,w:String,cycle:String,
+        inputs:CustomCoachAuditInputs,week:Int,day:Int
+    ):NativeAuthoredLoadReturnPreview =runCatching{fence.withOwnerTransaction(key){
+        fun no(r:NativeCalibrationRefusal)=NativeAuthoredLoadReturnPreview.Rejected(r)
+        if(!listOf(key,w,cycle).all(id::matches)||week !in 2..104||day !in 0..6)
+            return@withOwnerTransaction no(NativeCalibrationRefusal.INVALID_SELECTION)
+        val signed=owner(key)?:return@withOwnerTransaction no(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        if(hasRecord(root,key,w))
+            return@withOwnerTransaction no(NativeCalibrationRefusal.CONFLICTING_APPROVAL)
+        val draft=(drafts.read(key,cycle) as? NativeCustomDraftReadResult.Found)?.draft
+            ?:return@withOwnerTransaction no(NativeCalibrationRefusal.REVIEW_NOT_READY)
+        val source=(sources.read(key) as? NativeAuthoringSourceRead.Found)?.source
+            ?:return@withOwnerTransaction no(NativeCalibrationRefusal.REVIEW_NOT_READY)
+        if(draft.athleteId!=signed.athleteId||source.athleteId!=signed.athleteId)
+            return@withOwnerTransaction no(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        val audit=CustomCycleCoachAuditDomain.review(draft,source.setup,source.catalog,inputs)
+        val next=(CustomWorkoutSnapshotDomain.reviewForConsent(draft,source.setup,
+            source.catalog,source.revision,inputs,week,day)
+            as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+        if(audit.status!=CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW||
+            audit.issues.isNotEmpty()||next==null)
+            return@withOwnerTransaction no(NativeCalibrationRefusal.FULL_CYCLE_AUDIT_FAILED)
+        val reviews=next.slots.map{slot->
+            reviewer.reviewAuthored(key,cycle,inputs,week,day,slot.slotId,
+                CoachReadiness.NORMAL,false,BigDecimal.ONE)
+                as? NativeCustomNextCoachResult.Reviewed
+                ?:return@withOwnerTransaction no(NativeCalibrationRefusal.REVIEW_NOT_READY)
+        }
+        val first=reviews.firstOrNull()
+            ?:return@withOwnerTransaction no(NativeCalibrationRefusal.REVIEW_NOT_READY)
+        if(reviews.any{it.nextWorkout!=next||it.historyRevision!=first.historyRevision||
+                it.assistanceRevision!=first.assistanceRevision||
+                it.approvedConsentRevision!=first.approvedConsentRevision||
+                it.authoredLoadReversion==null||it.authoredLoadReversion.status in setOf(
+                    CustomAuthoredLoadReversionStatus.INVALID_HISTORY,
+                    CustomAuthoredLoadReversionStatus.TARGET_ALREADY_TRAINED)})
+            return@withOwnerTransaction no(NativeCalibrationRefusal.REVIEW_CHANGED)
+        val higher=reviews.mapNotNull{review->
+            val change=checkNotNull(review.authoredLoadReversion)
+            if(!change.requiresAthleteReview)null else NativeAuthoredLoadReturnSlot(
+                checkNotNull(review.selectedSlotId),
+                next.slots.single{it.slotId==review.selectedSlotId}.exerciseId,
+                checkNotNull(change.previousWorkoutId),change.higherSets)
+        }
+        if(higher.isEmpty())return@withOwnerTransaction no(NativeCalibrationRefusal.REVIEW_NOT_READY)
+        val ledger=(history.read(key,signed.athleteId) as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
+            ?:return@withOwnerTransaction no(NativeCalibrationRefusal.HISTORY_UNAVAILABLE)
+        if(ledger.manifestRevision!=first.historyRevision)
+            return@withOwnerTransaction no(NativeCalibrationRefusal.REVIEW_CHANGED)
+        val completed=ledger.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+            .map{it.manifest.workoutId}.toSet()
+        val owned=inventory.inspect(key,signed.athleteId,completed) as? NativeCustomInventoryReview.Reviewed
+            ?:return@withOwnerTransaction no(NativeCalibrationRefusal.HISTORY_UNAVAILABLE)
+        val targets=owned.sessions.filter{it.cycleId==cycle&&it.absoluteWeek==week&&it.weekday==day}
+        if(targets.any{it.workoutId!=w||it.issued||it.completed}||targets.size>1||
+            ledger.completions.any{it.manifest.workoutId==w}||
+            owned.sessions.any{it.workoutId==w&&it !in targets})
+            return@withOwnerTransaction no(NativeCalibrationRefusal.ALREADY_PREPARED_OR_ISSUED)
+        val other=composer.openStored(key,w){o,s->o==key&&s.athleteId==signed.athleteId}
+        if(other !is NativeJournalFileResult.Rejected||other.reason!=NativeJournalFileRefusal.NOT_ISSUED)
+            return@withOwnerTransaction no(NativeCalibrationRefusal.ALREADY_PREPARED_OR_ISSUED)
+        val saved=prepared.open(key,w)
+        if(saved is NativeCustomPreparedRead.Rejected)
+            return@withOwnerTransaction no(NativeCalibrationRefusal.CORRUPT_RECORD)
+        val old=(saved as? NativeCustomPreparedRead.Found)?.workout
+        if(old!=null&&(old.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE||
+                old.snapshot!=next||old.resetToAuthored||old.calibrationApprovalFingerprint!=null))
+            return@withOwnerTransaction no(NativeCalibrationRefusal.CONFLICTING_APPROVAL)
+        val signoff=NativeCustomCycleSignoffFingerprint.calculate(draft,source,inputs)
+        val proof=listOf("authored-load-return-v1",key,signed.athleteId,w,
+            first.historyRevision.toString(),first.approvedConsentRevision.toString(),
+            first.assistanceRevision.toString(),signoff,
+            hash(NativeKotlinCustomWorkoutSnapshotCodec.encode(next))).joinToString("\u0000")
+        if(owner(key)!=signed)return@withOwnerTransaction no(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        NativeAuthoredLoadReturnPreview.Ready(key,w,next,first.approvedConsentRevision,
+            signoff,first.historyRevision,first.assistanceRevision,
+            Collections.unmodifiableList(higher),hash(proof.toByteArray(Charsets.UTF_8)),audit.weeks.size)
+    }}.getOrElse{NativeAuthoredLoadReturnPreview.Rejected(NativeCalibrationRefusal.STORAGE_UNAVAILABLE)}
+
     fun preview(key:String,w:String,cycle:String,inputs:CustomCoachAuditInputs,
         week:Int,day:Int,slot:String,readiness:CoachReadiness,restricted:Boolean,
         increase:BigDecimal):NativeBlockCalibrationPreview =runCatching{
@@ -406,7 +491,8 @@ class NativeKotlinBlockCalibrationConsentStore(
                 val stored=(prepared.open(key,item.workoutId) as? NativeCustomPreparedRead.Found)?.workout
                     ?:return@withOwnerTransaction NativePendingCalibrationRead.Rejected(NativeCalibrationRefusal.CORRUPT_RECORD)
                 if(stored.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
-                    (stored.calibrationApprovalFingerprint!=null||stored.resetToAuthored))found+=stored
+                    (stored.calibrationApprovalFingerprint!=null||stored.resetToAuthored||
+                        stored.authoredReturnFingerprint!=null))found+=stored
             }
             val usedIds=owned.sessions.map{it.workoutId}.toSet()+ledger.completions.map{it.manifest.workoutId}
             val accepted=indexedApprovals().filter{it.ownerKey==key&&it.athleteId==signed.athleteId&&

@@ -54,6 +54,7 @@ internal data class NativeKotlinCustomCycleState(
     val preparationRefusal: NativeCustomPrepareRefusal? = null,
     val dayCoaching: NativeCustomNextCoachResult.Reviewed? = null,
     val calibrationReview:NativeBlockCalibrationPreview.Ready? = null,
+    val authoredReturnReview:NativeAuthoredLoadReturnPreview.Ready? = null,
     val calibrationReceipt:NativeBlockCalibrationReceipt? = null,
     val calibrationReset:NativePreparedManualResetPreview.Ready? = null,
     val issuedCalibrationId:String? = null,
@@ -217,6 +218,7 @@ internal class NativeKotlinCustomCycleController(
                             authoredPreviewRefusal = null,
                             consentBoundPreview = null,
                             preparedWorkout = null,
+                            authoredReturnReview = null,
                             preparationRefusal = null,
                             canUndo = true,
                             message = "Saved revision ${write.revision} · ${result.receipt.operation.replace('-', ' ')}.")
@@ -259,6 +261,7 @@ internal class NativeKotlinCustomCycleController(
             auditSourceRevision=null,
             consentBoundPreview=null,
             preparedWorkout=null,
+            authoredReturnReview=null,
             signoff=staleSignoff,
             message="The policy draft changed. Its previous audit and signoff view are no longer current; run a complete new review.")
     }
@@ -439,7 +442,9 @@ internal class NativeKotlinCustomCycleController(
      * athlete draft is not a consent, grant, or workout.
      */
     fun previewAuthoredDay(absoluteWeek:Int,weekday:Int) = run {
-        current.value=current.value.copy(dayCoaching=null)
+        current.value=current.value.copy(dayCoaching=null,authoredReturnReview=null,
+            preparedWorkout=current.value.preparedWorkout?.takeIf{
+                it.snapshot.absoluteWeek==absoluteWeek&&it.snapshot.weekday==weekday})
         val draft=current.value.draft ?:return@run
         val durable=host.readCustomCycleDraft(draft.cycleId)
         val source=runCatching{authoringSource.snapshot()}.getOrNull()
@@ -484,7 +489,7 @@ internal class NativeKotlinCustomCycleController(
         readiness:CoachReadiness,movementRestricted:Boolean,
         maximumIncrease:java.math.BigDecimal
     ) = run {
-        current.value=current.value.copy(dayCoaching=null,calibrationReview=null,
+        current.value=current.value.copy(dayCoaching=null,calibrationReview=null,authoredReturnReview=null,
             calibrationReceipt=null,calibrationReset=null,issuedCalibrationId=null)
         val draft=current.value.draft ?:return@run
         val inputs=auditedInputs
@@ -519,6 +524,7 @@ internal class NativeKotlinCustomCycleController(
         val result=host.previewBlockCalibration(workoutId,next.stamp.cycleId,
             next.absoluteWeek,next.weekday,slot,inputs,readiness,restricted,maximumIncrease)
         current.value=current.value.copy(calibrationReview=result as? NativeBlockCalibrationPreview.Ready,
+            authoredReturnReview=null,
             calibrationReceipt=null,calibrationReset=null,preparedWorkout=null,issuedCalibrationId=null,
             message=if(result is NativeBlockCalibrationPreview.Ready)
                 "The complete cycle and saved history support this exact workout change. Review and confirm before saving."
@@ -554,7 +560,8 @@ internal class NativeKotlinCustomCycleController(
     fun issueBlockCalibration() = run {
         val prepared=current.value.preparedWorkout ?:return@run
         val inputs=auditedInputs ?:return@run
-        if(prepared.calibrationApprovalFingerprint==null&&!prepared.resetToAuthored)return@run
+        if(prepared.calibrationApprovalFingerprint==null&&!prepared.resetToAuthored&&
+            prepared.authoredReturnFingerprint==null)return@run
         val snap=prepared.snapshot
         val result=host.issueReviewedCustomWorkout(prepared.workoutId,snap.stamp.cycleId,
             snap.absoluteWeek,snap.weekday,inputs)
@@ -588,13 +595,44 @@ internal class NativeKotlinCustomCycleController(
         val stored=(host.openPreparedCustomWorkout(workoutId) as? NativeCustomPreparedRead.Found)?.workout
         if(stored==null || stored.snapshot.stamp.cycleId!=current.value.draft?.cycleId ||
             stored.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE ||
-            stored.calibrationApprovalFingerprint==null&&!stored.resetToAuthored) {
+            stored.calibrationApprovalFingerprint==null&&!stored.resetToAuthored&&
+                stored.authoredReturnFingerprint==null) {
             current.value=current.value.copy(message="The stored preparation could not be verified.")
             return@run
         }
-        current.value=current.value.copy(preparedWorkout=stored,calibrationReview=null,
+        current.value=current.value.copy(preparedWorkout=stored,calibrationReview=null,authoredReturnReview=null,
             calibrationReceipt=null,calibrationReset=null,issuedCalibrationId=null,
+            dayCoaching=null,consentBoundPreview=null,authoredPreview=stored.snapshot,
             message="Stored targets reopened. Review your current full-cycle audit before issuing or resetting.")
+    }
+
+    fun reviewAuthoredLoadReturn() = run {
+        val prepared=current.value.preparedWorkout
+        val next=prepared?.takeIf{it.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE&&
+            !it.resetToAuthored&&it.calibrationApprovalFingerprint==null}?.snapshot
+            ?:current.value.dayCoaching?.nextWorkout
+            ?:current.value.consentBoundPreview?.session ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val workoutId=prepared?.takeIf{it.snapshot==next}?.workoutId
+            ?:"authored-"+UUID.randomUUID().toString()
+        val result=host.previewAuthoredLoadReturn(workoutId,next.stamp.cycleId,
+            next.absoluteWeek,next.weekday,inputs)
+        current.value=current.value.copy(authoredReturnReview=result as? NativeAuthoredLoadReturnPreview.Ready,
+            calibrationReview=null,calibrationReceipt=null,calibrationReset=null,issuedCalibrationId=null,
+            message=if(result is NativeAuthoredLoadReturnPreview.Ready)
+                "Review every heavier set before choosing this authored workout. This is your choice, not earned progression."
+            else "Authored-weight review unavailable. Recheck the current cycle, history and outstanding workouts.")
+    }
+
+    fun acceptAuthoredLoadReturn() = run {
+        val shown=current.value.authoredReturnReview ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val result=host.acceptAuthoredLoadReturn(shown,inputs,true)
+        current.value=current.value.copy(preparedWorkout=(result as? NativeCustomPrepareResult.Prepared)?.workout,
+            authoredReturnReview=null,preparationRefusal=(result as? NativeCustomPrepareResult.Rejected)?.reason,
+            message=if(result is NativeCustomPrepareResult.Prepared)
+                "Your choice of these exact authored targets is saved. Review the workout before issuing."
+            else "Acceptance refused because the review changed. Recheck the weights before confirming again.")
     }
 
     fun reviewCalibrationReset() = run {
@@ -629,6 +667,9 @@ internal class NativeKotlinCustomCycleController(
      * under the owner lock. It intentionally does not issue a journal.
      */
     fun verifyConsentBoundDay(absoluteWeek:Int,weekday:Int) = run {
+        current.value=current.value.copy(dayCoaching=null,authoredReturnReview=null,
+            preparedWorkout=current.value.preparedWorkout?.takeIf{
+                it.snapshot.absoluteWeek==absoluteWeek&&it.snapshot.weekday==weekday})
         val draft=current.value.draft ?:return@run
         val inputs=auditedInputs
         if(inputs==null) {

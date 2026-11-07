@@ -844,6 +844,21 @@ internal class NativeKotlinCandidateHost(context:Context) {
             week,weekday,slotId,readiness,restricted,maximumIncrease)
     }
 
+    fun previewAuthoredLoadReturn(workoutId:String,cycleId:String,week:Int,
+        weekday:Int,inputs:CustomCoachAuditInputs):NativeAuthoredLoadReturnPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeAuthoredLoadReturnPreview.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        return blockCalibrations.previewAuthoredReturn(owner.ownerKey,workoutId,cycleId,inputs,week,weekday)
+    }
+
+    fun acceptAuthoredLoadReturn(shown:NativeAuthoredLoadReturnPreview.Ready,
+        inputs:CustomCoachAuditInputs,confirmed:Boolean):NativeCustomPrepareResult {
+        if(localAthlete.signedInIdentity()!=NativeKotlinOwnerIdentity(
+                shown.ownerKey,shown.authored.stamp.athleteId))
+            return NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.prepareAuthoredReturn(shown,inputs,confirmed,blockCalibrations)
+    }
+
     fun pendingBlockCalibrations(cycleId:String):NativePendingCalibrationRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativePendingCalibrationRead.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED)

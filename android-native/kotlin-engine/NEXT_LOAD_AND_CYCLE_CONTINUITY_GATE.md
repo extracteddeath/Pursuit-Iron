@@ -61,8 +61,36 @@ LOADS + WEEK_OVERRIDES acceptance after a full-cycle audit can prepare and issue
 a revised later-week workout. Native persistence tests exercise weeks 4–6,
 process restart and a late RIR-0 correction revoking a staged receipt.
 
-**Still open:** production acknowledgment of a higher authored load when a
-lower repeat is suggested but not accepted; evidence-backed earned re-increase;
+**Explicit authored return (isolated native candidate):**
+`previewAuthoredReturn` checks every slot against the immediately prior
+same-day issued workout, shows each higher working set, and audits the full
+current cycle and gym again. The athlete may choose these exact authored
+targets even when the previous work was near failure; the UI identifies this
+as an athlete choice, never an earned increase or a coach recommendation.
+No adaptive-load permission is borrowed: this selects the already signed
+authored plan and does not edit the cycle or its week overrides.
+
+Explicit confirmation atomically saves the original authored snapshot and
+a distinct revision-bound consent fingerprint in prepared schema 9. It
+requires no second sidecar transaction. An old untouched preparation can add
+this consent without changing its targets. A stale unissued authored-return
+preparation can replace its consent only after a fresh displayed review and
+confirmation; ordinary prepare/issue retries cannot refresh it automatically.
+Both acceptance and first issuance reopen corrected history, current settings,
+signed cycle, gym and outstanding workout identities under the same owner
+fence. A missing verifier, correction, settings/source change, competing
+preparation, corrupt file or wrong owner refuses rather than falling back.
+Existing schemas 1–8 retain read compatibility.
+
+Cold discovery includes these preparations. Compose shows all higher sets,
+asks for separate authored-target confirmation, then offers the normal exact
+issuance and logger/Finish path. Coaching-off can use the separately reviewed
+authored-reset path; it clears the old return proof permanently, and turning
+coaching on again cannot revive it. Already issued workouts remain frozen
+and accessible independently of later settings or history edits.
+
+**Still open:** production activation of the candidate journey;
+evidence-backed earned re-increase from an accepted lower baseline;
 activated source/split mapping, complete backup/restore, directory fsync/
 power-loss recovery and device acceptance. The checksum detects accidental
 corruption, not cryptographic owner authentication; native file tests do not

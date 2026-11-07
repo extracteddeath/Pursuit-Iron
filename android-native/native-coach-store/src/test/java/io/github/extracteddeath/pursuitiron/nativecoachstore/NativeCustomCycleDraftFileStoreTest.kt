@@ -189,4 +189,54 @@ class NativeCustomCycleDraftFileStoreTest {
         assertEquals(NativeCustomDraftReadResult.Missing,
             repository().read("owner-1", "cycle-1"))
     }
+    @Test fun savedProgramPickerUsesVerifiedTitlesInsteadOfCycleIds() {
+        val store=repository()
+        assertEquals(NativeCustomDraftListResult.Ready(emptyList()),
+            store.listOwned("owner-1"))
+        val first=original()
+        val second=first.copy(cycleId="cycle-2",title="Second program")
+        assertEquals(saved(1),store.save("owner-1","cycle-1",0,first))
+        assertEquals(saved(1),store.save("owner-1","cycle-2",0,second))
+        assertEquals(listOf("My actual program","Second program"),
+            (store.listOwned("owner-1") as NativeCustomDraftListResult.Ready)
+                .drafts.map {it.title})
+        assertEquals(saved(2),store.save("owner-1","cycle-1",1,
+            first.copy(revision=2,title="Updated actual program")))
+        assertTrue((store.listOwned("owner-1")
+            as NativeCustomDraftListResult.Ready).drafts.any {
+            it.cycleId=="cycle-1" && it.title=="Updated actual program" &&
+                it.revision==2L && it.blocks==2
+        })
+        assertEquals(saved(2),store.delete("owner-1","cycle-2",1))
+        assertEquals(listOf("cycle-1"),(store.listOwned("owner-1")
+            as NativeCustomDraftListResult.Ready).drafts.map {it.cycleId})
+    }
+
+    @Test fun savedProgramPickerIsOwnerScopedAndFailsClosedOnCorruption() {
+        val store=repository()
+        val first=original()
+        assertEquals(saved(1),store.save("owner-1","cycle-1",0,first))
+        signedIn=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeCustomDraftListResult.Ready(emptyList()),
+            store.listOwned("other-owner"))
+        assertEquals(NativeCustomDraftListResult.Rejected(
+            NativeCustomDraftRefusal.NOT_AUTHORIZED),
+            store.listOwned("owner-1"))
+        signedIn=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(1,(store.listOwned("owner-1")
+            as NativeCustomDraftListResult.Ready).drafts.size)
+        val corrupt=Files.list(temp.root.toPath()).use{stream->
+            stream.filter {it.fileName.toString().startsWith("draft-") &&
+                it.fileName.toString().endsWith(".bin")}.findFirst().get()
+        }
+        Files.write(corrupt,byteArrayOf(1,2,3))
+        assertEquals(NativeCustomDraftListResult.Rejected(
+            NativeCustomDraftRefusal.CORRUPT_RECORD),
+            store.listOwned("owner-1"))
+        signedIn=null
+        assertEquals(NativeCustomDraftListResult.Rejected(
+            NativeCustomDraftRefusal.NOT_AUTHORIZED),
+            store.listOwned("owner-1"))
+    }
+
 }

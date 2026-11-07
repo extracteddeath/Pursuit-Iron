@@ -419,6 +419,85 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     modifier=Modifier.fillMaxWidth()
                 ) {Text("Diagnose missing policy requirements")}
                 state.coachingAudit?.let { audit ->
+                    val coachActions=remember(audit) {
+                        CustomCoachActionReviewDomain.review(audit)
+                    }
+                    var showCoachChoices by remember(audit) {mutableStateOf(false)}
+                    HorizontalDivider()
+                    Text("Coach-guided program review",
+                        style=MaterialTheme.typography.titleLarge)
+                    Text("Based on the verified authored weeks and actual reviewed policy. No suggested path automatically changes sets, exercises, splits, or approved targets.",
+                        style=MaterialTheme.typography.bodySmall)
+                    when(val guidance=coachActions) {
+                        is CustomCoachActionReviewResult.Rejected ->
+                            Text("Actionable coaching requires verified source, structure and training evidence: ${pretty(guidance.reason)}.",
+                                color=MaterialTheme.colorScheme.error,
+                                style=MaterialTheme.typography.bodySmall)
+                        is CustomCoachActionReviewResult.Reviewed -> {
+                            val findings=guidance.review.findings
+                            if(findings.isEmpty()) {
+                                Text("No additional coaching findings. This review does not issue or authorize a workout.",
+                                    style=MaterialTheme.typography.bodyMedium)
+                            } else {
+                                Text("${findings.size} verified findings and observations",
+                                    style=MaterialTheme.typography.titleMedium)
+                                OutlinedButton(onClick={showCoachChoices=!showCoachChoices},
+                                    enabled=!busy) {
+                                    Text(if(showCoachChoices)"Hide coaching choices"
+                                        else "Review possible corrections")
+                                }
+                                if(showCoachChoices) {
+                                    findings.take(12).forEach {finding->
+                                        HorizontalDivider()
+                                        val status=when(finding.status) {
+                                            CustomCoachFindingStatus.CONFIRMED_POLICY_VIOLATION ->
+                                                "Confirmed policy violation"
+                                            CustomCoachFindingStatus.COACH_POLICY_BLOCKER ->
+                                                "Needs reviewed policy"
+                                            CustomCoachFindingStatus.OBSERVED_CHANGE ->
+                                                "Observed change — not a safety finding"
+                                        }
+                                        Text(status,style=MaterialTheme.typography.labelMedium,
+                                            color=if(finding.status==CustomCoachFindingStatus.CONFIRMED_POLICY_VIOLATION)
+                                                MaterialTheme.colorScheme.error
+                                            else MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(finding.title,style=MaterialTheme.typography.titleSmall)
+                                        Text(finding.location,
+                                            style=MaterialTheme.typography.labelSmall)
+                                        Text(finding.explanation,
+                                            style=MaterialTheme.typography.bodySmall)
+                                        finding.comparison?.let{
+                                            Text(it,style=MaterialTheme.typography.bodySmall)
+                                        }
+                                        finding.options.forEachIndexed{index,choice->
+                                            Text("${index+1}. ${choice.title}",
+                                                style=MaterialTheme.typography.labelMedium)
+                                            Text(choice.explanation,
+                                                style=MaterialTheme.typography.bodySmall)
+                                        }
+                                        finding.absoluteWeek?.let {week ->
+                                            OutlinedButton(enabled=!busy,onClick={
+                                                inspectedWeek=week.toString()
+                                                val block=draft.blocks.firstOrNull {candidate->
+                                                    candidate.blockId==finding.blockId
+                                                }
+                                                val weekday=block?.days?.firstOrNull()?.weekday
+                                                if(weekday!=null) {
+                                                    inspectedWeekday=weekday
+                                                    controller.previewAuthoredDay(week,weekday)
+                                                }
+                                            }) {
+                                                Text("Inspect week $week in the authored preview")
+                                            }
+                                        }
+                                    }
+                                    if(findings.size>12)
+                                        Text("${findings.size-12} additional findings. Resolve the most important audited constraints, then rerun the review.",
+                                            style=MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
                     HorizontalDivider()
                     Text("Result · ${pretty(audit.status)}",
                         style = MaterialTheme.typography.titleMedium)

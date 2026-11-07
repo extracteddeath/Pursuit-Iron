@@ -3,6 +3,7 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -10,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomResumeReview
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -110,35 +112,88 @@ private fun NativeKotlinCandidateTrainEntry(
     onOpenCustomWorkout:(String?)->Unit
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
-    var customEntryId by rememberSaveable {mutableStateOf("")}
+    var resumable by remember(host) {
+        mutableStateOf<NativeCustomResumeReview?>(null)
+    }
+    var reviewingResume by remember {mutableStateOf(false)}
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val scope=rememberCoroutineScope()
     val valid = entryId.matches(
         Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
+    LaunchedEffect(customWorkoutId) {
+        // A past review is never an access grant after Finish or an athlete
+        // switch. Reopen verified storage for the next explicit selection.
+        resumable=null
+    }
     if(customWorkoutId!=null) {
         NativeKotlinCustomJournalScreen(host,customWorkoutId,
             onClose={onOpenCustomWorkout(null)})
     } else if(selectedId == null) {
-        Column(Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             PageHeading("KOTLIN COACH · ISOLATED",
                 "Your native workout",
                 "Only an explicitly approved Kotlin workout can be started.")
-            PursuitCard {
-                Text("Open an issued custom workout",
+            PursuitCard(highlighted=true) {
+                Text("Resume an issued custom workout",
                     style=MaterialTheme.typography.titleMedium)
-                Text("Custom workouts retain their exact authored exercises, warmups, amplifiers and separately logged actual sets. Only a durable, issued Kotlin journal can open.")
-                OutlinedTextField(value=customEntryId,
-                    onValueChange={customEntryId=it},
-                    singleLine=true,modifier=Modifier.fillMaxWidth(),
-                    label={Text("Issued custom workout ID")})
-                Button(
-                    enabled=customEntryId.matches(
-                        Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")),
-                    onClick={onOpenCustomWorkout(customEntryId)}) {
-                    Text("Open native custom journal")}
+                Text("Find your unfinished, native-issued sessions from verified history. Prepared previews are never treated as workouts. Your custom sets, amplifiers and actual observations remain intact.",
+                    style=MaterialTheme.typography.bodySmall)
+                Button(enabled=!reviewingResume,onClick={
+                    reviewingResume=true
+                    resumable=null
+                    scope.launch {
+                        val found=withContext(Dispatchers.IO) {
+                            runCatching {
+                                host.reviewResumableCustomWorkouts()
+                            }.getOrNull()
+                        }
+                        resumable=found
+                        reviewingResume=false
+                    }
+                }) {
+                    Text(if(reviewingResume)"Verifying saved journals…"
+                        else "Find my unfinished workouts")
+                }
+                when(val result=resumable) {
+                    is NativeCustomResumeReview.Ready -> {
+                        if(result.workouts.isEmpty()) {
+                            Text("No unfinished issued custom workouts were found. An approved plan alone is not a started workout.",
+                                style=MaterialTheme.typography.bodySmall)
+                        } else {
+                            Text("${result.workouts.size} saved custom workouts · verified history revision ${result.manifestRevision}",
+                                style=MaterialTheme.typography.labelMedium)
+                            result.workouts.take(20).forEach { item->
+                                OutlinedButton(
+                                    modifier=Modifier.fillMaxWidth(),
+                                    onClick={
+                                        // The journal performs a separate
+                                        // owner and disk validation on open.
+                                        resumable=null
+                                        onOpenCustomWorkout(item.workoutId)
+                                    }) {
+                                    Column(Modifier.fillMaxWidth(),
+                                        verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                                        Text(item.dayLabel,
+                                            style=MaterialTheme.typography.titleSmall)
+                                        Text("Week ${item.absoluteWeek} · Day ${item.weekday} · ${item.unresolvedVisitCount} visits remaining",
+                                            style=MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                            if(result.workouts.size>20)
+                                Text("Showing the first 20 by authored week and day. ${result.workouts.size-20} others remain verified; more navigation is still needed.",
+                                    style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    is NativeCustomResumeReview.Rejected ->
+                        Text("Saved workouts could not be verified (${result.reason.name.replace('_',' ').lowercase()}). No workout opened. If Finish was interrupted, recover it from the native custom workout before retrying.",
+                            color=MaterialTheme.colorScheme.error,
+                            style=MaterialTheme.typography.bodySmall)
+                    null -> {}
+                }
             }
             PursuitCard(highlighted=true) {
                 Text("Open an approved workout",

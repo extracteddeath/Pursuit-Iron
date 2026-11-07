@@ -136,6 +136,32 @@ internal class AppPrivateKotlinLocalAthlete(context: Context) :
     @Synchronized fun savedAthleteIdForExplicitResume():String? =
         runCatching { read()?.athleteId }.getOrNull()
 
+    /**
+     * Explicit same-device resume only. This validates the saved, checksummed
+     * identity without creating or replacing a record. The calling host MUST
+     * immediately verify the independently re-reviewed authoring snapshot
+     * and deactivate if it is absent, revoked or invalid.
+     *
+     * This is device-local profile selection, not remote authentication.
+     */
+    @Synchronized fun activatePreviouslySaved(
+        confirmedAthleteId:String
+    ):Enrollment {
+        if(!id.matches(confirmedAthleteId))
+            return Enrollment.Rejected("Saved athlete confirmation is invalid")
+        return try {
+            val saved=read()
+                ?:return Enrollment.Rejected("No saved local athlete to resume")
+            if(saved.athleteId!=confirmedAthleteId)
+                return Enrollment.Rejected("Saved athlete confirmation does not match")
+            explicitlyActivated=true
+            Enrollment.Activated(saved)
+        } catch(_:Exception) {
+            explicitlyActivated=false
+            Enrollment.Rejected("Saved athlete identity could not be verified")
+        }
+    }
+
     /** Never claim a previous login on cold startup without native activation. */
     override fun signedInIdentity():NativeKotlinOwnerIdentity? =
         if(explicitlyActivated)runCatching {read()}.getOrNull() else null

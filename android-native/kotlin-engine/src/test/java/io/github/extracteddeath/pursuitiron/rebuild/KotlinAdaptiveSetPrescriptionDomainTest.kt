@@ -199,6 +199,23 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
         })
     }
 
+    @Test fun multipleMissedExactGoalsRepeatInsteadOfInflatingOrResettingTargets() {
+        val old=listOf(14,14,12)
+        val before=observed(reps=listOf(13,13,11),
+            rir=listOf(3,3,3))
+        val result=candidate(request(previous=before,issuedExactReps=old))
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            result.decisionKind)
+        assertEquals(old,result.newRepTargets)
+        assertEquals(listOf(13,13,11),result.observedReps)
+        assertTrue(result.workout.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.map{it.reps.minimum}==old)
+        assertEquals(listOf(13,13,11),
+            before.observations.map{it.actualReps})
+        assertFalse(result.mayIssueWorkout)
+    }
+
     @Test fun repeatTargetsCannotBypassRecoveryIncompleteEffortOrLoadingGuards() {
         val exact=listOf(14,14,12)
         val safe=observed(reps=exact,rir=listOf(2,2,2))

@@ -480,7 +480,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             Text(carry.explanation,
                                 style=MaterialTheme.typography.bodySmall)
                         }
-                        if(reviewed.transitionStartingLoads?.changesAuthoredLoads==true &&
+                        if((reviewed.transitionStartingLoads?.changesAuthoredLoads==true ||
+                            reviewed.sameBlockLoadContinuity?.let {
+                                it.status==CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT &&
+                                    it.changesAuthoredLoads
+                            }==true) &&
                             state.calibrationReview==null && state.calibrationReceipt==null && state.preparedWorkout==null) {
                             Button(enabled=!busy&&maxStep!=null,onClick={
                                 controller.auditBlockCalibration(coachReadiness,coachRestricted,checkNotNull(maxStep))

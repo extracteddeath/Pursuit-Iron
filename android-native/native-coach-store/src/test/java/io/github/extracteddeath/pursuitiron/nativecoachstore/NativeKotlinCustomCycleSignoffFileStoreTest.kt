@@ -214,8 +214,11 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             store().confirm("owner-1","cycle-1",1,1,1,inputs(),true))
     }
 
+    private val coachSettings by lazy {NativeKotlinCoachAssistanceSettingsStore(
+        temp.root.toPath(),fence,identity)}
     private fun adaptive()=NativeKotlinAdaptiveCycleDraftAcceptance(
-        fence,identity,drafts,sources,permissionStore,store(),futureStore())
+        fence,identity,drafts,sources,permissionStore,store(),futureStore(),
+        coachSettings)
     private fun adjusted():CustomTrainingCycle {
         val original=cycle(2)
         return original.copy(blocks=original.blocks.map{block->

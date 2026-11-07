@@ -40,6 +40,7 @@ enum class NativeAdaptiveCycleDraftRefusal {
     COACH_REVIEW_UNRESOLVED,
     PERMISSION_REQUIRED, PERMISSIONS_NOT_APPROVED, PERMISSIONS_CHANGED,
     CURRENT_CYCLE_NOT_SIGNED_OFF, CONFIRMATION_REQUIRED, REVIEW_CHANGED,
+    ASSISTANCE_DISABLED, ASSISTANCE_UNAVAILABLE,
     FUTURE_CONTEXT_STORAGE_REJECTED, DRAFT_STORAGE_REJECTED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeAdaptiveCycleDraftPreview {
@@ -74,7 +75,8 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val permissionStore:NativeKotlinAdaptiveCyclePermissionFileStore,
     private val cycleSignoffs:NativeKotlinCustomCycleSignoffFileStore,
-    private val futureStore:NativeKotlinFutureBlockContextFileStore
+    private val futureStore:NativeKotlinFutureBlockContextFileStore,
+    private val coachingSettings:NativeKotlinCoachAssistanceSettingsStore
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     private val digest=Regex("^[a-f0-9]{64}$")
@@ -103,6 +105,20 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
         val signed=owner(c.ownerKey)
             ?:return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.NOT_AUTHORIZED)
+        // The athlete's current, cold-readable owner-scoped opt-outs are an
+        // independent source of truth; caller-supplied policy is NOT proof.
+        // Re-read under the same owner fence at preview AND accept.
+        val savedSettings=(coachingSettings.read(c.ownerKey)
+            as? NativeCoachSettingsRead.Current)?.settings
+            ?:return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.ASSISTANCE_UNAVAILABLE)
+        if(savedSettings.ownerKey!=c.ownerKey ||
+            savedSettings.athleteId!=signed.athleteId)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.ASSISTANCE_UNAVAILABLE)
+        if(!savedSettings.policy.coachingSuggestionsEnabled)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED)
         // Caller-provided toggles alone are not authorization. Reopen the
         // current versioned, athlete-approved rights under the owner fence.
         val rights=when(val read=permissionStore.read(c.ownerKey,c.cycleId)) {
@@ -209,6 +225,17 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
         if(review.status==AdaptiveCycleOptionStatus.PERMISSION_REQUIRED)
             return NativeAdaptiveCycleDraftPreview.Rejected(
                 NativeAdaptiveCycleDraftRefusal.PERMISSION_REQUIRED)
+        // Optional progression can be disabled without disabling structural
+        // cycle or exercise recommendations. An authored rep/load change is
+        // still an ordinary manual edit via the custom editor; this API is
+        // exclusively for COACH-proposed draft adaptations.
+        if(!savedSettings.policy.offersProgression &&
+            review.transition?.differences?.any {
+                it.kind==CustomCycleChangeKind.LOADS ||
+                    it.kind==CustomCycleChangeKind.REPS
+            }==true)
+            return NativeAdaptiveCycleDraftPreview.Rejected(
+                NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED)
         val expectedStatus=if(changedSchedule)
             AdaptiveCycleOptionStatus.PROSPECTIVE_REVIEW_REQUIRED
             else AdaptiveCycleOptionStatus.READY_FOR_REVIEW
@@ -244,7 +271,14 @@ class NativeKotlinAdaptiveCycleDraftAcceptance(
         } ?: "no-prospective-context"
         val scope=listOf(c.ownerKey,c.cycleId,c.targetBlockId,c.optionId,
             prior,next,future,c.expectedPermissionRevision.toString(),
-            rights.allowedKinds.sortedBy{it.name}.joinToString(",")).joinToString("\u0000")
+            rights.allowedKinds.sortedBy{it.name}.joinToString(","),
+            // Even changing STANDARD -> another enabled mode must invalidate
+            // an approval displayed before the settings revision changed.
+            savedSettings.revision.toString(),
+            savedSettings.policy.coachingSuggestionsEnabled.toString(),
+            savedSettings.policy.progressionSuggestionsEnabled.toString(),
+            savedSettings.policy.fatigueAdaptationEnabled.toString()
+        ).joinToString("\u0000")
         val sha=MessageDigest.getInstance("SHA-256")
             .digest(scope.toByteArray(Charsets.UTF_8))
             .joinToString(""){"%02x".format(it.toInt() and 255)}

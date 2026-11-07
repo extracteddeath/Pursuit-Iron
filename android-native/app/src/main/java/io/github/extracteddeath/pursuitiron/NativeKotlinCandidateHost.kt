@@ -40,7 +40,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete,customDraftStore,authoringSourceStore)
     private val adaptiveCycleDrafts=NativeKotlinAdaptiveCycleDraftAcceptance(
         revisionFence,localAthlete,customDraftStore,authoringSourceStore,
-        adaptiveCyclePermissions,customCycleSignoffs,futureBlockContexts)
+        adaptiveCyclePermissions,customCycleSignoffs,futureBlockContexts,
+        coachSettings)
     private val futureActivationHandoff=NativeKotlinFutureActivationHandoffFileStore(
         root,revisionFence,localAthlete,authoringSourceStore)
     private val customWorkoutPreflight=NativeKotlinCustomWorkoutPreflight(

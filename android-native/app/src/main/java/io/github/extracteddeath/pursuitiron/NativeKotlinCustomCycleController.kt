@@ -31,6 +31,9 @@ internal data class NativeKotlinCustomCycleState(
     val sourceRevision: Long? = null,
     /** Current owner-reviewed source context; stale edits are rechecked at audit. */
     val reviewedSourceSetup: AthleteSetupReview? = null,
+    /** Factual set credit evidence only; does not contain MEV/MRV decisions. */
+    val authoredWorkloadEvidence: CustomCoachPolicyEvidence? = null,
+    val evidenceSourceRevision: Long? = null,
     val coachingAudit: CustomCoachAudit? = null,
     val auditSourceRevision: Long? = null,
     /** Inputs from the latest independently rechecked full-cycle audit.
@@ -175,6 +178,8 @@ internal class NativeKotlinCustomCycleController(
                             draft = result.draft,
                             cycleId = result.draft.cycleId,
                             coachingAudit = null,
+                            authoredWorkloadEvidence = null,
+                            evidenceSourceRevision = null,
                             auditSourceRevision = null,
                             reviewedCoachInputs = null,
                             signoff = host.readCustomCycleConsent(result.draft.cycleId),
@@ -225,6 +230,56 @@ internal class NativeKotlinCustomCycleController(
             preparedWorkout=null,
             signoff=staleSignoff,
             message="The policy draft changed. Its previous audit and signoff view are no longer current; run a complete new review.")
+    }
+
+    /**
+     * Review exact authored workload from the SAME native full-cycle credit
+     * engine. An intentionally missing coach policy produces factual volume
+     * measurements only; it never supplies dose bounds, consent or issuance.
+     * Rejects any different durable cycle, source, account or catalog before
+     * publishing the read-only evidence back to the Compose state.
+     */
+    fun inspectAuthoredWorkloadEvidence() = run {
+        val requested=current.value.draft ?:return@run
+        val disk=host.readCustomCycleDraft(requested.cycleId)
+        if(disk !is NativeCustomDraftReadResult.Found ||
+            disk.draft!=requested) {
+            applyRead(requested.cycleId,disk)
+            current.value=current.value.copy(
+                message="Custom cycle changed; reload the exact saved program before inspecting workload.")
+            return@run
+        }
+        val source=runCatching{authoringSource.snapshot()}.getOrNull()
+        if(source==null || source.athleteId!=disk.draft.athleteId) {
+            current.value=current.value.copy(
+                authoredWorkloadEvidence=null,evidenceSourceRevision=null,
+                message="Reviewed native athlete, gym or exercise catalog unavailable.")
+            return@run
+        }
+        val audited=CustomCycleCoachAuditDomain.review(
+            disk.draft,source.setup,source.catalog,CustomCoachAuditInputs())
+        val evidence=CustomCoachPolicyEvidenceDomain.review(audited)
+        val latest=host.readCustomCycleDraft(requested.cycleId)
+        val fresh=runCatching{authoringSource.snapshot()}.getOrNull()
+        if(latest !is NativeCustomDraftReadResult.Found ||
+            latest.draft!=disk.draft || fresh!=source) {
+            applyRead(requested.cycleId,latest)
+            current.value=current.value.copy(
+                message="The native program or gym changed during workload review. Read again.")
+            return@run
+        }
+        current.value=when(evidence) {
+            is CustomCoachPolicyEvidenceReview.Reviewed ->
+                current.value.copy(
+                    authoredWorkloadEvidence=evidence.evidence,
+                    evidenceSourceRevision=source.revision,
+                    message="Authored weekly working sets and muscle credits verified; these are observations, not MEV/MRV prescriptions.")
+            is CustomCoachPolicyEvidenceReview.Rejected ->
+                current.value.copy(
+                    authoredWorkloadEvidence=null,
+                    evidenceSourceRevision=null,
+                    message="Verified authored workload unavailable: ${evidence.reason.name.replace('_',' ').lowercase()}. No dose suggestion issued.")
+        }
     }
 
     /**
@@ -639,6 +694,8 @@ internal class NativeKotlinCustomCycleController(
                 current.value = current.value.copy(
                     draft = result.draft, canUndo = false,
                     coachingAudit = null, auditSourceRevision = null,
+                    authoredWorkloadEvidence = null,
+                    evidenceSourceRevision = null,
                     reviewedCoachInputs = null,
                     signoff = host.readCustomCycleConsent(result.draft.cycleId),
                     signoffRefusal = null,

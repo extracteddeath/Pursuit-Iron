@@ -398,6 +398,75 @@ class CoachSessionPrescriptionDomainTest {
         assertFalse(preview.canIssueWorkout)
     }
 
+    @Test fun sharedPurposeProgressionCannotClaimDayWithOwnPrescription() {
+        val approved=request()
+        val source=KotlinTrainingSourceRevision(
+            "athlete-1",4,"program-1",8,"gym-1",3,"catalog-5","coach-rules-2")
+        fun completed(id:String)=ProgressionWorkoutEvidence(
+            id,"db-press",LoadUnit.LB,RepBand(8,12),2,
+            (0..1).map { ordinal ->
+                WorkingSetFact(ordinal,SetOutcome.COMPLETED,n("30"),
+                    12,3,n("30"),2)
+            })
+        val independentDay=policies().single {
+            it.exerciseId=="db-press" &&
+                it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.copy(dayIndex=2,purposeWorkingLoad=n("25"))
+        val allPolicies=policies()+independentDay
+        fun review(policies:List<ExercisePrescriptionPolicy>,day:Int?)=
+            CoachNextProgramLoadReviewDomain.review(
+                CoachNextProgramLoadRequest(
+                    approved,source,source,7,7,
+                    completed("earlier-day1"),completed("latest-day1"),
+                    "db-press",policies,n("5"),CoachReadiness.NORMAL,false,
+                    ComposerSessionPurpose.HYPERTROPHY,day
+                ))
+        val unsafe=review(allPolicies,null)
+        assertEquals(
+            CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
+            unsafe.status)
+        assertNull(unsafe.candidateProgram)
+        assertNull(unsafe.candidatePolicies)
+        assertTrue(unsafe.affectedDayIndices.isEmpty())
+
+        val scoped=review(allPolicies,1)
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            scoped.status)
+        assertEquals(listOf(1),scoped.affectedDayIndices)
+        assertEquals(n("35"),scoped.candidateLoad)
+        val updated=CoachSessionPrescriptionDomain.draft(
+            checkNotNull(scoped.candidateProgram),
+            checkNotNull(scoped.candidatePolicies))
+        assertEquals(PrescriptionDraftStatus.COMPLETE_FOR_REVIEW,updated.status)
+        fun firstLoad(day:Int)=(
+            updated.sessions.single {it.dayIndex==day}
+                .exercises.single {it.exerciseId=="db-press"}
+                .sets.first {it.type==DraftSetType.WORKING}.load
+                as DraftSetLoad.Verified).value
+        assertEquals(n("35"),firstLoad(1))
+        assertEquals(n("25"),firstLoad(2))
+        assertEquals(n("30"),(
+            approved.exercises.single {it.exerciseId=="db-press"}
+                .equipment as ComposerEquipment.Verified).plannedLoad)
+        assertFalse(scoped.maySaveProgram)
+        assertFalse(scoped.mayIssueWorkout)
+
+        // Without day-specific overrides, a deliberately shared-purpose
+        // change may legitimately affect BOTH matched training days.
+        val broad=review(policies(),null)
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            broad.status)
+        assertEquals(listOf(1,2),broad.affectedDayIndices)
+        val shared=CoachSessionPrescriptionDomain.draft(
+            checkNotNull(broad.candidateProgram),
+            checkNotNull(broad.candidatePolicies))
+        assertTrue(shared.sessions.filter {
+            it.purpose==ComposerSessionPurpose.HYPERTROPHY
+        }.flatMap {it.exercises}.filter {it.exerciseId=="db-press"}
+            .flatMap {it.sets}.filter {it.type==DraftSetType.WORKING}
+            .all {(it.load as DraftSetLoad.Verified).value==n("35")})
+    }
+
     @Test fun conflictingOrForgedDayScopedPolicyCannotProduceApprovedTargets() {
         val shared=policies()
         val specific=shared[1].copy(dayIndex=2,purposeWorkingLoad=n("25"))

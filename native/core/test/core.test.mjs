@@ -1219,4 +1219,18 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   const head = (part, k) => o.rows.find((r) => r.part === part)?.heads.find((h) => h.key === k);
   ok(head('shoulders', 'front_delts')?.from[0]?.name === 'Overhead Press' && head('traps', 'upper_traps')?.sets === 3 && head('forearms', 'wrist_flexors')?.from[0]?.name === 'Cable Wrist Curl',
     'your own program shows delt, trap and wrist heads with their lifts'); }
+// Ranked splits (the prototype's recommender on the real engine)
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  const eq = ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup', 'ezbar', 'legpress', 'legcurl', 'legext'];
+  const config = { goal: 'hypertrophy', days: 4, session: 's60', experience: 'intermediate', equipment: eq };
+  const plan = C.rankSplitsPlan({ config });
+  ok(plan.ids.length >= 5 && plan.ids[0] === plan.enginePick, 'rank plan lists the splits that fit 4 days, the engine pick first (' + plan.ids.length + ')');
+  const rows = plan.ids.map((id) => C.rankSplit({ config, id })).filter((r) => !r.failed).sort((a, b) => b.raw - a.raw);
+  ok(rows.length === plan.ids.length && rows.every((r) => r.score >= 1 && r.score <= 100 && r.week.filter((w) => w.on).length === 4 && r.why.length >= 4), 'every split is built and scored with a week and reasons');
+  ok(rows[0].score > rows[rows.length - 1].score, 'scores separate the splits (' + rows[0].score + ' vs ' + rows[rows.length - 1].score + ')');
+  const goalOf = (cfg, id) => C.rankSplit({ config: cfg, id }).parts.goal;
+  ok(goalOf({ ...config, goal: 'strength' }, 'sbd_power') > goalOf(config, 'sbd_power'), 'a powerlifting wave fits a strength goal better than a hypertrophy one');
+  ok(C.rankSplit({ config, id: rows[0].id }) === C.rankSplit({ config, id: rows[0].id }), 'scores are cached per answer set');
+  const r2 = C.rankSplitsPlan({ config: { ...config, days: 2, equipment: [] } });
+  ok(r2.ids.every((id) => !['five_three_one', 'gzclp'].includes(id)), 'a bodyweight gym does not offer barbell methods'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

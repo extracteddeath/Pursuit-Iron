@@ -110,23 +110,34 @@ def seek(pattern, tries=8):
 
 
 def wizard(name, cycle=False, shots=False):
-    """The design's Create wizard: pick the format, answer the required name, then Next until it can build."""
+    """The setup (the prototype's flow): pick the format, a few pages of questions, then the ranked splits — wait for
+    the best fit, name it, build."""
     if cycle:
         tap(r"^\|Training cycle$|Training cycle\|", "wizard-cycle")
     tap(r"^\|Continue$", "wizard-mode" if shots else None)
-    for k in range(22):
-        if find(r"Program name|Cycle name", timeout=1):
-            tap(r"Program name|Cycle name")
-            adb("shell", "input", "text", name.replace(" ", "%s"))
-            hide_keyboard()
-            time.sleep(0.6)
-        if shots and k < 4:
+    for k in range(14):
+        if shots and k < 5:
             shot(f"wizard-step-{k}")
-        if find(r"with these settings", timeout=1):
-            tap(r"with these settings", "wizard-early" if shots else None)
-            return True
-        if find(r"^\|(Generate Program|Build Cycle)$", timeout=1):
-            tap(r"^\|(Generate Program|Build Cycle)$")
+        if k == 3 and shots and find(r"Skip to your ranked splits", timeout=1):
+            shot("wizard-early")
+        if find(r"^\|Build this (program|cycle)$", timeout=1):
+            if not find(r"BEST FIT OF \d+", timeout=40):
+                FAILS.append("ranked splits never showed a best fit")
+            time.sleep(1.5)
+            if shots:
+                shot("wizard-ranked")
+                if scroll_to(r"SPLITS, RANKED", tries=4, step=500):
+                    shot("wizard-ranked-list")
+                    if not find(r"^Rank 2: ", timeout=4):
+                        FAILS.append("ranked splits list has no second split")
+            if seek(r"Program name|Cycle name"):
+                tap(r"Program name|Cycle name")
+                adb("shell", "input", "text", name.replace(" ", "%s"))
+                hide_keyboard()
+                time.sleep(0.6)
+            else:
+                FAILS.append("ranked page has no name field")
+            tap(r"^\|Build this (program|cycle)$")
             return True
         if not tap(r"^\|Next$", required=False):
             FAILS.append("wizard stuck")

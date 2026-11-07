@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -110,6 +111,155 @@ private val PRESETS = listOf(
 )
 private val EXP = listOf(Triple("none", "New to lifting", "Brand new to lifting"), Triple("beginner", "Beginner", "< 1 year training"), Triple("intermediate", "Intermediate", "1–3 years training"), Triple("advanced", "Advanced", "3+ years, dialled-in"))
 private val GOALS = mapOf("hypertrophy" to "Hypertrophy", "strength" to "Strength", "both" to "Strength & Size")
+private val SESS_SHORT = mapOf("s20" to "≤20 min", "s40" to "20–40", "s60" to "40–60", "s90" to "60–90", "s120" to "90–120", "s120p" to "120+")
+private val SES_MIN = mapOf("s20" to 20, "s40" to 40, "s60" to 60, "s90" to 90, "s120" to 120, "s120p" to 150)
+private val SUBHEAD = mapOf("approach" to "TRAINING APPROACH", "session" to "SESSION LENGTH", "constraints" to "GYM LIMITS", "name" to "NAME",
+    "units" to "UNITS", "progression" to "PROGRESSION", "length" to "BLOCK LENGTH", "deload" to "DELOAD WEEK")
+
+/** An optional group on a setup page: its title and current answer, opened in place. */
+@Composable
+private fun WzFold(title: String, summary: String, content: @Composable () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    var open by remember { mutableStateOf(false) }
+    Column(Modifier.padding(top = 10.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(cs.surfaceContainerLow)) {
+        Row(Modifier.fillMaxWidth().clickable { open = !open }.semantics(mergeDescendants = true) { role = Role.Button; stateDescription = if (open) "Expanded" else "Collapsed" }
+            .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(summary, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+            Icon(if (open) PiIcons.ChevronUp else PiIcons.ChevronDown, null, tint = cs.onSurfaceVariant)
+        }
+        AnimatedVisibility(open, enter = Motion.expandIn, exit = Motion.shrinkOut) {
+            Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
+        }
+    }
+}
+
+/**
+ * The prototype's ranked splits (Main.dc.html builder + guided setup result), on the real engine: every split this gym can
+ * run at these days is built with your answers and scored (core rankSplit). The list fills in as each one is scored;
+ * the hero card is the best fit (or your pick), with its score, why, the four measures and its week; the rest are ranked
+ * below with score bars; splits the gym can't run are listed last with what they need.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, onPick: (String) -> Unit, onTop: (String?) -> Unit, goalLabel: String, cyc: Boolean) {
+    val cs = MaterialTheme.colorScheme
+    val cfgKey = config.toString()
+    var plan by remember(cfgKey) { mutableStateOf<JSONObject?>(null) }
+    val rows = remember(cfgKey) { androidx.compose.runtime.mutableStateListOf<JSONObject>() }
+    var done by remember(cfgKey) { mutableIntStateOf(0) }
+    LaunchedEffect(cfgKey) {
+        val pl = vm.rankSplitsPlan(config) ?: return@LaunchedEffect
+        plan = pl
+        val ids = pl.strings("ids")
+        ids.forEach { id ->
+            vm.rankSplit(config, id)?.takeIf { !it.b("failed") }?.let { rows.add(it) }
+            done++
+            onTop(rows.maxWithOrNull(compareBy<JSONObject>({ it.optDouble("raw") }, { if (it.s("id") == pl.s("enginePick")) 1 else 0 }))?.s("id"))
+        }
+    }
+    val total = plan?.strings("ids")?.size ?: 0
+    val ranked = rows.sortedWith(compareByDescending<JSONObject> { it.optDouble("raw") }.thenByDescending { if (it.s("id") == plan?.s("enginePick")) 1 else 0 }.thenBy { it.s("name") })
+    val scoring = plan == null || done < total
+    if (scoring) Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) {
+        Text(if (plan == null) "Finding the splits that fit…" else "Building and scoring ${minOf(done + 1, total)} of $total splits…", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
+        androidx.compose.material3.LinearProgressIndicator(progress = { if (total == 0) 0f else done / total.toFloat() }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape))
+    }
+    if (ranked.isEmpty()) { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.fillMaxWidth()); return }
+    val top = ranked.first()
+    val hero = ranked.firstOrNull { it.s("id") == chosen } ?: top
+    val heroRank = ranked.indexOf(hero) + 1
+    // Hero: the best fit, or the split you picked
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.primaryContainer).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            val sc by androidx.compose.animation.core.animateFloatAsState(hero.i("score") / 100f, Motion.data(), label = "sc")
+            Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                val ring = cs.primary; val track = cs.onPrimaryContainer.copy(alpha = 0.15f)
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val st = androidx.compose.ui.graphics.drawscope.Stroke(7.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    val inset = 4.dp.toPx(); val sz = androidx.compose.ui.geometry.Size(size.width - 2 * inset, size.height - 2 * inset); val off = androidx.compose.ui.geometry.Offset(inset, inset)
+                    drawArc(track, 0f, 360f, false, off, sz, style = st); drawArc(ring, -90f, 360f * sc, false, off, sz, style = st)
+                }
+                Text("${hero.i("score")}", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold), color = cs.onPrimaryContainer)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(if (hero === top) "BEST FIT OF ${ranked.size}" else "YOUR PICK · #$heroRank OF ${ranked.size}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp), color = cs.primary)
+                Text(hero.s("name"), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 28.sp), color = cs.onPrimaryContainer)
+                Text("${plan?.i("days") ?: hero.i("sessions")} days · ${SESS_SHORT[hero.s("session")] ?: ""} min · $goalLabel" + if (hero.s("id") == plan?.s("enginePick")) " · the engine’s own pick" else "",
+                    style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer.copy(alpha = 0.8f))
+            }
+        }
+        // The four measures behind the score
+        val parts = hero.o("parts")
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("coverage" to "Coverage", "frequency" to "Frequency", "fit" to "Session fit", "goal" to "Goal fit").forEach { (k, l) ->
+                val v = parts?.optInt(k) ?: 0
+                Column(Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = "$l $v of 100" }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(l, style = MaterialTheme.typography.labelSmall, color = cs.onPrimaryContainer, maxLines = 1)
+                    com.pursuitiron.app.ui.common.ProgressBar(v / 100f, Modifier.fillMaxWidth(), height = 6.dp, color = cs.primary)
+                }
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            hero.strings("why").forEach { w -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.padding(top = 7.dp).size(5.dp).clip(CircleShape).background(cs.primary))
+                Text(w, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 19.sp), color = cs.onPrimaryContainer)
+            } }
+        }
+        if (hero.b("sessionMoved")) Text("Runs at ${SESS_SHORT[hero.s("session")]} min sessions; your length doesn’t fit it.", style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer)
+        // The week it lays out
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            hero.list("week").forEach { w ->
+                val on = w.b("on")
+                Column(Modifier.weight(1f).heightIn(min = 60.dp).clip(RoundedCornerShape(12.dp)).background(if (on) cs.surface else cs.onPrimaryContainer.copy(alpha = 0.06f)).padding(vertical = 6.dp, horizontal = 2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
+                    Text(w.s("wd"), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                    Text(w.s("name"), style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (on) FontWeight.Bold else FontWeight.Normal, fontSize = 10.sp, lineHeight = 12.sp),
+                        color = if (on) cs.onSurface else cs.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 2)
+                }
+            }
+        }
+    }
+    // Every split, ranked
+    WzKicker("ALL ${ranked.size} SPLITS, RANKED" + if (scoring) " · SCORING…" else "", Modifier.padding(top = 10.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        ranked.forEachIndexed { k, x ->
+            val on = x.s("id") == hero.s("id")
+            val bg by animateColorAsState(if (on) cs.secondaryContainer else cs.surfaceContainerLow, Motion.effects(), label = "rk")
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(bg).border(if (on) 2.dp else 0.dp, if (on) cs.primary else Color.Transparent, RoundedCornerShape(20.dp))
+                .clickable { onPick(x.s("id")) }.semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on; contentDescription = "Rank ${k + 1}: ${x.s("name")}, score ${x.i("score")}. ${x.s("line")}" }
+                .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(32.dp).clip(if (k < 3) RoundedCornerShape(11.dp) else CircleShape).background(if (k == 0) cs.primary else if (k < 3) cs.primaryContainer else cs.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+                    Text("${k + 1}", style = MaterialTheme.typography.labelLarge, color = if (k == 0) cs.onPrimary else if (k < 3) cs.onPrimaryContainer else cs.onSurface)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(x.s("name"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("${x.i("score")}", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold), color = if (k == 0) cs.primary else cs.onSurface)
+                    }
+                    val w by androidx.compose.animation.core.animateFloatAsState(x.i("score") / 100f, Motion.data(), label = "rw")
+                    Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(cs.surfaceContainerHighest)) {
+                        Box(Modifier.fillMaxWidth(w).fillMaxHeight().clip(CircleShape).background(if (k == 0) cs.primary else cs.onSurfaceVariant.copy(alpha = 0.45f)))
+                    }
+                    Text(x.s("line") + if (x.list("under").isNotEmpty()) " · low: " + x.strings("under").joinToString(", ") else "",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant, maxLines = 2)
+                }
+            }
+        }
+    }
+    val blocked = plan?.list("blocked").orEmpty()
+    if (blocked.isNotEmpty()) WzFold("${blocked.size} can’t run with your gym", "Add equipment in your gym to open ${if (blocked.size == 1) "it" else "them"} up") {
+        blocked.forEach { b -> Column {
+            Text(b.s("name"), style = MaterialTheme.typography.titleSmall)
+            Text(if (b.s("kind") == "lifts") "Needs equipment for: " + b.strings("items").joinToString(", ") else "Not enough exercises with your equipment" + (b.strings("items").takeIf { it.isNotEmpty() }?.let { " for ${it.joinToString(", ")}" } ?: ""),
+                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+        } }
+    }
+    Text("Scores come from each split actually built with your answers: week-1 sets against MEV/MAV, how often each muscle is trained, sets and minutes per session, and how much of the work matches your goal.",
+        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+}
 
 /* B894: an unfinished cycle setup stays on this device; Discard starts the wizard fresh. */
 @Composable
@@ -174,9 +324,15 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     var keys = if (cyc) (if (template == "custom") listOf("cycletype", "goal") + ck.drop(1) else ck) else sk
     if (!full) keys = keys.filter { it != "units" && it != "experience" && it != "equipment" }
     if (endless && !cyc) keys = keys.filter { it != "deload" }
-    val steps = if (chose) keys else listOf("mode")
+    /* The prototype's flow (Main.dc.html guided setup): a few questions a screen, ending on every split built and ranked
+       for you. Every option the long wizard had is still here, grouped onto the page it belongs to. */
+    val pageOf = listOf(listOf("cycletype"), listOf("goal", "approach"), listOf("experience"), listOf("days", "session"), listOf("equipment", "constraints"),
+        listOf("focus", "reduce"), listOf("split", "name", "units", "progression", "length", "deload"))
+    val steps: List<List<String>> = if (chose) pageOf.map { pg -> pg.filter { it in keys } }.filter { it.isNotEmpty() } else listOf(listOf("mode"))
     val at = step.coerceIn(0, steps.size - 1)
-    val key = steps[at]
+    val page = steps[at]
+    val key = page.first()
+    val pageIdx = { k: String -> steps.indexOfFirst { k in it } }
 
     val eq = (if (full) equip else gymEquip.toSet()).let { if (noRack) it + "no-rack" else it }
     val focusTotal = focus.values.sum()
@@ -196,7 +352,8 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     val sessIdx = { id: String? -> SESS.indexOfFirst { it.first == id } }
     val splits = opts.list("splits").filter { sp -> sp.optJSONArray("days")?.let { a -> (0 until a.length()).any { a.optInt(it) == days } } ?: true }
     val fits = { sp: JSONObject, ses: String -> val i = sessIdx(ses); (sp.s("minSession").let { it.isBlank() || it == "null" || i >= sessIdx(it) }) && (sp.s("maxSession").let { it.isBlank() || it == "null" || i <= sessIdx(it) }) }
-    val chosenSplit = split?.takeIf { s -> splits.any { it.s("id") == s } && splitOk(s) } ?: pick?.takeIf { p -> splits.any { it.s("id") == p } && splitOk(p) }
+    var rankTop by remember { mutableStateOf<String?>(null) }
+    val chosenSplit = split?.takeIf { s -> splits.any { it.s("id") == s } && splitOk(s) } ?: rankTop?.takeIf { p -> splits.any { it.s("id") == p } && splitOk(p) } ?: pick?.takeIf { p -> splits.any { it.s("id") == p } && splitOk(p) }
         ?: splits.firstOrNull { fits(it, session) && splitOk(it.s("id")) }?.s("id") ?: splits.firstOrNull { splitOk(it.s("id")) }?.s("id")
     val sd = splits.firstOrNull { it.s("id") == chosenSplit }
     val sessChoices = SESS.filter { sd == null || fits(sd, it.first) }
@@ -204,12 +361,14 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
 
     val nameOk = name.isNotBlank()
     val cycleOk = !cyc || template != "custom" || (custom.size in 2..8 && custom.all { it.weeks in 1..24 } && custom.sumOf { it.weeks } <= 104)
-    val canNext = when (key) { "name" -> nameOk; "cycletype" -> cycleOk; "split" -> chosenSplit != null; else -> true }
-    val essEnd = listOf("constraints", "equipment", "session").map { steps.indexOf(it) }.firstOrNull { it > -1 } ?: -1
-    val canEarly = key != "mode" && canNext && essEnd > -1 && at > essEnd && at < steps.size - 1
+    val canNext = when { "cycletype" in page -> cycleOk; "split" in page -> chosenSplit != null; else -> true }
+    val essEnd = listOf("days", "session").map { pageIdx(it) }.firstOrNull { it > -1 } ?: -1
+    // Once the schedule is answered you can jump straight to the ranked splits; the later pages are optional.
+    val canEarly = key != "mode" && canNext && essEnd > -1 && at >= essEnd && at < steps.size - 1
     fun finish() {
-        if (!nameOk) { step = steps.indexOf("name"); vm.toast("Name it first — it’s the one required answer"); return }
+        if (chosenSplit == null) return
         val c = config().put("split", chosenSplit).put("session", effSession)
+        if (!nameOk) c.put("name", (sd?.s("name") ?: "My program").take(60))
         if (cyc) vm.createCycle(c, template, if (template == "custom") customBlocksJson(custom) else null, adapt, adapt && adaptSplit) else vm.createProgram(c)
     }
     fun next() {
@@ -229,6 +388,15 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     }
     BackHandler { back() }
 
+    val pageHeads = mapOf(
+        "goal" to ("What are you training for?" to "Sets rep ranges and rest, and how the split ranking weighs frequency against volume."),
+        "experience" to ("How long have you lifted?" to "Scales your weekly volume. Newer lifters do best on splits that repeat each lift often."),
+        "days" to ("When can you train?" to "Days a week, and how long a session can run."),
+        "equipment" to ("Where do you train?" to "Only exercises you can actually do get programmed. Bodyweight is on by default and can be excluded below."),
+        "constraints" to ("Gym limits" to "How the workout may use gym space. These are firm rules for the generator, not suggestions."),
+        "focus" to ("Anything to prioritise?" to "One point raises a muscle’s priority; two marks a stronger specialization. You can skip this."),
+        "split" to ((if (cyc) "Your best split" else "Your best split") to "Every split that fits $days days, built from your answers and ranked on coverage, frequency, session fit and your goal."),
+    )
     val heads = mapOf(
         "mode" to ("What do you want to build?" to "Both ask the same questions about your training — a cycle just chains multiple blocks together."),
         "units" to ("Which units do you train in?" to "Used everywhere — plates, targets, history. You can change it later in Settings."),
@@ -257,7 +425,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                 Text(if (key == "mode") "Create" else if (cyc) "Create Cycle" else "Create Program", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
                 // Count the answers that matter first: "1/15" counted the optional tail too and made setup look twice as long.
-                Text(if (key == "mode") "" else if (essEnd < 0 || at <= essEnd) "${at + 1}/${essEnd.takeIf { it >= 0 }?.plus(1) ?: steps.size}" else "+${at - essEnd}/${steps.size - 1 - essEnd}", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = cs.onSurfaceVariant,
+                Text(if (key == "mode") "" else "${at + 1}/${steps.size}", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = cs.onSurfaceVariant,
                     modifier = Modifier.widthIn(min = 48.dp), textAlign = TextAlign.Center)
             }
             val prog by animateFloatAsState(if (key == "mode") 0.06f else (at + 1f) / steps.size, Motion.data(), label = "wz")
@@ -267,20 +435,21 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
             }
         }
         // The question
-        AnimatedContent(key to cyc, transitionSpec = {
-            val fwd = steps.indexOf(targetState.first) >= steps.indexOf(initialState.first)
+        AnimatedContent(at to cyc, transitionSpec = {
+            val fwd = targetState.first >= initialState.first
             (slideInHorizontally(Motion.spatial()) { if (fwd) it / 6 else -it / 6 } + fadeIn(Motion.enter(250))) togetherWith (slideOutHorizontally(Motion.spatial()) { if (fwd) -it / 6 else it / 6 } + fadeOut(Motion.exit(120)))
-        }, label = "wzStep", modifier = Modifier.weight(1f)) { (k, _) ->
+        }, label = "wzStep", modifier = Modifier.weight(1f)) { (pi, _) ->
+            val pg = steps[pi.coerceIn(0, steps.size - 1)]; val k0 = pg.first()
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp).padding(top = 18.dp, bottom = 24.dp).widthIn(max = 760.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val (h, sub) = heads[k] ?: ("" to "")
+                val (h, sub) = pageHeads[k0] ?: heads[k0] ?: ("" to "")
                 if (d0 != null) DraftBanner("Picking up your unfinished cycle setup. It stays on this device until you build or discard it.", onDiscard)
                 Column(Modifier.padding(bottom = 6.dp)) {
                     Text(h, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp, lineHeight = 32.sp), modifier = Modifier.semantics { heading() })
-                    Text(if (k == "deload") "Your block runs ${if (cyc) "its first block's" else "$weeks"} weeks. A deload adds a lighter recovery week at the end." else sub,
+                    Text(if (k0 == "deload") "Your block runs ${if (cyc) "its first block's" else "$weeks"} weeks. A deload adds a lighter recovery week at the end." else sub,
                         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 21.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
                 }
-                when (k) {
+                @Composable fun body(k: String) { when (k) {
                     "mode" -> {
                         WzOption("Single program", "One training block built around your goal, schedule, and gym.", WZ.dumb, !cyc) { cyc = false }
                         WzOption("Training cycle", "Multiple blocks that progress from one phase to the next over time.", WZ.layers, cyc) { cyc = true }
@@ -305,21 +474,12 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         }
                         AnimatedVisibility(tplOpen, enter = Motion.expandIn, exit = Motion.shrinkOut) { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { TemplatePicker(vm) } }
                     }
-                    "units" -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        listOf("kg" to "Kilograms", "lb" to "Pounds").forEach { (u, l) ->
-                            val on = unit == u
-                            val r by animateDpAsState(if (on) 22.dp else 28.dp, Motion.spatialFast(), label = "u")
-                            val bg by animateColorAsState(if (on) cs.secondaryContainer else cs.surfaceContainerLow, Motion.effects(), label = "ub")
-                            Column(Modifier.weight(1f).clip(RoundedCornerShape(r)).background(bg).border(if (on) 2.dp else 1.dp, if (on) cs.primary else cs.outlineVariant, RoundedCornerShape(r))
-                                .clickable { unit = u }.semantics { role = Role.RadioButton; selected = on }.padding(vertical = 26.dp, horizontal = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(u, style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp), color = if (on) cs.onSecondaryContainer else cs.onSurface)
-                                Text(l, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                            }
-                        }
+                    "units" -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("kg" to "Kilograms", "lb" to "Pounds").forEach { (u, l) -> WzSeg("$l · $u", unit == u, Modifier.weight(1f)) { unit = u } }
                     }
                     "cycletype" -> CycleTemplatePicker(vm, template, { template = it }, custom, adapt, { adapt = it }, adaptSplit, { adaptSplit = it }, days)
                     "name" -> OutlinedTextField(name, { name = it.take(60) }, Modifier.fillMaxWidth().semantics { contentDescription = if (cyc) "Cycle name" else "Program name" }, singleLine = true,
-                        placeholder = { Text(if (cyc) "e.g. Summer Training Cycle" else "e.g. Summer Hypertrophy Block") }, shape = RoundedCornerShape(18.dp),
+                        placeholder = { Text(if (cyc) "e.g. Summer Training Cycle" else (sd?.s("name") ?: "e.g. Summer Hypertrophy Block")) }, shape = RoundedCornerShape(18.dp),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp), keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words))
                     "experience" -> EXP.forEach { (id, l, s) -> WzOption(l, s, WZ.trophy, exp == id) { exp = id } }
                     "goal" -> listOf(Triple("hypertrophy", "Build muscle & size", WZ.layers), Triple("strength", "Get strong, lower reps", WZ.flame), Triple("both", "Heavy main lifts, hypertrophy accessories", WZ.zap))
@@ -328,32 +488,38 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         WzOption("Standard volume", "Balanced weekly volume and recovery. The best default for most lifters.", WZ.layers, approach == "standard") { approach = "standard" }
                         WzOption("Minimalist · high intensity", "Fewer hard sets taken closer to failure. Faster sessions with less total volume.", WZ.flame, approach == "minimalist") { approach = "minimalist" }
                     }
-                    "days" -> (2..6).forEach { d ->
-                        val n = opts.list("splits").count { sp -> sp.optJSONArray("days")?.let { a -> (0 until a.length()).any { a.optInt(it) == d } } ?: true }
-                        WzOption("$d days / week", "$n compatible splits", WZ.cal, days == d) { days = d; split = null }
-                    }
-                    "split" -> {
-                        // The design: availability is checked against this gym first; splits it can't run sort last, disabled, naming what they need.
-                        val blocked = splits.count { !splitOk(it.s("id")) }
-                        Text(if (avail == null) "Checking your equipment…" else "Availability checked against your equipment. Choose an available split to continue.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
-                        if (blocked > 0) Text((if (blocked == 1) "One program can’t be built with your current equipment, so it’s" else "$blocked programs can’t be built with your current equipment, so they’re") +
-                            " marked below. Add equipment in your gym settings to open ${if (blocked == 1) "it" else "them"} up.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer,
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.tertiaryContainer).padding(horizontal = 12.dp, vertical = 10.dp))
-                        splits.sortedWith(compareBy({ if (splitOk(it.s("id"))) 0 else 1 }, { if (it.s("id") == pick) 0 else 1 })).forEach { sp ->
-                            val id = sp.s("id"); val v = avail?.optJSONObject(id); val ok = splitOk(id)
-                            val note = when {
-                                !ok && v?.s("kind") == "lifts" -> "Needs equipment for: " + v.strings("items").joinToString(", ")
-                                !ok -> "Not enough exercises with your equipment" + (v?.strings("items")?.takeIf { it.isNotEmpty() }?.let { " for ${it.joinToString(", ")}" } ?: "")
-                                v?.optJSONArray("okLabels") != null -> "Works at $days days with ${v.strings("okLabels").joinToString(" or ")} sessions"
-                                v?.optJSONArray("runsAt") != null -> "Runs at " + v.strings("runsAt").joinToString(", ")
-                                else -> null
+                    "days" -> {
+                        // The prototype's big day chips; the count of splits that fit updates under them.
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            (2..6).forEach { d ->
+                                val on = days == d
+                                val r by animateDpAsState(if (on) 20.dp else 32.dp, Motion.spatialFast(), label = "dr")
+                                val bg by animateColorAsState(if (on) cs.primary else cs.surfaceContainerHigh, Motion.effects(), label = "db")
+                                Box(Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(r)).background(bg).clickable { days = d; split = null }
+                                    .semantics { role = Role.RadioButton; selected = on; contentDescription = "$d days a week" }, contentAlignment = Alignment.Center) {
+                                    Text("$d", style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp), color = if (on) cs.onPrimary else cs.onSurface)
+                                }
                             }
-                            WzOption(sp.s("name") + if (id == pick && ok) " · Recommended" else "", sp.s("blurb"), WZ.rep, id == chosenSplit, enabled = ok, note = note) { if (ok) split = id }
                         }
+                        val n = opts.list("splits").count { sp -> sp.optJSONArray("days")?.let { a -> (0 until a.length()).any { a.optInt(it) == days } } ?: true }
+                        Text("$n splits fit $days days. All of them get built and ranked for you at the end.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
-                    "session" -> sessChoices.forEach { (id, l) -> WzOption(l, "Optimized inside this time band", WZ.clock, effSession == id) { session = id } }
+                    "split" -> RankedSplits(vm, config().put("session", session), chosenSplit, { split = it }, { rankTop = it }, GOALS[goal] ?: "", cyc)
+                    "session" -> {
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SESS.forEach { (id, l) ->
+                                val on = session == id
+                                val bg by animateColorAsState(if (on) cs.primary else cs.surfaceContainerHigh, Motion.effects(), label = "sb")
+                                Box(Modifier.height(52.dp).clip(RoundedCornerShape(if (on) 16.dp else 26.dp)).background(bg).clickable { session = id }
+                                    .semantics { role = Role.RadioButton; selected = on; contentDescription = l }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
+                                    Text(SESS_SHORT[id] ?: l, style = MaterialTheme.typography.titleMedium, color = if (on) cs.onPrimary else cs.onSurface)
+                                }
+                            }
+                        }
+                        val ws = Math.round(days * (SES_MIN[session] ?: 60) / 60.0 * 17)
+                        Text("That’s about $ws working sets a week. A band, not a quota: the engine fills it only when another set is worth its fatigue.",
+                            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
                     "equipment" -> EquipmentStep(opts, equip, { equip = it }, noRack, { noRack = it }, noBodyweight, { noBodyweight = it })
                     "constraints" -> {
                         WzKicker("SUPERSETS")
@@ -411,6 +577,24 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         WzOption("Yes, add a deload", "Week ${(if (cyc) 0 else weeks) + 1} · reduced volume & load", WZ.battery, deload) { deload = true }
                         WzOption("No deload", "Train through the whole block", WZ.flame, !deload) { deload = false }
                     }
+                } }
+                // The page: its first question in full, the rest under small headings, optional ones folded.
+                val sumOf = mapOf(
+                    "constraints" to listOf(if (noSupersets) "No supersets" else "Supersets on", barbellCap?.let { "$it barbell lifts a day" } ?: "No barbell limit").joinToString(" · "),
+                    "reduce" to (reduce.filter { (focus[it] ?: 0) == 0 }.size.takeIf { it > 0 }?.let { "$it muscle${if (it == 1) "" else "s"}" } ?: "None"),
+                    "options" to listOfNotNull(if (!cyc) (if (progression == "manual") "Manual targets" else "Auto progression") else null,
+                        if (!cyc) (if (endless) "Endless" else "$weeks weeks") else null, if (!(endless && !cyc)) (if (deload) "+ deload" else "no deload") else null).joinToString(" · "))
+                val folded = setOf("constraints", "reduce", "progression", "length", "deload")
+                pg.forEachIndexed { ix, k ->
+                    when {
+                        ix == 0 -> body(k)
+                        k == "constraints" && pg.size > 1 -> WzFold("Gym limits", sumOf["constraints"]!!) { body(k) }
+                        k == "reduce" -> WzFold("Train less (optional)", sumOf["reduce"]!!) { body(k) }
+                        k in setOf("progression", "length", "deload") -> if (pg.firstOrNull { it in setOf("progression", "length", "deload") } == k)
+                            WzFold(if (cyc) "Deload" else "Program options", sumOf["options"]!!) { pg.filter { it in setOf("progression", "length", "deload") }.forEach { fk ->
+                                WzKicker(SUBHEAD[fk] ?: "", Modifier.padding(top = 6.dp)); body(fk) } }
+                        else -> { WzKicker(SUBHEAD[k] ?: "", Modifier.padding(top = 14.dp)); body(k) }
+                    }
                 }
                 // Your setup (web: WizardReviewPane)
                 val rows = buildList {
@@ -432,11 +616,12 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                     focus.filter { it.value > 0 }.takeIf { it.isNotEmpty() }?.let { f -> add("Emphasize" to f.entries.joinToString(", ") { labelOf(it.key) + if (it.value > 1) " ×${it.value}" else "" }) }
                     reduce.filter { (focus[it] ?: 0) == 0 }.takeIf { it.isNotEmpty() }?.let { r -> add("Reduce" to r.joinToString(", ") { labelOf(it) }) }
                 }
-                Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(46.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { revOpen = !revOpen }
+                // The ranked page shows the split itself; the settings summary belongs to the questions.
+                if ("split" !in pg) Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(46.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { revOpen = !revOpen }
                     .semantics { role = Role.Button; stateDescription = if (revOpen) "Expanded" else "Collapsed" }, contentAlignment = Alignment.Center) {
                     Text(if (revOpen) "Hide your setup" else "Your setup · ${rows.size} settings", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
                 }
-                AnimatedVisibility(revOpen, enter = Motion.expandIn, exit = Motion.shrinkOut) {
+                AnimatedVisibility(revOpen && "split" !in pg, enter = Motion.expandIn, exit = Motion.shrinkOut) {
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Column {
                             Text("YOUR SETUP", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp), color = cs.primary)
@@ -466,15 +651,15 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                 }
                 val bg by animateColorAsState(if (canNext) cs.primary else cs.surfaceContainerHighest, Motion.effects(), label = "next")
                 Box(Modifier.weight(1f).height(54.dp).clip(CircleShape).background(bg).clickable(enabled = canNext) { next() }.semantics { role = Role.Button }, contentAlignment = Alignment.Center) {
-                    Text(when { key == "mode" -> "Continue"; at == steps.size - 1 -> if (cyc) "Build Cycle" else "Generate Program"; else -> "Next" },
+                    Text(when { key == "mode" -> "Continue"; at == steps.size - 1 -> if (cyc) "Build this cycle" else "Build this program"; else -> "Next" },
                         style = MaterialTheme.typography.titleSmall.copy(fontSize = 16.sp, fontWeight = FontWeight.ExtraBold), color = if (canNext) cs.onPrimary else cs.onSurfaceVariant)
                 }
             }
             if (canEarly) {
                 val left = steps.size - 1 - at
-                Text((if (cyc) "Build with these settings" else "Generate with these settings") + " · $left optional ${if (left == 1) "step" else "steps"} left",
+                Text("Skip to your ranked splits" + if (left > 1) " · ${left - 1} optional ${if (left - 1 == 1) "page" else "pages"}" else "",
                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.primary, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(12.dp)).clickable { finish() }.padding(vertical = 8.dp))
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(12.dp)).clickable { step = steps.size - 1; revOpen = false }.padding(vertical = 8.dp))
             }
         }
     }

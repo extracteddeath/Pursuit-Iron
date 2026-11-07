@@ -2252,6 +2252,103 @@ export function splitOptions({ config } = {}) {
     });
     return out;
 }
+/* The prototype's ranked split recommender, on the real engine: every split this gym can run at these days is built
+   with your answers (the same generator createProgram uses), then scored on what came out —
+   coverage: each trained muscle's week-1 sets against its MEV (focus muscles against their MAV, and they count double);
+   frequency: how many days a week each muscle gets real work (2–3 is the sweet spot);
+   session fit: sets per muscle per session (enough to matter, not junk volume) and minutes against your session cap.
+   Weighted by goal as the prototype did. Cached per answer set; ~0.1 s a split. */
+const SES_CAP = { s20: 20, s40: 40, s60: 60, s90: 90, s120: 120, s120p: 150 };
+const RANK_PARTS = ['chest', 'lats', 'upper_back', 'shoulders', 'quads', 'hamstrings', 'glutes', 'biceps', 'triceps', 'calves', 'abs'];
+const WEEK_PATTERN = { 1: [0], 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 3, 4, 6], 6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6] };
+function rankKey(cfg) { return JSON.stringify(cfg) + '|' + (S.store.banned || []).join(); }
+/* Which splits to score (fast: the feasibility filter and the engine's own pick); the Kotlin side then scores them one by
+   one with rankSplit so the list fills in as it goes. */
+export function rankSplitsPlan({ config } = {}) {
+    const cfg = programConfig(config), key = rankKey(cfg);
+    if (S.rankPlanCache?.key === key) return S.rankPlanCache.out;
+    const avail = splitOptions({ config });
+    let enginePick = null; try { enginePick = recommend({ config }); } catch { enginePick = null; }
+    const ids = [], blocked = [];
+    Object.entries(E.SPLITS).filter(([, sp]) => sp.days.includes(cfg.days)).forEach(([id, sp]) => {
+        const a = avail[id] || { ok: true };
+        if (a.ok) ids.push(id); else blocked.push({ id, name: sp.name, kind: a.kind, items: a.items || [] });
+    });
+    if (enginePick && ids.includes(enginePick)) ids.splice(ids.indexOf(enginePick), 1), ids.unshift(enginePick);
+    const cap = SES_CAP[cfg.session] || 60;
+    const out = { ids, blocked, enginePick, days: cfg.days, cap, weekSets: Math.round(cfg.days * cap / 60 * 17) };
+    S.rankPlanCache = { key, out };
+    return out;
+}
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+export function rankSplit({ config, id } = {}) {
+    const cfg = programConfig(config), key = rankKey(cfg) + '#' + id;
+    S.rankCache = S.rankCache || new Map();
+    if (S.rankCache.has(key)) return S.rankCache.get(key);
+    const sp = E.SPLITS[id]; if (!sp) return null;
+    const avail = splitOptions({ config })[id] || { ok: true };
+    const cap = SES_CAP[cfg.session] || 60, r1 = (v) => Math.round(v * 10) / 10;
+    const ses = avail.okSessions?.length && !avail.okSessions.includes(cfg.session) ? avail.okSessions[0] : cfg.session;
+    let p = null;
+    try { p = E.generateNextProgramForShell({ config: { ...cfg, split: id, session: ses }, banned: S.store.banned || [], legacyExercises: EXERCISES, makeId: () => 'rank-' + E.uid() })?.program; } catch { p = null; }
+    if (!p?.days?.length) { const o = { id, name: sp.name, failed: true }; S.rankCache.set(key, o); return o; }
+    const focus = Object.keys(cfg.focus || {}).filter((k) => cfg.focus[k] > 0);
+    let vol = {}; try { vol = E.weeklyVolume(p, 1) || {}; } catch { vol = {}; }
+    const daysHit = {}, mins = []; let total = 0, heavy = 0;
+    p.days.forEach((d) => {
+        let bk = []; try { bk = E.dayMuscleBreakdown(p, d, 1) || []; } catch { bk = []; }
+        bk.forEach((e) => { if (e.sets >= 1) daysHit[e.part] = (daysHit[e.part] || 0) + 1; });
+        let m = null; try { m = E.estimateMinutes(p, d, 1); } catch { m = null; } if (m) mins.push(m);
+        d.exercises.forEach((_x, slot) => { try { const xid = E.exerciseAt(p, d, slot, 1), c = E.computeCell(p, d, xid, slot, 1), n = Number(c?.sets) || 0, lo = parseInt(String(c?.reps ?? '').split(/[-–]/)[0], 10);
+            total += n; if (lo && lo <= 5) heavy += n; } catch { /* skip */ } });
+    });
+    const lm = (pt) => { try { return E.landmarkFor(pt, cfg.experience || 'intermediate', p); } catch { return { mev: 6, mrv: 20 }; } };
+    const mav = (pt, l) => { const v = E.mavFor?.(pt, p); return v || (l.mev + l.mrv) / 2; };
+    let covSum = 0, covW = 0; const under = [];
+    RANK_PARTS.forEach((pt) => {
+        const l = lm(pt), v = Number(vol[pt]) || 0, w = focus.includes(pt) ? 2 : 1;
+        covSum += clamp01(v / Math.max(1, mav(pt, l))) * w; covW += w;
+        if (l.mev > 0 && v < l.mev - 0.25) under.push(E.PART_LABEL?.[pt] || pt);
+    });
+    const cov = covW ? covSum / covW : 0;
+    const freqs = RANK_PARTS.map((pt) => daysHit[pt] || 0), fq = freqs.reduce((x, y) => x + y, 0) / freqs.length;
+    const fs = fq < 2 ? clamp01(1 - (2 - fq) * 0.3) : fq <= 3 ? 1 : clamp01(1 - (fq - 3) * 0.1);
+    const weekSets = RANK_PARTS.reduce((x, pt) => x + (Number(vol[pt]) || 0), 0), exposures = freqs.reduce((x, y) => x + y, 0);
+    const per = exposures ? weekSets / exposures : 0;
+    const ds = per < 2 ? clamp01(per / 2) : per <= 6 ? 1 : clamp01(1 - (per - 6) * 0.08);
+    const avgMin = mins.length ? mins.reduce((x, y) => x + y, 0) / mins.length : 0, over = mins.filter((m) => m > cap + 5).length;
+    const fill = avgMin / cap;
+    const us = fill < 0.7 ? clamp01(fill / 0.7) : fill <= 1.0 ? 1 : clamp01(1 - (fill - 1) * 2.5);
+    const fit = ds * 0.5 + us * 0.5;
+    const h = total ? heavy / total : 0;
+    const gf = cfg.goal === 'strength' ? clamp01(h / 0.35) : cfg.goal === 'hypertrophy' ? clamp01(1 - Math.max(0, h - 0.2) * 1.6) : clamp01(1 - Math.abs(h - 0.25) * 2);
+    const W = cfg.goal === 'strength' ? [0.15, 0.3, 0.2, 0.35] : cfg.goal === 'hypertrophy' ? [0.35, 0.25, 0.2, 0.2] : [0.25, 0.25, 0.2, 0.3];
+    const raw = 100 * (W[0] * cov + W[1] * fs + W[2] * fit + W[3] * gf);
+    const sched = p.schedule || {}, hasSched = Object.keys(sched).length > 0, wd = WEEK_PATTERN[p.days.length] || WEEK_PATTERN[cfg.days];
+    const week = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((w, k) => {
+        const dId = hasSched ? sched[String((k + 1) % 7)] : null;
+        const day = hasSched ? p.days.find((d) => d.id === dId) : (wd && wd.indexOf(k) >= 0 ? p.days[wd.indexOf(k)] : null);
+        return { wd: w, name: day ? String(day.label || '').replace(/ — .*/, '') : 'Rest', on: !!day };
+    });
+    const heavyPct = Math.round(h * 100);
+    const focusNote = focus.map((pt) => { const l = lm(pt), t = mav(pt, l), v = Number(vol[pt]) || 0; return `${E.PART_LABEL?.[pt] || pt} gets ${r1(v)} sets a week (${Math.round(v / t * 100)}% of its MAV).`; });
+    const o = { id, name: sp.name, blurb: sp.blurb || '', score: Math.max(1, Math.min(100, Math.round(raw))), raw: r1(raw),
+        freq: r1(fq), per: r1(per), minutes: Math.round(avgMin), cap, over, sessions: p.days.length, workSets: total, heavyPct, under,
+        session: ses, sessionMoved: ses !== cfg.session, week,
+        parts: { coverage: Math.round(cov * 100), frequency: Math.round(fs * 100), fit: Math.round(fit * 100), goal: Math.round(gf * 100) },
+        why: [
+            `Each muscle about ${r1(fq)}× a week${fq >= 2 && fq <= 3 ? ', the frequency sweet spot' : fq < 2 ? ', below the 2× that suits most lifters' : ''}.`,
+            `~${r1(per)} sets per muscle per session${per > 6 ? ', on the heavy side' : per < 2 ? ', thin' : ', enough to count without junk volume'}.`,
+            over ? `${over} of ${p.days.length} sessions run past your ${cap}-minute cap (about ${Math.round(avgMin)} min).` : `Sessions about ${Math.round(avgMin)} min of your ${cap}.`,
+            under.length ? `Under minimum effective volume: ${under.join(', ')}.` : 'Every trained muscle reaches its minimum effective volume.',
+            cfg.goal === 'hypertrophy' ? `${100 - heavyPct}% of sets in the 6–20 rep range.` : `${heavyPct}% of sets are heavy (5 reps or fewer).`,
+            ...focusNote,
+        ],
+        line: `${r1(fq)}×/wk per muscle · ~${r1(per)} sets/session · ~${Math.round(avgMin)} min` + (cfg.goal === 'hypertrophy' ? '' : ` · ${heavyPct}% heavy`) };
+    S.rankCache.set(key, o);
+    if (S.rankCache.size > 120) S.rankCache.delete(S.rankCache.keys().next().value);
+    return o;
+}
 /* App.js handleGenerate: banned lifts honoured, the route stamped, the equipment remembered, and a
    unit picked here goes through switchUnit once a unit has been chosen (so loads convert). */
 function adoptConfigUnit(cfgUnit) {

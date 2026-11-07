@@ -419,6 +419,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun recommend(config: JSONObject): String? = call("recommend", jsonOf("config" to config)) as? String
     /** App.js Wizard split step: which splits this gym can run (lifts a contract split needs, lengths it runs at). */
     suspend fun splitOptions(config: JSONObject): JSONObject? = obj("splitOptions", jsonOf("config" to config))
+    /** The prototype's ranked splits on the real engine: which splits to build and score, then each one's score. */
+    suspend fun rankSplitsPlan(config: JSONObject): JSONObject? = obj("rankSplitsPlan", jsonOf("config" to config))
+    suspend fun rankSplit(config: JSONObject, id: String): JSONObject? = obj("rankSplit", jsonOf("config" to config, "id" to id))
 
     fun createProgram(config: JSONObject) = launchCore {
         val r = working("Building your program") { obj("createProgram", jsonOf("config" to config)) } ?: return@launchCore

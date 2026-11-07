@@ -122,7 +122,6 @@ class NativeKotlinAcceptedFutureWeekLoadHandoff(
                 NativeAcceptedFutureWeekLoadRefusal.AUDITED_OPTION_MISMATCH)
             if(source.blockId!=block.blockId ||
                 expected.sets!=changed.sets.map{it.prescription} ||
-                proposed.weekOverrides[blockId].orEmpty().size!=1 ||
                 projected.original!=source ||
                 projected.preview.slots.size!=source.slots.size)
                 return@withOwnerTransaction no(

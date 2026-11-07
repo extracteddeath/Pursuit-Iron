@@ -82,7 +82,8 @@ class CustomSameBlockLoadContinuityDomainTest {
         val unknown=completed(snap=snapshot(2,listOf(25,30),goal=null),
             actualRir=listOf(null,null))
         assertEquals(CustomSameBlockLoadStatus.EFFORT_UNAVAILABLE,
-            review(history=listOf(unknown)).status)
+            review(next=snapshot(3,listOf(40,45),goal=null),
+                history=listOf(unknown)).status)
         assertEquals(CustomSameBlockLoadStatus.NEAR_FAILURE,
             review(history=listOf(completed(actualRir=listOf(0,2)))).status)
     }

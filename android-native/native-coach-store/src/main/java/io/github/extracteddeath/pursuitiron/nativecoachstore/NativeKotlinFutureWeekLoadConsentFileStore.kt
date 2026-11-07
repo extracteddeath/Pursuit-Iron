@@ -82,7 +82,7 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
     private val identity:NativeKotlinCurrentIdentity,
     private val offer:(
         String,CustomCoachAuditInputs,String,String,Int,Int,String,
-        CoachReadiness,Boolean,BigDecimal
+        CoachReadiness,Boolean,BigDecimal,String?
     )->NativeFutureWeekConsentCandidate?
 ) {
     constructor(
@@ -90,9 +90,9 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
         identity:NativeKotlinCurrentIdentity,
         reviewer:NativeKotlinCustomFutureWeekLoadOptionReview
     ):this(directory,fence,identity,
-        {key,inputs,cycle,block,week,weekday,slot,readiness,restricted,limit->
+        {key,inputs,cycle,block,week,weekday,slot,readiness,restricted,limit,prepared->
             (reviewer.review(key,inputs,week,weekday,slot,
-                readiness,restricted,limit)
+                readiness,restricted,limit,prepared)
                 as? NativeFutureWeekLoadOptionResult.Ready)?.takeIf{
                 it.option.proposedCycle.cycleId==cycle &&
                     it.option.proposedCycle.blocks.any{b->b.blockId==block}
@@ -231,9 +231,11 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
     private fun candidate(
         key:String,inputs:CustomCoachAuditInputs,cycle:String,block:String,
         week:Int,day:Int,slot:String,readiness:CoachReadiness,
-        restricted:Boolean,limit:BigDecimal
+        restricted:Boolean,limit:BigDecimal,
+        permittedPreparedWorkoutId:String?=null
     ):NativeFutureWeekConsentCandidate? {
-        val c=offer(key,inputs,cycle,block,week,day,slot,readiness,restricted,limit)
+        val c=offer(key,inputs,cycle,block,week,day,slot,readiness,restricted,
+            limit,permittedPreparedWorkoutId)
             ?:return null
         return c.takeIf{it.cycleId==cycle&&it.blockId==block&&
             hex.matches(it.fingerprint)&&it.historyRevision>=0&&
@@ -336,10 +338,13 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
     /** A receipt is current only while a fresh full-cycle review reproduces it. */
     fun readCurrent(
         key:String,cycle:String,block:String,
-        inputs:CustomCoachAuditInputs,week:Int,day:Int,slot:String
+        inputs:CustomCoachAuditInputs,week:Int,day:Int,slot:String,
+        permittedPreparedWorkoutId:String?=null
     ):NativeFutureWeekConsentRead {
         fun no(r:NativeFutureWeekConsentRefusal)=NativeFutureWeekConsentRead.Rejected(r)
-        if(!valid(key,cycle,block,week,day,slot))
+        if(!valid(key,cycle,block,week,day,slot) ||
+            (permittedPreparedWorkoutId!=null &&
+                !id.matches(permittedPreparedWorkoutId)))
             return no(NativeFutureWeekConsentRefusal.INVALID_SELECTION)
         return runCatching{fence.withOwnerTransaction(key){
             val signed=owner(key)?:return@withOwnerTransaction no(
@@ -356,7 +361,8 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
                 return@withOwnerTransaction no(
                     NativeFutureWeekConsentRefusal.NOT_AUTHORIZED)
             val c=candidate(key,inputs,cycle,block,week,day,slot,r.readiness,
-                r.movementRestricted,r.maximumAuthorizedIncrease)
+                r.movementRestricted,r.maximumAuthorizedIncrease,
+                permittedPreparedWorkoutId)
                 ?:return@withOwnerTransaction no(
                     NativeFutureWeekConsentRefusal.STALE_REVIEW)
             val now=receipt(signed,cycle,block,r.recordRevision,week,day,slot,

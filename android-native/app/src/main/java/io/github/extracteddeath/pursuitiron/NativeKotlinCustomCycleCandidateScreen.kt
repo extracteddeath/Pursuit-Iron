@@ -402,6 +402,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     source=state.reviewedSourceSetup,
                     sourceRevision=state.sourceRevision,
                     busy=busy,
+                    onDraftChanged={controller.markPolicyInputsChanged()},
                     onReview={reviewedInputs->
                         controller.auditFullCycle(reviewedInputs)
                     })

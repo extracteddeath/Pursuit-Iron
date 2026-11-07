@@ -270,6 +270,11 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
                 return@withOwnerTransaction no(
                     NativeFutureWeekConsentRefusal.CORRUPT_RECORD)
             }
+            if(current?.receipt!=null &&
+                (current.receipt.ownerKey!=key ||
+                    current.receipt.athleteId!=signed.athleteId))
+                return@withOwnerTransaction no(
+                    NativeFutureWeekConsentRefusal.NOT_AUTHORIZED)
             val c=candidate(key,inputs,cycle,block,week,day,slot,
                 readiness,restricted,limit)
                 ?:return@withOwnerTransaction no(
@@ -304,6 +309,11 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
                 return@withOwnerTransaction no(
                     NativeFutureWeekConsentRefusal.CORRUPT_RECORD)
             }
+            if(previous?.receipt!=null &&
+                (previous.receipt.ownerKey!=key ||
+                    previous.receipt.athleteId!=signed.athleteId))
+                return@withOwnerTransaction no(
+                    NativeFutureWeekConsentRefusal.NOT_AUTHORIZED)
             if((previous?.revision?:0)!=expectedRecordRevision)
                 return@withOwnerTransaction no(
                     NativeFutureWeekConsentRefusal.STALE_REVISION)
@@ -353,6 +363,8 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
                 r.readiness,r.movementRestricted,r.maximumAuthorizedIncrease,c)
             if(now!=r)return@withOwnerTransaction no(
                 NativeFutureWeekConsentRefusal.STALE_REVIEW)
+            if(owner(key)!=signed)return@withOwnerTransaction no(
+                NativeFutureWeekConsentRefusal.NOT_AUTHORIZED)
             NativeFutureWeekConsentRead.Current(r)
         }}.getOrElse{no(NativeFutureWeekConsentRefusal.STORAGE_UNAVAILABLE)}
     }

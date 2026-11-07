@@ -399,7 +399,11 @@ class CoachSessionPrescriptionDomainTest {
     }
 
     @Test fun sharedPurposeProgressionCannotClaimDayWithOwnPrescription() {
-        val approved=request()
+        // Fix all visits at two sets so any refusal reflects independent
+        // day-level load scope, not Composer's variable set allocation.
+        val approved=request(options=listOf(press,row).map {
+            it.copy(minimumSetsPerVisit=2,maximumSetsPerVisit=2)
+        })
         val source=KotlinTrainingSourceRevision(
             "athlete-1",4,"program-1",8,"gym-1",3,"catalog-5","coach-rules-2")
         fun completed(id:String)=ProgressionWorkoutEvidence(
@@ -430,7 +434,8 @@ class CoachSessionPrescriptionDomainTest {
         assertTrue(unsafe.affectedDayIndices.isEmpty())
 
         val scoped=review(allPolicies,1)
-        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+        assertEquals(scoped.toString(),
+            CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
             scoped.status)
         assertEquals(listOf(1),scoped.affectedDayIndices)
         assertEquals(n("35"),scoped.candidateLoad)
@@ -454,7 +459,8 @@ class CoachSessionPrescriptionDomainTest {
         // Without day-specific overrides, a deliberately shared-purpose
         // change may legitimately affect BOTH matched training days.
         val broad=review(policies(),null)
-        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+        assertEquals(broad.toString(),
+            CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
             broad.status)
         assertEquals(listOf(1,2),broad.affectedDayIndices)
         val shared=CoachSessionPrescriptionDomain.draft(

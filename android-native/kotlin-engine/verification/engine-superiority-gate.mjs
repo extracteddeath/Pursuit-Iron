@@ -3,6 +3,7 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { verifyRecordedProgressionEvidence, caseIds } from './paired-progression.mjs';
+import { verifyRecordedFunctionalEvidence, caseIds as functionalCaseIds } from './paired-functional.mjs';
 
 /**
  * Independent comparative release gate. It intentionally does not derive a
@@ -154,15 +155,21 @@ if (args.has('--self-test')) {
   const auditOnly=args.has('--audit') && !args.has('--release');
   const provenance=verifyRecordedProgressionEvidence(evidence,
     { allowStaleProvenance: auditOnly });
+  const functional=verifyRecordedFunctionalEvidence(evidence,
+    { allowStaleProvenance: auditOnly });
   // Stale source results remain tamper-verified as archival evidence, but
   // cannot count as a CURRENT measured pair in an audit or release score.
-  const currentEvidence=provenance.currentNativeTree ? evidence : {
+  const staleIds=new Set([
+    ...(provenance.currentNativeTree?[]:caseIds),
+    ...(functional.currentNativeTree?[]:functionalCaseIds)]);
+  const currentEvidence={
     ...evidence,
     measurements:evidence.measurements.filter(m =>
-      !(m.proof==='headless' && caseIds.includes(m.caseId)))
+      !(m.proof==='headless' && staleIds.has(m.caseId)))
   };
   const verdict=reviewComparison(cases, currentEvidence);
-  verdict.staleRecordedHeadlessPairs=provenance.currentNativeTree ? 0 : provenance.recordedPairs;
+  verdict.staleRecordedHeadlessPairs=(provenance.currentNativeTree?0:provenance.recordedPairs)+
+    (functional.currentNativeTree?0:functional.recordedPairs);
   if(verdict.staleRecordedHeadlessPairs)
     verdict.blockers.unshift('Recorded Kotlin headless measurements have outdated engine or comparison-runner provenance; remeasure before certification.');
   console.log(JSON.stringify(verdict, null, 2));

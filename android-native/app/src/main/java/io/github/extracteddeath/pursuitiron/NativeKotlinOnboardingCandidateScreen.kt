@@ -124,7 +124,8 @@ private fun displayEnum(value:Enum<*>):String =
  */
 @Composable
 internal fun NativeKotlinOnboardingCandidateScreen(
-    controller:NativeKotlinGymSourceController
+    controller:NativeKotlinGymSourceController,
+    onContinue:()->Unit={}
 ) {
     val sourceState by controller.state.collectAsStateWithLifecycle()
     LaunchedEffect(controller) { controller.open() }
@@ -245,6 +246,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                 Text("Native source active",style=MaterialTheme.typography.titleLarge)
                 Text("Current reviewed athlete: ${existing.athleteId}. Source revision ${existing.revision}.")
                 Text("Continue to the gym or custom-program editor. No new profile or equipment is created here.")
+                Button(onClick=onContinue,enabled=!sourceState.busy) {Text("Continue to my program")}
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),

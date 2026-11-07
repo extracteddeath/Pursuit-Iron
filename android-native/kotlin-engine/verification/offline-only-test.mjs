@@ -23,6 +23,13 @@ const candidate=read(appRoot+'NativeKotlinCandidateHost.kt');
 const localAthlete=read(appRoot+'AppPrivateKotlinLocalAthlete.kt');
 const candidateScreen=read(appRoot+'NativeKotlinWorkoutCandidateScreen.kt');
 const sessionController=read(appRoot+'NativeKotlinSessionController.kt');
+const debugActivity=read('android-native/app/src/debug/java/io/github/extracteddeath/pursuitiron/KotlinEnginePreviewActivity.kt');
+const debugManifest=read('android-native/app/src/debug/AndroidManifest.xml');
+assert.ok(debugManifest.includes('.KotlinEnginePreviewActivity')&&debugManifest.includes('android.intent.category.LAUNCHER'));
+assert.ok(!read('android-native/app/src/main/AndroidManifest.xml').includes('KotlinEnginePreviewActivity'),
+  'Kotlin testing entry must remain debug-only until product cutover');
+assert.doesNotMatch(debugActivity,/nativeRuntime|NativeRuntimeHost|CanonicalJsSandboxProbe/,
+  'Kotlin launcher cannot start or switch into the JavaScript runtime');
 assert.ok(application.includes('by lazy { NativeKotlinCandidateHost(applicationContext) }'),
   'Kotlin candidate must not start or enroll anyone at Application startup');
 assert.doesNotMatch(mainActivity,

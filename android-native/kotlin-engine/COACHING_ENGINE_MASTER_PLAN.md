@@ -3,6 +3,12 @@
 **Status: architectural implementation contract, NOT an implemented or certified adaptive engine.**
 **Scope:** isolated Kotlin training engine, native data authority and the eventual fully native Jetpack Compose product. No edit to the production JavaScript engine or the other developer's Android branch is authorized by this plan.
 
+**Current delivery priority:** [the usable app milestone](../USABLE_APP_MILESTONE.md)
+now governs sequencing. Complete the visible setup → generated program →
+workout → history → next-workout loop and record direct comparisons before
+adding more narrow consent variants. Passing internal tests alone is not a
+usable app or demonstrated engine superiority.
+
 ## 0. North star and hard boundaries
 
 The finished engine is a coach that produces useful, individual, executable programs **before the first workout**, adapts them from authenticated performance and user feedback, and preserves every deliberate athlete choice. A “safe rejection” is necessary but is not the finished product: when evidence is sufficient, the engine must offer a specific, feasible next action. Fitness outcomes are individual and uncertain; “best” means the best **defensible option among checked candidates for this athlete**, not a globally optimal or clinically guaranteed program.

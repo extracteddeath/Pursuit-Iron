@@ -15,6 +15,7 @@ export const caseIds = ['dp-mixed-overload', 'dp-uniform-failure', 'dp-earned-st
 export const runnerPaths = [fixturePath,
   'android-native/kotlin-engine/verification/paired-progression.mjs',
   'android-native/kotlin-engine/verification/run-paired-progression.mjs',
+  'android-native/kotlin-engine/verification/run-jvm-probe.mjs',
   'android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/PairedProgressionProbe.kt',
   'android-native/kotlin-engine/build.gradle.kts'];
 export const sha256 = value => createHash('sha256').update(value).digest('hex');

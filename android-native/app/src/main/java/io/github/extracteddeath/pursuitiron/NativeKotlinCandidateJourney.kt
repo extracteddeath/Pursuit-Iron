@@ -20,19 +20,18 @@ import kotlinx.coroutines.withContext
  * Source-only KOTLIN-OWNED journey, intentionally not substituted for the
  * live app's NativeRuntimeHost or legacy-backed MainActivity screen.
  *
- * Can be mounted in an isolated native UI test or an explicitly gated R&D
- * launcher later. Shared controllers keep a single app-private source owner
+ * Mounted by the debug-only Kotlin Lab launcher. Shared controllers keep a single app-private source owner
  * while screen navigation preserves authored draft revisions.
  */
 private enum class KotlinCandidateDestination(val label:String) {
     ONBOARD("My setup"),GYM("My gym"),PROGRAM("My program"),
-    COACH("Coach"),FUTURE("Future weeks"),SETTINGS("Settings"),TRAIN("Train")
+    COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),SETTINGS("Settings"),TRAIN("Train")
 }
 
 @Composable
 internal fun NativeKotlinCandidateJourney() {
     val context=LocalContext.current.applicationContext
-    val host=remember(context){NativeKotlinCandidateHost(context)}
+    val host=remember(context){(context as PursuitIronApplication).kotlinCandidate}
     val gymController=remember(host){NativeKotlinGymSourceController(host)}
     val cycleController=remember(host){NativeKotlinCustomCycleController(host)}
     val sessionController=remember(host){NativeKotlinSessionController(host)}
@@ -69,7 +68,8 @@ internal fun NativeKotlinCandidateJourney() {
             savedScreens.SaveableStateProvider(destination.name) {
                 when(destination) {
                     KotlinCandidateDestination.ONBOARD ->
-                        NativeKotlinOnboardingCandidateScreen(gymController)
+                        NativeKotlinOnboardingCandidateScreen(gymController,
+                            onContinue={destination=KotlinCandidateDestination.PROGRAM})
                     KotlinCandidateDestination.GYM ->
                         NativeKotlinGymSourceCandidateScreen(gymController)
                     KotlinCandidateDestination.PROGRAM ->
@@ -91,6 +91,8 @@ internal fun NativeKotlinCandidateJourney() {
                     KotlinCandidateDestination.SETTINGS ->
                         NativeKotlinCoachSettingsScreen(host,
                             onBack={destination=KotlinCandidateDestination.COACH})
+                    KotlinCandidateDestination.HISTORY ->
+                        NativeKotlinCandidateHistoryScreen(host)
                     KotlinCandidateDestination.TRAIN ->
                         NativeKotlinCandidateTrainEntry(host,sessionController,
                             selectedCustomWorkoutId,
@@ -123,6 +125,7 @@ private fun NativeKotlinCandidateTrainEntry(
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var showIdEntry by rememberSaveable {mutableStateOf(false)}
     val scope=rememberCoroutineScope()
     val valid = entryId.matches(
         Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
@@ -229,18 +232,21 @@ private fun NativeKotlinCandidateTrainEntry(
                         color=MaterialTheme.colorScheme.error)
                 }
                 HorizontalDivider()
-                Text("Engineering fallback: enter a known native workout ID.",
-                    style=MaterialTheme.typography.bodySmall)
-                OutlinedTextField(
-                    value=entryId,
-                    onValueChange={entryId=it},
-                    singleLine=true,
-                    label={Text("Approved native workout ID")},
-                    isError=entryId.isNotBlank() && !valid,
-                    modifier=Modifier.fillMaxWidth())
-                PursuitPrimaryAction(
-                    "Open workout by ID",enabled=valid && !searching
-                ) { selectedId=entryId }
+                TextButton(onClick={showIdEntry=!showIdEntry}) {
+                    Text(if(showIdEntry)"Hide workout ID entry" else "Open by workout ID")
+                }
+                if(showIdEntry) {
+                    OutlinedTextField(
+                        value=entryId,
+                        onValueChange={entryId=it},
+                        singleLine=true,
+                        label={Text("Approved native workout ID")},
+                        isError=entryId.isNotBlank() && !valid,
+                        modifier=Modifier.fillMaxWidth())
+                    PursuitPrimaryAction(
+                        "Open workout by ID",enabled=valid && !searching
+                    ) { selectedId=entryId }
+                }
             }
         }
     } else {

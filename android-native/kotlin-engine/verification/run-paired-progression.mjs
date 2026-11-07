@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { runJvmProbe } from './run-jvm-probe.mjs';
 import { root, fixturePath, artifactPath, evidencePath, sourcePath, runnerPaths, caseIds,
   sha256, scenarioDigest, git, parseFixture, grade, verifyBundle,
   verifyRecordedProgressionEvidence } from './paired-progression.mjs';
@@ -20,14 +20,8 @@ assert.equal(git(root, 'status', '--porcelain', '--untracked-files=all', '--', s
 const candidateCommit = git(root, 'rev-parse', 'HEAD');
 const nativeOutput = resolve(dirname(output), 'paired-progression-native.json');
 mkdirSync(dirname(output), { recursive: true });
-const gradle = value('--gradle', 'gradle');
-// Host-specific proxy/trust options can be supplied locally but are never
-// persisted into public artifacts or substituted for a real engine result.
-const extra = JSON.parse(process.env.PURSUIT_COMPARISON_GRADLE_ARGS || '[]');
-assert.ok(Array.isArray(extra) && extra.every(v => typeof v === 'string'));
-execFileSync(gradle, ['-p', resolve(root, 'android-native'), ':kotlin-engine:runPairedProgressionProbe',
-  `-PcomparisonInput=${fixtureFile}`, `-PcomparisonOutput=${nativeOutput}`,
-  '--no-daemon', '--console=plain', '--max-workers=2', ...extra], { cwd: root, stdio: 'inherit' });
+runJvmProbe({root,args,probe:'PairedProgressionProbe',task:'runPairedProgressionProbe',
+  input:fixtureFile,output:nativeOutput});
 const native = JSON.parse(readFileSync(nativeOutput, 'utf8'));
 assert.equal(native.fixtureDigest, fixture.fixtureDigest);
 assert.deepEqual(native.results.map(r => r.caseId), caseIds);

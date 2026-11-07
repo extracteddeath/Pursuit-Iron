@@ -210,11 +210,18 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                         it.basis!=physical.basis ||
                         !same(it.value,loaded.first().value)
                 } || !same(loaded.first().value,
-                    advice.observedStraightSetLoad))
+                    advice.observedStraightSetLoad
+                        ?:return@withOwnerTransaction no(
+                            NativeFutureWeekLoadRefusal.NOT_EARNED)))
                 return@withOwnerTransaction no(
                     NativeFutureWeekLoadRefusal.PRESCRIPTION_CHANGED)
             val current=loaded.first().value
+            // Kotlin cannot smart-cast properties on cross-module DTOs.
+            // Local non-null bindings also prevent uncertain evidence from
+            // entering the physical stock check.
             val candidate=advice.loadReviewCandidate
+                ?:return@withOwnerTransaction no(
+                    NativeFutureWeekLoadRefusal.NOT_EARNED)
             if(physical==null || candidate<=current ||
                 candidate.subtract(current)>maxAuthorizedIncrease)
                 return@withOwnerTransaction no(
@@ -223,9 +230,11 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                 physical,current,physical.unit)
             val nextPhysical=EquipmentLoadDomain.inspect(
                 physical,candidate,physical.unit)
+            val nextAvailable=(inspected as? LoadInspection.Confirmed)
+                ?.nextAbove
             if(inspected !is LoadInspection.Confirmed ||
-                !inspected.exact || inspected.nextAbove==null ||
-                !same(inspected.nextAbove,candidate) ||
+                !inspected.exact || nextAvailable==null ||
+                !same(nextAvailable,candidate) ||
                 nextPhysical !is LoadInspection.Confirmed ||
                 !nextPhysical.exact)
                 return@withOwnerTransaction no(

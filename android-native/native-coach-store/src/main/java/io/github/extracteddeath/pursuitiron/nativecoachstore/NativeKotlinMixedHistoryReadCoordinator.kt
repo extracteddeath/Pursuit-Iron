@@ -606,6 +606,12 @@ class NativeKotlinMixedHistoryReadCoordinator(
                 if(current.storageRevision != intent.expectedApprovalRevision)
                     return@withOwnerTransaction reject(
                         NativeKotlinCoachAcceptanceRefusal.APPROVAL_CHANGED)
+                // An accepted personalized rep grant is a separate user
+                // decision. Never silently replace it with a new load.
+                if(current.acceptedRepTargets!=null &&
+                    !intent.allowSupersedingAcceptedReps)
+                    return@withOwnerTransaction reject(
+                        NativeKotlinCoachAcceptanceRefusal.REP_APPROVAL_SUPERSESSION_NOT_CONFIRMED)
                 if(authoringStore != null) {
                     val source=(authoringStore.read(owner)
                         as? NativeAuthoringSourceRead.Found)?.source

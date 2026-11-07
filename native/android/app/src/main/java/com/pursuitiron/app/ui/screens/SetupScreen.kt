@@ -236,7 +236,7 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
             val on = x.s("id") == hero.s("id")
             val bg by animateColorAsState(if (on) cs.secondaryContainer else cs.surfaceContainerLow, Motion.effects(), label = "rk")
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(bg).border(if (on) 2.dp else 0.dp, if (on) cs.primary else Color.Transparent, RoundedCornerShape(20.dp))
-                .clickable { onPick(x.s("id")) }.semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on; contentDescription = "Rank ${k + 1}: ${x.s("name")}, score ${x.i("score")}. ${x.s("line")}" }
+                .clickable { onPick(x.s("id")) }.semantics(mergeDescendants = true) { role = Role.RadioButton; selected = on; contentDescription = "Rank ${k + 1}: ${x.s("name")}, score ${x.i("score")}. ${x.s("tagline")}. ${x.s("line")}" }
                 .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(32.dp).clip(if (k < 3) RoundedCornerShape(11.dp) else CircleShape).background(if (k == 0) cs.primary else if (k < 3) cs.primaryContainer else cs.surfaceContainerHigh), contentAlignment = Alignment.Center) {
                     Text("${k + 1}", style = MaterialTheme.typography.labelLarge, color = if (k == 0) cs.onPrimary else if (k < 3) cs.onPrimaryContainer else cs.onSurface)
@@ -250,6 +250,8 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
                     Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(cs.surfaceContainerHighest)) {
                         Box(Modifier.fillMaxWidth(w).fillMaxHeight().clip(CircleShape).background(if (k == 0) cs.primary else cs.onSurfaceVariant.copy(alpha = 0.45f)))
                     }
+                    // What the split is, then its numbers: several methods share a first week, so the tagline is what tells them apart.
+                    x.s("tagline").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 17.sp), color = cs.onSurface, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                     Text(x.s("line") + if (x.list("under").isNotEmpty()) " · low: " + x.strings("under").joinToString(", ") else "",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant, maxLines = 2)
                 }

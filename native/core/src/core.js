@@ -2269,6 +2269,20 @@ export function splitOptions({ config } = {}) {
    Weighted by goal as the prototype did. Cached per answer set; ~0.1 s a split. */
 const SES_CAP = { s20: 20, s40: 40, s60: 60, s90: 90, s120: 120, s120p: 150 };
 const RANK_PARTS = ['chest', 'lats', 'upper_back', 'shoulders', 'quads', 'hamstrings', 'glutes', 'biceps', 'triceps', 'calves', 'abs'];
+/* What each split's own method is for, beyond the week it lays out. Several named methods build the same first week as a
+   generic split and differ in how they load and progress (waves off a training max, tiers, heavy/light days), which week-1
+   numbers can't see: the goal fit leans on this so a strength method wins a strength goal and a tie isn't a coin toss. */
+const SPLIT_INTENT = { five_three_one: 'strength', five31_beginner: 'strength', strength_fb: 'strength', texas: 'strength', gzclp: 'strength',
+    rippler: 'strength', sbd_power: 'strength', academy_prep: 'niche', jt: 'power', phul: 'power', phat: 'power', hybrid: 'power',
+    bro: 'size', ppla: 'size', ula: 'size', arnold: 'size', glute_focus: 'glute', torso_limbs: 'size' };
+const INTENT_FIT = { strength: { strength: 1, power: 0.97, size: 0.9, '': 0.94 }, hypertrophy: { strength: 0.88, power: 0.97, size: 1, '': 1 },
+    both: { strength: 0.95, power: 1, size: 0.95, '': 0.97 } };
+// Specialist splits fit only when you ask for what they specialise in.
+const intentFit = (intent, cfg) => intent === 'niche' ? 0.85 : intent === 'glute' ? ((cfg.focus?.glutes || 0) > 0 ? 1 : 0.92)
+    : ((INTENT_FIT[cfg.goal] || INTENT_FIT.both)[intent] ?? 1);
+const INTENT_WHY = { strength: 'Built around heavy main lifts that progress on their own scheme.', power: 'Heavy strength work and higher-rep size work in the same week.',
+    size: 'Organised to give lagging or specific muscles fresh, dedicated work.', glute: 'Hip-dominant: a hinge or thrust leads every lower day.',
+    niche: 'A specialist program for the law-enforcement academy fitness test.' };
 const WEEK_PATTERN = { 1: [0], 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 3, 4, 6], 6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6] };
 function rankKey(cfg) { return JSON.stringify(cfg) + '|' + (S.store.banned || []).join(); }
 /* Which splits to score (fast: the feasibility filter and the engine's own pick); the Kotlin side then scores them one by
@@ -2330,7 +2344,9 @@ export function rankSplit({ config, id } = {}) {
     const us = fill < 0.7 ? clamp01(fill / 0.7) : fill <= 1.0 ? 1 : clamp01(1 - (fill - 1) * 2.5);
     const fit = ds * 0.5 + us * 0.5;
     const h = total ? heavy / total : 0;
-    const gf = cfg.goal === 'strength' ? clamp01(h / 0.35) : cfg.goal === 'hypertrophy' ? clamp01(1 - Math.max(0, h - 0.2) * 1.6) : clamp01(1 - Math.abs(h - 0.25) * 2);
+    const intent = SPLIT_INTENT[id] || '';
+    const gf = (cfg.goal === 'strength' ? clamp01(h / 0.35) : cfg.goal === 'hypertrophy' ? clamp01(1 - Math.max(0, h - 0.2) * 1.6) : clamp01(1 - Math.abs(h - 0.25) * 2))
+        * intentFit(intent, cfg);
     const W = cfg.goal === 'strength' ? [0.15, 0.3, 0.2, 0.35] : cfg.goal === 'hypertrophy' ? [0.35, 0.25, 0.2, 0.2] : [0.25, 0.25, 0.2, 0.3];
     const raw = 100 * (W[0] * cov + W[1] * fs + W[2] * fit + W[3] * gf);
     const sched = p.schedule || {}, hasSched = Object.keys(sched).length > 0, wd = WEEK_PATTERN[p.days.length] || WEEK_PATTERN[cfg.days];
@@ -2341,17 +2357,19 @@ export function rankSplit({ config, id } = {}) {
     });
     const heavyPct = Math.round(h * 100);
     const focusNote = focus.map((pt) => { const l = lm(pt), t = mav(pt, l), v = Number(vol[pt]) || 0; return `${E.PART_LABEL?.[pt] || pt} gets ${r1(v)} sets a week (${Math.round(v / t * 100)}% of its sweet spot).`; });
-    const o = { id, name: sp.name, blurb: sp.blurb || '', score: Math.max(1, Math.min(100, Math.round(raw))), raw: r1(raw),
+    const tagline = String(sp.blurb || '').split(/(?<=\.)\s|\s—\s|;\s/)[0].replace(/\.$/, '');
+    const o = { id, name: sp.name, blurb: sp.blurb || '', tagline, score: Math.max(1, Math.min(100, Math.round(raw))), raw: r1(raw),
         freq: r1(fq), per: r1(per), minutes: Math.round(avgMin), cap, over, sessions: p.days.length, workSets: total, heavyPct, under,
         session: ses, sessionMoved: ses !== cfg.session, week,
         parts: { coverage: Math.round(cov * 100), frequency: Math.round(fs * 100), fit: Math.round(fit * 100), goal: Math.round(gf * 100) },
         why: [
-            `Each muscle trained about ${r1(fq)}× a week${fq >= 2 && fq <= 3 ? ', the sweet spot' : fq < 2 ? ', less than the twice a week that suits most lifters' : ''}.`,
+            `Each muscle trained about ${r1(fq)}× a week${fq >= 1.85 && fq <= 3 ? ', right around the twice a week that suits most lifters' : fq < 1.85 ? ', less than the twice a week that suits most lifters' : ''}.`,
             `About ${r1(per)} sets per muscle each session${per > 6 ? ', on the heavy side' : per < 2 ? ', on the light side' : ', enough to count without wasted sets'}.`,
             over ? `${over} of ${p.days.length} sessions run past your ${cap} minutes (about ${Math.round(avgMin)} min).` : `Sessions take about ${Math.round(avgMin)} of your ${cap} minutes.`,
             under.length ? `Not enough work to grow: ${under.join(', ')}.` : 'Every muscle gets enough work to grow.',
             cfg.goal === 'hypertrophy' ? `${100 - heavyPct}% of sets in the 6–20 rep range that builds muscle best.` : `${heavyPct}% of sets are heavy (5 reps or fewer).`,
             ...focusNote,
+            ...(intent ? [INTENT_WHY[intent]] : []),
         ],
         line: `Each muscle ${r1(fq)}× a week · ~${Math.round(avgMin)} min sessions` + (cfg.goal === 'hypertrophy' ? '' : ` · ${heavyPct}% heavy`) };
     S.rankCache.set(key, o);

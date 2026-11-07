@@ -198,7 +198,10 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
             listOf("coverage" to "Muscles", "frequency" to "How often", "fit" to "Time", "goal" to "Goal").forEach { (k, l) ->
                 val v = parts?.optInt(k) ?: 0
                 Column(Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = "$l $v of 100" }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(l, style = MaterialTheme.typography.labelSmall, color = cs.onPrimaryContainer, maxLines = 1)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(l, style = MaterialTheme.typography.labelSmall, color = cs.onPrimaryContainer, maxLines = 1, modifier = Modifier.weight(1f))
+                        Text("$v", style = MaterialTheme.typography.labelSmall, color = cs.onPrimaryContainer.copy(alpha = 0.7f), maxLines = 1)
+                    }
                     com.pursuitiron.app.ui.common.ProgressBar(v / 100f, Modifier.fillMaxWidth(), height = 6.dp, color = cs.primary)
                 }
             }

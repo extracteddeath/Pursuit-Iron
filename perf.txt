@@ -1,0 +1,6 @@
+cold start ms: 2884, 1995, 2556 (median 2556)
+Today: Total frames rendered: 67 | Janky frames: 62 (92.54%) | 50th percentile: 121ms | 90th percentile: 200ms | 99th percentile: 350ms
+Plan: Total frames rendered: 51 | Janky frames: 46 (90.20%) | 50th percentile: 101ms | 90th percentile: 150ms | 99th percentile: 200ms
+Progress: Total frames rendered: 65 | Janky frames: 63 (96.92%) | 50th percentile: 117ms | 90th percentile: 150ms | 99th percentile: 200ms
+Exercises: Total frames rendered: 61 | Janky frames: 56 (91.80%) | 50th percentile: 109ms | 90th percentile: 150ms | 99th percentile: 150ms
+You: Total frames rendered: 58 | Janky frames: 57 (98.28%) | 50th percentile: 105ms | 90th percentile: 150ms | 99th percentile: 150ms

@@ -1,0 +1,1 @@
+day setup does not open to the day focus

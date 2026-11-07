@@ -170,7 +170,7 @@ export function verifyBundle(bundle, fixture) {
 }
 
 /** Content-bound evidence, not a self-declared pass or a missing artifact path. */
-export function verifyRecordedProgressionEvidence(observations, { allowStaleNativeTree = false } = {}) {
+export function verifyRecordedProgressionEvidence(observations, { allowStaleProvenance = false } = {}) {
   const records = observations.measurements.filter(r => r.proof === 'headless' && caseIds.includes(r.caseId));
   if (!records.length) return { currentNativeTree: false, recordedPairs: 0 };
   assert.equal(records.length, caseIds.length * 2, 'incomplete recorded progression tranche');
@@ -187,19 +187,23 @@ export function verifyRecordedProgressionEvidence(observations, { allowStaleNati
     assert.equal(matching.length,1);
     assert.deepEqual(measurement,matching[0], 'ledger result is not bound to the measured execution');
   }
-  for (const file of runnerPaths)
-    assert.equal(bundle.runnerFiles[file], sha256(readFileSync(resolve(root, file))),
-      `comparison runner/fixture changed: remeasure ${file}`);
+  const changedRunnerFiles=runnerPaths.filter(file =>
+    bundle.runnerFiles[file]!==sha256(readFileSync(resolve(root,file))));
+  if(!allowStaleProvenance)
+    assert.deepEqual(changedRunnerFiles,[],
+      'comparison runner/fixture changed: remeasure before certification');
   const nativeTree=git(root, 'rev-parse', `HEAD:${sourcePath}`);
   const clean=git(root,'status','--porcelain','--untracked-files=all','--',sourcePath)==='';
   // The audit may report HISTORICAL evidence after a source change, but may
   // never count it as CURRENT measured superiority. Always validate the
   // artifact bytes, runner hashes and independent oracle before demoting it.
-  const currentNativeTree=bundle.engines['independent-kotlin'].sourceTree===nativeTree && clean;
-  if(!allowStaleNativeTree) {
+  const currentNativeTree=bundle.engines['independent-kotlin'].sourceTree===nativeTree &&
+    clean && changedRunnerFiles.length===0;
+  if(!allowStaleProvenance) {
     assert.equal(bundle.engines['independent-kotlin'].sourceTree,nativeTree,
       'native engine source changed: historical comparison is not current certification');
     assert.ok(clean,'uncommitted native policies cannot borrow recorded certification');
   }
-  return { currentNativeTree, recordedPairs: records.length / 2 };
+  return { currentNativeTree, recordedPairs: records.length / 2,
+    changedRunnerFiles };
 }

@@ -110,13 +110,13 @@ test('changed actual RIR, overwritten targets and made-up pass outcomes are refu
 test('recorded measurements require the exact artifact bytes and bound engine results',()=>{
   const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
   const provenance=verifyRecordedProgressionEvidence(evidence,
-    {allowStaleNativeTree:true});
+    {allowStaleProvenance:true});
   assert.equal(provenance.recordedPairs,5);
   if(provenance.currentNativeTree)
     assert.doesNotThrow(()=>verifyRecordedProgressionEvidence(evidence));
   else
     assert.throws(()=>verifyRecordedProgressionEvidence(evidence),
-      /native engine source changed|uncommitted native policies/);
+      /native engine source changed|uncommitted native policies|comparison runner\/fixture changed/);
   for(const mutate of [
     e=>e.measurements[0].artifactDigest='0'.repeat(64),
     e=>e.measurements[0].outcome='fail',
@@ -125,7 +125,7 @@ test('recorded measurements require the exact artifact bytes and bound engine re
     e=>e.measurements.push({...e.measurements[0]})]) {
     const altered=structuredClone(evidence);mutate(altered);
     assert.throws(()=>verifyRecordedProgressionEvidence(altered,
-      {allowStaleNativeTree:true}));
+      {allowStaleProvenance:true}));
   }
 });
 
@@ -135,7 +135,7 @@ test('five measured pairs still cannot certify the complete engine replacement',
     {cwd:root,encoding:'utf8'}));
   const verified=verifyRecordedProgressionEvidence(
     JSON.parse(readFileSync(resolve(root,evidencePath),'utf8')),
-    {allowStaleNativeTree:true});
+    {allowStaleProvenance:true});
   assert.equal(audit.completedPairs,verified.currentNativeTree?5:0);
   assert.equal(audit.requiredPairs,49);
   assert.equal(audit.missingPairs,verified.currentNativeTree?44:49);

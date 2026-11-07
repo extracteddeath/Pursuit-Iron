@@ -99,7 +99,7 @@ if (args.includes('--record')) {
 } else if (args.includes('--check-current')) {
   const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
   const provenance=verifyRecordedProgressionEvidence(evidence,
-    { allowStaleNativeTree:true });
+    { allowStaleProvenance:true });
   if(provenance.currentNativeTree) {
     const recorded=JSON.parse(readFileSync(resolve(root,artifactPath),'utf8'));
     for(const engine of Object.keys(engines)) {

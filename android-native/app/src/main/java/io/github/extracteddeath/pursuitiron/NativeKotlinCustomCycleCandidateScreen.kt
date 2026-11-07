@@ -67,6 +67,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     val calibrationLocked=state.calibrationReceipt!=null ||
         state.preparedWorkout?.let{it.calibrationApprovalFingerprint!=null||it.resetToAuthored}==true
     var openId by rememberSaveable { mutableStateOf(initialCycleId.orEmpty()) }
+    var showAdvancedId by rememberSaveable {mutableStateOf(false)}
     LaunchedEffect(initialCycleId) {
         if (!initialCycleId.isNullOrBlank()) controller.open(initialCycleId)
     }
@@ -172,14 +173,47 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                 ) { Text("Create and save my draft") }
             }
             PursuitCard {
-                Text("Open an existing saved draft",
+                Text("Your saved programs",
                     style = MaterialTheme.typography.titleMedium)
-                OutlinedTextField(openId, { openId = it },
-                    label = { Text("Cycle ID") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedButton(onClick = { controller.open(openId.trim()) },
-                    enabled = !busy && openId.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()) { Text("Open saved draft") }
+                Text("Open a verified program by name. Your edits, blocks and exercise choices are preserved.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    onClick = {controller.findSavedPrograms()},
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth()
+                ) {Text("Find my saved programs")}
+                if(state.savedDraftsLoaded && state.savedDrafts.isEmpty()) {
+                    Text("No saved custom programs for this athlete yet.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
+                state.savedDrafts.forEach { saved ->
+                    OutlinedButton(
+                        onClick={controller.open(saved.cycleId)},
+                        enabled=!busy,
+                        modifier=Modifier.fillMaxWidth()
+                    ) {
+                        Column(Modifier.fillMaxWidth()) {
+                            Text(saved.title,style=MaterialTheme.typography.titleSmall)
+                            Text("${saved.blocks} blocks · saved revision ${saved.revision}",
+                                style=MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                TextButton(onClick={showAdvancedId=!showAdvancedId},
+                    enabled=!busy) {
+                    Text(if(showAdvancedId)"Hide program ID entry"
+                        else "Advanced: open by program ID")
+                }
+                if(showAdvancedId) {
+                    OutlinedTextField(openId, {openId=it},
+                        label={Text("Program ID")},
+                        singleLine=true,modifier=Modifier.fillMaxWidth())
+                    OutlinedButton(onClick={controller.open(openId.trim())},
+                        enabled=!busy && openId.isNotBlank(),
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Open program by ID")
+                    }
+                }
             }
         } else {
             PursuitCard(highlighted = true) {

@@ -261,30 +261,30 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: (
 }
 
 /** M3 Expressive split button: Start workout (the session preview, where the time can be trimmed) with the other
-    ways into today beside it — start straight away, a fresher day, or a quick workout. */
+    ways into today beside it — start straight away, or a fresher day (Quick workout has its own card below). */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun StartSplitButton(vm: AppViewModel, hasFresher: Boolean, onFresher: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     var open by remember { mutableStateOf(false) }
     val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, com.pursuitiron.app.ui.theme.Motion.spatialFast(), label = "split")
-    Box(Modifier.fillMaxWidth()) {
-        // The split button's two halves in a row (the leading half takes the width; SplitButtonLayout sizes to content).
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.SplitButtonDefaults.Spacing)) {
-                androidx.compose.material3.SplitButtonDefaults.LeadingButton(onClick = { vm.openPreview() }, modifier = Modifier.weight(1f).height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)) {
-                    Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text("  Start workout", style = MaterialTheme.typography.titleSmall)
-                }
-                androidx.compose.material3.SplitButtonDefaults.TrailingButton(checked = open, onCheckedChange = { open = it }, modifier = Modifier.height(56.dp)
-                    .semantics { contentDescription = "More ways to start" },
-                    colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)) {
-                    Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = turn })
-                }
+    // The split button's two halves in a row (the leading half takes the width; SplitButtonLayout sizes to content).
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.SplitButtonDefaults.Spacing)) {
+        androidx.compose.material3.SplitButtonDefaults.LeadingButton(onClick = { vm.openPreview() }, modifier = Modifier.weight(1f).height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)) {
+            Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text("  Start workout", style = MaterialTheme.typography.titleSmall)
         }
-        DropdownMenu(open, { open = false }, modifier = Modifier.align(Alignment.TopEnd)) {
-            DropdownMenuItem(text = { Text("Start now, skip the preview") }, leadingIcon = { Icon(PiIcons.Play, null) }, onClick = { open = false; vm.start() })
-            if (hasFresher) DropdownMenuItem(text = { Text("Train a fresher day") }, leadingIcon = { Icon(PiIcons.Redo, null) }, onClick = { open = false; onFresher() })
-            DropdownMenuItem(text = { Text("Quick workout instead") }, leadingIcon = { Icon(PiIcons.Zap, null) }, onClick = { open = false; vm.quickPickOpen = true })
+        // The menu hangs from the arrow half, not the far edge of the row.
+        Box {
+            androidx.compose.material3.SplitButtonDefaults.TrailingButton(checked = open, onCheckedChange = { open = it }, modifier = Modifier.height(56.dp)
+                .semantics { contentDescription = "More ways to start" },
+                colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)) {
+                Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = turn })
+            }
+            DropdownMenu(open, { open = false }) {
+                DropdownMenuItem(text = { Text("Start now, skip the preview") }, leadingIcon = { Icon(PiIcons.Play, null) }, onClick = { open = false; vm.start() })
+                if (hasFresher) DropdownMenuItem(text = { Text("Train a fresher day") }, leadingIcon = { Icon(PiIcons.Redo, null) }, onClick = { open = false; onFresher() })
+            }
         }
     }
 }

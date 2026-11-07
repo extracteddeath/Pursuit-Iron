@@ -259,6 +259,12 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             items(exs, key = { "$dId:${it.i("slot")}:${it.s("id")}" }) { x ->
                 val slot = x.i("slot")
                 val paired = x.b("superset") || exs.getOrNull(slot - 1)?.b("superset") == true
+                // A group's first lift carries its header: superset or circuit, and how many rounds it runs.
+                if (x.b("superset") && exs.getOrNull(slot - 1)?.b("superset") != true) {
+                    var len = 1; while (exs.getOrNull(slot + len - 1)?.b("superset") == true) len++
+                    GroupHeader(len, x.optInt("rounds").takeIf { it > 0 }, x.optInt("sets").coerceAtLeast(1),
+                        onRounds = { n -> vm.edit("rounds", "dayId" to dId, "slot" to slot, "rounds" to n) })
+                }
                 ExerciseCard(vm, e, dId, x, exs.size, paired, openRow?.takeIf { it.first == slot }?.second,
                     onToggle = { what -> openRow = if (openRow == slot to what) null else slot to what },
                     onWhy = { why = slot }, onInfo = { info = x.s("id") }, modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = Motion.spatial()))
@@ -709,3 +715,29 @@ private fun DaySheet(vm: AppViewModel, e: JSONObject, dayId: String, open: (EShe
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } })
 }
 
+/** The web editor's superset header, and more: a group can run a set number of rounds (each lift gets that many working
+ *  sets, and the workout honours it), or leave the sets to the program ("Auto"). */
+@Composable
+private fun GroupHeader(len: Int, rounds: Int?, autoSets: Int, onRounds: (Int?) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val n = rounds ?: autoSets
+    Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(PiIcons.Layers, null, tint = cs.tertiary, modifier = Modifier.size(16.dp))
+        Text(if (len >= 3) "CIRCUIT · $len LIFTS" else "SUPERSET", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp),
+            color = cs.tertiary, modifier = Modifier.weight(1f))
+        Text(if (rounds != null) "Rounds" else "Auto sets", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+        Row(Modifier.clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHigh), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable(enabled = n > 1) { onRounds(n - 1) }.semantics { contentDescription = "Fewer rounds"; role = Role.Button }, contentAlignment = Alignment.Center) {
+                Text("−", style = MaterialTheme.typography.titleMedium, color = if (n > 1) cs.onSurface else cs.outline)
+            }
+            Text("$n", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = if (rounds != null) cs.primary else cs.onSurfaceVariant,
+                modifier = Modifier.widthIn(min = 20.dp).semantics { contentDescription = if (rounds != null) "$n rounds" else "$n sets, automatic" },
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Box(Modifier.size(40.dp).clickable(enabled = n < 10) { onRounds(n + 1) }.semantics { contentDescription = "More rounds"; role = Role.Button }, contentAlignment = Alignment.Center) {
+                Text("+", style = MaterialTheme.typography.titleMedium, color = if (n < 10) cs.onSurface else cs.outline)
+            }
+        }
+        if (rounds != null) Box(Modifier.size(40.dp).clip(CircleShape).clickable { onRounds(null) }.semantics { contentDescription = "Back to auto sets"; role = Role.Button },
+            contentAlignment = Alignment.Center) { Icon(PiIcons.Close, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(16.dp)) }
+    }
+}

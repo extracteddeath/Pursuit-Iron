@@ -1233,4 +1233,22 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   ok(C.rankSplit({ config, id: rows[0].id }) === C.rankSplit({ config, id: rows[0].id }), 'scores are cached per answer set');
   const r2 = C.rankSplitsPlan({ config: { ...config, days: 2, equipment: [] } });
   ok(r2.ids.every((id) => !['five_three_one', 'gzclp'].includes(id)), 'a bodyweight gym does not offer barbell methods'); }
+// Superset rounds: the editor sets them for the whole group, and the workout runs exactly that many working sets
+{ C.init({ store: JSON.stringify({ unit: 'kg' }) });
+  const made = C.createProgram({ config: { goal: 'hypertrophy', days: 4, session: 's60', experience: 'intermediate', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] } });
+  const pid = made.programId;
+  const ed0 = C.editor({ programId: pid }); const day = ed0.days[0]; const last = day.exercises.length - 1;
+  if (!day.exercises[last - 1].superset) C.editAct({ programId: pid, type: 'superset', dayId: day.id, slot: last - 1 });
+  C.editAct({ programId: pid, type: 'rounds', dayId: day.id, slot: last, rounds: 5 });
+  const ed1 = C.editor({ programId: pid }).days[0].exercises;
+  ok(ed1[last - 1].rounds === 5 && ed1[last].rounds === 5 && ed1[last].sets === 5 && ed1[0].rounds === null, 'rounds apply to the whole group and show as its sets');
+  C.saveEdits({ programId: pid });
+  C.startSession({ programId: pid, dayId: day.id });
+  const ex = C.session().exercises; const work = (e) => e.sets.filter((x) => !x.warm && !x.sub).length;
+  ok(work(ex[ex.length - 1]) === 5 && work(ex[ex.length - 2]) === 5, 'the workout runs the set number of rounds (' + work(ex[ex.length - 1]) + ')');
+  C.discardSession();
+  C.editAct({ programId: pid, type: 'rounds', dayId: day.id, slot: last, rounds: null });
+  ok(C.editor({ programId: pid }).days[0].exercises[last].rounds === null, 'back to auto sets clears the rounds');
+  C.editAct({ programId: pid, type: 'rounds', dayId: day.id, slot: 0, rounds: 3 });
+  ok(C.editor({ programId: pid }).days[0].exercises[0].rounds === null, 'an ungrouped lift takes no rounds'); C.discardEdits?.({ programId: pid }); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

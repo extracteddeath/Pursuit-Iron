@@ -836,6 +836,20 @@ function sessionContext(l) {
     return { program, day, wk, H, P, dayPerf, lifterModel };
 }
 
+/* A grouped lift with a set number of rounds gets exactly that many working sets: extra prescribed ones drop off the
+   end, and missing ones repeat the last working set's target. Warm-ups are untouched. */
+function withRounds(sets, rounds) {
+    if (!(rounds > 0) || !Array.isArray(sets)) return sets;
+    const work = sets.filter(isWork);
+    if (!work.length || work.length === rounds) return sets;
+    if (work.length > rounds) {
+        // Keep warm-ups, the first `rounds` working sets and their own drop/myo sub-sets.
+        let n = 0; return sets.filter((x) => x.warm || (isWork(x) ? ++n <= rounds : n <= rounds));
+    }
+    const last = work[work.length - 1], extra = Array.from({ length: rounds - work.length }, () => ({ ...last, done: false }));
+    return [...sets, ...extra];
+}
+
 // App.js WorkoutSession `data` initializer (fresh path).
 function freshData(ctx) {
     const { program, day, wk, H, P, dayPerf } = ctx, u = unit();
@@ -847,7 +861,8 @@ function freshData(ctx) {
         if (day.sessionLengthPlan && !(E.computeCell(program, day, id, slot, wk).sets > 0)) return null;
         const last = H.find((h) => h.programId === program.id && h.dayId === day.id && h.perf?.[id]);
         const n = repeatedNote(last?.perf?.[id]?.note, last?.perf?.[id]?.noteRepeat);
-        return { id, slot, sets: prescribeSets(program, day, EX_BY_ID[id], slot, wk, u, suggestions[slot], dayPerf, P, H, true),
+        const rounds = !program.config?.noSupersets && Number(program.rounds?.[`${day.id}:${slot}`]) || 0;
+        return { id, slot, sets: withRounds(prescribeSets(program, day, EX_BY_ID[id], slot, wk, u, suggestions[slot], dayPerf, P, H, true), rounds),
             note: n.text, noteRepeat: n.repeat, superset: !program.config?.noSupersets && !!program.ss?.[`${day.id}:${slot}`],
             restCustom: program.overrides?.[`${day.id}:${slot}`]?.rest || 0 };
     }).filter(Boolean);
@@ -3219,6 +3234,17 @@ const EDITS = {
     add(p, { dayId, exId }) { return addSlot(p, dayId, EX_BY_ID[exId]); },
     // App.js toggleSS: pairs this slot with the next; clears the day's rounds.
     superset(p, { dayId, slot }) { const ss = { ...(p.ss || {}) }, key = `${dayId}:${slot}`; if (ss[key]) delete ss[key]; else ss[key] = true; return { ...p, ss, rounds: clearDayKeys(p.rounds, dayId) }; },
+    // App.js setGroupRounds: a superset or circuit runs a fixed number of rounds (every lift in it gets that many working
+    // sets); null hands the group back to the engine's own set counts. Unlike the web, the workout honours it.
+    rounds(p, { dayId, slot, rounds }) {
+        const d = p.days.find((x) => x.id === dayId); if (!d) return p;
+        let start = slot; while (start > 0 && p.ss?.[`${dayId}:${start - 1}`]) start--;
+        let end = start; while (end < d.exercises.length - 1 && p.ss?.[`${dayId}:${end}`]) end++;
+        if (end === start) return p;
+        const r = { ...(p.rounds || {}) }, n = rounds == null ? null : Math.max(1, Math.min(10, Math.round(Number(rounds) || 0)));
+        for (let s = start; s <= end; s++) { const k = `${dayId}:${s}`; if (n == null) delete r[k]; else r[k] = n; }
+        return { ...p, rounds: r };
+    },
     // App.js editOverride, manual-progression sets/reps only (auto mode prescribes them).
     override(p, { dayId, slot, field, value }) {
         if (!['sets', 'reps'].includes(field)) return p;
@@ -3301,7 +3327,7 @@ export function editor({ programId, weekIndex = 1 } = {}) {
                     type: ex?.type === 'compound' ? 'compound' : 'isolation', last: lastTop(id),
                     plateau: plateauFor(stored || p, (stored || p).days.find((x) => x.id === d.id) || d, id), plateauChoice: plateauQueue()[`${p.id}:${d.id}`]?.[id] || null,
                     style: style || 'auto', styleLabel: STYLE_LABEL[style] || (style ? (E.PROG_STYLES?.[style] || style) : 'Auto'), styleLocked: !!p.progStyleLifter?.[id],
-                    superset: !!p.ss?.[`${d.id}:${slot}`], added: !!ov.added, sets, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null,
+                    superset: !!p.ss?.[`${d.id}:${slot}`], rounds: Number(p.rounds?.[`${d.id}:${slot}`]) || null, added: !!ov.added, sets: Number(p.rounds?.[`${d.id}:${slot}`]) || sets, reps: ov.reps ?? cell?.reps ?? null, rir: cell?.rir ?? null,
                     pinSum: (() => { const pn = pinnedNote({ id }); return pn ? [pn.fields.filter((f) => f.value).map((f) => `${f.label} ${f.value}`).join(' · '), pn.note].filter(Boolean).join(' — ') : ''; })() };
             });
             return { id: d.id, index: di, label: d.label, note: d.note || '', focus: d.focus === 'strength' || d.focus === 'hypertrophy' ? d.focus : null, minutes: mins, weekday: weekdayOf(d.id),

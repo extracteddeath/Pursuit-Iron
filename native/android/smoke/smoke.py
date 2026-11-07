@@ -1215,6 +1215,20 @@ if tap(r"Edit program", "editor"):
         if not (find(r"Why this lift\?", timeout=4) or scroll_to(r"Why this lift\?", tries=3, step=500)):
             FAILS.append("editor more menu missing Why this lift")
         tap(r"^More options for ")
+    # Superset rounds: pair a lift with the next, then give the group a set number of rounds
+    if tap(r"^More options for ", required=False):
+        if seek(r"Superset with the next lift"):
+            tap(r"Superset with the next lift")
+            if seek(r"^\|?(SUPERSET|CIRCUIT)"):
+                tap(r"^More rounds", required=False)
+                if find(r"^\d+ rounds", timeout=4):
+                    shot("editor-rounds")
+                else:
+                    FAILS.append("superset group took no rounds")
+            else:
+                FAILS.append("no superset header after pairing")
+        else:
+            back()
     # Day setup sits under the lifts, folded: it opens to the day focus
     if seek(r"(^|\|)Day setup"):
         tap(r"(^|\|)Day setup", "editor-day-setup")

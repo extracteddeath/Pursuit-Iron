@@ -285,7 +285,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
                         val open = preview == k
                         // App.js openCycleBlock: an adaptive cycle built for other equipment refreshes its future previews first.
                         Box(Modifier.height(36.dp).clip(CircleShape).border(1.5.dp, cs.outlineVariant, CircleShape).clickable {
-                            if (!open && c?.b("needsRefresh") == true) scope.launch { val cid = c!!.s("id"); if (vm.refreshCycle(cid, quiet = true)) { d = vm.cycleDetail(cid); preview = k } }
+                            if (!open && c?.b("needsRefresh") == true) scope.launch { val cid = c.s("id"); if (vm.refreshCycle(cid, quiet = true)) { d = vm.cycleDetail(cid); preview = k } }
                             else preview = if (open) null else k }
                             .semantics { role = Role.Button; stateDescription = if (open) "Expanded" else "Collapsed" }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                             Text(if (open) "Hide week 1" else "Preview week 1", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = fg)

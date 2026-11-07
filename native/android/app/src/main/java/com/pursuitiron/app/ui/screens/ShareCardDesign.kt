@@ -122,11 +122,13 @@ fun ShareCardSheet(vm: AppViewModel, onClose: () -> Unit) {
                     inner() } })
             ShareCap("SHOW ON CARD")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Toggle from what the card shows (the core may stand records in for a Strength Score you don't have yet).
+                val shown = card?.strings("share") ?: lay.share
                 card?.list("choices")?.forEach { c ->
-                    val on = c.b("on"); val id = c.s("id"); val last = on && lay.share.size == 1
+                    val on = c.b("on"); val id = c.s("id"); val last = on && shown.size == 1
                     CardChip((if (on) "✓ " else "+ ") + c.s("label"), on) {
                         if (last) vm.toast("Keep at least one thing on the card")
-                        else vm.prefs.changeProfileLayout(lay.copy(share = if (on) lay.share - id else lay.share + id))
+                        else vm.prefs.changeProfileLayout(lay.copy(share = if (on) shown - id else shown + id))
                     }
                 }
             }

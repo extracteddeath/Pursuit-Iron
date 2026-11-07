@@ -2933,6 +2933,9 @@ export function profileCard({ share = ['strength', 'streak'], favorites = [] } =
     const ids = CARD_CHOICES.map((c) => c[0]);
     let sel = [...new Set((Array.isArray(share) ? share : []).filter((x) => ids.includes(x)))];
     if (!sel.length) sel = [ids[0]];
+    // The untouched default leads with the Strength Score; with no score yet that tile would only say "No score yet",
+    // so the card shows your records (or achievements) in its place until there is one.
+    if (!p.score && sel.length === 2 && sel[0] === 'strength' && sel[1] === 'streak') sel = [Object.keys(bests).length ? 'prs' : 'achievements', 'streak'];
     const favs = [...new Set((Array.isArray(favorites) ? favorites : []).filter((id) => typeof id === 'string' && EX_BY_ID[id]))].slice(0, 3);
     const e1 = (id) => Math.round(Number(bests[id]?.e1rm) || 0);
     const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('en-US');

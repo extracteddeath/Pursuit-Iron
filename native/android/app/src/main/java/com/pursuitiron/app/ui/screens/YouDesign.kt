@@ -602,7 +602,7 @@ fun StrengthClubCard(vm: AppViewModel) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Strength Club", style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
-            Segmented(listOf("lifted" to "Lifted", "e1rm" to "Estimated max"), mode, { mode = it }, Modifier.width(210.dp), height = 40.dp)
+            Segmented(listOf("lifted" to "Lifted", "e1rm" to "Est. max"), mode, { mode = it }, Modifier.width(210.dp), height = 40.dp)
         }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("${if (u == "lb") java.text.NumberFormat.getIntegerInstance(Locale.US).format(Math.round(c.d("total"))) else Math.round(c.d("total")).toString()} $u",

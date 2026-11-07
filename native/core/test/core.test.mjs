@@ -641,12 +641,12 @@ ok(C.library({ q: 'bench' }).length > 0, 'library search finds bench variations'
   C.createProgram({ config: { name: 'V', unit: 'kg', goal: 'hypertrophy', experience: 'intermediate', split: 'ppl', days: 3, session: 's40',
     equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup'] }, seed: 7 });
   const v = C.weeklyVolumeView({});
-  ok(v.rows.length > 5 && v.rows.every((r) => r.mev >= 0 && r.mrv > r.mev && ['below MEV', 'productive', 'above MAV', 'above target', 'over MRV', 'a head over MRV', 'light · not targeted'].includes(r.zone)), 'volume rows carry landmarks and a zone');
+  ok(v.rows.length > 5 && v.rows.every((r) => r.mev >= 0 && r.mrv > r.mev && ['below its minimum', 'productive', 'above the sweet spot', 'above target', 'over its max', 'a head over its max', 'light · not targeted'].includes(r.zone)), 'volume rows carry landmarks and a zone');
   const sum = Math.round(v.rows.reduce((a, r) => a + r.sets, 0));
   ok(Math.abs(sum - v.total) <= 1, 'rows add up to the total (' + sum + ' vs ' + v.total + ')');
-  ok(v.rows.every((r) => (r.sets < r.mev) === (r.zone === 'below MEV' || r.zone === 'light · not targeted')), 'below MEV exactly when sets are under MEV');
+  ok(v.rows.every((r) => (r.sets < r.mev) === (r.zone === 'below its minimum' || r.zone === 'light · not targeted')), 'below MEV exactly when sets are under MEV');
   ok(v.rows.every((r) => r.zone !== 'light · not targeted' || (r.optional && !r.off)), 'untargeted helper muscles are not counted as off range');
-  ok(v.rows.filter((r) => r.off && r.zone === 'below MEV').every((r) => !r.optional), 'every below-MEV row the app flags is one the audit could act on');
+  ok(v.rows.filter((r) => r.off && r.zone === 'below its minimum').every((r) => !r.optional), 'every below-MEV row the app flags is one the audit could act on');
   const rp = C.repairVolume({});
   ok(rp.ok && typeof rp.message === 'string' && rp.message.length > 5, 'repair answers with the engine message: ' + rp.message); }
 // Welcome back: after ten days off, one easier session (2 working sets at 90%) before the plan resumes

@@ -75,7 +75,7 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) =
     Text(text, style = MaterialTheme.typography.titleMedium, modifier = modifier.padding(start = 4.dp, top = 8.dp))
 
 /** M3 Expressive connected button group (the successor to segmented buttons): one toggle per option, the outer
-    corners round, the inner ones tight, and the selected one morphs to a full pill in M3's own colours (primary). [track] and [gap] are kept for callers; the group draws no track. */
+    corners round, the inner ones tight, and the selected one morphs to a full pill. [track] and [gap] are kept for callers; the group draws no track. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun Segmented(options: List<Pair<String, String>>, selected: String?, onSelect: (String) -> Unit, modifier: Modifier = Modifier, height: Dp = 44.dp,
@@ -91,6 +91,11 @@ fun Segmented(options: List<Pair<String, String>>, selected: String?, onSelect: 
                     k == options.lastIndex -> androidx.compose.material3.ButtonGroupDefaults.connectedTrailingButtonShapes()
                     else -> androidx.compose.material3.ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
+                // Tonal, like the app's filter chips: a selected choice reads as selected without competing with the
+                // screen's primary action (the selected option still morphs to a full pill).
+                colors = androidx.compose.material3.ToggleButtonDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer, checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
             ) {
                 Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)

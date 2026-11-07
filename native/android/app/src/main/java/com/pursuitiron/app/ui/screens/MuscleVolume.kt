@@ -96,7 +96,7 @@ fun MuscleVolumeCard(vm: AppViewModel, programId: String, week: Int, onDetails: 
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Shaded: the weekly range that builds muscle. Tick: the sweet spot. A lift counts fully for its main muscle and partly for muscles it also works.",
+            Text("Shaded: MEV to MRV, the weekly range that builds muscle. Tick: MAV, the sweet spot. A lift counts fully for its main muscle and partly for muscles it also works.",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
         }
         if (d.list("issues").isNotEmpty() || d.list("verdicts").isNotEmpty())
@@ -141,7 +141,7 @@ private fun MuscleLine(r: JSONObject, key: String, expanded: Boolean, indent: Dp
         }
         AnimatedVisibility(expanded, enter = Motion.expandIn, exit = Motion.shrinkOut) {
             Column(Modifier.padding(start = 12.dp + indent, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("${r.s("zone").replaceFirstChar { it.uppercase() }} · range ${fmtNum(mev)}–${fmtNum(mrv)} · sweet spot ${fmtNum(mav)}",
+                Text("${r.s("zone").replaceFirstChar { it.uppercase() }} · MEV ${fmtNum(mev)} · MAV ${fmtNum(mav)} · MRV ${fmtNum(mrv)}",
                     style = MaterialTheme.typography.labelMedium, color = if (tone == "warn") cs.error else cs.onSurfaceVariant)
                 if (from.isEmpty()) Text("Nothing in this program trains it this week.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 from.forEach { f ->

@@ -568,7 +568,7 @@ private fun LiftDoneCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifi
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.popIn().size(56.dp).clip(RoundedCornerShape(18.dp)).background(cs.primary), contentAlignment = Alignment.Center) { DrawnCheck(cs.onPrimary, Modifier.size(28.dp)) }
         Text("${ex.s("short").ifBlank { ex.s("name") }} done", style = MaterialTheme.typography.headlineMedium, color = cs.onPrimaryContainer)
-        if (pr) Text("NEW STRENGTH PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.popIn(delayMs = 120).prGlow(cs.primary, 16.dp).clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
+        if (pr) Text("NEW PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.popIn(delayMs = 120).prGlow(cs.primary, 16.dp).clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Sets" to "${work.size}", "Top set" to (top?.let { "${it.s("weight")}×${it.s("reps")}" } ?: "—"), "Est. 1RM" to if (e1 > 0) fmtNum(Math.round(e1 * 2) / 2.0) else "—").forEach { (k, v) ->
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surface).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {

@@ -327,7 +327,7 @@ private fun FeelCard(vm: AppViewModel, x: JSONObject, parts: List<JSONObject>) {
             val diff = if (pt.isNull("diff")) null else pt.i("diff")
             val n = pt.i("sets")
             val (res, bg, fg) = when (diff) {
-                1 -> if (!pt.b("room")) Triple("Already at max", cs.tertiaryContainer, cs.onTertiaryContainer) else Triple("$n → ${n + 1} sets", cs.primary, cs.onPrimary)
+                1 -> if (!pt.b("room")) Triple("At MRV · no room", cs.tertiaryContainer, cs.onTertiaryContainer) else Triple("$n → ${n + 1} sets", cs.primary, cs.onPrimary)
                 0 -> Triple("Holds at $n sets", cs.secondaryContainer, cs.onSecondaryContainer)
                 -1 -> Triple("$n → ${(n - 1).coerceAtLeast(1)} sets", cs.tertiaryContainer, cs.onTertiaryContainer)
                 else -> Triple("Pick one", cs.surfaceContainerHigh, cs.onSurfaceVariant)

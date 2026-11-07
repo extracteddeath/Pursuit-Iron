@@ -501,7 +501,7 @@ private fun ExerciseCard(vm: AppViewModel, e: JSONObject, dayId: String, x: JSON
                 .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "How ${x.s("name")} progresses: ${x.s("styleLabel")}" }.padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
                 Icon(PiIcons.Trend, null, modifier = Modifier.size(15.dp))
-                Text(x.s("styleLabel").ifBlank { "Auto" },
+                Text("Progression: " + x.s("styleLabel").ifBlank { "Auto" },
                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.size(42.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { onToggle("more") }

@@ -252,7 +252,7 @@ fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
                 }
             }
         }
-        Text("Shaded: the weekly range that builds muscle at your level. Tick: the sweet spot. Lifts that also work a muscle count part of their sets.",
+        Text("Shaded: MEV to MRV at your level, the range that builds muscle. Tick: MAV. Lifts that also work a muscle count part of their sets.",
             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         val verdicts = d.list("verdicts")
         if (verdicts.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

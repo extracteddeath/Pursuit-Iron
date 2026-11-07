@@ -812,7 +812,7 @@ function progressionOptions(ctx, e, ex, u) {
         { id: 'ladder', label: 'Rep ladder', detail: 'One shared rep target climbs each session (8 → 10 → 12), then the load jumps and the target resets.' },
         { id: 'linear', label: 'Linear', detail: 'A fixed ' + (inc ? inc + ' ' : '') + 'jump every session you hold the bottom of the range. Best early on, on big lifts.' },
         { id: 'wave', label: 'Wave loading', detail: 'Light, medium and heavy sessions (high → mid → low reps), then the whole wave moves up.' },
-        { id: 'e1rm', label: 'e1RM autoregulation', detail: 'Each set’s load is aimed from your estimated 1RM to land on the target RIR, and re-aims after every set.' },
+        { id: 'e1rm', label: 'Aimed from your max', detail: 'Each set’s load is aimed from your estimated 1RM to land on the target RIR, and re-aims after every set.' },
         { id: 'top', label: 'Top set + back-offs', detail: 'One heavy top set, then back-offs at 90% of what the top set actually was.' },
     ].filter((o) => E.PROG_STYLES ? o.id in E.PROG_STYLES : true) };
 }
@@ -2019,7 +2019,7 @@ export function weekByWeek({ programId } = {}) {
 function volumeZoneOf(part, sets, program) {
     const { mev, mrv } = E.landmarkFor(part, program?.config?.experience || 'intermediate', program);
     const mav = E.mavFor(part, program);
-    if (sets < mev) return { label: 'below MEV', sub: 'under the volume that reliably drives growth', tone: 'muted' };
+    if (sets < mev) return { label: 'below its minimum', sub: 'under the volume that reliably drives growth', tone: 'muted' };
     if (sets <= mav) return { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' };
     /* An engine-built program's MAV is its own target for this session length (lats: 4 of a 16.8 MRV on a 40-minute
        plan), counted on direct sets, while these counts include helper credit — so nearly every muscle read past it
@@ -2027,18 +2027,18 @@ function volumeZoneOf(part, sets, program) {
        verdict: MEV to MRV is productive. */
     if (sets <= mrv + E.MRV_GRAIN) return program?.engineSource === 'pursuit-next'
         ? { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' }
-        : { label: 'above MAV', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
-    return { label: 'over MRV', sub: 'past what this app budgets to recover from', tone: 'warn' };
+        : { label: 'above the sweet spot', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
+    return { label: 'over its max', sub: 'past what this app budgets to recover from', tone: 'warn' };
 }
 function partZoneOf(part, sets, sub, program) {
     if (program?.engineSource === 'pursuit-next') return volumeZoneOf(part, sets, program);
     const heads = E.COMPOSITE_HEADS?.[part];
     if (!heads || !sub) return volumeZoneOf(part, sets);
     const { mev } = E.landmarkFor(part);
-    if (sets < mev) return { label: 'below MEV', sub: 'under the volume that reliably drives growth', tone: 'muted' };
+    if (sets < mev) return { label: 'below its minimum', sub: 'under the volume that reliably drives growth', tone: 'muted' };
     const over = heads.some((h) => { const lm = E.SUB_LANDMARKS?.[h]; return lm && lm.mev !== 0 && (sub[h] || 0) > (lm.mrv != null ? lm.mrv + E.MRV_GRAIN : Infinity); });
-    if (over) return { label: 'a head over MRV', sub: 'one deltoid head is past its own ceiling', tone: 'warn' };
-    return sets <= E.mavFor(part) ? { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' } : { label: 'above MAV', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
+    if (over) return { label: 'a head over its max', sub: 'one deltoid head is past its own ceiling', tone: 'warn' };
+    return sets <= E.mavFor(part) ? { label: 'productive', sub: 'inside the range this app plans for', tone: 'good' } : { label: 'above the sweet spot', sub: 'more than most need to grow; fine while you recover from it', tone: 'good' };
 }
 /* App.js VolumeCard for a program week: sets per muscle against MEV/MAV/MRV, the volume check (every
    training week), and what your own history says about each muscle's productive range. */
@@ -2106,7 +2106,7 @@ export function weeklyVolumeView({ programId, weekIndex } = {}) {
         let lm = null; try { lm = engine && k !== 'front_delts' ? E.landmarkFor(k, p.config?.experience || 'intermediate', p) : null; } catch { lm = null; }
         lm = lm || E.SUB_LANDMARKS?.[k] || { mev: 4, mrv: 20 };
         const v = Number(sub[k]) || 0, mav = lm.mav != null ? lm.mav : (lm.mev + lm.mrv) / 2;
-        const z = v < lm.mev ? ['below MEV', 'muted'] : v <= mav ? ['productive', 'ok'] : v <= lm.mrv ? ['high', 'ok'] : ['over MRV', 'warn'];
+        const z = v < lm.mev ? ['below its minimum', 'muted'] : v <= mav ? ['productive', 'ok'] : v <= lm.mrv ? ['high', 'ok'] : ['over its max', 'warn'];
         return { key: k, label: E.SUBMUSCLE_LABEL?.[k] || k, sets: r1(v), mev: lm.mev, mav: r1(mav), mrv: lm.mrv, zone: z[0], tone: z[1],
             from: (headFrom[k] || []).slice().sort((x, y) => y.direct - x.direct || y.contrib - x.contrib) };
     });
@@ -2356,7 +2356,7 @@ export function rankSplit({ config, id } = {}) {
         return { wd: w, name: day ? String(day.label || '').replace(/ — .*/, '') : 'Rest', on: !!day };
     });
     const heavyPct = Math.round(h * 100);
-    const focusNote = focus.map((pt) => { const l = lm(pt), t = mav(pt, l), v = Number(vol[pt]) || 0; return `${E.PART_LABEL?.[pt] || pt} gets ${r1(v)} sets a week (${Math.round(v / t * 100)}% of its sweet spot).`; });
+    const focusNote = focus.map((pt) => { const l = lm(pt), t = mav(pt, l), v = Number(vol[pt]) || 0; return `${E.PART_LABEL?.[pt] || pt} gets ${r1(v)} sets a week (${Math.round(v / t * 100)}% of its MAV).`; });
     const tagline = String(sp.blurb || '').split(/(?<=\.)\s|\s—\s|;\s/)[0].replace(/\.$/, '');
     const o = { id, name: sp.name, blurb: sp.blurb || '', tagline, score: Math.max(1, Math.min(100, Math.round(raw))), raw: r1(raw),
         freq: r1(fq), per: r1(per), minutes: Math.round(avgMin), cap, over, sessions: p.days.length, workSets: total, heavyPct, under,
@@ -2366,7 +2366,7 @@ export function rankSplit({ config, id } = {}) {
             `Each muscle trained about ${r1(fq)}× a week${fq >= 1.85 && fq <= 3 ? ', right around the twice a week that suits most lifters' : fq < 1.85 ? ', less than the twice a week that suits most lifters' : ''}.`,
             `About ${r1(per)} sets per muscle each session${per > 6 ? ', on the heavy side' : per < 2 ? ', on the light side' : ', enough to count without wasted sets'}.`,
             over ? `${over} of ${p.days.length} sessions run past your ${cap} minutes (about ${Math.round(avgMin)} min).` : `Sessions take about ${Math.round(avgMin)} of your ${cap} minutes.`,
-            under.length ? `Not enough work to grow: ${under.join(', ')}.` : 'Every muscle gets enough work to grow.',
+            under.length ? `Under MEV: ${under.join(', ')}.` : 'Every muscle gets at least its MEV.',
             cfg.goal === 'hypertrophy' ? `${100 - heavyPct}% of sets in the 6–20 rep range that builds muscle best.` : `${heavyPct}% of sets are heavy (5 reps or fewer).`,
             ...focusNote,
             ...(intent ? [INTENT_WHY[intent]] : []),
@@ -3529,7 +3529,7 @@ export function applyProgramSettings({ programId, settings = {}, shuffle = false
     // B918 App.js applyCfgDraft: a program the lifter built (not generated) keeps its days; settings apply in place,
     // and a newly requested bodyweight/barbell constraint its exercises break is refused with the day and lift named.
     if (program.custom === true && program.engineSource !== 'pursuit-next') {
-        if (shuffle || seed !== undefined) return { ok: false, error: 'You built this program yourself, so there is no generator to shuffle. Change its days in the editor.' };
+        if (shuffle || seed !== undefined) return { ok: false, error: 'You built this program yourself, so there is nothing to reshuffle. Change its days in the editor.' };
         const draft = { ...patch, ...meta };
         if (!Object.keys(draft).length) return { ok: true, rebuilt: false, changed: false };
         if (S.live?.programId === programId) return { ok: false, error: 'Finish or discard the workout in progress first.' };
@@ -4015,9 +4015,9 @@ export function completeProgramUpdate({ apply }) {
    stored by the engine, so it is not shown; nothing here is re-derived or invented. Lifts the user
    added or swapped in say so instead. */
 const ROLE_TEXT = {
-    primary_strength: ['Main strength lift', 'Placed first in the day and trained heavy with long rests. The engine reserves these before any optional muscle work.'],
-    hypertrophy_compound: ['Compound for size', 'A multi-joint lift chosen for the muscles this day still needed, scored on stimulus against fatigue and what the week already covers.'],
-    hypertrophy_isolation: ['Isolation for size', "Single-joint work to finish a muscle's weekly dose without adding much fatigue, chosen to cover a function the week was missing where it could."],
+    primary_strength: ['Main strength lift', 'Placed first in the day and trained heavy with long rests. It is planned before any optional muscle work.'],
+    hypertrophy_compound: ['Compound for size', 'A multi-joint lift picked for the muscles this day still needed, weighing how much it builds against how tiring it is and what the week already covers.'],
+    hypertrophy_isolation: ['Isolation for size', "Single-joint work to finish a muscle's weekly sets without adding much fatigue, covering a movement the week was missing where it could."],
 };
 export function whyLift({ programId, dayId, slot, weekIndex }) {
     const p = programById(programId); if (!p) return null;
@@ -4047,7 +4047,7 @@ export function whyLift({ programId, dayId, slot, weekIndex }) {
    .progressionPlan — read, never re-derived), and a lock when the lifter chose it. Choosing a style
    writes progStyle + progStyleLifter, the same record "keep in program" writes after a workout;
    choosing Auto hands the lift back to the engine. */
-const STYLE_LABEL = { double: 'Double progression', dynamic: 'Dynamic double', ladder: 'Rep ladder', linear: 'Linear', wave: 'Wave loading', e1rm: 'e1RM autoregulation', top: 'Top set + back-offs', auto: 'Auto' };
+const STYLE_LABEL = { double: 'Double progression', dynamic: 'Dynamic double', ladder: 'Rep ladder', linear: 'Linear', wave: 'Wave loading', e1rm: 'Aimed from your max', top: 'Top set + back-offs', auto: 'Auto' };
 export function liftProgression({ programId }) {
     const p = programById(programId); if (!p) return null;
     const plan = Array.isArray(p.nextEngine?.progressionPlan) ? p.nextEngine.progressionPlan : [];

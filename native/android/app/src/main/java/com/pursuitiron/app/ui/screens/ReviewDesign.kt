@@ -245,7 +245,7 @@ private fun ColumnScope.ReviewBody(r: JSONObject) {
                     Text(fmtNum(Math.round(at).toDouble()), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold), textAlign = TextAlign.End, modifier = Modifier.width(36.dp))
                 }
             }
-            Text("Shaded band: your minimum to maximum useful sets a week. Line: what you did.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
+            Text("Shaded band: MEV to MRV, your useful sets a week. Line: what you did.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
         }
     }
     val recs = r.list("recs")

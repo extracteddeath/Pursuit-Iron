@@ -425,6 +425,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         else null
                     }
                     var showCoachChoices by remember(audit) {mutableStateOf(false)}
+                    var showEveryFinding by remember(audit) {mutableStateOf(false)}
                     HorizontalDivider()
                     Text("Coach-guided program review",
                         style=MaterialTheme.typography.titleLarge)
@@ -452,7 +453,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                         else "Review possible corrections")
                                 }
                                 if(showCoachChoices) {
-                                    findings.take(12).forEach {finding->
+                                    findings.take(if(showEveryFinding) findings.size else 12).forEach {finding->
                                         HorizontalDivider()
                                         val status=when(finding.status) {
                                             CustomCoachFindingStatus.CONFIRMED_POLICY_VIOLATION ->
@@ -496,8 +497,16 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                             }
                                         }
                                     }
-                                    if(findings.size>12)
-                                        Text("${findings.size-12} additional findings. Resolve the most important audited constraints, then rerun the review.",
+                                    if(findings.size>12) {
+                                        TextButton(enabled=!busy,
+                                            onClick={showEveryFinding=!showEveryFinding}) {
+                                            Text(if(showEveryFinding)
+                                                "Show first 12 findings"
+                                            else "Inspect ${findings.size-12} remaining findings")
+                                        }
+                                    }
+                                    if(findings.size>=96)
+                                        Text("The review is capped at 96 findings. Re-audit after resolving these constraints to inspect remaining issues.",
                                             style=MaterialTheme.typography.bodySmall)
                                 }
                             }

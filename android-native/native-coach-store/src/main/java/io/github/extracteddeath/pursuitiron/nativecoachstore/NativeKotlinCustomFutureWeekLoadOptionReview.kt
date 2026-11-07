@@ -35,7 +35,9 @@ sealed interface NativeFutureWeekLoadOptionResult {
         val affectedWeekday:Int,
         val affectedSlotId:String,
         val previousLoad:BigDecimal,
-        val candidateLoad:BigDecimal
+        val candidateLoad:BigDecimal,
+        /** SHA-256 of exact audited proposal, verified history and settings. */
+        val reviewFingerprint:String
     ):NativeFutureWeekLoadOptionResult {
         val mayApplyAutomatically:Boolean get()=false
         val mayIssueWorkout:Boolean get()=false
@@ -274,11 +276,42 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                     CustomCycleTransitionStatus.READY_FOR_ATHLETE_REVIEW)
                 return@withOwnerTransaction no(
                     NativeFutureWeekLoadRefusal.FULL_CYCLE_AUDIT_FAILED)
+            // This audit is only a preview. Bind its exact proposed bytes,
+            // mixed-history watermark, assistance/permission revisions, and
+            // the activated block's original+prospective coaching context.
+            // A future consent writer MUST recompute this under the owner
+            // fence instead of trusting an old UI proposal.
+            val activationAudit=(activation.reviewActivatedCycle(
+                ownerKey,coaching)
+                as? NativeFutureActivatedCycleReview.Ready)
+                ?:return@withOwnerTransaction no(
+                    NativeFutureWeekLoadRefusal.FULL_CYCLE_AUDIT_FAILED)
+            if(activationAudit.cycleId!=original.cycleId ||
+                activationAudit.blockId!=block.blockId ||
+                activationAudit.sourceRevision!=source.revision)
+                return@withOwnerTransaction no(
+                    NativeFutureWeekLoadRefusal.FULL_CYCLE_AUDIT_FAILED)
+            val fingerprint=NativeFutureWeekLoadProof.fingerprint(
+                ownerKey=ownerKey,athleteId=owner.athleteId,
+                cycleId=original.cycleId,blockId=block.blockId,
+                optionId=option.optionId,
+                proposedBytes=NativeCustomCycleDraftCodec.encode(
+                    option.proposedCycle),
+                activationFingerprint=activationAudit.reviewFingerprint,
+                historyRevision=ledger.manifestRevision,
+                draftRevision=original.revision,
+                sourceRevision=source.revision,
+                settingsRevision=currentSettings.revision,
+                permissionRevision=permission.revision,
+                absoluteWeek=absoluteWeek,weekday=weekday,slotId=slotId,
+                previousLoad=current,candidateLoad=candidate,
+                evidenceWorkoutIds=advice.comparedWorkoutIds)
             NativeFutureWeekLoadOptionResult.Ready(
                 option,compared,ledger.manifestRevision,original.revision,
                 source.revision,currentSettings.revision,permission.revision,
                 Collections.unmodifiableList(advice.comparedWorkoutIds),
-                absoluteWeek,weekday,slotId,norm(current),norm(candidate))
+                absoluteWeek,weekday,slotId,norm(current),norm(candidate),
+                fingerprint)
         }}.getOrElse{no(NativeFutureWeekLoadRefusal.STORAGE_UNAVAILABLE)}
     }
 }

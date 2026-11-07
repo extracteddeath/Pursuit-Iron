@@ -397,11 +397,19 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     style = MaterialTheme.typography.titleLarge)
                 Text("Review every scheduled week and every authored override against your actual gym and confirmed training constraints. Missing coach-authored dose and time policies are shown as blockers—not invented targets.",
                     style = MaterialTheme.typography.bodyMedium)
-                Button(
-                    onClick = { controller.auditFullCycle() },
-                    enabled = !busy,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Run full Kotlin coach audit") }
+                NativeKotlinCustomCoachPolicyEditor(
+                    cycle=draft,
+                    source=state.reviewedSourceSetup,
+                    sourceRevision=state.sourceRevision,
+                    busy=busy,
+                    onReview={reviewedInputs->
+                        controller.auditFullCycle(reviewedInputs)
+                    })
+                OutlinedButton(
+                    onClick={controller.auditFullCycle()},
+                    enabled=!busy,
+                    modifier=Modifier.fillMaxWidth()
+                ) {Text("Diagnose missing policy requirements")}
                 state.coachingAudit?.let { audit ->
                     HorizontalDivider()
                     Text("Result · ${pretty(audit.status)}",

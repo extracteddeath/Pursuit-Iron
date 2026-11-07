@@ -20,6 +20,11 @@ import io.github.extracteddeath.pursuitiron.rebuild.CustomCycleCoachAuditDomain
 import io.github.extracteddeath.pursuitiron.rebuild.CustomWorkoutSnapshotDomain
 import io.github.extracteddeath.pursuitiron.rebuild.CustomWorkoutSnapshotResult
 import io.github.extracteddeath.pursuitiron.rebuild.CustomWorkoutSnapshotRefusal
+import io.github.extracteddeath.pursuitiron.rebuild.AdaptiveCycleOption
+import io.github.extracteddeath.pursuitiron.rebuild.AdaptiveCycleOptionRequest
+import io.github.extracteddeath.pursuitiron.rebuild.AdaptiveCycleOptionReviewDomain
+import io.github.extracteddeath.pursuitiron.rebuild.AdaptiveCycleComparison
+import io.github.extracteddeath.pursuitiron.rebuild.CustomCycleCoachPermissions
 
 /**
  * Owner-fenced WRITE-AHEAD activation of a second-consented future block.
@@ -399,6 +404,51 @@ class NativeKotlinFutureActivationCommitTransaction(
             }
         }}.getOrElse{NativeFutureActivatedCycleReview.Rejected(
             NativeFutureCommitRefusal.STORAGE_UNAVAILABLE)}
+
+    /**
+     * Strictly read-only, source-correct review of ONE new option for the
+     * already-activated future block. The baseline source's older training
+     * blocks must use the pre-activation gym/split; only the designated
+     * activated block receives the approved prospective context. A generic
+     * audit against the NEW gym for old completed blocks is invalid.
+     *
+     * Review again at explicit athlete acceptance: this method provides
+     * neither write authority nor a durable history/settings watermark.
+     */
+    fun reviewActivatedOption(
+        ownerKey:String,inputs:CustomCoachAuditInputs,
+        option:AdaptiveCycleOption,
+        permissions:CustomCycleCoachPermissions
+    ):AdaptiveCycleComparison? =
+        runCatching {fence.withOwnerTransaction(ownerKey){
+            val baseline=reviewActivatedCycle(ownerKey,inputs)
+                as? NativeFutureActivatedCycleReview.Ready
+                ?:return@withOwnerTransaction null
+            val handoff=(handoffs.read(ownerKey)
+                as? NativeFutureHandoffReview.Staged)?.receipt
+                ?:return@withOwnerTransaction null
+            val saved=intent(ownerKey)
+                ?:return@withOwnerTransaction null
+            val version=validate(saved)
+            val draft=(drafts.read(ownerKey,handoff.cycleId)
+                as? NativeCustomDraftReadResult.Found)?.draft
+                ?:return@withOwnerTransaction null
+            if(owner(ownerKey)?.athleteId!=draft.athleteId ||
+                draft.cycleId!=baseline.cycleId ||
+                draft.revision>=9_007_199_254_740_991L ||
+                option.proposedCycle.cycleId!=draft.cycleId ||
+                option.proposedCycle.revision!=draft.revision+1 ||
+                baseline.blockId!=handoff.blockId ||
+                baseline.sourceRevision!=version.proposed.revision)
+                return@withOwnerTransaction null
+            val context=version.future.future
+            AdaptiveCycleOptionReviewDomain.review(
+                AdaptiveCycleOptionRequest(
+                    draft,handoff.blockId,version.original.setup,
+                    version.original.catalog,inputs,permissions,
+                    listOf(option),mapOf(option.optionId to context),
+                    sourceProspectiveByBlockId=mapOf(handoff.blockId to context)))
+        }}.getOrNull()
 
     /**
      * Lossless read-only native workout preview for the activated block.

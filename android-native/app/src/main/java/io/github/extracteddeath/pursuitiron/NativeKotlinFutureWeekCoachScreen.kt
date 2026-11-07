@@ -28,7 +28,8 @@ import kotlinx.coroutines.withContext
 internal fun NativeKotlinFutureWeekCoachScreen(
     host:NativeKotlinCandidateHost,
     cycleController:NativeKotlinCustomCycleController,
-    onOpenProgram:()->Unit
+    onOpenProgram:()->Unit,
+    onOpenIssuedWorkout:(String)->Unit
 ) {
     val scope=rememberCoroutineScope()
     val cycleState by cycleController.state.collectAsState()
@@ -372,8 +373,11 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                 issued?.let {journal->
                     Text("Issued native custom journal · ${journal.journal.workoutId}",
                         style=MaterialTheme.typography.titleMedium)
-                    Text("Targets are now immutable. Custom journal set logging and Finish still require full on-device UI integration; the legacy workout screen is not a fallback.",
+                    Text("Targets are now immutable. Log actual sets and commit Finish directly through the native custom journal.",
                         style=MaterialTheme.typography.bodySmall)
+                    Button(enabled=!busy,onClick={
+                        onOpenIssuedWorkout(journal.journal.workoutId)
+                    }){Text("Open native workout logger")}
                 }
             }
         }

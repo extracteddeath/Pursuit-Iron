@@ -1,5 +1,38 @@
 # Pursuit Iron — independent Kotlin training engine
 
+## New-block recipe and phase calibration review — 2026-11-07
+
+`CustomBlockTransitionLoadDomain` now reviews a changed block recipe separately
+from ordinary progression and unchanged-block repeats. It shares the exact
+previous-exposure verifier with `CustomBlockBaselineContinuityDomain`: the last
+completed same-weekday work in the immediately preceding block must match the
+athlete, gym/catalog revision, split, exercise, variant and original factual
+receipts. It cannot skip a failed latest workout or borrow another day's lift.
+
+Each proposed working weight is capped at both that set's demonstrated weight
+and its new authored weight. The starting point is the new rep-range minimum.
+Starting reps plus target RIR must fit the prior performed reps plus reported
+RIR, or an explicitly identified assumption of that OLD set's original goal.
+The new block's goal cannot become a made-up historical effort observation.
+This bounded reserve check is a conservative calibration heuristic, not a
+one-rep-max estimate, guaranteed capacity or earned weight increase.
+
+New sets, reordered positions, changed warmups/techniques, shortened rests before
+another working set, near-failure evidence, unsupported target effort, low
+readiness, restrictions or unavailable physical loads refuse the proposal.
+Rest after the final selected working set is not credited as earlier recovery.
+Native ordinary/activated-cycle readers and the shared Compose coaching summary
+now expose exact before/after weights and effort provenance. The native test
+fixture uses a real declared bar/plates/bench/rack, named strength practice,
+full-cycle policy audit, nine actual completions, cold reads and saved correction.
+
+**Still review-only:** the projected snapshot cannot be issued or logged and
+does not replace the signed authored targets. A distinct owner-fenced athlete
+acceptance, complete audit of the changed cycle and actual next-workout issuance
+remain required. Changed source/split/schedule contexts still need fresh
+calibration or a separately verified transition policy. The active web app,
+other native branch and APK freeze remain untouched.
+
 ## Native block-entry history and starting-weight review — 2026-11-07
 
 The isolated Future Week and custom-cycle preview screens now read the actual

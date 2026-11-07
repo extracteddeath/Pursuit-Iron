@@ -2,6 +2,31 @@
 
 **Isolated branch only. No live app or JavaScript engine replacement.**
 
+## Changed block recipes: conservative calibration proposals
+
+`CustomBlockTransitionLoadDomain` adds an independent review of first-week
+phase or rep/RIR changes. It uses the shared complete-history exposure verifier
+instead of weakening ordinary double progression. Each working set retains at
+most its own historical and currently authored weight, with exact stock and
+unit/basis checks. The recommended starting reps are the new rep-range minimum;
+starting reps plus reserve must not exceed the old performed reps plus reported
+or explicitly assumed original goal RIR. The new goal never substitutes for the
+historical goal. No estimated maximum or earned load increase is claimed.
+
+The native owner computes the review from current consent, complete corrected
+history and current gym inside its existing fence. Compose shows the historical
+facts, authored/proposed weights, starting reps and goal effort. Changed warmups,
+working order, added sets, shorter inter-set rests, unsupported effort, near
+failure, recovery restrictions and changed source/split contexts remain refusals.
+The rest after the final selected working set cannot support earlier loads.
+
+This projection has no acceptance or issuance authority. Existing approved
+targets, old journals and actual RIR stay unchanged. Before a different proposed
+weight can enter Train: implement separate revision-bound athlete acceptance,
+reaudit the complete projected cycle, preserve pinned weekly prescriptions,
+check outstanding workouts and revalidate the proposal at actual issuance.
+Native integration tests are not paired or device certification.
+
 ## Previous-block work and conservative starting weights
 
 The native custom-day review now includes the evidence-only

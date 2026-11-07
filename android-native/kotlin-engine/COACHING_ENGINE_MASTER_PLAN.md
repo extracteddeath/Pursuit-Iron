@@ -170,6 +170,21 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-05
 
+**G3 changed-recipe review — 2026-11-07:** `CustomBlockTransitionLoadDomain`
+can build a conservative first-week phase/recipe calibration from the last
+complete same-day exposure under an unchanged source and split. Weights remain
+per-set and cannot exceed historical or authored loads; starting reps/reserve
+must fit old observed reps plus reported or assumed ORIGINAL goal RIR. It shares
+the existing factual exposure verifier, refuses new fatigue contexts, respects
+assistance controls and preserves the immutable signed workout. Native readers
+and the shared coaching UI expose this as a distinct read-only projection.
+Pure tests cover original-vs-new goal effort, physical loading, rest, set order,
+recovery, failed latest work and immutability; native fixtures exercise actual
+strength-policy/gym audit, nine persisted completions, cold review and saved
+near-failure correction. Changed-load acceptance, full projected-cycle audit,
+actual issued calibration, schedule/source transitions and paired/device proof
+remain unfinished. This is no cutover or superiority certificate.
+
 **G3/G5 block-entry update — 2026-11-07:** the isolated Future Week coach
 now displays actual native previous-block receipts and a conservative
 `CustomBlockStartingLoadDomain` review. Exact same-context recipes can repeat

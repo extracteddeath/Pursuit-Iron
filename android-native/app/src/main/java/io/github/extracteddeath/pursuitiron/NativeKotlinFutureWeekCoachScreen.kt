@@ -509,7 +509,11 @@ internal fun NativeKotlinCustomDayCoachingSummary(
             style=MaterialTheme.typography.bodySmall)
     }
     val starting=reviewed.blockStartingLoads
-    val baseline=reviewed.priorBlockBaseline
+    val transition=reviewed.transitionStartingLoads?.takeIf {
+        it.status!=CustomBlockTransitionLoadStatus.NO_TRANSITION_NEEDED &&
+            it.reference.priorWorkingSets.isNotEmpty()
+    }
+    val baseline=transition?.reference ?:reviewed.priorBlockBaseline
     if(baseline!=null && baseline.status!=CustomBlockBaselineStatus.NOT_BLOCK_ENTRY) {
         HorizontalDivider()
         Text("Previous block · same training day",
@@ -529,7 +533,23 @@ internal fun NativeKotlinCustomDayCoachingSummary(
             Text("These are saved results from the prior block. They do not earn a new-block increase.",
                 style=MaterialTheme.typography.bodySmall)
         }
-        starting?.let {review->
+        if(transition!=null) {
+            Text("Week $absoluteWeek calibration review",
+                style=MaterialTheme.typography.titleMedium)
+            Text(transition.explanation,style=MaterialTheme.typography.bodySmall)
+            transition.sets.forEach {set->
+                val basis=if(set.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                val authored=set.authoredLoad.stripTrailingZeros().toPlainString()
+                val proposed=set.proposedLoad.stripTrailingZeros().toPlainString()
+                Text("Set ${set.ordinal}: $authored → $proposed ${set.unit.name.lowercase()}$basis · start with ${set.startingReps} reps · goal ${set.targetRir} RIR",
+                    style=MaterialTheme.typography.bodyMedium)
+            }
+            if(transition.changesAuthoredLoads) {
+                Text("Proposed weights only. Your saved workout keeps its authored weights until a separately audited change is accepted.",
+                    color=MaterialTheme.colorScheme.onSurfaceVariant,
+                    style=MaterialTheme.typography.bodySmall)
+            }
+        } else starting?.let {review->
             Text("Week $absoluteWeek starting weights",
                 style=MaterialTheme.typography.titleMedium)
             Text(review.explanation,style=MaterialTheme.typography.bodySmall)

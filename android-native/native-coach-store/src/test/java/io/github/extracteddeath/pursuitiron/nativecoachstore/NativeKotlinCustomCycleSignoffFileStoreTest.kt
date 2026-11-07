@@ -14,6 +14,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         NativeKotlinOwnerIdentity("owner-1","athlete-1")
     /** Isolated weighted variant for the real progression integration test. */
     private var weightedFixture=false
+    private var phaseTransitionFixture=false
     private val identity=NativeKotlinCurrentIdentity{active}
     private val fence by lazy{NativeKotlinApprovalRevisionFence(temp.root.toPath())}
     private val drafts by lazy{NativeCustomCycleDraftFileStore(
@@ -36,12 +37,14 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         sessionTimeBucket=SessionTimeBucket.FORTY_TO_SIXTY,
         hardSessionLimit=HardSessionLimit.Minutes(60),
         gym=GymProfileDraft("gym-1",LoadUnit.LB,
-            if(weightedFixture)mapOf("dumbbell-rack" to VerifiedLoadStock.Totals(
+            if(phaseTransitionFixture)mapOf("straight-bar" to VerifiedLoadStock.Barbell(
+                LoadUnit.LB,n("10"),mapOf(n("5") to 2,n("2.5") to 2)))
+            else if(weightedFixture)mapOf("dumbbell-rack" to VerifiedLoadStock.Totals(
                 LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
                 listOf(n("20"),n("25"),n("30")))) else emptyMap(),
-            emptySet(),emptySet()),
+            if(phaseTransitionFixture)setOf("flat-bench","rack") else emptySet(),emptySet()),
         allowBodyweight=true,allowSupersets=false,
-        allowTricepsOnLower=false,maxBarbellExercisesPerDay=0,
+        allowTricepsOnLower=false,maxBarbellExercisesPerDay=if(phaseTransitionFixture)1 else 0,
         focusedMuscles=emptySet(),reducedMuscles=emptySet(),
         excludedExerciseIds=emptySet(),lockedTrainingDays=emptySet(),
         hardTrainingDays=emptySet(),longTrainingDays=emptySet(),
@@ -51,7 +54,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         "owner-1","athlete-1",rev,setup(),StarterExerciseTranche.movements())
     private fun set()=CustomAuthoredSet(DraftSetType.WORKING,
         if(weightedFixture)DraftSetLoad.Verified(LoadUnit.LB,
-            LoadBasis.DUMBBELL_PER_HAND,n("20"))
+            if(phaseTransitionFixture)LoadBasis.BARBELL_TOTAL else LoadBasis.DUMBBELL_PER_HAND,n("20"))
         else DraftSetLoad.ExplicitBodyweight,RepBand(10,15),2,55,75)
     private fun cycle(rev:Long=1)=CustomTrainingCycle(
         "cycle-1",rev,"athlete-1",AthleteTrainingGoal.HYPERTROPHY,
@@ -62,16 +65,19 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 day->CustomTrainingDay(day,"Day $day",
                     ComposerSessionPurpose.HYPERTROPHY,
                     listOf(CustomExerciseSlot("slot-$day",
-                        if(weightedFixture)"db_curl" else "bodyweight_crunch",
-                        ComposerRole.ACCESSORY,listOf(set()))))
+                        if(phaseTransitionFixture)"barbell_bench" else
+                            if(weightedFixture)"db_curl" else "bodyweight_crunch",
+                        if(phaseTransitionFixture)ComposerRole.PRIMARY else
+                            ComposerRole.ACCESSORY,listOf(set()))))
             }
         )))
     private fun bounds()=TrainingMuscle.entries.map{muscle ->
-        val focus=if(weightedFixture)TrainingMuscle.BICEPS else TrainingMuscle.ABS
+        val focus=if(phaseTransitionFixture)TrainingMuscle.CHEST else
+            if(weightedFixture)TrainingMuscle.BICEPS else TrainingMuscle.ABS
         DeclaredMuscleDoseBounds(muscle,
             if(muscle==focus)n("3") else BigDecimal.ZERO,
             if(muscle==focus)n("4") else BigDecimal.ZERO,
-            if(muscle==focus)n("5") else BigDecimal.ZERO,
+            if(muscle==focus || phaseTransitionFixture)n("5") else BigDecimal.ZERO,
             if(muscle==focus)3 else 0)
     }
     private fun policy()=AuthoredGoalProgramPolicy(
@@ -590,14 +596,28 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             split=ComposerSplit.UPPER_LOWER,trainingDays=4,
             minimumPurposeDays=mapOf(ComposerSessionPurpose.HYPERTROPHY to 4)),
         mapOf(0 to 200,1 to 200,2 to 200,4 to 200))
-    private fun futureInputs()=inputs().copy(continuityPolicy=
+    private fun futureInputs()=inputs().copy(
+        policiesByPhase=if(!phaseTransitionFixture)inputs().policiesByPhase else
+            inputs().policiesByPhase+(TrainingPhase.STRENGTH to policy().copy(
+                revision="strength-policy-1",phase=TrainingPhase.STRENGTH,
+                minimumPurposeDays=mapOf(ComposerSessionPurpose.STRENGTH_SKILL to 3),
+                primaryLiftMinimumDays=mapOf("barbell_bench" to 3))),
+        continuityPolicy=
         CustomCoachVolumeContinuityPolicy(
             n("0.50"),n("0.50"),n("0.50"),n("0.50")))
     private fun futureBaselineCycle():CustomTrainingCycle {
         val authored=cycle(2)
         val original=authored.blocks.single()
-        return authored.copy(blocks=listOf(original,
-            original.copy(blockId="build",label="Build")))
+        val next=original.copy(blockId="build",label="Build")
+        return authored.copy(blocks=listOf(original,if(!phaseTransitionFixture)next
+            else next.copy(phase=TrainingPhase.STRENGTH,days=next.days.map{day->
+                day.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL,
+                    slots=day.slots.map{slot->slot.copy(sets=slot.sets.map{set->
+                        set.copy(load=DraftSetLoad.Verified(LoadUnit.LB,
+                            LoadBasis.BARBELL_TOTAL,n("25")),
+                            reps=RepBand(5,8),targetRir=3)
+                    })})
+            })))
     }
     private fun initializeFutureBaseline() {
         initialize()
@@ -1988,8 +2008,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val corrections:NativeKotlinCustomSavedCorrectionFileStore
     )
     private fun authoredCoachFixture(actualRir:Int?=2,
-        initializeHistory:Boolean=true):AuthoredCoachFixture {
+        initializeHistory:Boolean=true,phaseTransition:Boolean=false):AuthoredCoachFixture {
         weightedFixture=true
+        phaseTransitionFixture=phaseTransition
         if(initializeHistory) {
             initializeFutureBaseline();approveFutureBaseline()
             persistNineHistoricalBaseWorkouts(actualRir)
@@ -2058,6 +2079,61 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(CustomBlockStartingLoadStatus.RESTRICTED_OR_LOW_READINESS,
             (authoredReview(f,restricted=true) as NativeCustomNextCoachResult.Reviewed)
                 .blockStartingLoads?.status)
+    }
+
+    @Test fun changedPhaseReviewsRealPriorLoadWithoutOverwritingAuthoredPrescription() {
+        val f=authoredCoachFixture(actualRir=null,phaseTransition=true)
+        val before=f.reader.read("owner-1","athlete-1")
+        val result=authoredReview(f)
+        assertTrue(result.toString(),result is NativeCustomNextCoachResult.Reviewed)
+        val ready=result as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomBlockBaselineStatus.PRESCRIPTION_CHANGED,
+            ready.priorBlockBaseline?.status)
+        val transition=checkNotNull(ready.transitionStartingLoads)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,transition.status)
+        val set=transition.sets.single()
+        assertEquals(n("25"),set.authoredLoad)
+        assertEquals(n("20"),set.proposedLoad)
+        assertEquals(5,set.startingReps)
+        assertEquals(3,set.targetRir)
+        assertEquals(2,set.previousGoalRir)
+        assertEquals(ProgressionEffortSource.ASSUMED_GOAL,set.effortSource)
+        assertNull(set.previousActualRir)
+        assertEquals(1,transition.assumedGoalRirSetCount)
+        assertTrue(transition.changesAuthoredLoads)
+        assertFalse(transition.mayIssueWorkout)
+        assertEquals(n("25"),
+            (ready.nextWorkout!!.slots.single().sets.single().prescription.load
+                as DraftSetLoad.Verified).value)
+        assertEquals(n("20"),
+            (transition.proposedWorkout!!.slots.single().sets.single().prescription.load
+                as DraftSetLoad.Verified).value)
+        assertEquals(before,f.reader.read("owner-1","athlete-1"))
+        assertEquals(ready,authoredReview(authoredCoachFixture(initializeHistory=false,
+            phaseTransition=true)))
+        assertEquals(CustomBlockTransitionLoadStatus.RECOVERY_OR_RESTRICTION,
+            (authoredReview(f,CoachReadiness.LOW) as NativeCustomNextCoachResult.Reviewed)
+                .transitionStartingLoads?.status)
+    }
+
+    @Test fun savedNearFailureCorrectionWithdrawsChangedPhaseStartingLoad() {
+        val f=authoredCoachFixture(phaseTransition=true)
+        assertEquals(CustomBlockTransitionLoadStatus.READY_FOR_REVIEW,
+            (authoredReview(f) as NativeCustomNextCoachResult.Reviewed)
+                .transitionStartingLoads?.status)
+        val correction=NativeKotlinCustomHistoryCorrectionTransaction(
+            f.history,f.issuer,f.corrections,fence,identity).correct(
+                "owner-1","athlete-1","real-base-w3-d0",
+                CustomSavedVisitCorrection("correct-phase-baseline",0,
+                    CustomWorkoutVisitKey("cycle-1:w3:d0:slot-0:s1",
+                        CustomWorkoutVisitPart.MAIN),"observed-w3-d0",
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(n("20"),LoadUnit.LB,12,1)))
+        assertTrue(correction.toString(),correction is NativeCustomCorrectionTransactionResult.Committed)
+        val after=authoredReview(f) as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomBlockTransitionLoadStatus.NEAR_FAILURE,
+            after.transitionStartingLoads?.status)
+        assertNull(after.transitionStartingLoads?.proposedWorkout)
     }
 
     @Test fun latestSavedCustomCorrectionInvalidatesBlockStartingAdvice() {

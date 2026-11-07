@@ -62,10 +62,22 @@ data class CustomBlockBaselineReview(
 }
 
 /** Last same-day exposure wins, including a failed or changed exercise. */
+internal data class CustomBlockExposureInspection(
+    val baseline:CustomBlockBaselineReview,
+    val previous:CustomCoachingHistoricalSession?=null,
+    val priorSlot:CustomWorkoutSlotSnapshot?=null
+)
+
 object CustomBlockBaselineContinuityDomain {
-    fun review(request:CustomBlockBaselineRequest):CustomBlockBaselineReview {
+    fun review(request:CustomBlockBaselineRequest):CustomBlockBaselineReview =
+        inspect(request,true).baseline
+
+    /** Shared factual verification; relaxed recipe comparison grants no progression. */
+    internal fun inspect(request:CustomBlockBaselineRequest,
+        exactPrescription:Boolean):CustomBlockExposureInspection {
         fun refuse(status:CustomBlockBaselineStatus,why:String)=
-            CustomBlockBaselineReview(status,null,null,null,emptyList(),why)
+            CustomBlockExposureInspection(
+                CustomBlockBaselineReview(status,null,null,null,emptyList(),why))
         val next=request.next
         if(request.completed.map {it.completionOrder}.let {
                 it.any {order->order<1L} ||
@@ -134,8 +146,12 @@ object CustomBlockBaselineContinuityDomain {
             it.prescription.type==DraftSetType.WORKING
         }
         if(oldWorking.isEmpty() || oldWorking.size>32 ||
-            priorSets.map {it.prescription}!=targetSets.map {it.prescription} ||
-            priorSets.map {it.ordinalInSlot}!=targetSets.map {it.ordinalInSlot} ||
+            priorSets.map{it.setKey}.distinct().size!=priorSets.size ||
+            priorSets.map{it.ordinalInSlot}.distinct().size!=priorSets.size ||
+            priorSets.any{it.ordinalInSlot<1 || it.setKey.isBlank()} ||
+            (exactPrescription &&
+                (priorSets.map {it.prescription}!=targetSets.map {it.prescription} ||
+                priorSets.map {it.ordinalInSlot}!=targetSets.map {it.ordinalInSlot})) ||
             oldWorking.any {it.prescription.amplifier!=null} ||
             priorSlot.supersetGroup!=nextSlot.supersetGroup)
             return refuse(CustomBlockBaselineStatus.PRESCRIPTION_CHANGED,
@@ -191,7 +207,7 @@ object CustomBlockBaselineContinuityDomain {
             observed+=CustomBlockBaselineSet(set.ordinalInSlot,issued.value,
                 issued.unit,actual.reps,actual.actualRir)
         }
-        return CustomBlockBaselineReview(
+        return CustomBlockExposureInspection(CustomBlockBaselineReview(
             if(changedPhaseOrPurpose)
                 CustomBlockBaselineStatus.VERIFIED_PHASE_REFERENCE_ONLY
             else CustomBlockBaselineStatus.VERIFIED_CONTEXT_ONLY,
@@ -202,6 +218,7 @@ object CustomBlockBaselineContinuityDomain {
             else "The adjacent previous block has comparable same-day work. ")+
                 "The previous complete sets are factual reference only, not "+
                 "a carried-over or automatically earned progression. New-block "+
-                "weights, rep targets and reported RIR remain independently authored.")
+                "weights, rep targets and reported RIR remain independently authored."),
+            previous,priorSlot)
     }
 }

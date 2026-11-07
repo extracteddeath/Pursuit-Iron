@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron.rebuild
 
 import java.util.Collections
+import java.security.MessageDigest
 
 /**
  * G2: convert one source-backed, fully prescribed generated week into an
@@ -28,12 +29,30 @@ enum class GeneratedAdaptiveBlockStatus {
     CYCLE_UNRESOLVED
 }
 
+/**
+ * Identity continuity within a proposed future block, NOT permission to
+ * reuse earlier workout history. The native coach still validates exact
+ * source revisions and completed exercise receipts.
+ */
+enum class GeneratedAdaptiveSlotRelationship {
+    UNCHANGED_EXPOSURE, CHANGED_SESSION_PURPOSE, CHANGED_EXERCISE_ROLE,
+    NEW_DAY_OR_EXERCISE, AMBIGUOUS_PREVIOUS_SLOT
+}
+data class GeneratedAdaptiveSlotContinuity(
+    val weekday:Int,
+    val exerciseId:String,
+    val priorSlotId:String?,
+    val proposedSlotId:String,
+    val relationship:GeneratedAdaptiveSlotRelationship
+)
+
 data class GeneratedAdaptiveBlockResult(
     val status:GeneratedAdaptiveBlockStatus,
     val generatedWeek:AthleteProgramGenerationReview?,
     val prescribedWeek:SessionPrescriptionDraft?,
     val proposedOption:AdaptiveCycleOption?,
-    val explanation:String
+    val explanation:String,
+    val slotContinuity:List<GeneratedAdaptiveSlotContinuity> = emptyList()
 ) {
     val maySaveProgram:Boolean get()=false
     val mayIssueWorkout:Boolean get()=false
@@ -41,6 +60,25 @@ data class GeneratedAdaptiveBlockResult(
 
 object GeneratedAdaptiveBlockDomain {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
+
+    // A new exposure gets a deterministic, short, namespace-scoped identity.
+    // Including the source revision ensures that a changed day cannot
+    // accidentally inherit a retired slot from a prior approved revision.
+    // IDs are labels, NOT evidence of historical performance.
+    private fun freshSlotId(
+        cycle:CustomTrainingCycle,blockId:String,weekday:Int,
+        purpose:ComposerSessionPurpose,exercise:DraftPrescribedExercise
+    ):String {
+        val seed=listOf(cycle.cycleId,cycle.revision.toString(),blockId,
+            weekday.toString(),purpose.name,exercise.exerciseId,
+            exercise.role.name).joinToString("|")
+        val suffix=MessageDigest.getInstance("SHA-256")
+            .digest(seed.toByteArray(Charsets.UTF_8))
+            .take(12).joinToString("") {
+                (it.toInt() and 255).toString(16).padStart(2,'0')
+            }
+        return "coach_d"+weekday+"_"+suffix
+    }
 
     fun propose(input:GeneratedAdaptiveBlockRequest):GeneratedAdaptiveBlockResult {
         fun refuse(
@@ -103,6 +141,7 @@ object GeneratedAdaptiveBlockDomain {
                 generation,prescribed)
 
         val originalByDay=source.days.associateBy {it.weekday}
+        val identities=mutableListOf<GeneratedAdaptiveSlotContinuity>()
         val days=prescribed.sessions.map {session ->
             val composerDay=composed.days.getOrNull(session.dayIndex)
                 ?:return refuse(GeneratedAdaptiveBlockStatus.PRESCRIPTION_UNRESOLVED,
@@ -110,11 +149,32 @@ object GeneratedAdaptiveBlockDomain {
             val weekday=composerDay.calendarDay
             val prior=originalByDay[weekday]
             val slots=session.exercises.map {exercise ->
-                val matching=prior?.slots?.singleOrNull {
+                val previous=prior?.slots.orEmpty().filter {
                     it.exerciseId==exercise.exerciseId
                 }
-                val stableId=matching?.slotId ?:
-                    "coach_d"+weekday+"_"+exercise.exerciseId
+                val matching=previous.singleOrNull()
+                val relationship=when {
+                    previous.size>1 ->
+                        GeneratedAdaptiveSlotRelationship.AMBIGUOUS_PREVIOUS_SLOT
+                    matching==null ->
+                        GeneratedAdaptiveSlotRelationship.NEW_DAY_OR_EXERCISE
+                    prior.purpose!=session.purpose ->
+                        GeneratedAdaptiveSlotRelationship.CHANGED_SESSION_PURPOSE
+                    matching.role!=exercise.role ->
+                        GeneratedAdaptiveSlotRelationship.CHANGED_EXERCISE_ROLE
+                    else ->GeneratedAdaptiveSlotRelationship.UNCHANGED_EXPOSURE
+                }
+                // Reuse identity only for the very SAME training exposure.
+                // Purpose and role changes must not impersonate old work,
+                // even when the movement stays on the same calendar weekday.
+                val stableId=if(relationship==
+                    GeneratedAdaptiveSlotRelationship.UNCHANGED_EXPOSURE)
+                    checkNotNull(matching).slotId
+                    else freshSlotId(cycle,input.targetBlockId,weekday,
+                        session.purpose,exercise)
+                identities+=GeneratedAdaptiveSlotContinuity(
+                    weekday,exercise.exerciseId,matching?.slotId,
+                    stableId,relationship)
                 // A protected source slot may never be silently reassigned;
                 // new slots are distinguishable from authored slot IDs.
                 CustomExerciseSlot(stableId,exercise.exerciseId,exercise.role,
@@ -148,6 +208,7 @@ object GeneratedAdaptiveBlockDomain {
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,
             generation,prescribed,
             AdaptiveCycleOption(input.optionId,structure.verifiedDraft),
-            "Complete candidate block; still requires full-cycle quality, permission and athlete review.")
+            "Complete candidate block; still requires full-cycle quality, permission and athlete review.",
+            Collections.unmodifiableList(identities.toList()))
     }
 }

@@ -2264,6 +2264,21 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(NativeCustomJournalResult.Rejected(
             NativeCustomJournalRefusal.NOT_ISSUED),
             after.issuer.open("owner-1","carry-week6"))
+
+        // Simulate an old caller that prepared the original heavier weight
+        // without injecting the guard. Even this cold-recoverable authored
+        // snapshot cannot become ISSUED through the guarded native path.
+        val oldPrepared=after.prepared.prepare("owner-1","old-unguarded-week6",
+            "cycle-1",6,0,futureInputs()) as NativeCustomPrepareResult.Prepared
+        assertEquals(n("25"),((oldPrepared.workout.snapshot.slots.single()
+            .sets.single().prescription.load) as DraftSetLoad.Verified).value)
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.CONSENT_CHANGED),
+            after.issuer.issue("owner-1","old-unguarded-week6","cycle-1",
+                6,0,futureInputs(),coldConsent))
+        assertEquals(NativeCustomJournalResult.Rejected(
+            NativeCustomJournalRefusal.NOT_ISSUED),
+            after.issuer.open("owner-1","old-unguarded-week6"))
     }
 
     @Test fun changedHistoryBeforeIssueRefusesCalibrationWithoutChangingPreparedTargets() {

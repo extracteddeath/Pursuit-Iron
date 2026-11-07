@@ -298,6 +298,18 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                         ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                             NativeCustomJournalRefusal.CONSENT_CHANGED)
                 else null
+                // Recheck a previously prepared untouched authored workout at
+                // the FIRST issuance boundary, not just at preparation. A
+                // corrected/finalized LOWER prior issued load must not turn a
+                // cold-recovered old 25 lb preparation into a silent step up.
+                // Already-issued sessions replay above without rewriting history.
+                if(pre is NativeCustomPreflightResult.ReviewedPreview &&
+                    approvedCalibration==null && !selected.resetToAuthored &&
+                    calibration!=null &&
+                    calibration.authoredPreparationGate(ownerKey,cycleId,inputs,
+                        pre.session)!=NativeAuthoredLoadPreparationGate.CLEAR)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.CONSENT_CHANGED)
                 if(pre !is NativeCustomPreflightResult.ReviewedPreview ||
                     pre.receipt.recordRevision!=selected.consentRevision ||
                     pre.receipt.fingerprintSha256!=selected.consentFingerprint ||

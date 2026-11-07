@@ -337,3 +337,10 @@ legacy store consumers without that injected reviewer are not certified as
 guarded issuance entry points. Full production cutover must make the guard
 mandatory in every trusted issuer path and implement a direct reviewed
 authored-load-return acknowledgement without toggling coaching OFF.
+
+The ordinary candidate-host issuer now repeats this owner-fenced reversion
+check on FIRST ISSUE, including old prepared authored workouts made before
+the guard was introduced. It refuses first issuance without changing that
+prepared file or existing issued history. Cold replay of legitimately issued
+workouts remains untouched. Regression tests also exercise the old-preparer
+bypass after a saved near-failure correction.

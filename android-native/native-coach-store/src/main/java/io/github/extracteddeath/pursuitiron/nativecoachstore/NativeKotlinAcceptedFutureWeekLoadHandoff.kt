@@ -29,7 +29,7 @@ sealed interface NativeAcceptedFutureWeekLoadHandoff {
         NativeAcceptedFutureWeekLoadHandoff
 }
 enum class NativeAcceptedFutureWeekLoadRefusal {
-    INVALID_SELECTION, CONSENT_MISSING_OR_REVOKED,
+    INVALID_SELECTION, NOT_AUTHORIZED, CONSENT_MISSING_OR_REVOKED,
     STALE_CONSENT_OR_REVIEW, SOURCE_CHANGED, EQUIPMENT_UNVERIFIED,
     AUDITED_OPTION_MISMATCH, STORAGE_UNAVAILABLE
 }

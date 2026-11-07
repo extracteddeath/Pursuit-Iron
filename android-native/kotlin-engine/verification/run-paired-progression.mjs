@@ -53,7 +53,7 @@ const legacyResults = fixture.cases.map(item => {
   return { caseId: item.id, inputDigest: scenarioDigest(fixture.fixtureDigest, item.id),
     previous: item.previous, latest: item.latest,
     candidateLoad: result.suggestedLoad, setTargets: result.setTargets,
-    mutatedInput: before !== JSON.stringify({ session, performed, context }), raw };
+    mutatedInput: before !== JSON.stringify({ session, performed, context }), raw: result };
 });
 const engines = {
   'legacy-javascript': { commit: fixture.legacyCommit,

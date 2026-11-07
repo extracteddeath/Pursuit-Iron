@@ -89,9 +89,13 @@ internal object NativeFutureWeekLoadSessionProjection {
             physical,item.previousLoad,physical.unit)
         val replacement=EquipmentLoadDomain.inspect(
             physical,item.proposedLoad,physical.unit)
+        // Do not smart-cast nullable fields owned by the engine module:
+        // the Kotlin compiler treats cross-module public properties as
+        // unstable. Capture the physical step once before comparisons.
+        val nextPhysical=(inspection as? LoadInspection.Confirmed)?.nextAbove
         if(inspection !is LoadInspection.Confirmed||
-            !inspection.exact||inspection.nextAbove==null||
-            !same(inspection.nextAbove,item.proposedLoad)||
+            !inspection.exact||nextPhysical==null||
+            !same(nextPhysical,item.proposedLoad)||
             replacement !is LoadInspection.Confirmed||
             !replacement.exact)
             return no(NativeFutureWeekLoadProjectionRefusal.UNVERIFIED_EQUIPMENT)

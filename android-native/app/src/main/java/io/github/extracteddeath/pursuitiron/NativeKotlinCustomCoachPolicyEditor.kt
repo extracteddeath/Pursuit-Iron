@@ -50,7 +50,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         mutableStateOf(false)
     }
     val profile=source?.reviewed?.takeIf {
-        source.status==AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW &&
+        source?.status==AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW &&
             it.athleteProfileId==cycle.athleteId && it.goal==cycle.goal
     }
     fun get(key:String)=fields[key].orEmpty()

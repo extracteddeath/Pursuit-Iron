@@ -481,4 +481,74 @@ class CustomCycleCoachAuditDomainTest {
                     CustomCoachPolicyAuthoringResult.Blocked)
     }
 
+    @Test fun missingCoachTargetsStillPermitFactualAuthoredEvidenceWithoutApprovingDose() {
+        val audited=CustomCycleCoachAuditDomain.review(
+            cycle(),setup(),StarterExerciseTranche.movements())
+        assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,audited.status)
+        val result=CustomCoachPolicyEvidenceDomain.review(audited)
+        assertTrue(result.toString(),
+            result is CustomCoachPolicyEvidenceReview.Reviewed)
+        val evidence=(result as CustomCoachPolicyEvidenceReview.Reviewed).evidence
+        val phase=evidence.phaseWorkloads.getValue(TrainingPhase.HYPERTROPHY)
+        assertEquals(3,phase.trainingWeekCount)
+        assertEquals(3,phase.minimumWorkingSets)
+        assertEquals(3,phase.maximumWorkingSets)
+        assertEquals(n("3"),phase.muscleRanges.getValue(
+            TrainingMuscle.ABS).minimumWeeklyCredit)
+        assertEquals(n("0"),phase.muscleRanges.getValue(
+            TrainingMuscle.WRIST_EXTENSORS).maximumWeeklyCredit)
+        assertEquals(3,phase.muscleRanges.getValue(
+            TrainingMuscle.ABS).minimumDirectWeekdays)
+        assertEquals(130L,phase.minimumKnownSecondsByDay[0])
+        assertEquals(2,evidence.transitions.size)
+        assertEquals(n("0.000"),
+            evidence.transitions.first().workingSetChangeFraction)
+        assertFalse(evidence.canSupplyDoseTargets)
+        assertFalse(evidence.canSupplyContinuityCeilings)
+        assertFalse(evidence.canIssueWorkout)
+    }
+
+    @Test fun evidenceTracksActualTrainingDropsAcrossBlockAndRecoveryBoundaries() {
+        val authored=twoBlockCycle(recoverySecond=false)
+        val inspected=CustomCycleCoachAuditDomain.review(
+            authored,setup(),StarterExerciseTranche.movements())
+        val result=CustomCoachPolicyEvidenceDomain.review(inspected)
+        assertTrue(result.toString(),
+            result is CustomCoachPolicyEvidenceReview.Reviewed)
+        val evidence=(result as CustomCoachPolicyEvidenceReview.Reviewed).evidence
+        assertEquals(2,evidence.phaseWorkloads.getValue(
+            TrainingPhase.HYPERTROPHY).trainingWeekCount)
+        assertEquals(3,evidence.phaseWorkloads.getValue(
+            TrainingPhase.HYPERTROPHY).minimumWorkingSets)
+        assertEquals(5,evidence.phaseWorkloads.getValue(
+            TrainingPhase.HYPERTROPHY).maximumWorkingSets)
+        assertEquals(n("-0.400"),
+            evidence.transitions.single().workingSetChangeFraction)
+        val withRecovery=CustomCycleCoachAuditDomain.review(
+            twoBlockCycle(recoverySecond=true),setup(),
+            StarterExerciseTranche.movements())
+        val recoveryEvidence=CustomCoachPolicyEvidenceDomain.review(withRecovery)
+        assertTrue(recoveryEvidence.toString(),
+            recoveryEvidence is CustomCoachPolicyEvidenceReview.Reviewed)
+        assertTrue((recoveryEvidence as CustomCoachPolicyEvidenceReview.Reviewed)
+            .evidence.transitions.isEmpty())
+    }
+
+    @Test fun unverifiedCatalogStructureAndSourceCannotGenerateFakeVolumeEvidence() {
+        val missingCatalog=CustomCycleCoachAuditDomain.review(
+            cycle(),setup(),emptyList())
+        assertEquals(CustomCoachPolicyEvidenceReview.Rejected(
+            CustomCoachEvidenceRefusal.UNVERIFIED_CATALOG),
+            CustomCoachPolicyEvidenceDomain.review(missingCatalog))
+        val mismatch=CustomCycleCoachAuditDomain.review(
+            cycle(),setup(excluded=setOf("bodyweight_crunch")),
+            StarterExerciseTranche.movements())
+        assertTrue(CustomCoachPolicyEvidenceDomain.review(mismatch) is
+            CustomCoachPolicyEvidenceReview.Rejected)
+        val invalid=CustomCycleCoachAuditDomain.review(
+            cycle(days=emptyList()),setup(),StarterExerciseTranche.movements())
+        assertTrue(CustomCoachPolicyEvidenceDomain.review(invalid) is
+            CustomCoachPolicyEvidenceReview.Rejected)
+    }
+
 }

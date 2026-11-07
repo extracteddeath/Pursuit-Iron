@@ -354,10 +354,15 @@ internal fun NativeKotlinCandidateCoachScreen(
                     }
                     Text("The approved program retains ${checkNotNull(candidate.candidateProgram).exercises.size} exercises, with the reviewed load applied to each affected visit. The prior issued workout and saved results will remain unchanged.",
                         style=MaterialTheme.typography.bodySmall)
+                    if(verified?.supersedesAcceptedRepTargets==true)
+                        Text("This load change replaces the pending personalized rep-only grant. The new load begins with the approved rep range; saved workout results remain unchanged.",
+                            style=MaterialTheme.typography.bodyMedium)
                     Row(verticalAlignment=Alignment.CenterVertically) {
                         Checkbox(checked=checked,
                             onCheckedChange={checked=it})
-                        Text("I reviewed the proposed loads and all affected days. Save a new approved Kotlin program revision.")
+                        Text(if(verified?.supersedesAcceptedRepTargets==true)
+                            "I reviewed the load change and all affected days, and agree to replace my pending personalized rep targets."
+                        else "I reviewed the proposed loads and all affected days. Save a new approved Kotlin program revision.")
                     }
                     Button(enabled=checked && !busy && step!=null,
                         onClick={
@@ -379,7 +384,8 @@ internal fun NativeKotlinCandidateCoachScreen(
                                     checkNotNull(summary.candidateLoad),
                                     summary.affectedDayIndices,
                                     "workout-$next","grant-$next",
-                                    "receipt-$next",selectedDay,true)
+                                    "receipt-$next",selectedDay,true,
+                                    proof.supersedesAcceptedRepTargets)
                                 scope.launch {
                                     val result=runCatching {
                                         withContext(Dispatchers.IO) {

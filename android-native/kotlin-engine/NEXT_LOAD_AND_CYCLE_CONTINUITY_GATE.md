@@ -32,14 +32,16 @@ and the whole week is recomposed and audited again. The original authored
 program, issued workouts, historical observations and stored grants remain
 unchanged.
 
-**Important product gap:** current generated Composer options hold one load
-per exercise across the whole program. The reviewer therefore surfaces every
-affected training day; it does not pretend to recommend a one-day adjustment.
-Production requires a new approved program revision, complete owner-verified
-history and native grant before these proposals may influence targets. A
-future per-purpose/per-visit loading model and a review/approval UI are needed
-for true coach-quality strength-vs-hypertrophy variation. A submitted DTO is
-not authenticated history by itself.
+**Current loading model:** a Composer exercise has a program-wide physical
+default, but the verified `ExercisePrescriptionPolicy` can now override its
+working load per session purpose **and per exact 0-based day slot**. Upper
+versus Push need not share a bench target, even when both use a hypertrophy
+session purpose. The native reviewer selects two comparable, authenticated
+visits from that *same day*, proposes a one-slot load change, and independently
+reaudits the complete revised week. Old issued workouts never change. This is
+an actual candidate capability, not proof of production release or human-coach
+superiority. Further exercise-specific load schemes, custom cycle handoff,
+source ownership and device validation are still required.
 
 ## Owner-fenced explicit load-change acceptance (candidate only)
 
@@ -62,8 +64,14 @@ compare-and-swap transaction to advance **both** storage approval revision
 and Kotlin program revision and save a new, separate workout grant.
 
 An unchanged original issued journal remains resumable and immutable; the
-new grant has **not** issued any sets or changed completed history. A
-repeat acceptance, altered correction, stale approval, unavailable history,
+new grant has **not** issued any sets or changed completed history. If a prior
+UNISSUED grant has athlete-accepted exact rep targets, the current review
+surfaces that pending prescription and requires separate explicit consent
+before the load acceptance can supersede it. The new program approval clears
+the old rep-only proof; it never transfers old exact rep goals to a changed
+working load. The replacement workout stages from the new verified load and
+approved practical rep band, while completed workouts retain their exact
+logged history. A repeat acceptance, altered correction, stale approval, unavailable history,
 identity reuse, unbuildable stock or missing explicit confirmation refuses
 the write. The real native issuance transaction must separately approve the
 newly selected workout before it appears in the logger.

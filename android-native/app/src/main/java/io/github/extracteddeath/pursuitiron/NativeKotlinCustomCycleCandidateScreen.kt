@@ -419,8 +419,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     modifier=Modifier.fillMaxWidth()
                 ) {Text("Diagnose missing policy requirements")}
                 state.coachingAudit?.let { audit ->
-                    val coachActions=remember(audit) {
-                        CustomCoachActionReviewDomain.review(audit)
+                    val coachActions=remember(audit,state.coachingSuggestionsEnabled) {
+                        if(state.coachingSuggestionsEnabled)
+                            CustomCoachActionReviewDomain.review(audit)
+                        else null
                     }
                     var showCoachChoices by remember(audit) {mutableStateOf(false)}
                     HorizontalDivider()
@@ -429,6 +431,9 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     Text("Based on the verified authored weeks and actual reviewed policy. No suggested path automatically changes sets, exercises, splits, or approved targets.",
                         style=MaterialTheme.typography.bodySmall)
                     when(val guidance=coachActions) {
+                        null ->
+                            Text("Coaching suggestions are off in your verified native settings. Full-cycle factual auditing and manual custom editing remain available.",
+                                style=MaterialTheme.typography.bodySmall)
                         is CustomCoachActionReviewResult.Rejected ->
                             Text("Actionable coaching requires verified source, structure and training evidence: ${pretty(guidance.reason)}.",
                                 color=MaterialTheme.colorScheme.error,

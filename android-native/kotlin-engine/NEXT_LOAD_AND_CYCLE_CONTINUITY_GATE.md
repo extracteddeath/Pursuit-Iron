@@ -6,7 +6,7 @@
 
 The native custom-day review now includes the evidence-only
 `CustomBlockBaselineContinuityDomain` plus `CustomBlockStartingLoadDomain`.
-The Future Week Compose screen shows the last verified same-weekday sets and
+The Future Week and custom-cycle preview screens show the last verified same-day sets and
 their original reported effort, then separately explains whether repeating
 the existing per-set authored loads is supported. It never calls that repeat
 an earned load increase and does not create a new approval or edit a cycle.
@@ -17,10 +17,15 @@ repeat recommendation. Missing RIR uses the original goal only for calculation;
 near failure, missing both effort sources, low readiness, restrictions, failed
 or missing latest work and unavailable physical stock refuse it. Changed phase
 or purpose can expose factual reference without converting it into a load.
-The current activation flow changes source revision, so it remains blocked
-pending a proven source-equivalence contract. Tests distinguish this real native
-limitation from the headless same-source repeat capability. Different starting
-weights and their acceptance/issuance remain separate unfinished work.
+The ordinary signed-cycle path uses `NativeKotlinCustomWorkoutPreflight` under
+the same owner transaction, so unchanged blocks can actually receive the
+same-source repeat from real persisted history. Nine-workout native tests prove
+missing-effort provenance, cold reads and withdrawal after a saved correction
+changes the latest work to failure; stale/revoked consent cannot read advice.
+The separate future-schedule activation path changes source and training
+context, so it still requires a fresh baseline. Different starting weights,
+new-context transition policies and their acceptance/issuance remain separate
+unfinished work.
 
 ## Evidence-driven next-program load review
 

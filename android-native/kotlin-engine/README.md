@@ -2,8 +2,8 @@
 
 ## Native block-entry history and starting-weight review — 2026-11-07
 
-The isolated Future Week screen now reads the actual owner-fenced custom-day
-coach and displays verified previous-block working sets separately from earned
+The isolated Future Week and custom-cycle preview screens now read the actual
+owner-fenced custom-day coach and display verified previous-block sets separately from earned
 progression. Each historical set retains its exact weight, reps and nullable
 actual RIR. Selecting a different day, slot, readiness or policy clears the
 review; a late response cannot reinstall coaching after that selection changes.
@@ -23,12 +23,21 @@ This recommendation changes no targets and needs no redundant acceptance
 transaction: it repeats already-authored weights and still requires the normal
 workout review/issuance. A different new-block load, estimated phase conversion,
 earned cross-block increase and new approval are **not implemented here**.
-In particular, current future-block activation increments the source revision;
-the handoff refuses that source change even when the exercise and weight appear
-identical. Native tests exercise that refusal against nine real completed
-workouts and a cold reader. A verified source-equivalence policy is still needed
-before that transition may retain a starting-weight recommendation. No automatic
-write, issued-workout change, APK or production cutover is enabled.
+Ordinary signed authored cycles now use their existing consent-bound preflight
+and the SAME complete corrected-history reader as activated blocks. They need
+no schedule adaptation to review a block-entry starting weight. Real native-file
+tests exercise nine preceding completed workouts, missing actual RIR, cold
+readers, recovery restrictions, revoked consent and correction of the latest
+workout to failed. The latter immediately withdraws the old starting advice.
+The UI binds advice to the exact snapshot and selected slot; dumbbell loads
+are labeled per hand.
+
+Current future-schedule activation changes both context and source revision;
+the handoff refuses that change even when exercise and weight appear identical.
+Native tests distinguish that refusal from the now-connected ordinary-cycle
+repeat. New split/day-count contexts still need a fresh baseline or a distinct,
+independently justified transition policy. No automatic write, issued-workout
+change, APK or production cutover is enabled.
 
 ## Goal RIR when effort is unreported — 2026-11-07
 

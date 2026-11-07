@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomSignoffRead
+import java.math.BigDecimal
 
 private val customWeekdays = listOf(
     "Monday", "Tuesday", "Wednesday", "Thursday",
@@ -84,6 +85,13 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var confirmConsent by remember { mutableStateOf(false) }
     var inspectedWeek by rememberSaveable { mutableStateOf("1") }
     var inspectedWeekday by rememberSaveable { mutableIntStateOf(0) }
+    var coachMaxStep by rememberSaveable {mutableStateOf("5")}
+    var coachReadiness by remember {mutableStateOf(CoachReadiness.NORMAL)}
+    var coachRestricted by rememberSaveable {mutableStateOf(false)}
+    var dayCoachingVisible by remember {mutableStateOf(false)}
+    LaunchedEffect(draft?.revision,state.sourceRevision,state.authoredPreview,
+        state.reviewedCoachInputs,coachMaxStep,coachReadiness,coachRestricted,
+        inspectedWeek,inspectedWeekday) {dayCoachingVisible=false}
     // Slot identity is stable and separate from the exercise catalog ID.
     // Null slot ID denotes authoring a genuinely new exercise visit.
     var exerciseEditor by remember {
@@ -361,6 +369,28 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         "Consent-bound preflight passed; this is STILL NOT an issued workout."
                         else "Draft preview: NOT a reviewed workout grant.",
                         style=MaterialTheme.typography.bodySmall)
+                    val maxStep=runCatching{BigDecimal(coachMaxStep.trim())}
+                        .getOrNull()?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("10000") &&
+                            it.stripTrailingZeros().scale()<=3}
+                    if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled) {
+                        OutlinedTextField(value=coachMaxStep,enabled=!busy,
+                            onValueChange={coachMaxStep=it;dayCoachingVisible=false},
+                            label={Text("Maximum load increase · gym units")},
+                            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
+                            isError=maxStep==null,singleLine=true,
+                            modifier=Modifier.fillMaxWidth())
+                        if(state.fatigueCoachingEnabled) {
+                            CycleChoiceRow("How are you feeling?",CoachReadiness.entries.toList(),
+                                coachReadiness,{pretty(it)}) {
+                                    if(!busy){coachReadiness=it;dayCoachingVisible=false}
+                                }
+                        }
+                        Row {
+                            Checkbox(checked=coachRestricted,enabled=!busy,
+                                onCheckedChange={coachRestricted=it;dayCoachingVisible=false})
+                            Text("Movement is painful or restricted")
+                        }
+                    }
                     session.slots.forEach { slot ->
                         HorizontalDivider()
                         Text("${slot.exerciseId} · ${slot.variantId}",
@@ -400,6 +430,24 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 session.absoluteWeek,session.weekday,slot.slotId)}) {
                             Text("Compare an edit for week ${session.absoluteWeek}")
                         }
+                        if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled) {
+                            OutlinedButton(enabled=!busy && maxStep!=null &&
+                                session.stamp.cycleRevision==draft.revision,
+                                onClick={
+                                    dayCoachingVisible=true
+                                    controller.reviewAuthoredDayCoaching(session.absoluteWeek,
+                                        session.weekday,slot.slotId,coachReadiness,
+                                        coachRestricted,checkNotNull(maxStep))
+                                }){Text("Review this exercise's starting weights")}
+                        }
+                    }
+                    state.dayCoaching?.takeIf {reviewed->
+                        dayCoachingVisible && reviewed.nextWorkout?.let {next->
+                            next.copy(declaredNonSetSeconds=session.declaredNonSetSeconds)==session
+                        }==true && session.stamp.cycleRevision==draft.revision &&
+                            session.stamp.gymCatalogSourceRevision==state.sourceRevision
+                    }?.let {reviewed->
+                        NativeKotlinCustomDayCoachingSummary(reviewed,session.absoluteWeek)
                     }
                 }
             }

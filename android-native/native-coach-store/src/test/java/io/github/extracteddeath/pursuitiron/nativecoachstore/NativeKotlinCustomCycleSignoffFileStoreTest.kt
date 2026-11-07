@@ -807,7 +807,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
      * the real fully verified custom + Composer + history preflight.
      */
     /** Full, disk-verified historical boundary: nine real custom Finish commits. */
-    private fun persistNineHistoricalBaseWorkouts() {
+    private fun persistNineHistoricalBaseWorkouts(actualRir:Int?=2) {
         val root=temp.root.toPath()
         val ledger=NativeKotlinHistoryManifestFileStore(root)
         assertTrue(ledger.enroll("owner-1","athlete-1"){o,a->
@@ -836,7 +836,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                     KotlinJournalSetOutcome.COMPLETED,
                     KotlinPerformedSet(
                         if(weightedFixture)n("20") else null,
-                        if(weightedFixture)LoadUnit.LB else null,12,2)))
+                        if(weightedFixture)LoadUnit.LB else null,12,actualRir)))
             assertTrue(recorded.toString(),
                 recorded is NativeCustomJournalResult.Durable)
             val finish=transaction.complete("owner-1","athlete-1",
@@ -1978,6 +1978,122 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             f.activation,f.signoff,sources,f.reader,f.issuer,f.assistance)
         assertEquals(reviewed,reopened.review("owner-1",futureInputs(),4,0,
             "slot-0",CoachReadiness.NORMAL,false,n("5")))
+    }
+
+    private data class AuthoredCoachFixture(
+        val coach:NativeKotlinCustomNextWorkoutReview,
+        val reader:NativeKotlinMixedHistoryReadCoordinator,
+        val issuer:NativeKotlinCustomWorkoutJournalFileStore,
+        val history:NativeKotlinHistoryManifestFileStore,
+        val corrections:NativeKotlinCustomSavedCorrectionFileStore
+    )
+    private fun authoredCoachFixture(actualRir:Int?=2,
+        initializeHistory:Boolean=true):AuthoredCoachFixture {
+        weightedFixture=true
+        if(initializeHistory) {
+            initializeFutureBaseline();approveFutureBaseline()
+            persistNineHistoricalBaseWorkouts(actualRir)
+        }
+        val root=temp.root.toPath()
+        val history=NativeKotlinHistoryManifestFileStore(root)
+        val preflight=NativeKotlinCustomWorkoutPreflight(
+            fence,identity,drafts,sources,store())
+        val issuer=NativeKotlinCustomWorkoutJournalFileStore(root,fence,identity,
+            NativeKotlinCustomWorkoutPreparedStore(root,fence,identity,preflight),
+            preflight,history,KotlinNativeJournalFileStore(root))
+        val activation=NativeKotlinFutureActivationCommitTransaction(
+            root,fence,identity,sources,drafts,futureStore(),
+            approvalCheckpoint(),newHandoff())
+        val composer=KotlinNativeJournalFileStore(root)
+        val authority=object:NativeKotlinWorkoutAuthority {
+            override fun currentApprovedWorkout(ownerKey:String,workoutId:String):
+                NativeKotlinWorkoutApproval?=null
+            override fun canAccessIssuedWorkout(ownerKey:String,source:KotlinTrainingSourceRevision)=
+                ownerKey=="owner-1" && source.athleteId=="athlete-1"
+        }
+        val corrections=NativeKotlinCustomSavedCorrectionFileStore(
+            root,fence,identity,issuer,history)
+        val reader=NativeKotlinMixedHistoryReadCoordinator(history,composer,
+            KotlinNativeSavedCorrectionFileStore(root,composer),issuer,
+            authority,identity,fence,corrections)
+        return AuthoredCoachFixture(NativeKotlinCustomNextWorkoutReview(
+            fence,identity,activation,
+            NativeKotlinActivatedCycleSignoffFileStore(root,fence,identity,activation),
+            sources,reader,issuer,
+            NativeKotlinCoachAssistanceSettingsStore(root,fence,identity),preflight),
+            reader,issuer,history,corrections)
+    }
+
+    private fun authoredReview(f:AuthoredCoachFixture,
+        readiness:CoachReadiness=CoachReadiness.NORMAL,restricted:Boolean=false)=
+        f.coach.reviewAuthored("owner-1","cycle-1",futureInputs(),
+            4,0,"slot-0",readiness,restricted,n("5"))
+
+    @Test fun ordinarySignedCustomBlocksUseRealPriorWorkWithoutScheduleActivation() {
+        val f=authoredCoachFixture(actualRir=null)
+        val before=f.reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review
+        val result=authoredReview(f)
+        assertTrue(result.toString(),result is NativeCustomNextCoachResult.Reviewed)
+        val ready=result as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomBlockBaselineStatus.VERIFIED_CONTEXT_ONLY,
+            ready.priorBlockBaseline?.status)
+        val start=checkNotNull(ready.blockStartingLoads)
+        assertEquals(CustomBlockStartingLoadStatus.REPEAT_AUTHORED_LOADS,start.status)
+        assertEquals("real-base-w3-d0",start.baseline.previousWorkoutId)
+        assertEquals(n("20"),start.startingSets.single().load)
+        assertEquals(LoadBasis.DUMBBELL_PER_HAND,start.startingSets.single().basis)
+        assertEquals(1,start.assumedGoalRirSetCount)
+        assertNull(start.startingSets.single().actualRir)
+        assertNull(start.baseline.priorWorkingSets.single().actualRir)
+        assertEquals("build",ready.nextWorkout?.blockId)
+        assertEquals("slot-0",ready.selectedSlotId)
+        assertEquals(CustomNextWorkoutCoachingStatus.NO_MATCHING_SESSION,ready.review.status)
+        assertNull(ready.review.loadReviewCandidate)
+        assertEquals(before,f.reader.read("owner-1","athlete-1"))
+        assertEquals(ready,authoredReview(authoredCoachFixture(initializeHistory=false)))
+        assertEquals(CustomBlockStartingLoadStatus.RESTRICTED_OR_LOW_READINESS,
+            (authoredReview(f,CoachReadiness.LOW) as NativeCustomNextCoachResult.Reviewed)
+                .blockStartingLoads?.status)
+        assertEquals(CustomBlockStartingLoadStatus.RESTRICTED_OR_LOW_READINESS,
+            (authoredReview(f,restricted=true) as NativeCustomNextCoachResult.Reviewed)
+                .blockStartingLoads?.status)
+    }
+
+    @Test fun latestSavedCustomCorrectionInvalidatesBlockStartingAdvice() {
+        val f=authoredCoachFixture()
+        val first=authoredReview(f) as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomBlockStartingLoadStatus.REPEAT_AUTHORED_LOADS,
+            first.blockStartingLoads?.status)
+        val corrected=NativeKotlinCustomHistoryCorrectionTransaction(
+            f.history,f.issuer,f.corrections,fence,identity).correct(
+                "owner-1","athlete-1","real-base-w3-d0",
+                CustomSavedVisitCorrection(
+                    "correct-last-baseline",0,
+                    CustomWorkoutVisitKey("cycle-1:w3:d0:slot-0:s1",
+                        CustomWorkoutVisitPart.MAIN),
+                    "observed-w3-d0",KotlinJournalSetOutcome.FAILED_ATTEMPT,
+                    KotlinPerformedSet(n("20"),LoadUnit.LB,0,null)))
+        assertTrue(corrected.toString(),corrected is NativeCustomCorrectionTransactionResult.Committed)
+        val after=authoredReview(f) as NativeCustomNextCoachResult.Reviewed
+        assertTrue(after.historyRevision>first.historyRevision)
+        assertEquals(CustomBlockBaselineStatus.PREVIOUS_WORKOUT_UNVERIFIED_OR_INCOMPLETE,
+            after.priorBlockBaseline?.status)
+        assertEquals(CustomBlockStartingLoadStatus.BASELINE_UNAVAILABLE,
+            after.blockStartingLoads?.status)
+        assertTrue(checkNotNull(after.blockStartingLoads).startingSets.isEmpty())
+    }
+
+    @Test fun ordinaryCustomCoachingRefusesRevokedConsentOrWrongCycle() {
+        val f=authoredCoachFixture()
+        assertEquals(NativeCustomNextCoachResult.Rejected(
+            NativeCustomNextCoachRefusal.AUTHORED_CONSENT_UNAVAILABLE),
+            f.coach.reviewAuthored("owner-1","missing-cycle",futureInputs(),
+                4,0,"slot-0",CoachReadiness.NORMAL,false,n("5")))
+        assertTrue(store().revoke("owner-1","cycle-1",1)
+            is NativeCustomSignoffWrite.Committed)
+        assertEquals(NativeCustomNextCoachResult.Rejected(
+            NativeCustomNextCoachRefusal.AUTHORED_CONSENT_UNAVAILABLE),authoredReview(f))
     }
 
     @Test fun blockEntryBaselineRespectsCoachingOffAndDoesNotAlterAuthoredWorkout() {

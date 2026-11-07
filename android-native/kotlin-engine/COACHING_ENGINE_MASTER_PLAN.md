@@ -176,11 +176,14 @@ now displays actual native previous-block receipts and a conservative
 their per-set authored loads; phase/purpose changes, failed work, source changes,
 near failure and recovery restrictions do not produce a carried load. Goal-RIR
 assumptions remain calculation-only. The review is read-only and requires no
-additional consent to retain already-authored weights. Real native-file tests
-cover the current source-changing activation refusal, cold reads and the
-coaching off switch. Cross-revision source equivalence and different starting
-loads, authoritative approval/issuance, paired block-transition results and
-physical-device acceptance remain open.
+additional consent to retain already-authored weights. Ordinary signed authored
+cycles now enter the same native coach through the existing consent-bound
+preflight, without needing an activated schedule. Real native-file tests prove
+same-source block-entry repeats, missing-RIR provenance, latest saved correction
+invalidation, revoked consent, cold reads and the coaching off switch.
+Source-changing schedule activation remains a distinct refusal. Different
+starting loads, new-context transition policies, authoritative approval/issuance,
+paired block-transition results and physical-device acceptance remain open.
 
 **G3 continuity update — 2026-11-07:** the existing
 `KotlinAdaptiveSetPrescriptionDomain` now materializes an explicit repeat of

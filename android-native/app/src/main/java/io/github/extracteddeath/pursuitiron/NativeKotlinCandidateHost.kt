@@ -88,12 +88,12 @@ internal class NativeKotlinCandidateHost(context:Context) {
         futureBlockContexts,futureActivationApproval,futureActivationHandoff)
     private val activatedCycleSignoffs=NativeKotlinActivatedCycleSignoffFileStore(
         root,revisionFence,localAthlete,futureActivationCommit)
-    private val activatedNextWorkoutCoach=NativeKotlinCustomNextWorkoutReview(
+    private val customNextWorkoutCoach=NativeKotlinCustomNextWorkoutReview(
         revisionFence,localAthlete,futureActivationCommit,
         activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
-        customIssuedStore,coachSettings)
+        customIssuedStore,coachSettings,customWorkoutPreflight)
     private val futureWeekLoadOptions=NativeKotlinCustomFutureWeekLoadOptionReview(
-        revisionFence,localAthlete,activatedNextWorkoutCoach,
+        revisionFence,localAthlete,customNextWorkoutCoach,
         futureActivationCommit,customDraftStore,authoringSourceStore,
         adaptiveCyclePermissions,coachSettings,mixedHistoryReader,
         outstandingCustomInventory)
@@ -101,13 +101,13 @@ internal class NativeKotlinCandidateHost(context:Context) {
         root,revisionFence,localAthlete,futureWeekLoadOptions)
     private val futureWeekLoadHandoff=NativeKotlinAcceptedFutureWeekLoadHandoff(
         revisionFence,acceptedFutureWeekLoads,futureWeekLoadOptions,
-        activatedNextWorkoutCoach,futureActivationCommit)
+        customNextWorkoutCoach,futureActivationCommit)
     private val acceptedFutureRepTargets=NativeKotlinCustomNextRepApprovalFileStore(
         root,revisionFence,localAthlete,futureActivationCommit,
-        activatedNextWorkoutCoach,customPreparedStore,customIssuedStore)
+        customNextWorkoutCoach,customPreparedStore,customIssuedStore)
     private val acceptedFutureLoads=NativeKotlinCustomNextLoadApprovalFileStore(
         root,revisionFence,localAthlete,futureActivationCommit,
-        activatedNextWorkoutCoach,customPreparedStore,customIssuedStore)
+        customNextWorkoutCoach,customPreparedStore,customIssuedStore)
     // Read-only indexed candidate; version-2 ledger remains the sole owner.
     private val segmentedHistoryShadow=NativeKotlinSegmentedHistoryShadowStore(
         root,historyStore,revisionFence,localAthlete)
@@ -810,9 +810,23 @@ internal class NativeKotlinCandidateHost(context:Context) {
         val signed=localAthlete.signedInIdentity()
             ?:return NativeCustomNextCoachResult.Rejected(
                 NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
-        return activatedNextWorkoutCoach.review(signed.ownerKey,inputs,
+        return customNextWorkoutCoach.review(signed.ownerKey,inputs,
             nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
             maximumAuthorizedIncrease)
+    }
+
+    /** Same native evidence pipeline for an ordinary signed authored cycle. */
+    fun reviewNextAuthoredWorkoutProgression(
+        cycleId:String,nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
+        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal
+    ):NativeCustomNextCoachResult {
+        val signed=localAthlete.signedInIdentity()
+            ?:return NativeCustomNextCoachResult.Rejected(
+                NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
+        return customNextWorkoutCoach.reviewAuthored(signed.ownerKey,cycleId,
+            inputs,nextAbsoluteWeek,nextWeekday,slotId,readiness,
+            movementRestricted,maximumAuthorizedIncrease)
     }
 
     /**

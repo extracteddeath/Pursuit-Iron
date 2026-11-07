@@ -494,11 +494,15 @@ internal fun NativeKotlinFutureWeekCoachScreen(
 
 /** Factual previous-block work is deliberately separate from earned changes. */
 @Composable
-private fun NativeKotlinCustomDayCoachingSummary(
+internal fun NativeKotlinCustomDayCoachingSummary(
     reviewed:NativeCustomNextCoachResult.Reviewed,absoluteWeek:Int
 ) {
     HorizontalDivider()
     Text("This day's coaching",style=MaterialTheme.typography.titleMedium)
+    reviewed.nextWorkout?.slots?.singleOrNull {
+        it.slotId==reviewed.selectedSlotId
+    }?.let {Text(it.exerciseId.replace('_',' '),
+        style=MaterialTheme.typography.titleSmall)}
     Text(reviewed.review.explanation,style=MaterialTheme.typography.bodyMedium)
     reviewed.review.nextSetSuggestions.forEachIndexed {index,set->
         Text("Set ${index+1}: ${set.observedReps} recorded → ${set.proposedNextReps} reps for review",
@@ -517,7 +521,9 @@ private fun NativeKotlinCustomDayCoachingSummary(
                 style=MaterialTheme.typography.bodySmall)
             baseline.priorWorkingSets.forEach {set->
                 val effort=set.actualRir?.let{"$it RIR"} ?: "RIR unreported"
-                Text("Set ${set.ordinal}: ${set.priorLoad.stripTrailingZeros().toPlainString()} ${set.loadUnit.name.lowercase()} × ${set.performedReps} · $effort",
+                val basis=if(reviewed.verifiedStock?.basis==LoadBasis.DUMBBELL_PER_HAND)
+                    " per hand" else ""
+                Text("Set ${set.ordinal}: ${set.priorLoad.stripTrailingZeros().toPlainString()} ${set.loadUnit.name.lowercase()}$basis × ${set.performedReps} · $effort",
                     style=MaterialTheme.typography.bodyMedium)
             }
             Text("These are saved results from the prior block. They do not earn a new-block increase.",
@@ -529,7 +535,8 @@ private fun NativeKotlinCustomDayCoachingSummary(
             Text(review.explanation,style=MaterialTheme.typography.bodySmall)
             review.startingSets.forEach {set->
                 val goal=set.goalRir?.let{" · goal $it RIR"} ?: ""
-                Text("Set ${set.ordinal}: keep ${set.load.stripTrailingZeros().toPlainString()} ${set.unit.name.lowercase()} · ${set.reps.minimum}–${set.reps.maximum} reps$goal",
+                val basis=if(set.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
+                Text("Set ${set.ordinal}: keep ${set.load.stripTrailingZeros().toPlainString()} ${set.unit.name.lowercase()}$basis · ${set.reps.minimum}–${set.reps.maximum} reps$goal",
                     style=MaterialTheme.typography.bodyMedium)
             }
         }

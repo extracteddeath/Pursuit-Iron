@@ -5,6 +5,7 @@ import java.math.BigDecimal
 
 enum class NativeCustomNextCoachRefusal {
     INVALID_SCOPE, NOT_AUTHORIZED, ACTIVATED_CONSENT_UNAVAILABLE,
+    AUTHORED_CONSENT_UNAVAILABLE,
     NEXT_WORKOUT_UNAVAILABLE, CURRENT_GYM_UNAVAILABLE,
     HISTORY_CHANGED_OR_UNVERIFIED, ASSISTANCE_DISABLED,
     COACH_SETTINGS_UNAVAILABLE, STORAGE_UNAVAILABLE
@@ -21,7 +22,10 @@ sealed interface NativeCustomNextCoachResult {
         /** Prior-block facts are display-only, not a rep/load proposal. */
         val priorBlockBaseline:CustomBlockBaselineReview?=null,
         /** Conservative unchanged starting weights, never a saved approval. */
-        val blockStartingLoads:CustomBlockStartingLoadReview?=null
+        val blockStartingLoads:CustomBlockStartingLoadReview?=null,
+        /** Exact current selection; a different UI preview cannot reuse this review. */
+        val nextWorkout:CustomWorkoutDaySnapshot?=null,
+        val selectedSlotId:String?=null
     ):NativeCustomNextCoachResult {
         /** Display-only: re-review after subsequent Finish/correction. */
         val mayIssueWorkout:Boolean get()=false
@@ -33,7 +37,7 @@ sealed interface NativeCustomNextCoachResult {
 }
 
 /**
- * Trusted native read owner for CUSTOM, ACTIVATED-BLOCK progression.
+ * Trusted native read owner for signed authored and activated custom cycles.
  *
  * Unlike accepting two UI-supplied good sessions, it reopens the ENTIRE
  * mixed native history including all custom saved corrections, then reads
@@ -49,7 +53,8 @@ class NativeKotlinCustomNextWorkoutReview(
     private val sources:NativeKotlinCustomAuthoringSourceFileStore,
     private val history:NativeKotlinMixedHistoryReadCoordinator,
     private val journals:NativeKotlinCustomWorkoutJournalFileStore,
-    private val assistance:NativeKotlinCoachAssistanceSettingsStore?=null
+    private val assistance:NativeKotlinCoachAssistanceSettingsStore?=null,
+    private val authoredPreflight:NativeKotlinCustomWorkoutPreflight?=null
 ) {
     private val id=Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")
     fun review(
@@ -57,10 +62,30 @@ class NativeKotlinCustomNextWorkoutReview(
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         readiness:CoachReadiness,movementRestricted:Boolean,
         maximumAuthorizedIncrease:BigDecimal
+    ):NativeCustomNextCoachResult =reviewSelected(ownerKey,null,inputs,
+        nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
+        maximumAuthorizedIncrease)
+
+    /** Ordinary signed custom cycles need no future-schedule activation. */
+    fun reviewAuthored(
+        ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
+        nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumAuthorizedIncrease:BigDecimal
+    ):NativeCustomNextCoachResult =reviewSelected(ownerKey,cycleId,inputs,
+        nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
+        maximumAuthorizedIncrease)
+
+    private fun reviewSelected(
+        ownerKey:String,authoredCycleId:String?,inputs:CustomCoachAuditInputs,
+        nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumAuthorizedIncrease:BigDecimal
     ):NativeCustomNextCoachResult {
         fun reject(reason:NativeCustomNextCoachRefusal)=
             NativeCustomNextCoachResult.Rejected(reason)
         if(!id.matches(ownerKey) || !id.matches(slotId) ||
+            (authoredCycleId!=null && !id.matches(authoredCycleId)) ||
             nextAbsoluteWeek !in 1..104 || nextWeekday !in 0..6)
             return reject(NativeCustomNextCoachRefusal.INVALID_SCOPE)
         return runCatching{fence.withOwnerTransaction(ownerKey){
@@ -77,34 +102,51 @@ class NativeKotlinCustomNextWorkoutReview(
             if(!preference.offersProgression)
                 return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED)
-            val acceptance=(signoffs.read(ownerKey,inputs)
-                as? NativeActivatedSignoffRead.Found)?.takeIf{it.isCurrent}
-                ?.receipt
-                ?:return@withOwnerTransaction reject(
-                    NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
-            val active=(activation.read(ownerKey)
-                as? NativeFutureCommitReview.Applied)?.context
-                ?:return@withOwnerTransaction reject(
-                    NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
-            if(acceptance.ownerKey!=ownerKey ||
-                acceptance.athleteId!=current.athleteId ||
-                acceptance.cycleId!=active.cycleId ||
-                acceptance.blockId!=active.blockId ||
-                acceptance.firstWeek!=active.firstWeek ||
-                acceptance.sourceRevision!=active.sourceRevision)
-                return@withOwnerTransaction reject(
-                    NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
-            val next=(activation.previewActivatedWorkout(ownerKey,inputs,
-                nextAbsoluteWeek,nextWeekday)
-                as? CustomWorkoutSnapshotResult.Preview)?.snapshot
-                ?:return@withOwnerTransaction reject(
-                    NativeCustomNextCoachRefusal.NEXT_WORKOUT_UNAVAILABLE)
-            if(next.stamp.athleteId!=current.athleteId ||
-                next.stamp.cycleId!=active.cycleId ||
-                next.blockId!=active.blockId ||
-                next.stamp.gymCatalogSourceRevision!=active.sourceRevision)
-                return@withOwnerTransaction reject(
-                    NativeCustomNextCoachRefusal.NEXT_WORKOUT_UNAVAILABLE)
+            val next:CustomWorkoutDaySnapshot
+            val consentRevision:Long
+            if(authoredCycleId!=null) {
+                val preflight=authoredPreflight?.inspect(ownerKey,authoredCycleId,
+                    nextAbsoluteWeek,nextWeekday,inputs)
+                    as? NativeCustomPreflightResult.ReviewedPreview
+                    ?:return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.AUTHORED_CONSENT_UNAVAILABLE)
+                next=preflight.session
+                consentRevision=preflight.receipt.recordRevision
+                if(next.stamp.athleteId!=current.athleteId ||
+                    next.stamp.cycleId!=authoredCycleId)
+                    return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.NEXT_WORKOUT_UNAVAILABLE)
+            } else {
+                val acceptance=(signoffs.read(ownerKey,inputs)
+                    as? NativeActivatedSignoffRead.Found)?.takeIf{it.isCurrent}
+                    ?.receipt
+                    ?:return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
+                val active=(activation.read(ownerKey)
+                    as? NativeFutureCommitReview.Applied)?.context
+                    ?:return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
+                if(acceptance.ownerKey!=ownerKey ||
+                    acceptance.athleteId!=current.athleteId ||
+                    acceptance.cycleId!=active.cycleId ||
+                    acceptance.blockId!=active.blockId ||
+                    acceptance.firstWeek!=active.firstWeek ||
+                    acceptance.sourceRevision!=active.sourceRevision)
+                    return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.ACTIVATED_CONSENT_UNAVAILABLE)
+                next=(activation.previewActivatedWorkout(ownerKey,inputs,
+                    nextAbsoluteWeek,nextWeekday)
+                    as? CustomWorkoutSnapshotResult.Preview)?.snapshot
+                    ?:return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.NEXT_WORKOUT_UNAVAILABLE)
+                if(next.stamp.athleteId!=current.athleteId ||
+                    next.stamp.cycleId!=active.cycleId ||
+                    next.blockId!=active.blockId ||
+                    next.stamp.gymCatalogSourceRevision!=active.sourceRevision)
+                    return@withOwnerTransaction reject(
+                        NativeCustomNextCoachRefusal.NEXT_WORKOUT_UNAVAILABLE)
+                consentRevision=acceptance.recordRevision
+            }
             val source=(sources.read(ownerKey)
                 as? NativeAuthoringSourceRead.Found)?.source
                 ?:return@withOwnerTransaction reject(
@@ -113,7 +155,7 @@ class NativeKotlinCustomNextWorkoutReview(
                 ?:return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE)
             if(source.athleteId!=current.athleteId ||
-                source.revision!=active.sourceRevision ||
+                source.revision!=next.stamp.gymCatalogSourceRevision ||
                 gym.gymId!=next.stamp.gymId)
                 return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.CURRENT_GYM_UNAVAILABLE)
@@ -171,9 +213,9 @@ class NativeKotlinCustomNextWorkoutReview(
                 CustomBlockBaselineRequest(next,slotId,completions,verifiedStock),
                 preference.coachingReadiness(readiness),movementRestricted)
             NativeCustomNextCoachResult.Reviewed(
-                full.timeline.manifestRevision,acceptance.recordRevision,
+                full.timeline.manifestRevision,consentRevision,
                 validated,currentSettings?.revision ?:0,verifiedStock,
-                starting.baseline,starting)
+                starting.baseline,starting,next,slotId)
         }}.getOrElse{reject(NativeCustomNextCoachRefusal.STORAGE_UNAVAILABLE)}
     }
 }

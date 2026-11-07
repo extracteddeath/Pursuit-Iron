@@ -31,6 +31,8 @@ internal data class NativeKotlinCustomCycleState(
     val sourceRevision: Long? = null,
     /** Read on current native owner open; never default coaching to on. */
     val coachingSuggestionsEnabled:Boolean = false,
+    val progressionCoachingEnabled:Boolean = false,
+    val fatigueCoachingEnabled:Boolean = false,
     /** Current owner-reviewed source context; stale edits are rechecked at audit. */
     val reviewedSourceSetup: AthleteSetupReview? = null,
     /** Factual set credit evidence only; does not contain MEV/MRV decisions. */
@@ -49,7 +51,8 @@ internal data class NativeKotlinCustomCycleState(
     val authoredPreviewRefusal: CustomWorkoutSnapshotRefusal? = null,
     val consentBoundPreview: NativeCustomPreflightResult.ReviewedPreview? = null,
     val preparedWorkout: NativeCustomPreparedWorkout? = null,
-    val preparationRefusal: NativeCustomPrepareRefusal? = null
+    val preparationRefusal: NativeCustomPrepareRefusal? = null,
+    val dayCoaching: NativeCustomNextCoachResult.Reviewed? = null
 )
 
 /**
@@ -104,9 +107,9 @@ internal class NativeKotlinCustomCycleController(
         auditedInputs = null
         pendingWeekEdit = null
         val latest = runCatching { authoringSource.snapshot() }.getOrNull()
-        val coachingEnabled=(runCatching{host.readCoachAssistance()}
+        val assistance=(runCatching{host.readCoachAssistance()}
             .getOrNull() as? NativeCoachSettingsRead.Current)
-            ?.settings?.policy?.coachingSuggestionsEnabled==true
+            ?.settings?.policy
         val found = (result as? NativeCustomDraftReadResult.Found)?.draft
         val source = latest?.takeIf { it.athleteId == found?.athleteId }
         val choices = if (source == null) emptyList() else
@@ -118,7 +121,9 @@ internal class NativeKotlinCustomCycleController(
                     cycleId = result.draft.cycleId,
                     availableChoices = choices,
                     sourceRevision = source?.revision,
-                    coachingSuggestionsEnabled = coachingEnabled,
+                    coachingSuggestionsEnabled = assistance?.coachingSuggestionsEnabled==true,
+                    progressionCoachingEnabled = assistance?.offersProgression==true,
+                    fatigueCoachingEnabled = assistance?.offersFatigueAdvice==true,
                     reviewedSourceSetup = source?.setup,
                     signoff = host.readCustomCycleConsent(result.draft.cycleId),
                     message = "Saved custom cycle restored · revision ${result.draft.revision}")
@@ -428,6 +433,7 @@ internal class NativeKotlinCustomCycleController(
      * athlete draft is not a consent, grant, or workout.
      */
     fun previewAuthoredDay(absoluteWeek:Int,weekday:Int) = run {
+        current.value=current.value.copy(dayCoaching=null)
         val draft=current.value.draft ?:return@run
         val durable=host.readCustomCycleDraft(draft.cycleId)
         val source=runCatching{authoringSource.snapshot()}.getOrNull()
@@ -464,6 +470,36 @@ internal class NativeKotlinCustomCycleController(
                     consentBoundPreview=null,
                     message="Cannot preview: ${result.reason.name.replace('_',' ').lowercase()}.")
         }
+    }
+
+    /** Same complete native history reader as activated-block coaching. */
+    fun reviewAuthoredDayCoaching(
+        absoluteWeek:Int,weekday:Int,slotId:String,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumIncrease:java.math.BigDecimal
+    ) = run {
+        current.value=current.value.copy(dayCoaching=null)
+        val draft=current.value.draft ?:return@run
+        val inputs=auditedInputs
+        if(inputs==null) {
+            current.value=current.value.copy(
+                message="Run your current full-cycle coaching audit before reviewing starting weights.")
+            return@run
+        }
+        val result=host.reviewNextAuthoredWorkoutProgression(draft.cycleId,
+            absoluteWeek,weekday,slotId,inputs,readiness,movementRestricted,
+            maximumIncrease)
+        val reviewed=result as? NativeCustomNextCoachResult.Reviewed
+        val preview=current.value.authoredPreview
+        val next=reviewed?.nextWorkout
+        if(next!=null && preview!=null &&
+            next.copy(declaredNonSetSeconds=preview.declaredNonSetSeconds)==preview &&
+            next.stamp.cycleRevision==draft.revision &&
+            next.stamp.gymCatalogSourceRevision==current.value.sourceRevision) {
+            current.value=current.value.copy(dayCoaching=reviewed,
+                message="Saved history reviewed for this exact training day. Nothing was changed.")
+        } else current.value=current.value.copy(
+            message="Coaching is unavailable for this preview. Check the saved cycle, gym, athlete consent and current coaching audit.")
     }
 
     /**

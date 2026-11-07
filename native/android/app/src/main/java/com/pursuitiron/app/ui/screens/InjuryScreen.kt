@@ -131,7 +131,7 @@ private fun InjuryForm(log: JSONObject, entry: JSONObject, onCancel: () -> Unit,
         log.list("parts").forEach { p -> MorphChip(p.s("label"), region.isBlank() && part == p.s("id"), { part = p.s("id"); region = "" }, height = 36.dp) }
     }
     Kicker("Side")
-    Segmented(listOf("unspecified" to "Not specified", "left" to "Left", "right" to "Right", "both" to "Both"), side, { side = it }, height = 40.dp)
+    Segmented(listOf("unspecified" to "Either", "left" to "Left", "right" to "Right", "both" to "Both"), side, { side = it }, height = 40.dp)
     Kicker("What should happen")
     log.list("impacts").forEach { im ->
         val on = impact == im.s("id")

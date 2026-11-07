@@ -25,6 +25,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     source:AthleteSetupReview?,
     sourceRevision:Long?,
     busy:Boolean,
+    onDraftChanged:()->Unit,
     onReview:(CustomCoachAuditInputs)->Unit
 ) {
     val phaseList=remember(cycle.cycleId,cycle.revision) {
@@ -56,6 +57,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     fun put(key:String,value:String) {
         fields[key]=value
         issues=emptyList()
+        onDraftChanged()
     }
     val phaseKey=selectedPhase.name
     fun keyFor(muscle:TrainingMuscle,side:String,field:String)=
@@ -188,6 +190,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
                 fields[dest]=get(sourceKey)
         }
         issues=emptyList()
+        onDraftChanged()
     }) {Text("Copy this muscle's baseline into selected")}
     Text("Copying is an explicit choice; it does not satisfy a focused or reduced muscle without a different reviewed target.",
         style=MaterialTheme.typography.bodySmall)
@@ -211,6 +214,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     if(rowCount<16)
         OutlinedButton(enabled=!busy,onClick={
             liftRows[selectedPhase]=rowCount+1
+            onDraftChanged()
         }){Text("Require another primary lift")}
 
     HorizontalDivider()

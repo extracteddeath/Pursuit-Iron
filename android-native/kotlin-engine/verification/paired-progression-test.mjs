@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { root, fixturePath, caseIds, parseFixture, physicalLoads, grade,
   scenarioDigest, verifyBundle, evidencePath, verifyRecordedProgressionEvidence } from './paired-progression.mjs';
+import { verifyRecordedFunctionalEvidence } from './paired-functional.mjs';
 
 const bytes=readFileSync(resolve(root,fixturePath));
 const fixture=parseFixture(bytes);
@@ -129,19 +130,25 @@ test('recorded measurements require the exact artifact bytes and bound engine re
   }
 });
 
-test('five measured pairs still cannot certify the complete engine replacement',()=>{
+test('partial matched measurements still cannot certify the complete engine replacement',()=>{
   const audit=JSON.parse(execFileSync(process.execPath,
     ['android-native/kotlin-engine/verification/engine-superiority-gate.mjs','--audit'],
     {cwd:root,encoding:'utf8'}));
-  const verified=verifyRecordedProgressionEvidence(
-    JSON.parse(readFileSync(resolve(root,evidencePath),'utf8')),
-    {allowStaleProvenance:true});
-  assert.equal(audit.completedPairs,verified.currentNativeTree?5:0);
+  const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
+  const verified=verifyRecordedProgressionEvidence(evidence,{allowStaleProvenance:true});
+  const functional=verifyRecordedFunctionalEvidence(evidence,{allowStaleProvenance:true});
+  const completed=(verified.currentNativeTree?verified.recordedPairs:0)+
+    (functional.currentNativeTree?functional.recordedPairs:0);
+  assert.equal(audit.completedPairs,completed);
   assert.equal(audit.requiredPairs,49);
-  assert.equal(audit.missingPairs,verified.currentNativeTree?44:49);
+  assert.equal(audit.missingPairs,49-completed);
   assert.equal(audit.staleRecordedHeadlessPairs,
-    verified.currentNativeTree?0:5);
+    (verified.currentNativeTree?0:verified.recordedPairs)+
+    (functional.currentNativeTree?0:functional.recordedPairs));
   assert.equal(audit.verdict,'NOT_PROVEN_BETTER');
-  assert.deepEqual(audit.improvedDomains,[]);
+  const repResults=evidence.measurements.filter(r=>r.caseId==='dp-rep-target-jumps'&&r.proof==='headless');
+  const repImproved=functional.currentNativeTree&&repResults.some(r=>r.engine==='legacy-javascript'&&r.outcome==='fail')&&
+    repResults.some(r=>r.engine==='independent-kotlin'&&r.outcome==='pass');
+  assert.deepEqual(audit.improvedDomains,repImproved?['progression']:[]);
   assert.deepEqual(audit.regressions,[]);
 });

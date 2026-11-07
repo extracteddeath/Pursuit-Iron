@@ -14,7 +14,7 @@ Neither engine gets credit for producing the other engine's output.
   programming, custom programs/cycles, coaching, history, migration and
   Android. The critical rep-jump case is a release blocker, not a claimed
   measured improvement.
-- `verification/engine-superiority-evidence.json`: now contains five executed
+- `verification/engine-superiority-evidence.json`: now contains eight executed
   headless pairs, with exact engine revisions, common input fingerprints and
   the content digest of the raw measurement artifact. Other pairs remain
   unmeasured. Do NOT fill it with reported defects, source comments, existence
@@ -83,21 +83,44 @@ frozen history is available to both adapters. Both actual/target snapshots and
 all set identities are checked after execution. A blanket refusal cannot pass
 the earned-increase or concrete-recovery cases.
 
-The gate has **5/49 required paired proofs**, no measured improvement domains,
-and no measured regression in this tranche. Both policies pass all five
-scenarios under the corrected effort rule. The verdict
-remains **NOT_PROVEN_BETTER**. The 44 missing pairs, improvements in at least
-three domains, blinded coach assessment, device acceptance and explicit user
-acceptance remain open.
+The original five load cases remain parity. The current gate also includes
+three new paired cases described below, for **8/49 required paired proofs**,
+one measured improvement domain (progression), and no measured regressions.
+The verdict remains **NOT_PROVEN_BETTER**. The 41 missing pairs, improvement
+in at least three domains, blinded coach assessment, device acceptance and
+explicit user acceptance remain open.
 
-**2026-11-07 evidence refresh:** the five raw pairs were retrieved unchanged
-from the successful [native CI execution at 5194ae4](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42372831674),
-artifact `13574880589`. The ZIP SHA-256 was independently checked against
-GitHub's artifact digest; the complete Kotlin policy tree, shared fixture and
-all comparison-runner hashes match the current source. The recorded
-measurements retain the actual executed commit rather than relabeling them
-as a later UI commit. There are zero stale pairs in this tranche. This refresh
-does not add block-entry, persistence or device comparison evidence.
+**2026-11-07 evidence refresh:** both executable tranches were run directly
+from frozen candidate `6ff4618ed9e38f6e18e010d6413f8b84b177e3cb` using the real
+Kotlin production sources and a JDK/Kotlin compiler, alongside the clean pinned
+web checkout. Raw measurements retain that actual executed commit and exact
+policy-tree/runner digests. The ledger independently validates both artifacts;
+there are zero stale pairs. CI reruns both tranches using Gradle. This does not
+add app-issuance, program-quality or device proof.
+
+## Rep-target and physical-stock tranche — 2026-11-07
+
+`verification/paired-functional-measurement.json` records four rep-target
+subscenarios and three actual-equipment queries as three matrix cases. Both
+engines receive the same frozen shared Properties input. The independent
+oracle enforces the already documented single-capable-set rep rule and
+enumerates physical stock without using either engine's answer.
+
+| Scenario | Web | Kotlin | Measured conclusion |
+| --- | --- | --- | --- |
+| 14/13/12 at 30 lb, 10–15 range, actual RIR 3/3/2 | 15/14/13 | 14/14/12 | Kotlin follows the one-set/one-rep guard; web advances every row |
+| Same reps, actual RIR 2/2/2 | 15/14/13 | Hold 14/13/12 | Kotlin does not infer extra reserve |
+| Same reps, actual RIR missing, original goal 2 | 15/14/13 | Hold 14/13/12 | Kotlin preserves missing actuals and uses only the original-goal assumption |
+| Same reps, actual RIR 3/3/0 | Hold | Hold | Parity; near failure takes precedence |
+| Machine requests 159.5 and 38.5 lb in known 5-lb stock | 155/35 lb, next 160/40 | Same | Parity; reported phantom-weight bug not reproduced |
+| 35-lb bar, finite 10- and 2.5-lb plate pairs, request 47.5 lb | 40 lb, next 55 | Same | Parity with the actual bar and stock |
+
+The rep result is a **narrow, measured policy improvement against the agreed
+acceptance rule**. It is not proof of improved strength/hypertrophy outcomes,
+better generated programs or a usable full product. A +3 jump inside one set
+was not reproduced in this fixture. A blanket refusal cannot pass: the
+headroom scenario requires one actual improvement on a demonstrably capable
+set. The other seven matrix cases pass on both engines.
 
 To reproduce with JDK 17, Android API 37 and Gradle 9.3.1 available:
 
@@ -105,6 +128,7 @@ To reproduce with JDK 17, Android API 37 and Gradle 9.3.1 available:
 git worktree add --detach ../pursuit-iron-web-comparison 903b4a78564590d8983e651cbe19d81acd1efb9c
 node --test android-native/kotlin-engine/verification/paired-progression-test.mjs
 node android-native/kotlin-engine/verification/run-paired-progression.mjs --legacy-root ../pursuit-iron-web-comparison --check-recorded
+node android-native/kotlin-engine/verification/run-paired-functional.mjs --legacy-root ../pursuit-iron-web-comparison --check-current
 node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --audit
 ```
 
@@ -153,6 +177,7 @@ confer user acceptance.
 
 | Area | Legacy JavaScript | Isolated Kotlin now | Can claim better? |
 | --- | --- | --- | --- |
+| Single-set rep-target guard | Real policy increases all three rows in 3 of 4 shared subscenarios | Actual Kotlin policy advances one capable set or holds without sufficient reserve | **Yes for this specific policy rule:** no training-outcome or complete-engine superiority claim |
 | Overloaded progression (200/205/210/215 for 3/3/2/2) | Frozen headless policy reviews 180 lb; the old reported 215-for-every-set defect was not reproduced | Native typed policies review the fixture's demonstrated 195 lb | **Parity for this headless safeguard:** no load-quality or end-to-end superiority claim |
 | Missing actual RIR despite a prescribed target | Frozen headless policy offers 200→205 | Native review also offers 200→205 using an explicit original-goal assumption; actual RIR stays null | **Headless parity:** the earlier claimed Kotlin advantage is withdrawn |
 | Verified exercise equipment and weight increments | Live web engine has broad equipment support; user-reported phantom 38.5/159.5 recommendations | `EquipmentLoadDomain` uses BigDecimal, confirmed plate pairs, machine stack and exact implement basis | **Not yet:** narrow headless correctness is encouraging, full supported-catalog breadth and app issuance are not proven |
@@ -167,8 +192,9 @@ confer user acceptance.
 The separate `KNOWN_LEGACY_BUG_REGRESSIONS.md` ledger tracks 25 reported
 regression areas. New Kotlin-only single-set rep targeting is tested for
 no +3 jumps, no blanket all-set increases, missing effort, near failure,
-unbuildable weights and altered set loading. That is one headless safeguard,
-**not** production parity or a completed matched JS/Kotlin benchmark.
+unbuildable weights and altered set loading. The rep-target safeguard now has
+a real matched policy execution. It remains **not** production parity or a
+complete engine/device benchmark.
 
 The user-reported bugs above are essential regression scenarios, **not**
 a claim that the current JavaScript commit still reproduces each issue.

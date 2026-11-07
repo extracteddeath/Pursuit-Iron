@@ -1,0 +1,506 @@
+{
+  "schemaVersion": 1,
+  "kind": "paired-headless-functional-review",
+  "scope": "Four rep-target and three physical-stock policy executions; no app, training-outcome or device certification.",
+  "fixture": "android-native/kotlin-engine/verification/paired-functional-input.properties",
+  "fixtureDigest": "1516513db32157c1fdc63bf58ea7183550461ae3c8be8f0a85435b045890c379",
+  "inputProperties": {
+    "schemaVersion": "1",
+    "legacyCommit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+    "caseIds": "dp-rep-target-jumps,machine-increments,bar-stock",
+    "unit": "lb",
+    "rep.exerciseId": "db_curl",
+    "rep.count": "3",
+    "rep.floor": "10",
+    "rep.ceiling": "15",
+    "rep.load": "30",
+    "rep.availableLoads": "25,30,35",
+    "rep.goalRir": "2",
+    "rep.scenarios": "headroom,goal-effort,missing-effort,near-failure",
+    "rep.headroom.reps": "14,13,12",
+    "rep.headroom.rir": "3,3,2",
+    "rep.goal-effort.reps": "14,13,12",
+    "rep.goal-effort.rir": "2,2,2",
+    "rep.missing-effort.reps": "14,13,12",
+    "rep.missing-effort.rir": "null,null,null",
+    "rep.near-failure.reps": "14,13,12",
+    "rep.near-failure.rir": "3,3,0",
+    "machine.exerciseId": "machine_press",
+    "machine.loads": "30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,160",
+    "machine.requested": "159.5,38.5",
+    "bar.exerciseId": "barbell_bench",
+    "bar.weight": "35",
+    "bar.platePairs": "10:1,2.5:1",
+    "bar.requested": "47.5"
+  },
+  "reproduction": "Run node android-native/kotlin-engine/verification/run-paired-functional.mjs --legacy-root <pinned clean web checkout> using Gradle, or add --kotlinc <Kotlin compiler> with JDK 17.",
+  "runnerFiles": {
+    "android-native/kotlin-engine/verification/paired-functional-input.properties": "1516513db32157c1fdc63bf58ea7183550461ae3c8be8f0a85435b045890c379",
+    "android-native/kotlin-engine/verification/paired-functional.mjs": "c390fbb17bf0c2772e665c8424f3f4b52dae5c2d80b8f91138e9b132374c59f5",
+    "android-native/kotlin-engine/verification/run-paired-functional.mjs": "cdecb65a6fdc5e25219a74e59fd4e769fb2c9f0f8da6c531cc79c27009a40d12",
+    "android-native/kotlin-engine/verification/run-jvm-probe.mjs": "522bc38f426cf1ec15d158e9f4c795a4f55e12aa30b04713b87e4f4f0f97aa05",
+    "android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/PairedFunctionalProbe.kt": "2fdf85842124797d3ce5a771024bea579708652d4f921288c7d195581b809af1",
+    "android-native/kotlin-engine/build.gradle.kts": "65a0627382be281bd09195e0e16c12ad01599647ac536b38e4e3891082a16e3f"
+  },
+  "engines": {
+    "legacy-javascript": {
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "sourceTree": "22aa71341d8ef9189686b13e4b31772265933ced",
+      "entryPoint": "evaluateWorkoutProgression + availableLoadAtOrBelow + nextAvailableLoad",
+      "results": [
+        {
+          "caseId": "dp-rep-target-jumps",
+          "subcases": [
+            {
+              "id": "headroom",
+              "targets": [
+                {
+                  "weight": 30,
+                  "reps": 15
+                },
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 13
+                }
+              ],
+              "raw": {
+                "exerciseId": "db_curl",
+                "exerciseName": "Dumbbell Curl",
+                "role": "accessory",
+                "outcome": "productive",
+                "reasonCode": "normal_progression",
+                "action": "add_reps",
+                "confidence": "moderate",
+                "reason": "Keep the load and build each set toward 15 reps at the planned effort. Next rep targets follow each set’s own last performance.",
+                "currentLoad": 30,
+                "suggestedLoad": 30,
+                "suggestedReps": 15,
+                "estimated1RM": 44,
+                "setTargets": [
+                  {
+                    "weight": 30,
+                    "reps": 15
+                  },
+                  {
+                    "weight": 30,
+                    "reps": 14
+                  },
+                  {
+                    "weight": 30,
+                    "reps": 13
+                  }
+                ]
+              },
+              "mutatedInput": false
+            },
+            {
+              "id": "goal-effort",
+              "targets": [
+                {
+                  "weight": 30,
+                  "reps": 15
+                },
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 13
+                }
+              ],
+              "raw": {
+                "exerciseId": "db_curl",
+                "exerciseName": "Dumbbell Curl",
+                "role": "accessory",
+                "outcome": "productive",
+                "reasonCode": "normal_progression",
+                "action": "add_reps",
+                "confidence": "moderate",
+                "reason": "Keep the load and build each set toward 15 reps at the planned effort. Next rep targets follow each set’s own last performance.",
+                "currentLoad": 30,
+                "suggestedLoad": 30,
+                "suggestedReps": 15,
+                "estimated1RM": 45,
+                "setTargets": [
+                  {
+                    "weight": 30,
+                    "reps": 15
+                  },
+                  {
+                    "weight": 30,
+                    "reps": 14
+                  },
+                  {
+                    "weight": 30,
+                    "reps": 13
+                  }
+                ]
+              },
+              "mutatedInput": false
+            },
+            {
+              "id": "missing-effort",
+              "targets": [
+                {
+                  "weight": 30,
+                  "reps": 15
+                },
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 13
+                }
+              ],
+              "raw": {
+                "exerciseId": "db_curl",
+                "exerciseName": "Dumbbell Curl",
+                "role": "accessory",
+                "outcome": "productive",
+                "reasonCode": "normal_progression",
+                "action": "add_reps",
+                "confidence": "moderate",
+                "reason": "Keep the load and build each set toward 15 reps at the planned effort. Next rep targets follow each set’s own last performance.",
+                "currentLoad": 30,
+                "suggestedLoad": 30,
+                "suggestedReps": 15,
+                "estimated1RM": 44,
+                "setTargets": [
+                  {
+                    "weight": 30,
+                    "reps": 15
+                  },
+                  {
+                    "weight": 30,
+                    "reps": 14
+                  },
+                  {
+                    "weight": 30,
+                    "reps": 13
+                  }
+                ]
+              },
+              "mutatedInput": false
+            },
+            {
+              "id": "near-failure",
+              "targets": [
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 13
+                },
+                {
+                  "weight": 30,
+                  "reps": 12
+                }
+              ],
+              "raw": {
+                "exerciseId": "db_curl",
+                "exerciseName": "Dumbbell Curl",
+                "role": "accessory",
+                "outcome": "failure",
+                "reasonCode": "effort_below_target",
+                "action": "hold",
+                "confidence": "moderate",
+                "reason": "Reported effort fell below the prescribed RIR floor. Hold the load and re-enter the prescribed effort range before progressing.",
+                "currentLoad": 30,
+                "suggestedLoad": 30,
+                "estimated1RM": 42,
+                "setTargets": [
+                  {
+                    "weight": 30,
+                    "reps": 14
+                  },
+                  {
+                    "weight": 30,
+                    "reps": 13
+                  },
+                  {
+                    "weight": 30,
+                    "reps": 12
+                  }
+                ]
+              },
+              "mutatedInput": false
+            }
+          ],
+          "inputDigest": "971aca03de54546b93114c1c8aa9bbd42f995e30ff57b105f975819bb433235d",
+          "assessment": {
+            "outcome": "fail",
+            "failures": [
+              "headroom: must improve exactly one capable set by one rep",
+              "goal-effort: added work without demonstrated reserve",
+              "missing-effort: added work without demonstrated reserve"
+            ]
+          }
+        },
+        {
+          "caseId": "machine-increments",
+          "subcases": [
+            {
+              "id": "159.5",
+              "requested": 159.5,
+              "floor": 155,
+              "next": 160,
+              "raw": {
+                "floor": 155,
+                "next": 160
+              },
+              "mutatedInput": false
+            },
+            {
+              "id": "38.5",
+              "requested": 38.5,
+              "floor": 35,
+              "next": 40,
+              "raw": {
+                "floor": 35,
+                "next": 40
+              },
+              "mutatedInput": false
+            }
+          ],
+          "inputDigest": "f006ece4ac83375a60bb3a5a50072c3704328577b6db85de2ff7b9c9188dee70",
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "bar-stock",
+          "subcases": [
+            {
+              "id": "47.5",
+              "requested": 47.5,
+              "floor": 40,
+              "next": 55,
+              "raw": {
+                "floor": 40,
+                "next": 55
+              },
+              "mutatedInput": false
+            }
+          ],
+          "inputDigest": "054da38e9d27321827168b818d7ed403649fe9ae8d273e37735e9d59564571fc",
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        }
+      ]
+    },
+    "independent-kotlin": {
+      "commit": "6ff4618ed9e38f6e18e010d6413f8b84b177e3cb",
+      "sourceTree": "ce5cdd2fff681acec2bcd77b9707a96f18730a60",
+      "entryPoint": "FatigueAwareRepTargetReviewDomain.assess + EquipmentLoadDomain.inspect",
+      "results": [
+        {
+          "caseId": "dp-rep-target-jumps",
+          "inputDigest": "971aca03de54546b93114c1c8aa9bbd42f995e30ff57b105f975819bb433235d",
+          "subcases": [
+            {
+              "id": "headroom",
+              "targets": [
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 12
+                }
+              ],
+              "reason": "ONE_SET_REP_INCREASE_FOR_REVIEW",
+              "actualRirCount": 3,
+              "assumedGoalRirSetCount": 0,
+              "mayAutoApply": false,
+              "mutatedInput": false
+            },
+            {
+              "id": "goal-effort",
+              "targets": [
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 13
+                },
+                {
+                  "weight": 30,
+                  "reps": 12
+                }
+              ],
+              "reason": "NO_DEMONSTRATED_EFFORT_HEADROOM",
+              "actualRirCount": 3,
+              "assumedGoalRirSetCount": 0,
+              "mayAutoApply": false,
+              "mutatedInput": false
+            },
+            {
+              "id": "missing-effort",
+              "targets": [
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 13
+                },
+                {
+                  "weight": 30,
+                  "reps": 12
+                }
+              ],
+              "reason": "NO_DEMONSTRATED_EFFORT_HEADROOM",
+              "actualRirCount": 0,
+              "assumedGoalRirSetCount": 3,
+              "mayAutoApply": false,
+              "mutatedInput": false
+            },
+            {
+              "id": "near-failure",
+              "targets": [
+                {
+                  "weight": 30,
+                  "reps": 14
+                },
+                {
+                  "weight": 30,
+                  "reps": 13
+                },
+                {
+                  "weight": 30,
+                  "reps": 12
+                }
+              ],
+              "reason": "NEAR_FAILURE_OR_RECOVERY_PRIORITY",
+              "actualRirCount": 3,
+              "assumedGoalRirSetCount": 0,
+              "mayAutoApply": false,
+              "mutatedInput": false
+            }
+          ],
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "machine-increments",
+          "inputDigest": "f006ece4ac83375a60bb3a5a50072c3704328577b6db85de2ff7b9c9188dee70",
+          "subcases": [
+            {
+              "id": "159.5",
+              "requested": 159.5,
+              "floor": 155,
+              "next": 160,
+              "mutatedInput": false
+            },
+            {
+              "id": "38.5",
+              "requested": 38.5,
+              "floor": 35,
+              "next": 40,
+              "mutatedInput": false
+            }
+          ],
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "bar-stock",
+          "inputDigest": "054da38e9d27321827168b818d7ed403649fe9ae8d273e37735e9d59564571fc",
+          "subcases": [
+            {
+              "id": "47.5",
+              "requested": 47.5,
+              "floor": 40,
+              "next": 55,
+              "mutatedInput": false
+            }
+          ],
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        }
+      ]
+    }
+  },
+  "measurements": [
+    {
+      "caseId": "dp-rep-target-jumps",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "fail",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "971aca03de54546b93114c1c8aa9bbd42f995e30ff57b105f975819bb433235d",
+      "reproducible": true
+    },
+    {
+      "caseId": "machine-increments",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "f006ece4ac83375a60bb3a5a50072c3704328577b6db85de2ff7b9c9188dee70",
+      "reproducible": true
+    },
+    {
+      "caseId": "bar-stock",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "054da38e9d27321827168b818d7ed403649fe9ae8d273e37735e9d59564571fc",
+      "reproducible": true
+    },
+    {
+      "caseId": "dp-rep-target-jumps",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "6ff4618ed9e38f6e18e010d6413f8b84b177e3cb",
+      "inputDigest": "971aca03de54546b93114c1c8aa9bbd42f995e30ff57b105f975819bb433235d",
+      "reproducible": true
+    },
+    {
+      "caseId": "machine-increments",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "6ff4618ed9e38f6e18e010d6413f8b84b177e3cb",
+      "inputDigest": "f006ece4ac83375a60bb3a5a50072c3704328577b6db85de2ff7b9c9188dee70",
+      "reproducible": true
+    },
+    {
+      "caseId": "bar-stock",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "6ff4618ed9e38f6e18e010d6413f8b84b177e3cb",
+      "inputDigest": "054da38e9d27321827168b818d7ed403649fe9ae8d273e37735e9d59564571fc",
+      "reproducible": true
+    }
+  ]
+}

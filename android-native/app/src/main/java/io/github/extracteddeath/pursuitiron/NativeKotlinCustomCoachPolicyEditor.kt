@@ -25,6 +25,8 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     source:AthleteSetupReview?,
     sourceRevision:Long?,
     busy:Boolean,
+    observedEvidence:CustomCoachPolicyEvidence?,
+    onInspectEvidence:()->Unit,
     onDraftChanged:()->Unit,
     onReview:(CustomCoachAuditInputs)->Unit
 ) {
@@ -67,6 +69,36 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         style=MaterialTheme.typography.titleLarge)
     Text("Enter reviewed athlete-specific phase targets and real non-set time. Blank values are not assumed to be zero. This editor does not design your program or auto-approve any dose.",
         style=MaterialTheme.typography.bodySmall)
+    OutlinedButton(onClick=onInspectEvidence,enabled=!busy,
+        modifier=Modifier.fillMaxWidth()) {
+        Text("Inspect actual weekly workload in my plan")
+    }
+    if(observedEvidence!=null) {
+        Text("Verified authored workload · cycle revision ${observedEvidence.auditedCycleRevision}",
+            style=MaterialTheme.typography.titleMedium)
+        Text("These are factual scheduled working-set credits from the reviewed native exercise catalog. They are not safe minimums, optimal doses, recovery limits, or automatic MEV/MAV/MRV recommendations.",
+            style=MaterialTheme.typography.bodySmall)
+        observedEvidence.phaseWorkloads.toSortedMap(compareBy{it.ordinal})
+            .forEach{(phase,volume)->
+                val range=if(volume.minimumWorkingSets==volume.maximumWorkingSets)
+                    "${volume.minimumWorkingSets}"
+                else "${volume.minimumWorkingSets}–${volume.maximumWorkingSets}"
+                Text("${phase.name.replace('_',' ')} · ${volume.trainingWeekCount} training weeks · $range authored working sets/week",
+                    style=MaterialTheme.typography.bodyMedium)
+            }
+        if(observedEvidence.transitions.any{
+                it.workingSetsBefore!=it.workingSetsAfter
+            }) {
+            Text("Observed changes between training weeks",
+                style=MaterialTheme.typography.labelLarge)
+            observedEvidence.transitions.filter{
+                it.workingSetsBefore!=it.workingSetsAfter
+            }.take(8).forEach{transition->
+                Text("Week ${transition.fromWeek} → ${transition.toWeek}: ${transition.workingSetsBefore} → ${transition.workingSetsAfter} sets (${transition.workingSetChangeFraction?.multiply(java.math.BigDecimal("100"))?.stripTrailingZeros()?.toPlainString()?.plus("%") ?: "change from zero baseline"})",
+                    style=MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
     OutlinedButton(onClick={expanded=!expanded},
         enabled=!busy,modifier=Modifier.fillMaxWidth()) {
         Text(if(expanded)"Hide authored policy editor"
@@ -152,6 +184,18 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
                         .replaceFirstChar{it.uppercase()})})
         }
     }
+    observedEvidence?.phaseWorkloads?.get(selectedPhase)?.let{phase->
+        phase.muscleRanges[selectedMuscle]?.let{measured->
+            fun show(n:java.math.BigDecimal)=
+                n.stripTrailingZeros().toPlainString()
+            Text("Authored plan evidence · ${selectedMuscle.name.replace('_',' ')}",
+                style=MaterialTheme.typography.titleSmall)
+            Text("Weekly total credit: ${show(measured.minimumWeeklyCredit)}–${show(measured.maximumWeeklyCredit)} · Direct: ${show(measured.minimumWeeklyDirectCredit)}–${show(measured.maximumWeeklyDirectCredit)} · Direct days: ${measured.minimumDirectWeekdays}–${measured.maximumDirectWeekdays}",
+                style=MaterialTheme.typography.bodySmall)
+            Text("These are observed training-plan exposures, NOT a validated MEV, MAV, MRV or frequency recommendation. You must independently review the targets entered below.",
+                style=MaterialTheme.typography.bodySmall)
+        }
+    }
     if(selectedMuscle in profile.focusedMuscles)
         Text("Focused muscle: your selected dose and/or direct frequency must increase relative to baseline.",
             color=MaterialTheme.colorScheme.secondary,
@@ -222,6 +266,14 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         style=MaterialTheme.typography.titleMedium)
     Text("Enter explicit seconds for setup, travel between stations, transitions and cooldown. Do not count authored working/rest seconds again.",
         style=MaterialTheme.typography.bodySmall)
+    observedEvidence?.phaseWorkloads?.get(selectedPhase)?.let{phase->
+        Text("Known authored set/rest time in this phase (excludes all unknown non-set time):",
+            style=MaterialTheme.typography.labelMedium)
+        phase.minimumKnownSecondsByDay.keys.sorted().forEach{day->
+            Text("Day ${day+1}: ${phase.minimumKnownSecondsByDay[day]}–${phase.maximumKnownSecondsByDay[day]} seconds",
+                style=MaterialTheme.typography.bodySmall)
+        }
+    }
     val weekdayLabels=listOf("Monday","Tuesday","Wednesday","Thursday",
         "Friday","Saturday","Sunday")
     profile.trainingWeekdays.sorted().forEach{day->

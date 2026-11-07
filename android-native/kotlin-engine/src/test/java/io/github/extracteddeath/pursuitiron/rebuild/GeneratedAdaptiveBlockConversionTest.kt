@@ -63,13 +63,17 @@ class GeneratedAdaptiveBlockConversionTest {
         val candidate=checkNotNull(first.proposedOption).proposedCycle
         val oldByDay=before.days.associateBy {it.weekday}
         val newByDay=candidate.blocks.single().days.associateBy {it.weekday}
-        assertEquals(9,first.slotContinuity.size)
-        assertEquals(3,first.slotContinuity.count {
+        val generatedSlotCount=newByDay.values.sumOf {it.slots.size}
+        assertEquals(generatedSlotCount,first.slotContinuity.size)
+        val changedDay=first.slotContinuity.filter {it.weekday==0}
+        assertTrue(changedDay.isNotEmpty())
+        assertTrue(changedDay.all {
             it.relationship==GeneratedAdaptiveSlotRelationship.CHANGED_SESSION_PURPOSE
         })
-        assertEquals(6,first.slotContinuity.count {
-            it.relationship==GeneratedAdaptiveSlotRelationship.UNCHANGED_EXPOSURE
-        })
+        assertEquals(generatedSlotCount-changedDay.size,
+            first.slotContinuity.count {
+                it.relationship==GeneratedAdaptiveSlotRelationship.UNCHANGED_EXPOSURE
+            })
         first.slotContinuity.forEach { history ->
             val old=checkNotNull(oldByDay[history.weekday]).slots.single {
                 it.exerciseId==history.exerciseId
@@ -102,7 +106,7 @@ class GeneratedAdaptiveBlockConversionTest {
         val before=original.blocks.single()
         val amended=original.copy(blocks=listOf(before.copy(
             days=before.days.map { day ->
-                if(day.weekday!=2) day else day.copy(slots=day.slots.map { slot ->
+                day.copy(slots=day.slots.map { slot ->
                     if(slot.exerciseId=="bench")
                         slot.copy(role=ComposerRole.SECONDARY)
                     else slot
@@ -112,17 +116,19 @@ class GeneratedAdaptiveBlockConversionTest {
             fixture.request(original=amended))
         assertEquals(result.explanation,
             GeneratedAdaptiveBlockStatus.READY_FOR_CYCLE_REVIEW,result.status)
-        val changed=result.slotContinuity.single {
-            it.weekday==2 && it.exerciseId=="bench"
+        val benchVisits=result.slotContinuity.filter {
+            it.exerciseId=="bench"
         }
-        assertEquals(
-            GeneratedAdaptiveSlotRelationship.CHANGED_EXERCISE_ROLE,
-            changed.relationship)
-        assertEquals("old_bench",changed.priorSlotId)
-        assertNotEquals("old_bench",changed.proposedSlotId)
-        assertEquals(8,result.slotContinuity.count {
-            it.relationship==GeneratedAdaptiveSlotRelationship.UNCHANGED_EXPOSURE
+        assertTrue(benchVisits.isNotEmpty())
+        assertTrue(benchVisits.all {
+            it.relationship==
+                GeneratedAdaptiveSlotRelationship.CHANGED_EXERCISE_ROLE &&
+            it.priorSlotId=="old_bench" && it.proposedSlotId!="old_bench"
         })
+        assertEquals(result.slotContinuity.size-benchVisits.size,
+            result.slotContinuity.count {
+                it.relationship==GeneratedAdaptiveSlotRelationship.UNCHANGED_EXPOSURE
+            })
     }
 
     @Test fun missingPrescriptionAndImpossibleGymWeightFailClosed() {

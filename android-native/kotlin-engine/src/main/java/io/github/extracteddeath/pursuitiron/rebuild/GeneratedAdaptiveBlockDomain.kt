@@ -158,7 +158,7 @@ object GeneratedAdaptiveBlockDomain {
                         GeneratedAdaptiveSlotRelationship.AMBIGUOUS_PREVIOUS_SLOT
                     matching==null ->
                         GeneratedAdaptiveSlotRelationship.NEW_DAY_OR_EXERCISE
-                    prior.purpose!=session.purpose ->
+                    prior?.purpose!=session.purpose ->
                         GeneratedAdaptiveSlotRelationship.CHANGED_SESSION_PURPOSE
                     matching.role!=exercise.role ->
                         GeneratedAdaptiveSlotRelationship.CHANGED_EXERCISE_ROLE

@@ -445,13 +445,19 @@ class CustomNextWorkoutCoachingDomainTest {
         assertNull(latest.evidence.visits.first().actual?.actualRir)
     }
 
-    @Test fun alteredPhasePurposeSplitOrGymRequireNewBaseline() {
+    @Test fun phaseAndPurposeChangesExposeOnlyFactsButNewSplitsRequireNewBaseline() {
         val current=blockEntry()
-        assertEquals(CustomBlockBaselineStatus.PHASE_PURPOSE_OR_SPLIT_CHANGED,
-            baseline(next=current.copy(phase=TrainingPhase.STRENGTH)).status)
-        assertEquals(CustomBlockBaselineStatus.PHASE_PURPOSE_OR_SPLIT_CHANGED,
-            baseline(next=current.copy(
-                sessionPurpose=ComposerSessionPurpose.STRENGTH_SKILL)).status)
+        val phase=baseline(next=current.copy(phase=TrainingPhase.STRENGTH))
+        assertEquals(CustomBlockBaselineStatus.VERIFIED_PHASE_REFERENCE_ONLY,
+            phase.status)
+        assertEquals(listOf(8,8),phase.priorWorkingSets.map{it.performedReps})
+        assertFalse(phase.mayApplyProgression)
+        val purpose=baseline(next=current.copy(
+            sessionPurpose=ComposerSessionPurpose.STRENGTH_SKILL))
+        assertEquals(CustomBlockBaselineStatus.VERIFIED_PHASE_REFERENCE_ONLY,
+            purpose.status)
+        assertNull(purpose.priorWorkingSets.firstOrNull{it.actualRir==null})
+        assertFalse(purpose.mayIssueWorkout)
         assertEquals(CustomBlockBaselineStatus.PHASE_PURPOSE_OR_SPLIT_CHANGED,
             baseline(next=current.copy(split=CustomSplitIdentity.Freeform("PPL"))).status)
         assertEquals(CustomBlockBaselineStatus.ATHLETE_OR_GYM_SOURCE_CHANGED,

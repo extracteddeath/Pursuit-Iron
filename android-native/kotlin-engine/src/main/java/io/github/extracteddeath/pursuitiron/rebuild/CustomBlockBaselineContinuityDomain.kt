@@ -32,7 +32,10 @@ enum class CustomBlockBaselineStatus {
     PRESCRIPTION_CHANGED,
     PREVIOUS_WORKOUT_UNVERIFIED_OR_INCOMPLETE,
     EQUIPMENT_UNVERIFIED,
-    VERIFIED_CONTEXT_ONLY
+    VERIFIED_CONTEXT_ONLY,
+    /** Phase/purpose changed, but exact observed work remains useful as a
+     * historic reference; never a carried progression authorization. */
+    VERIFIED_PHASE_REFERENCE_ONLY
 }
 
 data class CustomBlockBaselineSet(
@@ -120,11 +123,11 @@ object CustomBlockBaselineContinuityDomain {
             old.stamp.athleteProfileRevision!=next.stamp.athleteProfileRevision)
             return refuse(CustomBlockBaselineStatus.ATHLETE_OR_GYM_SOURCE_CHANGED,
                 "Gym inventory or athlete source changed; start a new verified baseline.")
-        if(old.phase!=next.phase ||
-            old.sessionPurpose!=next.sessionPurpose ||
-            old.split!=next.split)
+        if(old.split!=next.split)
             return refuse(CustomBlockBaselineStatus.PHASE_PURPOSE_OR_SPLIT_CHANGED,
-                "New training phase, split or day purpose needs its own baseline.")
+                "A revised training split changes the weekly fatigue context; establish a fresh baseline.")
+        val changedPhaseOrPurpose=old.phase!=next.phase ||
+            old.sessionPurpose!=next.sessionPurpose
         val priorSets=priorSlot.sets
         val targetSets=nextSlot.sets
         val oldWorking=priorSets.filter {
@@ -189,11 +192,16 @@ object CustomBlockBaselineContinuityDomain {
                 issued.unit,actual.reps,actual.actualRir)
         }
         return CustomBlockBaselineReview(
-            CustomBlockBaselineStatus.VERIFIED_CONTEXT_ONLY,
+            if(changedPhaseOrPurpose)
+                CustomBlockBaselineStatus.VERIFIED_PHASE_REFERENCE_ONLY
+            else CustomBlockBaselineStatus.VERIFIED_CONTEXT_ONLY,
             previous.evidence.workoutId,old.blockId,priorSlot.slotId,
             Collections.unmodifiableList(observed.toList()),
-            "The adjacent previous block has comparable exact same-day working sets. "+
-                "Show the actual weights, reps and reported RIR only. The new block starts "+
-                "at its own approved prescription; no automatic rep or load progression.")
+            (if(changedPhaseOrPurpose)
+                "A new phase or session purpose reinterprets training intensity. "
+            else "The adjacent previous block has comparable same-day work. ")+
+                "The previous complete sets are factual reference only, not "+
+                "a carried-over or automatically earned progression. New-block "+
+                "weights, rep targets and reported RIR remain independently authored.")
     }
 }

@@ -257,12 +257,17 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                                     replacement)))))
             val allowed=CustomCycleCoachPermissions(
                 adaptLoads=true,adaptWeekOverrides=true)
-            val compared=AdaptiveCycleOptionReviewDomain.review(
-                AdaptiveCycleOptionRequest(original,block.blockId,
-                    source.setup,source.catalog,coaching,allowed,
-                    listOf(option)))
+            // The currently activated block has a NEW athlete/gym/split
+            // context, while completed earlier blocks must retain their
+            // original pre-activation context. Only the activation owner can
+            // reconstruct and authenticate both contexts together.
+            val compared=activation.reviewActivatedOption(
+                ownerKey,coaching,option,allowed)
+                ?:return@withOwnerTransaction no(
+                    NativeFutureWeekLoadRefusal.FULL_CYCLE_AUDIT_FAILED)
             val assessed=compared.evaluated.singleOrNull()
-            if(assessed?.status!=AdaptiveCycleOptionStatus.READY_FOR_REVIEW ||
+            if(assessed?.status!=
+                    AdaptiveCycleOptionStatus.PROSPECTIVE_REVIEW_REQUIRED ||
                 assessed.coachingAudit?.status!=
                     CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
                 assessed.transition?.status!=

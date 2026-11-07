@@ -28,6 +28,8 @@ internal data class NativeKotlinCustomCycleState(
     val canUndo: Boolean = false,
     val authoringRefusal: CustomAuthoringRefusal? = null,
     val availableChoices: List<CustomExercisePickerOption> = emptyList(),
+    val savedDrafts: List<NativeCustomDraftSummary> = emptyList(),
+    val savedDraftsLoaded:Boolean = false,
     val sourceRevision: Long? = null,
     /** Read on current native owner open; never default coaching to on. */
     val coachingSuggestionsEnabled:Boolean = false,
@@ -149,6 +151,23 @@ internal class NativeKotlinCustomCycleController(
 
     fun open(cycleId: String) = run {
         applyRead(cycleId, host.readCustomCycleDraft(cycleId))
+    }
+
+    /** Owner-verified, read-only program picker. IDs stay internal to navigation. */
+    fun findSavedPrograms() = run {
+        when(val listed=host.listOwnedCustomCycleDrafts()) {
+            is NativeCustomDraftListResult.Ready ->
+                current.value=current.value.copy(
+                    savedDrafts=listed.drafts,savedDraftsLoaded=true,
+                    message=if(listed.drafts.isEmpty())
+                        "No saved custom programs were found for this athlete."
+                    else "Found ${listed.drafts.size} saved custom programs.")
+            is NativeCustomDraftListResult.Rejected ->
+                current.value=current.value.copy(
+                    savedDrafts=emptyList(),savedDraftsLoaded=false,
+                    refusal=listed.reason,
+                    message="Saved programs could not be verified. No program was opened.")
+        }
     }
 
     /** Re-open the verified disk state and CURRENT gym/catalog when returning

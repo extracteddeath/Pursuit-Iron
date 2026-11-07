@@ -322,4 +322,76 @@ class NativeKotlinCustomWorkoutJournalFileStoreTest {
             inventory().inspect("owner-1","athlete-1",emptySet()))
     }
 
+    private fun resumeReview()=NativeKotlinCustomResumeReview(
+        fence,identity,NativeKotlinMixedHistoryReadCoordinator(
+            history,composerJournal,
+            KotlinNativeSavedCorrectionFileStore(temp.root.toPath(),composerJournal),
+            issued,NativeKotlinApprovalFileAuthority(
+                temp.root.toPath(),fence,identity),
+            identity,fence),inventory(),issued)
+
+    @Test fun resumeDoesNotTreatPreparedOnlyWorkoutAsIssued() {
+        initialize();approve();prepareWeek();enroll()
+        val review=resumeReview().review("owner-1")
+        assertTrue(review.toString(),review is NativeCustomResumeReview.Ready)
+        assertTrue((review as NativeCustomResumeReview.Ready).workouts.isEmpty())
+        assertFalse(review.mayIssueWorkout)
+        assertFalse(review.mayAlterHistory)
+    }
+
+    @Test fun issuedCustomWorkoutReopensFromVerifiedOwnerInventoryWithoutIdEntry() {
+        initialize();approve();prepareWeek();enroll();issueWeek()
+        val before=resumeReview().review("owner-1")
+        assertTrue(before.toString(),before is NativeCustomResumeReview.Ready)
+        val item=(before as NativeCustomResumeReview.Ready).workouts.single()
+        assertEquals("workout-2",item.workoutId)
+        assertEquals("cycle-1",item.cycleId)
+        assertEquals(2,item.absoluteWeek)
+        assertEquals(0,item.weekday)
+        assertEquals("Core 0",item.dayLabel)
+        assertEquals(0L,item.journalRevision)
+        assertEquals(1,item.unresolvedVisitCount)
+        val write=issued.record("owner-1","workout-2",recordSet("observed",0))
+        assertTrue(write.toString(),write is NativeCustomJournalResult.Durable)
+        val cold=resumeReview().review("owner-1")
+        assertTrue(cold.toString(),cold is NativeCustomResumeReview.Ready)
+        assertEquals(1L,(cold as NativeCustomResumeReview.Ready)
+            .workouts.single().journalRevision)
+        assertEquals(0,cold.workouts.single().unresolvedVisitCount)
+    }
+
+    @Test fun committedCustomFinishDisappearsFromResumableList() {
+        initialize();approve();prepareWeek();enroll();issueWeek()
+        assertTrue(issued.record("owner-1","workout-2",
+            recordSet("observed",0)) is NativeCustomJournalResult.Durable)
+        val transaction=NativeKotlinCustomHistoryTransaction(
+            history,issued,fence,identity)
+        val finish=transaction.complete("owner-1","athlete-1",
+            "workout-2",CustomWorkoutJournalOperation.Finish(
+                "completed-1",1L))
+        assertTrue(finish.toString(),finish is NativeCustomFinishResult.Committed)
+        val review=resumeReview().review("owner-1")
+        assertTrue(review.toString(),review is NativeCustomResumeReview.Ready)
+        assertTrue((review as NativeCustomResumeReview.Ready).workouts.isEmpty())
+    }
+
+    @Test fun resumeFailsClosedOnOwnerSwitchAndCorruptedIssuedFile() {
+        initialize();approve();prepareWeek();enroll();issueWeek()
+        current=NativeKotlinOwnerIdentity("other-owner","athlete-1")
+        assertEquals(NativeCustomResumeReview.Rejected(
+            NativeCustomResumeRefusal.NOT_AUTHORIZED),
+            resumeReview().review("owner-1"))
+        current=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        val file=java.nio.file.Files.list(temp.root.toPath()).use{files->
+            files.filter{it.fileName.toString().startsWith("issued-custom-")}
+                .findFirst().orElseThrow()
+        }
+        val bytes=java.nio.file.Files.readAllBytes(file)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        java.nio.file.Files.write(file,bytes)
+        assertEquals(NativeCustomResumeReview.Rejected(
+            NativeCustomResumeRefusal.WORKOUT_INVENTORY_UNVERIFIED),
+            resumeReview().review("owner-1"))
+    }
+
 }

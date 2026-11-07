@@ -89,6 +89,11 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,futureActivationCommit,
         activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
         customIssuedStore,coachSettings)
+    private val futureWeekLoadOptions=NativeKotlinCustomFutureWeekLoadOptionReview(
+        revisionFence,localAthlete,activatedNextWorkoutCoach,
+        futureActivationCommit,customDraftStore,authoringSourceStore,
+        adaptiveCyclePermissions,coachSettings,mixedHistoryReader,
+        outstandingCustomInventory)
     private val acceptedFutureRepTargets=NativeKotlinCustomNextRepApprovalFileStore(
         root,revisionFence,localAthlete,futureActivationCommit,
         activatedNextWorkoutCoach,customPreparedStore,customIssuedStore)
@@ -787,6 +792,25 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomNextCoachRefusal.NOT_AUTHORIZED)
         return activatedNextWorkoutCoach.review(signed.ownerKey,inputs,
             nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
+            maximumAuthorizedIncrease)
+    }
+
+    /**
+     * Complete on-disk, read-only FUTURE WEEK load proposal. The native owner
+     * re-reads the real finished history, permission revision, assistance
+     * settings, approved draft and outstanding prepared/issued sessions.
+     * This produces a reviewed candidate only, NEVER a saved workout.
+     */
+    fun previewFutureCycleWeekLoadOption(
+        absoluteWeek:Int,weekday:Int,slotId:String,
+        inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
+        movementRestricted:Boolean,maximumAuthorizedIncrease:java.math.BigDecimal
+    ):NativeFutureWeekLoadOptionResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeFutureWeekLoadOptionResult.Rejected(
+                NativeFutureWeekLoadRefusal.NOT_AUTHORIZED)
+        return futureWeekLoadOptions.review(owner.ownerKey,inputs,
+            absoluteWeek,weekday,slotId,readiness,movementRestricted,
             maximumAuthorizedIncrease)
     }
 

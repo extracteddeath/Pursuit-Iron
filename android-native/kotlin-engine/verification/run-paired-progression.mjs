@@ -96,6 +96,20 @@ if (args.includes('--record')) {
     assert.deepEqual(engines[engine].results, recorded.engines[engine].results,
       'fresh executed outputs differ from the recorded comparison');
   }
+} else if (args.includes('--check-current')) {
+  const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
+  const provenance=verifyRecordedProgressionEvidence(evidence,
+    { allowStaleNativeTree:true });
+  if(provenance.currentNativeTree) {
+    const recorded=JSON.parse(readFileSync(resolve(root,artifactPath),'utf8'));
+    for(const engine of Object.keys(engines)) {
+      assert.equal(engines[engine].sourceTree,recorded.engines[engine].sourceTree);
+      assert.deepEqual(engines[engine].results,recorded.engines[engine].results,
+        'fresh executed outputs differ from the recorded comparison');
+    }
+  } else {
+    console.log('Current Kotlin source differs from archived measurements. Freshly executed paired results were oracle-graded but NOT recorded or certified.');
+  }
 }
 for (const item of fixture.cases) console.log(JSON.stringify({ caseId: item.id,
   legacy: engines['legacy-javascript'].results.find(r => r.caseId === item.id).assessment,

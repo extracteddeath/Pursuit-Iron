@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { verifyRecordedProgressionEvidence } from './paired-progression.mjs';
+import { verifyRecordedProgressionEvidence, caseIds } from './paired-progression.mjs';
 
 /**
  * Independent comparative release gate. It intentionally does not derive a
@@ -151,8 +151,20 @@ if (args.has('--self-test')) {
 } else {
   if (!args.has('--audit') && !args.has('--release'))
     throw Error('Choose --audit, --release, or --self-test');
-  verifyRecordedProgressionEvidence(evidence);
-  const verdict = reviewComparison(cases, evidence);
+  const auditOnly=args.has('--audit') && !args.has('--release');
+  const provenance=verifyRecordedProgressionEvidence(evidence,
+    { allowStaleNativeTree: auditOnly });
+  // Stale source results remain tamper-verified as archival evidence, but
+  // cannot count as a CURRENT measured pair in an audit or release score.
+  const currentEvidence=provenance.currentNativeTree ? evidence : {
+    ...evidence,
+    measurements:evidence.measurements.filter(m =>
+      !(m.proof==='headless' && caseIds.includes(m.caseId)))
+  };
+  const verdict=reviewComparison(cases, currentEvidence);
+  verdict.staleRecordedHeadlessPairs=provenance.currentNativeTree ? 0 : provenance.recordedPairs;
+  if(verdict.staleRecordedHeadlessPairs)
+    verdict.blockers.unshift('Recorded Kotlin headless measurements refer to an older native engine source tree; remeasure before certification.');
   console.log(JSON.stringify(verdict, null, 2));
   if (args.has('--write-report')) {
     const out = join(here, '..', 'reports', 'engine-superiority-audit.json');

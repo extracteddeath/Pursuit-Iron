@@ -109,7 +109,14 @@ test('changed actual RIR, overwritten targets and made-up pass outcomes are refu
 
 test('recorded measurements require the exact artifact bytes and bound engine results',()=>{
   const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
-  assert.doesNotThrow(()=>verifyRecordedProgressionEvidence(evidence));
+  const provenance=verifyRecordedProgressionEvidence(evidence,
+    {allowStaleNativeTree:true});
+  assert.equal(provenance.recordedPairs,5);
+  if(provenance.currentNativeTree)
+    assert.doesNotThrow(()=>verifyRecordedProgressionEvidence(evidence));
+  else
+    assert.throws(()=>verifyRecordedProgressionEvidence(evidence),
+      /native engine source changed|uncommitted native policies/);
   for(const mutate of [
     e=>e.measurements[0].artifactDigest='0'.repeat(64),
     e=>e.measurements[0].outcome='fail',
@@ -117,7 +124,8 @@ test('recorded measurements require the exact artifact bytes and bound engine re
     e=>e.measurements[0].commit='0'.repeat(40),
     e=>e.measurements.push({...e.measurements[0]})]) {
     const altered=structuredClone(evidence);mutate(altered);
-    assert.throws(()=>verifyRecordedProgressionEvidence(altered));
+    assert.throws(()=>verifyRecordedProgressionEvidence(altered,
+      {allowStaleNativeTree:true}));
   }
 });
 
@@ -125,9 +133,14 @@ test('five measured pairs still cannot certify the complete engine replacement',
   const audit=JSON.parse(execFileSync(process.execPath,
     ['android-native/kotlin-engine/verification/engine-superiority-gate.mjs','--audit'],
     {cwd:root,encoding:'utf8'}));
-  assert.equal(audit.completedPairs,5);
+  const verified=verifyRecordedProgressionEvidence(
+    JSON.parse(readFileSync(resolve(root,evidencePath),'utf8')),
+    {allowStaleNativeTree:true});
+  assert.equal(audit.completedPairs,verified.currentNativeTree?5:0);
   assert.equal(audit.requiredPairs,49);
-  assert.equal(audit.missingPairs,44);
+  assert.equal(audit.missingPairs,verified.currentNativeTree?44:49);
+  assert.equal(audit.staleRecordedHeadlessPairs,
+    verified.currentNativeTree?0:5);
   assert.equal(audit.verdict,'NOT_PROVEN_BETTER');
   assert.deepEqual(audit.improvedDomains,[]);
   assert.deepEqual(audit.regressions,[]);

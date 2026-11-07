@@ -70,7 +70,7 @@ jobs:
       - name: Re-execute both progression engines and compare recorded outputs
         run: >-
           node android-native/kotlin-engine/verification/run-paired-progression.mjs
-          --legacy-root comparison-legacy --check-recorded
+          --legacy-root comparison-legacy --check-current
       - name: Test isolated native journal persistence and offline crash recovery
         working-directory: android-native
         run: gradle :native-coach-store:testDebugUnitTest --no-daemon --stacktrace

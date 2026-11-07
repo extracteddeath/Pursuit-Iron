@@ -170,9 +170,9 @@ export function verifyBundle(bundle, fixture) {
 }
 
 /** Content-bound evidence, not a self-declared pass or a missing artifact path. */
-export function verifyRecordedProgressionEvidence(observations) {
+export function verifyRecordedProgressionEvidence(observations, { allowStaleNativeTree = false } = {}) {
   const records = observations.measurements.filter(r => r.proof === 'headless' && caseIds.includes(r.caseId));
-  if (!records.length) return;
+  if (!records.length) return { currentNativeTree: false, recordedPairs: 0 };
   assert.equal(records.length, caseIds.length * 2, 'incomplete recorded progression tranche');
   const path = realpathSync(resolve(root, artifactPath));
   assert.ok(!relative(realpathSync(root), path).startsWith(`..${sep}`));
@@ -190,8 +190,16 @@ export function verifyRecordedProgressionEvidence(observations) {
   for (const file of runnerPaths)
     assert.equal(bundle.runnerFiles[file], sha256(readFileSync(resolve(root, file))),
       `comparison runner/fixture changed: remeasure ${file}`);
-  assert.equal(bundle.engines['independent-kotlin'].sourceTree, git(root, 'rev-parse', `HEAD:${sourcePath}`),
-    'native engine source changed: historical comparison is not current certification');
-  assert.equal(git(root,'status','--porcelain','--untracked-files=all','--',sourcePath),'',
-    'uncommitted native policies cannot borrow recorded certification');
+  const nativeTree=git(root, 'rev-parse', `HEAD:${sourcePath}`);
+  const clean=git(root,'status','--porcelain','--untracked-files=all','--',sourcePath)==='';
+  // The audit may report HISTORICAL evidence after a source change, but may
+  // never count it as CURRENT measured superiority. Always validate the
+  // artifact bytes, runner hashes and independent oracle before demoting it.
+  const currentNativeTree=bundle.engines['independent-kotlin'].sourceTree===nativeTree && clean;
+  if(!allowStaleNativeTree) {
+    assert.equal(bundle.engines['independent-kotlin'].sourceTree,nativeTree,
+      'native engine source changed: historical comparison is not current certification');
+    assert.ok(clean,'uncommitted native policies cannot borrow recorded certification');
+  }
+  return { currentNativeTree, recordedPairs: records.length / 2 };
 }

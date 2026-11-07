@@ -27,6 +27,12 @@ Neither engine gets credit for producing the other engine's output.
 - `verification/engine-superiority-gate.mjs --audit --write-report`: checks
   matrix/evidence structure, reports unmeasured pairs, publishes a
   non-certifying CI artifact; incomplete measurement is not CI failure.
+  When Kotlin source changes, old measured headless results remain
+  independently artifact-verified but are excluded from CURRENT pair counts,
+  explicitly marked stale, and do not prevent separate engine/unit tests.
+  `--release` still refuses stale source. CI uses a clean, pinned-legacy
+  `--check-current` pair execution to grade present behavior without claiming
+  that unreleased fresh results were recorded as accepted evidence.
 - `verification/engine-superiority-gate.mjs --release`: fails closed until
   every required matched pair is measured and Kotlin passes every domain,
   improvement is demonstrated in three or more distinct domains, there are

@@ -220,7 +220,8 @@ object CustomExerciseAuthoringDomain {
     /**
      * Edit only the chosen slot. Never replace the same exercise on another
      * day or reset an explicit week override. The gym is checked AGAIN when
-     * changing individual loads or advanced-set techniques.
+     * changing individual loads or advanced-set techniques. A supplied
+     * week selects only that override; the block's base sets stay intact.
      */
     fun replaceSelectedSets(
         current: CustomTrainingCycle,
@@ -230,7 +231,8 @@ object CustomExerciseAuthoringDomain {
         slotId: String,
         newSets: List<CustomAuthoredSet>,
         setup: AthleteSetupReview,
-        catalog: List<CatalogMovement>
+        catalog: List<CatalogMovement>,
+        weekInBlock: Int? = null
     ): CustomAuthoringResult {
         val athlete = setup.reviewed?.takeIf {
             setup.status == AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW &&
@@ -257,8 +259,12 @@ object CustomExerciseAuthoringDomain {
                 CustomAuthoringRefusal.INVALID_SETS)
         val invalid = newSets.firstNotNullOfOrNull { validSet(it, option) }
         if (invalid != null) return CustomAuthoringResult.Rejected(invalid)
-        return when (val changed = CustomCycleBuilderDomain.replaceSlotSets(
-            current, expectedRevision, blockId, weekday, slotId, newSets)) {
+        val proposal = if (weekInBlock == null)
+            CustomCycleBuilderDomain.replaceSlotSets(
+                current, expectedRevision, blockId, weekday, slotId, newSets)
+        else CustomCycleBuilderDomain.editWeek(
+            current, expectedRevision, blockId, weekInBlock, weekday, slotId, newSets)
+        return when (val changed = proposal) {
             is CustomCycleBuilderResult.Proposed ->
                 CustomAuthoringResult.Accepted(changed)
             is CustomCycleBuilderResult.Rejected ->

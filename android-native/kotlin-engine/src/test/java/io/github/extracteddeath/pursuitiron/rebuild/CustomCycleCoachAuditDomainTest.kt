@@ -641,6 +641,131 @@ class CustomCycleCoachAuditDomainTest {
         }})
     }
 
+    private fun compareWeek(
+        source: CustomTrainingCycle = cycle(),
+        replacement: List<CustomAuthoredSet>? = List(3) { authoredSet() },
+        reviewedInputs: CustomCoachAuditInputs = inputs().copy(
+            continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("1"),n("1"),n("1"),n("1")))
+    ): CustomCoachWeekEditReview {
+        val result=CustomCoachWeekEditDomain.review(source,source.revision,
+            2,0,"slot-0",replacement,setup(),
+            StarterExerciseTranche.movements(),reviewedInputs)
+        assertTrue(result.toString(),result is CustomCoachWeekEditResult.Reviewed)
+        return (result as CustomCoachWeekEditResult.Reviewed).review
+    }
+
+    @Test fun selectedWeekCorrectionComparesExactDoseTimeAndPreservesEveryOtherDay() {
+        val original=cycle()
+        val reviewed=compareWeek(original)
+        assertEquals(listOf(3,3,3),reviewed.before.weeks.map{it.workingSets})
+        assertEquals(listOf(3,5,3),reviewed.after.weeks.map{it.workingSets})
+        assertEquals(n("5"),reviewed.after.weeks[1].directSets.getValue(TrainingMuscle.ABS))
+        assertEquals(3,reviewed.after.weeks[1].directDays.getValue(TrainingMuscle.ABS))
+        assertEquals(330L,reviewed.before.weeks[1].estimatedSecondsByDay[0])
+        assertEquals(590L,reviewed.after.weeks[1].estimatedSecondsByDay[0])
+        assertEquals(original.blocks,reviewed.proposal.draft.blocks)
+        assertEquals(original,reviewed.proposal.receipt.original)
+        assertEquals(listOf(CustomWeekSlotOverride(2,0,"slot-0",List(3){authoredSet()})),
+            reviewed.proposal.draft.weekOverrides.getValue("block-1"))
+        assertEquals(1,reviewed.originalSets.size)
+        assertEquals(3,reviewed.proposedSets.size)
+        assertFalse(reviewed.mayIssueWorkout)
+        assertFalse(reviewed.mayApprovePolicy)
+        assertFalse(reviewed.restoresBlockSets)
+    }
+
+    @Test fun correctionReportsResolvedCeilingWithoutClaimingUnchangedIssuesWereFixed() {
+        val source=cycle(overrides=mapOf("block-1" to listOf(
+            CustomWeekSlotOverride(2,0,"slot-0",List(6){authoredSet()}))))
+        val fixed=compareWeek(source)
+        assertTrue(fixed.resolvedIssues.any {
+            it.kind==CustomCoachIssueKind.ABOVE_WEEKLY_MRV
+        })
+        assertTrue(fixed.introducedIssues.isEmpty())
+        assertEquals(CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,fixed.after.status)
+        val partial=compareWeek(source,List(5){authoredSet()})
+        assertTrue(partial.remainingIssues.any {
+            it.kind==CustomCoachIssueKind.ABOVE_WEEKLY_MRV
+        })
+        assertFalse(partial.resolvedIssues.any {
+            it.kind==CustomCoachIssueKind.ABOVE_WEEKLY_MRV
+        })
+        assertEquals(CustomCoachAuditStatus.UNRESOLVED,partial.after.status)
+    }
+
+    @Test fun wholeCycleComparisonExposesNewViolationsInTheFollowingUneditedWeek() {
+        val reviewed=compareWeek(reviewedInputs=inputs().copy(
+            continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.25"),n("0.25"),n("0.25"),n("0.25"))))
+        assertTrue(reviewed.before.issues.isEmpty())
+        assertTrue(reviewed.introducedIssues.any {
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_TRAINING_VOLUME_SPIKE &&
+                it.location.startsWith("week.2.")
+        })
+        assertTrue(reviewed.introducedIssues.any {
+            it.kind==CustomCoachIssueKind.UNJUSTIFIED_BLOCK_VOLUME_DROP &&
+                it.location.startsWith("week.3.")
+        })
+        assertEquals(3,reviewed.after.weeks[2].workingSets)
+    }
+
+    @Test fun explicitRestoreRemovesOnlyTheSelectedOverrideAndKeepsOtherAuthoredWeeks() {
+        val other=CustomWeekSlotOverride(3,2,"slot-2",List(2){authoredSet()})
+        val source=cycle(overrides=mapOf("block-1" to listOf(
+            CustomWeekSlotOverride(2,0,"slot-0",List(6){authoredSet()}),other)))
+        val reviewed=compareWeek(source,null)
+        assertTrue(reviewed.restoresBlockSets)
+        assertEquals(listOf(3,3,4),reviewed.after.weeks.map{it.workingSets})
+        assertEquals(listOf(other),reviewed.proposal.draft.weekOverrides["block-1"])
+        assertEquals(source.blocks,reviewed.proposal.draft.blocks)
+    }
+
+    @Test fun manualComparisonWithoutCoachingPolicyShowsFactsAndUnresolvedRequirements() {
+        val reviewed=compareWeek(reviewedInputs=CustomCoachAuditInputs())
+        assertEquals(5,reviewed.after.weeks[1].workingSets)
+        assertEquals(CustomCoachAuditStatus.COACHING_POLICY_REQUIRED,reviewed.after.status)
+        assertTrue(reviewed.remainingIssues.any {
+            it.kind==CustomCoachIssueKind.REVIEWED_POLICY_MISSING
+        })
+        assertFalse(reviewed.after.issues.any {
+            it.kind==CustomCoachIssueKind.BELOW_WEEKLY_MEV ||
+                it.kind==CustomCoachIssueKind.ABOVE_WEEKLY_MRV
+        })
+        assertTrue(reviewed.after.weeks.all {
+            it.estimatedSecondsByDay.values.all {seconds->seconds==null}
+        })
+    }
+
+    @Test fun warmupOnlyChangePreservesWorkingDoseWhileIncreasingKnownTime() {
+        val reviewed=compareWeek(replacement=listOf(
+            authoredSet().copy(type=DraftSetType.WARMUP),authoredSet()))
+        assertEquals(3,reviewed.after.weeks[1].workingSets)
+        assertEquals(n("3"),reviewed.after.weeks[1].totalSetCredits[TrainingMuscle.ABS])
+        assertEquals(260L,reviewed.after.weeks[1].knownSecondsByDay[0])
+    }
+
+    @Test fun weekComparisonRejectsStaleSourceInvalidSelectionImpossibleLoadsAndNoOps() {
+        fun result(revision:Long=4,week:Int=2,day:Int=0,slot:String="slot-0",
+            sets:List<CustomAuthoredSet>?=List(3){authoredSet()},
+            catalog:List<CatalogMovement> = StarterExerciseTranche.movements())=
+            CustomCoachWeekEditDomain.review(cycle(),revision,week,day,slot,
+                sets,setup(),catalog,inputs())
+        fun reason(value:CustomCoachWeekEditResult)=
+            (value as CustomCoachWeekEditResult.Rejected).reason
+        assertEquals(CustomCoachWeekEditRefusal.STALE_REVISION,reason(result(revision=3)))
+        assertEquals(CustomCoachWeekEditRefusal.INVALID_SELECTION,reason(result(week=4)))
+        assertEquals(CustomCoachWeekEditRefusal.INVALID_SELECTION,reason(result(day=1)))
+        assertEquals(CustomCoachWeekEditRefusal.INVALID_SELECTION,reason(result(slot="missing")))
+        assertEquals(CustomCoachWeekEditRefusal.SOURCE_UNVERIFIED,reason(result(catalog=emptyList())))
+        assertEquals(CustomCoachWeekEditRefusal.NO_CHANGE,reason(result(sets=null)))
+        assertEquals(CustomCoachWeekEditRefusal.NO_CHANGE,reason(result(sets=listOf(authoredSet()))))
+        assertEquals(CustomCoachWeekEditRefusal.INVALID_SETS,reason(result(sets=emptyList())))
+        assertEquals(CustomCoachWeekEditRefusal.INVALID_SETS,reason(result(sets=listOf(
+            authoredSet().copy(load=DraftSetLoad.Verified(LoadUnit.LB,
+                LoadBasis.DUMBBELL_PER_HAND,n("25")))))))
+    }
+
     @Test fun unverifiedCatalogOrAuthoredStructureCannotYieldCoachOptions() {
         val noCatalog=CustomCycleCoachAuditDomain.review(
             cycle(),setup(),emptyList())

@@ -61,6 +61,50 @@ class NativeKotlinCustomAuthoringDraftCoordinatorTest {
         "My custom plan","base",4,TrainingPhase.HYPERTROPHY,
         CustomSplitIdentity.Freeform("Upper / Arms"))!!
 
+    private fun authoredSet()=CustomAuthoredSet(DraftSetType.WORKING,
+        DraftSetLoad.Verified(LoadUnit.LB,LoadBasis.CABLE_STACK,BigDecimal("20")),
+        RepBand(10,15),2,40,90)
+    private fun completeCycle()=CustomTrainingCycle("cycle-1",1,"athlete-1",
+        AthleteTrainingGoal.HYPERTROPHY,"Custom arms",
+        listOf(CustomTrainingBlock("base","Base",TrainingPhase.HYPERTROPHY,
+            CustomBlockPurpose.TRAINING,4,CustomSplitIdentity.Freeform("Arms"),
+            listOf(0,2,4).map {day -> CustomTrainingDay(day,"Arms $day",
+                ComposerSessionPurpose.HYPERTROPHY,
+                listOf(CustomExerciseSlot("slot-$day",pushdown.exerciseId,
+                    pushdown.role,listOf(authoredSet()),attachmentId="rope",pinned=true))) })))
+
+    @Test fun reviewedWeekCorrectionWaitsForExplicitSaveRejectsChangedGymAndColdRecovers() {
+        sources.publish("owner-1",0,source(1))
+        val original=completeCycle()
+        assertEquals(NativeCustomDraftWriteResult.Committed(1),
+            drafts.save("owner-1","cycle-1",0,original))
+        val result=CustomCoachWeekEditDomain.review(original,1,2,0,"slot-0",
+            listOf(authoredSet(),authoredSet()),reviewed(),listOf(pushdown))
+        assertTrue(result.toString(),result is CustomCoachWeekEditResult.Reviewed)
+        val proposal=(result as CustomCoachWeekEditResult.Reviewed).review.proposal
+        assertEquals(NativeCustomDraftReadResult.Found(original),
+            drafts.read("owner-1","cycle-1"))
+        assertEquals(NativeAuthoringSourceWrite.Committed(2),
+            sources.publish("owner-1",1,source(2)))
+        assertEquals(NativeCustomDraftWriteResult.Rejected(NativeCustomDraftRefusal.STALE_REVISION),
+            coordinator.saveVerifiedExerciseEdit("owner-1",proposal.draft,1,1))
+        assertEquals(NativeCustomDraftReadResult.Found(original),drafts.read("owner-1","cycle-1"))
+        val fresh=CustomCoachWeekEditDomain.review(original,1,2,0,"slot-0",
+            listOf(authoredSet(),authoredSet()),source(2).setup,source(2).catalog)
+            as CustomCoachWeekEditResult.Reviewed
+        assertEquals(NativeCustomDraftWriteResult.Committed(2),
+            coordinator.saveVerifiedExerciseEdit("owner-1",fresh.review.proposal.draft,1,2))
+        val coldFence=NativeKotlinApprovalRevisionFence(temp.root.toPath())
+        val reopened=NativeCustomCycleDraftFileStore(temp.root.toPath(),coldFence,identity)
+            .read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found
+        assertEquals(fresh.review.proposal.draft,reopened.draft)
+        assertEquals(original.blocks,reopened.draft.blocks)
+        assertEquals(listOf(CustomWeekSlotOverride(2,0,"slot-0",List(2){authoredSet()})),
+            reopened.draft.weekOverrides["base"])
+        assertEquals(NativeCustomDraftWriteResult.Rejected(NativeCustomDraftRefusal.STALE_REVISION),
+            coordinator.saveVerifiedExerciseEdit("owner-1",fresh.review.proposal.draft,1,2))
+    }
+
     @Test fun staleGymSourceRevisionCannotWriteEvenWhenDraftCASMatches() {
         assertEquals(AthleteSetupStatus.READY_FOR_PROGRAM_REVIEW,
             reviewed().status)

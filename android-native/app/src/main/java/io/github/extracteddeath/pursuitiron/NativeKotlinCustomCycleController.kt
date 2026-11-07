@@ -41,6 +41,8 @@ internal data class NativeKotlinCustomCycleState(
     /** Inputs from the latest independently rechecked full-cycle audit.
      * Never persisted, fabricated, or reused after an authored draft edit. */
     val reviewedCoachInputs: CustomCoachAuditInputs? = null,
+    /** Unsaved, athlete-entered one-week correction and its full-cycle effects. */
+    val weekEditReview: CustomCoachWeekEditReview? = null,
     val signoff: NativeCustomSignoffRead? = null,
     val signoffRefusal: NativeCustomSignoffRefusal? = null,
     val authoredPreview: CustomWorkoutDaySnapshot? = null,
@@ -73,6 +75,12 @@ internal class NativeKotlinCustomCycleController(
     val state: StateFlow<NativeKotlinCustomCycleState> = current.asStateFlow()
     private var lastUndo: CustomCycleDraftReceipt? = null
     private var auditedInputs: CustomCoachAuditInputs? = null
+    private data class PendingWeekEdit(
+        val source: NativeCustomAuthoringSnapshot,
+        val inputs: CustomCoachAuditInputs,
+        val review: CustomCoachWeekEditReview
+    )
+    private var pendingWeekEdit: PendingWeekEdit? = null
 
     private fun run(action: () -> Unit) {
         if (!pending.compareAndSet(false, true)) return
@@ -94,6 +102,7 @@ internal class NativeKotlinCustomCycleController(
     private fun applyRead(cycleId: String, result: NativeCustomDraftReadResult) {
         lastUndo = null
         auditedInputs = null
+        pendingWeekEdit = null
         val latest = runCatching { authoringSource.snapshot() }.getOrNull()
         val coachingEnabled=(runCatching{host.readCoachAssistance()}
             .getOrNull() as? NativeCoachSettingsRead.Current)
@@ -168,7 +177,7 @@ internal class NativeKotlinCustomCycleController(
         val result = command(saved)
         when (result) {
             is CustomCycleBuilderResult.Rejected ->
-                if (current.value.authoringRefusal == null)
+                if (current.value.authoringRefusal == null && current.value.message == null)
                     current.value = current.value.copy(
                         message = "Edit refused: ${result.reason.name.replace('_', ' ').lowercase()}.")
             is CustomCycleBuilderResult.Proposed -> {
@@ -180,6 +189,8 @@ internal class NativeKotlinCustomCycleController(
                 when (write) {
                     is NativeCustomDraftWriteResult.Committed -> {
                         lastUndo = result.receipt
+                        auditedInputs = null
+                        pendingWeekEdit = null
                         current.value = current.value.copy(
                             draft = result.draft,
                             cycleId = result.draft.cycleId,
@@ -188,6 +199,7 @@ internal class NativeKotlinCustomCycleController(
                             evidenceSourceRevision = null,
                             auditSourceRevision = null,
                             reviewedCoachInputs = null,
+                            weekEditReview = null,
                             signoff = host.readCustomCycleConsent(result.draft.cycleId),
                             signoffRefusal = null,
                             authoredPreview = null,
@@ -222,8 +234,9 @@ internal class NativeKotlinCustomCycleController(
     fun markPolicyInputsChanged() {
         val previous=current.value
         if(previous.busy || (previous.coachingAudit==null &&
-            previous.reviewedCoachInputs==null)) return
+            previous.reviewedCoachInputs==null && previous.weekEditReview==null)) return
         auditedInputs=null
+        pendingWeekEdit=null
         val staleSignoff=when(val old=previous.signoff) {
             is NativeCustomSignoffRead.Found->old.copy(isCurrent=false)
             else -> old
@@ -231,6 +244,7 @@ internal class NativeKotlinCustomCycleController(
         current.value=previous.copy(
             coachingAudit=null,
             reviewedCoachInputs=null,
+            weekEditReview=null,
             auditSourceRevision=null,
             consentBoundPreview=null,
             preparedWorkout=null,
@@ -297,6 +311,8 @@ internal class NativeKotlinCustomCycleController(
     fun auditFullCycle(
         inputs: CustomCoachAuditInputs = CustomCoachAuditInputs()
     ) = run {
+        pendingWeekEdit=null
+        current.value=current.value.copy(weekEditReview=null)
         val requested = current.value.draft ?: return@run
         val disk = host.readCustomCycleDraft(requested.cycleId)
         if(disk !is NativeCustomDraftReadResult.Found ||
@@ -609,6 +625,85 @@ internal class NativeKotlinCustomCycleController(
             draft, draft.revision, blockId, weekday, slotId, sets, setup, catalog)
     }
 
+    /** Read-only comparison; available for manual authoring even with coach advice off. */
+    fun previewWeekSets(
+        absoluteWeek: Int, weekday: Int, slotId: String,
+        sets: List<CustomAuthoredSet>?
+    ) = run {
+        pendingWeekEdit=null
+        current.value=current.value.copy(weekEditReview=null)
+        val requested=current.value.draft ?: return@run
+        val disk=host.readCustomCycleDraft(requested.cycleId)
+        if(disk !is NativeCustomDraftReadResult.Found || disk.draft!=requested) {
+            applyRead(requested.cycleId,disk)
+            current.value=current.value.copy(message="The saved cycle changed. Reopen the selected week before comparing sets.")
+            return@run
+        }
+        val source=runCatching { authoringSource.snapshot() }.getOrNull()
+        if(source==null || source.athleteId!=requested.athleteId) {
+            current.value=current.value.copy(message="Reviewed athlete, gym and exercise catalog required to compare this edit.")
+            return@run
+        }
+        val inputs=current.value.reviewedCoachInputs ?: CustomCoachAuditInputs()
+        val result=CustomCoachWeekEditDomain.review(requested,requested.revision,
+            absoluteWeek,weekday,slotId,sets,source.setup,source.catalog,inputs)
+        val latest=host.readCustomCycleDraft(requested.cycleId)
+        if(latest !is NativeCustomDraftReadResult.Found || latest.draft!=requested ||
+            runCatching {authoringSource.snapshot()}.getOrNull()!=source) {
+            applyRead(requested.cycleId,latest)
+            current.value=current.value.copy(message="The program or gym changed during comparison. Compare again with the current source.")
+            return@run
+        }
+        when(result) {
+            is CustomCoachWeekEditResult.Rejected -> current.value=current.value.copy(
+                message="Edit comparison unavailable: ${result.reason.name.replace('_',' ').lowercase()}"+
+                    (result.authoringReason?.let {" · ${it.name.replace('_',' ').lowercase()}"} ?: "")+".")
+            is CustomCoachWeekEditResult.Reviewed -> {
+                pendingWeekEdit=PendingWeekEdit(source,inputs,result.review)
+                current.value=current.value.copy(weekEditReview=result.review,
+                    message="One-week edit compared across the full cycle. Inspect its effects before explicitly saving the draft.")
+            }
+        }
+    }
+
+    fun dismissWeekEditReview() {
+        if(current.value.busy)return
+        pendingWeekEdit=null
+        current.value=current.value.copy(weekEditReview=null)
+    }
+
+    /** Recheck the exact comparison, then use the existing owner-locked source/draft CAS. */
+    fun acceptWeekEdit() {
+        var checkedRevision: Long? = null
+        edit(reviewedSourceRevision={checkedRevision}) { draft ->
+            val prepared=pendingWeekEdit
+            val source=runCatching {authoringSource.snapshot()}.getOrNull()
+            val inputs=current.value.reviewedCoachInputs ?: CustomCoachAuditInputs()
+            if(prepared==null || source==null || source!=prepared.source || inputs!=prepared.inputs ||
+                prepared.review.proposal.receipt.original!=draft) {
+                pendingWeekEdit=null
+                current.value=current.value.copy(weekEditReview=null,
+                    message="This comparison is no longer current. Review the exact saved week again.")
+                CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.STALE_REVISION)
+            } else {
+                val previous=prepared.review
+                val fresh=CustomCoachWeekEditDomain.review(draft,draft.revision,
+                    previous.absoluteWeek,previous.weekday,previous.slotId,
+                    if(previous.restoresBlockSets)null else previous.proposedSets,
+                    source.setup,source.catalog,inputs)
+                if(fresh is CustomCoachWeekEditResult.Reviewed && fresh.review==previous) {
+                    checkedRevision=source.revision
+                    fresh.review.proposal
+                } else {
+                    pendingWeekEdit=null
+                    current.value=current.value.copy(weekEditReview=null,
+                        message="The full-cycle comparison changed. Nothing saved; compare again.")
+                    CustomCycleBuilderResult.Rejected(CustomCycleBuilderRefusal.STALE_REVISION)
+                }
+            }
+        }
+    }
+
     fun editMetadata(title: String, note: String) = edit { draft ->
         CustomCycleBuilderDomain.editCycleMetadata(
             draft, draft.revision, title, note)
@@ -695,6 +790,8 @@ internal class NativeKotlinCustomCycleController(
         }
         val write = host.saveCustomCycleDraft(result.draft, saved.revision)
         lastUndo = null
+        auditedInputs = null
+        pendingWeekEdit = null
         when (write) {
             is NativeCustomDraftWriteResult.Committed ->
                 current.value = current.value.copy(
@@ -703,6 +800,7 @@ internal class NativeKotlinCustomCycleController(
                     authoredWorkloadEvidence = null,
                     evidenceSourceRevision = null,
                     reviewedCoachInputs = null,
+                    weekEditReview = null,
                     signoff = host.readCustomCycleConsent(result.draft.cycleId),
                     signoffRefusal = null,
                     authoredPreview = null,

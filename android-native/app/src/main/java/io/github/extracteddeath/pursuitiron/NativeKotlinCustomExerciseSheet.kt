@@ -111,7 +111,11 @@ internal fun NativeKotlinCustomExerciseSheet(
     available: List<CustomExercisePickerOption>,
     existing: CustomExerciseSlot?,
     onSave: (exerciseId: String, sets: List<CustomAuthoredSet>, note: String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    scopeLabel: String? = null,
+    saveLabel: String = "Save authored sets",
+    onRestore: (() -> Unit)? = null,
+    feedback: String? = null
 ) {
     var search by remember(existing?.slotId) { mutableStateOf("") }
     var exerciseId by remember(existing?.slotId) {
@@ -134,6 +138,9 @@ internal fun NativeKotlinCustomExerciseSheet(
     NativeEditSheet(busy = busy, onDismiss = onDismiss) {
         Text(if (existing == null) "Add your exercise" else "Edit authored sets",
             style = MaterialTheme.typography.titleLarge)
+        scopeLabel?.let { Text(it,style=MaterialTheme.typography.titleMedium) }
+        feedback?.let { Text(it,style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.error) }
         Text("Every set stays yours. The coach will not silently round loads, swap movements or replace your target reps.",
             style = MaterialTheme.typography.bodyMedium)
         if (available.isEmpty()) {
@@ -303,7 +310,12 @@ internal fun NativeKotlinCustomExerciseSheet(
             enabled = !busy && parsed != null && option != null &&
                 note.length <= 1000,
             modifier = Modifier.fillMaxWidth()) {
-            Text("Save authored sets")
+            Text(saveLabel)
+        }
+        onRestore?.let { restore ->
+            OutlinedButton(onClick=restore,enabled=!busy,modifier=Modifier.fillMaxWidth()) {
+                Text("Compare restoring this week's block sets")
+            }
         }
         TextButton(onClick = onDismiss,enabled = !busy) { Text("Cancel") }
     }

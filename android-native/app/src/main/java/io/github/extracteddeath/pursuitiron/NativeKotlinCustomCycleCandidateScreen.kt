@@ -89,6 +89,12 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var exerciseEditor by remember {
         mutableStateOf<Triple<String, Int, String?>?>(null)
     }
+    var weekExerciseEditor by remember(draft?.cycleId,draft?.revision) {
+        mutableStateOf<Triple<Int,Int,String>?>(null)
+    }
+    LaunchedEffect(state.weekEditReview) {
+        if(state.weekEditReview!=null)weekExerciseEditor=null
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp, vertical = 20.dp),
@@ -389,6 +395,11 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                     style=MaterialTheme.typography.bodySmall)
                             }
                         }
+                        OutlinedButton(enabled=!busy && session.stamp.cycleRevision==draft.revision,
+                            onClick={weekExerciseEditor=Triple(
+                                session.absoluteWeek,session.weekday,slot.slotId)}) {
+                            Text("Compare an edit for week ${session.absoluteWeek}")
+                        }
                     }
                 }
             }
@@ -627,6 +638,43 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
 
     val current = draft
     if (current != null) {
+        state.weekEditReview?.let {review ->
+            NativeKotlinCustomCycleWeekEditSheet(review,busy,
+                onSave={controller.acceptWeekEdit()},
+                onDismiss={controller.dismissWeekEditReview()})
+        }
+        weekExerciseEditor?.takeIf {state.weekEditReview==null}?.let { (absoluteWeek,weekday,slotId) ->
+            val session=state.authoredPreview?.takeIf {
+                it.absoluteWeek==absoluteWeek && it.weekday==weekday &&
+                    it.stamp.cycleRevision==current.revision
+            }
+            val selected=session?.slots?.firstOrNull {it.slotId==slotId}
+            val base=current.blocks.firstOrNull {it.blockId==session?.blockId}
+                ?.days?.firstOrNull {it.weekday==weekday}
+                ?.slots?.firstOrNull {it.slotId==slotId}
+            if(session!=null && selected!=null && base!=null) {
+                key(current.revision,absoluteWeek,weekday,slotId) {
+                    var comparisonRequested by remember {mutableStateOf(false)}
+                    NativeKotlinCustomExerciseSheet(busy=busy,
+                        available=controller.availableExerciseChoices(),
+                        existing=base.copy(sets=selected.sets.map {it.prescription}),
+                        scopeLabel="Week $absoluteWeek only · ${customWeekdays[weekday]}",
+                        saveLabel="Compare full-cycle effects",
+                        feedback=state.message?.takeIf {comparisonRequested && !busy},
+                        onSave={_,sets,_ ->
+                            comparisonRequested=true
+                            controller.previewWeekSets(absoluteWeek,weekday,slotId,sets)
+                        },
+                        onRestore=if(current.weekOverrides[session.blockId].orEmpty().any {
+                            it.weekInBlock==session.weekInBlock && it.weekday==weekday && it.slotId==slotId
+                        }) ({
+                            comparisonRequested=true
+                            controller.previewWeekSets(absoluteWeek,weekday,slotId,null)
+                        }) else null,
+                        onDismiss={weekExerciseEditor=null})
+                }
+            }
+        }
         exerciseEditor?.let { target ->
             val (blockId, weekday, slotId) = target
             val selectedSlot = current.blocks.firstOrNull {

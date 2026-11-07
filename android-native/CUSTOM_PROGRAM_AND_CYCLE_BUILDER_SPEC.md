@@ -7,6 +7,38 @@ The Kotlin/Compose replacement must create genuinely custom programs and cycles
 template after selecting “Custom,” and a cycle change must never discard chosen
 exercises, sets, per-exercise RIR, attachments or amplifier settings.
 
+### Selected-week correction comparison — 2026-11-07
+
+The isolated Kotlin candidate now connects the exact authored workout preview
+to editing one absolute week/day/stable exercise slot. The editor starts with
+that week's resolved sets, including its override. It can compare exact
+athlete-entered sets or explicitly restore that slot's base block sets.
+
+`CustomCoachWeekEditDomain` validates the physical load, attachment and advanced
+set technique using the existing authoring rules, then audits both complete
+cycles with the **same** athlete, catalog and supplied coach policy. The review
+shows original/proposed prescriptions, working sets, direct/total muscle
+credits, direct training days, known/full session time and resolved, introduced
+and remaining audit issues. Later weeks are re-audited too: adding work this
+week can introduce a continuity violation in the next untouched training week.
+An unchanged issue remains unresolved even when its measured amount changes.
+Missing dose/time policy stays missing; observed sets never become MEV/MAV/MRV.
+
+Compare and Cancel write nothing. Explicit Save rechecks the complete
+comparison and uses the existing owner-locked gym-source revision and draft
+revision transaction. Successful saves invalidate the old audit/signoff view,
+retain Undo and require a fresh audit before signing off on the new revision.
+The block template, other slots, other week overrides and all already-issued
+workouts remain independent. Manual comparison is available when coaching
+suggestions are off and does not generate recommended sets.
+
+Regression coverage includes exact week isolation, warmup/time accounting,
+resolved versus persisting ceiling findings, new following-week violations,
+restoring one override, absent policies, invalid/stale inputs and physical
+loads, changed gym rejection, explicit saving and cold recovery. Android
+device/TalkBack/large-font acceptance and paired web/native superiority remain
+separate open gates; this feature does not enable runtime cutover or an APK.
+
 An athlete can create from **Blank**, **Start from a split**, **Duplicate my
 program**, or **Build a training cycle**. These are entry routes into ONE
 first-class, versioned athlete-owned blueprint, not divergent legacy paths.

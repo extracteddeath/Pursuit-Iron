@@ -104,6 +104,20 @@ class NativeFutureWeekLoadConsentFileStoreTest {
                 coach,0,1,"bench",CoachReadiness.NORMAL,false,limit))
     }
 
+    @Test fun changedAthleteCannotInspectOrReplaceEarlierOwnersConsent() {
+        val first=accepted().receipt
+        currentIdentity=NativeKotlinOwnerIdentity("owner-1","athlete-2")
+        assertEquals(NativeFutureWeekConsentPreview.Rejected(
+            NativeFutureWeekConsentRefusal.NOT_AUTHORIZED),preview())
+        assertEquals(NativeFutureWeekConsentWrite.Rejected(
+            NativeFutureWeekConsentRefusal.NOT_AUTHORIZED),
+            accept(revision=first.recordRevision))
+        assertEquals(NativeFutureWeekConsentRead.Rejected(
+            NativeFutureWeekConsentRefusal.NOT_AUTHORIZED),read())
+        currentIdentity=NativeKotlinOwnerIdentity("owner-1","athlete-1")
+        assertEquals(NativeFutureWeekConsentRead.Current(first),read())
+    }
+
     @Test fun corruptedDiskAndInterruptedAtomicRenameCannotRestoreConsent() {
         accepted()
         val file=recordFile()

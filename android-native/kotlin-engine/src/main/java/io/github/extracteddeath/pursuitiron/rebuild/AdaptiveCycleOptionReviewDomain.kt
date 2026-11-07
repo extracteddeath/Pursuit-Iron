@@ -23,6 +23,15 @@ data class AdaptiveCycleOptionRequest(
     val permissions:CustomCycleCoachPermissions=CustomCycleCoachPermissions(),
     val alternatives:List<AdaptiveCycleOption>,
     val prospectiveByOptionId:Map<String,ProspectiveBlockCoachingContext> =
+        emptyMap(),
+    /**
+     * Explicit separately reviewed setup for the SOURCE target block.
+     * Required after activating an adaptive split/gym change: historical
+     * blocks retain their original context while the active block keeps its
+     * previously approved prospective setup. Native ownership must verify
+     * this context against its durable activation record.
+     */
+    val sourceProspectiveByBlockId:Map<String,ProspectiveBlockCoachingContext> =
         emptyMap()
 )
 
@@ -196,9 +205,13 @@ object AdaptiveCycleOptionReviewDomain {
         require(request.prospectiveByOptionId.keys.all {key->
             request.alternatives.any {it.optionId==key}
         })
+        require(request.sourceProspectiveByBlockId.keys.all {
+            it==request.targetBlockId
+        })
         val source=request.approvedCycle
         val sourceAudit=CustomCycleCoachAuditDomain.review(
-            source,request.athleteSetup,request.catalog,request.coaching)
+            source,request.athleteSetup,request.catalog,request.coaching,
+            request.sourceProspectiveByBlockId)
         val sourceBlock=source.blocks.singleOrNull {
             it.blockId==request.targetBlockId
         }

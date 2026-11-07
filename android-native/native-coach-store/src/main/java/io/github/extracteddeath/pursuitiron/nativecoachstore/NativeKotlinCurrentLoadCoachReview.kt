@@ -32,7 +32,10 @@ sealed interface NativeCurrentLoadReviewResult {
     data class Reviewed(
         val historyRevision: Long,
         val comparedWorkoutIds: List<String>,
-        val coaching: CoachNextProgramLoadReview
+        val coaching: CoachNextProgramLoadReview,
+        /** The CURRENT unissued grant has a separate athlete-approved rep
+         * override which this load revision necessarily supersedes. */
+        val supersedesAcceptedRepTargets: Boolean = false
     ) : NativeCurrentLoadReviewResult {
         /** The coaching result is a proposal, not a durable program change. */
         val mayApply: Boolean get() = false
@@ -215,7 +218,7 @@ object NativeKotlinCurrentLoadCoachReview {
         return NativeCurrentLoadReviewResult.Reviewed(
             timeline.manifestRevision,
             Collections.unmodifiableList(lastTwo.map { it.manifest.workoutId }),
-            reviewed
+            reviewed, approval.acceptedRepTargets != null
         )
     }
 }

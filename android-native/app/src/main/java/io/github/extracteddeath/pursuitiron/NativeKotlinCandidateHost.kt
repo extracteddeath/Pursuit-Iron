@@ -1314,6 +1314,14 @@ internal class NativeKotlinCandidateHost(context:Context) {
             owner.ownerKey,cycleId,expectedConsentRevision)
     }
 
+    /** Read-only, owner-fenced program discovery for the native picker. */
+    fun listOwnedCustomCycleDrafts():NativeCustomDraftListResult {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomDraftListResult.Rejected(
+                NativeCustomDraftRefusal.NOT_AUTHORIZED)
+        return customDraftStore.listOwned(owner.ownerKey)
+    }
+
     fun readCustomAuthoringSource():NativeAuthoringSourceRead {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeAuthoringSourceRead.Rejected(

@@ -1463,6 +1463,55 @@ internal class NativeKotlinCandidateHost(context:Context) {
      * the production Compose screens. No draft is an issuance grant.
      * The store re-authenticates the owner and enforces revision CAS.
      */
+    /**
+     * Explicit create-only first-program DRAFT handoff, not approval.
+     * Replays the entire candidate from current owner-verified setup and gym
+     * under a revision fence. Refuses any difference from the shown review.
+     * A chosen cycle ID can never silently overwrite an older custom cycle.
+     */
+    fun saveReviewedFirstProgramDraft(
+        input:FirstProgramStartRequest,
+        shown:FirstProgramStartReview,
+        expectedSourceRevision:Long,
+        cycleId:String,
+        title:String,
+        weeks:Int,
+        confirmed:Boolean
+    ):NativeCustomDraftWriteResult {
+        if(!confirmed)return NativeCustomDraftWriteResult.Rejected(
+            NativeCustomDraftRefusal.INVALID_DRAFT)
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.NOT_AUTHORIZED)
+        val read=authoringSourceStore.read(owner.ownerKey)
+        val source=(read as? NativeAuthoringSourceRead.Found)?.source
+            ?:return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.STALE_REVISION)
+        if(source.revision!=expectedSourceRevision ||
+            source.athleteId!=owner.athleteId ||
+            input.setup!=source.setup || input.catalog!=source.catalog)
+            return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.STALE_REVISION)
+        val replay=runCatching {
+            CoachFirstProgramStartDomain.review(input.copy(
+                setup=source.setup,catalog=source.catalog))
+        }.getOrNull() ?:return NativeCustomDraftWriteResult.Rejected(
+            NativeCustomDraftRefusal.INVALID_DRAFT)
+        if(replay!=shown ||
+            replay.status!=FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)
+            return NativeCustomDraftWriteResult.Rejected(
+                NativeCustomDraftRefusal.STALE_REVISION)
+        val candidate=CoachFirstProgramDraftConversionDomain.propose(
+            replay,source.setup,source.catalog,cycleId,title,weeks)
+        val cycle=candidate.cycle?.takeIf {
+            candidate.status==FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT
+        } ?:return NativeCustomDraftWriteResult.Rejected(
+            NativeCustomDraftRefusal.INVALID_DRAFT)
+        return customAuthoringCoordinator.saveVerifiedExerciseEdit(
+            owner.ownerKey,cycle,expectedDraftRevision=0,
+            expectedSourceRevision=expectedSourceRevision)
+    }
+
     fun createBlankCustomCycleDraft(
         cycleId:String,
         goal:AthleteTrainingGoal,

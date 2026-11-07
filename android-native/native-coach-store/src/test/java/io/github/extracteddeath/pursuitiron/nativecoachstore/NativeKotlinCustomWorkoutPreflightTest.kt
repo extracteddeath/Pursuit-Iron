@@ -261,4 +261,43 @@ class NativeKotlinCustomWorkoutPreflightTest {
                 "cycle-1",1,0,input()))
     }
 
+    @Test fun futureWeekApprovalHasIndependentColdRecoverableSchema() {
+        initialize();approve()
+        val session=(preflight.inspect("owner-1","cycle-1",2,0,input())
+            as NativeCustomPreflightResult.ReviewedPreview).session
+        val value=NativeCustomPreparedWorkout(
+            "owner-1","athlete-1","future-workout-2",
+            1,"a".repeat(64),session,
+            NativeCustomPreparationAuthority.ACTIVATED_BLOCK,
+            futureWeekApprovalFingerprint="b".repeat(64),
+            futureWeekSlotId="slot-0")
+        // Exercise the real checksum + versioned disk codec, including
+        // cold decode. A legacy per-workout load fingerprint is NULL.
+        val writer=NativeKotlinCustomWorkoutPreparedStore::class.java
+            .getDeclaredMethod("encode",NativeCustomPreparedWorkout::class.java)
+        writer.isAccessible=true
+        val bytes=writer.invoke(prepared,value) as ByteArray
+        assertEquals(6,java.nio.ByteBuffer.wrap(bytes).getInt(8))
+        val file=temp.root.toPath().resolve("future-version-6.bin")
+        java.nio.file.Files.write(file,bytes)
+        val reader=NativeKotlinCustomWorkoutPreparedStore::class.java
+            .getDeclaredMethod("decode",java.nio.file.Path::class.java)
+        reader.isAccessible=true
+        val restored=reader.invoke(prepared,file) as NativeCustomPreparedWorkout
+        assertEquals(value,restored)
+        assertNull(restored.repApprovalFingerprint)
+        assertNull(restored.loadApprovalFingerprint)
+        assertEquals("slot-0",restored.futureWeekSlotId)
+        assertEquals("b".repeat(64),restored.futureWeekApprovalFingerprint)
+
+        // Both old and new approval cannot share one prepared snapshot.
+        val wrong=value.copy(loadApprovalFingerprint="c".repeat(64))
+        val failure=runCatching{writer.invoke(prepared,wrong)}.exceptionOrNull()
+        assertTrue(failure is java.lang.reflect.InvocationTargetException)
+        assertTrue(failure?.cause is IllegalArgumentException)
+        val noSlot=value.copy(futureWeekSlotId=null)
+        val missing=runCatching{writer.invoke(prepared,noSlot)}.exceptionOrNull()
+        assertTrue(missing?.cause is IllegalArgumentException)
+    }
+
 }

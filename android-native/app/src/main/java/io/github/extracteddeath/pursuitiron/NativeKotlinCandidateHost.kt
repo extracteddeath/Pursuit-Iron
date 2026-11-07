@@ -70,6 +70,9 @@ internal class NativeKotlinCandidateHost(context:Context) {
         approvalStore,localAthlete,revisionFence,customSavedCorrections)
     private val outstandingCustomInventory=NativeKotlinCustomOutstandingWorkoutInventory(
         customPreparedStore,customIssuedStore)
+    private val resumableCustomWorkouts=NativeKotlinCustomResumeReview(
+        revisionFence,localAthlete,mixedHistoryReader,
+        outstandingCustomInventory,customIssuedStore)
     private val composerActivationInventory=NativeKotlinComposerActivationInventory(
         journalStore,approvalStore)
     private val futureActivationPreflight=NativeKotlinFutureBlockActivationPreflight(
@@ -291,6 +294,18 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 NativeCustomJournalRefusal.NOT_AUTHORIZED)
         return customIssuedStore.issue(owner.ownerKey,workoutId,cycleId,
             absoluteWeek,weekday,inputs)
+    }
+
+    /**
+     * An owner-fenced, historical-source-verified list of only issued and
+     * unfinished custom workouts. No user-entered ID, local cache or
+     * prepared-but-not-issued preview can grant access to a workout.
+     */
+    fun reviewResumableCustomWorkouts():NativeCustomResumeReview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeCustomResumeReview.Rejected(
+                NativeCustomResumeRefusal.NOT_AUTHORIZED)
+        return resumableCustomWorkouts.review(owner.ownerKey)
     }
 
     /** Past committed prescriptions remain independently cold-recoverable. */

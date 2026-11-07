@@ -129,7 +129,7 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
             if (skipped.isNotEmpty()) Text("Skipped today: " + skipped.joinToString(", "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(PiIcons.Flame, null, Modifier.size(18.dp), tint = cs.onSurfaceVariant)
-                Text("Warm-ups and rests run as prescribed; a limit only removes work.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                Text("Warm-ups and rest stay the same; a shorter session only trims sets.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
             Button(onClick = { onClose(); vm.start(x.s("programId"), x.s("dayId"), x.i("weekIndex"), minutes) }, enabled = fits,
                 modifier = Modifier.fillMaxWidth().height(56.dp)) { Icon(PiIcons.ChevronRight, null); Text(" Start workout") }

@@ -362,7 +362,7 @@ fun WhyLiftSheet(vm: AppViewModel, programId: String, dayId: String, slot: Int, 
             com.pursuitiron.app.ui.common.MuscleChips(x.strings("muscles").firstOrNull()?.replaceFirstChar { it.uppercase() } ?: x.s("part"), x.strings("muscles").drop(1).map { it.replaceFirstChar { c -> c.uppercase() } })
             when (x.s("source")) {
                 "added" -> Text("You added this lift. The app sets its sets and progression, but didn't pick it.", style = MaterialTheme.typography.bodyMedium)
-                "edited" -> Text("You changed this slot, so the original reasoning no longer applies.", style = MaterialTheme.typography.bodyMedium)
+                "edited" -> Text("You changed this lift, so the original reasoning no longer applies.", style = MaterialTheme.typography.bodyMedium)
             }
             x.o("role")?.let { r ->
                 PiCard(color = cs.primaryContainer, radius = 22.dp, padding = 16.dp) {

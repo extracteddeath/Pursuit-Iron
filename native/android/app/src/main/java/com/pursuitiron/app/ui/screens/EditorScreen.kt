@@ -605,7 +605,7 @@ private fun SlotSheet(vm: AppViewModel, e: JSONObject, dayId: String, slot: Int,
                 Text(x.s("name"), style = MaterialTheme.typography.headlineSmall)
             }
             if (e.b("manual")) PiCard(color = cs.surfaceContainer, radius = 20.dp, padding = 14.dp) {
-                Text("Your prescription", style = MaterialTheme.typography.titleSmall)
+                Text("Your targets", style = MaterialTheme.typography.titleSmall)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(onClick = { vm.edit("override", "dayId" to dayId, "slot" to slot, "field" to "sets", "value" to (x.i("sets") - 1).coerceAtLeast(1)) }) { Icon(PiIcons.Minus, "Fewer sets") }
                     Text("${x.i("sets")} sets", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(64.dp))
@@ -633,7 +633,7 @@ private fun EditSwapSheet(vm: AppViewModel, dayId: String, slot: Int, onClose: (
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Swap for", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
-            Text("Same muscle, ranked for this slot, from your gym. Banned lifts are hidden.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+            Text("Same muscle, best fits first, from your gym. Banned lifts are hidden.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             val o = opts
             when {
                 o == null -> Text("Finding alternatives…")

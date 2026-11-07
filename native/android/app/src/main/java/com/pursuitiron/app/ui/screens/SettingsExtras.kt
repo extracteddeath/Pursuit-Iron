@@ -285,7 +285,7 @@ fun HelpCard(vm: AppViewModel) {
             }
         }
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surface).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Pursuit Iron ${BuildConfig.VERSION_NAME} · build ${BuildConfig.VERSION_CODE} · engine on this phone (${vm.runtime})", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold))
+            Text("Pursuit Iron ${BuildConfig.VERSION_NAME} · build ${BuildConfig.VERSION_CODE} · runs entirely on this phone", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold))
             Text("An evidence-based training planner. It adjusts training load and isn't medical advice.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = cs.onSurfaceVariant)
         }
     }

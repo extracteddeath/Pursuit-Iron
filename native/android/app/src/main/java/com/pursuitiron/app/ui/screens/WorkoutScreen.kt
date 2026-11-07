@@ -874,7 +874,7 @@ private fun SwapSheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Swap exercise", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 4.dp))
-            Text("Same muscle, ranked for this slot, from the gym you're in. Banned lifts are hidden.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+            Text("Same muscle, best fits first, from the gym you're in. Banned lifts are hidden.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             if (!quick) com.pursuitiron.app.ui.common.Segmented(listOf("session" to "Today only", "program" to "In the program too"), scope, { scope = it }, height = 40.dp)
             val o = opts
             when {

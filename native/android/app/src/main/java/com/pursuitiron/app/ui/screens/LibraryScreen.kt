@@ -261,7 +261,7 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             if (e.b("today")) Row(Modifier.fillMaxWidth().height(56.dp).clip(CircleShape).background(cs.primaryContainer), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(PiIcons.Check, null, Modifier.size(18.dp), tint = cs.onPrimaryContainer); Text("  In today's workout", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold), color = cs.onPrimaryContainer)
             }
-            if (e.b("banned")) FilledTonalButton(onClick = { vm.setBan(id, false); x = JSONObject(e.toString()).put("banned", false) }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Unban — the generator can pick it again") }
+            if (e.b("banned")) FilledTonalButton(onClick = { vm.setBan(id, false); x = JSONObject(e.toString()).put("banned", false) }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Unban — it can be picked again") }
             else OutlinedButton(onClick = { vm.setBan(id, true); x = JSONObject(e.toString()).put("banned", true) }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Icon(PiIcons.Ban, null, modifier = Modifier.size(18.dp)); Text("  Ban exercise")
             }

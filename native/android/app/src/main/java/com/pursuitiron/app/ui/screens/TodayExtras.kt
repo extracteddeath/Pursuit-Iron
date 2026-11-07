@@ -84,7 +84,7 @@ fun IntroScreen(vm: AppViewModel) {
             Kicker("Pursuit Iron · Strength Coach")
             Text("Your training,\nbuilt around you.", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(10.dp))
-            Text("Build around your goal, schedule, and equipment. Log what you actually did; the next prescription stays grounded in that history. Your data remains on this device unless you export it.",
+            Text("Built around your goal, schedule and equipment. Log what you actually did, and every next workout adjusts to it. Your data stays on this phone unless you export it.",
                 style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
             Spacer(Modifier.height(24.dp))
             listOf(

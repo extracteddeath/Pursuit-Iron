@@ -240,6 +240,100 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         "owner-1","cycle-1","base","coach_option_1",
         1,1,proposed,inputs(),permissions,1)
 
+    @Test fun manualModeRevokesAlreadyDisplayedAdaptiveCycleProposal() {
+        initialize()
+        approved()
+        val candidate=option()
+        val displayed=adaptive().preview(candidate)
+            as NativeAdaptiveCycleDraftPreview.Ready
+        assertEquals(NativeCoachSettingsWrite.Saved(
+            NativeCoachAssistanceSettings("owner-1","athlete-1",1,
+                CoachAssistancePolicy.MANUAL)),
+            coachSettings.save("owner-1",0,CoachAssistancePolicy.MANUAL))
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED),
+            adaptive().preview(candidate))
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED),
+            adaptive().accept(candidate,displayed.reviewedFingerprint,true))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+        assertEquals(NativeCustomSignoffRead.Found(
+            (store().read("owner-1","cycle-1",inputs())
+                as NativeCustomSignoffRead.Found).receipt,true),
+            store().read("owner-1","cycle-1",inputs()))
+    }
+
+    @Test fun progressionOptOutDoesNotDisableOtherStructuralCoaching() {
+        initialize()
+        approved()
+        assertTrue(coachSettings.save("owner-1",0,
+            CoachAssistancePolicy.STANDARD.copy(
+                progressionSuggestionsEnabled=false))
+            is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.ASSISTANCE_DISABLED),
+            adaptive().preview(option()))
+        val cueOnly=option(
+            proposed=cycle(2).copy(blocks=cycle(2).blocks.map {
+                it.copy(label="Different reviewed block label")
+            }))
+        val structural=adaptive().preview(cueOnly)
+        assertTrue(structural.toString(),
+            structural is NativeAdaptiveCycleDraftPreview.Ready)
+        val displayed=structural as NativeAdaptiveCycleDraftPreview.Ready
+        assertEquals(setOf(CustomCycleChangeKind.CUES),
+            displayed.changes.map {it.kind}.toSet())
+        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(
+            2,"coach_option_1"),
+            adaptive().accept(cueOnly,displayed.reviewedFingerprint,true))
+    }
+
+    @Test fun assistanceRevisionChangesInvalidateDisplayedApprovalEvenWhenStillEnabled() {
+        initialize()
+        approved()
+        val candidate=option()
+        val displayed=adaptive().preview(candidate)
+            as NativeAdaptiveCycleDraftPreview.Ready
+        assertTrue(coachSettings.save("owner-1",0,
+            CoachAssistancePolicy.PROGRESSION_ONLY)
+            is NativeCoachSettingsWrite.Saved)
+        val updated=adaptive().preview(candidate)
+            as NativeAdaptiveCycleDraftPreview.Ready
+        assertNotEquals(displayed.reviewedFingerprint,
+            updated.reviewedFingerprint)
+        assertEquals(NativeAdaptiveCycleDraftDecision.Rejected(
+            NativeAdaptiveCycleDraftRefusal.REVIEW_CHANGED),
+            adaptive().accept(candidate,displayed.reviewedFingerprint,true))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+        // Unchanged full review is still permitted under the athlete's
+        // chosen no-fatigue progression mode and a NEW on-screen approval.
+        assertEquals(NativeAdaptiveCycleDraftDecision.Saved(
+            2,"coach_option_1"),
+            adaptive().accept(candidate,updated.reviewedFingerprint,true))
+    }
+
+    @Test fun corruptCoachSettingsRefuseNativeAdaptiveCycleWithoutRestoringDefault() {
+        initialize()
+        approved()
+        assertTrue(coachSettings.save("owner-1",0,CoachAssistancePolicy.MANUAL)
+            is NativeCoachSettingsWrite.Saved)
+        val settingsFile=Files.list(temp.root.toPath()).use {files->
+            files.filter {it.fileName.toString().startsWith(
+                "coach-assistance-") && it.fileName.toString().endsWith(".bin")
+            }.findFirst().orElseThrow()
+        }
+        val bytes=Files.readAllBytes(settingsFile)
+        bytes[bytes.lastIndex]=(bytes.last().toInt() xor 1).toByte()
+        Files.write(settingsFile,bytes)
+        assertEquals(NativeAdaptiveCycleDraftPreview.Rejected(
+            NativeAdaptiveCycleDraftRefusal.ASSISTANCE_UNAVAILABLE),
+            adaptive().preview(option()))
+        assertEquals(NativeCustomDraftReadResult.Found(cycle()),
+            drafts.read("owner-1","cycle-1"))
+    }
+
     @Test fun athleteReviewedAdaptiveOptionPersistsOnlyDraftAndStalesOldConsent() {
         initialize()
         val signed=approved()

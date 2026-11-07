@@ -277,7 +277,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
             }
             if(issues.isNotEmpty()) CustomCoachPolicyAuthoringResult.Blocked(issues)
             else CustomCoachPolicyAuthoringDomain.inspect(
-                cycle,source,CustomCoachPolicyAuthoringRequest(
+                cycle,checkNotNull(source),CustomCoachPolicyAuthoringRequest(
                     phases,profile.trainingWeekdays.associateWith{
                         get("time:$it")},
                     get("continuity:dropTotal"),

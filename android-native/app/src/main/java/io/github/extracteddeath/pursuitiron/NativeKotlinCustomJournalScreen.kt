@@ -119,7 +119,7 @@ internal fun NativeKotlinCustomJournalScreen(
                     Text("Journal revision ${current.revision}. Actual weights, reps and effort are recorded separately from the plan.",
                         style=MaterialTheme.typography.bodySmall)
                     if(finished||current.finishedByEventId!=null)
-                        Text("Workout completed and indexed in native history.",
+                        Text("Native Finish receipt stored. If history recovery was interrupted, use the recovery action to verify or finalize the manifest before relying on completion.",
                             color=MaterialTheme.colorScheme.primary)
                     OutlinedButton(enabled=!busy,
                         onClick={refresh()}){Text("Reload saved journal")}

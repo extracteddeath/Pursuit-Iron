@@ -219,7 +219,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
     fun issue(
         ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,
-        inputs:CustomCoachAuditInputs
+        inputs:CustomCoachAuditInputs,
+        calibration:NativeKotlinBlockCalibrationConsentStore?=null
     ):NativeCustomJournalResult {
         if(!id.matches(workoutId)||!id.matches(cycleId) ||
             absoluteWeek !in 1..104 || weekday !in 0..6)
@@ -288,10 +289,21 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                         NativeCustomJournalRefusal.WORKOUT_ID_CONFLICT)
                 val pre=preflight.inspect(ownerKey,cycleId,
                     absoluteWeek,weekday,inputs)
+                val needsCalibration=selected.calibrationApprovalFingerprint!=null ||
+                    (!selected.resetToAuthored && NativeKotlinBlockCalibrationConsentStore.hasRecord(
+                        root,ownerKey,workoutId))
+                val approvedCalibration=if(needsCalibration)
+                    (calibration?.readCurrent(ownerKey,workoutId,cycleId,absoluteWeek,
+                        weekday,inputs) as? NativeBlockCalibrationRead.Current)?.review
+                        ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                            NativeCustomJournalRefusal.CONSENT_CHANGED)
+                else null
                 if(pre !is NativeCustomPreflightResult.ReviewedPreview ||
                     pre.receipt.recordRevision!=selected.consentRevision ||
                     pre.receipt.fingerprintSha256!=selected.consentFingerprint ||
-                    pre.session!=selected.snapshot)
+                    (approvedCalibration!=null && approvedCalibration.original!=pre.session) ||
+                    selected.calibrationApprovalFingerprint!=approvedCalibration?.receipt?.fingerprint ||
+                    (approvedCalibration?.projected ?:pre.session)!=selected.snapshot)
                     return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.CONSENT_CHANGED)
                 if(owner(ownerKey)!=current)

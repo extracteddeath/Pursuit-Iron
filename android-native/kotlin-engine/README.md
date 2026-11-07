@@ -1,5 +1,34 @@
 # Pursuit Iron — independent Kotlin training engine
 
+## Accepted starting weights reach native logging — 2026-11-07
+
+The isolated custom-cycle journey now carries a changed-block starting-weight
+proposal through **full-cycle audit -> explicit acceptance -> durable preparation
+-> independently rechecked issuance -> native logging and Finish**.
+`NativeKotlinBlockCalibrationConsentStore` saves a one-workout receipt bound to
+the exact per-set diff, owner, corrected history, authored consent, gym source,
+adaptation permissions and assistance settings. It recomputes the projected
+whole-cycle audit before accepting a new receipt, preparing or issuing. Existing
+authored week exceptions are protected. This path requires both LOADS and
+WEEK_OVERRIDES permission and does not rewrite the signed cycle.
+
+The integration fixture starts with an authored 25 lb target, accepts 20 lb from
+verified previous-block work, cold-reopens that acceptance, prepares and issues
+20 lb, logs an actual set and finishes into native history with the same 20 lb
+target. Missing actual RIR remains null. Missing/corrupt approval data, revoked
+permissions and corrected near-failure history block the changed workout without
+silently reverting its targets. Confirmed authored reset is a separate action
+available with coaching off; it cannot change an issued workout, and turning
+coaching back on does not resurrect the old calibration. Saved acceptances and
+unissued preparations can be found again after restarting the candidate journey.
+
+Local native persistence verification passes **405 tests**. The dedicated
+source-only workflow also checks the unchanged engine suite, matched progression
+cases and Android application compilation. This is bounded candidate evidence:
+only one selected workout is calibrated. Carrying that new baseline through
+subsequent weeks, changed source/split contexts, backup/restore, power-loss and
+phone interaction certification remain open. No APK or live-app cutover.
+
 ## New-block recipe and phase calibration review — 2026-11-07
 
 `CustomBlockTransitionLoadDomain` now reviews a changed block recipe separately
@@ -26,19 +55,19 @@ now expose exact before/after weights and effort provenance. The native test
 fixture uses a real declared bar/plates/bench/rack, named strength practice,
 full-cycle policy audit, nine actual completions, cold reads and saved correction.
 
-**Still review-only:** the projected snapshot cannot be issued or logged and
-does not replace the signed authored targets. A distinct owner-fenced athlete
-acceptance, complete audit of the changed cycle and actual next-workout issuance
-remain required. Changed source/split/schedule contexts still need fresh
-calibration or a separately verified transition policy. The active web app,
-other native branch and APK freeze remain untouched.
+The pure projection remains read-only. The ordinary signed-cycle native path
+can now separately accept, prepare and issue it through the flow above;
+activated/source-changing schedule contexts still need fresh calibration or a
+separately verified transition policy. The active web app, other native branch
+and APK freeze remain untouched.
 
 Source verification at [5194ae4](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42372831674):
 646 headless engine tests, 397 native persistence/recovery tests and Android
 application Kotlin compilation passed. Five existing paired load-review cases
 were freshly executed in both engines and passed; they do not measure this new
-phase-calibration workflow or prove full replacement superiority. Phone
-interaction, changed-load acceptance and actual calibrated issuance remain open.
+phase-calibration workflow or prove full replacement superiority. The subsequent
+native acceptance/issuance tests above are separate from this earlier baseline;
+phone interaction and paired block-transition measurement remain open.
 
 ## Native block-entry history and starting-weight review — 2026-11-07
 

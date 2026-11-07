@@ -2005,7 +2005,8 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val reader:NativeKotlinMixedHistoryReadCoordinator,
         val issuer:NativeKotlinCustomWorkoutJournalFileStore,
         val history:NativeKotlinHistoryManifestFileStore,
-        val corrections:NativeKotlinCustomSavedCorrectionFileStore
+        val corrections:NativeKotlinCustomSavedCorrectionFileStore,
+        val prepared:NativeKotlinCustomWorkoutPreparedStore
     )
     private fun authoredCoachFixture(actualRir:Int?=2,
         initializeHistory:Boolean=true,phaseTransition:Boolean=false):AuthoredCoachFixture {
@@ -2019,8 +2020,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         val history=NativeKotlinHistoryManifestFileStore(root)
         val preflight=NativeKotlinCustomWorkoutPreflight(
             fence,identity,drafts,sources,store())
+        val prepared=NativeKotlinCustomWorkoutPreparedStore(root,fence,identity,preflight)
         val issuer=NativeKotlinCustomWorkoutJournalFileStore(root,fence,identity,
-            NativeKotlinCustomWorkoutPreparedStore(root,fence,identity,preflight),
+            prepared,
             preflight,history,KotlinNativeJournalFileStore(root))
         val activation=NativeKotlinFutureActivationCommitTransaction(
             root,fence,identity,sources,drafts,futureStore(),
@@ -2042,7 +2044,204 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             NativeKotlinActivatedCycleSignoffFileStore(root,fence,identity,activation),
             sources,reader,issuer,
             NativeKotlinCoachAssistanceSettingsStore(root,fence,identity),preflight),
-            reader,issuer,history,corrections)
+            reader,issuer,history,corrections,prepared)
+    }
+
+    private fun calibrationStore(f:AuthoredCoachFixture)=NativeKotlinBlockCalibrationConsentStore(
+        temp.root.toPath(),fence,identity,f.coach,drafts,sources,permissionStore,f.reader,
+        NativeKotlinCustomOutstandingWorkoutInventory(f.prepared,f.issuer),
+        KotlinNativeJournalFileStore(temp.root.toPath()),f.prepared)
+    private fun calibrationPreview(f:AuthoredCoachFixture,w:String="calibrated-week4")=
+        calibrationStore(f).preview("owner-1",w,"cycle-1",futureInputs(),4,0,
+            "slot-0",CoachReadiness.NORMAL,false,n("5"))
+    private fun calibrationRights() {
+        assertTrue(permissionStore.confirm("owner-1","cycle-1",1,
+            setOf(CustomCycleChangeKind.LOADS,CustomCycleChangeKind.WEEK_OVERRIDES),true)
+            is NativeAdaptivePermissionWrite.Committed)
+    }
+
+    @Test fun phaseCalibrationAcceptancePreparationAndIssuanceKeepExactPerSetTargets() {
+        val f=authoredCoachFixture(actualRir=null,phaseTransition=true)
+        assertEquals(NativeBlockCalibrationPreview.Rejected(NativeCalibrationRefusal.PERMISSION_REQUIRED),
+            calibrationPreview(f))
+        calibrationRights()
+        val offer=calibrationPreview(f) as NativeBlockCalibrationPreview.Ready
+        assertEquals(6,offer.auditedWeeks)
+        assertEquals(listOf(n("25")),offer.receipt.authoredLoads)
+        assertEquals(listOf(n("20")),offer.receipt.proposedLoads)
+        val writer=calibrationStore(f)
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.CONFIRMATION_REQUIRED),
+            writer.accept(offer.receipt,futureInputs(),false))
+        assertEquals(NativeBlockCalibrationWrite.Accepted(offer.receipt,false),
+            writer.accept(offer.receipt,futureInputs(),true))
+        assertEquals(NativeBlockCalibrationWrite.Accepted(offer.receipt,true),
+            writer.accept(offer.receipt,futureInputs(),true))
+        val cold=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        val approval=calibrationStore(cold)
+        assertEquals(NativeBlockCalibrationRead.Current(offer),approval.readCurrent(
+            "owner-1","calibrated-week4","cycle-1",4,0,futureInputs()))
+        assertEquals(listOf(offer.receipt),
+            (approval.pendingPreparations("owner-1","cycle-1") as NativePendingCalibrationRead.Ready).acceptances)
+        // The generic path must not silently substitute the authored 25.
+        assertEquals(NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            cold.prepared.prepare("owner-1","calibrated-week4","cycle-1",4,0,futureInputs()))
+        val prepared=cold.prepared.prepare("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval)
+            as NativeCustomPrepareResult.Prepared
+        assertEquals(offer.projected,prepared.workout.snapshot)
+        assertEquals(offer.receipt.fingerprint,prepared.workout.calibrationApprovalFingerprint)
+        assertEquals(prepared.workout,(cold.prepared.open("owner-1","calibrated-week4")
+            as NativeCustomPreparedRead.Found).workout)
+        assertEquals(listOf(prepared.workout),
+            (approval.pendingPreparations("owner-1","cycle-1") as NativePendingCalibrationRead.Ready).workouts)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            cold.issuer.issue("owner-1","calibrated-week4","cycle-1",4,0,futureInputs()))
+        val issued=cold.issuer.issue("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval)
+            as NativeCustomJournalResult.Durable
+        assertEquals(offer.projected,issued.issued.journal.snapshot)
+        assertEquals(NativePreparedManualResetPreview.Rejected(NativePreparedManualResetRefusal.ALREADY_ISSUED),
+            cold.prepared.previewManualReset("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),
+                null,null,cold.issuer,NativeKotlinCoachAssistanceSettingsStore(temp.root.toPath(),fence,identity)))
+        assertTrue((approval.pendingPreparations("owner-1","cycle-1")
+            as NativePendingCalibrationRead.Ready).workouts.isEmpty())
+        assertEquals(issued.issued,cold.issuer.issue("owner-1","calibrated-week4","cycle-1",4,0,
+            futureInputs(),approval).let{(it as NativeCustomJournalResult.Durable).issued})
+        assertEquals(n("25"),((drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found)
+            .draft.blocks.last().days.first().slots.single().sets.single().load as DraftSetLoad.Verified).value)
+        val recorded=cold.issuer.record("owner-1","calibrated-week4",CustomWorkoutJournalOperation.Record(
+            "calibrated-observation",0,CustomWorkoutVisitKey("cycle-1:w4:d0:slot-0:s1",
+                CustomWorkoutVisitPart.MAIN),KotlinJournalSetOutcome.COMPLETED,
+            KotlinPerformedSet(n("20"),LoadUnit.LB,5,null)))
+        assertTrue(recorded.toString(),recorded is NativeCustomJournalResult.Durable)
+        val finish=NativeKotlinCustomHistoryTransaction(cold.history,cold.issuer,fence,identity)
+            .complete("owner-1","athlete-1","calibrated-week4",
+                CustomWorkoutJournalOperation.Finish("calibrated-finish",1))
+        assertTrue(finish.toString(),finish is NativeCustomFinishResult.Committed)
+        val history=cold.reader.read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review
+        val fact=(history.timeline.completions.last() as NativeKotlinMixedHistoryCompletion.Custom).evidence.visits.single()
+        assertEquals(n("20"),(fact.prescribedLoad as DraftSetLoad.Verified).value)
+        assertNull(fact.actual!!.actualRir)
+    }
+
+    @Test fun changedHistoryBeforeIssueRefusesCalibrationWithoutChangingPreparedTargets() {
+        val f=authoredCoachFixture(phaseTransition=true);calibrationRights()
+        val offer=calibrationPreview(f) as NativeBlockCalibrationPreview.Ready
+        val approval=calibrationStore(f)
+        assertTrue(approval.accept(offer.receipt,futureInputs(),true) is NativeBlockCalibrationWrite.Accepted)
+        val prepared=f.prepared.prepare("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval)
+            as NativeCustomPrepareResult.Prepared
+        val corrected=NativeKotlinCustomHistoryCorrectionTransaction(f.history,f.issuer,f.corrections,fence,identity)
+            .correct("owner-1","athlete-1","real-base-w3-d0",CustomSavedVisitCorrection(
+                "calibration-stale",0,CustomWorkoutVisitKey("cycle-1:w3:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN),
+                "observed-w3-d0",KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("20"),LoadUnit.LB,12,1)))
+        assertTrue(corrected is NativeCustomCorrectionTransactionResult.Committed)
+        assertTrue(approval.readCurrent("owner-1","calibrated-week4","cycle-1",4,0,futureInputs())
+            is NativeBlockCalibrationRead.Rejected)
+        assertEquals(NativeBlockCalibrationWrite.Accepted(offer.receipt,true),
+            approval.accept(offer.receipt,futureInputs(),true))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            f.issuer.issue("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval))
+        assertEquals(NativeCustomPreparedRead.Found(prepared.workout),f.prepared.open("owner-1","calibrated-week4"))
+    }
+
+    @Test fun coachingOffRequiresConfirmedAuthoredResetAndNeverRewritesAnIssuedWorkout() {
+        val f=authoredCoachFixture(phaseTransition=true);calibrationRights()
+        val approval=calibrationStore(f)
+        val offer=calibrationPreview(f) as NativeBlockCalibrationPreview.Ready
+        approval.accept(offer.receipt,futureInputs(),true)
+        f.prepared.prepare("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval)
+        val settings=NativeKotlinCoachAssistanceSettingsStore(temp.root.toPath(),fence,identity)
+        assertTrue(settings.save("owner-1",0,CoachAssistancePolicy.MANUAL) is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            f.issuer.issue("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval))
+        val reset=f.prepared.previewManualReset("owner-1","calibrated-week4","cycle-1",4,0,
+            futureInputs(),null,null,f.issuer,settings) as NativePreparedManualResetPreview.Ready
+        assertEquals(n("25"),(reset.authored.slots.single().sets.single().prescription.load as DraftSetLoad.Verified).value)
+        assertEquals(NativePreparedManualResetWrite.Rejected(NativePreparedManualResetRefusal.CONFIRMATION_REQUIRED),
+            f.prepared.acceptManualReset("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),null,null,
+                f.issuer,settings,reset.preparedFingerprint,reset.settingsRevision,false))
+        val saved=f.prepared.acceptManualReset("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),null,null,
+            f.issuer,settings,reset.preparedFingerprint,reset.settingsRevision,true) as NativePreparedManualResetWrite.Reset
+        assertTrue(saved.prepared.resetToAuthored)
+        assertNull(saved.prepared.calibrationApprovalFingerprint)
+        assertEquals(saved.prepared,(f.prepared.open("owner-1","calibrated-week4") as NativeCustomPreparedRead.Found).workout)
+        assertTrue(settings.save("owner-1",1,CoachAssistancePolicy.STANDARD) is NativeCoachSettingsWrite.Saved)
+        val issued=f.issuer.issue("owner-1","calibrated-week4","cycle-1",4,0,futureInputs())
+            as NativeCustomJournalResult.Durable
+        assertEquals(reset.authored,issued.issued.journal.snapshot)
+        assertEquals(NativePreparedManualResetPreview.Rejected(NativePreparedManualResetRefusal.NO_AMENDED_PREPARATION),
+            f.prepared.previewManualReset("owner-1","calibrated-week4","cycle-1",4,0,
+                futureInputs(),null,null,f.issuer,settings))
+    }
+
+    @Test fun calibrationRejectsForgedDisplayedWeightsAndAlreadyPreparedDays() {
+        val f=authoredCoachFixture(phaseTransition=true);calibrationRights()
+        val approval=calibrationStore(f)
+        val offer=calibrationPreview(f) as NativeBlockCalibrationPreview.Ready
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.REVIEW_CHANGED),
+            approval.accept(offer.receipt.copy(proposedLoads=listOf(n("25"))),futureInputs(),true))
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.REVIEW_CHANGED),
+            approval.accept(offer.receipt.copy(workoutId="forged-identity"),futureInputs(),true))
+        assertTrue(f.prepared.prepare("owner-1","authored-already-owned","cycle-1",4,0,futureInputs())
+            is NativeCustomPrepareResult.Prepared)
+        assertEquals(NativeBlockCalibrationPreview.Rejected(NativeCalibrationRefusal.ALREADY_PREPARED_OR_ISSUED),
+            calibrationPreview(f))
+    }
+
+    @Test fun changedPermissionsBeforePreparationCannotFallBackToAuthoredTargets() {
+        val f=authoredCoachFixture(phaseTransition=true);calibrationRights()
+        val offer=calibrationPreview(f) as NativeBlockCalibrationPreview.Ready
+        val approval=calibrationStore(f)
+        approval.accept(offer.receipt,futureInputs(),true)
+        assertTrue(permissionStore.confirm("owner-1","cycle-1",2,setOf(CustomCycleChangeKind.CUES),true)
+            is NativeAdaptivePermissionWrite.Committed)
+        assertTrue(approval.readCurrent("owner-1","calibrated-week4","cycle-1",4,0,futureInputs())
+            is NativeBlockCalibrationRead.Rejected)
+        assertEquals(NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            f.prepared.prepare("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval))
+        assertEquals(NativeCustomPreparedRead.Missing,f.prepared.open("owner-1","calibrated-week4"))
+    }
+
+    @Test fun corruptCalibrationConsentRefusesReadsAndPreparation() {
+        val f=authoredCoachFixture(phaseTransition=true);calibrationRights()
+        val approval=calibrationStore(f)
+        val offer=calibrationPreview(f) as NativeBlockCalibrationPreview.Ready
+        approval.accept(offer.receipt,futureInputs(),true)
+        val file=Files.list(temp.root.toPath()).use{stream->stream.filter{
+            it.fileName.toString().startsWith("block-calibration-")&&it.fileName.toString().endsWith(".bin")
+        }.findFirst().get()}
+        val bytes=Files.readAllBytes(file);bytes[bytes.lastIndex]=(bytes.last().toInt() xor 255).toByte()
+        Files.write(file,bytes)
+        assertEquals(NativeBlockCalibrationRead.Rejected(NativeCalibrationRefusal.CORRUPT_RECORD),
+            approval.readCurrent("owner-1","calibrated-week4","cycle-1",4,0,futureInputs()))
+        assertEquals(NativeBlockCalibrationPreview.Rejected(NativeCalibrationRefusal.CORRUPT_RECORD),calibrationPreview(f))
+        assertEquals(NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            f.prepared.prepare("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval))
+    }
+
+    @Test fun missingAcceptedCalibrationCannotProduceAnAuthoredFallback() {
+        val f=authoredCoachFixture(phaseTransition=true);calibrationRights()
+        val approval=calibrationStore(f)
+        val offer=calibrationPreview(f) as NativeBlockCalibrationPreview.Ready
+        approval.accept(offer.receipt,futureInputs(),true)
+        val file=Files.list(temp.root.toPath()).use{stream->stream.filter{
+            it.fileName.toString().startsWith("block-calibration-")&&it.fileName.toString().endsWith(".bin")
+        }.findFirst().get()}
+        Files.delete(file)
+        assertEquals(NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            f.prepared.prepare("owner-1","calibrated-week4","cycle-1",4,0,futureInputs(),approval,
+                offer.receipt.fingerprint))
+        assertEquals(NativeCustomPreparedRead.Missing,f.prepared.open("owner-1","calibrated-week4"))
+    }
+
+    @Test fun calibrationNeverReplacesAnAuthoredWeekException() {
+        val f=authoredCoachFixture(phaseTransition=true);calibrationRights()
+        val original=(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft
+        val next=original.copy(revision=3,weekOverrides=mapOf("build" to listOf(
+            CustomWeekSlotOverride(1,0,"slot-0",original.blocks.last().days.first().slots.single().sets))))
+        assertTrue(drafts.save("owner-1","cycle-1",2,next) is NativeCustomDraftWriteResult.Committed)
+        assertTrue(store().confirm("owner-1","cycle-1",3,1,1,futureInputs(),true)
+            is NativeCustomSignoffWrite.Committed)
+        assertEquals(NativeBlockCalibrationPreview.Rejected(NativeCalibrationRefusal.PROTECTED_WEEK),calibrationPreview(f))
     }
 
     private fun authoredReview(f:AuthoredCoachFixture,

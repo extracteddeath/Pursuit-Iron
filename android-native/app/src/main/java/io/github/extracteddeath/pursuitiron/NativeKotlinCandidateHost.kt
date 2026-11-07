@@ -92,6 +92,10 @@ internal class NativeKotlinCandidateHost(context:Context) {
         revisionFence,localAthlete,futureActivationCommit,
         activatedCycleSignoffs,authoringSourceStore,mixedHistoryReader,
         customIssuedStore,coachSettings,customWorkoutPreflight)
+    private val blockCalibrations=NativeKotlinBlockCalibrationConsentStore(
+        root,revisionFence,localAthlete,customNextWorkoutCoach,customDraftStore,
+        authoringSourceStore,adaptiveCyclePermissions,mixedHistoryReader,
+        outstandingCustomInventory,journalStore,customPreparedStore)
     private val futureWeekLoadOptions=NativeKotlinCustomFutureWeekLoadOptionReview(
         revisionFence,localAthlete,customNextWorkoutCoach,
         futureActivationCommit,customDraftStore,authoringSourceStore,
@@ -253,7 +257,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?:return NativeCustomPrepareResult.Rejected(
                 NativeCustomPrepareRefusal.NOT_AUTHORIZED)
         return customPreparedStore.prepare(owner.ownerKey,workoutId,
-            cycleId,absoluteWeek,weekday,inputs)
+            cycleId,absoluteWeek,weekday,inputs,blockCalibrations)
     }
 
     fun openPreparedCustomWorkout(workoutId:String):NativeCustomPreparedRead {
@@ -293,7 +297,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
             ?:return NativeCustomJournalResult.Rejected(
                 NativeCustomJournalRefusal.NOT_AUTHORIZED)
         return customIssuedStore.issue(owner.ownerKey,workoutId,cycleId,
-            absoluteWeek,weekday,inputs)
+            absoluteWeek,weekday,inputs,blockCalibrations)
     }
 
     /**
@@ -827,6 +831,66 @@ internal class NativeKotlinCandidateHost(context:Context) {
         return customNextWorkoutCoach.reviewAuthored(signed.ownerKey,cycleId,
             inputs,nextAbsoluteWeek,nextWeekday,slotId,readiness,
             movementRestricted,maximumAuthorizedIncrease)
+    }
+
+    fun previewBlockCalibration(
+        workoutId:String,cycleId:String,week:Int,weekday:Int,slotId:String,
+        inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
+        restricted:Boolean,maximumIncrease:java.math.BigDecimal
+    ):NativeBlockCalibrationPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeBlockCalibrationPreview.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        return blockCalibrations.preview(owner.ownerKey,workoutId,cycleId,inputs,
+            week,weekday,slotId,readiness,restricted,maximumIncrease)
+    }
+
+    fun pendingBlockCalibrations(cycleId:String):NativePendingCalibrationRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativePendingCalibrationRead.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        return blockCalibrations.pendingPreparations(owner.ownerKey,cycleId)
+    }
+
+    fun recheckBlockCalibration(receipt:NativeBlockCalibrationReceipt,
+        inputs:CustomCoachAuditInputs):NativeBlockCalibrationRead {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativeBlockCalibrationRead.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        if(owner.ownerKey!=receipt.ownerKey||owner.athleteId!=receipt.athleteId)
+            return NativeBlockCalibrationRead.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        return blockCalibrations.readCurrent(owner.ownerKey,receipt.workoutId,receipt.cycleId,
+            receipt.absoluteWeek,receipt.weekday,inputs)
+    }
+
+    fun acceptBlockCalibration(receipt:NativeBlockCalibrationReceipt,
+        inputs:CustomCoachAuditInputs,confirmed:Boolean):NativeBlockCalibrationWrite {
+        if(localAthlete.signedInIdentity()!=NativeKotlinOwnerIdentity(receipt.ownerKey,receipt.athleteId))
+            return NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED)
+        return blockCalibrations.accept(receipt,inputs,confirmed)
+    }
+
+    fun prepareAcceptedBlockCalibration(receipt:NativeBlockCalibrationReceipt,
+        inputs:CustomCoachAuditInputs):NativeCustomPrepareResult {
+        if(localAthlete.signedInIdentity()!=NativeKotlinOwnerIdentity(receipt.ownerKey,receipt.athleteId))
+            return NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.prepare(receipt.ownerKey,receipt.workoutId,receipt.cycleId,
+            receipt.absoluteWeek,receipt.weekday,inputs,blockCalibrations,receipt.fingerprint)
+    }
+
+    fun previewResetBlockCalibration(workoutId:String,cycleId:String,week:Int,
+        weekday:Int,inputs:CustomCoachAuditInputs):NativePreparedManualResetPreview {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativePreparedManualResetPreview.Rejected(NativePreparedManualResetRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.previewManualReset(owner.ownerKey,workoutId,cycleId,week,
+            weekday,inputs,null,null,customIssuedStore,coachSettings)
+    }
+
+    fun acceptResetBlockCalibration(workoutId:String,cycleId:String,week:Int,weekday:Int,
+        inputs:CustomCoachAuditInputs,preparedFingerprint:String,settingsRevision:Long,
+        confirmed:Boolean):NativePreparedManualResetWrite {
+        val owner=localAthlete.signedInIdentity()
+            ?:return NativePreparedManualResetWrite.Rejected(NativePreparedManualResetRefusal.NOT_AUTHORIZED)
+        return customPreparedStore.acceptManualReset(owner.ownerKey,workoutId,cycleId,week,
+            weekday,inputs,null,null,customIssuedStore,coachSettings,preparedFingerprint,
+            settingsRevision,confirmed)
     }
 
     /**

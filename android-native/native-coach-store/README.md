@@ -1,8 +1,36 @@
 # Native Kotlin workout journal store — isolated integration candidate
 
 **Status: JVM-tested integration candidate, NOT the production Android workout
-owner, and NOT the final end-to-end Kotlin cutover.** The Android app does not
-depend on this module. The legacy JavaScript runtime remains unchanged.
+owner, and NOT the final end-to-end Kotlin cutover.** The isolated Android
+candidate host compiles this module; active MainActivity workout routes still
+use the legacy JavaScript runtime.
+
+## One-workout block calibration consent — 2026-11-07
+
+`NativeKotlinBlockCalibrationConsentStore` adds revision-bound athlete acceptance
+for conservative changed-recipe starting loads in ordinary signed custom cycles.
+It delegates all training decisions to the existing custom-day reviewer, then
+independently audits a virtual full-cycle copy before any new acceptance,
+preparation or issuance. It requires current LOADS and WEEK_OVERRIDES permission,
+preserves authored week exceptions, detects prepared/issued day and ID conflicts,
+and retains the original authored cycle/signoff.
+
+The new checksummed bounded sidecar is written by forced staging plus atomic
+rename under the same owner fence. Prepared-workout schema 7 carries its distinct
+calibration fingerprint; schema 8 records explicit return to ordinary authored
+targets. Schemas 1–6 remain readable. Stale/missing/corrupt approval data refuses
+the accepted change. Actual issued targets and completed history remain readable
+independently of later coaching settings. Before issue, a separately confirmed
+reset restores only the exact current signed authored snapshot and permanently
+clears that preparation's advice proof. Turning coaching back on cannot revive
+the old calibration.
+
+The isolated Compose journey can discover unprepared acceptances and unissued
+preparations after restart, recheck them, issue exact targets and enter the
+existing native logger/Finish flow. Local JVM suite: **405 tests passed**,
+including eight new calibration lifecycle cases. This does not certify later-week
+baseline carry, legacy migration/export/backup, directory fsync or device
+power-loss recovery. Checksums are corruption detection, not authentication.
 
 ## Kotlin-issued workout Compose candidate (not live navigation)
 

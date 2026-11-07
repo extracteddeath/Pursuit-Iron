@@ -52,7 +52,13 @@ internal data class NativeKotlinCustomCycleState(
     val consentBoundPreview: NativeCustomPreflightResult.ReviewedPreview? = null,
     val preparedWorkout: NativeCustomPreparedWorkout? = null,
     val preparationRefusal: NativeCustomPrepareRefusal? = null,
-    val dayCoaching: NativeCustomNextCoachResult.Reviewed? = null
+    val dayCoaching: NativeCustomNextCoachResult.Reviewed? = null,
+    val calibrationReview:NativeBlockCalibrationPreview.Ready? = null,
+    val calibrationReceipt:NativeBlockCalibrationReceipt? = null,
+    val calibrationReset:NativePreparedManualResetPreview.Ready? = null,
+    val issuedCalibrationId:String? = null,
+    val pendingCalibrations:List<NativeCustomPreparedWorkout> = emptyList(),
+    val pendingCalibrationAcceptances:List<NativeBlockCalibrationReceipt> = emptyList()
 )
 
 /**
@@ -478,7 +484,8 @@ internal class NativeKotlinCustomCycleController(
         readiness:CoachReadiness,movementRestricted:Boolean,
         maximumIncrease:java.math.BigDecimal
     ) = run {
-        current.value=current.value.copy(dayCoaching=null)
+        current.value=current.value.copy(dayCoaching=null,calibrationReview=null,
+            calibrationReceipt=null,calibrationReset=null,issuedCalibrationId=null)
         val draft=current.value.draft ?:return@run
         val inputs=auditedInputs
         if(inputs==null) {
@@ -500,6 +507,121 @@ internal class NativeKotlinCustomCycleController(
                 message="Saved history reviewed for this exact training day. Nothing was changed.")
         } else current.value=current.value.copy(
             message="Coaching is unavailable for this preview. Check the saved cycle, gym, athlete consent and current coaching audit.")
+    }
+
+    fun auditBlockCalibration(readiness:CoachReadiness,restricted:Boolean,
+        maximumIncrease:java.math.BigDecimal) = run {
+        val coaching=current.value.dayCoaching ?:return@run
+        val next=coaching.nextWorkout ?:return@run
+        val slot=coaching.selectedSlotId ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val workoutId="calibration-"+UUID.randomUUID().toString()
+        val result=host.previewBlockCalibration(workoutId,next.stamp.cycleId,
+            next.absoluteWeek,next.weekday,slot,inputs,readiness,restricted,maximumIncrease)
+        current.value=current.value.copy(calibrationReview=result as? NativeBlockCalibrationPreview.Ready,
+            calibrationReceipt=null,calibrationReset=null,preparedWorkout=null,issuedCalibrationId=null,
+            message=if(result is NativeBlockCalibrationPreview.Ready)
+                "The complete cycle and saved history support this exact workout change. Review and confirm before saving."
+            else "Calibration review unavailable. Check current load-change permissions, consent, source and outstanding workouts.")
+    }
+
+    fun clearCalibrationOffer() {
+        if(!pending.get() && current.value.calibrationReceipt==null &&
+            current.value.preparedWorkout?.calibrationApprovalFingerprint==null)
+            current.value=current.value.copy(calibrationReview=null,calibrationReset=null)
+    }
+
+    fun acceptBlockCalibration() = run {
+        val offer=current.value.calibrationReview ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val result=host.acceptBlockCalibration(offer.receipt,inputs,true)
+        current.value=current.value.copy(calibrationReceipt=(result as? NativeBlockCalibrationWrite.Accepted)?.receipt,
+            message=if(result is NativeBlockCalibrationWrite.Accepted)
+                "Starting-weight acceptance saved. Prepare the exact workout before issuance."
+            else "Acceptance refused. Recheck the current review; no workout was changed.")
+    }
+
+    fun prepareBlockCalibration() = run {
+        val accepted=current.value.calibrationReceipt ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val result=host.prepareAcceptedBlockCalibration(accepted,inputs)
+        current.value=current.value.copy(preparedWorkout=(result as? NativeCustomPrepareResult.Prepared)?.workout,
+            message=if(result is NativeCustomPrepareResult.Prepared)
+                "Accepted targets prepared and saved. Review once more before issuing."
+            else "Preparation refused. History, permissions or the reviewed proposal changed.")
+    }
+
+    fun issueBlockCalibration() = run {
+        val prepared=current.value.preparedWorkout ?:return@run
+        val inputs=auditedInputs ?:return@run
+        if(prepared.calibrationApprovalFingerprint==null&&!prepared.resetToAuthored)return@run
+        val snap=prepared.snapshot
+        val result=host.issueReviewedCustomWorkout(prepared.workoutId,snap.stamp.cycleId,
+            snap.absoluteWeek,snap.weekday,inputs)
+        current.value=current.value.copy(issuedCalibrationId=(result as? NativeCustomJournalResult.Durable)
+            ?.issued?.journal?.workoutId,message=if(result is NativeCustomJournalResult.Durable)
+                "Exact workout issued. Its targets are now immutable; log your actual sets in Train."
+            else "Issuance refused. Recheck consent and corrected history, or explicitly return to the authored workout.")
+    }
+
+    fun findPendingCalibrations() = run {
+        val cycle=current.value.draft?.cycleId ?:return@run
+        val result=host.pendingBlockCalibrations(cycle)
+        current.value=current.value.copy(pendingCalibrations=(result as? NativePendingCalibrationRead.Ready)?.workouts.orEmpty(),
+            pendingCalibrationAcceptances=(result as? NativePendingCalibrationRead.Ready)?.acceptances.orEmpty(),
+            message=if(result is NativePendingCalibrationRead.Ready)
+                "${result.workouts.size} preparations and ${result.acceptances.size} unprepared acceptances found. Current validation is still required."
+            else "Stored preparations could not be verified. Nothing was issued or replaced.")
+    }
+
+    fun resumeAcceptedCalibration(receipt:NativeBlockCalibrationReceipt) = run {
+        val inputs=auditedInputs ?:return@run
+        val result=host.recheckBlockCalibration(receipt,inputs)
+        val rechecked=(result as? NativeBlockCalibrationRead.Current)?.review
+        current.value=current.value.copy(calibrationReview=rechecked,
+            calibrationReceipt=rechecked?.receipt,preparedWorkout=null,calibrationReset=null,issuedCalibrationId=null,
+            message=if(rechecked!=null)"Saved acceptance revalidated. Its exact workout can now be prepared."
+            else "This saved acceptance is no longer current. No targets were prepared or issued.")
+    }
+
+    fun resumePreparedCalibration(workoutId:String) = run {
+        val stored=(host.openPreparedCustomWorkout(workoutId) as? NativeCustomPreparedRead.Found)?.workout
+        if(stored==null || stored.snapshot.stamp.cycleId!=current.value.draft?.cycleId ||
+            stored.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE ||
+            stored.calibrationApprovalFingerprint==null&&!stored.resetToAuthored) {
+            current.value=current.value.copy(message="The stored preparation could not be verified.")
+            return@run
+        }
+        current.value=current.value.copy(preparedWorkout=stored,calibrationReview=null,
+            calibrationReceipt=null,calibrationReset=null,issuedCalibrationId=null,
+            message="Stored targets reopened. Review your current full-cycle audit before issuing or resetting.")
+    }
+
+    fun reviewCalibrationReset() = run {
+        val prepared=current.value.preparedWorkout ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val snap=prepared.snapshot
+        val result=host.previewResetBlockCalibration(prepared.workoutId,snap.stamp.cycleId,
+            snap.absoluteWeek,snap.weekday,inputs)
+        current.value=current.value.copy(calibrationReset=result as? NativePreparedManualResetPreview.Ready,
+            message=if(result is NativePreparedManualResetPreview.Ready)
+                "Review the original authored targets before returning to them."
+            else "The workout cannot be reset. Issued targets are immutable, and current authored consent is required.")
+    }
+
+    fun acceptCalibrationReset() = run {
+        val reset=current.value.calibrationReset ?:return@run
+        val inputs=auditedInputs ?:return@run
+        val snap=reset.authored
+        val result=host.acceptResetBlockCalibration(reset.original.workoutId,snap.stamp.cycleId,
+            snap.absoluteWeek,snap.weekday,inputs,reset.preparedFingerprint,reset.settingsRevision,true)
+        current.value=current.value.copy(preparedWorkout=(result as? NativePreparedManualResetWrite.Reset)?.prepared
+                ?:current.value.preparedWorkout,
+            calibrationReview=if(result is NativePreparedManualResetWrite.Reset)null else current.value.calibrationReview,
+            calibrationReceipt=if(result is NativePreparedManualResetWrite.Reset)null else current.value.calibrationReceipt,
+            calibrationReset=null,message=if(result is NativePreparedManualResetWrite.Reset)
+                "Original authored targets restored explicitly. Issuance still rechecks the current workout."
+            else "Reset refused. The reviewed preparation or settings changed.")
     }
 
     /**

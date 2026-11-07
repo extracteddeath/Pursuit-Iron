@@ -73,7 +73,11 @@ internal fun NativeKotlinCandidateJourney() {
                     KotlinCandidateDestination.GYM ->
                         NativeKotlinGymSourceCandidateScreen(gymController)
                     KotlinCandidateDestination.PROGRAM ->
-                        NativeKotlinCustomCycleCandidateScreen(cycleController)
+                        NativeKotlinCustomCycleCandidateScreen(cycleController,
+                            onOpenIssuedWorkout={id->
+                                selectedCustomWorkoutId=id
+                                destination=KotlinCandidateDestination.TRAIN
+                            })
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,
                             onOpenSettings={destination=KotlinCandidateDestination.SETTINGS})

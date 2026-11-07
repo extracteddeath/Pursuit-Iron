@@ -56,11 +56,14 @@ private fun splitLabel(split: CustomSplitIdentity): String = when (split) {
 @Composable
 internal fun NativeKotlinCustomCycleCandidateScreen(
     controller: NativeKotlinCustomCycleController,
-    initialCycleId: String? = null
+    initialCycleId: String? = null,
+    onOpenIssuedWorkout:(String)->Unit = {}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val draft = state.draft
     val busy = state.busy
+    val calibrationLocked=state.calibrationReceipt!=null ||
+        state.preparedWorkout?.let{it.calibrationApprovalFingerprint!=null||it.resetToAuthored}==true
     var openId by rememberSaveable { mutableStateOf(initialCycleId.orEmpty()) }
     LaunchedEffect(initialCycleId) {
         if (!initialCycleId.isNullOrBlank()) controller.open(initialCycleId)
@@ -91,7 +94,10 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     var dayCoachingVisible by remember {mutableStateOf(false)}
     LaunchedEffect(draft?.revision,state.sourceRevision,state.authoredPreview,
         state.reviewedCoachInputs,coachMaxStep,coachReadiness,coachRestricted,
-        inspectedWeek,inspectedWeekday) {dayCoachingVisible=false}
+        inspectedWeek,inspectedWeekday) {
+        dayCoachingVisible=false
+        controller.clearCalibrationOffer()
+    }
     // Slot identity is stable and separate from the exercise catalog ID.
     // Null slot ID denotes authoring a genuinely new exercise visit.
     var exerciseEditor by remember {
@@ -110,7 +116,13 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
         PageHeading("KOTLIN COACH · ISOLATED",
             if (draft == null) "Build your program" else draft.title,
             "Custom programs and cycles · saved privately on this device")
-        Text("Draft only · not coaching-approved · no workout issued",
+        Text(when {
+            state.issuedCalibrationId!=null -> "Workout ready to log"
+            state.preparedWorkout!=null -> "Targets prepared · workout not started"
+            state.calibrationReceipt!=null -> "Starting weights saved · workout not started"
+            draft!=null -> "Your authored cycle · review changes before starting"
+            else -> "Create and review your own training cycle"
+        },
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.secondary)
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -327,7 +339,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         modifier=Modifier.fillMaxWidth()
                     ) {Text("Verify exact consent and session")}
                 }
-                if(validWeek && state.consentBoundPreview?.session?.absoluteWeek==weekNumber &&
+                if(state.calibrationReceipt==null && validWeek && state.consentBoundPreview?.session?.absoluteWeek==weekNumber &&
                     state.consentBoundPreview?.session?.weekday==inspectedWeekday) {
                     OutlinedButton(
                         onClick={
@@ -372,7 +384,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     val maxStep=runCatching{BigDecimal(coachMaxStep.trim())}
                         .getOrNull()?.takeIf{it>BigDecimal.ZERO && it<=BigDecimal("10000") &&
                             it.stripTrailingZeros().scale()<=3}
-                    if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled) {
+                    if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled && !calibrationLocked) {
                         OutlinedTextField(value=coachMaxStep,enabled=!busy,
                             onValueChange={coachMaxStep=it;dayCoachingVisible=false},
                             label={Text("Maximum load increase · gym units")},
@@ -430,7 +442,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 session.absoluteWeek,session.weekday,slot.slotId)}) {
                             Text("Compare an edit for week ${session.absoluteWeek}")
                         }
-                        if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled) {
+                        if(state.reviewedCoachInputs!=null && state.progressionCoachingEnabled && !calibrationLocked) {
                             OutlinedButton(enabled=!busy && maxStep!=null &&
                                 session.stamp.cycleRevision==draft.revision,
                                 onClick={
@@ -448,9 +460,16 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             session.stamp.gymCatalogSourceRevision==state.sourceRevision
                     }?.let {reviewed->
                         NativeKotlinCustomDayCoachingSummary(reviewed,session.absoluteWeek)
+                        if(reviewed.transitionStartingLoads?.changesAuthoredLoads==true &&
+                            state.calibrationReview==null && state.calibrationReceipt==null && state.preparedWorkout==null) {
+                            Button(enabled=!busy&&maxStep!=null,onClick={
+                                controller.auditBlockCalibration(coachReadiness,coachRestricted,checkNotNull(maxStep))
+                            }){Text("Audit this workout change")}
+                        }
                     }
                 }
             }
+            NativeKotlinCustomCycleCalibrationPanel(controller,state,onOpenIssuedWorkout)
             PursuitCard(highlighted = true) {
                 Text("Audit your full cycle",
                     style = MaterialTheme.typography.titleLarge)

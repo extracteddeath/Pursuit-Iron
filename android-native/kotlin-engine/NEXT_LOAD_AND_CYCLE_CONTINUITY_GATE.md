@@ -20,12 +20,44 @@ working order, added sets, shorter inter-set rests, unsupported effort, near
 failure, recovery restrictions and changed source/split contexts remain refusals.
 The rest after the final selected working set cannot support earlier loads.
 
-This projection has no acceptance or issuance authority. Existing approved
-targets, old journals and actual RIR stay unchanged. Before a different proposed
-weight can enter Train: implement separate revision-bound athlete acceptance,
-reaudit the complete projected cycle, preserve pinned weekly prescriptions,
-check outstanding workouts and revalidate the proposal at actual issuance.
-Native integration tests are not paired or device certification.
+The pure projection has no acceptance or issuance authority. The ordinary
+signed-cycle native path now supplies a separate, explicit one-workout protocol:
+
+1. `NativeKotlinBlockCalibrationConsentStore` reopens the complete corrected
+   history, current signed authored cycle, assistance settings and LOADS plus
+   WEEK_OVERRIDES permissions under the shared owner fence. It refuses a pinned
+   week exception, an already prepared/issued target day, or a workout-ID
+   collision. The projected slot is applied only to a virtual cycle copy and
+   every cycle week is audited again; the snapshot must exactly match the
+   displayed projection.
+2. Athlete confirmation stores a checksummed receipt bound to all revisions,
+   original/projected fingerprints and exact per-set diff. An identical retry
+   acknowledges the stored fact; it does not grant fresh issuance authority.
+3. Preparation and actual issuance independently recompute the same evidence
+   and full-cycle audit. A missing, stale or corrupt receipt refuses the changed
+   targets rather than substituting authored weights. The immutable issued
+   snapshot enters the existing native journal, actual logger and Finish path.
+4. Before issuance the athlete may separately review and confirm restoration of
+   the original authored snapshot, including with coaching disabled. This clears
+   the preparation's calibration proof and durably prevents automatic revival
+   when coaching is re-enabled. Issued targets cannot be reset.
+
+Acceptance/preparation discovery supports cold restart, without treating a
+stored receipt as proof it is still current. The cycle and its signoff remain
+unchanged. Native tests cover the 25 -> 20 lb accepted target through Finish,
+null actual RIR, cold reads, corrections, missing/corrupt approval records,
+permission revocation, protected week exceptions, duplicate ownership and
+explicit coaching-off reset. Prepared schemas 7 (ordinary calibration) and 8
+(ordinary authored reset) retain reads of schemas 1–6.
+
+**Next continuity gate:** only this selected first-week workout receives the
+calibration. Later authored weeks do not inherit it automatically. Connect that
+actual issued baseline to later same-slot reviews with explicit permission and
+whole-cycle continuity checks; cover all subsequent workouts in multiweek
+simulations. Activated/source/split changes, complete backup/restore, directory
+fsync/power-loss recovery and physical-device acceptance remain separate gates.
+The new checksum detects accidental corruption; it is not cryptographic owner
+authentication. Native integration tests are not paired or device certification.
 
 ## Previous-block work and conservative starting weights
 
@@ -49,8 +81,8 @@ missing-effort provenance, cold reads and withdrawal after a saved correction
 changes the latest work to failure; stale/revoked consent cannot read advice.
 The separate future-schedule activation path changes source and training
 context, so it still requires a fresh baseline. Different starting weights,
-new-context transition policies and their acceptance/issuance remain separate
-unfinished work.
+new-context transition policies remain separate unfinished work. Changed
+same-source first-workout loads have the bounded acceptance/issuance path above.
 
 ## Evidence-driven next-program load review
 

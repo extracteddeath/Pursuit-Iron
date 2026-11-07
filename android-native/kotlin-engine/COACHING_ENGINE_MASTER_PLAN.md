@@ -168,7 +168,27 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 4. Only after block candidates are proven, implement native ownership of proposed -> accepted -> persisted cycle revisions and immutable slot remapping, then connect it to actual issued workouts.
 5. Expand the goal/phase/experience policy source library and complete the matrix; never inflate confidence from toy fixtures.
 
-## 9. Current audited state — 2026-11-05
+## 9. Current audited state — 2026-11-07
+
+**G3/G4/G5 accepted calibration — 2026-11-07:** ordinary signed custom cycles
+now have a durable one-workout starting-load approval through native
+`NativeKotlinBlockCalibrationConsentStore`. Every new acceptance, preparation
+and issuance recomputes complete corrected history and audits a virtual copy of
+the whole cycle. Exact owner/source/consent/settings/permissions and per-set diff
+are bound to the receipt; authored week exceptions and outstanding workouts are
+protected. The original cycle stays unchanged. Candidate Compose supports
+before/after review, separate acceptance/issuance confirmations, cold discovery,
+opening the actual native logger, and confirmed authored reset with coaching
+off. Re-enabling coaching cannot revive a reset calibration; issued targets
+remain immutable. Native tests demonstrate authored 25 -> accepted/issued 20 lb
+through actual logging and Finish, preserving null actual RIR. Local native
+persistence tests: 405 passed. Existing pure engine rules are unchanged.
+
+This closes the first-workout acceptance/issuance gap below, not the entire
+continuity milestone. Next: subsequent same-slot workouts must review the new
+issued baseline without an unearned jump back to the old authored weight.
+Multiweek carry, activated/source/split transitions, paired transition-quality
+measurement, backup/power-loss and physical-device verification remain open.
 
 **G3 changed-recipe review — 2026-11-07:** `CustomBlockTransitionLoadDomain`
 can build a conservative first-week phase/recipe calibration from the last
@@ -181,9 +201,10 @@ and the shared coaching UI expose this as a distinct read-only projection.
 Pure tests cover original-vs-new goal effort, physical loading, rest, set order,
 recovery, failed latest work and immutability; native fixtures exercise actual
 strength-policy/gym audit, nine persisted completions, cold review and saved
-near-failure correction. Changed-load acceptance, full projected-cycle audit,
-actual issued calibration, schedule/source transitions and paired/device proof
-remain unfinished. This is no cutover or superiority certificate.
+near-failure correction. The ordinary-cycle changed-load acceptance, full
+projected-cycle audit and actual issuance are now connected above; schedule/source
+transitions and paired/device proof remain unfinished. This is no cutover or
+superiority certificate.
 
 **G3/G5 block-entry update — 2026-11-07:** the isolated Future Week coach
 now displays actual native previous-block receipts and a conservative
@@ -197,8 +218,9 @@ preflight, without needing an activated schedule. Real native-file tests prove
 same-source block-entry repeats, missing-RIR provenance, latest saved correction
 invalidation, revoked consent, cold reads and the coaching off switch.
 Source-changing schedule activation remains a distinct refusal. Different
-starting loads, new-context transition policies, authoritative approval/issuance,
-paired block-transition results and physical-device acceptance remain open.
+same-source starting loads use the one-workout approval/issuance above;
+new-context transition policies, paired block-transition results and
+physical-device acceptance remain open.
 
 **G3 continuity update — 2026-11-07:** the existing
 `KotlinAdaptiveSetPrescriptionDomain` now materializes an explicit repeat of

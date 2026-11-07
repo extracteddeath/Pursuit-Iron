@@ -40,7 +40,9 @@ data class NativeCustomPreparedWorkout(
     val resetToAuthored:Boolean=false,
     /** Separate from a one-workout load amendment. */
     val futureWeekApprovalFingerprint:String?=null,
-    val futureWeekSlotId:String?=null
+    val futureWeekSlotId:String?=null,
+    /** Ordinary-cycle calibration has distinct consent from earned increases. */
+    val calibrationApprovalFingerprint:String?=null
 ) {
     val isIssued:Boolean get() = false
     val mayLog:Boolean get() = false
@@ -141,6 +143,9 @@ class NativeKotlinCustomWorkoutPreparedStore(
         require(workout.loadApprovalFingerprint==null ||
             (workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK &&
                 fingerprint.matches(workout.loadApprovalFingerprint)))
+        require(workout.calibrationApprovalFingerprint==null ||
+            (workout.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                fingerprint.matches(workout.calibrationApprovalFingerprint)))
         require((workout.futureWeekApprovalFingerprint==null)==
             (workout.futureWeekSlotId==null))
         require(workout.futureWeekApprovalFingerprint==null ||
@@ -149,18 +154,22 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 id.matches(checkNotNull(workout.futureWeekSlotId))))
         require(listOf(workout.repApprovalFingerprint,
             workout.loadApprovalFingerprint,
-            workout.futureWeekApprovalFingerprint).count{it!=null}<=1)
+            workout.futureWeekApprovalFingerprint,
+            workout.calibrationApprovalFingerprint).count{it!=null}<=1)
         require(!workout.resetToAuthored ||
-            (workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK &&
-                workout.repApprovalFingerprint==null &&
+            (workout.repApprovalFingerprint==null &&
                 workout.loadApprovalFingerprint==null &&
-                workout.futureWeekApprovalFingerprint==null))
+                workout.futureWeekApprovalFingerprint==null &&
+                workout.calibrationApprovalFingerprint==null))
         val session=NativeKotlinCustomWorkoutSnapshotCodec.encode(
             workout.snapshot)
         val payload=ByteArrayOutputStream()
         DataOutputStream(payload).use{out->
             out.writeInt(magic)
-            out.writeInt(if(workout.resetToAuthored)5 else
+            out.writeInt(if(workout.resetToAuthored &&
+                    workout.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE)8 else
+                if(workout.calibrationApprovalFingerprint!=null)7 else
+                if(workout.resetToAuthored)5 else
                 if(workout.futureWeekApprovalFingerprint!=null)6 else
                 if(workout.loadApprovalFingerprint!=null)4 else
                 if(workout.repApprovalFingerprint!=null)3 else
@@ -171,7 +180,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
             out.writeUTF(workout.workoutId)
             out.writeLong(workout.consentRevision)
             out.writeUTF(workout.consentFingerprint)
-            if(workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK)
+            if(workout.authority==NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
+                workout.calibrationApprovalFingerprint!=null || workout.resetToAuthored)
                 out.writeUTF(workout.authority.name)
             if(workout.repApprovalFingerprint!=null)
                 out.writeUTF(workout.repApprovalFingerprint)
@@ -181,6 +191,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 out.writeUTF(workout.futureWeekApprovalFingerprint)
                 out.writeUTF(checkNotNull(workout.futureWeekSlotId))
             }
+            if(workout.calibrationApprovalFingerprint!=null)
+                out.writeUTF(workout.calibrationApprovalFingerprint)
             out.writeInt(session.size);out.write(session)
         }
         val bytes=payload.toByteArray()
@@ -214,7 +226,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(data.readInt()!=magic)
                     throw IOException("unsupported prepared custom snapshot magic")
                 val schema=data.readInt()
-                if(schema !in 1..6)
+                if(schema !in 1..8)
                     throw IOException("unsupported prepared custom snapshot version")
                 val owner=data.readUTF()
                 val athlete=data.readUTF()
@@ -236,10 +248,15 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(schema==5 &&
                     authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK)
                     throw IOException("invalid manual-reset preparation authority")
+                if(schema in 7..8 && authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE)
+                    throw IOException("invalid ordinary calibration authority")
                 val repProof=if(schema==3)data.readUTF() else null
                 val loadProof=if(schema==4)data.readUTF() else null
                 val futureProof=if(schema==6)data.readUTF() else null
                 val futureSlot=if(schema==6)data.readUTF() else null
+                val calibration=if(schema==7)data.readUTF() else null
+                if(calibration!=null && !fingerprint.matches(calibration))
+                    throw IOException("invalid calibration proof")
                 if((repProof!=null || loadProof!=null || futureProof!=null) &&
                     (authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
                         !fingerprint.matches(checkNotNull(
@@ -257,8 +274,9 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 NativeCustomPreparedWorkout(owner,athlete,workoutId,
                     revision,receiptHash,
                     NativeKotlinCustomWorkoutSnapshotCodec.decode(session),
-                    authority,repProof,loadProof,schema==5,
-                    futureProof,futureSlot).also{
+                    authority,repProof,loadProof,schema==5||schema==8,
+                    futureProof,futureSlot,calibration).also{
+                        encode(it)
                         if(it.snapshot.stamp.athleteId!=athlete)
                             throw IOException("prepared athlete mismatch")
                     }
@@ -295,8 +313,10 @@ class NativeKotlinCustomWorkoutPreparedStore(
         if(selected.resetToAuthored ||
             (selected.repApprovalFingerprint==null &&
                 selected.loadApprovalFingerprint==null &&
-                selected.futureWeekApprovalFingerprint==null) ||
-            selected.authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
+                selected.futureWeekApprovalFingerprint==null &&
+                selected.calibrationApprovalFingerprint==null) ||
+            (selected.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE &&
+                selected.calibrationApprovalFingerprint==null) ||
             selected.snapshot.copy(slots=authored.slots)!=authored ||
             selected.snapshot.slots.size!=authored.slots.size)
             return false
@@ -326,11 +346,14 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 val actualLoad=set.prescription.load
                     as? DraftSetLoad.Verified
                 val goodLoad=(selected.loadApprovalFingerprint!=null ||
-                    selected.futureWeekApprovalFingerprint!=null) &&
+                    selected.futureWeekApprovalFingerprint!=null ||
+                    selected.calibrationApprovalFingerprint!=null) &&
                     sameExceptLoad && originalLoad!=null && actualLoad!=null &&
                     actualLoad.unit==originalLoad.unit &&
                     actualLoad.basis==originalLoad.basis &&
-                    actualLoad.value>originalLoad.value
+                    (if(selected.calibrationApprovalFingerprint!=null)
+                        actualLoad.value<=originalLoad.value
+                    else actualLoad.value>originalLoad.value)
                 if(!goodRep && !goodLoad)return false
                 edited++
             }
@@ -377,8 +400,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
     private fun resetPreviewFenced(
         ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
-        signoffs:NativeKotlinActivatedCycleSignoffFileStore,
-        activation:NativeKotlinFutureActivationCommitTransaction,
+        signoffs:NativeKotlinActivatedCycleSignoffFileStore?,
+        activation:NativeKotlinFutureActivationCommitTransaction?,
         issued:NativeKotlinCustomWorkoutJournalFileStore,
         settings:NativeKotlinCoachAssistanceSettingsStore
     ):NativePreparedManualResetPreview {
@@ -393,11 +416,11 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 else NativePreparedManualResetRefusal.CORRUPT_RECORD)
         val saved=(read as? NativeCustomPreparedRead.Found)?.workout
             ?:return no(NativePreparedManualResetRefusal.NO_AMENDED_PREPARATION)
-        if(saved.authority!=NativeCustomPreparationAuthority.ACTIVATED_BLOCK ||
-            saved.resetToAuthored ||
+        if(saved.resetToAuthored ||
             saved.repApprovalFingerprint==null &&
                 saved.loadApprovalFingerprint==null &&
-                saved.futureWeekApprovalFingerprint==null)
+                saved.futureWeekApprovalFingerprint==null &&
+                saved.calibrationApprovalFingerprint==null)
             return no(NativePreparedManualResetRefusal.NO_AMENDED_PREPARATION)
         if(saved.snapshot.stamp.cycleId!=cycleId ||
             saved.snapshot.absoluteWeek!=absoluteWeek ||
@@ -417,13 +440,25 @@ class NativeKotlinCustomWorkoutPreparedStore(
         val preferences=(settings.read(ownerKey)
             as? NativeCoachSettingsRead.Current)?.settings
             ?:return no(NativePreparedManualResetRefusal.SETTINGS_UNAVAILABLE)
-        val consent=(signoffs.read(ownerKey,inputs)
+        val original=if(saved.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE) {
+            if(saved.calibrationApprovalFingerprint==null ||
+                activationHandoff?.blocksNewIssuance(ownerKey)==true)
+                return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
+            val pre=preflight.inspect(ownerKey,cycleId,absoluteWeek,weekday,inputs)
+                as? NativeCustomPreflightResult.ReviewedPreview
+                ?:return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
+            if(pre.receipt.recordRevision!=saved.consentRevision ||
+                pre.receipt.fingerprintSha256!=saved.consentFingerprint)
+                return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
+            pre.session
+        } else {
+        val consent=(signoffs?.read(ownerKey,inputs)
             as? NativeActivatedSignoffRead.Found)?.takeIf{it.isCurrent}
             ?.receipt ?:return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
-        val active=(activation.read(ownerKey)
+        val active=(activation?.read(ownerKey)
             as? NativeFutureCommitReview.Applied)?.context
             ?:return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
-        val original=(activation.previewActivatedWorkout(
+        val activated=(activation?.previewActivatedWorkout(
             ownerKey,inputs,absoluteWeek,weekday)
             as? CustomWorkoutSnapshotResult.Preview)?.snapshot
             ?:return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
@@ -434,13 +469,15 @@ class NativeKotlinCustomWorkoutPreparedStore(
             consent.recordRevision!=saved.consentRevision ||
             consent.reviewFingerprint!=saved.consentFingerprint ||
             absoluteWeek<consent.firstWeek ||
-            original.stamp.athleteId!=athlete.athleteId ||
-            original.stamp.cycleId!=cycleId ||
-            original.stamp.gymCatalogSourceRevision!=active.sourceRevision ||
-            original.blockId!=consent.blockId ||
-            original.absoluteWeek!=absoluteWeek ||
-            original.weekday!=weekday)
+            activated.stamp.athleteId!=athlete.athleteId ||
+            activated.stamp.cycleId!=cycleId ||
+            activated.stamp.gymCatalogSourceRevision!=active.sourceRevision ||
+            activated.blockId!=consent.blockId ||
+            activated.absoluteWeek!=absoluteWeek ||
+            activated.weekday!=weekday)
             return no(NativePreparedManualResetRefusal.CONSENT_CHANGED)
+        activated
+        }
         if(!isResettableAmendment(saved,original))
             return no(NativePreparedManualResetRefusal.UNSAFE_AMENDMENT)
         if(current(ownerKey)!=athlete)
@@ -454,8 +491,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
     fun previewManualReset(
         ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
-        signoffs:NativeKotlinActivatedCycleSignoffFileStore,
-        activation:NativeKotlinFutureActivationCommitTransaction,
+        signoffs:NativeKotlinActivatedCycleSignoffFileStore?,
+        activation:NativeKotlinFutureActivationCommitTransaction?,
         issued:NativeKotlinCustomWorkoutJournalFileStore,
         settings:NativeKotlinCoachAssistanceSettingsStore
     ):NativePreparedManualResetPreview {
@@ -481,8 +518,8 @@ class NativeKotlinCustomWorkoutPreparedStore(
     fun acceptManualReset(
         ownerKey:String,workoutId:String,cycleId:String,
         absoluteWeek:Int,weekday:Int,inputs:CustomCoachAuditInputs,
-        signoffs:NativeKotlinActivatedCycleSignoffFileStore,
-        activation:NativeKotlinFutureActivationCommitTransaction,
+        signoffs:NativeKotlinActivatedCycleSignoffFileStore?,
+        activation:NativeKotlinFutureActivationCommitTransaction?,
         issued:NativeKotlinCustomWorkoutJournalFileStore,
         settings:NativeKotlinCoachAssistanceSettingsStore,
         expectedPreparedFingerprint:String,
@@ -522,6 +559,7 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 loadApprovalFingerprint=null,
                 futureWeekApprovalFingerprint=null,
                 futureWeekSlotId=null,
+                calibrationApprovalFingerprint=null,
                 resetToAuthored=true)
             replacePreparedAtomically(ownerKey,workoutId,baseline)
             NativePreparedManualResetWrite.Reset(baseline)
@@ -567,7 +605,9 @@ class NativeKotlinCustomWorkoutPreparedStore(
         cycleId:String,
         absoluteWeek:Int,
         weekday:Int,
-        coachingInputs:CustomCoachAuditInputs
+        coachingInputs:CustomCoachAuditInputs,
+        calibration:NativeKotlinBlockCalibrationConsentStore?=null,
+        expectedCalibrationFingerprint:String?=null
     ):NativeCustomPrepareResult {
         if(!id.matches(workoutId) || !id.matches(cycleId) ||
             absoluteWeek !in 1..104 || weekday !in 0..6)
@@ -586,13 +626,31 @@ class NativeKotlinCustomWorkoutPreparedStore(
                 if(pre !is NativeCustomPreflightResult.ReviewedPreview)
                     return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                         NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
-                val planned=NativeCustomPreparedWorkout(ownerKey,
-                    owner.athleteId,workoutId,pre.receipt.recordRevision,
-                    pre.receipt.fingerprintSha256,pre.session)
                 val existing=openFenced(ownerKey,workoutId,owner)
                 if(existing is NativeCustomPreparedRead.Rejected)
                     return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                         existing.reason)
+                val reset=(existing as? NativeCustomPreparedRead.Found)?.workout?.resetToAuthored==true
+                val hasCalibration=NativeKotlinBlockCalibrationConsentStore.hasRecord(
+                    directory,ownerKey,workoutId)
+                val accepted=if((hasCalibration||expectedCalibrationFingerprint!=null ||
+                        (existing as? NativeCustomPreparedRead.Found)?.workout?.calibrationApprovalFingerprint!=null)&&!reset) {
+                    (calibration?.readCurrent(ownerKey,workoutId,cycleId,absoluteWeek,
+                        weekday,coachingInputs) as? NativeBlockCalibrationRead.Current)?.review
+                        ?:return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                } else null
+                if(accepted!=null && (accepted.original!=pre.session ||
+                    accepted.receipt.consentRevision!=pre.receipt.recordRevision ||
+                    (expectedCalibrationFingerprint!=null &&
+                        accepted.receipt.fingerprint!=expectedCalibrationFingerprint)))
+                    return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                        NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                val planned=NativeCustomPreparedWorkout(ownerKey,
+                    owner.athleteId,workoutId,pre.receipt.recordRevision,
+                    pre.receipt.fingerprintSha256,accepted?.projected ?:pre.session,
+                    resetToAuthored=reset,
+                    calibrationApprovalFingerprint=accepted?.receipt?.fingerprint)
                 if(existing is NativeCustomPreparedRead.Found)
                     return@withOwnerTransaction if(existing.workout==planned)
                         NativeCustomPrepareResult.Prepared(existing.workout,true)

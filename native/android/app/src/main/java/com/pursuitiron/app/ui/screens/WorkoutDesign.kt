@@ -129,19 +129,21 @@ fun WorkoutHeader(vm: AppViewModel, s: JSONObject, wide: Boolean, focus: Boolean
             }
         }
         val hasNote = s.s("sessionNote").isNotBlank()
-        Box(Modifier.size(44.dp).clip(CircleShape).background(if (hasNote) cs.secondaryContainer else Color.Transparent).clickable(onClick = onNote)
+        com.pursuitiron.app.ui.common.PiTooltip(if (hasNote) "Workout note" else "Add a workout note") {
+        Box(Modifier.size(48.dp).clip(CircleShape).background(if (hasNote) cs.secondaryContainer else Color.Transparent).clickable(onClick = onNote)
             .semantics { contentDescription = if (hasNote) "Workout note: ${s.s("sessionNote")}" else "Add a workout note"; role = Role.Button }, contentAlignment = Alignment.Center) {
             Icon(PiIcons.Note, null, tint = if (hasNote) cs.onSecondaryContainer else cs.onSurfaceVariant, modifier = Modifier.size(22.dp))
-            if (hasNote) Box(Modifier.align(Alignment.TopEnd).padding(9.dp).size(8.dp).clip(CircleShape).background(cs.primary))
-        }
+            if (hasNote) Box(Modifier.align(Alignment.TopEnd).padding(10.dp).size(8.dp).clip(CircleShape).background(cs.primary))
+        } }
         val r by animateDpAsState(if (focus) 14.dp else 22.dp, Motion.spring(), label = "focus")
         val bg by animateColorAsState(if (focus) cs.primaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "focusBg")
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(r)).background(bg).clickable(onClick = onFocus)
+        com.pursuitiron.app.ui.common.PiTooltip("Focus mode") {
+        Box(Modifier.size(48.dp).clip(RoundedCornerShape(r)).background(bg).clickable(onClick = onFocus)
             .semantics { contentDescription = "Focus mode"; role = Role.Switch; stateDescription = if (focus) "On" else "Off" }, contentAlignment = Alignment.Center) {
             Icon(PiIcons.Focus, null, tint = if (focus) cs.onPrimaryContainer else cs.onSurfaceVariant, modifier = Modifier.size(22.dp))
-        }
+        } }
         // Discard lives in the workout menu, a step away from Focus: one icon over from the most-used header button it was an easy mis-tap mid-set.
-        androidx.compose.material3.IconButton(onClick = onMenu) { Icon(PiIcons.More, "Workout options", tint = cs.onSurfaceVariant) }
+        com.pursuitiron.app.ui.common.PiTooltip("Workout options") { androidx.compose.material3.IconButton(onClick = onMenu) { Icon(PiIcons.More, "Workout options", tint = cs.onSurfaceVariant) } }
         if (wide) Button(onClick = onFinish, modifier = Modifier.height(44.dp)) { Text("Finish") }
     }
 }
@@ -305,8 +307,10 @@ fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -
 
 @Composable
 private fun HeadIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick).semantics { contentDescription = label; role = Role.Button }, contentAlignment = Alignment.Center) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+    com.pursuitiron.app.ui.common.PiTooltip(label) {
+        Box(Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onClick).semantics { contentDescription = label; role = Role.Button }, contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+        }
     }
 }
 

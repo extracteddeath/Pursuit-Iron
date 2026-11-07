@@ -103,6 +103,9 @@ fun VolumeChartCard(g: JSONObject) {
                 }
             }
         }
+        // One week is a number, not a trend: say when it becomes one instead of leaving empty slots unexplained.
+        if (weeks.count { it.i("sessions") > 0 || it.i("volume") > 0 } < 2)
+            Text("Your weekly trend fills in after a second week of training.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
     }
 }
 

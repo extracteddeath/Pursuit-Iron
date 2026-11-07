@@ -59,6 +59,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -111,6 +112,15 @@ fun PiApp(vm: AppViewModel) {
 
 @Composable
 private fun Shell(vm: AppViewModel, wide: Boolean) {
+    var backRaw by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val backPeek by androidx.compose.animation.core.animateFloatAsState(backRaw, com.pursuitiron.app.ui.theme.Motion.effectsFast(), label = "backPeek")
+    androidx.compose.runtime.LaunchedEffect(vm.screen) { backRaw = 0f }
+    androidx.activity.compose.PredictiveBackHandler(enabled = vm.screen == Screen.Workout || vm.screen == Screen.Summary) { events ->
+        try {
+            events.collect { backRaw = it.progress }
+            if (vm.screen == Screen.Workout) vm.minimise() else vm.closeSummary()
+        } catch (e: kotlinx.coroutines.CancellationException) { backRaw = 0f; throw e }
+    }
     Box(Modifier.fillMaxSize()) {
         AnimatedContent(
             targetState = vm.screen,
@@ -122,13 +132,19 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
             },
             label = "screen",
         ) { screen ->
-            when (screen) {
+            // M3 predictive back: while the back gesture is held, the workout or summary shrinks and rounds toward the
+            // screen behind, so you see where back goes before you commit.
+            val p = if (screen == Screen.Workout || screen == Screen.Summary) backPeek else 0f
+            Box(Modifier.fillMaxSize().graphicsLayer {
+                scaleX = 1f - 0.1f * p; scaleY = 1f - 0.1f * p
+                shape = RoundedCornerShape((32f * p).dp); clip = p > 0f
+            }) { when (screen) {
                 Screen.Tabs -> if (vm.home?.b("empty") == true && vm.prefs.seenIntro < com.pursuitiron.app.ui.screens.INTRO_VERSION) com.pursuitiron.app.ui.screens.IntroScreen(vm) else Tabs(vm, wide)
                 Screen.Workout -> WorkoutScreen(vm)
                 Screen.Summary -> SummaryScreen(vm)
                 Screen.Setup -> SetupScreen(vm)
                 Screen.Editor -> ProgramEditorScreen(vm)
-            }
+            } }
         }
         SnackHost(vm, Modifier.align(Alignment.BottomCenter))
         ImportDialog(vm)
@@ -140,9 +156,7 @@ private fun Shell(vm: AppViewModel, wide: Boolean) {
         com.pursuitiron.app.ui.screens.InjuryJournalSheet(vm)
         vm.busy?.let { BusyScrim(it) }
     }
-    BackHandler(enabled = vm.screen == Screen.Workout) { vm.minimise() }
     BackHandler(enabled = vm.screen == Screen.Setup) { vm.closeSetup() }
-    BackHandler(enabled = vm.screen == Screen.Summary) { vm.closeSummary() }
     BackHandler(enabled = vm.screen == Screen.Tabs && vm.tab != Tab.Today) { vm.goTab(Tab.Today) }
 }
 

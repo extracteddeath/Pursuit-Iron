@@ -47,6 +47,26 @@ sealed interface NativeFutureWeekLoadOptionResult {
         NativeFutureWeekLoadOptionResult
 }
 
+/**
+ * New authoring reviews require the target day to be untouched. Issuance may
+ * re-review ONE already-prepared workout, but may never re-author a different
+ * prepared ID, an issued journal or a manifest-completed session.
+ */
+internal object NativeFutureWeekPreparedReviewBoundary {
+    fun permits(
+        sessions:List<NativeCustomInventoryFact>,cycleId:String,
+        week:Int,weekday:Int,permittedPreparedId:String?
+    ):Boolean {
+        val target=sessions.filter{
+            it.cycleId==cycleId &&
+                it.absoluteWeek==week && it.weekday==weekday
+        }
+        return if(permittedPreparedId==null) target.isEmpty()
+        else target.size==1 && target.single().workoutId==permittedPreparedId &&
+            !target.single().issued && !target.single().completed
+    }
+}
+
 class NativeKotlinCustomFutureWeekLoadOptionReview(
     private val fence:NativeKotlinApprovalRevisionFence,
     private val identity:NativeKotlinCurrentIdentity,
@@ -67,11 +87,14 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
         ownerKey:String,coaching:CustomCoachAuditInputs,
         absoluteWeek:Int,weekday:Int,slotId:String,
         readiness:CoachReadiness,movementRestricted:Boolean,
-        maxAuthorizedIncrease:BigDecimal
+        maxAuthorizedIncrease:BigDecimal,
+        permittedPreparedWorkoutId:String?=null
     ):NativeFutureWeekLoadOptionResult {
         fun no(reason:NativeFutureWeekLoadRefusal)=
             NativeFutureWeekLoadOptionResult.Rejected(reason)
         if(!id.matches(ownerKey) || !id.matches(slotId) ||
+            (permittedPreparedWorkoutId!=null &&
+                !id.matches(permittedPreparedWorkoutId)) ||
             absoluteWeek !in 1..104 || weekday !in 0..6 ||
             maxAuthorizedIncrease<=BigDecimal.ZERO)
             return no(NativeFutureWeekLoadRefusal.INVALID_SELECTION)
@@ -192,11 +215,11 @@ class NativeKotlinCustomFutureWeekLoadOptionReview(
                 as? NativeCustomInventoryReview.Reviewed
                 ?:return@withOwnerTransaction no(
                     NativeFutureWeekLoadRefusal.HISTORY_UNVERIFIED)
-            if(owned.sessions.any{
-                it.cycleId==original.cycleId &&
-                    it.absoluteWeek==absoluteWeek && it.weekday==weekday
-            })return@withOwnerTransaction no(
-                NativeFutureWeekLoadRefusal.WORKOUT_ALREADY_PREPARED_OR_ISSUED)
+            if(!NativeFutureWeekPreparedReviewBoundary.permits(
+                owned.sessions,original.cycleId,absoluteWeek,weekday,
+                permittedPreparedWorkoutId))
+                return@withOwnerTransaction no(
+                    NativeFutureWeekLoadRefusal.WORKOUT_ALREADY_PREPARED_OR_ISSUED)
 
             val authored=slot.sets
             val loaded=authored.mapNotNull {it.load as? DraftSetLoad.Verified}

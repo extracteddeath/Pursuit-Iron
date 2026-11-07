@@ -28,17 +28,22 @@ test('ambiguous duplicate, escaped, unknown and incomplete inputs are refused',(
 });
 
 test('blanket refusal cannot pass earned progression or failed-load recovery',()=>{
-  for(const id of caseIds.filter(id=>id!=='progression-no-rir'))
+  for(const id of caseIds)
     assert.equal(grade(fixture,byId(id),result(null)).outcome,'fail',id);
   assert.equal(grade(fixture,byId('dp-earned-step'),result(205)).outcome,'pass');
   assert.equal(grade(fixture,byId('dp-uniform-failure'),result(215)).outcome,'fail');
   assert.equal(grade(fixture,byId('dp-uniform-failure'),result(200)).outcome,'pass');
 });
 
-test('missing actual RIR cannot be replaced by a prescribed target',()=>{
-  assert.equal(grade(fixture,byId('progression-no-rir'),result(205)).outcome,'fail');
-  assert.equal(grade(fixture,byId('progression-no-rir'),result(null)).outcome,'pass');
-  assert.equal(grade(fixture,byId('progression-no-rir'),result(200)).outcome,'pass');
+test('original goal RIR supports normal progression while missing actuals remain null',()=>{
+  const input=byId('progression-no-rir');
+  assert.equal(grade(fixture,input,result(205)).outcome,'pass');
+  assert.equal(grade(fixture,input,result(null)).outcome,'fail');
+  assert.ok(input.latest.every(s=>s.rir===null && s.issuedRir===2));
+  const reportedHard=structuredClone(input);reportedHard.latest[0].rir=0;
+  assert.equal(grade(fixture,reportedHard,result(205)).outcome,'fail');
+  const noGoal=structuredClone(input);noGoal.latest[0].issuedRir=null;
+  assert.equal(grade(fixture,noGoal,result(205)).outcome,'fail');
 });
 
 test('unbuildable load, fabricated set targets and mutated actuals fail',()=>{
@@ -53,12 +58,14 @@ function syntheticBundle() {
   const measurements=[];
   for(const engine of ['legacy-javascript','independent-kotlin']) {
     const results=fixture.cases.map(item=>{
-      const candidateLoad=item.id==='dp-earned-step'?205:item.id==='progression-no-rir'?null:195;
+      const candidateLoad=['dp-earned-step','progression-no-rir'].includes(item.id)?205:195;
       const row={caseId:item.id,inputDigest:scenarioDigest(fixture.fixtureDigest,item.id),
         previous:structuredClone(item.previous),latest:structuredClone(item.latest),
         candidateLoad,mutatedInput:false};
       if(engine==='independent-kotlin')Object.assign(row,{completedSets:4,
-        actualRirCount:item.latest.filter(s=>s.rir!==null).length,mayAutoApply:false});
+        actualRirCount:item.latest.filter(s=>s.rir!==null).length,
+        assumedGoalRirSetCount:[...item.previous,...item.latest].filter(s=>s.rir===null).length,
+        mayAutoApply:false});
       else Object.assign(row,{raw:{suggestedLoad:candidateLoad}});
       row.assessment=grade(fixture,item,row);
       return row;
@@ -91,6 +98,7 @@ test('changed actual RIR, overwritten targets and made-up pass outcomes are refu
     b=>b.engines['independent-kotlin'].results[4].latest[0].rir=2,
     b=>b.engines['independent-kotlin'].results[0].latest[0].issuedLoad=195,
     b=>b.engines['independent-kotlin'].results[4].actualRirCount=4,
+    b=>b.engines['independent-kotlin'].results[4].assumedGoalRirSetCount=0,
     b=>b.engines['independent-kotlin'].results[0].mayAutoApply=true,
     b=>b.engines['legacy-javascript'].results[0].raw.suggestedLoad=215,
     b=>b.measurements[0].outcome='fail']) {
@@ -121,6 +129,6 @@ test('five measured pairs still cannot certify the complete engine replacement',
   assert.equal(audit.requiredPairs,49);
   assert.equal(audit.missingPairs,44);
   assert.equal(audit.verdict,'NOT_PROVEN_BETTER');
-  assert.deepEqual(audit.improvedDomains,['progression']);
+  assert.deepEqual(audit.improvedDomains,[]);
   assert.deepEqual(audit.regressions,[]);
 });

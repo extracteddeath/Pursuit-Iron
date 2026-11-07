@@ -45,21 +45,25 @@ class CoachExerciseDecisionDomainTest {
     @Test fun missingActualRirNeverConflictsWithConservativeProgressionGate() {
         val unknown=workout("second",rir=listOf(null,null,null))
         val result=review(first,unknown)
-        assertEquals(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,result.direction)
+        assertEquals(CoachDirection.REVIEW_SMALL_INCREASE,result.direction)
         assertEquals(CoachConfidence.LIMITED,result.confidence)
-        assertNull(result.nextLoadToReview)
+        assertEquals(n(35),result.nextLoadToReview)
         assertTrue(CoachEvidenceFlag.EFFORT_NOT_REPORTED in result.evidence)
-        assertTrue(result.explanation.contains("actual effort"))
+        assertTrue(CoachEvidenceFlag.GOAL_RIR_ASSUMED in result.evidence)
+        assertTrue(result.explanation.contains("assumes their original goal RIR"))
         assertNull(unknown.observations.first().actualRir)
         val missingPrior=workout("first",rir=listOf(null,2,2))
         val priorResult=review(missingPrior,second)
-        assertEquals(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+        assertEquals(CoachDirection.REVIEW_SMALL_INCREASE,
             priorResult.direction)
         assertEquals(CoachConfidence.LIMITED,priorResult.confidence)
-        assertNull(priorResult.nextLoadToReview)
+        assertEquals(n(35),priorResult.nextLoadToReview)
         val allMissing=workout("first",rir=listOf(null,null,null))
         assertEquals(CoachConfidence.LIMITED,
             review(allMissing,unknown).confidence)
+        val noGoal=unknown.copy(observations=unknown.observations.map {it.copy(issuedRir=null)})
+        assertNull(review(first,noGoal).nextLoadToReview)
+        assertEquals(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,review(first,noGoal).direction)
     }
 
     @Test fun notAllSetsAtCeilingMeansBuildRepsRatherThanRaiseWeight() {

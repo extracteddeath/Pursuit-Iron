@@ -29,6 +29,7 @@ object PairedProgressionProbe {
         val input=Properties().also {it.load(text.reader())}
         fun field(key:String)=requireNotNull(input.getProperty(key)) {"Missing $key"}
         require(field("schemaVersion")=="1" && field("unit")=="lb")
+        require(field("effortPolicy")=="assume_original_goal_when_unreported")
         val fixtureDigest=digest(bytes)
         val count=field("workingSets").toInt()
         val band=RepBand(field("repFloor").toInt(),field("repCeiling").toInt())
@@ -73,6 +74,7 @@ object PairedProgressionProbe {
                 "\"candidateLoad\":${candidate?.toPlainString() ?: "null"},"+
                 "\"increaseReason\":${quoted(increase.reason.name)},\"recoveryReason\":${quoted(recovery.reason.name)},"+
                 "\"completedSets\":${facts.completedWorkingSets},\"actualRirCount\":${facts.actualRirReportedOrdinals.size},"+
+                "\"assumedGoalRirSetCount\":${increase.assumedGoalRirSetCount},"+
                 "\"mutatedInput\":${previous!=originalPrevious || latest!=originalLatest},\"mayAutoApply\":false}"
         }
         val json="{\"schemaVersion\":1,\"fixtureDigest\":${quoted(fixtureDigest)},\"results\":[${outputs.joinToString(",")}] }\n"

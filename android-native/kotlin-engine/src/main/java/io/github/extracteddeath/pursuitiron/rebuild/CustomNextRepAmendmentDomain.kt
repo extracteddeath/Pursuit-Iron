@@ -53,8 +53,12 @@ object CustomNextRepAmendmentDomain {
         var changed=false
         for((set,proposal) in working.zip(reviewed.nextSetSuggestions)){
             val range=set.prescription.reps
+            val effort=runCatching {ProgressionEffortDomain.forCompletedSet(
+                proposal.actualRir,set.prescription.targetRir)}.getOrNull()
+                ?:return fail(CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED)
             if(proposal.observedReps !in range.minimum..range.maximum ||
-                proposal.actualRir<2 || proposal.actualRir>10 ||
+                effort.rir==null || effort.rir<2 ||
+                proposal.progressionRir!=effort.rir || proposal.effortSource!=effort.source ||
                 proposal.proposedNextReps !in range.minimum..range.maximum ||
                 proposal.changed !=
                     (proposal.proposedNextReps>proposal.observedReps) ||

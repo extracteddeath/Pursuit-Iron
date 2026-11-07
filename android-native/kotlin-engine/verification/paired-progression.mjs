@@ -36,6 +36,8 @@ export function parseFixture(bytes) {
   function number(value) { assert.match(value, /^\d+(?:\.\d+)?$/); return Number(value); }
   const integer = value => { const n = number(value); assert.ok(Number.isSafeInteger(n)); return n; };
   assert.equal(field('schemaVersion'), '1');
+  const effortPolicy=field('effortPolicy');
+  assert.equal(effortPolicy,'assume_original_goal_when_unreported');
   assert.match(field('legacyCommit'), /^[a-f0-9]{40}$/);
   assert.deepEqual(field('caseIds').split(','), caseIds, 'only implemented, fixed scenarios can be recorded');
   assert.equal(field('exerciseId'), 'barbell_bench');
@@ -78,7 +80,7 @@ export function parseFixture(bytes) {
   assert.equal(used.size, Object.keys(p).length, 'unused/unknown input would make the comparison ambiguous');
   return { legacyCommit: p.legacyCommit, exerciseId: p.exerciseId, unit: p.unit,
     count, floor, ceiling, issuedRir, maximumIncrease, barWeight, platePairs,
-    fixtureDigest: sha256(bytes), cases };
+    effortPolicy, fixtureDigest: sha256(bytes), cases };
 }
 
 /** Independent, finite inventory enumeration; neither engine supplies the oracle. */
@@ -110,19 +112,17 @@ export function grade(fixture, item, result) {
     case 'dp-fatigue-decay':
       if (!(load > 0 && load < max)) failures.push('no concrete lower-load review after demonstrated rep-floor failure');
       break;
-    case 'dp-earned-step': {
+    case 'dp-earned-step':
+    case 'progression-no-rir': {
       const current = item.latest[0].load;
       const earned = [item.previous, item.latest].every(rows => rows.every(s =>
         s.load === current && s.issuedLoad === current && s.reps >= fixture.ceiling &&
-        s.rir !== null && s.rir >= fixture.issuedRir));
+        (s.rir ?? s.issuedRir) !== null && (s.rir ?? s.issuedRir) >= fixture.issuedRir));
       const next = stock.find(v => v > current);
       if (!earned || load !== next || load - current > fixture.maximumIncrease)
         failures.push('did not offer the earned smallest authorized physical increment');
       break;
     }
-    case 'progression-no-rir':
-      if (load !== null && load > max) failures.push('increased load without measured actual RIR');
-      break;
     default: throw Error('Unimplemented comparison oracle');
   }
   return { outcome: failures.length ? 'fail' : 'pass', failures };
@@ -146,6 +146,8 @@ export function verifyBundle(bundle, fixture) {
       assert.deepEqual(r.latest, item.latest, 'latest actuals/issued targets differ');
       if (engine === 'independent-kotlin') {
         assert.equal(r.actualRirCount, item.latest.filter(s => s.rir !== null).length);
+        assert.equal(r.assumedGoalRirSetCount,[...item.previous,...item.latest]
+          .filter(s=>s.rir===null && s.issuedRir!==null).length);
         assert.equal(r.completedSets, fixture.count);
         assert.equal(r.mayAutoApply, false);
       } else {

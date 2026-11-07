@@ -90,7 +90,7 @@
       "domain": "progression",
       "severity": "major",
       "scenario": "RIR missing despite an issued RIR target",
-      "expected": "Do not treat prescribed RIR as measured effort",
+      "expected": "Use each completed set's original goal RIR as an explicit progression assumption when actual RIR is unreported, allow the normal earned increment, and retain missing actual RIR as null in history",
       "requiredProof": [
         "headless"
       ]

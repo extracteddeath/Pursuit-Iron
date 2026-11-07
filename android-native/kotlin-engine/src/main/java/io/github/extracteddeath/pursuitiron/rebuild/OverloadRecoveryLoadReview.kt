@@ -31,7 +31,8 @@ data class OverloadRecoveryLoadReview(
     val reason: OverloadRecoveryReason,
     val demonstratedLoad: BigDecimal?,
     val heaviestAttemptedLoad: BigDecimal?,
-    val candidateReturnLoad: BigDecimal?
+    val candidateReturnLoad: BigDecimal?,
+    val assumedGoalRirSetCount: Int = 0
 ) {
     val canOfferForReview: Boolean get() =
         reason == OverloadRecoveryReason.RETURN_TO_DEMONSTRATED_LOAD_FOR_REVIEW
@@ -66,12 +67,13 @@ object OverloadRecoveryLoadReviewDomain {
             previous.expectedWorkingSets == latest.expectedWorkingSets &&
             previous.expectedWorkingSets in 1..32
 
+        var assumed=0
         fun result(
             reason: OverloadRecoveryReason,
             prior: BigDecimal? = null,
             heavy: BigDecimal? = null,
             candidate: BigDecimal? = null
-        ) = OverloadRecoveryLoadReview(reason, prior, heavy, candidate)
+        ) = OverloadRecoveryLoadReview(reason, prior, heavy, candidate, assumed)
 
         if (!comparable)
             return result(OverloadRecoveryReason.INCOMPARABLE_WORKOUTS)
@@ -82,6 +84,9 @@ object OverloadRecoveryLoadReviewDomain {
             previous.targetReps, previous.expectedWorkingSets, previous.observations)
         val latestFacts = DoubleProgressionEvidenceDomain.assess(
             latest.targetReps, latest.expectedWorkingSets, latest.observations)
+        assumed=(previous.observations+latest.observations).count {
+            ProgressionEffortDomain.resolve(it).assumed
+        }
 
         val priorRows = previous.observations.sortedBy { it.workingOrdinal }
         val latestRows = latest.observations.sortedBy { it.workingOrdinal }
@@ -90,7 +95,7 @@ object OverloadRecoveryLoadReviewDomain {
             priorFacts.mixedActualLoads || priorLoads.size != 1 ||
             priorLoads.single().signum() <= 0 ||
             priorFacts.belowFloorOrdinals.isNotEmpty() ||
-            priorRows.any { it.actualRir == null || it.actualRir < 2 })
+            priorRows.any { (ProgressionEffortDomain.resolve(it).rir ?: -1) < 2 })
             return result(OverloadRecoveryReason.PRIOR_CAPACITY_NOT_DEMONSTRATED)
 
         val demonstrated = priorLoads.single()
@@ -100,7 +105,7 @@ object OverloadRecoveryLoadReviewDomain {
 
         val loads = latestRows.mapNotNull { it.actualLoad?.let(::normal) }
         val heavy = loads.maxOrNull()
-        if (latestRows.any { it.actualRir == null } ||
+        if (latestRows.any { ProgressionEffortDomain.resolve(it).rir == null } ||
             loads.any { it < demonstrated })
             return result(OverloadRecoveryReason.INSUFFICIENT_LATEST_EVIDENCE,
                 demonstrated, heavy)
@@ -121,7 +126,7 @@ object OverloadRecoveryLoadReviewDomain {
         if (latestRows.any { row ->
                 row.actualLoad?.compareTo(demonstrated) == 0 &&
                     checkNotNull(row.actualReps) < latest.targetReps.minimum &&
-                    checkNotNull(row.actualRir) <= 1
+                    checkNotNull(ProgressionEffortDomain.resolve(row).rir) <= 1
             })
             return result(OverloadRecoveryReason.INSUFFICIENT_LATEST_EVIDENCE,
                 demonstrated, heavy)

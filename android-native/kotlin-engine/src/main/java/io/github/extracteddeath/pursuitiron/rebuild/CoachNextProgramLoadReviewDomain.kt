@@ -278,14 +278,17 @@ object CoachNextProgramLoadReviewDomain {
             return denied(CoachNextLoadReviewStatus.FULL_WEEK_REAUDIT_FAILED,
                 "The exercise schedule changed during review.")
 
+        val assumed=if(kind==CoachNextLoadChangeKind.EARNED_INCREMENT)
+            increase.assumedGoalRirSetCount else recovery.assumedGoalRirSetCount
         return CoachNextProgramLoadReview(
             CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW, kind,
             normalized(workingLoad), normalized(candidate),
             Collections.unmodifiableList(affected),
             modified,
-            if (kind == CoachNextLoadChangeKind.EARNED_INCREMENT)
+            (if (kind == CoachNextLoadChangeKind.EARNED_INCREMENT)
                 "Two complete comparable workouts earned the next physically verified load. Review every affected training day before saving a new program revision."
-            else "The overloaded session did not demonstrate the heaviest attempted weight across all sets. Review a return to the previously demonstrated load across the affected days.",
+            else "The overloaded session did not demonstrate the heaviest attempted weight across all sets. Review a return to the previously demonstrated load across the affected days.")+
+                ProgressionEffortDomain.assumptionNote(assumed),
             if(purpose==null)null else modifiedPolicies
         )
     }

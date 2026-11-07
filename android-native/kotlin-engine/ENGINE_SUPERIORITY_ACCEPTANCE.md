@@ -41,8 +41,8 @@ passing this release gate.
 ## First executed progression tranche — 2026-11-07
 
 The web engine is frozen at `903b4a78564590d8983e651cbe19d81acd1efb9c`;
-the native policy/runner revision is
-`f210c27941eecab0a058c432578d7cae1c983116`. The shared ASCII Properties
+the native policy/runner revision is pinned by the artifact's
+`engines.independent-kotlin.commit` and source-tree identity. The shared ASCII Properties
 fixture contains four working sets at a 5–8 practical rep band, prescribed
 RIR 2, an explicit 45-lb bar and finite plate-pair inventory. Earlier capacity
 is a controlled fixture, not an inferred or imported user workout.
@@ -53,15 +53,20 @@ is a controlled fixture, not an inferred or imported user workout.
 | Repeated 215 at 2 reps near failure | 185 lb | Historical 200 lb | Both pass |
 | Two full 200-lb ceiling sessions with actual RIR | 205 lb | 205 lb | Both pass |
 | Declining 8/7/5/3 at 200 lb | 175 lb | Historical 195 lb | Both pass |
-| 200-lb ceiling sets with actual RIR missing | Offers 205 lb | No increase; actual RIR remains missing | Web fails the declared effort-evidence policy; Kotlin passes |
+| 200-lb ceiling sets with actual RIR missing and original goal RIR 2 | 205 lb | 205 lb, explicitly assuming goal RIR | Both pass; logged actual RIR remains null |
 
 The first four passes do **not** reproduce the old reported 215-for-every-set
 defect in the frozen current web policy. Different downward reviews can pass:
 the independent oracle requires a concrete buildable lower load after the
 specified rep-floor failures and the smallest authorized increment after
 earned work; it does not declare either reduction physiologically optimal.
-Missing actual RIR is judged against the master plan's rule that unknown effort
-is not permission to increase, even when a prescribed RIR target exists.
+**Corrected effort policy:** missing actual RIR may use the original goal RIR
+as an explicit progression assumption. It does not become measured effort in
+history. Reported values, especially 0/1 RIR, override the goal; missing both
+sources cannot invent a default. The previous strict oracle incorrectly
+counted Kotlin's refusal to progress as an advantage. That claimed improvement
+is withdrawn under the user's clarified policy. The shared fixture versions
+this choice as `assume_original_goal_when_unreported`.
 
 These are headless **next-exposure load-review policies**, not issued-workout,
 history persistence, full native onboarding or Android-device proofs. The web
@@ -71,8 +76,9 @@ frozen history is available to both adapters. Both actual/target snapshots and
 all set identities are checked after execution. A blanket refusal cannot pass
 the earned-increase or concrete-recovery cases.
 
-The gate now has **5/49 required paired proofs**, one measured improvement
-domain (progression), and no measured regression in this tranche. The verdict
+The gate has **5/49 required paired proofs**, no measured improvement domains,
+and no measured regression in this tranche. Both policies pass all five
+scenarios under the corrected effort rule. The verdict
 remains **NOT_PROVEN_BETTER**. The 44 missing pairs, improvements in at least
 three domains, blinded coach assessment, device acceptance and explicit user
 acceptance remain open.
@@ -129,7 +135,7 @@ silently rewrite the evidence ledger or confer user acceptance.
 | Area | Legacy JavaScript | Isolated Kotlin now | Can claim better? |
 | --- | --- | --- | --- |
 | Overloaded progression (200/205/210/215 for 3/3/2/2) | Frozen headless policy reviews 180 lb; the old reported 215-for-every-set defect was not reproduced | Native typed policies review the fixture's demonstrated 195 lb | **Parity for this headless safeguard:** no load-quality or end-to-end superiority claim |
-| Missing actual RIR despite a prescribed target | Frozen headless policy offers 200→205 without measured effort | Native increase review retains actual RIR as missing and withholds promotion | **One measured policy improvement:** other progression, program and device proofs remain open |
+| Missing actual RIR despite a prescribed target | Frozen headless policy offers 200→205 | Native review also offers 200→205 using an explicit original-goal assumption; actual RIR stays null | **Headless parity:** the earlier claimed Kotlin advantage is withdrawn |
 | Verified exercise equipment and weight increments | Live web engine has broad equipment support; user-reported phantom 38.5/159.5 recommendations | `EquipmentLoadDomain` uses BigDecimal, confirmed plate pairs, machine stack and exact implement basis | **Not yet:** narrow headless correctness is encouraging, full supported-catalog breadth and app issuance are not proven |
 | Recovery-week per-set intensity | No matched web execution yet; cannot infer behavior from old bug reports | Kotlin candidate now flags higher rep floors/ceilings at unchanged load and refuses unmatched set comparisons despite fewer sets | **Not yet:** requires matched executed headless and Android proofs |
 | Custom program and cycle authoring | Existing live working product has many features, with reported amplifier and volume-loss defects | Separate first-class custom authoring, candidate transitions and review contracts; not fully production-integrated | **No** until complete parity plus better authoring and block outcomes on device |

@@ -42,7 +42,8 @@ sealed interface AdaptiveSetPrescriptionResult {
         val editedSetKey: String,
         val observedReps: List<Int>,
         val newRepTargets: List<Int>,
-        val decisionKind:AdaptiveRepDecisionKind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
+        val decisionKind:AdaptiveRepDecisionKind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP,
+        val assumedGoalRirSetCount:Int=0
     ) : AdaptiveSetPrescriptionResult {
         val mayAutoApply: Boolean get() = false
         val mayIssueWorkout: Boolean get() = false
@@ -231,7 +232,7 @@ object KotlinAdaptiveSetPrescriptionDomain {
             history.workoutId,request.historyRevision,history.exerciseId,
             chosen[changed].setKey,
             Collections.unmodifiableList(checkNotNull(proposed.observedReps)),
-            Collections.unmodifiableList(targets),kind
+            Collections.unmodifiableList(targets),kind,proposed.assumedGoalRirSetCount
         )
     }
 }

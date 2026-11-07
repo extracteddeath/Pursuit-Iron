@@ -134,12 +134,14 @@ class KotlinProgressionTimelineDomainTest {
                 currentHistoryRevision = 11)).status)
     }
 
-    @Test fun unreportedRirOrRecentFailedAttemptNeverQualifies() {
+    @Test fun unreportedRirUsesOriginalGoalWhileRecentFailedAttemptStillBlocks() {
         val missing = KotlinProgressionTimelineDomain.review(request(
             listOf(workout(1), workout(2,
                 actualRir = listOf(null, null, null, null)))))
-        assertEquals(IncreaseReviewReason.ACTUAL_RIR_MISSING,
+        assertEquals(IncreaseReviewReason.QUALIFIED_FOR_REVIEW,
             missing.progression?.reason)
+        assertEquals(4,missing.progression?.assumedGoalRirSetCount)
+        assertEquals(0,missing.progression?.latest?.actualRirReportedOrdinals?.size)
         val failed = KotlinProgressionTimelineDomain.review(request(
             listOf(workout(1), workout(2, failedAt = 3))))
         assertEquals(IncreaseReviewReason.INCOMPLETE_SESSION,

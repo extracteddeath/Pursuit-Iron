@@ -48,8 +48,11 @@ data class CustomNextSetCoaching(
     val setKey:String,
     val observedReps:Int,
     val proposedNextReps:Int,
-    val actualRir:Int,
-    val changed:Boolean
+    val actualRir:Int?,
+    val changed:Boolean,
+    val progressionRir:Int?=actualRir,
+    val effortSource:ProgressionEffortSource=if(actualRir==null)
+        ProgressionEffortSource.UNAVAILABLE else ProgressionEffortSource.REPORTED
 )
 
 data class CustomNextWorkoutCoachingReview(
@@ -59,7 +62,8 @@ data class CustomNextWorkoutCoachingReview(
     val nextSetSuggestions:List<CustomNextSetCoaching>,
     val observedStraightSetLoad:BigDecimal?,
     val loadReviewCandidate:BigDecimal?,
-    val explanation:String
+    val explanation:String,
+    val assumedGoalRirSetCount:Int=0
 ) {
     val mayIssueWorkout:Boolean get()=false
     val mayEditProgram:Boolean get()=false
@@ -98,6 +102,7 @@ object CustomNextWorkoutCoachingDomain {
     }
 
     fun review(request:CustomNextWorkoutCoachingRequest):CustomNextWorkoutCoachingReview {
+        var assumedForReview=0
         fun result(
             status:CustomNextWorkoutCoachingStatus,
             ids:List<String> = emptyList(),latest:String?=null,
@@ -107,7 +112,7 @@ object CustomNextWorkoutCoachingDomain {
         )=CustomNextWorkoutCoachingReview(status,
             Collections.unmodifiableList(ids.toList()),latest,
             Collections.unmodifiableList(reps.toList()),load,candidate,
-            explanation)
+            explanation+ProgressionEffortDomain.assumptionNote(assumedForReview),assumedForReview)
         if(request.maximumAuthorizedIncrease<=zero ||
             request.maximumAuthorizedIncrease>maximum ||
             request.maximumAuthorizedIncrease.stripTrailingZeros().scale()>3 ||
@@ -217,14 +222,17 @@ object CustomNextWorkoutCoachingDomain {
             return result(CustomNextWorkoutCoachingStatus.MISSED_OR_FAILED_SETS,
                 ids,latest.evidence.workoutId,
                 explanation="A skipped, failed or below-range set needs review before progression.")
-        if(facts.any{it.actual?.actualRir==null})
+        val effort=facts.associate {it.setKey to
+            ProgressionEffortDomain.forCompletedSet(it.actual!!.actualRir,it.prescribedRir)}
+        assumedForReview=effort.values.count {it.assumed}
+        if(effort.values.any{it.rir==null})
             return result(CustomNextWorkoutCoachingStatus.NEEDS_RECORDED_EFFORT,
                 ids,latest.evidence.workoutId,
-                explanation="Actual RIR was not recorded for every working set.")
-        if(facts.any{it.actual!!.actualRir!!<=1})
+                explanation="Some working sets have neither actual RIR nor an original goal RIR.")
+        if(effort.values.any{checkNotNull(it.rir)<=1})
             return result(CustomNextWorkoutCoachingStatus.HOLD_NEAR_FAILURE,
                 ids,latest.evidence.workoutId,
-                explanation="Near-failure effort does not justify adding reps or load.")
+                explanation="Reported or assumed-goal effort leaves too little reserve to add reps or load.")
 
         // Recommend at most ONE additional rep per individual working set.
         // A mixed-loading top set never becomes an all-sets prescription.
@@ -244,11 +252,12 @@ object CustomNextWorkoutCoachingDomain {
                     actual.load==null && actual.unit==null
             }
             val observed=actual.reps.coerceIn(lower,upper)
+            val effortForSet=effort.getValue(previousSet.setKey)
             val next=if(sameIssued && actual.reps<=upper &&
-                actual.actualRir!!>=2) (observed+1).coerceAtMost(upper)
+                checkNotNull(effortForSet.rir)>=2) (observed+1).coerceAtMost(upper)
                 else observed
             CustomNextSetCoaching(set.setKey,actual.reps,next,
-                actual.actualRir!!,next>observed)
+                actual.actualRir,next>observed,effortForSet.rir,effortForSet.source)
         }
         val increased=suggestions.any{it.changed}
 
@@ -320,6 +329,7 @@ object CustomNextWorkoutCoachingDomain {
                     }.getOrNull()
                     observedLoad=reviewed?.currentObservedLoad
                     candidate=reviewed?.reviewCandidate
+                    if(reviewed!=null)assumedForReview=maxOf(assumedForReview,reviewed.assumedGoalRirSetCount)
                 }
             }
         }

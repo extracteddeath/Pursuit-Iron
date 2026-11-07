@@ -64,7 +64,10 @@ class OverloadRecoveryLoadReviewTest {
         val mixedEarlier = session("before", loads = listOf(200, 205, 210, 215))
         assertNull(review(earlier = mixedEarlier).candidateReturnLoad)
         val missingEffort = session("before", reported = false)
-        assertNull(review(earlier = missingEffort).candidateReturnLoad)
+        assertEquals(n(200),review(earlier = missingEffort).candidateReturnLoad)
+        assertEquals(4,review(earlier = missingEffort).assumedGoalRirSetCount)
+        val noGoal=missingEffort.copy(observations=missingEffort.observations.map {it.copy(issuedRir=null)})
+        assertNull(review(earlier=noGoal).candidateReturnLoad)
         val nearFailure = session("before", rir = listOf(2, 2, 2, 1))
         assertNull(review(earlier = nearFailure).candidateReturnLoad)
     }
@@ -115,8 +118,9 @@ class OverloadRecoveryLoadReviewTest {
             overload.observations.mapIndexed { i, row ->
                 if (i == 3) row.copy(actualRir = null) else row
             })
-        assertEquals(OverloadRecoveryReason.INSUFFICIENT_LATEST_EVIDENCE,
+        assertEquals(OverloadRecoveryReason.RETURN_TO_DEMONSTRATED_LOAD_FOR_REVIEW,
             review(latest = omittedRir).reason)
+        assertEquals(1,review(latest=omittedRir).assumedGoalRirSetCount)
         val dippedBelowPrior = session("after", listOf(195, 205, 210, 215),
             listOf(3, 3, 2, 2))
         assertEquals(OverloadRecoveryReason.INSUFFICIENT_LATEST_EVIDENCE,

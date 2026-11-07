@@ -117,7 +117,8 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         return (issued as NativeKotlinIssueResult.Committed).journal
     }
     private fun complete(id:Int,day:Int,
-        sessionPolicies:List<ExercisePrescriptionPolicy> = policies
+        sessionPolicies:List<ExercisePrescriptionPolicy> = policies,
+        actualRir:Int?=2
     ):Pair<KotlinWorkoutJournalState,String> {
         var journal=accept(id,day,sessionPolicies)
         var pressKey=""
@@ -129,7 +130,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             val event=KotlinJournalOperation.RecordSet(
                 "set-$id-$index",journal.revision,target.setKey,
                 KotlinJournalSetOutcome.COMPLETED,
-                KotlinPerformedSet(load.value,load.unit,12,2))
+                KotlinPerformedSet(load.value,load.unit,12,actualRir))
             val written=journals.appendStored(
                 "owner-1",journal.snapshot.workoutId,event,
                 approvals::canAccessIssuedWorkout)
@@ -696,6 +697,33 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         val targets=(issued as NativeKotlinIssueResult.Committed).journal.snapshot.targets
         assertTrue(targets.filter { it.exerciseId=="db-press" }.all {
             (it.load as DraftSetLoad.Verified).value.compareTo(n("35"))==0
+        })
+    }
+
+    @Test fun assumedGoalProgressionSurvivesRealHistoryAcceptanceAndColdOpenWithActualRirNull() {
+        enrolled()
+        complete(1,1,actualRir=null)
+        complete(2,1,actualRir=null)
+        val shown=(review() as NativeOwnerLoadReviewResult.Review)
+            .coaching as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,shown.coaching.status)
+        assertEquals(n("35"),shown.coaching.candidateLoad)
+        assertTrue(shown.coaching.explanation.contains("assumes their original goal RIR"))
+        assertTrue(accept(intent(shown)) is NativeKotlinCoachAcceptanceResult.Committed)
+        val cold=KotlinNativeJournalFileStore(root)
+        for(id in listOf("workout-1","workout-2")) {
+            val restored=cold.openStored("owner-1",id,approvals::canAccessIssuedWorkout)
+                as NativeJournalFileResult.Durable
+            assertTrue(restored.journal.snapshot.targets.all {it.targetRir==2})
+            assertTrue(restored.journal.effectiveSets.values.all {
+                (it.operation as KotlinJournalOperation.RecordSet).performed?.actualRir==null
+            })
+        }
+        val issued=NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+            .issue("owner-1","workout-3") as NativeKotlinIssueResult.Committed
+        assertTrue(issued.journal.effectiveSets.isEmpty())
+        assertTrue(issued.journal.snapshot.targets.filter {it.exerciseId=="db-press"}.all {
+            (it.load as DraftSetLoad.Verified).value.compareTo(n("35"))==0 && it.targetRir==2
         })
     }
 

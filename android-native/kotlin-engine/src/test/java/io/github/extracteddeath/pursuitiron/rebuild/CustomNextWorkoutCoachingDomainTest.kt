@@ -135,9 +135,16 @@ class CustomNextWorkoutCoachingDomainTest {
         assertEquals(1,stable.nextSetSuggestions.maxOf{
             it.proposedNextReps-it.observedReps
         })
-        assertEquals(CustomNextWorkoutCoachingStatus.NEEDS_RECORDED_EFFORT,
-            review(sessions=listOf(completed(1,3),
-                completed(2,4,rirs=listOf(2,null)))).status)
+        val assumed=review(sessions=listOf(completed(1,3),
+            completed(2,4,rirs=listOf(2,null))))
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,assumed.status)
+        assertEquals(n(205),assumed.loadReviewCandidate)
+        assertEquals(1,assumed.assumedGoalRirSetCount)
+        val unreported=assumed.nextSetSuggestions[1]
+        assertNull(unreported.actualRir)
+        assertEquals(2,unreported.progressionRir)
+        assertEquals(ProgressionEffortSource.ASSUMED_GOAL,unreported.effortSource)
+        assertTrue(assumed.explanation.contains("assumes their original goal RIR"))
         assertEquals(CustomNextWorkoutCoachingStatus.HOLD_NEAR_FAILURE,
             review(sessions=listOf(completed(1,3),
                 completed(2,4,rirs=listOf(2,1)))).status)
@@ -165,6 +172,24 @@ class CustomNextWorkoutCoachingDomainTest {
             late.status)
         assertEquals("workout-6-0",late.latestWorkoutId)
         assertTrue(late.nextSetSuggestions.isEmpty())
+    }
+
+    @Test fun customRepAmendmentUsesAuthenticGoalAssumptionsWithoutInventingActualRir() {
+        val latest=completed(2,4,reps=listOf(5,6),rirs=listOf(null,null))
+        val original=snapshot(5)
+        val result=review(next=original,sessions=listOf(completed(1,3),latest))
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,result.status)
+        val amended=CustomNextRepAmendmentDomain.propose(original,"main",result)
+        assertTrue(amended.toString(),amended is CustomNextRepAmendmentResult.Proposed)
+        assertEquals(listOf(6,7),(amended as CustomNextRepAmendmentResult.Proposed).amendment.nextMinimumReps)
+        assertTrue(result.nextSetSuggestions.all {it.actualRir==null && it.progressionRir==2})
+        assertTrue(latest.evidence.visits.all {it.actual?.actualRir==null})
+        assertTrue(amended.amendment.amended.slots.single().sets.all {it.prescription.targetRir==2})
+        val forged=result.copy(nextSetSuggestions=result.nextSetSuggestions.mapIndexed {i,s->
+            if(i==0)s.copy(progressionRir=5) else s
+        })
+        assertEquals(CustomNextRepAmendmentResult.Rejected(CustomNextRepAmendmentRefusal.SUGGESTIONS_CHANGED),
+            CustomNextRepAmendmentDomain.propose(original,"main",forged))
     }
 
     @Test fun futureCompletionOnDifferentWeekdayDoesNotBlockIndependentDay() {

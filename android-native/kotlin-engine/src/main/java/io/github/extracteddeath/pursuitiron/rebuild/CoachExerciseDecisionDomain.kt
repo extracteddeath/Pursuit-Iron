@@ -34,7 +34,8 @@ enum class CoachEvidenceFlag {
     REPS_BELOW_TARGET, SOME_SETS_BELOW_CEILING, DIFFERENT_SET_LOADS,
     COMPLETED_AT_CEILING, REPEATABLE_PERFORMANCE, REPORTED_NEAR_FAILURE,
     EFFORT_NOT_REPORTED, DEVICE_LOAD_NOT_VERIFIED, ACTUAL_SET_MISSING,
-    FAILED_ATTEMPT, READINESS_LOW, USER_REPORTED_RESTRICTION
+    FAILED_ATTEMPT, READINESS_LOW, USER_REPORTED_RESTRICTION,
+    GOAL_RIR_ASSUMED
 }
 
 data class CoachExerciseContext(
@@ -120,6 +121,8 @@ object CoachExerciseDecisionDomain {
         }.mapNotNull {it.actualRir}
         val missingRir=latestFacts.actualRirReportedOrdinals.size!=last.expectedWorkingSets
         val nearFailure=observedRir.any {it<=1}
+        val latestEffort=last.observations.map(ProgressionEffortDomain::resolve)
+        val nearLimit=latestEffort.any {it.rir!=null && it.rir<=1}
 
         val flags=linkedSetOf<CoachEvidenceFlag>()
         if(missingRir) flags+=CoachEvidenceFlag.EFFORT_NOT_REPORTED
@@ -137,10 +140,14 @@ object CoachExerciseDecisionDomain {
 
         fun result(direction:CoachDirection,confidence:CoachConfidence,
             explanation:String,candidate:BigDecimal?=null,
-            repTargets:List<Int>?=null)=
-            CoachExerciseReview(direction,confidence,candidate,explanation,
+            repTargets:List<Int>?=null,assumedCount:Int=0):CoachExerciseReview {
+            if(assumedCount>0)flags+=CoachEvidenceFlag.GOAL_RIR_ASSUMED
+            return CoachExerciseReview(direction,
+                if(assumedCount>0)CoachConfidence.LIMITED else confidence,
+                candidate,explanation+ProgressionEffortDomain.assumptionNote(assumedCount),
                 flags.toSet(),chronologicalSessions.size,currentLoad,
                 repTargets)
+        }
 
         // Exercise restrictions and day readiness are separate from
         // performance failure; never mark a recovery substitution as
@@ -181,8 +188,9 @@ object CoachExerciseDecisionDomain {
                 if(review.candidateRepTargets!=null)
                     return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
                         CoachConfidence.MODERATE,
-                        "Each authored set kept its own verified weight. Recorded effort supports reviewing one more rep on one set without changing any load.",
-                        repTargets=review.candidateRepTargets)
+                        "Each authored set kept its own verified weight. Progression effort supports reviewing one more rep on one set without changing any load.",
+                        repTargets=review.candidateRepTargets,
+                        assumedCount=review.assumedGoalRirSetCount)
             }
             return result(CoachDirection.STABILIZE_SET_LOADING,CoachConfidence.LIMITED,
                 "Working weights varied across the sets. Use the full set history to choose a repeatable load; the heaviest set alone is not a starting target.")
@@ -196,13 +204,16 @@ object CoachExerciseDecisionDomain {
                 if(repReview.candidateRepTargets!=null)CoachConfidence.MODERATE
                 else CoachConfidence.LIMITED,
                 if(repReview.candidateRepTargets!=null)
-                    "Your recorded effort supports reviewing one additional rep on one set, while preserving other sets and the current load. This does not change your workout targets."
+                    "Your progression effort supports reviewing one additional rep on one set, while preserving other sets and the current load. This does not change your workout targets."
                 else "Keep building quality reps at the current load. No safe set-specific rep increase is demonstrated yet.",
-                repTargets=repReview.candidateRepTargets)
+                repTargets=repReview.candidateRepTargets,
+                assumedCount=if(repReview.candidateRepTargets!=null)repReview.assumedGoalRirSetCount else 0)
         }
-        if(nearFailure)
-            return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,CoachConfidence.MODERATE,
-                "All sets reached the top of the rep range, but reported effort was very high. Repeat or recover before reviewing an increase.")
+        if(nearLimit)
+            return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,
+                if(nearFailure)CoachConfidence.MODERATE else CoachConfidence.LIMITED,
+                if(nearFailure) "All sets reached the top of the rep range, but reported effort was very high. Repeat or recover before reviewing an increase."
+                else "All sets reached the rep ceiling, but their assumed goal RIR leaves too little reserve for an increase.")
 
         // Look for the most recent comparable prior session, never cherry
         // pick an older success past intervening contradictory evidence.
@@ -214,21 +225,22 @@ object CoachExerciseDecisionDomain {
                 facts.ceilingOrdinals.size==prior.expectedWorkingSets &&
                 !facts.mixedActualLoads && facts.belowFloorOrdinals.isEmpty() &&
                 !prior.observations.any {
-                    it.outcome==SetOutcome.COMPLETED && it.actualRir!=null && it.actualRir<=1
+                    ProgressionEffortDomain.resolve(it).rir?.let {rir->rir<=1}==true
                 } && observedUniformLoad(prior)?.compareTo(currentLoad)==0
         }
         if(!repeatable)
             return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,CoachConfidence.MODERATE,
                 "This is a promising session. Repeat a comparable performance before reviewing a load increase.")
-        // An issued RIR goal is never evidence of actual effort. A separate
-        // conservative progression gate already requires all sets' observed
-        // RIR for BOTH workouts. Never give contradictory "increase" advice.
+        // Preserve factual missing-RIR flags while allowing the ORIGINAL
+        // goal as an explicitly disclosed progression assumption.
         val previousMissingRir=assessments[priorIndex].actualRirReportedOrdinals.size!=
             last.expectedWorkingSets
         if(previousMissingRir) flags+=CoachEvidenceFlag.EFFORT_NOT_REPORTED
-        if(missingRir || previousMissingRir)
+        val comparedEffort=(chronologicalSessions[priorIndex].observations+
+            last.observations).map(ProgressionEffortDomain::resolve)
+        if(comparedEffort.any {it.rir==null})
             return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,CoachConfidence.LIMITED,
-                "Your reps are promising, but actual effort was not recorded for every set in both workouts. Keep the current load and record RIR when possible before reviewing an increase.")
+                "Your reps are promising, but some sets have neither actual RIR nor an original goal RIR. Review that effort context before increasing the load.")
         flags+=CoachEvidenceFlag.REPEATABLE_PERFORMANCE
 
         val load=currentLoad ?: return result(CoachDirection.STABILIZE_SET_LOADING,
@@ -252,9 +264,15 @@ object CoachExerciseDecisionDomain {
             return result(CoachDirection.VERIFY_LOADING_OPTIONS,CoachConfidence.LIMITED,
                 "The next available weight exceeds your approved increment. Hold the current load or adjust your equipment options.")
         }
+        val eligible=ConservativeProgressionReview.assess(
+            chronologicalSessions[priorIndex],last,context.availableLoads,
+            context.maximumStepForReview)
+        if(!eligible.canOfferIncrease)
+            return result(CoachDirection.REPEAT_SUCCESSFUL_PERFORMANCE,CoachConfidence.LIMITED,
+                "The completed work has not earned a change to the original issued load. Keep the current load and review the full prescription.")
         return result(CoachDirection.REVIEW_SMALL_INCREASE,
             CoachConfidence.MODERATE,
-            "The full working sets reached the rep target in consecutive sessions with actual effort recorded and no near-failure. Review a small, equipment-valid increase.",
-            next)
+            "The full working sets reached the rep target in consecutive sessions with sufficient effort reserve. Review a small, equipment-valid increase.",
+            next,assumedCount=eligible.assumedGoalRirSetCount)
     }
 }

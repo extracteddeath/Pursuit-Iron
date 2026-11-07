@@ -120,6 +120,22 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
         })
     }
 
+    @Test fun anUnreportedRirMayUseItsOriginalGoalForOneRepWhileFactsStayUnreported() {
+        val previous=observed(rir=listOf(null,null,null)).let {w->w.copy(
+            observations=w.observations.map {it.copy(issuedRir=3)})}
+        val next=stagedRequest(p=policies().map {it.copy(targetRir=3)})
+        val proposed=candidate(request(previous=previous,next=next))
+        assertEquals(listOf(14,13,13),proposed.newRepTargets)
+        assertEquals(3,proposed.assumedGoalRirSetCount)
+        assertTrue(previous.observations.all {it.actualRir==null})
+        assertTrue(proposed.workout.targets.all {it.targetRir==3})
+        val explicitFailure=previous.copy(observations=previous.observations.mapIndexed {i,s->
+            if(i==2)s.copy(actualRir=0) else s
+        })
+        assertTrue(KotlinAdaptiveSetPrescriptionDomain.draft(request(
+            previous=explicitFailure,next=next)) is AdaptiveSetPrescriptionResult.Rejected)
+    }
+
     @Test fun aMissedExactTargetIsRepeatedNotFalselyLabeledEarned() {
         val last=listOf(14,14,12)
         val proposal=candidate(request(
@@ -154,9 +170,12 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
                 AdaptiveSetPrescriptionResult.Rejected).reason)
     }
 
-    @Test fun noUnobservedRepsNearFailureOrMissingEffortCanGenerateNextTargets() {
+    @Test fun noUnobservedRepsNearFailureOrUnavailableEffortCanGenerateNextTargets() {
         val cases=listOf(
-            request(previous=observed(rir=listOf(3,null,2))),
+            request(previous=observed(rir=listOf(3,null,2)).let {w->w.copy(
+                observations=w.observations.map {s->
+                    if(s.workingOrdinal==1)s.copy(issuedRir=null) else s
+                })}),
             request(previous=observed(rir=listOf(3,3,1))),
             request(previous=observed(rir=listOf(2,2,2))),
             request(previous=observed(reps=listOf(14,9,12))),

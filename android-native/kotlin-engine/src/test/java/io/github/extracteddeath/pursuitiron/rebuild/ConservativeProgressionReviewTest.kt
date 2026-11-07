@@ -75,12 +75,31 @@ class ConservativeProgressionReviewTest {
             review(next=workout("week-two",performed=listOf(8,8,7,6))).reason)
     }
 
-    @Test fun missingActualRirCanNeverBeBorrowedFromTargets() {
+    @Test fun missingActualRirUsesGoalAsDisclosedAssumptionWithoutChangingFacts() {
         val missing=workout("week-two",rir=listOf(null,null,null,null),targetRir=3)
-        assertEquals(IncreaseReviewReason.ACTUAL_RIR_MISSING,review(next=missing).reason)
-        assertEquals(IncreaseReviewReason.ACTUAL_RIR_MISSING,
+        assertEquals(IncreaseReviewReason.QUALIFIED_FOR_REVIEW,review(next=missing).reason)
+        assertEquals(n(205),review(next=missing).reviewCandidate)
+        assertEquals(4,review(next=missing).assumedGoalRirSetCount)
+        assertEquals(IncreaseReviewReason.QUALIFIED_FOR_REVIEW,
             review(old=workout("week-one",rir=listOf(null,2,2,2))).reason)
         assertEquals(0,review(next=missing).latest.actualRirReportedOrdinals.size)
+        assertTrue(missing.observations.all {it.actualRir==null && it.issuedRir==3})
+        val both=workout("week-one",rir=List(4){null})
+        assertEquals(8,review(old=both,next=missing).assumedGoalRirSetCount)
+        val unavailable=missing.copy(observations=missing.observations.map {it.copy(issuedRir=null)})
+        assertEquals(IncreaseReviewReason.ACTUAL_RIR_MISSING,review(next=unavailable).reason)
+        assertNull(review(next=unavailable).reviewCandidate)
+    }
+
+    @Test fun actualEffortOverridesGoalAndMissedRepsNeverEarnAnAssumedIncrease() {
+        val explicit=workout("week-two",rir=listOf(null,null,null,0),targetRir=3)
+        assertEquals(IncreaseReviewReason.TOO_CLOSE_TO_FAILURE,review(next=explicit).reason)
+        assertNull(review(next=explicit).reviewCandidate)
+        val missed=workout("week-two",performed=listOf(8,8,8,4),rir=List(4){null})
+        assertEquals(IncreaseReviewReason.BELOW_REP_FLOOR,review(next=missed).reason)
+        assertNull(review(next=missed).reviewCandidate)
+        val littleReserve=workout("week-two",rir=List(4){null},targetRir=1)
+        assertEquals(IncreaseReviewReason.TOO_CLOSE_TO_FAILURE,review(next=littleReserve).reason)
     }
 
     @Test fun nearFailureInEitherWorkoutBlocksEvenTwoAllCeilingSessions() {

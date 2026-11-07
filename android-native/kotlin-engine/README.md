@@ -1,5 +1,20 @@
 # Pursuit Iron — independent Kotlin training engine
 
+## Goal RIR when effort is unreported — 2026-11-07
+
+Ordinary progression assumes the **original issued goal RIR for that set**
+when actual RIR was not entered. The shared `ProgressionEffortDomain` identifies
+reported, assumed-goal and unavailable effort separately. A real report,
+including zero, always overrides the goal. Neither source available means
+unknown effort; failed/skipped sets receive no assumed successful effort.
+
+Generated and custom load/rep reviews expose goal assumptions while historical
+actuals stay null. Missed reps, near-failure reports, restrictions, equipment
+validation and assistance switches retain precedence. This applies to review
+calculations, not retroactive history edits or invented fatigue observations.
+The earlier benchmark advantage based on blocking all unreported-RIR
+progression is withdrawn; the paired comparison uses this clarified policy.
+
 ## End state: full native replacement, not a permanent JavaScript bridge
 
 The agreed destination is a **Kotlin-only training engine and fully native
@@ -354,9 +369,10 @@ from **two comparable sessions** with the independently verified loading
 catalog. It produces a candidate *for review*, never an issued target.
 
 Eligibility requires all working sets completed at the rep ceiling in both
-sessions, an unchanged observed baseline load, actual (not target) RIR at
-least 2 on every set, confirmed exact loading stock, an attainable next
-increment and a bounded user-authorized maximum step. Missing RIR, near
+sessions, an unchanged observed baseline load, reported RIR or an explicitly
+disclosed original-goal assumption of at least 2 on every set, confirmed exact
+loading stock, an attainable next increment and a bounded user-authorized
+maximum step. Missing both actual and original goal RIR, near
 failure, incomplete/skipped/failed work, mixed loads, zero-load/bodyweight
 ambiguity and fabricated equipment all block auto-promotion. It never
 silently changes the athlete's loads, reduces an unachieved load, issues
@@ -464,7 +480,7 @@ loading semantics, or adjust for user-reported low readiness/restrictions.
 This avoids the earlier prototype's rigid all-set-RIR gate: if performance
 is repeatable but RIR is missing, it **does not invent effort** or stop
 progress entirely. It offers a possible increase **for review** with limited
-confidence and explicitly asks to confirm effort. Reported near-failure,
+confidence and explicitly identifies the original-goal assumption. Reported near-failure,
 skips/failed attempts, unverified equipment and oversize increments still
 block a load jump. No user-entered value or workout is changed.
 

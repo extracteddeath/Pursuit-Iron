@@ -18,7 +18,7 @@ Do not invent a second week composer, progression system, journal writer or cust
 - Kotlin is the only eventual Android training decision authority. No hidden JavaScript/WebView/network fallback.
 - Native storage is the only authority for profile, gym, approved program, issued workout, actual sets, corrections and history. Decision functions are pure and reproducible.
 - Never mutate completed sets, pinned issued targets, old program revisions or custom history. Corrections are separate authenticated events.
-- An unknown actual RIR, unconfirmed equipment increment, missing slot mapping or unreviewed coaching parameter stays **unknown**, never zero or guessed.
+- Unreported actual RIR stays **unreported in history**. Ordinary progression may explicitly assume that set's original goal RIR; reported effort always wins. With neither source available, effort remains unknown. Unconfirmed equipment, slot mappings and coaching parameters are never guessed.
 - User restrictions, equipment, hard session limit, split/day locks, recovery minimums, prescribed volume ceilings and explicit permissions outrank any optimization score.
 - A candidate is NOT an accepted program. A permitted *suggestion* is NOT permission to apply it silently.
 
@@ -107,7 +107,9 @@ The prescribed progression belongs to **exercise occurrence/slot and training pu
 | Recovery/deload | Respond to sustained strain, low readiness, recent restriction and planned block context; alter the next actual prescription and review recovery outcome | Merely display “deload recommended” while issuing unchanged workload |
 | Technique/method progression | Handle warmups, drops, myo, rest-pause, cluster and supersets as typed workloads with appropriate rest, inventory and set counts | Drop amplifiers when transitioning cycles or count their extensions as arbitrary normal sets |
 
-Always distinguish *conservative no increase*, *specific repeat*, *specific lower load*, *recovery substitution*, *insufficient evidence* and *unresolvable constraint*. Unknown actual RIR reduces confidence; it is not permission to increase. Next set/session/day/block decisions must use the SAME native authenticated receipts and revision watermarks.
+Always distinguish *conservative no increase*, *specific repeat*, *specific lower load*, *recovery substitution*, *insufficient evidence* and *unresolvable constraint*. When actual RIR is unreported, ordinary progression assumes the original issued goal RIR and identifies that assumption. It may earn the normal rep/load step when all other requirements pass. Neither source available means unknown effort, not an invented default. Next set/session/day/block decisions must use the SAME native authenticated receipts and revision watermarks.
+
+**RIR fallback decision — 2026-11-07:** reported RIR, including zero, overrides the goal. A blank report can use only the original immutable goal for that same set, with `ASSUMED_GOAL` provenance and a clear review explanation. Never write the assumed value into actuals, count it as reported effort or infer fatigue/near-failure from the assumption alone. Missed reps, failed/skipped sets, recovery restrictions, physical loading checks and assistance switches retain precedence. The earlier benchmark's claimed advantage from withholding all progression on missing RIR is withdrawn.
 
 ## 6. Adaptive feedback loop and precedence
 

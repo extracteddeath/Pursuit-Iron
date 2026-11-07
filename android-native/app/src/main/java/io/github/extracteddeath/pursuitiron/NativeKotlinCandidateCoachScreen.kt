@@ -249,6 +249,9 @@ internal fun NativeKotlinCandidateCoachScreen(
                         style=MaterialTheme.typography.bodyMedium)
                     Text("Built from the most recent verified, corrected workout. This is a preview only; already-issued sessions are never changed.",
                         style=MaterialTheme.typography.bodySmall)
+                    if(candidate.assumedGoalRirSetCount>0)
+                        Text(ProgressionEffortDomain.assumptionNote(candidate.assumedGoalRirSetCount).trim(),
+                            style=MaterialTheme.typography.bodySmall)
                     val sets=candidate.workout.targets.filter {
                         it.exerciseId==candidate.exerciseId &&
                             it.type==DraftSetType.WORKING

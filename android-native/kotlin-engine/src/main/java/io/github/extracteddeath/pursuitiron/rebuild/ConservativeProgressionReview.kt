@@ -8,7 +8,8 @@ import java.math.BigDecimal
  *
  * Two independent, comparable workouts must show every working set at the
  * target rep ceiling, the SAME physically confirmed load, and actually
- * reported RIR >= 2 on every set. Issued/target RIR is never substituted.
+ * reported RIR >= 2 or, when unreported, an explicitly identified original
+ * goal-RIR assumption. This calculation never rewrites logged actual effort.
  *
  * This deliberately conservative first rule will later be complemented by
  * explicit fatigue, longitudinal evidence, individual variability and
@@ -45,7 +46,8 @@ data class IncreaseReview(
     val currentObservedLoad: BigDecimal?,
     val reviewCandidate: BigDecimal?,
     val previous: ProgressionEvidence,
-    val latest: ProgressionEvidence
+    val latest: ProgressionEvidence,
+    val assumedGoalRirSetCount: Int = 0
 ) {
     val canOfferIncrease: Boolean
         get() = reason == IncreaseReviewReason.QUALIFIED_FOR_REVIEW &&
@@ -60,7 +62,7 @@ data class IncreaseReview(
 object ConservativeProgressionReview {
     private val zero=BigDecimal.ZERO
     private val maxAllowedStep=BigDecimal("100000")
-    private val minimumActualRir=2
+    private val minimumProgressionRir=2
 
     private fun onlyObservedLoad(workout: ProgressionWorkoutEvidence): BigDecimal? {
         val actual=workout.observations.filter { it.outcome == SetOutcome.COMPLETED }
@@ -91,11 +93,13 @@ object ConservativeProgressionReview {
 
         val previousFacts=reviewedEvidence(previous)
         val latestFacts=reviewedEvidence(latest)
+        val effort=(previous.observations+latest.observations)
+            .map(ProgressionEffortDomain::resolve)
         val currentLoad=onlyObservedLoad(latest)
         fun result(reason: IncreaseReviewReason,candidate: BigDecimal?=null)=
             IncreaseReview(reason,currentLoad?.let {
                 BigDecimal(it.stripTrailingZeros().toPlainString())
-            },candidate,previousFacts,latestFacts)
+            },candidate,previousFacts,latestFacts,effort.count {it.assumed})
 
         // Latest failure has priority over earlier "success" and never triggers
         // an automatic weight reduction or promotion to the heaviest observed set.
@@ -115,16 +119,11 @@ object ConservativeProgressionReview {
             onlyObservedLoad(previous)?.compareTo(currentLoad) != 0)
             return result(IncreaseReviewReason.NEEDS_SECOND_COMPARABLE_SESSION)
 
-        // Data integrity: the presence of an issued target RIR is irrelevant.
-        if(previousFacts.actualRirReportedOrdinals.size!=previous.expectedWorkingSets ||
-            latestFacts.actualRirReportedOrdinals.size!=latest.expectedWorkingSets)
+        // The original issued goal may guide progression as an assumption.
+        // Actual reports always override it, including explicit 0/1 RIR.
+        if(effort.any {it.rir==null})
             return result(IncreaseReviewReason.ACTUAL_RIR_MISSING)
-
-        if(previous.observations.any {
-                it.outcome==SetOutcome.COMPLETED && it.actualRir!! < minimumActualRir
-            } || latest.observations.any {
-                it.outcome==SetOutcome.COMPLETED && it.actualRir!! < minimumActualRir
-            })
+        if(effort.any {checkNotNull(it.rir)<minimumProgressionRir})
             return result(IncreaseReviewReason.TOO_CLOSE_TO_FAILURE)
 
         val observed=checkNotNull(currentLoad)

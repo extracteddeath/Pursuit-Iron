@@ -77,11 +77,21 @@ class FatigueAwareRepTargetReviewDomainTest {
         assertEquals(2,nearTop.proposedOrdinal)
     }
 
-    @Test fun missingActualRirCannotInheritTargetOrFakeRepHeadroom() {
-        assertEquals(FatigueRepReviewReason.ACTUAL_EFFORT_NOT_REPORTED,
-            review(session(rir=listOf(3,null,2))).reason)
-        assertNull(review(session(rir=listOf(3,null,2))).candidateRepTargets)
-        assertNull(review(session(rir=listOf(null,null,null))).candidateRepTargets)
+    @Test fun goalAssumptionsPreserveMissingActualsAndDoNotInventExtraHeadroom() {
+        val mixed=review(session(rir=listOf(3,null,2)))
+        assertEquals(listOf(15,13,12),mixed.candidateRepTargets)
+        assertEquals(1,mixed.assumedGoalRirSetCount)
+        assertEquals(FatigueRepReviewReason.NO_DEMONSTRATED_EFFORT_HEADROOM,
+            review(session(rir=listOf(null,null,null))).reason)
+        val original=session(rir=listOf(null,null,null)).let {w->w.copy(
+            observations=w.observations.map {it.copy(issuedRir=3)})}
+        val assumed=review(original)
+        assertEquals(listOf(14,13,13),assumed.candidateRepTargets)
+        assertEquals(3,assumed.assumedGoalRirSetCount)
+        assertTrue(original.observations.all {it.actualRir==null})
+        val unavailable=original.copy(observations=original.observations.map {it.copy(issuedRir=null)})
+        assertEquals(FatigueRepReviewReason.ACTUAL_EFFORT_NOT_REPORTED,review(unavailable).reason)
+        assertNull(review(unavailable).candidateRepTargets)
     }
 
     @Test fun nearFailureOrLowReadinessAlwaysWinsOverFirstSetStrength() {
@@ -147,7 +157,8 @@ class FatigueAwareRepTargetReviewDomainTest {
         val unknown=CoachExerciseDecisionDomain.review(listOf(
             session(rir=listOf(3,null,2))),context)
         assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,unknown.direction)
-        assertNull(unknown.nextRepTargetsForReview)
+        assertEquals(listOf(15,13,12),unknown.nextRepTargetsForReview)
+        assertTrue(unknown.explanation.contains("assumes their original goal RIR"))
         assertNull(unknown.nextLoadToReview)
         val poorlyRecovered=CoachExerciseDecisionDomain.review(listOf(
             session(rir=listOf(3,3,1))),context)

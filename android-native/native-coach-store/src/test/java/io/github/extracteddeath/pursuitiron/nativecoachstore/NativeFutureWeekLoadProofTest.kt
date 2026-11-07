@@ -1,6 +1,7 @@
 package io.github.extracteddeath.pursuitiron.nativecoachstore
 
 import java.math.BigDecimal
+import io.github.extracteddeath.pursuitiron.rebuild.CoachReadiness
 import org.junit.Assert.*
 import org.junit.Test
 

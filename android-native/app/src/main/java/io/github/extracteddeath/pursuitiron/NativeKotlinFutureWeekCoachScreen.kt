@@ -543,6 +543,13 @@ internal fun NativeKotlinCustomDayCoachingSummary(
                 val proposed=set.proposedLoad.stripTrailingZeros().toPlainString()
                 Text("Set ${set.ordinal}: $authored → $proposed ${set.unit.name.lowercase()}$basis · start with ${set.startingReps} reps · goal ${set.targetRir} RIR",
                     style=MaterialTheme.typography.bodyMedium)
+                if(set.effortSource==ProgressionEffortSource.ASSUMED_GOAL) {
+                    set.previousGoalRir?.let {goal->
+                        Text("Previous effort: assumed goal $goal RIR",
+                            color=MaterialTheme.colorScheme.onSurfaceVariant,
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
             if(transition.changesAuthoredLoads) {
                 Text("Proposed weights only. Your saved workout keeps its authored weights until a separately audited change is accepted.",

@@ -222,7 +222,7 @@ object CustomCoachActionReviewDomain {
                 CustomCoachFindingStatus.OBSERVED_CHANGE,
                 "week.${change.toWeek}.training-workload",
                 "Training-week workload changed",
-                "The authored program schedules ${change.workingSetsBefore} working sets in training week ${change.fromWeek} and ${change.workingSetsAfter} in training week ${change.toWeek}. Without an athlete-reviewed continuity policy this is a comparison, not proof of an unsafe or beneficial change.",
+                "The authored program schedules ${change.workingSetsBefore} working sets in training week ${change.fromWeek} and ${change.workingSetsAfter} in training week ${change.toWeek}. This comparison alone is not proof of an unsafe or beneficial change; review the athlete-specific continuity decision.",
                 change.toWeek,weeks[change.toWeek]?.blockId,
                 "Week ${change.fromWeek} → ${change.toWeek} · ${change.fromPhase.name.lowercase()} → ${change.toPhase.name.lowercase()}",
                 listOf(

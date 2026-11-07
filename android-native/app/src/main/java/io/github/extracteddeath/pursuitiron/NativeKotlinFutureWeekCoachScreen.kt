@@ -172,7 +172,7 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                         val result=withContext(Dispatchers.IO) {
                             runCatching {
                                 host.previewActivatedFutureWorkout(
-                                    absoluteWeek,weekday,inputs)
+                                    inputs,absoluteWeek,weekday)
                             }.getOrNull()
                         }
                         session=(result as? CustomWorkoutSnapshotResult.Preview)

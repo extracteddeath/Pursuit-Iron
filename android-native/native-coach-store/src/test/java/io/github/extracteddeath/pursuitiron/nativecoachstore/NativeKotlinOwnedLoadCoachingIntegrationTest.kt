@@ -835,11 +835,15 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
             review.coaching.status)
         assertEquals(listOf(1),review.coaching.affectedDayIndices)
+        assertTrue(review.supersedesAcceptedRepTargets)
         val request=intent(review).copy(
             expectedApprovalRevision=3,newWorkoutId="workout-new-load",
             newGrantId="grant-new-load",
             newStorageReceiptId="storage-new-load")
-        val result=accept(request)
+        assertEquals(NativeKotlinCoachAcceptanceResult.Rejected(
+            NativeKotlinCoachAcceptanceRefusal.REP_APPROVAL_SUPERSESSION_NOT_CONFIRMED),
+            accept(request))
+        val result=accept(request.copy(allowSupersedingAcceptedReps=true))
         assertTrue(result.toString(),result is NativeKotlinCoachAcceptanceResult.Committed)
         val restored=checkNotNull(NativeKotlinApprovalFileAuthority(
             root,fence,identity).currentOwnedApproval("owner-1"))

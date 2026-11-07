@@ -435,7 +435,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                     ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.CONSENT_CHANGED)
                 val currentFuture=futureWeek?.preview(ownerKey,cycleId,
-                    consent.blockId,inputs,absoluteWeek,weekday,slot)
+                    consent.blockId,inputs,absoluteWeek,weekday,slot,
+                    workoutId)
                     as? NativeAcceptedFutureWeekLoadHandoff.Ready
                     ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                         NativeCustomJournalRefusal.CONSENT_CHANGED)

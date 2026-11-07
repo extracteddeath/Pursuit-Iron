@@ -203,6 +203,31 @@ internal class NativeKotlinCustomCycleController(
     }
 
     /**
+     * A changed on-screen policy draft is NOT the previously reviewed policy.
+     * Invalidate the remembered audit and consent status without altering
+     * any durable athlete consent, program, or issued workout. A fresh source-
+     * and revision-backed review is required before another signoff.
+     */
+    fun markPolicyInputsChanged() {
+        val previous=current.value
+        if(previous.busy || (previous.coachingAudit==null &&
+            previous.reviewedCoachInputs==null)) return
+        auditedInputs=null
+        val staleSignoff=when(val old=previous.signoff) {
+            is NativeCustomSignoffRead.Found->old.copy(isCurrent=false)
+            else -> old
+        }
+        current.value=previous.copy(
+            coachingAudit=null,
+            reviewedCoachInputs=null,
+            auditSourceRevision=null,
+            consentBoundPreview=null,
+            preparedWorkout=null,
+            signoff=staleSignoff,
+            message="The policy draft changed. Its previous audit and signoff view are no longer current; run a complete new review.")
+    }
+
+    /**
      * Read-only, full-cycle coaching audit. Source and draft are read from
      * durable storage on IO; a second read refuses stale concurrent updates.
      * No default dose policy or transition time is supplied, and passing

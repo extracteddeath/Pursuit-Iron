@@ -52,7 +52,7 @@ class NativeFutureWeekLoadProofTest {
         assertNotEquals(initial,proof(week=10))
         assertNotEquals(initial,proof(weekday=4))
         assertNotEquals(initial,proof(slot="incline-bench"))
-        assertNotEquals(initial,proof(before="195"))
+        assertNotEquals(initial,proof(before="201"))
         assertNotEquals(initial,proof(after="204"))
         assertNotEquals(initial,proof(readiness=CoachReadiness.LOW))
         assertNotEquals(initial,proof(restricted=true))

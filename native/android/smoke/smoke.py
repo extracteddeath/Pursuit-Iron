@@ -1232,7 +1232,8 @@ if tap(r"Edit program", "editor"):
     # Day setup sits under the lifts, folded: it opens to the day focus
     if seek(r"(^|\|)Day setup"):
         tap(r"(^|\|)Day setup", "editor-day-setup")
-        if not seek(r"DAY FOCUS"):
+        # It opens below the fold at the foot of the list: look down, not up.
+        if not (find(r"DAY FOCUS", timeout=2) or scroll_to(r"DAY FOCUS", tries=4, step=500)):
             FAILS.append("day setup does not open to the day focus")
         tap(r"(^|\|)Day setup", required=False) if find(r"(^|\|)Day setup", timeout=1) else None
     else:

@@ -24,7 +24,7 @@ class NativeFutureWeekLoadConsentFileStoreTest {
 
     private fun store()=NativeKotlinFutureWeekLoadConsentFileStore(
         root,fence,identity,
-        {_,_,_,_,_,_,_,_,_,_->now})
+        {_,_,_,_,_,_,_,_,_,_,_->now})
     private fun preview()=store().preview(
         "owner-1","cycle-1","block-2",coach,9,1,"bench",
         CoachReadiness.NORMAL,false,limit)

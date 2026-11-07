@@ -51,6 +51,11 @@ sealed interface NativePendingCalibrationRead {
     data class Rejected(val reason:NativeCalibrationRefusal):NativePendingCalibrationRead
 }
 
+private data class CalibrationLoadChange(
+    val setKey:String,val authoredLoad:BigDecimal,val proposedLoad:BigDecimal,
+    val unit:LoadUnit,val basis:LoadBasis
+)
+
 /** One-workout consent. Neither the authored cycle nor its signoff is rewritten. */
 class NativeKotlinBlockCalibrationConsentStore(
     private val root:Path,private val fence:NativeKotlinApprovalRevisionFence,
@@ -200,11 +205,33 @@ class NativeKotlinBlockCalibrationConsentStore(
         val signed=owner(key)?:return no(NativeCalibrationRefusal.NOT_AUTHORIZED)
         val reviewed=reviewer.reviewAuthored(key,cycle,inputs,week,day,slot,readiness,restricted,increase)
             as? NativeCustomNextCoachResult.Reviewed ?:return no(NativeCalibrationRefusal.REVIEW_NOT_READY)
-        val advice=reviewed.transitionStartingLoads
+        val entry=reviewed.transitionStartingLoads
+        val continuation=reviewed.sameBlockLoadContinuity
+        val enteringBlock=entry?.status==CustomBlockTransitionLoadStatus.READY_FOR_REVIEW &&
+            entry.changesAuthoredLoads && entry.proposedWorkout!=null
+        val repeatingWeek=!enteringBlock &&
+            continuation?.status==CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT &&
+            continuation.changesAuthoredLoads && continuation.proposedWorkout!=null
         val original=reviewed.nextWorkout
-        val projected=advice?.proposedWorkout
-        if(advice?.status!=CustomBlockTransitionLoadStatus.READY_FOR_REVIEW||
-            !advice.changesAuthoredLoads||original==null||projected==null)
+        val projected=when {
+            enteringBlock -> entry?.proposedWorkout
+            repeatingWeek -> continuation?.proposedWorkout
+            else -> null
+        }
+        if(original==null||projected==null)
+            return no(NativeCalibrationRefusal.REVIEW_NOT_READY)
+        // Both cases remain exact per-set conservative reductions. An ordinary
+        // progression step is NOT an accepted-baseline handoff.
+        val changes=when {
+            enteringBlock -> entry!!.sets.map{
+                CalibrationLoadChange(it.setKey,it.authoredLoad,it.proposedLoad,it.unit,it.basis)
+            }
+            repeatingWeek -> continuation!!.sets.map{
+                CalibrationLoadChange(it.setKey,it.authoredLoad,it.proposedLoad,it.unit,it.basis)
+            }
+            else -> emptyList()
+        }
+        if(changes.isEmpty()||changes.map{it.unit to it.basis}.distinct().size!=1)
             return no(NativeCalibrationRefusal.REVIEW_NOT_READY)
         val draft=(drafts.read(key,cycle) as? NativeCustomDraftReadResult.Found)?.draft
             ?:return no(NativeCalibrationRefusal.REVIEW_NOT_READY)
@@ -248,7 +275,8 @@ class NativeKotlinBlockCalibrationConsentStore(
                 (it.cycleId!=cycle||it.absoluteWeek!=week||it.weekday!=day)}||
             composerId !is NativeJournalFileResult.Rejected||composerId.reason!=NativeJournalFileRefusal.NOT_ISSUED)
             return no(NativeCalibrationRefusal.ALREADY_PREPARED_OR_ISSUED)
-        val proof=listOf("block-calibration-v1",key,signed.athleteId,w,cycle,slot,
+        val proof=listOf(if(repeatingWeek)"same-block-repeat-v1" else "block-calibration-v1",
+            key,signed.athleteId,w,cycle,slot,
             week.toString(),day.toString(),reviewed.historyRevision.toString(),
             reviewed.approvedConsentRevision.toString(),reviewed.assistanceRevision.toString(),
             rights.revision.toString(),readiness.name,restricted.toString(),norm(increase).toPlainString(),
@@ -257,14 +285,13 @@ class NativeKotlinBlockCalibrationConsentStore(
             hash(NativeKotlinCustomWorkoutSnapshotCodec.encode(original)),
             hash(NativeKotlinCustomWorkoutSnapshotCodec.encode(projected))).joinToString("\u0000")
         if(owner(key)!=signed)return no(NativeCalibrationRefusal.NOT_AUTHORIZED)
-        val sets=advice.sets
         val receipt=NativeBlockCalibrationReceipt(key,signed.athleteId,w,cycle,week,day,slot,
             hash(proof.toByteArray(Charsets.UTF_8)),reviewed.historyRevision,
             reviewed.approvedConsentRevision,reviewed.assistanceRevision,rights.revision,
-            source.revision,readiness,restricted,norm(increase),sets.first().unit,sets.first().basis,
-            Collections.unmodifiableList(sets.map{it.setKey}),
-            Collections.unmodifiableList(sets.map{norm(it.authoredLoad)}),
-            Collections.unmodifiableList(sets.map{norm(it.proposedLoad)}))
+            source.revision,readiness,restricted,norm(increase),changes.first().unit,changes.first().basis,
+            Collections.unmodifiableList(changes.map{it.setKey}),
+            Collections.unmodifiableList(changes.map{norm(it.authoredLoad)}),
+            Collections.unmodifiableList(changes.map{norm(it.proposedLoad)}))
         encode(receipt)
         return NativeBlockCalibrationPreview.Ready(receipt,original,projected,audit.weeks.size)
     }

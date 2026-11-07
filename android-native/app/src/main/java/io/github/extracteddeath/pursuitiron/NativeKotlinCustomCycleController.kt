@@ -31,6 +31,9 @@ internal data class NativeKotlinCustomCycleState(
     val sourceRevision: Long? = null,
     val coachingAudit: CustomCoachAudit? = null,
     val auditSourceRevision: Long? = null,
+    /** Inputs from the latest independently rechecked full-cycle audit.
+     * Never persisted, fabricated, or reused after an authored draft edit. */
+    val reviewedCoachInputs: CustomCoachAuditInputs? = null,
     val signoff: NativeCustomSignoffRead? = null,
     val signoffRefusal: NativeCustomSignoffRefusal? = null,
     val authoredPreview: CustomWorkoutDaySnapshot? = null,
@@ -170,6 +173,7 @@ internal class NativeKotlinCustomCycleController(
                             cycleId = result.draft.cycleId,
                             coachingAudit = null,
                             auditSourceRevision = null,
+                            reviewedCoachInputs = null,
                             signoff = host.readCustomCycleConsent(result.draft.cycleId),
                             signoffRefusal = null,
                             authoredPreview = null,
@@ -218,6 +222,7 @@ internal class NativeKotlinCustomCycleController(
         if(source==null || source.athleteId!=disk.draft.athleteId) {
             current.value=current.value.copy(
                 coachingAudit=null,auditSourceRevision=null,
+                reviewedCoachInputs=null,
                 message="No current owner-reviewed native gym and catalog. Complete setup before coach review.")
             return@run
         }
@@ -237,6 +242,7 @@ internal class NativeKotlinCustomCycleController(
         auditedInputs=inputs
         current.value=current.value.copy(
             coachingAudit=result,auditSourceRevision=source.revision,
+            reviewedCoachInputs=inputs,
             signoff=host.readCustomCycleConsent(disk.draft.cycleId,inputs),
             signoffRefusal=null,
             message="Whole-cycle coach audit: ${result.issues.size} actionable issues across ${result.weeks.size} evaluated weeks. No workout approved.")
@@ -605,6 +611,7 @@ internal class NativeKotlinCustomCycleController(
                 current.value = current.value.copy(
                     draft = result.draft, canUndo = false,
                     coachingAudit = null, auditSourceRevision = null,
+                    reviewedCoachInputs = null,
                     signoff = host.readCustomCycleConsent(result.draft.cycleId),
                     signoffRefusal = null,
                     authoredPreview = null,

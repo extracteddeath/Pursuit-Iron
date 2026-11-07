@@ -91,8 +91,8 @@ three domains, blinded coach assessment, device acceptance and explicit user
 acceptance remain open.
 
 **2026-11-07 evidence refresh:** the five raw pairs were retrieved unchanged
-from the successful [native CI execution at 0074d36](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42369051473),
-artifact `13572329261`. The ZIP SHA-256 was independently checked against
+from the successful [native CI execution at 5194ae4](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42372831674),
+artifact `13574880589`. The ZIP SHA-256 was independently checked against
 GitHub's artifact digest; the complete Kotlin policy tree, shared fixture and
 all comparison-runner hashes match the current source. The recorded
 measurements retain the actual executed commit rather than relabeling them
@@ -110,8 +110,11 @@ node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --aud
 
 CI checks out the same frozen web revision, runs both actual policies afresh
 and compares their raw results with the recorded artifact. Its generated run
-outputs are attached separately. Re-recording requires `--record`; CI does not
-silently rewrite the evidence ledger or confer user acceptance.
+outputs are attached separately. Local re-recording uses `--record`. An exact
+CI artifact can also be promoted after independently checking its ZIP digest,
+raw bundle, executed commit, current policy tree and every runner hash through
+the same validators. CI does not silently rewrite the evidence ledger or
+confer user acceptance.
 
 ## Measurement method
 

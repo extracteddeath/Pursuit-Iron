@@ -33,6 +33,13 @@ remain required. Changed source/split/schedule contexts still need fresh
 calibration or a separately verified transition policy. The active web app,
 other native branch and APK freeze remain untouched.
 
+Source verification at [5194ae4](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42372831674):
+646 headless engine tests, 397 native persistence/recovery tests and Android
+application Kotlin compilation passed. Five existing paired load-review cases
+were freshly executed in both engines and passed; they do not measure this new
+phase-calibration workflow or prove full replacement superiority. Phone
+interaction, changed-load acceptance and actual calibrated issuance remain open.
+
 ## Native block-entry history and starting-weight review — 2026-11-07
 
 The isolated Future Week and custom-cycle preview screens now read the actual
@@ -54,8 +61,9 @@ are enforced by the native owner before reading a proposal.
 
 This recommendation changes no targets and needs no redundant acceptance
 transaction: it repeats already-authored weights and still requires the normal
-workout review/issuance. A different new-block load, estimated phase conversion,
-earned cross-block increase and new approval are **not implemented here**.
+workout review/issuance. Different loads now have the separate changed-recipe
+review above; their acceptance/issuance, estimated phase conversions and earned
+cross-block increases are **not implemented in this unchanged-recipe path**.
 Ordinary signed authored cycles now use their existing consent-bound preflight
 and the SAME complete corrected-history reader as activated blocks. They need
 no schedule adaptation to review a block-entry starting weight. Real native-file

@@ -33,6 +33,18 @@ sealed interface NativeCustomDraftWriteResult {
     data class Committed(val revision: Long) : NativeCustomDraftWriteResult
     data class Rejected(val reason: NativeCustomDraftRefusal) : NativeCustomDraftWriteResult
 }
+data class NativeCustomDraftSummary(
+    val cycleId:String,
+    val title:String,
+    val blocks:Int,
+    val revision:Long
+)
+sealed interface NativeCustomDraftListResult {
+    data class Ready(val drafts:List<NativeCustomDraftSummary>):
+        NativeCustomDraftListResult
+    data class Rejected(val reason:NativeCustomDraftRefusal):
+        NativeCustomDraftListResult
+}
 private data class CustomDraftRecord(
     val ownerKey: String,
     val athleteId: String,
@@ -212,6 +224,74 @@ class NativeCustomCycleDraftFileStore(
         } catch (_: Exception) {
             NativeCustomDraftReadResult.Rejected(
                 NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Owner-scoped saved-program picker. The file names are hashes, not
+     * discoverable IDs. Walk only the bounded native draft namespace under
+     * the same revision lock; validate the envelope, source owner and
+     * canonical file path before showing a single title.
+     *
+     * A corrupt record refuses the complete listing rather than producing
+     * a misleading "no programs" result. Tombstones are never shown.
+     * This is navigation only, not approval or training authorization.
+     */
+    fun listOwned(ownerKey:String):NativeCustomDraftListResult {
+        fun rejected(reason:NativeCustomDraftRefusal)=
+            NativeCustomDraftListResult.Rejected(reason)
+        if(active(ownerKey)==null)return rejected(
+            NativeCustomDraftRefusal.NOT_AUTHORIZED)
+        return try {
+            fence.withOwnerTransaction(ownerKey) {
+                val owner=active(ownerKey)
+                    ?:return@withOwnerTransaction rejected(
+                        NativeCustomDraftRefusal.NOT_AUTHORIZED)
+                if(!Files.exists(privateDirectory))
+                    return@withOwnerTransaction NativeCustomDraftListResult.Ready(
+                        emptyList())
+                if(Files.isSymbolicLink(privateDirectory) ||
+                    !Files.isDirectory(privateDirectory))
+                    return@withOwnerTransaction rejected(
+                        NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
+                val names=Regex("^draft-[0-9a-f]{64}\\.bin$")
+                val files=Files.list(privateDirectory).use { stream ->
+                    stream.filter { names.matches(it.fileName.toString()) }
+                        .limit(513).toArray().map {it as Path}
+                }
+                if(files.size>512)
+                    return@withOwnerTransaction rejected(
+                        NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
+                val drafts=ArrayList<NativeCustomDraftSummary>()
+                for(file in files) {
+                    val saved=try {decode(file)}catch(_:Exception) {
+                        return@withOwnerTransaction rejected(
+                            NativeCustomDraftRefusal.CORRUPT_RECORD)
+                    } ?:return@withOwnerTransaction rejected(
+                        NativeCustomDraftRefusal.CORRUPT_RECORD)
+                    if(path(saved.ownerKey,saved.cycleId)!=file)
+                        return@withOwnerTransaction rejected(
+                            NativeCustomDraftRefusal.CORRUPT_RECORD)
+                    if(saved.ownerKey!=ownerKey)continue
+                    if(saved.athleteId!=owner.athleteId)
+                        return@withOwnerTransaction rejected(
+                            NativeCustomDraftRefusal.NOT_AUTHORIZED)
+                    saved.draft?.let {draft->
+                        drafts+=NativeCustomDraftSummary(
+                            draft.cycleId,draft.title,draft.blocks.size,
+                            draft.revision)
+                    }
+                }
+                if(active(ownerKey)!=owner)
+                    rejected(NativeCustomDraftRefusal.NOT_AUTHORIZED)
+                else NativeCustomDraftListResult.Ready(
+                    java.util.Collections.unmodifiableList(
+                        drafts.sortedWith(compareBy<NativeCustomDraftSummary>{
+                            it.title.lowercase()
+                        }.thenBy {it.cycleId})))
+            }
+        }catch(_:Exception) {
+            rejected(NativeCustomDraftRefusal.STORAGE_UNAVAILABLE)
         }
     }
 

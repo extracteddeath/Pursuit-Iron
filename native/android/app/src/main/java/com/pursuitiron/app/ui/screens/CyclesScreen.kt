@@ -215,7 +215,7 @@ fun CycleTemplatePicker(vm: AppViewModel, template: String, onTemplate: (String)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             (1..minOf(3, eff)).forEach { n -> MorphChip("$n× / week", b.freq == n, { custom[i] = b.copy(freq = n) }, height = 36.dp) }
                         }
-                        Text("Practice sessions are spread across the week where the split allows. The engine refuses a frequency the week can't hold.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        Text("Practice sessions are spread across the week where the split allows. A frequency the week can't hold isn't offered.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                 }
             }

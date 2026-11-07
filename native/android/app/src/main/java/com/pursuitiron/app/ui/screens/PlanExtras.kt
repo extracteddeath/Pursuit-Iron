@@ -76,7 +76,7 @@ fun VolumeWaveCard(vm: AppViewModel, programId: String, selected: Int, onPick: (
     val sel = weeks.firstOrNull { it.i("w") == selected }
     PiCard(radius = 28.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Volume wave", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text("Sets each week", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             if (sel != null) Text("Week $selected" + (if (sel.b("deload")) " · deload" else "") + " · ${sel.i("sets")} sets", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         }
         Row(Modifier.fillMaxWidth().height(118.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
@@ -96,7 +96,7 @@ fun VolumeWaveCard(vm: AppViewModel, programId: String, selected: Int, onPick: (
                 }
             }
         }
-        Text("Bars run from the lightest week ($low sets) to the heaviest ($peak), not from zero. Tap one to see that week.",
+        Text("Scaled from the lightest week ($low sets) to the heaviest ($peak). Tap a week to see it.",
             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         FilledTonalButton(onClick = onMatrix) { Icon(PiIcons.Grid, null, Modifier.size(18.dp)); Text("  Every lift, week by week") }
     }
@@ -223,7 +223,7 @@ fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(if (under) "LOW" else "HIGH", style = MaterialTheme.typography.labelSmall, color = if (under) cs.onSurfaceVariant else cs.error, modifier = Modifier.width(36.dp).padding(top = 2.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("${i.s("label")} · ${com.pursuitiron.app.ui.common.fmtNum(i.optDouble("sets"))} sets (" + (if (under) "MEV ${i.s("mev")}" else "MRV ${i.s("mrv")}") + ")", style = MaterialTheme.typography.bodyMedium)
+                        Text("${i.s("label")} · ${com.pursuitiron.app.ui.common.fmtNum(i.optDouble("sets"))} sets (" + (if (under) "minimum ${i.s("mev")}" else "max ${i.s("mrv")}") + ")", style = MaterialTheme.typography.bodyMedium)
                         if (i.s("fix").isNotBlank()) Text(i.s("fix"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                 }
@@ -252,7 +252,7 @@ fun WeekVolumeCard(vm: AppViewModel, programId: String, week: Int) {
                 }
             }
         }
-        Text("Band: MEV to MRV for your experience; the tick is MAV. Sets include partial credit from lifts that also train the muscle.",
+        Text("Shaded: the weekly range that builds muscle at your level. Tick: the sweet spot. Lifts that also work a muscle count part of their sets.",
             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         val verdicts = d.list("verdicts")
         if (verdicts.isNotEmpty()) Column(Modifier.clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -361,8 +361,8 @@ fun WhyLiftSheet(vm: AppViewModel, programId: String, dayId: String, slot: Int, 
             }
             com.pursuitiron.app.ui.common.MuscleChips(x.strings("muscles").firstOrNull()?.replaceFirstChar { it.uppercase() } ?: x.s("part"), x.strings("muscles").drop(1).map { it.replaceFirstChar { c -> c.uppercase() } })
             when (x.s("source")) {
-                "added" -> Text("You added this lift. The engine prescribes its sets and progression, but it didn't choose it.", style = MaterialTheme.typography.bodyMedium)
-                "edited" -> Text("You changed this slot, so the engine's original reasoning no longer applies to it.", style = MaterialTheme.typography.bodyMedium)
+                "added" -> Text("You added this lift. The app sets its sets and progression, but didn't pick it.", style = MaterialTheme.typography.bodyMedium)
+                "edited" -> Text("You changed this slot, so the original reasoning no longer applies.", style = MaterialTheme.typography.bodyMedium)
             }
             x.o("role")?.let { r ->
                 PiCard(color = cs.primaryContainer, radius = 22.dp, padding = 16.dp) {

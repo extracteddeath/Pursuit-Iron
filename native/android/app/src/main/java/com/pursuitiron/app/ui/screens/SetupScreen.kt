@@ -187,7 +187,7 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
             Column(Modifier.weight(1f)) {
                 Text(if (hero === top) "BEST FIT OF ${ranked.size}" else "YOUR PICK · #$heroRank OF ${ranked.size}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp), color = cs.primary)
                 Text(hero.s("name"), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 28.sp), color = cs.onPrimaryContainer)
-                Text("${plan?.i("days") ?: hero.i("sessions")} days · ${SESS_SHORT[hero.s("session")] ?: ""} min · $goalLabel" + if (hero.s("id") == plan?.s("enginePick")) " · the engine’s own pick" else "",
+                Text("${plan?.i("days") ?: hero.i("sessions")} days · ${SESS_SHORT[hero.s("session")] ?: ""} min · $goalLabel" + if (hero.s("id") == plan?.s("enginePick")) " · our default pick" else "",
                     style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer.copy(alpha = 0.8f))
             }
         }
@@ -257,7 +257,7 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
         } }
     }
-    Text("Scores come from each split actually built with your answers: week-1 sets against MEV/MAV, how often each muscle is trained, sets and minutes per session, and how much of the work matches your goal.",
+    Text("Each split is actually built from your answers, then scored on how well it covers every muscle, how often each one is trained, how well sessions fit your time, and how much of the work suits your goal.",
         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
 }
 
@@ -389,13 +389,13 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
     BackHandler { back() }
 
     val pageHeads = mapOf(
-        "goal" to ("What are you training for?" to "Sets rep ranges and rest, and how the split ranking weighs frequency against volume."),
-        "experience" to ("How long have you lifted?" to "Scales your weekly volume. Newer lifters do best on splits that repeat each lift often."),
+        "goal" to ("What are you training for?" to "Shapes your reps, rest and which splits rank highest."),
+        "experience" to ("How long have you lifted?" to "Sets how much work you get each week. Newer lifters do best practicing each lift often."),
         "days" to ("When can you train?" to "Days a week, and how long a session can run."),
         "equipment" to ("Where do you train?" to "Only exercises you can actually do get programmed. Bodyweight is on by default and can be excluded below."),
-        "constraints" to ("Gym limits" to "How the workout may use gym space. These are firm rules for the generator, not suggestions."),
-        "focus" to ("Anything to prioritise?" to "One point raises a muscle’s priority; two marks a stronger specialization. You can skip this."),
-        "split" to ((if (cyc) "Your best split" else "Your best split") to "Every split that fits $days days, built from your answers and ranked on coverage, frequency, session fit and your goal."),
+        "constraints" to ("Gym limits" to "Rules for how a workout uses the gym. They’re always followed."),
+        "focus" to ("Anything to prioritise?" to "One point gives a muscle a bit more work; two makes it a focus. You can skip this."),
+        "split" to ((if (cyc) "Your best split" else "Your best split") to "Every split that fits $days days, built from your answers and ranked on how well it fits you."),
     )
     val heads = mapOf(
         "mode" to ("What do you want to build?" to "Both ask the same questions about your training — a cycle just chains multiple blocks together."),
@@ -446,7 +446,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                 if (d0 != null) DraftBanner("Picking up your unfinished cycle setup. It stays on this device until you build or discard it.", onDiscard)
                 Column(Modifier.padding(bottom = 6.dp)) {
                     Text(h, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 28.sp, lineHeight = 32.sp), modifier = Modifier.semantics { heading() })
-                    Text(if (k0 == "deload") "Your block runs ${if (cyc) "its first block's" else "$weeks"} weeks. A deload adds a lighter recovery week at the end." else sub,
+                    Text(if (k0 == "deload") "Your block runs ${if (cyc) "its first block's" else "$weeks"} weeks. A deload is a lighter week at the end so you recover." else sub,
                         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 21.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
                 }
                 @Composable fun body(k: String) { when (k) {
@@ -461,7 +461,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                             Icon(com.pursuitiron.app.ui.common.PiIcons.Pencil, null, tint = cs.primary)
                             Column(Modifier.weight(1f)) {
                                 Text("Build your own", style = MaterialTheme.typography.titleMedium)
-                                Text("Pick every exercise yourself. The engine still sets loads and reps, progresses each lift, runs the deload and builds the next block.",
+                                Text("Pick every exercise yourself. The app still sets weights and reps, progresses each lift, plans the easy week and builds the next block.",
                                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                             }
                             Icon(com.pursuitiron.app.ui.common.PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
@@ -517,7 +517,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                             }
                         }
                         val ws = Math.round(days * (SES_MIN[session] ?: 60) / 60.0 * 17)
-                        Text("That’s about $ws working sets a week. A band, not a quota: the engine fills it only when another set is worth its fatigue.",
+                        Text("About $ws hard sets a week. A ceiling, not a quota: a set is added only when it’s worth the fatigue.",
                             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                     "equipment" -> EquipmentStep(opts, equip, { equip = it }, noRack, { noRack = it }, noBodyweight, { noBodyweight = it })
@@ -565,16 +565,16 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         WzCheckRow(p.s("label"), null, on, RoundedCornerShape(18.dp)) { if (on) reduce.remove(id) else reduce.add(id) }
                     }
                     "progression" -> {
-                        WzOption("Auto · choose per exercise", "Pursuit picks the method for each lift and only changes it when your training gives enough evidence", WZ.wand, progression == "auto") { progression = "auto" }
+                        WzOption("Auto · choose per exercise", "Picks how each lift progresses and adjusts as you train", WZ.wand, progression == "auto") { progression = "auto" }
                         WzOption("Manual weekly targets", "You set the weekly sets and reps; loads still progress per lift", WZ.pencil, progression == "manual") { progression = "manual" }
                     }
                     "length" -> {
-                        WzOption("Endless — continuous", "No fixed end. Load and volume auto-progress every session; a light deload drops in automatically when you plateau or accumulate fatigue. Never runs out.", WZ.rep, endless) { endless = true }
-                        listOf(4 to "Short block — Auto avoids methods that need a longer runway", 6 to "Balanced block — more room for advanced progression when it fits", 8 to "Long block — gradual ramp", 10 to "Extended accumulation for advanced lifters")
+                        WzOption("Endless — continuous", "No fixed end. Weight and sets progress every session, and a lighter week drops in when you stall or get run down.", WZ.rep, endless) { endless = true }
+                        listOf(4 to "Short block — quick progress, simpler methods", 6 to "Balanced block — more room for advanced progression when it fits", 8 to "Long block — gradual ramp", 10 to "Longest build-up, for advanced lifters")
                             .forEach { (w, s) -> WzOption("$w weeks", s, WZ.cal, !endless && weeks == w) { weeks = w; endless = false } }
                     }
                     "deload" -> {
-                        WzOption("Yes, add a deload", "Week ${(if (cyc) 0 else weeks) + 1} · reduced volume & load", WZ.battery, deload) { deload = true }
+                        WzOption("Yes, add a deload", "Week ${(if (cyc) 0 else weeks) + 1} · lighter weights and fewer sets", WZ.battery, deload) { deload = true }
                         WzOption("No deload", "Train through the whole block", WZ.flame, !deload) { deload = false }
                     }
                 } }
@@ -604,7 +604,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                     if (!full) add("Experience" to (EXP.firstOrNull { it.first == exp }?.second ?: exp) + " · from your profile")
                     add("Schedule" to "$days days per week")
                     add("Split" to (sd?.s("name") ?: "Not selected"))
-                    add("Session capacity" to (SESS.firstOrNull { it.first == effSession }?.second ?: "—"))
+                    add("Session length" to (SESS.firstOrNull { it.first == effSession }?.second ?: "—"))
                     val nEq = eq.count { it != "no-rack" }
                     add("Equipment" to (if (nEq == 0) "Bodyweight only" else "$nEq selected types") + if (full) "" else " · ${activeGym?.s("name") ?: "your gym"}")
                     add("Training style" to if (approach == "minimalist") "Minimalist · high intensity" else "Standard volume")

@@ -194,7 +194,7 @@ fun CreateExerciseSheet(vm: AppViewModel, dayId: String?, onCreated: (String) ->
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("New exercise", style = MaterialTheme.typography.headlineSmall)
-            Text("Yours to use anywhere: swaps, quick workouts, the program editor. The engine progresses it like any other lift.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant)
+            Text("Yours to use anywhere: swaps, quick workouts, the program editor. It progresses like any other lift.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant)
             cap("NAME")
             androidx.compose.material3.TextField(name, { name = it.take(60) }, singleLine = true, placeholder = { Text("e.g. Kneeling cable chop") },
                 shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = cs.surfaceContainerHigh, unfocusedContainerColor = cs.surfaceContainerHigh,

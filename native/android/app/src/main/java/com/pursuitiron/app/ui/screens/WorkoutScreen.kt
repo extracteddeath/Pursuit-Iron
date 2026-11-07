@@ -279,7 +279,7 @@ fun WorkoutScreen(vm: AppViewModel) {
     else if (confirmFinish) AlertDialog(
         onDismissRequest = { confirmFinish = false },
         title = { Text("Finish with ${total - done} sets not logged?") },
-        text = { Text("Only logged sets count. The engine plans your next session from what you actually did.") },
+        text = { Text("Only logged sets count. Your next session is planned from what you actually did.") },
         confirmButton = { Button(onClick = { confirmFinish = false; sheet = WSheet.Finish }) { Text("Finish") } },
         dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text("Keep going") } },
     )
@@ -907,7 +907,7 @@ private fun WhySheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val e = x
-            if (e == null) { Text(if (loaded) "No explanation is available for this lift." else "Asking the engine…"); return@Column }
+            if (e == null) { Text(if (loaded) "No explanation is available for this lift." else "Working it out…"); return@Column }
             val lift = e.o("lift"); val ctx = e.o("context"); val read = e.o("read"); val dec = e.o("decided"); val load = e.o("load")
             Kicker(lift.s("name"))
             Text(load?.let { l -> if (l.isNull("weight")) "No weight yet" else "${l.s("weight")} ${vm.session?.s("unit").orEmpty()}" } ?: "This set", style = MaterialTheme.typography.headlineMedium)
@@ -924,7 +924,7 @@ private fun WhySheet(vm: AppViewModel, ei: Int, onClose: () -> Unit) {
             }
             dec?.s("styleWhy")?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant) }
             PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {
-                Text("What the engine read", style = MaterialTheme.typography.titleSmall)
+                Text("What it’s based on", style = MaterialTheme.typography.titleSmall)
                 Text(listOfNotNull(
                     "Week ${ctx.i("weekIndex")} of ${ctx.i("weeksTotal")}" + (ctx.s("phase").takeIf { it.isNotBlank() }?.let { " · " + it.replace('_', ' ') } ?: ""),
                     if (ctx.b("deload")) "Deload week" else null,

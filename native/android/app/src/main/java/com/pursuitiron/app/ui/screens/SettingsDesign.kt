@@ -273,7 +273,7 @@ fun E1rmCalcCard(vm: AppViewModel) {
     val snap = { v: Double, s: Double -> Math.round(v / s) * s }
     val sliderColors = SliderDefaults.colors(thumbColor = cs.primary, activeTrackColor = cs.primary)
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("e1RM calculator", style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 8.dp).semantics { heading() })
+        Text("1RM calculator", style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 8.dp).semantics { heading() })
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("Estimated 1RM", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f).padding(bottom = 8.dp))

@@ -319,7 +319,7 @@ private fun FeelCard(vm: AppViewModel, x: JSONObject, parts: List<JSONObject>) {
     Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surface).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column {
             Text("How did each muscle feel?", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold))
-            Text("Sets next time follow your answer — only where there's room under MRV. Pump and recovery are optional.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+            Text("Next time’s sets follow your answer, as long as there’s room to recover. Pump and soreness are optional.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
         }
         parts.forEach { pt ->
             val part = pt.s("part")
@@ -327,7 +327,7 @@ private fun FeelCard(vm: AppViewModel, x: JSONObject, parts: List<JSONObject>) {
             val diff = if (pt.isNull("diff")) null else pt.i("diff")
             val n = pt.i("sets")
             val (res, bg, fg) = when (diff) {
-                1 -> if (!pt.b("room")) Triple("No room · at MRV", cs.tertiaryContainer, cs.onTertiaryContainer) else Triple("$n → ${n + 1} sets", cs.primary, cs.onPrimary)
+                1 -> if (!pt.b("room")) Triple("Already at max", cs.tertiaryContainer, cs.onTertiaryContainer) else Triple("$n → ${n + 1} sets", cs.primary, cs.onPrimary)
                 0 -> Triple("Holds at $n sets", cs.secondaryContainer, cs.onSecondaryContainer)
                 -1 -> Triple("$n → ${(n - 1).coerceAtLeast(1)} sets", cs.tertiaryContainer, cs.onTertiaryContainer)
                 else -> Triple("Pick one", cs.surfaceContainerHigh, cs.onSurfaceVariant)
@@ -339,7 +339,7 @@ private fun FeelCard(vm: AppViewModel, x: JSONObject, parts: List<JSONObject>) {
                 }
                 Segmented(listOf("1" to "Too easy", "0" to "About right", "-1" to "Too much"), diff?.toString(), { vm.act("feedback", "part" to part, "diff" to it.toInt()) }, height = 40.dp, gap = 3.dp)
                 FeelRow("Pump", listOf("flat" to "Low", "good" to "Moderate", "huge" to "Great"), pt.s("pump").takeIf { !pt.isNull("pump") }) { vm.act("feedback", "part" to part, "pump" to it) }
-                FeelRow("Going in", listOf("sore" to "Still sore", "ontime" to "Recovered", "fresh" to "Fresh"), pt.s("sore").takeIf { !pt.isNull("sore") }) { vm.act("feedback", "part" to part, "sore" to it) }
+                FeelRow("Soreness", listOf("sore" to "Still sore", "ontime" to "Recovered", "fresh" to "Fresh"), pt.s("sore").takeIf { !pt.isNull("sore") }) { vm.act("feedback", "part" to part, "sore" to it) }
             }
         }
     }

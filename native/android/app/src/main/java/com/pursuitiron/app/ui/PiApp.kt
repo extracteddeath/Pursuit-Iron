@@ -321,7 +321,7 @@ private fun BusyScrim(label: String) {
 @Composable
 private fun StartupError(msg: String) {
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("The training engine didn't start", style = MaterialTheme.typography.headlineSmall)
+        Text("Pursuit Iron couldn't start", style = MaterialTheme.typography.headlineSmall)
         Text("Your data is safe on this phone. Close the app and open it again. If this keeps happening, update Android System WebView from the Play Store.", style = MaterialTheme.typography.bodyLarge)
         Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

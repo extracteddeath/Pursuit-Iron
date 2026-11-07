@@ -282,7 +282,7 @@ fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -
                 }
             }
             if (prog != null && prog.b("locked") && ex.s("line").contains("of max")) com.pursuitiron.app.ui.common.Badge("% of max · set by the method", cs.tertiaryContainer, cs.onTertiaryContainer)
-            if (ex.b("primary")) com.pursuitiron.app.ui.common.Badge("Primary")
+            if (ex.b("primary")) com.pursuitiron.app.ui.common.Badge("Main lift")
             ex.s("supplemental").takeIf { it.isNotBlank() && it != "null" }?.let { com.pursuitiron.app.ui.common.Badge(it.replaceFirstChar { c -> c.uppercase() }, cs.secondaryContainer, cs.onSecondaryContainer) }
             if (ex.b("assisted")) com.pursuitiron.app.ui.common.Badge("Assisted · less help is progress", cs.tertiaryContainer, cs.onTertiaryContainer)
             if (ex.d("goal") > 0) com.pursuitiron.app.ui.common.Badge("Goal ${fmtNum(ex.d("goal"))} ${s.s("unit")}", cs.primaryContainer, cs.onPrimaryContainer)
@@ -342,7 +342,7 @@ fun StartingEstimateCard(s: JSONObject, ex: JSONObject, est: JSONObject) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 14.dp, vertical = 12.dp)
         .semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Starting estimate · ${est.s("w")} ${s.s("unit")}", style = MaterialTheme.typography.titleSmall)
-        Text("$lead ${est.s("text")} If $low reps leave more than $rir in the tank, go heavier. The engine calibrates from your first set.",
+        Text("$lead ${est.s("text")} If $low reps leave more than $rir in the tank, go heavier. Your first set fine-tunes the rest.",
             style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
     }
 }
@@ -381,7 +381,7 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, onHistory: () -> 
                 contentAlignment = Alignment.Center) { Icon(PiIcons.Close, null, modifier = Modifier.size(16.dp)) }
         }
         val e = x
-        if (e == null) { Text("Asking the engine…", color = cs.onSurfaceVariant); return@Column }
+        if (e == null) { Text("Working it out…", color = cs.onSurfaceVariant); return@Column }
         e.o("load")?.s("reason")?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val read = e.o("read"); val dec = e.o("decided")
@@ -564,9 +564,9 @@ private fun LiftDoneCard(vm: AppViewModel, s: JSONObject, ex: JSONObject, modifi
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.popIn().size(56.dp).clip(RoundedCornerShape(18.dp)).background(cs.primary), contentAlignment = Alignment.Center) { DrawnCheck(cs.onPrimary, Modifier.size(28.dp)) }
         Text("${ex.s("short").ifBlank { ex.s("name") }} done", style = MaterialTheme.typography.headlineMedium, color = cs.onPrimaryContainer)
-        if (pr) Text("NEW e1RM PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.popIn(delayMs = 120).prGlow(cs.primary, 16.dp).clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
+        if (pr) Text("NEW STRENGTH PR", style = MaterialTheme.typography.labelLarge, color = cs.onPrimary, modifier = Modifier.popIn(delayMs = 120).prGlow(cs.primary, 16.dp).clip(CircleShape).background(cs.primary).padding(horizontal = 14.dp, vertical = 6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("Sets" to "${work.size}", "Top set" to (top?.let { "${it.s("weight")}×${it.s("reps")}" } ?: "—"), "e1RM" to if (e1 > 0) fmtNum(Math.round(e1 * 2) / 2.0) else "—").forEach { (k, v) ->
+            listOf("Sets" to "${work.size}", "Top set" to (top?.let { "${it.s("weight")}×${it.s("reps")}" } ?: "—"), "Est. 1RM" to if (e1 > 0) fmtNum(Math.round(e1 * 2) / 2.0) else "—").forEach { (k, v) ->
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surface).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(k, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant); Text(v, style = MaterialTheme.typography.titleMedium)
                 }

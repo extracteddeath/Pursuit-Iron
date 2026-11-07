@@ -87,7 +87,7 @@ fun Big3Card(b: JSONObject) {
                 }
             }
             Column(Modifier.weight(1f)) {
-                Kicker("Big 3 total · e1RM", cs.onPrimaryContainer)
+                Kicker("Big 3 total · est. 1RM", cs.onPrimaryContainer)
                 Text("${fmtNum(big.d("total"))} $u", style = MaterialTheme.typography.headlineMedium, color = cs.onPrimaryContainer)
                 if (big.i("logged") < 3) Text("${3 - big.i("logged")} of the three not logged yet", style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer)
             }
@@ -122,7 +122,7 @@ fun PrBoardCard(vm: AppViewModel, b: JSONObject) {
             Text("PR board", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Text("${pb.list("e1rm").size} lifts", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
         }
-        Segmented(listOf("e1rm" to "e1RM", "heaviest" to "Heaviest"), mode, { mode = it }, height = 40.dp)
+        Segmented(listOf("e1rm" to "Est. 1RM", "heaviest" to "Heaviest"), mode, { mode = it }, height = 40.dp)
         Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             (if (all) rows else rows.take(5)).forEachIndexed { k, r ->
                 Row(Modifier.fillMaxWidth().background(cs.surface).clickable { liftId = r.s("id") }.padding(horizontal = 12.dp, vertical = 10.dp),

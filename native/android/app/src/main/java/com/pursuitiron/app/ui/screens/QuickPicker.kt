@@ -79,7 +79,7 @@ fun QuickPickerSheet(vm: AppViewModel) {
                     Box(Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) { Text("New exercise", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold)) }
                 }
             }
-            Text("Pick lifts in the order you’ll do them. Nothing in your program changes; every set still teaches the engine.",
+            Text("Pick lifts in the order you’ll do them. Your program doesn’t change, and every set still counts toward your progress.",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
             TextField(q, { q = it }, singleLine = true, placeholder = { Text("Search exercises") }, leadingIcon = { Icon(PiIcons.Search, null) },
                 shape = CircleShape, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Search exercises" },

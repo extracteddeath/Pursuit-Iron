@@ -380,7 +380,7 @@ fun SupersetSheet(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
             if (partner == null && guard != null) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.tertiaryContainer).padding(horizontal = 14.dp, vertical = 12.dp)
                 .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(PiIcons.Shield, null, Modifier.size(18.dp), tint = cs.onTertiaryContainer)
-                Text("${guard.s("name")} is today’s ${if (guard.b("main")) "main" else "second"} lift. Alternating it with anything costs top-set strength, so the engine won’t suggest a partner. You can still pair it yourself below.",
+                Text("${guard.s("name")} is today’s ${if (guard.b("main")) "main" else "second"} lift. Alternating it with anything costs top-set strength, so we won’t suggest a partner. You can still pair it yourself below.",
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer)
             }
             val sug = if (partner == null && guard == null) s.list("supersetSuggestions") else emptyList()

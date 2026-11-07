@@ -149,9 +149,9 @@ fun ProgramEditorScreen(vm: AppViewModel) {
             // Build your own: what to do here, and what the engine does once it's saved.
             if (e.b("buildOwn")) item(key = "own") {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.tertiaryContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Your lifts, the engine's coaching", style = MaterialTheme.typography.titleMedium, color = cs.onTertiaryContainer)
+                    Text("Your lifts, our coaching", style = MaterialTheme.typography.titleMedium, color = cs.onTertiaryContainer)
                     Text("Add the exercises you want to each day, then Save. Day options renames a day or adds another. " +
-                        "From what you log, the engine sets each lift's loads and reps, moves it up with its own progression, runs the deload week and builds your next block.",
+                        "From what you log, the app sets each lift's weights and reps, moves it up as you get stronger, schedules the easy week and builds your next block.",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onTertiaryContainer)
                 }
             }
@@ -284,7 +284,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                         Column(Modifier.weight(1f)) {
                             Text("Day setup", style = MaterialTheme.typography.titleSmall)
                             Text("Focus: " + mapOf("auto" to "Auto", "strength" to "Strength", "hypertrophy" to "Hypertrophy")[f0] +
-                                (d.list("hits").size.takeIf { it > 0 }?.let { " · sets for $it muscles" } ?: "") + if (e.b("manual")) " · manual targets" else " · engine targets",
+                                (d.list("hits").size.takeIf { it > 0 }?.let { " · sets for $it muscles" } ?: "") + if (e.b("manual")) " · manual targets" else " · automatic targets",
                                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                         Icon(if (setupOpen) PiIcons.ChevronUp else PiIcons.ChevronDown, null, tint = cs.onSurfaceVariant)
@@ -323,7 +323,7 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                     if (setupOpen) Box(Modifier.fillMaxWidth().height(1.dp).background(cs.outlineVariant))
                     if (setupOpen) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(if (e.b("manual")) "Manual targets: change sets and reps on each lift. Auto won’t rewrite these at block review."
-                            else "Sets, reps and effort come from the engine for each week of the block. Switch Set & rep targets to Manual in Settings to set them yourself.",
+                            else "The app sets the sets, reps and effort for each week. To set them yourself, switch Set & rep targets to Manual in Settings.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
                         if (!e.b("manual")) Box(Modifier.height(40.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { settingsOpen = true }
                             .semantics { role = Role.Button }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {

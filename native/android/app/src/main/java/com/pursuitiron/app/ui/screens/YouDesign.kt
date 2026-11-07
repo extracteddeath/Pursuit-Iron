@@ -178,7 +178,7 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
                 }
             }
             Column(Modifier.weight(1f)) {
-                Text("BIG 3 TOTAL · e1RM", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.4.sp), color = cs.onPrimaryContainer.copy(alpha = 0.8f))
+                Text("BIG 3 TOTAL · EST. 1RM", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.4.sp), color = cs.onPrimaryContainer.copy(alpha = 0.8f))
                 Text("${ink(big.d("total"))} $u", style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, lineHeight = 38.sp), color = cs.onPrimaryContainer)
                 Text(tier ?: "${3 - big.i("logged")} of the three not logged yet", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onPrimaryContainer)
             }
@@ -339,7 +339,7 @@ fun ProfPrBoard(vm: AppViewModel, board: JSONObject) {
             Text("PR board", style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f).semantics { heading() })
             Text("${pb.list("e1rm").size} lifts tracked", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
         }
-        Segmented(listOf("e1rm" to "e1RM", "heaviest" to "Heaviest", "reps" to "Rep PRs"), mode, { mode = it })
+        Segmented(listOf("e1rm" to "Est. 1RM", "heaviest" to "Heaviest", "reps" to "Rep PRs"), mode, { mode = it })
         AnimatedContent(mode, transitionSpec = { com.pursuitiron.app.ui.theme.Motion.peer() }, label = "prmode") { m ->
             if (m != "reps") {
                 Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {

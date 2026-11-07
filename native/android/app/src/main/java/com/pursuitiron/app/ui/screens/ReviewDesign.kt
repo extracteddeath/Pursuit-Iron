@@ -169,7 +169,7 @@ private fun ColumnScope.ReviewBody(r: JSONObject) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.primaryContainer).padding(20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         val planned = if (r.isNull("planned")) 0 else r.i("planned")
         listOf("${r.i("sessions")}" to (if (planned > 0) "sessions done of $planned planned" else "sessions done"),
-            "${r.i("stronger")} of ${r.i("judged")}" to "lifts stronger by e1RM").forEach { (big, small) ->
+            "${r.i("stronger")} of ${r.i("judged")}" to "lifts got stronger").forEach { (big, small) ->
             Column(Modifier.weight(1f)) {
                 Text(big, style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, lineHeight = 38.sp), color = cs.onPrimaryContainer, maxLines = 1)
                 Text(small, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)

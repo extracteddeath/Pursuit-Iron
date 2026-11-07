@@ -159,7 +159,7 @@ fun ProgramSettingsSheet(vm: AppViewModel, onClose: () -> Unit) {
             if (!locked) {
                 PsCap("TRAINING GOAL")
                 Segmented(listOf("strength" to "Strength", "both" to "Strength & Size", "hypertrophy" to "Hypertrophy"), goal, { goal = it })
-                PsCap("SESSION CAPACITY")
+                PsCap("SESSION LENGTH")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     p.list("sessions").forEach { o -> PsChip(SESSION_SHORT[o.s("id")] ?: o.s("label"), session == o.s("id")) { session = o.s("id") } }
                 }

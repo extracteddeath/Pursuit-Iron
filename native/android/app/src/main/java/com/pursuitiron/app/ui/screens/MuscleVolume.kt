@@ -82,7 +82,7 @@ fun MuscleVolumeCard(vm: AppViewModel, programId: String, week: Int, onDetails: 
                 }
             }
             Text("Week $week · ${d.optInt("workingSets").takeIf { it > 0 } ?: fmtNum(d.optDouble("total"))} working sets · ${rows.size} muscles" +
-                if (flagged > 0) " · $flagged outside MEV–MRV" else " · all in range",
+                if (flagged > 0) " · $flagged outside their range" else " · all in range",
                 style = MaterialTheme.typography.bodySmall, color = if (flagged > 0) cs.error else cs.onSurfaceVariant)
         }
         Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -96,7 +96,7 @@ fun MuscleVolumeCard(vm: AppViewModel, programId: String, week: Int, onDetails: 
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Band: MEV to MRV, tick at MAV. A lift counts its sets for the muscle it targets and a share for muscles it also works.",
+            Text("Shaded: the weekly range that builds muscle. Tick: the sweet spot. A lift counts fully for its main muscle and partly for muscles it also works.",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
         }
         if (d.list("issues").isNotEmpty() || d.list("verdicts").isNotEmpty())
@@ -122,7 +122,7 @@ private fun MuscleLine(r: JSONObject, key: String, expanded: Boolean, indent: Dp
         Row(Modifier.fillMaxWidth().heightIn(min = if (head) 40.dp else 46.dp).clickable(onClick = onTap)
             .semantics(mergeDescendants = true) {
                 role = Role.Button; stateDescription = if (expanded) "Expanded" else "Collapsed"
-                contentDescription = "${r.s("label")}: ${fmtNum(sets)} sets, ${r.s("zone")}. MEV ${fmtNum(mev)}, MRV ${fmtNum(mrv)}. ${from.size} lifts"
+                contentDescription = "${r.s("label")}: ${fmtNum(sets)} sets, ${r.s("zone")}. range ${fmtNum(mev)} to ${fmtNum(mrv)}. ${from.size} lifts"
             }.padding(start = 12.dp + indent, end = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(r.s("label"), style = if (head) MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp) else MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp),
                 color = if (head) cs.onSurfaceVariant else cs.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(if (head) 100.dp else 112.dp))
@@ -141,7 +141,7 @@ private fun MuscleLine(r: JSONObject, key: String, expanded: Boolean, indent: Dp
         }
         AnimatedVisibility(expanded, enter = Motion.expandIn, exit = Motion.shrinkOut) {
             Column(Modifier.padding(start = 12.dp + indent, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("${r.s("zone").replaceFirstChar { it.uppercase() }} · MEV ${fmtNum(mev)} · MAV ${fmtNum(mav)} · MRV ${fmtNum(mrv)}",
+                Text("${r.s("zone").replaceFirstChar { it.uppercase() }} · range ${fmtNum(mev)}–${fmtNum(mrv)} · sweet spot ${fmtNum(mav)}",
                     style = MaterialTheme.typography.labelMedium, color = if (tone == "warn") cs.error else cs.onSurfaceVariant)
                 if (from.isEmpty()) Text("Nothing in this program trains it this week.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 from.forEach { f ->

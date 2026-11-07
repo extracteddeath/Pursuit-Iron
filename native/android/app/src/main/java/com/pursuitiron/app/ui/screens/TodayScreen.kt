@@ -119,7 +119,7 @@ fun TodayScreen(vm: AppViewModel) {
             PiCard(color = cs.primaryContainer, radius = 28.dp, padding = 20.dp) {
                 Kicker("Welcome", cs.onPrimaryContainer)
                 Text("Let's build your first program", style = MaterialTheme.typography.headlineMedium, color = cs.onPrimaryContainer)
-                Text("A few questions about your goal, schedule and gym. The engine builds the program and adjusts every set from what you log.",
+                Text("A few questions about your goal, schedule and gym. We build the program and adjust every set from what you log.",
                     style = MaterialTheme.typography.bodyMedium, color = cs.onPrimaryContainer)
                 Button(onClick = { vm.openSetup() }) { Text("Build my program") }
             }

@@ -207,7 +207,7 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
                     (if (plan != null) "Plan · ${plan.s("day")}" else "Plan") to (plan?.let { p -> if (p.isNull("sets")) "—" else "${p.i("sets")} × ${p.s("reps").replace("-", "–")}" } ?: "Not in it"),
-                    "Best e1RM" to (if (e.isNull("bestE1rm")) "—" else "${fmtNum(e.d("bestE1rm"))} $u"),
+                    "Best est. 1RM" to (if (e.isNull("bestE1rm")) "—" else "${fmtNum(e.d("bestE1rm"))} $u"),
                     "At your gym" to (if (e.b("atGym", true)) "Yes" else "No"),
                 ).forEach { (k, v) ->
                     Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 10.dp)) {

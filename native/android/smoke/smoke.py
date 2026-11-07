@@ -865,7 +865,7 @@ else:
 if tap(r"^\|Rep PRs$", "rep-prs", required=False):
     if not scroll_to(r"PREDICTED|DONE", tries=3):
         FAILS.append("rep PR matrix missing")
-    tap(r"^\|e1RM$")
+    tap(r"^\|Est\. 1RM$")
 scroll_to(r"Achievements")
 shot("profile-achievements")
 # The design's badges: tap one for what it takes
@@ -910,7 +910,7 @@ else:
 # The design: History is one tap from Progress (Trends · History), with the month calendar filtering the list
 tap(r"^\|Progress$|^Progress\|")
 time.sleep(1.2)
-if not scroll_to(r"Weekly sets vs landmarks", tries=4, step=600):
+if not scroll_to(r"Weekly sets per muscle", tries=4, step=600):
     FAILS.append("no weekly landmarks on Progress")
 if scroll_to(r"^\|Weekly audit$", tries=4, step=600):
     shot("weekly-audit")
@@ -980,7 +980,7 @@ if seek(r"^\|Comfort & accessibility$"):
     back()
 else:
     FAILS.append("no Comfort & accessibility row")
-if seek(r"^\|e1RM calculator$"):
+if seek(r"^\|1RM calculator$"):
     shot("e1rm-calc")
 else:
     FAILS.append("no e1RM calculator in settings")
@@ -1100,7 +1100,7 @@ if tap(r"^\|New( program)?$", "draft-setup", required=False):
 # Build your own (App.js buildOwnRoutine): you pick the lifts in the editor; backing out of an empty one leaves nothing
 if tap(r"^\|New( program)?$", "own-setup", required=False):
     if tap(r"Build your own", "own-dialog", required=False) and tap(r"^\|Start building$", required=False):
-        if not find(r"Your lifts, the engine's coaching", timeout=8):
+        if not find(r"Your lifts, our coaching", timeout=8):
             FAILS.append("build your own does not open the editor with its guide")
         else:
             shot("own-editor")

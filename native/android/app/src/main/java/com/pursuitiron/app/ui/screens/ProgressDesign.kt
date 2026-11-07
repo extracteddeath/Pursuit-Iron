@@ -63,8 +63,8 @@ fun LandmarksCard(d: JSONObject) {
     val scale = (rows.maxOf { maxOf(it.d("mrv"), it.d("sets"), it.d("done")) } * 1.1).coerceAtLeast(1.0)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.surfaceContainerLow).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column {
-            Text("Weekly sets vs landmarks", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.semantics { heading() })
-            Text("Solid: done this week. Faint: planned. Band: MEV to MRV.",
+            Text("Weekly sets per muscle", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.semantics { heading() })
+            Text("Solid: done this week. Faint: planned. Shaded: the range that builds muscle.",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
         }
         // Fifteen bars every visit buried the few that matter: muscles off their range lead, then the rest behind Show all.
@@ -137,9 +137,9 @@ fun AuditCard(vm: AppViewModel, d: JSONObject) {
         }
         if (issues.isEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.primaryContainer).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PiIcons.Check, null, Modifier.size(20.dp), tint = cs.onPrimaryContainer)
-            Text("Every muscle this program trains sits between its MEV and MRV in its heaviest week.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
+            Text("Every muscle gets enough work without more than it can recover from, even in the hardest week.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
         }
-        Text("Checks the full planned week · ${if (issues.any { it.s("status") != "under" }) "something over MRV" else "nothing over MRV"}", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+        Text("Checks the full planned week · ${if (issues.any { it.s("status") != "under" }) "something over its max" else "nothing over its max"}", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
     }
     preview?.let { i ->
         ModalBottomSheet(onDismissRequest = { preview = null }) {
@@ -148,7 +148,7 @@ fun AuditCard(vm: AppViewModel, d: JSONObject) {
                 Text(issueDetail(i), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(cs.surfaceContainerHigh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("THE FIX", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold), color = cs.onSurfaceVariant)
-                    Text(i.s("fix").ifBlank { "Rebalance this week's sets so ${i.s("label")} lands inside its range, without pushing another muscle past its MRV." },
+                    Text(i.s("fix").ifBlank { "Rebalance this week's sets so ${i.s("label")} lands inside its range, without pushing another muscle past its max." },
                         style = MaterialTheme.typography.bodyMedium)
                     Text("The audit repairs the whole planned week at once, and you can undo it.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 }
@@ -162,11 +162,11 @@ fun AuditCard(vm: AppViewModel, d: JSONObject) {
 
 private fun issueTitle(i: JSONObject): String {
     val l = i.s("label").replaceFirstChar { it.uppercase() }
-    return when { i.s("status") != "under" -> "$l over MRV"; i.d("sets") <= 0.05 -> "$l not trained"; else -> "$l under MEV" }
+    return when { i.s("status") != "under" -> "$l above its max"; i.d("sets") <= 0.05 -> "$l not trained"; else -> "$l below its minimum" }
 }
 private fun issueDetail(i: JSONObject): String =
-    if (i.s("status") != "under") "Planned ${sets(i.d("sets"))} sets this week, MRV is ${i.s("mrv")}. More than you can recover from."
-    else "Planned ${sets(i.d("sets"))} sets this week, MEV is ${i.s("mev")}." + if (i.d("sets") <= 0.05) " Nothing in the week trains it directly." else ""
+    if (i.s("status") != "under") "Planned ${sets(i.d("sets"))} sets this week; its max is ${i.s("mrv")}. More than you can recover from."
+    else "Planned ${sets(i.d("sets"))} sets this week; it needs at least ${i.s("mev")} to grow." + if (i.d("sets") <= 0.05) " Nothing in the week trains it directly." else ""
 
 /** Loads this week's volume view once for both cards. */
 @Composable

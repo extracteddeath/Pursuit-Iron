@@ -408,10 +408,19 @@ export function sessionReview({ programId, dayId, weekIndex } = {}) {
     if (!r) return null;
     const restScale = Number(S.store.restScale) || 1;
     const ranked = [...r.exercises].sort((a, b) => { const sc = (x) => (x.opportunity ? 8 : 0) + (x.change.undone ? 4 : 0) + (x.protocol.type !== 'straight' ? 2 : 0) + (x.change ? 1 : 0); return sc(b) - sc(a); }); // the card shows three, Show all reveals the rest
+    // The engine's reasons are written for the web's detail view ("This exposure will establish a reference…"); Today's
+    // card says the same thing the way a coach would.
+    const plainWhy = (x) => {
+        const est = (x.proposed || []).find((t) => t?.target?.estimate)?.target;
+        if (est) { const f = est.estimate?.from || {};
+            return (f.kind === 'own' || f.kind === 'related') && f.name ? `A first guess from your ${f.name}, set a little light. Adjust after your first set.` : 'A light first guess. Adjust after your first set.'; }
+        if (/^Choose a starting load/.test(String(x.reason || ''))) return `First time on this lift: pick a weight you could do for ${x.range?.[0]}–${x.range?.[1]} reps with a couple to spare.`;
+        return x.reason;
+    };
     const gamePlan = ranked.map((x) => {
         const pr = x.opportunity;
         const tech = x.protocol.type === 'myo_reps' ? `Myo-reps · ${Math.max(8, Math.round(15 * restScale))}-second rests.` : x.protocol.type === 'drop_set' ? 'Drop set on the last set.' : null;
-        const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${Math.round(pr.estimated * 10) / 10} ${u}.` : `Could beat your ${pr.bestReps}-rep best at this load.`) : x.reason;
+        const why = pr ? (pr.type === 'e1rm' ? `Could raise estimated 1RM to ${Math.round(pr.estimated * 10) / 10} ${u}.` : `Could beat your ${pr.bestReps}-rep best at this load.`) : plainWhy(x);
         // What kind of note it is, so the card can mark it the way the design does (a PR chance, a technique, a first
         // estimate, load going up, load coming down for a reset, or targets the program sets).
         const estimate = (x.proposed || []).some((t) => t?.target?.estimate);
@@ -2331,20 +2340,20 @@ export function rankSplit({ config, id } = {}) {
         return { wd: w, name: day ? String(day.label || '').replace(/ — .*/, '') : 'Rest', on: !!day };
     });
     const heavyPct = Math.round(h * 100);
-    const focusNote = focus.map((pt) => { const l = lm(pt), t = mav(pt, l), v = Number(vol[pt]) || 0; return `${E.PART_LABEL?.[pt] || pt} gets ${r1(v)} sets a week (${Math.round(v / t * 100)}% of its MAV).`; });
+    const focusNote = focus.map((pt) => { const l = lm(pt), t = mav(pt, l), v = Number(vol[pt]) || 0; return `${E.PART_LABEL?.[pt] || pt} gets ${r1(v)} sets a week (${Math.round(v / t * 100)}% of its sweet spot).`; });
     const o = { id, name: sp.name, blurb: sp.blurb || '', score: Math.max(1, Math.min(100, Math.round(raw))), raw: r1(raw),
         freq: r1(fq), per: r1(per), minutes: Math.round(avgMin), cap, over, sessions: p.days.length, workSets: total, heavyPct, under,
         session: ses, sessionMoved: ses !== cfg.session, week,
         parts: { coverage: Math.round(cov * 100), frequency: Math.round(fs * 100), fit: Math.round(fit * 100), goal: Math.round(gf * 100) },
         why: [
-            `Each muscle about ${r1(fq)}× a week${fq >= 2 && fq <= 3 ? ', the frequency sweet spot' : fq < 2 ? ', below the 2× that suits most lifters' : ''}.`,
-            `~${r1(per)} sets per muscle per session${per > 6 ? ', on the heavy side' : per < 2 ? ', thin' : ', enough to count without junk volume'}.`,
-            over ? `${over} of ${p.days.length} sessions run past your ${cap}-minute cap (about ${Math.round(avgMin)} min).` : `Sessions about ${Math.round(avgMin)} min of your ${cap}.`,
-            under.length ? `Under minimum effective volume: ${under.join(', ')}.` : 'Every trained muscle reaches its minimum effective volume.',
-            cfg.goal === 'hypertrophy' ? `${100 - heavyPct}% of sets in the 6–20 rep range.` : `${heavyPct}% of sets are heavy (5 reps or fewer).`,
+            `Each muscle trained about ${r1(fq)}× a week${fq >= 2 && fq <= 3 ? ', the sweet spot' : fq < 2 ? ', less than the twice a week that suits most lifters' : ''}.`,
+            `About ${r1(per)} sets per muscle each session${per > 6 ? ', on the heavy side' : per < 2 ? ', on the light side' : ', enough to count without wasted sets'}.`,
+            over ? `${over} of ${p.days.length} sessions run past your ${cap} minutes (about ${Math.round(avgMin)} min).` : `Sessions take about ${Math.round(avgMin)} of your ${cap} minutes.`,
+            under.length ? `Not enough work to grow: ${under.join(', ')}.` : 'Every muscle gets enough work to grow.',
+            cfg.goal === 'hypertrophy' ? `${100 - heavyPct}% of sets in the 6–20 rep range that builds muscle best.` : `${heavyPct}% of sets are heavy (5 reps or fewer).`,
             ...focusNote,
         ],
-        line: `${r1(fq)}×/wk per muscle · ~${r1(per)} sets/session · ~${Math.round(avgMin)} min` + (cfg.goal === 'hypertrophy' ? '' : ` · ${heavyPct}% heavy`) };
+        line: `Each muscle ${r1(fq)}× a week · ~${Math.round(avgMin)} min sessions` + (cfg.goal === 'hypertrophy' ? '' : ` · ${heavyPct}% heavy`) };
     S.rankCache.set(key, o);
     if (S.rankCache.size > 120) S.rankCache.delete(S.rankCache.keys().next().value);
     return o;

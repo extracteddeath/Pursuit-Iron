@@ -805,6 +805,73 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         })
     }
 
+    @Test fun newLoadApprovalDiscardsOldRepConsentButPreservesFrozenIssuedHistory() {
+        enrolled()
+        complete(1,1)
+        val original=complete(2,1).first
+        val approved=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        val personalGrant=approved.grant.copy(
+            workoutId="workout-personal",grantId="grant-personal")
+        val staged=(KotlinWorkoutSnapshotDomain.stage(
+            KotlinWorkoutSnapshotRequest(source,source,personalGrant,
+                approved.program,approved.policies))
+            as KotlinWorkoutSnapshotResult.Staged).snapshot
+        val working=staged.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy {it.ordinal}
+        assertEquals(2,working.size)
+        val proof=NativeKotlinAcceptedRepTargets(
+            "workout-2",3,"db-press",working[0].setKey,
+            listOf(11,12),listOf(12,12),CoachReadiness.NORMAL)
+        val oldPending=approved.copy(
+            grant=personalGrant,storageReceiptId="storage-personal",
+            storageRevision=3,acceptedRepTargets=proof)
+        assertEquals(NativeApprovalWriteResult.Committed(3),
+            approvals.publish("owner-1",2,oldPending))
+        assertEquals(proof,approvals.currentOwnedApproval("owner-1")
+            ?.acceptedRepTargets)
+        val review=(review() as NativeOwnerLoadReviewResult.Review)
+            .coaching as NativeCurrentLoadReviewResult.Reviewed
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            review.coaching.status)
+        assertEquals(listOf(1),review.coaching.affectedDayIndices)
+        val request=intent(review).copy(
+            expectedApprovalRevision=3,newWorkoutId="workout-new-load",
+            newGrantId="grant-new-load",
+            newStorageReceiptId="storage-new-load")
+        val result=accept(request)
+        assertTrue(result.toString(),result is NativeKotlinCoachAcceptanceResult.Committed)
+        val restored=checkNotNull(NativeKotlinApprovalFileAuthority(
+            root,fence,identity).currentOwnedApproval("owner-1"))
+        assertEquals(4L,restored.storageRevision)
+        assertEquals(9L,restored.approvedSource.programRevision)
+        assertEquals("workout-new-load",restored.grant.workoutId)
+        assertNull("A prior workout's exact reps cannot be transferred to a new load",
+            restored.acceptedRepTargets)
+        assertEquals(n("35"),restored.policies.single {
+            it.exerciseId=="db-press" && it.dayIndex==1
+        }.purposeWorkingLoad)
+        val newJournal=NativeKotlinWorkoutCoordinator(
+            KotlinNativeJournalFileStore(root),approvals,fence)
+            .issue("owner-1","workout-new-load")
+        assertTrue(newJournal.toString(),newJournal is NativeKotlinIssueResult.Committed)
+        val newWorking=(newJournal as NativeKotlinIssueResult.Committed)
+            .journal.snapshot.targets.filter {
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }
+        assertTrue(newWorking.all {
+            it.reps==RepBand(8,12) &&
+                (it.load as DraftSetLoad.Verified).value.compareTo(n("35"))==0
+        })
+        val frozen=NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+            .open("owner-1","workout-2") as NativeJournalFileResult.Durable
+        assertEquals(original,frozen.journal)
+        assertEquals(n("30"),
+            (frozen.journal.snapshot.targets.first{
+                it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+            }.load as DraftSetLoad.Verified).value)
+    }
+
     @Test fun assumedGoalProgressionSurvivesRealHistoryAcceptanceAndColdOpenWithActualRirNull() {
         enrolled()
         complete(1,1,actualRir=null)

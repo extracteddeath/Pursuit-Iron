@@ -344,6 +344,9 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
         .put("reduce", JSONArray(reduce.filter { (focus[it] ?: 0) == 0 }))
         .apply { if (name.isNotBlank()) put("name", name.trim().take(60)) }
         .apply { if (!cyc) { if (endless) put("endless", true).put("weeks", 5).put("deload", true).put("progression", "auto") else put("weeks", weeks).put("deload", deload).put("progression", progression) } else put("deload", deload) }
+    // What the ranking is built from: the training answers only. Name, block length, deload and progression sit on the
+    // ranked page itself, and typing a name must not throw away and rebuild every split's score.
+    fun rankConfig(): JSONObject = config().apply { listOf("name", "weeks", "deload", "progression", "endless").forEach { remove(it) } }
     LaunchedEffect(goal, exp, days, session, equip, noRack) { pick = vm.recommend(config()) }
     var avail by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(goal, exp, days, session, equip, noRack, noBodyweight) { avail = vm.splitOptions(config()) }
@@ -417,6 +420,16 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
         "deload" to ("Add a deload week?" to "A deload adds a lighter recovery week at the end."),
     )
 
+    // Build and score the splits in the background once the schedule is known: by the time you reach the ranked page
+    // most of them are cached and it opens ready. Any answer that changes the build restarts it after a short pause.
+    val warmCfg = rankConfig().toString()
+    LaunchedEffect(warmCfg, key) {
+        if (key in setOf("mode", "cycletype", "goal", "experience", "split")) return@LaunchedEffect
+        kotlinx.coroutines.delay(900)
+        val c = JSONObject(warmCfg)
+        val pl = vm.rankSplitsPlan(c) ?: return@LaunchedEffect
+        pl.strings("ids").forEach { vm.rankSplit(c, it) }
+    }
     Column(Modifier.fillMaxSize().background(cs.surface).statusBarsPadding()) {
         // Top bar: back, title, step count, progress
         Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) {
@@ -504,7 +517,7 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                         val n = opts.list("splits").count { sp -> sp.optJSONArray("days")?.let { a -> (0 until a.length()).any { a.optInt(it) == days } } ?: true }
                         Text("$n splits fit $days days. All of them get built and ranked for you at the end.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
-                    "split" -> RankedSplits(vm, config().put("session", session), chosenSplit, { split = it }, { rankTop = it }, GOALS[goal] ?: "", cyc)
+                    "split" -> RankedSplits(vm, rankConfig(), chosenSplit, { split = it }, { rankTop = it }, GOALS[goal] ?: "", cyc)
                     "session" -> {
                         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             SESS.forEach { (id, l) ->

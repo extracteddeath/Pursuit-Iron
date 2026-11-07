@@ -32,6 +32,7 @@ internal data class NativeFirstProgramState(
     val busy:Boolean=false,
     val message:String?=null,
     val preview:FirstProgramStartReview?=null,
+    val eligibleMovements:List<FirstProgramMovementOption> = emptyList(),
     val enteredLoads:Map<String,String> =emptyMap(),
     val selectedBodyweightIds:Set<String> =emptySet(),
     val phase:TrainingPhase=TrainingPhase.HYPERTROPHY,
@@ -82,12 +83,13 @@ internal class NativeKotlinFirstProgramController(
                     selectedBodyweightIds=if(retained)before.selectedBodyweightIds
                         else emptySet(),
                     extraFocuses=if(retained)before.extraFocuses else emptyList(),
-                    preview=null,
+                    preview=null,eligibleMovements=emptyList(),
                     message="Verified setup loaded. Choose your own initial working weights; equipment inventory is not a strength test.")
                 val first=CoachFirstProgramStartDomain.review(
                     FirstProgramStartRequest(source.setup,source.catalog,
                         emptyMap(),emptySet(),phase))
-                current.value=newState.copy(preview=first)
+                current.value=newState.copy(preview=first,
+                    eligibleMovements=first.eligibleMovements)
             }
             else ->current.value=current.value.copy(
                 source=null,preview=null,
@@ -275,7 +277,7 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                     style=MaterialTheme.typography.titleLarge)
                 Text("Enter an attainable first-session weight for each movement you want. Use the displayed loading basis; for dumbbells the value is per hand. Leave unused exercises blank. The coach will not choose the lightest gym weight as your working weight.",
                     style=MaterialTheme.typography.bodySmall)
-                val options=state.preview?.eligibleMovements.orEmpty()
+                val options=state.eligibleMovements
                 if(options.isEmpty())Text(
                     "No eligible curated movements are available yet. Check your gym inventory, facilities and bodyweight preferences.",
                     style=MaterialTheme.typography.bodySmall)

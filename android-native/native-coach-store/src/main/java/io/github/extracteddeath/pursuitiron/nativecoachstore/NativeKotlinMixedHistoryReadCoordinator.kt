@@ -95,7 +95,10 @@ data class NativeKotlinAcceptedRepIntent(
     val nextGrantId:String,
     val nextStorageReceiptId:String,
     /** The UI must collect a fresh, explicit acceptance of every set. */
-    val explicitlyAccepted:Boolean
+    val explicitlyAccepted:Boolean,
+    /** A repeat must be explicitly reviewed as a hold, not as earned progress. */
+    val expectedDecisionKind:AdaptiveRepDecisionKind=
+        AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
 )
 enum class NativeKotlinRepAcceptanceRefusal {
     INVALID_SCOPE, NOT_ACCEPTED, NOT_AUTHORIZED, ASSISTANCE_DISABLED, NO_CURRENT_APPROVAL,
@@ -443,7 +446,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     original.priorWorkoutId!=intent.expectedHistoricalWorkoutId ||
                     evidence.editedSetKey!=intent.expectedChangedSetKey ||
                     evidence.observedReps!=intent.expectedObservedReps ||
-                    evidence.newRepTargets!=intent.expectedNewRepTargets)
+                    evidence.newRepTargets!=intent.expectedNewRepTargets ||
+                    evidence.decisionKind!=intent.expectedDecisionKind)
                     return@withOwnerTransaction reject(
                         NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED)
                 val next=current.copy(

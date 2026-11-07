@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { verifyRecordedProgressionEvidence } from './paired-progression.mjs';
 
 /**
  * Independent comparative release gate. It intentionally does not derive a
@@ -150,6 +151,7 @@ if (args.has('--self-test')) {
 } else {
   if (!args.has('--audit') && !args.has('--release'))
     throw Error('Choose --audit, --release, or --self-test');
+  verifyRecordedProgressionEvidence(evidence);
   const verdict = reviewComparison(cases, evidence);
   console.log(JSON.stringify(verdict, null, 2));
   if (args.has('--write-report')) {

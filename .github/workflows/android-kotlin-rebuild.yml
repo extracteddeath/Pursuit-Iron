@@ -60,6 +60,17 @@ jobs:
       - name: Test headless Kotlin training decisions and weekly composer without an APK
         working-directory: android-native
         run: gradle :kotlin-engine:testDebugUnitTest --no-daemon --stacktrace
+      - name: Test independent paired-comparison oracle and evidence validation
+        run: node --test android-native/kotlin-engine/verification/paired-progression-test.mjs
+      - name: Check out frozen web engine for matched progression execution
+        uses: actions/checkout@v4
+        with:
+          ref: 903b4a78564590d8983e651cbe19d81acd1efb9c
+          path: comparison-legacy
+      - name: Re-execute both progression engines and compare recorded outputs
+        run: >-
+          node android-native/kotlin-engine/verification/run-paired-progression.mjs
+          --legacy-root comparison-legacy --check-recorded
       - name: Test isolated native journal persistence and offline crash recovery
         working-directory: android-native
         run: gradle :native-coach-store:testDebugUnitTest --no-daemon --stacktrace
@@ -72,6 +83,16 @@ jobs:
         with:
           name: kotlin-vs-web-comparison-incomplete
           path: android-native/kotlin-engine/reports/engine-superiority-audit.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Attach fresh matched headless progression execution
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paired-headless-progression-review
+          path: |
+            android-native/kotlin-engine/build/reports/paired-progression.json
+            android-native/kotlin-engine/build/reports/paired-progression-native.json
           if-no-files-found: warn
           retention-days: 7
       - name: Attach legacy migration review inventory (not coaching-approved)

@@ -1,0 +1,1185 @@
+{
+  "schemaVersion": 1,
+  "kind": "paired-headless-progression-review",
+  "scope": "Next-exposure load-review policies only; no issued workout, persistence, device or full-product certification.",
+  "fixture": "android-native/kotlin-engine/verification/paired-progression-input.properties",
+  "fixtureDigest": "df936d682b7d282d236ac153ea322dccab3afc0a1c6319578f42d5a295c01f26",
+  "reproduction": "Check out the recorded candidate and pinned legacy commits; run node android-native/kotlin-engine/verification/run-paired-progression.mjs --legacy-root <clean-legacy-checkout>. Requires JDK 17, Android API 37 and Gradle 9.3.1.",
+  "runnerFiles": {
+    "android-native/kotlin-engine/verification/paired-progression-input.properties": "df936d682b7d282d236ac153ea322dccab3afc0a1c6319578f42d5a295c01f26",
+    "android-native/kotlin-engine/verification/paired-progression.mjs": "b5ff393ec7d64432c8b7da749af5290921d3c360e8c9b2d7224430476ec64041",
+    "android-native/kotlin-engine/verification/run-paired-progression.mjs": "1203bd62f5fd9e0e1545f0a46ec4223e16bcef47c244b9305bd86ea0c9f78e1e",
+    "android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/PairedProgressionProbe.kt": "f87a416a1d9a6f0496ef884af93850a14406856ad32bebfab1310869860f877c",
+    "android-native/kotlin-engine/build.gradle.kts": "6b04fbe543d22830d93ea447334e4870c6431959fb0cfe935d49e10fb069e2e5"
+  },
+  "engines": {
+    "legacy-javascript": {
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "sourceTree": "22aa71341d8ef9189686b13e4b31772265933ced",
+      "entryPoint": "modules/next-engine/performance.js:evaluateWorkoutProgression",
+      "results": [
+        {
+          "caseId": "dp-mixed-overload",
+          "inputDigest": "e4d7a1159aed3b88d41b1f1b329b5cbb6d604cbbd6d86c2075031068112d6f30",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 3,
+              "rir": 2,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 205,
+              "reps": 3,
+              "rir": 1,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 210,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 215,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 180,
+          "setTargets": [
+            {
+              "weight": 180,
+              "reps": 5
+            },
+            {
+              "weight": 180,
+              "reps": 5
+            },
+            {
+              "weight": 180,
+              "reps": 5
+            },
+            {
+              "weight": 180,
+              "reps": 5
+            }
+          ],
+          "mutatedInput": false,
+          "raw": {
+            "exerciseId": "barbell_bench",
+            "exerciseName": "Barbell Bench Press",
+            "role": "primary",
+            "outcome": "failure",
+            "reasonCode": "load_too_heavy",
+            "action": "decrease_load",
+            "confidence": "high",
+            "reason": "4/4 logged sets fell below the 5-rep floor, including 215×2 at 0 RIR. Holding the heaviest logged weight would repeat an off-target load. Reduce to 180 lb and rebuild from 5 reps inside the 5–8 range at the planned effort.",
+            "currentLoad": 215,
+            "suggestedLoad": 180,
+            "suggestedReps": 5,
+            "estimated1RM": 233.3,
+            "calibrationEstimated1RM": 224,
+            "setTargets": [
+              {
+                "weight": 180,
+                "reps": 5
+              },
+              {
+                "weight": 180,
+                "reps": 5
+              },
+              {
+                "weight": 180,
+                "reps": 5
+              },
+              {
+                "weight": 180,
+                "reps": 5
+              }
+            ]
+          },
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "dp-uniform-failure",
+          "inputDigest": "f9088c12ebaf600fb99dc9ee1d33cf4bd82ee5ad6b6f6f94bfdd9994d6d5c834",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 215,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 215,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 215,
+              "reps": 2,
+              "rir": 1,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 215,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 185,
+          "setTargets": [
+            {
+              "weight": 185,
+              "reps": 5
+            },
+            {
+              "weight": 185,
+              "reps": 5
+            },
+            {
+              "weight": 185,
+              "reps": 5
+            },
+            {
+              "weight": 185,
+              "reps": 5
+            }
+          ],
+          "mutatedInput": false,
+          "raw": {
+            "exerciseId": "barbell_bench",
+            "exerciseName": "Barbell Bench Press",
+            "role": "primary",
+            "outcome": "failure",
+            "reasonCode": "load_too_heavy",
+            "action": "decrease_load",
+            "confidence": "high",
+            "reason": "4/4 logged sets fell below the 5-rep floor, including 215×2 at 0 RIR. Holding the heaviest logged weight would repeat an off-target load. Reduce to 185 lb and rebuild from 5 reps inside the 5–8 range at the planned effort.",
+            "currentLoad": 215,
+            "suggestedLoad": 185,
+            "suggestedReps": 5,
+            "estimated1RM": 236.5,
+            "calibrationEstimated1RM": 229.3,
+            "setTargets": [
+              {
+                "weight": 185,
+                "reps": 5
+              },
+              {
+                "weight": 185,
+                "reps": 5
+              },
+              {
+                "weight": 185,
+                "reps": 5
+              },
+              {
+                "weight": 185,
+                "reps": 5
+              }
+            ]
+          },
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "dp-earned-step",
+          "inputDigest": "dd59262371172a87900528ee9fc3d89ec7374bdb120909f83fb715ddda9cbd8f",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 205,
+          "setTargets": [
+            {
+              "weight": 205,
+              "reps": 5
+            },
+            {
+              "weight": 205,
+              "reps": 5
+            },
+            {
+              "weight": 205,
+              "reps": 5
+            },
+            {
+              "weight": 205,
+              "reps": 5
+            }
+          ],
+          "mutatedInput": false,
+          "raw": {
+            "exerciseId": "barbell_bench",
+            "exerciseName": "Barbell Bench Press",
+            "role": "primary",
+            "outcome": "success",
+            "reasonCode": "progression_success",
+            "action": "increase_load",
+            "confidence": "high",
+            "reason": "All prescribed sets reached the top of the rep range within target effort. Increase from 200 lb to 205 lb next exposure.",
+            "currentLoad": 200,
+            "suggestedLoad": 205,
+            "loadMode": "barbell_total",
+            "suggestedLoadLabel": "205 lb",
+            "estimated1RM": 266.7,
+            "setTargets": [
+              {
+                "weight": 205,
+                "reps": 5
+              },
+              {
+                "weight": 205,
+                "reps": 5
+              },
+              {
+                "weight": 205,
+                "reps": 5
+              },
+              {
+                "weight": 205,
+                "reps": 5
+              }
+            ]
+          },
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "dp-fatigue-decay",
+          "inputDigest": "88eb806d974af94b5e311188e0b585ca641af1e422893b5b05ed68c8e750337c",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": 3,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 7,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 5,
+              "rir": 1,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 3,
+              "rir": 0,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 175,
+          "setTargets": [
+            {
+              "weight": 175,
+              "reps": 5
+            },
+            {
+              "weight": 175,
+              "reps": 5
+            },
+            {
+              "weight": 175,
+              "reps": 5
+            },
+            {
+              "weight": 175,
+              "reps": 5
+            }
+          ],
+          "mutatedInput": false,
+          "raw": {
+            "exerciseId": "barbell_bench",
+            "exerciseName": "Barbell Bench Press",
+            "role": "primary",
+            "outcome": "failure",
+            "reasonCode": "load_too_heavy",
+            "action": "decrease_load",
+            "confidence": "high",
+            "reason": "1/4 logged sets fell below the 5-rep floor, including 200×3 at 0 RIR. Holding the heaviest logged weight would repeat an off-target load. Reduce to 175 lb and rebuild from 5 reps inside the 5–8 range at the planned effort.",
+            "currentLoad": 200,
+            "suggestedLoad": 175,
+            "suggestedReps": 5,
+            "estimated1RM": 273.3,
+            "calibrationEstimated1RM": 220,
+            "setTargets": [
+              {
+                "weight": 175,
+                "reps": 5
+              },
+              {
+                "weight": 175,
+                "reps": 5
+              },
+              {
+                "weight": 175,
+                "reps": 5
+              },
+              {
+                "weight": 175,
+                "reps": 5
+              }
+            ]
+          },
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "progression-no-rir",
+          "inputDigest": "d73bfc077d7a51081556842fd0f47bbf8ac87e90a954737fc1b95d8b6a90c129",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": null,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 8,
+              "rir": null,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 8,
+              "rir": null,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 8,
+              "rir": null,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 205,
+          "setTargets": [
+            {
+              "weight": 205,
+              "reps": 5
+            },
+            {
+              "weight": 205,
+              "reps": 5
+            },
+            {
+              "weight": 205,
+              "reps": 5
+            },
+            {
+              "weight": 205,
+              "reps": 5
+            }
+          ],
+          "mutatedInput": false,
+          "raw": {
+            "exerciseId": "barbell_bench",
+            "exerciseName": "Barbell Bench Press",
+            "role": "primary",
+            "outcome": "success",
+            "reasonCode": "progression_success",
+            "action": "increase_load",
+            "confidence": "moderate",
+            "reason": "All prescribed sets reached the top of the rep range within target effort. Increase from 200 lb to 205 lb next exposure.",
+            "currentLoad": 200,
+            "suggestedLoad": 205,
+            "loadMode": "barbell_total",
+            "suggestedLoadLabel": "205 lb",
+            "estimated1RM": 253.3,
+            "setTargets": [
+              {
+                "weight": 205,
+                "reps": 5
+              },
+              {
+                "weight": 205,
+                "reps": 5
+              },
+              {
+                "weight": 205,
+                "reps": 5
+              },
+              {
+                "weight": 205,
+                "reps": 5
+              }
+            ]
+          },
+          "assessment": {
+            "outcome": "fail",
+            "failures": [
+              "increased load without measured actual RIR"
+            ]
+          }
+        }
+      ]
+    },
+    "independent-kotlin": {
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "sourceTree": "8bac7d788d68f2d5e2f92b17ef196c4e0a2d330a",
+      "entryPoint": "ConservativeProgressionReview.assess + OverloadRecoveryLoadReviewDomain.assess",
+      "results": [
+        {
+          "caseId": "dp-mixed-overload",
+          "inputDigest": "e4d7a1159aed3b88d41b1f1b329b5cbb6d604cbbd6d86c2075031068112d6f30",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 3,
+              "rir": 2,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 205,
+              "reps": 3,
+              "rir": 1,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 210,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 215,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 195,
+          "increaseReason": "BELOW_REP_FLOOR",
+          "recoveryReason": "RETURN_TO_DEMONSTRATED_LOAD_FOR_REVIEW",
+          "completedSets": 4,
+          "actualRirCount": 4,
+          "mutatedInput": false,
+          "mayAutoApply": false,
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "dp-uniform-failure",
+          "inputDigest": "f9088c12ebaf600fb99dc9ee1d33cf4bd82ee5ad6b6f6f94bfdd9994d6d5c834",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 215,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 215,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 215,
+              "reps": 2,
+              "rir": 1,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 215,
+              "reps": 2,
+              "rir": 0,
+              "issuedLoad": 215,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 200,
+          "increaseReason": "BELOW_REP_FLOOR",
+          "recoveryReason": "RETURN_TO_DEMONSTRATED_LOAD_FOR_REVIEW",
+          "completedSets": 4,
+          "actualRirCount": 4,
+          "mutatedInput": false,
+          "mayAutoApply": false,
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "dp-earned-step",
+          "inputDigest": "dd59262371172a87900528ee9fc3d89ec7374bdb120909f83fb715ddda9cbd8f",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 205,
+          "increaseReason": "QUALIFIED_FOR_REVIEW",
+          "recoveryReason": "NO_HIGHER_LOAD_ATTEMPT",
+          "completedSets": 4,
+          "actualRirCount": 4,
+          "mutatedInput": false,
+          "mayAutoApply": false,
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "dp-fatigue-decay",
+          "inputDigest": "88eb806d974af94b5e311188e0b585ca641af1e422893b5b05ed68c8e750337c",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 195,
+              "reps": 6,
+              "rir": 2,
+              "issuedLoad": 195,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": 3,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 7,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 5,
+              "rir": 1,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 3,
+              "rir": 0,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": 195,
+          "increaseReason": "BELOW_REP_FLOOR",
+          "recoveryReason": "RETURN_TO_DEMONSTRATED_LOAD_FOR_REVIEW",
+          "completedSets": 4,
+          "actualRirCount": 4,
+          "mutatedInput": false,
+          "mayAutoApply": false,
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        },
+        {
+          "caseId": "progression-no-rir",
+          "inputDigest": "d73bfc077d7a51081556842fd0f47bbf8ac87e90a954737fc1b95d8b6a90c129",
+          "previous": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 8,
+              "rir": 2,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "latest": [
+            {
+              "ordinal": 0,
+              "load": 200,
+              "reps": 8,
+              "rir": null,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 1,
+              "load": 200,
+              "reps": 8,
+              "rir": null,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 2,
+              "load": 200,
+              "reps": 8,
+              "rir": null,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            },
+            {
+              "ordinal": 3,
+              "load": 200,
+              "reps": 8,
+              "rir": null,
+              "issuedLoad": 200,
+              "issuedRir": 2
+            }
+          ],
+          "candidateLoad": null,
+          "increaseReason": "ACTUAL_RIR_MISSING",
+          "recoveryReason": "INSUFFICIENT_LATEST_EVIDENCE",
+          "completedSets": 4,
+          "actualRirCount": 0,
+          "mutatedInput": false,
+          "mayAutoApply": false,
+          "assessment": {
+            "outcome": "pass",
+            "failures": []
+          }
+        }
+      ]
+    }
+  },
+  "measurements": [
+    {
+      "caseId": "dp-mixed-overload",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "e4d7a1159aed3b88d41b1f1b329b5cbb6d604cbbd6d86c2075031068112d6f30",
+      "reproducible": true
+    },
+    {
+      "caseId": "dp-uniform-failure",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "f9088c12ebaf600fb99dc9ee1d33cf4bd82ee5ad6b6f6f94bfdd9994d6d5c834",
+      "reproducible": true
+    },
+    {
+      "caseId": "dp-earned-step",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "dd59262371172a87900528ee9fc3d89ec7374bdb120909f83fb715ddda9cbd8f",
+      "reproducible": true
+    },
+    {
+      "caseId": "dp-fatigue-decay",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "88eb806d974af94b5e311188e0b585ca641af1e422893b5b05ed68c8e750337c",
+      "reproducible": true
+    },
+    {
+      "caseId": "progression-no-rir",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "fail",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "d73bfc077d7a51081556842fd0f47bbf8ac87e90a954737fc1b95d8b6a90c129",
+      "reproducible": true
+    },
+    {
+      "caseId": "dp-mixed-overload",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "e4d7a1159aed3b88d41b1f1b329b5cbb6d604cbbd6d86c2075031068112d6f30",
+      "reproducible": true
+    },
+    {
+      "caseId": "dp-uniform-failure",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "f9088c12ebaf600fb99dc9ee1d33cf4bd82ee5ad6b6f6f94bfdd9994d6d5c834",
+      "reproducible": true
+    },
+    {
+      "caseId": "dp-earned-step",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "dd59262371172a87900528ee9fc3d89ec7374bdb120909f83fb715ddda9cbd8f",
+      "reproducible": true
+    },
+    {
+      "caseId": "dp-fatigue-decay",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "88eb806d974af94b5e311188e0b585ca641af1e422893b5b05ed68c8e750337c",
+      "reproducible": true
+    },
+    {
+      "caseId": "progression-no-rir",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "d73bfc077d7a51081556842fd0f47bbf8ac87e90a954737fc1b95d8b6a90c129",
+      "reproducible": true
+    }
+  ]
+}

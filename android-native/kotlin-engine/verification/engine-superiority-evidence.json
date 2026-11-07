@@ -6,5 +6,116 @@
     "approved": false,
     "artifact": null
   },
-  "measurements": []
+  "measurements": [
+    {
+      "caseId": "dp-mixed-overload",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "e4d7a1159aed3b88d41b1f1b329b5cbb6d604cbbd6d86c2075031068112d6f30",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "dp-uniform-failure",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "f9088c12ebaf600fb99dc9ee1d33cf4bd82ee5ad6b6f6f94bfdd9994d6d5c834",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "dp-earned-step",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "dd59262371172a87900528ee9fc3d89ec7374bdb120909f83fb715ddda9cbd8f",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "dp-fatigue-decay",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "88eb806d974af94b5e311188e0b585ca641af1e422893b5b05ed68c8e750337c",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "progression-no-rir",
+      "engine": "legacy-javascript",
+      "proof": "headless",
+      "outcome": "fail",
+      "commit": "903b4a78564590d8983e651cbe19d81acd1efb9c",
+      "inputDigest": "d73bfc077d7a51081556842fd0f47bbf8ac87e90a954737fc1b95d8b6a90c129",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "dp-mixed-overload",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "e4d7a1159aed3b88d41b1f1b329b5cbb6d604cbbd6d86c2075031068112d6f30",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "dp-uniform-failure",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "f9088c12ebaf600fb99dc9ee1d33cf4bd82ee5ad6b6f6f94bfdd9994d6d5c834",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "dp-earned-step",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "dd59262371172a87900528ee9fc3d89ec7374bdb120909f83fb715ddda9cbd8f",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "dp-fatigue-decay",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "88eb806d974af94b5e311188e0b585ca641af1e422893b5b05ed68c8e750337c",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    },
+    {
+      "caseId": "progression-no-rir",
+      "engine": "independent-kotlin",
+      "proof": "headless",
+      "outcome": "pass",
+      "commit": "f210c27941eecab0a058c432578d7cae1c983116",
+      "inputDigest": "d73bfc077d7a51081556842fd0f47bbf8ac87e90a954737fc1b95d8b6a90c129",
+      "reproducible": true,
+      "artifact": "android-native/kotlin-engine/verification/paired-progression-measurement.json",
+      "artifactDigest": "caeff25722a7432f7188d472312e7c47701431a00ad88ffe60bee628cac340ca"
+    }
+  ]
 }

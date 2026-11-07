@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { root, fixturePath, caseIds, parseFixture, physicalLoads, grade,
-  scenarioDigest, verifyBundle } from './paired-progression.mjs';
+  scenarioDigest, verifyBundle, evidencePath, verifyRecordedProgressionEvidence } from './paired-progression.mjs';
 
 const bytes=readFileSync(resolve(root,fixturePath));
 const fixture=parseFixture(bytes);
@@ -96,4 +97,30 @@ test('changed actual RIR, overwritten targets and made-up pass outcomes are refu
     const bundle=syntheticBundle();mutate(bundle);
     assert.throws(()=>verifyBundle(bundle,fixture));
   }
+});
+
+test('recorded measurements require the exact artifact bytes and bound engine results',()=>{
+  const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
+  assert.doesNotThrow(()=>verifyRecordedProgressionEvidence(evidence));
+  for(const mutate of [
+    e=>e.measurements[0].artifactDigest='0'.repeat(64),
+    e=>e.measurements[0].outcome='fail',
+    e=>e.measurements[0].inputDigest='0'.repeat(64),
+    e=>e.measurements[0].commit='0'.repeat(40),
+    e=>e.measurements.push({...e.measurements[0]})]) {
+    const altered=structuredClone(evidence);mutate(altered);
+    assert.throws(()=>verifyRecordedProgressionEvidence(altered));
+  }
+});
+
+test('five measured pairs still cannot certify the complete engine replacement',()=>{
+  const audit=JSON.parse(execFileSync(process.execPath,
+    ['android-native/kotlin-engine/verification/engine-superiority-gate.mjs','--audit'],
+    {cwd:root,encoding:'utf8'}));
+  assert.equal(audit.completedPairs,5);
+  assert.equal(audit.requiredPairs,49);
+  assert.equal(audit.missingPairs,44);
+  assert.equal(audit.verdict,'NOT_PROVEN_BETTER');
+  assert.deepEqual(audit.improvedDomains,['progression']);
+  assert.deepEqual(audit.regressions,[]);
 });

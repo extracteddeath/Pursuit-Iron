@@ -14,9 +14,16 @@ Neither engine gets credit for producing the other engine's output.
   programming, custom programs/cycles, coaching, history, migration and
   Android. The critical rep-jump case is a release blocker, not a claimed
   measured improvement.
-- `verification/engine-superiority-evidence.json`: deliberately empty until
-  both engines are actually run. Do NOT fill it with reported defects, source
-  comments, existence of Kotlin classes or impressions from screenshots.
+- `verification/engine-superiority-evidence.json`: now contains five executed
+  headless pairs, with exact engine revisions, common input fingerprints and
+  the content digest of the raw measurement artifact. Other pairs remain
+  unmeasured. Do NOT fill it with reported defects, source comments, existence
+  of Kotlin classes or impressions from screenshots.
+- `verification/paired-progression-measurement.json`: complete raw native and
+  JavaScript policy results, both engines' source-tree identities, exact
+  previous/latest actuals and issued targets, independent oracle assessments
+  and runner/fixture content fingerprints. Audit/release refuses altered,
+  mismatched or stale evidence for this tranche.
 - `verification/engine-superiority-gate.mjs --audit --write-report`: checks
   matrix/evidence structure, reports unmeasured pairs, publishes a
   non-certifying CI artifact; incomplete measurement is not CI failure.
@@ -30,6 +37,59 @@ Neither engine gets credit for producing the other engine's output.
 The comparison gate is intentionally a final approval requirement, not part
 of the current `app` runtime. Passing the ordinary Kotlin CI is **not**
 passing this release gate.
+
+## First executed progression tranche — 2026-11-07
+
+The web engine is frozen at `903b4a78564590d8983e651cbe19d81acd1efb9c`;
+the native policy/runner revision is
+`f210c27941eecab0a058c432578d7cae1c983116`. The shared ASCII Properties
+fixture contains four working sets at a 5–8 practical rep band, prescribed
+RIR 2, an explicit 45-lb bar and finite plate-pair inventory. Earlier capacity
+is a controlled fixture, not an inferred or imported user workout.
+
+| Frozen scenario | Web load review | Kotlin load review | Independent headless result |
+| --- | --- | --- | --- |
+| Mixed 200/205/210/215 at 3/3/2/2 | 180 lb | Historical 195 lb | Both pass |
+| Repeated 215 at 2 reps near failure | 185 lb | Historical 200 lb | Both pass |
+| Two full 200-lb ceiling sessions with actual RIR | 205 lb | 205 lb | Both pass |
+| Declining 8/7/5/3 at 200 lb | 175 lb | Historical 195 lb | Both pass |
+| 200-lb ceiling sets with actual RIR missing | Offers 205 lb | No increase; actual RIR remains missing | Web fails the declared effort-evidence policy; Kotlin passes |
+
+The first four passes do **not** reproduce the old reported 215-for-every-set
+defect in the frozen current web policy. Different downward reviews can pass:
+the independent oracle requires a concrete buildable lower load after the
+specified rep-floor failures and the smallest authorized increment after
+earned work; it does not declare either reduction physiologically optimal.
+Missing actual RIR is judged against the master plan's rule that unknown effort
+is not permission to increase, even when a prescribed RIR target exists.
+
+These are headless **next-exposure load-review policies**, not issued-workout,
+history persistence, full native onboarding or Android-device proofs. The web
+entry point evaluates the latest completed exposure; native increase/recovery
+policies inspect the supplied previous and latest exposures. The exact same
+frozen history is available to both adapters. Both actual/target snapshots and
+all set identities are checked after execution. A blanket refusal cannot pass
+the earned-increase or concrete-recovery cases.
+
+The gate now has **5/49 required paired proofs**, one measured improvement
+domain (progression), and no measured regression in this tranche. The verdict
+remains **NOT_PROVEN_BETTER**. The 44 missing pairs, improvements in at least
+three domains, blinded coach assessment, device acceptance and explicit user
+acceptance remain open.
+
+To reproduce with JDK 17, Android API 37 and Gradle 9.3.1 available:
+
+```sh
+git worktree add --detach ../pursuit-iron-web-comparison 903b4a78564590d8983e651cbe19d81acd1efb9c
+node --test android-native/kotlin-engine/verification/paired-progression-test.mjs
+node android-native/kotlin-engine/verification/run-paired-progression.mjs --legacy-root ../pursuit-iron-web-comparison --check-recorded
+node android-native/kotlin-engine/verification/engine-superiority-gate.mjs --audit
+```
+
+CI checks out the same frozen web revision, runs both actual policies afresh
+and compares their raw results with the recorded artifact. Its generated run
+outputs are attached separately. Re-recording requires `--record`; CI does not
+silently rewrite the evidence ledger or confer user acceptance.
 
 ## Measurement method
 
@@ -68,10 +128,15 @@ passing this release gate.
 
 | Area | Legacy JavaScript | Isolated Kotlin now | Can claim better? |
 | --- | --- | --- | --- |
-| Overloaded progression (200/205/210/215 for 3/3/2/2) | **User-reported** unearned 215-for-every-set recommendation; NOT yet remeasured on frozen web revision | Candidate `ConservativeProgressionReview` refuses increase; `OverloadRecoveryLoadReviewDomain` can offer a prior verified all-set load for review | **Not yet:** new logic is headless and no paired current web run exists |
+| Overloaded progression (200/205/210/215 for 3/3/2/2) | Frozen headless policy reviews 180 lb; the old reported 215-for-every-set defect was not reproduced | Native typed policies review the fixture's demonstrated 195 lb | **Parity for this headless safeguard:** no load-quality or end-to-end superiority claim |
+| Missing actual RIR despite a prescribed target | Frozen headless policy offers 200→205 without measured effort | Native increase review retains actual RIR as missing and withholds promotion | **One measured policy improvement:** other progression, program and device proofs remain open |
 | Verified exercise equipment and weight increments | Live web engine has broad equipment support; user-reported phantom 38.5/159.5 recommendations | `EquipmentLoadDomain` uses BigDecimal, confirmed plate pairs, machine stack and exact implement basis | **Not yet:** narrow headless correctness is encouraging, full supported-catalog breadth and app issuance are not proven |
-| Recovery-week per-set intensity | No matched web execution yet; cannot infer behavior from old bug reports | Kotlin candidate now flags higher rep floors/ceilings at unchanged load and refuses unmatched set comparisons despite fewer sets | **Not yet:** requires matched executed headless and Android proofs |\n| Custom program and cycle authoring | Existing live working product has many features, with reported amplifier and volume-loss defects | Separate first-class custom authoring, candidate transitions and review contracts; not fully production-integrated | **No** until complete parity plus better authoring and block outcomes on device |
-| Revision-fenced longitudinal review | Historical source revisions can change across sessions; legacy outcome is unmeasured | Kotlin review now rejects changes to athlete/program revision, not just IDs or gym source | **Not yet:** requires paired persisted-history and Android proofs |\n| Conflicting redo after acknowledgment loss | Requires a fresh identical event-ID/different-payload experiment in the legacy product | Candidate Kotlin segmented root now binds the full typed correction and has a disk-level stale-WAL regression | **Not yet:** paired engine and physical-device experiments remain required |\n| Paired root/index recovery | No pinned matched behavior yet for the live web source | Isolated checksum-framed candidate checkpoint binds the complete authenticated segmented root to both workout/receipt index trees; crash and lost-ack tests passed in native CI | **Not yet:** full single-writer cutover, backup/restore and real Android device proofs are missing |\n| Native history integrity | Existing web and JS-native paths support actual historical workouts | v2 native history and candidate segmented root, replay, redo, correction and lookup tests; segmented candidate is inactive and v2 is capped at 4,096 entries | **No:** missing single-authority cutover and 4,097+ actual persistence |
+| Recovery-week per-set intensity | No matched web execution yet; cannot infer behavior from old bug reports | Kotlin candidate now flags higher rep floors/ceilings at unchanged load and refuses unmatched set comparisons despite fewer sets | **Not yet:** requires matched executed headless and Android proofs |
+| Custom program and cycle authoring | Existing live working product has many features, with reported amplifier and volume-loss defects | Separate first-class custom authoring, candidate transitions and review contracts; not fully production-integrated | **No** until complete parity plus better authoring and block outcomes on device |
+| Revision-fenced longitudinal review | Historical source revisions can change across sessions; legacy outcome is unmeasured | Kotlin review now rejects changes to athlete/program revision, not just IDs or gym source | **Not yet:** requires paired persisted-history and Android proofs |
+| Conflicting redo after acknowledgment loss | Requires a fresh identical event-ID/different-payload experiment in the legacy product | Candidate Kotlin segmented root now binds the full typed correction and has a disk-level stale-WAL regression | **Not yet:** paired engine and physical-device experiments remain required |
+| Paired root/index recovery | No pinned matched behavior yet for the live web source | Isolated checksum-framed candidate checkpoint binds the complete authenticated segmented root to both workout/receipt index trees; crash and lost-ack tests passed in native CI | **Not yet:** full single-writer cutover, backup/restore and real Android device proofs are missing |
+| Native history integrity | Existing web and JS-native paths support actual historical workouts | v2 native history and candidate segmented root, replay, redo, correction and lookup tests; segmented candidate is inactive and v2 is capped at 4,096 entries | **No:** missing single-authority cutover and 4,097+ actual persistence |
 | End-to-end usability | Web product available for real workouts | Kotlin replacement is not the sole native coaching issuer; existing Compose integration can still depend on old engine | **No** until complete offline device journey and no JS fallback |
 
 The separate `KNOWN_LEGACY_BUG_REGRESSIONS.md` ledger tracks 25 reported

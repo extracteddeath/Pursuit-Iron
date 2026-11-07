@@ -40,7 +40,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -101,7 +100,7 @@ fun PiApp(vm: AppViewModel) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         when {
             vm.startupError != null -> StartupError(vm.startupError!!)
-            !vm.ready -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            !vm.ready -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class) androidx.compose.material3.LoadingIndicator(Modifier.size(56.dp)) }
             else -> BoxWithConstraints(Modifier.fillMaxSize()) {
                 val wide = maxWidth >= 600.dp
                 CompositionLocalProvider(LocalWide provides wide, LocalAppVm provides vm) { Shell(vm, wide) }
@@ -326,7 +325,9 @@ private fun BusyScrim(label: String) {
         Row(Modifier.padding(32.dp).clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerHigh).padding(horizontal = 24.dp, vertical = 20.dp)
             .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite; contentDescription = "$label, please wait" },
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+            // M3 Expressive loading indicator: a morphing shape for waits under a few seconds.
+            @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+            androidx.compose.material3.LoadingIndicator(Modifier.size(40.dp))
             Text("$label…", style = MaterialTheme.typography.titleSmall)
         }
     }

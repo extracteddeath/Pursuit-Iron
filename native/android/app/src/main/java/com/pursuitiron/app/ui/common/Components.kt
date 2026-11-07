@@ -74,24 +74,32 @@ fun Kicker(text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVaria
 fun SectionTitle(text: String, modifier: Modifier = Modifier) =
     Text(text, style = MaterialTheme.typography.titleMedium, modifier = modifier.padding(start = 4.dp, top = 8.dp))
 
-/** Pill segmented control: the selected segment is secondary-container. */
+/** M3 Expressive connected button group (the successor to segmented buttons): one toggle per option, the outer
+    corners round, the inner ones tight, and the selected one morphs to a full pill. Tonal colours keep it quieter than
+    the screen's primary actions. [track] and [gap] are kept for callers; the group draws no track of its own. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun Segmented(options: List<Pair<String, String>>, selected: String?, onSelect: (String) -> Unit, modifier: Modifier = Modifier, height: Dp = 44.dp, track: Color = MaterialTheme.colorScheme.surfaceContainerHigh, gap: Dp = 4.dp) {
-    Row(
-        modifier.fillMaxWidth().clip(CircleShape).background(track).padding(gap),
-        horizontalArrangement = Arrangement.spacedBy(gap),
-    ) {
-        options.forEach { (id, label) ->
+fun Segmented(options: List<Pair<String, String>>, selected: String?, onSelect: (String) -> Unit, modifier: Modifier = Modifier, height: Dp = 44.dp,
+              @Suppress("UNUSED_PARAMETER") track: Color = MaterialTheme.colorScheme.surfaceContainerHigh, @Suppress("UNUSED_PARAMETER") gap: Dp = 4.dp) {
+    val cs = MaterialTheme.colorScheme
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.ButtonGroupDefaults.ConnectedSpaceBetween)) {
+        options.forEachIndexed { k, (id, label) ->
             val on = id == selected
-            val bg by animateColorAsState(if (on) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "seg")
-            Box(
-                Modifier.weight(1f).height(height).clip(CircleShape).background(bg)
-                    .semantics { role = Role.Tab; this.selected = on }
-                    .clickable { onSelect(id) },
-                contentAlignment = Alignment.Center,
+            androidx.compose.material3.ToggleButton(
+                checked = on, onCheckedChange = { onSelect(id) },
+                modifier = Modifier.weight(1f).height(height).semantics { role = Role.Tab; this.selected = on },
+                shapes = when {
+                    options.size == 1 -> androidx.compose.material3.ToggleButtonDefaults.shapes()
+                    k == 0 -> androidx.compose.material3.ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    k == options.lastIndex -> androidx.compose.material3.ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> androidx.compose.material3.ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
+                colors = androidx.compose.material3.ToggleButtonDefaults.toggleButtonColors(
+                    containerColor = cs.surfaceContainerHigh, contentColor = cs.onSurfaceVariant,
+                    checkedContainerColor = cs.secondaryContainer, checkedContentColor = cs.onSecondaryContainer),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
             ) {
-                Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = if (on) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

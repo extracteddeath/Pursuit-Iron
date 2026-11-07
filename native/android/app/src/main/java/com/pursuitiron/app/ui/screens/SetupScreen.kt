@@ -166,9 +166,17 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
     val scoring = plan == null || done < total
     if (scoring) Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) {
         Text(if (plan == null) "Finding the splits that fit…" else "Building and scoring ${minOf(done + 1, total)} of $total splits…", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
-        androidx.compose.material3.LinearProgressIndicator(progress = { if (total == 0) 0f else done / total.toFloat() }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape))
+        // M3 Expressive wavy progress: it ripples while the splits are being built, then settles flat.
+        @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+        androidx.compose.material3.LinearWavyProgressIndicator(progress = { if (total == 0) 0f else done / total.toFloat() }, modifier = Modifier.fillMaxWidth())
     }
-    if (ranked.isEmpty()) { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.fillMaxWidth()); return }
+    if (ranked.isEmpty()) {
+        Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+            @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+            androidx.compose.material3.ContainedLoadingIndicator(Modifier.size(56.dp))
+        }
+        return
+    }
     val top = ranked.first()
     val hero = ranked.firstOrNull { it.s("id") == chosen } ?: top
     val heroRank = ranked.indexOf(hero) + 1

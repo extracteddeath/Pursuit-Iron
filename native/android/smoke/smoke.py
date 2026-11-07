@@ -323,6 +323,12 @@ if find(r"How are you today\?", timeout=3) or scroll_to(r"How are you today\?", 
         FAILS.append("check-in did not fold into its chip")
 
 # 2. Workout: enter a weight, log, rate, rest
+# The M3 Expressive split button: its menu holds the other ways into today
+scroll_up_to(r"Start workout|^\|?Train .+ now", tries=8)
+if tap(r"^More ways to start", "start-split", required=False):
+    if not find(r"Start now, skip the preview", timeout=3):
+        FAILS.append("start split button menu missing its options")
+    back()
 tap(r"Start workout|^\|?Train .+ now")
 # Build 898 session preview: try a shorter limit, then start the full session
 if find(r"(?i)time available", timeout=6):

@@ -49,6 +49,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -163,7 +166,7 @@ fun TodayScreen(vm: AppViewModel) {
         }
         if (next != null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise {
             val rest = h.o("restDay")
-            if (rest != null) RestDayHero(vm, rest) else Hero(vm, next, h)
+            if (rest != null) RestDayHero(vm, rest) else Hero(vm, next, h) { altOpen = true }
         }}
         // The check-in tunes the session above it, so it sits under it, folded to one row until opened.
         if (next != null && h.o("live") == null && h.o("restDay") == null) item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { CheckInCard(vm) }}
@@ -208,7 +211,7 @@ fun TodayScreen(vm: AppViewModel) {
 }
 
 @Composable
-private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
+private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject, onFresher: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val ready = readinessToday(vm, h)
     val ex = next.list("exercises")
@@ -246,12 +249,42 @@ private fun Hero(vm: AppViewModel, next: JSONObject, h: JSONObject) {
                         }
                     }
                 }
-                Button(
-                    onClick = { if (live != null) vm.resume() else vm.openPreview() },
+                if (live != null) Button(
+                    onClick = { vm.resume() },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary),
-                ) { Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text(if (live != null) "  Resume workout" else "  Start workout", style = MaterialTheme.typography.titleSmall) }
+                ) { Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text("  Resume workout", style = MaterialTheme.typography.titleSmall) }
+                else StartSplitButton(vm, hasFresher = h.o("alt") != null, onFresher = onFresher)
             }
+        }
+    }
+}
+
+/** M3 Expressive split button: Start workout (the session preview, where the time can be trimmed) with the other
+    ways into today beside it — start straight away, a fresher day, or a quick workout. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun StartSplitButton(vm: AppViewModel, hasFresher: Boolean, onFresher: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    var open by remember { mutableStateOf(false) }
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, com.pursuitiron.app.ui.theme.Motion.spatialFast(), label = "split")
+    Box(Modifier.fillMaxWidth()) {
+        // The split button's two halves in a row (the leading half takes the width; SplitButtonLayout sizes to content).
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.SplitButtonDefaults.Spacing)) {
+                androidx.compose.material3.SplitButtonDefaults.LeadingButton(onClick = { vm.openPreview() }, modifier = Modifier.weight(1f).height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)) {
+                    Icon(PiIcons.Play, null, modifier = Modifier.size(18.dp)); Text("  Start workout", style = MaterialTheme.typography.titleSmall)
+                }
+                androidx.compose.material3.SplitButtonDefaults.TrailingButton(checked = open, onCheckedChange = { open = it }, modifier = Modifier.height(56.dp)
+                    .semantics { contentDescription = "More ways to start" },
+                    colors = ButtonDefaults.buttonColors(containerColor = cs.primary, contentColor = cs.onPrimary)) {
+                    Icon(PiIcons.ChevronDown, null, modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = turn })
+                }
+        }
+        DropdownMenu(open, { open = false }, modifier = Modifier.align(Alignment.TopEnd)) {
+            DropdownMenuItem(text = { Text("Start now, skip the preview") }, leadingIcon = { Icon(PiIcons.Play, null) }, onClick = { open = false; vm.start() })
+            if (hasFresher) DropdownMenuItem(text = { Text("Train a fresher day") }, leadingIcon = { Icon(PiIcons.Redo, null) }, onClick = { open = false; onFresher() })
+            DropdownMenuItem(text = { Text("Quick workout instead") }, leadingIcon = { Icon(PiIcons.Zap, null) }, onClick = { open = false; vm.quickPickOpen = true })
         }
     }
 }

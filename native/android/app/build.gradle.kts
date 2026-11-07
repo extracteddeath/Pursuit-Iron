@@ -69,7 +69,8 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")
-    implementation("androidx.compose.material3:material3:1.4.0")
+    // 1.5 brings Material 3 Expressive: connected button groups, loading indicators, wavy progress.
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")

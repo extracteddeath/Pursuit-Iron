@@ -1203,4 +1203,20 @@ for (const [id, want, label] of [['p531', 90, 'Training max'], ['texas', 85, '5-
   const rf = C.refreshCycle({ id: plain.cycleId });
   ok(rf.ok && /Refresh future blocks/.test(C.cycleDetail({ id: plain.cycleId }).refreshLabel) && C.cycleDetail({ id: plain.cycleId }).blocks.length === pd2.blocks.length, 'upgrading rebuilds the later blocks as adaptive and keeps the cycle shape (' + (rf.error || rf.blocks) + ')');
   ok(C.setProgramIcon({ key: plain.cycleId, icon: 'flame' }) && C.cycleDetail({ id: plain.cycleId }).icon.icon === 'flame', 'a cycle takes its own icon'); }
+// Plan's sets by muscle (App.js VolumeBars opened): the lifts behind each muscle and each head
+{ C.init({ store: JSON.stringify({ unit: 'lb' }) });
+  C.createProgram({ config: { name: 'V', unit: 'lb', goal: 'hypertrophy', experience: 'intermediate', split: 'upper_lower', days: 4, session: 's60', equipment: ['barbell', 'rack', 'bench', 'dumbbell', 'cable', 'machine', 'pullup', 'ezbar'] } });
+  const v = C.weeklyVolumeView({});
+  const sum = (a) => Math.round(a.reduce((x, f) => x + f.contrib, 0) * 10) / 10;
+  ok(v.rows.every((r) => r.from.length && Math.abs(sum(r.from) - r.sets) <= 0.3 + 0.05 * r.from.length), 'every muscle lists the lifts behind it, adding up to its sets');
+  ok(v.rows.every((r) => r.from.every((f) => f.day && f.name && f.contrib > 0)), 'each lift says its day and what it counts');
+  const sh = v.rows.find((r) => r.part === 'shoulders');
+  ok(sh && sh.heads.map((h) => h.key).join() === 'front_delts,side_delts,rear_delts' && sh.heads.every((h) => Math.abs(sum(h.from) - h.sets) <= 0.3), 'shoulders split into front, side and rear delts, each with its lifts');
+  const b = C.buildOwnProgram({ name: 'Own', days: 1 }), d = C.editor({ programId: b.programId }).days[0].id;
+  ['ohp', 'db-shrug', 'cable-wrist-curl'].forEach((id) => C.editAct({ programId: b.programId, type: 'add', dayId: d, exId: id }));
+  C.saveEdits({ programId: b.programId });
+  const o = C.weeklyVolumeView({ programId: b.programId });
+  const head = (part, k) => o.rows.find((r) => r.part === part)?.heads.find((h) => h.key === k);
+  ok(head('shoulders', 'front_delts')?.from[0]?.name === 'Overhead Press' && head('traps', 'upper_traps')?.sets === 3 && head('forearms', 'wrist_flexors')?.from[0]?.name === 'Cable Wrist Curl',
+    'your own program shows delt, trap and wrist heads with their lifts'); }
 console.log(fails ? fails + ' FAILED' : 'ALL PASS'); process.exit(fails ? 1 : 0);

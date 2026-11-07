@@ -185,6 +185,8 @@ fun PlanScreen(vm: AppViewModel) {
             }
         }}
         item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { VolumeWaveCard(vm, p.s("programId"), wk, { vm.loadPlan(p.s("programId"), it) }, { matrixOpen = true }) }}
+        // App.js VolumeCard on the program page: sets per muscle (and per head) with the lifts behind each, in view, not a sheet away.
+        item(span = if (wide) StaggeredGridItemSpan.SingleLane else full) { Rise { MuscleVolumeCard(vm, p.s("programId"), wk) { detailsOpen = true } }}
         p.list("days").forEach { d ->
             item { Rise { PlanDayCard(vm, p, d, wk) { k -> whyFor = Triple(p.s("programId"), d.s("id"), k) } }}
         }

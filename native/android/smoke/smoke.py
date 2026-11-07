@@ -612,6 +612,26 @@ if scroll_to(r"Every lift, week by week", tries=4):
     close_sheet(r"^\|Week by week$")
 else:
     FAILS.append("no week-by-week entry on Plan")
+# Sets by muscle on Plan (App.js VolumeCard): tap a muscle for its lifts; Heads splits shoulders into delt heads
+MUSCLE_ROW = r"^[A-Z][A-Za-z /]+: [0-9.]+ sets, .* lifts"
+if seek(r"Sets by muscle · week"):
+    shot("muscle-volume")
+    if scroll_to(MUSCLE_ROW, tries=3, step=300) and tap(MUSCLE_ROW, "muscle-lifts"):
+        time.sleep(0.8)
+        shot("muscle-lifts-open")
+    else:
+        FAILS.append("sets by muscle has no tappable muscle")
+    if scroll_up_to(r"^Show muscle heads", tries=6) and tap(r"^Show muscle heads", "muscle-heads"):
+        if not seek(r"^(Front|Side|Rear) Delts: "):
+            FAILS.append("Heads shows no delt heads")
+        else:
+            shot("muscle-heads-on")
+        scroll_up_to(r"^Show muscle heads", tries=8)
+        tap(r"^Show muscle heads", required=False)
+    else:
+        FAILS.append("sets by muscle has no Heads switch")
+else:
+    FAILS.append("no sets by muscle on Plan")
 # The design's Programs (the program pill under Plan): every program, then shared programs (added without switching)
 scroll_up_to(r"^Program: ", tries=10)
 prog_open = tap(r"^Program: ", "programs-sheet")

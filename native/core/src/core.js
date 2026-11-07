@@ -2033,6 +2033,8 @@ function partZoneOf(part, sets, sub, program) {
 }
 /* App.js VolumeCard for a program week: sets per muscle against MEV/MAV/MRV, the volume check (every
    training week), and what your own history says about each muscle's productive range. */
+const HEADS_UNDER = { shoulders: ['front_delts', 'side_delts', 'rear_delts'], traps: ['upper_traps'], abs: ['obliques', 'serratus'], calves: ['tibialis'],
+    forearms: ['wrist_flexors', 'wrist_extensors', 'wrist_deviators', 'grip'] };
 export function weeklyVolumeView({ programId, weekIndex } = {}) {
     const nx = upNext();
     const p = programId ? programById(programId) : nx?.program;
@@ -2062,6 +2064,44 @@ export function weeklyVolumeView({ programId, weekIndex } = {}) {
     });
     // The week's working sets as the plan counts them (Plan, the volume wave): per-muscle credit adds helper shares,
     // so its sum (80.5) is not a set count and was being shown as one beside a 61-set week.
+    // App.js VolumeBars, opened: tap a muscle for the lifts that train it (day, lift, sets, and the share it counts);
+    // "Show heads" lists each head (delts, upper traps, obliques, serratus, tibialis, wrist directions) with its own
+    // MEV–MRV and the lifts behind it.
+    const sched = p.schedule || {}, WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayTag = (d, di) => { const wd = Object.keys(sched).find((k) => sched[k] === d.id); return wd != null ? `${WD[Number(wd)]} · ${d.label}` : /^day\s*\d+$/i.test(d.label || '') ? d.label : `Day ${di + 1} · ${d.label}`; };
+    const contrib = {};   // part → [{ day, name, sets, contrib, direct, id }]
+    p.days.forEach((d, di) => { let rows2 = []; try { rows2 = E.dayMuscleBreakdown(p, d, wk) || []; } catch { rows2 = []; }
+        rows2.forEach((e) => (e.from || []).forEach((f) => { if ((f.contrib || 0) <= 0.05) return;
+            (contrib[e.part] = contrib[e.part] || []).push({ id: f.id, name: f.name, day: dayTag(d, di), sets: r1(f.sets), contrib: r1(f.contrib), direct: !!f.direct }); })); });
+    const fromOf = (part) => (contrib[part] || []).slice().sort((x, y) => y.direct - x.direct || y.contrib - x.contrib);
+    const engine = p.engineSource === 'pursuit-next';
+    // Per-head credit: an engine program's own set events (they carry each set's muscle shares); otherwise the
+    // shell's rule (a lift's own head takes its sets; pressing feeds front delts, rows and pulldowns rear delts, rows upper traps).
+    const headFrom = {};
+    if (engine) { try { const snap = E.captureShellVolumeSnapshot(p, wk, EXERCISES);
+        const sess = new Map((snap?.sessions || []).map((x) => [x.id, x])), acc = new Map();
+        (snap?.events || []).forEach((ev) => { const se = sess.get(ev.sessionId); const di = p.days.findIndex((d) => d.id === se?.shellDayId); if (di < 0) return;
+            const ex = se.exercises.find((x) => x.exerciseId === ev.exerciseId);
+            Object.entries(ev.muscles || {}).forEach(([m, f]) => { if (!(f > 0) || !/_delts$/.test(m)) return;
+                const k = `${m}|${di}|${ev.exerciseId}`, cur = acc.get(k) || { head: m, id: ex?.shellId, name: ex?.name || EX_BY_ID[ex?.shellId]?.name || ev.exerciseId, day: dayTag(p.days[di], di), sets: 0, contrib: 0, direct: f >= 1 };
+                cur.contrib += f; cur.sets += 1; acc.set(k, cur); }); });
+        acc.forEach((v) => (headFrom[v.head] = headFrom[v.head] || []).push({ ...v, contrib: r1(v.contrib) })); } catch { /* heads stay empty */ } }
+    else Object.entries(contrib).forEach(([part, list]) => list.forEach((f) => {
+        const ex = EX_BY_ID[f.id]; if (!ex) return; let k = null;
+        if (f.direct) { try { k = E.subRegionOf(ex); } catch { k = null; } if (k === part) k = null; }
+        else if (part === 'shoulders') { let pat = null; try { pat = E.movePattern(ex); } catch { pat = null; } k = pat === 'row' || pat === 'pulldown' ? 'rear_delts' : 'front_delts'; }
+        else if (part === 'traps') k = 'upper_traps';
+        if (k) (headFrom[k] = headFrom[k] || []).push(f); }));
+    const headsOf = (part) => (engine ? (part === 'shoulders' ? HEADS_UNDER.shoulders : []) : (HEADS_UNDER[part] || []))
+        .filter((k) => (sub[k] || 0) > 0.05 || (E.SUB_LANDMARKS?.[k]?.mev || 0) > 0).map((k) => {
+        let lm = null; try { lm = engine && k !== 'front_delts' ? E.landmarkFor(k, p.config?.experience || 'intermediate', p) : null; } catch { lm = null; }
+        lm = lm || E.SUB_LANDMARKS?.[k] || { mev: 4, mrv: 20 };
+        const v = Number(sub[k]) || 0, mav = lm.mav != null ? lm.mav : (lm.mev + lm.mrv) / 2;
+        const z = v < lm.mev ? ['below MEV', 'muted'] : v <= mav ? ['productive', 'ok'] : v <= lm.mrv ? ['high', 'ok'] : ['over MRV', 'warn'];
+        return { key: k, label: E.SUBMUSCLE_LABEL?.[k] || k, sets: r1(v), mev: lm.mev, mav: r1(mav), mrv: lm.mrv, zone: z[0], tone: z[1],
+            from: (headFrom[k] || []).slice().sort((x, y) => y.direct - x.direct || y.contrib - x.contrib) };
+    });
+    rows.forEach((r) => { r.from = fromOf(r.part); r.heads = headsOf(r.part); });
     let workingSets = 0; try { p.days.forEach((d) => d.exercises.forEach((_id, slot) => { const id = E.exerciseAt(p, d, slot, wk); workingSets += Number(E.computeCell(p, d, id, slot, wk)?.sets) || 0; })); } catch { workingSets = 0; }
     return { programId: p.id, weekIndex: wk, total: r1(parts.reduce((a, x) => a + volume[x], 0)), workingSets, rows,
         issues: (audit.issues || []).map((i) => ({ part: i.part, label: i.label || E.PART_LABEL?.[i.part] || i.part, status: i.status, sets: r1(i.v), mev: i.mev ?? null, mrv: i.mrv ?? null, fix: i.fix || '' })),

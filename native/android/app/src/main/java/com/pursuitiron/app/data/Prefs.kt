@@ -51,6 +51,9 @@ class Prefs(context: Context) {
     var healthSync by mutableStateOf(sp.getBoolean("healthSync", false))
         private set
     fun changeHealthSync(v: Boolean) { healthSync = v; sp.edit().putBoolean("healthSync", v).apply() }
+    /** Plan's sets-by-muscle card: show each head (delts, upper traps, obliques…) under its muscle (App.js VolumeBars granular). */
+    var volHeads by mutableStateOf(sp.getBoolean("volHeads", false))
+    fun changeVolHeads(v: Boolean) { volHeads = v; sp.edit().putBoolean("volHeads", v).apply() }
 
     fun changeSeed(v: Seed) { seed = v; sp.edit().putString("seed", v.name).apply() }
     fun changeBlack(v: Boolean) { black = v; sp.edit().putBoolean("black", v).apply() }

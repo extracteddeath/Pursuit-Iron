@@ -196,7 +196,6 @@ fun ProfBig3Card(vm: AppViewModel, board: JSONObject) {
                     style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer, modifier = Modifier.width(54.dp), textAlign = TextAlign.End)
             }
         }
-        if (board.isNull("bodyweight")) Text("Log your bodyweight to see each lift as a multiple of it.", style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer)
     }
 }
 
@@ -207,11 +206,6 @@ fun ProfScoreCard(vm: AppViewModel, onOpen: () -> Unit, onNeedBodyweight: () -> 
     val cs = MaterialTheme.colorScheme
     val sc = p.o("score")
     if (sc == null) {
-        if (!p.b("scoreLocked")) return
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).clickable(onClick = onNeedBodyweight).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("STRENGTH SCORE", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp), color = cs.onSurfaceVariant)
-            Text("Log your bodyweight to score your lifts against strength standards.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-        }
         return
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(cs.surfaceContainerLow).clickable(onClick = onOpen)
@@ -322,7 +316,7 @@ fun ProfBodyweightCard(vm: AppViewModel, onOpenBody: () -> Unit) {
         }
         // Each state says what it means: an empty card used to show "— kg" with copy about recalculating ratios.
         Text(when {
-            bw == null -> "Your strength-to-bodyweight ratios use this. Log it once to start."
+            bw == null -> "Unlocks your Strength Score and each lift as a multiple of bodyweight."
             log.size < 2 -> "Log it again over the next weeks and an 8-week line appears here."
             else -> "8 weeks · strength ratios update when you log"
         }, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)

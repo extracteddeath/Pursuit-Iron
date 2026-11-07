@@ -231,16 +231,14 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
                     Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Grid, null, tint = cs.primary) }
                     Column(Modifier.weight(1f)) {
                         Text("Browse shared programs", style = MaterialTheme.typography.titleSmall)
-                        Text("Import a community program — yours to edit", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        Text("Community programs, yours to edit", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                     Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
                 }
             }
-            Surface(onClick = { addShared = true }, color = androidx.compose.ui.graphics.Color.Transparent, contentColor = cs.primary, shape = RoundedCornerShape(24.dp),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, cs.outlineVariant), modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Icon(PiIcons.Download, null, Modifier.size(18.dp)); Text("  Add a shared program", style = MaterialTheme.typography.titleSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
-                }
+            // One entry for shared programs: browse above, a code as a quiet link (two full-width rows read as duplicates).
+            androidx.compose.material3.TextButton(onClick = { addShared = true }, modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 48.dp)) {
+                Icon(PiIcons.Download, null, Modifier.size(18.dp)); Text("  Add a shared program by code", style = MaterialTheme.typography.labelLarge)
             }
         }
     }

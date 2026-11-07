@@ -199,7 +199,7 @@ fun CycleSheet(vm: AppViewModel, id: String?, programId: String? = null, onClose
             }
             return@DesignPage
         }
-        if (!editing && c == null) return@DesignPage
+        if (!editing && c == null) { com.pursuitiron.app.ui.common.LoadingSkeleton(Modifier.padding(4.dp)); return@DesignPage }
         if (!editing && c != null) Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             // The cycle's icon, as on the web's Cycle options: tap to change it.
             Box(Modifier.clip(RoundedCornerShape(18.dp)).clickable { iconOpen = true }.semantics { role = Role.Button; contentDescription = "Change cycle icon" }) { IconTile(c.o("icon"), 56.dp) }

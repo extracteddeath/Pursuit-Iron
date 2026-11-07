@@ -617,11 +617,11 @@ private fun SetupBody(vm: AppViewModel, onDiscard: () -> Unit) {
                     reduce.filter { (focus[it] ?: 0) == 0 }.takeIf { it.isNotEmpty() }?.let { r -> add("Reduce" to r.joinToString(", ") { labelOf(it) }) }
                 }
                 // The ranked page shows the split itself; the settings summary belongs to the questions.
-                if ("split" !in pg) Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(46.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { revOpen = !revOpen }
+                if ("split" !in pg && "cycletype" !in pg) Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(46.dp).clip(CircleShape).background(cs.surfaceContainerHigh).clickable { revOpen = !revOpen }
                     .semantics { role = Role.Button; stateDescription = if (revOpen) "Expanded" else "Collapsed" }, contentAlignment = Alignment.Center) {
                     Text(if (revOpen) "Hide your setup" else "Your setup · ${rows.size} settings", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold))
                 }
-                AnimatedVisibility(revOpen && "split" !in pg, enter = Motion.expandIn, exit = Motion.shrinkOut) {
+                AnimatedVisibility(revOpen && "split" !in pg && "cycletype" !in pg, enter = Motion.expandIn, exit = Motion.shrinkOut) {
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Column {
                             Text("YOUR SETUP", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp), color = cs.primary)

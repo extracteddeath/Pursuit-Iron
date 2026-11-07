@@ -287,7 +287,7 @@ fun GamePlanCard(review: JSONObject, changes: Int) {
                 }
                 Column(Modifier.weight(1f)) {
                     Text(g.s("title"), style = MaterialTheme.typography.titleSmall)
-                    Text(g.s("guidance"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = if (on) 12 else 3, overflow = TextOverflow.Ellipsis)
+                    Text(g.s("guidance"), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = if (on) 12 else 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

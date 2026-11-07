@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -135,7 +136,7 @@ private fun MuscleLine(r: JSONObject, key: String, expanded: Boolean, indent: Dp
                 if (mav > 0) drawRect(tick, topLeft = Offset(x(mav) - 1f, 0f), size = Size(2f, size.height))
             }
             Text(fmtNum(sets), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = if (tone == "warn") cs.error else cs.onSurface,
-                modifier = Modifier.width(38.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                maxLines = 1, softWrap = false, modifier = Modifier.widthIn(min = 38.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
             Icon(if (expanded) PiIcons.ChevronUp else PiIcons.ChevronDown, null, Modifier.size(16.dp), tint = cs.onSurfaceVariant)
         }
         AnimatedVisibility(expanded, enter = Motion.expandIn, exit = Motion.shrinkOut) {

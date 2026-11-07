@@ -180,7 +180,7 @@ fun TodayScreen(vm: AppViewModel) {
                     Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(cs.primaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Zap, null, tint = cs.onPrimaryContainer) }
                     Column(Modifier.weight(1f)) {
                         Text("Quick workout", style = MaterialTheme.typography.titleSmall)
-                        Text("Pick lifts and go. Your program stays as it is.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        Text("Pick lifts and go. Your plan stays put.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                     Icon(PiIcons.ChevronRight, null, tint = cs.onSurfaceVariant)
                 }

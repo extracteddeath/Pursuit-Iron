@@ -81,6 +81,9 @@ class RestNotifier(private val context: Context) {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(open)
             .setTimeoutAfter((endAt - System.currentTimeMillis()).coerceAtLeast(1000L) + 30_000L)
+            // Android 16 Live Update: the countdown also rides in the status bar as a chip and leads the lock screen,
+            // the way a ride or a delivery does (iOS calls it a Live Activity). Older Android ignores the request.
+            .setRequestPromotedOngoing(!sample)
         if (!sample) {
             b.addAction(R.mipmap.ic_launcher_monochrome, "−15 s", actionIntent("minus"))
             b.addAction(R.mipmap.ic_launcher_monochrome, "+15 s", actionIntent("plus"))
@@ -95,6 +98,29 @@ class RestNotifier(private val context: Context) {
             if (exactAllowed()) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endAt, pi)
             else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endAt, pi)
         }
+    }
+
+    /** A workout running with no rest in progress, while you're out of the app: the session clock counting up and the
+     *  next set, so it reads like the rest card (and, on Android 16, sits in the status bar as a Live Update). */
+    fun showWorkout(startedAt: Long?, title: String, next: String) {
+        if (!allowed()) return
+        val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val b = NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(R.mipmap.ic_launcher_monochrome)
+            .setContentTitle(title)
+            .setContentText(next)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(open)
+            .setRequestPromotedOngoing(true)
+        if (startedAt != null && startedAt > 0) b.setWhen(startedAt).setShowWhen(true).setUsesChronometer(true) else b.setShowWhen(false)
+        runCatching { alarms?.cancel(alarmIntent(null)) }
+        @Suppress("MissingPermission")
+        runCatching { NotificationManagerCompat.from(context).notify(id, b.build()) }
     }
 
     fun cancel() {

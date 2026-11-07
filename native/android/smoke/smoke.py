@@ -531,6 +531,15 @@ if not find(r"^Workout note: ", timeout=4):
 # 3. Minimise and resume through the mini bar
 tap(r"Minimise workout", "minimised")
 tap(r"Resume workout", "resumed")
+# Out of the app mid-workout: the workout (or its rest) stays in the shade as an ongoing card
+adb("shell", "input", "keyevent", "KEYCODE_HOME")
+time.sleep(2.5)
+nd = adb("shell", "dumpsys", "notification", "--noredact") or ""
+if PKG not in nd or not re.search(r"Next: |Tap to finish|Rest", nd):
+    FAILS.append("no ongoing workout notification out of the app")
+adb("shell", "am", "start", "-W", "-n", f"{PKG}/com.pursuitiron.app.MainActivity")
+time.sleep(2)
+find(r"Finish", timeout=8)
 
 # 4. Finish
 tap(r"^\|Finish$|^Finish$")
@@ -1341,6 +1350,11 @@ for pat, nm in [(r"^\|Today$|^Today\|", "today"), (r"^\|Plan$|^Plan\|", "plan"),
 adb("shell", "cmd", "uimode", "night", "no")
 time.sleep(2.5)
 tap(r"^\|Today$|^Today\|", required=False)
+
+# 9d. Launcher shortcuts (long-press the icon): Start workout and Quick workout are published
+sc = adb("shell", "dumpsys", "shortcut", timeout=60) or ""
+if "Quick workout" not in sc or "Start workout" not in sc:
+    FAILS.append("launcher shortcuts not published")
 
 # 10. Home-screen widget: rendered by a real AppWidgetHost, then its Start button's intent
 adb("shell", "appwidget", "grantbind", "--package", PKG)

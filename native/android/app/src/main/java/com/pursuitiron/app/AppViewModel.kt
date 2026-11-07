@@ -102,6 +102,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 publishWidget()
                 com.pursuitiron.app.data.Reminders.save(app, settings?.o("reminders"))
                 if (pendingWidgetStart) { pendingWidgetStart = false; fromWidget() }
+                if (pendingQuickShortcut) { pendingQuickShortcut = false; fromQuickShortcut() }
             } catch (e: Throwable) {
                 startupError = e.message ?: e.toString()
             }
@@ -152,6 +153,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
     private var pendingWidgetStart = false
     /** The widget's Start/Resume button: resume a workout in progress, otherwise start the next one. */
+    /** The Quick workout launcher shortcut: the picker on Today, or back into a workout already running. */
+    fun fromQuickShortcut() {
+        if (!ready) { pendingQuickShortcut = true; return }
+        if (session?.b("active") == true) resume() else { goTab(Tab.Today); quickPickOpen = true }
+    }
+    private var pendingQuickShortcut = false
+
     fun fromWidget() {
         if (!ready) { pendingWidgetStart = true; return }
         if (session?.b("active") == true) resume() else start()
@@ -846,12 +854,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun onForeground() { inForeground = true; rest.cancel() }
     fun onBackground() {
         inForeground = false
-        val end = restEndsAt() ?: return
-        if (restPaused() || end <= System.currentTimeMillis()) return
-        val s = session ?: return
+        val s = session?.takeIf { it.b("active") } ?: return
         val ex = s.list("exercises").getOrNull(s.i("exIdx"))
         val next = ex?.list("sets")?.firstOrNull { !it.b("done") }
         val text = if (ex != null && next != null) "Next: ${ex.s("name")} · ${next.s("weight").ifBlank { "?" }} ${s.s("unit")} × ${next.s("reps")}" else "Next set when it ends"
+        val end = restEndsAt()
+        if (end == null || restPaused() || end <= System.currentTimeMillis()) {
+            // No rest running: the workout itself stays one glance away (clock held when the workout is paused).
+            val paused = s.optLong("pausedAt") > 0
+            rest.showWorkout(if (paused) null else s.optLong("startedAt"), s.s("dayLabel").ifBlank { "Workout" } + if (paused) " · paused" else "",
+                if (ex != null && next != null) text else "Tap to finish your workout")
+            return
+        }
         val kind = s.o("rest")?.s("kind")
         rest.show(end, when (kind) { "mini" -> "Myo rest"; "warm" -> "Warm-up rest"; else -> "Rest" }, text)
     }

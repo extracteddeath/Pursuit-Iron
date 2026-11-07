@@ -161,6 +161,20 @@ object CoachNextProgramLoadReviewDomain {
         if (affected.isEmpty())
             return denied(CoachNextLoadReviewStatus.NO_COMPARABLE_PLANNED_VISIT,
                 "No approved training day contains this exercise.")
+        // A shared-purpose policy MUST NOT claim to change all matching
+        // training days when any of them has a more specific day-scoped
+        // prescription. The day override wins during issuance, so a broad
+        // update could falsely report that this day received a new load.
+        // Explicitly review that day instead; Upper and Push stay independent.
+        if(purpose!=null && day==null && request.policies.any { policy ->
+                policy.exerciseId==request.exerciseId &&
+                    policy.purpose==purpose &&
+                    policy.dayIndex!=null &&
+                    policy.dayIndex in affected
+            })
+            return denied(
+                CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
+                "One or more training days have their own approved prescription. Review each day-specific load separately; a shared-purpose change cannot override or misreport those targets.")
         if (purpose==null && request.policies.any {
                 it.exerciseId == request.exerciseId && it.purposeWorkingLoad != null
             })

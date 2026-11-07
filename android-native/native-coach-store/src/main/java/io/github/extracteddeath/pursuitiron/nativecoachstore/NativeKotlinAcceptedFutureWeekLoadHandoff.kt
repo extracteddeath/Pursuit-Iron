@@ -47,22 +47,27 @@ class NativeKotlinAcceptedFutureWeekLoadHandoff(
     fun preview(
         ownerKey:String,cycleId:String,blockId:String,
         coaching:CustomCoachAuditInputs,
-        absoluteWeek:Int,weekday:Int,slotId:String
+        absoluteWeek:Int,weekday:Int,slotId:String,
+        permittedPreparedWorkoutId:String?=null
     ):NativeAcceptedFutureWeekLoadHandoff {
         fun no(r:NativeAcceptedFutureWeekLoadRefusal)=
             NativeAcceptedFutureWeekLoadHandoff.Rejected(r)
         if(listOf(ownerKey,cycleId,blockId,slotId).any{!id.matches(it)}||
+            (permittedPreparedWorkoutId!=null &&
+                !id.matches(permittedPreparedWorkoutId)) ||
             absoluteWeek !in 1..104||weekday !in 0..6)
             return no(NativeAcceptedFutureWeekLoadRefusal.INVALID_SELECTION)
         return runCatching{fence.withOwnerTransaction(ownerKey){
             val accepted=(consents.readCurrent(ownerKey,cycleId,blockId,
-                coaching,absoluteWeek,weekday,slotId)
+                coaching,absoluteWeek,weekday,slotId,
+                permittedPreparedWorkoutId)
                 as? NativeFutureWeekConsentRead.Current)?.receipt
                 ?:return@withOwnerTransaction no(
                     NativeAcceptedFutureWeekLoadRefusal.CONSENT_MISSING_OR_REVOKED)
             val earned=(future.review(ownerKey,coaching,absoluteWeek,weekday,
                 slotId,accepted.readiness,accepted.movementRestricted,
-                accepted.maximumAuthorizedIncrease)
+                accepted.maximumAuthorizedIncrease,
+                permittedPreparedWorkoutId)
                 as? NativeFutureWeekLoadOptionResult.Ready)
                 ?:return@withOwnerTransaction no(
                     NativeAcceptedFutureWeekLoadRefusal.STALE_CONSENT_OR_REVIEW)

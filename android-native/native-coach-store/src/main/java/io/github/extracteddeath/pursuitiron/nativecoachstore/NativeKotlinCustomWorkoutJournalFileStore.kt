@@ -326,7 +326,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
         signoffs:NativeKotlinActivatedCycleSignoffFileStore,
         activation:NativeKotlinFutureActivationCommitTransaction,
         repApprovals:NativeKotlinCustomNextRepApprovalFileStore?=null,
-        loadApprovals:NativeKotlinCustomNextLoadApprovalFileStore?=null
+        loadApprovals:NativeKotlinCustomNextLoadApprovalFileStore?=null,
+        futureWeek:NativeKotlinAcceptedFutureWeekLoadHandoff?=null
     ):NativeCustomJournalResult {
         if(!id.matches(workoutId)||!id.matches(cycleId) ||
             absoluteWeek !in 1..104 || weekday !in 0..6)
@@ -424,13 +425,35 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)
             val load=loadRead as? NativeCustomLoadRead.Current
+            // Version-6 preparation is a separate athlete-approved
+            // FUTURE-WEEK option. Never substitute the per-workout load
+            // approval or trust a prepared fingerprint without rederiving
+            // the entire option against current history, settings, gym,
+            // program and full-cycle audit under this owner transaction.
+            val futureAccepted=if(selected.futureWeekApprovalFingerprint!=null) {
+                val slot=selected.futureWeekSlotId
+                    ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.CONSENT_CHANGED)
+                val currentFuture=futureWeek?.preview(ownerKey,cycleId,
+                    consent.blockId,inputs,absoluteWeek,weekday,slot)
+                    as? NativeAcceptedFutureWeekLoadHandoff.Ready
+                    ?:return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.CONSENT_CHANGED)
+                if(selected.resetToAuthored || amended!=null || load!=null ||
+                    currentFuture.slotId!=slot ||
+                    currentFuture.fingerprint!=selected.futureWeekApprovalFingerprint ||
+                    currentFuture.original!=exact.snapshot)
+                    return@withOwnerTransaction NativeCustomJournalResult.Rejected(
+                        NativeCustomJournalRefusal.CONSENT_CHANGED)
+                currentFuture
+            } else null
             // Reset is explicit, authenticated, version-5 preparation
             // provenance. Never reapply a superseded coaching approval,
             // even if its old receipt still happens to be current. A corrupt
             // approval still fails closed above, and issued journals never
             // consult preferences to rewrite their historical targets.
             val expectedSnapshot=if(selected.resetToAuthored)exact.snapshot
-                else load?.amendment?.amended
+                else futureAccepted?.projected ?:load?.amendment?.amended
                     ?:amended?.amendment?.amended ?:exact.snapshot
             val expectedRepProof=if(selected.resetToAuthored)null
                 else amended?.receipt?.fingerprint
@@ -438,6 +461,8 @@ class NativeKotlinCustomWorkoutJournalFileStore(
                 else load?.receipt?.fingerprint
             if(selected.repApprovalFingerprint!=expectedRepProof ||
                 selected.loadApprovalFingerprint!=expectedLoadProof ||
+                selected.futureWeekApprovalFingerprint!=futureAccepted?.fingerprint ||
+                selected.futureWeekSlotId!=futureAccepted?.slotId ||
                 selected.snapshot!=expectedSnapshot)
                 return@withOwnerTransaction NativeCustomJournalResult.Rejected(
                     NativeCustomJournalRefusal.CONSENT_CHANGED)

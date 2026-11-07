@@ -101,8 +101,8 @@ fun SessionPreviewSheet(vm: AppViewModel, t: AppViewModel.PreviewTarget, onClose
                     }
                 }
             }
-            Text(if (fits) "Today only. Keeps key lifts, warm-ups and prescribed rest. Cuts optional amplifiers and lower-priority volume first."
-                else "The protected work needs about $est min. Choose a longer option or Full.",
+            Text(if (fits) "Today only. Keeps your key lifts, warm-ups and rest; trims extra sets and lower-priority lifts first."
+                else "Your key lifts alone need about $est min. Pick a longer option or Full.",
                 style = MaterialTheme.typography.bodySmall, color = if (fits) cs.onSurfaceVariant else cs.tertiary)
             Column(Modifier.clip(RoundedCornerShape(22.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 x.list("exercises").forEachIndexed { k, e ->

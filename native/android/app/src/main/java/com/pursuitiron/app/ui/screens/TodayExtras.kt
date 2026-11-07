@@ -298,7 +298,7 @@ fun StreakLine(h: JSONObject) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Icon(PiIcons.Flame, null, Modifier.size(18.dp), tint = cs.primary)
         Text("$n-week streak", style = MaterialTheme.typography.titleSmall)
-        Text("· one workout keeps a week", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text("· one workout a week keeps it", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

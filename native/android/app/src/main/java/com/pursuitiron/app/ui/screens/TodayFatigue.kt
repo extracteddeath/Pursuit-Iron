@@ -245,7 +245,7 @@ fun ReadinessPanel(vm: AppViewModel, h: JSONObject, onClose: () -> Unit) {
                         Text(l, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold))
                     }
                 }
-                Text("Hatched: under 65%", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                Text("Striped: still recovering", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold))
             }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 shown.forEach { m ->
@@ -258,7 +258,7 @@ fun ReadinessPanel(vm: AppViewModel, h: JSONObject, onClose: () -> Unit) {
                     }
                 }
             }
-            Text("Estimated from when each muscle was last trained, how many sets and how close to failure you took it. Bold rows are trained today. Deleting a logged session resets its fatigue.",
+            Text("Estimated from when each muscle was last trained, how many sets and how hard. Bold rows are trained today.",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp))
             val rec = h.o("recovery")
             if (rec?.b("restAdvised") == true && h.b("canLight")) {

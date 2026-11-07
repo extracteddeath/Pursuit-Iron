@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -194,7 +195,7 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
         // The four measures behind the score
         val parts = hero.o("parts")
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf("coverage" to "Coverage", "frequency" to "Frequency", "fit" to "Session fit", "goal" to "Goal fit").forEach { (k, l) ->
+            listOf("coverage" to "Muscles", "frequency" to "How often", "fit" to "Time", "goal" to "Goal").forEach { (k, l) ->
                 val v = parts?.optInt(k) ?: 0
                 Column(Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = "$l $v of 100" }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(l, style = MaterialTheme.typography.labelSmall, color = cs.onPrimaryContainer, maxLines = 1)
@@ -202,11 +203,17 @@ private fun RankedSplits(vm: AppViewModel, config: JSONObject, chosen: String?, 
                 }
             }
         }
+        // Three reasons up front; the rest on request, so the week strip stays in view without scrolling.
+        var allWhy by remember(hero.s("id")) { mutableStateOf(false) }
+        val why = hero.strings("why")
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            hero.strings("why").forEach { w -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            (if (allWhy) why else why.take(3)).forEach { w -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.padding(top = 7.dp).size(5.dp).clip(CircleShape).background(cs.primary))
                 Text(w, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 19.sp), color = cs.onPrimaryContainer)
             } }
+            if (why.size > 3) Text(if (allWhy) "Fewer reasons" else "${why.size - 3} more reason${if (why.size - 3 == 1) "" else "s"}",
+                style = MaterialTheme.typography.labelLarge, color = cs.primary,
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { allWhy = !allWhy }.semantics { role = Role.Button }.heightIn(min = 40.dp).padding(horizontal = 4.dp).wrapContentHeight())
         }
         if (hero.b("sessionMoved")) Text("Runs at ${SESS_SHORT[hero.s("session")]} min sessions; your length doesn’t fit it.", style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer)
         // The week it lays out

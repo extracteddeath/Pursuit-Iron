@@ -456,13 +456,20 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertRepeatedRepIssuance(null)
     }
 
-    private fun assertRepeatedRepIssuance(actualRir:Int?) {
+    @Test fun twoMissedPersonalizedGoalsRepeatAcrossRestartWithoutFalseProgression() {
+        assertRepeatedRepIssuance(2,missedBoth=true)
+    }
+
+    private fun assertRepeatedRepIssuance(
+        actualRir:Int?,missedBoth:Boolean=false
+    ) {
         assertTrue(acceptRep(repReadyHistory()) is NativeKotlinRepAcceptanceResult.Committed)
         var journal=(repIssuer().issue("owner-1","workout-3")
             as NativeKotlinIssueResult.Committed).journal
         for((index,target) in journal.snapshot.targets.withIndex()) {
             val load=target.load as DraftSetLoad.Verified
-            val reps=if(target.exerciseId=="db-press" && target.ordinal==0)11 else 12
+            val reps=if(target.exerciseId=="db-press" &&
+                (target.ordinal==0 || missedBoth))11 else 12
             val saved=journals.appendStored("owner-1","workout-3",
                 KotlinJournalOperation.RecordSet("repeat-set-$index",journal.revision,
                     target.setKey,KotlinJournalSetOutcome.COMPLETED,
@@ -488,7 +495,8 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         val review=displayed.candidate as NativeCurrentRepPrescriptionResult.Reviewed
         val candidate=review.proposal as AdaptiveSetPrescriptionResult.Candidate
         assertEquals("workout-3",candidate.historicalWorkoutId)
-        assertEquals(listOf(11,12),candidate.observedReps)
+        val recordedReps=if(missedBoth)listOf(11,11) else listOf(11,12)
+        assertEquals(recordedReps,candidate.observedReps)
         assertEquals(listOf(12,12),candidate.newRepTargets)
         assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
             candidate.decisionKind)
@@ -533,7 +541,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         })
         val historical=coldIssuer.open("owner-1","workout-3") as NativeJournalFileResult.Durable
         val keys=historical.journal.snapshot.targets.filter{it.exerciseId=="db-press"}.map{it.setKey}
-        assertEquals(listOf(11,12),keys.map {
+        assertEquals(recordedReps,keys.map {
             (historical.journal.effectiveSets.getValue(it).operation as KotlinJournalOperation.RecordSet)
                 .performed!!.reps
         })

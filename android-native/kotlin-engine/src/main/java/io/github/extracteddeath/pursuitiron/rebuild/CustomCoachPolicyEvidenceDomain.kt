@@ -68,6 +68,8 @@ object CustomCoachPolicyEvidenceDomain {
     fun review(audit:CustomCoachAudit):CustomCoachPolicyEvidenceReview {
         fun no(reason:CustomCoachEvidenceRefusal)=
             CustomCoachPolicyEvidenceReview.Rejected(reason)
+        if(audit.issues.any{it.kind==CustomCoachIssueKind.CATALOG_UNVERIFIED})
+            return no(CustomCoachEvidenceRefusal.UNVERIFIED_CATALOG)
         val authored=audit.structuralReview?.verifiedDraft
             ?:return no(CustomCoachEvidenceRefusal.UNVERIFIED_STRUCTURE)
         if(audit.sourceAthleteRevision.isNullOrBlank() ||
@@ -84,8 +86,6 @@ object CustomCoachPolicyEvidenceDomain {
                 CustomCoachIssueKind.PROSPECTIVE_CONTEXT_INVALID
             )})
             return no(CustomCoachEvidenceRefusal.UNVERIFIED_SOURCE)
-        if(audit.issues.any{it.kind==CustomCoachIssueKind.CATALOG_UNVERIFIED})
-            return no(CustomCoachEvidenceRefusal.UNVERIFIED_CATALOG)
         val weeks=audit.weeks.sortedBy{it.absoluteWeek}
         if(weeks.size!=authored.blocks.sumOf{it.weeks} ||
             weeks.size !in 1..104 ||

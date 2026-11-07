@@ -90,6 +90,15 @@ remains **NOT_PROVEN_BETTER**. The 44 missing pairs, improvements in at least
 three domains, blinded coach assessment, device acceptance and explicit user
 acceptance remain open.
 
+**2026-11-07 evidence refresh:** the five raw pairs were retrieved unchanged
+from the successful [native CI execution at 0074d36](https://github.com/extracteddeath/Pursuit-Iron/actions/runs/42369051473),
+artifact `13572329261`. The ZIP SHA-256 was independently checked against
+GitHub's artifact digest; the complete Kotlin policy tree, shared fixture and
+all comparison-runner hashes match the current source. The recorded
+measurements retain the actual executed commit rather than relabeling them
+as a later UI commit. There are zero stale pairs in this tranche. This refresh
+does not add block-entry, persistence or device comparison evidence.
+
 To reproduce with JDK 17, Android API 37 and Gradle 9.3.1 available:
 
 ```sh

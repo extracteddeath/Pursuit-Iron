@@ -40,8 +40,8 @@ The pure reviewer never writes or issues anything. A load proposal must have
 one of two evidence paths:
 
 1. **Earned load:** two completed comparable performances at the same verified
-   working weight, all reps at the target ceiling, actual reported RIR at least
-   two on every set, with an attainable next physical weight within the
+   working weight, all reps at the target ceiling, reported or assumed original
+   goal RIR at least two on every set, with an attainable next physical weight within the
    athlete's maximum increment.
 2. **Overload recovery:** the last attempt contains a rep-floor miss after
    trying higher weights, a prior comparable workout demonstrated a safe common
@@ -189,13 +189,13 @@ from the approved program and measured completed working sets. It changes
 only exact per-set rep targets, never arbitrary set weights, RIR, rest,
 exercise order, or logged evidence. Eligibility requires matching actual
 unit and equipment stock, stable ordinals, authentic historical source,
-actual recorded RIR, sufficient headroom and no restricted movement.
+reported or explicitly assumed original-goal RIR, sufficient headroom and no restricted movement.
 
 The isolated native Coach screen now displays the before/after working-set
 targets and asks the athlete to explicitly accept them. The native owner
 reopens complete saved history including corrections and current equipment
 under one revision fence. It rejects unissued/custom workout identity
-collisions, stale approval/history, omitted effort, or any altered proposed
+collisions, stale approval/history, unavailable effort, or any altered proposed
 rep. Acceptance persists a new approval storage revision and **new grant**
 with a constrained evidence proof (original workout/revision and exact
 working-set targets). Version-2 `NativeKotlinApprovalCodec` retains version-1
@@ -246,5 +246,7 @@ Do not transfer source ownership, merge this development branch, publish an APK
 or claim superiority until real paired JavaScript/Kotlin comparisons, the
 full 14-feature and E01–E41 ledgers, authoritative history, actual Android
 onboarding-to-Finish acceptance, device power-loss/restore and blind coaching
-reviews pass. The 27-scenario comparison's evidence file remains empty until
-both engines are actually run with matched inputs.
+reviews pass. The current 33-scenario comparison requires 49 paired proofs.
+Five current headless pairs have actual matched executions; 44 proofs and
+measured improvement in at least three domains remain missing. The five
+existing pairs do not measure this new block-entry workflow.

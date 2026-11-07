@@ -7,8 +7,8 @@
   "reproduction": "Check out the recorded candidate and pinned legacy commits; run node android-native/kotlin-engine/verification/run-paired-progression.mjs --legacy-root <clean-legacy-checkout>. Requires JDK 17, Android API 37 and Gradle 9.3.1.",
   "runnerFiles": {
     "android-native/kotlin-engine/verification/paired-progression-input.properties": "b723db001ebb4a011f63e611047265060e7a18836ef69923a9b19f29cb26cc92",
-    "android-native/kotlin-engine/verification/paired-progression.mjs": "99b99007eda771d3ba1d57624ec0c848e75e34b5e3b5e04ae798ed1a72125827",
-    "android-native/kotlin-engine/verification/run-paired-progression.mjs": "1203bd62f5fd9e0e1545f0a46ec4223e16bcef47c244b9305bd86ea0c9f78e1e",
+    "android-native/kotlin-engine/verification/paired-progression.mjs": "03a3898bc92879606211d24fc2b49989e5221b385da23d68872c42e3ccceeea6",
+    "android-native/kotlin-engine/verification/run-paired-progression.mjs": "2a86c94cfe63a00b90269965d8c827fae9546467586fc424e4bb0a7b79b7f23e",
     "android-native/kotlin-engine/src/test/java/io/github/extracteddeath/pursuitiron/rebuild/PairedProgressionProbe.kt": "892ecb90defab46417926ce2efb0b91a969b301a0eec09073fc1ea33fd60ed67",
     "android-native/kotlin-engine/build.gradle.kts": "6b04fbe543d22830d93ea447334e4870c6431959fb0cfe935d49e10fb069e2e5"
   },
@@ -666,8 +666,8 @@
       ]
     },
     "independent-kotlin": {
-      "commit": "e0b7a0c15da0c747a3ac086c7067079728d345ba",
-      "sourceTree": "76457bd6cc44c9cf06c0cb39738cac14b4914f93",
+      "commit": "0074d3602a17ff594d09248ea574ba08e92d449d",
+      "sourceTree": "07204d0a5fd9504796514c4f47b5cec7b51c4962",
       "entryPoint": "ConservativeProgressionReview.assess + OverloadRecoveryLoadReviewDomain.assess",
       "results": [
         {
@@ -1144,7 +1144,7 @@
       "engine": "independent-kotlin",
       "proof": "headless",
       "outcome": "pass",
-      "commit": "e0b7a0c15da0c747a3ac086c7067079728d345ba",
+      "commit": "0074d3602a17ff594d09248ea574ba08e92d449d",
       "inputDigest": "c82cedeb40bf7d86e11e393ee825b518020d2422c1d647318e60d19bdc82c750",
       "reproducible": true
     },
@@ -1153,7 +1153,7 @@
       "engine": "independent-kotlin",
       "proof": "headless",
       "outcome": "pass",
-      "commit": "e0b7a0c15da0c747a3ac086c7067079728d345ba",
+      "commit": "0074d3602a17ff594d09248ea574ba08e92d449d",
       "inputDigest": "df3c36f246bbb099d0ee27fa702f0a5b8afb2ee26e5407baeae5bfb112d8744e",
       "reproducible": true
     },
@@ -1162,7 +1162,7 @@
       "engine": "independent-kotlin",
       "proof": "headless",
       "outcome": "pass",
-      "commit": "e0b7a0c15da0c747a3ac086c7067079728d345ba",
+      "commit": "0074d3602a17ff594d09248ea574ba08e92d449d",
       "inputDigest": "51857be8e16ce5af14e73e34b205066ef120142a083c1617367b75ee597c32c3",
       "reproducible": true
     },
@@ -1171,7 +1171,7 @@
       "engine": "independent-kotlin",
       "proof": "headless",
       "outcome": "pass",
-      "commit": "e0b7a0c15da0c747a3ac086c7067079728d345ba",
+      "commit": "0074d3602a17ff594d09248ea574ba08e92d449d",
       "inputDigest": "4fbd2b8a04c5e05171e49d704e9aafbcd57ae349d6a81fbf0b9c9c9135ace7dc",
       "reproducible": true
     },
@@ -1180,7 +1180,7 @@
       "engine": "independent-kotlin",
       "proof": "headless",
       "outcome": "pass",
-      "commit": "e0b7a0c15da0c747a3ac086c7067079728d345ba",
+      "commit": "0074d3602a17ff594d09248ea574ba08e92d449d",
       "inputDigest": "beb1036f9222d3fc688d5d2d050144df48b4a68b2663b87ff1f7d3b6f00589b7",
       "reproducible": true
     }

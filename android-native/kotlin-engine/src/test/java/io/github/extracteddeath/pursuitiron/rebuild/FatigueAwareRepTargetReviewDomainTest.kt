@@ -185,6 +185,10 @@ class FatigueAwareRepTargetReviewDomainTest {
         val poorlyRecovered=CoachExerciseDecisionDomain.review(listOf(
             session(rir=listOf(3,3,1))),context)
         assertEquals(listOf(15,14,11),poorlyRecovered.nextRepTargetsForReview)
+        val needsLighterLoad=CoachExerciseDecisionDomain.review(listOf(
+            session(reps=listOf(14,13,10),rir=listOf(3,3,0))),context)
+        assertEquals(CoachDirection.REVIEW_WORKING_LOAD,needsLighterLoad.direction)
+        assertNull(needsLighterLoad.nextRepTargetsForReview)
     }
 
     @Test fun verifiedPerSetLoadsUseEachOrdinalsEffortWithoutCopyingHeaviestWeight() {
@@ -216,6 +220,11 @@ class FatigueAwareRepTargetReviewDomainTest {
         assertEquals(listOf(15,14,14),decision.nextRepTargetsForReview)
         assertNull(decision.nextLoadToReview)
         assertNull(decision.observedWorkingLoad)
+        val requiresReview=CoachExerciseDecisionDomain.review(listOf(mixed.copy(
+            observations=mixed.observations.mapIndexed {i,set ->
+                if(i==2)set.copy(actualReps=10,actualRir=0) else set
+            })),context)
+        assertEquals(CoachDirection.REVIEW_WORKING_LOAD,requiresReview.direction)
     }
 
     @Test fun mixedSetLoadingNeverLaundersEditedUnattainableOrNearFailureLoads() {

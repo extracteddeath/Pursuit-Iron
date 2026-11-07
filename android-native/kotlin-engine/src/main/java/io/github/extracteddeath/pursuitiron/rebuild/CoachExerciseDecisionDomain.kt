@@ -191,6 +191,9 @@ object CoachExerciseDecisionDomain {
                         "Review each set's reps at its intended RIR, keeping its own weight. These are estimates from the last workout; earlier work and actual rest can change later capacity.",
                         repTargets=review.candidateRepTargets,
                         assumedCount=review.assumedGoalRirSetCount)
+                if(review.reason==FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW)
+                    return result(CoachDirection.REVIEW_WORKING_LOAD,CoachConfidence.LIMITED,
+                        "Review the set-specific loads and recovery: the reported effort suggests at least one set cannot maintain the rep range at its intended RIR.")
             }
             return result(CoachDirection.STABILIZE_SET_LOADING,CoachConfidence.LIMITED,
                 "Working weights varied across the sets. Use the full set history to choose a repeatable load; the heaviest set alone is not a starting target.")
@@ -200,12 +203,13 @@ object CoachExerciseDecisionDomain {
                 last,context.availableLoads,
                 context.availableLoads?.basis ?: LoadBasis.EXERCISE_OVERRIDE,
                 context.readiness,context.movementRestricted)
+            if(repReview.reason==FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW)
+                return result(CoachDirection.REVIEW_WORKING_LOAD,CoachConfidence.LIMITED,
+                    "The reported effort suggests this load cannot maintain the rep range at the intended RIR. Review the load and recovery.")
             return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
                 CoachConfidence.LIMITED,
                 if(repReview.candidateRepTargets!=null)
                     "Review each set's reps at its intended RIR using that set's recorded performance. Stop at the intended effort if fewer reps are available. These estimates do not yet model changes in rest, earlier work or longer-term fatigue."
-                else if(repReview.reason==FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW)
-                    "The reported effort suggests this load cannot maintain the rep range at the intended RIR. Review the load and recovery."
                 else "Keep building quality reps at the current load. A set-specific change is not supported by this review yet.",
                 repTargets=repReview.candidateRepTargets,
                 assumedCount=if(repReview.candidateRepTargets!=null)repReview.assumedGoalRirSetCount else 0)

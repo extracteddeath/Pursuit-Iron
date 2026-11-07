@@ -156,7 +156,7 @@ private fun StdRow(r: JSONObject, levels: org.json.JSONArray?, onOpen: () -> Uni
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f)) {
                 Text(r.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-                Text("${fmtNum(e1)} $u e1RM · ${String.format(java.util.Locale.US, "%.2f", r.d("ratio"))}× bodyweight", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                Text("${fmtNum(e1)} $u est. 1RM · ${String.format(java.util.Locale.US, "%.2f", r.d("ratio"))}× bodyweight", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
             }
             Text(r.s("level"), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), color = if (idx >= 4) cs.onPrimary else cs.onSecondaryContainer,
                 modifier = Modifier.clip(CircleShape).background(if (idx >= 4) cs.primary else cs.secondaryContainer).padding(horizontal = 10.dp, vertical = 4.dp))

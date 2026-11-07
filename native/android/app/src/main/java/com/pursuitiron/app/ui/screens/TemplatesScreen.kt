@@ -205,7 +205,7 @@ fun TrainingMaxSheet(vm: AppViewModel) {
                                 Text(l.s("name"), style = MaterialTheme.typography.titleSmall)
                                 // The design's line under each lift: what the number is, and how it sits against your e1RM.
                                 val basis = basisLabel
-                                if (!l.isNull("pctOfE1rm") && l.i("pctOfE1rm") > 0) Text("$basis · ${l.i("pctOfE1rm")}% of your ${fmtNum(l.d("e1rm"))} $u e1RM",
+                                if (!l.isNull("pctOfE1rm") && l.i("pctOfE1rm") > 0) Text("$basis · ${l.i("pctOfE1rm")}% of your ${fmtNum(l.d("e1rm"))} $u est. 1RM",
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
                             }
                             if (tm > 0 && mode == "tm") {

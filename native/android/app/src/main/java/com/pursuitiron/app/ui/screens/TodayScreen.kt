@@ -320,7 +320,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(PiIcons.Trophy, null, tint = cs.onPrimary)
                 Column {
-                    Text("${prs.size} new e1RM ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary)
+                    Text("${prs.size} new ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary)
                     Text(prs.joinToString(" · "), style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onPrimary.copy(alpha = 0.9f))
                 }
             }
@@ -331,7 +331,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                         Text(l.s("name"), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (l.b("pr")) Text("PR", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary,
                             modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(cs.primary).padding(horizontal = 8.dp, vertical = 2.dp))
-                        Text(if (l.isNull("e1rm")) "Bodyweight" else "e1RM ${com.pursuitiron.app.ui.common.fmtNum(l.d("e1rm"))} $u", style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
+                        Text(if (l.isNull("e1rm")) "Bodyweight" else "Est. 1RM ${com.pursuitiron.app.ui.common.fmtNum(l.d("e1rm"))} $u", style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
                     }
                     androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         l.list("sets").forEachIndexed { i, x ->
@@ -373,7 +373,7 @@ fun HistorySheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
                                 Text("${com.pursuitiron.app.ui.common.fmtNum(t.d("w"))} × ${t.s("r")}", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold), color = cs.onPrimaryContainer) }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (prs.isNotEmpty()) Text("${prs.size} new e1RM ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary,
+                            if (prs.isNotEmpty()) Text("${prs.size} new ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.ExtraBold), color = cs.onPrimary,
                                 modifier = Modifier.clip(CircleShape).background(cs.primary).padding(horizontal = 12.dp, vertical = 6.dp))
                             Spacer(Modifier.weight(1f))
                             Text("Logged with Pursuit Iron", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = cs.onPrimaryContainer.copy(alpha = 0.7f))

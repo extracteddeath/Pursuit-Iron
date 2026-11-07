@@ -103,7 +103,7 @@ fun SummaryScreen(vm: AppViewModel) {
         if (prs.isNotEmpty()) PiCard(Modifier.widthIn(max = 520.dp), color = cs.surface, radius = 24.dp) {
             Text("${prs.size} new ${if (prs.size == 1) "best" else "bests"}", style = MaterialTheme.typography.titleMedium)
             prs.forEach { p ->
-                Row { Text(p.s("name"), Modifier.weight(1f)); Text("e1RM ${fmtNum(p.d("prev"))} → ${fmtNum(p.d("e1rm"))}", style = MaterialTheme.typography.labelLarge, color = cs.primary) }
+                Row { Text(p.s("name"), Modifier.weight(1f)); Text("Est. 1RM ${fmtNum(p.d("prev"))} → ${fmtNum(p.d("e1rm"))}", style = MaterialTheme.typography.labelLarge, color = cs.primary) }
             }
         }
         r.list("achievements").forEach { a -> Badge(a.s("label"), cs.tertiaryContainer, cs.onTertiaryContainer) }

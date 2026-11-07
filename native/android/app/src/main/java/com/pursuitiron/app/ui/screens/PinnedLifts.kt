@@ -101,14 +101,14 @@ fun PinnedLiftsSection(vm: AppViewModel, onOpen: (String) -> Unit, onManage: () 
                     Surface(
                         onClick = { onOpen(l.s("id")) }, shape = shape, color = bg, contentColor = fg,
                         modifier = Modifier.weight(1f).semantics(mergeDescendants = true) {
-                            contentDescription = "${l.s("name")} record ${l.s("heavy")}, e1RM ${fmtNum(l.d("e1rm"))} $u. $trendWords. Open lift history"
+                            contentDescription = "${l.s("name")} record ${l.s("heavy")}, est. 1RM ${fmtNum(l.d("e1rm"))} $u. $trendWords. Open lift history"
                         },
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Icon(PiIcons.Trophy, null, Modifier.size(22.dp))
                             Text(l.s("name"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(l.s("heavy").ifBlank { "${fmtNum(l.d("e1rm"))} $u" }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("e1RM ${fmtNum(l.d("e1rm"))}" + (date?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelSmall, modifier = Modifier.alpha(0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("Est. 1RM ${fmtNum(l.d("e1rm"))}" + (date?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelSmall, modifier = Modifier.alpha(0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (pts.size >= 2) Sparkline(pts, Modifier.weight(1f).height(28.dp), color = fg)
                                 else Text("One session so far", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f).alpha(0.8f))

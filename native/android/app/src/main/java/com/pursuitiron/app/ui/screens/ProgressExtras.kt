@@ -145,7 +145,7 @@ fun StrengthStandardsCard(vm: AppViewModel, onLift: (String) -> Unit) {
                     Text(r.s("level"), style = MaterialTheme.typography.labelLarge, color = cs.primary, modifier = Modifier.align(Alignment.CenterVertically))
                 }
                 ProgressBar(((r.i("idx") + r.d("within")) / 6.0).toFloat().coerceIn(0f, 1f), Modifier.fillMaxWidth(), height = 8.dp)
-                r.s("next").takeIf { it.isNotBlank() }?.let { nx -> Text(if (r.d("add") > 0.5) "+${fmtNum(r.d("add"))} ${r.s("unit")} e1RM → $nx" else "On the cusp of $nx", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant) }
+                r.s("next").takeIf { it.isNotBlank() }?.let { nx -> Text(if (r.d("add") > 0.5) "+${fmtNum(r.d("add"))} ${r.s("unit")} est. 1RM → $nx" else "On the cusp of $nx", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant) }
             }
         }
     }

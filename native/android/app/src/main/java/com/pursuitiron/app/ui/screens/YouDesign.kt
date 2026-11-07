@@ -256,7 +256,7 @@ fun ProfScoreCard(vm: AppViewModel, onOpen: () -> Unit, onNeedBodyweight: () -> 
                 Icon(PiIcons.Star, null, Modifier.size(20.dp), tint = cs.primary)
                 Column(Modifier.weight(1f)) {
                     Text("${n.s("name")} ${ink(n.d("target"))} ${n.s("unit")} reaches ${n.s("level")}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp))
-                    Text("Now ${ink(n.d("current"))} ${n.s("unit")} e1RM" + (if (lowest != null && n.s("pattern").equals(lowest, true)) " · ${lowest} is your lowest pattern, so it moves the score most" else ""),
+                    Text("Now ${ink(n.d("current"))} ${n.s("unit")} est. 1RM" + (if (lowest != null && n.s("pattern").equals(lowest, true)) " · ${lowest} is your lowest pattern, so it moves the score most" else ""),
                         style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp), color = cs.onSurfaceVariant)
                 }
             }
@@ -393,7 +393,7 @@ fun ProfPrBoard(vm: AppViewModel, board: JSONObject) {
                             }
                         }
                     }
-                    Text("Solid tiles are sets you actually did. Outlined tiles are what your best e1RM predicts — targets worth chasing.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+                    Text("Solid tiles are sets you actually did. Outlined tiles are what your best est. 1RM predicts — targets worth chasing.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
                 }
             }
         }

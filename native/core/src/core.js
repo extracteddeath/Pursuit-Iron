@@ -1910,11 +1910,11 @@ export function profileBoard() {
     const anyPR = trends.some((t) => (t.sessions || []).length > 1 && (t.sessions || []).slice(1).some((x) => Number(x.best) >= Number(t.prBest) && Number(x.best) > Number((t.sessions || [])[0].best)));
     const streak = weekStreak(H), w = (v) => `${r1(v)} ${u}`;
     const BD = [
-        ['first', 'First PR', 'First PR', 'Log a set that beats your best e1RM.', anyPR ? 1 : 0, 1, () => (anyPR ? 'Earned' : 'Not yet')],
-        ['bench1', 'Bench 1×', 'Bodyweight bench', 'Bench press e1RM equal to your bodyweight.', ratio('bench'), 1, (v) => `${v.toFixed(2)}× bodyweight`],
-        ['squat15', 'Squat 1.5×', 'One-and-a-half squat', 'Back squat e1RM at 1.5× bodyweight.', ratio('squat'), 1.5, (v) => `${v.toFixed(2)}× bodyweight`],
-        ['pull2', 'Pull 2×', 'Double-bodyweight pull', 'Deadlift e1RM at 2× bodyweight.', ratio('deadlift'), 2, (v) => `${v.toFixed(2)}× bodyweight`],
-        ['bench15', 'Bench 1.5×', 'Heavy presser', 'Bench press e1RM at 1.5× bodyweight.', ratio('bench'), 1.5, (v) => `now ${v.toFixed(2)}× · ${w(Math.max(0, 1.5 * bw - e1('bench')))} to go`],
+        ['first', 'First PR', 'First PR', 'Log a set that beats your best estimated 1RM.', anyPR ? 1 : 0, 1, () => (anyPR ? 'Earned' : 'Not yet')],
+        ['bench1', 'Bench 1×', 'Bodyweight bench', 'Bench press estimated 1RM equal to your bodyweight.', ratio('bench'), 1, (v) => `${v.toFixed(2)}× bodyweight`],
+        ['squat15', 'Squat 1.5×', 'One-and-a-half squat', 'Back squat estimated 1RM at 1.5× bodyweight.', ratio('squat'), 1.5, (v) => `${v.toFixed(2)}× bodyweight`],
+        ['pull2', 'Pull 2×', 'Double-bodyweight pull', 'Deadlift estimated 1RM at 2× bodyweight.', ratio('deadlift'), 2, (v) => `${v.toFixed(2)}× bodyweight`],
+        ['bench15', 'Bench 1.5×', 'Heavy presser', 'Bench press estimated 1RM at 1.5× bodyweight.', ratio('bench'), 1.5, (v) => `now ${v.toFixed(2)}× · ${w(Math.max(0, 1.5 * bw - e1('bench')))} to go`],
         ['century', '100 sessions', 'Century', 'Log 100 training sessions.', H.length, 100, (v) => `${v} of 100 sessions`],
         ['streak6', '6-wk streak', 'Six-week streak', 'Train every week, six weeks running.', streak, 6, (v) => (v >= 6 ? `${v} weeks and counting` : `${v} of 6 weeks`)],
         ['tonne', '1,000 t', 'Thousand-tonne club', 'Lift 1,000 tonnes in total volume.', tonnes, 1000, (v) => `${Math.round(v).toLocaleString('en-US')} of 1,000 t`],

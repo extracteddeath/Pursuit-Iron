@@ -153,7 +153,7 @@ fun LibraryScreen(vm: AppViewModel) {
             val tileShape = listOf(CircleShape, RoundedCornerShape(14.dp), RoundedCornerShape(14.dp, 14.dp, 14.dp, 4.dp))[g]
             // The design's grouped list: one surface split by hairline gaps, rounded only at its two ends (one column).
             val top = if (k == 0 || wide) 22.dp else 6.dp; val bottom = if (k == shown.lastIndex || wide) 22.dp else 6.dp
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.padding(horizontal = 14.dp, vertical = 10.dp),
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(cs.surfaceContainerLow).clickable { open = x.s("id") }.heightIn(min = 56.dp).padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(40.dp).clip(tileShape).background(tileBg).clearAndSetSemantics { }, contentAlignment = Alignment.Center) { // decoration: the row reads its name
                     // The movement held mid-rep (the focus demo's figure), not the name's first letter, which said nothing.

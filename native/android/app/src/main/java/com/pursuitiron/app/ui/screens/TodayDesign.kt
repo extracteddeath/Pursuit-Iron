@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -280,7 +281,7 @@ fun GamePlanCard(review: JSONObject, changes: Int) {
                 "plan" -> Triple(PiIcons.Calendar, cs.secondaryContainer, cs.onSecondaryContainer)
                 else -> Triple(PiIcons.Progress, cs.surfaceContainerHighest, cs.onSurfaceVariant)
             }
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = if (on) "Show less" else "Show more") { open = if (on) null else key },
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = if (on) "Show less" else "Show more") { open = if (on) null else key },
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(bg), contentAlignment = Alignment.Center) {
                     Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))

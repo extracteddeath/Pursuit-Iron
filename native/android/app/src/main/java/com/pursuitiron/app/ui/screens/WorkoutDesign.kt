@@ -389,7 +389,7 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, onHistory: () -> 
         e.o("load")?.s("reason")?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val read = e.o("read"); val dec = e.o("decided")
-            listOfNotNull(read?.takeIf { !it.isNull("e1rm") }?.let { "e1RM ${it.s("e1rm")} ${s.s("unit")}" },
+            listOfNotNull(read?.takeIf { !it.isNull("e1rm") }?.let { "Est. 1RM ${it.s("e1rm")} ${s.s("unit")}" },
                 dec?.s("style")?.takeIf { it.isNotBlank() }?.let { it.replace('_', ' ').replaceFirstChar { c -> c.uppercase() } },
                 read?.i("historyEntriesForThisDay")?.let { n -> if (n == 0) "First time on this day" else "From $n earlier session${if (n == 1) "" else "s"}" }).forEach { t ->
                 Text(t, style = MaterialTheme.typography.labelMedium, modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(cs.surface).padding(horizontal = 10.dp, vertical = 6.dp))
@@ -397,7 +397,7 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, onHistory: () -> 
         }
         if (spark.size >= 2) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(onClick = onHistory).padding(vertical = 4.dp)
             .semantics { contentDescription = "Open ${ex.s("name")} history" }) {
-            Row { Text("e1RM · last ${spark.size} sessions · tap for history", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Row { Text("Est. 1RM · last ${spark.size} sessions · tap for history", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
                 Text("${fmtNum(spark.min())}–${fmtNum(spark.max())}", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant) }
             com.pursuitiron.app.ui.common.Sparkline(spark, Modifier.fillMaxWidth().height(56.dp))
         }

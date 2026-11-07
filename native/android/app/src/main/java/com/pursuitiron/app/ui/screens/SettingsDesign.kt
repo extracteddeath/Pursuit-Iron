@@ -77,7 +77,7 @@ import com.pursuitiron.app.ui.common.s
 import java.util.Locale
 
 /* The design's You → Settings (Main.dc.html profSettings): the everyday controls as one grouped list,
-   every other page one row away, the banned list, and the e1RM calculator. */
+   every other page one row away, the banned list, and the est. 1RM calculator. */
 
 /** The design's compact pill toggle (kg | lb, cm | in, Short | Standard | Long). */
 @Composable

@@ -159,7 +159,7 @@ fun RecapCard(vm: AppViewModel, h: JSONObject) {
     val mins = r.i("minutes")
     val stats = listOf("${r.i("sets")}" to "sets", com.pursuitiron.app.ui.common.volText(r.d("vol"), u) to "volume", "${r.i("prs")}" to if (r.i("prs") == 1) "PR" else "PRs", com.pursuitiron.app.ui.common.minutesLabel(mins) to "trained")
     val line = buildString {
-        r.o("best")?.let { b -> append("Best: ${b.s("name")} ${fmtNum(b.d("w"))} $u × ${b.i("r")}" + (if (!b.isNull("rir")) " @${fmtNum(b.d("rir"))}" else "") + ", e1RM ${fmtNum(b.d("e1rm"))} $u.") }
+        r.o("best")?.let { b -> append("Best: ${b.s("name")} ${fmtNum(b.d("w"))} $u × ${b.i("r")}" + (if (!b.isNull("rir")) " @${fmtNum(b.d("rir"))}" else "") + ", est. 1RM ${fmtNum(b.d("e1rm"))} $u.") }
         if (r.d("prevVol") > 0) { val pct = Math.round((r.d("vol") / r.d("prevVol") - 1) * 100); append((if (isNotEmpty()) " " else "") + "Volume ${if (pct >= 0) "+" else "−"}${kotlin.math.abs(pct)}% on the week before.") }
         r.o("topMuscle")?.let { t -> append((if (isNotEmpty()) " " else "") + "Most trained: ${t.s("label")}, ${t.i("sets")} sets.") }
     }

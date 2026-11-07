@@ -120,7 +120,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                 val ids = (0 until (x.optJSONArray("routineIds")?.length() ?: 0)).map { x.getJSONArray("routineIds").optString(it) }
                 val prs = x.list("prs")
                 if (prs.isNotEmpty()) Column(Modifier.prGlow(cs.primary, 20.dp).clip(RoundedCornerShape(20.dp)).background(cs.primary).padding(horizontal = 16.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${prs.size} new e1RM ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), color = cs.onPrimary)
+                    Text("${prs.size} new ${if (prs.size == 1) "PR" else "PRs"}", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), color = cs.onPrimary)
                     Text(prs.joinToString(" · ") { it.s("name") }, style = MaterialTheme.typography.labelMedium, color = cs.onPrimary.copy(alpha = 0.9f), textAlign = TextAlign.Center)
                 }
                 val sec = (x.optLong("elapsedMs") / 1000).toInt()
@@ -158,7 +158,7 @@ fun FinishPage(vm: AppViewModel, s: JSONObject, onClose: () -> Unit) {
                         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surface).padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp, 14.dp, 4.dp, 14.dp)).background(cs.primary), contentAlignment = Alignment.Center) { Icon(PiIcons.Progress, null, Modifier.size(22.dp), tint = cs.onPrimary) }
                             Column(Modifier.weight(1f)) {
-                                Text("${m.s("name")} · e1RM", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
+                                Text("${m.s("name")} · est. 1RM", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant)
                                 Text("${m.i("est")} $u", style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 28.sp), color = cs.onSurface)
                                 val prev = m.i("prev")
                                 Text(if (prev > 0 && m.i("est") > prev) "+${m.i("est") - prev} $u · new best" else if (prev > 0) "Best is $prev $u · held" else "First estimate",

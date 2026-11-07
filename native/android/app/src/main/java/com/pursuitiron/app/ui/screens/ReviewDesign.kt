@@ -196,7 +196,7 @@ private fun ColumnScope.ReviewBody(r: JSONObject) {
             Row(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {
                     Text(l.s("name"), style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text((if (l.s("state") == "regressed") "e1RM down over ${l.i("sessions")} sessions" else "e1RM flat for ${l.i("sessions")} sessions") +
+                    Text((if (l.s("state") == "regressed") "Est. 1RM down over ${l.i("sessions")} sessions" else "Est. 1RM flat for ${l.i("sessions")} sessions") +
                         (if (l.isNull("end")) "" else " at ${fmtNum(l.d("end"))} $u"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = cs.onSurfaceVariant)
                 }
                 Text(pct(l.d("deltaPct")), style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
@@ -214,7 +214,7 @@ private fun ColumnScope.ReviewBody(r: JSONObject) {
                 "flat" -> Triple("Flat", cs.surfaceContainerHighest, cs.onSurfaceVariant)
                 else -> Triple("Too few", cs.surfaceContainerHighest, cs.onSurfaceVariant)
             }
-            val out = Regex("[+−-]?\\d+(\\.\\d+)?%").find(m.s("drove"))?.value?.let { "$it e1RM" }
+            val out = Regex("[+−-]?\\d+(\\.\\d+)?%").find(m.s("drove"))?.value?.let { "$it est. 1RM" }
             Column(Modifier.fillMaxWidth().background(cs.surfaceContainerLow).padding(horizontal = 14.dp, vertical = 12.dp)
                 .semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

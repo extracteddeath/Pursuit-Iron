@@ -100,7 +100,7 @@ fun LiftPage(vm: AppViewModel, id: String, x: JSONObject, onGoalSaved: () -> Uni
         PiCard(color = cs.surfaceContainerHigh, radius = 20.dp, padding = 14.dp) {
             Text("Strength standard: ${l.s("level")}", style = MaterialTheme.typography.titleSmall)
             ProgressBar(l.d("within").toFloat(), Modifier.fillMaxWidth(), height = 8.dp)
-            l.s("next").takeIf { it.isNotBlank() }?.let { nx -> Text(if (l.d("add") > 0.5) "+${fmtNum(l.d("add"))} ${x.s("unit")} e1RM → $nx" else "On the cusp of $nx",
+            l.s("next").takeIf { it.isNotBlank() }?.let { nx -> Text(if (l.d("add") > 0.5) "+${fmtNum(l.d("add"))} ${x.s("unit")} est. 1RM → $nx" else "On the cusp of $nx",
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant) }
         }
     }
@@ -223,7 +223,7 @@ private fun HistoryTab(x: JSONObject) {
                 Text(dS(r.optLong("date")), style = MaterialTheme.typography.titleSmall)
                 if (prs[k]) Badge("PR", cs.primaryContainer, cs.onPrimaryContainer)
                 Spacer(Modifier.weight(1f))
-                Text("e1RM ${fmtNum(r.d("e1"))} $u", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                Text("Est. 1RM ${fmtNum(r.d("e1"))} $u", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 r.list("sets").forEachIndexed { i, st ->

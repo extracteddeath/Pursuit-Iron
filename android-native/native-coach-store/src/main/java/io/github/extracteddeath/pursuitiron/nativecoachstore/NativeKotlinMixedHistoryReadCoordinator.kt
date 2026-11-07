@@ -692,6 +692,11 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     grant = nextGrant,
                     program = proposed,
                     policies=coaching.candidatePolicies ?: current.policies,
+                    // A rep-only consent belongs to its exact old workout,
+                    // weights and grant. Never carry it across a program
+                    // load revision; recompute reps from the new prescription
+                    // after the athlete accepts and actually trains it.
+                    acceptedRepTargets = null,
                     storageReceiptId = intent.newStorageReceiptId,
                     storageRevision = nextRevision)
                 val validation = KotlinWorkoutSnapshotDomain.stage(

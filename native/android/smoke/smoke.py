@@ -1096,6 +1096,11 @@ if scroll_to(r"^\|Help & about$", tries=6):
 else:
     FAILS.append("no Help & about row")
 tap(r"^\|Today$|^Today\|", "today-lb")
+# The M3 Expressive split button on a training day: its menu holds the other ways into today
+if tap(r"^More ways to start", "start-split-menu", required=False):
+    if not find(r"Start now, skip the preview", timeout=3):
+        FAILS.append("start split button menu missing its options")
+    back()
 
 # 8. Training cycle: build one, open it, try to advance
 tap(r"^\|Plan$|^Plan\|")
@@ -1440,7 +1445,8 @@ def a11y_pass():
             ns = list(nodes())
             # The workout bar and the tab bar cover the list's bottom: rows reaching them are cut off, not small.
             floor = min([int(re.findall(r"\d+", m.get("bounds", "0,0,0,0"))[1]) for m in ns
-                         if re.match(r"^(WORKOUT IN PROGRESS|Today|Plan|Progress|Exercises|You)$", m.get("text") or "")
+                         if (re.match(r"^(WORKOUT IN PROGRESS|Today|Plan|Progress|Exercises|You)$", m.get("text") or "")
+                             or (m.get("content-desc") or "").startswith("Resume workout, "))
                          and len(re.findall(r"\d+", m.get("bounds", ""))) == 4 and int(re.findall(r"\d+", m.get("bounds"))[1]) > screen_h // 2] or [screen_h])
             viewports = [tuple(map(int, re.findall(r"\d+", m.get("bounds", "")))) for m in ns
                          if m.get("scrollable") == "true" and len(re.findall(r"\d+", m.get("bounds", ""))) == 4]

@@ -387,4 +387,98 @@ class CustomCycleCoachAuditDomainTest {
         })
     }
 
+    private fun completeUserPolicyRequest():CustomCoachPolicyAuthoringRequest {
+        val complete=TrainingMuscle.entries.associateWith{m->
+            if(m==TrainingMuscle.ABS)
+                CustomMuscleDoseEntry("3","4","5","3")
+            else CustomMuscleDoseEntry("0","0","0","0")
+        }
+        return CustomCoachPolicyAuthoringRequest(
+            phases=listOf(CustomPhasePolicyEntry(
+                phase=TrainingPhase.HYPERTROPHY,
+                policyId="athlete-coach-1",revision="policy-v1",
+                rationale="Explicitly reviewed athlete core-dose prescription",
+                baseline=complete,selected=complete,
+                minimumPurposeDays=mapOf(
+                    ComposerSessionPurpose.HYPERTROPHY to "3"))),
+            nonSetSecondsByWeekday=mapOf(0 to "200",2 to "200",4 to "200")
+        )
+    }
+
+    @Test fun explicitCompleteSixteenMusclePolicyCanReachExactCoachAudit() {
+        val result=CustomCoachPolicyAuthoringDomain.inspect(
+            cycle(),setup(),completeUserPolicyRequest())
+        assertTrue(result.toString(),
+            result is CustomCoachPolicyAuthoringResult.Ready)
+        val inputs=(result as CustomCoachPolicyAuthoringResult.Ready).inputs
+        assertEquals(16,inputs.policiesByPhase.getValue(
+            TrainingPhase.HYPERTROPHY).selectedBounds.size)
+        assertEquals(n("3"),inputs.policiesByPhase.getValue(
+            TrainingPhase.HYPERTROPHY).selectedBounds.first{
+                it.muscle==TrainingMuscle.ABS}.mev)
+        assertEquals(200,inputs.nonSetSecondsByWeekday[0])
+        val audit=CustomCycleCoachAuditDomain.review(cycle(),setup(),
+            StarterExerciseTranche.movements(),inputs)
+        assertEquals(audit.issues.toString(),
+            CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW,audit.status)
+        assertFalse(audit.mayIssueWorkout)
+    }
+
+    @Test fun blankPolicyCannotBeInferredAsZeroOrApproved() {
+        val missing=completeUserPolicyRequest().copy(phases=emptyList())
+        val result=CustomCoachPolicyAuthoringDomain.inspect(cycle(),setup(),
+            missing)
+        assertTrue(result.toString(),
+            result is CustomCoachPolicyAuthoringResult.Blocked)
+        val base=completeUserPolicyRequest()
+        val absentZero=base.copy(phases=base.phases.map{phase->
+            phase.copy(selected=phase.selected-
+                TrainingMuscle.WRIST_EXTENSORS)
+        })
+        val rejected=CustomCoachPolicyAuthoringDomain.inspect(cycle(),setup(),
+            absentZero)
+        assertTrue(rejected.toString(),
+            rejected is CustomCoachPolicyAuthoringResult.Blocked)
+        assertTrue((rejected as CustomCoachPolicyAuthoringResult.Blocked)
+            .missingOrInvalid.any{it.contains("all 16")})
+    }
+
+    @Test fun invalidMuscleDoseAndUnreviewedOverheadNeverBecomePolicy() {
+        val base=completeUserPolicyRequest()
+        val bad=base.copy(phases=base.phases.map{phase->
+            phase.copy(selected=phase.selected+(
+                TrainingMuscle.ABS to CustomMuscleDoseEntry(
+                    "8","4","5","4")))
+        },nonSetSecondsByWeekday=mapOf(0 to "200",2 to "",4 to "200"))
+        val denied=CustomCoachPolicyAuthoringDomain.inspect(cycle(),setup(),bad)
+        assertTrue(denied.toString(),
+            denied is CustomCoachPolicyAuthoringResult.Blocked)
+        val issues=(denied as CustomCoachPolicyAuthoringResult.Blocked)
+            .missingOrInvalid
+        assertTrue(issues.any{it.contains("ABS")})
+        assertTrue(issues.any{it.contains("Day 3")})
+    }
+
+    @Test fun continuityCeilingsAreOnlyKeptWhenExplicitAndValid() {
+        val base=completeUserPolicyRequest()
+        val complete=base.copy(
+            totalDropFraction="0.20",directDropFraction="0.25",
+            totalRiseFraction="0.10",directRiseFraction="0.15")
+        val ready=CustomCoachPolicyAuthoringDomain.inspect(cycle(),setup(),
+            complete) as CustomCoachPolicyAuthoringResult.Ready
+        val retained=checkNotNull(ready.inputs.continuityPolicy)
+        assertEquals(n("0.20"),retained.maximumTotalWorkingSetDropFraction)
+        assertEquals(n("0.15"),retained.maximumDirectMuscleRiseFraction)
+        assertNull((CustomCoachPolicyAuthoringDomain.inspect(
+            cycle(),setup(),base) as CustomCoachPolicyAuthoringResult.Ready)
+            .inputs.continuityPolicy)
+        assertTrue(CustomCoachPolicyAuthoringDomain.inspect(cycle(),setup(),
+            base.copy(totalDropFraction="0.2",directDropFraction="",
+                totalRiseFraction="0.1")) is
+                    CustomCoachPolicyAuthoringResult.Blocked)
+        assertTrue(CustomCoachPolicyAuthoringDomain.inspect(cycle(),setup(),
+            base.copy(totalDropFraction="2",directDropFraction="0.4")) is
+                    CustomCoachPolicyAuthoringResult.Blocked)
+    }
+
 }

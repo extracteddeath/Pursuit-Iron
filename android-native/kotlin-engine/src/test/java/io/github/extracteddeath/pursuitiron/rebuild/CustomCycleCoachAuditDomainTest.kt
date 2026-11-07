@@ -551,4 +551,105 @@ class CustomCycleCoachAuditDomainTest {
             CustomCoachPolicyEvidenceReview.Rejected)
     }
 
+    @Test fun actionableCoachReviewIsReadOnlyForFullyCompliantCustomCycle() {
+        val authored=cycle()
+        val audit=CustomCycleCoachAuditDomain.review(
+            authored,setup(),StarterExerciseTranche.movements(),inputs())
+        val result=CustomCoachActionReviewDomain.review(audit)
+        assertTrue(result.toString(),
+            result is CustomCoachActionReviewResult.Reviewed)
+        val review=(result as CustomCoachActionReviewResult.Reviewed).review
+        assertTrue(review.findings.toString(),review.findings.isEmpty())
+        assertEquals(authored.revision,review.cycleRevision)
+        assertFalse(review.mayApplyChange)
+        assertFalse(review.mayApprovePolicy)
+        assertFalse(review.mayIssueWorkout)
+        assertEquals(authored,audit.structuralReview?.verifiedDraft)
+    }
+
+    @Test fun unreviewedVolumeDropIsDescribedNotCalledUnsafeOrAutoCorrected() {
+        val authored=intraBlockFiveToThreeWeekCycle()
+        val audit=CustomCycleCoachAuditDomain.review(
+            authored,setup(),StarterExerciseTranche.movements())
+        val result=CustomCoachActionReviewDomain.review(audit)
+        assertTrue(result.toString(),result is CustomCoachActionReviewResult.Reviewed)
+        val findings=(result as CustomCoachActionReviewResult.Reviewed)
+            .review.findings
+        assertTrue(findings.any{
+            it.status==CustomCoachFindingStatus.COACH_POLICY_BLOCKER &&
+                it.location=="continuity"
+        })
+        val observed=findings.single{
+            it.status==CustomCoachFindingStatus.OBSERVED_CHANGE
+        }
+        assertEquals(2,observed.absoluteWeek)
+        assertEquals("block-1",observed.blockId)
+        assertTrue(observed.explanation.contains("5 working sets"))
+        assertTrue(observed.explanation.contains("3 in training week 2"))
+        assertTrue(observed.options.any{
+            it.kind==CustomCoachActionKind.EDIT_AUTHORED_WEEK
+        })
+        assertFalse(findings.any{
+            it.status==CustomCoachFindingStatus.CONFIRMED_POLICY_VIOLATION
+        })
+        assertEquals(authored,audit.structuralReview?.verifiedDraft)
+    }
+
+    @Test fun reviewedContinuityViolationUsesAuditedWeekAndDoesNotDoubleCountChange() {
+        val audit=CustomCycleCoachAuditDomain.review(
+            intraBlockFiveToThreeWeekCycle(),setup(),
+            StarterExerciseTranche.movements(),
+            inputs().copy(continuityPolicy=CustomCoachVolumeContinuityPolicy(
+                n("0.25"),n("0.25"))))
+        val result=CustomCoachActionReviewDomain.review(audit)
+        assertTrue(result.toString(),result is CustomCoachActionReviewResult.Reviewed)
+        val findings=(result as CustomCoachActionReviewResult.Reviewed)
+            .review.findings
+        val violation=findings.single{
+            it.status==CustomCoachFindingStatus.CONFIRMED_POLICY_VIOLATION &&
+                it.title=="Decline exceeds the reviewed continuity policy" &&
+                it.location.startsWith("week.2.block.")
+        }
+        assertEquals(2,violation.absoluteWeek)
+        assertEquals("block-1",violation.blockId)
+        assertTrue(violation.options.any{
+            it.kind==CustomCoachActionKind.EDIT_AUTHORED_WEEK
+        })
+        assertFalse(findings.any{
+            it.status==CustomCoachFindingStatus.OBSERVED_CHANGE &&
+                it.absoluteWeek==2
+        })
+    }
+
+    @Test fun coachedVolumeViolationOffersInspectionNotAnUnvalidatedNewNumber() {
+        val audit=CustomCycleCoachAuditDomain.review(
+            cycle(),setup(),StarterExerciseTranche.movements(),
+            inputs(policy=policy(bounds=bounds(absMev="4",absMrv="5"))))
+        val result=CustomCoachActionReviewDomain.review(audit)
+        assertTrue(result.toString(),result is CustomCoachActionReviewResult.Reviewed)
+        val findings=(result as CustomCoachActionReviewResult.Reviewed)
+            .review.findings
+        assertTrue(findings.any{
+            it.status==CustomCoachFindingStatus.CONFIRMED_POLICY_VIOLATION &&
+                it.title=="Below the reviewed weekly volume minimum" &&
+                it.absoluteWeek==1 &&
+                it.explanation.contains("MEV")
+        })
+        assertFalse(findings.any{it.options.any{option->
+            option.explanation.contains("raise it to ") ||
+                option.explanation.contains("lower it to ")
+        }})
+    }
+
+    @Test fun unverifiedCatalogOrAuthoredStructureCannotYieldCoachOptions() {
+        val noCatalog=CustomCycleCoachAuditDomain.review(
+            cycle(),setup(),emptyList())
+        assertTrue(CustomCoachActionReviewDomain.review(noCatalog) is
+            CustomCoachActionReviewResult.Rejected)
+        val malformed=CustomCycleCoachAuditDomain.review(
+            cycle(days=emptyList()),setup(),StarterExerciseTranche.movements())
+        assertTrue(CustomCoachActionReviewDomain.review(malformed) is
+            CustomCoachActionReviewResult.Rejected)
+    }
+
 }

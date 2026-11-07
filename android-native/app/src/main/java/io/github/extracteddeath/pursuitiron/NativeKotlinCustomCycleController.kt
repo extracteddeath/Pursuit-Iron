@@ -29,6 +29,8 @@ internal data class NativeKotlinCustomCycleState(
     val authoringRefusal: CustomAuthoringRefusal? = null,
     val availableChoices: List<CustomExercisePickerOption> = emptyList(),
     val sourceRevision: Long? = null,
+    /** Current owner-reviewed source context; stale edits are rechecked at audit. */
+    val reviewedSourceSetup: AthleteSetupReview? = null,
     val coachingAudit: CustomCoachAudit? = null,
     val auditSourceRevision: Long? = null,
     /** Inputs from the latest independently rechecked full-cycle audit.
@@ -99,6 +101,7 @@ internal class NativeKotlinCustomCycleController(
                     cycleId = result.draft.cycleId,
                     availableChoices = choices,
                     sourceRevision = source?.revision,
+                    reviewedSourceSetup = source?.setup,
                     signoff = host.readCustomCycleConsent(result.draft.cycleId),
                     message = "Saved custom cycle restored · revision ${result.draft.revision}")
             NativeCustomDraftReadResult.Missing ->

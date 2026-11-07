@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
  */
 private enum class KotlinCandidateDestination(val label:String) {
     ONBOARD("My setup"),GYM("My gym"),PROGRAM("My program"),
-    COACH("Coach"),SETTINGS("Settings"),TRAIN("Train")
+    COACH("Coach"),FUTURE("Future weeks"),SETTINGS("Settings"),TRAIN("Train")
 }
 
 @Composable
@@ -72,6 +72,9 @@ internal fun NativeKotlinCandidateJourney() {
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,
                             onOpenSettings={destination=KotlinCandidateDestination.SETTINGS})
+                    KotlinCandidateDestination.FUTURE ->
+                        NativeKotlinFutureWeekCoachScreen(host,cycleController,
+                            onOpenProgram={destination=KotlinCandidateDestination.PROGRAM})
                     KotlinCandidateDestination.SETTINGS ->
                         NativeKotlinCoachSettingsScreen(host,
                             onBack={destination=KotlinCandidateDestination.COACH})

@@ -401,6 +401,17 @@ private fun ExercisePane(vm: AppViewModel, s: JSONObject, ex: JSONObject?, wide:
                         }
                     }
                 }
+                // First workout only: what the effort target means, in one line, dismissed for good.
+                if (!vm.prefs.effortTipSeen && !focus) {
+                    val rpe = vm.settings.s("loadMode") == "rpe"
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(cs.secondaryContainer).padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(if (rpe) "RPE 8 means about 2 good reps left. After each set, tap how hard it was."
+                            else "@2 RIR means stop with about 2 good reps left. After each set, tap how many you had.",
+                            style = MaterialTheme.typography.bodySmall, color = cs.onSecondaryContainer, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { vm.prefs.markEffortTip() }) { Text("Got it") }
+                    }
+                }
                 // The design: skip the remaining warm-ups in one tap, right above the sets (tap ✓ on one to bring it back).
                 val warmLeft = sets.filter { it.b("warm") && !it.b("done") && !it.b("skipped") }
                 if (warmLeft.isNotEmpty() && !focus) TextButton(onClick = {

@@ -342,6 +342,12 @@ if find(r"Warm-up & mobility", timeout=3):
     tap(r"Warmed up", "warmup-done")
 else:
     FAILS.append("no warm-up card on the first lift")
+# First workout: the one-line effort tip above the sets, dismissed for good
+if find(r"good reps left", timeout=3):
+    shot("effort-tip")
+    tap(r"^\|Got it$")
+else:
+    FAILS.append("no effort tip on the first workout")
 if tap(r"Weight not set, edit", "set-editor"):
     tap(r"^Weight \((kg|lb)\), tap to type")  # the design's big value, typed in place
     adb("shell", "input", "text", "60")

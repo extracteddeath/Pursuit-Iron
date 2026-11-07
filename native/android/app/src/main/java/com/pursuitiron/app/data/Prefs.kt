@@ -54,6 +54,9 @@ class Prefs(context: Context) {
     /** Plan's sets-by-muscle card: show each head (delts, upper traps, obliques…) under its muscle (App.js VolumeBars granular). */
     var volHeads by mutableStateOf(sp.getBoolean("volHeads", false))
     fun changeVolHeads(v: Boolean) { volHeads = v; sp.edit().putBoolean("volHeads", v).apply() }
+    /** The one-time "what @2 RIR means" tip on the first workout. */
+    var effortTipSeen by mutableStateOf(sp.getBoolean("effortTipSeen", false))
+    fun markEffortTip() { effortTipSeen = true; sp.edit().putBoolean("effortTipSeen", true).apply() }
 
     fun changeSeed(v: Seed) { seed = v; sp.edit().putString("seed", v.name).apply() }
     fun changeBlack(v: Boolean) { black = v; sp.edit().putBoolean("black", v).apply() }

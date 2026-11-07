@@ -44,6 +44,9 @@ internal fun NativeKotlinCandidateJourney() {
     var destination by rememberSaveable {
         mutableStateOf(KotlinCandidateDestination.ONBOARD)
     }
+    var selectedCustomWorkoutId by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
     val savedScreens=rememberSaveableStateHolder()
     LaunchedEffect(destination) {
         if(destination==KotlinCandidateDestination.PROGRAM)
@@ -74,12 +77,18 @@ internal fun NativeKotlinCandidateJourney() {
                             onOpenSettings={destination=KotlinCandidateDestination.SETTINGS})
                     KotlinCandidateDestination.FUTURE ->
                         NativeKotlinFutureWeekCoachScreen(host,cycleController,
-                            onOpenProgram={destination=KotlinCandidateDestination.PROGRAM})
+                            onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},
+                            onOpenIssuedWorkout={id->
+                                selectedCustomWorkoutId=id
+                                destination=KotlinCandidateDestination.TRAIN
+                            })
                     KotlinCandidateDestination.SETTINGS ->
                         NativeKotlinCoachSettingsScreen(host,
                             onBack={destination=KotlinCandidateDestination.COACH})
                     KotlinCandidateDestination.TRAIN ->
-                        NativeKotlinCandidateTrainEntry(host,sessionController)
+                        NativeKotlinCandidateTrainEntry(host,sessionController,
+                            selectedCustomWorkoutId,
+                            onOpenCustomWorkout={selectedCustomWorkoutId=it})
                 }
             }
         }
@@ -96,21 +105,41 @@ internal fun NativeKotlinCandidateJourney() {
 @Composable
 private fun NativeKotlinCandidateTrainEntry(
     host: NativeKotlinCandidateHost,
-    controller: NativeKotlinSessionController
+    controller: NativeKotlinSessionController,
+    customWorkoutId:String?,
+    onOpenCustomWorkout:(String?)->Unit
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
+    var customEntryId by rememberSaveable {mutableStateOf("")}
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val scope=rememberCoroutineScope()
     val valid = entryId.matches(
         Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,63}$"))
-    if(selectedId == null) {
+    if(customWorkoutId!=null) {
+        NativeKotlinCustomJournalScreen(host,customWorkoutId,
+            onClose={onOpenCustomWorkout(null)})
+    } else if(selectedId == null) {
         Column(Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement=Arrangement.spacedBy(16.dp)) {
             PageHeading("KOTLIN COACH · ISOLATED",
                 "Your native workout",
                 "Only an explicitly approved Kotlin workout can be started.")
+            PursuitCard {
+                Text("Open an issued custom workout",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("Custom workouts retain their exact authored exercises, warmups, amplifiers and separately logged actual sets. Only a durable, issued Kotlin journal can open.")
+                OutlinedTextField(value=customEntryId,
+                    onValueChange={customEntryId=it},
+                    singleLine=true,modifier=Modifier.fillMaxWidth(),
+                    label={Text("Issued custom workout ID")})
+                Button(
+                    enabled=customEntryId.matches(
+                        Regex("^[A-Za-z0-9][A-Za-z0-9_:-]{0,79}$")),
+                    onClick={onOpenCustomWorkout(customEntryId)}) {
+                    Text("Open native custom journal")}
+            }
             PursuitCard(highlighted=true) {
                 Text("Open an approved workout",
                     style=MaterialTheme.typography.titleMedium)

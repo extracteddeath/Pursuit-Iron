@@ -207,6 +207,73 @@ class NativeKotlinApprovalFileAuthorityTest {
         }
     }
 
+    @Test fun repeatedGoalProofSurvivesDiskEncodingWithMultipleOrNoMisses() {
+        val fixed=program().copy(exercises=listOf(press,row).map {
+            it.copy(minimumSetsPerVisit=2,maximumSetsPerVisit=2,
+                maximumVisits=3,requiredVisits=3)
+        })
+        val baseline=approval().copy(program=fixed,
+            grant=KotlinWorkoutSelectionGrant("grant-repeat","future-repeat",source,1))
+        val repeated=NativeKotlinAcceptedRepTargets(
+            "past-repeat",7,"db-press","db-press:d1:s0",
+            listOf(9,8),listOf(11,10),CoachReadiness.NORMAL,
+            AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS)
+        for(proof in listOf(
+            repeated,
+            repeated.copy(observedReps=listOf(11,10)),
+            repeated.copy(observedReps=listOf(10,10),
+                newRepTargets=listOf(11,10))
+        )) {
+            val approved=baseline.copy(acceptedRepTargets=proof)
+            val restored=NativeKotlinApprovalCodec.decode(
+                NativeKotlinApprovalCodec.encode(approved))
+            assertEquals(approved,restored)
+            assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+                restored.acceptedRepTargets!!.decisionKind)
+        }
+        // A repeat flag is not authorization for out-of-band goals,
+        // impossible observations or changes to the authenticated owner.
+        for(forged in listOf(
+            repeated.copy(newRepTargets=listOf(13,10)),
+            repeated.copy(observedReps=listOf(0,8)),
+            repeated.copy(reviewedReadiness=CoachReadiness.LOW),
+            repeated.copy(changedSetKey="db-press:d1:s999"),
+            repeated.copy(historicalWorkoutId="future-repeat")
+        )) {
+            assertThrows(IllegalArgumentException::class.java) {
+                NativeKotlinApprovalCodec.encode(
+                    baseline.copy(acceptedRepTargets=forged))
+            }
+        }
+    }
+
+    @Test fun legacyV4EarnedRepProofStillDecodesAsEarnedAfterV5Upgrade() {
+        val fixed=program().copy(exercises=listOf(press,row).map {
+            it.copy(minimumSetsPerVisit=2,maximumSetsPerVisit=2,
+                maximumVisits=3,requiredVisits=3)
+        })
+        val earned=approval().copy(program=fixed,
+            grant=KotlinWorkoutSelectionGrant("grant-legacy","future-legacy",source,1),
+            acceptedRepTargets=NativeKotlinAcceptedRepTargets(
+                "past-legacy",7,"db-press","db-press:d1:s0",
+                listOf(11,12),listOf(12,12),CoachReadiness.NORMAL))
+        val v5=NativeKotlinApprovalCodec.encode(earned)
+        val enumSuffix=java.io.ByteArrayOutputStream().also {out->
+            java.io.DataOutputStream(out).use {
+                it.writeUTF(AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP.name)
+            }
+        }.toByteArray()
+        assertTrue(v5.takeLast(enumSuffix.size).toByteArray()
+            .contentEquals(enumSuffix))
+        val v4=v5.copyOf(v5.size-enumSuffix.size).also {it[7]=4}
+        val restored=NativeKotlinApprovalCodec.decode(v4)
+        assertEquals(earned,restored)
+        assertEquals(AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP,
+            restored.acceptedRepTargets!!.decisionKind)
+        assertEquals(earned,NativeKotlinApprovalCodec.decode(
+            NativeKotlinApprovalCodec.encode(restored)))
+    }
+
     @Test fun explicitBarbellPlatesAndMachineStackSurviveApprovalRoundtrip() {
         // One pair of 2.5 and one pair of 5 lbs permits 20,25,30,35...
         // It never invents impossible 38.5 lb suggestions.

@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
  * while screen navigation preserves authored draft revisions.
  */
 private enum class KotlinCandidateDestination(val label:String) {
-    ONBOARD("My setup"),GYM("My gym"),PROGRAM("My program"),
+    ONBOARD("My setup"),GYM("My gym"),STARTER("Build first"),PROGRAM("My program"),
     COACH("Coach"),FUTURE("Future weeks"),HISTORY("History"),SETTINGS("Settings"),TRAIN("Train")
 }
 
@@ -33,11 +33,13 @@ internal fun NativeKotlinCandidateJourney() {
     val context=LocalContext.current.applicationContext
     val host=remember(context){(context as PursuitIronApplication).kotlinCandidate}
     val gymController=remember(host){NativeKotlinGymSourceController(host)}
+    val starterController=remember(host){NativeKotlinFirstProgramController(host)}
     val cycleController=remember(host){NativeKotlinCustomCycleController(host)}
     val sessionController=remember(host){NativeKotlinSessionController(host)}
-    DisposableEffect(gymController,cycleController,sessionController) {
+    DisposableEffect(gymController,starterController,cycleController,sessionController) {
         onDispose {
             gymController.close()
+            starterController.close()
             cycleController.close()
             sessionController.close()
         }
@@ -69,9 +71,11 @@ internal fun NativeKotlinCandidateJourney() {
                 when(destination) {
                     KotlinCandidateDestination.ONBOARD ->
                         NativeKotlinOnboardingCandidateScreen(gymController,
-                            onContinue={destination=KotlinCandidateDestination.PROGRAM})
+                            onContinue={destination=KotlinCandidateDestination.STARTER})
                     KotlinCandidateDestination.GYM ->
                         NativeKotlinGymSourceCandidateScreen(gymController)
+                    KotlinCandidateDestination.STARTER ->
+                        NativeKotlinFirstProgramCandidateScreen(starterController)
                     KotlinCandidateDestination.PROGRAM ->
                         NativeKotlinCustomCycleCandidateScreen(cycleController,
                             onOpenIssuedWorkout={id->

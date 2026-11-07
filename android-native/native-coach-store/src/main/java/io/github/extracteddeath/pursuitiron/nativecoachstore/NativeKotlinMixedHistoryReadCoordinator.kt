@@ -456,7 +456,7 @@ class NativeKotlinMixedHistoryReadCoordinator(
                         intent.exerciseId,evidence.editedSetKey,
                         Collections.unmodifiableList(evidence.observedReps.toList()),
                         Collections.unmodifiableList(evidence.newRepTargets.toList()),
-                        readiness))
+                        readiness,evidence.decisionKind))
                 val rederived=NativeKotlinCurrentRepPrescriptionDomain.inspect(
                     next,history,intent.exerciseId,readiness,false)
                     as? NativeCurrentRepPrescriptionResult.Reviewed
@@ -468,7 +468,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     nextEvidence.workout.grantId!=next.grant.grantId ||
                     nextEvidence.workout.workoutId!=next.grant.workoutId ||
                     nextEvidence.newRepTargets!=evidence.newRepTargets ||
-                    nextEvidence.observedReps!=evidence.observedReps)
+                    nextEvidence.observedReps!=evidence.observedReps ||
+                    nextEvidence.decisionKind!=evidence.decisionKind)
                     return@withOwnerTransaction reject(
                         NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED)
                 return@withOwnerTransaction when(val written=
@@ -536,6 +537,7 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     result.editedSetKey!=proof.changedSetKey ||
                     result.observedReps!=proof.observedReps ||
                     result.newRepTargets!=proof.newRepTargets ||
+                    result.decisionKind!=proof.decisionKind ||
                     result.workout.workoutId!=approval.grant.workoutId ||
                     result.workout.grantId!=approval.grant.grantId)
                     return@withOwnerTransaction null

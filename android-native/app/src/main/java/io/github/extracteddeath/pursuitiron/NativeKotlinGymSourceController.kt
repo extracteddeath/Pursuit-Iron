@@ -73,6 +73,25 @@ internal class NativeKotlinGymSourceController(
     fun open()=run {load()}
 
     /**
+     * A deliberate cold-start restoration, never an automatic login.
+     * The host verifies both the saved identity and the source's re-reviewed
+     * athlete/gym facts before this state receives any protected material.
+     */
+    fun resumeVerifiedSavedSetup(confirmedAthleteId:String)=run {
+        when(val resumed=host.resumeVerifiedSavedSetup(confirmedAthleteId)) {
+            is NativeSavedSetupResume.Ready ->
+                load("Saved athlete and gym restored · source revision ${resumed.sourceRevision}. No program or workout was replaced.")
+            is NativeSavedSetupResume.Rejected -> {
+                load()
+                current.value=current.value.copy(
+                    refusal=NativeAuthoringSourceRefusal.NOT_AUTHORIZED,
+                    message=resumed.reason)
+            }
+        }
+    }
+
+
+    /**
      * ONLY a direct first-time native onboarding confirmation may call this.
      * Review all explicit athlete facts again, activate the matching local
      * athlete and publish the provisional curated catalog with no guessed stock.

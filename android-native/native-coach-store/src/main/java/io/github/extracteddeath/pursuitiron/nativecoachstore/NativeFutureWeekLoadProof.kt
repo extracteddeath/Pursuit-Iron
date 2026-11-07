@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.math.BigDecimal
 import java.security.MessageDigest
+import io.github.extracteddeath.pursuitiron.rebuild.CoachReadiness
 
 /**
  * Canonical, domain-separated SHA-256 of a future-week load proposal.
@@ -26,6 +27,8 @@ internal object NativeFutureWeekLoadProof {
         settingsRevision:Long,permissionRevision:Long,
         absoluteWeek:Int,weekday:Int,slotId:String,
         previousLoad:BigDecimal,candidateLoad:BigDecimal,
+        readiness:CoachReadiness,movementRestricted:Boolean,
+        maximumAuthorizedIncrease:BigDecimal,
         evidenceWorkoutIds:List<String>
     ):String {
         require(ownerKey.isNotBlank() && athleteId.isNotBlank() &&
@@ -36,7 +39,9 @@ internal object NativeFutureWeekLoadProof {
         require(historyRevision>=0 && draftRevision>0 && sourceRevision>0 &&
             settingsRevision>=0 && permissionRevision>0)
         require(absoluteWeek in 1..104 && weekday in 0..6)
-        require(previousLoad>=BigDecimal.ZERO && candidateLoad>previousLoad)
+        require(previousLoad>=BigDecimal.ZERO && candidateLoad>previousLoad &&
+            maximumAuthorizedIncrease>BigDecimal.ZERO &&
+            candidateLoad.subtract(previousLoad)<=maximumAuthorizedIncrease)
         require(evidenceWorkoutIds.size==2 &&
             evidenceWorkoutIds.distinct().size==2 &&
             evidenceWorkoutIds.all{it.isNotBlank()})
@@ -54,6 +59,9 @@ internal object NativeFutureWeekLoadProof {
             out.writeInt(weekday)
             out.writeUTF(normal(previousLoad))
             out.writeUTF(normal(candidateLoad))
+            out.writeUTF(readiness.name)
+            out.writeBoolean(movementRestricted)
+            out.writeUTF(normal(maximumAuthorizedIncrease))
             out.writeInt(evidenceWorkoutIds.size)
             evidenceWorkoutIds.forEach(out::writeUTF)
             out.writeInt(proposedBytes.size)

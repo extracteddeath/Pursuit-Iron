@@ -15,6 +15,24 @@ calculations, not retroactive history edits or invented fatigue observations.
 The earlier benchmark advantage based on blocking all unreported-RIR
 progression is withdrawn; the paired comparison uses this clarified policy.
 
+## Preserve personalized targets when progression holds — 2026-11-07
+
+`KotlinAdaptiveSetPrescriptionDomain` now offers an exact repeat of previously
+accepted per-set targets when complete comparable work does not earn another
+rep. Meeting goal effort, missing a prior exact target within the practical
+range, or reaching the rep ceiling no longer discards the accepted targets
+and falls back to a generic range. A repeat is explicitly labeled separately
+from an earned single-set improvement; load progression remains a separate
+review. Recovery restrictions, low readiness, near failure, skipped work,
+below-floor reps, unavailable effort and changed/unverified loading still
+refuse the repeat proposal.
+
+Real native-file tests cover explicit acceptance, a later same-exercise and
+same-purpose workout on another day, fresh approval/history readers, exact
+next-workout issuance and idempotent replay. Both reported and assumed goal
+RIR are covered; old issued targets and actuals remain unchanged. This closes
+part of G3/L26, with paired continuity and physical-device acceptance pending.
+
 ## End state: full native replacement, not a permanent JavaScript bridge
 
 The agreed destination is a **Kotlin-only training engine and fully native

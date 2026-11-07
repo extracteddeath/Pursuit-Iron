@@ -41,7 +41,7 @@ without executing it.
 | L24 | Original custom program cannot be edited as richly as a good coach would write it | Native custom source editor, split and cycle drafts | **Open**: complete premium UI, arbitrary custom structures and safe mutation |
 | L25 | No objective proof the new engine beats the existing web coach | `verification/engine-superiority-gate.mjs` and pinned bilateral scenarios | **Open**: actual matched JS vs Kotlin runs, device and blinded coaching |
 
-| L26 | Individually targeted workouts make the following session appear to have incompatible rep bands or reset progression | `KotlinLongitudinalRepEvidenceDomainTest`, native complete-personalized-session integration: preserve actual issued 12/12 while coaching against originally approved 8–12, with exact stock and source rules | **Partial**: high-level program/load timeline must also normalize authenticated exact targets; run matched JS and Android device continuity tests |
+| L26 | Individually targeted workouts make the following session appear to have incompatible rep bands or reset progression | `KotlinLongitudinalRepEvidenceDomainTest`, `KotlinAdaptiveSetPrescriptionDomainTest` and native personalized-session integration: preserve exact targets on a hold, explicit repeat versus earned labels, another day's history isolation, cold acceptance/issuance, exact stock and source checks | **Partial**: paired JS continuity and Android device tests remain required; automated native holds are covered for reported and assumed goal RIR |
 
 ## Definition of done for each defect
 
@@ -84,9 +84,17 @@ If any personalized target was missed, the engine refuses to raise a
 different set above its previous target until the prior targets are met.
 A true `EARNED_ONE_MORE_REP` must exceed exactly one previous exact target,
 while every other target remains at least as demanding and supported by
-reported effort. Android's Coach preview shows this distinction. This
-does not yet implement fatigue-adjusted downward targets or peak-specific
-periodization; the current conservative refusal remains intentional.
+reported effort or the disclosed original-goal assumption. Android's Coach
+preview shows this distinction. If complete comparable work meets goal effort
+without extra headroom, misses a prior exact target within the practical band,
+or reaches the practical ceiling, the reviewer now offers those same exact
+targets as a repeat. It does not abandon them for the generic range or promote
+a different set. Native-file tests explicitly accept and issue that repeat
+after an interleaved same-purpose day and fresh disk readers. Actual RIR stays
+null when it was unreported. Recovery, missing both effort sources, incomplete
+work, below-floor reps and loading/source failures still refuse the proposal.
+Fatigue-adjusted downward targets, peak-specific periodization and physical
+device acceptance remain open.
 
 The owner-fenced native **two-workout load review now uses the same
 conservative, exact-inventory normalization** across the two latest

@@ -157,9 +157,37 @@ object KotlinAdaptiveSetPrescriptionDomain {
                 request.readiness,request.movementRestricted,
                 verifiedPerSetLoading=backoff)
         }.getOrNull()
-        val targets=proposed?.candidateRepTargets
-            ?:return denied(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
-                "No demonstrated single-set rep increase. Keep the approved targets.")
+        if(proposed==null)
+            return denied(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+                "The completed working sets could not support a comparable rep review.")
+        val earlierTargets=request.previouslyIssuedExactReps
+        if(earlierTargets!=null && (earlierTargets.size!=chosen.size ||
+            earlierTargets.any {it !in history.targetReps.minimum..history.targetReps.maximum}))
+            return denied(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
+                "The recorded individualized target count or range differs from the approved plan.")
+
+        val earnedTargets=proposed.candidateRepTargets
+        var kind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
+        val targets=if(earlierTargets!=null && (
+            earnedTargets==null || earnedTargets==earlierTargets ||
+                earlierTargets.indices.any {checkNotNull(observed[it].actualReps)<earlierTargets[it]} ||
+                earnedTargets.indices.any {earnedTargets[it]<earlierTargets[it]} ||
+                earnedTargets.indices.count {earnedTargets[it]>earlierTargets[it]}!=1)) {
+            // A hold is a useful concrete prescription, not a reason to
+            // discard already accepted exact targets. These reasons arise
+            // only AFTER complete work, rep-floor, effort, readiness and
+            // physical-loading checks. Every other refusal still wins.
+            if(proposed.reason !in setOf(
+                    FatigueRepReviewReason.ONE_SET_REP_INCREASE_FOR_REVIEW,
+                    FatigueRepReviewReason.NO_DEMONSTRATED_EFFORT_HEADROOM,
+                    FatigueRepReviewReason.ALREADY_AT_REP_CEILING))
+                return denied(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+                    "Recovery, effort or completed-set evidence does not support repeating these targets.")
+            kind=AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS
+            earlierTargets
+        } else earnedTargets ?:return denied(
+            AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+            "No demonstrated single-set rep increase. Keep the approved targets.")
         if(targets.size!=chosen.size ||
             targets.any { it !in history.targetReps.minimum..history.targetReps.maximum } ||
             (!backoff &&
@@ -173,38 +201,17 @@ object KotlinAdaptiveSetPrescriptionDomain {
             return denied(AdaptiveSetPrescriptionRefusal.CANDIDATE_REAUDIT_FAILED,
                 "Observed per-set loads or proposed reps no longer match the approved exercise.")
 
-        val earlierTargets=request.previouslyIssuedExactReps
-        var kind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
-        if(earlierTargets!=null) {
-            if(earlierTargets.size!=targets.size ||
-                earlierTargets.any {it !in history.targetReps.minimum..history.targetReps.maximum})
-                return denied(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
-                    "The recorded individualized target count or range differs from the approved plan.")
-            if(targets==earlierTargets) {
-                // Same previously issued goals. This is a repeat target,
-                // NOT a new coaching improvement or weight increase.
-                kind=AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS
-            } else {
-                // A missed individualized set precludes increasing some
-                // other set while calling the entire session an advance.
-                if(earlierTargets.indices.any {
-                    checkNotNull(history.observations.single {obs ->
-                        obs.workingOrdinal==it
-                    }.actualReps)<earlierTargets[it]
-                } || targets.indices.any {targets[it]<earlierTargets[it]} ||
-                    targets.indices.count {targets[it]>earlierTargets[it]}!=1)
-                    return denied(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
-                        "Repeat the previous individualized targets before earning another increase.")
-            }
-        }
-
         val targetByKey=chosen.mapIndexed {i,set ->
             set.setKey to targets[i]
         }.toMap()
         if(targetByKey.size!=chosen.size)
             return denied(AdaptiveSetPrescriptionRefusal.CANDIDATE_REAUDIT_FAILED,
                 "Set IDs are ambiguous; preserve the original prescription.")
-        val changed=checkNotNull(proposed.proposedOrdinal)
+        val changed=if(kind==AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP)
+            checkNotNull(proposed.proposedOrdinal)
+        else checkNotNull(earlierTargets).indices.firstOrNull {
+            checkNotNull(observed[it].actualReps)<earlierTargets[it]
+        } ?:0
         val updated=original.targets.map {set ->
             val reps=targetByKey[set.setKey]
             if(reps==null) set else set.copy(reps=RepBand(reps,reps))

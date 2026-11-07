@@ -244,7 +244,7 @@ internal fun NativeKotlinCandidateCoachScreen(
                     Text(
                         if(candidate.decisionKind==
                             AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS)
-                            "Maintain your previously prescribed targets. A missed target is not a newly earned progression."
+                            "Repeat your previously prescribed targets. This keeps your set goals without claiming a new progression."
                         else "Your recorded performance supports reviewing exactly one additional rep on one set.",
                         style=MaterialTheme.typography.bodyMedium)
                     Text("Built from the most recent verified, corrected workout. This is a preview only; already-issued sessions are never changed.",

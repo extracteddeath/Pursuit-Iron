@@ -170,6 +170,18 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-05
 
+**G3 continuity update — 2026-11-07:** the existing
+`KotlinAdaptiveSetPrescriptionDomain` now materializes an explicit repeat of
+authenticated personalized targets when complete, physically comparable work
+does not earn another rep. It preserves the same day and purpose via the
+existing native history owner, keeps goal-RIR assumptions separate from actual
+effort, and retains all recovery/failed-work/source checks. Real native-file
+tests cover another same-purpose day, explicit repeat acceptance, fresh disk
+readers and exact next-session issuance/replay. The Coach preview identifies
+a repeat without claiming earned progress. Canonical owner, journal format
+and approval protocol are unchanged. This advances L26; paired continuity
+and physical-device evidence remain unfilled release requirements.
+
 **Present:** independently tested, review-only Kotlin week generation for 4 splits, 3–6 days; bounded feasible-candidate ranking and priority-lift recovery; authored phase/dose policy checks; full-session rep/RIR and equipment draft; purpose- and day-slot-specific progression paths with native owner-backed test issuance; custom-cycle authoring with stable slots/amplifiers; permissioned structural diffs; custom full-cycle dose continuity and longitudinal candidate review. Source: existing domain implementations and isolated green CI at commit ff7f0dc5c967d831c474700c4de167170e6475cd.
 
 **Not yet implemented as a connected end-to-end adaptive cycle coach:** automatic research-grounded phase/dose presets for every goal/experience; complete block option enumeration and comparison; truly adaptive split and day-count selection; future-block exercise mapping and slot migrations; full fatigue/deload-driven next-workout issuance; finished custom/program UX; production Kotlin-only Android authority and real-device superiority certification.

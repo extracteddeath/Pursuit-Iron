@@ -159,15 +159,67 @@ class KotlinAdaptiveSetPrescriptionDomainTest {
         val input=request(previous=observed(
             reps=listOf(14,13,12),rir=listOf(3,3,3)),
             issuedExactReps=listOf(14,14,12))
-        val result=KotlinAdaptiveSetPrescriptionDomain.draft(input)
-            as AdaptiveSetPrescriptionResult.Rejected
-        assertEquals(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
-            result.reason)
-        assertTrue(result.detail.contains("Repeat"))
+        val result=candidate(input)
+        assertEquals(listOf(14,14,12),result.newRepTargets)
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            result.decisionKind)
         assertEquals(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
             (KotlinAdaptiveSetPrescriptionDomain.draft(request(
                 issuedExactReps=listOf(14,14))) as
                 AdaptiveSetPrescriptionResult.Rejected).reason)
+    }
+
+    @Test fun meetingGoalEffortKeepsAcceptedExactTargetsInsteadOfResettingTheRange() {
+        val exact=listOf(14,14,12)
+        for(rir in listOf(listOf(2,2,2),listOf(null,null,null))) {
+            val previous=observed(reps=exact,rir=rir)
+            val result=candidate(request(previous=previous,issuedExactReps=exact))
+            assertEquals(exact,result.newRepTargets)
+            assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+                result.decisionKind)
+            assertEquals(if(rir.first()==null)3 else 0,result.assumedGoalRirSetCount)
+            assertEquals(exact.map{RepBand(it,it)},result.workout.targets.filter {
+                it.exerciseId=="db-press"
+            }.map{it.reps})
+            assertEquals(rir,previous.observations.map{it.actualRir})
+            assertFalse(result.mayAutoApply)
+            assertFalse(result.mayIssueWorkout)
+        }
+    }
+
+    @Test fun ceilingTargetsCanBeRepeatedWithoutInventingAnotherRepOrLoadIncrease() {
+        val result=candidate(request(previous=observed(
+            reps=listOf(15,15,15),rir=listOf(2,2,2)),
+            issuedExactReps=listOf(15,15,15)))
+        assertEquals(listOf(15,15,15),result.newRepTargets)
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            result.decisionKind)
+        assertTrue(result.workout.targets.filter{it.exerciseId=="db-press"}.all {
+            (it.load as DraftSetLoad.Verified).value.compareTo(n("30"))==0
+        })
+    }
+
+    @Test fun repeatTargetsCannotBypassRecoveryIncompleteEffortOrLoadingGuards() {
+        val exact=listOf(14,14,12)
+        val safe=observed(reps=exact,rir=listOf(2,2,2))
+        val cases=listOf(
+            request(previous=safe,readiness=CoachReadiness.LOW,issuedExactReps=exact),
+            request(previous=safe,restricted=true,issuedExactReps=exact),
+            request(previous=observed(reps=exact,rir=listOf(null,null,0)),issuedExactReps=exact),
+            request(previous=observed(reps=listOf(14,9,12)),issuedExactReps=exact),
+            request(previous=observed(actualLoads=listOf("30","35","30")),issuedExactReps=exact),
+            request(previous=safe.copy(observations=safe.observations.map {
+                it.copy(actualRir=null,issuedRir=null)
+            }),issuedExactReps=exact),
+            request(previous=safe.copy(observations=safe.observations.mapIndexed {i,s->
+                if(i==1)s.copy(outcome=SetOutcome.SKIPPED,actualReps=null,actualLoad=null,actualRir=null) else s
+            }),issuedExactReps=exact),
+            request(previous=safe,issuedExactReps=listOf(16,14,12))
+        )
+        for(input in cases) {
+            val result=KotlinAdaptiveSetPrescriptionDomain.draft(input)
+            assertTrue(result.toString(),result is AdaptiveSetPrescriptionResult.Rejected)
+        }
     }
 
     @Test fun noUnobservedRepsNearFailureOrUnavailableEffortCanGenerateNextTargets() {

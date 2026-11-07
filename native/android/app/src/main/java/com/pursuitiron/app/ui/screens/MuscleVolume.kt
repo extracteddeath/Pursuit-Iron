@@ -71,17 +71,18 @@ fun MuscleVolumeCard(vm: AppViewModel, programId: String, week: Int, onDetails: 
     val anyHeads = rows.any { it.list("heads").isNotEmpty() }
     val flagged = rows.count { it.b("off") }
     PiCard(radius = 28.dp, padding = 16.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("Sets by muscle · week $week", style = MaterialTheme.typography.titleMedium)
-                Text("${d.optInt("workingSets").takeIf { it > 0 } ?: fmtNum(d.optDouble("total"))} working sets · ${rows.size} muscles" +
-                    if (flagged > 0) " · $flagged outside MEV–MRV" else " · all in range",
-                    style = MaterialTheme.typography.bodySmall, color = if (flagged > 0) cs.error else cs.onSurfaceVariant)
+        // Title and the Heads switch share a line; the summary gets the full width under them (it wrapped to three lines beside the switch).
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Sets by muscle", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                if (anyHeads) {
+                    Text("Heads", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
+                    Switch(heads, { vm.prefs.changeVolHeads(it) }, modifier = Modifier.semantics { contentDescription = "Show muscle heads" })
+                }
             }
-            if (anyHeads) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Heads", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
-                Switch(heads, { vm.prefs.changeVolHeads(it) }, modifier = Modifier.semantics { contentDescription = "Show muscle heads" })
-            }
+            Text("Week $week · ${d.optInt("workingSets").takeIf { it > 0 } ?: fmtNum(d.optDouble("total"))} working sets · ${rows.size} muscles" +
+                if (flagged > 0) " · $flagged outside MEV–MRV" else " · all in range",
+                style = MaterialTheme.typography.bodySmall, color = if (flagged > 0) cs.error else cs.onSurfaceVariant)
         }
         Column(Modifier.clip(RoundedCornerShape(18.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             rows.forEach { r ->

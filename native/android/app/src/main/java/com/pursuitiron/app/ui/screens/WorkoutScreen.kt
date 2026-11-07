@@ -815,7 +815,7 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                     val n = work.size; val minN = work.count { it.b("done") }.coerceAtLeast(1)
                     Row(Modifier.fillMaxWidth().background(cs.surfaceContainerHigh).padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.List, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
+                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer), contentAlignment = Alignment.Center) { Icon(PiIcons.Layers, null, tint = cs.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
                         Column(Modifier.weight(1f)) {
                             Text("Working sets", style = MaterialTheme.typography.titleSmall)
                             Text("Logged sets stay. Keep the new count after saving, or just today", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -830,18 +830,18 @@ private fun ExerciseMenu(vm: AppViewModel, s: JSONObject, ei: Int, onPick: (WShe
                     }
                 }
                 MenuRow(PiIcons.Shield, "Something hurt", "Flag it and the plan protects that area", cs.tertiaryContainer, cs.onTertiaryContainer) { onPick(WSheet.Hurt(ei)) }
-                MenuRow(PiIcons.List, "Same weight for all sets", "Set every unlogged set to the average", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("level", "ei" to ei); onPick(null) }
+                MenuRow(PiIcons.Scale, "Same weight for all sets", "Set every unlogged set to the average", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("level", "ei" to ei); onPick(null) }
                 if (count > 1) {
                     val mates = s.list("exercises")
                     val mate = if (ex.b("superset")) mates.getOrNull(ei + 1) else mates.getOrNull(ei - 1)?.takeIf { it.b("superset") }
-                    MenuRow(PiIcons.Swap, mate?.let { "Superset with ${it.s("name")}" } ?: "Superset", if (mate != null) "Change or remove the pairing" else "Suggested partners that won’t cost you strength",
+                    MenuRow(PiIcons.Layers, mate?.let { "Superset with ${it.s("name")}" } ?: "Superset", if (mate != null) "Change or remove the pairing" else "Suggested partners that won’t cost you strength",
                         cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("select", "ei" to ei); onPick(WSheet.Superset) }
                 }
                 MenuRow(PiIcons.Timer, "Rest, goal & setup", listOf(if (ex.i("restCustom") > 0) "Rest ${restLabel(ex.i("restCustom"))}" else "Rest for this lift", if (ex.d("goal") > 0) "goal ${com.pursuitiron.app.ui.common.fmtNum(ex.d("goal"))}" else "a goal weight", "machine step").joinToString(", "), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.LiftSettings(ei)) }
                 val pinned = (ex.list("setup").filter { it.s("value").isNotBlank() }.map { "${it.s("label")} ${it.s("value")}" } + listOf(ex.s("pinNote")).filter { it.isNotBlank() }).joinToString(" — ")
                 MenuRow(PiIcons.Pin, if (pinned.isBlank()) "Pin a note" else "Edit pinned note", pinned.ifBlank { "Setup per machine and a cue you’ll see every time" }, cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Pin(ex.s("id"))) }
                 MenuRow(PiIcons.Close, "Skip exercise", "Drop it from today's workout", cs.tertiaryContainer, cs.onTertiaryContainer) { skipWithUndo(vm, ei, ex.s("name")); onPick(null) }
-                MenuRow(PiIcons.List, "Note for today", if (ex.s("note").isBlank()) "Only this workout; pinned notes stay with the lift" else ex.s("note"), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Note(ei)) }
+                MenuRow(PiIcons.Note, "Note for today", if (ex.s("note").isBlank()) "Only this workout; pinned notes stay with the lift" else ex.s("note"), cs.secondaryContainer, cs.onSecondaryContainer) { onPick(WSheet.Note(ei)) }
                 if (ei > 0) MenuRow(PiIcons.ChevronLeft, "Move earlier", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei - 1); onPick(null) }
                 if (ei < count - 1) MenuRow(PiIcons.ChevronRight, "Move later", "Logged sets move with it", cs.secondaryContainer, cs.onSecondaryContainer) { vm.act("move", "from" to ei, "to" to ei + 1); onPick(null) }
             }

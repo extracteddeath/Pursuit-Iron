@@ -102,7 +102,8 @@ fun PlateBar(ex: JSONObject, unit: String, onOpen: () -> Unit) {
     }
 }
 
-/** The design's add row: + Add set, + Drop, + Myo, and ⋯ for warm-ups and removing a set you added. */
+/** The add row: + Add set (a standard set, one tap) and ⋯ for the other kinds — drop, myo-reps, a warm-up ramp — and removing a set you added.
+    Drop and Myo used to sit inline on every lift, usually greyed out until a working set was logged. */
 @Composable
 fun AddRow(vm: AppViewModel, ex: JSONObject, modifier: Modifier = Modifier, onMore: () -> Unit) {
     val cs = MaterialTheme.colorScheme
@@ -110,29 +111,14 @@ fun AddRow(vm: AppViewModel, ex: JSONObject, modifier: Modifier = Modifier, onMo
     val rules = ex.o("addRules")
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Surface(onClick = { vm.act("addSet", "ei" to ei) }, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer, shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.weight(1.4f).height(48.dp).semantics { contentDescription = "Add set" }) {
+            modifier = Modifier.weight(1f).height(48.dp).semantics { contentDescription = "Add set" }) {
             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(PiIcons.Plus, null, modifier = Modifier.size(18.dp)); Text(" Add set", style = MaterialTheme.typography.titleSmall, maxLines = 1)
             }
         }
-        listOf("drop" to "Drop", "myo" to "Myo").forEach { (k, label) ->
-            val r = rules?.o(k)
-            if (r != null && r.b("show")) {
-                val why = r.s("why")
-                Surface(onClick = { if (why.isNotBlank()) vm.toast(why) else vm.act("addOne", "ei" to ei, "kind" to k) },
-                    color = Color.Transparent, contentColor = cs.primary, shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, cs.outline),
-                    modifier = Modifier.height(48.dp).alpha(if (why.isNotBlank()) 0.55f else 1f)
-                        .semantics { contentDescription = if (why.isNotBlank()) "$label, unavailable: $why" else "Add a ${if (k == "drop") "drop set" else "myo-rep set"}" }) {
-                    Row(Modifier.padding(horizontal = 14.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        Icon(PiIcons.Plus, null, modifier = Modifier.size(18.dp)); Text(" $label", style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                    }
-                }
-            }
-        }
         Surface(onClick = onMore, color = Color.Transparent, contentColor = cs.onSurfaceVariant, shape = RoundedCornerShape(16.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, cs.outlineVariant),
-            modifier = Modifier.size(48.dp).semantics { contentDescription = "More set options — warm-ups, remove a set" }) {
+            modifier = Modifier.size(48.dp).semantics { contentDescription = "More set options — drop, myo-reps, warm-ups, remove a set" }) {
             Box(contentAlignment = Alignment.Center) { Icon(PiIcons.More, null) }
         }
     }

@@ -64,7 +64,7 @@ fun LandmarksCard(d: JSONObject) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).background(cs.surfaceContainerLow).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column {
             Text("Weekly sets vs landmarks", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.semantics { heading() })
-            Text("This week: solid bar is done so far, faint bar is the plan. The band runs from MEV (least that grows) to MRV (most you recover from). A muscle that only helps on a lift gets part of a set, so counts can be fractional.",
+            Text("Solid: done this week. Faint: planned. Band: MEV to MRV.",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), color = cs.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
         }
         // Fifteen bars every visit buried the few that matter: muscles off their range lead, then the rest behind Show all.

@@ -239,7 +239,13 @@ fun RestDayHero(vm: AppViewModel, r: JSONObject) {
                     if (sore.isNotEmpty()) sore.take(3).joinToString(", ") + (if (sore.size == 1) " is" else " are") + " still recovering." else null,
                 ).joinToString(" "), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.alpha(0.85f))
             }
-            val rows = r.list("rows")
+            // Only muscles still recovering get a bar; when everything is back, one line says so (six identical 100% bars said nothing).
+            val all = r.list("rows")
+            val rows = all.filter { it.i("readiness") < 95 }
+            if (all.isNotEmpty() && rows.isEmpty()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(com.pursuitiron.app.ui.common.PiIcons.Check, null, Modifier.size(18.dp))
+                Text("Every muscle ${r.s("nextLabel")} trains is recovered.", style = MaterialTheme.typography.bodyMedium)
+            }
             if (rows.isNotEmpty()) androidx.compose.material3.Surface(color = cs.surface, contentColor = cs.onSurface, shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     rows.forEach { m ->
@@ -253,9 +259,8 @@ fun RestDayHero(vm: AppViewModel, r: JSONObject) {
                     }
                 }
             }
-            listOf("A 20–30 minute walk speeds recovery more than lying still.", "Sleep is when the training turns into strength. Aim for seven hours or more.").forEach { tip ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text("•"); Text(tip, style = MaterialTheme.typography.bodyMedium) }
-            }
+            // One tip, not two bullets: it reads as advice instead of a list to get through.
+            Text("A 20–30 minute walk and a full night's sleep speed recovery more than rest alone.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0.85f))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { vm.openPreview() }, modifier = Modifier.height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = cs.onSecondaryContainer, contentColor = cs.secondaryContainer)) {

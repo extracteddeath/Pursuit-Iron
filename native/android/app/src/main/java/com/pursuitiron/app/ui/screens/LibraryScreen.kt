@@ -12,6 +12,9 @@ import androidx.compose.foundation.background
 import com.pursuitiron.app.ui.common.fmtNum
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.clickable
@@ -118,22 +121,18 @@ fun LibraryScreen(vm: AppViewModel) {
                 items(PARTS) { (id, label) -> MorphChip(label, part == id, { part = id; vm.searchLibrary(q, id, equip) }, check = true) }
             }
         }}
+        // Show and Equipment are dropdown chips on one line with the count (two more rows of chips pushed the list off the first screen).
         item(span = { GridItemSpan(maxLineSpan) }) { Rise {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
-                items(listOf("all" to "All lifts", "recent" to "Recent", "goals" to "Goals", "banned" to "Banned")) { (id, label) ->
-                    MorphChip(if (id == "all") label else "$label · ${counts[id] ?: 0}", st == id, { st = id }, height = 36.dp)
-                }
+            Row(Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val stLabel = mapOf("all" to "All lifts", "recent" to "Recent", "goals" to "Goals", "banned" to "Banned")
+                DropChip(if (st == "all") "All lifts" else "${stLabel[st]} · ${counts[st] ?: 0}", st != "all", "Show",
+                    stLabel.map { (id, l) -> (if (id == "all") l else "$l · ${counts[id] ?: 0}") to { st = id } })
+                DropChip(EQUIPS.firstOrNull { it.first == equip }?.second ?: "Any equipment", equip != null, "Equipment",
+                    EQUIPS.map { (id, l) -> l to { equip = id; vm.searchLibrary(q, part, id) } })
+                Text(if (shown.size >= 400) "400+" else "${shown.size}", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.weight(1f).padding(end = 4.dp)
+                        .semantics { contentDescription = (if (shown.size >= 400) "400+ exercises" else "${shown.size} exercise${if (shown.size == 1) "" else "s"}") })
             }
-        }}
-        item(span = { GridItemSpan(maxLineSpan) }) { Rise {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
-                items(EQUIPS) { (id, label) -> MorphChip(label, equip == id, { equip = id; vm.searchLibrary(q, part, id) }, height = 36.dp) }
-            }
-        }}
-        item(span = { GridItemSpan(maxLineSpan) }) { Rise {
-            Text((if (shown.size >= 400) "400+ exercises" else "${shown.size} exercise${if (shown.size == 1) "" else "s"}") +
-                when (st) { "recent" -> " · trained recently"; "goals" -> " · with a goal"; "banned" -> " · banned"; else -> "" },
-                style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         }}
         if (shown.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) { Rise {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -270,3 +269,27 @@ fun ExerciseSheet(vm: AppViewModel, id: String, onClose: () -> Unit) {
     }
 }
 
+
+
+/** A filter chip that opens its choices in a menu (Material filter chip with a dropdown). */
+@Composable
+private fun DropChip(label: String, active: Boolean, title: String, options: List<Pair<String, () -> Unit>>) {
+    val cs = MaterialTheme.colorScheme
+    var open by remember { mutableStateOf(false) }
+    Box {
+        androidx.compose.material3.Surface(onClick = { open = true }, shape = RoundedCornerShape(10.dp),
+            color = if (active) cs.secondaryContainer else Color.Transparent, contentColor = if (active) cs.onSecondaryContainer else cs.onSurface,
+            border = if (active) null else androidx.compose.foundation.BorderStroke(1.dp, cs.outline),
+            modifier = Modifier.height(36.dp).semantics { contentDescription = "$title: $label" }) {
+            Row(Modifier.padding(start = 12.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                Icon(PiIcons.ChevronDown, null, Modifier.size(16.dp))
+            }
+        }
+        androidx.compose.material3.DropdownMenu(open, { open = false }, shape = RoundedCornerShape(16.dp)) {
+            options.forEach { (l, go) ->
+                androidx.compose.material3.DropdownMenuItem(text = { Text(l) }, onClick = { open = false; go() }, modifier = Modifier.heightIn(min = 48.dp))
+            }
+        }
+    }
+}

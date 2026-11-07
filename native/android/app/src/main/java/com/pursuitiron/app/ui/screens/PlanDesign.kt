@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
@@ -98,15 +99,30 @@ fun PlanActions(p: JSONObject, onEdit: () -> Unit, onReview: () -> Unit, onSched
             }
         }
     }
-    LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(end = 16.dp)) {
-        item { Act("Edit program", PiIcons.List, primary = true, onClick = onEdit) }
-        item { Act("Review block", PiIcons.Progress, tonal = true, onClick = onReview) }
-        item { Act("Schedule", PiIcons.Calendar, onClick = onSchedule) }
-        if (onTm != null) item { Act("Training maxes", PiIcons.Calc, onClick = onTm) }
-        if (onCycle != null) item { Act("Cycle", PiIcons.Redo, onClick = onCycle) }
-        item { Act("Settings", PiIcons.Grid, onClick = onSettings) }
-        item { Act("Details", PiIcons.Info, onClick = onDetails) }
-        item { Act("New", PiIcons.Plus, onClick = onNew) }
+    /* Two actions you use every block, in full; the rest in one overflow menu (Material: no more than three visible
+       actions, and nothing cut off at the screen edge — the old row hid five of eight past "Schedul…"). */
+    var more by remember { mutableStateOf(false) }
+    Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Act("Edit program", PiIcons.List, primary = true, onClick = onEdit)
+        Act("Review block", PiIcons.Progress, tonal = true, onClick = onReview)
+        Box {
+            Surface(onClick = { more = true }, color = cs.surfaceContainerHigh, contentColor = cs.onSurface, shape = CircleShape,
+                modifier = Modifier.size(40.dp).semantics { contentDescription = "More plan actions" }) {
+                Box(contentAlignment = Alignment.Center) { Icon(PiIcons.More, null, modifier = Modifier.size(20.dp)) }
+            }
+            androidx.compose.material3.DropdownMenu(more, { more = false }, shape = RoundedCornerShape(16.dp)) {
+                @Composable fun Item(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, go: () -> Unit) =
+                    androidx.compose.material3.DropdownMenuItem(text = { Text(label, style = MaterialTheme.typography.bodyLarge) }, onClick = { more = false; go() },
+                        leadingIcon = { Icon(icon, null, modifier = Modifier.size(20.dp)) }, modifier = Modifier.heightIn(min = 48.dp))
+                Item("Schedule", PiIcons.Calendar, onSchedule)
+                if (onTm != null) Item("Training maxes", PiIcons.Calc, onTm)
+                if (onCycle != null) Item("Cycle", PiIcons.Redo, onCycle)
+                Item("Settings", PiIcons.Sliders, onSettings)
+                Item("Details", PiIcons.Info, onDetails)
+                androidx.compose.material3.HorizontalDivider()
+                Item("New program", PiIcons.Plus, onNew)
+            }
+        }
     }
 }
 
@@ -169,26 +185,43 @@ fun ProgramsSheet(vm: AppViewModel, onCompare: () -> Unit, onGallery: () -> Unit
                         TextButton(onClick = { renaming = null }) { Text("Cancel") }
                     }
                     if (open) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            if (!active) ProgPill("Switch now", PiIcons.ChevronRight, primary = true) { switchTo = pr }
-                            if (!active && !pr.b("quick") && x.b("canQueue")) ProgPill(if (queued) "Queued for next block" else "Queue for next block", PiIcons.Timer) {
-                                vm.queueProgram(if (queued) null else id, pr.s("name")) { refresh() }
+                        // One main action and Edit in view; the rest in a menu (seven pills used to wrap over three lines).
+                        var rowMenu by remember(id) { mutableStateOf(false) }
+                        val share: () -> Unit = {
+                            scope.launch {
+                                val t = vm.programText(id) ?: return@launch
+                                val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                    .putExtra(android.content.Intent.EXTRA_SUBJECT, t.s("name")).putExtra(android.content.Intent.EXTRA_TEXT, t.s("text"))
+                                runCatching { ctx.startActivity(android.content.Intent.createChooser(send, "Share ${t.s("name")}")) }.onFailure { vm.toast("No app to share with") }
                             }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (active) ProgPill("Program settings", PiIcons.Sliders, primary = true) { onClose(); onSettings(id) }
-                            if (pr.b("percent")) ProgPill("Training maxes", PiIcons.Wave) { onClose(); vm.tmFor = id }
+                            else ProgPill("Switch now", PiIcons.ChevronRight, primary = true) { switchTo = pr }
                             ProgPill("Edit", PiIcons.Pencil) { onClose(); vm.openEditor(id) }
-                            ProgPill("Duplicate", PiIcons.Copy) { vm.duplicateProgram(id) { nid, nname -> refresh(); sel = nid; renaming = nid; renameText = nname } }
-                            ProgPill("Rename", PiIcons.List) { renaming = id; renameText = pr.s("name") }
-                            ProgPill("Share as text", PiIcons.Share) {
-                                scope.launch {
-                                    val t = vm.programText(id) ?: return@launch
-                                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
-                                        .putExtra(android.content.Intent.EXTRA_SUBJECT, t.s("name")).putExtra(android.content.Intent.EXTRA_TEXT, t.s("text"))
-                                    runCatching { ctx.startActivity(android.content.Intent.createChooser(send, "Share ${t.s("name")}")) }.onFailure { vm.toast("No app to share with") }
+                            Box {
+                                Surface(onClick = { rowMenu = true }, color = cs.surfaceContainerHighest, contentColor = cs.onSurface, shape = CircleShape,
+                                    modifier = Modifier.size(40.dp).semantics { contentDescription = "More for ${pr.s("name")}" }) {
+                                    Box(contentAlignment = Alignment.Center) { Icon(PiIcons.More, null, modifier = Modifier.size(20.dp)) }
+                                }
+                                androidx.compose.material3.DropdownMenu(rowMenu, { rowMenu = false }, shape = RoundedCornerShape(16.dp)) {
+                                    @Composable fun Item(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, danger: Boolean = false, go: () -> Unit) =
+                                        androidx.compose.material3.DropdownMenuItem(text = { Text(label, color = if (danger) cs.error else cs.onSurface) },
+                                            onClick = { rowMenu = false; go() }, leadingIcon = { Icon(icon, null, modifier = Modifier.size(20.dp), tint = if (danger) cs.error else cs.onSurfaceVariant) },
+                                            modifier = Modifier.heightIn(min = 48.dp))
+                                    if (!active && !pr.b("quick") && x.b("canQueue")) Item(if (queued) "Unqueue" else "Queue for next block", PiIcons.Timer) {
+                                        vm.queueProgram(if (queued) null else id, pr.s("name")) { refresh() }
+                                    }
+                                    if (pr.b("percent")) Item("Training maxes", PiIcons.Wave) { onClose(); vm.tmFor = id }
+                                    Item("Duplicate", PiIcons.Copy) { vm.duplicateProgram(id) { nid, nname -> refresh(); sel = nid; renaming = nid; renameText = nname } }
+                                    Item("Rename", PiIcons.Pencil) { renaming = id; renameText = pr.s("name") }
+                                    Item("Share as text", PiIcons.Share, go = share)
+                                    if (!active) { androidx.compose.material3.HorizontalDivider()
+                                        Item("Delete", PiIcons.Trash, danger = true) { vm.deleteProgram(id); sel = null; scope.launch { kotlinx.coroutines.delay(250); refresh() } } }
                                 }
                             }
-                            if (!active) ProgPill("Delete", PiIcons.Trash, danger = true) { vm.deleteProgram(id); sel = null; scope.launch { kotlinx.coroutines.delay(250); refresh() } }
                         }
+                        if (queued) Text("Queued: starts when this block ends.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
                         if (active) Text("This is the program you’re running. Switch to another before deleting it.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = fg.copy(alpha = 0.8f))
                     }
                 }

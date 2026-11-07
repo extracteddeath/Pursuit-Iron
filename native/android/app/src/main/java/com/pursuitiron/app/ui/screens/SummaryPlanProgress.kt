@@ -319,13 +319,11 @@ private fun PlanDayCard(vm: AppViewModel, p: JSONObject, d: JSONObject, wk: Int,
                     modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Start ${d.s("label")}" }) { Text("Start") }
             }
         }
-        // The design's "Hits …" line: the engine's weekly volume for this day, direct plus secondary shares
+        // What the day mainly trains, in one line; the week's per-muscle numbers (and the lifts behind them) are in Sets by muscle.
         d.list("hits").takeIf { it.isNotEmpty() }?.let { hs ->
-            // Helper muscles get part credit; say so whenever a count is fractional, or "Biceps 4.5" reads like a typo.
-            Text("Hits " + hs.joinToString(" · ") { "${it.s("label")} ${com.pursuitiron.app.ui.common.fmtNum(it.d("sets"))}" } +
-                (if (hs.any { it.d("sets") % 1.0 != 0.0 }) " (helper work counts as part sets)" else ""),
+            Text("Trains " + hs.filter { it.d("sets") >= 2 }.take(4).ifEmpty { hs.take(3) }.joinToString(", ") { it.s("label") },
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = if (today) cs.onPrimaryContainer else cs.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp))
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp))
         }
         Column(Modifier.clip(RoundedCornerShape(20.dp)).background(cs.surface), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             d.list("exercises").forEachIndexed { k, e ->

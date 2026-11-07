@@ -290,7 +290,8 @@ fun ExerciseHead(s: JSONObject, ex: JSONObject, onInfo: () -> Unit, onProg: () -
             // The design's pinned-note chip: setup and cue, or an invitation to pin one (Main.dc.html setupText)
             val setup = ex.list("setup").filter { it.s("value").isNotBlank() }.joinToString(" · ") { "${it.s("label")} ${it.s("value")}" }
             val pinned = listOf(setup, ex.s("pinNote")).filter { it.isNotBlank() }.joinToString(" — ")
-            Surface(onClick = onSetup, color = if (pinned.isBlank()) cs.surfaceContainerHigh else cs.primaryContainer, shape = RoundedCornerShape(8.dp),
+            // Only a note you've pinned shows here; pinning one is in the lift's menu (an empty invitation on every lift was noise).
+            if (pinned.isNotBlank()) Surface(onClick = onSetup, color = cs.primaryContainer, shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.height(28.dp).semantics { contentDescription = if (pinned.isBlank()) "Pin a note for ${ex.s("name")}" else "Pinned note for ${ex.s("name")}: $pinned. Edit" }) {
                 Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(PiIcons.Pin, null, modifier = Modifier.size(14.dp))
@@ -363,6 +364,8 @@ fun WhyInline(vm: AppViewModel, s: JSONObject, ex: JSONObject, onHistory: () -> 
         ex.b("assisted") -> "Why ${first.s("weight").trim().removePrefix("-")} ${s.s("unit")} of help?"
         else -> "Why ${first.s("weight")} ${s.s("unit")}?"
     }
+    // Nothing to explain before a first exposure: the chip appears once there's a load to explain.
+    if (first == null && !open) return
     if (!open) {
         Surface(onClick = { open = true }, color = cs.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.height(36.dp)) {
             Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

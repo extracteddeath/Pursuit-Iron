@@ -250,52 +250,6 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                     Text(d.s("note"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onPrimaryContainer)
                 }
             }
-            // Day setup: focus, sets by muscle, and who owns the numbers.
-            item(key = "setup") {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Cap("DAY FOCUS")
-                        val f = d.s("focus").ifBlank { "auto" }
-                        Segmented(listOf("auto" to "Auto", "strength" to "Strength", "hypertrophy" to "Hypertrophy"), f,
-                            { vm.edit("dayFocus", "dayId" to dId, "focus" to if (it == "auto") null else it) })
-                        Text(when (f) { "strength" -> "Heavier loads, lower reps, longer rest on this day. Overrides the program goal."
-                            "hypertrophy" -> "Higher reps, shorter rest, more volume on this day. Overrides the program goal."
-                            else -> "Follows the program goal. Tag a day to run a hybrid week (e.g. strength Upper/Lower + hypertrophy Push/Pull/Legs)." },
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
-                    }
-                    val hits = d.list("hits")
-                    if (hits.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Cap("SETS THIS WEEK BY MUSCLE")
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            hits.forEach { h -> val on = hitOpen == h.s("part")
-                                Text("${h.s("label")} ${fmtNum(h.d("sets"))}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
-                                    color = if (on) cs.onSecondaryContainer else cs.onSurface,
-                                    modifier = Modifier.clip(CircleShape).background(if (on) cs.secondaryContainer else cs.surfaceContainerHigh)
-                                        .clickable { hitOpen = if (on) null else h.s("part") }.semantics { role = Role.Button; selected = on }
-                                        .padding(horizontal = 14.dp, vertical = 9.dp)) }
-                        }
-                        // Tap a muscle to see what trains it: direct sets first, then the lifts that also work it (counted as a share).
-                        hits.firstOrNull { it.s("part") == hitOpen }?.let { h ->
-                            val from = h.list("from")
-                            val direct = from.filter { it.b("direct") }; val shared = from.filter { !it.b("direct") }
-                            Text(listOfNotNull(
-                                direct.takeIf { it.isNotEmpty() }?.joinToString(" · ", prefix = "${h.s("label")}: ", postfix = " direct") { "${it.s("name")} ${fmtNum(it.d("sets"))}" },
-                                shared.takeIf { it.isNotEmpty() }?.joinToString(" · ", prefix = if (direct.isEmpty()) "${h.s("label")}: " else "", postfix = " as a secondary muscle") { "${it.s("name")} ${fmtNum(it.d("sets"))}" }
-                            ).joinToString(". ") + ". A lift counts its sets for the muscle it targets and a share for muscles it also works.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = cs.onSurfaceVariant)
-                        }
-                    }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(cs.outlineVariant))
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(if (e.b("manual")) "Manual targets: change sets and reps on each lift. Auto won’t rewrite these at block review."
-                            else "Sets, reps and effort come from the engine for each week of the block. Switch Set & rep targets to Manual in Settings to set them yourself.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
-                        if (!e.b("manual")) Box(Modifier.height(40.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { settingsOpen = true }
-                            .semantics { role = Role.Button }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                            Text("Settings", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
-                        }
-                    }
-                }
-            }
             item(key = "exh") {
                 Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.Bottom) {
                     Text("Exercises", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
@@ -315,6 +269,66 @@ fun ProgramEditorScreen(vm: AppViewModel) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(PiIcons.Plus, null, tint = cs.primary, modifier = Modifier.size(18.dp))
                         Text("Add an exercise", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = cs.primary)
+                    }
+                }
+            }
+            // Day setup: focus, sets by muscle, and who owns the numbers.
+            // Under the lifts and folded: the lifts are what you came to edit (this card used to push them below the first screen).
+            item(key = "setup") {
+                var setupOpen by remember(dId) { mutableStateOf(false) }
+                val f0 = d.s("focus").ifBlank { "auto" }
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cs.surfaceContainerLow).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { setupOpen = !setupOpen }
+                        .semantics(mergeDescendants = true) { role = Role.Button; stateDescription = if (setupOpen) "Expanded" else "Collapsed" }.heightIn(min = 40.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Day setup", style = MaterialTheme.typography.titleSmall)
+                            Text("Focus: " + mapOf("auto" to "Auto", "strength" to "Strength", "hypertrophy" to "Hypertrophy")[f0] +
+                                (d.list("hits").size.takeIf { it > 0 }?.let { " · sets for $it muscles" } ?: "") + if (e.b("manual")) " · manual targets" else " · engine targets",
+                                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                        Icon(if (setupOpen) PiIcons.ChevronUp else PiIcons.ChevronDown, null, tint = cs.onSurfaceVariant)
+                    }
+                    if (setupOpen) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Cap("DAY FOCUS")
+                        val f = d.s("focus").ifBlank { "auto" }
+                        Segmented(listOf("auto" to "Auto", "strength" to "Strength", "hypertrophy" to "Hypertrophy"), f,
+                            { vm.edit("dayFocus", "dayId" to dId, "focus" to if (it == "auto") null else it) })
+                        Text(when (f) { "strength" -> "Heavier loads, lower reps, longer rest on this day. Overrides the program goal."
+                            "hypertrophy" -> "Higher reps, shorter rest, more volume on this day. Overrides the program goal."
+                            else -> "Follows the program goal. Tag a day to run a hybrid week (e.g. strength Upper/Lower + hypertrophy Push/Pull/Legs)." },
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp), color = cs.onSurfaceVariant)
+                    }
+                    val hits = d.list("hits")
+                    if (setupOpen && hits.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Cap("SETS THIS WEEK BY MUSCLE")
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            hits.forEach { h -> val on = hitOpen == h.s("part")
+                                Text("${h.s("label")} ${fmtNum(h.d("sets"))}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                                    color = if (on) cs.onSecondaryContainer else cs.onSurface,
+                                    modifier = Modifier.clip(CircleShape).background(if (on) cs.secondaryContainer else cs.surfaceContainerHigh)
+                                        .clickable { hitOpen = if (on) null else h.s("part") }.semantics { role = Role.Button; selected = on }
+                                        .padding(horizontal = 14.dp, vertical = 9.dp)) }
+                        }
+                        // Tap a muscle to see what trains it: direct sets first, then the lifts that also work it (counted as a share).
+                        hits.firstOrNull { it.s("part") == hitOpen }?.let { h ->
+                            val from = h.list("from")
+                            val direct = from.filter { it.b("direct") }; val shared = from.filter { !it.b("direct") }
+                            Text(listOfNotNull(
+                                direct.takeIf { it.isNotEmpty() }?.joinToString(" · ", prefix = "${h.s("label")}: ", postfix = " direct") { "${it.s("name")} ${fmtNum(it.d("sets"))}" },
+                                shared.takeIf { it.isNotEmpty() }?.joinToString(" · ", prefix = if (direct.isEmpty()) "${h.s("label")}: " else "", postfix = " as a secondary muscle") { "${it.s("name")} ${fmtNum(it.d("sets"))}" }
+                            ).joinToString(". ") + ". A lift counts its sets for the muscle it targets and a share for muscles it also works.", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = cs.onSurfaceVariant)
+                        }
+                    }
+                    if (setupOpen) Box(Modifier.fillMaxWidth().height(1.dp).background(cs.outlineVariant))
+                    if (setupOpen) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(if (e.b("manual")) "Manual targets: change sets and reps on each lift. Auto won’t rewrite these at block review."
+                            else "Sets, reps and effort come from the engine for each week of the block. Switch Set & rep targets to Manual in Settings to set them yourself.",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = cs.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        if (!e.b("manual")) Box(Modifier.height(40.dp).clip(CircleShape).background(cs.secondaryContainer).clickable { settingsOpen = true }
+                            .semantics { role = Role.Button }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                            Text("Settings", style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = cs.onSecondaryContainer)
+                        }
                     }
                 }
             }

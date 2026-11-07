@@ -138,16 +138,12 @@ def wizard(name, cycle=False, shots=False):
 
 
 def row_scroll_to(pattern, anchor, tries=4):
-    """A horizontally scrolling row (the Plan action row): swipe it left at the anchor's height until pattern shows."""
-    for _ in range(tries):
-        if find(pattern, timeout=1):
-            return True
-        a = find(anchor, timeout=2)
-        if not a:
-            return False
-        adb("shell", "input", "swipe", "900", str(a[1]), "250", str(a[1]), "300")
-        time.sleep(0.6)
-    return bool(find(pattern, timeout=1))
+    """Plan's actions: Edit program and Review block show; the rest are in the More plan actions menu."""
+    if find(pattern, timeout=1):
+        return True
+    if tap(r"^More plan actions", required=False):
+        return bool(find(pattern, timeout=3))
+    return False
 
 
 def dismiss_system_dialogs():
@@ -351,7 +347,7 @@ if tap(r"^Pause rest", required=False):
 else:
     FAILS.append("rest card has no pause")
 # The design's Why opens in place on the card
-if tap(r"Why .* kg\?|Why .* reps\?|No suggestion yet", "why-inline"):
+if tap(r"Why .* kg\?|Why .* reps\?", "why-inline"):
     tap(r"^Close explanation", required=False)
 # The design's header: focus mode, the exercise list, and "Short on time?" from the clock
 if tap(r"^Focus mode", "focus-mode"):
@@ -471,7 +467,9 @@ if scroll_to(r"Rest, goal & setup", tries=3):
 else:
     FAILS.append("no Rest, goal & setup in the exercise menu")
 # B932: the pinned note saves the cue and setup together and shows on the lift
-if tap(r"Pin a note for ", "pin-note", required=False):
+# The pin lives in the lift's menu until a note is pinned (no empty chip on every lift)
+tap(r"Exercise actions")
+if tap(r"^\|?Pin a note$|^Pin a note\|", "pin-note", required=False):
     if tap(r"^\|Note$|Note\|", required=False):
         adb("shell", "input", "text", "Pause%son%schest")
         hide_keyboard()
@@ -590,9 +588,11 @@ record("motion-tabs", [r"^\|Plan$|^Plan\|", r"^\|Progress$|^Progress\|"])
 
 # 5a. Exercises: equipment filter and the count
 tap(r"^\|Exercises$|^Exercises\|")
-if tap(r"^\|Barbell$", "library-barbell"):
-    if not find(r"^\|\d+\+? exercises?$", timeout=4):
+# Show and Equipment are dropdown chips on one row with the count
+if tap(r"^Equipment: ", required=False) and tap(r"^\|Barbell$", "library-barbell"):
+    if not find(r"^\d+\+? exercises?", timeout=4):
         FAILS.append("exercise count missing")
+    tap(r"^Equipment: ")
     tap(r"^\|Any equipment$")
 else:
     FAILS.append("no equipment filter on Exercises")
@@ -614,7 +614,7 @@ else:
     FAILS.append("no week-by-week entry on Plan")
 # Sets by muscle on Plan (App.js VolumeCard): tap a muscle for its lifts; Heads splits shoulders into delt heads
 MUSCLE_ROW = r"^[A-Z][A-Za-z /]+: [0-9.]+ sets, .* lifts"
-if seek(r"Sets by muscle · week"):
+if seek(r"^\|?Sets by muscle$|Working sets · .* muscles|working sets · .* muscles"):
     shot("muscle-volume")
     if scroll_to(MUSCLE_ROW, tries=3, step=300) and tap(MUSCLE_ROW, "muscle-lifts"):
         time.sleep(0.8)
@@ -663,17 +663,23 @@ scroll_up_to(r"^Program: ", tries=10)
 if tap(r"^Program: ", "programs-rows", required=False) and tap(r"^\|ACTIVE$", "program-active-open", required=False):
     if not find(r"^\|Program settings$", timeout=3) or not find(r"Switch to another before deleting it", timeout=2):
         FAILS.append("the active program row has no Program settings or delete note")
+    # The row shows its main action and Edit; the rest is in its More menu
+    tap(r"^More for ", required=False)
     if tap(r"^\|Duplicate$", "program-duplicate", required=False):
         if not find(r"^\|Program name$|^Program name\|", timeout=4):
             FAILS.append("a duplicated program does not open its name field")
         tap(r"^\|Cancel$", required=False)
+        if not find(r"^\|Switch now$", timeout=3):
+            FAILS.append("another program's row has no Switch now")
+        tap(r"^More for .*\(copy\)", required=False) or tap(r"^More for ", required=False)
         if tap(r"^\|Queue for next block$", "program-queue", required=False):
             if not find(r"queued · starts after this block|^\|QUEUED$", timeout=4):
                 FAILS.append("queueing a program shows no QUEUED badge or toast")
             shot("program-queued")
         else:
             FAILS.append("no Queue for next block on another program")
-        if not scroll_to(r"^\|Delete$", tries=3, step=300) or not tap(r"^\|Delete$", required=False):
+        tap(r"^More for .*\(copy\)", required=False) or tap(r"^More for ", required=False)
+        if not tap(r"^\|Delete$", required=False):
             FAILS.append("no Delete on the copied program")
     else:
         FAILS.append("no Duplicate on the program row")
@@ -1056,15 +1062,15 @@ tap(r"^\|Today$|^Today\|", "today-lb")
 # 8. Training cycle: build one, open it, try to advance
 tap(r"^\|Plan$|^Plan\|")
 scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
-row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 # B894: an unfinished cycle setup survives closing the wizard; Discard starts fresh
-if tap(r"^\|New$", "draft-setup", required=False):
+if tap(r"^\|New( program)?$", "draft-setup", required=False):
     tap(r"^\|Training cycle$|Training cycle\|")
     tap(r"^\|Continue$")
     time.sleep(1)
     back(); back()
-    row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
-    tap(r"^\|New$")
+    row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+    tap(r"^\|New( program)?$")
     if not find(r"Picking up your unfinished cycle setup", timeout=6):
         FAILS.append("unfinished cycle setup not recovered")
     else:
@@ -1073,9 +1079,9 @@ if tap(r"^\|New$", "draft-setup", required=False):
     if find(r"^\|Continue$", timeout=4):
         back()
     scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
-    row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+    row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
 # Build your own (App.js buildOwnRoutine): you pick the lifts in the editor; backing out of an empty one leaves nothing
-if tap(r"^\|New$", "own-setup", required=False):
+if tap(r"^\|New( program)?$", "own-setup", required=False):
     if tap(r"Build your own", "own-dialog", required=False) and tap(r"^\|Start building$", required=False):
         if not find(r"Your lifts, the engine's coaching", timeout=8):
             FAILS.append("build your own does not open the editor with its guide")
@@ -1090,8 +1096,8 @@ if tap(r"^\|New$", "own-setup", required=False):
     if find(r"^\|Continue$", timeout=2):
         back()
     scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
-    row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
-if tap(r"^\|New$", "cycle-setup"):
+    row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+if tap(r"^\|New( program)?$", "cycle-setup"):
     wizard("Smoke Cycle", cycle=True)
     time.sleep(8)
     shot("cycle-built")
@@ -1142,13 +1148,14 @@ tap(r"^\|Today$|^Today\|", "today-cycle")
 # 9. Program editor: move a lift, save this block only
 tap(r"^\|Plan$|^Plan\|")
 adb("shell", "input", "swipe", "540", "700", "540", "1900", "200")
+row_scroll_to(r"^\|Schedule$", r"Review block")
 if tap(r"^\|  Schedule$|Schedule$", "schedule-sheet", required=False):
     tap(r"^Mon", "schedule-monday")
     scroll_to(r"^\|Done$", tries=3)
     tap(r"^\|Done$")
 if tap(r"Edit program", "editor"):
-    if not find(r"DAY FOCUS", timeout=8):
-        FAILS.append("editor has no day setup")
+    if not find(r"^Edit program|^\|Edit program$", timeout=8):
+        FAILS.append("editor did not open")
     # Every week of the block: picking another week shows its targets
     if tap(r"^Week 1: \d+ sets", "editor-week-1", required=False):
         if not find(r"Week 1’s targets are shown|This week’s targets are shown", timeout=6):
@@ -1165,6 +1172,14 @@ if tap(r"Edit program", "editor"):
         if not (find(r"Why this lift\?", timeout=4) or scroll_to(r"Why this lift\?", tries=3, step=500)):
             FAILS.append("editor more menu missing Why this lift")
         tap(r"^More options for ")
+    # Day setup sits under the lifts, folded: it opens to the day focus
+    if seek(r"^Day setup"):
+        tap(r"^Day setup", "editor-day-setup")
+        if not seek(r"DAY FOCUS"):
+            FAILS.append("day setup does not open to the day focus")
+        tap(r"^Day setup", required=False) if find(r"^Day setup", timeout=1) else None
+    else:
+        FAILS.append("editor has no day setup")
     if seek(r"Add an exercise") and tap(r"Add an exercise"):
         if tap(r"Create a custom exercise", "custom-create"):
             tap(r"Exercise name")
@@ -1224,8 +1239,8 @@ if scroll_to(r"^\|Injury log$", tries=10):
 # Template with percentages: build, then set training maxes
 tap(r"^\|Plan$|^Plan\|")
 scroll_up_to(r"^\|Edit program$|Review block|^\|New$", tries=10)
-row_scroll_to(r"^\|New$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
-if tap(r"^\|New$"):
+row_scroll_to(r"^\|New( program)?$", r"Review block|^\|Settings$|^\|Details$|^\|Schedule$", tries=6)
+if tap(r"^\|New( program)?$"):
     if tap(r"^\|Start from a template", "templates"):
         tap(r"Search 75 templates|Search \d+ templates")
         adb("shell", "input", "text", "Main-Lift")

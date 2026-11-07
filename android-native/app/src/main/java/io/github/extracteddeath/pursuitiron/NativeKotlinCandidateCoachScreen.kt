@@ -290,7 +290,8 @@ internal fun NativeKotlinCandidateCoachScreen(
                                     candidate.newRepTargets,
                                     "workout-$nextId",
                                     "grant-$nextId",
-                                    "receipt-$nextId",true)
+                                    "receipt-$nextId",true,
+                                    candidate.decisionKind)
                                 busy=true
                                 scope.launch {
                                     val result=runCatching {

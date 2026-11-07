@@ -260,7 +260,11 @@ internal fun NativeKotlinCandidateCoachScreen(
                         val before=candidate.observedReps[index]
                         val after=candidate.newRepTargets[index]
                         val sameLoad=set.load as? DraftSetLoad.Verified
-                        Text("Set ${index+1}: ${before} recorded → ${after} proposed reps",
+                        val targetText=if(candidate.decisionKind==
+                            AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS)
+                            "Set ${index+1}: ${before} completed · repeat ${after}-rep goal"
+                        else "Set ${index+1}: ${before} completed → ${after}-rep goal"
+                        Text(targetText,
                             style=MaterialTheme.typography.titleMedium)
                         Text("Load: ${sameLoad?.value ?: "bodyweight"} ${sameLoad?.unit?.name ?: ""} · Target RIR: ${set.targetRir ?: "not issued"} · Rest: ${set.restSeconds}s",
                             style=MaterialTheme.typography.bodySmall)
@@ -270,7 +274,7 @@ internal fun NativeKotlinCandidateCoachScreen(
                     Row(verticalAlignment=Alignment.CenterVertically) {
                         Checkbox(checked=repAccepted,
                             onCheckedChange={repAccepted=it})
-                        Text("I reviewed each new rep target and authorize a new native workout prescription.")
+                        Text("I reviewed each exact rep goal and authorize a new native workout prescription.")
                     }
                     Button(
                         enabled=repAccepted && !busy,

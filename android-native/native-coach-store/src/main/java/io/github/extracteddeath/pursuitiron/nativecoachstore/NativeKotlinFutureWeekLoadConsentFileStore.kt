@@ -348,8 +348,8 @@ class NativeKotlinFutureWeekLoadConsentFileStore internal constructor(
                 catch(_:Exception){return@withOwnerTransaction no(
                     NativeFutureWeekConsentRefusal.CORRUPT_RECORD)}
                 ?:return@withOwnerTransaction NativeFutureWeekConsentRead.Missing
-            val r=saved.receipt?:return@withOwnerTransaction
-                NativeFutureWeekConsentRead.Revoked(saved.revision)
+            val r=saved.receipt ?: return@withOwnerTransaction (
+                NativeFutureWeekConsentRead.Revoked(saved.revision))
             if(r.ownerKey!=key||r.athleteId!=signed.athleteId||
                 r.cycleId!=cycle||r.blockId!=block||
                 r.absoluteWeek!=week||r.weekday!=day||r.slotId!=slot)

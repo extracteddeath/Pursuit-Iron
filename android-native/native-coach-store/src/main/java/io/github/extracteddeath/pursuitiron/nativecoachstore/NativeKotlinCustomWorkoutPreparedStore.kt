@@ -326,10 +326,11 @@ class NativeKotlinCustomWorkoutPreparedStore(
         selected:NativeCustomPreparedWorkout,
         authored:CustomWorkoutDaySnapshot
     ):Boolean {
-        // An authored-return choice already has the original targets. A
-        // separately confirmed reset can clear its stale coaching proof,
-        // including after coaching is disabled, without changing a set.
-        if(selected.authoredReturnFingerprint!=null)
+        // A return choice or earned step can already equal the authored
+        // targets. Explicit reset clears its stale proof, including with
+        // coaching disabled, without changing a set.
+        if(selected.authoredReturnFingerprint!=null ||
+            selected.calibrationApprovalFingerprint!=null&&selected.snapshot==authored)
             return !selected.resetToAuthored && selected.snapshot==authored &&
                 selected.authority==NativeCustomPreparationAuthority.CUSTOM_CYCLE
         if(selected.resetToAuthored ||

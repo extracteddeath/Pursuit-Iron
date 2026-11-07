@@ -31,7 +31,9 @@ sealed interface NativeCustomNextCoachResult {
         /** A repeat of a LOWER issued same-block load needs a new consent gate. */
         val sameBlockLoadContinuity:CustomSameBlockLoadReview?=null,
         /** A heavier authored week needs explicit review even after failed work. */
-        val authoredLoadReversion:CustomAuthoredLoadReversionReview?=null
+        val authoredLoadReversion:CustomAuthoredLoadReversionReview?=null,
+        /** Earned equipment step from the accepted lower same-day baseline. */
+        val reducedBaselineProgression:CustomReducedBaselineProgressionReview?=null
     ):NativeCustomNextCoachResult {
         /** Display-only: re-review after subsequent Finish/correction. */
         val mayIssueWorkout:Boolean get()=false
@@ -226,10 +228,13 @@ class NativeKotlinCustomNextWorkoutReview(
                 preference.coachingReadiness(readiness),movementRestricted)
             val reversion=CustomAuthoredLoadReversionDomain.review(
                 CustomBlockBaselineRequest(next,slotId,completions,verifiedStock))
+            val reduced=CustomReducedBaselineProgressionDomain.review(
+                CustomNextWorkoutCoachingRequest(next,slotId,completions,verifiedStock,
+                    maximumAuthorizedIncrease,preference.coachingReadiness(readiness),movementRestricted))
             NativeCustomNextCoachResult.Reviewed(
                 full.timeline.manifestRevision,consentRevision,
                 validated,currentSettings?.revision ?:0,verifiedStock,
-                starting.baseline,starting,next,slotId,transition,sameBlock,reversion)
+                starting.baseline,starting,next,slotId,transition,sameBlock,reversion,reduced)
         }}.getOrElse{reject(NativeCustomNextCoachRefusal.STORAGE_UNAVAILABLE)}
     }
 }

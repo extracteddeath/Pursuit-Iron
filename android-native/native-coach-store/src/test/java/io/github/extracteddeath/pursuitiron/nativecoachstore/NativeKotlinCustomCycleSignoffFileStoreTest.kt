@@ -15,6 +15,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     /** Isolated weighted variant for the real progression integration test. */
     private var weightedFixture=false
     private var phaseTransitionFixture=false
+    private var phaseAuthoredWeight=25
     private val identity=NativeKotlinCurrentIdentity{active}
     private val fence by lazy{NativeKotlinApprovalRevisionFence(temp.root.toPath())}
     private val drafts by lazy{NativeCustomCycleDraftFileStore(
@@ -38,7 +39,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         hardSessionLimit=HardSessionLimit.Minutes(60),
         gym=GymProfileDraft("gym-1",LoadUnit.LB,
             if(phaseTransitionFixture)mapOf("straight-bar" to VerifiedLoadStock.Barbell(
-                LoadUnit.LB,n("10"),mapOf(n("5") to 2,n("2.5") to 2)))
+                LoadUnit.LB,n("10"),mapOf(n("5") to (if(phaseAuthoredWeight>=30)4 else 2),n("2.5") to 2)))
             else if(weightedFixture)mapOf("dumbbell-rack" to VerifiedLoadStock.Totals(
                 LoadUnit.LB,LoadBasis.DUMBBELL_PER_HAND,
                 listOf(n("20"),n("25"),n("30")))) else emptyMap(),
@@ -614,7 +615,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
                 day.copy(purpose=ComposerSessionPurpose.STRENGTH_SKILL,
                     slots=day.slots.map{slot->slot.copy(sets=slot.sets.map{set->
                         set.copy(load=DraftSetLoad.Verified(LoadUnit.LB,
-                            LoadBasis.BARBELL_TOTAL,n("25")),
+                            LoadBasis.BARBELL_TOTAL,n(phaseAuthoredWeight.toString())),
                             reps=RepBand(5,8),targetRir=3)
                     })})
             })))
@@ -2281,7 +2282,9 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             after.issuer.open("owner-1","old-unguarded-week6"))
     }
 
-    private fun finishedLowerWeekFour(nearFailure:Boolean=false):AuthoredCoachFixture {
+    private fun finishedLowerWeekFour(nearFailure:Boolean=false,reps:Int=5,
+        authoredWeight:Int=25):AuthoredCoachFixture {
+        phaseAuthoredWeight=authoredWeight
         val f=authoredCoachFixture(actualRir=null,phaseTransition=true)
         calibrationRights()
         val approval=calibrationStore(f)
@@ -2293,7 +2296,7 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
             is NativeCustomJournalResult.Durable)
         assertTrue(f.issuer.record("owner-1","lower-week4",CustomWorkoutJournalOperation.Record(
             "lower-set",0,CustomWorkoutVisitKey("cycle-1:w4:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN),
-            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("20"),LoadUnit.LB,5,
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("20"),LoadUnit.LB,reps,
                 if(nearFailure)0 else null))) is NativeCustomJournalResult.Durable)
         assertTrue(NativeKotlinCustomHistoryTransaction(f.history,f.issuer,fence,identity)
             .complete("owner-1","athlete-1","lower-week4",CustomWorkoutJournalOperation.Finish(
@@ -2302,6 +2305,217 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
     }
     private fun authoredReturn(f:AuthoredCoachFixture,w:String="return-week5")=
         calibrationStore(f).previewAuthoredReturn("owner-1",w,"cycle-1",futureInputs(),5,0)
+
+    private fun finishedTwoReducedWorkouts(authoredWeight:Int=25):AuthoredCoachFixture {
+        val f=finishedLowerWeekFour(reps=8,authoredWeight=authoredWeight)
+        val approval=calibrationStore(f)
+        val repeat=approval.preview("owner-1","lower-week5","cycle-1",futureInputs(),5,0,
+            "slot-0",CoachReadiness.NORMAL,false,n("5")) as NativeBlockCalibrationPreview.Ready
+        assertEquals(NativeBlockLoadConsentKind.CONSERVATIVE_REDUCTION,repeat.receipt.kind)
+        assertTrue(approval.accept(repeat.receipt,futureInputs(),true) is NativeBlockCalibrationWrite.Accepted)
+        assertTrue(f.prepared.prepare("owner-1","lower-week5","cycle-1",5,0,futureInputs(),approval)
+            is NativeCustomPrepareResult.Prepared)
+        assertTrue(f.issuer.issue("owner-1","lower-week5","cycle-1",5,0,futureInputs(),approval)
+            is NativeCustomJournalResult.Durable)
+        assertTrue(f.issuer.record("owner-1","lower-week5",CustomWorkoutJournalOperation.Record(
+            "second-lower-set",0,CustomWorkoutVisitKey("cycle-1:w5:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("20"),LoadUnit.LB,8,null)))
+            is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(f.history,f.issuer,fence,identity)
+            .complete("owner-1","athlete-1","lower-week5",CustomWorkoutJournalOperation.Finish(
+                "second-lower-finish",1)) is NativeCustomFinishResult.Committed)
+        return f
+    }
+    private fun earnedBaselinePreview(f:AuthoredCoachFixture,w:String="earned-week6",
+        readiness:CoachReadiness=CoachReadiness.NORMAL,restricted:Boolean=false,limit:BigDecimal=n("5"))=
+        calibrationStore(f).preview("owner-1",w,"cycle-1",futureInputs(),6,0,"slot-0",
+            readiness,restricted,limit,NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE)
+    private fun correctSecondReducedWorkout(f:AuthoredCoachFixture) {
+        val result=NativeKotlinCustomHistoryCorrectionTransaction(f.history,f.issuer,f.corrections,fence,identity)
+            .correct("owner-1","athlete-1","lower-week5",CustomSavedVisitCorrection(
+                "invalidate-earned",0,CustomWorkoutVisitKey("cycle-1:w5:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN),
+                "second-lower-set",KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("20"),LoadUnit.LB,8,0)))
+        assertTrue(result.toString(),result is NativeCustomCorrectionTransactionResult.Committed)
+    }
+
+    @Test fun twoReducedCeilingWorkoutsEarnASeparatelyAcceptedStepToTheAuthoredLoad() {
+        val f=finishedTwoReducedWorkouts()
+        val coached=f.coach.reviewAuthored("owner-1","cycle-1",futureInputs(),6,0,"slot-0",
+            CoachReadiness.NORMAL,false,n("5")) as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomNextWorkoutCoachingStatus.CHANGED_PRESCRIPTION,coached.review.status)
+        assertEquals(CustomReducedBaselineProgressionStatus.READY_FOR_REVIEW,
+            coached.reducedBaselineProgression?.status)
+        val approval=calibrationStore(f)
+        val earned=earnedBaselinePreview(f) as NativeBlockCalibrationPreview.Ready
+        assertEquals(NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE,earned.receipt.kind)
+        assertEquals(listOf("lower-week4","lower-week5"),earned.receipt.comparedWorkoutIds)
+        assertEquals(listOf(n("20")),earned.receipt.baselineLoads)
+        assertEquals(listOf(n("25")),earned.receipt.proposedLoads)
+        assertEquals(2,earned.receipt.assumedGoalRirSetCount)
+        assertEquals(earned.original,earned.projected)
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.CONFIRMATION_REQUIRED),
+            approval.accept(earned.receipt,futureInputs(),false))
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.REVIEW_CHANGED),
+            approval.accept(earned.receipt.copy(comparedWorkoutIds=listOf("fake-one","fake-two")),futureInputs(),true))
+        assertTrue(approval.accept(earned.receipt,futureInputs(),true) is NativeBlockCalibrationWrite.Accepted)
+        val cold=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        val reopened=calibrationStore(cold)
+        assertEquals(NativeBlockCalibrationRead.Current(earned),
+            reopened.readCurrent("owner-1","earned-week6","cycle-1",6,0,futureInputs()))
+        assertEquals(listOf(earned.receipt),(reopened.pendingPreparations("owner-1","cycle-1")
+            as NativePendingCalibrationRead.Ready).acceptances)
+        assertEquals(NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            cold.prepared.prepare("owner-1","earned-week6","cycle-1",6,0,futureInputs()))
+        val prepared=cold.prepared.prepare("owner-1","earned-week6","cycle-1",6,0,
+            futureInputs(),reopened,earned.receipt.fingerprint) as NativeCustomPrepareResult.Prepared
+        assertEquals(earned.receipt.fingerprint,prepared.workout.calibrationApprovalFingerprint)
+        assertNull(prepared.workout.authoredReturnFingerprint);assertFalse(prepared.workout.resetToAuthored)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            cold.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs()))
+        val issued=cold.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs(),reopened)
+            as NativeCustomJournalResult.Durable
+        assertEquals(earned.projected,issued.issued.journal.snapshot)
+        assertTrue(cold.issuer.record("owner-1","earned-week6",CustomWorkoutJournalOperation.Record(
+            "earned-set",0,CustomWorkoutVisitKey("cycle-1:w6:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN),
+            KotlinJournalSetOutcome.COMPLETED,KotlinPerformedSet(n("25"),LoadUnit.LB,5,null)))
+            is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(cold.history,cold.issuer,fence,identity)
+            .complete("owner-1","athlete-1","earned-week6",CustomWorkoutJournalOperation.Finish(
+                "earned-finish",1)) is NativeCustomFinishResult.Committed)
+        val facts=(cold.reader.read("owner-1","athlete-1") as NativeKotlinMixedHistoryReadResult.Review)
+            .timeline.completions.filterIsInstance<NativeKotlinMixedHistoryCompletion.Custom>()
+        assertEquals(listOf(n("20"),n("20"),n("25")),facts.takeLast(3).map{
+            (it.evidence.visits.single().prescribedLoad as DraftSetLoad.Verified).value})
+        assertTrue(facts.takeLast(3).all{it.evidence.visits.single().actual!!.actualRir==null})
+        correctSecondReducedWorkout(cold)
+        assertTrue(cold.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs(),reopened)
+            is NativeCustomJournalResult.Durable)
+        assertEquals(2L,(drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found).draft.revision)
+    }
+
+    @Test fun earnedReturnCanStayBelowAuthoredLoadAndKeepsTheConservativeRepeatSeparate() {
+        val f=finishedTwoReducedWorkouts(authoredWeight=30)
+        val earned=earnedBaselinePreview(f) as NativeBlockCalibrationPreview.Ready
+        assertEquals(listOf(n("30")),earned.receipt.authoredLoads)
+        assertEquals(listOf(n("20")),earned.receipt.baselineLoads)
+        assertEquals(listOf(n("25")),earned.receipt.proposedLoads)
+        val approval=calibrationStore(f)
+        val repeat=approval.preview("owner-1","repeat-instead","cycle-1",futureInputs(),6,0,"slot-0",
+            CoachReadiness.NORMAL,false,n("5")) as NativeBlockCalibrationPreview.Ready
+        assertEquals(NativeBlockLoadConsentKind.CONSERVATIVE_REDUCTION,repeat.receipt.kind)
+        assertEquals(listOf(n("20")),repeat.receipt.proposedLoads)
+        assertTrue(repeat.receipt.baselineLoads.isEmpty())
+        assertNotEquals(repeat.receipt.fingerprint,earned.receipt.fingerprint)
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.REVIEW_CHANGED),
+            approval.accept(repeat.receipt.copy(kind=NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE),futureInputs(),true))
+        assertTrue(approval.accept(earned.receipt,futureInputs(),true) is NativeBlockCalibrationWrite.Accepted)
+        assertTrue(f.prepared.prepare("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval)
+            is NativeCustomPrepareResult.Prepared)
+        val issued=f.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval)
+            as NativeCustomJournalResult.Durable
+        assertEquals(n("25"),(issued.issued.journal.snapshot.slots.single().sets.single()
+            .prescription.load as DraftSetLoad.Verified).value)
+        assertEquals(n("30"),((drafts.read("owner-1","cycle-1") as NativeCustomDraftReadResult.Found)
+            .draft.blocks.last().days.first().slots.single().sets.single().load as DraftSetLoad.Verified).value)
+    }
+
+    @Test fun lateCorrectionRevokesEarnedConsentBeforePreparationAndBeforeFirstIssuance() {
+        val f=finishedTwoReducedWorkouts()
+        val shown=earnedBaselinePreview(f) as NativeBlockCalibrationPreview.Ready
+        val approval=calibrationStore(f)
+        assertTrue(approval.accept(shown.receipt,futureInputs(),true) is NativeBlockCalibrationWrite.Accepted)
+        val saved=f.prepared.prepare("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval)
+            as NativeCustomPrepareResult.Prepared
+        correctSecondReducedWorkout(f)
+        val cold=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        val reopened=calibrationStore(cold)
+        assertTrue(reopened.readCurrent("owner-1","earned-week6","cycle-1",6,0,futureInputs())
+            is NativeBlockCalibrationRead.Rejected)
+        assertEquals(NativeBlockCalibrationWrite.Accepted(shown.receipt,true),
+            reopened.accept(shown.receipt,futureInputs(),true))
+        assertEquals(NativeCustomPrepareResult.Rejected(NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            cold.prepared.prepare("owner-1","earned-week6","cycle-1",6,0,futureInputs(),reopened))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            cold.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs(),reopened))
+        assertEquals(NativeCustomPreparedRead.Found(saved.workout),cold.prepared.open("owner-1","earned-week6"))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.NOT_ISSUED),
+            cold.issuer.open("owner-1","earned-week6"))
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.REVIEW_NOT_READY),
+            reopened.accept(shown.receipt.copy(workoutId="new-after-correction"),futureInputs(),true))
+    }
+
+    @Test fun earnedReturnRespectsPermissionStepReadinessAndWrongOwnerRefusals() {
+        val f=finishedTwoReducedWorkouts()
+        assertTrue(earnedBaselinePreview(f,readiness=CoachReadiness.LOW) is NativeBlockCalibrationPreview.Rejected)
+        assertTrue(earnedBaselinePreview(f,restricted=true) is NativeBlockCalibrationPreview.Rejected)
+        assertTrue(earnedBaselinePreview(f,limit=n("4")) is NativeBlockCalibrationPreview.Rejected)
+        val shown=earnedBaselinePreview(f) as NativeBlockCalibrationPreview.Ready
+        val approval=calibrationStore(f)
+        assertTrue(approval.accept(shown.receipt,futureInputs(),true) is NativeBlockCalibrationWrite.Accepted)
+        assertTrue(f.prepared.prepare("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval)
+            is NativeCustomPrepareResult.Prepared)
+        assertTrue(permissionStore.confirm("owner-1","cycle-1",2,emptySet(),true)
+            is NativeAdaptivePermissionWrite.Committed)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            f.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval))
+        active=NativeKotlinOwnerIdentity("other-owner","other-athlete")
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED),
+            approval.accept(shown.receipt,futureInputs(),true))
+    }
+
+    @Test fun earnedReceiptRejectsAnUnknownKindEvenWithARecomputedChecksum() {
+        val f=finishedTwoReducedWorkouts()
+        val shown=earnedBaselinePreview(f) as NativeBlockCalibrationPreview.Ready
+        val approval=calibrationStore(f)
+        approval.accept(shown.receipt,futureInputs(),true)
+        f.prepared.prepare("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval)
+        val file=Files.list(temp.root.toPath()).use{stream->stream.filter{
+            it.fileName.toString().startsWith("block-calibration-")&&it.fileName.toString().endsWith(".bin")&&
+                String(Files.readAllBytes(it),Charsets.ISO_8859_1).contains("earned-week6")
+        }.findFirst().get()}
+        val raw=Files.readAllBytes(file)
+        val body=raw.copyOfRange(4,raw.size-32)
+        assertEquals(2,java.nio.ByteBuffer.wrap(body).getInt(4))
+        val marker=String(body,Charsets.ISO_8859_1).indexOf(NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE.name)
+        assertTrue(marker>0);body[marker]='X'.code.toByte()
+        val tampered=java.nio.ByteBuffer.allocate(raw.size).putInt(body.size).put(body)
+            .put(java.security.MessageDigest.getInstance("SHA-256").digest(body)).array()
+        Files.write(file,tampered)
+        val cold=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        val reopened=calibrationStore(cold)
+        assertEquals(NativeBlockCalibrationRead.Rejected(NativeCalibrationRefusal.CORRUPT_RECORD),
+            reopened.readCurrent("owner-1","earned-week6","cycle-1",6,0,futureInputs()))
+        assertEquals(NativeBlockCalibrationWrite.Rejected(NativeCalibrationRefusal.CORRUPT_RECORD),
+            reopened.accept(shown.receipt,futureInputs(),true))
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            cold.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs(),reopened))
+        assertArrayEquals(tampered,Files.readAllBytes(file))
+    }
+
+    @Test fun coachingOffCanExplicitlyResetAnEarnedStepThatExactlyMatchesAuthoredTargets() {
+        val f=finishedTwoReducedWorkouts()
+        val shown=earnedBaselinePreview(f) as NativeBlockCalibrationPreview.Ready
+        val approval=calibrationStore(f)
+        approval.accept(shown.receipt,futureInputs(),true)
+        val saved=f.prepared.prepare("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval)
+            as NativeCustomPrepareResult.Prepared
+        val settings=NativeKotlinCoachAssistanceSettingsStore(temp.root.toPath(),fence,identity)
+        assertTrue(settings.save("owner-1",0,CoachAssistancePolicy.MANUAL) is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomJournalResult.Rejected(NativeCustomJournalRefusal.CONSENT_CHANGED),
+            f.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval))
+        val reset=f.prepared.previewManualReset("owner-1","earned-week6","cycle-1",6,0,futureInputs(),
+            null,null,f.issuer,settings) as NativePreparedManualResetPreview.Ready
+        assertEquals(saved.workout.snapshot,reset.authored)
+        val result=f.prepared.acceptManualReset("owner-1","earned-week6","cycle-1",6,0,futureInputs(),
+            null,null,f.issuer,settings,reset.preparedFingerprint,reset.settingsRevision,true)
+            as NativePreparedManualResetWrite.Reset
+        assertTrue(result.prepared.resetToAuthored);assertNull(result.prepared.calibrationApprovalFingerprint)
+        assertTrue(settings.save("owner-1",1,CoachAssistancePolicy.STANDARD) is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomPrepareResult.Prepared(result.prepared,true),f.prepared.prepare(
+            "owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval))
+        assertTrue(f.issuer.issue("owner-1","earned-week6","cycle-1",6,0,futureInputs(),approval)
+            is NativeCustomJournalResult.Durable)
+    }
     private fun correctLowerWeekFour(f:AuthoredCoachFixture,event:String="lower-edit",revision:Long=0,
         prior:String="lower-set") {
         val corrected=NativeKotlinCustomHistoryCorrectionTransaction(f.history,f.issuer,f.corrections,fence,identity)

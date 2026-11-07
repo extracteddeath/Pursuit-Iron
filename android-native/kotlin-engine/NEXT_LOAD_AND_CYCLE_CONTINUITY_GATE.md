@@ -89,8 +89,38 @@ authored-reset path; it clears the old return proof permanently, and turning
 coaching on again cannot revive it. Already issued workouts remain frozen
 and accessible independently of later settings or history edits.
 
+**Earned step from a reduced baseline (isolated native candidate):**
+`CustomReducedBaselineProgressionDomain` first verifies the immediately prior
+issued lower loads and the preceding adjacent same-day workout, including
+the complete exercise variant, prescription, warmups and corrected receipts.
+It then reviews a virtual next snapshot at that verified baseline through
+the existing `CustomNextWorkoutCoachingDomain` and
+`CustomNextLoadAmendmentDomain`. No new double-progression mathematics or
+performance estimates are introduced. Two complete comparable ceiling
+workouts, adequate reported/original-goal effort, exact stock and the approved
+maximum increment remain mandatory. An intervening missing/failed/changed
+day cannot be skipped, and another weekday cannot supply the second workout.
+Mixed working loads cannot become a uniform all-sets increase.
+
+The bounded proposal may remain below or exactly reach the authored loads;
+it never exceeds an individual authored working weight. A new explicit
+`EARNED_BASELINE_INCREASE` receipt kind carries the two workout IDs, actual
+issued baseline loads and count of original-goal RIR assumptions. Its
+checksummed schema 2 shares the existing owner-fenced full-cycle audit,
+LOADS + WEEK_OVERRIDES permissions, acceptance, preparation and issuance
+transactions. Conservative reductions keep their original schema-1 bytes
+and never silently become earned increases. Actual unreported RIR stays null.
+
+Compose separately offers the earned option, displays baseline → proposed
+weights and effort assumptions, then requires acceptance and exact issuance.
+Cold discovery and revalidation understand both receipt versions. A late
+correction, revoked permission, changed setting or damaged receipt refuses
+first issuance; previously issued snapshots remain immutable. Explicit
+coaching-off authored reset also works when the earned step exactly equals
+the authored snapshot, and permanently clears its old advice proof.
+
 **Still open:** production activation of the candidate journey;
-evidence-backed earned re-increase from an accepted lower baseline;
+earned increases above current authored weights in ordinary signed cycles;
 activated source/split mapping, complete backup/restore, directory fsync/
 power-loss recovery and device acceptance. The checksum detects accidental
 corruption, not cryptographic owner authentication; native file tests do not

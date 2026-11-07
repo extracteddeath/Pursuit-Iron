@@ -15,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomSignoffRead
 import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeCustomPrepareRefusal
+import io.github.extracteddeath.pursuitiron.nativecoachstore.NativeBlockLoadConsentKind
 import java.math.BigDecimal
 
 private val customWeekdays = listOf(
@@ -485,6 +486,23 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             }
                             Text(carry.explanation,
                                 style=MaterialTheme.typography.bodySmall)
+                        }
+                        reviewed.reducedBaselineProgression?.let {earned->
+                            if(earned.status==CustomReducedBaselineProgressionStatus.READY_FOR_REVIEW) {
+                                Text("Earned increase from your reduced baseline",
+                                    style=MaterialTheme.typography.titleSmall)
+                                earned.sets.forEach{set->
+                                    Text("Set ${set.ordinal}: ${set.baselineLoad} → ${set.proposedLoad} ${set.unit.name.lowercase()}",
+                                        style=MaterialTheme.typography.bodyMedium)
+                                }
+                                Text("Your two latest same-day workouts support the next equipment step. Review it before accepting.",
+                                    style=MaterialTheme.typography.bodySmall)
+                                if(state.calibrationReview==null&&state.calibrationReceipt==null&&state.preparedWorkout==null)
+                                    Button(enabled=!busy&&maxStep!=null,onClick={
+                                        controller.auditBlockCalibration(coachReadiness,coachRestricted,checkNotNull(maxStep),
+                                            NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE)
+                                    }){Text("Audit earned weight increase")}
+                            }
                         }
                         if((reviewed.transitionStartingLoads?.changesAuthoredLoads==true ||
                             reviewed.sameBlockLoadContinuity?.let {

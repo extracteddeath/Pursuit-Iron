@@ -836,12 +836,13 @@ internal class NativeKotlinCandidateHost(context:Context) {
     fun previewBlockCalibration(
         workoutId:String,cycleId:String,week:Int,weekday:Int,slotId:String,
         inputs:CustomCoachAuditInputs,readiness:CoachReadiness,
-        restricted:Boolean,maximumIncrease:java.math.BigDecimal
+        restricted:Boolean,maximumIncrease:java.math.BigDecimal,
+        kind:NativeBlockLoadConsentKind=NativeBlockLoadConsentKind.CONSERVATIVE_REDUCTION
     ):NativeBlockCalibrationPreview {
         val owner=localAthlete.signedInIdentity()
             ?:return NativeBlockCalibrationPreview.Rejected(NativeCalibrationRefusal.NOT_AUTHORIZED)
         return blockCalibrations.preview(owner.ownerKey,workoutId,cycleId,inputs,
-            week,weekday,slotId,readiness,restricted,maximumIncrease)
+            week,weekday,slotId,readiness,restricted,maximumIncrease,kind)
     }
 
     fun previewAuthoredLoadReturn(workoutId:String,cycleId:String,week:Int,

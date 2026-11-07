@@ -7,6 +7,35 @@ use the legacy JavaScript runtime.
 
 ## One-workout block calibration consent — 2026-11-07
 
+### Earned equipment step from a reduced issued baseline
+
+The ordinary signed-cycle candidate can now explicitly review and accept an
+earned load step after two adjacent complete same-day workouts at an accepted
+lower weight. The pure reviewer reuses the current custom progression and
+physical-load amendment rules; it does not estimate strength or invent a
+second progression formula. Exact rep ceilings, adequate reported/original-goal
+effort, current stock and the athlete's increment limit remain required.
+The bounded return can stay below or exactly reach authored working weights.
+
+`NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE` uses receipt schema 2
+with exact baseline loads, two compared workout IDs and effort-assumption
+count. Conservative receipt schema 1 remains byte-compatible. Both kinds
+use the same owner-fenced full-cycle audit, LOADS + WEEK_OVERRIDES permissions,
+exact athlete confirmation, prepared schema 7 and first-issuance revalidation.
+An old conservative acceptance cannot turn into an earned step. Restart,
+corrected history, permission/settings changes and corruption retain the
+existing fail-closed behavior. The isolated Compose screen labels the earned
+option separately and shows the actual baseline → proposed step. Explicit
+manual reset can clear an unissued earned proof even when its targets already
+equal the authored plan. Actual RIR is never filled in by the assumption.
+
+Native lifecycle tests cover 20 → 25 lb with 25 lb and 30 lb authored ceilings,
+cold receipt/preparation reads, factual Finish, null actual RIR, wrong owner,
+step/readiness restrictions, revoked permission, late correction, an unknown
+receipt kind with a recomputed checksum, and coaching-off reset. These are
+isolated source/JVM checks; ordinary increases above authored targets,
+production integration, backup/migration and device acceptance remain open.
+
 ### Explicit choice of heavier authored targets
 
 The ordinary-cycle native candidate now has a complete reviewed authored-return

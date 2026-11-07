@@ -515,20 +515,21 @@ internal class NativeKotlinCustomCycleController(
     }
 
     fun auditBlockCalibration(readiness:CoachReadiness,restricted:Boolean,
-        maximumIncrease:java.math.BigDecimal) = run {
+        maximumIncrease:java.math.BigDecimal,
+        kind:NativeBlockLoadConsentKind=NativeBlockLoadConsentKind.CONSERVATIVE_REDUCTION) = run {
         val coaching=current.value.dayCoaching ?:return@run
         val next=coaching.nextWorkout ?:return@run
         val slot=coaching.selectedSlotId ?:return@run
         val inputs=auditedInputs ?:return@run
         val workoutId="calibration-"+UUID.randomUUID().toString()
         val result=host.previewBlockCalibration(workoutId,next.stamp.cycleId,
-            next.absoluteWeek,next.weekday,slot,inputs,readiness,restricted,maximumIncrease)
+            next.absoluteWeek,next.weekday,slot,inputs,readiness,restricted,maximumIncrease,kind)
         current.value=current.value.copy(calibrationReview=result as? NativeBlockCalibrationPreview.Ready,
             authoredReturnReview=null,
             calibrationReceipt=null,calibrationReset=null,preparedWorkout=null,issuedCalibrationId=null,
             message=if(result is NativeBlockCalibrationPreview.Ready)
                 "The complete cycle and saved history support this exact workout change. Review and confirm before saving."
-            else "Calibration review unavailable. Check current load-change permissions, consent, source and outstanding workouts.")
+            else "Weight review unavailable. Check current load-change permissions, consent, source and outstanding workouts.")
     }
 
     fun clearCalibrationOffer() {
@@ -543,7 +544,7 @@ internal class NativeKotlinCustomCycleController(
         val result=host.acceptBlockCalibration(offer.receipt,inputs,true)
         current.value=current.value.copy(calibrationReceipt=(result as? NativeBlockCalibrationWrite.Accepted)?.receipt,
             message=if(result is NativeBlockCalibrationWrite.Accepted)
-                "Starting-weight acceptance saved. Prepare the exact workout before issuance."
+                "Weight acceptance saved. Prepare the exact workout before issuance."
             else "Acceptance refused. Recheck the current review; no workout was changed.")
     }
 

@@ -39,13 +39,14 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
     }
     val readyPolicy=state.reviewedCoachInputs!=null
     PursuitCard {
-        Text("Reviewed starting weights",style=MaterialTheme.typography.titleLarge)
+        Text("Reviewed workout weights",style=MaterialTheme.typography.titleLarge)
         OutlinedButton(enabled=!state.busy,onClick=controller::findPendingCalibrations) {
             Text("Find saved approvals and preparations")
         }
         state.pendingCalibrationAcceptances.forEach {receipt->
             OutlinedButton(enabled=!state.busy&&readyPolicy,onClick={controller.resumeAcceptedCalibration(receipt)}) {
-                Text("Recheck accepted weights · week ${receipt.absoluteWeek}")
+                Text((if(receipt.kind==NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE)
+                    "Recheck earned weights" else "Recheck accepted weights")+" · week ${receipt.absoluteWeek}")
             }
         }
         if(state.pendingCalibrationAcceptances.isNotEmpty()&&!readyPolicy)
@@ -86,14 +87,26 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             }
         }
         offer?.let {
+            val earned=it.receipt.kind==NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE
             Text("All ${it.auditedWeeks} cycle weeks audited",
                 style=MaterialTheme.typography.titleMedium)
+            if(earned) {
+                Text("Earned increase from the reduced baseline",style=MaterialTheme.typography.titleMedium)
+                Text("Two comparable same-day workouts support this next equipment step.",
+                    style=MaterialTheme.typography.bodySmall)
+                if(it.receipt.assumedGoalRirSetCount>0)
+                    Text("Unreported RIR used the original goal for ${it.receipt.assumedGoalRirSetCount} sets. Actual RIR remains unreported.",
+                        style=MaterialTheme.typography.bodySmall)
+            }
             it.receipt.setKeys.indices.forEach {i->
                 val basis=if(it.receipt.basis==LoadBasis.DUMBBELL_PER_HAND)" per hand" else ""
-                Text("Working set ${i+1}: ${it.receipt.authoredLoads[i]} → ${it.receipt.proposedLoads[i]} ${it.receipt.unit.name.lowercase()}$basis")
+                val from=if(earned)it.receipt.baselineLoads[i] else it.receipt.authoredLoads[i]
+                Text("Working set ${i+1}: $from → ${it.receipt.proposedLoads[i]} ${it.receipt.unit.name.lowercase()}$basis")
             }
             if(state.calibrationReceipt==null) {
-                Button(enabled=!state.busy,onClick={confirmAccept=true}){Text("Review and accept starting weights")}
+                Button(enabled=!state.busy,onClick={confirmAccept=true}) {
+                    Text(if(earned)"Review and accept earned weights" else "Review and accept starting weights")
+                }
             } else {
                 Text("Athlete acceptance saved. Your authored cycle is unchanged.",
                     style=MaterialTheme.typography.bodySmall)
@@ -143,7 +156,9 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
         }
     }
     if(confirmAccept&&offer!=null)AlertDialog(
-        onDismissRequest={if(!state.busy)confirmAccept=false},title={Text("Accept these starting weights?")},
+        onDismissRequest={if(!state.busy)confirmAccept=false},title={Text(
+            if(offer.receipt.kind==NativeBlockLoadConsentKind.EARNED_BASELINE_INCREASE)
+                "Accept this earned weight increase?" else "Accept these starting weights?")},
         text={Text("Save only the displayed per-set weight changes for week ${offer.receipt.absoluteWeek}, ${offer.original.dayLabel}. This does not start a workout or edit your cycle.")},
         confirmButton={Button(enabled=!state.busy,onClick={confirmAccept=false;controller.acceptBlockCalibration()}){Text("Accept exact weights")}},
         dismissButton={TextButton(enabled=!state.busy,onClick={confirmAccept=false}){Text("Cancel")}})

@@ -178,7 +178,7 @@ fun BodyMeasureCard(vm: AppViewModel) {
                 listOf("cm", "in").forEach { o ->
                     val on = lu == o
                     val bg by animateColorAsState(if (on) cs.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent, com.pursuitiron.app.ui.theme.Motion.effects(), label = "lu")
-                    Box(Modifier.height(32.dp).clip(CircleShape).background(bg).clickable { if (!on) vm.setLengthUnit(o) }.semantics { role = Role.RadioButton; stateDescription = if (on) "Selected" else "" }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.height(40.dp).clip(CircleShape).background(bg).clickable { if (!on) vm.setLengthUnit(o) }.semantics { role = Role.RadioButton; stateDescription = if (on) "Selected" else "" }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                         Text(o, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = if (on) cs.onSecondaryContainer else cs.onSurfaceVariant)
                     }
                 }
@@ -200,11 +200,11 @@ fun BodyMeasureCard(vm: AppViewModel) {
                         }
                         if (last != null) { val dl = last - rows.first().d("v")
                             Text(if (Math.abs(dl) < 0.001) "±0" else (if (dl > 0) "+" else "−") + fx(Math.abs(dl)), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = cs.onSurfaceVariant) }
-                        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).clickable { if (last == null) typing = k else vm.logMeasurement(k, Math.round((last - step) * 1000) / 1000.0) }
+                        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).clickable { if (last == null) typing = k else vm.logMeasurement(k, Math.round((last - step) * 1000) / 1000.0) }
                             .semantics { contentDescription = "$name down ${if (inch) "a quarter inch" else "half a centimetre"}"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("−") }
                         Text(last?.let { fx(it) } ?: "—", style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), textAlign = TextAlign.Center,
                             modifier = Modifier.width(44.dp).clip(RoundedCornerShape(8.dp)).clickable { typing = k }.semantics { contentDescription = "$name ${last?.let { fx(it) + " " + lu } ?: "not logged"}. Tap to type" })
-                        Box(Modifier.size(36.dp).clip(CircleShape).background(cs.surface).clickable { if (last == null) typing = k else vm.logMeasurement(k, Math.round((last + step) * 1000) / 1000.0) }
+                        Box(Modifier.size(44.dp).clip(CircleShape).background(cs.surface).clickable { if (last == null) typing = k else vm.logMeasurement(k, Math.round((last + step) * 1000) / 1000.0) }
                             .semantics { contentDescription = "$name up ${if (inch) "a quarter inch" else "half a centimetre"}"; role = Role.Button }, contentAlignment = Alignment.Center) { Text("+") }
                     }
                     AnimatedVisibility(isOpen, enter = com.pursuitiron.app.ui.theme.Motion.expandIn, exit = com.pursuitiron.app.ui.theme.Motion.shrinkOut) {

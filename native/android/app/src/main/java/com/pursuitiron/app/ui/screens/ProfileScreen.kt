@@ -168,7 +168,7 @@ fun ClubCard(vm: AppViewModel) {
             Text(when { earned && mode == "lifted" -> c.s("current").ifBlank { "1,000 lb Club" }; earned -> "Projected ${c.s("current").ifBlank { "1,000 lb Club" }}"; else -> "Road to 1,000 lb Club" },
                 style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
         }
-        Segmented(listOf("lifted" to "Lifted", "e1rm" to "Est. 1RM"), mode, { mode = it }, height = 36.dp)
+        Segmented(listOf("lifted" to "Lifted", "e1rm" to "Est. 1RM"), mode, { mode = it }, height = 40.dp)
         Text("${fmtNum(c.d("total"))} $u total", style = MaterialTheme.typography.headlineSmall)
         Text(when {
             c.b("maxedOut") -> "Every club tier cleared"

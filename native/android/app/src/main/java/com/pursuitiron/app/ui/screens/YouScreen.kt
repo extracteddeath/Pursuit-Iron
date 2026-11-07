@@ -223,7 +223,7 @@ private fun MeasurementsCard(vm: AppViewModel) {
     PiCard(radius = 28.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Measurements", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Segmented(listOf("cm" to "cm", "in" to "in"), lu, { if (it != lu) vm.setLengthUnit(it) }, modifier = Modifier.width(120.dp), height = 36.dp)
+            Segmented(listOf("cm" to "cm", "in" to "in"), lu, { if (it != lu) vm.setLengthUnit(it) }, modifier = Modifier.width(120.dp), height = 40.dp)
         }
         MEASURES.forEach { k ->
             val rows = m.list(k)

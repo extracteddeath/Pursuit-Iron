@@ -1326,6 +1326,15 @@ if tap(r"^\|Settings$", required=False):
         adb("shell", "input", "swipe", "540", "1800", "540", "800", "500")
         time.sleep(0.9)
 tap(r"^\|Today$|^Today\|", required=False)
+# 9c. The same tabs in dark mode (the app follows the system), a few pages each, for contrast review
+adb("shell", "cmd", "uimode", "night", "yes")
+time.sleep(2.5)
+for pat, nm in [(r"^\|Today$|^Today\|", "today"), (r"^\|Plan$|^Plan\|", "plan"), (r"^\|Progress$|^Progress\|", "progress"),
+                (r"^\|Exercises$|^Exercises\|", "exercises"), (r"^\|You$|^You\|", "you")]:
+    tour(pat, "dark-" + nm, pages=3)
+adb("shell", "cmd", "uimode", "night", "no")
+time.sleep(2.5)
+tap(r"^\|Today$|^Today\|", required=False)
 
 # 10. Home-screen widget: rendered by a real AppWidgetHost, then its Start button's intent
 adb("shell", "appwidget", "grantbind", "--package", PKG)

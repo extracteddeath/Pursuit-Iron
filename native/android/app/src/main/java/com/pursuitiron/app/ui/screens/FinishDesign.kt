@@ -349,6 +349,6 @@ private fun FeelCard(vm: AppViewModel, x: JSONObject, parts: List<JSONObject>) {
 private fun FeelRow(label: String, opts: List<Pair<String, String>>, sel: String?, onPick: (String) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(64.dp))
-        Segmented(opts, sel, onPick, Modifier.weight(1f), height = 36.dp, gap = 3.dp)
+        Segmented(opts, sel, onPick, Modifier.weight(1f), height = 40.dp, gap = 3.dp)
     }
 }

@@ -460,6 +460,26 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                             session.stamp.gymCatalogSourceRevision==state.sourceRevision
                     }?.let {reviewed->
                         NativeKotlinCustomDayCoachingSummary(reviewed,session.absoluteWeek)
+                        reviewed.sameBlockLoadContinuity?.takeIf {
+                            it.status==CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT &&
+                                it.changesAuthoredLoads
+                        }?.let {carry->
+                            HorizontalDivider()
+                            Text("Earlier approved weights differ from this week's plan",
+                                style=MaterialTheme.typography.titleMedium)
+                            Text("This is a history-verified, read-only repeat suggestion. " +
+                                "It is not a progression increase or an issued workout. " +
+                                "A separately audited and accepted workout change is still required.",
+                                style=MaterialTheme.typography.bodySmall)
+                            carry.sets.forEach {set->
+                                Text("Set ${set.ordinal}: last issued ${set.lastIssuedLoad.toPlainString()} " +
+                                    "→ suggested repeat ${set.proposedLoad.toPlainString()} " +
+                                    "${set.unit.name.lowercase()} (authored ${set.authoredLoad.toPlainString()})",
+                                    style=MaterialTheme.typography.bodyMedium)
+                            }
+                            Text(carry.explanation,
+                                style=MaterialTheme.typography.bodySmall)
+                        }
                         if(reviewed.transitionStartingLoads?.changesAuthoredLoads==true &&
                             state.calibrationReview==null && state.calibrationReceipt==null && state.preparedWorkout==null) {
                             Button(enabled=!busy&&maxStep!=null,onClick={

@@ -43,7 +43,10 @@ data class NativeKotlinAcceptedRepTargets(
     val changedSetKey: String,
     val observedReps: List<Int>,
     val newRepTargets: List<Int>,
-    val reviewedReadiness: CoachReadiness
+    val reviewedReadiness: CoachReadiness,
+    /** Store the reviewed decision so repetition is never mislabeled as earned progress. */
+    val decisionKind: AdaptiveRepDecisionKind =
+        AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
 )
 
 data class NativeKotlinWorkoutApproval(

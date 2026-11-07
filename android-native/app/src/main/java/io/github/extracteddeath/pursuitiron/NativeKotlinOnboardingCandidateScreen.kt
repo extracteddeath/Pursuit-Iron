@@ -173,6 +173,7 @@ internal fun NativeKotlinOnboardingCandidateScreen(
     var gymConfirmed by rememberSaveable {mutableStateOf(false)}
     var showIdentity by rememberSaveable {mutableStateOf(false)}
     var awaitingConfirmation by rememberSaveable {mutableStateOf(false)}
+    var awaitingSavedResume by rememberSaveable {mutableStateOf(false)}
 
     val muscles=TrainingMuscle.entries
     fun maskMuscles(raw:String):Set<TrainingMuscle>? {
@@ -240,6 +241,19 @@ internal fun NativeKotlinOnboardingCandidateScreen(
                 color=if(sourceState.refusal!=null)
                     MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if(existing==null && sourceState.savedAthleteId!=null) {
+            PursuitCard(highlighted=true) {
+                Text("Resume your saved training setup",
+                    style=MaterialTheme.typography.titleLarge)
+                Text("This device has a previous Kotlin athlete. You can reopen the original verified profile and gym without re-entering every setting. Nothing is overwritten, and a corrupt or revoked setup is refused.",
+                    style=MaterialTheme.typography.bodySmall)
+                Button(
+                    onClick={awaitingSavedResume=true},
+                    enabled=!sourceState.busy,
+                    modifier=Modifier.fillMaxWidth()
+                ) {Text("Resume my saved setup")}
+            }
         }
         if(existing!=null) {
             PursuitCard(highlighted=true) {
@@ -461,6 +475,21 @@ internal fun NativeKotlinOnboardingCandidateScreen(
             }
         }
     }
+    if(awaitingSavedResume)AlertDialog(
+        onDismissRequest={if(!sourceState.busy)awaitingSavedResume=false},
+        title={Text("Resume the existing Kotlin athlete?")},
+        text={Text("The app will verify the original local identity and revalidate the saved training setup and physical gym. It will not create a new athlete, change the program, or issue a workout.")},
+        confirmButton={Button(
+            enabled=!sourceState.busy && sourceState.savedAthleteId!=null,
+            onClick={
+                awaitingSavedResume=false
+                sourceState.savedAthleteId?.let(controller::resumeVerifiedSavedSetup)
+            }
+        ) {Text("Verify and resume")}},
+        dismissButton={TextButton(onClick={awaitingSavedResume=false}) {
+            Text("Cancel")
+        }}
+    )
     if(awaitingConfirmation)AlertDialog(
         onDismissRequest={if(!sourceState.busy)awaitingConfirmation=false},
         title={Text("Confirm your native athlete setup?")},

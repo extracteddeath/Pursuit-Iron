@@ -176,7 +176,7 @@ object CoachExerciseDecisionDomain {
         if(latestFacts.mixedActualLoads) {
             // A verified per-set prescription is different from an athlete
             // unexpectedly editing weights during a straight-set workout.
-            // Even in the verified case only ONE set may earn one REP.
+            // Each ordinal uses its own observed effort and intended RIR.
             // No weight is raised or copied to other days/sets.
             if(context.verifiedPerSetLoading &&
                 latestFacts.ceilingOrdinals.size<last.expectedWorkingSets) {
@@ -187,8 +187,8 @@ object CoachExerciseDecisionDomain {
                     verifiedPerSetLoading=true)
                 if(review.candidateRepTargets!=null)
                     return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
-                        CoachConfidence.MODERATE,
-                        "Each authored set kept its own verified weight. Progression effort supports reviewing one more rep on one set without changing any load.",
+                        CoachConfidence.LIMITED,
+                        "Review each set's reps at its intended RIR, keeping its own weight. These are estimates from the last workout; earlier work and actual rest can change later capacity.",
                         repTargets=review.candidateRepTargets,
                         assumedCount=review.assumedGoalRirSetCount)
             }
@@ -201,11 +201,12 @@ object CoachExerciseDecisionDomain {
                 context.availableLoads?.basis ?: LoadBasis.EXERCISE_OVERRIDE,
                 context.readiness,context.movementRestricted)
             return result(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
-                if(repReview.candidateRepTargets!=null)CoachConfidence.MODERATE
-                else CoachConfidence.LIMITED,
+                CoachConfidence.LIMITED,
                 if(repReview.candidateRepTargets!=null)
-                    "Your progression effort supports reviewing one additional rep on one set, while preserving other sets and the current load. This does not change your workout targets."
-                else "Keep building quality reps at the current load. No safe set-specific rep increase is demonstrated yet.",
+                    "Review each set's reps at its intended RIR using that set's recorded performance. Stop at the intended effort if fewer reps are available. These estimates do not yet model changes in rest, earlier work or longer-term fatigue."
+                else if(repReview.reason==FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW)
+                    "The reported effort suggests this load cannot maintain the rep range at the intended RIR. Review the load and recovery."
+                else "Keep building quality reps at the current load. A set-specific change is not supported by this review yet.",
                 repTargets=repReview.candidateRepTargets,
                 assumedCount=if(repReview.candidateRepTargets!=null)repReview.assumedGoalRirSetCount else 0)
         }

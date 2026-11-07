@@ -58,23 +58,18 @@ const engines={
     entryPoint:'FatigueAwareRepTargetReviewDomain.assess + EquipmentLoadDomain.inspect',results:native.results}};
 const measurements=[];
 for(const [engine,run] of Object.entries(engines))for(const r of run.results) {
-  r.assessment=grade(f,r.caseId,r);
+  r.assessment=grade(f,r.caseId,r,2);
   measurements.push({caseId:r.caseId,engine,proof:'headless',outcome:r.assessment.outcome,
     commit:run.commit,inputDigest:r.inputDigest,reproducible:true});
 }
-const bundle=verifyBundle({schemaVersion:1,kind:'paired-headless-functional-review',
-  scope:'Four rep-target and three physical-stock policy executions; no app, training-outcome or device certification.',
+const bundle=verifyBundle({schemaVersion:2,kind:'paired-headless-functional-review',
+  scope:'Rep rows are observed behavior with data-integrity checks only; the one-set superiority claim is withdrawn. Physical-stock queries are exact feasibility checks. No individualized prediction, training-outcome, app or device certification.',
   fixture:fixturePath,fixtureDigest:f.fixtureDigest,inputProperties:f.properties,
   reproduction:'Run node android-native/kotlin-engine/verification/run-paired-functional.mjs --legacy-root <pinned clean web checkout> using Gradle, or add --kotlinc <Kotlin compiler> with JDK 17.',
   runnerFiles:Object.fromEntries(runnerPaths.map(p=>[p,sha256(readFileSync(resolve(root,p)))])),engines,measurements},f);
 const bytes=JSON.stringify(bundle,null,2)+'\n';writeFileSync(output,bytes);
 if(args.includes('--record')) {
-  writeFileSync(resolve(root,artifactPath),bytes);
-  const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
-  evidence.measurements=evidence.measurements.filter(r=>r.proof!=='headless'||!caseIds.includes(r.caseId));
-  evidence.measurements.push(...measurements.map(r=>({...r,artifact:artifactPath,artifactDigest:sha256(bytes)})));
-  writeFileSync(resolve(root,evidencePath),JSON.stringify(evidence,null,2)+'\n');
-  verifyRecordedFunctionalEvidence(evidence);
+  throw Error('The historical functional artifact is retained after retraction. New rep-quality evidence needs an independently validated oracle before recording.');
 } else if(args.includes('--check-current')) {
   const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
   const provenance=verifyRecordedFunctionalEvidence(evidence,{allowStaleProvenance:true});

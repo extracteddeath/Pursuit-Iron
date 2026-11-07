@@ -32,7 +32,7 @@ interface NativeKotlinWorkoutAuthority {
  * and athlete ID independently; they are NOT inferred from a JS program.
  */
 /**
- * Durable acceptance of ONE history-derived per-set adjustment, bound to
+ * Durable acceptance of one history-derived review, possibly changing several sets, bound to
  * immutable native evidence. This is NOT a substitute for live revalidation:
  * the issuer must recompute it from the complete corrected history, or refuse.
  */

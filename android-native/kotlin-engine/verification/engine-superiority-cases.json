@@ -46,8 +46,8 @@
       "id": "dp-rep-target-jumps",
       "domain": "progression",
       "severity": "critical",
-      "scenario": "At one verified working weight, sets complete 14/13/12 reps in 10–15 with actual RIR 3/3/2; also test all-set RIR 2, missing RIR and near failure",
-      "expected": "If effort permits, at most one extra rep on one demonstrably capable set for review; no +2/+3 jumps, no wholesale all-set increases and no issued-target overwrite",
+      "scenario": "At a verified load, sets complete 14/13/12 in 10–15 with actual RIR 3/3/2 and goal RIR 2. Include lifter history, rest and set order, acute/chronic fatigue context, all-set goal effort, missing effort and near failure.",
+      "expected": "Recommend reps likely achievable at the intended RIR using individual and context-specific evidence. Evaluate 15 on the first set when supported; allow multiple sets or rep changes when justified. Account for later-set fatigue and uncertainty without a fixed one-set/one-rep cap, fabricated probabilities, unearned load increases or issued-target overwrite.",
       "requiredProof": [
         "headless"
       ]
@@ -57,7 +57,7 @@
       "domain": "progression",
       "severity": "critical",
       "scenario": "Generate, accept, issue, finish and correct an individually targeted 14/14/12-rep workout under the original 10–15 practical band, then plan the following session. Include goal effort without extra headroom, unreported RIR with its original goal, missed exact targets within the practical band and another same-purpose training day before cold repeat issuance.",
-      "expected": "Retain exact original issued targets and actual effort in history, normalize only the approved practical envelope for the next decision, reject unrelated mixed schemes and unavailable loading, allow further earned single-set improvements, and explicitly repeat accepted targets on a hold without resetting to a generic plan or borrowing another day's history",
+      "expected": "Retain exact original issued targets and actual effort in history, normalize only the approved practical envelope for the next decision, reject unrelated mixed schemes and unavailable loading, allow further individually justified rep improvements across one or more sets, and explicitly repeat accepted targets on a hold without resetting to a generic plan or borrowing another day's history",
       "requiredProof": [
         "headless",
         "device"

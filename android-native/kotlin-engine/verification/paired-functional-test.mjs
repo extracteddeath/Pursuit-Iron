@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+// v1 cases authenticate a withdrawn historical archive, not coaching quality.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import {root,fixturePath,caseIds,parseFixture,barLoads,grade,verifyBundle,
+import {root,fixturePath,caseIds,parseFixture,barLoads,grade as assess,verifyBundle,
   scenarioDigest,evidencePath,verifyRecordedFunctionalEvidence} from './paired-functional.mjs';
 const bytes=readFileSync(resolve(root,fixturePath)),f=parseFixture(bytes);
+const grade=(f,id,result)=>assess(f,id,result,1);
 function output(id) {
   if(id===caseIds[0])return {caseId:id,subcases:f.repRows.map(input=>({id:input.id,
     targets:input.reps.map((n,i)=>({weight:30,reps:n+(input.id==='headroom'&&i===1?1:0)})),
@@ -19,12 +21,12 @@ test('fixed shared facts preserve real equipment and missing actual effort',()=>
   for(const addition of ['unit=kg','unknown=1','rep.load=\\u0033\\u0030'])
     assert.throws(()=>parseFixture(Buffer.from(bytes+'\n'+addition+'\n')));
 });
-test('refusal of every change cannot pass the capable-set comparison',()=>{
+test('withdrawn v1 archive still authenticates its historical capable-set rule',()=>{
   const held=output(caseIds[0]);held.subcases[0].targets[1].reps=13;
   assert.equal(grade(f,caseIds[0],held).outcome,'fail');
   assert.equal(grade(f,caseIds[0],output(caseIds[0])).outcome,'pass');
 });
-test('all-set increases, jumps, invented loads and near-failure increases fail',()=>{
+test('withdrawn v1 result contents remain reproducible without endorsing its rule',()=>{
   for(const mutate of [
     r=>r.subcases[0].targets.forEach((t,i)=>t.reps=f.repRows[0].reps[i]+1),
     r=>r.subcases[0].targets[1].reps=15,
@@ -81,4 +83,28 @@ test('absent or stale records cannot claim current functional comparisons',()=>{
     const changed=structuredClone(e);changed.measurements.find(r=>caseIds.includes(r.caseId)).artifactDigest='0'.repeat(64);
     assert.throws(()=>verifyRecordedFunctionalEvidence(changed,{allowStaleProvenance:true}));
   }
+});
+
+test('v2 rep checks do not rank unchanged, first-set, or multiple-set progressions',()=>{
+  for(const proposed of [[14,13,12],[15,13,12],[15,14,12]]) {
+    const r=output(caseIds[0]);r.subcases[0].targets.forEach((t,i)=>t.reps=proposed[i]);
+    assert.equal(assess(f,caseIds[0],r).outcome,'pass');
+  }
+  const invalid=output(caseIds[0]);invalid.subcases[0].targets[0].weight=38.5;
+  assert.equal(assess(f,caseIds[0],invalid).outcome,'fail');
+  const invented=output(caseIds[0]);invented.subcases[0].mutatedInput=true;
+  assert.equal(assess(f,caseIds[0],invented).outcome,'fail');
+});
+
+test('v2 bundles bind rep-integrity results without awarding prediction superiority',()=>{
+  const bundle=syntheticBundle();bundle.schemaVersion=2;
+  for(const [engine,run] of Object.entries(bundle.engines))for(const result of run.results) {
+    if(result.caseId===caseIds[0]) {
+      result.subcases[0].targets[0].reps=15;
+      if(engine==='legacy-javascript')result.subcases[0].raw.setTargets=structuredClone(result.subcases[0].targets);
+    }
+    result.assessment=assess(f,result.caseId,result);
+    bundle.measurements.find(m=>m.engine===engine&&m.caseId===result.caseId).outcome=result.assessment.outcome;
+  }
+  assert.doesNotThrow(()=>verifyBundle(bundle,f));
 });

@@ -242,15 +242,17 @@ internal fun NativeKotlinCandidateCoachScreen(
                     Text("Next-session rep preview",
                         style=MaterialTheme.typography.titleLarge)
                     Text(
-                        if(candidate.decisionKind==
-                            AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS)
+                        if(candidate.decisionKind.isRepeat)
                             "Repeat your previously prescribed targets. This keeps your set goals without claiming a new progression."
-                        else "Your recorded performance supports reviewing exactly one additional rep on one set.",
+                        else "Review each set at its intended effort. One or several rep goals may change based on your recorded performance.",
                         style=MaterialTheme.typography.bodyMedium)
                     Text("Built from the most recent verified, corrected workout. This is a preview only; already-issued sessions are never changed.",
                         style=MaterialTheme.typography.bodySmall)
                     if(candidate.assumedGoalRirSetCount>0)
                         Text(ProgressionEffortDomain.assumptionNote(candidate.assumedGoalRirSetCount).trim(),
+                            style=MaterialTheme.typography.bodySmall)
+                    if(candidate.forecastLimitations.isNotEmpty())
+                        Text("These estimates use your last workout. Rest, earlier sets and recovery can change what is achievable. Stop at your target RIR if fewer reps are available.",
                             style=MaterialTheme.typography.bodySmall)
                     val sets=candidate.workout.targets.filter {
                         it.exerciseId==candidate.exerciseId &&
@@ -260,8 +262,7 @@ internal fun NativeKotlinCandidateCoachScreen(
                         val before=candidate.observedReps[index]
                         val after=candidate.newRepTargets[index]
                         val sameLoad=set.load as? DraftSetLoad.Verified
-                        val targetText=if(candidate.decisionKind==
-                            AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS)
+                        val targetText=if(candidate.decisionKind.isRepeat)
                             "Set ${index+1}: ${before} completed · repeat ${after}-rep goal"
                         else "Set ${index+1}: ${before} completed → ${after}-rep goal"
                         Text(targetText,

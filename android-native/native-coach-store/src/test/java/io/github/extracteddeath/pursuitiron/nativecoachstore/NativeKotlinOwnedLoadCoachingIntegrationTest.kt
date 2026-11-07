@@ -382,6 +382,85 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }.all {it.reps==RepBand(8,12)})
     }
 
+    @Test fun severalEffortAlignedSetIncreasesSurviveAcceptanceAndColdIssuance() {
+        assertSeveralEffortAlignedChanges(3,11)
+    }
+
+    @Test fun earlyHeadroomAndLateNearFailureCanIncreaseAndReduceDifferentSets() {
+        assertSeveralEffortAlignedChanges(0,8)
+    }
+
+    private fun assertSeveralEffortAlignedChanges(lateRir:Int,lateTarget:Int) {
+        repReadyHistory()
+        val original=(journals.openStored("owner-1","workout-1",
+            approvals::canAccessIssuedWorkout) as NativeJournalFileResult.Durable).journal
+        val sets=original.snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy {it.ordinal}
+        for((i,set) in sets.withIndex()) {
+            val parent=if(i==0)"rep-accept-correction"
+                else original.effectiveSets.getValue(set.setKey).operation.eventId
+            assertTrue(transactions.correct("owner-1","athlete-1","workout-1",
+                KotlinSavedSetCorrection("effort-rebalance-$i",1L+i,set.setKey,parent,
+                    KotlinJournalSetOutcome.COMPLETED,
+                    KotlinPerformedSet(n("30"),LoadUnit.LB,10,if(i==0)4 else lateRir)))
+                is NativeHistoryTransactionResult.Durable)
+        }
+        val displayed=reader.reviewCurrentNextSetTargets("owner-1","athlete-1",
+            approvals,"db-press",CoachReadiness.NORMAL,false,authoring)
+            as NativeOwnerNextSetResult.Review
+        val reviewed=displayed.candidate as NativeCurrentRepPrescriptionResult.Reviewed
+        val candidate=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals(listOf(10,10),candidate.observedReps)
+        assertEquals(listOf(12,lateTarget),candidate.newRepTargets)
+        assertEquals(AdaptiveRepDecisionKind.TARGET_RIR_ALIGNED_REPS,candidate.decisionKind)
+        assertTrue(candidate.forecastLimitations.contains(RepForecastLimitation.EARLIER_SET_WORK_CHANGED))
+        val intent=NativeKotlinAcceptedRepIntent("db-press",displayed.approvalRevision,
+            reviewed.historyRevision,"workout-2",candidate.historicalWorkoutId,
+            candidate.editedSetKey,candidate.observedReps,candidate.newRepTargets,
+            "workout-3","grant-3","storage-3",true,candidate.decisionKind)
+        assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)
+
+        val coldApprovals=NativeKotlinApprovalFileAuthority(root,fence,identity)
+        val coldJournals=KotlinNativeJournalFileStore(root)
+        val coldReader=NativeKotlinMixedHistoryReadCoordinator(
+            NativeKotlinHistoryManifestFileStore(root),coldJournals,
+            KotlinNativeSavedCorrectionFileStore(root,coldJournals),custom,
+            coldApprovals,identity,fence)
+        val coldIssuer=NativeKotlinWorkoutCoordinator(coldJournals,
+            NativeKotlinGymCoherentWorkoutAuthority(coldApprovals,authoring,fence),fence,
+            NativeKotlinAcceptedRepSnapshotVerifier {owner,approved ->
+                coldReader.rederiveAcceptedRepSnapshot(owner,"athlete-1",
+                    coldApprovals,approved,authoring)
+            })
+        val issued=coldIssuer.issue("owner-1","workout-3")
+        assertTrue(issued.toString(),issued is NativeKotlinIssueResult.Committed)
+        val snapshot=(issued as NativeKotlinIssueResult.Committed).journal.snapshot
+        assertEquals(listOf(12,lateTarget),snapshot.targets.filter {
+            it.exerciseId=="db-press" && it.type==DraftSetType.WORKING
+        }.sortedBy {it.ordinal}.map {it.reps.minimum})
+        val history=(coldReader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review).timeline.completions.single()
+            as NativeKotlinMixedHistoryCompletion.Composer
+        val past=history.evidence.exerciseReviews.single {it.exerciseId=="db-press"}
+        assertEquals(listOf(10,10),past.workingSets.map {it.actual!!.reps})
+        assertTrue(past.workingSets.all {it.issuedReps==RepBand(8,12)})
+    }
+
+    @Test fun anAlreadyAcceptedLegacyRepReceiptStillIssuesWithItsOriginalPolicy() {
+        assertTrue(acceptRep(repReadyHistory()) is NativeKotlinRepAcceptanceResult.Committed)
+        val current=checkNotNull(approvals.currentOwnedApproval("owner-1"))
+        val legacy=current.copy(storageRevision=4,storageReceiptId="storage-legacy-4",
+            acceptedRepTargets=checkNotNull(current.acceptedRepTargets).copy(
+                decisionKind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP))
+        assertEquals(NativeApprovalWriteResult.Committed(4),approvals.publish("owner-1",3,legacy))
+        val issued=repIssuer().issue("owner-1","workout-3")
+        assertTrue(issued.toString(),issued is NativeKotlinIssueResult.Committed)
+        assertEquals(listOf(12,12),(issued as NativeKotlinIssueResult.Committed)
+            .journal.snapshot.targets.filter {it.exerciseId=="db-press" &&
+                it.type==DraftSetType.WORKING}.map {it.reps.minimum})
+    }
+
     @Test fun completedPersonalizedWorkoutCanEarnNextRepTargetWithoutReset() {
         val first=repReadyHistory()
         assertTrue(acceptRep(first) is NativeKotlinRepAcceptanceResult.Committed)
@@ -438,7 +517,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertEquals("workout-3",following.historicalWorkoutId)
         assertEquals(listOf(12,11),following.observedReps)
         assertEquals(listOf(12,12),following.newRepTargets)
-        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_TARGET_RIR_ALIGNED_REPS,
             following.decisionKind)
         assertEquals("workout-4",following.workout.workoutId)
         assertEquals(listOf(RepBand(12,12),RepBand(12,12)),
@@ -498,7 +577,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         val recordedReps=if(missedBoth)listOf(11,11) else listOf(11,12)
         assertEquals(recordedReps,candidate.observedReps)
         assertEquals(listOf(12,12),candidate.newRepTargets)
-        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_TARGET_RIR_ALIGNED_REPS,
             candidate.decisionKind)
         assertEquals(if(actualRir==null)2 else 0,candidate.assumedGoalRirSetCount)
         val intent=NativeKotlinAcceptedRepIntent(
@@ -509,9 +588,9 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         assertEquals(NativeKotlinRepAcceptanceResult.Rejected(
             NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED),
             acceptRep(intent.copy(expectedDecisionKind=
-                AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP)))
+                AdaptiveRepDecisionKind.TARGET_RIR_ALIGNED_REPS)))
         assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)
-        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_TARGET_RIR_ALIGNED_REPS,
             checkNotNull(approvals.currentOwnedApproval("owner-1"))
                 .acceptedRepTargets?.decisionKind)
 
@@ -1503,7 +1582,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             .candidate as NativeCurrentRepPrescriptionResult.Reviewed
         val proposal=verified.proposal as AdaptiveSetPrescriptionResult.Candidate
         assertEquals("workout-3",proposal.historicalWorkoutId)
-        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_TARGET_RIR_ALIGNED_REPS,
             proposal.decisionKind)
         assertEquals(listOf(12,11),proposal.observedReps)
         assertEquals(listOf(12,12),proposal.newRepTargets)

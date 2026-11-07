@@ -247,6 +247,34 @@ class NativeKotlinApprovalFileAuthorityTest {
         }
     }
 
+    @Test fun v6AllowsSeveralEffortAlignedChangesButCannotPretendToBeAV5Receipt() {
+        val fixed=program().copy(exercises=listOf(press,row).map {
+            it.copy(minimumSetsPerVisit=2,maximumSetsPerVisit=2,
+                maximumVisits=3,requiredVisits=3)
+        })
+        val baseline=approval().copy(program=fixed,
+            grant=KotlinWorkoutSelectionGrant("grant-v2","future-v2",source,1))
+        val proof=NativeKotlinAcceptedRepTargets(
+            "past-v2",7,"db-press","db-press:d1:s0",
+            listOf(9,10),listOf(12,8),CoachReadiness.NORMAL,
+            AdaptiveRepDecisionKind.TARGET_RIR_ALIGNED_REPS)
+        val value=baseline.copy(acceptedRepTargets=proof)
+        val bytes=NativeKotlinApprovalCodec.encode(value)
+        assertEquals(6,bytes[7].toInt())
+        assertEquals(value,NativeKotlinApprovalCodec.decode(bytes))
+        assertThrows(java.io.IOException::class.java) {
+            NativeKotlinApprovalCodec.decode(bytes.copyOf().also {it[7]=5})
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinApprovalCodec.encode(value.copy(acceptedRepTargets=
+                proof.copy(decisionKind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP)))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            NativeKotlinApprovalCodec.encode(value.copy(acceptedRepTargets=
+                proof.copy(changedSetKey="db-press:d1:s1")))
+        }
+    }
+
     @Test fun legacyV4EarnedRepProofStillDecodesAsEarnedAfterV5Upgrade() {
         val fixed=program().copy(exercises=listOf(press,row).map {
             it.copy(minimumSetsPerVisit=2,maximumSetsPerVisit=2,

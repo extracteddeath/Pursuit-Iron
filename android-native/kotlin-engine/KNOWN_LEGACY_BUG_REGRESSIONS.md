@@ -75,26 +75,20 @@ weight and correction in history. This requires matching actual exercise ID,
 set count/order, target RIR, verified exact gym weight, source revision,
 straight-set scheme and purpose. An authored top/backoff or nonmatching mixed
 scheme fails closed. A completed individualized workout can therefore support
-another earned one-rep proposal, without resetting the athlete's program.
+another set-specific review, without resetting the athlete's program.
 
-The follow-on prescription now classifies the *real* relationship between
-issued and observed reps. Re-proposing a missed exact target is labeled
-`REPEAT_PREVIOUSLY_ISSUED_TARGETS`, never marketed as an earned increase.
-If any personalized target was missed, the engine refuses to raise a
-different set above its previous target until the prior targets are met.
-A true `EARNED_ONE_MORE_REP` must exceed exactly one previous exact target,
-while every other target remains at least as demanding and supported by
-reported effort or the disclosed original-goal assumption. Android's Coach
-preview shows this distinction. If complete comparable work meets goal effort
-without extra headroom, misses a prior exact target within the practical band,
-or reaches the practical ceiling, the reviewer now offers those same exact
-targets as a repeat. It does not abandon them for the generic range or promote
-a different set. Native-file tests explicitly accept and issue that repeat
-after an interleaved same-purpose day and fresh disk readers. Actual RIR stays
-null when it was unreported. Recovery, missing both effort sources, incomplete
-work, below-floor reps and loading/source failures still refuse the proposal.
-Fatigue-adjusted downward targets, peak-specific periodization and physical
-device acceptance remain open.
+The current v2 prescription estimates each set at its intended RIR. Several
+sets may change, and higher recorded effort can justify fewer reps. Missing a
+prior exact target does not automatically forbid another set from changing.
+An unchanged accepted prescription is labeled as a repeat; a v2 adjustment has
+a distinct identity. The old one-set/one-rep receipts remain replayable only
+for compatibility. That cap was introduced by the assistant, not requested by
+the athlete, and its claimed superiority is withdrawn.
+
+The v2 estimate does not yet quantify accumulated fatigue, changed rest or
+prior exercise work, or the impact of harder early sets. It declares those
+limitations rather than applying an invented universal penalty. See
+[the scientific contract](SCIENCE_BASED_COACHING_CONTRACT.md).
 
 The owner-fenced native **two-workout load review now uses the same
 conservative, exact-inventory normalization** across the two latest
@@ -125,10 +119,12 @@ least one set has enough demonstrated headroom, it produces a concrete
 **immutable full-workout snapshot** with exact set-specific rep targets.
 It does not change a single load, unit, equipment basis, RIR, rest, warmup,
 other exercise, training day, journal or historical observation. Reps remain
-inside the approved practical rep envelope, and only one actual working set
-can earn an additional rep. Missing effort, near failure, skipped sets,
-edited/mixed loads, an unaudited set scheme, or stale source/history fails
-closed. This prevents copying a strong first set onto a fatigued last set.
+inside the approved practical rep envelope. Each ordinal uses its own evidence;
+several sets may change and a set performed too close to failure can receive
+fewer reps. An estimate below the rep floor asks for load review. Missing both
+effort sources, skipped sets, edited/unverified loads, an unaudited scheme or
+stale source/history still refuses the candidate. This does not copy first-set
+capacity onto fatigued later sets, or establish validated fatigue prediction.
 
 `NativeKotlinMixedHistoryReadCoordinator.reviewCurrentNextSetTargets`
 reopens the full native completion/correction ledger, identifies the

@@ -2,10 +2,12 @@
 
 The target is a usable coach and app. A growing count of internal tests is
 evidence against specific bugs, not proof that this target has been reached.
-The latest baseline has eight directly compared cases: Kotlin passes all eight;
-the web policy passes seven. The demonstrated difference is the agreed
-single-set rep-target rule. Overall superiority and a complete usable Kotlin
-app are not yet proven. See [the plain-language results](ENGINE_COMPARISON_SUMMARY.md).
+The earlier one-set rep-target superiority claim is withdrawn: that restriction
+was introduced by the assistant, not requested by the athlete or established by
+research. The remaining seven frozen comparisons show parity. New target-RIR
+estimates remove the cap but still require individual prediction validation.
+Overall superiority and a complete usable Kotlin app are not yet proven.
+See [the plain-language results](ENGINE_COMPARISON_SUMMARY.md).
 
 ## Finish line for the next testable app
 
@@ -30,15 +32,17 @@ passed. Keep the APK freeze until the agreed full journey is ready to test.
 
 | Priority | Deliverable | Current evidence / missing work |
 | --- | --- | --- |
-| 1 | Honest direct engine comparisons | Eight compared cases; a measured rep-target improvement, parity on the five original load cases and two equipment cases. Raw outputs and source identities are recorded. Programming quality and overall superiority remain unproven. |
+| 1 | Honest direct engine comparisons | Seven historical parity cases; the one-set rep-quality claim is explicitly withdrawn. New rep estimates require held-out individual validation and fresh source measurement. Program/cycle quality and overall superiority remain unproven. |
 | 2 | A reachable Kotlin journey | Debug-only Kotlin Lab launcher, setup-to-program action and real factual History screen added. Main app ownership is unchanged. Android/device acceptance is pending. |
 | 3 | Generate a useful first program | Headless generator exists. The product still needs versioned starting coaching policies, sufficient reviewed exercise coverage and a native review/save flow from the saved setup. Do not use test fixtures as user programs. |
 | 4 | Finish-to-next-workout loop | Native logging and history transactions exist. Connect automatic day selection, next-session approval/issuance and the History editor through the actual app journey. |
 | 5 | Cold restart and phone acceptance | Native storage has recovery tests. Saved-profile resume, full journey interaction, layout, TalkBack, backup and physical-device verification still need acceptance. |
 
 Defer additional narrow load-consent variants unless one blocks this loop or
-the direct comparison exposes a real defect. Keep the existing independent
-progression rules and data owners; do not build parallel engines or journals.
+the direct comparison exposes a real defect. Improve the existing independent progression domains and preserve data owners;
+do not build parallel engines or journals. The objective is feasible work at
+the intended RIR, informed by individual experience/history, accumulated fatigue
+and current-session fatigue, across daily sessions, programs and cycles.
 
 ## What counts as progress in updates
 

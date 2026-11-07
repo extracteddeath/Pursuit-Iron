@@ -73,8 +73,8 @@ export function barLoads(f) {
   return [...values].sort((a,b)=>a-b);
 }
 
-/** Existing acceptance rule: improve one capable set, never all rows at once. */
-export function grade(f,id,result) {
+/** Frozen v1 conformance oracle. Retracted as scientific/superiority evidence. */
+function gradeHistoricalV1(f,id,result) {
   const failures=[];const rows=result.subcases;
   if(!Array.isArray(rows))return {outcome:'fail',failures:['missing measured subcases']};
   if(id==='dp-rep-target-jumps') {
@@ -115,8 +115,30 @@ export function grade(f,id,result) {
   return {outcome:failures.length?'fail':'pass',failures};
 }
 
+/** V2 verifies physical/data integrity, not individualized accuracy or superiority.
+ * Rep feasibility requires held-out outcomes and fatigue context absent here.
+ * It intentionally does not reward fewer changed sets or a particular vector.
+ */
+export function grade(f,id,result,oracleVersion=2) {
+  if(oracleVersion===1)return gradeHistoricalV1(f,id,result);
+  assert.equal(oracleVersion,2);
+  if(id!=='dp-rep-target-jumps')return gradeHistoricalV1(f,id,result);
+  const failures=[];
+  const rows=result.subcases;
+  if(!Array.isArray(rows)||JSON.stringify(rows.map(r=>r.id))!==JSON.stringify(f.repRows.map(r=>r.id)))
+    return {outcome:'fail',failures:['rep scenarios missing or reordered']};
+  for(const row of rows) {
+    if(row.mutatedInput!==false||!Array.isArray(row.targets)||row.targets.length!==f.count) {
+      failures.push(row.id+': original facts/complete targets not preserved');continue;
+    }
+    if(row.targets.some(t=>t.weight!==f.load||!Number.isInteger(t.reps)||t.reps<f.floor||t.reps>f.ceiling))
+      failures.push(row.id+': changed load or invalid rep range');
+  }
+  return {outcome:failures.length?'fail':'pass',failures};
+}
+
 export function verifyBundle(bundle,f) {
-  assert.equal(bundle.schemaVersion,1);assert.equal(bundle.kind,'paired-headless-functional-review');
+  assert.ok([1,2].includes(bundle.schemaVersion));assert.equal(bundle.kind,'paired-headless-functional-review');
   assert.equal(bundle.fixtureDigest,f.fixtureDigest);assert.deepEqual(bundle.inputProperties,f.properties);
   assert.equal(bundle.measurements.length,caseIds.length*2);
   for(const engine of ['legacy-javascript','independent-kotlin']) {
@@ -136,7 +158,7 @@ export function verifyBundle(bundle,f) {
         assert.equal(sub.assumedGoalRirSetCount,input.rir.filter(r=>r===null).length);
         assert.equal(sub.mayAutoApply,false);
       }
-      const assessment=grade(f,row.caseId,row);assert.deepEqual(row.assessment,assessment);
+      const assessment=grade(f,row.caseId,row,bundle.schemaVersion);assert.deepEqual(row.assessment,assessment);
       const records=bundle.measurements.filter(m=>m.caseId===row.caseId&&m.engine===engine);
       assert.equal(records.length,1);
       assert.deepEqual(records[0],{caseId:row.caseId,engine,proof:'headless',outcome:assessment.outcome,

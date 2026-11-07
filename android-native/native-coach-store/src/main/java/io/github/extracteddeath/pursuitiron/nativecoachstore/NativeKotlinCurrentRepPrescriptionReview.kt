@@ -40,7 +40,9 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         timeline:NativeKotlinMixedHistoryTimeline,
         exerciseId:String,
         readiness:CoachReadiness,
-        movementRestricted:Boolean
+        movementRestricted:Boolean,
+        /** Old accepted receipts replay their original policy, never re-score history. */
+        policyVersion:AdaptiveRepPolicyVersion=AdaptiveRepPolicyVersion.TARGET_RIR_V2
     ):NativeCurrentRepPrescriptionResult {
         fun reject(reason:NativeCurrentRepPrescriptionRefusal)=
             NativeCurrentRepPrescriptionResult.Rejected(reason)
@@ -167,7 +169,7 @@ object NativeKotlinCurrentRepPrescriptionDomain {
                 readiness,movementRestricted,
                 if(normalized.normalizedPersonalizedTargets)
                     normalized.exactIssuedReps.map { it.minimum }
-                else null))
+                else null,policyVersion))
         return NativeCurrentRepPrescriptionResult.Reviewed(
             timeline.manifestRevision,last.manifest.workoutId,proposal)
     }

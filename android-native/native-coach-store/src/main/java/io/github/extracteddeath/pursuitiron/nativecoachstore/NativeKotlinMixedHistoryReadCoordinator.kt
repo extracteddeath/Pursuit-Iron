@@ -98,7 +98,7 @@ data class NativeKotlinAcceptedRepIntent(
     val explicitlyAccepted:Boolean,
     /** A repeat must be explicitly reviewed as a hold, not as earned progress. */
     val expectedDecisionKind:AdaptiveRepDecisionKind=
-        AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
+        AdaptiveRepDecisionKind.TARGET_RIR_ALIGNED_REPS
 )
 enum class NativeKotlinRepAcceptanceRefusal {
     INVALID_SCOPE, NOT_ACCEPTED, NOT_AUTHORIZED, ASSISTANCE_DISABLED, NO_CURRENT_APPROVAL,
@@ -530,7 +530,7 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     return@withOwnerTransaction null
                 val reviewed=NativeKotlinCurrentRepPrescriptionDomain.inspect(
                     approval,history,proof.exerciseId,
-                    proof.reviewedReadiness,false)
+                    proof.reviewedReadiness,false,proof.decisionKind.policyVersion)
                     as? NativeCurrentRepPrescriptionResult.Reviewed
                     ?:return@withOwnerTransaction null
                 val result=reviewed.proposal

@@ -44,6 +44,15 @@ export function reviewComparison(matrix, observations) {
     assert.equal(new Set(item.requiredProof).size, item.requiredProof.length);
     assert.ok(item.requiredProof.every(kind => proofKinds.has(kind)));
   }
+  const withdrawn=new Map();
+  for(const item of observations.retractions??[]) {
+    const scenario=matrix.cases.find(c=>c.id===item.caseId);
+    assert.ok(scenario&&scenario.requiredProof.includes(item.proof),'invalid retraction scope');
+    assert.ok(item.reason?.trim(),'retraction requires a reason');
+    assert.ok(item.artifact?.trim()&&sha64.test(item.artifactDigest),'unbound retraction artifact');
+    const key=item.caseId+':'+item.proof;
+    assert.ok(!withdrawn.has(key),'duplicate retraction');withdrawn.set(key,item);
+  }
   const seen = new Set();
   const byKey = new Map();
   for (const record of observations.measurements) {
@@ -57,6 +66,11 @@ export function reviewComparison(matrix, observations) {
     assert.ok(sha64.test(record.inputDigest), 'missing common input fingerprint');
     assert.ok(record.artifact?.trim(), 'missing reproducible evidence artifact');
     assert.equal(record.reproducible, true, 'unreproducible evidence is not proof');
+    const retraction=withdrawn.get(record.caseId+':'+record.proof);
+    if(retraction) {
+      assert.equal(record.artifact,retraction.artifact,'retraction names a different artifact');
+      assert.equal(record.artifactDigest,retraction.artifactDigest,'retraction digest differs');
+    }
     if (record.proof === 'device')
       assert.ok(record.androidDevice?.trim(), 'device proof requires actual device');
     if (record.proof === 'human') {
@@ -76,6 +90,12 @@ export function reviewComparison(matrix, observations) {
   const regressions = [];
   for (const item of matrix.cases) {
     for (const proof of item.requiredProof) {
+      const retraction=withdrawn.get(item.id+':'+proof);
+      if(retraction) {
+        missingPairs++;
+        blockers.push(item.id+'/'+proof+': WITHDRAWN — '+retraction.reason);
+        continue;
+      }
       const legacy = byKey.get([item.id, proof, 'legacy-javascript'].join(':'));
       const kotlin = byKey.get([item.id, proof, 'independent-kotlin'].join(':'));
       if (!legacy || !kotlin) {
@@ -110,6 +130,7 @@ export function reviewComparison(matrix, observations) {
     missingPairs,
     measuredImprovements: improvements,
     improvedDomains,
+    withdrawnPairs:[...withdrawn.values()].map(({caseId,proof,reason})=>({caseId,proof,reason})),
     regressions,
     blockers
   };
@@ -120,6 +141,7 @@ function selfTest() {
   assert.equal(blank.verdict, 'NOT_PROVEN_BETTER');
   assert.ok(blank.missingPairs > 0);
   const fake = JSON.parse(JSON.stringify(evidence));
+  fake.retractions=[];
   const all = [];
   for (const item of cases.cases) for (const proof of item.requiredProof) {
     for (const engine of ['legacy-javascript', 'independent-kotlin']) {
@@ -143,6 +165,14 @@ function selfTest() {
   const duplicate = structuredClone(fake);
   duplicate.measurements.push({ ...duplicate.measurements[0] });
   assert.throws(() => reviewComparison(cases, duplicate), /duplicate evidence/);
+  if(evidence.retractions?.length) {
+    const retracted=reviewComparison(cases,evidence);
+    assert.ok(!retracted.measuredImprovements.some(x=>evidence.retractions.some(r=>r.caseId===x.id&&r.proof===x.proof)),
+      'withdrawn policy-shape checks cannot count as superiority');
+    assert.ok(retracted.blockers.some(x=>x.includes('WITHDRAWN')));
+    const unbound=structuredClone(evidence);unbound.retractions[0].artifactDigest='0'.repeat(64);
+    assert.throws(()=>reviewComparison(cases,unbound),/retraction digest differs/);
+  }
   console.log('Engine comparison validation self-test passed; no superiority inferred.');
 }
 

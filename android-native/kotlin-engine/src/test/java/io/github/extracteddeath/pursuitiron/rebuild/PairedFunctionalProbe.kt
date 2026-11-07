@@ -6,7 +6,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.Properties
 
-/** Execute existing production policies; an external oracle grades the raw results. */
+/** Execute real policies; external checks verify integrity, not rep-prediction quality. */
 object PairedFunctionalProbe {
     private fun hash(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes)
         .joinToString(""){"%02x".format(it.toInt() and 255)}
@@ -41,6 +41,7 @@ object PairedFunctionalProbe {
             "{\"id\":${quote(id)},\"targets\":["+targets.joinToString(","){
                 "{\"weight\":$load,\"reps\":$it}"}+"],\"reason\":${quote(result.reason.name)},"+
                 "\"actualRirCount\":${rir.count{it!=null}},\"assumedGoalRirSetCount\":${result.assumedGoalRirSetCount},"+
+                "\"forecastLimitations\":[${result.forecastLimitations.joinToString(","){quote(it.name)}}],"+
                 "\"mayAutoApply\":${result.canAutoApply},\"mutatedInput\":${original!=session}}"
         }
         fun inspect(id:String,stock:VerifiedLoadStock,requested:BigDecimal):String {

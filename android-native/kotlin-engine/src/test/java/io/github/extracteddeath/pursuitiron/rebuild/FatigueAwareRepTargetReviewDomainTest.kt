@@ -5,9 +5,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Known legacy regressions: +3 rep jumps, blindly raising every set,
- * target RIR mistaken for actual effort, and making late fatigued sets
- * mimic the first set. These are hard refusals, not coaching slogans.
+ * Goal-effort estimates are tested separately from actual history and from
+ * physiological accuracy. Multi-set changes are legitimate; copying first-set
+ * capacity to later sets and inventing observed effort are not.
  */
 class FatigueAwareRepTargetReviewDomainTest {
     private fun n(value:String)=BigDecimal(value)
@@ -47,14 +47,17 @@ class FatigueAwareRepTargetReviewDomainTest {
     )=FatigueAwareRepTargetReviewDomain.assess(
         session,stock,basis,readiness,restricted)
 
-    @Test fun oneFatigueAwareSetEarnsOnlyOneAdditionalRepWithoutWeightChanges() {
+    @Test fun eachSetUsesItsOwnEffortAndFirstSetCanReachFifteen() {
         val original=session()
         val result=review(original)
-        assertEquals(FatigueRepReviewReason.ONE_SET_REP_INCREASE_FOR_REVIEW,
+        assertEquals(FatigueRepReviewReason.TARGET_RIR_ALIGNED_REPS_FOR_REVIEW,
             result.reason)
         assertEquals(listOf(14,13,12),result.observedReps)
-        assertEquals(listOf(14,14,12),result.candidateRepTargets)
-        assertEquals(1,result.proposedOrdinal)
+        assertEquals(listOf(15,14,12),result.candidateRepTargets)
+        assertEquals(0,result.proposedOrdinal)
+        assertEquals(setOf(0,1),result.proposedOrdinals)
+        assertTrue(result.forecastLimitations.contains(RepForecastLimitation.EARLIER_SET_WORK_CHANGED))
+        assertTrue(result.forecastLimitations.contains(RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED))
         assertEquals(load,result.observedLoad)
         assertFalse(result.canAutoApply)
         assertFalse(result.mayIssueWorkout)
@@ -63,18 +66,15 @@ class FatigueAwareRepTargetReviewDomainTest {
             original.observations.map {it.actualLoad})
     }
 
-    @Test fun noThreeRepJumpAndNoAutomaticIncreaseForEverySet() {
+    @Test fun severalSetsAndSeveralRepsCanChangeWhenEachHasEffortHeadroom() {
         val input=session(reps=listOf(10,10,10),rir=listOf(5,5,5))
         val result=review(input)
-        assertEquals(listOf(11,10,10),result.candidateRepTargets)
-        assertEquals(0,result.proposedOrdinal)
-        assertEquals(1,
-            result.candidateRepTargets!!.zip(result.observedReps!!)
-                .sumOf {(after,before)->after-before})
-        val nearTop=review(session(reps=listOf(15,14,13),
-            rir=listOf(3,4,4)))
-        assertEquals(listOf(15,14,14),nearTop.candidateRepTargets)
-        assertEquals(2,nearTop.proposedOrdinal)
+        assertEquals(listOf(13,13,13),result.candidateRepTargets)
+        assertEquals(setOf(0,1,2),result.proposedOrdinals)
+        val nearTop=review(session(reps=listOf(15,14,13),rir=listOf(3,4,4)))
+        assertEquals(listOf(15,15,15),nearTop.candidateRepTargets)
+        assertEquals(setOf(1,2),nearTop.proposedOrdinals)
+        assertTrue(nearTop.forecastLimitations.contains(RepForecastLimitation.RIR_ESTIMATE_UNCALIBRATED))
     }
 
     @Test fun goalAssumptionsPreserveMissingActualsAndDoNotInventExtraHeadroom() {
@@ -86,7 +86,8 @@ class FatigueAwareRepTargetReviewDomainTest {
         val original=session(rir=listOf(null,null,null)).let {w->w.copy(
             observations=w.observations.map {it.copy(issuedRir=3)})}
         val assumed=review(original)
-        assertEquals(listOf(14,13,13),assumed.candidateRepTargets)
+        assertNull(assumed.candidateRepTargets)
+        assertEquals(FatigueRepReviewReason.NO_DEMONSTRATED_EFFORT_HEADROOM,assumed.reason)
         assertEquals(3,assumed.assumedGoalRirSetCount)
         assertTrue(original.observations.all {it.actualRir==null})
         val unavailable=original.copy(observations=original.observations.map {it.copy(issuedRir=null)})
@@ -94,16 +95,36 @@ class FatigueAwareRepTargetReviewDomainTest {
         assertNull(review(unavailable).candidateRepTargets)
     }
 
-    @Test fun nearFailureOrLowReadinessAlwaysWinsOverFirstSetStrength() {
-        assertEquals(FatigueRepReviewReason.NEAR_FAILURE_OR_RECOVERY_PRIORITY,
-            review(session(rir=listOf(5,4,1))).reason)
-        assertNull(review(session(rir=listOf(5,4,0))).candidateRepTargets)
+    @Test fun lateNearFailureReducesThatSetsEstimateWithoutSuppressingFirstSetCapacity() {
+        assertEquals(listOf(15,15,11),review(session(rir=listOf(5,4,1))).candidateRepTargets)
+        assertEquals(listOf(15,15,10),review(session(rir=listOf(5,4,0))).candidateRepTargets)
         assertEquals(FatigueRepReviewReason.NEAR_FAILURE_OR_RECOVERY_PRIORITY,
             review(readiness=CoachReadiness.LOW).reason)
         assertEquals(FatigueRepReviewReason.NEAR_FAILURE_OR_RECOVERY_PRIORITY,
             review(restricted=true).reason)
         assertEquals(FatigueRepReviewReason.NO_DEMONSTRATED_EFFORT_HEADROOM,
             review(session(rir=listOf(2,2,2))).reason)
+        assertEquals(FatigueRepReviewReason.EFFORT_REQUIRES_LOAD_REVIEW,
+            review(session(reps=listOf(14,13,10),rir=listOf(3,3,0))).reason)
+    }
+
+    @Test fun intendedEffortIsSetSpecificRatherThanAHardCodedRirThreshold() {
+        val input=session(reps=listOf(12,12,12),rir=listOf(2,4,3)).let {s->s.copy(
+            observations=s.observations.mapIndexed {i,set->set.copy(issuedRir=listOf(1,3,3)[i])})}
+        assertEquals(listOf(13,13,12),review(input).candidateRepTargets)
+        val missing=input.copy(observations=input.observations.map {it.copy(issuedRir=null)})
+        assertEquals(FatigueRepReviewReason.EFFORT_TARGET_MISSING,review(missing).reason)
+    }
+
+    @Test fun alreadyAcceptedV1TargetsCanStillBeReplayedWithoutRewritingHistory() {
+        val original=session()
+        val old=FatigueAwareRepTargetReviewDomain.assess(original,gym,
+            LoadBasis.DUMBBELL_PER_HAND,CoachReadiness.NORMAL,false,
+            policyVersion=AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1)
+        assertEquals(listOf(14,14,12),old.candidateRepTargets)
+        assertEquals(FatigueRepReviewReason.ONE_SET_REP_INCREASE_FOR_REVIEW,old.reason)
+        assertEquals(listOf(15,14,12),review(original).candidateRepTargets)
+        assertEquals(listOf(14,13,12),original.observations.map {it.actualReps})
     }
 
     @Test fun belowFloorOrUnfinishedCannotBecomeProgression() {
@@ -143,16 +164,17 @@ class FatigueAwareRepTargetReviewDomainTest {
         assertNull(result.candidateRepTargets)
     }
 
-    @Test fun exerciseCoachExposesOnlyAnOptionalSingleSetReview() {
+    @Test fun exerciseCoachExposesEstimatesAndTheirMissingContext() {
         val context=CoachExerciseContext(
             CoachReadiness.NORMAL,false,gym,n("5"))
         val w=session().copy(workoutId="recorded-2")
         val interpreted=CoachExerciseDecisionDomain.review(listOf(w),context)
         assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,
             interpreted.direction)
-        assertEquals(listOf(14,14,12),interpreted.nextRepTargetsForReview)
+        assertEquals(listOf(15,14,12),interpreted.nextRepTargetsForReview)
         assertNull(interpreted.nextLoadToReview)
-        assertTrue(interpreted.explanation.contains("one additional rep"))
+        assertTrue(interpreted.explanation.contains("intended RIR"))
+        assertEquals(CoachConfidence.LIMITED,interpreted.confidence)
         assertEquals(listOf(14,13,12),w.observations.map {it.actualReps})
         val unknown=CoachExerciseDecisionDomain.review(listOf(
             session(rir=listOf(3,null,2))),context)
@@ -162,10 +184,10 @@ class FatigueAwareRepTargetReviewDomainTest {
         assertNull(unknown.nextLoadToReview)
         val poorlyRecovered=CoachExerciseDecisionDomain.review(listOf(
             session(rir=listOf(3,3,1))),context)
-        assertNull(poorlyRecovered.nextRepTargetsForReview)
+        assertEquals(listOf(15,14,11),poorlyRecovered.nextRepTargetsForReview)
     }
 
-    @Test fun verifiedPerSetLoadsCanEarnOneRepWithoutCopyingHeaviestWeight() {
+    @Test fun verifiedPerSetLoadsUseEachOrdinalsEffortWithoutCopyingHeaviestWeight() {
         val mixed=session(reps=listOf(14,13,12),rir=listOf(3,3,4),
             loads=listOf("35","30","25"),
             issued=listOf("35","30","25"))
@@ -175,13 +197,13 @@ class FatigueAwareRepTargetReviewDomainTest {
         val reviewed=FatigueAwareRepTargetReviewDomain.assess(
             mixed,gym,LoadBasis.DUMBBELL_PER_HAND,CoachReadiness.NORMAL,
             false,verifiedPerSetLoading=true)
-        assertEquals(FatigueRepReviewReason.ONE_SET_REP_INCREASE_FOR_REVIEW,
+        assertEquals(FatigueRepReviewReason.TARGET_RIR_ALIGNED_REPS_FOR_REVIEW,
             reviewed.reason)
         assertNull(reviewed.observedLoad)
         assertEquals(listOf(n("35"),n("30"),n("25")),
             reviewed.observedSetLoads)
-        assertEquals(listOf(14,13,13),reviewed.candidateRepTargets)
-        assertEquals(2,reviewed.proposedOrdinal)
+        assertEquals(listOf(15,14,14),reviewed.candidateRepTargets)
+        assertEquals(0,reviewed.proposedOrdinal)
         assertFalse(reviewed.mayIssueWorkout)
         assertFalse(reviewed.canAutoApply)
         assertEquals(listOf(n("35"),n("30"),n("25")),
@@ -191,7 +213,7 @@ class FatigueAwareRepTargetReviewDomainTest {
             verifiedPerSetLoading=true)
         val decision=CoachExerciseDecisionDomain.review(listOf(mixed),context)
         assertEquals(CoachDirection.BUILD_REPS_AT_CURRENT_LOAD,decision.direction)
-        assertEquals(listOf(14,13,13),decision.nextRepTargetsForReview)
+        assertEquals(listOf(15,14,14),decision.nextRepTargetsForReview)
         assertNull(decision.nextLoadToReview)
         assertNull(decision.observedWorkingLoad)
     }
@@ -217,10 +239,10 @@ class FatigueAwareRepTargetReviewDomainTest {
             authorized(session(loads=listOf("35","30","25"),
                 issued=listOf("35","30","25"),
                 reps=listOf(14,13,9))).reason)
-        assertEquals(FatigueRepReviewReason.NEAR_FAILURE_OR_RECOVERY_PRIORITY,
+        assertEquals(listOf(15,14,11),
             authorized(session(loads=listOf("35","30","25"),
                 issued=listOf("35","30","25"),
-                rir=listOf(3,3,1))).reason)
+                rir=listOf(3,3,1))).candidateRepTargets)
         assertEquals(CoachDirection.STABILIZE_SET_LOADING,
             CoachExerciseDecisionDomain.review(listOf(valid),
                 CoachExerciseContext(CoachReadiness.NORMAL,false,gym,n("5")))

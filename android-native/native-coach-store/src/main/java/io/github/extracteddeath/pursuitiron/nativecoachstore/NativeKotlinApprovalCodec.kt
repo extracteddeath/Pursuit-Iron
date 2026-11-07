@@ -20,7 +20,7 @@ import java.math.BigDecimal
  */
 internal object NativeKotlinApprovalCodec {
     private const val MAGIC=0x50494131 // PIA1
-    private const val VERSION=5
+    private const val VERSION=6
     const val MAX_BYTES=512_000
 
     private fun DataOutputStream.string(value:String)=writeUTF(value)
@@ -267,7 +267,11 @@ internal object NativeKotlinApprovalCodec {
             AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP ->
                 require(differences.size==1 &&
                     working[differences.single()].setKey==proof.changedSetKey)
-            AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS -> {
+            AdaptiveRepDecisionKind.TARGET_RIR_ALIGNED_REPS ->
+                require(differences.isNotEmpty() &&
+                    working[differences.first()].setKey==proof.changedSetKey)
+            AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            AdaptiveRepDecisionKind.REPEAT_TARGET_RIR_ALIGNED_REPS -> {
                 // Repeated goals may equal observed reps OR exceed several
                 // missed exact goals. The owner-fenced history re-derivation
                 // must prove these are exactly the previously issued targets.
@@ -309,7 +313,7 @@ internal object NativeKotlinApprovalCodec {
                     items(proof.observedReps){writeInt(it)}
                     items(proof.newRepTargets){writeInt(it)}
                     writeEnum(proof.reviewedReadiness)
-                    // v5 distinguishes an earned rep from unchanged accepted goals.
+                    // v6 adds target-RIR adjustments; v1 single-set receipts stay immutable.
                     writeEnum(proof.decisionKind)
                 }
             }
@@ -342,6 +346,9 @@ internal object NativeKotlinApprovalCodec {
                             if(version>=5)readEnum<AdaptiveRepDecisionKind>()
                                 else AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP)
                     } else null
+                    if(version<6 && proof!=null &&
+                        proof.decisionKind.policyVersion!=AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1)
+                        throw IOException("target-RIR decisions require approval encoding v6")
                     if(available()!=0)throw IOException("trailing approval bytes")
                     NativeKotlinWorkoutApproval(owner,athlete,approved,current,
                         grant,program,policies,receipt,revision,proof)

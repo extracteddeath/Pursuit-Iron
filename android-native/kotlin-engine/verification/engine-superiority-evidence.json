@@ -183,5 +183,15 @@
       "artifact": "android-native/kotlin-engine/verification/paired-functional-measurement.json",
       "artifactDigest": "f33874031f4917e48e4e2218b2d23340d08d981c158b79cc56e17d0860420158"
     }
+  ],
+  "retractions": [
+    {
+      "caseId": "dp-rep-target-jumps",
+      "proof": "headless",
+      "date": "2026-11-07",
+      "reason": "The one-set/one-rep restriction was introduced by the assistant, not requested by the athlete, and does not establish personalized effectiveness or target-RIR feasibility. Historical raw outputs are retained; the superiority claim is withdrawn.",
+      "artifact": "android-native/kotlin-engine/verification/paired-functional-measurement.json",
+      "artifactDigest": "f33874031f4917e48e4e2218b2d23340d08d981c158b79cc56e17d0860420158"
+    }
   ]
 }

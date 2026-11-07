@@ -137,8 +137,11 @@ test('partial matched measurements still cannot certify the complete engine repl
   const evidence=JSON.parse(readFileSync(resolve(root,evidencePath),'utf8'));
   const verified=verifyRecordedProgressionEvidence(evidence,{allowStaleProvenance:true});
   const functional=verifyRecordedFunctionalEvidence(evidence,{allowStaleProvenance:true});
+  const currentWithdrawals=(evidence.retractions??[]).filter(r=>r.proof==='headless'&&
+    ((caseIds.includes(r.caseId)&&verified.currentNativeTree)||
+        (['dp-rep-target-jumps','machine-increments','bar-stock'].includes(r.caseId)&&functional.currentNativeTree))).length;
   const completed=(verified.currentNativeTree?verified.recordedPairs:0)+
-    (functional.currentNativeTree?functional.recordedPairs:0);
+    (functional.currentNativeTree?functional.recordedPairs:0)-currentWithdrawals;
   assert.equal(audit.completedPairs,completed);
   assert.equal(audit.requiredPairs,49);
   assert.equal(audit.missingPairs,49-completed);
@@ -147,8 +150,13 @@ test('partial matched measurements still cannot certify the complete engine repl
     (functional.currentNativeTree?0:functional.recordedPairs));
   assert.equal(audit.verdict,'NOT_PROVEN_BETTER');
   const repResults=evidence.measurements.filter(r=>r.caseId==='dp-rep-target-jumps'&&r.proof==='headless');
-  const repImproved=functional.currentNativeTree&&repResults.some(r=>r.engine==='legacy-javascript'&&r.outcome==='fail')&&
+  const repWithdrawn=(evidence.retractions??[]).some(r=>r.caseId==='dp-rep-target-jumps'&&r.proof==='headless');
+  const repImproved=!repWithdrawn&&functional.currentNativeTree&&repResults.some(r=>r.engine==='legacy-javascript'&&r.outcome==='fail')&&
     repResults.some(r=>r.engine==='independent-kotlin'&&r.outcome==='pass');
   assert.deepEqual(audit.improvedDomains,repImproved?['progression']:[]);
   assert.deepEqual(audit.regressions,[]);
+  if(repWithdrawn) {
+    assert.ok(audit.withdrawnPairs.some(r=>r.caseId==='dp-rep-target-jumps'));
+    assert.ok(!audit.measuredImprovements.some(r=>r.id==='dp-rep-target-jumps'));
+  }
 });

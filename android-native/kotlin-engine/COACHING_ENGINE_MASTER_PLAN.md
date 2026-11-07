@@ -9,6 +9,14 @@ workout → history → next-workout loop and record direct comparisons before
 adding more narrow consent variants. Passing internal tests alone is not a
 usable app or demonstrated engine superiority.
 
+**Corrected coaching objective:** [the research-informed personalization contract](SCIENCE_BASED_COACHING_CONTRACT.md)
+supersedes the assistant-imposed one-set/one-rep rule. The athlete requested
+realistic target-RIR performance, individualized programs/cycles, and acute and
+longer-term fatigue handling. Multiple sets or reps may progress when supported;
+fewer changed sets are not inherently more accurate. The comparison claim based
+on the old restriction is withdrawn, and the new target-RIR estimate
+is still not the completed personalized acute/chronic fatigue model.
+
 ## 0. North star and hard boundaries
 
 The finished engine is a coach that produces useful, individual, executable programs **before the first workout**, adapts them from authenticated performance and user feedback, and preserves every deliberate athlete choice. A “safe rejection” is necessary but is not the finished product: when evidence is sufficient, the engine must offer a specific, feasible next action. Fitness outcomes are individual and uncertain; “best” means the best **defensible option among checked candidates for this athlete**, not a globally optimal or clinically guaranteed program.
@@ -105,7 +113,7 @@ The prescribed progression belongs to **exercise occurrence/slot and training pu
 | Mode | Trigger and suggested behavior | Never do |
 | --- | --- | --- |
 | Double progression | Improve reps within the approved band at stable verified loading; earn the smallest suitable load increase only when recent comparable set performance and RIR justify it; rebuild feasible rep targets | Promote an unearned 215 lb across all sets from 200/205/210/215 for 3/3/2/2 |
-| Per-set rep progression | Change only earned working-set targets, using each set's observed reps/RIR and an intra-session fatigue curve; no blanket +3 rep jump; preserve source rep envelope and future continuity | Rewrite other sets or treat a new issued target as a historical actual |
+| Per-set rep progression | Forecast each set's feasible reps at the intended RIR using individual history, current capacity, set order/rest and fatigue; one or several sets may change, with justified rep steps; preserve the practical envelope and future continuity | Impose a fixed one-set rule, invent a fatigue penalty, or treat forecasts/targets as measured actuals |
 | Dynamic load / autoregulation | Resolve the slot's actual verified implement and next load based on recent all-set ability, objective, rep reserve and recovery; allow an actual attainable repeat, increase or decrease | Assume a gym-wide increment, copy Upper bench to Push bench or treat unknown RIR as 0 |
 | Strength/intensity progression | Manage repeated lift exposure, loading, practice and rep envelopes, with fatigue/skill balance and phase intent; specialize near a verified test/peak | Copy hypertrophy progression blindly into a strength day |
 | Volume/frequency progression | Adjust sets and direct sessions inside individual MEV/MAV/MRV, approved recovery, schedule and cycle continuity; consider more frequent quality work before indiscriminate session stuffing | Drop 30->11 normal working sets without evidence and explicit review |

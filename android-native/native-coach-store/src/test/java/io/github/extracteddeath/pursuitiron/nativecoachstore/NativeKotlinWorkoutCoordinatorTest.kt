@@ -315,7 +315,7 @@ class NativeKotlinWorkoutCoordinatorTest {
                 request,source,history,7,7,CoachReadiness.NORMAL,false,
                 previouslyIssuedExactReps=priorTargets))
             as AdaptiveSetPrescriptionResult.Candidate
-        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_TARGET_RIR_ALIGNED_REPS,
             proposal.decisionKind)
         assertEquals(priorTargets,proposal.newRepTargets)
         val acceptance=baseApproval.copy(acceptedRepTargets=

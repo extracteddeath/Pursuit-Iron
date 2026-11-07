@@ -15,8 +15,20 @@ import java.util.Collections
  * active/rest seconds and purpose-specific effort remain unchanged.
  */
 enum class AdaptiveRepDecisionKind {
+    /** Frozen v1 receipt identities; new reviews use target-RIR v2. */
     EARNED_ONE_MORE_REP,
-    REPEAT_PREVIOUSLY_ISSUED_TARGETS
+    REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+    TARGET_RIR_ALIGNED_REPS,
+    REPEAT_TARGET_RIR_ALIGNED_REPS;
+
+    val isRepeat: Boolean get() = this==REPEAT_PREVIOUSLY_ISSUED_TARGETS ||
+        this==REPEAT_TARGET_RIR_ALIGNED_REPS
+    val policyVersion: AdaptiveRepPolicyVersion get() = when(this) {
+        EARNED_ONE_MORE_REP, REPEAT_PREVIOUSLY_ISSUED_TARGETS ->
+            AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1
+        TARGET_RIR_ALIGNED_REPS, REPEAT_TARGET_RIR_ALIGNED_REPS ->
+            AdaptiveRepPolicyVersion.TARGET_RIR_V2
+    }
 }
 
 enum class AdaptiveSetPrescriptionRefusal {
@@ -42,8 +54,9 @@ sealed interface AdaptiveSetPrescriptionResult {
         val editedSetKey: String,
         val observedReps: List<Int>,
         val newRepTargets: List<Int>,
-        val decisionKind:AdaptiveRepDecisionKind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP,
-        val assumedGoalRirSetCount:Int=0
+        val decisionKind:AdaptiveRepDecisionKind=AdaptiveRepDecisionKind.TARGET_RIR_ALIGNED_REPS,
+        val assumedGoalRirSetCount:Int=0,
+        val forecastLimitations:Set<RepForecastLimitation> = emptySet()
     ) : AdaptiveSetPrescriptionResult {
         val mayAutoApply: Boolean get() = false
         val mayIssueWorkout: Boolean get() = false
@@ -60,7 +73,9 @@ data class AdaptiveSetPrescriptionRequest(
     val readiness: CoachReadiness,
     val movementRestricted: Boolean,
     /** From owner-verified real issued set bands, never screen input. */
-    val previouslyIssuedExactReps: List<Int>?=null
+    val previouslyIssuedExactReps: List<Int>?=null,
+    /** Only the native receipt verifier selects v1 to replay an old approval. */
+    val policyVersion:AdaptiveRepPolicyVersion=AdaptiveRepPolicyVersion.TARGET_RIR_V2
 )
 
 object KotlinAdaptiveSetPrescriptionDomain {
@@ -155,7 +170,8 @@ object KotlinAdaptiveSetPrescriptionDomain {
                 history,equipment.inventory,
                 checkNotNull(equipment.inventory).basis,
                 request.readiness,request.movementRestricted,
-                verifiedPerSetLoading=backoff)
+                verifiedPerSetLoading=backoff,policyVersion=request.policyVersion,
+                targetRirByOrdinal=chosen.map {it.targetRir})
         }.getOrNull()
         if(proposed==null)
             return denied(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
@@ -166,28 +182,32 @@ object KotlinAdaptiveSetPrescriptionDomain {
             return denied(AdaptiveSetPrescriptionRefusal.HISTORY_NOT_COMPARABLE,
                 "The recorded individualized target count or range differs from the approved plan.")
 
-        val earnedTargets=proposed.candidateRepTargets
-        var kind=AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
+        val estimatedTargets=proposed.candidateRepTargets
+        val legacy=request.policyVersion==AdaptiveRepPolicyVersion.LEGACY_SINGLE_SET_V1
+        var kind=if(legacy)AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP
+            else AdaptiveRepDecisionKind.TARGET_RIR_ALIGNED_REPS
         val targets=if(earlierTargets!=null && (
-            earnedTargets==null || earnedTargets==earlierTargets ||
+            estimatedTargets==null || estimatedTargets==earlierTargets || (legacy && (
                 earlierTargets.indices.any {checkNotNull(observed[it].actualReps)<earlierTargets[it]} ||
-                earnedTargets.indices.any {earnedTargets[it]<earlierTargets[it]} ||
-                earnedTargets.indices.count {earnedTargets[it]>earlierTargets[it]}!=1)) {
+                estimatedTargets.indices.any {estimatedTargets[it]<earlierTargets[it]} ||
+                estimatedTargets.indices.count {estimatedTargets[it]>earlierTargets[it]}!=1)))) {
             // A hold is a useful concrete prescription, not a reason to
             // discard already accepted exact targets. These reasons arise
             // only AFTER complete work, rep-floor, effort, readiness and
             // physical-loading checks. Every other refusal still wins.
             if(proposed.reason !in setOf(
                     FatigueRepReviewReason.ONE_SET_REP_INCREASE_FOR_REVIEW,
+                    FatigueRepReviewReason.TARGET_RIR_ALIGNED_REPS_FOR_REVIEW,
                     FatigueRepReviewReason.NO_DEMONSTRATED_EFFORT_HEADROOM,
                     FatigueRepReviewReason.ALREADY_AT_REP_CEILING))
                 return denied(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
                     "Recovery, effort or completed-set evidence does not support repeating these targets.")
-            kind=AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS
+            kind=if(legacy)AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS
+                else AdaptiveRepDecisionKind.REPEAT_TARGET_RIR_ALIGNED_REPS
             earlierTargets
-        } else earnedTargets ?:return denied(
+        } else estimatedTargets ?:return denied(
             AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
-            "No demonstrated single-set rep increase. Keep the approved targets.")
+            "No supported change at the intended RIR. Keep the approved targets.")
         if(targets.size!=chosen.size ||
             targets.any { it !in history.targetReps.minimum..history.targetReps.maximum } ||
             (!backoff &&
@@ -207,7 +227,7 @@ object KotlinAdaptiveSetPrescriptionDomain {
         if(targetByKey.size!=chosen.size)
             return denied(AdaptiveSetPrescriptionRefusal.CANDIDATE_REAUDIT_FAILED,
                 "Set IDs are ambiguous; preserve the original prescription.")
-        val changed=if(kind==AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP)
+        val changed=if(!kind.isRepeat)
             checkNotNull(proposed.proposedOrdinal)
         else checkNotNull(earlierTargets).indices.firstOrNull {
             checkNotNull(observed[it].actualReps)<earlierTargets[it]
@@ -239,7 +259,8 @@ object KotlinAdaptiveSetPrescriptionDomain {
             history.workoutId,request.historyRevision,history.exerciseId,
             chosen[changed].setKey,
             Collections.unmodifiableList(checkNotNull(proposed.observedReps)),
-            Collections.unmodifiableList(targets),kind,proposed.assumedGoalRirSetCount
+            Collections.unmodifiableList(targets),kind,proposed.assumedGoalRirSetCount,
+            proposed.forecastLimitations
         )
     }
 }

@@ -1,3 +1,19 @@
+# Current coaching correction — 2026-11-07
+
+The athlete did not request a one-set/one-rep cap. That assistant-imposed rule
+and its superiority claim are withdrawn. New rep reviews estimate each set
+at its intended RIR and allow several sets/reps to change, including reductions
+when recorded effort was too high. This is a transparent starting estimate,
+not a validated individualized fatigue model. Missing context and uncertainty
+are exposed in the native preview. Old accepted receipts replay v1 without
+changing issued workouts or history. See the
+[science and evaluation contract](SCIENCE_BASED_COACHING_CONTRACT.md) and
+[corrected comparison record](ENGINE_SUPERIORITY_ACCEPTANCE.md).
+
+The older dated implementation notes below describe historical stages. Their
+single-set restrictions are compatibility history, not current requirements
+or evidence that the new engine is better.
+
 # Pursuit Iron — independent Kotlin training engine
 
 ## Accepted starting weights reach native logging — 2026-11-07

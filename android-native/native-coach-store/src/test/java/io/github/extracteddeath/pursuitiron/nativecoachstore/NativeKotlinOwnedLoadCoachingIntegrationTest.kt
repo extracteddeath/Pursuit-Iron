@@ -808,7 +808,10 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
     @Test fun newLoadApprovalDiscardsOldRepConsentButPreservesFrozenIssuedHistory() {
         enrolled()
         complete(1,1)
-        val original=complete(2,1).first
+        complete(2,1)
+        // Compare the original FINISHED journal, not the pre-Finish logger state.
+        val original=(NativeKotlinWorkoutCoordinator(journals,approvals,fence)
+            .open("owner-1","workout-2") as NativeJournalFileResult.Durable).journal
         val approved=checkNotNull(approvals.currentOwnedApproval("owner-1"))
         val personalGrant=approved.grant.copy(
             workoutId="workout-personal",grantId="grant-personal")

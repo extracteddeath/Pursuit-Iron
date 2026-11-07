@@ -50,14 +50,23 @@ permission revocation, protected week exceptions, duplicate ownership and
 explicit coaching-off reset. Prepared schemas 7 (ordinary calibration) and 8
 (ordinary authored reset) retain reads of schemas 1–6.
 
-**Next continuity gate:** only this selected first-week workout receives the
-calibration. Later authored weeks do not inherit it automatically. Connect that
-actual issued baseline to later same-slot reviews with explicit permission and
-whole-cycle continuity checks; cover all subsequent workouts in multiweek
-simulations. Activated/source/split changes, complete backup/restore, directory
-fsync/power-loss recovery and physical-device acceptance remain separate gates.
-The new checksum detects accidental corruption; it is not cryptographic owner
-authentication. Native integration tests are not paired or device certification.
+**Same-block continuity gate:** an accepted first-week adjustment still
+applies only to that exact workout. A later same-slot session now has a separate
+lower-only repeat proposal based on the immediately preceding completed
+same-weekday issued snapshot and corrected history. No higher load is earned
+by this repeat. Matching source, split, block, phase, recipe, exercise variant,
+physical inventory, effort provenance, readiness and restrictions are checked.
+Ambiguous duplicate prior-day completions refuse review. Only fresh explicit
+LOADS + WEEK_OVERRIDES acceptance after a full-cycle audit can prepare and issue
+a revised later-week workout. Native persistence tests exercise weeks 4–6,
+process restart and a late RIR-0 correction revoking a staged receipt.
+
+**Still open:** production acknowledgment of a higher authored load when a
+lower repeat is suggested but not accepted; evidence-backed earned re-increase;
+activated source/split mapping, complete backup/restore, directory fsync/
+power-loss recovery and device acceptance. The checksum detects accidental
+corruption, not cryptographic owner authentication; native file tests do not
+constitute paired or device certification.
 
 ## Previous-block work and conservative starting weights
 

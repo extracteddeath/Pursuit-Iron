@@ -87,6 +87,10 @@ object CustomSameBlockLoadContinuityDomain {
         if(sameDay.any{it.snapshot.absoluteWeek>=next.absoluteWeek})
             return result(CustomSameBlockLoadStatus.TARGET_ALREADY_TRAINED,
                 "This weekday is already completed in the target or a later week.")
+        if(sameDay.count{it.snapshot.absoluteWeek==next.absoluteWeek-1}>1)
+            return result(CustomSameBlockLoadStatus.INVALID_HISTORY,
+                "Multiple completed workouts occupy the previous scheduled day; " +
+                    "no single issued baseline may be selected.")
         val prior=sameDay.lastOrNull()
             ?:return result(CustomSameBlockLoadStatus.NO_IMMEDIATELY_PREVIOUS_DAY,
                 "There is no immediately previous completed same-weekday workout.")

@@ -108,6 +108,20 @@ class CustomSameBlockLoadContinuityDomainTest {
             review(history=listOf(completed(snapshot(3,listOf(25,30))))).status)
     }
 
+    @Test fun duplicatePreviousWorkoutCannotBeCherryPickedButOtherWeekdaysAreIndependent() {
+        val upper=completed(order=1)
+        val duplicate=completed(order=2).let{session->
+            session.copy(evidence=session.evidence.copy(workoutId="other-same-day"))
+        }
+        assertEquals(CustomSameBlockLoadStatus.INVALID_HISTORY,
+            review(history=listOf(upper,duplicate)).status)
+
+        val push=completed(snapshot(2,listOf(25,30),day=2),order=2)
+        val independent=review(history=listOf(upper,push))
+        assertEquals(CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT,independent.status)
+        assertEquals("workout-2-0",independent.previousWorkoutId)
+    }
+
     @Test fun changedDaySourceAndPrescriptionCannotBorrowThePriorLoad() {
         assertEquals(CustomSameBlockLoadStatus.NO_IMMEDIATELY_PREVIOUS_DAY,
             review(next=snapshot(3,listOf(40,45),day=2)).status)

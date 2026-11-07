@@ -185,10 +185,24 @@ through actual logging and Finish, preserving null actual RIR. Local native
 persistence tests: 405 passed. Existing pure engine rules are unchanged.
 
 This closes the first-workout acceptance/issuance gap below, not the entire
-continuity milestone. Next: subsequent same-slot workouts must review the new
-issued baseline without an unearned jump back to the old authored weight.
-Multiweek carry, activated/source/split transitions, paired transition-quality
-measurement, backup/power-loss and physical-device verification remain open.
+continuity milestone. **Multiweek same-slot carry is now connected:** the
+reviewer compares the immediately previous completed same-weekday issued
+snapshot and corrected actuals, requires matching source, block, phase,
+purpose, slot and recipe, and proves each proposed lower weight is physically
+buildable. Existing LOADS + WEEK_OVERRIDES permission, per-workout acceptance,
+full prospective cycle audit and exact immutable issuance are reused.
+Native-file fixtures demonstrate a 25 -> 20 lb week-4 acceptance, separately
+approved 20 lb repeats through weeks 5–6, cold restarts and actual Finish.
+A corrected RIR 0 on the most recent completion invalidates even a prepared
+future receipt; duplicate previous same-day completions cannot be cherry-picked.
+Original goal RIR assumption stays calculation-only; no actual effort is forged.
+
+**Remaining:** no automatic rewrite of later authored workouts; production
+acknowledgment before intentionally reverting to a higher authored target,
+an earned return-to-higher-weight policy, activated/source/split transitions,
+paired-quality measurement, backup and power-loss tests, and real-device
+acceptance are still required. The new continuation does not prove that
+Kotlin is a superior complete coach.
 
 **G3 changed-recipe review — 2026-11-07:** `CustomBlockTransitionLoadDomain`
 can build a conservative first-week phase/recipe calibration from the last

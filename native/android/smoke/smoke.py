@@ -123,7 +123,13 @@ def wizard(name, cycle=False, shots=False):
         if find(r"^\|Build this (program|cycle)$", timeout=1):
             if not find(r"BEST FIT OF \d+", timeout=40):
                 FAILS.append("ranked splits never showed a best fit")
-            time.sleep(1.5)
+            t0 = time.time()
+            while find(r"SCORING", timeout=1) and time.time() - t0 < 120:
+                time.sleep(2)
+            print(f"ranked scoring took ~{time.time() - t0:.0f}s more")
+            if find(r"SCORING", timeout=1):
+                FAILS.append("ranked splits still scoring after 2 min")
+            time.sleep(1.0)
             if shots:
                 shot("wizard-ranked")
                 if scroll_to(r"SPLITS, RANKED", tries=4, step=500):
@@ -1184,11 +1190,11 @@ if tap(r"Edit program", "editor"):
             FAILS.append("editor more menu missing Why this lift")
         tap(r"^More options for ")
     # Day setup sits under the lifts, folded: it opens to the day focus
-    if seek(r"^Day setup"):
-        tap(r"^Day setup", "editor-day-setup")
+    if seek(r"(^|\|)Day setup"):
+        tap(r"(^|\|)Day setup", "editor-day-setup")
         if not seek(r"DAY FOCUS"):
             FAILS.append("day setup does not open to the day focus")
-        tap(r"^Day setup", required=False) if find(r"^Day setup", timeout=1) else None
+        tap(r"(^|\|)Day setup", required=False) if find(r"(^|\|)Day setup", timeout=1) else None
     else:
         FAILS.append("editor has no day setup")
     if seek(r"Add an exercise") and tap(r"Add an exercise"):

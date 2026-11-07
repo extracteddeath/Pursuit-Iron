@@ -20,7 +20,7 @@ import java.math.BigDecimal
  */
 internal object NativeKotlinApprovalCodec {
     private const val MAGIC=0x50494131 // PIA1
-    private const val VERSION=4
+    private const val VERSION=5
     const val MAX_BYTES=512_000
 
     private fun DataOutputStream.string(value:String)=writeUTF(value)
@@ -258,12 +258,21 @@ internal object NativeKotlinApprovalCodec {
         val differences=proof.newRepTargets.zip(proof.observedReps)
             .mapIndexedNotNull {i,(next,was)->
                 require(was in 1..100 && next in 1..100 &&
-                    next in working[i].reps.minimum..working[i].reps.maximum &&
-                    (next==was || next==was+1))
+                    next in working[i].reps.minimum..working[i].reps.maximum)
+                if(proof.decisionKind==AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP)
+                    require(next==was || next==was+1)
                 if(next!=was)i else null
             }
-        require(differences.size==1 &&
-            working[differences.single()].setKey==proof.changedSetKey)
+        when(proof.decisionKind) {
+            AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP ->
+                require(differences.size==1 &&
+                    working[differences.single()].setKey==proof.changedSetKey)
+            AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS -> {
+                // Repeated goals may equal observed reps OR exceed several
+                // missed exact goals. The owner-fenced history re-derivation
+                // must prove these are exactly the previously issued targets.
+            }
+        }
         require(working.all {it.load is DraftSetLoad.Verified})
     }
 
@@ -300,6 +309,8 @@ internal object NativeKotlinApprovalCodec {
                     items(proof.observedReps){writeInt(it)}
                     items(proof.newRepTargets){writeInt(it)}
                     writeEnum(proof.reviewedReadiness)
+                    // v5 distinguishes an earned rep from unchanged accepted goals.
+                    writeEnum(proof.decisionKind)
                 }
             }
         }
@@ -327,7 +338,9 @@ internal object NativeKotlinApprovalCodec {
                         NativeKotlinAcceptedRepTargets(
                             readUTF(),readLong(),readUTF(),readUTF(),
                             items(32){readInt()},items(32){readInt()},
-                            readEnum<CoachReadiness>())
+                            readEnum<CoachReadiness>(),
+                            if(version>=5)readEnum<AdaptiveRepDecisionKind>()
+                                else AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP)
                     } else null
                     if(available()!=0)throw IOException("trailing approval bytes")
                     NativeKotlinWorkoutApproval(owner,athlete,approved,current,

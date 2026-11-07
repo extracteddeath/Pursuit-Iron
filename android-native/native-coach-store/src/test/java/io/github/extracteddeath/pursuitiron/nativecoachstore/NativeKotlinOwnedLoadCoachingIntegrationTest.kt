@@ -497,8 +497,15 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
             "db-press",displayed.approvalRevision,review.historyRevision,
             "workout-5",candidate.historicalWorkoutId,candidate.editedSetKey,
             candidate.observedReps,candidate.newRepTargets,
-            "workout-6","grant-6","storage-6",true)
+            "workout-6","grant-6","storage-6",true,candidate.decisionKind)
+        assertEquals(NativeKotlinRepAcceptanceResult.Rejected(
+            NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED),
+            acceptRep(intent.copy(expectedDecisionKind=
+                AdaptiveRepDecisionKind.EARNED_ONE_MORE_REP)))
         assertTrue(acceptRep(intent) is NativeKotlinRepAcceptanceResult.Committed)
+        assertEquals(AdaptiveRepDecisionKind.REPEAT_PREVIOUSLY_ISSUED_TARGETS,
+            checkNotNull(approvals.currentOwnedApproval("owner-1"))
+                .acceptedRepTargets?.decisionKind)
 
         val coldJournals=KotlinNativeJournalFileStore(root)
         val coldApprovals=NativeKotlinApprovalFileAuthority(root,fence,identity)

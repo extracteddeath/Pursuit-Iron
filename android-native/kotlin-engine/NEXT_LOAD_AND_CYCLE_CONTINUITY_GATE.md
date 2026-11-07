@@ -2,6 +2,26 @@
 
 **Isolated branch only. No live app or JavaScript engine replacement.**
 
+## Previous-block work and conservative starting weights
+
+The native custom-day review now includes the evidence-only
+`CustomBlockBaselineContinuityDomain` plus `CustomBlockStartingLoadDomain`.
+The Future Week Compose screen shows the last verified same-weekday sets and
+their original reported effort, then separately explains whether repeating
+the existing per-set authored loads is supported. It never calls that repeat
+an earned load increase and does not create a new approval or edit a cycle.
+The full request is recomputed under the existing native owner fence.
+
+Only an identical recipe, source, split, phase and purpose may receive the
+repeat recommendation. Missing RIR uses the original goal only for calculation;
+near failure, missing both effort sources, low readiness, restrictions, failed
+or missing latest work and unavailable physical stock refuse it. Changed phase
+or purpose can expose factual reference without converting it into a load.
+The current activation flow changes source revision, so it remains blocked
+pending a proven source-equivalence contract. Tests distinguish this real native
+limitation from the headless same-source repeat capability. Different starting
+weights and their acceptance/issuance remain separate unfinished work.
+
 ## Evidence-driven next-program load review
 
 `CoachNextProgramLoadReviewDomain` now connects the existing conservative

@@ -46,6 +46,8 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     var readiness by remember {mutableStateOf(CoachReadiness.NORMAL)}
     var restricted by rememberSaveable {mutableStateOf(false)}
     var session by remember {mutableStateOf<CustomWorkoutDaySnapshot?>(null)}
+    var coaching by remember {mutableStateOf<NativeCustomNextCoachResult.Reviewed?>(null)}
+    var coachingGeneration by remember {mutableLongStateOf(0)}
     var offer by remember {mutableStateOf<NativeFutureWeekLoadOptionResult.Ready?>(null)}
     var consentPreview by remember {mutableStateOf<NativeFutureWeekConsentPreview.Ready?>(null)}
     var accepted by remember {mutableStateOf<NativeFutureWeekLoadConsentReceipt?>(null)}
@@ -60,12 +62,14 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     var assistance by remember {mutableStateOf<CoachAssistancePolicy?>(null)}
 
     fun invalidate() {
-        session=null;slotId="";offer=null;consentPreview=null;accepted=null
+        coachingGeneration++
+        session=null;slotId="";coaching=null;offer=null;consentPreview=null;accepted=null
         handoff=null;prepared=null;issued=null;confirmAcceptance=false
         confirmIssue=false;notice=null
     }
     fun clearOffer() {
-        offer=null;consentPreview=null;accepted=null;handoff=null
+        coachingGeneration++
+        coaching=null;offer=null;consentPreview=null;accepted=null;handoff=null
         prepared=null;issued=null;confirmAcceptance=false;confirmIssue=false
         notice=null
     }
@@ -105,6 +109,10 @@ internal fun NativeKotlinFutureWeekCoachScreen(
     LaunchedEffect(activation?.cycleId,activation?.blockId,block?.blockId) {
         absoluteWeek=activation?.firstWeek ?: 1
         weekday=block?.days?.firstOrNull()?.weekday ?: 0
+        invalidate()
+    }
+    LaunchedEffect(cycleState.draft?.revision,cycleState.auditSourceRevision,
+        savedInputs,assistance) {
         invalidate()
     }
     val active=activation
@@ -231,6 +239,33 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                     Checkbox(checked=restricted,enabled=!busy,
                         onCheckedChange={restricted=it;clearOffer()})
                     Text("Movement is painful or restricted")
+                }
+                OutlinedButton(enabled=!busy&&slotId.isNotBlank()&&maxStep!=null,
+                    onClick={
+                        val chosen=slotId
+                        val increase=checkNotNull(maxStep)
+                        clearOffer()
+                        val generation=coachingGeneration
+                        busy=true
+                        scope.launch {
+                            val result=withContext(Dispatchers.IO) {
+                                runCatching {
+                                    host.reviewNextActivatedWorkoutProgression(
+                                        absoluteWeek,weekday,chosen,contextInputs,
+                                        readiness,restricted,increase)
+                                }.getOrNull()
+                            }
+                            if(generation==coachingGeneration) {
+                                coaching=result as? NativeCustomNextCoachResult.Reviewed
+                                notice=if(coaching==null)
+                                    "Coaching is unavailable. Reopen your program and check that its review and saved history are current."
+                                else null
+                            }
+                            busy=false
+                        }
+                    }) {Text(if(busy)"Checking saved work…" else "Review this training day")}
+                coaching?.let {reviewed->
+                    NativeKotlinCustomDayCoachingSummary(reviewed,absoluteWeek)
                 }
                 Button(enabled=!busy&&slotId.isNotBlank()&&maxStep!=null,
                     onClick={
@@ -455,4 +490,51 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                     Text("Cancel")}
             })
     }
+}
+
+/** Factual previous-block work is deliberately separate from earned changes. */
+@Composable
+private fun NativeKotlinCustomDayCoachingSummary(
+    reviewed:NativeCustomNextCoachResult.Reviewed,absoluteWeek:Int
+) {
+    HorizontalDivider()
+    Text("This day's coaching",style=MaterialTheme.typography.titleMedium)
+    Text(reviewed.review.explanation,style=MaterialTheme.typography.bodyMedium)
+    reviewed.review.nextSetSuggestions.forEachIndexed {index,set->
+        Text("Set ${index+1}: ${set.observedReps} recorded → ${set.proposedNextReps} reps for review",
+            style=MaterialTheme.typography.bodySmall)
+    }
+    val starting=reviewed.blockStartingLoads
+    val baseline=reviewed.priorBlockBaseline
+    if(baseline!=null && baseline.status!=CustomBlockBaselineStatus.NOT_BLOCK_ENTRY) {
+        HorizontalDivider()
+        Text("Previous block · same training day",
+            style=MaterialTheme.typography.titleMedium)
+        if(baseline.priorWorkingSets.isEmpty()) {
+            Text(baseline.explanation,style=MaterialTheme.typography.bodySmall)
+        } else {
+            Text("Last completed workout on this training day",
+                style=MaterialTheme.typography.bodySmall)
+            baseline.priorWorkingSets.forEach {set->
+                val effort=set.actualRir?.let{"$it RIR"} ?: "RIR unreported"
+                Text("Set ${set.ordinal}: ${set.priorLoad.stripTrailingZeros().toPlainString()} ${set.loadUnit.name.lowercase()} × ${set.performedReps} · $effort",
+                    style=MaterialTheme.typography.bodyMedium)
+            }
+            Text("These are saved results from the prior block. They do not earn a new-block increase.",
+                style=MaterialTheme.typography.bodySmall)
+        }
+        starting?.let {review->
+            Text("Week $absoluteWeek starting weights",
+                style=MaterialTheme.typography.titleMedium)
+            Text(review.explanation,style=MaterialTheme.typography.bodySmall)
+            review.startingSets.forEach {set->
+                val goal=set.goalRir?.let{" · goal $it RIR"} ?: ""
+                Text("Set ${set.ordinal}: keep ${set.load.stripTrailingZeros().toPlainString()} ${set.unit.name.lowercase()} · ${set.reps.minimum}–${set.reps.maximum} reps$goal",
+                    style=MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+    Text("Review only. Open the exact workout before starting.",
+        color=MaterialTheme.colorScheme.onSurfaceVariant,
+        style=MaterialTheme.typography.bodySmall)
 }

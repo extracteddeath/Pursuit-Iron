@@ -519,6 +519,131 @@ class CustomNextWorkoutCoachingDomainTest {
             baseline(sessions=listOf(completed(1,3),moved)).status)
     }
 
+    private fun starting(
+        next:CustomWorkoutDaySnapshot=blockEntry(),
+        sessions:List<CustomCoachingHistoricalSession> = listOf(completed(1,4)),
+        readiness:CoachReadiness=CoachReadiness.NORMAL,
+        restricted:Boolean=false,physical:VerifiedLoadStock?=stock()
+    )=CustomBlockStartingLoadDomain.review(
+        CustomBlockBaselineRequest(next,"main",sessions,physical),
+        readiness,restricted)
+
+    @Test fun newBlockStartingRecommendationKeepsEachSetsOwnApprovedWeight() {
+        val prior=completed(1,4,issued=listOf(200,215))
+        val next=blockEntry().copy(slots=blockEntry().slots.map {slot->
+            slot.copy(sets=slot.sets.mapIndexed {index,set->
+                set.copy(prescription=set.prescription.copy(
+                    load=load(if(index==0)200 else 215)))
+            })
+        })
+        val result=starting(next=next,sessions=listOf(prior))
+        assertEquals(CustomBlockStartingLoadStatus.REPEAT_AUTHORED_LOADS,result.status)
+        assertEquals(listOf(n(200),n(215)),result.startingSets.map{it.load})
+        assertEquals(next.slots.single().sets.map{it.setKey},
+            result.startingSets.map{it.setKey})
+        assertEquals(listOf(1,2),result.startingSets.map{it.ordinal})
+        assertTrue(result.startingSets.all{it.reps==band() && it.goalRir==2})
+        assertFalse(result.mayApplyProgression)
+        assertFalse(result.mayChangePrescription)
+        assertFalse(result.mayIssueWorkout)
+        assertFalse(result.mayModifyHistory)
+        assertTrue(runCatching {
+            (result.startingSets as MutableList<CustomBlockStartingSet>).clear()
+        }.isFailure)
+        assertEquals(listOf(n(200),n(215)),prior.evidence.visits.map{it.actual!!.load})
+    }
+
+    @Test fun unreportedEffortUsesOnlyOriginalGoalAndKeepsActualBlank() {
+        val prior=completed(1,4,rirs=listOf(null,2))
+        val result=starting(sessions=listOf(prior))
+        assertEquals(CustomBlockStartingLoadStatus.REPEAT_AUTHORED_LOADS,result.status)
+        assertEquals(1,result.assumedGoalRirSetCount)
+        assertEquals(ProgressionEffortSource.ASSUMED_GOAL,
+            result.startingSets.first().effortSource)
+        assertEquals(ProgressionEffortSource.REPORTED,
+            result.startingSets.last().effortSource)
+        assertNull(result.startingSets.first().actualRir)
+        assertNull(prior.evidence.visits.first().actual!!.actualRir)
+        assertTrue(result.explanation.contains("original goal RIR"))
+    }
+
+    @Test fun realNearFailureOverridesGoalAndBlocksStartingRecommendation() {
+        for(rir in listOf(0,1)) {
+            val result=starting(sessions=listOf(
+                completed(1,4,rirs=listOf(rir,null))))
+            assertEquals(CustomBlockStartingLoadStatus.NEAR_FAILURE_REQUIRES_REVIEW,
+                result.status)
+            assertTrue(result.startingSets.isEmpty())
+        }
+    }
+
+    @Test fun noEffortSourceNeverBecomesAnAssumedStartingWeight() {
+        fun withoutGoals(snapshot:CustomWorkoutDaySnapshot)=snapshot.copy(
+            slots=snapshot.slots.map {slot->slot.copy(sets=slot.sets.map {set->
+                set.copy(prescription=set.prescription.copy(targetRir=null))
+            })})
+        val original=completed(1,4,rirs=listOf(null,null))
+        val prior=original.copy(snapshot=withoutGoals(original.snapshot),
+            evidence=original.evidence.copy(visits=original.evidence.visits.map {
+                it.copy(prescribedRir=null)
+            }))
+        val result=starting(next=withoutGoals(blockEntry()),sessions=listOf(prior))
+        assertEquals(CustomBlockStartingLoadStatus.EFFORT_UNAVAILABLE,result.status)
+        assertEquals(0,result.assumedGoalRirSetCount)
+        assertTrue(result.startingSets.isEmpty())
+        assertTrue(prior.evidence.visits.all{it.actual!!.actualRir==null})
+    }
+
+    @Test fun newBlockRecoveryAndMovementRestrictionTakePrecedence() {
+        assertEquals(CustomBlockStartingLoadStatus.RESTRICTED_OR_LOW_READINESS,
+            starting(readiness=CoachReadiness.LOW).status)
+        assertEquals(CustomBlockStartingLoadStatus.RESTRICTED_OR_LOW_READINESS,
+            starting(readiness=CoachReadiness.STRONG,restricted=true).status)
+        assertEquals(starting().startingSets,
+            starting(readiness=CoachReadiness.STRONG).startingSets)
+    }
+
+    @Test fun phaseAndPurposeReferencesNeverConvertIntoNewStartingWeights() {
+        for(next in listOf(blockEntry().copy(phase=TrainingPhase.STRENGTH),
+            blockEntry().copy(sessionPurpose=ComposerSessionPurpose.STRENGTH_SKILL))) {
+            val result=starting(next=next)
+            assertEquals(CustomBlockStartingLoadStatus.CHANGED_TRAINING_CONTEXT,
+                result.status)
+            assertEquals(2,result.baseline.priorWorkingSets.size)
+            assertTrue(result.startingSets.isEmpty())
+        }
+    }
+
+    @Test fun changedOrFailedLatestWorkCannotBecomeAStartingLoadRecommendation() {
+        val current=blockEntry()
+        val changed=current.copy(slots=current.slots.map {slot->
+            slot.copy(sets=slot.sets.map {set->
+                set.copy(prescription=set.prescription.copy(load=load(205)))
+            })
+        })
+        assertEquals(CustomBlockStartingLoadStatus.BASELINE_UNAVAILABLE,
+            starting(next=changed).status)
+        for(latest in listOf(completed(2,4,failed=setOf(0)),
+            completed(2,4,reps=listOf(4,8)),
+            completed(2,4,exercise="different_machine"))) {
+            val result=starting(sessions=listOf(completed(1,3),latest))
+            assertEquals(CustomBlockStartingLoadStatus.BASELINE_UNAVAILABLE,result.status)
+            assertTrue(result.startingSets.isEmpty())
+        }
+        assertEquals(CustomBlockStartingLoadStatus.BASELINE_UNAVAILABLE,
+            starting(physical=null).status)
+    }
+
+    @Test fun startingWeightsCannotBorrowOtherDaysOrSkipAnUntrainedWeek() {
+        for(sessions in listOf(listOf(completed(1,4,day=2)),
+            listOf(completed(1,3)),
+            listOf(completed(1,4),completed(2,5)))) {
+            val result=starting(sessions=sessions)
+            assertEquals(CustomBlockStartingLoadStatus.BASELINE_UNAVAILABLE,result.status)
+            assertTrue(result.startingSets.isEmpty())
+        }
+    }
+
     @Test fun noBorrowingBetweenWeekdaysOrAfterMissingWeekOrFinishedTarget() {
         val otherDay=completed(1,4,2)
         assertEquals(CustomBlockBaselineStatus.NO_PRIOR_SAME_WEEKDAY,

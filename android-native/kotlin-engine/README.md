@@ -1,5 +1,35 @@
 # Pursuit Iron — independent Kotlin training engine
 
+## Native block-entry history and starting-weight review — 2026-11-07
+
+The isolated Future Week screen now reads the actual owner-fenced custom-day
+coach and displays verified previous-block working sets separately from earned
+progression. Each historical set retains its exact weight, reps and nullable
+actual RIR. Selecting a different day, slot, readiness or policy clears the
+review; a late response cannot reinstall coaching after that selection changes.
+
+`CustomBlockStartingLoadDomain` recomputes the existing complete-history baseline
+checks before offering an unchanged starting point. Only an adjacent, completed,
+same-weekday exposure with the same exercise variant, source, split, phase,
+purpose and complete authored recipe can recommend repeating each set's own
+approved weight. It never raises all sets to the heaviest one. Missing actual
+RIR may use that exact set's original goal for this calculation, with explicit
+provenance; logged effort stays blank. Missing both effort sources, reported
+near failure, low readiness and movement restrictions block a recommendation.
+Changed phase/purpose remains historical reference only. Coaching opt-outs
+are enforced by the native owner before reading a proposal.
+
+This recommendation changes no targets and needs no redundant acceptance
+transaction: it repeats already-authored weights and still requires the normal
+workout review/issuance. A different new-block load, estimated phase conversion,
+earned cross-block increase and new approval are **not implemented here**.
+In particular, current future-block activation increments the source revision;
+the handoff refuses that source change even when the exercise and weight appear
+identical. Native tests exercise that refusal against nine real completed
+workouts and a cold reader. A verified source-equivalence policy is still needed
+before that transition may retain a starting-weight recommendation. No automatic
+write, issued-workout change, APK or production cutover is enabled.
+
 ## Goal RIR when effort is unreported — 2026-11-07
 
 Ordinary progression assumes the **original issued goal RIR for that set**

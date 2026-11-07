@@ -170,6 +170,18 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-05
 
+**G3/G5 block-entry update — 2026-11-07:** the isolated Future Week coach
+now displays actual native previous-block receipts and a conservative
+`CustomBlockStartingLoadDomain` review. Exact same-context recipes can repeat
+their per-set authored loads; phase/purpose changes, failed work, source changes,
+near failure and recovery restrictions do not produce a carried load. Goal-RIR
+assumptions remain calculation-only. The review is read-only and requires no
+additional consent to retain already-authored weights. Real native-file tests
+cover the current source-changing activation refusal, cold reads and the
+coaching off switch. Cross-revision source equivalence and different starting
+loads, authoritative approval/issuance, paired block-transition results and
+physical-device acceptance remain open.
+
 **G3 continuity update — 2026-11-07:** the existing
 `KotlinAdaptiveSetPrescriptionDomain` now materializes an explicit repeat of
 authenticated personalized targets when complete, physically comparable work

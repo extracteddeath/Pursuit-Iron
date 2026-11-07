@@ -1945,6 +1945,58 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         return workoutId
     }
 
+    @Test fun blockEntryCoachingReopensRealPriorHistoryWithoutInventingAStartingLoad() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        val before=f.reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review
+        val result=f.coach.review("owner-1",futureInputs(),4,0,
+            "slot-0",CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(result.toString(),result is NativeCustomNextCoachResult.Reviewed)
+        val reviewed=result as NativeCustomNextCoachResult.Reviewed
+        assertEquals(before.timeline.manifestRevision,reviewed.historyRevision)
+        assertEquals(CustomNextWorkoutCoachingStatus.NO_MATCHING_SESSION,
+            reviewed.review.status)
+        // Activation changes the reviewed athlete/gym source and split.
+        // Same exercise + same physical weight alone cannot prove continuity.
+        assertEquals(CustomBlockBaselineStatus.ATHLETE_OR_GYM_SOURCE_CHANGED,
+            reviewed.priorBlockBaseline?.status)
+        assertEquals(CustomBlockStartingLoadStatus.BASELINE_UNAVAILABLE,
+            reviewed.blockStartingLoads?.status)
+        assertTrue(checkNotNull(reviewed.blockStartingLoads).startingSets.isEmpty())
+        assertEquals(reviewed.priorBlockBaseline,reviewed.blockStartingLoads?.baseline)
+        assertFalse(reviewed.mayIssueWorkout)
+        assertFalse(checkNotNull(reviewed.blockStartingLoads).mayChangePrescription)
+        val after=f.reader.read("owner-1","athlete-1")
+            as NativeKotlinMixedHistoryReadResult.Review
+        assertEquals(before,after)
+        assertTrue(f.issuer.open("owner-1","not-issued")
+            is NativeCustomJournalResult.Rejected)
+        // A fresh reader uses persisted facts, not the previous UI result.
+        val reopened=NativeKotlinCustomNextWorkoutReview(
+            NativeKotlinApprovalRevisionFence(temp.root.toPath()),identity,
+            f.activation,f.signoff,sources,f.reader,f.issuer,f.assistance)
+        assertEquals(reviewed,reopened.review("owner-1",futureInputs(),4,0,
+            "slot-0",CoachReadiness.NORMAL,false,n("5")))
+    }
+
+    @Test fun blockEntryBaselineRespectsCoachingOffAndDoesNotAlterAuthoredWorkout() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        val original=f.activation.previewActivatedWorkout(
+            "owner-1",futureInputs(),4,0)
+        assertTrue(original is CustomWorkoutSnapshotResult.Preview)
+        val current=f.assistance.read("owner-1") as NativeCoachSettingsRead.Current
+        assertTrue(f.assistance.save("owner-1",current.settings.revision,
+            CoachAssistancePolicy.MANUAL) is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeCustomNextCoachResult.Rejected(
+            NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED),
+            f.coach.review("owner-1",futureInputs(),4,0,"slot-0",
+                CoachReadiness.NORMAL,false,n("5")))
+        assertEquals(original,f.activation.previewActivatedWorkout(
+            "owner-1",futureInputs(),4,0))
+    }
+
     @Test fun realCustomFinishToApprovedNextRepToIssuedWorkoutSurvivesRestart() {
         val f=liveFutureCoachFixture()
         finishRealActivatedSession(f,4,12)

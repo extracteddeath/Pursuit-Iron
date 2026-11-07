@@ -26,7 +26,10 @@ data class NativeKotlinCoachLoadAcceptanceIntent(
     val newStorageReceiptId: String,
     val newDayIndex: Int,
     /** The UI must set only on a user-triggered explicit acceptance. */
-    val explicitlyAccepted: Boolean
+    val explicitlyAccepted: Boolean,
+    /** Explicitly permit retiring a prior UNISSUED rep-only prescription.
+     * Never inferred from accepting the separate load recommendation. */
+    val allowSupersedingAcceptedReps: Boolean = false
 )
 
 enum class NativeKotlinCoachAcceptanceRefusal {
@@ -35,6 +38,7 @@ enum class NativeKotlinCoachAcceptanceRefusal {
     HISTORY_CHANGED, NO_VERIFIED_COACHING_CHANGE, PROPOSAL_CHANGED,
     IDENTIFIER_ALREADY_USED, NEW_WORKOUT_UNRESOLVED,
     GYM_SOURCE_UNAVAILABLE, GYM_SOURCE_CHANGED,
+    REP_APPROVAL_SUPERSESSION_NOT_CONFIRMED,
     APPROVAL_STORE_REJECTED, STORAGE_UNAVAILABLE
 }
 

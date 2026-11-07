@@ -2122,6 +2122,92 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertNull(fact.actual!!.actualRir)
     }
 
+    @Test fun acceptedLowerBlockEntryWeightsRepeatThroughLaterWeeksOnlyWithFreshApproval() {
+        val initial=authoredCoachFixture(actualRir=null,phaseTransition=true)
+        calibrationRights()
+        val first=calibrationPreview(initial,"carry-week4")
+            as NativeBlockCalibrationPreview.Ready
+        val firstConsent=calibrationStore(initial)
+        assertEquals(listOf(n("20")),first.receipt.proposedLoads)
+        assertTrue(firstConsent.accept(first.receipt,futureInputs(),true)
+            is NativeBlockCalibrationWrite.Accepted)
+        assertTrue(initial.prepared.prepare("owner-1","carry-week4","cycle-1",4,0,
+            futureInputs(),firstConsent) is NativeCustomPrepareResult.Prepared)
+        assertTrue(initial.issuer.issue("owner-1","carry-week4","cycle-1",4,0,
+            futureInputs(),firstConsent) is NativeCustomJournalResult.Durable)
+        assertTrue(initial.issuer.record("owner-1","carry-week4",
+            CustomWorkoutJournalOperation.Record("carry-set-w4",0,
+                CustomWorkoutVisitKey("cycle-1:w4:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("20"),LoadUnit.LB,5,null)))
+            is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(initial.history,initial.issuer,
+            fence,identity).complete("owner-1","athlete-1","carry-week4",
+                CustomWorkoutJournalOperation.Finish("carry-finish-w4",1))
+            is NativeCustomFinishResult.Committed)
+
+        val cold=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        val coached=cold.coach.reviewAuthored("owner-1","cycle-1",futureInputs(),
+            5,0,"slot-0",CoachReadiness.NORMAL,false,n("5"))
+            as NativeCustomNextCoachResult.Reviewed
+        val suggested=checkNotNull(coached.sameBlockLoadContinuity)
+        assertEquals(CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT,suggested.status)
+        assertEquals("carry-week4",suggested.previousWorkoutId)
+        assertEquals(listOf(n("25")),suggested.sets.map{it.authoredLoad})
+        assertEquals(listOf(n("20")),suggested.sets.map{it.proposedLoad})
+        assertEquals(1,suggested.assumedGoalRirSetCount)
+        assertNull(suggested.sets.single().previousActualRir)
+        assertFalse(suggested.mayIssueWorkout)
+
+        val secondStore=calibrationStore(cold)
+        val second=secondStore.preview("owner-1","carry-week5","cycle-1",
+            futureInputs(),5,0,"slot-0",CoachReadiness.NORMAL,false,n("5"))
+            as NativeBlockCalibrationPreview.Ready
+        assertEquals(6,second.auditedWeeks)
+        assertEquals(listOf(n("20")),second.receipt.proposedLoads)
+        assertEquals(listOf(n("25")),second.receipt.authoredLoads)
+        assertEquals(NativeBlockCalibrationWrite.Rejected(
+            NativeCalibrationRefusal.CONFIRMATION_REQUIRED),
+            secondStore.accept(second.receipt,futureInputs(),false))
+        assertTrue(secondStore.accept(second.receipt,futureInputs(),true)
+            is NativeBlockCalibrationWrite.Accepted)
+        val restarted=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+        val again=calibrationStore(restarted)
+        assertEquals(NativeBlockCalibrationRead.Current(second),
+            again.readCurrent("owner-1","carry-week5","cycle-1",5,0,futureInputs()))
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE),
+            restarted.prepared.prepare("owner-1","carry-week5","cycle-1",5,0,
+                futureInputs()))
+        val prepared=restarted.prepared.prepare("owner-1","carry-week5","cycle-1",
+            5,0,futureInputs(),again) as NativeCustomPrepareResult.Prepared
+        assertEquals(second.projected,prepared.workout.snapshot)
+        val issued=restarted.issuer.issue("owner-1","carry-week5","cycle-1",5,0,
+            futureInputs(),again) as NativeCustomJournalResult.Durable
+        assertEquals(second.projected,issued.issued.journal.snapshot)
+        assertTrue(restarted.issuer.record("owner-1","carry-week5",
+            CustomWorkoutJournalOperation.Record("carry-set-w5",0,
+                CustomWorkoutVisitKey("cycle-1:w5:d0:slot-0:s1",CustomWorkoutVisitPart.MAIN),
+                KotlinJournalSetOutcome.COMPLETED,
+                KotlinPerformedSet(n("20"),LoadUnit.LB,5,null)))
+            is NativeCustomJournalResult.Durable)
+        assertTrue(NativeKotlinCustomHistoryTransaction(restarted.history,restarted.issuer,
+            fence,identity).complete("owner-1","athlete-1","carry-week5",
+                CustomWorkoutJournalOperation.Finish("carry-finish-w5",1))
+            is NativeCustomFinishResult.Committed)
+        val third=authoredCoachFixture(initializeHistory=false,phaseTransition=true)
+            .coach.reviewAuthored("owner-1","cycle-1",futureInputs(),6,0,
+                "slot-0",CoachReadiness.NORMAL,false,n("5"))
+            as NativeCustomNextCoachResult.Reviewed
+        assertEquals(CustomSameBlockLoadStatus.REVIEW_LOWER_REPEAT,
+            third.sameBlockLoadContinuity?.status)
+        assertEquals("carry-week5",third.sameBlockLoadContinuity?.previousWorkoutId)
+        assertEquals(listOf(n("20")),third.sameBlockLoadContinuity?.sets?.map{it.proposedLoad})
+        assertEquals(n("25"),((drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft.blocks.last()
+            .days.first().slots.single().sets.single().load as DraftSetLoad.Verified).value)
+    }
+
     @Test fun changedHistoryBeforeIssueRefusesCalibrationWithoutChangingPreparedTargets() {
         val f=authoredCoachFixture(phaseTransition=true);calibrationRights()
         val offer=calibrationPreview(f) as NativeBlockCalibrationPreview.Ready

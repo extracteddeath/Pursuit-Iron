@@ -357,6 +357,12 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     Text("Preparation not saved: ${pretty(it)}",
                         color=MaterialTheme.colorScheme.error,
                         style=MaterialTheme.typography.bodySmall)
+                    if(it==NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED)
+                        Text("The authored load is higher than the last ISSUED load. " +
+                            "Review and explicitly accept the lower-load repeat before preparation. " +
+                            "A failed previous workout does not earn the heavier weight; " +
+                            "turning progression coaching off is a separate manual preference.",
+                            style=MaterialTheme.typography.bodySmall)
                 }
                 state.preparedWorkout?.let { prepared ->
                     Text("Prepared ID: ${prepared.workoutId}",

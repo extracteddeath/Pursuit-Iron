@@ -316,3 +316,24 @@ reviews pass. The current 33-scenario comparison requires 49 paired proofs.
 Five current headless pairs have actual matched executions; 44 proofs and
 measured improvement in at least three domains remain missing. The five
 existing pairs do not measure this new block-entry workflow.
+
+## Native authored-load reversion guard
+
+Ordinary candidate-host preparation now rechecks EVERY same-day exercise slot against
+the full corrected native ledger under the owner revision fence. If an immediately
+previous same-block, same-source immutable issued working load was LOWER than the
+authored next-week target, preparation of the higher unamended workout is refused
+with `AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED`. This independent detection
+still fires on failed, near-failure, or missing-RIR sessions, where a repeat
+recommendation may itself be unsafe. No blanket return to the authored weight
+is an earned progression. The previously shipped lower-load consent path remains
+available on qualifying evidence. Coaching OFF deliberately uses the untouched
+authored plan; authenticated manual reset of a PREPARED amendment remains a
+separate explicit athlete action. No issued session or source cycle is mutated.
+
+The guard is enforced for the app's candidate host, which always provides
+the native calibration/history reviewer to ordinary preparation. Standalone
+legacy store consumers without that injected reviewer are not certified as
+guarded issuance entry points. Full production cutover must make the guard
+mandatory in every trusted issuer path and implement a direct reviewed
+authored-load-return acknowledgement without toggling coaching OFF.

@@ -2158,6 +2158,14 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(1,suggested.assumedGoalRirSetCount)
         assertNull(suggested.sets.single().previousActualRir)
         assertFalse(suggested.mayIssueWorkout)
+        assertEquals(CustomAuthoredLoadReversionStatus.CONFIRM_HIGHER_AUTHORED_LOAD,
+            coached.authoredLoadReversion?.status)
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED),
+            cold.prepared.prepare("owner-1","unaccepted-higher-week5","cycle-1",5,0,
+                futureInputs(),calibrationStore(cold)))
+        assertEquals(NativeCustomPreparedRead.Missing,
+            cold.prepared.open("owner-1","unaccepted-higher-week5"))
 
         val secondStore=calibrationStore(cold)
         val second=secondStore.preview("owner-1","carry-week5","cycle-1",
@@ -2238,6 +2246,12 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
         assertEquals(CustomSameBlockLoadStatus.NEAR_FAILURE,
             current.sameBlockLoadContinuity?.status)
         assertNull(current.sameBlockLoadContinuity?.proposedWorkout)
+        assertEquals(CustomAuthoredLoadReversionStatus.CONFIRM_HIGHER_AUTHORED_LOAD,
+            current.authoredLoadReversion?.status)
+        assertEquals(NativeCustomPrepareResult.Rejected(
+            NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED),
+            after.prepared.prepare("owner-1","unaccepted-higher-after-correction",
+                "cycle-1",6,0,futureInputs(),calibrationStore(after)))
         val coldConsent=calibrationStore(after)
         assertTrue(coldConsent.readCurrent("owner-1","carry-week6","cycle-1",
             6,0,futureInputs()) is NativeBlockCalibrationRead.Rejected)

@@ -51,6 +51,11 @@ sealed interface NativePendingCalibrationRead {
     data class Rejected(val reason:NativeCalibrationRefusal):NativePendingCalibrationRead
 }
 
+/** Ordinary authored preparation is never allowed to hide a previously issued lower weight. */
+internal enum class NativeAuthoredLoadPreparationGate {
+    CLEAR, LOWER_ISSUED_LOAD_NEEDS_REVIEW, UNVERIFIED_HISTORY
+}
+
 private data class CalibrationLoadChange(
     val setKey:String,val authoredLoad:BigDecimal,val proposedLoad:BigDecimal,
     val unit:LoadUnit,val basis:LoadBasis
@@ -295,6 +300,42 @@ class NativeKotlinBlockCalibrationConsentStore(
         encode(receipt)
         return NativeBlockCalibrationPreview.Ready(receipt,original,projected,audit.weeks.size)
     }
+    /**
+     * Called by ordinary preparation under the same owner OS fence. Evaluate
+     * EVERY slot in the approved day against authenticated corrected history;
+     * a previous failed set is still a previous LOWER issued prescription.
+     * Coaching OFF is an explicit choice to follow the authored plan.
+     */
+    internal fun authoredPreparationGate(key:String,cycle:String,
+        inputs:CustomCoachAuditInputs,next:CustomWorkoutDaySnapshot
+    ):NativeAuthoredLoadPreparationGate {
+        if(owner(key)?.athleteId!=next.stamp.athleteId ||
+            next.stamp.cycleId!=cycle)return NativeAuthoredLoadPreparationGate.UNVERIFIED_HISTORY
+        if(next.weekInBlock<2)return NativeAuthoredLoadPreparationGate.CLEAR
+        var higher=false
+        for(slot in next.slots) {
+            val result=reviewer.reviewAuthored(key,cycle,inputs,next.absoluteWeek,
+                next.weekday,slot.slotId,CoachReadiness.NORMAL,false,BigDecimal.ONE)
+            if(result is NativeCustomNextCoachResult.Rejected &&
+                result.reason==NativeCustomNextCoachRefusal.ASSISTANCE_DISABLED)
+                return NativeAuthoredLoadPreparationGate.CLEAR
+            val reviewed=result as? NativeCustomNextCoachResult.Reviewed
+                ?:return NativeAuthoredLoadPreparationGate.UNVERIFIED_HISTORY
+            if(reviewed.nextWorkout!=next)
+                return NativeAuthoredLoadPreparationGate.UNVERIFIED_HISTORY
+            when(reviewed.authoredLoadReversion?.status) {
+                CustomAuthoredLoadReversionStatus.INVALID_HISTORY,
+                CustomAuthoredLoadReversionStatus.TARGET_ALREADY_TRAINED,
+                null -> return NativeAuthoredLoadPreparationGate.UNVERIFIED_HISTORY
+                CustomAuthoredLoadReversionStatus.CONFIRM_HIGHER_AUTHORED_LOAD ->
+                    higher=true
+                else -> Unit
+            }
+        }
+        return if(higher)NativeAuthoredLoadPreparationGate.LOWER_ISSUED_LOAD_NEEDS_REVIEW
+            else NativeAuthoredLoadPreparationGate.CLEAR
+    }
+
     fun preview(key:String,w:String,cycle:String,inputs:CustomCoachAuditInputs,
         week:Int,day:Int,slot:String,readiness:CoachReadiness,restricted:Boolean,
         increase:BigDecimal):NativeBlockCalibrationPreview =runCatching{

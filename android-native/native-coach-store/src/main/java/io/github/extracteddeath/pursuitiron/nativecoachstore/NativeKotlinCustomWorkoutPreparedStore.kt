@@ -52,7 +52,7 @@ data class NativeCustomPreparedWorkout(
 enum class NativeCustomPrepareRefusal {
     NOT_AUTHORIZED, INVALID_SELECTION, REVIEW_UNAVAILABLE,
     DIFFERENT_WORKOUT_ALREADY_PREPARED, CORRUPT_RECORD,
-    STORAGE_UNAVAILABLE
+    AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED, STORAGE_UNAVAILABLE
 }
 sealed interface NativeCustomPrepareResult {
     data class Prepared(
@@ -646,6 +646,18 @@ class NativeKotlinCustomWorkoutPreparedStore(
                         accepted.receipt.fingerprint!=expectedCalibrationFingerprint)))
                     return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
                         NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                if(accepted==null && !reset && calibration!=null) {
+                    when(calibration.authoredPreparationGate(ownerKey,cycleId,
+                        coachingInputs,pre.session)) {
+                        NativeAuthoredLoadPreparationGate.CLEAR -> Unit
+                        NativeAuthoredLoadPreparationGate.LOWER_ISSUED_LOAD_NEEDS_REVIEW ->
+                            return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                                NativeCustomPrepareRefusal.AUTHORED_LOAD_REVERSION_REVIEW_REQUIRED)
+                        NativeAuthoredLoadPreparationGate.UNVERIFIED_HISTORY ->
+                            return@withOwnerTransaction NativeCustomPrepareResult.Rejected(
+                                NativeCustomPrepareRefusal.REVIEW_UNAVAILABLE)
+                    }
+                }
                 val planned=NativeCustomPreparedWorkout(ownerKey,
                     owner.athleteId,workoutId,pre.receipt.recordRevision,
                     pre.receipt.fingerprintSha256,accepted?.projected ?:pre.session,

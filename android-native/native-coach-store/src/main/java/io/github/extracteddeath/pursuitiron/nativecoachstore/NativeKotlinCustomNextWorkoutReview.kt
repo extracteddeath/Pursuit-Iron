@@ -29,7 +29,9 @@ sealed interface NativeCustomNextCoachResult {
         /** New-recipe calibration; never an earned weight or persisted approval. */
         val transitionStartingLoads:CustomBlockTransitionLoadReview?=null,
         /** A repeat of a LOWER issued same-block load needs a new consent gate. */
-        val sameBlockLoadContinuity:CustomSameBlockLoadReview?=null
+        val sameBlockLoadContinuity:CustomSameBlockLoadReview?=null,
+        /** A heavier authored week needs explicit review even after failed work. */
+        val authoredLoadReversion:CustomAuthoredLoadReversionReview?=null
     ):NativeCustomNextCoachResult {
         /** Display-only: re-review after subsequent Finish/correction. */
         val mayIssueWorkout:Boolean get()=false
@@ -222,10 +224,12 @@ class NativeKotlinCustomNextWorkoutReview(
             val sameBlock=CustomSameBlockLoadContinuityDomain.review(
                 CustomBlockBaselineRequest(next,slotId,completions,verifiedStock),
                 preference.coachingReadiness(readiness),movementRestricted)
+            val reversion=CustomAuthoredLoadReversionDomain.review(
+                CustomBlockBaselineRequest(next,slotId,completions,verifiedStock))
             NativeCustomNextCoachResult.Reviewed(
                 full.timeline.manifestRevision,consentRevision,
                 validated,currentSettings?.revision ?:0,verifiedStock,
-                starting.baseline,starting,next,slotId,transition,sameBlock)
+                starting.baseline,starting,next,slotId,transition,sameBlock,reversion)
         }}.getOrElse{reject(NativeCustomNextCoachRefusal.STORAGE_UNAVAILABLE)}
     }
 }

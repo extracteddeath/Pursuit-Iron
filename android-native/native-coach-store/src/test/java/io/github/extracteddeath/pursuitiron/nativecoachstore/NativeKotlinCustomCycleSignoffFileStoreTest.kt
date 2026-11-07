@@ -2085,6 +2085,122 @@ class NativeKotlinCustomCycleSignoffFileStoreTest {
 
 
 
+    /**
+     * Unlike a caller-authored AdaptiveCycleOption, this candidate comes
+     * from actual native issued/completed/replayed workout history.
+     */
+    private fun futureWeekLoadOption(f:LiveFutureCoachFixture)=
+        NativeKotlinCustomFutureWeekLoadOptionReview(
+            fence,identity,f.coach,f.activation,drafts,sources,
+            permissionStore,f.assistance,f.reader,
+            NativeKotlinCustomOutstandingWorkoutInventory(
+                f.prepared,f.issuer))
+
+    private fun permitNextLoadAndWeekOverrides() {
+        val current=(permissionStore.read("owner-1","cycle-1")
+            as NativeAdaptivePermissionRead.Found).receipt
+        val saved=permissionStore.confirm("owner-1","cycle-1",
+            current.revision,current.allowedKinds+setOf(
+                CustomCycleChangeKind.WEEK_OVERRIDES,
+                CustomCycleChangeKind.LOADS),true)
+        assertEquals(NativeAdaptivePermissionWrite.Committed(
+            current.revision+1),saved)
+    }
+
+    @Test fun realCustomCompletionEarnsReviewedSingleFutureWeekOptionOnly() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        val before=(drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft
+        val missing=futureWeekLoadOption(f).review("owner-1",futureInputs(),
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+        assertEquals(NativeFutureWeekLoadOptionResult.Rejected(
+            NativeFutureWeekLoadRefusal.PERMISSION_REQUIRED),missing)
+        permitNextLoadAndWeekOverrides()
+        val reviewed=futureWeekLoadOption(f).review("owner-1",futureInputs(),
+            6,1,"slot-1",CoachReadiness.NORMAL,false,n("5"))
+        assertTrue(reviewed.toString(),reviewed is NativeFutureWeekLoadOptionResult.Ready)
+        val ready=reviewed as NativeFutureWeekLoadOptionResult.Ready
+        assertEquals(n("20"),ready.previousLoad)
+        assertEquals(n("25"),ready.candidateLoad)
+        assertEquals(listOf("real-activated-week4","real-activated-week5"),
+            ready.comparedWorkoutIds)
+        assertEquals(6,ready.affectedAbsoluteWeek)
+        assertEquals(1,ready.affectedWeekday)
+        assertEquals("slot-1",ready.affectedSlotId)
+        assertEquals(3L,ready.draftRevision)
+        val proposed=ready.option.proposedCycle
+        assertEquals(4L,proposed.revision)
+        assertEquals(before.blocks,proposed.blocks)
+        assertEquals(1,proposed.weekOverrides["build"]!!.size)
+        val override=proposed.weekOverrides.getValue("build").single()
+        assertEquals(3,override.weekInBlock)
+        assertEquals(1,override.weekday)
+        assertEquals("slot-1",override.slotId)
+        assertEquals(n("25"),
+            (override.sets.single().load as DraftSetLoad.Verified).value)
+        assertEquals(before, (drafts.read("owner-1","cycle-1")
+            as NativeCustomDraftReadResult.Found).draft)
+        assertEquals(reviewed,futureWeekLoadOption(f).review(
+            "owner-1",futureInputs(),6,1,"slot-1",
+            CoachReadiness.NORMAL,false,n("5")))
+        assertFalse(ready.mayApplyAutomatically)
+        assertFalse(ready.mayIssueWorkout)
+        assertFalse(ready.mayEditHistory)
+    }
+
+    @Test fun nativeWeekLoadReviewHonorsManualAndNoFatigueCoaching() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        permitNextLoadAndWeekOverrides()
+        val opts=futureWeekLoadOption(f)
+        assertTrue(f.assistance.save("owner-1",0,
+            CoachAssistancePolicy.MANUAL) is NativeCoachSettingsWrite.Saved)
+        assertEquals(NativeFutureWeekLoadOptionResult.Rejected(
+            NativeFutureWeekLoadRefusal.ASSISTANCE_DISABLED),
+            opts.review("owner-1",futureInputs(),6,1,"slot-1",
+                CoachReadiness.NORMAL,false,n("5")))
+        assertTrue(f.assistance.save("owner-1",1,
+            CoachAssistancePolicy.PROGRESSION_ONLY)
+            is NativeCoachSettingsWrite.Saved)
+        val straightforward=opts.review("owner-1",futureInputs(),
+            6,1,"slot-1",CoachReadiness.LOW,false,n("5"))
+        assertTrue(straightforward.toString(),
+            straightforward is NativeFutureWeekLoadOptionResult.Ready)
+        assertEquals(NativeFutureWeekLoadOptionResult.Rejected(
+            NativeFutureWeekLoadRefusal.NOT_EARNED),
+            opts.review("owner-1",futureInputs(),6,1,"slot-1",
+                CoachReadiness.LOW,true,n("5")))
+        active=NativeKotlinOwnerIdentity("other-owner","athlete-1")
+        assertEquals(NativeFutureWeekLoadOptionResult.Rejected(
+            NativeFutureWeekLoadRefusal.NOT_AUTHORIZED),
+            opts.review("owner-1",futureInputs(),6,1,"slot-1",
+                CoachReadiness.NORMAL,false,n("5")))
+    }
+
+    @Test fun nativeFutureOptionCannotChangePreparedOrCompletedWeek() {
+        weightedFixture=true
+        val f=liveFutureCoachFixture()
+        finishRealActivatedSession(f,4,15)
+        finishRealActivatedSession(f,5,15)
+        permitNextLoadAndWeekOverrides()
+        val prepared=f.prepared.prepareActivated("owner-1","already-prepared",
+            "cycle-1",6,1,futureInputs(),f.signoff,f.activation)
+        assertTrue(prepared.toString(),prepared is NativeCustomPrepareResult.Prepared)
+        assertEquals(NativeFutureWeekLoadOptionResult.Rejected(
+            NativeFutureWeekLoadRefusal.WORKOUT_ALREADY_PREPARED_OR_ISSUED),
+            futureWeekLoadOption(f).review("owner-1",futureInputs(),
+                6,1,"slot-1",CoachReadiness.NORMAL,false,n("5")))
+        assertEquals(NativeFutureWeekLoadOptionResult.Rejected(
+            NativeFutureWeekLoadRefusal.NOT_EARNED),
+            futureWeekLoadOption(f).review("owner-1",futureInputs(),
+                6,1,"slot-1",CoachReadiness.NORMAL,true,n("5")))
+    }
+
     @Test fun verifiedDumbbellProgressionNeedsFullHistoryAndExplicitLoadApproval() {
         weightedFixture=true
         val f=liveFutureCoachFixture()

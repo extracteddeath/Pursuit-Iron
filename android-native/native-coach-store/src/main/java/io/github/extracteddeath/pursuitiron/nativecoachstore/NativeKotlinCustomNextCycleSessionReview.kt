@@ -50,23 +50,36 @@ internal object NativeCustomNextCycleSlotDomain {
             it.weekday !in 0..6 || it.completed&&!it.issued} ||
             facts.map{it.absoluteWeek to it.weekday}.distinct().size!=facts.size)
             return refuse("Training history contains an older revision or ambiguous repeated session. Choose a day manually.")
-        val byDay=facts.associateBy{it.absoluteWeek to it.weekday}
+        val schedule=linkedMapOf<Pair<Int,Int>,String>()
         var week=0
         for(block in cycle.blocks)repeat(block.weeks) {
             week++
-            for(day in block.days.sortedBy{it.weekday}) {
-                val fact=byDay[week to day.weekday]
-                when {
-                    fact==null ->return NativeCustomNextCycleSlot.Next(
-                        week,day.weekday,day.label)
-                    fact.completed ->continue
-                    fact.issued ->return NativeCustomNextCycleSlot.ResumeIssued(
-                        fact.workoutId,week,day.weekday,day.label)
-                    else ->return NativeCustomNextCycleSlot.Prepared(
-                        fact.workoutId,week,day.weekday,day.label)
-                }
-            }
+            for(day in block.days.sortedBy{it.weekday})
+                schedule[week to day.weekday]=day.label
         }
+        val byDay=facts.associateBy{it.absoluteWeek to it.weekday}
+        if(byDay.keys.any{it !in schedule})
+            return refuse("A previously prepared workout is no longer in this saved training calendar. Review the changed program.")
+        // Existing issued work outranks a new session even when someone
+        // trained out of order. Prepared-only sessions come next; never
+        // create a duplicate while a cold-recoverable preparation exists.
+        val outstanding=facts.filter{!it.completed}.sortedWith(
+            compareByDescending<NativeCustomCycleSessionFact>{it.issued}
+                .thenBy{it.absoluteWeek}.thenBy{it.weekday})
+            .firstOrNull()
+        if(outstanding!=null) {
+            val label=checkNotNull(schedule[
+                outstanding.absoluteWeek to outstanding.weekday])
+            return if(outstanding.issued)
+                NativeCustomNextCycleSlot.ResumeIssued(
+                    outstanding.workoutId,outstanding.absoluteWeek,
+                    outstanding.weekday,label)
+            else NativeCustomNextCycleSlot.Prepared(
+                outstanding.workoutId,outstanding.absoluteWeek,
+                outstanding.weekday,label)
+        }
+        for((slot,label) in schedule)if(slot !in byDay)
+            return NativeCustomNextCycleSlot.Next(slot.first,slot.second,label)
         return NativeCustomNextCycleSlot.CycleComplete
     }
 }

@@ -92,4 +92,40 @@ class CoachFirstProgramDraftConversionDomainTest {
                 candidate,source.setup.copy(reviewed=null)))
     }
 
+    @Test fun savedFirstProgramPreservesEveryPlannedLoadRepTargetAndWeekday() {
+        val candidate=reviewed()
+        val source=GeneratedAdaptiveBlockFixture.generation()
+        val response=CoachFirstProgramDraftConversionDomain.propose(
+            candidate,source.setup,source.catalog,"exact-first-cycle",
+            "First exact cycle",4)
+        val cycle=checkNotNull(response.cycle)
+        val week=checkNotNull(candidate.prescription)
+        val composed=checkNotNull(
+            candidate.generation?.candidate?.catalogReview?.composedRequest)
+        val days=cycle.blocks.single().days
+        assertEquals(composed.days.map {it.calendarDay}.toSet(),
+            days.map {it.weekday}.toSet())
+        val allSlots=days.flatMap {it.slots}
+        assertEquals(allSlots.size,allSlots.map {it.slotId}.distinct().size)
+        for(session in week.sessions) {
+            val weekday=composed.days[session.dayIndex].calendarDay
+            val saved=days.single {it.weekday==weekday}
+            assertEquals(session.exercises.map {it.exerciseId},
+                saved.slots.map {it.exerciseId})
+            for((sourceExercise,slot) in session.exercises.zip(saved.slots)) {
+                assertEquals(sourceExercise.role,slot.role)
+                assertEquals(sourceExercise.sets.size,slot.sets.size)
+                for((planned,actual) in sourceExercise.sets.zip(slot.sets)) {
+                    assertEquals(planned.type,actual.type)
+                    assertEquals(planned.load,actual.load)
+                    assertEquals(planned.targetReps,actual.reps)
+                    assertEquals(planned.targetRir,actual.targetRir)
+                    assertEquals(planned.activeSeconds,actual.activeSeconds)
+                    assertEquals(planned.restSeconds,actual.restSeconds)
+                }
+            }
+        }
+        assertFalse(response.mayIssueWorkout)
+    }
+
 }

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
@@ -59,6 +60,7 @@ internal fun NativeKotlinProfileScreen(
     onBack:()->Unit,
     onPlan:()->Unit,
     onProgress:()->Unit,
+    onProgressLift:(String)->Unit,
     onGym:()->Unit,
     onSettings:()->Unit,
     onAppearance:()->Unit
@@ -67,12 +69,16 @@ internal fun NativeKotlinProfileScreen(
     val prefs=remember(context) {
         context.getSharedPreferences(PROFILE_DISPLAY_PREFS,0)
     }
+    val favoritePreferences=remember(context) {
+        context.getSharedPreferences(NativeStrengthFavorites.PREFS_NAME,0)
+    }
     var setup by remember(host) {mutableStateOf<NativeSavedSetupResume?>(null)}
     var history by remember(host) {
         mutableStateOf<NativeKotlinMixedHistoryReadResult?>(null)
     }
     var refresh by remember{mutableIntStateOf(0)}
     var displayName by remember{mutableStateOf("")}
+    var favoriteLifts by remember{mutableStateOf<List<String>>(emptyList())}
     var draftName by rememberSaveable{mutableStateOf("")}
     var editingName by rememberSaveable{mutableStateOf(false)}
     LaunchedEffect(host,refresh) {
@@ -86,9 +92,13 @@ internal fun NativeKotlinProfileScreen(
     }
     val current=(setup as? NativeSavedSetupResume.Ready)?.setup
     LaunchedEffect(current?.athleteProfileId) {
-        displayName=current?.athleteProfileId?.let {
+        val athleteId=current?.athleteProfileId
+        displayName=athleteId?.let {
             prefs.getString("name:$it","").orEmpty()
         }.orEmpty()
+        favoriteLifts=if(athleteId==null)emptyList() else withContext(Dispatchers.IO) {
+            NativeStrengthFavorites.read(favoritePreferences,athleteId)
+        }
     }
     val timeline=(history as? NativeKotlinMixedHistoryReadResult.Review)?.timeline
     val finished=timeline?.completions?.size?.toString()?:"—"
@@ -180,6 +190,22 @@ internal fun NativeKotlinProfileScreen(
             onClick=onProgress,
             icon={Icon(Icons.Filled.Insights,contentDescription=null)}
         )
+        if(current!=null) {
+            PursuitSectionHeading("Pinned strength charts",
+                "Your saved favorites are shortcuts, not personal records or achievements.")
+            if(favoriteLifts.isEmpty())Text(
+                "No favorite lifts pinned yet. Open Strength Standards and pin the lifts you follow.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            favoriteLifts.forEach { liftId ->
+                PursuitDestinationRow(
+                    title=NativeStrengthFavorites.title(liftId),
+                    description="Open this lift's verified estimated strength trend.",
+                    onClick={onProgressLift(liftId)},
+                    icon={Icon(Icons.Filled.Star,contentDescription=null)}
+                )
+            }
+        }
         PursuitSectionHeading("Training and preferences")
         PursuitDestinationRow(
             title="Full training program",

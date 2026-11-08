@@ -1,8 +1,11 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -84,5 +87,47 @@ internal fun PursuitHistoryStatus(
         Text(title,style=MaterialTheme.typography.titleSmall)
         Text(description,style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Shared responsive reading width for Profile, Settings, Coach and Progress. */
+@Composable
+internal fun PursuitScreenContent(
+    modifier:Modifier=Modifier,
+    content:@Composable ColumnScope.()->Unit
+) {
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        horizontalAlignment=Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().widthIn(max=920.dp)
+            .padding(horizontal=PursuitSpace.md,vertical=PursuitSpace.lg),
+            verticalArrangement=Arrangement.spacedBy(PursuitSpace.lg),
+            content=content)
+    }
+}
+
+/** A clear one-tap navigation item with a generous touch target. */
+@Composable
+internal fun PursuitDestinationRow(
+    title:String,description:String,onClick:()->Unit,
+    icon:@Composable ()->Unit
+) {
+    Surface(
+        onClick=onClick,
+        modifier=Modifier.fillMaxWidth().heightIn(min=64.dp),
+        shape=MaterialTheme.shapes.large,
+        color=MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        ListItem(
+            headlineContent={Text(title,style=MaterialTheme.typography.titleMedium)},
+            supportingContent={Text(description,
+                style=MaterialTheme.typography.bodySmall)},
+            leadingContent=icon,
+            trailingContent={
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription=null)
+            },
+            colors=ListItemDefaults.colors(
+                containerColor=MaterialTheme.colorScheme.surfaceContainerLow)
+        )
     }
 }

@@ -17,7 +17,9 @@ enum class NativeHistoryEnrollmentRefusal {
     JOURNAL_INVENTORY_INVALID, CORRECTION_INVENTORY_INVALID,
     INCOMPLETE_OR_DUPLICATE_CHRONOLOGY, ORPHANED_CORRECTION,
     INVALID_WORKOUT_OR_CORRECTION, INDEX_REJECTED,
-    EXISTING_MANIFEST_CONFLICT, STORAGE_UNAVAILABLE
+    EXISTING_MANIFEST_CONFLICT, STORAGE_UNAVAILABLE,
+    SEPARATE_HISTORY_NOT_CONFIRMED, SEPARATE_NATIVE_OWNER_UNVERIFIED,
+    EXISTING_NATIVE_WORKOUT_REQUIRES_MIGRATION, CUSTOM_INVENTORY_UNVERIFIED
 }
 
 sealed interface NativeHistoryEnrollmentResult {
@@ -61,7 +63,8 @@ class NativeKotlinHistoryEnrollmentCoordinator(
         athlete: String,
         chronologicalFinishedWorkoutIds: List<String>,
         authenticateOwner: (String, String) -> Boolean,
-        certifyNoUnmigratedLegacyHistory: (String, String) -> Boolean
+        certifyNoUnmigratedLegacyHistory: (String, String) -> Boolean,
+        requireEmptyNativeInventory:Boolean=false
     ): NativeHistoryEnrollmentResult {
         if (!id.matches(owner) || !id.matches(athlete))
             return NativeHistoryEnrollmentResult.Rejected(
@@ -74,6 +77,75 @@ class NativeKotlinHistoryEnrollmentCoordinator(
         }.getOrElse {
             NativeHistoryEnrollmentResult.Rejected(
                 NativeHistoryEnrollmentRefusal.STORAGE_UNAVAILABLE)
+        }
+    }
+
+
+    /**
+     * First-class, **independent** local training history, NOT a legacy
+     * migration or a declaration that this person never trained before.
+     *
+     * Only an explicitly opted-in, freshly minted device-local Kotlin owner
+     * may use it. The host separately validates the immutable local-owner
+     * identity and reviewed starter source; this method checks the COMPLETE
+     * native custom census and all composer/correction inventory while the
+     * SAME owner transaction is held. Any existing native workout makes the
+     * independent empty-history path unavailable. Other web/app records are
+     * never read, modified or claimed to be imported.
+     */
+    fun enrollSeparateLocalHistory(
+        owner:String,
+        athlete:String,
+        explicitSeparateHistoryConsent:Boolean,
+        authenticateOwner:(String,String)->Boolean,
+        verifyIndependentLocalOwner:(String,String)->Boolean,
+        customInventory:NativeKotlinCustomOutstandingWorkoutInventory
+    ):NativeHistoryEnrollmentResult {
+        fun no(reason:NativeHistoryEnrollmentRefusal)=
+            NativeHistoryEnrollmentResult.Rejected(reason)
+        if(!id.matches(owner) || !id.matches(athlete))
+            return no(NativeHistoryEnrollmentRefusal.INVALID_SCOPE)
+        if(!explicitSeparateHistoryConsent)
+            return no(NativeHistoryEnrollmentRefusal.SEPARATE_HISTORY_NOT_CONFIRMED)
+        return runCatching {
+            ownerFence.withOwnerTransaction(owner) {
+                if(!runCatching{authenticateOwner(owner,athlete)}.getOrDefault(false))
+                    return@withOwnerTransaction no(
+                        NativeHistoryEnrollmentRefusal.NOT_AUTHORIZED)
+                if(!runCatching{
+                        verifyIndependentLocalOwner(owner,athlete)
+                    }.getOrDefault(false))
+                    return@withOwnerTransaction no(
+                        NativeHistoryEnrollmentRefusal.SEPARATE_NATIVE_OWNER_UNVERIFIED)
+                // The inventory enumerates both prepared and issued custom
+                // sessions and reconciles them. An "empty UI" is no evidence.
+                val custom=customInventory.inspect(owner,athlete,emptySet())
+                if(custom !is NativeCustomInventoryReview.Reviewed)
+                    return@withOwnerTransaction no(
+                        NativeHistoryEnrollmentRefusal.CUSTOM_INVENTORY_UNVERIFIED)
+                if(custom.sessions.isNotEmpty())
+                    return@withOwnerTransaction no(
+                        NativeHistoryEnrollmentRefusal.EXISTING_NATIVE_WORKOUT_REQUIRES_MIGRATION)
+                val previous=historyStore.open(owner,athlete)
+                if(previous is NativeHistoryLedgerResult.Durable &&
+                    (!previous.ledger.readyForHistoryReads ||
+                        previous.ledger.completions.isNotEmpty()))
+                    return@withOwnerTransaction no(
+                        NativeHistoryEnrollmentRefusal.EXISTING_MANIFEST_CONFLICT)
+                if(previous is NativeHistoryLedgerResult.Rejected &&
+                    previous.reason!=NativeHistoryLedgerRefusal.NOT_ENROLLED)
+                    return@withOwnerTransaction no(
+                        NativeHistoryEnrollmentRefusal.EXISTING_MANIFEST_CONFLICT)
+                // Legacy data is NOT certified absent for the HUMAN.
+                // This is a new, separate native history for this local owner
+                // and requires zero native journal or correction records.
+                enrollFenced(owner,athlete,emptyList(),
+                    authenticateOwner, {o,a->
+                        verifyIndependentLocalOwner(o,a)
+                    },requireEmptyNativeInventory=true)
+            }
+        }.getOrElse {
+            no(NativeHistoryEnrollmentRefusal.STORAGE_UNAVAILABLE)
         }
     }
 
@@ -112,11 +184,17 @@ class NativeKotlinHistoryEnrollmentCoordinator(
         if (scanned !is NativeKotlinJournalInventoryResult.Verified)
             return denied(NativeHistoryEnrollmentRefusal.JOURNAL_INVENTORY_INVALID)
         val journals = scanned.journals
+        if(requireEmptyNativeInventory && journals.isNotEmpty())
+            return denied(
+                NativeHistoryEnrollmentRefusal.EXISTING_NATIVE_WORKOUT_REQUIRES_MIGRATION)
         val finished = journals.filter { it.finishedByEventId != null }
         val savedScan = correctionStore.inventoryOwner(owner)
         if (savedScan !is NativeSavedCorrectionInventoryResult.Verified)
             return denied(NativeHistoryEnrollmentRefusal.CORRECTION_INVENTORY_INVALID)
         val correctionIds = savedScan.workoutIds
+        if(requireEmptyNativeInventory && correctionIds.isNotEmpty())
+            return denied(
+                NativeHistoryEnrollmentRefusal.EXISTING_NATIVE_WORKOUT_REQUIRES_MIGRATION)
         if (correctionIds.any { corrected ->
                 finished.none { it.snapshot.workoutId == corrected }
             })

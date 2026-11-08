@@ -1,6 +1,6 @@
 name: Pursuit Iron Kotlin Lab trial — Android emulator smoke
 
-# Exercise ONLY the source-verified startup-corrected APK from run 42496653330.
+# Exercise ONLY the source-verified guided-setup APK from run 42511496443.
 # No new signing keys, AAB release or production app changes.
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
       - name: Download already-built disposable APK and receipt
         uses: actions/download-artifact@v4
         with:
-          run-id: 42496653330
+          run-id: 42511496443
           github-token: ${{ github.token }}
           name: pursuit-iron-kotlin-lab-disposable
           path: trial
@@ -38,8 +38,8 @@ jobs:
           set -euo pipefail
           receipt="$(find trial -name disposable-trial-receipt.txt -print -quit)"
           test -n "$receipt"
-          grep -Fx 'sourceCommit=1f2276c3f04c43ade653195d017ed68bd38277f8' "$receipt"
-          grep -Fx 'applicationId=io.github.extracteddeath.pursuitiron.kotlinlabtrial8' "$receipt"
+          grep -Fx 'sourceCommit=3949ab1137de1880d4b33e31cd1e4e76711b70ad' "$receipt"
+          grep -Fx 'applicationId=io.github.extracteddeath.pursuitiron.kotlinlabtrial9' "$receipt"
           grep -Fx 'deviceAcceptance=NOT_TESTED' "$receipt"
           apk="$(find trial -name '*.apk' -print -quit)"
           test -s "$apk"
@@ -50,7 +50,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Install, launch, background, and cold-restart trial APK
+      - name: Run startup and real setup-to-History UI journey
         uses: ReactiveCircus/android-emulator-runner@v2.38.0
         with:
           api-level: 35
@@ -59,12 +59,14 @@ jobs:
           profile: pixel_7
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash android-native/verification/kotlin-lab-emulator-smoke.sh
+          script: |
+            bash android-native/verification/kotlin-lab-emulator-smoke.sh
+            python3 android-native/verification/kotlin-lab-onboarding-journey.py --package io.github.extracteddeath.pursuitiron.kotlinlabtrial9
       - name: Upload actual emulator screen, UI tree, and diagnostic result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: kotlin-lab-trial8-emulator-smoke
+          name: kotlin-lab-trial9-emulator-journey
           path: smoke-out
           if-no-files-found: warn
           retention-days: 14

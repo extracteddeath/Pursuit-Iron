@@ -19,6 +19,19 @@ cases. There is **no established improvement domain**. Overall verdict:
 credit for archived evidence; it must be remeasured. An archival pass cannot
 certify newly changed code.
 
+### Current-tree refresh — 2026-11-08
+
+The five next-exposure load-review pairs were re-executed in verified CI run
+42494367984 at commit `75b8e602ce4af8655c51fb64e448bf96bfa57c67`.
+The artifact bytes, actual outputs, independent oracle, engine source tree
+and runner hashes were checked before refreshing the progression ledger.
+All five pairs pass on both engines: **parity, not demonstrated superiority**.
+The APK-only and display-name follow-ups retain that exact engine source
+tree. The other three archived functional pairs remain stale/withdrawn and
+receive no current quality credit. Current coverage is **5 of 49 required
+pairs**, with zero established improvement domains; device and personalized
+prediction evidence remain open.
+
 The old rep outputs, including web 15/14/13 versus Kotlin 14/14/12 for actual
 14/13/12 at RIR 3/3/2, are behavior observations. The first-set 15 should be
 evaluated against the intended RIR, not rejected because another set advanced.

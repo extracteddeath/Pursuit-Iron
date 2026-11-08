@@ -119,12 +119,15 @@ test('recorded measurements require the exact artifact bytes and bound engine re
     assert.throws(()=>verifyRecordedProgressionEvidence(evidence),
       /native engine source changed|uncommitted native policies|comparison runner\/fixture changed/);
   for(const mutate of [
-    e=>e.measurements[0].artifactDigest='0'.repeat(64),
-    e=>e.measurements[0].outcome='fail',
-    e=>e.measurements[0].inputDigest='0'.repeat(64),
-    e=>e.measurements[0].commit='0'.repeat(40),
-    e=>e.measurements.push({...e.measurements[0]})]) {
-    const altered=structuredClone(evidence);mutate(altered);
+    record=>record.artifactDigest='0'.repeat(64),
+    record=>record.outcome='fail',
+    record=>record.inputDigest='0'.repeat(64),
+    record=>record.commit='0'.repeat(40),
+    (record,e)=>e.measurements.push({...record})]) {
+    const altered=structuredClone(evidence);
+    const record=altered.measurements.find(r=>r.proof==='headless'&&caseIds.includes(r.caseId));
+    assert.ok(record,'Select the progression tranche regardless of ledger ordering');
+    mutate(record,altered);
     assert.throws(()=>verifyRecordedProgressionEvidence(altered,
       {allowStaleProvenance:true}));
   }

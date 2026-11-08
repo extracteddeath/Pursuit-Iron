@@ -124,10 +124,14 @@ object CustomNextWorkoutCoachingDomain {
             explanation+ProgressionEffortDomain.assumptionNote(assumedForReview),
             assumedForReview,request.repForecastPolicy,
             if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2)
-                setOf(RepForecastLimitation.SINGLE_EXPOSURE,
-                    RepForecastLimitation.RIR_ESTIMATE_UNCALIBRATED,
-                    RepForecastLimitation.ACTUAL_REST_AND_PRIOR_EXERCISE_WORK_UNAVAILABLE,
-                    RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED)
+                buildSet {
+                    add(RepForecastLimitation.SINGLE_EXPOSURE)
+                    add(RepForecastLimitation.RIR_ESTIMATE_UNCALIBRATED)
+                    add(RepForecastLimitation.ACTUAL_REST_AND_PRIOR_EXERCISE_WORK_UNAVAILABLE)
+                    add(RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED)
+                    if(reps.dropLast(1).any {it.changed})
+                        add(RepForecastLimitation.EARLIER_SET_WORK_CHANGED)
+                }
             else emptySet())
         if(request.maximumAuthorizedIncrease<=zero ||
             request.maximumAuthorizedIncrease>maximum ||
@@ -378,7 +382,9 @@ object CustomNextWorkoutCoachingDomain {
                 "Two complete same-day workouts earned a verified load option. Athlete review is required.")
             increased->result(CustomNextWorkoutCoachingStatus.BUILD_REPS,
                 ids,latest.evidence.workoutId,suggestions,observedLoad,
-                explanation="Increase eligible sets by at most one rep; keep each set's own load.")
+                explanation=if(request.repForecastPolicy==CustomRepForecastPolicy.TARGET_RIR_V2)
+                    "Review each set's reps at its intended RIR while keeping its own load. Earlier harder sets, rest and longer-term fatigue can change later capacity."
+                else "Increase eligible sets by at most one rep; keep each set's own load.")
             else->result(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
                 ids,latest.evidence.workoutId,suggestions,observedLoad,
                 explanation="Maintain the current approved load and rep range.")

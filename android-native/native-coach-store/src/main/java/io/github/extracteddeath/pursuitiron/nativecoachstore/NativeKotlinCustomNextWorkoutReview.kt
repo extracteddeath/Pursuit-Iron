@@ -69,26 +69,33 @@ class NativeKotlinCustomNextWorkoutReview(
         ownerKey:String,inputs:CustomCoachAuditInputs,
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         readiness:CoachReadiness,movementRestricted:Boolean,
-        maximumAuthorizedIncrease:BigDecimal
+        maximumAuthorizedIncrease:BigDecimal,
+        /** V1 remains default for signed custom receipts. V2 requires an
+         * explicit caller and separately versioned saved approval. */
+        repForecastPolicy:CustomRepForecastPolicy=
+            CustomRepForecastPolicy.LEGACY_STEP_V1
     ):NativeCustomNextCoachResult =reviewSelected(ownerKey,null,inputs,
         nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
-        maximumAuthorizedIncrease)
+        maximumAuthorizedIncrease,repForecastPolicy)
 
     /** Ordinary signed custom cycles need no future-schedule activation. */
     fun reviewAuthored(
         ownerKey:String,cycleId:String,inputs:CustomCoachAuditInputs,
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         readiness:CoachReadiness,movementRestricted:Boolean,
-        maximumAuthorizedIncrease:BigDecimal
+        maximumAuthorizedIncrease:BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy=
+            CustomRepForecastPolicy.LEGACY_STEP_V1
     ):NativeCustomNextCoachResult =reviewSelected(ownerKey,cycleId,inputs,
         nextAbsoluteWeek,nextWeekday,slotId,readiness,movementRestricted,
-        maximumAuthorizedIncrease)
+        maximumAuthorizedIncrease,repForecastPolicy)
 
     private fun reviewSelected(
         ownerKey:String,authoredCycleId:String?,inputs:CustomCoachAuditInputs,
         nextAbsoluteWeek:Int,nextWeekday:Int,slotId:String,
         readiness:CoachReadiness,movementRestricted:Boolean,
-        maximumAuthorizedIncrease:BigDecimal
+        maximumAuthorizedIncrease:BigDecimal,
+        repForecastPolicy:CustomRepForecastPolicy
     ):NativeCustomNextCoachResult {
         fun reject(reason:NativeCustomNextCoachRefusal)=
             NativeCustomNextCoachResult.Rejected(reason)
@@ -211,7 +218,8 @@ class NativeKotlinCustomNextWorkoutReview(
                 CustomNextWorkoutCoachingRequest(
                     next,slotId,completions,verifiedStock,
                     maximumAuthorizedIncrease,
-                    preference.coachingReadiness(readiness),movementRestricted)
+                    preference.coachingReadiness(readiness),movementRestricted,
+                    repForecastPolicy)
             )}.getOrNull()
                 ?:return@withOwnerTransaction reject(
                     NativeCustomNextCoachRefusal.HISTORY_CHANGED_OR_UNVERIFIED)

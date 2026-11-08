@@ -673,6 +673,9 @@ class CustomNextWorkoutCoachingDomainTest {
         assertEquals(listOf(8,8),result.nextSetSuggestions.map{it.proposedNextReps})
         assertTrue(result.forecastLimitations.contains(
             RepForecastLimitation.CHRONIC_FATIGUE_NOT_ESTIMATED))
+        assertTrue(result.forecastLimitations.contains(
+            RepForecastLimitation.EARLIER_SET_WORK_CHANGED))
+        assertTrue(result.explanation.contains("Earlier harder sets"))
         assertNull(result.loadReviewCandidate)
         val amendment=CustomNextRepAmendmentDomain.propose(
             snapshot(5),"main",result) as CustomNextRepAmendmentResult.Proposed

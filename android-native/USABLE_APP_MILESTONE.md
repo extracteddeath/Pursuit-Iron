@@ -53,12 +53,21 @@ the requirement through both paths and adds a regression that refuses an empty
 history enrollment when an unfinished native Composer workout already exists.
 No history format or training calculation changes are needed for this repair.
 
-The next source milestone is the actual generated-program journey across
-multiple exercises and complete working/warmup sets, including cold reopen,
-correction and next-session issuance. Current nine-session traversal uses a
-deliberately small custom fixture to verify the real storage/selection owners;
-it does not establish whole-body program quality, individual fatigue accuracy,
-legacy-history migration or phone usability.
+The generated-program source milestone is now exercised by
+`NativeKotlinGeneratedProgramJourneyTest`: a four-day Upper/Lower program from
+the real starter catalog completes every warmup and working set, corrections,
+Finish retries, cold reads and selection of week two. The test first exposed
+and now reproduces the previous starter-policy bug: zero ceilings on
+indirect-only muscles prohibited ordinary compound lifts. New v2 plans allow
+that declared exposure while preserving direct-coverage gaps. V1 saved plans
+retain exact replay. Ordinary prepared workouts can now reopen through a fresh
+exact-snapshot/consent preflight. See
+[the executed program and limits](GENERATED_PROGRAM_JOURNEY_CHECKPOINT.md).
+
+Full warmup-aware composition, the broader program-quality matrix,
+individual fatigue accuracy, legacy-history migration and Android interaction
+acceptance remain open. A source-tested generated week is not full product
+acceptance or proof of coaching superiority.
 
 ## What counts as progress in updates
 

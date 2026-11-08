@@ -262,7 +262,7 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                             label={Text(prettyFirstProgram(phase.name))})
                     }
                 }
-                Text("Estimated warm-up / setup / exercise transitions per session",
+                Text("General warm-up, setup and transitions per session",
                     style=MaterialTheme.typography.labelLarge)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -273,6 +273,8 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                     }
                 }
                 Text("These are versioned starting assumptions. No personal MEV/MRV, fatigue tolerance, or achievable weight is inferred from experience alone.",
+                    style=MaterialTheme.typography.bodySmall)
+                Text("Specific lighter sets appear separately in the workout and its time estimate when your gym has a suitable weight.",
                     style=MaterialTheme.typography.bodySmall)
             }
             if(athlete!=null) {

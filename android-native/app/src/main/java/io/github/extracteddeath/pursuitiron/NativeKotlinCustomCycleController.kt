@@ -745,9 +745,9 @@ internal class NativeKotlinCustomCycleController(
             prepared.futureWeekApprovalFingerprint==null &&
             !prepared.resetToAuthored &&
             preflight!=null &&
-            preflight.session.stamp==prepared.snapshot.stamp &&
-            preflight.session.absoluteWeek==prepared.snapshot.absoluteWeek &&
-            preflight.session.weekday==prepared.snapshot.weekday &&
+            preflight.session==prepared.snapshot &&
+            preflight.receipt.recordRevision==prepared.consentRevision &&
+            preflight.receipt.fingerprintSha256==prepared.consentFingerprint &&
             prepared.snapshot.stamp.cycleId==draft.cycleId &&
             prepared.snapshot.stamp.cycleRevision==draft.revision &&
             before.coachingAudit?.status==
@@ -797,19 +797,76 @@ internal class NativeKotlinCustomCycleController(
             else "This saved acceptance is no longer current. No targets were prepared or issued.")
     }
 
-    fun resumePreparedCalibration(workoutId:String) = run {
-        val stored=(host.openPreparedCustomWorkout(workoutId) as? NativeCustomPreparedRead.Found)?.workout
-        if(stored==null || stored.snapshot.stamp.cycleId!=current.value.draft?.cycleId ||
-            stored.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE ||
-            stored.calibrationApprovalFingerprint==null&&!stored.resetToAuthored&&
-                stored.authoredReturnFingerprint==null) {
-            current.value=current.value.copy(message="The stored preparation could not be verified.")
+    /**
+     * Reopen a saved custom workout of either normal or calibrated type.
+     * An ordinary preparation needs a new exact consent-bound preflight;
+     * neither branch treats preparation as an issued session.
+     */
+    fun reopenPreparedWorkout(workoutId:String) = run {
+        val before=current.value
+        val draft=before.draft ?:return@run
+        val stored=(host.openPreparedCustomWorkout(workoutId)
+            as? NativeCustomPreparedRead.Found)?.workout
+        if(stored==null || stored.snapshot.stamp.cycleId!=draft.cycleId ||
+            stored.snapshot.stamp.cycleRevision!=draft.revision ||
+            stored.authority!=NativeCustomPreparationAuthority.CUSTOM_CYCLE) {
+            current.value=before.copy(preparedWorkout=null,
+                consentBoundPreview=null,
+                message="The saved preparation does not match this program revision.")
             return@run
         }
-        current.value=current.value.copy(preparedWorkout=stored,calibrationReview=null,authoredReturnReview=null,
-            calibrationReceipt=null,calibrationReset=null,issuedCalibrationId=null,
-            dayCoaching=null,consentBoundPreview=null,authoredPreview=stored.snapshot,
-            message="Stored targets reopened. Review your current full-cycle audit before issuing or resetting.")
+        val special=stored.calibrationApprovalFingerprint!=null ||
+            stored.resetToAuthored || stored.authoredReturnFingerprint!=null
+        if(special) {
+            current.value=before.copy(preparedWorkout=stored,calibrationReview=null,
+                authoredReturnReview=null,calibrationReceipt=null,
+                calibrationReset=null,issuedCalibrationId=null,
+                dayCoaching=null,consentBoundPreview=null,
+                authoredPreview=stored.snapshot,
+                message="Saved adjusted targets reopened. Recheck the current coach policy before issuing.")
+            return@run
+        }
+        val plain=stored.loadApprovalFingerprint==null &&
+            stored.repApprovalFingerprint==null &&
+            stored.futureWeekApprovalFingerprint==null
+        val inputs=auditedInputs
+        if(!plain || inputs==null ||
+            before.coachingAudit?.status!=
+                CustomCoachAuditStatus.READY_FOR_ATHLETE_REVIEW ||
+            before.coachingAudit?.issues?.isNotEmpty()!=false ||
+            (before.signoff as? NativeCustomSignoffRead.Found)?.isCurrent!=true) {
+            current.value=before.copy(preparedWorkout=null,
+                consentBoundPreview=null,
+                message="A current complete review and exact athlete consent are required to reopen normal targets.")
+            return@run
+        }
+        val snap=stored.snapshot
+        val verified=host.previewConsentBoundCustomWorkout(
+            draft.cycleId,snap.absoluteWeek,snap.weekday,inputs)
+        if(verified !is NativeCustomPreflightResult.ReviewedPreview ||
+            verified.session!=snap ||
+            verified.receipt.recordRevision!=stored.consentRevision ||
+            verified.receipt.fingerprintSha256!=stored.consentFingerprint) {
+            current.value=before.copy(preparedWorkout=null,
+                consentBoundPreview=null,
+                message="The saved preparation differs from the current consent-bound workout. Nothing issued.")
+            return@run
+        }
+        val second=host.openPreparedCustomWorkout(workoutId)
+        if(second !is NativeCustomPreparedRead.Found ||
+            second.workout!=stored) {
+            current.value=before.copy(preparedWorkout=null,
+                consentBoundPreview=null,
+                message="The stored preparation changed during recovery. Nothing issued.")
+            return@run
+        }
+        current.value=before.copy(preparedWorkout=stored,
+            calibrationReview=null,authoredReturnReview=null,
+            calibrationReceipt=null,calibrationReset=null,
+            issuedCalibrationId=null,dayCoaching=null,
+            consentBoundPreview=verified,authoredPreview=verified.session,
+            signoff=NativeCustomSignoffRead.Found(verified.receipt,true),
+            message="Original saved targets and athlete consent were independently verified. Review and issue below.")
     }
 
     fun reviewAuthoredLoadReturn() = run {

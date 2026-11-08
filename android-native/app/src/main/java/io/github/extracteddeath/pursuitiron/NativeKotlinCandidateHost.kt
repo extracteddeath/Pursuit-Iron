@@ -1595,7 +1595,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 } ?:return@withOwnerTransaction NativeCustomDraftWriteResult.Rejected(
                     NativeCustomDraftRefusal.INVALID_DRAFT)
                 val seed=NativeFirstProgramSeed(cycleId,title,weeks,
-                    source.revision,CoachFirstProgramStartDomain.POLICY_VERSION,
+                    source.revision,input.policyVersion,
                     input.phase,input.startingLoads,
                     input.selectedBodyweightExerciseIds,input.extraFocuses,
                     input.nonSetSecondsPerDay)
@@ -1645,7 +1645,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                     draft.athleteId!=owner.athleteId ||
                     source.revision!=seed.sourceRevision ||
                     draft.revision!=1L ||
-                    seed.policyVersion!=CoachFirstProgramStartDomain.POLICY_VERSION)
+                    !CoachFirstProgramStartDomain.supportsPolicy(seed.policyVersion))
                     return@withOwnerTransaction NativeRecoveredFirstProgramReview.Rejected(
                         "The saved gym, program revision or generator version changed. Review the program manually.")
                 val replay=runCatching {
@@ -1653,7 +1653,7 @@ internal class NativeKotlinCandidateHost(context:Context) {
                         FirstProgramStartRequest(
                             source.setup,source.catalog,seed.startingLoads,
                             seed.bodyweightExercises,seed.phase,
-                            seed.extraFocuses,seed.nonSetSeconds))
+                            seed.extraFocuses,seed.nonSetSeconds,seed.policyVersion))
                 }.getOrNull()
                 val candidate=replay?.let {
                     CoachFirstProgramDraftConversionDomain.propose(

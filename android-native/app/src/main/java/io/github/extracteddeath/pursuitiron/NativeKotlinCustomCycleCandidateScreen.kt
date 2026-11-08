@@ -321,7 +321,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                     OutlinedButton(
                                         enabled=!busy,
                                         onClick={
-                                            controller.resumePreparedCalibration(
+                                            controller.reopenPreparedWorkout(
                                                 selection.workoutId)
                                         },modifier=Modifier.fillMaxWidth()
                                     ) {Text("Reopen saved preparation")}

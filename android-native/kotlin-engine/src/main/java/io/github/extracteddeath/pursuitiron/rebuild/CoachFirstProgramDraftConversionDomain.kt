@@ -135,7 +135,7 @@ object CoachFirstProgramDraftConversionDomain {
                 CustomBlockPurpose.TRAINING,firstBlockWeeks,
                 CustomSplitIdentity.Named(athlete.split),
                 Collections.unmodifiableList(days))),
-            authorNote="Provisional ${CoachFirstProgramStartDomain.POLICY_VERSION} plan. Review training responses and actual fatigue before advancing."
+            authorNote="Provisional ${policy.policyId} plan. Review training responses and actual fatigue before advancing."
         )
         val available=CustomExerciseAuthoringDomain.picker(setup,curatedCatalog)
             .map{it.availability}

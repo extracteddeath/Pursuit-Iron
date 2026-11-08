@@ -39,9 +39,9 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
             it.futureWeekApprovalFingerprint==null &&
             !it.resetToAuthored &&
             state.consentBoundPreview!=null &&
-            state.consentBoundPreview.session.stamp==it.snapshot.stamp &&
-            state.consentBoundPreview?.session?.absoluteWeek==it.snapshot.absoluteWeek &&
-            state.consentBoundPreview?.session?.weekday==it.snapshot.weekday &&
+            state.consentBoundPreview.session==it.snapshot &&
+            state.consentBoundPreview.receipt.recordRevision==it.consentRevision &&
+            state.consentBoundPreview.receipt.fingerprintSha256==it.consentFingerprint &&
             state.draft?.revision==it.snapshot.stamp.cycleRevision
     }
     val prepared=state.preparedWorkout?.takeIf {
@@ -66,7 +66,7 @@ internal fun NativeKotlinCustomCycleCalibrationPanel(
         if(state.pendingCalibrationAcceptances.isNotEmpty()&&!readyPolicy)
             Text("Run your current full-cycle audit to recheck a saved acceptance.",style=MaterialTheme.typography.bodySmall)
         state.pendingCalibrations.forEach {workout->
-            OutlinedButton(enabled=!state.busy,onClick={controller.resumePreparedCalibration(workout.workoutId)}) {
+            OutlinedButton(enabled=!state.busy,onClick={controller.reopenPreparedWorkout(workout.workoutId)}) {
                 Text("Reopen week ${workout.snapshot.absoluteWeek} · ${workout.snapshot.dayLabel}")
             }
         }

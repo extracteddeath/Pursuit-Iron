@@ -71,10 +71,14 @@ unfinished workouts on entry. Native History supports saved custom-set
 corrections and links back to the program. The original themes are preserved.
 
 The return-to-training continuation verifies a three-week, nine-session custom
-cycle through the actual native storage owners and fresh disk readers,
-including prepared/unfinished priority, week-specific targets and duplicate
-Finish acknowledgments. This small fixture is workflow evidence, not proof of
-program quality or a complete generated-program Android journey.
+cycle through actual native storage owners and fresh disk readers. A newer
+four-day generated-program test now uses the shipped catalog, full warmup and
+working prescriptions, corrections, duplicate Finish acknowledgments and cold
+selection of week two. It exposed a Kotlin starter-policy defect that rejected
+compound lifts by assigning zero ceilings to their indirect muscles; v2 fixes
+that failure and preserves exact v1 replay. This is a demonstrated improvement
+over the prior Kotlin policy, not a measured improvement over the web coach.
+See [the executed program and limits](GENERATED_PROGRAM_JOURNEY_CHECKPOINT.md).
 
 Broader generator coverage, individualized fatigue calibration, legacy history
 migration, custom-policy recovery and complete Android interaction acceptance

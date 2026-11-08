@@ -115,7 +115,15 @@ internal fun NativeKotlinCandidateJourney() {
                     KotlinCandidateDestination.TRAIN ->
                         NativeKotlinCandidateTrainEntry(host,sessionController,
                             selectedCustomWorkoutId,
-                            onOpenCustomWorkout={selectedCustomWorkoutId=it})
+                            onOpenCustomWorkout={selectedCustomWorkoutId=it},
+                            onViewFinishedHistory={
+                                selectedCustomWorkoutId=null
+                                destination=KotlinCandidateDestination.HISTORY
+                            },
+                            onReturnToProgram={
+                                selectedCustomWorkoutId=null
+                                destination=KotlinCandidateDestination.PROGRAM
+                            })
                 }
             }
         }
@@ -134,7 +142,9 @@ private fun NativeKotlinCandidateTrainEntry(
     host: NativeKotlinCandidateHost,
     controller: NativeKotlinSessionController,
     customWorkoutId:String?,
-    onOpenCustomWorkout:(String?)->Unit
+    onOpenCustomWorkout:(String?)->Unit,
+    onViewFinishedHistory:()->Unit,
+    onReturnToProgram:()->Unit
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
     var resumable by remember(host) {
@@ -155,7 +165,9 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     if(customWorkoutId!=null) {
         NativeKotlinCustomJournalScreen(host,customWorkoutId,
-            onClose={onOpenCustomWorkout(null)})
+            onClose={onOpenCustomWorkout(null)},
+            onViewHistory=onViewFinishedHistory,
+            onReturnToProgram=onReturnToProgram)
     } else if(selectedId == null) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {

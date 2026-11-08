@@ -27,7 +27,9 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun NativeKotlinCandidateCoachScreen(
     host: NativeKotlinCandidateHost,
-    onOpenSettings:()->Unit={}
+    preferredExerciseId:String?=null,
+    onOpenSettings:()->Unit={},
+    onOpenTrain:(String)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var exerciseId by rememberSaveable { mutableStateOf("") }
@@ -69,7 +71,7 @@ internal fun NativeKotlinCandidateCoachScreen(
         savedWorkout=null
         notice=null
     }
-    LaunchedEffect(host) {
+    LaunchedEffect(host,preferredExerciseId) {
         choicesLoading=true
         val saved=runCatching {
             withContext(Dispatchers.IO){host.readCoachAssistance()}
@@ -81,8 +83,14 @@ internal fun NativeKotlinCandidateCoachScreen(
             }
         }.getOrDefault(emptyList()) else emptyList()
         exerciseChoices=choices
-        if(exerciseId !in choices) {
-            exerciseId=choices.firstOrNull().orEmpty()
+        // Finished History/workout may suggest only a FOCUS movement. Never
+        // grant access from a passed exercise ID: require the CURRENT owned
+        // program + equipment choices independently verified by the host.
+        val selected=preferredExerciseId?.takeIf{it in choices}
+            ?:exerciseId.takeIf{it in choices}
+            ?:choices.firstOrNull().orEmpty()
+        if(exerciseId!=selected) {
+            exerciseId=selected
             invalidate()
         }
         choicesLoading=false
@@ -126,6 +134,15 @@ internal fun NativeKotlinCandidateCoachScreen(
             Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text("Choose an approved exercise",
                     style=MaterialTheme.typography.titleMedium)
+                if(preferredExerciseId!=null && preferredExerciseId in exerciseChoices) {
+                    Text("From your finished workout: ${preferredExerciseId.replace('_',' ').replace('-',' ')}. Current program and training-day evidence are rechecked for each review.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                } else if(preferredExerciseId!=null && !choicesLoading) {
+                    Text("This earlier movement is not available in your CURRENT approved generated program. Select an eligible exercise below. Custom-cycle next-week reviews remain in My Program.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 when {
                     choicesLoading -> Text("Checking your current native program and gym…")
                     exerciseChoices.isEmpty() ->
@@ -418,6 +435,15 @@ internal fun NativeKotlinCandidateCoachScreen(
         savedWorkout?.let {
             Text("Approved workout: $it",style=MaterialTheme.typography.labelLarge)
         }
+        // Once a NEW immutable approval was durably accepted, make the
+        // ordinary Train entry reachable without copying proposal facts
+        // into the UI or issuing any workout here. Train independently
+        // revalidates the exact approval, owner and native history.
+        val approvedId=repApprovedWorkout ?: savedWorkout
+        if(approvedId!=null)
+            PursuitPrimaryAction("Open approved workout in Train",enabled=!busy) {
+                onOpenTrain(approvedId)
+            }
         Text("Candidate only · no automatic target edits, no JavaScript fallback, no production history cutover.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)

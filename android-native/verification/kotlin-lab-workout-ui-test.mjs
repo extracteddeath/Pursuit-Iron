@@ -73,10 +73,10 @@ assert.ok(timer.includes('var receiptBaselineChecked by remember(workoutId)') &&
 assert.ok(composer.includes('NativeKotlinFinishedComposerHandoff.inspect(stored,history)') &&
   composer.includes('host.reviewVerifiedKotlinHistory()') &&
   composer.includes('View finished workout in History') &&
-  composer.includes('Review next session with Coach') &&
+  composer.includes('onClick={onReviewNext(exerciseId)}') &&
   composer.includes('Recheck committed History') &&
   journey.includes('onViewHistory={') &&
-  journey.includes('onReviewNext={') &&
+  journey.includes('onReviewNext={exerciseId->') &&
   journey.includes('controller.clear()'),
   'Generated Finish navigation requires independently verified committed history, never just the Finish flag');
 console.log('PASS native workout recording and verified Finish-to-History/Coach navigation');

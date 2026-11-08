@@ -64,8 +64,18 @@ for(const required of [
   'current?.manifest?.savedCorrectionRevision!=',
   'kotlinHistoryCorrectionActual('
 ])assert.ok(history.includes(required),'Kotlin History must show source-backed target/actual facts: '+required);
-assert.ok(journey.includes('onOpenCoach={destination=KotlinCandidateDestination.COACH}') &&
-  journey.includes('onReviewNext={') &&
+const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
+assert.ok(journey.includes('onOpenCoach={exerciseId->') &&
+  journey.includes('coachRequestedExerciseId=exerciseId') &&
+  journey.includes('onReviewNext={exerciseId->') &&
+  journey.includes('preferredExerciseId=coachRequestedExerciseId') &&
+  history.includes('onClick={onOpenCoach(exercise)}') &&
   history.includes('Review next workout with Coach'),
-  'Verified finished or corrected History must link to Coach without silently issuing a workout');
+  'History and Finish must carry explicit source-backed exercise focus to Coach');
+assert.ok(coach.includes('preferredExerciseId?.takeIf{it in choices}') &&
+  coach.includes('host.currentVerifiedCoachExerciseChoices()') &&
+  coach.includes('onOpenTrain(approvedId)') &&
+  journey.includes('selectedGeneratedWorkoutId=id') &&
+  journey.includes('if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)'),
+  'Coach focus requires current owner-verified program, and accepted grant must open the exact Train entry');
 console.log('PASS Kotlin Lab navigation, corrected History and explicit History-to-Coach handoff');

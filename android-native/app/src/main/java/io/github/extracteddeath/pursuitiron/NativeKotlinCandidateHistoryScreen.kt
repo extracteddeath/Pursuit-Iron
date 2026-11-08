@@ -1,6 +1,8 @@
 package io.github.extracteddeath.pursuitiron
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -19,7 +21,7 @@ import kotlinx.coroutines.withContext
 internal fun NativeKotlinCandidateHistoryScreen(
     host:NativeKotlinCandidateHost,
     onOpenProgram:()->Unit={},
-    onOpenCoach:()->Unit={}
+    onOpenCoach:(String?)->Unit={}
 ) {
     val scope=rememberCoroutineScope()
     var busy by remember{mutableStateOf(false)}
@@ -57,7 +59,7 @@ internal fun NativeKotlinCandidateHistoryScreen(
                     }
                     if(read.timeline.completions.isNotEmpty())
                         OutlinedButton(
-                            onClick=onOpenCoach,enabled=!busy,
+                            onClick={onOpenCoach(null)},enabled=!busy,
                             modifier=Modifier.fillMaxWidth()) {
                             Text("Review next workout with Coach")
                         }
@@ -93,6 +95,30 @@ internal fun NativeKotlinCandidateHistoryScreen(
                         if(performance.followUpVisits>0)
                             Text("Amplifier follow-ups: ${performance.completedFollowUpVisits} of ${performance.followUpVisits} completed (not counted as main sets)",
                                 style=MaterialTheme.typography.bodySmall)
+                        // Generated exercise selection is only a navigation
+                        // hint. Coach still intersects with the CURRENT
+                        // approved program; custom training stays in its
+                        // separately consented cycle review workflow.
+                        if(entry is NativeKotlinMixedHistoryCompletion.Composer) {
+                            val movements=entry.evidence.exerciseReviews
+                                .filter{it.workingSets.isNotEmpty()}
+                                .map{it.exerciseId}.distinct()
+                            if(movements.isNotEmpty()) {
+                                Text("Review a completed movement",
+                                    style=MaterialTheme.typography.labelLarge)
+                                Row(Modifier.fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                    movements.forEach{exercise->
+                                        OutlinedButton(
+                                            enabled=!busy,
+                                            onClick={onOpenCoach(exercise)}) {
+                                            Text(exercise.replace('_',' ').replace('-',' '))
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         TextButton(onClick={expanded=!expanded}){Text(if(expanded)"Hide sets" else "View targets and actuals")}
                         if(expanded)when(entry) {
                             is NativeKotlinMixedHistoryCompletion.Composer ->entry.evidence.sets.forEach {set->

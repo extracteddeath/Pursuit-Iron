@@ -101,3 +101,15 @@ Include what can actually be opened, generated or completed, what still blocks
 the loop, and the next concrete deliverable. Test counts are supporting evidence.
 Do not call Kotlin better overall until the complete comparison requirements
 are met; identify a narrow demonstrated improvement as a narrow improvement.
+
+**History → Coach → Train continuation — 2026-11-08:** The isolated
+native UI can now route the exact selected generated working movement from
+a verified, correction-aware historical session or verified Finish to Coach.
+The movement is only a navigation hint: current owner-approved program and
+equipment are re-read; stale/foreign movement IDs cannot grant coaching
+authority. When the owner explicitly accepts a reviewed new immutable
+rep/load prescription, Coach offers an exact approved-workout Train handoff;
+Train independently revalidates the approval and history before issuance.
+Unfinished-workout selection and the separate custom-cycle proposal pathway
+retain their own owner checks. The source integration requires full CI and
+separate physical Android acceptance; no existing web history is imported.

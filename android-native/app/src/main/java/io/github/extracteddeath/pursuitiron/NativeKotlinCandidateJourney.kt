@@ -59,6 +59,12 @@ internal fun NativeKotlinCandidateJourney() {
     var selectedCustomWorkoutId by rememberSaveable {
         mutableStateOf<String?>(null)
     }
+    var selectedGeneratedWorkoutId by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    var coachRequestedExerciseId by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
     val savedScreens=rememberSaveableStateHolder()
     var pendingFirstProgramAudit by remember {
         mutableStateOf<Pair<String,CustomCoachAuditInputs>?>(null)
@@ -106,6 +112,8 @@ internal fun NativeKotlinCandidateJourney() {
     var moreExpanded by remember { mutableStateOf(false) }
     fun navigate(to:KotlinCandidateDestination) {
         navigationTouched=true
+        if(to==KotlinCandidateDestination.COACH)
+            coachRequestedExerciseId=null // ordinary tab, not a saved-set handoff
         destination=to
     }
     // Four ordinary destinations stay within a thumb's reach. Setup,
@@ -208,6 +216,7 @@ internal fun NativeKotlinCandidateJourney() {
                     KotlinCandidateDestination.PROGRAM ->
                         NativeKotlinCustomCycleCandidateScreen(cycleController,
                             onOpenIssuedWorkout={id->
+                                selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=id
                                 destination=KotlinCandidateDestination.TRAIN
                             },
@@ -217,11 +226,18 @@ internal fun NativeKotlinCandidateJourney() {
                             onBuildProgram={destination=KotlinCandidateDestination.STARTER})
                     KotlinCandidateDestination.COACH ->
                         NativeKotlinCandidateCoachScreen(host,
-                            onOpenSettings={destination=KotlinCandidateDestination.SETTINGS})
+                            preferredExerciseId=coachRequestedExerciseId,
+                            onOpenSettings={destination=KotlinCandidateDestination.SETTINGS},
+                            onOpenTrain={id->
+                                selectedGeneratedWorkoutId=id
+                                selectedCustomWorkoutId=null
+                                destination=KotlinCandidateDestination.TRAIN
+                            })
                     KotlinCandidateDestination.FUTURE ->
                         NativeKotlinFutureWeekCoachScreen(host,cycleController,
                             onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},
                             onOpenIssuedWorkout={id->
+                                selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=id
                                 destination=KotlinCandidateDestination.TRAIN
                             })
@@ -231,20 +247,31 @@ internal fun NativeKotlinCandidateJourney() {
                     KotlinCandidateDestination.HISTORY ->
                         NativeKotlinCandidateHistoryScreen(host,
                             onOpenProgram={destination=KotlinCandidateDestination.PROGRAM},
-                            onOpenCoach={destination=KotlinCandidateDestination.COACH})
+                            onOpenCoach={exerciseId->
+                                coachRequestedExerciseId=exerciseId
+                                destination=KotlinCandidateDestination.COACH
+                            })
                     KotlinCandidateDestination.TRAIN ->
                         NativeKotlinCandidateTrainEntry(host,sessionController,
-                            selectedCustomWorkoutId,
-                            onOpenCustomWorkout={selectedCustomWorkoutId=it},
+                            selectedCustomWorkoutId,selectedGeneratedWorkoutId,
+                            onOpenCustomWorkout={
+                                selectedGeneratedWorkoutId=null
+                                selectedCustomWorkoutId=it
+                            },
+                            onClearGeneratedWorkout={selectedGeneratedWorkoutId=null},
                             onViewFinishedHistory={
+                                selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
                                 destination=KotlinCandidateDestination.HISTORY
                             },
-                            onReviewNext={
+                            onReviewNext={exerciseId->
+                                selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
+                                coachRequestedExerciseId=exerciseId
                                 destination=KotlinCandidateDestination.COACH
                             },
                             onReturnToProgram={
+                                selectedGeneratedWorkoutId=null
                                 selectedCustomWorkoutId=null
                                 destination=KotlinCandidateDestination.PROGRAM
                             })
@@ -266,9 +293,11 @@ private fun NativeKotlinCandidateTrainEntry(
     host: NativeKotlinCandidateHost,
     controller: NativeKotlinSessionController,
     customWorkoutId:String?,
+    generatedWorkoutId:String?,
     onOpenCustomWorkout:(String?)->Unit,
+    onClearGeneratedWorkout:()->Unit,
     onViewFinishedHistory:()->Unit,
-    onReviewNext:()->Unit,
+    onReviewNext:(String)->Unit,
     onReturnToProgram:()->Unit
 ) {
     var entryId by rememberSaveable { mutableStateOf("") }
@@ -277,6 +306,10 @@ private fun NativeKotlinCandidateTrainEntry(
     }
     var reviewingResume by remember {mutableStateOf(false)}
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(generatedWorkoutId) {
+        if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)
+            selectedId=generatedWorkoutId
+    }
     var searching by remember { mutableStateOf(false) }
     var selectionMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showIdEntry by rememberSaveable {mutableStateOf(false)}
@@ -439,6 +472,7 @@ private fun NativeKotlinCandidateTrainEntry(
                 TextButton(onClick={
                     controller.clear()
                     selectedId=null
+                    onClearGeneratedWorkout()
                 }) { Text("Other workout") }
             }
             Box(Modifier.weight(1f)) {
@@ -450,10 +484,10 @@ private fun NativeKotlinCandidateTrainEntry(
                         selectedId=null
                         onViewFinishedHistory()
                     },
-                    onReviewNext={
+                    onReviewNext={exerciseId->
                         controller.clear()
                         selectedId=null
-                        onReviewNext()
+                        onReviewNext(exerciseId)
                     })
                 }
             }

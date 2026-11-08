@@ -71,7 +71,7 @@ internal fun NativeKotlinWorkoutCandidateScreen(
     workoutId:String,
     host:NativeKotlinCandidateHost,
     onViewHistory:()->Unit={},
-    onReviewNext:()->Unit={}
+    onReviewNext:(String)->Unit={}
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     LaunchedEffect(workoutId) { controller.open(workoutId) }
@@ -288,10 +288,18 @@ internal fun NativeKotlinWorkoutCandidateScreen(
                         style=MaterialTheme.typography.bodySmall)
                     PursuitPrimaryAction("View finished workout in History",
                         enabled=!state.busy){onViewHistory()}
-                    OutlinedButton(
-                        onClick=onReviewNext,enabled=!state.busy,
-                        modifier=Modifier.fillMaxWidth()) {
-                        Text("Review next session with Coach")
+                    Text("Choose a movement to review with Coach. The current approved program determines whether its progression is eligible.",
+                        style=MaterialTheme.typography.bodySmall)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        presentation.exercises.map{it.exerciseId}.distinct()
+                            .forEach{exerciseId->
+                                OutlinedButton(
+                                    onClick={onReviewNext(exerciseId)},
+                                    enabled=!state.busy) {
+                                    Text("Review ${exerciseId.replace('_',' ').replace('-',' ')}")
+                                }
+                            }
                     }
                 }
                 is NativeComposerFinishHandoffResult.Rejected ->

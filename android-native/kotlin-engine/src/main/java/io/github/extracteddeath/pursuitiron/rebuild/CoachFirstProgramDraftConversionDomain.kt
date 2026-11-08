@@ -49,6 +49,7 @@ object CoachFirstProgramDraftConversionDomain {
             return reject(FirstProgramDraftStatus.INCOMPLETE_SOURCE,
                 "The verified athlete, program identity, or starting policy is missing.")
         if(reviewed.status!=FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW ||
+            generated==null ||
             generated.status!=AthleteGenerationStatus.GENERATED_FOR_REVIEW ||
             prescribed==null || composed==null || selected==null ||
             prescribed.status!=PrescriptionDraftStatus.COMPLETE_FOR_REVIEW ||

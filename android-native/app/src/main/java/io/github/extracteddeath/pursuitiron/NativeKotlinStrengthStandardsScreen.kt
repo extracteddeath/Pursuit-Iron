@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -17,6 +18,7 @@ import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -72,7 +74,9 @@ private fun displayedTier(ratio:Double,thresholds:List<Double>):String {
  * Dedicated Progress / Strength Standards screen. Actual performance comes
  * from the FULL owner-verified native mixed-history facts, never from entered
  * targets, unverified backups, manual PR badges or older substituted sessions.
- * Bodyweight and comparison group are display-only ephemeral choices.
+ * Bodyweight and comparison group are display-only choices. Optional
+ * on-device persistence requires an explicit action and is never a workout
+ * observation, athlete-authoring source or coaching input.
  */
 @Composable
 internal fun NativeKotlinStrengthStandardsScreen(
@@ -85,12 +89,59 @@ internal fun NativeKotlinStrengthStandardsScreen(
         mutableStateOf<NativeKotlinMixedHistoryTimeline?>(null)
     }
     var revision by remember{mutableIntStateOf(0)}
+    val context=LocalContext.current.applicationContext
+    // Auto-backup is disabled by the native app manifest. A comparison is
+    // athlete-scoped and saved ONLY by an explicit button; no inferred values.
+    val preferences=remember(context) {
+        context.getSharedPreferences("pursuit-strength-comparison-v1",0)
+    }
+    val scope=rememberCoroutineScope()
+    var profileId by remember(host){mutableStateOf<String?>(null)}
+    var savedComparison by remember(host) {
+        mutableStateOf<Triple<String,String,String>?>(null)
+    }
+    var comparisonNotice by remember{mutableStateOf<String?>(null)}
+    var comparisonBusy by remember{mutableStateOf(false)}
     var bodyweightText by rememberSaveable{mutableStateOf("")}
     var bodyweightUnit by rememberSaveable{mutableStateOf(LoadUnit.LB.name)}
     var comparisonGroup by rememberSaveable{mutableStateOf<String?>(null)}
     var trendExerciseId by rememberSaveable{mutableStateOf("barbell_bench")}
     var historyExerciseId by rememberSaveable{mutableStateOf<String?>(null)}
     val uri=LocalUriHandler.current
+    LaunchedEffect(host) {
+        val verified=withContext(Dispatchers.IO) {
+            (runCatching {host.reviewActiveAthleteSetup()}.getOrNull()
+                as? NativeSavedSetupResume.Ready)?.setup?.athleteProfileId
+        }
+        profileId=verified
+        if(verified!=null) {
+            val prefix="athlete:$verified:"
+            val stored=withContext(Dispatchers.IO) {
+                Triple(
+                    preferences.getString(prefix+"group",null),
+                    preferences.getString(prefix+"bodyweight",null),
+                    preferences.getString(prefix+"unit",null))
+            }
+            val group=stored.first?.takeIf{it=="male"||it=="female"}
+            val weight=stored.second?.takeIf {
+                runCatching{BigDecimal(it)}.getOrNull()?.let { value ->
+                    value>BigDecimal.ZERO && value<=BigDecimal("1000")
+                }==true
+            }
+            val unit=stored.third?.takeIf{saved ->
+                LoadUnit.entries.any{it.name==saved}
+            }
+            if(group!=null && weight!=null && unit!=null) {
+                savedComparison=Triple(group,weight,unit)
+                // Preserve unsaved edits restored by Compose after rotation.
+                if(comparisonGroup==null && bodyweightText.isBlank()) {
+                    comparisonGroup=group
+                    bodyweightText=weight
+                    bodyweightUnit=unit
+                }
+            }
+        }
+    }
     LaunchedEffect(host,revision) {
         result=null
         timeline=null
@@ -180,6 +231,70 @@ internal fun NativeKotlinStrengthStandardsScreen(
                 isError=bodyweightText.isNotEmpty()&&bodyweight==null,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 modifier=Modifier.fillMaxWidth())
+            val chosen=comparisonGroup?.let{ group ->
+                if(bodyweight!=null)Triple(group,bodyweightText,bodyweightUnit)
+                else null
+            }
+            Text(if(chosen!=null && chosen==savedComparison)
+                "Comparison saved privately on this device for your current athlete."
+                else "Comparison settings are not saved until you choose Save.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth(),
+                horizontalArrangement=Arrangement.spacedBy(PursuitSpace.sm)) {
+                Button(onClick={
+                    val owner=checkNotNull(profileId)
+                    val current=checkNotNull(chosen)
+                    comparisonBusy=true
+                    comparisonNotice=null
+                    scope.launch {
+                        val saved=withContext(Dispatchers.IO) {
+                            preferences.edit()
+                                .putString("athlete:$owner:group",current.first)
+                                .putString("athlete:$owner:bodyweight",current.second)
+                                .putString("athlete:$owner:unit",current.third)
+                                .commit()
+                        }
+                        if(saved)savedComparison=current
+                        comparisonNotice=if(saved)"Saved on this device only."
+                            else "Could not save comparison settings."
+                        comparisonBusy=false
+                    }
+                },enabled=profileId!=null && chosen!=null && !comparisonBusy,
+                    modifier=Modifier.weight(1f)) {Text("Save comparison")}
+                OutlinedButton(onClick={
+                    val owner=checkNotNull(profileId)
+                    comparisonBusy=true
+                    comparisonNotice=null
+                    scope.launch {
+                        val cleared=withContext(Dispatchers.IO) {
+                            preferences.edit()
+                                .remove("athlete:$owner:group")
+                                .remove("athlete:$owner:bodyweight")
+                                .remove("athlete:$owner:unit")
+                                .commit()
+                        }
+                        if(cleared) {
+                            savedComparison=null
+                            comparisonGroup=null
+                            bodyweightText=""
+                        }
+                        comparisonNotice=if(cleared)"Saved comparison cleared."
+                            else "Could not clear saved comparison."
+                        comparisonBusy=false
+                    }
+                },enabled=profileId!=null && savedComparison!=null && !comparisonBusy,
+                    modifier=Modifier.weight(1f)) {Text("Clear saved")}
+            }
+            if(profileId==null)Text("Confirm your native athlete setup to save a comparison. You can still compare without saving.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            comparisonNotice?.let {Text(it,
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)}
+            Text("Your comparison is display-only. Saving is optional, local to this installation, and never changes coaching or logged sets.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Changing units converts your entered bodyweight. Saved sets retain their original weight units.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

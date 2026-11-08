@@ -341,9 +341,7 @@ internal class NativeKotlinCustomCycleController(
      * No default dose policy or transition time is supplied, and passing
      * the review NEVER creates an approved workout or a storage grant.
      */
-    fun auditFullCycle(
-        inputs: CustomCoachAuditInputs = CustomCoachAuditInputs()
-    ) = run {
+    private fun auditReviewedSavedCycle(inputs:CustomCoachAuditInputs) {
         pendingWeekEdit=null
         current.value=current.value.copy(weekEditReview=null)
         val requested = current.value.draft ?: return@run
@@ -384,6 +382,24 @@ internal class NativeKotlinCustomCycleController(
             signoff=host.readCustomCycleConsent(disk.draft.cycleId,inputs),
             signoffRefusal=null,
             message="Whole-cycle coach audit: ${result.issues.size} actionable issues across ${result.weeks.size} evaluated weeks. No workout approved.")
+    }
+
+    /** Normal manual/custom audit path. The same checks apply to generated plans. */
+    fun auditFullCycle(
+        inputs:CustomCoachAuditInputs=CustomCoachAuditInputs()
+    )=run {auditReviewedSavedCycle(inputs)}
+
+    /**
+     * Open a newly saved generated program AND re-audit its reviewed policy
+     * in one IO operation. Never trust a transient preview or grant consent;
+     * disk source, draft and revision are checked twice by the audit.
+     */
+    fun openSavedFirstProgramForReview(
+        cycleId:String,inputs:CustomCoachAuditInputs
+    )=run {
+        applyRead(cycleId,host.readCustomCycleDraft(cycleId))
+        if(current.value.draft?.cycleId==cycleId)
+            auditReviewedSavedCycle(inputs)
     }
 
     /**

@@ -42,6 +42,7 @@ jobs:
           node android-native/verification/native-original-theme-parity-test.mjs
           node android-native/verification/no-apk-before-end-to-end-test.mjs
           node android-native/verification/kotlin-lab-navigation-test.mjs
+          node android-native/verification/kotlin-lab-workout-ui-test.mjs
           grep -q 'KotlinEnginePreviewActivity' android-native/app/src/debug/AndroidManifest.xml
           grep -q 'applicationIdSuffix = ".kotlinlab"' android-native/app/build.gradle.kts
       - name: Test native program decisions and durable workout history

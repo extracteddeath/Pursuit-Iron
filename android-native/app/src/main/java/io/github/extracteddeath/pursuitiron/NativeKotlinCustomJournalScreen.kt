@@ -3,8 +3,11 @@ package io.github.extracteddeath.pursuitiron
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -113,9 +116,8 @@ internal fun NativeKotlinCustomJournalScreen(
         Row(Modifier.fillMaxWidth(),
             horizontalArrangement=Arrangement.SpaceBetween,
             verticalAlignment=Alignment.CenterVertically) {
-            Text("CUSTOM WORKOUT · KOTLIN",
-                style=MaterialTheme.typography.labelLarge)
-            TextButton(onClick=onClose){Text("Close")}
+            Text("YOUR WORKOUT",style=MaterialTheme.typography.labelLarge)
+            TextButton(enabled=!busy,onClick=onClose){Text("Minimize")}
         }
         if(loading) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -129,13 +131,40 @@ internal fun NativeKotlinCustomJournalScreen(
                     Button(enabled=!busy,onClick={refresh()}){Text("Retry durable open")}
                 }
             } else {
+                // Keep the next unresolved visit in focus. An amplifier is
+                // required only when its main set was completed; skipped or
+                // failed sets do not produce a phantom follow-up.
+                val nextVisit=current.snapshot.slots.flatMap {slot->
+                    slot.sets.flatMap {set->
+                        val main=CustomWorkoutVisitKey(set.setKey,
+                            CustomWorkoutVisitPart.MAIN)
+                        val recorded=current.effectiveVisits[main]?.operation
+                            as? CustomWorkoutJournalOperation.Record
+                        if(set.prescription.amplifier!=null &&
+                            recorded?.outcome==KotlinJournalSetOutcome.COMPLETED)
+                            listOf(main,CustomWorkoutVisitKey(
+                                set.setKey,CustomWorkoutVisitPart.FOLLOW_UP))
+                        else listOf(main)
+                    }
+                }.firstOrNull {it !in current.effectiveVisits}
+                val mainTotal=current.snapshot.slots.sumOf{it.sets.size}
+                val mainLogged=current.snapshot.slots.sumOf {slot->
+                    slot.sets.count {set->
+                        CustomWorkoutVisitKey(set.setKey,
+                            CustomWorkoutVisitPart.MAIN) in current.effectiveVisits
+                    }
+                }
                 PageHeading("APPROVED · IMMUTABLE TARGETS",
                     current.snapshot.dayLabel,
                     "Week ${current.snapshot.absoluteWeek} · ${current.snapshot.phase.name.replace('_',' ')}")
                 PursuitCard(highlighted=true) {
-                    Text("${current.unresolvedVisitCount} visits left",
+                    Text("${mainLogged} of ${mainTotal} sets recorded",
                         style=MaterialTheme.typography.titleLarge)
-                    Text("Journal revision ${current.revision}. Actual weights, reps and effort are recorded separately from the plan.",
+                    LinearProgressIndicator(
+                        progress={if(mainTotal==0)0f else
+                            mainLogged.toFloat()/mainTotal.toFloat()},
+                        modifier=Modifier.fillMaxWidth())
+                    Text("${current.unresolvedVisitCount} required entries remain, including amplifier follow-ups. Nothing is saved until you confirm a set.",
                         style=MaterialTheme.typography.bodySmall)
                     if(finished||current.finishedByEventId!=null) {
                         Text(if(verifiedFinishedInHistory)
@@ -172,6 +201,7 @@ internal fun NativeKotlinCustomJournalScreen(
                             NativeKotlinCustomVisitEditor(
                                 set=set,part=CustomWorkoutVisitPart.MAIN,
                                 existing=observed,locked=busy||finished,
+                                initiallyExpanded=nextVisit==mainKey,
                                 onRecord={outcome,actual->
                                     record(set.setKey,CustomWorkoutVisitPart.MAIN,
                                         outcome,actual)
@@ -186,6 +216,8 @@ internal fun NativeKotlinCustomJournalScreen(
                                 NativeKotlinCustomVisitEditor(
                                     set=set,part=CustomWorkoutVisitPart.FOLLOW_UP,
                                     existing=follower,locked=busy||finished,
+                                    initiallyExpanded=nextVisit==CustomWorkoutVisitKey(
+                                        set.setKey,CustomWorkoutVisitPart.FOLLOW_UP),
                                     onRecord={outcome,actual->
                                         record(set.setKey,
                                             CustomWorkoutVisitPart.FOLLOW_UP,
@@ -289,6 +321,7 @@ private fun NativeKotlinCustomVisitEditor(
     part:CustomWorkoutVisitPart,
     existing:CustomWorkoutJournalReceipt?,
     locked:Boolean,
+    initiallyExpanded:Boolean,
     onRecord:(KotlinJournalSetOutcome,KotlinPerformedSet?)->Unit
 ) {
     val prescription=set.prescription
@@ -298,16 +331,25 @@ private fun NativeKotlinCustomVisitEditor(
     else prescription.load
     val verified=target as? DraftSetLoad.Verified
     val saved=existing?.operation as? CustomWorkoutJournalOperation.Record
-    var editing by remember(set.setKey,part,existing?.appliedRevision) {
-        mutableStateOf(saved==null)
+    var editing by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
+        mutableStateOf(saved==null && initiallyExpanded)
     }
-    var actualReps by remember(set.setKey,part,existing?.appliedRevision) {
-        mutableStateOf(saved?.performed?.reps?.toString().orEmpty())
+    LaunchedEffect(set.setKey,part,initiallyExpanded,locked,existing?.appliedRevision) {
+        if(initiallyExpanded && saved==null && !locked)editing=true
     }
-    var actualLoad by remember(set.setKey,part,existing?.appliedRevision) {
-        mutableStateOf(saved?.performed?.load?.toPlainString().orEmpty())
+    // These values are editable targets, NEVER synthesized performed facts.
+    // They become recorded actuals only after the athlete taps Complete.
+    var actualReps by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
+        mutableStateOf(saved?.performed?.reps?.toString() ?:
+            (if(part==CustomWorkoutVisitPart.FOLLOW_UP)
+                follower?.followUpReps else prescription.reps.minimum)
+                ?.toString().orEmpty())
     }
-    var actualRir by remember(set.setKey,part,existing?.appliedRevision) {
+    var actualLoad by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
+        mutableStateOf(saved?.performed?.load?.toPlainString() ?:
+            verified?.value?.toPlainString().orEmpty())
+    }
+    var actualRir by rememberSaveable(set.setKey,part.name,existing?.appliedRevision) {
         mutableStateOf(saved?.performed?.actualRir?.toString().orEmpty())
     }
     val weight=if(verified==null)null else
@@ -342,38 +384,50 @@ private fun NativeKotlinCustomVisitEditor(
             TextButton(enabled=!locked,onClick={editing=true}) {
                 Text("Correct recorded visit")}
         } else if(!locked){
+            if(!editing) {
+                OutlinedButton(onClick={editing=true}){Text("Log this set")}
+            } else {
+            Text("Planned weight and reps are prefilled for convenience. Correct them to what you actually did before completing. Blank RIR stays unreported.",
+                style=MaterialTheme.typography.bodySmall)
             if(verified!=null)
                 OutlinedTextField(value=actualLoad,onValueChange={actualLoad=it},
-                    label={Text("Actual weight · ${verified.unit.name} / ${verified.basis.name.replace('_',' ')}")},
+                    label={Text("Weight performed · ${verified.unit.name} / ${verified.basis.name.replace('_',' ')}")},
+                    keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                     singleLine=true,modifier=Modifier.fillMaxWidth(),
                     isError=actualLoad.isNotBlank()&&weight==null)
             OutlinedTextField(value=actualReps,onValueChange={actualReps=it},
-                label={Text("Actual reps (not target)")},singleLine=true,
+                label={Text("Reps completed")},singleLine=true,
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
                 modifier=Modifier.fillMaxWidth(),
                 isError=actualReps.isNotBlank()&&reps==null)
             OutlinedTextField(value=actualRir,onValueChange={actualRir=it},
-                label={Text("Actual RIR · optional, unknown if blank")},
+                label={Text("Actual RIR · optional, blank if unknown")},
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),
                 singleLine=true,modifier=Modifier.fillMaxWidth(),
                 isError=!effortValid)
             Row(Modifier.fillMaxWidth(),
                 horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Button(enabled=loadValid&&reps!=null&&effortValid,
+                    modifier=Modifier.weight(1f),
                     onClick={
                         onRecord(KotlinJournalSetOutcome.COMPLETED,
                             KotlinPerformedSet(weight,verified?.unit,
                                 checkNotNull(reps),effort))
                     }){Text("Complete")}
-                OutlinedButton(onClick={
+                OutlinedButton(modifier=Modifier.weight(1f),onClick={
                     onRecord(KotlinJournalSetOutcome.SKIPPED,null)
                 }){Text("Skip")}
                 OutlinedButton(enabled=loadValid,
+                    modifier=Modifier.weight(1f),
                     onClick={
                         onRecord(KotlinJournalSetOutcome.FAILED_ATTEMPT,
                             KotlinPerformedSet(weight,verified?.unit,0,null))
                     }){Text("Failed")}
             }
-            if(saved!=null)
-                TextButton(onClick={editing=false}){Text("Cancel correction")}
+            TextButton(onClick={editing=false}) {
+                Text(if(saved!=null)"Cancel correction" else "Collapse set")
+            }
+            }
         }
     }
 }

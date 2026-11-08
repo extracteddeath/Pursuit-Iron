@@ -124,7 +124,9 @@ internal fun NativeKotlinCandidateJourney() {
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Box {
-                        IconButton(onClick={moreExpanded=true}) {
+                        IconButton(onClick={moreExpanded=true},
+                            enabled=destination!=KotlinCandidateDestination.TRAIN ||
+                                selectedCustomWorkoutId==null) {
                             Icon(Icons.Filled.MoreVert,contentDescription="More screens")
                         }
                         DropdownMenu(expanded=moreExpanded,
@@ -147,7 +149,10 @@ internal fun NativeKotlinCandidateJourney() {
             }
         },
         bottomBar={
-            NavigationBar {
+            // No tab strip over the active custom set logger. Minimize to
+            // Train first; the durable journal remains resumable.
+            if(destination!=KotlinCandidateDestination.TRAIN ||
+                selectedCustomWorkoutId==null)NavigationBar {
                 listOf(KotlinCandidateDestination.PROGRAM,
                     KotlinCandidateDestination.TRAIN,
                     KotlinCandidateDestination.HISTORY,

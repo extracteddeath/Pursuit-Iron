@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.extracteddeath.pursuitiron.nativecoachstore.*
 import io.github.extracteddeath.pursuitiron.rebuild.*
 import java.math.BigDecimal
+import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,6 +33,9 @@ internal data class NativeFirstProgramState(
     val busy:Boolean=false,
     val message:String?=null,
     val preview:FirstProgramStartReview?=null,
+    val reviewedInput:FirstProgramStartRequest?=null,
+    val canSaveDraft:Boolean=false,
+    val savedProgramId:String?=null,
     val eligibleMovements:List<FirstProgramMovementOption> = emptyList(),
     val enteredLoads:Map<String,String> =emptyMap(),
     val selectedBodyweightIds:Set<String> =emptySet(),
@@ -83,7 +87,8 @@ internal class NativeKotlinFirstProgramController(
                     selectedBodyweightIds=if(retained)before.selectedBodyweightIds
                         else emptySet(),
                     extraFocuses=if(retained)before.extraFocuses else emptyList(),
-                    preview=null,eligibleMovements=emptyList(),
+                    preview=null,reviewedInput=null,canSaveDraft=false,
+                    savedProgramId=null,eligibleMovements=emptyList(),
                     message="Verified setup loaded. Choose your own initial working weights; equipment inventory is not a strength test.")
                 val first=CoachFirstProgramStartDomain.review(
                     FirstProgramStartRequest(source.setup,source.catalog,
@@ -102,7 +107,8 @@ internal class NativeKotlinFirstProgramController(
         current.value=s.copy(
             enteredLoads=if(raw.isBlank())s.enteredLoads-id
                 else s.enteredLoads+(id to raw),
-            preview=null,message=null)
+            preview=null,reviewedInput=null,canSaveDraft=false,
+            savedProgramId=null,message=null)
     }
     fun toggleBodyweight(id:String) {
         val s=current.value
@@ -110,28 +116,33 @@ internal class NativeKotlinFirstProgramController(
         current.value=s.copy(
             selectedBodyweightIds=if(id in s.selectedBodyweightIds)
                 s.selectedBodyweightIds-id else s.selectedBodyweightIds+id,
-            preview=null,message=null)
+            preview=null,reviewedInput=null,canSaveDraft=false,
+            savedProgramId=null,message=null)
     }
     fun choosePhase(value:TrainingPhase) {
         val s=current.value
-        if(!s.busy)current.value=s.copy(phase=value,preview=null,message=null)
+        if(!s.busy)current.value=s.copy(phase=value,preview=null,
+            reviewedInput=null,canSaveDraft=false,savedProgramId=null,message=null)
     }
     fun chooseSetupMinutes(value:Int) {
         val s=current.value
         if(!s.busy && value in setOf(10,15,20,30))
-            current.value=s.copy(setupMinutes=value,preview=null,message=null)
+            current.value=s.copy(setupMinutes=value,preview=null,reviewedInput=null,
+                canSaveDraft=false,savedProgramId=null,message=null)
     }
     fun addFocus(value:ComposerFocus) {
         val s=current.value
         if(!s.busy && s.extraFocuses.size<2)
             current.value=s.copy(extraFocuses=s.extraFocuses+value,
-                preview=null,message=null)
+                preview=null,reviewedInput=null,canSaveDraft=false,
+                savedProgramId=null,message=null)
     }
     fun removeLastFocus() {
         val s=current.value
         if(!s.busy && s.extraFocuses.isNotEmpty())
             current.value=s.copy(extraFocuses=s.extraFocuses.dropLast(1),
-                preview=null,message=null)
+                preview=null,reviewedInput=null,canSaveDraft=false,
+                savedProgramId=null,message=null)
     }
     fun preview()=run {
         val initial=current.value
@@ -153,11 +164,17 @@ internal class NativeKotlinFirstProgramController(
             }
             selected[id]=number
         }
-        val result=CoachFirstProgramStartDomain.review(
-            FirstProgramStartRequest(source.setup,source.catalog,
-                selected,initial.selectedBodyweightIds,
-                initial.phase,initial.extraFocuses,
-                nonSetSecondsPerDay=initial.setupMinutes*60))
+        val input=FirstProgramStartRequest(
+            source.setup,source.catalog,selected,
+            initial.selectedBodyweightIds,initial.phase,
+            initial.extraFocuses,nonSetSecondsPerDay=initial.setupMinutes*60)
+        val result=CoachFirstProgramStartDomain.review(input)
+        val conversion=if(result.status==
+            FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW)
+            CoachFirstProgramDraftConversionDomain.propose(
+                result,source.setup,source.catalog,
+                "first-preview","My first program",4)
+        else null
         val after=(host.readCustomAuthoringSource()
             as? NativeAuthoringSourceRead.Found)?.source
         if(after!=source) {
@@ -166,6 +183,9 @@ internal class NativeKotlinFirstProgramController(
             return@run
         }
         current.value=initial.copy(preview=result,
+            reviewedInput=input,
+            canSaveDraft=conversion?.status==
+                FirstProgramDraftStatus.READY_FOR_SAVING_DRAFT,
             message=when(result.status) {
                 FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW ->
                     "An auditable first-program draft was generated. It is not saved or approved; review its muscle coverage, sets and intended effort."
@@ -174,6 +194,26 @@ internal class NativeKotlinFirstProgramController(
                 else -> "Your choices need review before this draft can become a program."
             })
     }
+    /** Explicit create-only save: the host recomputes the exact shown week. */
+    fun saveReviewedDraft()=run {
+        val before=current.value
+        val source=before.source ?:return@run
+        val input=before.reviewedInput ?:return@run
+        val shown=before.preview ?:return@run
+        if(!before.canSaveDraft || before.savedProgramId!=null)return@run
+        val id="first-"+UUID.randomUUID().toString().replace("-","")
+        val result=host.saveReviewedFirstProgramDraft(
+            input,shown,source.revision,id,"My first program",4,true)
+        if(result is NativeCustomDraftWriteResult.Committed &&
+            host.readCustomCycleDraft(id) is NativeCustomDraftReadResult.Found) {
+            current.value=before.copy(savedProgramId=id,canSaveDraft=false,
+                message="Saved your first-program draft with its exact sets and weights. Open it from My program > Find my saved programs. It still needs full-cycle coaching audit and approval before training.")
+        } else {
+            current.value=before.copy(canSaveDraft=false,
+                message="Saving the first program was refused or could not be verified. No workout was issued; reload your saved gym and preview again.")
+        }
+    }
+
     override fun close(){scope.cancel()}
 }
 private fun prettyFirstProgram(value:String)=value.replace('_',' ')
@@ -184,6 +224,7 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
     controller:NativeKotlinFirstProgramController
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
+    var confirmingSave by remember {mutableStateOf(false)}
     LaunchedEffect(controller) {controller.open()}
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -355,10 +396,40 @@ internal fun NativeKotlinFirstProgramCandidateScreen(
                                 style=MaterialTheme.typography.bodySmall)
                         }
                     }
-                    Text("This is a read-only candidate, not yet a saved or executable program. A separate full-cycle review, load validation and explicit approval must happen before workouts can be issued.",
+                    if(state.canSaveDraft) {
+                        Button(onClick={confirmingSave=true},
+                            enabled=!state.busy,
+                            modifier=Modifier.fillMaxWidth()) {
+                            Text("Save this first-program draft")
+                        }
+                    } else if(review.status==
+                        FirstProgramStartStatus.PRESCRIBED_DRAFT_FOR_REVIEW &&
+                        state.savedProgramId==null) {
+                        Text("A new draft still needs the native cycle-structure review before saving.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                    if(state.savedProgramId!=null) {
+                        Text("First-program draft saved. Use My program to open and complete approval.",
+                            style=MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("A saved first-program draft is not an approved or executable workout. Full-cycle review and explicit workout issuance remain separate.",
                         style=MaterialTheme.typography.bodySmall)
                 }
             }
         }
     }
+    if(confirmingSave)AlertDialog(
+        onDismissRequest={if(!state.busy)confirmingSave=false},
+        title={Text("Save this reviewed training draft?")},
+        text={Text("Save the displayed four-week first block, including its exact chosen weights, sets, reps and effort targets, as a new native program draft. This will not overwrite any previous program or issue a workout. You will review the complete cycle before training.")},
+        confirmButton={Button(
+            enabled=!state.busy && state.canSaveDraft,
+            onClick={
+                confirmingSave=false
+                controller.saveReviewedDraft()
+            }) {Text("Save new draft")}},
+        dismissButton={TextButton(onClick={confirmingSave=false}) {
+            Text("Cancel")
+        }}
+    )
 }

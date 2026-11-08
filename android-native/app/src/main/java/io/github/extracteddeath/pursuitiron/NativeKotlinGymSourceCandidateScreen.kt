@@ -82,6 +82,8 @@ internal fun NativeKotlinGymSourceCandidateScreen(
     LaunchedEffect(controller) {controller.open()}
     val reviewed=source?.setup?.reviewed
     var editingFixtures by remember {mutableStateOf(false)}
+    var showGymDetails by rememberSaveable {mutableStateOf(false)}
+    var showMovementCatalog by rememberSaveable {mutableStateOf(false)}
     var equipmentEditor by remember {mutableStateOf(false)}
     var removeTarget by remember {mutableStateOf<String?>(null)}
     var equipmentId by rememberSaveable {mutableStateOf("")}
@@ -111,43 +113,60 @@ internal fun NativeKotlinGymSourceCandidateScreen(
         }
         if(reviewed==null || source==null) {
             PursuitCard(highlighted=true) {
-                Text("Complete native onboarding and catalog review",
+                Text("Finish your training setup",
                     style=MaterialTheme.typography.titleMedium)
-                Text("No default gym is created. A reviewed athlete and a curated exercise catalog must be explicitly published to the isolated Kotlin repository before physical equipment can be edited.")
+                Text("Save your training preferences and confirm the equipment you actually have. No weights or exercise choices are assumed.")
                 if(reviewedSetupDraft!=null) {
                     HorizontalDivider()
-                    Text("First-time native setup",
+                    Text("Review your first setup",
                         style=MaterialTheme.typography.titleMedium)
-                    Text("Approve the explicitly completed Kotlin athlete setup and the 20 engineering-reviewed provisional starter movements. Those movement definitions carry no gym weights, targets or automatic workout approval.")
-                    Text("This is not a conversion of the JavaScript engine. Nothing will replace an existing different athlete or previously saved source.",
+                    Text("Confirm your selected preferences and starting exercise catalog. Your available weights and workout targets remain separate choices.")
+                    Text("This action does not replace a different saved athlete or an existing training program.",
                         style=MaterialTheme.typography.bodySmall)
                     Button(
                         onClick={controller.activateReviewedStarter(reviewedSetupDraft)},
                         enabled=!state.busy,
                         modifier=Modifier.fillMaxWidth()) {
-                        Text("Confirm native setup and starter catalog")
+                        Text("Save setup and exercises")
                     }
                 }
                 OutlinedButton(onClick={controller.open()},enabled=!state.busy) {
-                    Text("Reload native gym")
+                    Text("Refresh setup")
                 }
             }
             return@PursuitScreenContent
         }
         val gym=reviewed.gym
         PursuitCard(highlighted=true) {
-            Text("Confirmed equipment",style=MaterialTheme.typography.titleLarge)
-            Text("${gym.gymId} · ${gym.unit} · revision ${source.revision}",
+            Text("Your equipment",style=MaterialTheme.typography.titleLarge)
+            Text("${gym.confirmedStock.size} confirmed weight sources · " +
+                "${gym.availableFacilities.size} facilities · " +
+                "${gym.availableAttachments.size} attachments",
                 style=MaterialTheme.typography.bodyMedium)
-            Text("${gym.confirmedStock.size} verified implements · ${gym.availableAttachments.size} attachments · ${source.catalog.size} reviewed catalog movements")
-            Text("An equipment change creates a new source revision. Existing custom sets and workout history remain unchanged, and unavailable exercise choices become ineligible.")
+            Text("Your equipment determines which exercises can be reviewed. Editing it never changes previously logged workouts.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick={controller.open()},enabled=!state.busy,
-                modifier=Modifier.fillMaxWidth()) {Text("Reload verified gym")}
+                modifier=Modifier.fillMaxWidth()) {Text("Refresh equipment")}
+            TextButton(onClick={showGymDetails=!showGymDetails}) {
+                Text(if(showGymDetails)"Hide source details" else "Advanced gym details")
+            }
+            if(showGymDetails)Text("Gym: ${gym.gymId} · ${gym.unit} · " +
+                "source revision ${source.revision} · " +
+                "${source.catalog.size} reviewed movements",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         gym.confirmedStock.toSortedMap().forEach { (id, stock) ->
             key(id) {
                 PursuitCard {
-                    Text(id,style=MaterialTheme.typography.titleMedium)
+                    val equipmentName=kotlinGymFacilityLabel(id).takeIf{it!=id}
+                        ?:id.replace('-',' ').replace('_',' ')
+                            .replaceFirstChar{it.uppercase()}
+                    Text(equipmentName,style=MaterialTheme.typography.titleMedium)
+                    if(showGymDetails)Text("Source ID: $id",
+                        style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(when(stock) {
                         is VerifiedLoadStock.Totals ->
                             "${stock.basis.name.lowercase().replace('_',' ')} · " +
@@ -198,16 +217,20 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                 enabled=!state.busy) {Text("Edit availability")}
         }
         PursuitCard {
-            Text("Reviewed movement variants",
-                style=MaterialTheme.typography.titleMedium)
-            Text("Review-only. Creating or revising muscle credits requires the separate curated catalog publisher.")
-            source.catalog.forEach { item ->
-                Text("${item.exerciseId} · ${item.familyId}/${item.variantId}",
+            PursuitSectionHeading("Reviewed exercises",
+                "${source.catalog.size} exercise definitions. Viewing them never edits your saved gym.")
+            TextButton(onClick={showMovementCatalog=!showMovementCatalog}) {
+                Text(if(showMovementCatalog)"Hide exercises" else "Show exercise catalog")
+            }
+            if(showMovementCatalog)source.catalog.forEach { item ->
+                Text(kotlinExerciseLabel(item.exerciseId),
                     style=MaterialTheme.typography.bodyMedium)
-                Text("Equipment: ${item.equipmentId ?: "explicit bodyweight"} · " +
-                    "Attachment: ${item.attachmentId ?: "none"} · " +
-                    "Review: ${item.creditReviewReference ?: "missing"}",
-                    style=MaterialTheme.typography.bodySmall)
+                if(showGymDetails)Text(
+                    "${item.familyId}/${item.variantId} · " +
+                    "Equipment ${item.equipmentId ?: "bodyweight"} · " +
+                    "Attachment ${item.attachmentId ?: "none"}",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

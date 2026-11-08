@@ -97,7 +97,7 @@ internal fun NativeKotlinStrengthStandardsScreen(
         // One owner-verified history snapshot supplies BOTH strength cards
         // and trends. No second asynchronous read can mix manifest revisions.
         val verified:Pair<NativeKotlinMixedFactsReadResult,
-            NativeKotlinMixedHistoryTimeline?>=withContext(Dispatchers.IO) {
+            NativeKotlinMixedHistoryTimeline?> = withContext(Dispatchers.IO) {
             when(val history=runCatching{
                 host.reviewVerifiedKotlinHistory()
             }.getOrElse{

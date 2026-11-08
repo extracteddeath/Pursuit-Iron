@@ -28,7 +28,7 @@ internal fun verifiedStrengthTrend(
     exerciseId:String,
     displayUnit:LoadUnit
 ):List<StrengthTrendSample> = timeline.completions.mapNotNull { entry ->
-    val sets:List<Pair<DraftSetLoad,KotlinPerformedSet?>>=when(entry) {
+    val sets: List<Pair<DraftSetLoad, KotlinPerformedSet?>> = when(entry) {
         is NativeKotlinMixedHistoryCompletion.Composer ->
             entry.evidence.sets.filter{
                 it.exerciseId==exerciseId &&

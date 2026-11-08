@@ -132,7 +132,7 @@ internal fun NativeKotlinGymSourceCandidateScreen(
                     Text("Reload native gym")
                 }
             }
-            return@Column
+            return@PursuitScreenContent
         }
         val gym=reviewed.gym
         PursuitCard(highlighted=true) {

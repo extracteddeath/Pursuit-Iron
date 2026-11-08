@@ -124,7 +124,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        PageHeading("KOTLIN COACH · ISOLATED",
+        PageHeading("YOUR TRAINING PLAN",
             if (draft == null) "Your programs" else draft.title,
             "Custom programs and cycles · saved privately on this device")
         Text(when {
@@ -390,7 +390,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                                 style = MaterialTheme.typography.bodySmall)
                             if (day.slots.isNotEmpty()) {
                                 day.slots.forEachIndexed { slotIndex, slot ->
-                                    Text("${slot.exerciseId} · ${slot.sets.size} authored sets" +
+                                    Text("${kotlinExerciseLabel(slot.exerciseId)} · ${slot.sets.size} sets" +
                                         if (slot.pinned) " · Pinned" else "",
                                         style = MaterialTheme.typography.bodyMedium)
                                     Row(Modifier.fillMaxWidth()
@@ -572,7 +572,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                     }
                     session.slots.forEach { slot ->
                         HorizontalDivider()
-                        Text("${slot.exerciseId} · ${slot.variantId}",
+                        Text(kotlinExerciseLabel(slot.exerciseId),
                             style=MaterialTheme.typography.titleSmall)
                         Text("Slot ${slot.slotId} · ${pretty(slot.role)}" +
                             (slot.attachmentId?.let{" · Attachment $it"} ?: "") +

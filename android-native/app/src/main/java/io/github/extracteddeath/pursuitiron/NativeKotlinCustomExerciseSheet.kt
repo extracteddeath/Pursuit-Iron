@@ -157,12 +157,12 @@ internal fun NativeKotlinCustomExerciseSheet(
                     selected = exerciseId == candidate.exerciseId,
                     onClick = { exerciseId = candidate.exerciseId },
                     label = {
-                        Text(candidate.exerciseId.replace('-', ' ') +
+                        Text(kotlinExerciseLabel(candidate.exerciseId) +
                             " · " + candidate.variantId.replace('-', ' '))
                     })
             }
         } else {
-            Text(existing.exerciseId.replace('-', ' '),
+            Text(kotlinExerciseLabel(existing.exerciseId),
                 style = MaterialTheme.typography.titleMedium)
             Text("Pinned: ${existing.pinned} · Attachment: ${existing.attachmentId ?: "none"}",
                 style = MaterialTheme.typography.bodySmall)

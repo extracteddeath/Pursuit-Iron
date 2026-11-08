@@ -203,7 +203,7 @@ internal fun NativeKotlinCandidateCoachScreen(
                         exerciseChoices.forEach { id ->
                             FilterChip(selected=exerciseId==id,
                                 onClick={exerciseId=id;invalidate()},
-                                label={Text(id.replace('_',' ').replace('-',' '))})
+                                label={Text(kotlinExerciseLabel(id))})
                         }
                     }
                 }

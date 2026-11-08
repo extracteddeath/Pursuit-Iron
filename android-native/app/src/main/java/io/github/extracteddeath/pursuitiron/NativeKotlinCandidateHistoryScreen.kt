@@ -227,7 +227,7 @@ private fun KotlinHistoryActualRow(
     exercise:String,label:String,issuedLoad:DraftSetLoad,issuedReps:RepBand,
     issuedRir:Int?,outcome:KotlinJournalSetOutcome,actual:KotlinPerformedSet?
 ) {
-    Text("${exercise.replace('_',' ').replace('-',' ')} · $label",
+    Text("${kotlinExerciseLabel(exercise)} · $label",
         style=MaterialTheme.typography.titleSmall)
     val goalReps=if(issuedReps.minimum==issuedReps.maximum)
         "${issuedReps.minimum} reps" else "${issuedReps.minimum}–${issuedReps.maximum} reps"

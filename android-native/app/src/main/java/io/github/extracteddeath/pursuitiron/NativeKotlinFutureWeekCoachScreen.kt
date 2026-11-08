@@ -212,11 +212,13 @@ internal fun NativeKotlinFutureWeekCoachScreen(
                     Text("Select one reviewed exercise slot. Other exercises and training days are not changed.",
                         style=MaterialTheme.typography.bodySmall)
                     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                        snap.slots.forEach {slot->
+                        snap.slots.forEachIndexed {index,slot->
                             FilterChip(selected=slotId==slot.slotId,
                                 enabled=!busy,
                                 onClick={slotId=slot.slotId;clearOffer()},
-                                label={Text("${slot.exerciseId.replace('_',' ')} · ${slot.slotId}")})
+                                label={Text(kotlinExerciseLabel(slot.exerciseId)+
+                                    if(snap.slots.count{it.exerciseId==slot.exerciseId}>1)
+                                        " · Slot ${index+1}" else "")})
                         }
                     }
                 }
@@ -652,7 +654,7 @@ internal fun NativeKotlinCustomDayCoachingSummary(
     Text("This day's coaching",style=MaterialTheme.typography.titleMedium)
     reviewed.nextWorkout?.slots?.singleOrNull {
         it.slotId==reviewed.selectedSlotId
-    }?.let {Text(it.exerciseId.replace('_',' '),
+    }?.let {Text(kotlinExerciseLabel(it.exerciseId),
         style=MaterialTheme.typography.titleSmall)}
     Text(reviewed.review.explanation,style=MaterialTheme.typography.bodyMedium)
     if(reviewed.review.status==

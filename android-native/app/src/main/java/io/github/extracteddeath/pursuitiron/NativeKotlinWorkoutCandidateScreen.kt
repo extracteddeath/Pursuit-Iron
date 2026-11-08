@@ -28,19 +28,6 @@ private fun performed(
         as? KotlinSetEntryResult.Accepted
     )?.performed
 
-private fun loadLabel(load:DraftSetLoad):String=when(load) {
-    DraftSetLoad.ExplicitBodyweight -> "Bodyweight"
-    is DraftSetLoad.Verified ->
-        "${load.value.stripTrailingZeros().toPlainString()} ${load.unit.name.lowercase()} · "+
-            when(load.basis) {
-                LoadBasis.DUMBBELL_PER_HAND -> "per hand"
-                LoadBasis.BARBELL_TOTAL -> "total barbell"
-                LoadBasis.SMITH_TOTAL -> "Smith total"
-                LoadBasis.CABLE_STACK -> "cable stack"
-                LoadBasis.MACHINE_STACK -> "machine stack"
-                LoadBasis.EXERCISE_OVERRIDE -> "verified load"
-            }
-}
 private fun humanStatus(reason:NativeJournalFileRefusal?):String=when(reason) {
     NativeJournalFileRefusal.HISTORY_NOT_READY ->
         "Native history ownership is not verified yet. Workout changes and Finish are blocked until existing history is safely enrolled or recovered. Nothing was overwritten."
@@ -75,11 +62,11 @@ internal fun NativeKotlinWorkoutCandidateScreen(
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     var referenceMode by rememberWorkoutReferenceMode()
-    val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
-        enabled=referenceMode==WorkoutReferenceMode.LAST)
     LaunchedEffect(workoutId) { controller.open(workoutId) }
     val presentation=state.presentation?.takeIf{it.workoutId==workoutId}
     val journal=state.journal?.takeIf{it.snapshot.workoutId==workoutId}
+    val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=false,
+        enabled=referenceMode==WorkoutReferenceMode.LAST && journal!=null)
     val running=presentation!=null && !presentation.finished
     var verifiedFinish by remember(host,workoutId){
         mutableStateOf<NativeComposerFinishHandoffResult?>(null)

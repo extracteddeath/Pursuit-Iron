@@ -38,8 +38,6 @@ internal fun NativeKotlinCustomJournalScreen(
 ) {
     val scope=rememberCoroutineScope()
     var referenceMode by rememberWorkoutReferenceMode()
-    val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=true,
-        enabled=referenceMode==WorkoutReferenceMode.LAST)
     var journal by remember(host,workoutId) {
         mutableStateOf<CustomWorkoutJournalDraft?>(null)
     }
@@ -130,6 +128,8 @@ internal fun NativeKotlinCustomJournalScreen(
         }
     }
     val current=journal
+    val lastReferences=rememberWorkoutLastReferences(host,workoutId,custom=true,
+        enabled=referenceMode==WorkoutReferenceMode.LAST && current!=null)
     val nextVisit=current?.let{CustomWorkoutJournalDomain.nextUnresolvedVisit(it)}
     Column(Modifier.fillMaxSize()) {
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())

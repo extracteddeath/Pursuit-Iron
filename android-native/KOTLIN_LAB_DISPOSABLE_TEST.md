@@ -56,3 +56,21 @@ This follow-up packages the corrected native UI at commit
 Verify fresh-install Amethyst, selectable themes, saved preference on reopen,
 and stable/production app isolation. The artifact is disposable, with its
 own run-number package identity and debug-only certificate.
+
+## Target/Last workout milestone — APK only
+
+The next disposable APK includes the persistent Target/Last reference in both
+Kotlin workout paths, original curated exercise names throughout Plan, Train,
+History and Coach, and separate warm-up/working-set counts. Amethyst remains
+the first-install theme and all original palettes remain selectable.
+
+Verify that switching Target/Last leaves unsubmitted weight/reps/RIR untouched;
+Last shows the latest matching program day and exact slot, including corrected,
+skipped and failed results. Unknown actual RIR must stay unreported. A first
+workout with no matching history shows an empty reference and can still be
+logged. Minimize/resume, rest, confirmed Finish and History remain connected.
+
+The workflow now assembles, verifies and uploads **only the test APK**. No AAB
+is generated. This is another isolated per-run install with a temporary debug
+certificate, not an in-place update of a prior trial. Do not uninstall a prior
+trial to install this one; their training data remains separate.

@@ -124,3 +124,8 @@ closing the full-program editor, retaining an unsubmitted rep value across a
 1.6 font-scale configuration change, logging a set with that layout, restart
 recovery and a visible saved-workout result without manually scrolling up.
 Keep Amethyst as default and produce only an APK.
+
+The follow-up candidate also retains unsaved policy form fields when closing
+and reopening the full-program disclosure or changing Android configuration.
+Restoring a form draft cannot count as a policy audit; it must be reviewed
+explicitly before any training approval can rely on those changed values.

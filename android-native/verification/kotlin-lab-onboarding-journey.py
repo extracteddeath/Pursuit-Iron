@@ -315,6 +315,17 @@ try:
     capture("02a-plan-overview")
     tap("Open full program")
     locate("Name & notes")
+    tap("Author complete phase policy and session overhead")
+    enter("Policy ID", "qa-unsaved-policy")
+    top()
+    review_root, review_button = locate("Review program approval")
+    assert not enabled(review_root, review_button), "Unreviewed policy draft retained approval"
+    tap("Close full program")
+    tap("Open full program")
+    assert_value("Policy ID", "qa-unsaved-policy")
+    capture("02b-retained-review-draft")
+    top()
+    tap("Discard unsaved review")
     top()
     tap("Close full program")
     top()
@@ -401,6 +412,7 @@ try:
     result = {"status": "PASS", "scope": "synthetic real-UI training journey",
               "checks": ["reviewed setup", "unit cancellation preserves stock", "generated four-day program",
                          "Plan overview and full-program disclosure",
+                         "unsaved policy draft retained without approval and explicitly discarded",
                          "explicit cycle and history consent", "Target/Last preserves unsubmitted reps",
                          "1.6 font scale retains unsubmitted reps and completes a set",
                          "native set writes", "cold recovery", "Finish to History", "next independent day"],

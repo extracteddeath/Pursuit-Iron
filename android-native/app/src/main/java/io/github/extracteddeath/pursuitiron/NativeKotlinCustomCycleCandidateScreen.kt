@@ -742,6 +742,7 @@ internal fun NativeKotlinCustomCycleCandidateScreen(
                         controller.inspectAuthoredWorkloadEvidence()
                     },
                     onDraftChanged={controller.markPolicyInputsChanged()},
+                    onDiscardDraft={controller.open(draft.cycleId)},
                     onReview={reviewedInputs->
                         controller.auditFullCycle(reviewedInputs)
                     })

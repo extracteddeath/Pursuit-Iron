@@ -31,6 +31,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
     observedEvidence:CustomCoachPolicyEvidence?,
     onInspectEvidence:()->Unit,
     onDraftChanged:()->Unit,
+    onDiscardDraft:()->Unit={},
     onReview:(CustomCoachAuditInputs)->Unit
 ) {
     val phaseList=remember(cycle.cycleId,cycle.revision) {
@@ -103,6 +104,10 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
                     fields["continuity:riseDirect"]=it.toPlainString()
                 }
             }
+        } else if(saved!=null && edited) {
+            // Reopening may reload the saved program's prior policy. A
+            // restored, unsubmitted form is still a draft, never its audit.
+            onDraftChanged()
         }
     }
     var issues by rememberSaveable(cycle.cycleId,cycle.revision,sourceRevision) {
@@ -130,6 +135,10 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         style=MaterialTheme.typography.titleLarge)
     Text("Enter reviewed athlete-specific phase targets and real non-set time. Blank values are not assumed to be zero. This editor does not design your program or auto-approve any dose.",
         style=MaterialTheme.typography.bodySmall)
+    if(edited)TextButton(enabled=!busy,onClick={
+        fields.clear();liftRows.clear();issues=emptyList();edited=false
+        onDiscardDraft()
+    }) {Text("Discard unsaved review")}
     OutlinedButton(onClick=onInspectEvidence,enabled=!busy,
         modifier=Modifier.fillMaxWidth()) {
         Text("Inspect actual weekly workload in my plan")
@@ -407,6 +416,7 @@ internal fun NativeKotlinCustomCoachPolicyEditor(
         when(result) {
             is CustomCoachPolicyAuthoringResult.Ready -> {
                 issues=emptyList()
+                edited=false
                 onReview(result.inputs)
             }
             is CustomCoachPolicyAuthoringResult.Blocked ->

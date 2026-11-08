@@ -651,7 +651,9 @@ class NativeKotlinCurrentLoadCoachReviewTest {
             "warmup-$i",null)
 
     @Test fun currentNativeRepReviewAcceptsRealWarmupsWithoutEditingThem() {
-        val current=approval().copy(policies=policies.map {p->
+        val current=approval().copy(
+            grant=KotlinWorkoutSelectionGrant("grant-3","workout-3",source,1),
+            policies=policies.map {p->
             if(p.exerciseId=="db-press" &&
                 p.purpose==ComposerSessionPurpose.HYPERTROPHY)
                 p.copy(warmups=listOf(DeclaredWarmupStep(n("25"),5,30,60)))
@@ -682,7 +684,9 @@ class NativeKotlinCurrentLoadCoachReviewTest {
     }
 
     @Test fun missingOrChangedHistoricalWarmupCannotPassNativeRepReview() {
-        val current=approval().copy(policies=policies.map {p->
+        val current=approval().copy(
+            grant=KotlinWorkoutSelectionGrant("grant-3","workout-3",source,1),
+            policies=policies.map {p->
             if(p.exerciseId=="db-press" &&
                 p.purpose==ComposerSessionPurpose.HYPERTROPHY)
                 p.copy(warmups=listOf(DeclaredWarmupStep(n("25"),5,30,60)))
@@ -704,7 +708,9 @@ class NativeKotlinCurrentLoadCoachReviewTest {
 
     @Test fun warmupAwareNativeLoadReviewKeepsPreparationAndProgressesWork() {
         val planned=DeclaredWarmupStep(n("25"),5,30,60)
-        val current=approval().copy(policies=policies.map {p->
+        val current=approval().copy(
+            grant=KotlinWorkoutSelectionGrant("grant-3","workout-3",source,1),
+            policies=policies.map {p->
             if(p.exerciseId=="db-press" &&
                 p.purpose==ComposerSessionPurpose.HYPERTROPHY)
                 p.copy(warmups=listOf(planned))
@@ -741,7 +747,9 @@ class NativeKotlinCurrentLoadCoachReviewTest {
     }
 
     @Test fun nativeLoadReviewRejectsMissingOrChangedIssuedWarmups() {
-        val current=approval().copy(policies=policies.map {p->
+        val current=approval().copy(
+            grant=KotlinWorkoutSelectionGrant("grant-3","workout-3",source,1),
+            policies=policies.map {p->
             if(p.exerciseId=="db-press" &&
                 p.purpose==ComposerSessionPurpose.HYPERTROPHY)
                 p.copy(warmups=listOf(DeclaredWarmupStep(n("25"),5,30,60)))

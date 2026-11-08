@@ -165,15 +165,15 @@ object NativeKotlinCurrentLoadCoachReview {
             approval.policies,exerciseId,latest.purpose,
             nextDay.dayIndex)
             ?:return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
-        // Do not reinterpret authored top/backoff or warmup prescriptions as
-        // individualized STRAIGHT sets. Only the approved rep envelope is
-        // normalized, never a single historical issued target or actual fact.
+        // Only straight WORKING sets are comparable for load progression.
+        // Verified warmups are preserved, never counted as load evidence.
+        // Both finished workouts must carry the same immutable warmup
+        // prescription as the currently approved day. Re-auditing a proposed
+        // new weight will independently reject incompatible warmup loading.
         if(policy.scheme!=SetLoadScheme.STRAIGHT ||
-            policy.warmups.isNotEmpty() ||
             listOf(previous,latest).any { session ->
-                session.evidence.sets.any {
-                    it.exerciseId==exerciseId && it.type==DraftSetType.WARMUP
-                }
+                !NativeKotlinWarmupEvidenceGate.matchesIssued(
+                    nextDay,session.evidence,exerciseId)
             })
             return refuse(NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT)
         fun normalized(

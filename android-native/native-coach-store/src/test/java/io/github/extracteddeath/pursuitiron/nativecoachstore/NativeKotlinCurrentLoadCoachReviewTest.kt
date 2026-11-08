@@ -699,4 +699,65 @@ class NativeKotlinCurrentLoadCoachReviewTest {
                     CoachReadiness.NORMAL,false))
         }
     }
+
+    @Test fun warmupAwareNativeLoadReviewKeepsPreparationAndProgressesWork() {
+        val planned=DeclaredWarmupStep(n("25"),5,30,60)
+        val current=approval().copy(policies=policies.map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY)
+                p.copy(warmups=listOf(planned))
+            else p
+        })
+        fun completed(i:Int):NativeKotlinMixedHistoryCompletion.Composer {
+            val original=composer(i)
+            return original.copy(evidence=original.evidence.copy(
+                sets=listOf(historicalWarmup(i))+original.evidence.sets))
+        }
+        val older=completed(1)
+        val latest=completed(2)
+        val result=inspect(timeline(older,latest),accepted=current)
+        assertTrue(result.toString(),result is NativeCurrentLoadReviewResult.Reviewed)
+        val coached=(result as NativeCurrentLoadReviewResult.Reviewed).coaching
+        assertEquals(CoachNextLoadReviewStatus.READY_FOR_ATHLETE_REVIEW,
+            coached.status)
+        assertEquals(CoachNextLoadChangeKind.EARNED_INCREMENT,coached.kind)
+        assertEquals(n("35"),coached.candidateLoad)
+        assertEquals(listOf(1),coached.affectedDayIndices)
+        val revised=checkNotNull(coached.candidatePolicies)
+        val perDay=revised.single {it.exerciseId=="db-press" &&
+            it.purpose==ComposerSessionPurpose.HYPERTROPHY &&
+            it.dayIndex==1}
+        assertEquals(n("35"),perDay.purposeWorkingLoad)
+        assertEquals(listOf(planned),perDay.warmups)
+        assertEquals(listOf(n("25"),n("25")),
+            listOf(older,latest).map {entry ->
+                (entry.evidence.sets.first().issuedLoad
+                    as DraftSetLoad.Verified).value
+            })
+        assertFalse(result.mayApply)
+        assertFalse(result.mayIssueWorkout)
+    }
+
+    @Test fun nativeLoadReviewRejectsMissingOrChangedIssuedWarmups() {
+        val current=approval().copy(policies=policies.map {p->
+            if(p.exerciseId=="db-press" &&
+                p.purpose==ComposerSessionPurpose.HYPERTROPHY)
+                p.copy(warmups=listOf(DeclaredWarmupStep(n("25"),5,30,60)))
+            else p
+        })
+        val previous=composer(1)
+        val second=composer(2)
+        val secondWithWarmup=second.copy(evidence=second.evidence.copy(
+            sets=listOf(historicalWarmup(2))+second.evidence.sets))
+        val badHistory=second.copy(evidence=second.evidence.copy(
+            sets=listOf(historicalWarmup(2,"30"))+second.evidence.sets))
+        for(t in listOf(timeline(previous,secondWithWarmup),
+            timeline(previous.copy(evidence=previous.evidence.copy(
+                sets=listOf(historicalWarmup(1))+previous.evidence.sets)),
+                badHistory))) {
+            assertEquals(NativeCurrentLoadReviewResult.Rejected(
+                NativeCurrentLoadReviewRefusal.INCOMPARABLE_WORKOUT),
+                inspect(t,accepted=current))
+        }
+    }
 }

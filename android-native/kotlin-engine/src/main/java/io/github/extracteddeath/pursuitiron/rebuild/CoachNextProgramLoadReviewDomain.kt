@@ -181,13 +181,16 @@ object CoachNextProgramLoadReviewDomain {
             return denied(
                 CoachNextLoadReviewStatus.PURPOSE_SPECIFIC_LOADING_REQUIRES_SEPARATE_REVIEW,
                 "This exercise uses purpose-specific working loads. Review each purpose and its saved history independently; a program-wide increase is unsafe.")
+        // Working-set loading must remain a straight-set scheme. Audited
+        // warmups are preparation, not proof of working-weight capacity;
+        // preserve them and let the complete re-staging reject any proposed
+        // weight that makes them invalid (including warmup >= working load).
         if (request.policies.filter { it.exerciseId == request.exerciseId &&
                 (purpose==null || it.purpose==purpose) &&
                 (day==null || it==specific) }
-                .any { it.scheme != SetLoadScheme.STRAIGHT ||
-                    it.warmups.isNotEmpty() })
+                .any { it.scheme != SetLoadScheme.STRAIGHT })
             return denied(CoachNextLoadReviewStatus.ONLY_STRAIGHT_SETS_SUPPORTED,
-                "A custom warmup or top/backoff load needs an individual prescription review.")
+                "A top/backoff working-load scheme needs an individual prescription review.")
 
         val prior = request.previous
         val latest = request.latest

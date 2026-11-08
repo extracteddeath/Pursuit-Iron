@@ -2,7 +2,7 @@
 set -euo pipefail
 # This is installation/lifecycle smoke only, NOT an acceptance verdict on
 # onboarding, progression quality, accessibility or device-wide UX.
-package="io.github.extracteddeath.pursuitiron.kotlinlabtrial7"
+package="io.github.extracteddeath.pursuitiron.kotlinlabtrial8"
 component="$package/io.github.extracteddeath.pursuitiron.KotlinEnginePreviewActivity"
 apk="$(find trial -type f -name '*.apk' -print -quit)"
 mkdir -p smoke-out
@@ -53,5 +53,5 @@ if grep -F "Process: $package" smoke-out/android-runtime-errors.txt; then
   echo "FAIL: AndroidRuntime reported Kotlin Lab fatal exception" | tee smoke-out/result.txt
   exit 1
 fi
-echo "PASS: trial7 APK installed, launched, resumed and cold-restarted on emulator API 35" | tee smoke-out/result.txt
+echo "PASS: trial8 APK installed, launched, resumed and cold-restarted on emulator API 35 without a false equipment error" | tee smoke-out/result.txt
 echo "LIMIT: does not certify program creation, complete workout, backup, accessibility or a real phone" >> smoke-out/result.txt

@@ -58,7 +58,10 @@ internal data class PursuitPalette(
 }
 
 internal object PursuitThemes {
-    const val DEFAULT_ID="lime" // Same first-install choice as modules/App.js.
+    // Intentional native-first default: an ORIGINAL shipped web palette,
+    // while all 20 web theme definitions stay byte-for-byte color-matched.
+    // Explicitly saved Lime selections remain valid and are never overwritten.
+    const val DEFAULT_ID="amethyst"
     val all:List<PursuitPalette> = listOf(
         PursuitPalette("lime", "Lime", false, Color(0xFF0A0908), Color(0xFF0F0D10), Color(0xFF15131A), Color(0xFF1E1A25), Color(0xFFF2EEE4), Color(0xFFA29EA8), Color(0xFF6F6B76), Color(0xFFD4FF3D), Color(0xFF0A0908), Color(0xFFD4FF3D), Color(0xFFE4BC5D), Color(0xFFFF5D6C), Color(0xFFACA9B1), Color(0xFF94919B), Color(0xFFD4FF3D), Color(0xFFFF6E7B), Color(0xFF1A1508)),
         PursuitPalette("ember", "Ember", false, Color(0xFF120907), Color(0xFF17100C), Color(0xFF1E1511), Color(0xFF2A1D17), Color(0xFFF5EDE2), Color(0xFFA3968A), Color(0xFF786D64), Color(0xFFFF8A3D), Color(0xFF120907), Color(0xFFFF8A3D), Color(0xFFF5B85D), Color(0xFFFF5D6C), Color(0xFFB3A89E), Color(0xFF9B9188), Color(0xFFFF8A3D), Color(0xFFFF7480), Color(0xFF1A1508)),

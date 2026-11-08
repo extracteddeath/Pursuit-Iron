@@ -33,7 +33,11 @@ for(const [i,theme] of themes.entries()) {
     theme.name+' colors must remain the original per-theme palette');
   assert.equal(actual.hex.length,17,'Preserve TOK-derived contrast ink roles.');
 }
-assert.match(colors,/const val DEFAULT_ID="lime"/);
+assert.match(colors,/const val DEFAULT_ID="amethyst"/);
+assert.ok(themes.some(theme=>theme.id==='amethyst' && theme.base==='dark'),
+  'The default Amethyst palette must be a real existing dark web theme.');
+assert.ok(native.find(theme=>theme.id==='amethyst')?.hex.includes('#B388FF'),
+  'Default accent must use the shipped Amethyst lavender, not neon Lime.');
 assert.match(colors,/surfaceContainerLow=tint,surfaceContainer=card/);
 assert.match(colors,/primary=accent,onPrimary=onAccent/);
 assert.match(colors,/val accentInk:Color/);

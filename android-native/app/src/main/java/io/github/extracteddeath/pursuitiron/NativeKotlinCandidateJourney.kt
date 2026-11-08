@@ -38,7 +38,10 @@ private enum class KotlinCandidateDestination(val label:String) {
 }
 
 @Composable
-internal fun NativeKotlinCandidateJourney() {
+internal fun NativeKotlinCandidateJourney(
+    themeId:String=PursuitThemes.DEFAULT_ID,
+    onThemeSelected:(String)->Unit={}
+) {
     val context=LocalContext.current.applicationContext
     val host=remember(context){(context as PursuitIronApplication).kotlinCandidate}
     val gymController=remember(host){NativeKotlinGymSourceController(host)}
@@ -110,6 +113,7 @@ internal fun NativeKotlinCandidateJourney() {
         }
     }
     var moreExpanded by remember { mutableStateOf(false) }
+    var appearanceExpanded by remember { mutableStateOf(false) }
     fun navigate(to:KotlinCandidateDestination) {
         navigationTouched=true
         if(to==KotlinCandidateDestination.COACH)
@@ -151,6 +155,10 @@ internal fun NativeKotlinCandidateJourney() {
                                     navigate(page)
                                 })
                             }
+                            DropdownMenuItem(text={Text("Appearance")},onClick={
+                                moreExpanded=false
+                                appearanceExpanded=true
+                            })
                         }
                     }
                 }
@@ -243,6 +251,8 @@ internal fun NativeKotlinCandidateJourney() {
                             })
                     KotlinCandidateDestination.SETTINGS ->
                         NativeKotlinCoachSettingsScreen(host,
+                            themeId=themeId,
+                            onOpenAppearance={appearanceExpanded=true},
                             onBack={destination=KotlinCandidateDestination.COACH})
                     KotlinCandidateDestination.HISTORY ->
                         NativeKotlinCandidateHistoryScreen(host,
@@ -278,6 +288,13 @@ internal fun NativeKotlinCandidateJourney() {
                 }
             }
         }
+    }
+    if(appearanceExpanded) {
+        NativeAppearanceSheet(
+            selectedId=themeId,
+            onSelect=onThemeSelected,
+            onDismiss={appearanceExpanded=false}
+        )
     }
 }
 

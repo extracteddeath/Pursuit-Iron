@@ -13,6 +13,9 @@ const release=read('android-native/app/src/release/AndroidManifest.xml');
 const build=read('android-native/app/build.gradle.kts');
 const journey=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateJourney.kt');
 const history=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHistoryScreen.kt');
+const labActivity=read('android-native/app/src/debug/java/io/github/extracteddeath/pursuitiron/KotlinEnginePreviewActivity.kt');
+const tokens=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeDesignTokens.kt');
+const nativeSettings=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCoachSettingsScreen.kt');
 
 assert.match(main,/android:name="\.MainActivity"/,
   'Live MainActivity must remain registered, even when hidden from the lab launcher');
@@ -87,4 +90,17 @@ assert.ok(coach.includes('preferredExerciseId?.takeIf{it in choices}') &&
   'Coach focus requires current owner-verified program, and accepted grant must open the exact Train entry');
 assert.ok((host.match(/enableRepeatedFatigueReview=assistance.offersFatigueAdvice/g)||[]).length===2,
   'Both next-rep preview and final acceptance must preserve the athlete fatigue-advice switch');
-console.log('PASS Kotlin Lab navigation, corrected History and explicit History-to-Coach handoff');
+assert.ok(tokens.includes('const val DEFAULT_ID="amethyst"') &&
+  !tokens.includes('const val DEFAULT_ID="lime"') &&
+  labActivity.includes('PursuitIronTheme(themeId=themeId)') &&
+  labActivity.includes('PursuitThemes.find(requested)!=null') &&
+  labActivity.includes('appearance.edit().putString("theme_id",requested).apply()') &&
+  labActivity.includes('bars.isAppearanceLightStatusBars=themeUsesLightBars') &&
+  journey.includes('NativeAppearanceSheet(') &&
+  journey.includes('onSelect=onThemeSelected') &&
+  journey.includes('DropdownMenuItem(text={Text("Appearance")}') &&
+  nativeSettings.includes('onOpenAppearance:()->Unit={}') &&
+  nativeSettings.includes('Text("Choose color theme")') &&
+  journey.includes('onOpenAppearance={appearanceExpanded=true}'),
+  'Kotlin Lab must start with original Amethyst, persist native theme choice, expose all web palettes, and update system bar contrast live');
+console.log('PASS Kotlin Lab navigation, corrected History and selectable original web themes with Amethyst default');

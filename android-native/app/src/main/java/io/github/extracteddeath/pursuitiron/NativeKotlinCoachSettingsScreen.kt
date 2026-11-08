@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,6 +41,8 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun NativeKotlinCoachSettingsScreen(
     host:NativeKotlinCandidateHost,
+    themeId:String=PursuitThemes.DEFAULT_ID,
+    onOpenAppearance:()->Unit={},
     onBack:()->Unit
 ) {
     val scope=rememberCoroutineScope()
@@ -118,6 +121,15 @@ internal fun NativeKotlinCoachSettingsScreen(
             "Optional suggestions never control workout logging or your authored program."
         )
         Button(onClick=onBack,enabled=!saving) {Text("Back to Coach")}
+        PursuitFormSection("Appearance",
+            "Choose from the original Pursuit Iron web-app themes. This changes the app's colors, not training data."
+        ) {
+            Text("Current: ${PursuitThemes.resolve(themeId).name}",
+                style=MaterialTheme.typography.bodyMedium)
+            OutlinedButton(onClick=onOpenAppearance) {
+                Text("Choose color theme")
+            }
+        }
 
         PursuitFormSection(
             "Coaching style",

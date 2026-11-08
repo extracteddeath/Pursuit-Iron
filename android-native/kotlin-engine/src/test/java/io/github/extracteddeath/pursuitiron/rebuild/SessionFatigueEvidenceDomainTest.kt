@@ -22,7 +22,7 @@ class SessionFatigueEvidenceDomainTest {
         SessionFatigueEvidenceDomain.inspect(reps,count,sets)
 
     private val verified=VerifiedLoadStock.Totals(
-        LoadUnit.LB,LoadBasis.BARBELL_TOTAL,
+        LoadUnit.LB,LoadBasis.MACHINE_STACK,
         listOf(BigDecimal(190),BigDecimal(195),BigDecimal(200)))
     private fun recorded(
         id:String,values:List<Int>,rir:List<Int?> = List(3){2},

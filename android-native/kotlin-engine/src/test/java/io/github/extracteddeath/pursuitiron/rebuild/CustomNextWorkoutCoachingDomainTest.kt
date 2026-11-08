@@ -887,6 +887,50 @@ class CustomNextWorkoutCoachingDomainTest {
         assertEquals(listOf(5,6),latest.evidence.visits.map{it.actual!!.reps})
     }
 
+    @Test fun targetRirV2AndV3DoNotTreatOverCeilingRepCutsAsProgression() {
+        val previous=completed(1,3,reps=listOf(5,5))
+        val latest=completed(2,4,reps=listOf(9,5),rirs=listOf(2,5))
+        for(version in listOf(CustomRepForecastPolicy.TARGET_RIR_V2,
+            CustomRepForecastPolicy.TARGET_RIR_TREND_V3)) {
+            val result=CustomNextWorkoutCoachingDomain.review(
+                CustomNextWorkoutCoachingRequest(snapshot(5),"main",
+                    listOf(previous,latest),stock(),n(5),
+                    CoachReadiness.NORMAL,false,version))
+            assertEquals(CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+                result.status)
+            assertTrue(result.nextSetSuggestions.isEmpty())
+            assertNull(result.loadReviewCandidate)
+            assertTrue(result.explanation.contains("exceeded"))
+            assertTrue(CustomNextRepAmendmentDomain.propose(
+                snapshot(5),"main",result) is CustomNextRepAmendmentResult.Rejected)
+            // Over-ceiling actuals are NEVER rewritten in the source facts.
+            assertEquals(listOf(9,5),latest.evidence.visits.map{it.actual?.reps})
+        }
+        // A previously issued V1 receipt retains its historical behavior.
+        val legacy=review(sessions=listOf(previous,latest))
+        assertEquals(CustomRepForecastPolicy.LEGACY_STEP_V1,legacy.repForecastPolicy)
+        assertEquals(CustomNextWorkoutCoachingStatus.BUILD_REPS,legacy.status)
+        assertEquals(listOf(8,6),legacy.nextSetSuggestions.map{it.proposedNextReps})
+    }
+
+    @Test fun repeatedOverCeilingSuccessCanStillEarnVerifiedLoadReview() {
+        val previous=completed(1,3,reps=listOf(8,8))
+        val latest=completed(2,4,reps=listOf(9,8),rirs=listOf(2,2))
+        val v2=CustomNextWorkoutCoachingDomain.review(
+            CustomNextWorkoutCoachingRequest(snapshot(5),"main",
+                listOf(previous,latest),stock(),n(5),
+                CoachReadiness.NORMAL,false,CustomRepForecastPolicy.TARGET_RIR_V2))
+        assertEquals(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,v2.status)
+        assertEquals(n(205),v2.loadReviewCandidate)
+        assertTrue(v2.explanation.contains("higher LOAD review"))
+        assertTrue(v2.nextSetSuggestions.none{it.changed})
+        assertTrue(CustomNextLoadAmendmentDomain.propose(
+            snapshot(5),"main",v2,stock(),n(5))
+            is CustomNextLoadAmendmentResult.Proposed)
+        assertTrue(CustomNextRepAmendmentDomain.propose(
+            snapshot(5),"main",v2) is CustomNextRepAmendmentResult.Rejected)
+    }
+
     @Test fun targetRirV2NeverTurnsAssumedEffortIntoExtraHeadroom() {
         val previous=completed(1,3,reps=listOf(5,5))
         val latest=completed(2,4,reps=listOf(5,6),rirs=listOf(null,null))

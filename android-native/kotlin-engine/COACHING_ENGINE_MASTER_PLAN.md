@@ -184,6 +184,16 @@ Each milestone has a concrete artifact, targeted automated tests and a release-g
 
 ## 9. Current audited state — 2026-11-07
 
+**Custom-cycle rep ceiling consistency — 2026-11-08:** opt-in
+target-RIR V2/V3 now refuse to label clipping a recorded above-ceiling
+set back to its authored maximum as an earned rep progression. When an
+independent, physically verified higher LOAD step is supported by two
+comparable same-day completions, that review remains available with an
+explicit explanation; otherwise no rep amendment is proposed. Previously
+issued V1 coaching remains replay-compatible. Kotlin tests include an
+overshot first set with a later set that could otherwise increase, an
+earned higher-load review, and historical V1 behavior.
+
 **G4 repeated-set recovery review — 2026-11-08:** The exercise
 coach can examine three comparable, day-scoped workout appearances
 using the native journal's program/revision/day identity.

@@ -454,6 +454,15 @@ object CustomNextWorkoutCoachingDomain {
                 actual.actualRir,next>observed,effortForSet.rir,effortForSet.source)
         }
         val increased=suggestions.any{it.changed}
+        // Exceeding an authored rep ceiling is not permission to package a
+        // LOWER capped rep number as an "earned" rep increase. V2/V3 can
+        // still evaluate an independently supported, physically verified
+        // LOAD step below. Signed legacy V1 results retain exact replay.
+        val overshotRepCeiling=request.repForecastPolicy.usesTargetRir() &&
+            facts.any{fact->
+                val issued=oldSets.single{it.setKey==fact.setKey}
+                checkNotNull(fact.actual).reps>issued.prescription.reps.maximum
+            }
 
         // An additional LOAD is only considered after TWO comparable,
         // uniformly loaded, completed ceiling sessions. Verified stock and
@@ -537,7 +546,13 @@ object CustomNextWorkoutCoachingDomain {
             candidate!=null->result(CustomNextWorkoutCoachingStatus.READY_FOR_LOAD_REVIEW,
                 ids,latest.evidence.workoutId,suggestions,observedLoad,
                 normalized(checkNotNull(candidate)),
-                "Two complete same-day workouts earned a verified load option. Athlete review is required.")
+                if(overshotRepCeiling)
+                    "One or more sets exceeded their prescribed rep ceiling. Two comparable completed same-day workouts support a verified higher LOAD review, not a rep-only progression. Athlete approval is required."
+                else "Two complete same-day workouts earned a verified load option. Athlete review is required.")
+            overshotRepCeiling->result(
+                CustomNextWorkoutCoachingStatus.HOLD_CURRENT_TARGETS,
+                ids,latest.evidence.workoutId,load=observedLoad,
+                explanation="A recorded working set exceeded its authored rep ceiling. Review the load and rep range; lowering that observed count back to the ceiling cannot be presented as an earned rep progression. No rep amendment was proposed.")
             increased->result(CustomNextWorkoutCoachingStatus.BUILD_REPS,
                 ids,latest.evidence.workoutId,suggestions,observedLoad,
                 explanation=if(request.repForecastPolicy.usesTargetRir())

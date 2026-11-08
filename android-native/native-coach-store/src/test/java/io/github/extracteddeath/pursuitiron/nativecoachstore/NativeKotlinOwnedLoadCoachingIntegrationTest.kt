@@ -118,7 +118,8 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
     }
     private fun complete(id:Int,day:Int,
         sessionPolicies:List<ExercisePrescriptionPolicy> = policies,
-        actualRir:Int?=2
+        actualRir:Int?=2,
+        workingReps:Int=12
     ):Pair<KotlinWorkoutJournalState,String> {
         var journal=accept(id,day,sessionPolicies)
         var pressKey=""
@@ -131,7 +132,7 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
                 "set-$id-$index",journal.revision,target.setKey,
                 KotlinJournalSetOutcome.COMPLETED,
                 KotlinPerformedSet(load.value,load.unit,
-                    if(target.type==DraftSetType.WARMUP)target.reps.minimum else 12,
+                    if(target.type==DraftSetType.WARMUP)target.reps.minimum else workingReps,
                     if(target.type==DraftSetType.WARMUP)null else actualRir))
             val written=journals.appendStored(
                 "owner-1",journal.snapshot.workoutId,event,
@@ -204,6 +205,66 @@ class NativeKotlinOwnedLoadCoachingIntegrationTest {
         }
         return NativeCustomAuthoringSnapshot(
             "owner-1","athlete-1",1,reviewed,catalog)
+    }
+
+    @Test fun threeComparableSameDayDeclinesDeferRepProposalOnlyWithFatigueAdvice() {
+        enrolled()
+        complete(1,1,actualRir=2,workingReps=12)
+        complete(2,1,actualRir=2,workingReps=11)
+        // Reported reserve still permits a rep increase in isolation,
+        // but capacity at the prescribed goal fell 12 -> 11 -> 10.
+        complete(3,1,actualRir=3,workingReps=9)
+        val next=NativeKotlinWorkoutApproval(
+            "owner-1","athlete-1",source,source,
+            KotlinWorkoutSelectionGrant("grant-4","workout-4",source,1),
+            program,policies,"storage-4",4)
+        assertEquals(NativeApprovalWriteResult.Committed(4),
+            approvals.publish("owner-1",3,next))
+        assertEquals(NativeAuthoringSourceWrite.Committed(1),
+            authoring.publish("owner-1",0,sourceRecord()))
+        val declined=reader.reviewCurrentNextSetTargets(
+            "owner-1","athlete-1",approvals,"db-press",
+            CoachReadiness.NORMAL,false,authoring,
+            enableRepeatedFatigueReview=true) as NativeOwnerNextSetResult.Review
+        val guarded=declined.candidate as NativeCurrentRepPrescriptionResult.Reviewed
+        val refusal=guarded.proposal as AdaptiveSetPrescriptionResult.Rejected
+        assertEquals(AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+            refusal.reason)
+        assertTrue(refusal.detail.contains("Three comparable same-day workouts"))
+        assertEquals("workout-3",guarded.priorWorkoutId)
+
+        // Coaching off is a real opt-out: keep the independent progression
+        // review and immutable earlier actuals, never fabricate a deload.
+        val off=reader.reviewCurrentNextSetTargets(
+            "owner-1","athlete-1",approvals,"db-press",
+            CoachReadiness.NORMAL,false,authoring,
+            enableRepeatedFatigueReview=false) as NativeOwnerNextSetResult.Review
+        val reviewed=off.candidate as NativeCurrentRepPrescriptionResult.Reviewed
+        val proposal=reviewed.proposal as AdaptiveSetPrescriptionResult.Candidate
+        assertEquals(listOf(9,9),proposal.observedReps)
+        assertEquals(listOf(10,10),proposal.newRepTargets)
+        assertEquals("workout-4",proposal.workout.workoutId)
+
+        // A recommendation displayed with coaching off cannot be accepted
+        // after fatigue review becomes enabled; recompute at consent time.
+        val attempt=NativeKotlinAcceptedRepIntent(
+            "db-press",off.approvalRevision,reviewed.historyRevision,
+            "workout-4",reviewed.priorWorkoutId,proposal.editedSetKey,
+            proposal.observedReps,proposal.newRepTargets,
+            "workout-5","grant-5","storage-5",true,proposal.decisionKind)
+        assertEquals(NativeKotlinRepAcceptanceResult.Rejected(
+            NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED),
+            reader.acceptReviewedNextSetTargets("owner-1","athlete-1",
+                approvals,attempt,CoachReadiness.NORMAL,false,authoring,
+                enableRepeatedFatigueReview=true))
+        assertEquals(NativeJournalFileResult.Rejected(
+            NativeJournalFileRefusal.NOT_ISSUED),
+            journals.openStored("owner-1","workout-5",
+                approvals::canAccessIssuedWorkout))
+        assertEquals(4L,checkNotNull(approvals.currentOwnedApproval("owner-1"))
+            .storageRevision)
+        assertTrue(reader.read("owner-1","athlete-1")
+            is NativeKotlinMixedHistoryReadResult.Review)
     }
 
     @Test fun latestCorrectedWorkoutShapesNextPerSetRepsWithoutChangingIssuedTargets() {

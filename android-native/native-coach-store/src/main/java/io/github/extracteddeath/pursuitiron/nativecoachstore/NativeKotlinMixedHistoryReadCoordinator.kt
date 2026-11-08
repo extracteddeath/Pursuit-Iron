@@ -281,7 +281,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
         exerciseId:String,
         readiness:CoachReadiness,
         movementRestricted:Boolean,
-        authoringStore:NativeKotlinCustomAuthoringSourceFileStore?=null
+        authoringStore:NativeKotlinCustomAuthoringSourceFileStore?=null,
+        enableRepeatedFatigueReview:Boolean=false
     ):NativeOwnerNextSetResult {
         fun reject(reason:NativeOwnerNextSetRefusal)=
             NativeOwnerNextSetResult.Rejected(reason)
@@ -330,7 +331,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                             approval.storageRevision,
                             NativeKotlinCurrentRepPrescriptionDomain.inspect(
                                 approval,history.timeline,exerciseId,
-                                readiness,movementRestricted))
+                                readiness,movementRestricted,
+                                enableRepeatedFatigueReview=enableRepeatedFatigueReview))
                 }
             }
         }.getOrElse {
@@ -352,7 +354,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
         intent:NativeKotlinAcceptedRepIntent,
         readiness:CoachReadiness,
         movementRestricted:Boolean,
-        authoringStore:NativeKotlinCustomAuthoringSourceFileStore
+        authoringStore:NativeKotlinCustomAuthoringSourceFileStore,
+        enableRepeatedFatigueReview:Boolean=false
     ):NativeKotlinRepAcceptanceResult {
         fun reject(reason:NativeKotlinRepAcceptanceRefusal)=
             NativeKotlinRepAcceptanceResult.Rejected(reason)
@@ -434,7 +437,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                     return@withOwnerTransaction reject(
                         NativeKotlinRepAcceptanceRefusal.IDENTIFIER_ALREADY_USED)
                 val original=NativeKotlinCurrentRepPrescriptionDomain.inspect(
-                    current,history,intent.exerciseId,readiness,false)
+                    current,history,intent.exerciseId,readiness,false,
+                    enableRepeatedFatigueReview=enableRepeatedFatigueReview)
                     as? NativeCurrentRepPrescriptionResult.Reviewed
                     ?:return@withOwnerTransaction reject(
                         NativeKotlinRepAcceptanceRefusal.PROPOSAL_CHANGED)
@@ -462,7 +466,8 @@ class NativeKotlinMixedHistoryReadCoordinator(
                         Collections.unmodifiableList(evidence.newRepTargets.toList()),
                         readiness,evidence.decisionKind))
                 val rederived=NativeKotlinCurrentRepPrescriptionDomain.inspect(
-                    next,history,intent.exerciseId,readiness,false)
+                    next,history,intent.exerciseId,readiness,false,
+                    enableRepeatedFatigueReview=enableRepeatedFatigueReview)
                     as? NativeCurrentRepPrescriptionResult.Reviewed
                 val nextEvidence=rederived?.proposal
                     as? AdaptiveSetPrescriptionResult.Candidate

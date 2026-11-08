@@ -42,7 +42,9 @@ object NativeKotlinCurrentRepPrescriptionDomain {
         readiness:CoachReadiness,
         movementRestricted:Boolean,
         /** Old accepted receipts replay their original policy, never re-score history. */
-        policyVersion:AdaptiveRepPolicyVersion=AdaptiveRepPolicyVersion.TARGET_RIR_V2
+        policyVersion:AdaptiveRepPolicyVersion=AdaptiveRepPolicyVersion.TARGET_RIR_V2,
+        /** New, opt-in recovery review; false preserves legacy and manual policy. */
+        enableRepeatedFatigueReview:Boolean=false
     ):NativeCurrentRepPrescriptionResult {
         fun reject(reason:NativeCurrentRepPrescriptionRefusal)=
             NativeCurrentRepPrescriptionResult.Rejected(reason)
@@ -160,6 +162,49 @@ object NativeKotlinCurrentRepPrescriptionDomain {
             as? LongitudinalRepEvidenceResult.Comparable
             ?:return reject(NativeCurrentRepPrescriptionRefusal.INCOMPARABLE_LATEST_WORKOUT)
         val actualEvidence=normalized.session
+
+        // The exercise coach already recognizes repeated intra-session
+        // deterioration. Apply the SAME verified observation to REAL next
+        // rep prescriptions, but only while fatigue advice is enabled.
+        // Never skip a same-day occurrence just to find three good workouts,
+        // and never borrow capacity from another weekday or phase.
+        // This is a review/hold, not a diagnosed recovery problem or deload.
+        if(enableRepeatedFatigueReview &&
+            policyVersion==AdaptiveRepPolicyVersion.TARGET_RIR_V2) {
+            val sameDay=appearances.filterIsInstance<
+                NativeKotlinMixedHistoryCompletion.Composer>().filter {
+                it.dayIndex==day.dayIndex && it.purpose==day.purpose
+            }.takeLast(3)
+            if(sameDay.size==3 && sameDay.all{
+                    it.evidence.source==source &&
+                        NativeKotlinWarmupEvidenceGate.matchesIssued(
+                            day,it.evidence,exerciseId)
+                }) {
+                val observations=sameDay.map{completed->
+                    completed.evidence.exerciseReviews.singleOrNull{
+                        it.exerciseId==exerciseId
+                    }?.progressionWorkout
+                }
+                if(observations.all{it!=null}) {
+                    val trend=SessionFatigueEvidenceDomain.inspectRecent(
+                        observations.filterNotNull(),inventory,
+                        verifiedPerSetLoading=reviewedBackoff)
+                    val signal=trend?.signal
+                    if(signal==RepeatedSessionFatigueSignal.BROAD_DECLINE ||
+                        signal==RepeatedSessionFatigueSignal.LATER_SET_DECLINE) {
+                        val detail=if(signal==RepeatedSessionFatigueSignal.BROAD_DECLINE)
+                            "Three comparable same-day workouts show declining effort-aligned reps across most sets including the first. Review recovery, training demands and loads before approving higher rep targets; this is not a fatigue diagnosis."
+                        else
+                            "Three comparable same-day workouts show stable first-set performance but repeated later-set decline. Review actual rest, exercise order and within-workout fatigue before increasing later-set targets."
+                        return NativeCurrentRepPrescriptionResult.Reviewed(
+                            timeline.manifestRevision,last.manifest.workoutId,
+                            AdaptiveSetPrescriptionResult.Rejected(
+                                AdaptiveSetPrescriptionRefusal.INSUFFICIENT_REP_PROGRESS_EVIDENCE,
+                                detail))
+                    }
+                }
+            }
+        }
 
         val proposal=KotlinAdaptiveSetPrescriptionDomain.draft(
             AdaptiveSetPrescriptionRequest(

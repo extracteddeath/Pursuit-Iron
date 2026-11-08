@@ -546,7 +546,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 else mixedHistoryReader.reviewCurrentNextSetTargets(
                     owner.ownerKey,owner.athleteId,approvalStore,exerciseId,
                     assistance.coachingReadiness(readiness),movementRestricted,
-                    authoringSourceStore)
+                    authoringSourceStore,
+                    enableRepeatedFatigueReview=assistance.offersFatigueAdvice)
             }
         }.getOrElse {NativeOwnerNextSetResult.Rejected(
             NativeOwnerNextSetRefusal.STORAGE_UNAVAILABLE)}
@@ -570,7 +571,8 @@ internal class NativeKotlinCandidateHost(context:Context) {
                 else mixedHistoryReader.acceptReviewedNextSetTargets(
                     signed.ownerKey,signed.athleteId,approvalStore,intent,
                     assistance.coachingReadiness(readiness),movementRestricted,
-                    authoringSourceStore)
+                    authoringSourceStore,
+                    enableRepeatedFatigueReview=assistance.offersFatigueAdvice)
             }
         }.getOrElse {NativeKotlinRepAcceptanceResult.Rejected(
             NativeKotlinRepAcceptanceRefusal.STORAGE_UNAVAILABLE)}

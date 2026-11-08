@@ -65,6 +65,7 @@ for(const required of [
   'kotlinHistoryCorrectionActual('
 ])assert.ok(history.includes(required),'Kotlin History must show source-backed target/actual facts: '+required);
 const coach=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateCoachScreen.kt');
+const host=read('android-native/app/src/main/java/io/github/extracteddeath/pursuitiron/NativeKotlinCandidateHost.kt');
 assert.ok(journey.includes('onOpenCoach={exerciseId->') &&
   journey.includes('coachRequestedExerciseId=exerciseId') &&
   journey.includes('onReviewNext={exerciseId->') &&
@@ -78,4 +79,6 @@ assert.ok(coach.includes('preferredExerciseId?.takeIf{it in choices}') &&
   journey.includes('selectedGeneratedWorkoutId=id') &&
   journey.includes('if(generatedWorkoutId!=null && selectedId!=generatedWorkoutId)'),
   'Coach focus requires current owner-verified program, and accepted grant must open the exact Train entry');
+assert.ok((host.match(/enableRepeatedFatigueReview=assistance.offersFatigueAdvice/g)||[]).length===2,
+  'Both next-rep preview and final acceptance must preserve the athlete fatigue-advice switch');
 console.log('PASS Kotlin Lab navigation, corrected History and explicit History-to-Coach handoff');

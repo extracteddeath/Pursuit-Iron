@@ -360,3 +360,18 @@ and physical-device evidence remain unfilled release requirements.
 **Existing required ledgers:** FULL_REPLACEMENT_CONTRACT.md (release/cutover); ENGINE_BASELINE_COVERAGE.md (14 features, E01–E41); NATIVE_ENGINE_UX_IMPACT.md (screens); KNOWN_LEGACY_BUG_REGRESSIONS.md (L01–L26); ENGINE_SUPERIORITY_ACCEPTANCE.md and verification/engine-superiority-*.json (paired objective proof); NEXT_LOAD_AND_CYCLE_CONTINUITY_GATE.md (existing load/cycle continuity integration).
 
 **Working rule:** any new feature must name its gate, canonical owner, exact invariant, realistic adversarial test, storage/UX impact and regression ledger entry. If it cannot, do not add another domain class just to report “more work done.” Update this document's current-state section only when implementation and its end-to-end evidence actually change.
+
+**Native V2 longitudinal recovery gate — 2026-11-08:** The
+owner-fenced next-rep preview and acceptance now optionally consult the
+same three-session, fully reported-RIR same-day trend used by the exercise
+coach. A verified repeated broad or later-set decline returns a recovery
+review instead of offering a new rep-target increase. The candidate is
+neither an auto-deload nor a fatigue diagnosis. The comparison requires
+the three latest same-day/purpose Composer appearances, identical source,
+authenticated warmups, ordinal/load/RIR comparability and verified physical
+stock; no mismatched or skipped history is cherry-picked. The user can
+disable this behavior through the existing fatigue-advice switch without
+disabling normal progression. Both preview and revision-fenced acceptance
+recalculate the current setting; saved old policy receipts retain their
+original replay algorithm. A native file-backed regression exercises actual
+logged sets, history, on/off advice and a mid-consent toggle.
